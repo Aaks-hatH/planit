@@ -1,0 +1,770 @@
+const express = require('express');
+const router = express.Router();
+const { body, validationResult } = require('express-validator');
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
+const { v4: uuidv4 } = require('uuid');
+const Event = require('../models/Event');
+const EventParticipant = require('../models/EventParticipant');
+const { verifyEventAccess, verifyOrganizer } = require('../middleware/auth');
+const { createEventLimiter, authLimiter } = require('../middleware/rateLimiter');
+
+const validate = (req, res, next) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
+  next();
+};
+
+// Create event
+router.post('/',
+  createEventLimiter,
+  [
+    body('subdomain').trim().isLength({ min: 3, max: 50 }).matches(/^[a-z0-9-]+$/).withMessage('Invalid subdomain format'),
+    body('title').trim().isLength({ min: 1, max: 200 }).withMessage('Title is required'),
+    body('date').isISO8601().withMessage('Valid date is required'),
+    body('organizerName').trim().isLength({ min: 1, max: 100 }).withMessage('Organizer name is required'),
+    body('organizerEmail').isEmail().normalizeEmail().withMessage('Valid email is required'),
+    body('password').optional({ values: 'falsy' }).isLength({ min: 6 }).withMessage('Password must be at least 6 characters'),
+    validate
+  ],
+  async (req, res, next) => {
+    try {
+      const { subdomain, title, description, date, location, organizerName, organizerEmail, password, settings, maxParticipants } = req.body;
+
+      const existing = await Event.findOne({ subdomain });
+      if (existing) return res.status(409).json({ error: 'This event link is already taken.' });
+
+      let hashedPassword = null;
+      let isPasswordProtected = false;
+      if (password) {
+        hashedPassword = await bcrypt.hash(password, 10);
+        isPasswordProtected = true;
+      }
+
+      const event = new Event({
+        subdomain, title, description, date, location, organizerName, organizerEmail,
+        password: hashedPassword, isPasswordProtected,
+        settings: settings || {}, maxParticipants: maxParticipants || 100,
+        participants: [{ username: organizerName, role: 'organizer' }]
+      });
+
+      await event.save();
+
+      const token = jwt.sign(
+        { eventId: event._id.toString(), username: organizerName, role: 'organizer' },
+        process.env.JWT_SECRET,
+        { expiresIn: '30d' }
+      );
+
+      res.status(201).json({
+        message: 'Event created successfully',
+        event: { id: event._id, subdomain: event.subdomain, title: event.title, isPasswordProtected: event.isPasswordProtected },
+        token
+      });
+    } catch (error) { next(error); }
+  }
+);
+
+// Get existing participant names for an event (for join gate dropdown)
+router.get('/participants/:eventId', async (req, res, next) => {
+  try {
+    const participants = await EventParticipant.find({ eventId: req.params.eventId })
+      .select('username hasPassword role')
+      .sort({ lastSeenAt: -1 })
+      .lean();
+    res.json({ participants: participants.map(p => ({ username: p.username, hasPassword: p.hasPassword, role: p.role })) });
+  } catch (error) { next(error); }
+});
+
+// Set or update account password for a participant (must supply current password if one exists)
+router.post('/set-password/:eventId', authLimiter,
+  [
+    body('username').trim().isLength({ min: 1, max: 100 }),
+    body('newPassword').isLength({ min: 4, max: 100 }).withMessage('Password must be at least 4 characters'),
+    body('currentPassword').optional(),
+    validate
+  ],
+  async (req, res, next) => {
+    try {
+      const { username, newPassword, currentPassword } = req.body;
+      const participant = await EventParticipant.findOne({ eventId: req.params.eventId, username }).select('+password');
+      if (!participant) return res.status(404).json({ error: 'Participant not found.' });
+
+      // If they already have a password, verify current one first
+      if (participant.hasPassword) {
+        if (!currentPassword) return res.status(400).json({ error: 'Current password required.' });
+        const valid = await bcrypt.compare(currentPassword, participant.password);
+        if (!valid) return res.status(401).json({ error: 'Current password is incorrect.' });
+      }
+
+      participant.password = await bcrypt.hash(newPassword, 10);
+      participant.hasPassword = true;
+      await participant.save();
+      res.json({ message: 'Password set successfully.' });
+    } catch (error) { next(error); }
+  }
+);
+
+// Public info (no auth) — for join gate
+router.get('/public/:eventId', async (req, res, next) => {
+  try {
+    const event = await Event.findById(req.params.eventId);
+    if (!event) return res.status(404).json({ error: 'Event not found.' });
+
+    res.json({
+      event: {
+        id: event._id, subdomain: event.subdomain, title: event.title,
+        description: event.description, date: event.date, location: event.location,
+        organizerName: event.organizerName, isPasswordProtected: event.isPasswordProtected,
+        maxParticipants: event.maxParticipants, participantCount: event.participants.length,
+        status: event.status, rsvpSummary: event.getRsvpSummary()
+      }
+    });
+  } catch (error) { next(error); }
+});
+
+// Get by subdomain
+router.get('/subdomain/:subdomain', async (req, res, next) => {
+  try {
+    const event = await Event.findOne({ subdomain: req.params.subdomain });
+    if (!event) return res.status(404).json({ error: 'Event not found.' });
+    await event.incrementViews();
+    res.json({
+      event: {
+        id: event._id, subdomain: event.subdomain, title: event.title, date: event.date,
+        organizerName: event.organizerName, isPasswordProtected: event.isPasswordProtected,
+        requiresPassword: event.isPasswordProtected,
+        description: event.isPasswordProtected ? undefined : event.description,
+        location: event.isPasswordProtected ? undefined : event.location,
+        maxParticipants: event.maxParticipants, participantCount: event.participants.length
+      }
+    });
+  } catch (error) { next(error); }
+});
+
+// Verify password + join
+router.post('/verify-password/:eventId', authLimiter,
+  [body('password').notEmpty(), body('username').trim().isLength({ min: 1, max: 100 }), body('accountPassword').optional(), validate],
+  async (req, res, next) => {
+    try {
+      const event = await Event.findById(req.params.eventId).select('+password');
+      if (!event) return res.status(404).json({ error: 'Event not found.' });
+      if (!event.isPasswordProtected) return res.status(400).json({ error: 'Event is not password protected.' });
+
+      const isMatch = await bcrypt.compare(req.body.password, event.password);
+      if (!isMatch) return res.status(401).json({ error: 'Incorrect event password.' });
+
+      const { username, accountPassword } = req.body;
+
+      // Check if this username already has an account in this event
+      const existing = await EventParticipant.findOne({ eventId: req.params.eventId, username }).select('+password');
+      if (existing && existing.hasPassword) {
+        if (!accountPassword) return res.status(400).json({ error: 'This name has an account — enter your account password.', requiresAccountPassword: true });
+        const accountMatch = await bcrypt.compare(accountPassword, existing.password);
+        if (!accountMatch) return res.status(401).json({ error: 'Incorrect account password.' });
+        existing.lastSeenAt = new Date();
+        await existing.save();
+      } else {
+        await EventParticipant.findOneAndUpdate(
+          { eventId: req.params.eventId, username },
+          { role: 'participant', lastSeenAt: new Date() },
+          { upsert: true, new: true }
+        );
+      }
+
+      await event.addParticipant(username);
+
+      const io = req.app.get('io');
+      if (io) {
+        io.to(`event_${req.params.eventId}`).emit('participant_joined', {
+          username, role: 'participant', joinedAt: new Date(), participants: event.participants
+        });
+      }
+
+      const token = jwt.sign(
+        { eventId: event._id.toString(), username, role: 'participant' },
+        process.env.JWT_SECRET, { expiresIn: '30d' }
+      );
+      res.json({ message: 'Access granted', token, event: { id: event._id, title: event.title } });
+    } catch (error) { next(error); }
+  }
+);
+
+// Join (no password)
+router.post('/join/:eventId',
+  [body('username').trim().isLength({ min: 1, max: 100 }), body('accountPassword').optional(), validate],
+  async (req, res, next) => {
+    try {
+      const event = await Event.findById(req.params.eventId);
+      if (!event) return res.status(404).json({ error: 'Event not found.' });
+      if (event.isPasswordProtected) return res.status(403).json({ error: 'This event requires a password.' });
+
+      const { username, accountPassword } = req.body;
+
+      // Check if this username already has an account in this event
+      const existing = await EventParticipant.findOne({ eventId: req.params.eventId, username }).select('+password');
+      if (existing && existing.hasPassword) {
+        if (!accountPassword) return res.status(400).json({ error: 'This name has an account — enter your account password.', requiresAccountPassword: true });
+        const accountMatch = await bcrypt.compare(accountPassword, existing.password);
+        if (!accountMatch) return res.status(401).json({ error: 'Incorrect account password.' });
+        existing.lastSeenAt = new Date();
+        await existing.save();
+      } else {
+        await EventParticipant.findOneAndUpdate(
+          { eventId: req.params.eventId, username },
+          { role: 'participant', lastSeenAt: new Date() },
+          { upsert: true, new: true }
+        );
+      }
+
+      await event.addParticipant(username);
+
+      const io = req.app.get('io');
+      if (io) {
+        io.to(`event_${req.params.eventId}`).emit('participant_joined', {
+          username, role: 'participant', joinedAt: new Date(), participants: event.participants
+        });
+      }
+
+      const token = jwt.sign(
+        { eventId: event._id.toString(), username, role: 'participant' },
+        process.env.JWT_SECRET, { expiresIn: '30d' }
+      );
+      res.json({ message: 'Joined successfully', token, event: { id: event._id, title: event.title } });
+    } catch (error) { next(error); }
+  }
+);
+
+// Get full event details (authenticated)
+router.get('/:eventId', verifyEventAccess, async (req, res, next) => {
+  try {
+    const event = req.event;
+    res.json({
+      event: {
+        id: event._id, subdomain: event.subdomain, title: event.title,
+        description: event.description, date: event.date, location: event.location,
+        organizerName: event.organizerName, settings: event.settings,
+        participants: event.participants, maxParticipants: event.maxParticipants,
+        status: event.status, isPasswordProtected: event.isPasswordProtected,
+        rsvps: event.rsvps, rsvpSummary: event.getRsvpSummary(),
+        agenda: event.agenda ? [...event.agenda].sort((a, b) => a.order - b.order) : [],
+        createdAt: event.createdAt
+      }
+    });
+  } catch (error) { next(error); }
+});
+
+// ── RSVP ──────────────────────────────────────────────────────────────────
+router.post('/:eventId/rsvp',
+  verifyEventAccess,
+  [
+    body('username').trim().isLength({ min: 1, max: 100 }).withMessage('Username required'),
+    body('status').isIn(['yes', 'maybe', 'no']).withMessage('Status must be yes, maybe, or no'),
+    validate
+  ],
+  async (req, res, next) => {
+    try {
+      const event = req.event;
+      await event.setRsvp(req.body.username, req.body.status);
+
+      // ── FIX: Emit complete RSVP data including rsvps array ──
+      const io = req.app.get('io');
+      if (io) {
+        io.to(`event_${req.params.eventId}`).emit('rsvp_updated', {
+          username: req.body.username,
+          status: req.body.status,
+          rsvps: event.rsvps,
+          summary: event.getRsvpSummary()
+        });
+      }
+
+      res.json({ message: 'RSVP recorded', rsvpSummary: event.getRsvpSummary() });
+    } catch (error) { next(error); }
+  }
+);
+
+// ── TASKS ─────────────────────────────────────────────────────────────────
+// Get tasks
+router.get('/:eventId/tasks', verifyEventAccess, async (req, res, next) => {
+  try {
+    const tasks = req.event.tasks.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    res.json({ tasks, stats: req.event.getTaskStats() });
+  } catch (error) { next(error); }
+});
+
+// Create task
+router.post('/:eventId/tasks', verifyEventAccess,
+  [
+    body('title').trim().isLength({ min: 1, max: 200 }),
+    body('description').optional().trim().isLength({ max: 500 }),
+    body('assignedTo').optional().trim().isLength({ max: 100 }),
+    body('dueDate').optional().isISO8601(),
+    body('priority').optional().isIn(['low', 'medium', 'high']),
+    validate
+  ],
+  async (req, res, next) => {
+    try {
+      const { title, description, assignedTo, dueDate, priority } = req.body;
+      const task = {
+        id: uuidv4(),
+        title, description: description || '', assignedTo, dueDate,
+        priority: priority || 'medium',
+        createdBy: req.eventAccess.username,
+        completed: false
+      };
+      req.event.tasks.push(task);
+      await req.event.save();
+
+      const io = req.app.get('io');
+      if (io) io.to(`event_${req.params.eventId}`).emit('tasks_updated', { tasks: req.event.tasks });
+
+      res.status(201).json({ message: 'Task created', task });
+    } catch (error) { next(error); }
+  }
+);
+
+// Toggle task completion
+router.patch('/:eventId/tasks/:taskId/toggle', verifyEventAccess, async (req, res, next) => {
+  try {
+    const task = req.event.tasks.find(t => t.id === req.params.taskId);
+    if (!task) return res.status(404).json({ error: 'Task not found' });
+
+    task.completed = !task.completed;
+    if (task.completed) {
+      task.completedBy = req.eventAccess.username;
+      task.completedAt = new Date();
+    } else {
+      task.completedBy = undefined;
+      task.completedAt = undefined;
+    }
+    await req.event.save();
+
+    const io = req.app.get('io');
+    if (io) io.to(`event_${req.params.eventId}`).emit('tasks_updated', { tasks: req.event.tasks });
+
+    res.json({ message: 'Task updated', task });
+  } catch (error) { next(error); }
+});
+
+// Delete task
+router.delete('/:eventId/tasks/:taskId', verifyEventAccess, async (req, res, next) => {
+  try {
+    req.event.tasks = req.event.tasks.filter(t => t.id !== req.params.taskId);
+    await req.event.save();
+
+    const io = req.app.get('io');
+    if (io) io.to(`event_${req.params.eventId}`).emit('tasks_updated', { tasks: req.event.tasks });
+
+    res.json({ message: 'Task deleted' });
+  } catch (error) { next(error); }
+});
+
+// ── ANNOUNCEMENTS ─────────────────────────────────────────────────────────
+// Get announcements
+router.get('/:eventId/announcements', verifyEventAccess, async (req, res, next) => {
+  try {
+    const announcements = [...req.event.announcements].sort((a, b) => 
+      new Date(b.createdAt) - new Date(a.createdAt)
+    );
+    res.json({ announcements });
+  } catch (error) { next(error); }
+});
+
+// Create announcement (organizer only)
+router.post('/:eventId/announcements', verifyEventAccess,
+  [
+    body('title').trim().isLength({ min: 1, max: 200 }),
+    body('content').trim().isLength({ min: 1, max: 2000 }),
+    body('important').optional().isBoolean(),
+    validate
+  ],
+  async (req, res, next) => {
+    try {
+      const isOrg = req.event.participants.some(p => 
+        p.username === req.eventAccess.username && p.role === 'organizer'
+      );
+      if (!isOrg) return res.status(403).json({ error: 'Only organizers can create announcements' });
+
+      const announcement = {
+        id: uuidv4(),
+        title: req.body.title,
+        content: req.body.content,
+        important: req.body.important || false,
+        author: req.eventAccess.username,
+        createdAt: new Date()
+      };
+      req.event.announcements.push(announcement);
+      await req.event.save();
+
+      const io = req.app.get('io');
+      if (io) io.to(`event_${req.params.eventId}`).emit('announcement_created', { announcement });
+
+      res.status(201).json({ message: 'Announcement created', announcement });
+    } catch (error) { next(error); }
+  }
+);
+
+// Delete announcement (organizer only)
+router.delete('/:eventId/announcements/:announcementId', verifyEventAccess, async (req, res, next) => {
+  try {
+    const isOrg = req.event.participants.some(p => 
+      p.username === req.eventAccess.username && p.role === 'organizer'
+    );
+    if (!isOrg) return res.status(403).json({ error: 'Only organizers can delete announcements' });
+
+    req.event.announcements = req.event.announcements.filter(a => a.id !== req.params.announcementId);
+    await req.event.save();
+
+    const io = req.app.get('io');
+    if (io) io.to(`event_${req.params.eventId}`).emit('announcements_updated', { announcements: req.event.announcements });
+
+    res.json({ message: 'Announcement deleted' });
+  } catch (error) { next(error); }
+});
+
+// ── EXPENSES ──────────────────────────────────────────────────────────────
+// Get expenses
+router.get('/:eventId/expenses', verifyEventAccess, async (req, res, next) => {
+  try {
+    const expenses = [...req.event.expenses].sort((a, b) => new Date(b.date) - new Date(a.date));
+    res.json({ expenses, summary: req.event.getExpenseSummary(), budget: req.event.budget });
+  } catch (error) { next(error); }
+});
+
+// Add expense
+router.post('/:eventId/expenses', verifyEventAccess,
+  [
+    body('title').trim().isLength({ min: 1, max: 200 }),
+    body('amount').isFloat({ min: 0 }),
+    body('category').optional().trim().isLength({ max: 100 }),
+    body('paidBy').optional().trim().isLength({ max: 100 }),
+    body('notes').optional().trim().isLength({ max: 500 }),
+    validate
+  ],
+  async (req, res, next) => {
+    try {
+      const { title, amount, category, paidBy, notes } = req.body;
+      const expense = {
+        id: uuidv4(),
+        title, amount, category, paidBy, notes,
+        createdBy: req.eventAccess.username,
+        date: new Date()
+      };
+      req.event.expenses.push(expense);
+      await req.event.save();
+
+      const io = req.app.get('io');
+      if (io) io.to(`event_${req.params.eventId}`).emit('expenses_updated', { 
+        expenses: req.event.expenses,
+        summary: req.event.getExpenseSummary()
+      });
+
+      res.status(201).json({ message: 'Expense added', expense });
+    } catch (error) { next(error); }
+  }
+);
+
+// Update budget (organizer only)
+router.patch('/:eventId/budget', verifyEventAccess,
+  [body('budget').isFloat({ min: 0 }), validate],
+  async (req, res, next) => {
+    try {
+      const isOrg = req.event.participants.some(p => 
+        p.username === req.eventAccess.username && p.role === 'organizer'
+      );
+      if (!isOrg) return res.status(403).json({ error: 'Only organizers can set budget' });
+
+      req.event.budget = req.body.budget;
+      await req.event.save();
+
+      res.json({ message: 'Budget updated', budget: req.event.budget });
+    } catch (error) { next(error); }
+  }
+);
+
+// Delete expense
+router.delete('/:eventId/expenses/:expenseId', verifyEventAccess, async (req, res, next) => {
+  try {
+    req.event.expenses = req.event.expenses.filter(e => e.id !== req.params.expenseId);
+    await req.event.save();
+
+    const io = req.app.get('io');
+    if (io) io.to(`event_${req.params.eventId}`).emit('expenses_updated', { 
+      expenses: req.event.expenses,
+      summary: req.event.getExpenseSummary()
+    });
+
+    res.json({ message: 'Expense deleted' });
+  } catch (error) { next(error); }
+});
+
+// ── NOTES ─────────────────────────────────────────────────────────────────
+// Get notes
+router.get('/:eventId/notes', verifyEventAccess, async (req, res, next) => {
+  try {
+    const notes = [...req.event.notes].sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
+    res.json({ notes });
+  } catch (error) { next(error); }
+});
+
+// Create note
+router.post('/:eventId/notes', verifyEventAccess,
+  [
+    body('title').trim().isLength({ min: 1, max: 200 }),
+    body('content').trim().isLength({ min: 1, max: 5000 }),
+    body('color').optional().matches(/^#[0-9A-Fa-f]{6}$/),
+    validate
+  ],
+  async (req, res, next) => {
+    try {
+      const { title, content, color } = req.body;
+      const note = {
+        id: uuidv4(),
+        title, content,
+        color: color || '#fef3c7',
+        author: req.eventAccess.username,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      };
+      req.event.notes.push(note);
+      await req.event.save();
+
+      const io = req.app.get('io');
+      if (io) io.to(`event_${req.params.eventId}`).emit('notes_updated', { notes: req.event.notes });
+
+      res.status(201).json({ message: 'Note created', note });
+    } catch (error) { next(error); }
+  }
+);
+
+// Update note
+router.put('/:eventId/notes/:noteId', verifyEventAccess,
+  [
+    body('title').optional().trim().isLength({ min: 1, max: 200 }),
+    body('content').optional().trim().isLength({ min: 1, max: 5000 }),
+    body('color').optional().matches(/^#[0-9A-Fa-f]{6}$/),
+    validate
+  ],
+  async (req, res, next) => {
+    try {
+      const note = req.event.notes.find(n => n.id === req.params.noteId);
+      if (!note) return res.status(404).json({ error: 'Note not found' });
+
+      if (req.body.title) note.title = req.body.title;
+      if (req.body.content) note.content = req.body.content;
+      if (req.body.color) note.color = req.body.color;
+      note.updatedAt = new Date();
+      
+      await req.event.save();
+
+      const io = req.app.get('io');
+      if (io) io.to(`event_${req.params.eventId}`).emit('notes_updated', { notes: req.event.notes });
+
+      res.json({ message: 'Note updated', note });
+    } catch (error) { next(error); }
+  }
+);
+
+// Delete note
+router.delete('/:eventId/notes/:noteId', verifyEventAccess, async (req, res, next) => {
+  try {
+    req.event.notes = req.event.notes.filter(n => n.id !== req.params.noteId);
+    await req.event.save();
+
+    const io = req.app.get('io');
+    if (io) io.to(`event_${req.params.eventId}`).emit('notes_updated', { notes: req.event.notes });
+
+    res.json({ message: 'Note deleted' });
+  } catch (error) { next(error); }
+});
+
+// ── ANALYTICS ─────────────────────────────────────────────────────────────
+// Get analytics (organizer only)
+router.get('/:eventId/analytics', verifyEventAccess, async (req, res, next) => {
+  try {
+    const isOrg = req.event.participants.some(p => 
+      p.username === req.eventAccess.username && p.role === 'organizer'
+    );
+    if (!isOrg) return res.status(403).json({ error: 'Only organizers can view analytics' });
+
+    const Message = require('../models/Message');
+    const Poll = require('../models/Poll');
+    const File = require('../models/File');
+
+    const [messageCount, pollCount, fileCount] = await Promise.all([
+      Message.countDocuments({ eventId: req.params.eventId }),
+      Poll.countDocuments({ eventId: req.params.eventId }),
+      File.countDocuments({ eventId: req.params.eventId })
+    ]);
+
+    const analytics = {
+      ...req.event.getAnalytics(),
+      messages: messageCount,
+      polls: pollCount,
+      files: fileCount
+    };
+
+    res.json({ analytics });
+  } catch (error) { next(error); }
+});
+
+// ── UTILITIES ─────────────────────────────────────────────────────────────
+// Generate ICS calendar file
+router.get('/:eventId/calendar.ics', verifyEventAccess, async (req, res, next) => {
+  try {
+    const event = req.event;
+    const startDate = new Date(event.date);
+    const endDate = new Date(startDate.getTime() + 2 * 60 * 60 * 1000); // +2 hours default
+
+    const formatDate = (date) => {
+      return date.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+    };
+
+    const ics = `BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//PlanIt//Event//EN
+CALSCALE:GREGORIAN
+METHOD:PUBLISH
+BEGIN:VEVENT
+UID:${event._id}@planit.app
+DTSTAMP:${formatDate(new Date())}
+DTSTART:${formatDate(startDate)}
+DTEND:${formatDate(endDate)}
+SUMMARY:${event.title}
+DESCRIPTION:${event.description || ''}
+LOCATION:${event.location || ''}
+ORGANIZER;CN=${event.organizerName}:mailto:${event.organizerEmail}
+URL:${req.protocol}://${req.get('host')}/e/${event.subdomain}
+STATUS:CONFIRMED
+END:VEVENT
+END:VCALENDAR`;
+
+    res.setHeader('Content-Type', 'text/calendar');
+    res.setHeader('Content-Disposition', `attachment; filename="${event.subdomain}.ics"`);
+    res.send(ics);
+  } catch (error) { next(error); }
+});
+
+// Export participants as CSV
+router.get('/:eventId/participants.csv', verifyEventAccess, async (req, res, next) => {
+  try {
+    const isOrg = req.event.participants.some(p => 
+      p.username === req.eventAccess.username && p.role === 'organizer'
+    );
+    if (!isOrg) return res.status(403).json({ error: 'Only organizers can export participants' });
+
+    let csv = 'Username,Role,Joined At,RSVP Status\n';
+    req.event.participants.forEach(p => {
+      const rsvp = req.event.rsvps.find(r => r.username === p.username);
+      csv += `"${p.username}","${p.role}","${p.joinedAt.toISOString()}","${rsvp ? rsvp.status : 'no response'}"\n`;
+    });
+
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', `attachment; filename="${req.event.subdomain}-participants.csv"`);
+    res.send(csv);
+  } catch (error) { next(error); }
+});
+
+// ── Agenda ────────────────────────────────────────────────────────────────
+// Get agenda
+router.get('/:eventId/agenda', verifyEventAccess, async (req, res, next) => {
+  try {
+    const event = req.event;
+    const sorted = event.agenda ? [...event.agenda].sort((a, b) => a.order - b.order) : [];
+    res.json({ agenda: sorted });
+  } catch (error) { next(error); }
+});
+
+// Add agenda item (organizer only)
+router.post('/:eventId/agenda',
+  verifyEventAccess,
+  [
+    body('title').trim().isLength({ min: 1, max: 200 }).withMessage('Title required'),
+    body('time').optional().trim().isLength({ max: 20 }),
+    body('description').optional().trim().isLength({ max: 500 }),
+    body('duration').optional().isInt({ min: 0 }),
+    validate
+  ],
+  async (req, res, next) => {
+    try {
+      const event = req.event;
+      // Only organizer can manage agenda
+      const username = req.eventAccess?.username;
+      const isOrg = event.participants.some(p => p.username === username && p.role === 'organizer');
+      if (!isOrg) return res.status(403).json({ error: 'Only organizers can manage the agenda' });
+
+      const { title, time, description, duration } = req.body;
+      const item = {
+        id: uuidv4(),
+        title, time: time || '', description: description || '',
+        duration: duration || 0,
+        order: event.agenda.length
+      };
+
+      event.agenda.push(item);
+      await event.save();
+
+      const io = req.app.get('io');
+      if (io) io.to(`event_${req.params.eventId}`).emit('agenda_updated', { agenda: event.agenda });
+
+      res.status(201).json({ message: 'Agenda item added', item });
+    } catch (error) { next(error); }
+  }
+);
+
+// Delete agenda item (organizer only)
+router.delete('/:eventId/agenda/:itemId',
+  verifyEventAccess,
+  async (req, res, next) => {
+    try {
+      const event = req.event;
+      const username = req.eventAccess?.username;
+      const isOrg = event.participants.some(p => p.username === username && p.role === 'organizer');
+      if (!isOrg) return res.status(403).json({ error: 'Only organizers can manage the agenda' });
+
+      event.agenda = event.agenda.filter(a => a.id !== req.params.itemId);
+      await event.save();
+
+      const io = req.app.get('io');
+      if (io) io.to(`event_${req.params.eventId}`).emit('agenda_updated', { agenda: event.agenda });
+
+      res.json({ message: 'Agenda item removed' });
+    } catch (error) { next(error); }
+  }
+);
+
+// Update event (organizer only)
+router.put('/:eventId', verifyOrganizer,
+  [
+    body('title').optional().trim().isLength({ min: 1, max: 200 }),
+    body('description').optional().trim().isLength({ max: 2000 }),
+    body('date').optional().isISO8601(),
+    body('location').optional().trim().isLength({ max: 500 }),
+    validate
+  ],
+  async (req, res, next) => {
+    try {
+      const { title, description, date, location, settings, maxParticipants, status } = req.body;
+      const event = req.event;
+      if (title) event.title = title;
+      if (description !== undefined) event.description = description;
+      if (date) event.date = date;
+      if (location !== undefined) event.location = location;
+      if (settings) event.settings = { ...event.settings, ...settings };
+      if (maxParticipants) event.maxParticipants = maxParticipants;
+      if (status && ['active', 'completed', 'cancelled'].includes(status)) event.status = status;
+      await event.save();
+      res.json({ message: 'Event updated', event });
+    } catch (error) { next(error); }
+  }
+);
+
+// Delete event (organizer only)
+router.delete('/:eventId', verifyOrganizer, async (req, res, next) => {
+  try {
+    await Event.findByIdAndDelete(req.params.eventId);
+    res.json({ message: 'Event deleted successfully' });
+  } catch (error) { next(error); }
+});
+
+module.exports = router;

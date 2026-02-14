@@ -1,0 +1,142 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=DM+Mono:wght@400;500&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --color-border: #e5e5e5;
+    --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+    --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.07), 0 2px 4px -2px rgb(0 0 0 / 0.05);
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    background-color: #ffffff;
+    color: #0a0a0a;
+    font-family: 'DM Sans', system-ui, -apple-system, sans-serif;
+    font-size: 15px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'DM Sans', system-ui, sans-serif;
+    font-weight: 600;
+    letter-spacing: -0.025em;
+    line-height: 1.25;
+  }
+
+  input, textarea, select, button {
+    font-family: 'DM Sans', system-ui, sans-serif;
+  }
+}
+
+@layer components {
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-all duration-150 focus:outline-none disabled:opacity-40 disabled:cursor-not-allowed whitespace-nowrap;
+    letter-spacing: -0.01em;
+  }
+
+  .btn-primary {
+    @apply bg-neutral-900 text-white hover:bg-neutral-800;
+  }
+
+  .btn-secondary {
+    @apply bg-white text-neutral-700 border border-neutral-200 hover:bg-neutral-50 hover:border-neutral-300;
+  }
+
+  .btn-danger {
+    @apply bg-white text-red-600 border border-red-200 hover:bg-red-50;
+  }
+
+  .btn-ghost {
+    @apply bg-transparent text-neutral-500 hover:bg-neutral-100 hover:text-neutral-900;
+  }
+
+  .input {
+    @apply w-full px-3 py-2.5 text-sm rounded-lg border border-neutral-200 bg-white placeholder-neutral-400 text-neutral-900 transition-all duration-150;
+    @apply focus:outline-none focus:border-neutral-900 focus:ring-1 focus:ring-neutral-900;
+  }
+
+  .input:disabled {
+    @apply bg-neutral-50 cursor-not-allowed opacity-60;
+  }
+
+  .card {
+    @apply bg-white rounded-xl border border-neutral-200;
+    box-shadow: var(--shadow-sm);
+  }
+
+  .badge {
+    @apply inline-flex items-center px-2 py-0.5 text-xs font-medium rounded-md;
+  }
+
+  .badge-primary { @apply bg-neutral-900 text-white; }
+  .badge-green { @apply bg-emerald-50 text-emerald-700 border border-emerald-200; }
+  .badge-gray { @apply bg-neutral-100 text-neutral-600 border border-neutral-200; }
+  .badge-red { @apply bg-red-50 text-red-700 border border-red-200; }
+  .badge-amber { @apply bg-amber-50 text-amber-700 border border-amber-200; }
+
+  .logo-text {
+    @apply text-lg font-semibold text-neutral-900 tracking-tight;
+  }
+
+  .planit-card {
+    @apply bg-white rounded-xl border border-neutral-200 transition-all duration-200;
+    box-shadow: var(--shadow-sm);
+  }
+
+  .planit-card:hover {
+    box-shadow: var(--shadow-md);
+    border-color: #d4d4d4;
+  }
+
+  .planit-hero {
+    background: #fafafa;
+  }
+}
+
+@layer utilities {
+  .text-balance { text-wrap: balance; }
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .scrollbar-hide::-webkit-scrollbar { display: none; }
+}
+
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #d4d4d4; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #a3a3a3; }
+
+@keyframes spin { to { transform: rotate(360deg); } }
+.spinner {
+  animation: spin 0.75s linear infinite;
+  border-radius: 50%;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
+.animate-fade-in { animation: fadeIn 0.3s ease-out; }
+.animate-slide-up { animation: slideUp 0.35s ease-out; }
+.animate-pulse-dot { animation: pulse-dot 1.5s ease-in-out infinite; }
+
+*:focus-visible {
+  outline: 2px solid #0a0a0a;
+  outline-offset: 2px;
+}
