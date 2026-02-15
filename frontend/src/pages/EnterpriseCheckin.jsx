@@ -4,7 +4,7 @@ import {
   QrCode, UserCheck, Users, Check, Plus, X, ArrowLeft, Camera, CameraOff, Mail,
   RefreshCw, Keyboard, ShieldCheck, ShieldAlert, ShieldOff, AlertTriangle,
   Baby, User, Settings, ChevronRight, Lock, Unlock, Eye, EyeOff,
-  Clock, Ban, CheckCircle2, Info, Loader2
+  Clock, Ban, CheckCircle2, Info, Loader2, Copy
 } from 'lucide-react';
 import { eventAPI } from '../services/api';
 import toast from 'react-hot-toast';
@@ -450,6 +450,7 @@ function SecuritySettings({ eventId, onClose }) {
           <Toggle on={!!local.blockCrossEvent} onClick={() => toggle('blockCrossEvent')} label="Block Cross-Event Tickets" description="Reject QR codes that belong to other events. Always recommended." />
           <Toggle on={!!local.requireCodeConfirm} onClick={() => toggle('requireCodeConfirm')} label="Require Code Confirmation" description="Staff must manually confirm the invite code before admitting." />
           <Toggle on={!!local.requirePin} onClick={() => toggle('requirePin')} label="Require Guest Security PIN" description="Guests set a PIN when invited. Staff must verify it at entry." />
+          <Toggle on={!!local.requireAttendeeCount} onClick={() => toggle('requireAttendeeCount')} label="Verify Attendee Count" description="Staff must manually verify and input the exact number of guests checking in." />
           <Toggle on={!!local.allowManualOverride} onClick={() => toggle('allowManualOverride')} label="Allow Manual Override" description="Let staff bypass security checks with organizer approval." />
 
           <div className="py-4 border-b border-neutral-100">
@@ -613,6 +614,118 @@ function AddGuestsModal({ eventId, onClose, onSuccess }) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Attendee Verification Modal
+// ─────────────────────────────────────────────────────────────────────────────
+function AttendeeVerificationModal({ invite, settings, onConfirm, onCancel }) {
+  const [attendeeCount, setAttendeeCount] = useState('');
+  const expectedTotal = (invite.adults || 1) + (invite.children || 0);
+  
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    const count = parseInt(attendeeCount);
+    if (isNaN(count) || count < 1) {
+      toast.error('Please enter a valid number');
+      return;
+    }
+    if (count > expectedTotal + 2) {
+      toast.error(`Count seems too high. Expected ${expectedTotal} guests.`);
+      return;
+    }
+    onConfirm(count);
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[60] flex items-center justify-center p-4">
+      <div className="bg-white rounded-3xl w-full max-w-md shadow-2xl" onClick={e => e.stopPropagation()}>
+        <div className="px-6 pt-6 pb-4 border-b border-neutral-100">
+          <div className="flex items-center gap-3 mb-2">
+            <div className="w-10 h-10 bg-amber-100 rounded-xl flex items-center justify-center">
+              <Users className="w-5 h-5 text-amber-600" />
+            </div>
+            <h3 className="text-lg font-bold text-neutral-900">Verify Attendee Count</h3>
+          </div>
+          <p className="text-sm text-neutral-500">
+            Count and verify the exact number of guests present for <strong>{invite.guestName}</strong>
+          </p>
+        </div>
+
+        <form onSubmit={handleSubmit} className="px-6 py-5 space-y-4">
+          <div className="bg-neutral-50 rounded-xl p-4 border border-neutral-100">
+            <div className="text-xs text-neutral-500 mb-2">Expected Guests</div>
+            <div className="flex items-center gap-4">
+              {invite.adults > 0 && (
+                <div className="flex items-center gap-2">
+                  <User className="w-4 h-4 text-neutral-400" />
+                  <span className="text-lg font-semibold text-neutral-900">{invite.adults}</span>
+                  <span className="text-xs text-neutral-500">adult{invite.adults !== 1 ? 's' : ''}</span>
+                </div>
+              )}
+              {invite.children > 0 && (
+                <div className="flex items-center gap-2">
+                  <Baby className="w-4 h-4 text-blue-400" />
+                  <span className="text-lg font-semibold text-neutral-900">{invite.children}</span>
+                  <span className="text-xs text-neutral-500">child{invite.children !== 1 ? 'ren' : ''}</span>
+                </div>
+              )}
+              <div className="ml-auto">
+                <div className="text-2xl font-bold text-neutral-900">{expectedTotal}</div>
+                <div className="text-xs text-neutral-500">total</div>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-semibold text-neutral-900 mb-2">
+              Actual Count <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="number"
+              min="1"
+              max="99"
+              required
+              autoFocus
+              value={attendeeCount}
+              onChange={(e) => setAttendeeCount(e.target.value)}
+              placeholder="Count guests present..."
+              className="w-full px-4 py-3 border-2 border-neutral-200 rounded-xl text-lg font-semibold text-neutral-900 focus:outline-none focus:border-neutral-900 transition-colors"
+            />
+            <p className="text-xs text-neutral-500 mt-2">
+              Enter the number of people physically present with this guest
+            </p>
+          </div>
+
+          {settings.staffNote && (
+            <div className="bg-amber-50 border border-amber-200 rounded-xl p-3">
+              <div className="flex items-start gap-2">
+                <AlertTriangle className="w-4 h-4 text-amber-600 mt-0.5 flex-shrink-0" />
+                <div className="text-xs text-amber-800 leading-relaxed">{settings.staffNote}</div>
+              </div>
+            </div>
+          )}
+
+          <div className="flex gap-3 pt-2">
+            <button
+              type="button"
+              onClick={onCancel}
+              className="flex-1 px-4 py-3 bg-neutral-100 text-neutral-700 rounded-xl font-semibold text-sm hover:bg-neutral-200 transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className="flex-1 px-4 py-3 bg-neutral-900 text-white rounded-xl font-semibold text-sm hover:bg-black transition-colors flex items-center justify-center gap-2"
+            >
+              <CheckCircle2 className="w-4 h-4" />
+              Confirm Check-in
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Main EnterpriseCheckin Page
 // ─────────────────────────────────────────────────────────────────────────────
 export default function EnterpriseCheckin() {
@@ -638,6 +751,8 @@ export default function EnterpriseCheckin() {
   const [committing, setCommitting] = useState(false);
   const [pendingCode, setPendingCode] = useState('');
   const [requiresPin, setRequiresPin] = useState(false);
+  const [verifyingInvite, setVerifyingInvite] = useState(null);
+  const [settings, setSettings] = useState(null);
 
   const auth = () => {
     const t = localStorage.getItem('eventToken');
@@ -648,14 +763,16 @@ export default function EnterpriseCheckin() {
 
   const loadData = async () => {
     try {
-      const [evRes, invRes, stRes] = await Promise.all([
+      const [evRes, invRes, stRes, setRes] = await Promise.all([
         eventAPI.getById(eventId),
         fetch(`${API_URL}/events/${eventId}/invites`, { headers: auth() }).then(r => r.json()),
         fetch(`${API_URL}/events/${eventId}/checkin-stats`, { headers: auth() }).then(r => r.json()),
+        fetch(`${API_URL}/events/${eventId}/checkin-settings`, { headers: auth() }).then(r => r.json()),
       ]);
       setEvent(evRes.data.event);
       setInvites(invRes.invites || []);
       setStats(stRes.stats);
+      setSettings(setRes.settings || {});
     } catch { toast.error('Failed to load check-in data'); }
     finally { setLoading(false); }
   };
@@ -699,6 +816,12 @@ export default function EnterpriseCheckin() {
 
   // Step 3: commit check-in
   const handleAdmit = async (pinVerified) => {
+    // Check if attendee count verification is required
+    if (settings?.requireAttendeeCount && guestProfile) {
+      setVerifyingInvite(guestProfile);
+      return;
+    }
+    
     setCommitting(true);
     try {
       const res = await fetch(`${API_URL}/events/${eventId}/checkin/${pendingCode}`, {
@@ -715,6 +838,30 @@ export default function EnterpriseCheckin() {
       setScanState('admitted');
       loadData();
     } catch { toast.error('Network error'); setScanState('idle'); }
+    finally { setCommitting(false); }
+  };
+
+  // Handle check-in with verified attendee count
+  const handleVerifiedCheckin = async (actualCount) => {
+    setCommitting(true);
+    try {
+      const res = await fetch(`${API_URL}/events/${eventId}/checkin/${pendingCode}`, {
+        method: 'POST', headers: auth(),
+        body: JSON.stringify({ actualAttendees: actualCount }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(data.error || 'Check-in failed');
+        setVerifyingInvite(null);
+        setScanState('idle');
+        return;
+      }
+      toast.success(`✓ ${data.invite.guestName} checked in (${actualCount} guests)`);
+      setAdmittedInfo(data.invite);
+      setVerifyingInvite(null);
+      setScanState('admitted');
+      loadData();
+    } catch { toast.error('Network error'); setVerifyingInvite(null); setScanState('idle'); }
     finally { setCommitting(false); }
   };
 
@@ -766,6 +913,17 @@ export default function EnterpriseCheckin() {
       )}
       {showSettings && <SecuritySettings eventId={eventId} onClose={() => setShowSettings(false)} />}
       {showAdd && <AddGuestsModal eventId={eventId} onClose={() => setShowAdd(false)} onSuccess={loadData} />}
+      {verifyingInvite && settings && (
+        <AttendeeVerificationModal
+          invite={verifyingInvite}
+          settings={settings}
+          onConfirm={handleVerifiedCheckin}
+          onCancel={() => {
+            setVerifyingInvite(null);
+            setScanState('idle');
+          }}
+        />
+      )}
 
       {/* ── Header ── */}
       <header className="bg-white border-b border-neutral-200 sticky top-0 z-10">
@@ -886,10 +1044,34 @@ export default function EnterpriseCheckin() {
                     </div>
                   </div>
 
-                  {/* Status */}
-                  <div className="flex-shrink-0 text-right">
+                  {/* Actions */}
+                  <div className="flex-shrink-0 flex items-center gap-2">
+                    {/* Copy Link Button */}
+                    {!invite.checkedIn && (() => {
+                      const [copied, setCopied] = useState(false);
+                      const handleCopyLink = () => {
+                        const link = `${window.location.origin}/invite/${invite.inviteCode}`;
+                        navigator.clipboard.writeText(link);
+                        setCopied(true);
+                        toast.success('Invite link copied!');
+                        setTimeout(() => setCopied(false), 2000);
+                      };
+                      
+                      return (
+                        <button 
+                          onClick={handleCopyLink}
+                          className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 text-blue-600 text-xs font-semibold rounded-xl hover:bg-blue-100 transition-all"
+                          title="Copy invite link"
+                        >
+                          {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                          {copied ? 'Copied' : 'Copy'}
+                        </button>
+                      );
+                    })()}
+                    
+                    {/* Check In Button or Status */}
                     {invite.checkedIn ? (
-                      <div>
+                      <div className="text-right">
                         <div className="flex items-center gap-1 text-emerald-600 text-xs font-bold mb-0.5">
                           <CheckCircle2 className="w-3.5 h-3.5" /> Admitted
                         </div>
