@@ -1196,7 +1196,8 @@ export default function EventSpace() {
                 <Utilities 
                   eventId={eventId} 
                   subdomain={event.subdomain}
-                  isOrganizer={isOrganizer} 
+                  isOrganizer={isOrganizer}
+                  isEnterpriseMode={event?.isEnterpriseMode}
                 />
               </div>
             )}
