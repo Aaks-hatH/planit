@@ -3,7 +3,8 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { 
   Calendar, MapPin, Users, QrCode, Check, X, Clock, Mail,
   Copy, Share2, CheckCircle, AlertCircle, Info, Shield,
-  Ticket, Phone, ExternalLink, Download, User
+  Ticket, Phone, ExternalLink, Download, User, Sparkles,
+  Navigation, CalendarPlus, MessageCircle
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { formatDateInTimezone } from '../utils/timezoneUtils';
@@ -14,7 +15,6 @@ export default function GuestInvite() {
   const [invite, setInvite] = useState(null);
   const [event, setEvent] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [showRSVP, setShowRSVP] = useState(false);
   const [copied, setCopied] = useState(false);
   const [showQRFullscreen, setShowQRFullscreen] = useState(false);
 
@@ -52,36 +52,8 @@ export default function GuestInvite() {
       });
       toast.success(`RSVP updated: ${status}`);
       loadInvite();
-      setShowRSVP(false);
     } catch (error) {
       toast.error('Failed to update RSVP');
-    }
-  };
-
-  const formatDate = (dateStr, timezone = 'UTC') => {
-    if (!dateStr) return '';
-    
-    try {
-      // Use the timezone-aware formatter
-      return formatDateInTimezone(dateStr, timezone, {
-        weekday: 'long',
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-        hour: 'numeric',
-        minute: '2-digit'
-      });
-    } catch (error) {
-      // Fallback to basic formatting if timezone utils fail
-      const date = new Date(dateStr);
-      return date.toLocaleDateString('en-US', {
-        weekday: 'long',
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-        hour: 'numeric',
-        minute: '2-digit'
-      });
     }
   };
 
@@ -97,33 +69,9 @@ export default function GuestInvite() {
     }
   };
 
-  const handleShare = async () => {
-    const inviteUrl = `${window.location.origin}/invite/${inviteCode}`;
-    const shareData = {
-      title: `Invitation to ${event.title}`,
-      text: `You're invited to ${event.title}${event.date ? ` on ${formatDate(event.date, event.timezone)}` : ''}`,
-      url: inviteUrl
-    };
-
-    try {
-      if (navigator.share && navigator.canShare && navigator.canShare(shareData)) {
-        await navigator.share(shareData);
-        toast.success('Shared successfully!');
-      } else {
-        // Fallback to copy
-        await handleCopyLink();
-      }
-    } catch (error) {
-      if (error.name !== 'AbortError') {
-        toast.error('Failed to share');
-      }
-    }
-  };
-
   const handleDownloadQR = () => {
     const inviteUrl = `${window.location.origin}/invite/${inviteCode}`;
     const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=600x600&data=${encodeURIComponent(inviteUrl)}`;
-    
     const link = document.createElement('a');
     link.href = qrUrl;
     link.download = `${event.title}-${invite.guestName}-QR.png`;
@@ -133,394 +81,338 @@ export default function GuestInvite() {
     toast.success('QR Code downloaded!');
   };
 
-  const getStatusColor = (status) => {
-    const colors = {
-      'pending': 'bg-neutral-100 text-neutral-600',
-      'confirmed': 'bg-emerald-50 text-emerald-700 border-emerald-200',
-      'declined': 'bg-red-50 text-red-700 border-red-200',
-      'checked-in': 'bg-blue-50 text-blue-700 border-blue-200'
+  const addToCalendar = () => {
+    if (!event.date) return;
+    
+    const startDate = new Date(event.date);
+    const endDate = new Date(startDate.getTime() + 2 * 60 * 60 * 1000); // 2 hours later
+    
+    const formatDateForCal = (date) => {
+      return date.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
     };
-    return colors[status] || colors.pending;
+    
+    const calendarUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(event.title)}&dates=${formatDateForCal(startDate)}/${formatDateForCal(endDate)}&details=${encodeURIComponent(`You're invited! Code: ${inviteCode}`)}&location=${encodeURIComponent(event.location || '')}`;
+    
+    window.open(calendarUrl, '_blank');
   };
 
-  const getStatusLabel = (status) => {
-    const labels = {
-      'pending': 'Awaiting Response',
-      'confirmed': 'Confirmed',
-      'declined': 'Declined',
-      'checked-in': 'Checked In'
-    };
-    return labels[status] || status;
+  const getDirections = () => {
+    if (!event.location) return;
+    const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(event.location)}`;
+    window.open(mapsUrl, '_blank');
   };
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-neutral-50 flex items-center justify-center">
-        <span className="spinner w-5 h-5 border-2 border-neutral-200 border-t-neutral-500" />
+      <div className="min-h-screen bg-neutral-950 flex items-center justify-center">
+        <div className="w-8 h-8 border-4 border-neutral-700 border-t-neutral-400 rounded-full animate-spin" />
       </div>
     );
   }
 
-  if (!invite || !event) {
-    return null;
-  }
+  if (!invite || !event) return null;
 
   const inviteUrl = `${window.location.origin}/invite/${inviteCode}`;
-  const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(inviteUrl)}`;
+  const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=${encodeURIComponent(inviteUrl)}`;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-neutral-50 to-neutral-100">
-      <header className="bg-white border-b border-neutral-200">
-        <div className="max-w-2xl mx-auto px-6 h-16 flex items-center">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-neutral-900 flex items-center justify-center">
-              <Calendar className="w-4 h-4 text-white" />
+    <div className="min-h-screen bg-neutral-950 relative overflow-hidden">
+      {/* Background Elements */}
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-neutral-900 via-neutral-950 to-black" />
+      <div className="absolute top-0 left-1/4 w-96 h-96 bg-neutral-800/20 rounded-full blur-3xl" />
+      <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-neutral-800/20 rounded-full blur-3xl" />
+      
+      {/* Content */}
+      <div className="relative z-10">
+        {/* Header */}
+        <header className="border-b border-neutral-800/50 backdrop-blur-sm">
+          <div className="max-w-4xl mx-auto px-6 h-20 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-neutral-700 to-neutral-800 flex items-center justify-center shadow-lg">
+                <Calendar className="w-5 h-5 text-neutral-100" />
+              </div>
+              <div>
+                <span className="text-xl font-black text-neutral-100">PlanIt</span>
+                <p className="text-xs text-neutral-500">Event Management</p>
+              </div>
             </div>
-            <span className="text-lg font-semibold text-neutral-900">PlanIt</span>
-          </div>
-        </div>
-      </header>
-
-      <main className="max-w-2xl mx-auto px-6 py-8">
-        <div className="card p-8 mb-6">
-          <div className="text-center mb-6">
-            <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium border mb-4 ${getStatusColor(invite.status)}`}>
-              {invite.status === 'checked-in' && <Check className="w-3.5 h-3.5" />}
-              {getStatusLabel(invite.status)}
-            </div>
-            <h1 className="text-3xl font-bold text-neutral-900 mb-2">{invite.guestName}</h1>
-            <p className="text-neutral-500">You're invited to</p>
-          </div>
-
-          <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl p-6 border border-blue-200 mb-6">
-            <h2 className="text-2xl font-bold text-neutral-900 mb-4">{event.title}</h2>
             
-            <div className="space-y-3">
-              {event.date && (
-                <div className="flex items-start gap-3">
-                  <Calendar className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
-                  <div>
-                    <p className="text-sm font-medium text-neutral-900">Date & Time</p>
-                    <p className="text-sm text-neutral-600">
-                      {formatDate(event.date, event.timezone)}
-                    </p>
-                    {event.timezone && event.timezone !== 'UTC' && (
-                      <p className="text-xs text-neutral-400 mt-0.5">
-                        {event.timezone}
-                      </p>
+            <button
+              onClick={handleCopyLink}
+              className="flex items-center gap-2 px-4 py-2 bg-neutral-800/50 hover:bg-neutral-700/50 border border-neutral-700 rounded-xl text-sm font-medium text-neutral-300 transition-all"
+            >
+              {copied ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
+              {copied ? 'Copied!' : 'Share'}
+            </button>
+          </div>
+        </header>
+
+        <main className="max-w-4xl mx-auto px-6 py-12">
+          {/* Ticket Card */}
+          <div className="relative">
+            {/* Main Ticket */}
+            <div className="bg-gradient-to-br from-neutral-900 to-neutral-950 rounded-3xl border border-neutral-800 shadow-2xl overflow-hidden">
+              
+              {/* Ticket Header - Guest Name */}
+              <div className="relative px-8 pt-8 pb-6 border-b border-neutral-800/50">
+                <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-neutral-800/20 to-transparent rounded-full blur-3xl" />
+                <div className="relative">
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-3">
+                        <Ticket className="w-5 h-5 text-neutral-400" />
+                        <span className="text-xs font-semibold text-neutral-500 uppercase tracking-widest">Exclusive Invitation</span>
+                      </div>
+                      <h1 className="text-4xl font-black text-neutral-100 mb-2">{invite.guestName}</h1>
+                      <p className="text-neutral-400 text-lg">You're invited to attend</p>
+                    </div>
+                    
+                    {invite.checkedIn && (
+                      <div className="flex-shrink-0 px-4 py-2 bg-emerald-500/10 border border-emerald-500/30 rounded-xl">
+                        <div className="flex items-center gap-2">
+                          <CheckCircle className="w-4 h-4 text-emerald-400" />
+                          <span className="text-sm font-bold text-emerald-400">ADMITTED</span>
+                        </div>
+                      </div>
                     )}
                   </div>
                 </div>
-              )}
-              
-              {event.location && (
-                <div className="flex items-start gap-3">
-                  <MapPin className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
-                  <div>
-                    <p className="text-sm font-medium text-neutral-900">Location</p>
-                    <p className="text-sm text-neutral-600">{event.location}</p>
-                  </div>
-                </div>
-              )}
-
-              {(invite.adults !== undefined || invite.children !== undefined || invite.groupSize > 1) && (
-                <div className="flex items-start gap-3">
-                  <Users className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
-                  <div>
-                    <p className="text-sm font-medium text-neutral-900">Group Size</p>
-                    <p className="text-sm text-neutral-600">
-                      {invite.adults !== undefined && invite.children !== undefined ? (
-                        <>
-                          {invite.adults} adult{invite.adults !== 1 ? 's' : ''}
-                          {invite.children > 0 && <> + {invite.children} child{invite.children !== 1 ? 'ren' : ''}</>}
-                          {' '}({invite.adults + invite.children} total)
-                        </>
-                      ) : (
-                        <>
-                          {invite.groupSize} {invite.groupSize === 1 ? 'person' : 'people'}
-                        </>
-                      )}
-                      {invite.plusOnes > 0 && <> (+ {invite.plusOnes} optional plus-one{invite.plusOnes !== 1 ? 's' : ''})</>}
-                    </p>
-                  </div>
-                </div>
-              )}
-
-              {event.organizerName && (
-                <div className="flex items-start gap-3">
-                  <Mail className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
-                  <div>
-                    <p className="text-sm font-medium text-neutral-900">Organized by</p>
-                    <p className="text-sm text-neutral-600">{event.organizerName}</p>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {event.description && (
-              <div className="mt-4 pt-4 border-t border-blue-200">
-                <p className="text-sm text-neutral-700 leading-relaxed">{event.description}</p>
               </div>
-            )}
-          </div>
 
-          {/* Invite Link Share Section */}
-          <div className="mb-6 p-5 bg-white border-2 border-neutral-200 rounded-xl">
-            <div className="flex items-center gap-2 mb-3">
-              <Ticket className="w-5 h-5 text-blue-600" />
-              <h3 className="text-sm font-bold text-neutral-900">Your Invitation Link</h3>
-            </div>
-            <div className="bg-neutral-50 border border-neutral-200 rounded-lg p-3 mb-3">
-              <p className="text-xs text-neutral-500 mb-1">Share this link with others:</p>
-              <p className="text-sm font-mono text-neutral-700 break-all">
-                {`${window.location.origin}/invite/${inviteCode}`}
-              </p>
-            </div>
-            <div className="grid grid-cols-2 gap-2">
-              <button
-                onClick={handleCopyLink}
-                className="flex items-center justify-center gap-2 px-4 py-2.5 bg-neutral-900 text-white rounded-lg hover:bg-black transition-all text-sm font-medium"
-              >
-                {copied ? (
-                  <>
-                    <CheckCircle className="w-4 h-4" />
-                    Copied!
-                  </>
-                ) : (
-                  <>
-                    <Copy className="w-4 h-4" />
-                    Copy Link
-                  </>
-                )}
-              </button>
-              <button
-                onClick={handleShare}
-                className="flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all text-sm font-medium"
-              >
-                <Share2 className="w-4 h-4" />
-                Share
-              </button>
-            </div>
-          </div>
-
-          {/* Enhanced Guest Information - Airline Style */}
-          <div className="mb-6 bg-gradient-to-br from-neutral-900 to-neutral-800 rounded-xl p-6 text-white shadow-lg">
-            <div className="flex items-center gap-2 mb-4">
-              <User className="w-5 h-5" />
-              <h3 className="text-sm font-bold uppercase tracking-wide">Guest Credentials</h3>
-            </div>
-            
-            <div className="grid grid-cols-2 gap-4 mb-4">
-              <div>
-                <p className="text-xs text-neutral-400 mb-1">CONFIRMATION CODE</p>
-                <p className="text-lg font-mono font-bold tracking-widest">{invite.code || inviteCode}</p>
-              </div>
-              <div>
-                <p className="text-xs text-neutral-400 mb-1">STATUS</p>
-                <p className={`text-sm font-bold uppercase ${
-                  invite.status === 'confirmed' ? 'text-emerald-400' :
-                  invite.status === 'checked-in' ? 'text-blue-400' :
-                  invite.status === 'declined' ? 'text-red-400' : 'text-amber-400'
-                }`}>
-                  {getStatusLabel(invite.status)}
-                </p>
-              </div>
-            </div>
-
-            <div className="border-t border-neutral-700 pt-4 space-y-2">
-              <div className="flex justify-between text-sm">
-                <span className="text-neutral-400">Guest Name:</span>
-                <span className="font-semibold">{invite.guestName}</span>
-              </div>
-              
-              {(invite.adults !== undefined || invite.children !== undefined || invite.groupSize > 1) && (
-                <div className="flex justify-between text-sm">
-                  <span className="text-neutral-400">Party Size:</span>
-                  <span className="font-semibold">
-                    {invite.adults !== undefined && invite.children !== undefined ? (
-                      `${invite.adults + invite.children} (${invite.adults}A / ${invite.children}C)`
-                    ) : (
-                      invite.groupSize
-                    )}
-                  </span>
-                </div>
-              )}
-
-              {invite.plusOnes > 0 && (
-                <div className="flex justify-between text-sm">
-                  <span className="text-neutral-400">Plus Ones Allowed:</span>
-                  <span className="font-semibold text-emerald-400">+{invite.plusOnes}</span>
-                </div>
-              )}
-
-              {invite.email && (
-                <div className="flex justify-between text-sm">
-                  <span className="text-neutral-400">Email:</span>
-                  <span className="font-semibold text-xs">{invite.email}</span>
-                </div>
-              )}
-
-              <div className="flex justify-between text-sm">
-                <span className="text-neutral-400">Invitation Type:</span>
-                <span className="font-semibold">{invite.checkedIn ? 'ADMITTED' : 'STANDARD ENTRY'}</span>
-              </div>
-            </div>
-          </div>
-
-          {invite.notes && (
-            <div className="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-lg">
-              <p className="text-xs font-medium text-amber-900 mb-1">Special Notes</p>
-              <p className="text-sm text-amber-800">{invite.notes}</p>
-            </div>
-          )}
-
-          {invite.checkedIn ? (
-            <div className="text-center p-6 bg-emerald-50 border border-emerald-200 rounded-xl">
-              <div className="w-12 h-12 mx-auto rounded-full bg-emerald-100 flex items-center justify-center mb-3">
-                <Check className="w-6 h-6 text-emerald-600" />
-              </div>
-              <p className="text-sm font-semibold text-emerald-900 mb-1">Already Checked In</p>
-              <p className="text-xs text-emerald-700">
-                {event.timezone 
-                  ? formatDateInTimezone(invite.checkedInAt, event.timezone, {
-                      month: 'short',
-                      day: 'numeric',
-                      hour: 'numeric',
-                      minute: '2-digit'
-                    })
-                  : new Date(invite.checkedInAt).toLocaleString()
-                }
-              </p>
-            </div>
-          ) : (
-            <>
-              <div className="mb-6">
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-sm font-semibold text-neutral-900 flex items-center gap-2">
-                    <Shield className="w-4 h-4 text-blue-600" />
-                    Your Check-in QR Code
-                  </h3>
-                  <button
-                    onClick={handleDownloadQR}
-                    className="flex items-center gap-1.5 text-xs text-blue-600 hover:text-blue-700 font-medium"
-                  >
-                    <Download className="w-3.5 h-3.5" />
-                    Download
-                  </button>
-                </div>
+              {/* Event Details */}
+              <div className="px-8 py-8">
+                <h2 className="text-3xl font-black text-neutral-100 mb-8">{event.title}</h2>
                 
-                <div 
-                  onClick={() => setShowQRFullscreen(true)}
-                  className="bg-white p-6 rounded-xl border-2 border-neutral-200 flex flex-col items-center cursor-pointer hover:border-blue-300 transition-all group"
-                >
-                  <img 
-                    src={qrUrl} 
-                    alt="QR Code" 
-                    className="w-64 h-64 mb-3 group-hover:scale-105 transition-transform"
-                  />
-                  <div className="text-center">
-                    <p className="text-xs text-neutral-500 mb-1 flex items-center justify-center gap-1.5">
-                      <QrCode className="w-3.5 h-3.5" />
-                      Show this code at the event entrance
-                    </p>
-                    <p className="text-xl font-mono font-bold text-neutral-900 tracking-widest">{invite.code || inviteCode}</p>
-                    <p className="text-xs text-blue-600 mt-2 flex items-center justify-center gap-1">
-                      <ExternalLink className="w-3 h-3" />
-                      Tap to view fullscreen
-                    </p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                  {/* Date & Time */}
+                  {event.date && (
+                    <div className="flex gap-4">
+                      <div className="flex-shrink-0 w-12 h-12 rounded-xl bg-neutral-800/50 flex items-center justify-center">
+                        <Calendar className="w-6 h-6 text-neutral-400" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-semibold text-neutral-500 uppercase tracking-wider mb-1">Date & Time</p>
+                        <p className="text-neutral-200 font-medium">
+                          {formatDateInTimezone(event.date, event.timezone || 'UTC', {
+                            weekday: 'long',
+                            year: 'numeric',
+                            month: 'long',
+                            day: 'numeric',
+                            hour: 'numeric',
+                            minute: '2-digit'
+                          })}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Location */}
+                  {event.location && (
+                    <div className="flex gap-4">
+                      <div className="flex-shrink-0 w-12 h-12 rounded-xl bg-neutral-800/50 flex items-center justify-center">
+                        <MapPin className="w-6 h-6 text-neutral-400" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-semibold text-neutral-500 uppercase tracking-wider mb-1">Location</p>
+                        <p className="text-neutral-200 font-medium">{event.location}</p>
+                        <button 
+                          onClick={getDirections}
+                          className="text-xs text-blue-400 hover:text-blue-300 font-medium mt-1 flex items-center gap-1"
+                        >
+                          <Navigation className="w-3 h-3" />
+                          Get Directions
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Party Size */}
+                  {((invite.adults !== undefined && invite.adults > 0) || (invite.children !== undefined && invite.children > 0)) && (
+                    <div className="flex gap-4">
+                      <div className="flex-shrink-0 w-12 h-12 rounded-xl bg-neutral-800/50 flex items-center justify-center">
+                        <Users className="w-6 h-6 text-neutral-400" />
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-xs font-semibold text-neutral-500 uppercase tracking-wider mb-1">Party Size</p>
+                        <div className="flex items-center gap-4">
+                          {invite.adults > 0 && (
+                            <span className="text-neutral-200 font-medium">
+                              {invite.adults} Adult{invite.adults !== 1 ? 's' : ''}
+                            </span>
+                          )}
+                          {invite.children > 0 && (
+                            <span className="text-neutral-200 font-medium">
+                              {invite.children} Child{invite.children !== 1 ? 'ren' : ''}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Invite Code */}
+                  <div className="flex gap-4">
+                    <div className="flex-shrink-0 w-12 h-12 rounded-xl bg-neutral-800/50 flex items-center justify-center">
+                      <Shield className="w-6 h-6 text-neutral-400" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-xs font-semibold text-neutral-500 uppercase tracking-wider mb-1">Invitation Code</p>
+                      <p className="text-2xl font-mono font-black text-neutral-100 tracking-widest">{inviteCode}</p>
+                    </div>
                   </div>
                 </div>
 
-                {/* Security Notice */}
-                <div className="mt-3 p-3 bg-amber-50 border border-amber-200 rounded-lg flex items-start gap-2">
-                  <AlertCircle className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
-                  <div className="text-xs text-amber-800">
-                    <p className="font-semibold mb-1">Security Notice</p>
-                    <p>This QR code is unique to your invitation. Do not share it publicly or with unauthorized individuals. Present it only at the official check-in desk.</p>
+                {/* Description */}
+                {event.description && (
+                  <div className="mb-8 p-4 bg-neutral-800/30 rounded-xl border border-neutral-800">
+                    <p className="text-neutral-300 leading-relaxed">{event.description}</p>
                   </div>
+                )}
+
+                {/* Notes */}
+                {invite.notes && (
+                  <div className="mb-8 p-4 bg-amber-500/10 border border-amber-500/30 rounded-xl">
+                    <div className="flex items-start gap-3">
+                      <Info className="w-5 h-5 text-amber-400 flex-shrink-0 mt-0.5" />
+                      <div>
+                        <p className="text-xs font-bold text-amber-400 uppercase tracking-wider mb-1">Special Notes</p>
+                        <p className="text-amber-200/90 text-sm leading-relaxed">{invite.notes}</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* QR Code Section */}
+                {!invite.checkedIn && (
+                  <div className="mb-8">
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="text-lg font-bold text-neutral-100 flex items-center gap-2">
+                        <QrCode className="w-5 h-5" />
+                        Your Entry Pass
+                      </h3>
+                      <button
+                        onClick={handleDownloadQR}
+                        className="text-sm text-neutral-400 hover:text-neutral-200 font-medium flex items-center gap-2 transition-colors"
+                      >
+                        <Download className="w-4 h-4" />
+                        Download
+                      </button>
+                    </div>
+                    
+                    <div 
+                      onClick={() => setShowQRFullscreen(true)}
+                      className="group relative bg-white p-8 rounded-2xl cursor-pointer hover:shadow-2xl hover:shadow-neutral-900/50 transition-all"
+                    >
+                      <div className="flex flex-col items-center">
+                        <img 
+                          src={qrUrl} 
+                          alt="Entry QR Code" 
+                          className="w-72 h-72 group-hover:scale-105 transition-transform duration-300"
+                        />
+                        <div className="mt-6 text-center">
+                          <p className="text-sm text-neutral-600 mb-2">Present this code at the entrance</p>
+                          <p className="text-xs text-blue-600 font-medium flex items-center justify-center gap-1.5 group-hover:text-blue-700">
+                            <ExternalLink className="w-3.5 h-3.5" />
+                            Tap for fullscreen view
+                          </p>
+                        </div>
+                      </div>
+                      
+                      {/* Perforated edge effect */}
+                      <div className="absolute left-0 right-0 -top-2 h-4 bg-repeat-x opacity-30" 
+                           style={{backgroundImage: "url('data:image/svg+xml,%3Csvg width='20' height='8' xmlns='http://www.w3.org/2000/svg'%3E%3Ccircle cx='4' cy='4' r='3' fill='%23000'/%3E%3C/svg%3E')"}} />
+                    </div>
+
+                    <div className="mt-4 p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl flex items-start gap-2.5">
+                      <AlertCircle className="w-4 h-4 text-amber-400 flex-shrink-0 mt-0.5" />
+                      <p className="text-xs text-amber-200/90 leading-relaxed">
+                        <strong className="font-semibold">Keep this private:</strong> This QR code is unique to your invitation. Only show it at the official check-in desk.
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Action Buttons */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {event.date && (
+                    <button
+                      onClick={addToCalendar}
+                      className="flex items-center justify-center gap-2 px-6 py-4 bg-neutral-800/50 hover:bg-neutral-700/50 border border-neutral-700 rounded-xl font-semibold text-neutral-200 transition-all"
+                    >
+                      <CalendarPlus className="w-5 h-5" />
+                      Add to Calendar
+                    </button>
+                  )}
+                  
+                  <button
+                    onClick={handleCopyLink}
+                    className="flex items-center justify-center gap-2 px-6 py-4 bg-neutral-800/50 hover:bg-neutral-700/50 border border-neutral-700 rounded-xl font-semibold text-neutral-200 transition-all"
+                  >
+                    {copied ? <Check className="w-5 h-5 text-emerald-400" /> : <Share2 className="w-5 h-5" />}
+                    {copied ? 'Link Copied!' : 'Share Invite'}
+                  </button>
                 </div>
               </div>
 
-              {/* QR Fullscreen Modal */}
-              {showQRFullscreen && (
-                <div 
-                  className="fixed inset-0 bg-black/95 z-50 flex items-center justify-center p-6"
-                  onClick={() => setShowQRFullscreen(false)}
-                >
-                  <div className="max-w-2xl w-full">
-                    <div className="text-center mb-6">
-                      <h2 className="text-2xl font-bold text-white mb-2">{event.title}</h2>
-                      <p className="text-neutral-400">{invite.guestName}</p>
-                    </div>
-                    <div className="bg-white p-8 rounded-2xl">
-                      <img 
-                        src={`https://api.qrserver.com/v1/create-qr-code/?size=600x600&data=${encodeURIComponent(inviteUrl)}`}
-                        alt="QR Code Fullscreen" 
-                        className="w-full max-w-md mx-auto"
-                      />
-                      <p className="text-3xl font-mono font-bold text-neutral-900 text-center mt-6 tracking-widest">
-                        {invite.code || inviteCode}
-                      </p>
-                    </div>
-                    <p className="text-center text-neutral-400 text-sm mt-6">Tap anywhere to close</p>
+              {/* Ticket Footer - Perforated Edge */}
+              <div className="relative h-8 bg-neutral-950 border-t border-neutral-800/50">
+                <div className="absolute left-0 right-0 -top-2 h-4 bg-repeat-x opacity-20" 
+                     style={{backgroundImage: "url('data:image/svg+xml,%3Csvg width='20' height='8' xmlns='http://www.w3.org/2000/svg'%3E%3Ccircle cx='4' cy='4' r='3' fill='%23fff'/%3E%3C/svg%3E')"}} />
+              </div>
+            </div>
+
+            {/* Bottom Strip */}
+            <div className="mt-6 px-8 py-6 bg-neutral-900/50 backdrop-blur-sm rounded-2xl border border-neutral-800/50">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs text-neutral-500 mb-1">Powered by</p>
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="w-4 h-4 text-neutral-400" />
+                    <span className="text-lg font-black text-neutral-100">PlanIt</span>
                   </div>
+                  <p className="text-xs text-neutral-500 mt-1">Professional Event Management</p>
                 </div>
-              )}
+                <a
+                  href="/"
+                  className="px-6 py-3 bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 rounded-xl text-sm font-semibold text-neutral-200 transition-all flex items-center gap-2"
+                >
+                  Create Your Event
+                  <ExternalLink className="w-4 h-4" />
+                </a>
+              </div>
+            </div>
+          </div>
+        </main>
+      </div>
 
-              {invite.status === 'pending' && (
-                <div className="flex gap-3">
-                  <button
-                    onClick={() => handleRSVP('confirmed')}
-                    className="flex-1 btn btn-primary py-3"
-                  >
-                    <Check className="w-4 h-4" />
-                    Accept Invitation
-                  </button>
-                  <button
-                    onClick={() => handleRSVP('declined')}
-                    className="flex-1 btn btn-secondary py-3 text-red-600 hover:bg-red-50"
-                  >
-                    <X className="w-4 h-4" />
-                    Decline
-                  </button>
-                </div>
-              )}
-
-              {invite.status === 'confirmed' && (
-                <div className="text-center">
-                  <p className="text-sm text-neutral-600 mb-3">
-                    You've confirmed your attendance. See you there!
-                  </p>
-                  <button
-                    onClick={() => handleRSVP('declined')}
-                    className="text-xs text-neutral-400 hover:text-neutral-600"
-                  >
-                    Can't make it? Decline invitation
-                  </button>
-                </div>
-              )}
-
-              {invite.status === 'declined' && (
-                <div className="text-center">
-                  <p className="text-sm text-neutral-600 mb-3">
-                    You've declined this invitation.
-                  </p>
-                  <button
-                    onClick={() => handleRSVP('confirmed')}
-                    className="text-sm text-blue-600 hover:text-blue-700 font-medium"
-                  >
-                    Changed your mind? Accept invitation
-                  </button>
-                </div>
-              )}
-            </>
-          )}
+      {/* Fullscreen QR Modal */}
+      {showQRFullscreen && (
+        <div 
+          className="fixed inset-0 bg-black/98 z-50 flex items-center justify-center p-6 backdrop-blur-sm"
+          onClick={() => setShowQRFullscreen(false)}
+        >
+          <div className="max-w-2xl w-full">
+            <div className="text-center mb-8">
+              <h2 className="text-3xl font-black text-white mb-2">{event.title}</h2>
+              <p className="text-neutral-400 text-lg">{invite.guestName}</p>
+            </div>
+            <div className="bg-white p-12 rounded-3xl shadow-2xl">
+              <img 
+                src={`https://api.qrserver.com/v1/create-qr-code/?size=800x800&data=${encodeURIComponent(inviteUrl)}`}
+                alt="QR Code Fullscreen" 
+                className="w-full max-w-lg mx-auto"
+              />
+              <p className="text-4xl font-mono font-black text-neutral-900 text-center mt-8 tracking-[0.3em]">
+                {inviteCode}
+              </p>
+            </div>
+            <p className="text-center text-neutral-400 text-sm mt-8 flex items-center justify-center gap-2">
+              <Info className="w-4 h-4" />
+              Tap anywhere to close
+            </p>
+          </div>
         </div>
-
-        <div className="text-center text-xs text-neutral-400">
-          <p>Powered by PlanIt</p>
-        </div>
-      </main>
+      )}
     </div>
   );
 }
