@@ -1219,10 +1219,11 @@ export default function EventSpace() {
         {/* Sidebar */}
         <aside className="hidden lg:block w-64 flex-shrink-0">
           <div className="card p-5 sticky top-20">
-            {/* Add Countdown here */}
-            <div className="mb-5">
-              <Countdown eventDate={event.date} />
-            </div>
+            {event?.date && (
+              <div className="mb-5">
+                <Countdown eventDate={event.date} />
+              </div>
+            )}
             
             <h3 className="text-xs font-semibold text-neutral-400 uppercase tracking-wide mb-4">Event details</h3>
             <div className="space-y-3.5">
