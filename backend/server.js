@@ -33,6 +33,10 @@ const publicRoutes = require('./routes/public');
 const { apiLimiter } = require('./middleware/rateLimiter');
 const { errorHandler } = require('./middleware/errorHandler');
 
+// ── Trust proxy for Render / any reverse-proxy hosting ──
+// Required so express-rate-limit can read X-Forwarded-For correctly
+app.set('trust proxy', 1);
+
 // Enhanced security headers with HSTS
 app.use(helmet({
   // HSTS - Force HTTPS for 2 years
