@@ -252,20 +252,23 @@ function JoinGate({ eventId, onJoined }) {
                 </form>
               </>
           </div>
-          <div className="text-center mt-4 space-y-2">
-            <p className="text-sm text-neutral-400">
-              <a href="/" className="hover:text-neutral-600 transition-colors">← Back to home</a>
-            </p>
-            <p className="text-xs text-neutral-400">
-              Are you the organizer?{' '}
+          <div className="mt-6 pt-4 border-t border-neutral-100">
+            <div className="text-center space-y-3">
+              {/* Organizer Login Button - matching the style from the organizer sidebar */}
               <button
-                type="button"
                 onClick={() => navigate(`/event/${eventId}/login`)}
-                className="text-neutral-600 hover:text-neutral-800 underline underline-offset-2"
+                className="flex items-center justify-center gap-2 w-full px-4 py-2.5 text-sm bg-neutral-900 hover:bg-neutral-700 text-white rounded-lg transition-colors font-medium"
               >
-                Log in with organizer access
+                <Lock className="w-4 h-4" />
+                <span>Login as Organizer</span>
               </button>
-            </p>
+              <p className="text-xs text-neutral-400">
+                Are you the event organizer? Log in to access organizer tools
+              </p>
+              <p className="text-sm text-neutral-400 pt-2">
+                <a href="/" className="hover:text-neutral-600 transition-colors">← Back to home</a>
+              </p>
+            </div>
           </div>
         </div>
       </main>
