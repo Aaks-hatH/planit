@@ -1,15 +1,19 @@
 const rateLimit = require('express-rate-limit');
 
+// ── Skip function for health checks ──────────────────────────────────────
+const skipHealthCheck = (req) => req.path === '/health';
+
 // General API rate limiter
 const apiLimiter = rateLimit({
-  windowMs: (process.env.RATE_LIMIT_WINDOW || 15) * 60 * 1000, // 15 minutes default
-  max: process.env.RATE_LIMIT_MAX || 10000, // 100 requests per window
-  message: {
-    error: 'Too many requests from this IP, please try again later.',
-    retryAfter: 'Check the Retry-After header'
-  },
+  windowMs: (process.env.RATE_LIMIT_WINDOW || 15) * 60 * 1000,
+  max: process.env.RATE_LIMIT_MAX || 10000,
   standardHeaders: true,
   legacyHeaders: false,
+  skip: skipHealthCheck,
+  // Use x-forwarded-for when available (Render sets trust proxy 1 in server.js)
+  keyGenerator: (req) => {
+    return req.ip || req.socket?.remoteAddress || 'unknown';
+  },
   handler: (req, res) => {
     res.status(429).json({
       error: 'Too many requests',
@@ -21,43 +25,50 @@ const apiLimiter = rateLimit({
 
 // Stricter limiter for authentication endpoints
 const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 5, // 5 attempts
+  windowMs: 15 * 60 * 1000,
+  max: 20, // increased slightly from 5 to reduce frustration while still protecting
   skipSuccessfulRequests: true,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req) => {
+    return req.ip || req.socket?.remoteAddress || 'unknown';
+  },
   message: {
-    error: 'Too many authentication attempts, please try again later.'
+    error: 'Too many authentication attempts, please try again in 15 minutes.'
   }
 });
 
 // File upload limiter
 const uploadLimiter = rateLimit({
-  windowMs: 60 * 60 * 1000, // 1 hour
-  max: 20, // 20 uploads per hour
-  message: {
-    error: 'Too many file uploads, please try again later.'
-  }
+  windowMs: 60 * 60 * 1000,
+  max: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req) => req.ip || req.socket?.remoteAddress || 'unknown',
+  message: { error: 'Too many file uploads, please try again later.' }
 });
 
 // Event creation limiter
 const createEventLimiter = rateLimit({
-  windowMs: 60 * 60 * 1000, // 1 hour
-  max: 5, // 5 events per hour
-  message: {
-    error: 'Too many events created, please try again later.'
-  }
+  windowMs: 60 * 60 * 1000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req) => req.ip || req.socket?.remoteAddress || 'unknown',
+  message: { error: 'Too many events created, please try again later.' }
 });
 
-// Chat message limiter (per event)
+// Chat message limiter
 const chatLimiter = rateLimit({
-  windowMs: 60 * 1000, // 1 minute
-  max: 30, // 30 messages per minute
+  windowMs: 60 * 1000,
+  max: 30,
+  standardHeaders: true,
+  legacyHeaders: false,
   keyGenerator: (req) => {
-    // Rate limit per IP + event combination
-    return `${req.ip}-${req.params.eventId || req.body.eventId}`;
+    const ip = req.ip || req.socket?.remoteAddress || 'unknown';
+    return `${ip}-${req.params.eventId || req.body?.eventId || 'none'}`;
   },
-  message: {
-    error: 'Too many messages, please slow down.'
-  }
+  message: { error: 'Too many messages, please slow down.' }
 });
 
 module.exports = {
