@@ -578,20 +578,30 @@ router.get('/:eventId/analytics', verifyEventAccess, async (req, res, next) => {
     const File = require('../models/File');
 
     const [messageCount, pollCount, fileCount] = await Promise.all([
-      Message.countDocuments({ eventId: req.params.eventId }),
-      Poll.countDocuments({ eventId: req.params.eventId }),
-      File.countDocuments({ eventId: req.params.eventId })
+      Message.countDocuments({ eventId: req.params.eventId }).catch(() => 0),
+      Poll.countDocuments({ eventId: req.params.eventId }).catch(() => 0),
+      File.countDocuments({ eventId: req.params.eventId }).catch(() => 0)
     ]);
 
+    const baseAnalytics = req.event.getAnalytics ? req.event.getAnalytics() : {
+      views: req.event.metadata?.views || 0,
+      participants: req.event.participants?.length || 0,
+      rsvps: req.event.getRsvpSummary ? req.event.getRsvpSummary() : { yes: 0, maybe: 0, no: 0 },
+      lastActivity: req.event.metadata?.lastActivity || new Date()
+    };
+
     const analytics = {
-      ...req.event.getAnalytics(),
+      ...baseAnalytics,
       messages: messageCount,
       polls: pollCount,
       files: fileCount
     };
 
     res.json({ analytics });
-  } catch (error) { next(error); }
+  } catch (error) { 
+    console.error('Analytics error:', error);
+    next(error); 
+  }
 });
 
 // ── UTILITIES ─────────────────────────────────────────────────────────────
