@@ -15,6 +15,15 @@ const eventSchema = new mongoose.Schema({
   isPasswordProtected: { type: Boolean, default: false },
   maxParticipants: { type: Number, default: 100, min: 1, max: 1000 },
   isEnterpriseMode: { type: Boolean, default: false },
+  checkinSettings: {
+    requirePin:            { type: Boolean, default: false },
+    requireCodeConfirm:    { type: Boolean, default: true  },
+    blockCrossEvent:       { type: Boolean, default: true  },
+    maxFailedAttempts:     { type: Number,  default: 3     },
+    lockoutMinutes:        { type: Number,  default: 15    },
+    allowManualOverride:   { type: Boolean, default: false },
+    staffNote:             { type: String,  default: '' },
+  },
   settings: {
     allowChat: { type: Boolean, default: true },
     allowPolls: { type: Boolean, default: true },
