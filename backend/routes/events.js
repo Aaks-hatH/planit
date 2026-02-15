@@ -780,6 +780,8 @@ router.post('/:eventId/invites', verifyOrganizer,
     body('guests.*.guestName').trim().isLength({ min: 1, max: 100 }),
     body('guests.*.guestEmail').optional().isEmail(),
     body('guests.*.groupSize').optional().isInt({ min: 1 }),
+    body('guests.*.adults').optional().isInt({ min: 0 }),
+    body('guests.*.children').optional().isInt({ min: 0 }),
     validate
   ],
   async (req, res, next) => {
@@ -790,14 +792,23 @@ router.post('/:eventId/invites', verifyOrganizer,
       const invites = [];
       for (const guest of guests) {
         const inviteCode = Math.random().toString(36).substring(2, 10).toUpperCase();
+        
+        // Calculate adults and children with proper defaults
+        const adults = parseInt(guest.adults) >= 0 ? parseInt(guest.adults) : 1;
+        const children = parseInt(guest.children) >= 0 ? parseInt(guest.children) : 0;
+        const calculatedGroupSize = adults + children;
+        
         const invite = await Invite.create({
           eventId: req.params.eventId,
           inviteCode,
           guestName: guest.guestName,
           guestEmail: guest.guestEmail || '',
           guestPhone: guest.guestPhone || '',
-          groupSize: guest.groupSize || 1,
-          plusOnes: guest.plusOnes || 0,
+          adults: adults,
+          children: children,
+          groupSize: guest.groupSize || calculatedGroupSize,
+          plusOnes: parseInt(guest.plusOnes) || 0,
+          securityPin: guest.securityPin || '',
           notes: guest.notes || ''
         });
         invites.push(invite);
@@ -833,12 +844,16 @@ router.get('/invite/:inviteCode', async (req, res, next) => {
         inviteCode: invite.inviteCode,
         guestName: invite.guestName,
         guestEmail: invite.guestEmail,
+        guestPhone: invite.guestPhone,
+        adults: invite.adults,
+        children: invite.children,
         groupSize: invite.groupSize,
         plusOnes: invite.plusOnes,
         checkedIn: invite.checkedIn,
         checkedInAt: invite.checkedInAt,
         status: invite.status,
-        notes: invite.notes
+        notes: invite.notes,
+        email: invite.guestEmail
       },
       event: {
         id: event._id,
@@ -846,7 +861,8 @@ router.get('/invite/:inviteCode', async (req, res, next) => {
         date: event.date,
         location: event.location,
         description: event.description,
-        organizerName: event.organizerName
+        organizerName: event.organizerName,
+        timezone: event.timezone || 'UTC'
       }
     });
   } catch (error) { next(error); }
