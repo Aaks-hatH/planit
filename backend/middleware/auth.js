@@ -28,14 +28,26 @@ const verifyEventAccess = async (req, res, next) => {
       return res.status(404).json({ error: 'Event not found.' });
     }
 
-    // If event is not password protected, allow access
+    // Always try to decode the token for username/role info (needed even on open events)
+    const anyToken = req.headers['authorization']?.split(' ')[1] ||
+                     req.headers['x-event-token'] ||
+                     req.cookies?.[`event_${eventId}`];
+    if (anyToken) {
+      try {
+        const decoded = jwt.verify(anyToken, process.env.JWT_SECRET);
+        req.eventAccess = decoded;
+      } catch (_) { /* invalid or expired — still allow open events */ }
+    }
+
+    // If event is not password protected, allow access regardless of token
     if (!event.isPasswordProtected) {
       req.event = event;
       return next();
     }
 
-    // Check for valid session token
-    const token = req.headers['x-event-token'] || req.cookies[`event_${eventId}`];
+    // Check for valid session token (password-protected events require this)
+    const token = req.headers['x-event-token'] || req.cookies?.[`event_${eventId}`] ||
+                  req.headers['authorization']?.split(' ')[1];
     
     if (!token) {
       return res.status(403).json({ 
@@ -47,7 +59,7 @@ const verifyEventAccess = async (req, res, next) => {
     try {
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
       
-      if (decoded.eventId !== eventId) {
+      if (decoded.eventId !== eventId && decoded.eventId !== eventId.toString()) {
         return res.status(403).json({ 
           error: 'Invalid event access token.',
           requiresPassword: true 
@@ -89,9 +101,14 @@ const verifyOrganizer = async (req, res, next) => {
     try {
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
       const username = decoded.username;
+      
+      // Check organizer role from JWT or from event participants list
+      const isOrganizerByJWT = decoded.role === 'organizer';
       const participant = event.participants.find(p => p.username === username);
+      const isOrganizerByEvent = participant && participant.role === 'organizer';
+      const isOrganizerByName = event.organizerName === username;
 
-      if (!participant || participant.role !== 'organizer') {
+      if (!isOrganizerByJWT && !isOrganizerByEvent && !isOrganizerByName) {
         return res.status(403).json({ error: 'Only organizers can perform this action.' });
       }
 
