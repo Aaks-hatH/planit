@@ -567,7 +567,7 @@ export default function Home() {
                   <div className="mb-8 p-5 bg-neutral-50 rounded-2xl border border-neutral-200">
                     <label className="block text-xs font-bold text-neutral-500 uppercase tracking-wider mb-4">Event Type</label>
                     <div className="grid grid-cols-2 gap-3">
-                      {[{val:'standard',label:'Standard',sub:'Team planning'},{val:'enterprise',label:'Enterprise',sub:'QR check-in'}].map(({val,label,sub}) => (
+                      {[{val:'standard',label:'Standard',sub:'Team planning'},{val:'enterprise',label:'Enterprise',sub:'Full Execution'}].map(({val,label,sub}) => (
                         <button key={val} type="button" onClick={() => setMode(val)}
                           className={`px-5 py-4 text-sm font-bold rounded-2xl border-2 transition-all duration-300 ${mode===val?'bg-neutral-900 text-white border-neutral-900 shadow-lg scale-[1.03]':'bg-white text-neutral-600 border-neutral-200 hover:border-neutral-400 hover:scale-[1.02]'}`}>
                           <div className="font-bold mb-1">{label}</div>
