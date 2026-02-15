@@ -1,9 +1,14 @@
 /**
- * Timezone Utilities - SIMPLE & WORKING
+ * Timezone Utilities - Using Luxon for Reliable Timezone Conversions
  * 
- * The problem: datetime-local gives us "2024-12-25T17:35" (meaning 5:35 PM)
- * We need to convert this to UTC, treating it as being in the selected timezone
+ * Fixed Implementation:
+ * - Correctly interprets datetime-local input as being IN the selected timezone
+ * - Converts to UTC without double-shifting offsets
+ * - Handles DST transitions properly
+ * - Uses Luxon library for production-safe timezone handling
  */
+
+import { DateTime } from 'luxon';
 
 export function getUserTimezone() {
   try {
@@ -14,109 +19,125 @@ export function getUserTimezone() {
 }
 
 /**
- * Convert datetime-local to UTC - FINAL WORKING VERSION
- * @param {string} datetimeLocal - "2024-12-25T17:35" from datetime-local input
- * @param {string} selectedTimezone - "America/New_York"
+ * Convert datetime-local input to UTC (CORRECTED VERSION)
+ * 
+ * @param {string} datetimeLocal - "2024-02-15T17:50" from datetime-local input
+ * @param {string} selectedTimezone - IANA timezone (e.g., "America/New_York")
+ * @returns {string} ISO 8601 UTC string (e.g., "2024-02-15T22:50:00.000Z")
+ * 
+ * Example:
+ *   Input:  "2024-02-15T17:50" in "America/New_York" (EST = UTC-5)
+ *   Output: "2024-02-15T22:50:00.000Z" (17:50 + 5 hours = 22:50 UTC)
  */
 export function localDateTimeToUTC(datetimeLocal, selectedTimezone = getUserTimezone()) {
   if (!datetimeLocal) return '';
   
   try {
-    // Just append the timezone and let the browser do the work
-    // We'll use a trick: create a date string in ISO format with explicit timezone
+    // Parse the datetime-local string and treat it AS IF it's in the selected timezone
+    // This is the key: we're telling Luxon "this time is in America/New_York"
+    const dt = DateTime.fromISO(datetimeLocal, { zone: selectedTimezone });
     
-    // Parse the input
-    const [datePart, timePart] = datetimeLocal.split('T');
-    const [year, month, day] = datePart.split('-').map(Number);
-    const [hour, minute] = timePart.split(':').map(Number);
+    // Check if parsing was valid
+    if (!dt.isValid) {
+      console.error('Invalid datetime:', dt.invalidReason);
+      return '';
+    }
     
-    // Create a date object at this time in UTC
-    const utcDate = new Date(Date.UTC(year, month - 1, day, hour, minute, 0));
-    
-    // Get how this UTC time appears in the target timezone
-    const formatter = new Intl.DateTimeFormat('en-US', {
-      timeZone: selectedTimezone,
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit',
-      hour12: false
-    });
-    
-    const formatted = formatter.format(utcDate);
-    const [tzDate, tzTime] = formatted.split(', ');
-    const [tzMonth, tzDay, tzYear] = tzDate.split('/').map(Number);
-    const [tzHour, tzMinute] = tzTime.split(':').map(Number);
-    
-    // Calculate the offset: how many milliseconds difference
-    const tzUTC = Date.UTC(tzYear, tzMonth - 1, tzDay, tzHour, tzMinute, 0);
-    const offsetMs = utcDate.getTime() - tzUTC;
-    
-    // Apply the INVERSE offset to get correct UTC
-    // If we want 5:35 PM ET, and ET is currently UTC-5, we need to add 5 hours to get UTC
-    const correctUTC = Date.UTC(year, month - 1, day, hour, minute, 0) - offsetMs;
-    
-    return new Date(correctUTC).toISOString();
+    // Convert to UTC and return as ISO string
+    return dt.toUTC().toISO();
   } catch (error) {
     console.error('Timezone conversion error:', error);
-    // Fallback: treat as UTC
-    const [datePart, timePart] = datetimeLocal.split('T');
-    const [year, month, day] = datePart.split('-').map(Number);
-    const [hour, minute] = timePart.split(':').map(Number);
-    return new Date(Date.UTC(year, month - 1, day, hour, minute, 0)).toISOString();
+    return '';
   }
 }
 
 /**
- * Convert UTC to datetime-local string in a timezone
+ * Convert UTC timestamp back to datetime-local string in a specific timezone
+ * 
+ * @param {string|Date} utcDate - UTC timestamp (ISO string or Date object)
+ * @param {string} timezone - IANA timezone (e.g., "America/New_York")
+ * @returns {string} datetime-local format "YYYY-MM-DDTHH:mm"
+ * 
+ * Example:
+ *   Input:  "2024-02-15T22:50:00.000Z" in "America/New_York" (EST = UTC-5)
+ *   Output: "2024-02-15T17:50" (22:50 UTC - 5 hours = 17:50 ET)
  */
 export function utcToLocalDateTime(utcDate, timezone = getUserTimezone()) {
   if (!utcDate) return '';
   
   try {
-    const date = new Date(utcDate);
-    const formatter = new Intl.DateTimeFormat('sv-SE', {
-      timeZone: timezone,
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: false
-    });
-    const formatted = formatter.format(date);
-    return formatted.replace(' ', 'T').substring(0, 16);
+    // Parse the UTC date and convert to the target timezone
+    const dt = DateTime.fromISO(utcDate, { zone: 'UTC' }).setZone(timezone);
+    
+    if (!dt.isValid) {
+      console.error('Invalid UTC date:', dt.invalidReason);
+      return '';
+    }
+    
+    // Return in datetime-local format (YYYY-MM-DDTHH:mm)
+    return dt.toFormat("yyyy-MM-dd'T'HH:mm");
   } catch (error) {
-    return new Date(utcDate).toISOString().slice(0, 16);
+    console.error('UTC to local conversion error:', error);
+    return '';
   }
 }
 
 /**
- * Format UTC date for display in timezone
+ * Format UTC date for human-readable display in a specific timezone
+ * 
+ * @param {string|Date} utcDate - UTC timestamp
+ * @param {string} timezone - IANA timezone
+ * @param {object} options - Luxon format options
+ * @returns {string} Formatted date string
  */
 export function formatDateInTimezone(utcDate, timezone = getUserTimezone(), options = {}) {
   if (!utcDate) return '';
   
   try {
-    const date = new Date(utcDate);
-    const defaultOptions = {
-      timeZone: timezone,
+    const dt = DateTime.fromISO(utcDate, { zone: 'UTC' }).setZone(timezone);
+    
+    if (!dt.isValid) {
+      console.error('Invalid date for formatting:', dt.invalidReason);
+      return '';
+    }
+    
+    // Default format: "Wednesday, February 15, 2024, 5:50 PM"
+    const defaultFormat = {
       weekday: 'long',
-      year: 'numeric',
       month: 'long',
       day: 'numeric',
+      year: 'numeric',
       hour: 'numeric',
       minute: '2-digit',
       ...options
     };
-    return new Intl.DateTimeFormat('en-US', defaultOptions).format(date);
+    
+    return dt.toLocaleString(defaultFormat);
   } catch (error) {
-    return new Date(utcDate).toLocaleString();
+    console.error('Date formatting error:', error);
+    return '';
   }
 }
 
+/**
+ * Get timezone abbreviation (e.g., "EST", "EDT", "PST")
+ * 
+ * @param {string} timezone - IANA timezone
+ * @param {Date} date - Date to check for DST (defaults to now)
+ * @returns {string} Timezone abbreviation
+ */
+export function getTimezoneAbbr(timezone = getUserTimezone(), date = new Date()) {
+  try {
+    const dt = DateTime.fromJSDate(date).setZone(timezone);
+    return dt.offsetNameShort || timezone;
+  } catch (error) {
+    return timezone;
+  }
+}
+
+/**
+ * Get list of common timezones for dropdowns
+ */
 export function getTimezoneOptions() {
   return [
     { value: 'America/New_York', label: 'Eastern Time (ET)' },
@@ -134,18 +155,4 @@ export function getTimezoneOptions() {
     { value: 'Australia/Sydney', label: 'Sydney (AEDT/AEST)' },
     { value: 'UTC', label: 'UTC (Coordinated Universal Time)' }
   ];
-}
-
-export function getTimezoneAbbr(timezone = getUserTimezone(), date = new Date()) {
-  try {
-    const formatter = new Intl.DateTimeFormat('en-US', {
-      timeZone: timezone,
-      timeZoneName: 'short'
-    });
-    const parts = formatter.formatToParts(date);
-    const tzPart = parts.find(p => p.type === 'timeZoneName');
-    return tzPart ? tzPart.value : timezone;
-  } catch (error) {
-    return timezone;
-  }
 }
