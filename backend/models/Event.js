@@ -13,7 +13,7 @@ const eventSchema = new mongoose.Schema({
   organizerEmail: { type: String, required: true, trim: true, lowercase: true, match: /^[^\s@]+@[^\s@]+\.[^\s@]+$/ },
   password: { type: String, select: false },
   isPasswordProtected: { type: Boolean, default: false },
-  maxParticipants: { type: Number, default: 100, min: 1, max: 1000 },
+  maxParticipants: { type: Number, default: 100, min: 1, max: 1000000 },
   isEnterpriseMode: { type: Boolean, default: false },
   checkinSettings: {
     requirePin:            { type: Boolean, default: false },
