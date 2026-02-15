@@ -76,26 +76,6 @@ router.get('/participants/:eventId', async (req, res, next) => {
   } catch (error) { next(error); }
 });
 
- {
-      const { username, newPassword, currentPassword } = req.body;
-      const participant = await EventParticipant.findOne({ eventId: req.params.eventId, username }).select('+password');
-      if (!participant) return res.status(404).json({ error: 'Participant not found.' });
-
-      // If they already have a password, verify current one first
-      if (participant.hasPassword) {
-        if (!currentPassword) return res.status(400).json({ error: 'Current password required.' });
-        const valid = await bcrypt.compare(currentPassword, participant.password);
-        if (!valid) return res.status(401).json({ error: 'Current password is incorrect.' });
-      }
-
-      participant.password = await bcrypt.hash(newPassword, 10);
-      participant.hasPassword = true;
-      await participant.save();
-      res.json({ message: 'Password set successfully.' });
-    } catch (error) { next(error); }
-  }
-);
-
 // Public info (no auth) — for join gate
 router.get('/public/:eventId', async (req, res, next) => {
   try {
