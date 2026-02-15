@@ -875,42 +875,192 @@ router.post('/:eventId/invites/:inviteCode/rsvp', async (req, res, next) => {
   } catch (error) { next(error); }
 });
 
-// Check-in guest with QR code
+// ═══════════════════════════════════════════════════════════════════════════
+// SECURE CHECK-IN SYSTEM
+// ═══════════════════════════════════════════════════════════════════════════
+
+// STEP 1: Scan / lookup — returns full guest profile WITHOUT committing check-in
+// Used by scanner UI to show the "boarding pass" before staff taps Admit
+router.get('/:eventId/verify-scan/:inviteCode', verifyEventAccess, async (req, res, next) => {
+  try {
+    const Invite = require('../models/Invite');
+    const { eventId, inviteCode } = req.params;
+    const ip = req.ip || req.connection.remoteAddress || '';
+    const staffUser = req.eventAccess?.username || 'staff';
+
+    // ── Cross-event security: invite must belong to THIS event ──
+    const invite = await Invite.findOne({ inviteCode: inviteCode.toUpperCase().trim() });
+
+    if (!invite) {
+      return res.status(404).json({
+        valid: false,
+        reason: 'not_found',
+        message: 'QR code not recognised. Deny entry.',
+      });
+    }
+
+    if (invite.eventId.toString() !== eventId) {
+      // Log the cross-event attempt on the invite it actually belongs to
+      invite.scanAttempts.push({ reason: 'wrong_event', attemptedBy: staffUser, ipAddress: ip });
+      await invite.save();
+      return res.status(403).json({
+        valid: false,
+        reason: 'wrong_event',
+        message: 'This ticket belongs to a DIFFERENT event. Deny entry.',
+      });
+    }
+
+    if (invite.checkedIn) {
+      invite.scanAttempts.push({ reason: 'already_checked_in', attemptedBy: staffUser, ipAddress: ip });
+      await invite.save();
+      return res.status(400).json({
+        valid: false,
+        reason: 'already_checked_in',
+        message: 'Ticket already used.',
+        checkedInAt: invite.checkedInAt,
+        checkedInBy: invite.checkedInBy,
+      });
+    }
+
+    // Get event checkin settings
+    const event = await Event.findById(eventId).select('checkinSettings title').lean();
+    const settings = event?.checkinSettings || {};
+
+    // ── Return the full guest profile for staff to review ──
+    res.json({
+      valid: true,
+      requiresPin: settings.requirePin && !!invite.securityPin,
+      guest: {
+        id:          invite._id,
+        inviteCode:  invite.inviteCode,
+        guestName:   invite.guestName,
+        guestEmail:  invite.guestEmail,
+        guestPhone:  invite.guestPhone,
+        adults:      invite.adults,
+        children:    invite.children,
+        groupSize:   invite.groupSize,
+        plusOnes:    invite.plusOnes,
+        status:      invite.status,
+        notes:       invite.notes,
+        // Only expose PIN hint — never the actual PIN value over the wire
+        hasPin:      !!(invite.securityPin),
+      },
+      event: { title: event?.title },
+      staffNote: settings.staffNote || '',
+    });
+  } catch (error) { next(error); }
+});
+
+// STEP 2: Verify PIN (called if requiresPin === true, before committing admission)
+router.post('/:eventId/verify-pin/:inviteCode', verifyEventAccess, async (req, res, next) => {
+  try {
+    const Invite = require('../models/Invite');
+    const { eventId, inviteCode } = req.params;
+    const { pin } = req.body;
+    const ip = req.ip || req.connection.remoteAddress || '';
+    const staffUser = req.eventAccess?.username || 'staff';
+
+    const invite = await Invite.findOne({ inviteCode: inviteCode.toUpperCase().trim(), eventId });
+    if (!invite) return res.status(404).json({ valid: false, message: 'Invite not found.' });
+
+    if (!invite.securityPin || invite.securityPin.trim() === '') {
+      return res.json({ valid: true, message: 'No PIN required.' });
+    }
+
+    if (!pin || pin.trim() !== invite.securityPin.trim()) {
+      invite.scanAttempts.push({ reason: 'wrong_pin', attemptedBy: staffUser, ipAddress: ip });
+      await invite.save();
+
+      const event = await Event.findById(eventId).select('checkinSettings').lean();
+      const maxAttempts = event?.checkinSettings?.maxFailedAttempts || 3;
+      const pinAttempts = invite.scanAttempts.filter(a => a.reason === 'wrong_pin').length;
+      const remaining = Math.max(0, maxAttempts - pinAttempts);
+
+      return res.status(401).json({
+        valid: false,
+        message: remaining > 0
+          ? `Incorrect PIN. ${remaining} attempt${remaining !== 1 ? 's' : ''} remaining.`
+          : 'PIN locked — too many failed attempts. Escalate to organizer.',
+        locked: remaining === 0,
+      });
+    }
+
+    res.json({ valid: true, message: 'PIN verified.' });
+  } catch (error) { next(error); }
+});
+
+// STEP 3: Commit check-in — only called after staff reviews profile (and PIN if required)
 router.post('/:eventId/checkin/:inviteCode', verifyEventAccess, async (req, res, next) => {
   try {
     const Invite = require('../models/Invite');
-    const invite = await Invite.findOne({ 
-      eventId: req.params.eventId, 
-      inviteCode: req.params.inviteCode 
-    });
-    
+    const { eventId, inviteCode } = req.params;
+    const { actualAttendees, pinVerified } = req.body;
+    const ip = req.ip || req.connection.remoteAddress || '';
+    const staffUser = req.eventAccess?.username || 'staff';
+
+    // Re-verify event ownership on commit (belt-and-suspenders)
+    const invite = await Invite.findOne({ inviteCode: inviteCode.toUpperCase().trim() });
     if (!invite) return res.status(404).json({ error: 'Invite not found' });
-    if (invite.checkedIn) return res.status(400).json({ error: 'Already checked in', checkedInAt: invite.checkedInAt });
-    
-    const { actualAttendees } = req.body;
-    
-    invite.checkedIn = true;
-    invite.checkedInAt = new Date();
-    invite.checkedInBy = req.eventAccess.username;
-    invite.status = 'checked-in';
-    if (actualAttendees !== undefined) {
-      invite.actualAttendees = actualAttendees;
-    } else {
-      invite.actualAttendees = invite.groupSize;
+
+    if (invite.eventId.toString() !== eventId) {
+      invite.scanAttempts.push({ reason: 'wrong_event', attemptedBy: staffUser, ipAddress: ip });
+      await invite.save();
+      return res.status(403).json({ error: 'Cross-event ticket — access denied.' });
     }
-    await invite.save();
-    
-    const io = req.app.get('io');
-    if (io) {
-      io.to(`event_${req.params.eventId}`).emit('guest_checked_in', {
-        inviteCode: invite.inviteCode,
-        guestName: invite.guestName,
-        actualAttendees: invite.actualAttendees,
-        checkedInAt: invite.checkedInAt
+
+    if (invite.checkedIn) {
+      return res.status(400).json({
+        error: 'Already checked in',
+        checkedInAt: invite.checkedInAt,
+        checkedInBy: invite.checkedInBy,
       });
     }
-    
-    res.json({ message: 'Guest checked in successfully', invite });
+
+    const event = await Event.findById(eventId).select('checkinSettings').lean();
+    const settings = event?.checkinSettings || {};
+
+    // If PIN is required and wasn't verified, block commit
+    if (settings.requirePin && invite.securityPin && !pinVerified) {
+      return res.status(403).json({ error: 'PIN verification required before check-in.' });
+    }
+
+    invite.checkedIn    = true;
+    invite.checkedInAt  = new Date();
+    invite.checkedInBy  = staffUser;
+    invite.status       = 'checked-in';
+    invite.actualAttendees = (actualAttendees !== undefined && actualAttendees !== null)
+      ? parseInt(actualAttendees)
+      : (invite.adults + invite.children) || invite.groupSize;
+
+    await invite.save();
+
+    const io = req.app.get('io');
+    if (io) {
+      io.to(`event_${eventId}`).emit('guest_checked_in', {
+        inviteCode:       invite.inviteCode,
+        guestName:        invite.guestName,
+        adults:           invite.adults,
+        children:         invite.children,
+        actualAttendees:  invite.actualAttendees,
+        checkedInAt:      invite.checkedInAt,
+      });
+    }
+
+    res.json({
+      message: 'Guest checked in successfully',
+      invite: {
+        id:              invite._id,
+        inviteCode:      invite.inviteCode,
+        guestName:       invite.guestName,
+        adults:          invite.adults,
+        children:        invite.children,
+        groupSize:       invite.groupSize,
+        actualAttendees: invite.actualAttendees,
+        checkedInAt:     invite.checkedInAt,
+        checkedInBy:     invite.checkedInBy,
+        notes:           invite.notes,
+      },
+    });
   } catch (error) { next(error); }
 });
 
@@ -919,30 +1069,55 @@ router.get('/:eventId/checkin-stats', verifyOrganizer, async (req, res, next) =>
   try {
     const Invite = require('../models/Invite');
     const invites = await Invite.find({ eventId: req.params.eventId });
-    
-    const total = invites.length;
-    const checkedIn = invites.filter(i => i.checkedIn).length;
-    const pending = invites.filter(i => i.status === 'pending').length;
-    const confirmed = invites.filter(i => i.status === 'confirmed').length;
-    const declined = invites.filter(i => i.status === 'declined').length;
-    
-    const totalExpectedAttendees = invites.reduce((sum, i) => sum + i.groupSize, 0);
-    const totalActualAttendees = invites.reduce((sum, i) => sum + i.actualAttendees, 0);
-    
+
+    const total       = invites.length;
+    const checkedIn   = invites.filter(i => i.checkedIn).length;
+    const pending     = invites.filter(i => i.status === 'pending').length;
+    const confirmed   = invites.filter(i => i.status === 'confirmed').length;
+    const declined    = invites.filter(i => i.status === 'declined').length;
+
+    const totalExpectedAdults    = invites.reduce((s, i) => s + (i.adults   || 0), 0);
+    const totalExpectedChildren  = invites.reduce((s, i) => s + (i.children || 0), 0);
+    const totalExpectedAttendees = invites.reduce((s, i) => s + i.groupSize, 0);
+    const totalActualAttendees   = invites.reduce((s, i) => s + i.actualAttendees, 0);
+    const totalFailedScans       = invites.reduce((s, i) => s + i.scanAttempts.length, 0);
+
     res.json({
       stats: {
-        total,
-        checkedIn,
-        pending,
-        confirmed,
-        declined,
-        noShow: confirmed - checkedIn,
+        total, checkedIn, pending, confirmed, declined,
+        noShow: Math.max(0, confirmed - checkedIn),
+        totalExpectedAdults,
+        totalExpectedChildren,
         totalExpectedAttendees,
-        totalActualAttendees
+        totalActualAttendees,
+        totalFailedScans,
       }
     });
   } catch (error) { next(error); }
 });
+
+// Get / update checkin security settings (organizer only)
+router.get('/:eventId/checkin-settings', verifyOrganizer, async (req, res, next) => {
+  try {
+    const event = await Event.findById(req.params.eventId).select('checkinSettings').lean();
+    if (!event) return res.status(404).json({ error: 'Event not found' });
+    res.json({ settings: event.checkinSettings || {} });
+  } catch (error) { next(error); }
+});
+
+router.patch('/:eventId/checkin-settings', verifyOrganizer, async (req, res, next) => {
+  try {
+    const allowed = ['requirePin','requireCodeConfirm','blockCrossEvent','maxFailedAttempts','lockoutMinutes','allowManualOverride','staffNote'];
+    const updates = {};
+    for (const key of allowed) {
+      if (req.body[key] !== undefined) updates[`checkinSettings.${key}`] = req.body[key];
+    }
+    const event = await Event.findByIdAndUpdate(req.params.eventId, { $set: updates }, { new: true }).select('checkinSettings');
+    if (!event) return res.status(404).json({ error: 'Event not found' });
+    res.json({ settings: event.checkinSettings });
+  } catch (error) { next(error); }
+});
+
 
 // Delete invite
 router.delete('/:eventId/invites/:inviteId', verifyOrganizer, async (req, res, next) => {
