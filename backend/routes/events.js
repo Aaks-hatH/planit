@@ -164,8 +164,12 @@ router.post('/verify-password/:eventId', authLimiter,
         });
       }
 
+      // Preserve organizer role if this is the organizer logging back in
+      const isOrganizer = event.organizerName === username ||
+        event.participants.some(p => p.username === username && p.role === 'organizer');
+
       const token = jwt.sign(
-        { eventId: event._id.toString(), username, role: 'participant' },
+        { eventId: event._id.toString(), username, role: isOrganizer ? 'organizer' : 'participant' },
         process.env.JWT_SECRET, { expiresIn: '30d' }
       );
       res.json({ message: 'Access granted', token, event: { id: event._id, title: event.title } });
@@ -213,8 +217,12 @@ router.post('/join/:eventId',
         });
       }
 
+      // Preserve organizer role if this is the organizer logging back in
+      const isOrganizer = event.organizerName === username || 
+        event.participants.some(p => p.username === username && p.role === 'organizer');
+      
       const token = jwt.sign(
-        { eventId: event._id.toString(), username, role: 'participant' },
+        { eventId: event._id.toString(), username, role: isOrganizer ? 'organizer' : 'participant' },
         process.env.JWT_SECRET, { expiresIn: '30d' }
       );
       res.json({ message: 'Joined successfully', token, event: { id: event._id, title: event.title } });
@@ -822,6 +830,7 @@ router.get('/invite/:inviteCode', async (req, res, next) => {
     res.json({ 
       invite: {
         code: invite.inviteCode,
+        inviteCode: invite.inviteCode,
         guestName: invite.guestName,
         guestEmail: invite.guestEmail,
         groupSize: invite.groupSize,
