@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const multer = require('multer');
 const cloudinary = require('cloudinary').v2;
-const { verifyEventToken } = require('../middleware/auth');
+const { verifyEventAccess: verifyEventToken } = require('../middleware/auth');
 const File = require('../models/File');
 const Event = require('../models/Event');
 
