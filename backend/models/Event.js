@@ -14,6 +14,7 @@ const eventSchema = new mongoose.Schema({
   password: { type: String, select: false },
   isPasswordProtected: { type: Boolean, default: false },
   maxParticipants: { type: Number, default: 100, min: 1, max: 1000 },
+  isEnterpriseMode: { type: Boolean, default: false },
   settings: {
     allowChat: { type: Boolean, default: true },
     allowPolls: { type: Boolean, default: true },
