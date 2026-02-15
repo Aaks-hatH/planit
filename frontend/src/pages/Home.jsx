@@ -385,22 +385,39 @@ export default function Home() {
                   </div>
                   <h2 className="text-xl font-semibold text-neutral-900">Event created</h2>
                   <p className="text-sm text-neutral-500 mt-1">
-                    Share the link below so others can join
-                    {created.isPasswordProtected ? ' — they will be asked for the password' : ''}.
+                    {mode === 'enterprise' 
+                      ? 'Your enterprise event is ready. Set up guest invites and check-in.' 
+                      : `Share the link below so others can join${created.isPasswordProtected ? ' — they will be asked for the password' : ''}.`
+                    }
                   </p>
                 </div>
 
-                <div className="mb-6">
-                  <p className="text-sm font-medium text-neutral-700">Your event link</p>
-                  <CopyLinkBox eventId={created.id} subdomain={created.subdomain} />
-                </div>
+                {mode === 'enterprise' ? (
+                  <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Users className="w-4 h-4 text-blue-600" />
+                      <p className="text-sm font-semibold text-blue-900">Next Steps for Enterprise Mode:</p>
+                    </div>
+                    <ol className="text-xs text-blue-800 space-y-1 ml-6 list-decimal">
+                      <li>Enter your event and click "Manage Invites & Check-in"</li>
+                      <li>Add your guests with their names and group sizes</li>
+                      <li>Copy and send personalized invite links to each guest</li>
+                      <li>On event day, use the check-in dashboard to scan QR codes</li>
+                    </ol>
+                  </div>
+                ) : (
+                  <div className="mb-6">
+                    <p className="text-sm font-medium text-neutral-700">Your event link</p>
+                    <CopyLinkBox eventId={created.id} subdomain={created.subdomain} />
+                  </div>
+                )}
 
                 <div className="pt-5 border-t border-neutral-100">
                   <button
                     onClick={() => navigate(created.subdomain ? `/e/${created.subdomain}` : `/event/${created.id}`)}
                     className="btn btn-primary w-full py-3"
                   >
-                    Enter your event
+                    {mode === 'enterprise' ? 'Set Up Invites' : 'Enter your event'}
                     <ArrowRight className="w-4 h-4" />
                   </button>
                   <p className="text-xs text-neutral-400 text-center mt-3">
