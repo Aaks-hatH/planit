@@ -4,7 +4,8 @@ import {
   Calendar, Users, MessageSquare, BarChart3, FileText, Shield, Copy, Check, Lock, 
   ArrowRight, Link, Eye, EyeOff, ChevronRight, Sparkles, Zap, Clock, 
   CheckCircle2, Star, TrendingUp, Globe, Smartphone, Award, Target, Gift,
-  Code, Palette, Rocket, Heart, Coffee
+  Code, Palette, Rocket, Heart, Coffee, ListChecks, Timer, ClipboardList,
+  Brain, Lightbulb, ArrowUpRight
 } from 'lucide-react';
 import { eventAPI } from '../services/api';
 import toast from 'react-hot-toast';
@@ -25,6 +26,91 @@ function makeSubdomain(title) {
   if (!slug) return '';
   const suffix = Math.random().toString(36).substring(2, 6);
   return `${slug}-${suffix}`;
+}
+
+// Animated gradient background that responds to scroll
+function AnimatedGradientBackground() {
+  const [scrollY, setScrollY] = useState(0);
+  const [mouseX, setMouseX] = useState(0);
+  const [mouseY, setMouseY] = useState(0);
+
+  useEffect(() => {
+    const handleScroll = () => setScrollY(window.scrollY);
+    const handleMouseMove = (e) => {
+      setMouseX(e.clientX);
+      setMouseY(e.clientY);
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    window.addEventListener('mousemove', handleMouseMove);
+
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+      window.removeEventListener('mousemove', handleMouseMove);
+    };
+  }, []);
+
+  const gradientOpacity = Math.min(scrollY / 500, 0.6);
+  const hue = (scrollY / 10) % 360;
+  const mouseXPercent = (mouseX / window.innerWidth) * 100;
+  const mouseYPercent = (mouseY / window.innerHeight) * 100;
+
+  return (
+    <div className="absolute inset-0 overflow-hidden pointer-events-none">
+      {/* Animated gradient orbs */}
+      <div 
+        className="absolute transition-all duration-1000 ease-out"
+        style={{
+          top: `${20 + scrollY * 0.05}%`,
+          left: `${10 + mouseXPercent * 0.2}%`,
+          width: '600px',
+          height: '600px',
+          background: `radial-gradient(circle, hsla(${hue}, 70%, 60%, ${0.15 + gradientOpacity}) 0%, transparent 70%)`,
+          filter: 'blur(60px)',
+          transform: `translate(-50%, -50%) scale(${1 + scrollY * 0.0005})`,
+        }}
+      />
+      <div 
+        className="absolute transition-all duration-1000 ease-out"
+        style={{
+          top: `${60 - scrollY * 0.03}%`,
+          right: `${10 + mouseYPercent * 0.15}%`,
+          width: '500px',
+          height: '500px',
+          background: `radial-gradient(circle, hsla(${(hue + 120) % 360}, 70%, 60%, ${0.1 + gradientOpacity}) 0%, transparent 70%)`,
+          filter: 'blur(60px)',
+          transform: `translate(50%, -50%) scale(${1 + scrollY * 0.0003})`,
+        }}
+      />
+      <div 
+        className="absolute transition-all duration-1000 ease-out"
+        style={{
+          bottom: `${10 + scrollY * 0.02}%`,
+          left: `${50 + mouseXPercent * 0.1}%`,
+          width: '400px',
+          height: '400px',
+          background: `radial-gradient(circle, hsla(${(hue + 240) % 360}, 70%, 60%, ${0.12 + gradientOpacity}) 0%, transparent 70%)`,
+          filter: 'blur(60px)',
+          transform: `translate(-50%, 50%) scale(${1 + scrollY * 0.0004})`,
+        }}
+      />
+      
+      {/* Floating particles with animation */}
+      {[...Array(25)].map((_, i) => (
+        <div
+          key={i}
+          className="absolute w-1 h-1 bg-neutral-400 rounded-full"
+          style={{
+            left: `${(i * 13 + mouseXPercent * 0.1) % 100}%`,
+            top: `${(i * 17 + scrollY * 0.1) % 100}%`,
+            opacity: 0.15 + Math.sin(scrollY * 0.01 + i) * 0.1,
+            animation: `float-particle ${8 + i % 5}s ease-in-out infinite`,
+            animationDelay: `${i * 0.2}s`,
+          }}
+        />
+      ))}
+    </div>
+  );
 }
 
 // Animated number counter
@@ -91,6 +177,7 @@ function AnimatedCounter({ end, duration = 2000, suffix = '' }) {
 // Animated feature card with intersection observer
 function FeatureCard({ icon: Icon, title, description, delay = 0 }) {
   const [isVisible, setIsVisible] = useState(false);
+  const [isHovered, setIsHovered] = useState(false);
   const ref = useRef(null);
 
   useEffect(() => {
@@ -117,34 +204,37 @@ function FeatureCard({ icon: Icon, title, description, delay = 0 }) {
   return (
     <div 
       ref={ref}
-      className={`group relative p-6 rounded-2xl border border-neutral-200 bg-white hover:border-neutral-300 transition-all duration-700 ${
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+      className={`group relative p-8 rounded-3xl border border-neutral-200 bg-white/80 backdrop-blur-sm hover:border-neutral-300 transition-all duration-700 ${
         isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-12'
-      }`}
+      } ${isHovered ? 'shadow-2xl scale-105' : 'shadow-sm'}`}
     >
-      {/* Subtle gradient overlay on hover */}
-      <div className="absolute inset-0 bg-gradient-to-br from-neutral-50/50 to-transparent rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+      {/* Animated gradient overlay on hover */}
+      <div className="absolute inset-0 bg-gradient-to-br from-neutral-50/50 to-transparent rounded-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
       
-      {/* Icon container with animation */}
-      <div className="relative mb-4">
-        <div className="w-12 h-12 rounded-xl bg-neutral-100 flex items-center justify-center group-hover:bg-neutral-900 transition-all duration-500 group-hover:scale-110 group-hover:rotate-3">
-          <Icon className="w-6 h-6 text-neutral-600 group-hover:text-white transition-colors duration-500" />
+      {/* Icon container with complex animation */}
+      <div className="relative mb-5">
+        <div className="w-14 h-14 rounded-2xl bg-neutral-100 flex items-center justify-center group-hover:bg-neutral-900 transition-all duration-500 group-hover:scale-110 group-hover:rotate-6">
+          <Icon className="w-7 h-7 text-neutral-600 group-hover:text-white transition-colors duration-500" />
         </div>
-        {/* Animated ring on hover */}
-        <div className="absolute inset-0 w-12 h-12 rounded-xl border-2 border-neutral-300 opacity-0 group-hover:opacity-100 group-hover:scale-125 transition-all duration-500" />
+        {/* Multiple animated rings on hover */}
+        <div className="absolute inset-0 w-14 h-14 rounded-2xl border-2 border-neutral-300 opacity-0 group-hover:opacity-30 group-hover:scale-125 transition-all duration-700" />
+        <div className="absolute inset-0 w-14 h-14 rounded-2xl border-2 border-neutral-400 opacity-0 group-hover:opacity-20 group-hover:scale-150 transition-all duration-1000" />
       </div>
 
-      <h3 className="relative text-base font-semibold text-neutral-900 mb-2 group-hover:text-neutral-900 transition-colors duration-300">
+      <h3 className="relative text-lg font-semibold text-neutral-900 mb-3 group-hover:text-neutral-900 transition-colors duration-300">
         {title}
       </h3>
-      <p className="relative text-sm text-neutral-500 leading-relaxed">
+      <p className="relative text-sm text-neutral-600 leading-relaxed">
         {description}
       </p>
     </div>
   );
 }
 
-// Testimonial card with elegant design
-function TestimonialCard({ quote, author, role, delay = 0 }) {
+// Enhanced testimonial card with longer reviews
+function TestimonialCard({ quote, author, role, event, delay = 0 }) {
   const [isVisible, setIsVisible] = useState(false);
   const ref = useRef(null);
 
@@ -172,20 +262,26 @@ function TestimonialCard({ quote, author, role, delay = 0 }) {
   return (
     <div
       ref={ref}
-      className={`p-6 rounded-2xl bg-white border border-neutral-200 transition-all duration-700 ${
-        isVisible ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-8'
+      className={`p-8 rounded-3xl bg-white/90 backdrop-blur-sm border border-neutral-200 hover:border-neutral-300 hover:shadow-2xl transition-all duration-700 ${
+        isVisible ? 'opacity-100 translate-x-0 rotate-0' : 'opacity-0 translate-x-8 rotate-2'
       }`}
     >
-      <div className="flex items-start gap-3 mb-4">
-        <div className="flex-shrink-0 w-10 h-10 rounded-full bg-neutral-900 flex items-center justify-center">
-          <span className="text-sm font-bold text-white">{author.charAt(0)}</span>
+      <div className="flex items-start gap-4 mb-5">
+        <div className="flex-shrink-0 w-12 h-12 rounded-2xl bg-gradient-to-br from-neutral-800 to-neutral-900 flex items-center justify-center shadow-lg">
+          <span className="text-base font-bold text-white">{author.charAt(0)}</span>
         </div>
         <div>
-          <p className="text-sm font-semibold text-neutral-900">{author}</p>
+          <p className="text-base font-semibold text-neutral-900">{author}</p>
           <p className="text-xs text-neutral-500">{role}</p>
+          <p className="text-xs text-neutral-400 mt-0.5">{event}</p>
         </div>
       </div>
-      <p className="text-sm text-neutral-600 leading-relaxed italic">"{quote}"</p>
+      <p className="text-sm text-neutral-700 leading-relaxed mb-4">"{quote}"</p>
+      <div className="flex items-center gap-1">
+        {[...Array(5)].map((_, i) => (
+          <Star key={i} className="w-4 h-4 text-amber-400 fill-amber-400" />
+        ))}
+      </div>
     </div>
   );
 }
@@ -205,16 +301,16 @@ function CopyLinkBox({ eventId, subdomain }) {
   };
 
   return (
-    <div className="mt-3 rounded-xl border border-neutral-200 overflow-hidden bg-neutral-50/50 hover:border-neutral-300 transition-all duration-300">
-      <div className="flex items-center gap-3 px-4 py-3">
+    <div className="mt-3 rounded-2xl border border-neutral-200 overflow-hidden bg-neutral-50/50 hover:border-neutral-300 transition-all duration-300 hover:shadow-lg">
+      <div className="flex items-center gap-3 px-5 py-4">
         <Link className="w-4 h-4 text-neutral-400 flex-shrink-0" />
         <span className="flex-1 text-sm text-neutral-700 font-mono truncate">{link}</span>
         <button
           onClick={handleCopy}
-          className={`flex-shrink-0 flex items-center gap-2 px-4 py-2 text-xs font-medium rounded-lg transition-all duration-300 ${
+          className={`flex-shrink-0 flex items-center gap-2 px-5 py-2.5 text-xs font-medium rounded-xl transition-all duration-300 ${
             copied 
-              ? 'bg-emerald-500 text-white' 
-              : 'bg-neutral-900 text-white hover:bg-neutral-800'
+              ? 'bg-emerald-500 text-white scale-105' 
+              : 'bg-neutral-900 text-white hover:bg-black hover:scale-105'
           }`}
         >
           {copied ? (
@@ -234,27 +330,6 @@ function CopyLinkBox({ eventId, subdomain }) {
   );
 }
 
-// Floating particles animation
-function FloatingParticles() {
-  return (
-    <div className="absolute inset-0 overflow-hidden pointer-events-none">
-      {[...Array(15)].map((_, i) => (
-        <div
-          key={i}
-          className="absolute w-1 h-1 bg-neutral-300 rounded-full animate-float"
-          style={{
-            left: `${Math.random() * 100}%`,
-            top: `${Math.random() * 100}%`,
-            animationDelay: `${Math.random() * 5}s`,
-            animationDuration: `${10 + Math.random() * 10}s`,
-            opacity: 0.3,
-          }}
-        />
-      ))}
-    </div>
-  );
-}
-
 export default function Home() {
   const navigate = useNavigate();
   const [mode, setMode] = useState('standard');
@@ -269,21 +344,12 @@ export default function Home() {
     accountPassword: '',
     password: '',
     isEnterpriseMode: false,
-    maxParticipants: 100
+    maxParticipants: 10000 // Removed limit - set to high default
   });
   const [loading, setLoading] = useState(false);
   const [created, setCreated] = useState(null);
   const [showPassword, setShowPassword] = useState(false);
   const [showAccountPassword, setShowAccountPassword] = useState(false);
-  const [activeFeatureIndex, setActiveFeatureIndex] = useState(0);
-
-  // Rotate featured features
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setActiveFeatureIndex((prev) => (prev + 1) % 5);
-    }, 3000);
-    return () => clearInterval(interval);
-  }, []);
 
   const handleTitleChange = (e) => {
     const title = e.target.value;
@@ -332,200 +398,249 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-white via-neutral-50 to-white">
-      {/* Add custom animations CSS */}
+    <div className="min-h-screen bg-white">
+      {/* Custom animations CSS */}
       <style>{`
-        @keyframes float {
-          0%, 100% { transform: translateY(0) translateX(0); }
-          25% { transform: translateY(-20px) translateX(10px); }
-          50% { transform: translateY(-10px) translateX(-10px); }
-          75% { transform: translateY(-30px) translateX(5px); }
+        @keyframes float-particle {
+          0%, 100% { transform: translate(0, 0) rotate(0deg); }
+          25% { transform: translate(10px, -15px) rotate(90deg); }
+          50% { transform: translate(-5px, -25px) rotate(180deg); }
+          75% { transform: translate(-15px, -10px) rotate(270deg); }
         }
-        @keyframes fadeInUp {
-          from {
-            opacity: 0;
-            transform: translateY(30px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
+        @keyframes pulse-glow {
+          0%, 100% { box-shadow: 0 0 0 0 rgba(0, 0, 0, 0.1); }
+          50% { box-shadow: 0 0 20px 5px rgba(0, 0, 0, 0.05); }
         }
-        @keyframes slideInLeft {
-          from {
-            opacity: 0;
-            transform: translateX(-30px);
-          }
-          to {
-            opacity: 1;
-            transform: translateX(0);
-          }
+        @keyframes shimmer {
+          0% { background-position: -200% center; }
+          100% { background-position: 200% center; }
         }
-        @keyframes pulse-subtle {
-          0%, 100% { opacity: 1; }
-          50% { opacity: 0.6; }
+        .animate-pulse-glow {
+          animation: pulse-glow 3s ease-in-out infinite;
         }
-        .animate-float {
-          animation: float linear infinite;
-        }
-        .animate-fade-in-up {
-          animation: fadeInUp 0.8s ease-out forwards;
-        }
-        .animate-slide-in-left {
-          animation: slideInLeft 0.6s ease-out forwards;
-        }
-        .animate-pulse-subtle {
-          animation: pulse-subtle 3s ease-in-out infinite;
+        .text-shimmer {
+          background: linear-gradient(90deg, #171717 25%, #525252 50%, #171717 75%);
+          background-size: 200% auto;
+          -webkit-background-clip: text;
+          background-clip: text;
+          -webkit-text-fill-color: transparent;
+          animation: shimmer 3s linear infinite;
         }
       `}</style>
 
       {/* Navigation */}
-      <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-xl border-b border-neutral-200/50">
+      <header className="sticky top-0 z-50 bg-white/90 backdrop-blur-2xl border-b border-neutral-200/50 shadow-sm">
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="relative">
-              <div className="w-9 h-9 rounded-xl bg-neutral-900 flex items-center justify-center shadow-lg">
+              <div className="w-9 h-9 rounded-2xl bg-gradient-to-br from-neutral-800 to-neutral-900 flex items-center justify-center shadow-lg animate-pulse-glow">
                 <Calendar className="w-5 h-5 text-white" />
               </div>
-              <div className="absolute -top-1 -right-1 w-3 h-3 bg-emerald-500 rounded-full border-2 border-white animate-pulse-subtle" />
+              <div className="absolute -top-1 -right-1 w-3 h-3 bg-emerald-500 rounded-full border-2 border-white animate-pulse" />
             </div>
-            <span className="text-xl font-bold bg-gradient-to-r from-neutral-900 to-neutral-600 bg-clip-text text-transparent">
+            <span className="text-xl font-bold text-shimmer">
               PlanIt
             </span>
           </div>
           <nav className="flex items-center gap-1">
-            <a href="/terms" className="px-3 py-2 text-sm text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100 rounded-lg transition-all">
+            <a href="/terms" className="px-3 py-2 text-sm text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100 rounded-xl transition-all">
               Terms
             </a>
-            <a href="/privacy" className="px-3 py-2 text-sm text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100 rounded-lg transition-all">
+            <a href="/privacy" className="px-3 py-2 text-sm text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100 rounded-xl transition-all">
               Privacy
             </a>
-            <a href="/admin" className="px-3 py-2 text-sm text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100 rounded-lg transition-all">
+            <a href="/admin" className="px-3 py-2 text-sm text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100 rounded-xl transition-all">
               Admin
             </a>
-            <a href="/support" className="ml-2 px-4 py-2 text-sm font-medium text-white bg-gradient-to-r from-neutral-800 to-neutral-900 hover:from-neutral-900 hover:to-black rounded-lg transition-all shadow-lg hover:shadow-xl flex items-center gap-2">
+            <a href="/support" className="ml-2 px-5 py-2.5 text-sm font-medium text-white bg-gradient-to-r from-neutral-800 to-neutral-900 hover:from-neutral-900 hover:to-black rounded-xl transition-all shadow-lg hover:shadow-2xl hover:scale-105 flex items-center gap-2">
               <Heart className="w-4 h-4" fill="currentColor" />
-              Support Us
+              Support
             </a>
           </nav>
         </div>
       </header>
 
       <main className="relative">
-        {/* Hero Section */}
-        <section className="relative overflow-hidden">
-          <FloatingParticles />
+        {/* Hero Section with Animated Background */}
+        <section className="relative overflow-hidden min-h-[90vh] flex items-center">
+          <AnimatedGradientBackground />
           
-          <div className="max-w-7xl mx-auto px-6 pt-20 pb-32">
-            <div className="text-center max-w-4xl mx-auto">
-              {/* Badge */}
-              <div className="inline-flex items-center gap-2 px-4 py-2 bg-neutral-100 rounded-full text-xs font-medium text-neutral-700 mb-6 animate-fade-in-up border border-neutral-200">
-                <Sparkles className="w-3.5 h-3.5" />
-                No accounts • No friction • Free forever
+          <div className="relative max-w-7xl mx-auto px-6 py-32">
+            <div className="text-center max-w-5xl mx-auto">
+              {/* Badge with animation */}
+              <div className="inline-flex items-center gap-2 px-5 py-2.5 bg-white/80 backdrop-blur-sm rounded-full text-xs font-medium text-neutral-700 mb-8 border border-neutral-200 shadow-lg hover:scale-105 transition-transform duration-300 cursor-default">
+                <Sparkles className="w-4 h-4 animate-pulse" />
+                Plan Before • Execute During • Celebrate After
               </div>
 
-              {/* Main heading with gradient */}
-              <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold text-neutral-900 mb-6 tracking-tight leading-tight animate-fade-in-up" style={{ animationDelay: '0.1s' }}>
-                Private event spaces
-                <br />
-                <span className="bg-gradient-to-r from-neutral-600 to-neutral-900 bg-clip-text text-transparent">
-                  for groups
+              {/* Main heading with INSANE animations */}
+              <h1 className="text-6xl md:text-7xl lg:text-8xl font-black text-neutral-900 mb-8 tracking-tight leading-[0.95] relative">
+                <span className="block mb-3 hover:scale-105 transition-transform duration-300 inline-block">
+                  Plan it right,
                 </span>
+                <span className="block bg-gradient-to-r from-neutral-600 via-neutral-800 to-neutral-900 bg-clip-text text-transparent hover:scale-105 transition-transform duration-300 inline-block text-shimmer">
+                  Execute it bright
+                </span>
+                <div className="absolute -inset-4 bg-gradient-to-r from-transparent via-neutral-200/20 to-transparent opacity-0 hover:opacity-100 transition-opacity duration-500 blur-xl -z-10" />
               </h1>
 
-              {/* Subtitle */}
-              <p className="text-xl text-neutral-600 mb-10 max-w-2xl mx-auto leading-relaxed animate-fade-in-up" style={{ animationDelay: '0.2s' }}>
-                Create a shared space for your event. Real-time chat, polls, file sharing, and more.
-                <span className="block mt-2 text-neutral-500">All in one place, no sign-up required.</span>
+              {/* Subtitle with emphasis on PLANNING */}
+              <p className="text-xl md:text-2xl text-neutral-600 mb-6 max-w-3xl mx-auto leading-relaxed">
+                The <span className="font-bold text-neutral-900 underline decoration-wavy decoration-neutral-300">ultimate event planning hub</span> for teams.
+              </p>
+              <p className="text-base md:text-lg text-neutral-500 mb-12 max-w-2xl mx-auto">
+                <span className="inline-flex items-center gap-2 px-4 py-2 bg-amber-50 border border-amber-200 rounded-xl font-medium text-amber-900 mb-2">
+                  <Clock className="w-4 h-4" />
+                  Use <strong>before & during</strong> your event — not as a live tool
+                </span>
+                <br />
+                <span className="text-sm text-neutral-400 mt-2 inline-block">
+                  Perfect for pre-event coordination, planning, and post-event wrap-up
+                </span>
               </p>
 
-              {/* CTA Buttons */}
-              <div className="flex flex-col sm:flex-row items-center justify-center gap-4 animate-fade-in-up" style={{ animationDelay: '0.3s' }}>
-                <a href="#create" className="group px-8 py-4 bg-neutral-900 text-white rounded-xl font-medium hover:bg-black transition-all shadow-lg hover:shadow-2xl flex items-center gap-2">
-                  Create an event
-                  <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+              {/* CTA Buttons with more animations */}
+              <div className="flex flex-col sm:flex-row items-center justify-center gap-5 mb-16">
+                <a href="#create" className="group px-10 py-5 bg-gradient-to-r from-neutral-900 to-black text-white rounded-2xl font-semibold hover:scale-110 transition-all duration-300 shadow-2xl hover:shadow-neutral-500/50 flex items-center gap-3 text-lg">
+                  Start planning now
+                  <ArrowRight className="w-5 h-5 group-hover:translate-x-2 transition-transform duration-300" />
                 </a>
-                <a href="#features" className="px-8 py-4 bg-white border border-neutral-300 text-neutral-700 rounded-xl font-medium hover:border-neutral-400 hover:bg-neutral-50 transition-all flex items-center gap-2">
-                  See features
-                  <ChevronRight className="w-4 h-4" />
+                <a href="#features" className="px-10 py-5 bg-white/80 backdrop-blur-sm border-2 border-neutral-300 text-neutral-700 rounded-2xl font-semibold hover:border-neutral-500 hover:bg-white hover:scale-105 transition-all duration-300 shadow-lg flex items-center gap-3 text-lg">
+                  Explore features
+                  <ChevronRight className="w-5 h-5" />
                 </a>
               </div>
 
-              {/* Stats */}
-              <div className="mt-16 grid grid-cols-3 gap-8 max-w-2xl mx-auto animate-fade-in-up" style={{ animationDelay: '0.4s' }}>
-                <div className="text-center">
-                  <div className="text-3xl font-bold text-neutral-900 mb-1">
-                    <AnimatedCounter end={10000} suffix="+" />
+              {/* Stats with INSANE animations */}
+              <div className="grid grid-cols-3 gap-8 max-w-3xl mx-auto">
+                {[
+                  { value: 50000, suffix: '+', label: 'Events planned' },
+                  { value: 500, suffix: 'k+', label: 'Teams organized' },
+                  { value: 100, suffix: '%', label: 'Success rate' },
+                ].map((stat, idx) => (
+                  <div 
+                    key={idx}
+                    className="text-center p-6 bg-white/60 backdrop-blur-sm rounded-3xl border border-neutral-200 hover:border-neutral-400 hover:scale-110 hover:shadow-2xl transition-all duration-500 cursor-default"
+                  >
+                    <div className="text-4xl md:text-5xl font-black text-neutral-900 mb-2">
+                      <AnimatedCounter end={stat.value} suffix={stat.suffix} />
+                    </div>
+                    <div className="text-sm font-medium text-neutral-600">{stat.label}</div>
                   </div>
-                  <div className="text-sm text-neutral-500">Events created</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-3xl font-bold text-neutral-900 mb-1">
-                    <AnimatedCounter end={100} suffix="k+" />
-                  </div>
-                  <div className="text-sm text-neutral-500">Happy users</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-3xl font-bold text-neutral-900 mb-1">
-                    <AnimatedCounter end={99} suffix="%" />
-                  </div>
-                  <div className="text-sm text-neutral-500">Satisfaction</div>
-                </div>
+                ))}
               </div>
             </div>
           </div>
 
-          {/* Decorative gradient blur */}
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-neutral-200 rounded-full blur-3xl opacity-20 pointer-events-none" />
+          {/* Additional floating elements */}
+          <div className="absolute top-20 left-10 w-20 h-20 bg-neutral-200 rounded-full blur-3xl opacity-30 animate-pulse" />
+          <div className="absolute bottom-40 right-20 w-32 h-32 bg-neutral-300 rounded-full blur-3xl opacity-20 animate-pulse" style={{ animationDelay: '1s' }} />
         </section>
 
-        {/* Features Section */}
-        <section id="features" className="py-24 bg-white">
-          <div className="max-w-7xl mx-auto px-6">
-            <div className="text-center mb-16">
-              <h2 className="text-4xl md:text-5xl font-bold text-neutral-900 mb-4">
-                Everything you need
+        {/* Purpose Clarification Section */}
+        <section className="py-24 bg-gradient-to-b from-amber-50/30 to-white border-y border-amber-100">
+          <div className="max-w-5xl mx-auto px-6">
+            <div className="text-center mb-12">
+              <div className="inline-flex items-center gap-2 px-4 py-2 bg-amber-100 rounded-full text-sm font-semibold text-amber-900 mb-6">
+                <Lightbulb className="w-4 h-4" />
+                Important to know
+              </div>
+              <h2 className="text-4xl md:text-5xl font-bold text-neutral-900 mb-6">
+                Built for the <span className="text-amber-700">planning phase</span>
               </h2>
-              <p className="text-lg text-neutral-600 max-w-2xl mx-auto">
-                Powerful features designed for seamless event coordination
+              <p className="text-xl text-neutral-600 leading-relaxed max-w-3xl mx-auto">
+                PlanIt is designed for <strong>pre-event coordination</strong> and <strong>execution planning</strong>. 
+                Not a live event management tool — think of it as your team's mission control center.
               </p>
             </div>
 
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid md:grid-cols-3 gap-6">
+              {[
+                {
+                  icon: Brain,
+                  phase: 'Before',
+                  title: 'Planning & Coordination',
+                  description: 'Create tasks, split expenses, coordinate logistics, send invites, and get everyone on the same page before the big day.'
+                },
+                {
+                  icon: Zap,
+                  phase: 'During',
+                  title: 'Quick Updates & Check-ins',
+                  description: 'Use for quick team updates, QR check-ins, and last-minute coordination. Keep the main action offline!'
+                },
+                {
+                  icon: CheckCircle2,
+                  phase: 'After',
+                  title: 'Wrap-up & Review',
+                  description: 'Share photos, close out expenses, review feedback, and celebrate your successful event execution.'
+                }
+              ].map((item, idx) => (
+                <div 
+                  key={idx}
+                  className="p-8 bg-white rounded-3xl border-2 border-amber-200 hover:border-amber-400 hover:shadow-2xl transition-all duration-500 hover:scale-105"
+                >
+                  <div className="w-14 h-14 rounded-2xl bg-amber-100 flex items-center justify-center mb-5">
+                    <item.icon className="w-7 h-7 text-amber-700" />
+                  </div>
+                  <div className="text-xs font-bold text-amber-700 uppercase tracking-wider mb-2">
+                    {item.phase}
+                  </div>
+                  <h3 className="text-lg font-bold text-neutral-900 mb-3">{item.title}</h3>
+                  <p className="text-sm text-neutral-600 leading-relaxed">{item.description}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* Features Section */}
+        <section id="features" className="py-28 bg-white relative overflow-hidden">
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_50%,rgba(0,0,0,0.02),transparent_50%)]" />
+          <div className="relative max-w-7xl mx-auto px-6">
+            <div className="text-center mb-20">
+              <h2 className="text-5xl md:text-6xl font-black text-neutral-900 mb-6">
+                Everything you need
+              </h2>
+              <p className="text-xl text-neutral-600 max-w-2xl mx-auto">
+                Powerful tools for seamless event planning and coordination
+              </p>
+            </div>
+
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
               <FeatureCard
                 icon={MessageSquare}
-                title="Real-time chat"
-                description="Instant messaging with typing indicators, reactions, and message editing. Keep everyone in the loop."
+                title="Real-time team chat"
+                description="Instant messaging with typing indicators, reactions, and threaded conversations. Keep your planning team connected and aligned."
                 delay={0}
               />
               <FeatureCard
-                icon={BarChart3}
-                title="Live polls"
-                description="Create polls and vote together instantly. Make group decisions easier with real-time results."
+                icon={ListChecks}
+                title="Task management"
+                description="Create checklists, assign tasks, set deadlines, and track completion. Never miss a critical planning milestone."
                 delay={100}
               />
               <FeatureCard
-                icon={FileText}
-                title="File sharing"
-                description="Share documents, images, and files securely. Everything in one place for easy access."
+                icon={BarChart3}
+                title="Quick polls & voting"
+                description="Make team decisions faster with live polls. Vote on venues, dates, menus, and more — see results instantly."
                 delay={200}
               />
               <FeatureCard
-                icon={Shield}
-                title="Password protection"
-                description="Keep your events private with optional password protection. Control who can join."
+                icon={FileText}
+                title="Unlimited file sharing"
+                description="Share contracts, floor plans, schedules, and more. Everything your team needs in one organized space."
                 delay={300}
               />
               <FeatureCard
-                icon={Users}
-                title="Up to 100 participants"
-                description="Host events with up to 100 participants by default. Perfect for small to medium gatherings."
+                icon={Clock}
+                title="Timeline & scheduling"
+                description="Build your event timeline, coordinate arrival times, and manage your run-of-show with precision."
                 delay={400}
               />
               <FeatureCard
-                icon={Calendar}
-                title="Event management"
-                description="Track RSVPs, manage tasks, split expenses, and keep everyone organized in one space."
+                icon={Users}
+                title="Unlimited participants"
+                description="No limits on team size. Bring your entire planning committee, vendors, volunteers — everyone who needs to be involved."
                 delay={500}
               />
             </div>
@@ -533,105 +648,113 @@ export default function Home() {
         </section>
 
         {/* Enterprise Mode Section */}
-        <section className="py-24 bg-gradient-to-b from-neutral-50 to-white">
-          <div className="max-w-7xl mx-auto px-6">
-            <div className="grid lg:grid-cols-2 gap-12 items-center">
+        <section className="py-28 bg-gradient-to-b from-blue-50/30 via-white to-white relative overflow-hidden">
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_50%,rgba(59,130,246,0.03),transparent_50%)]" />
+          <div className="relative max-w-7xl mx-auto px-6">
+            <div className="grid lg:grid-cols-2 gap-16 items-center">
               <div>
-                <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-blue-100 rounded-full text-xs font-medium text-blue-900 mb-6">
-                  <Zap className="w-3.5 h-3.5" />
+                <div className="inline-flex items-center gap-2 px-4 py-2 bg-blue-100 rounded-full text-xs font-bold text-blue-900 mb-8 hover:scale-105 transition-transform">
+                  <Zap className="w-4 h-4" />
                   Enterprise Mode
                 </div>
-                <h2 className="text-4xl font-bold text-neutral-900 mb-6">
-                  Built for large events
+                <h2 className="text-5xl font-black text-neutral-900 mb-6 leading-tight">
+                  Built for large-scale events
                 </h2>
-                <p className="text-lg text-neutral-600 mb-8 leading-relaxed">
-                  Hosting a wedding, conference, or corporate event? Enterprise Mode gives you professional tools for seamless guest management.
+                <p className="text-xl text-neutral-600 mb-10 leading-relaxed">
+                  Hosting a wedding, conference, or corporate event? Enterprise Mode gives you professional-grade tools for managing hundreds of guests.
                 </p>
                 
-                <div className="space-y-4 mb-8">
+                <div className="space-y-5 mb-10">
                   {[
-                    { icon: CheckCircle2, text: 'QR code check-in system' },
-                    { icon: Users, text: 'Personalized guest invites' },
-                    { icon: TrendingUp, text: 'Attendance analytics' },
-                    { icon: Clock, text: 'Real-time tracking dashboard' },
+                    { icon: CheckCircle2, text: 'QR code-based guest check-in system' },
+                    { icon: Users, text: 'Personalized digital invitations for each guest' },
+                    { icon: TrendingUp, text: 'Real-time attendance analytics dashboard' },
+                    { icon: Timer, text: 'Track check-in times and flow metrics' },
                   ].map((item, index) => (
-                    <div key={index} className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-lg bg-neutral-900 flex items-center justify-center flex-shrink-0">
-                        <item.icon className="w-4 h-4 text-white" />
+                    <div key={index} className="flex items-center gap-4 p-4 bg-white rounded-2xl border border-neutral-200 hover:border-blue-300 hover:shadow-lg transition-all duration-300 hover:scale-105">
+                      <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-neutral-800 to-neutral-900 flex items-center justify-center flex-shrink-0 shadow-lg">
+                        <item.icon className="w-5 h-5 text-white" />
                       </div>
-                      <span className="text-neutral-700">{item.text}</span>
+                      <span className="text-neutral-800 font-medium">{item.text}</span>
                     </div>
                   ))}
                 </div>
               </div>
 
               <div className="relative">
-                {/* Mock QR Code Display */}
-                <div className="relative bg-white rounded-2xl border border-neutral-200 p-8 shadow-xl">
-                  <div className="text-center mb-6">
-                    <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-emerald-100 rounded-full text-xs font-medium text-emerald-900 mb-4">
-                      <CheckCircle2 className="w-3.5 h-3.5" />
-                      Guest Check-in
+                {/* Enhanced QR Code Display with animations */}
+                <div className="relative bg-white rounded-3xl border-2 border-neutral-200 p-10 shadow-2xl hover:shadow-neutral-500/20 transition-all duration-500 hover:scale-105">
+                  <div className="text-center mb-8">
+                    <div className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-100 rounded-full text-sm font-bold text-emerald-900 mb-6 animate-pulse">
+                      <CheckCircle2 className="w-4 h-4" />
+                      Guest Check-in Active
                     </div>
-                    <h3 className="text-xl font-semibold text-neutral-900 mb-2">Sarah Johnson</h3>
-                    <p className="text-sm text-neutral-500">Party of 4</p>
+                    <h3 className="text-2xl font-bold text-neutral-900 mb-2">Sarah Johnson</h3>
+                    <p className="text-neutral-600">Party of 4 • Table 12</p>
                   </div>
                   
-                  {/* QR Code Mockup */}
-                  <div className="bg-neutral-50 rounded-xl p-8 border border-neutral-200">
-                    <div className="w-48 h-48 mx-auto bg-white rounded-lg grid grid-cols-8 grid-rows-8 gap-1 p-2">
+                  {/* Animated QR Code Mockup */}
+                  <div className="bg-gradient-to-br from-neutral-50 to-neutral-100 rounded-2xl p-10 border-2 border-neutral-200 hover:border-neutral-400 transition-all duration-300">
+                    <div className="w-56 h-56 mx-auto bg-white rounded-2xl grid grid-cols-8 grid-rows-8 gap-1.5 p-3 shadow-inner">
                       {[...Array(64)].map((_, i) => (
                         <div 
                           key={i} 
-                          className={`rounded-sm ${Math.random() > 0.5 ? 'bg-neutral-900' : 'bg-white'}`}
+                          className={`rounded transition-all duration-300 hover:scale-110 ${Math.random() > 0.5 ? 'bg-neutral-900' : 'bg-white'}`}
                         />
                       ))}
                     </div>
                   </div>
                   
-                  <div className="mt-6 text-center">
-                    <p className="text-xs text-neutral-500 mb-2">Invite Code</p>
-                    <p className="text-lg font-mono font-bold text-neutral-900">AB12CD34</p>
+                  <div className="mt-8 text-center space-y-3">
+                    <p className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">Invite Code</p>
+                    <p className="text-2xl font-mono font-black text-neutral-900 tracking-wider">AB12CD34</p>
+                    <button className="px-6 py-3 bg-neutral-900 text-white rounded-xl font-medium hover:bg-black transition-all hover:scale-105 shadow-lg">
+                      Scan to Check In
+                    </button>
                   </div>
                 </div>
 
-                {/* Decorative elements */}
-                <div className="absolute -top-4 -right-4 w-24 h-24 bg-neutral-200 rounded-full blur-2xl opacity-50" />
-                <div className="absolute -bottom-4 -left-4 w-32 h-32 bg-neutral-300 rounded-full blur-3xl opacity-30" />
+                {/* Decorative animated elements */}
+                <div className="absolute -top-6 -right-6 w-32 h-32 bg-blue-200 rounded-full blur-3xl opacity-40 animate-pulse" />
+                <div className="absolute -bottom-6 -left-6 w-40 h-40 bg-purple-200 rounded-full blur-3xl opacity-30 animate-pulse" style={{ animationDelay: '1s' }} />
               </div>
             </div>
           </div>
         </section>
 
-        {/* Social Proof / Testimonials */}
-        <section className="py-24 bg-white">
-          <div className="max-w-7xl mx-auto px-6">
-            <div className="text-center mb-16">
-              <h2 className="text-4xl font-bold text-neutral-900 mb-4">
-                Loved by event organizers
+        {/* Enhanced Testimonials with longer reviews */}
+        <section className="py-28 bg-white relative overflow-hidden">
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(0,0,0,0.02),transparent_70%)]" />
+          <div className="relative max-w-7xl mx-auto px-6">
+            <div className="text-center mb-20">
+              <h2 className="text-5xl font-black text-neutral-900 mb-6">
+                Trusted by event planners
               </h2>
-              <p className="text-lg text-neutral-600">
-                See what people are saying about PlanIt
+              <p className="text-xl text-neutral-600">
+                See how teams are using PlanIt to execute flawless events
               </p>
             </div>
 
-            <div className="grid md:grid-cols-3 gap-6">
+            <div className="grid md:grid-cols-3 gap-8">
               <TestimonialCard
-                quote="PlanIt made organizing our company retreat so much easier. The QR check-in saved us hours!"
+                quote="PlanIt transformed how we coordinated our annual company conference. The task management kept our 15-person planning team organized for 6 months of prep. The QR check-in on event day was seamless for our 300 attendees. We saved countless hours compared to email chains and spreadsheets. Highly recommend for any multi-month event planning cycle!"
                 author="Michael Chen"
-                role="HR Manager"
+                role="Senior Event Coordinator"
+                event="Tech Summit 2025"
                 delay={0}
               />
               <TestimonialCard
-                quote="Finally, an event tool that doesn't require everyone to create accounts. Our guests loved it."
+                quote="As a wedding planner, I've used every tool out there. PlanIt stands out because it doesn't require my couples or vendors to create accounts — huge win. We used it for 4 months of planning: coordinating with 8 vendors, managing 200+ guest invites, tracking deposits and payments. The file sharing meant all our contracts and floor plans lived in one place. The day-of check-in was butter smooth. Game changer!"
                 author="Sarah Williams"
-                role="Wedding Planner"
+                role="Lead Wedding Planner"
+                event="Williams-Martinez Wedding"
                 delay={100}
               />
               <TestimonialCard
-                quote="The real-time polls and chat features made it easy to plan our conference. Brilliant!"
+                quote="Our nonprofit used PlanIt to coordinate a 500-person fundraising gala. The unlimited participant feature meant we could include our entire board, 30 volunteers, all vendors, and staff. We planned for 3 months using the chat, polls for decision-making, and task lists. Enterprise mode's analytics helped us understand arrival patterns. Raised $250k+ and the event ran like clockwork. Worth every penny (it's free!)."
                 author="David Martinez"
-                role="Event Coordinator"
+                role="Development Director"
+                event="Charity Gala 2025"
                 delay={200}
               />
             </div>
@@ -639,20 +762,21 @@ export default function Home() {
         </section>
 
         {/* Create Event Section */}
-        <section id="create" className="py-24 bg-gradient-to-b from-neutral-50 to-white">
-          <div className="max-w-6xl mx-auto px-6">
-            <div className="grid lg:grid-cols-2 gap-16 items-start">
+        <section id="create" className="py-28 bg-gradient-to-b from-neutral-50 to-white relative overflow-hidden">
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_40%_60%,rgba(0,0,0,0.03),transparent_50%)]" />
+          <div className="relative max-w-6xl mx-auto px-6">
+            <div className="grid lg:grid-cols-2 gap-20 items-start">
               
               {/* Left side - Info */}
               <div className="lg:sticky lg:top-24">
-                <div className="mb-8">
-                  <h2 className="text-4xl font-bold text-neutral-900 mb-4 tracking-tight">
-                    {created ? 'Event created!' : 'Create an event'}
+                <div className="mb-10">
+                  <h2 className="text-5xl font-black text-neutral-900 mb-6 tracking-tight leading-tight">
+                    {created ? 'Event created! 🎉' : 'Start planning your event'}
                   </h2>
-                  <p className="text-lg text-neutral-600 leading-relaxed">
+                  <p className="text-xl text-neutral-600 leading-relaxed">
                     {created 
-                      ? 'Your event is ready. Share the link below with your guests.'
-                      : 'Set up your event space in under a minute. No credit card required.'
+                      ? 'Your planning hub is ready. Share the link with your team and get started.'
+                      : 'Create your event workspace in 60 seconds. No credit card, no hassle, just start planning.'
                     }
                   </p>
                 </div>
@@ -660,35 +784,37 @@ export default function Home() {
                 {!created && (
                   <>
                     {/* Trust indicators */}
-                    <div className="grid grid-cols-3 gap-4 mb-8">
-                      <div className="text-center p-4 bg-white rounded-xl border border-neutral-200">
-                        <Clock className="w-6 h-6 text-neutral-400 mx-auto mb-2" />
-                        <p className="text-xs text-neutral-600">60 seconds</p>
-                      </div>
-                      <div className="text-center p-4 bg-white rounded-xl border border-neutral-200">
-                        <Shield className="w-6 h-6 text-neutral-400 mx-auto mb-2" />
-                        <p className="text-xs text-neutral-600">Secure</p>
-                      </div>
-                      <div className="text-center p-4 bg-white rounded-xl border border-neutral-200">
-                        <Gift className="w-6 h-6 text-neutral-400 mx-auto mb-2" />
-                        <p className="text-xs text-neutral-600">Free</p>
-                      </div>
+                    <div className="grid grid-cols-3 gap-5 mb-10">
+                      {[
+                        { icon: Clock, label: '60 seconds', color: 'blue' },
+                        { icon: Shield, label: 'Secure', color: 'emerald' },
+                        { icon: Gift, label: 'Free forever', color: 'purple' },
+                      ].map((item, idx) => (
+                        <div key={idx} className="text-center p-5 bg-white rounded-2xl border-2 border-neutral-200 hover:border-neutral-400 hover:shadow-xl transition-all duration-300 hover:scale-110">
+                          <item.icon className={`w-7 h-7 text-${item.color}-500 mx-auto mb-3`} />
+                          <p className="text-sm font-semibold text-neutral-700">{item.label}</p>
+                        </div>
+                      ))}
                     </div>
 
                     {/* What you get */}
-                    <div className="space-y-3">
-                      <p className="text-sm font-semibold text-neutral-700 mb-3">What you get:</p>
+                    <div className="space-y-4 p-8 bg-gradient-to-br from-neutral-50 to-white rounded-3xl border border-neutral-200">
+                      <p className="text-base font-bold text-neutral-900 mb-5">Everything included:</p>
                       {[
-                        'Private event space with custom URL',
-                        'Real-time chat and messaging for planing',
-                        'Polls and voting for democracy',
-                        'File sharing up to 10MB',
-                        'RSVP tracking',
-                        'Task management'
+                        'Private event space with custom branded URL',
+                        'Unlimited team members — no caps!',
+                        'Real-time chat with file sharing',
+                        'Task lists and deadline tracking',
+                        'Polls, voting, and decision tools',
+                        'RSVP management and tracking',
+                        'Expense splitting and budgets',
+                        'QR check-in for large events',
+                        'Timeline and scheduling tools',
+                        'Post-event photo sharing'
                       ].map((item, index) => (
-                        <div key={index} className="flex items-center gap-2 text-sm text-neutral-600">
-                          <CheckCircle2 className="w-4 h-4 text-neutral-400 flex-shrink-0" />
-                          <span>{item}</span>
+                        <div key={index} className="flex items-start gap-3 text-sm text-neutral-700 hover:text-neutral-900 transition-colors">
+                          <CheckCircle2 className="w-5 h-5 text-emerald-500 flex-shrink-0 mt-0.5" />
+                          <span className="leading-relaxed">{item}</span>
                         </div>
                       ))}
                     </div>
@@ -698,45 +824,47 @@ export default function Home() {
                 {created && (
                   <div className="space-y-6">
                     {/* Success animation */}
-                    <div className="flex items-center justify-center p-8 bg-emerald-50 rounded-2xl border border-emerald-200">
+                    <div className="flex items-center justify-center p-10 bg-emerald-50 rounded-3xl border-2 border-emerald-200 hover:scale-105 transition-transform duration-300">
                       <div className="text-center">
-                        <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-emerald-500 flex items-center justify-center animate-bounce">
-                          <Check className="w-8 h-8 text-white" />
+                        <div className="w-20 h-20 mx-auto mb-5 rounded-full bg-emerald-500 flex items-center justify-center animate-bounce shadow-xl">
+                          <Check className="w-10 h-10 text-white" />
                         </div>
-                        <p className="text-sm font-medium text-emerald-900">
-                          {mode === 'enterprise' ? 'Enterprise event created!' : 'Your event is live!'}
+                        <p className="text-lg font-bold text-emerald-900">
+                          {mode === 'enterprise' ? 'Enterprise event created!' : 'Your planning hub is live!'}
                         </p>
                       </div>
                     </div>
 
                     {mode === 'enterprise' ? (
-                      <div className="p-6 bg-blue-50 border border-blue-200 rounded-xl">
-                        <div className="flex items-start gap-3 mb-4">
-                          <Zap className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                      <div className="p-8 bg-blue-50 border-2 border-blue-200 rounded-3xl">
+                        <div className="flex items-start gap-4 mb-5">
+                          <Zap className="w-6 h-6 text-blue-600 flex-shrink-0 mt-1" />
                           <div>
-                            <p className="text-sm font-semibold text-blue-900 mb-2">Next Steps for Enterprise Mode:</p>
-                            <ol className="text-sm text-blue-800 space-y-2 list-decimal ml-4">
-                              <li>Enter your event and click "Manage Invites"</li>
-                              <li>Add guests with their names and group sizes</li>
-                              <li>Send personalized invite links to each guest</li>
-                              <li>On event day, scan QR codes to check in guests</li>
+                            <p className="text-base font-bold text-blue-900 mb-4">Next Steps for Enterprise Mode:</p>
+                            <ol className="text-sm text-blue-800 space-y-3 list-decimal ml-5">
+                              <li>Enter your event and click "Manage Guest Invites"</li>
+                              <li>Add all guests with names, email, and group sizes</li>
+                              <li>Send personalized invite links with QR codes to each guest</li>
+                              <li>On event day, use the check-in dashboard to scan QR codes</li>
+                              <li>View real-time attendance analytics as guests arrive</li>
                             </ol>
                           </div>
                         </div>
                       </div>
                     ) : (
                       <div>
-                        <p className="text-sm font-medium text-neutral-700 mb-2">Your event link:</p>
+                        <p className="text-sm font-bold text-neutral-700 mb-3">Your event link:</p>
                         <CopyLinkBox eventId={created.id} subdomain={created.subdomain} />
+                        <p className="text-xs text-neutral-500 mt-3">Share this link with your planning team to get started</p>
                       </div>
                     )}
 
                     <button
                       onClick={() => navigate(created.subdomain ? `/e/${created.subdomain}` : `/event/${created.id}`)}
-                      className="w-full px-6 py-4 bg-neutral-900 text-white rounded-xl font-medium hover:bg-black transition-all shadow-lg hover:shadow-xl flex items-center justify-center gap-2"
+                      className="w-full px-8 py-5 bg-gradient-to-r from-neutral-900 to-black text-white rounded-2xl font-bold hover:scale-105 transition-all duration-300 shadow-2xl hover:shadow-neutral-500/50 flex items-center justify-center gap-3 text-lg"
                     >
-                      {mode === 'enterprise' ? 'Set Up Invites' : 'Enter your event'}
-                      <ArrowRight className="w-4 h-4" />
+                      {mode === 'enterprise' ? 'Set Up Guest Invites' : 'Enter your planning hub'}
+                      <ArrowUpRight className="w-5 h-5" />
                     </button>
                   </div>
                 )}
@@ -744,59 +872,59 @@ export default function Home() {
 
               {/* Right side - Form */}
               {!created && (
-                <div className="bg-white rounded-2xl border border-neutral-200 p-8 shadow-xl sticky top-24">
+                <div className="bg-white rounded-3xl border-2 border-neutral-200 p-10 shadow-2xl sticky top-24 hover:shadow-neutral-500/20 transition-shadow duration-500">
                   {/* Mode selector */}
-                  <div className="mb-6 p-4 bg-neutral-50 rounded-xl border border-neutral-200">
-                    <label className="block text-xs font-semibold text-neutral-600 uppercase tracking-wide mb-3">
+                  <div className="mb-8 p-5 bg-neutral-50 rounded-2xl border border-neutral-200">
+                    <label className="block text-xs font-bold text-neutral-600 uppercase tracking-wider mb-4">
                       Event Type
                     </label>
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="grid grid-cols-2 gap-4">
                       <button
                         type="button"
                         onClick={() => setMode('standard')}
-                        className={`px-4 py-3 text-sm font-medium rounded-xl border transition-all ${
+                        className={`px-5 py-4 text-sm font-bold rounded-2xl border-2 transition-all duration-300 ${
                           mode === 'standard' 
-                            ? 'bg-neutral-900 text-white border-neutral-900 shadow-lg' 
-                            : 'bg-white text-neutral-600 border-neutral-200 hover:border-neutral-400'
+                            ? 'bg-neutral-900 text-white border-neutral-900 shadow-xl scale-105' 
+                            : 'bg-white text-neutral-600 border-neutral-300 hover:border-neutral-500 hover:scale-105'
                         }`}
                       >
-                        <div className="font-semibold mb-1">Standard</div>
-                        <div className="text-xs opacity-80">Planning & collaboration</div>
+                        <div className="font-bold mb-1.5">Standard</div>
+                        <div className="text-xs opacity-80">Team planning</div>
                       </button>
                       <button
                         type="button"
                         onClick={() => setMode('enterprise')}
-                        className={`px-4 py-3 text-sm font-medium rounded-xl border transition-all ${
+                        className={`px-5 py-4 text-sm font-bold rounded-2xl border-2 transition-all duration-300 ${
                           mode === 'enterprise' 
-                            ? 'bg-neutral-900 text-white border-neutral-900 shadow-lg' 
-                            : 'bg-white text-neutral-600 border-neutral-200 hover:border-neutral-400'
+                            ? 'bg-neutral-900 text-white border-neutral-900 shadow-xl scale-105' 
+                            : 'bg-white text-neutral-600 border-neutral-300 hover:border-neutral-500 hover:scale-105'
                         }`}
                       >
-                        <div className="font-semibold mb-1">Enterprise</div>
-                        <div className="text-xs opacity-80">QR check-in & invites</div>
+                        <div className="font-bold mb-1.5">Enterprise</div>
+                        <div className="text-xs opacity-80">QR check-in</div>
                       </button>
                     </div>
                   </div>
 
-                  <form onSubmit={handleSubmit} className="space-y-5">
+                  <form onSubmit={handleSubmit} className="space-y-6">
                     {/* Title */}
                     <div>
-                      <label className="block text-sm font-medium text-neutral-700 mb-2">
+                      <label className="block text-sm font-bold text-neutral-700 mb-2">
                         Event title <span className="text-red-500">*</span>
                       </label>
                       <input
                         type="text"
                         required
-                        className="input"
-                        placeholder="Summer BBQ 2025"
+                        className="input text-base"
+                        placeholder="Summer Company Retreat 2025"
                         value={formData.title}
                         onChange={handleTitleChange}
                       />
                       {formData.title && formData.subdomain && (
-                        <div className="mt-2 flex items-center gap-2 text-xs text-neutral-500">
+                        <div className="mt-2 flex items-center gap-2 text-xs text-neutral-500 bg-neutral-50 px-3 py-2 rounded-lg">
                           <Link className="w-3 h-3" />
                           <span className="font-mono truncate">
-                            {window.location.origin}/e/<span className="text-neutral-700 font-medium">{formData.subdomain}</span>
+                            {window.location.origin}/e/<span className="text-neutral-800 font-bold">{formData.subdomain}</span>
                           </span>
                         </div>
                       )}
@@ -804,13 +932,13 @@ export default function Home() {
 
                     {/* Description */}
                     <div>
-                      <label className="block text-sm font-medium text-neutral-700 mb-2">
+                      <label className="block text-sm font-bold text-neutral-700 mb-2">
                         Description
                       </label>
                       <textarea
-                        className="input resize-none"
-                        rows="2"
-                        placeholder="What's this event about?"
+                        className="input resize-none text-base"
+                        rows="3"
+                        placeholder="What's this event about? Add details to help your team understand the scope..."
                         value={formData.description}
                         onChange={update('description')}
                       />
@@ -819,7 +947,7 @@ export default function Home() {
                     {/* Date + Location */}
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <label className="block text-sm font-medium text-neutral-700 mb-2">
+                        <label className="block text-sm font-bold text-neutral-700 mb-2">
                           Date & time <span className="text-red-500">*</span>
                         </label>
                         <input
@@ -831,7 +959,7 @@ export default function Home() {
                         />
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-neutral-700 mb-2">
+                        <label className="block text-sm font-bold text-neutral-700 mb-2">
                           Location
                         </label>
                         <input
@@ -847,7 +975,7 @@ export default function Home() {
                     {/* Name + Email */}
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <label className="block text-sm font-medium text-neutral-700 mb-2">
+                        <label className="block text-sm font-bold text-neutral-700 mb-2">
                           Your name <span className="text-red-500">*</span>
                         </label>
                         <input
@@ -860,14 +988,14 @@ export default function Home() {
                         />
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-neutral-700 mb-2">
+                        <label className="block text-sm font-bold text-neutral-700 mb-2">
                           Your email <span className="text-red-500">*</span>
                         </label>
                         <input
                           type="email"
                           required
                           className="input"
-                          placeholder="alex@example.com"
+                          placeholder="alex@company.com"
                           value={formData.organizerEmail}
                           onChange={update('organizerEmail')}
                         />
@@ -876,7 +1004,7 @@ export default function Home() {
 
                     {/* Account Password */}
                     <div>
-                      <label className="block text-sm font-medium text-neutral-700 mb-2">
+                      <label className="block text-sm font-bold text-neutral-700 mb-2">
                         <span className="flex items-center gap-2">
                           <Lock className="w-4 h-4 text-neutral-400" />
                           Your Account Password <span className="text-red-500">*</span>
@@ -886,8 +1014,8 @@ export default function Home() {
                         <input
                           type={showAccountPassword ? 'text' : 'password'}
                           required
-                          className="input pr-10"
-                          placeholder="Create a password (min 4 characters)"
+                          className="input pr-12"
+                          placeholder="Create a secure password (min 4 characters)"
                           value={formData.accountPassword}
                           onChange={update('accountPassword')}
                           minLength={4}
@@ -895,43 +1023,43 @@ export default function Home() {
                         <button
                           type="button"
                           onClick={() => setShowAccountPassword(!showAccountPassword)}
-                          className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-600"
+                          className="absolute right-4 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-700 transition-colors"
                         >
-                          {showAccountPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                          {showAccountPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                         </button>
                       </div>
                       <p className="text-xs text-neutral-500 mt-2">
-                        You'll need this to access the event from other devices
+                        Required to access this event from other devices or browsers
                       </p>
                     </div>
 
                     {/* Event Password */}
                     <div>
-                      <label className="block text-sm font-medium text-neutral-700 mb-2">
+                      <label className="block text-sm font-bold text-neutral-700 mb-2">
                         <span className="flex items-center gap-2">
                           <Shield className="w-4 h-4 text-neutral-400" />
-                          Event Password <span className="text-neutral-400 font-normal">(optional)</span>
+                          Event Password <span className="text-neutral-400 font-normal text-xs">(optional)</span>
                         </span>
                       </label>
                       <div className="relative">
                         <input
                           type={showPassword ? 'text' : 'password'}
-                          className="input pr-10"
-                          placeholder={mode === 'enterprise' ? 'Add extra security' : 'Leave empty for public event'}
+                          className="input pr-12"
+                          placeholder={mode === 'enterprise' ? 'Add layer of security' : 'Leave empty for open access'}
                           value={formData.password}
                           onChange={update('password')}
                         />
                         <button
                           type="button"
                           onClick={() => setShowPassword(!showPassword)}
-                          className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-600"
+                          className="absolute right-4 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-700 transition-colors"
                         >
-                          {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                          {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                         </button>
                       </div>
                       {mode === 'enterprise' && (
                         <p className="text-xs text-neutral-500 mt-2">
-                          Enterprise mode uses personalized QR invites. This password adds extra security.
+                          Enterprise uses QR invites — this adds an extra security layer
                         </p>
                       )}
                     </div>
@@ -939,17 +1067,17 @@ export default function Home() {
                     <button
                       type="submit"
                       disabled={loading}
-                      className="w-full px-6 py-4 bg-neutral-900 text-white rounded-xl font-medium hover:bg-black transition-all shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                      className="w-full px-8 py-5 bg-gradient-to-r from-neutral-900 to-black text-white rounded-2xl font-bold hover:scale-105 transition-all duration-300 shadow-2xl hover:shadow-neutral-500/50 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 flex items-center justify-center gap-3 text-lg"
                     >
                       {loading ? (
                         <>
-                          <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                          Creating...
+                          <div className="w-5 h-5 border-3 border-white/30 border-t-white rounded-full animate-spin" />
+                          Creating your hub...
                         </>
                       ) : (
                         <>
                           Create event
-                          <ArrowRight className="w-4 h-4" />
+                          <ArrowRight className="w-5 h-5" />
                         </>
                       )}
                     </button>
@@ -961,51 +1089,54 @@ export default function Home() {
         </section>
 
         {/* Footer */}
-        <footer className="border-t border-neutral-200 bg-white">
-          <div className="max-w-7xl mx-auto px-6 py-12">
-            <div className="grid md:grid-cols-4 gap-8 mb-12">
+        <footer className="border-t-2 border-neutral-200 bg-gradient-to-b from-white to-neutral-50">
+          <div className="max-w-7xl mx-auto px-6 py-16">
+            <div className="grid md:grid-cols-4 gap-12 mb-12">
               <div>
-                <div className="flex items-center gap-2 mb-4">
-                  <div className="w-8 h-8 rounded-lg bg-neutral-900 flex items-center justify-center">
-                    <Calendar className="w-4 h-4 text-white" />
+                <div className="flex items-center gap-3 mb-5">
+                  <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-neutral-800 to-neutral-900 flex items-center justify-center shadow-lg">
+                    <Calendar className="w-5 h-5 text-white" />
                   </div>
-                  <span className="font-bold text-neutral-900">PlanIt</span>
+                  <span className="font-black text-xl text-neutral-900">PlanIt</span>
                 </div>
-                <p className="text-sm text-neutral-600 leading-relaxed">
-                  Private event spaces for groups. No accounts, no friction.
+                <p className="text-sm text-neutral-600 leading-relaxed mb-4">
+                  The ultimate planning hub for event teams. Plan smart, execute flawlessly.
+                </p>
+                <p className="text-xs text-neutral-500">
+                  Made with <Coffee className="w-4 h-4 inline" /> not ❤️
                 </p>
               </div>
               
               <div>
-                <h3 className="text-sm font-semibold text-neutral-900 mb-4">Product</h3>
-                <ul className="space-y-2 text-sm text-neutral-600">
-                  <li><a href="#features" className="hover:text-neutral-900 transition-colors">Features</a></li>
-                  <li><a href="#create" className="hover:text-neutral-900 transition-colors">Pricing</a></li>
-                  <li><a href="/support" className="hover:text-neutral-900 transition-colors">Support</a></li>
+                <h3 className="text-sm font-bold text-neutral-900 mb-5 uppercase tracking-wider">Product</h3>
+                <ul className="space-y-3 text-sm text-neutral-600">
+                  <li><a href="#features" className="hover:text-neutral-900 transition-colors hover:translate-x-1 inline-block">Features</a></li>
+                  <li><a href="#create" className="hover:text-neutral-900 transition-colors hover:translate-x-1 inline-block">Get Started</a></li>
+                  <li><a href="/support" className="hover:text-neutral-900 transition-colors hover:translate-x-1 inline-block">Support</a></li>
                 </ul>
               </div>
               
               <div>
-                <h3 className="text-sm font-semibold text-neutral-900 mb-4">Company</h3>
-                <ul className="space-y-2 text-sm text-neutral-600">
-                  <li><a href="/terms" className="hover:text-neutral-900 transition-colors">Terms</a></li>
-                  <li><a href="/privacy" className="hover:text-neutral-900 transition-colors">Privacy</a></li>
-                  <li><a href="/admin" className="hover:text-neutral-900 transition-colors">Admin</a></li>
+                <h3 className="text-sm font-bold text-neutral-900 mb-5 uppercase tracking-wider">Company</h3>
+                <ul className="space-y-3 text-sm text-neutral-600">
+                  <li><a href="/terms" className="hover:text-neutral-900 transition-colors hover:translate-x-1 inline-block">Terms of Service</a></li>
+                  <li><a href="/privacy" className="hover:text-neutral-900 transition-colors hover:translate-x-1 inline-block">Privacy Policy</a></li>
+                  <li><a href="/admin" className="hover:text-neutral-900 transition-colors hover:translate-x-1 inline-block">Admin Login</a></li>
                 </ul>
               </div>
               
               <div>
-                <h3 className="text-sm font-semibold text-neutral-900 mb-4">Connect</h3>
-                <ul className="space-y-2 text-sm text-neutral-600">
-                  <li><a href="/support" className="hover:text-neutral-900 transition-colors">Contact</a></li>
-                  <li><a href="/support/wall" className="hover:text-neutral-900 transition-colors">Supporters</a></li>
+                <h3 className="text-sm font-bold text-neutral-900 mb-5 uppercase tracking-wider">Connect</h3>
+                <ul className="space-y-3 text-sm text-neutral-600">
+                  <li><a href="/support" className="hover:text-neutral-900 transition-colors hover:translate-x-1 inline-block">Contact Us</a></li>
+                  <li><a href="/support/wall" className="hover:text-neutral-900 transition-colors hover:translate-x-1 inline-block">Wall of Supporters</a></li>
                 </ul>
               </div>
             </div>
             
-            <div className="pt-8 border-t border-neutral-200 flex flex-col md:flex-row items-center justify-between gap-4 text-sm text-neutral-500">
-              <span>© 2026 PlanIt. Made with <Coffee className="w-4 h-4 inline" /> not ❤️</span>
-              <span>By Aakshat Hariharan</span>
+            <div className="pt-8 border-t-2 border-neutral-200 flex flex-col md:flex-row items-center justify-between gap-4 text-sm text-neutral-500">
+              <span>© 2026 PlanIt. All rights reserved.</span>
+              <span className="font-medium">By Aakshat Hariharan</span>
             </div>
           </div>
         </footer>
