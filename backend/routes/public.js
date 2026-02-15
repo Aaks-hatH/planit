@@ -67,7 +67,7 @@ Sitemap: ${protocol}://${domain}/api/sitemap.xml`;
 router.get('/terms', (req, res) => {
   const terms = {
     title: 'Terms of Service',
-    lastUpdated: '2024-01-01',
+    lastUpdated: '2026-02-11',
     sections: [
       {
         title: '1. Acceptance of Terms',
@@ -123,7 +123,7 @@ router.get('/terms', (req, res) => {
 router.get('/privacy', (req, res) => {
   const privacy = {
     title: 'Privacy Policy',
-    lastUpdated: '2024-01-01',
+    lastUpdated: '2026-02-11',
     sections: [
       {
         title: '1. Information We Collect',
