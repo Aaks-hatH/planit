@@ -24,6 +24,7 @@ const eventSchema = new mongoose.Schema({
     maxFailedAttempts:     { type: Number,  default: 3     },
     lockoutMinutes:        { type: Number,  default: 15    },
     allowManualOverride:   { type: Boolean, default: false },
+    requireAttendeeCount:  { type: Boolean, default: false }, // FIXED: Added new setting for attendee verification
     staffNote:             { type: String,  default: '' },
   },
   settings: {
