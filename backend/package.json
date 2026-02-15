@@ -17,7 +17,6 @@
     "crypto-js": "^4.2.0",
     "lucide-react": "^0.303.0",
     "date-fns": "^3.0.6",
-    "luxon": "^3.4.4",
     "react-hot-toast": "^2.4.1",
     "zustand": "^4.4.7"
   },
