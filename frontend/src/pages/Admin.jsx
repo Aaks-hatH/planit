@@ -1,13 +1,15 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  Calendar, Users, Activity, TrendingUp,
-  Trash2, Eye, LogOut, Lock, ArrowLeft,
-  MessageSquare, BarChart3, UserX, ChevronRight,
-  RefreshCw, ShieldOff
+  Calendar, Users, Activity, TrendingUp, Database, HardDrive,
+  Trash2, Eye, LogOut, Lock, ArrowLeft, Search, Download,
+  MessageSquare, BarChart3, UserX, ChevronRight, Shield,
+  RefreshCw, ShieldOff, Edit2, Save, X, FileText, Image,
+  Clock, Mail, MapPin, User, Settings, AlertTriangle, CheckCircle,
+  Server, Zap, DollarSign, Cpu, Info, Upload, FileUp, Trash
 } from 'lucide-react';
 import { adminAPI } from '../services/api';
-import { formatDate, formatNumber, formatRelativeTime } from '../utils/formatters';
+import { formatDate, formatNumber, formatRelativeTime, formatFileSize } from '../utils/formatters';
 import toast from 'react-hot-toast';
 
 const StatusBadge = ({ status }) => (
@@ -19,37 +21,61 @@ const StatusBadge = ({ status }) => (
   }`}>{status}</span>
 );
 
-function EventDetail({ event, onBack, onDelete }) {
-  const [tab, setTab] = useState('messages');
+// Enhanced Event Detail with Full Edit Capabilities
+function EventDetail({ event: initialEvent, onBack, onDelete, onUpdate }) {
+  const [tab, setTab] = useState('overview');
+  const [event, setEvent] = useState(initialEvent);
   const [messages, setMessages] = useState([]);
   const [participants, setParticipants] = useState([]);
   const [polls, setPolls] = useState([]);
+  const [files, setFiles] = useState([]);
+  const [invites, setInvites] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [editMode, setEditMode] = useState(false);
+  const [editForm, setEditForm] = useState({});
+  const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => { loadAll(); }, [event._id]);
 
   const loadAll = async () => {
     setLoading(true);
     try {
-      const [msgRes, partRes, pollRes] = await Promise.all([
-        adminAPI.getMessages(event._id),
-        adminAPI.getParticipants(event._id),
-        adminAPI.getPolls(event._id),
+      const [msgRes, partRes, pollRes, filesRes, invitesRes] = await Promise.all([
+        adminAPI.getMessages(event._id).catch(() => ({ data: { messages: [] } })),
+        adminAPI.getParticipants(event._id).catch(() => ({ data: { participants: [] } })),
+        adminAPI.getPolls(event._id).catch(() => ({ data: { polls: [] } })),
+        adminAPI.getFiles(event._id).catch(() => ({ data: { files: [] } })),
+        adminAPI.getInvites(event._id).catch(() => ({ data: { invites: [] } })),
       ]);
       setMessages(msgRes.data.messages || []);
       setParticipants(partRes.data.participants || []);
       setPolls(pollRes.data.polls || []);
-    } catch { toast.error('Failed to load event data'); }
+      setFiles(filesRes.data.files || []);
+      setInvites(invitesRes.data.invites || []);
+    } catch (err) { 
+      console.error('Load error:', err);
+      toast.error('Failed to load some event data'); 
+    }
     finally { setLoading(false); }
   };
 
+  const handleSaveEdit = async () => {
+    try {
+      await adminAPI.updateEvent(event._id, editForm);
+      setEvent({ ...event, ...editForm });
+      setEditMode(false);
+      toast.success('Event updated');
+      onUpdate?.();
+    } catch { toast.error('Failed to update event'); }
+  };
+
   const handleDeleteMessage = async (msgId) => {
-    if (!confirm('Delete this message?')) return;
+    if (!confirm('Delete this message permanently?')) return;
     try {
       await adminAPI.deleteMessage(event._id, msgId);
       setMessages(prev => prev.filter(m => m._id !== msgId));
       toast.success('Message deleted');
-    } catch { toast.error('Failed'); }
+    } catch { toast.error('Failed to delete message'); }
   };
 
   const handleRemoveParticipant = async (username) => {
@@ -58,46 +84,226 @@ function EventDetail({ event, onBack, onDelete }) {
       await adminAPI.removeParticipant(event._id, username);
       setParticipants(prev => prev.filter(p => p.username !== username));
       toast.success('Participant removed');
-    } catch { toast.error('Failed'); }
+    } catch { toast.error('Failed to remove participant'); }
   };
 
   const handleResetPassword = async (username) => {
     if (!confirm(`Reset account password for ${username}?`)) return;
     try {
       await adminAPI.resetParticipantPassword(event._id, username);
-      setParticipants(prev => prev.map(p => p.username === username ? { ...p, hasPassword: false } : p));
-      toast.success('Password reset');
-    } catch { toast.error('Failed'); }
+      setParticipants(prev => prev.map(p => 
+        p.username === username ? { ...p, hasPassword: false } : p
+      ));
+      toast.success('Password reset successfully');
+    } catch { toast.error('Failed to reset password'); }
   };
 
+  const handleDeletePoll = async (pollId) => {
+    if (!confirm('Delete this poll?')) return;
+    try {
+      await adminAPI.deletePoll(event._id, pollId);
+      setPolls(prev => prev.filter(p => p._id !== pollId));
+      toast.success('Poll deleted');
+    } catch { toast.error('Failed to delete poll'); }
+  };
+
+  const handleDeleteFile = async (fileId) => {
+    if (!confirm('Delete this file?')) return;
+    try {
+      await adminAPI.deleteFile(event._id, fileId);
+      setFiles(prev => prev.filter(f => f._id !== fileId));
+      toast.success('File deleted');
+    } catch { toast.error('Failed to delete file'); }
+  };
+
+  const handleCheckInGuest = async (inviteCode) => {
+    try {
+      await adminAPI.checkInGuest(event._id, inviteCode);
+      toast.success('Guest checked in');
+      loadAll();
+    } catch { toast.error('Failed to check in guest'); }
+  };
+
+  const handleDeleteInvite = async (inviteId) => {
+    if (!confirm('Delete this invite?')) return;
+    try {
+      await adminAPI.deleteInvite(event._id, inviteId);
+      setInvites(prev => prev.filter(i => i._id !== inviteId));
+      toast.success('Invite deleted');
+    } catch { toast.error('Failed to delete invite'); }
+  };
+
+  const handleChangeStatus = async (newStatus) => {
+    if (!confirm(`Change event status to "${newStatus}"?`)) return;
+    try {
+      await adminAPI.updateEventStatus(event._id, newStatus);
+      setEvent({ ...event, status: newStatus });
+      toast.success(`Status changed to ${newStatus}`);
+      onUpdate?.();
+    } catch { toast.error('Failed to update status'); }
+  };
+
+  const handleExportData = async (type) => {
+    try {
+      const data = type === 'messages' ? messages :
+                   type === 'participants' ? participants :
+                   type === 'polls' ? polls :
+                   type === 'invites' ? invites : files;
+      
+      const json = JSON.stringify(data, null, 2);
+      const blob = new Blob([json], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${event.subdomain}-${type}-${Date.now()}.json`;
+      a.click();
+      toast.success(`Exported ${type}`);
+    } catch { toast.error('Export failed'); }
+  };
+
+  const filteredMessages = messages.filter(m => 
+    !searchTerm || m.content?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    m.username?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const filteredParticipants = participants.filter(p =>
+    !searchTerm || p.username?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
   const tabs = [
-    { id: 'messages',     label: 'Chat',        icon: MessageSquare, count: messages.length },
+    { id: 'overview',     label: 'Overview',     icon: Info,          count: null },
+    { id: 'messages',     label: 'Chat',         icon: MessageSquare, count: messages.length },
     { id: 'participants', label: 'Participants', icon: Users,         count: participants.length },
     { id: 'polls',        label: 'Polls',        icon: BarChart3,     count: polls.length },
+    { id: 'files',        label: 'Files',        icon: FileText,      count: files.length },
+    { id: 'invites',      label: 'Invites',      icon: Mail,          count: invites.length },
   ];
 
   return (
     <div>
-      <div className="flex items-center gap-3 mb-6">
-        <button onClick={onBack} className="btn btn-ghost p-1.5"><ArrowLeft className="w-4 h-4" /></button>
+      {/* Header */}
+      <div className="flex items-center gap-3 mb-6 flex-wrap">
+        <button onClick={onBack} className="btn btn-ghost p-1.5">
+          <ArrowLeft className="w-4 h-4" />
+        </button>
         <div className="flex-1 min-w-0">
           <h2 className="text-lg font-semibold text-neutral-900 truncate">{event.title}</h2>
-          <p className="text-xs text-neutral-500">/{event.subdomain} · {event.organizerEmail}</p>
+          <p className="text-xs text-neutral-500">
+            ID: {event._id} · /{event.subdomain} · {event.organizerEmail}
+          </p>
         </div>
         <StatusBadge status={event.status} />
+        
+        {/* Status Change Dropdown */}
+        <select 
+          value={event.status} 
+          onChange={(e) => handleChangeStatus(e.target.value)}
+          className="input py-1.5 text-sm"
+        >
+          <option value="active">Active</option>
+          <option value="completed">Completed</option>
+          <option value="cancelled">Cancelled</option>
+          <option value="draft">Draft</option>
+        </select>
+
+        {editMode ? (
+          <>
+            <button onClick={handleSaveEdit} className="btn btn-primary gap-1.5 text-sm">
+              <Save className="w-3.5 h-3.5" /> Save
+            </button>
+            <button onClick={() => { setEditMode(false); setEditForm({}); }}
+              className="btn btn-secondary gap-1.5 text-sm">
+              <X className="w-3.5 h-3.5" /> Cancel
+            </button>
+          </>
+        ) : (
+          <button onClick={() => { setEditMode(true); setEditForm(event); }}
+            className="btn btn-secondary gap-1.5 text-sm">
+            <Edit2 className="w-3.5 h-3.5" /> Edit
+          </button>
+        )}
+        
         <a href={`/e/${event.subdomain}`} target="_blank" rel="noopener noreferrer"
-          className="btn btn-secondary gap-1.5 text-sm"><Eye className="w-3.5 h-3.5" /> Open</a>
+          className="btn btn-secondary gap-1.5 text-sm">
+          <Eye className="w-3.5 h-3.5" /> View
+        </a>
         <button onClick={() => onDelete(event._id)}
           className="btn btn-secondary gap-1.5 text-sm text-red-600 hover:bg-red-50">
           <Trash2 className="w-3.5 h-3.5" /> Delete
         </button>
       </div>
 
-      <div className="grid grid-cols-3 gap-4 mb-6">
+      {/* Edit Form */}
+      {editMode && (
+        <div className="card p-6 mb-6 bg-amber-50 border-amber-200">
+          <h3 className="text-sm font-semibold text-neutral-900 mb-4">Edit Event Details</h3>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-medium text-neutral-700 mb-1">Title</label>
+              <input type="text" className="input text-sm" value={editForm.title || ''}
+                onChange={e => setEditForm({ ...editForm, title: e.target.value })} />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-neutral-700 mb-1">Subdomain</label>
+              <input type="text" className="input text-sm" value={editForm.subdomain || ''}
+                onChange={e => setEditForm({ ...editForm, subdomain: e.target.value })} />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-neutral-700 mb-1">Date</label>
+              <input type="datetime-local" className="input text-sm" 
+                value={editForm.date ? new Date(editForm.date).toISOString().slice(0, 16) : ''}
+                onChange={e => setEditForm({ ...editForm, date: e.target.value })} />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-neutral-700 mb-1">Location</label>
+              <input type="text" className="input text-sm" value={editForm.location || ''}
+                onChange={e => setEditForm({ ...editForm, location: e.target.value })} />
+            </div>
+            <div className="col-span-2">
+              <label className="block text-xs font-medium text-neutral-700 mb-1">Description</label>
+              <textarea className="input text-sm" rows="2" value={editForm.description || ''}
+                onChange={e => setEditForm({ ...editForm, description: e.target.value })} />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-neutral-700 mb-1">Organizer Name</label>
+              <input type="text" className="input text-sm" value={editForm.organizerName || ''}
+                onChange={e => setEditForm({ ...editForm, organizerName: e.target.value })} />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-neutral-700 mb-1">Organizer Email</label>
+              <input type="email" className="input text-sm" value={editForm.organizerEmail || ''}
+                onChange={e => setEditForm({ ...editForm, organizerEmail: e.target.value })} />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-neutral-700 mb-1">Max Participants</label>
+              <input type="number" className="input text-sm" value={editForm.maxParticipants || 100}
+                onChange={e => setEditForm({ ...editForm, maxParticipants: parseInt(e.target.value) })} />
+            </div>
+            <div className="flex items-center gap-6">
+              <label className="flex items-center gap-2 text-sm">
+                <input type="checkbox" checked={editForm.isPasswordProtected || false}
+                  onChange={e => setEditForm({ ...editForm, isPasswordProtected: e.target.checked })} />
+                Password Protected
+              </label>
+              <label className="flex items-center gap-2 text-sm">
+                <input type="checkbox" checked={editForm.isEnterpriseMode || false}
+                  onChange={e => setEditForm({ ...editForm, isEnterpriseMode: e.target.checked })} />
+                Enterprise Mode
+              </label>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Stats Grid */}
+      <div className="grid grid-cols-2 lg:grid-cols-6 gap-4 mb-6">
         {[
           { label: 'Messages',     value: messages.length,     icon: MessageSquare },
-          { label: 'Participants', value: participants.length,  icon: Users },
-          { label: 'Polls',        value: polls.length,         icon: BarChart3 },
+          { label: 'Participants', value: participants.length, icon: Users },
+          { label: 'Polls',        value: polls.length,        icon: BarChart3 },
+          { label: 'Files',        value: files.length,        icon: FileText },
+          { label: 'Invites',      value: invites.length,      icon: Mail },
+          { label: 'Checked In',   value: invites.filter(i => i.checkedIn).length, icon: CheckCircle },
         ].map(({ label, value, icon: Icon }) => (
           <div key={label} className="card p-4 flex items-center gap-3">
             <Icon className="w-5 h-5 text-neutral-400" />
@@ -109,15 +315,16 @@ function EventDetail({ event, onBack, onDelete }) {
         ))}
       </div>
 
+      {/* Tabs */}
       <div className="card overflow-hidden">
-        <div className="flex border-b border-neutral-200">
+        <div className="flex border-b border-neutral-200 overflow-x-auto">
           {tabs.map(({ id, label, icon: Icon, count }) => (
             <button key={id} onClick={() => setTab(id)}
-              className={`flex items-center gap-2 px-5 py-3 text-sm font-medium transition-colors ${
+              className={`flex items-center gap-2 px-5 py-3 text-sm font-medium transition-colors whitespace-nowrap ${
                 tab === id ? 'border-b-2 border-neutral-900 text-neutral-900' : 'text-neutral-500 hover:text-neutral-700'
               }`}>
               <Icon className="w-4 h-4" />{label}
-              <span className="text-xs bg-neutral-100 text-neutral-600 rounded-full px-1.5 py-0.5">{count}</span>
+              {count !== null && <span className="text-xs bg-neutral-100 text-neutral-600 rounded-full px-1.5 py-0.5">{count}</span>}
             </button>
           ))}
           <button onClick={loadAll} className="ml-auto mr-3 my-2 btn btn-ghost p-1.5" title="Refresh">
@@ -130,150 +337,387 @@ function EventDetail({ event, onBack, onDelete }) {
             <div className="spinner w-6 h-6 border-2 border-neutral-300 border-t-neutral-600" />
           </div>
         ) : (
-          <>
-            {tab === 'messages' && (
-              <div className="divide-y divide-neutral-100 max-h-[500px] overflow-y-auto">
-                {messages.length === 0 ? (
-                  <p className="text-sm text-neutral-400 text-center py-12">No messages</p>
-                ) : messages.map(msg => (
-                  <div key={msg._id} className="flex items-start gap-3 px-5 py-3 hover:bg-neutral-50 group">
-                    <div className="w-7 h-7 rounded-full bg-neutral-200 flex items-center justify-center text-xs font-bold text-neutral-600 flex-shrink-0 mt-0.5">
-                      {msg.username?.charAt(0).toUpperCase()}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-baseline gap-2">
-                        <span className="text-xs font-semibold text-neutral-900">{msg.username}</span>
-                        <span className="text-xs text-neutral-400">{formatRelativeTime(new Date(msg.createdAt))}</span>
-                      </div>
-                      <p className="text-sm text-neutral-700 mt-0.5 break-words">{msg.content}</p>
-                    </div>
-                    <button onClick={() => handleDeleteMessage(msg._id)}
-                      className="opacity-0 group-hover:opacity-100 btn btn-ghost p-1 text-red-400 hover:text-red-600 flex-shrink-0">
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {tab === 'participants' && (
-              <div className="divide-y divide-neutral-100">
-                {participants.length === 0 ? (
-                  <p className="text-sm text-neutral-400 text-center py-12">No participants</p>
-                ) : participants.map(p => (
-                  <div key={p.username} className="flex items-center gap-3 px-5 py-3 hover:bg-neutral-50">
-                    <div className="w-8 h-8 rounded-full bg-neutral-200 flex items-center justify-center text-xs font-bold text-neutral-600">
-                      {p.username?.charAt(0).toUpperCase()}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm font-medium text-neutral-900">{p.username}</span>
-                        {p.role === 'organizer' && (
-                          <span className="text-xs bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full">organizer</span>
-                        )}
-                        {p.hasPassword && (
-                          <span className="text-xs bg-blue-50 text-blue-600 px-1.5 py-0.5 rounded-full flex items-center gap-1">
-                            <Lock className="w-2.5 h-2.5" /> has password
-                          </span>
-                        )}
-                      </div>
-                      <p className="text-xs text-neutral-400">
-                        Joined {formatRelativeTime(new Date(p.joinedAt))} · Last seen {formatRelativeTime(new Date(p.lastSeenAt))}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      {p.hasPassword && (
-                        <button onClick={() => handleResetPassword(p.username)}
-                          className="btn btn-ghost p-1.5 text-neutral-400 hover:text-amber-600" title="Reset account password">
-                          <ShieldOff className="w-3.5 h-3.5" />
-                        </button>
-                      )}
-                      {p.role !== 'organizer' && (
-                        <button onClick={() => handleRemoveParticipant(p.username)}
-                          className="btn btn-ghost p-1.5 text-neutral-400 hover:text-red-500" title="Remove participant">
-                          <UserX className="w-3.5 h-3.5" />
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {tab === 'polls' && (
-              <div className="divide-y divide-neutral-100">
-                {polls.length === 0 ? (
-                  <p className="text-sm text-neutral-400 text-center py-12">No polls</p>
-                ) : polls.map(poll => (
-                  <div key={poll._id} className="px-5 py-4">
-                    <div className="flex items-start justify-between gap-4 mb-3">
-                      <p className="text-sm font-medium text-neutral-900">{poll.question}</p>
-                      <span className={`text-xs px-2 py-0.5 rounded-full flex-shrink-0 ${poll.isOpen ? 'bg-emerald-100 text-emerald-700' : 'bg-neutral-100 text-neutral-500'}`}>
-                        {poll.isOpen ? 'open' : 'closed'}
-                      </span>
-                    </div>
-                    <div className="space-y-1.5">
-                      {poll.options?.map((opt, i) => {
-                        const votes = opt.votes?.length || 0;
-                        const total = poll.options.reduce((s, o) => s + (o.votes?.length || 0), 0);
-                        const pct = total > 0 ? Math.round((votes / total) * 100) : 0;
-                        return (
-                          <div key={i} className="flex items-center gap-2">
-                            <div className="flex-1 bg-neutral-100 rounded-full h-5 overflow-hidden">
-                              <div className="bg-neutral-700 h-full rounded-full" style={{ width: `${pct}%` }} />
-                            </div>
-                            <span className="text-xs text-neutral-600 w-28 truncate">{opt.text}</span>
-                            <span className="text-xs text-neutral-400 w-16 text-right">{votes} ({pct}%)</span>
+          <div className="p-5">
+            {/* Overview Tab */}
+            {tab === 'overview' && (
+              <div className="space-y-6">
+                <div className="grid grid-cols-2 gap-6">
+                  <div>
+                    <h3 className="text-xs font-semibold text-neutral-500 uppercase mb-3">Event Info</h3>
+                    <div className="space-y-2.5">
+                      {[
+                        { icon: Calendar, label: 'Date', value: formatDate(event.date) },
+                        { icon: MapPin, label: 'Location', value: event.location || 'Not set' },
+                        { icon: User, label: 'Organizer', value: event.organizerName },
+                        { icon: Mail, label: 'Email', value: event.organizerEmail },
+                        { icon: Clock, label: 'Created', value: formatRelativeTime(new Date(event.createdAt)) },
+                        { icon: Users, label: 'Max Capacity', value: event.maxParticipants },
+                      ].map(({ icon: Icon, label, value }) => (
+                        <div key={label} className="flex items-start gap-2.5">
+                          <Icon className="w-4 h-4 text-neutral-400 mt-0.5" />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs text-neutral-500">{label}</p>
+                            <p className="text-sm text-neutral-900 font-medium truncate">{value}</p>
                           </div>
-                        );
-                      })}
+                        </div>
+                      ))}
                     </div>
                   </div>
-                ))}
+                  <div>
+                    <h3 className="text-xs font-semibold text-neutral-500 uppercase mb-3">Settings</h3>
+                    <div className="space-y-2.5">
+                      {[
+                        { label: 'Password Protected', value: event.isPasswordProtected },
+                        { label: 'Enterprise Mode', value: event.isEnterpriseMode },
+                        { label: 'Subdomain', value: event.subdomain },
+                        { label: 'Status', value: event.status },
+                      ].map(({ label, value }) => (
+                        <div key={label} className="flex items-center justify-between">
+                          <p className="text-xs text-neutral-500">{label}</p>
+                          <p className="text-sm text-neutral-900 font-medium">
+                            {typeof value === 'boolean' ? (value ? '✓ Yes' : '✗ No') : value}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+                {event.description && (
+                  <div>
+                    <h3 className="text-xs font-semibold text-neutral-500 uppercase mb-2">Description</h3>
+                    <p className="text-sm text-neutral-700 leading-relaxed">{event.description}</p>
+                  </div>
+                )}
               </div>
             )}
-          </>
+
+            {/* Messages Tab */}
+            {tab === 'messages' && (
+              <div>
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex-1 max-w-md">
+                    <div className="relative">
+                      <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400" />
+                      <input
+                        type="text"
+                        placeholder="Search messages..."
+                        className="input pl-10 text-sm"
+                        value={searchTerm}
+                        onChange={e => setSearchTerm(e.target.value)}
+                      />
+                    </div>
+                  </div>
+                  <button onClick={() => handleExportData('messages')} 
+                    className="btn btn-secondary text-sm gap-1.5">
+                    <Download className="w-3.5 h-3.5" /> Export
+                  </button>
+                </div>
+                <div className="space-y-2 max-h-[500px] overflow-y-auto">
+                  {filteredMessages.length === 0 ? (
+                    <p className="text-sm text-neutral-400 text-center py-12">No messages</p>
+                  ) : filteredMessages.map(msg => (
+                    <div key={msg._id} className="flex items-start gap-3 p-3 rounded-lg hover:bg-neutral-50 group border border-neutral-100">
+                      <div className="w-8 h-8 rounded-full bg-neutral-200 flex items-center justify-center text-xs font-bold text-neutral-600 flex-shrink-0">
+                        {msg.username?.charAt(0).toUpperCase()}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-baseline gap-2">
+                          <span className="text-sm font-semibold text-neutral-900">{msg.username}</span>
+                          <span className="text-xs text-neutral-400">{formatRelativeTime(new Date(msg.createdAt))}</span>
+                        </div>
+                        <p className="text-sm text-neutral-700 mt-0.5 break-words">{msg.content}</p>
+                        {msg.editedAt && (
+                          <p className="text-xs text-neutral-400 mt-1">(edited)</p>
+                        )}
+                      </div>
+                      <button onClick={() => handleDeleteMessage(msg._id)}
+                        className="opacity-0 group-hover:opacity-100 btn btn-ghost p-1.5 text-red-400 hover:text-red-600">
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Participants Tab */}
+            {tab === 'participants' && (
+              <div>
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex-1 max-w-md">
+                    <div className="relative">
+                      <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400" />
+                      <input
+                        type="text"
+                        placeholder="Search participants..."
+                        className="input pl-10 text-sm"
+                        value={searchTerm}
+                        onChange={e => setSearchTerm(e.target.value)}
+                      />
+                    </div>
+                  </div>
+                  <button onClick={() => handleExportData('participants')} 
+                    className="btn btn-secondary text-sm gap-1.5">
+                    <Download className="w-3.5 h-3.5" /> Export
+                  </button>
+                </div>
+                <div className="space-y-2">
+                  {filteredParticipants.length === 0 ? (
+                    <p className="text-sm text-neutral-400 text-center py-12">No participants</p>
+                  ) : filteredParticipants.map(p => (
+                    <div key={p.username} className="flex items-center justify-between p-3 rounded-lg border border-neutral-100 hover:bg-neutral-50 group">
+                      <div className="flex items-center gap-3">
+                        <div className="w-9 h-9 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-sm font-bold">
+                          {p.username.charAt(0).toUpperCase()}
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium text-neutral-900">{p.username}</p>
+                          <p className="text-xs text-neutral-400">
+                            {p.hasPassword && <Lock className="w-3 h-3 inline mr-1" />}
+                            Joined {formatRelativeTime(new Date(p.joinedAt))}
+                            {p.rsvp && <> · RSVP: {p.rsvp.status}</>}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100">
+                        {p.hasPassword && (
+                          <button onClick={() => handleResetPassword(p.username)}
+                            className="btn btn-secondary text-xs px-2 py-1">
+                            <ShieldOff className="w-3 h-3" /> Reset Password
+                          </button>
+                        )}
+                        <button onClick={() => handleRemoveParticipant(p.username)}
+                          className="btn btn-secondary text-xs px-2 py-1 text-red-600 hover:bg-red-50">
+                          <UserX className="w-3 h-3" /> Remove
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Polls Tab */}
+            {tab === 'polls' && (
+              <div>
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-sm font-semibold text-neutral-900">
+                    {polls.length} {polls.length === 1 ? 'Poll' : 'Polls'}
+                  </h3>
+                  <button onClick={() => handleExportData('polls')} 
+                    className="btn btn-secondary text-sm gap-1.5">
+                    <Download className="w-3.5 h-3.5" /> Export
+                  </button>
+                </div>
+                <div className="space-y-3">
+                  {polls.length === 0 ? (
+                    <p className="text-sm text-neutral-400 text-center py-12">No polls</p>
+                  ) : polls.map(poll => {
+                    const totalVotes = poll.options?.reduce((sum, opt) => sum + (opt.votes?.length || 0), 0) || 0;
+                    return (
+                      <div key={poll._id} className="p-4 rounded-lg border border-neutral-200 hover:bg-neutral-50 group">
+                        <div className="flex items-start justify-between mb-3">
+                          <div className="flex-1">
+                            <p className="text-sm font-medium text-neutral-900">{poll.question}</p>
+                            <p className="text-xs text-neutral-400 mt-1">
+                              Created {formatRelativeTime(new Date(poll.createdAt))} · {totalVotes} votes
+                            </p>
+                          </div>
+                          <button onClick={() => handleDeletePoll(poll._id)}
+                            className="opacity-0 group-hover:opacity-100 btn btn-ghost p-1.5 text-red-400 hover:text-red-600">
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                        <div className="space-y-1.5">
+                          {poll.options?.map(opt => {
+                            const votes = opt.votes?.length || 0;
+                            const percentage = totalVotes > 0 ? Math.round((votes / totalVotes) * 100) : 0;
+                            return (
+                              <div key={opt.text} className="relative">
+                                <div className="flex items-center justify-between text-xs mb-1">
+                                  <span className="text-neutral-700">{opt.text}</span>
+                                  <span className="text-neutral-500">{votes} ({percentage}%)</span>
+                                </div>
+                                <div className="h-2 bg-neutral-100 rounded-full overflow-hidden">
+                                  <div 
+                                    className="h-full bg-blue-500 transition-all"
+                                    style={{ width: `${percentage}%` }}
+                                  />
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Files Tab */}
+            {tab === 'files' && (
+              <div>
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-sm font-semibold text-neutral-900">
+                    {files.length} {files.length === 1 ? 'File' : 'Files'}
+                    {files.length > 0 && (
+                      <span className="text-neutral-400 font-normal ml-2">
+                        ({formatFileSize(files.reduce((sum, f) => sum + (f.size || 0), 0))})
+                      </span>
+                    )}
+                  </h3>
+                  <button onClick={() => handleExportData('files')} 
+                    className="btn btn-secondary text-sm gap-1.5">
+                    <Download className="w-3.5 h-3.5" /> Export List
+                  </button>
+                </div>
+                <div className="space-y-2">
+                  {files.length === 0 ? (
+                    <p className="text-sm text-neutral-400 text-center py-12">No files</p>
+                  ) : files.map(file => (
+                    <div key={file._id} className="flex items-center justify-between p-3 rounded-lg border border-neutral-100 hover:bg-neutral-50 group">
+                      <div className="flex items-center gap-3 flex-1 min-w-0">
+                        {file.mimetype?.startsWith('image/') ? (
+                          <Image className="w-5 h-5 text-blue-500 flex-shrink-0" />
+                        ) : (
+                          <FileText className="w-5 h-5 text-neutral-400 flex-shrink-0" />
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-neutral-900 truncate">{file.filename}</p>
+                          <p className="text-xs text-neutral-400">
+                            {formatFileSize(file.size)} · Uploaded by {file.uploadedBy} · {formatRelativeTime(new Date(file.uploadedAt))}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100">
+                        <a href={file.url} target="_blank" rel="noopener noreferrer"
+                          className="btn btn-secondary text-xs px-2 py-1">
+                          <Download className="w-3 h-3" />
+                        </a>
+                        <button onClick={() => handleDeleteFile(file._id)}
+                          className="btn btn-secondary text-xs px-2 py-1 text-red-600 hover:bg-red-50">
+                          <Trash2 className="w-3 h-3" />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Invites Tab */}
+            {tab === 'invites' && (
+              <div>
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-sm font-semibold text-neutral-900">
+                    {invites.length} {invites.length === 1 ? 'Invite' : 'Invites'}
+                    {invites.length > 0 && (
+                      <span className="text-neutral-400 font-normal ml-2">
+                        ({invites.filter(i => i.checkedIn).length} checked in)
+                      </span>
+                    )}
+                  </h3>
+                  <button onClick={() => handleExportData('invites')} 
+                    className="btn btn-secondary text-sm gap-1.5">
+                    <Download className="w-3.5 h-3.5" /> Export
+                  </button>
+                </div>
+                <div className="space-y-2">
+                  {invites.length === 0 ? (
+                    <p className="text-sm text-neutral-400 text-center py-12">No invites</p>
+                  ) : invites.map(invite => (
+                    <div key={invite._id} className={`p-3 rounded-lg border hover:bg-neutral-50 group ${
+                      invite.checkedIn ? 'bg-emerald-50 border-emerald-200' : 'border-neutral-100'
+                    }`}>
+                      <div className="flex items-center justify-between">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-1">
+                            <p className="text-sm font-medium text-neutral-900">{invite.guestName}</p>
+                            <span className="text-xs px-2 py-0.5 rounded-full bg-neutral-100 text-neutral-600 font-mono">
+                              {invite.inviteCode}
+                            </span>
+                            {invite.checkedIn && (
+                              <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 font-medium">
+                                ✓ Checked In
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-xs text-neutral-500">
+                            {invite.guestEmail && <>{invite.guestEmail} · </>}
+                            {invite.groupSize} {invite.groupSize === 1 ? 'person' : 'people'}
+                            {invite.plusOnes > 0 && <> (+{invite.plusOnes} plus ones)</>}
+                            {invite.checkedIn && <> · {formatRelativeTime(new Date(invite.checkedInAt))}</>}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100">
+                          {!invite.checkedIn && (
+                            <button onClick={() => handleCheckInGuest(invite.inviteCode)}
+                              className="btn btn-primary text-xs px-2 py-1">
+                              Check In
+                            </button>
+                          )}
+                          <button onClick={() => handleDeleteInvite(invite._id)}
+                            className="btn btn-secondary text-xs px-2 py-1 text-red-600 hover:bg-red-50">
+                            <Trash2 className="w-3 h-3" />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
         )}
       </div>
     </div>
   );
 }
 
+// Main Admin Component
 export default function Admin() {
+  const navigate = useNavigate();
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [loginForm, setLoginForm] = useState({ username: '', password: '' });
   const [loggingIn, setLoggingIn] = useState(false);
-
+  const [loginForm, setLoginForm] = useState({ username: '', password: '' });
+  
   const [stats, setStats] = useState(null);
   const [events, setEvents] = useState([]);
-  const [statusFilter, setStatusFilter] = useState('all');
+  const [selectedEvent, setSelectedEvent] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-  const [selectedEvent, setSelectedEvent] = useState(null);
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [searchQuery, setSearchQuery] = useState('');
 
-  const ITEMS_PER_PAGE = 15;
+  useEffect(() => {
+    checkAuth();
+  }, []);
 
-  useEffect(() => { checkAuth(); }, []);
-  useEffect(() => { if (isAuthenticated) loadDashboard(); }, [isAuthenticated, currentPage, statusFilter]);
+  useEffect(() => {
+    if (isAuthenticated) loadDashboard();
+  }, [isAuthenticated, currentPage, statusFilter]);
 
-  const checkAuth = async () => {
+  const checkAuth = () => {
     const token = localStorage.getItem('adminToken');
-    if (!token) { setLoading(false); return; }
-    try { await adminAPI.getStats(); setIsAuthenticated(true); }
-    catch { localStorage.removeItem('adminToken'); }
-    finally { setLoading(false); }
+    setIsAuthenticated(!!token);
+    setLoading(false);
   };
 
   const handleLogin = async (e) => {
-    e.preventDefault(); setLoggingIn(true);
+    e.preventDefault();
+    setLoggingIn(true);
     try {
-      const res = await adminAPI.login(loginForm);
+      const res = await adminAPI.login(loginForm.username, loginForm.password);
       localStorage.setItem('adminToken', res.data.token);
       setIsAuthenticated(true);
-      toast.success('Logged in');
-    } catch (err) { toast.error(err.response?.data?.error || 'Invalid credentials'); }
-    finally { setLoggingIn(false); }
+      toast.success('Logged in successfully');
+    } catch (error) {
+      toast.error(error.response?.data?.error || 'Login failed');
+    } finally {
+      setLoggingIn(false);
+    }
   };
 
   const handleLogout = () => {
@@ -286,25 +730,56 @@ export default function Admin() {
     try {
       const [statsRes, eventsRes] = await Promise.all([
         adminAPI.getStats(),
-        adminAPI.getEvents({ page: currentPage, limit: ITEMS_PER_PAGE, status: statusFilter !== 'all' ? statusFilter : undefined }),
+        adminAPI.getEvents({ 
+          page: currentPage, 
+          limit: 20, 
+          status: statusFilter === 'all' ? undefined : statusFilter 
+        }),
       ]);
       setStats(statsRes.data);
-      setEvents(eventsRes.data.events || []);
-      setTotalPages(eventsRes.data.pagination?.pages || 1);
-    } catch (err) {
-      if (err.response?.status === 401) { localStorage.removeItem('adminToken'); setIsAuthenticated(false); }
-      else toast.error('Failed to load dashboard');
+      setEvents(eventsRes.data.events);
+      setTotalPages(eventsRes.data.pagination.pages);
+    } catch (error) {
+      console.error('Dashboard load error:', error);
+      if (error.response?.status === 401) {
+        handleLogout();
+      }
     }
   };
 
   const handleDeleteEvent = async (eventId) => {
-    if (!confirm('Delete this event and ALL its data permanently?')) return;
+    if (!confirm('Delete this event and ALL its data permanently? This cannot be undone!')) return;
     try {
       await adminAPI.deleteEvent(eventId);
-      toast.success('Event deleted');
+      toast.success('Event deleted permanently');
       setSelectedEvent(null);
       loadDashboard();
-    } catch { toast.error('Failed to delete'); }
+    } catch { toast.error('Failed to delete event'); }
+  };
+
+  const handleSearch = async (e) => {
+    e.preventDefault();
+    if (!searchQuery.trim()) return;
+    try {
+      const res = await adminAPI.search(searchQuery);
+      // Show search results in a modal or new view
+      console.log('Search results:', res.data);
+      toast.success(`Found ${res.data.results.events.length} events`);
+    } catch { toast.error('Search failed'); }
+  };
+
+  const handleBulkExport = async () => {
+    try {
+      const res = await adminAPI.exportData('events');
+      const json = JSON.stringify(res.data.data, null, 2);
+      const blob = new Blob([json], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `planit-events-export-${Date.now()}.json`;
+      a.click();
+      toast.success('Exported all events');
+    } catch { toast.error('Export failed'); }
   };
 
   if (loading) return (
@@ -314,29 +789,36 @@ export default function Admin() {
   );
 
   if (!isAuthenticated) return (
-    <div className="min-h-screen bg-neutral-50 flex items-center justify-center px-4">
+    <div className="min-h-screen bg-gradient-to-br from-neutral-900 to-neutral-800 flex items-center justify-center px-4">
       <div className="w-full max-w-md">
-        <div className="card p-8">
+        <div className="card p-8 shadow-2xl">
           <div className="flex items-center justify-center mb-6">
-            <div className="w-12 h-12 rounded-xl bg-neutral-900 flex items-center justify-center">
-              <Lock className="w-6 h-6 text-white" />
+            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-lg">
+              <Shield className="w-8 h-8 text-white" />
             </div>
           </div>
-          <h1 className="text-xl font-bold text-neutral-900 text-center mb-1">Admin Login</h1>
-          <p className="text-sm text-neutral-500 text-center mb-6">PlanIt Management Panel</p>
+          <h1 className="text-2xl font-bold text-neutral-900 text-center mb-2">Super Admin</h1>
+          <p className="text-sm text-neutral-500 text-center mb-6">PlanIt Master Control Panel</p>
           <form onSubmit={handleLogin} className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-neutral-700 mb-1.5">Username</label>
               <input type="text" required className="input" placeholder="admin"
-                value={loginForm.username} onChange={e => setLoginForm({ ...loginForm, username: e.target.value })} />
+                value={loginForm.username} 
+                onChange={e => setLoginForm({ ...loginForm, username: e.target.value })}
+                autoFocus />
             </div>
             <div>
               <label className="block text-sm font-medium text-neutral-700 mb-1.5">Password</label>
               <input type="password" required className="input" placeholder="••••••••"
-                value={loginForm.password} onChange={e => setLoginForm({ ...loginForm, password: e.target.value })} />
+                value={loginForm.password} 
+                onChange={e => setLoginForm({ ...loginForm, password: e.target.value })} />
             </div>
-            <button type="submit" disabled={loggingIn} className="btn btn-primary w-full py-2.5">
-              {loggingIn ? <><span className="spinner w-4 h-4 border-2 border-white/30 border-t-white" /> Logging in...</> : 'Login'}
+            <button type="submit" disabled={loggingIn} className="btn btn-primary w-full py-3 shadow-lg">
+              {loggingIn ? (
+                <><span className="spinner w-4 h-4 border-2 border-white/30 border-t-white" /> Authenticating...</>
+              ) : (
+                <><Shield className="w-4 h-4" /> Login</>
+              )}
             </button>
           </form>
           <div className="mt-6 pt-6 border-t border-neutral-200 text-center">
@@ -349,93 +831,206 @@ export default function Admin() {
 
   return (
     <div className="min-h-screen bg-neutral-50">
-      <header className="bg-white border-b border-neutral-200 sticky top-0 z-40">
-        <div className="max-w-7xl mx-auto px-6 h-14 flex items-center justify-between">
-          <div className="flex items-center gap-3">
+      {/* Enhanced Header */}
+      <header className="bg-gradient-to-r from-neutral-900 to-neutral-800 border-b border-neutral-700 sticky top-0 z-50 shadow-lg">
+        <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
+          <div className="flex items-center gap-4">
             {selectedEvent && (
-              <button onClick={() => setSelectedEvent(null)} className="btn btn-ghost p-1.5 -ml-1.5">
-                <ArrowLeft className="w-4 h-4" />
+              <button onClick={() => setSelectedEvent(null)} className="text-white/80 hover:text-white">
+                <ArrowLeft className="w-5 h-5" />
               </button>
             )}
-            <div className="w-7 h-7 rounded-lg bg-neutral-900 flex items-center justify-center">
-              <Lock className="w-4 h-4 text-white" />
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-lg">
+                <Shield className="w-5 h-5 text-white" />
+              </div>
+              <div>
+                <h1 className="text-base font-bold text-white">
+                  {selectedEvent ? selectedEvent.title : 'Super Admin Panel'}
+                </h1>
+                <p className="text-xs text-neutral-400">
+                  {selectedEvent ? `Event Management` : 'Master Control'}
+                </p>
+              </div>
             </div>
-            <h1 className="text-base font-bold text-neutral-900">
-              {selectedEvent ? selectedEvent.title : 'Admin Panel'}
-            </h1>
           </div>
-          <button onClick={handleLogout} className="btn btn-secondary gap-2 text-sm">
-            <LogOut className="w-4 h-4" /> Logout
-          </button>
+          
+          {!selectedEvent && (
+            <form onSubmit={handleSearch} className="flex-1 max-w-md mx-6">
+              <div className="relative">
+                <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400" />
+                <input
+                  type="text"
+                  placeholder="Search events, messages, users..."
+                  className="w-full pl-10 pr-4 py-2 bg-neutral-800 border border-neutral-700 rounded-lg text-sm text-white placeholder-neutral-500 focus:outline-none focus:border-blue-500"
+                  value={searchQuery}
+                  onChange={e => setSearchQuery(e.target.value)}
+                />
+              </div>
+            </form>
+          )}
+
+          <div className="flex items-center gap-3">
+            {!selectedEvent && (
+              <button onClick={handleBulkExport} className="btn bg-neutral-800 hover:bg-neutral-700 text-white border-neutral-700 gap-2 text-sm">
+                <Download className="w-4 h-4" /> Export All
+              </button>
+            )}
+            <button onClick={handleLogout} className="btn bg-neutral-800 hover:bg-neutral-700 text-white border-neutral-700 gap-2 text-sm">
+              <LogOut className="w-4 h-4" /> Logout
+            </button>
+          </div>
         </div>
       </header>
 
       <main className="max-w-7xl mx-auto px-6 py-8">
         {selectedEvent ? (
-          <EventDetail event={selectedEvent} onBack={() => setSelectedEvent(null)} onDelete={handleDeleteEvent} />
+          <EventDetail 
+            event={selectedEvent} 
+            onBack={() => setSelectedEvent(null)} 
+            onDelete={handleDeleteEvent}
+            onUpdate={loadDashboard}
+          />
         ) : (
           <>
+            {/* Enhanced Stats Grid */}
             {stats && (
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
                 {[
-                  { label: 'Total Events',  value: stats.totalEvents,       sub: `${stats.activeEvents} active`,                icon: Calendar },
-                  { label: 'Participants',  value: stats.totalParticipants, sub: `avg ${stats.averageParticipantsPerEvent}/event`, icon: Users },
-                  { label: 'Messages',      value: stats.totalMessages,     sub: `${stats.totalPolls} polls`,                    icon: Activity },
-                  { label: 'Last 24h',      value: stats.recentEvents,      sub: 'new events',                                   icon: TrendingUp },
-                ].map(({ label, value, sub, icon: Icon }) => (
-                  <div key={label} className="card p-5">
-                    <div className="flex items-center justify-between mb-2">
-                      <p className="text-xs font-medium text-neutral-500">{label}</p>
-                      <Icon className="w-4 h-4 text-neutral-300" />
+                  { 
+                    label: 'Total Events', 
+                    value: stats.totalEvents, 
+                    sub: `${stats.activeEvents} active`,
+                    icon: Calendar,
+                    color: 'blue'
+                  },
+                  { 
+                    label: 'Participants', 
+                    value: stats.totalParticipants, 
+                    sub: `avg ${stats.averageParticipantsPerEvent}/event`,
+                    icon: Users,
+                    color: 'emerald'
+                  },
+                  { 
+                    label: 'Messages', 
+                    value: stats.totalMessages, 
+                    sub: `${stats.totalPolls} polls`,
+                    icon: Activity,
+                    color: 'violet'
+                  },
+                  { 
+                    label: 'Last 24h', 
+                    value: stats.recentEvents, 
+                    sub: 'new events',
+                    icon: TrendingUp,
+                    color: 'amber'
+                  },
+                  {
+                    label: 'Total Files',
+                    value: stats.totalFiles,
+                    sub: formatFileSize(stats.totalStorage || 0),
+                    icon: HardDrive,
+                    color: 'rose'
+                  },
+                  {
+                    label: 'Storage',
+                    value: formatFileSize(stats.totalStorage || 0),
+                    sub: `${stats.totalFiles} files`,
+                    icon: Database,
+                    color: 'cyan'
+                  },
+                ].map(({ label, value, sub, icon: Icon, color }) => (
+                  <div key={label} className="card p-5 hover:shadow-lg transition-shadow">
+                    <div className="flex items-center justify-between mb-3">
+                      <p className="text-xs font-medium text-neutral-500 uppercase tracking-wide">{label}</p>
+                      <div className={`w-8 h-8 rounded-lg bg-${color}-100 flex items-center justify-center`}>
+                        <Icon className={`w-4 h-4 text-${color}-600`} />
+                      </div>
                     </div>
-                    <p className="text-2xl font-bold text-neutral-900">{formatNumber(value)}</p>
-                    <p className="text-xs text-neutral-400 mt-0.5">{sub}</p>
+                    <p className="text-2xl font-bold text-neutral-900 mb-1">{typeof value === 'number' ? formatNumber(value) : value}</p>
+                    <p className="text-xs text-neutral-500">{sub}</p>
                   </div>
                 ))}
               </div>
             )}
 
-            <div className="card">
-              <div className="p-5 border-b border-neutral-200 flex items-center justify-between gap-4">
-                <h2 className="text-base font-semibold text-neutral-900">Events <span className="text-sm font-normal text-neutral-400">(click to drill in)</span></h2>
-                <div className="flex items-center gap-2">
+            {/* Events Table */}
+            <div className="card shadow-lg">
+              <div className="p-5 border-b border-neutral-200 flex items-center justify-between gap-4 flex-wrap">
+                <h2 className="text-base font-semibold text-neutral-900">
+                  All Events <span className="text-sm font-normal text-neutral-400">(click to manage)</span>
+                </h2>
+                <div className="flex items-center gap-3">
                   <select value={statusFilter} onChange={e => { setStatusFilter(e.target.value); setCurrentPage(1); }}
-                    className="input py-1.5 text-sm">
-                    <option value="all">All</option>
+                    className="input py-2 text-sm">
+                    <option value="all">All Statuses</option>
                     <option value="active">Active</option>
                     <option value="completed">Completed</option>
                     <option value="cancelled">Cancelled</option>
+                    <option value="draft">Draft</option>
                   </select>
-                  <button onClick={loadDashboard} className="btn btn-ghost p-1.5"><RefreshCw className="w-4 h-4" /></button>
+                  <button onClick={loadDashboard} className="btn btn-ghost p-2" title="Refresh">
+                    <RefreshCw className="w-4 h-4" />
+                  </button>
                 </div>
               </div>
 
               <div className="overflow-x-auto">
                 <table className="w-full">
-                  <thead className="bg-neutral-50">
+                  <thead className="bg-neutral-50 border-b border-neutral-200">
                     <tr>
-                      {['Event', 'Organizer', 'Date', 'Participants', 'Status', ''].map(h => (
-                        <th key={h} className="px-5 py-3 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider">{h}</th>
+                      {['Event', 'Organizer', 'Date', 'Participants', 'Mode', 'Status', ''].map(h => (
+                        <th key={h} className="px-5 py-3 text-left text-xs font-semibold text-neutral-600 uppercase tracking-wider">
+                          {h}
+                        </th>
                       ))}
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-neutral-100">
                     {events.length === 0 ? (
-                      <tr><td colSpan="6" className="px-5 py-12 text-center text-sm text-neutral-400">No events found</td></tr>
-                    ) : events.map(event => (
-                      <tr key={event._id} className="hover:bg-neutral-50 cursor-pointer" onClick={() => setSelectedEvent(event)}>
-                        <td className="px-5 py-3">
-                          <p className="text-sm font-medium text-neutral-900">{event.title}</p>
-                          <p className="text-xs text-neutral-400">/{event.subdomain}</p>
+                      <tr>
+                        <td colSpan="7" className="px-5 py-16 text-center">
+                          <Activity className="w-12 h-12 mx-auto text-neutral-300 mb-3" />
+                          <p className="text-sm text-neutral-400">No events found</p>
                         </td>
-                        <td className="px-5 py-3">
+                      </tr>
+                    ) : events.map(event => (
+                      <tr key={event._id} className="hover:bg-neutral-50 cursor-pointer transition-colors" 
+                        onClick={() => setSelectedEvent(event)}>
+                        <td className="px-5 py-4">
+                          <p className="text-sm font-medium text-neutral-900">{event.title}</p>
+                          <p className="text-xs text-neutral-400 font-mono">/{event.subdomain}</p>
+                        </td>
+                        <td className="px-5 py-4">
                           <p className="text-sm text-neutral-900">{event.organizerName}</p>
                           <p className="text-xs text-neutral-400">{event.organizerEmail}</p>
                         </td>
-                        <td className="px-5 py-3 text-sm text-neutral-600">{formatDate(event.date)}</td>
-                        <td className="px-5 py-3 text-sm text-neutral-600">{event.participants?.length || 0}</td>
-                        <td className="px-5 py-3"><StatusBadge status={event.status} /></td>
-                        <td className="px-5 py-3 text-right"><ChevronRight className="w-4 h-4 text-neutral-300 ml-auto" /></td>
+                        <td className="px-5 py-4 text-sm text-neutral-600">
+                          {event.date ? formatDate(event.date) : 'No date set'}
+                        </td>
+                        <td className="px-5 py-4">
+                          <div className="flex items-center gap-2">
+                            <Users className="w-4 h-4 text-neutral-400" />
+                            <span className="text-sm font-medium text-neutral-900">
+                              {event.participants?.length || 0}
+                            </span>
+                          </div>
+                        </td>
+                        <td className="px-5 py-4">
+                          {event.isEnterpriseMode ? (
+                            <span className="inline-flex items-center gap-1 px-2 py-1 bg-blue-50 text-blue-700 rounded-full text-xs font-medium">
+                              <Zap className="w-3 h-3" /> Enterprise
+                            </span>
+                          ) : (
+                            <span className="text-xs text-neutral-400">Standard</span>
+                          )}
+                        </td>
+                        <td className="px-5 py-4">
+                          <StatusBadge status={event.status} />
+                        </td>
+                        <td className="px-5 py-4 text-right">
+                          <ChevronRight className="w-5 h-5 text-neutral-400 ml-auto" />
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -443,13 +1038,25 @@ export default function Admin() {
               </div>
 
               {totalPages > 1 && (
-                <div className="px-5 py-3 border-t border-neutral-100 flex items-center justify-between">
-                  <p className="text-xs text-neutral-500">Page {currentPage} of {totalPages}</p>
+                <div className="px-5 py-4 border-t border-neutral-100 flex items-center justify-between bg-neutral-50">
+                  <p className="text-sm text-neutral-600">
+                    Page {currentPage} of {totalPages}
+                  </p>
                   <div className="flex gap-2">
-                    <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1}
-                      className="btn btn-secondary text-sm py-1.5">Prev</button>
-                    <button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages}
-                      className="btn btn-secondary text-sm py-1.5">Next</button>
+                    <button 
+                      onClick={() => setCurrentPage(p => Math.max(1, p - 1))} 
+                      disabled={currentPage === 1}
+                      className="btn btn-secondary text-sm py-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      Previous
+                    </button>
+                    <button 
+                      onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} 
+                      disabled={currentPage === totalPages}
+                      className="btn btn-secondary text-sm py-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      Next
+                    </button>
                   </div>
                 </div>
               )}
