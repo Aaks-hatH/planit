@@ -68,6 +68,7 @@ function CopyLinkBox({ eventId, subdomain }) {
 
 export default function Home() {
   const navigate = useNavigate();
+  const [mode, setMode] = useState('standard');
   const [formData, setFormData] = useState({
     subdomain: '',
     title: '',
@@ -77,6 +78,7 @@ export default function Home() {
     organizerName: '',
     organizerEmail: '',
     password: '',
+    isEnterpriseMode: false,
     maxParticipants: 100
   });
   const [loading, setLoading] = useState(false);
@@ -103,12 +105,11 @@ export default function Home() {
     e.preventDefault();
     setLoading(true);
 
-    // Ensure subdomain is set — fallback if title was somehow empty
     const payload = {
       ...formData,
-      subdomain: formData.subdomain || makeSubdomain(formData.title) || `event-${Date.now()}`
+      subdomain: formData.subdomain || makeSubdomain(formData.title) || `event-${Date.now()}`,
+      isEnterpriseMode: mode === 'enterprise'
     };
-    // Strip internal tracking field
     delete payload._subdomainTouched;
 
     try {
@@ -161,8 +162,26 @@ export default function Home() {
                 Private event spaces for groups
               </h1>
               <p className="text-neutral-500 text-lg leading-relaxed">
-                Create a shared space for your event — real-time chat, polls, and file sharing. No accounts, no friction.
+                Create a shared space for your event. No accounts, no friction.
               </p>
+            </div>
+
+            <div className="mb-6 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl">
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center">
+                  <Users className="w-4 h-4 text-white" />
+                </div>
+                <h3 className="text-sm font-semibold text-neutral-900">Enterprise Mode</h3>
+              </div>
+              <p className="text-sm text-neutral-600 mb-3">
+                Hosting a large event? Use Enterprise Mode for QR-based check-in, personalized invites, and attendance analytics.
+              </p>
+              <div className="flex flex-wrap gap-2 text-xs text-neutral-500">
+                <span className="px-2 py-1 bg-white rounded border border-blue-200">QR Check-in</span>
+                <span className="px-2 py-1 bg-white rounded border border-blue-200">Personalized Invites</span>
+                <span className="px-2 py-1 bg-white rounded border border-blue-200">Attendance Tracking</span>
+                <span className="px-2 py-1 bg-white rounded border border-blue-200">Analytics Dashboard</span>
+              </div>
             </div>
 
             <div className="card p-1 divide-y divide-neutral-100">
@@ -187,6 +206,36 @@ export default function Home() {
                 <div className="mb-6">
                   <h2 className="text-xl font-semibold text-neutral-900">Create an event</h2>
                   <p className="text-sm text-neutral-500 mt-1">Set up your event space in under a minute.</p>
+                </div>
+
+                <div className="mb-5 p-3 bg-neutral-50 rounded-lg border border-neutral-200">
+                  <label className="block text-xs font-medium text-neutral-600 mb-2">Event Type</label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setMode('standard')}
+                      className={`px-4 py-2.5 text-sm font-medium rounded-lg border transition-all ${
+                        mode === 'standard' 
+                          ? 'bg-neutral-900 text-white border-neutral-900' 
+                          : 'bg-white text-neutral-600 border-neutral-200 hover:border-neutral-400'
+                      }`}
+                    >
+                      <div className="text-xs font-semibold mb-0.5">Standard</div>
+                      <div className="text-xs opacity-80">Planning & collaboration</div>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setMode('enterprise')}
+                      className={`px-4 py-2.5 text-sm font-medium rounded-lg border transition-all ${
+                        mode === 'enterprise' 
+                          ? 'bg-blue-600 text-white border-blue-600' 
+                          : 'bg-white text-neutral-600 border-neutral-200 hover:border-neutral-400'
+                      }`}
+                    >
+                      <div className="text-xs font-semibold mb-0.5">Enterprise</div>
+                      <div className="text-xs opacity-80">QR check-in & invites</div>
+                    </button>
+                  </div>
                 </div>
 
                 <form onSubmit={handleSubmit} className="space-y-5">
@@ -291,16 +340,21 @@ export default function Home() {
                     <label className="block text-sm font-medium text-neutral-700 mb-1.5">
                       <span className="flex items-center gap-1.5">
                         <Lock className="w-3.5 h-3.5 text-neutral-400" />
-                        Password <span className="text-neutral-400 font-normal">(optional)</span>
+                        Event Password <span className="text-neutral-400 font-normal">(optional{mode === 'enterprise' ? ', for entry control' : ''})</span>
                       </span>
                     </label>
                     <input
                       type="password"
                       className="input"
-                      placeholder="Leave empty for a public event"
+                      placeholder={mode === 'enterprise' ? 'Protect event access' : 'Leave empty for a public event'}
                       value={formData.password}
                       onChange={update('password')}
                     />
+                    {mode === 'enterprise' && (
+                      <p className="text-xs text-neutral-400 mt-1.5">
+                        Enterprise mode uses personalized QR invites for check-in. This password adds extra security.
+                      </p>
+                    )}
                   </div>
 
                   <button
