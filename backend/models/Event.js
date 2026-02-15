@@ -8,6 +8,8 @@ const eventSchema = new mongoose.Schema({
   title: { type: String, required: true, trim: true, maxlength: 200 },
   description: { type: String, trim: true, maxlength: 2000 },
   date: { type: Date, required: true },
+  // Store the timezone identifier (e.g., 'America/New_York', 'Europe/London', 'UTC')
+  timezone: { type: String, required: true, default: 'UTC' },
   location: { type: String, trim: true, maxlength: 500 },
   organizerName: { type: String, required: true, trim: true, maxlength: 100 },
   organizerEmail: { type: String, required: true, trim: true, lowercase: true, match: /^[^\s@]+@[^\s@]+\.[^\s@]+$/ },
