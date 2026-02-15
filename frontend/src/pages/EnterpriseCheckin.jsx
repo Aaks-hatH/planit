@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
-  QrCode, UserCheck, Users, Check, Plus, X, ArrowLeft, Camera, CameraOff,
+  QrCode, UserCheck, Users, Check, Plus, X, ArrowLeft, Camera, CameraOff, Mail,
   RefreshCw, Keyboard, ShieldCheck, ShieldAlert, ShieldOff, AlertTriangle,
   Baby, User, Settings, ChevronRight, Lock, Unlock, Eye, EyeOff,
   Clock, Ban, CheckCircle2, Info, Loader2
@@ -179,7 +179,9 @@ function GuestProfileCard({ guest, eventTitle, staffNote, onAdmit, onDeny, requi
   const [verifyingPin, setVerifyingPin] = useState(false);
   const pinRef = useRef(null);
 
-  const totalPeople = (guest.adults || 0) + (guest.children || 0) || guest.groupSize;
+  const adults = typeof guest.adults === 'number' ? guest.adults : 1;
+  const children = typeof guest.children === 'number' ? guest.children : 0;
+  const totalPeople = adults + children;
 
   useEffect(() => {
     if (requiresPin && pinRef.current) pinRef.current.focus();
@@ -223,13 +225,13 @@ function GuestProfileCard({ guest, eventTitle, staffNote, onAdmit, onDeny, requi
           <div className="grid grid-cols-3 gap-2 mb-4">
             <div className="bg-neutral-50 rounded-2xl p-3 text-center border border-neutral-200">
               <div className="flex justify-center mb-1"><User className="w-4 h-4 text-neutral-600" /></div>
-              <div className="text-2xl font-black text-neutral-900">{guest.adults ?? 1}</div>
-              <div className="text-xs text-neutral-500 font-medium">Adult{guest.adults !== 1 ? 's' : ''}</div>
+              <div className="text-2xl font-black text-neutral-900">{adults}</div>
+              <div className="text-xs text-neutral-500 font-medium">Adult{adults !== 1 ? 's' : ''}</div>
             </div>
             <div className="bg-neutral-50 rounded-2xl p-3 text-center border border-neutral-200">
               <div className="flex justify-center mb-1"><Baby className="w-4 h-4 text-blue-500" /></div>
-              <div className="text-2xl font-black text-neutral-900">{guest.children ?? 0}</div>
-              <div className="text-xs text-neutral-500 font-medium">Child{guest.children !== 1 ? 'ren' : ''}</div>
+              <div className="text-2xl font-black text-neutral-900">{children}</div>
+              <div className="text-xs text-neutral-500 font-medium">Child{children !== 1 ? 'ren' : ''}</div>
             </div>
             <div className="bg-neutral-900 rounded-2xl p-3 text-center">
               <div className="flex justify-center mb-1"><Users className="w-4 h-4 text-white/70" /></div>
@@ -857,7 +859,9 @@ export default function EnterpriseCheckin() {
                 {invites.length === 0 ? 'No guests yet. Add guests to get started.' : 'No guests match your search.'}
               </div>
             ) : filtered.map(invite => {
-              const total = (invite.adults || 0) + (invite.children || 0) || invite.groupSize;
+              const adults = typeof invite.adults === 'number' ? invite.adults : 1;
+              const children = typeof invite.children === 'number' ? invite.children : 0;
+              const total = adults + children;
               const hasFailed = invite.scanAttempts?.length > 0;
 
               return (
@@ -875,8 +879,8 @@ export default function EnterpriseCheckin() {
                     </div>
                     <div className="flex items-center gap-3 mt-0.5 text-xs text-neutral-400 flex-wrap">
                       <span className="font-mono font-medium">{invite.inviteCode}</span>
-                      <span className="flex items-center gap-1"><User className="w-3 h-3" />{invite.adults ?? 1}</span>
-                      {(invite.children > 0) && <span className="flex items-center gap-1"><Baby className="w-3 h-3 text-blue-400" />{invite.children}</span>}
+                      <span className="flex items-center gap-1"><User className="w-3 h-3" />{adults} adult{adults !== 1 ? 's' : ''}</span>
+                      {children > 0 && <span className="flex items-center gap-1"><Baby className="w-3 h-3 text-blue-400" />{children} child{children !== 1 ? 'ren' : ''}</span>}
                       <span className="flex items-center gap-1"><Users className="w-3 h-3" />{total} total</span>
                       {invite.securityPin && <span className="flex items-center gap-1 text-amber-600"><Lock className="w-3 h-3" />PIN set</span>}
                     </div>
