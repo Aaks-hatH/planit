@@ -1,166 +1,277 @@
 const express = require('express');
 const router = express.Router();
 const multer = require('multer');
-const path = require('path');
-const fs = require('fs').promises;
-const { v4: uuidv4 } = require('uuid');
+const cloudinary = require('cloudinary').v2;
+const { verifyEventToken } = require('../middleware/auth');
 const File = require('../models/File');
-const { verifyEventAccess } = require('../middleware/auth');
-const { uploadLimiter } = require('../middleware/rateLimiter');
+const Event = require('../models/Event');
 
-const uploadDir = path.join(__dirname, '../uploads');
-fs.mkdir(uploadDir, { recursive: true }).catch(console.error);
-
-const storage = multer.diskStorage({
-  destination: async (req, file, cb) => {
-    const eventDir = path.join(uploadDir, req.params.eventId);
-    await fs.mkdir(eventDir, { recursive: true });
-    cb(null, eventDir);
-  },
-  filename: (req, file, cb) => {
-    cb(null, `${uuidv4()}${path.extname(file.originalname)}`);
-  }
+// Configure Cloudinary
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
+  secure: true
 });
 
-const fileFilter = (req, file, cb) => {
-  const allowedTypes = [
-    'application/pdf',
-    'application/msword',
-    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-    'application/vnd.ms-excel',
-    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-    'application/vnd.ms-powerpoint',
-    'application/vnd.openxmlformats-officedocument.presentationml.presentation',
-    'text/plain',
-    'text/csv',
-    'image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml',
-    'application/zip', 'application/x-zip-compressed'
-  ];
-  if (allowedTypes.includes(file.mimetype)) {
-    cb(null, true);
-  } else {
-    cb(new Error(`File type ${file.mimetype} is not allowed`), false);
-  }
-};
+// Use memory storage - files go directly to Cloudinary, not disk
+const storage = multer.memoryStorage();
 
 const upload = multer({
-  storage,
-  fileFilter,
+  storage: storage,
   limits: {
-    fileSize: parseInt(process.env.FILE_UPLOAD_MAX_SIZE) || 10 * 1024 * 1024,
-    files: 5
+    fileSize: 10 * 1024 * 1024, // 10MB limit
+  },
+  fileFilter: (req, file, cb) => {
+    // Allowed file types for security
+    const allowedMimes = [
+      'image/jpeg',
+      'image/png',
+      'image/gif',
+      'image/webp',
+      'application/pdf',
+      'application/msword',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'application/vnd.ms-excel',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'text/plain',
+      'text/csv'
+    ];
+
+    if (allowedMimes.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error('File type not allowed. Only images, PDFs, and common documents are supported.'));
+    }
   }
 });
 
-// Upload files — frontend appends field name 'files'
+// Helper function to upload to Cloudinary from buffer
+const uploadToCloudinary = (buffer, filename, mimetype) => {
+  return new Promise((resolve, reject) => {
+    // Determine resource type
+    let resourceType = 'raw'; // default for documents
+    if (mimetype.startsWith('image/')) {
+      resourceType = 'image';
+    } else if (mimetype.startsWith('video/')) {
+      resourceType = 'video';
+    }
+
+    // Create upload stream
+    const uploadStream = cloudinary.uploader.upload_stream(
+      {
+        folder: 'planit-events', // Organize files in folder
+        resource_type: resourceType,
+        public_id: `${Date.now()}-${filename.replace(/\.[^/.]+$/, '')}`, // Remove extension, Cloudinary adds it
+        secure: true,
+        // Add transformation for images (optimize)
+        ...(resourceType === 'image' && {
+          transformation: [
+            { quality: 'auto', fetch_format: 'auto' }
+          ]
+        })
+      },
+      (error, result) => {
+        if (error) {
+          reject(error);
+        } else {
+          resolve(result);
+        }
+      }
+    );
+
+    // Pipe buffer to upload stream
+    uploadStream.end(buffer);
+  });
+};
+
+// Upload file
 router.post('/:eventId/upload',
-  verifyEventAccess,
-  uploadLimiter,
-  upload.array('files', 5),
+  verifyEventToken,
+  upload.single('file'),
   async (req, res, next) => {
     try {
-      if (!req.files || req.files.length === 0) {
-        return res.status(400).json({ error: 'No files uploaded' });
+      const { eventId } = req.params;
+
+      // Verify event exists
+      const event = await Event.findById(eventId);
+      if (!event) {
+        return res.status(404).json({ error: 'Event not found' });
       }
 
-      // Get uploader from body, or fall back to JWT username
-      const uploadedBy = req.body.uploadedBy || req.eventAccess?.username || 'unknown';
+      // Verify user is participant
+      const isParticipant = event.participants.some(
+        p => p.username === req.username
+      );
+      if (!isParticipant) {
+        return res.status(403).json({ error: 'Not authorized' });
+      }
 
-      const files = await Promise.all(
-        req.files.map(async (file) => {
-          const fileDoc = new File({
-            eventId: req.params.eventId,
-            uploadedBy,
-            originalName: file.originalname,   // human-readable name
-            filename: file.originalname,        // expose originalName as filename for frontend display
-            path: file.path,
-            mimetype: file.mimetype,
-            size: file.size,
-            url: `/uploads/${req.params.eventId}/${file.filename}`
-          });
-          await fileDoc.save();
-          return {
-            id: fileDoc._id,
-            filename: file.originalname,        // always the original display name
-            size: fileDoc.size,
-            uploadedBy: fileDoc.uploadedBy,
-            mimetype: fileDoc.mimetype,
-            createdAt: fileDoc.createdAt
-          };
-        })
+      if (!req.file) {
+        return res.status(400).json({ error: 'No file uploaded' });
+      }
+
+      // Upload to Cloudinary from buffer
+      const cloudinaryResult = await uploadToCloudinary(
+        req.file.buffer,
+        req.file.originalname,
+        req.file.mimetype
       );
 
-      const io = req.app.get('io');
-      if (io) io.to(`event_${req.params.eventId}`).emit('files_uploaded', { files });
+      // Create file record in MongoDB (only metadata + URL)
+      const file = new File({
+        eventId,
+        filename: req.file.originalname,
+        originalName: req.file.originalname,
+        mimetype: req.file.mimetype,
+        size: req.file.size,
+        cloudinaryUrl: cloudinaryResult.secure_url,
+        cloudinaryPublicId: cloudinaryResult.public_id,
+        cloudinaryResourceType: cloudinaryResult.resource_type,
+        uploadedBy: req.username
+      });
 
-      res.status(201).json({ message: 'Files uploaded successfully', files });
+      await file.save();
+
+      // Emit socket event for real-time update
+      const io = req.app.get('io');
+      if (io) {
+        io.to(`event-${eventId}`).emit('file_uploaded', {
+          file: {
+            _id: file._id,
+            filename: file.filename,
+            size: file.size,
+            mimetype: file.mimetype,
+            url: file.cloudinaryUrl,
+            uploadedBy: file.uploadedBy,
+            uploadedAt: file.uploadedAt
+          }
+        });
+      }
+
+      res.json({
+        message: 'File uploaded successfully',
+        file: {
+          _id: file._id,
+          filename: file.filename,
+          size: file.size,
+          mimetype: file.mimetype,
+          url: file.cloudinaryUrl,
+          uploadedBy: file.uploadedBy,
+          uploadedAt: file.uploadedAt
+        }
+      });
     } catch (error) {
-      if (req.files) {
-        await Promise.all(req.files.map(f => fs.unlink(f.path).catch(() => {})));
+      // Clean up Cloudinary upload if database save fails
+      if (req.file && error.cloudinaryPublicId) {
+        try {
+          await cloudinary.uploader.destroy(error.cloudinaryPublicId);
+        } catch (cleanupError) {
+          console.error('Failed to cleanup Cloudinary upload:', cleanupError);
+        }
       }
       next(error);
     }
   }
 );
 
-// Get all files for an event
-router.get('/:eventId', verifyEventAccess, async (req, res, next) => {
+// Get all files for event
+router.get('/:eventId', verifyEventToken, async (req, res, next) => {
   try {
-    const files = await File.find({ eventId: req.params.eventId, isDeleted: false })
-      .sort({ createdAt: -1 })
+    const { eventId } = req.params;
+
+    const files = await File.find({
+      eventId,
+      isDeleted: false
+    })
+      .sort({ uploadedAt: -1 })
+      .select('-cloudinaryPublicId') // Don't expose internal IDs
       .lean();
 
-    // Normalise: always return originalName as filename for the frontend
-    const normalised = files.map(f => ({
-      id: f._id,
-      filename: f.originalName || f.filename,
+    // Map to safe response format
+    const safeFiles = files.map(f => ({
+      _id: f._id,
+      filename: f.filename,
       size: f.size,
-      uploadedBy: f.uploadedBy,
       mimetype: f.mimetype,
-      createdAt: f.createdAt
+      url: f.cloudinaryUrl,
+      uploadedBy: f.uploadedBy,
+      uploadedAt: f.uploadedAt
     }));
 
-    res.json({ files: normalised });
+    res.json({ files: safeFiles });
   } catch (error) {
     next(error);
   }
 });
 
-// Download a file
-router.get('/:eventId/download/:fileId', verifyEventAccess, async (req, res, next) => {
+// Download/Get file URL (returns Cloudinary URL)
+router.get('/:eventId/download/:fileId', verifyEventToken, async (req, res, next) => {
   try {
-    const file = await File.findOne({ _id: req.params.fileId, eventId: req.params.eventId, isDeleted: false });
-    if (!file) return res.status(404).json({ error: 'File not found' });
+    const { eventId, fileId } = req.params;
 
-    await file.incrementDownloads();
+    const file = await File.findOne({
+      _id: fileId,
+      eventId,
+      isDeleted: false
+    });
 
-    try { await fs.access(file.path); }
-    catch { return res.status(404).json({ error: 'File not found on server' }); }
-
-    res.download(file.path, file.originalName);
-  } catch (error) {
-    next(error);
-  }
-});
-
-// Delete a file
-router.delete('/:eventId/:fileId', verifyEventAccess, async (req, res, next) => {
-  try {
-    const file = await File.findOne({ _id: req.params.fileId, eventId: req.params.eventId });
-    if (!file) return res.status(404).json({ error: 'File not found' });
-
-    const username = req.body.username || req.eventAccess?.username;
-    const event = req.event;
-    const isOrganizer = event.participants.some(p => p.username === username && p.role === 'organizer');
-
-    if (file.uploadedBy !== username && !isOrganizer) {
-      return res.status(403).json({ error: 'You can only delete your own files' });
+    if (!file) {
+      return res.status(404).json({ error: 'File not found' });
     }
 
-    await file.softDelete();
+    // Return the Cloudinary URL for download
+    // The client can use this URL directly
+    res.json({
+      url: file.cloudinaryUrl,
+      filename: file.filename,
+      mimetype: file.mimetype
+    });
+  } catch (error) {
+    next(error);
+  }
+});
 
+// Delete file
+router.delete('/:eventId/:fileId', verifyEventToken, async (req, res, next) => {
+  try {
+    const { eventId, fileId } = req.params;
+
+    const file = await File.findOne({
+      _id: fileId,
+      eventId,
+      isDeleted: false
+    });
+
+    if (!file) {
+      return res.status(404).json({ error: 'File not found' });
+    }
+
+    // Verify user is the uploader or organizer
+    const event = await Event.findById(eventId);
+    const isOrganizer = event.participants.some(
+      p => p.username === req.username && p.role === 'organizer'
+    );
+    const isUploader = file.uploadedBy === req.username;
+
+    if (!isOrganizer && !isUploader) {
+      return res.status(403).json({ error: 'Not authorized to delete this file' });
+    }
+
+    // Delete from Cloudinary
+    await file.deleteFromCloudinary();
+
+    // Soft delete in database
+    file.isDeleted = true;
+    file.deletedAt = new Date();
+    file.deletedBy = req.username;
+    await file.save();
+
+    // Emit socket event
     const io = req.app.get('io');
-    if (io) io.to(`event_${req.params.eventId}`).emit('file_deleted', { fileId: file._id });
+    if (io) {
+      io.to(`event-${eventId}`).emit('file_deleted', { fileId });
+    }
 
     res.json({ message: 'File deleted successfully' });
   } catch (error) {
