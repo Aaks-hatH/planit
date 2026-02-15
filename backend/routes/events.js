@@ -575,7 +575,7 @@ router.delete('/:eventId/notes/:noteId', verifyEventAccess, async (req, res, nex
 });
 
 // ── ANALYTICS ─────────────────────────────────────────────────────────────
-// Get analytics (organizer only)
+// Get analytics (organizer only) - UPDATED WITH CHECK-IN STATS
 router.get('/:eventId/analytics', verifyEventAccess, async (req, res, next) => {
   try {
     const isOrg = req.event.participants.some(p => 
@@ -586,17 +586,30 @@ router.get('/:eventId/analytics', verifyEventAccess, async (req, res, next) => {
     const Message = require('../models/Message');
     const Poll = require('../models/Poll');
     const File = require('../models/File');
+    const Invite = require('../models/Invite');
 
-    const [messageCount, pollCount, fileCount] = await Promise.all([
+    const promises = [
       Message.countDocuments({ eventId: req.params.eventId }).catch(() => 0),
       Poll.countDocuments({ eventId: req.params.eventId }).catch(() => 0),
       File.countDocuments({ eventId: req.params.eventId }).catch(() => 0)
-    ]);
+    ];
+
+    // Add check-in analytics for enterprise events
+    if (req.event.isEnterpriseMode) {
+      promises.push(
+        Invite.find({ eventId: req.params.eventId }).catch(() => [])
+      );
+    }
+
+    const results = await Promise.all(promises);
+    const [messageCount, pollCount, fileCount, invites] = results;
 
     const baseAnalytics = req.event.getAnalytics ? req.event.getAnalytics() : {
       views: req.event.metadata?.views || 0,
       participants: req.event.participants?.length || 0,
       rsvps: req.event.getRsvpSummary ? req.event.getRsvpSummary() : { yes: 0, maybe: 0, no: 0 },
+      tasks: req.event.getTaskStats ? req.event.getTaskStats() : { total: 0, completed: 0, pending: 0 },
+      expenses: req.event.getExpenseSummary ? req.event.getExpenseSummary() : { total: 0, count: 0, byCategory: {} },
       lastActivity: req.event.metadata?.lastActivity || new Date()
     };
 
@@ -606,6 +619,28 @@ router.get('/:eventId/analytics', verifyEventAccess, async (req, res, next) => {
       polls: pollCount,
       files: fileCount
     };
+
+    // Add enterprise check-in analytics
+    if (req.event.isEnterpriseMode && invites) {
+      const checkedInInvites = invites.filter(i => i.checkedIn);
+      const totalInvites = invites.length;
+      const totalExpectedGuests = invites.reduce((sum, i) => {
+        return sum + (i.adults || 1) + (i.children || 0);
+      }, 0);
+      const totalCheckedIn = checkedInInvites.reduce((sum, i) => {
+        return sum + (i.actualAttendees || (i.adults || 1) + (i.children || 0));
+      }, 0);
+
+      analytics.checkins = {
+        totalInvites,
+        checkedInInvites: checkedInInvites.length,
+        pendingInvites: totalInvites - checkedInInvites.length,
+        totalExpectedGuests,
+        totalCheckedIn,
+        checkInRate: totalInvites > 0 ? Math.round((checkedInInvites.length / totalInvites) * 100) : 0,
+        attendanceRate: totalExpectedGuests > 0 ? Math.round((totalCheckedIn / totalExpectedGuests) * 100) : 0
+      };
+    }
 
     res.json({ analytics });
   } catch (error) { 
