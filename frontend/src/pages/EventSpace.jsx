@@ -4,7 +4,7 @@ import {
   Calendar, Users, MessageSquare, BarChart3, FileText,
   Send, Paperclip, X, Download, Trash2, Plus,
   LogOut, ArrowLeft, Copy, Check, Lock, MapPin,
-  ChevronRight, Clock, QrCode, CalendarDown,
+  ChevronRight, Clock, QrCode, CalendarDays,
   Smile, ThumbsUp, Heart, Laugh,
   CheckCircle2, Megaphone, DollarSign, StickyNote, Share2, UserCheck
 } from 'lucide-react';
@@ -252,9 +252,21 @@ function JoinGate({ eventId, onJoined }) {
                 </form>
               </>
           </div>
-          <p className="text-center text-sm text-neutral-400 mt-4">
-            <a href="/" className="hover:text-neutral-600 transition-colors">Back to home</a>
-          </p>
+          <div className="text-center mt-4 space-y-2">
+            <p className="text-sm text-neutral-400">
+              <a href="/" className="hover:text-neutral-600 transition-colors">← Back to home</a>
+            </p>
+            <p className="text-xs text-neutral-400">
+              Are you the organizer?{' '}
+              <button
+                type="button"
+                onClick={() => navigate(`/event/${eventId}/login`)}
+                className="text-neutral-600 hover:text-neutral-800 underline underline-offset-2"
+              >
+                Log in with organizer access
+              </button>
+            </p>
+          </div>
         </div>
       </main>
     </div>
@@ -788,6 +800,15 @@ export default function EventSpace() {
               {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
               <span className="hidden sm:inline">{copied ? 'Copied' : 'Share'}</span>
             </button>
+            {isOrganizer && event?.isEnterpriseMode && (
+              <button
+                onClick={() => navigate(`/event/${eventId}/checkin`)}
+                className="btn btn-primary px-3 py-1.5 text-xs gap-1.5"
+                title="Enterprise Check-in"
+              >
+                <UserCheck className="w-3.5 h-3.5" /><span className="hidden sm:inline">Check-in</span>
+              </button>
+            )}
             <button onClick={() => { localStorage.removeItem('eventToken'); localStorage.removeItem('username'); navigate('/'); }} className="btn btn-secondary px-3 py-1.5 text-xs gap-1.5">
               <LogOut className="w-3.5 h-3.5" /><span className="hidden sm:inline">Leave</span>
             </button>
@@ -1269,18 +1290,48 @@ export default function EventSpace() {
             </div>
 
             <div className="mt-5 pt-4 border-t border-neutral-100 space-y-2">
-              {event?.isEnterpriseMode && isOrganizer && (
-                <button 
-                  onClick={() => navigate(`/event/${eventId}/checkin`)}
-                  className="flex items-center justify-center gap-2 w-full px-4 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-lg transition-all font-semibold text-sm shadow-lg hover:shadow-xl">
-                  <UserCheck className="w-4 h-4" />
-                  <span>Manage Invites</span>
+
+              {/* ── Organizer Tools ── */}
+              {isOrganizer && (
+                <div className="mb-1">
+                  <p className="text-xs font-semibold text-neutral-400 uppercase tracking-wide mb-2 px-1">Organizer Tools</p>
+                  {event?.isEnterpriseMode && (
+                    <button
+                      onClick={() => navigate(`/event/${eventId}/checkin`)}
+                      className="flex items-center gap-2 w-full px-3 py-2.5 text-xs bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors font-medium mb-1.5"
+                    >
+                      <UserCheck className="w-3.5 h-3.5" />
+                      <span>Manage Guest Check-in</span>
+                    </button>
+                  )}
+                  <button
+                    onClick={() => navigate(`/event/${eventId}/login`)}
+                    className="flex items-center gap-2 w-full px-3 py-2 text-xs bg-neutral-900 hover:bg-neutral-700 text-white rounded-lg transition-colors"
+                  >
+                    <Lock className="w-3.5 h-3.5" />
+                    <span>Organizer Login (new device)</span>
+                  </button>
+                </div>
+              )}
+
+              {/* Share links */}
+              {event?.subdomain && (
+                <button
+                  onClick={() => {
+                    const link = `${window.location.origin}/e/${event.subdomain}`;
+                    navigator.clipboard.writeText(link);
+                    toast.success('Subdomain link copied!');
+                  }}
+                  className="flex items-center gap-2 w-full px-3 py-2 text-xs bg-neutral-50 hover:bg-neutral-100 border border-neutral-200 rounded-lg text-neutral-600 transition-colors"
+                >
+                  <Copy className="w-3.5 h-3.5 flex-shrink-0" />
+                  <span className="truncate">Copy: /e/{event.subdomain}</span>
                 </button>
               )}
               <button onClick={handleCopyLink}
                 className="flex items-center gap-2 w-full px-3 py-2 text-xs bg-neutral-50 hover:bg-neutral-100 border border-neutral-200 rounded-lg text-neutral-600 transition-colors">
                 {copied ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" />}
-                <span className="truncate">{copied ? 'Copied!' : 'Copy invite link'}</span>
+                <span className="truncate">{copied ? 'Copied!' : 'Copy event link'}</span>
               </button>
               <button onClick={handleCalendarExport}
                 className="flex items-center gap-2 w-full px-3 py-2 text-xs bg-neutral-50 hover:bg-neutral-100 border border-neutral-200 rounded-lg text-neutral-600 transition-colors">
@@ -1290,7 +1341,7 @@ export default function EventSpace() {
               <button onClick={() => setShowQR(true)}
                 className="flex items-center gap-2 w-full px-3 py-2 text-xs bg-neutral-50 hover:bg-neutral-100 border border-neutral-200 rounded-lg text-neutral-600 transition-colors">
                 <QrCode className="w-3.5 h-3.5" />
-                <span>Show QR code</span>
+                <span>Show event QR code</span>
               </button>
             </div>
           </div>
