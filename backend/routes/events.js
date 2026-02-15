@@ -954,3 +954,199 @@ router.delete('/:eventId/invites/:inviteId', verifyOrganizer, async (req, res, n
 });
 
 module.exports = router;
+
+// ═══════════════════════════════════════════════════════════════════════════
+// BACKUP & DATA EXPORT ROUTES
+// ═══════════════════════════════════════════════════════════════════════════
+
+const Message = require('../models/Message');
+const Poll = require('../models/Poll');
+const File = require('../models/File');
+
+/**
+ * GET /api/events/:eventId/backup
+ * 
+ * Download complete backup of event data
+ * Returns JSON file with all event information
+ * Users should download this before their event date
+ */
+router.get('/:eventId/backup', verifyOrganizer, async (req, res, next) => {
+  try {
+    const { eventId } = req.params;
+
+    // Get the event
+    const event = await Event.findById(eventId);
+    if (!event) {
+      return res.status(404).json({ error: 'Event not found' });
+    }
+
+    // Gather all event data
+    const [messages, polls, files, participants, invites] = await Promise.all([
+      Message.find({ eventId, isDeleted: false })
+        .select('-__v')
+        .lean(),
+      Poll.find({ eventId })
+        .select('-__v')
+        .lean(),
+      File.find({ eventId, isDeleted: false })
+        .select('-__v')
+        .lean(),
+      EventParticipant.find({ eventId })
+        .select('-password -__v')
+        .lean(),
+      (() => {
+        try {
+          const Invite = require('../models/Invite');
+          return Invite.find({ eventId }).select('-__v').lean();
+        } catch {
+          return Promise.resolve([]);
+        }
+      })()
+    ]);
+
+    // Create comprehensive backup object
+    const backup = {
+      metadata: {
+        exportDate: new Date().toISOString(),
+        eventId: event._id,
+        planItVersion: '1.0.0',
+        format: 'JSON'
+      },
+      event: {
+        id: event._id,
+        title: event.title,
+        description: event.description,
+        date: event.date,
+        location: event.location,
+        organizerName: event.organizerName,
+        organizerEmail: event.organizerEmail,
+        isEnterpriseMode: event.isEnterpriseMode,
+        subdomain: event.subdomain,
+        status: event.status,
+        createdAt: event.createdAt,
+        tasks: event.tasks || [],
+        announcements: event.announcements || [],
+        expenses: event.expenses || [],
+        budget: event.budget || 0,
+        notes: event.notes || [],
+        agenda: event.agenda || [],
+        rsvps: event.rsvps || []
+      },
+      statistics: {
+        totalParticipants: participants.length,
+        totalMessages: messages.length,
+        totalPolls: polls.length,
+        totalFiles: files.length,
+        totalInvites: invites.length,
+        totalExpenses: event.expenses?.length || 0,
+        totalTasks: event.tasks?.length || 0,
+        totalBudget: event.budget || 0
+      },
+      participants: participants.map(p => ({
+        username: p.username,
+        role: p.role,
+        joinedAt: p.joinedAt,
+        hasPassword: p.hasPassword,
+        rsvp: event.rsvps?.find(r => r.username === p.username)
+      })),
+      messages: messages.map(m => ({
+        id: m._id,
+        username: m.username,
+        content: m.content,
+        createdAt: m.createdAt,
+        editedAt: m.editedAt,
+        reactions: m.reactions || []
+      })),
+      polls: polls.map(p => ({
+        id: p._id,
+        question: p.question,
+        options: p.options || [],
+        createdBy: p.createdBy,
+        createdAt: p.createdAt,
+        closedAt: p.closedAt,
+        allowMultiple: p.allowMultiple
+      })),
+      files: files.map(f => ({
+        id: f._id,
+        filename: f.filename,
+        originalName: f.originalName,
+        size: f.size,
+        mimetype: f.mimetype,
+        url: f.cloudinaryUrl || f.url, // Support both old and new file systems
+        uploadedBy: f.uploadedBy,
+        uploadedAt: f.uploadedAt
+      })),
+      invites: invites.map(i => ({
+        guestName: i.guestName,
+        guestEmail: i.guestEmail,
+        inviteCode: i.inviteCode,
+        groupSize: i.groupSize,
+        plusOnes: i.plusOnes,
+        status: i.status,
+        checkedIn: i.checkedIn,
+        checkedInAt: i.checkedInAt,
+        actualAttendees: i.actualAttendees
+      })),
+      importantNotice: {
+        dataRetention: 'This event will be automatically deleted 7 days after the event date to save storage space.',
+        fileAccess: 'File URLs in this backup will remain accessible as they are hosted externally (Cloudinary).',
+        privacy: 'Keep this backup file secure as it contains all event data including participant information.',
+        howToUse: 'This is a complete backup in JSON format. You can view it in any text editor or JSON viewer.'
+      }
+    };
+
+    // Set headers for file download
+    res.setHeader('Content-Type', 'application/json');
+    res.setHeader('Content-Disposition', `attachment; filename="planit-backup-${event.subdomain}-${Date.now()}.json"`);
+    
+    res.json(backup);
+
+  } catch (error) {
+    console.error('Backup error:', error);
+    next(error);
+  }
+});
+
+/**
+ * GET /api/events/:eventId/backup-info
+ * 
+ * Get information about when the event will be deleted
+ * Shows countdown and backup status
+ */
+router.get('/:eventId/backup-info', verifyEventAccess, async (req, res, next) => {
+  try {
+    const { eventId } = req.params;
+
+    const event = await Event.findById(eventId);
+    if (!event) {
+      return res.status(404).json({ error: 'Event not found' });
+    }
+
+    const eventDate = new Date(event.date);
+    const deletionDate = new Date(eventDate);
+    deletionDate.setDate(deletionDate.getDate() + 7);
+
+    const now = new Date();
+    const daysUntilDeletion = Math.ceil((deletionDate - now) / (1000 * 60 * 60 * 24));
+    const hasOccurred = now > eventDate;
+    const willBeDeleted = daysUntilDeletion <= 7 && hasOccurred;
+
+    res.json({
+      eventDate: eventDate,
+      deletionDate: deletionDate,
+      daysUntilDeletion: daysUntilDeletion,
+      hasOccurred: hasOccurred,
+      willBeDeleted: willBeDeleted,
+      warningLevel: daysUntilDeletion <= 3 && hasOccurred ? 'critical' :
+                    daysUntilDeletion <= 5 && hasOccurred ? 'warning' : 'normal',
+      message: willBeDeleted 
+        ? `⚠️ This event will be automatically deleted in ${daysUntilDeletion} day(s). Download a backup now!`
+        : hasOccurred
+        ? 'This event has occurred. It will be deleted 7 days after the event date.'
+        : 'Your event data is safe. Automatic deletion happens 7 days after the event date.'
+    });
+
+  } catch (error) {
+    next(error);
+  }
+});
