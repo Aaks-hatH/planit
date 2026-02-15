@@ -23,33 +23,49 @@ const Support = mongoose.model('Support', supportSchema);
 // ══════════════════════════════════════════════════════════════════════════
 
 async function sendDiscordNotification(data) {
-  if (!process.env.DISCORD_WEBHOOK_URL) return; // Skip if no webhook
-  
+  if (!process.env.DISCORD_WEBHOOK_URL) return;
+
   const { name, amount, type, message, feature } = data;
   const isFeature = type === 'feature_request';
-  
+  const displayName = (name && name.trim()) ? name.trim() : 'Anonymous';
+  const amountFormatted = `$${(amount / 100).toFixed(2)}`;
+
   const embed = {
-    title: isFeature ? ' New Feature Request!!!' : ' New Donation!',
-    color: isFeature ? 0x3B82F6 : 0x10B981, // Blue for features, Green for donations
+    title: isFeature ? 'New Feature Request' : 'New Donation',
+    description: isFeature
+      ? `**${displayName}** submitted a feature request with ${amountFormatted}`
+      : `**${displayName}** just supported PlanIt with ${amountFormatted}`,
+    color: isFeature ? 0x3B82F6 : 0x10B981,
     fields: [
-      { name: 'From', value: name || 'Anonymous', inline: true },
-      { name: 'Amount', value: `$${(amount / 100).toFixed(2)}`, inline: true },
+      { name: 'From', value: displayName, inline: true },
+      { name: 'Amount', value: amountFormatted, inline: true },
     ],
     timestamp: new Date().toISOString(),
+    footer: { text: 'PlanIt' },
   };
-  
-  if (isFeature) {
-    embed.fields.push({ name: 'Feature', value: feature });
-  } else if (message) {
-    embed.fields.push({ name: 'Message', value: message });
+
+  // Only push non-empty string values — Discord rejects empty/undefined field values
+  if (isFeature && feature && feature.trim()) {
+    embed.fields.push({ name: 'Feature Request', value: feature.trim().substring(0, 1024) });
+  } else if (!isFeature && message && message.trim()) {
+    embed.fields.push({ name: 'Message', value: message.trim().substring(0, 1024) });
   }
-  
+
+  // Top-level content gives Discord something to show even if embed rendering fails
+  const content = isFeature
+    ? `New feature request from **${displayName}** — ${amountFormatted}`
+    : `New donation from **${displayName}** — ${amountFormatted}`;
+
   try {
-    await fetch(process.env.DISCORD_WEBHOOK_URL, {
+    const response = await fetch(process.env.DISCORD_WEBHOOK_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ embeds: [embed] }),
+      body: JSON.stringify({ content, embeds: [embed] }),
     });
+    if (!response.ok) {
+      const text = await response.text();
+      console.error('Discord webhook error:', response.status, text);
+    }
   } catch (error) {
     console.error('Discord notification failed:', error);
   }
