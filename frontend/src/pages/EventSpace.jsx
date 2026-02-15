@@ -765,7 +765,7 @@ export default function EventSpace() {
     { id: 'announcements', label: 'Announcements', icon: Megaphone },
     { id: 'expenses', label: 'Budget', icon: DollarSign },
     { id: 'notes', label: 'Notes', icon: StickyNote },
-    ...(isOrganizer ? [{ id: 'analytics', label: 'Analytics', icon: BarChart3 }] : []),
+    ...(isOrganizer && event?.isEnterpriseMode ? [{ id: 'analytics', label: 'Analytics', icon: BarChart3 }] : []),
     { id: 'utilities', label: 'Share', icon: Share2 },
   ];
 
