@@ -1,11 +1,13 @@
 import { useState } from 'react';
-import { QrCode, Calendar, Download, Share2, Copy, Check, Link as LinkIcon } from 'lucide-react';
+import { QrCode, Calendar, Download, Share2, Copy, Check, Link as LinkIcon, UserCheck, Users } from 'lucide-react';
 import { utilityAPI } from '../services/api';
+import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 
-export default function Utilities({ eventId, subdomain, isOrganizer }) {
+export default function Utilities({ eventId, subdomain, isOrganizer, isEnterpriseMode }) {
   const [copied, setCopied] = useState(false);
   const [showQR, setShowQR] = useState(false);
+  const navigate = useNavigate();
   
   const eventUrl = subdomain
     ? `${window.location.origin}/e/${subdomain}`
@@ -53,6 +55,49 @@ export default function Utilities({ eventId, subdomain, isOrganizer }) {
   return (
     <div className="h-full overflow-y-auto">
       <div className="p-6 space-y-6">
+        {/* Enterprise Mode Banner */}
+        {isEnterpriseMode && isOrganizer && (
+          <div className="card p-6 bg-gradient-to-r from-blue-600 to-indigo-600 border-blue-700 shadow-xl">
+            <div className="flex items-center gap-4 mb-4">
+              <div className="w-12 h-12 rounded-full bg-white/20 flex items-center justify-center flex-shrink-0">
+                <UserCheck className="w-6 h-6 text-white" />
+              </div>
+              <div className="flex-1">
+                <h3 className="text-lg font-bold text-white mb-1">Enterprise Event Management</h3>
+                <p className="text-sm text-blue-100">Manage personalized invites, track RSVPs, and check in guests with QR codes</p>
+              </div>
+            </div>
+            <button 
+              onClick={() => navigate(`/event/${eventId}/checkin`)}
+              className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-white text-blue-600 rounded-lg font-bold text-base hover:bg-blue-50 transition-all shadow-lg hover:shadow-xl"
+            >
+              <UserCheck className="w-5 h-5" />
+              Open Check-in Dashboard
+            </button>
+            <div className="mt-4 pt-4 border-t border-white/20">
+              <p className="text-xs text-blue-100 mb-2 font-medium">Quick Actions:</p>
+              <div className="grid grid-cols-2 gap-2 text-xs text-blue-50">
+                <div className="flex items-center gap-2">
+                  <span className="w-1.5 h-1.5 bg-white rounded-full"></span>
+                  <span>Add guests with group sizes</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="w-1.5 h-1.5 bg-white rounded-full"></span>
+                  <span>Send personalized invite links</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="w-1.5 h-1.5 bg-white rounded-full"></span>
+                  <span>Scan QR codes at entrance</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="w-1.5 h-1.5 bg-white rounded-full"></span>
+                  <span>View real-time attendance</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Header */}
         <div>
           <h2 className="text-2xl font-bold text-neutral-900 flex items-center gap-2">
