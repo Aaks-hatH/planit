@@ -29,7 +29,7 @@ router.post('/',
   ],
   async (req, res, next) => {
     try {
-      const { subdomain, title, description, date, location, organizerName, organizerEmail, password, settings, maxParticipants } = req.body;
+      const { subdomain, title, description, date, location, organizerName, organizerEmail, password, accountPassword, settings, maxParticipants } = req.body;
 
       const existing = await Event.findOne({ subdomain });
       if (existing) return res.status(409).json({ error: 'This event link is already taken.' });
@@ -49,6 +49,13 @@ router.post('/',
       });
 
       await event.save();
+
+      const participantData = { eventId: event._id, username: organizerName, role: 'organizer' };
+      if (accountPassword) {
+        participantData.password = await bcrypt.hash(accountPassword, 10);
+        participantData.hasPassword = true;
+      }
+      await EventParticipant.create(participantData);
 
       const token = jwt.sign(
         { eventId: event._id.toString(), username: organizerName, role: 'organizer' },
@@ -743,6 +750,185 @@ router.delete('/:eventId', verifyOrganizer, async (req, res, next) => {
   try {
     await Event.findByIdAndDelete(req.params.eventId);
     res.json({ message: 'Event deleted successfully' });
+  } catch (error) { next(error); }
+});
+
+// Enterprise Mode: Create personalized invites
+router.post('/:eventId/invites', verifyOrganizer, 
+  [
+    body('guests').isArray().withMessage('Guests must be an array'),
+    body('guests.*.guestName').trim().isLength({ min: 1, max: 100 }),
+    body('guests.*.guestEmail').optional().isEmail(),
+    body('guests.*.groupSize').optional().isInt({ min: 1 }),
+    validate
+  ],
+  async (req, res, next) => {
+    try {
+      const Invite = require('../models/Invite');
+      const { guests } = req.body;
+      
+      const invites = [];
+      for (const guest of guests) {
+        const inviteCode = Math.random().toString(36).substring(2, 10).toUpperCase();
+        const invite = await Invite.create({
+          eventId: req.params.eventId,
+          inviteCode,
+          guestName: guest.guestName,
+          guestEmail: guest.guestEmail || '',
+          guestPhone: guest.guestPhone || '',
+          groupSize: guest.groupSize || 1,
+          plusOnes: guest.plusOnes || 0,
+          notes: guest.notes || ''
+        });
+        invites.push(invite);
+      }
+      
+      res.status(201).json({ message: 'Invites created', invites });
+    } catch (error) { next(error); }
+  }
+);
+
+// Get all invites for event
+router.get('/:eventId/invites', verifyOrganizer, async (req, res, next) => {
+  try {
+    const Invite = require('../models/Invite');
+    const invites = await Invite.find({ eventId: req.params.eventId }).sort({ createdAt: -1 });
+    res.json({ invites });
+  } catch (error) { next(error); }
+});
+
+// Get invite by code (public)
+router.get('/invite/:inviteCode', async (req, res, next) => {
+  try {
+    const Invite = require('../models/Invite');
+    const invite = await Invite.findOne({ inviteCode: req.params.inviteCode });
+    if (!invite) return res.status(404).json({ error: 'Invite not found' });
+    
+    const event = await Event.findById(invite.eventId);
+    if (!event) return res.status(404).json({ error: 'Event not found' });
+    
+    res.json({ 
+      invite: {
+        code: invite.inviteCode,
+        guestName: invite.guestName,
+        guestEmail: invite.guestEmail,
+        groupSize: invite.groupSize,
+        plusOnes: invite.plusOnes,
+        checkedIn: invite.checkedIn,
+        checkedInAt: invite.checkedInAt,
+        status: invite.status,
+        notes: invite.notes
+      },
+      event: {
+        id: event._id,
+        title: event.title,
+        date: event.date,
+        location: event.location,
+        description: event.description,
+        organizerName: event.organizerName
+      }
+    });
+  } catch (error) { next(error); }
+});
+
+router.post('/:eventId/invites/:inviteCode/rsvp', async (req, res, next) => {
+  try {
+    const Invite = require('../models/Invite');
+    const { status } = req.body;
+    
+    if (!['confirmed', 'declined'].includes(status)) {
+      return res.status(400).json({ error: 'Invalid status' });
+    }
+    
+    const invite = await Invite.findOne({ 
+      eventId: req.params.eventId, 
+      inviteCode: req.params.inviteCode 
+    });
+    
+    if (!invite) return res.status(404).json({ error: 'Invite not found' });
+    
+    invite.status = status;
+    await invite.save();
+    
+    res.json({ message: 'RSVP updated', invite });
+  } catch (error) { next(error); }
+});
+
+// Check-in guest with QR code
+router.post('/:eventId/checkin/:inviteCode', verifyEventAccess, async (req, res, next) => {
+  try {
+    const Invite = require('../models/Invite');
+    const invite = await Invite.findOne({ 
+      eventId: req.params.eventId, 
+      inviteCode: req.params.inviteCode 
+    });
+    
+    if (!invite) return res.status(404).json({ error: 'Invite not found' });
+    if (invite.checkedIn) return res.status(400).json({ error: 'Already checked in', checkedInAt: invite.checkedInAt });
+    
+    const { actualAttendees } = req.body;
+    
+    invite.checkedIn = true;
+    invite.checkedInAt = new Date();
+    invite.checkedInBy = req.eventAccess.username;
+    invite.status = 'checked-in';
+    if (actualAttendees !== undefined) {
+      invite.actualAttendees = actualAttendees;
+    } else {
+      invite.actualAttendees = invite.groupSize;
+    }
+    await invite.save();
+    
+    const io = req.app.get('io');
+    if (io) {
+      io.to(`event_${req.params.eventId}`).emit('guest_checked_in', {
+        inviteCode: invite.inviteCode,
+        guestName: invite.guestName,
+        actualAttendees: invite.actualAttendees,
+        checkedInAt: invite.checkedInAt
+      });
+    }
+    
+    res.json({ message: 'Guest checked in successfully', invite });
+  } catch (error) { next(error); }
+});
+
+// Get check-in analytics
+router.get('/:eventId/checkin-stats', verifyOrganizer, async (req, res, next) => {
+  try {
+    const Invite = require('../models/Invite');
+    const invites = await Invite.find({ eventId: req.params.eventId });
+    
+    const total = invites.length;
+    const checkedIn = invites.filter(i => i.checkedIn).length;
+    const pending = invites.filter(i => i.status === 'pending').length;
+    const confirmed = invites.filter(i => i.status === 'confirmed').length;
+    const declined = invites.filter(i => i.status === 'declined').length;
+    
+    const totalExpectedAttendees = invites.reduce((sum, i) => sum + i.groupSize, 0);
+    const totalActualAttendees = invites.reduce((sum, i) => sum + i.actualAttendees, 0);
+    
+    res.json({
+      stats: {
+        total,
+        checkedIn,
+        pending,
+        confirmed,
+        declined,
+        noShow: confirmed - checkedIn,
+        totalExpectedAttendees,
+        totalActualAttendees
+      }
+    });
+  } catch (error) { next(error); }
+});
+
+// Delete invite
+router.delete('/:eventId/invites/:inviteId', verifyOrganizer, async (req, res, next) => {
+  try {
+    const Invite = require('../models/Invite');
+    await Invite.findByIdAndDelete(req.params.inviteId);
+    res.json({ message: 'Invite deleted' });
   } catch (error) { next(error); }
 });
 
