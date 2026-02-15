@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { getUserTimezone, localDateTimeToUTC } from '../utils/timezoneUtils';
+import { getUserTimezone, localDateTimeToUTC, getTimezoneOptions } from '../utils/timezoneUtils';
 import { useNavigate } from 'react-router-dom';
 import {
   Calendar, Users, MessageSquare, BarChart3, FileText, Shield, Copy, Check, Lock,
@@ -598,9 +598,17 @@ export default function Home() {
                         <input type="datetime-local" required className="input" value={formData.date} onChange={update('date')} />
                       </div>
                       <div>
-                        <label className="block text-sm font-bold text-neutral-700 mb-2">Location</label>
-                        <input type="text" className="input" placeholder="Central Park, NYC" value={formData.location} onChange={update('location')} />
+                        <label className="block text-sm font-bold text-neutral-700 mb-2">Timezone <span className="text-red-500">*</span></label>
+                        <select required className="input" value={formData.timezone} onChange={update('timezone')}>
+                          {getTimezoneOptions().map(tz => (
+                            <option key={tz.value} value={tz.value}>{tz.label}</option>
+                          ))}
+                        </select>
                       </div>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-bold text-neutral-700 mb-2">Location</label>
+                      <input type="text" className="input" placeholder="Central Park, NYC" value={formData.location} onChange={update('location')} />
                     </div>
                     <div className="grid grid-cols-2 gap-4">
                       <div>
