@@ -76,16 +76,7 @@ router.get('/participants/:eventId', async (req, res, next) => {
   } catch (error) { next(error); }
 });
 
-// Set or update account password for a participant (must supply current password if one exists)
-router.post('/set-password/:eventId', authLimiter,
-  [
-    body('username').trim().isLength({ min: 1, max: 100 }),
-    body('newPassword').isLength({ min: 4, max: 100 }).withMessage('Password must be at least 4 characters'),
-    body('currentPassword').optional(),
-    validate
-  ],
-  async (req, res, next) => {
-    try {
+ {
       const { username, newPassword, currentPassword } = req.body;
       const participant = await EventParticipant.findOne({ eventId: req.params.eventId, username }).select('+password');
       if (!participant) return res.status(404).json({ error: 'Participant not found.' });
@@ -156,7 +147,6 @@ router.post('/verify-password/:eventId', authLimiter,
 
       const { username, accountPassword } = req.body;
 
-      // Check if this username already has an account in this event
       const existing = await EventParticipant.findOne({ eventId: req.params.eventId, username }).select('+password');
       if (existing && existing.hasPassword) {
         if (!accountPassword) return res.status(400).json({ error: 'This name has an account — enter your account password.', requiresAccountPassword: true });
@@ -165,9 +155,14 @@ router.post('/verify-password/:eventId', authLimiter,
         existing.lastSeenAt = new Date();
         await existing.save();
       } else {
+        const updateData = { role: 'participant', lastSeenAt: new Date() };
+        if (accountPassword) {
+          updateData.password = await bcrypt.hash(accountPassword, 10);
+          updateData.hasPassword = true;
+        }
         await EventParticipant.findOneAndUpdate(
           { eventId: req.params.eventId, username },
-          { role: 'participant', lastSeenAt: new Date() },
+          updateData,
           { upsert: true, new: true }
         );
       }
@@ -201,7 +196,6 @@ router.post('/join/:eventId',
 
       const { username, accountPassword } = req.body;
 
-      // Check if this username already has an account in this event
       const existing = await EventParticipant.findOne({ eventId: req.params.eventId, username }).select('+password');
       if (existing && existing.hasPassword) {
         if (!accountPassword) return res.status(400).json({ error: 'This name has an account — enter your account password.', requiresAccountPassword: true });
@@ -210,9 +204,14 @@ router.post('/join/:eventId',
         existing.lastSeenAt = new Date();
         await existing.save();
       } else {
+        const updateData = { role: 'participant', lastSeenAt: new Date() };
+        if (accountPassword) {
+          updateData.password = await bcrypt.hash(accountPassword, 10);
+          updateData.hasPassword = true;
+        }
         await EventParticipant.findOneAndUpdate(
           { eventId: req.params.eventId, username },
-          { role: 'participant', lastSeenAt: new Date() },
+          updateData,
           { upsert: true, new: true }
         );
       }
