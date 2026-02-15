@@ -54,10 +54,6 @@ function JoinGate({ eventId, onJoined }) {
   const [accountPassword, setAccountPassword] = useState('');
   const [needsAccountPassword, setNeedsAccountPassword] = useState(false);
   const [selectedHasPassword, setSelectedHasPassword] = useState(false);
-  const [showSetPassword, setShowSetPassword] = useState(false);
-  const [newPassword, setNewPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [settingPassword, setSettingPassword] = useState(false);
   const [error, setError] = useState('');
   const navigate = useNavigate();
 
@@ -88,9 +84,12 @@ function JoinGate({ eventId, onJoined }) {
   };
 
   const handleUsernameChange = (e) => {
-    setUsername(e.target.value);
-    setNeedsAccountPassword(false);
-    setSelectedHasPassword(false);
+    const newUsername = e.target.value;
+    setUsername(newUsername);
+    
+    const existingUser = knownParticipants.find(p => p.username.toLowerCase() === newUsername.trim().toLowerCase());
+    setNeedsAccountPassword(existingUser?.hasPassword || false);
+    setSelectedHasPassword(existingUser?.hasPassword || false);
     setAccountPassword('');
     setShowDropdown(true);
     setError('');
@@ -121,27 +120,6 @@ function JoinGate({ eventId, onJoined }) {
       }
     } finally {
       setJoining(false);
-    }
-  };
-
-  const handleSetPassword = async (e) => {
-    e.preventDefault();
-    if (newPassword !== confirmPassword) { setError('Passwords do not match'); return; }
-    if (newPassword.length < 4) { setError('Password must be at least 4 characters'); return; }
-    setSettingPassword(true); setError('');
-    try {
-      await eventAPI.setPassword(eventId, {
-        username: username.trim(),
-        newPassword,
-        currentPassword: accountPassword || undefined,
-      });
-      setShowSetPassword(false);
-      setNewPassword(''); setConfirmPassword('');
-      toast.success('Account password set! You can now use it to sign in next time.');
-    } catch (err) {
-      setError(err.response?.data?.error || 'Failed to set password');
-    } finally {
-      setSettingPassword(false);
     }
   };
 
@@ -200,9 +178,8 @@ function JoinGate({ eventId, onJoined }) {
               )}
             </div>
 
-            {!showSetPassword ? (
-              <>
-                <h2 className="text-base font-semibold text-neutral-900 mb-4">Join this event</h2>
+            <>
+              <h2 className="text-base font-semibold text-neutral-900 mb-4">Join this event</h2>
                 <form onSubmit={handleJoin} className="space-y-4">
                   {/* Name field with dropdown */}
                   <div className="relative">
@@ -235,14 +212,25 @@ function JoinGate({ eventId, onJoined }) {
                     )}
                   </div>
 
-                  {/* Account password — shown if name has one or was requested */}
-                  {(needsAccountPassword || selectedHasPassword) && (
+                  {(needsAccountPassword || selectedHasPassword || (username.trim() && !knownParticipants.find(p => p.username.toLowerCase() === username.trim().toLowerCase()))) && (
                     <div>
                       <label className="block text-sm font-medium text-neutral-700 mb-1.5">
-                        Account password <span className="text-xs font-normal text-neutral-400">(for {username})</span>
+                        Account password {(needsAccountPassword || selectedHasPassword) ? 
+                          <span className="text-xs font-normal text-neutral-400">(for {username})</span> :
+                          <span className="text-xs font-normal text-neutral-400">(optional, protects your name)</span>
+                        }
                       </label>
-                      <input type="password" className="input" placeholder="Your account password"
-                        value={accountPassword} onChange={e => setAccountPassword(e.target.value)} />
+                      <input 
+                        type="password" 
+                        className="input" 
+                        placeholder={(needsAccountPassword || selectedHasPassword) ? "Your account password" : "Create a password (min 4 characters)"}
+                        value={accountPassword} 
+                        onChange={e => setAccountPassword(e.target.value)}
+                        minLength={4}
+                      />
+                      {!(needsAccountPassword || selectedHasPassword) && (
+                        <p className="text-xs text-neutral-400 mt-1">This password is only for this event and protects your username</p>
+                      )}
                     </div>
                   )}
 
@@ -261,51 +249,8 @@ function JoinGate({ eventId, onJoined }) {
                     {joining ? <><span className="spinner w-4 h-4 border-2 border-white/30 border-t-white" />Joining...</>
                       : <>Join event<ChevronRight className="w-4 h-4" /></>}
                   </button>
-
-                  {/* Set password prompt for new/no-password users */}
-                  {username.trim() && !needsAccountPassword && (
-                    <button type="button" onClick={() => { setShowSetPassword(true); setError(''); }}
-                      className="w-full text-xs text-neutral-400 hover:text-neutral-600 transition-colors text-center pt-1">
-                      🔒 Set an account password to protect your name
-                    </button>
-                  )}
                 </form>
               </>
-            ) : (
-              <>
-                <div className="flex items-center gap-2 mb-4">
-                  <button type="button" onClick={() => { setShowSetPassword(false); setError(''); }}
-                    className="btn btn-ghost p-1"><ArrowLeft className="w-4 h-4" /></button>
-                  <h2 className="text-base font-semibold text-neutral-900">Set account password</h2>
-                </div>
-                <p className="text-sm text-neutral-500 mb-4">
-                  Set a password for <strong>{username}</strong> in this event. Next time you join, you'll need it to use this name.
-                </p>
-                <form onSubmit={handleSetPassword} className="space-y-4">
-                  {selectedHasPassword && (
-                    <div>
-                      <label className="block text-sm font-medium text-neutral-700 mb-1.5">Current password</label>
-                      <input type="password" className="input" placeholder="Current account password"
-                        value={accountPassword} onChange={e => setAccountPassword(e.target.value)} />
-                    </div>
-                  )}
-                  <div>
-                    <label className="block text-sm font-medium text-neutral-700 mb-1.5">New password</label>
-                    <input type="password" className="input" placeholder="At least 4 characters"
-                      value={newPassword} onChange={e => setNewPassword(e.target.value)} />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-neutral-700 mb-1.5">Confirm password</label>
-                    <input type="password" className="input" placeholder="Repeat password"
-                      value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} />
-                  </div>
-                  {error && <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{error}</p>}
-                  <button type="submit" disabled={settingPassword} className="btn btn-primary w-full py-2.5">
-                    {settingPassword ? <><span className="spinner w-4 h-4 border-2 border-white/30 border-t-white" />Saving...</> : 'Set password'}
-                  </button>
-                </form>
-              </>
-            )}
           </div>
           <p className="text-center text-sm text-neutral-400 mt-4">
             <a href="/" className="hover:text-neutral-600 transition-colors">Back to home</a>
