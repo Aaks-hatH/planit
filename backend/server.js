@@ -10,6 +10,11 @@ const path = require('path');
 const supportRoutes = require('./routes/support');
 require('dotenv').config();
 
+// ═══════════════════════════════════════════════════════════════════════════
+// IMPORT CLEANUP SCHEDULER
+// ═══════════════════════════════════════════════════════════════════════════
+const { startCleanupScheduler } = require('./jobs/cleanupJob');
+
 const app = express();
 const server = http.createServer(app);
 const io = socketIo(server, {
@@ -52,11 +57,11 @@ app.use(helmet({
       defaultSrc: ["'self'"],
       scriptSrc: ["'self'", "'unsafe-inline'"],  // Allow inline scripts for React
       styleSrc: ["'self'", "'unsafe-inline'"],   // Allow inline styles
-      imgSrc: ["'self'", "data:", "https:", "http:"],  // Allow external images
+      imgSrc: ["'self'", "data:", "https:", "http:"],  // Allow external images (Cloudinary)
       connectSrc: ["'self'", "wss:", "ws:", "https:", "http:"],  // Allow WebSocket
       fontSrc: ["'self'", "data:"],
       objectSrc: ["'none'"],
-      mediaSrc: ["'self'"],
+      mediaSrc: ["'self'", "https:"],  // Allow Cloudinary media
       frameSrc: ["'none'"],
     },
   },
@@ -73,6 +78,7 @@ app.use(helmet({
     action: 'deny'
   }
 }));
+
 app.use(compression());
 
 const corsOptions = {
@@ -99,6 +105,7 @@ app.use(cookieParser());
 app.use('/api/', apiLimiter);
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
+// Mount routes
 app.use('/api/events', eventRoutes);
 app.use('/api/chat', chatRoutes);
 app.use('/api/polls', pollRoutes);
@@ -107,18 +114,26 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/support', supportRoutes);
 app.use('/api', publicRoutes);
 
+// Health check endpoint
 app.get('/api/health', (req, res) => {
   res.json({ 
     status: 'ok', 
     timestamp: new Date().toISOString(), 
     uptime: process.uptime(),
-    mongodb: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected'
+    mongodb: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected',
+    features: {
+      cloudinaryStorage: !!process.env.CLOUDINARY_CLOUD_NAME,
+      autoCleanup: true
+    }
   });
 });
 
 app.use(errorHandler);
 
-// ── FIX: Enhanced MongoDB connection with better error handling and logging ──
+// ═══════════════════════════════════════════════════════════════════════════
+// ENHANCED MongoDB CONNECTION WITH CLEANUP SCHEDULER
+// ═══════════════════════════════════════════════════════════════════════════
+
 const connectDB = async () => {
   try {
     if (!process.env.MONGODB_URI) {
@@ -140,6 +155,15 @@ const connectDB = async () => {
     console.log(`  Host: ${mongoose.connection.host}`);
     console.log(`  Port: ${mongoose.connection.port}`);
 
+    // ═══════════════════════════════════════════════════════════════════════
+    // START AUTOMATIC CLEANUP SCHEDULER
+    // ═══════════════════════════════════════════════════════════════════════
+    console.log('\n  Initializing automatic event cleanup...');
+    startCleanupScheduler();
+    console.log('✓ Cleanup scheduler started');
+    console.log('  Events will be deleted 7 days after they occur');
+    console.log('  Cleanup runs daily at 2:00 AM\n');
+
     // Handle connection events
     mongoose.connection.on('error', (err) => {
       console.error('MongoDB connection error:', err);
@@ -154,7 +178,7 @@ const connectDB = async () => {
     });
 
   } catch (err) {
-    console.error('❌ MongoDB connection failed:');
+    console.error(' MongoDB connection failed:');
     console.error('  Error:', err.message);
     if (process.env.MONGODB_URI) {
       // Hide credentials in logs
@@ -170,25 +194,51 @@ const connectDB = async () => {
   }
 };
 
-// Connect to MongoDB and start server
+// ═══════════════════════════════════════════════════════════════════════════
+// START SERVER
+// ═══════════════════════════════════════════════════════════════════════════
+
 connectDB().then(() => {
   const PORT = process.env.PORT || 5000;
   server.listen(PORT, () => {
-    console.log(`✓ Server running on port ${PORT}`);
+    console.log('\n' + '═'.repeat(70));
+    console.log(' PlanIt Server Started');
+    console.log('═'.repeat(70));
+    console.log(`  Port:        ${PORT}`);
     console.log(`  Environment: ${process.env.NODE_ENV || 'development'}`);
     console.log(`  CORS Origin: ${process.env.CORS_ORIGIN || 'http://localhost:5173'}`);
-    console.log('\nServer ready to accept connections 🚀\n');
+    console.log(`  Storage:     ${process.env.CLOUDINARY_CLOUD_NAME ? 'Cloudinary ' : 'Local'}`);
+    console.log('═'.repeat(70));
+    console.log('\nServer ready to accept connections! \n');
   });
 });
 
+// Initialize WebSocket chat
 require('./socket/chatSocket')(io);
 
+// ═══════════════════════════════════════════════════════════════════════════
+// GRACEFUL SHUTDOWN
+// ═══════════════════════════════════════════════════════════════════════════
+
 process.on('SIGTERM', () => {
-  console.log('SIGTERM signal received: closing HTTP server');
+  console.log('\n SIGTERM signal received: closing HTTP server');
   server.close(() => {
-    console.log('HTTP server closed');
+    console.log('✓ HTTP server closed');
     mongoose.connection.close(false, () => {
-      console.log('MongoDB connection closed');
+      console.log('✓ MongoDB connection closed');
+      console.log(' Server shutdown complete');
+      process.exit(0);
+    });
+  });
+});
+
+process.on('SIGINT', () => {
+  console.log('\n SIGINT signal received: closing HTTP server');
+  server.close(() => {
+    console.log('✓ HTTP server closed');
+    mongoose.connection.close(false, () => {
+      console.log('✓ MongoDB connection closed');
+      console.log(' Server shutdown complete');
       process.exit(0);
     });
   });
@@ -196,7 +246,16 @@ process.on('SIGTERM', () => {
 
 // Handle unhandled promise rejections
 process.on('unhandledRejection', (err) => {
-  console.error('Unhandled Promise Rejection:', err);
+  console.error(' Unhandled Promise Rejection:', err);
+  console.error('   Stack:', err.stack);
+  // Close server & exit process
+  server.close(() => process.exit(1));
+});
+
+// Handle uncaught exceptions
+process.on('uncaughtException', (err) => {
+  console.error(' Uncaught Exception:', err);
+  console.error('   Stack:', err.stack);
   // Close server & exit process
   server.close(() => process.exit(1));
 });
