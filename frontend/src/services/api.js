@@ -1,198 +1,703 @@
-import axios from 'axios';
+const express = require('express');
+const router = express.Router();
+const jwt = require('jsonwebtoken');
+const { body, validationResult } = require('express-validator');
+const Event = require('../models/Event');
+const Message = require('../models/Message');
+const Poll = require('../models/Poll');
+const File = require('../models/File');
+const EventParticipant = require('../models/EventParticipant');
+const Invite = require('../models/Invite');
+const { verifyAdmin } = require('../middleware/auth');
+const { authLimiter } = require('../middleware/rateLimiter');
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
-
-const api = axios.create({
-  baseURL: API_URL,
-  headers: { 'Content-Type': 'application/json' },
-  withCredentials: true,
-});
-
-api.interceptors.request.use((config) => {
-  // ── FIX: Check if this is an admin request first ──
-  const isAdminRequest = config.url && config.url.includes('/admin');
-  
-  if (isAdminRequest) {
-    // For admin requests, ONLY use admin token
-    const adminToken = localStorage.getItem('adminToken');
-    if (adminToken) {
-      config.headers.Authorization = `Bearer ${adminToken}`;
-    }
-  } else {
-    // For regular event requests, use event token
-    const token = localStorage.getItem('eventToken');
-    if (token) {
-      config.headers['x-event-token'] = token;
-      config.headers.Authorization = `Bearer ${token}`;
-    }
+// Validation middleware
+const validate = (req, res, next) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ errors: errors.array() });
   }
-  
-  return config;
-});
+  next();
+};
 
-api.interceptors.response.use(
-  (response) => response,
-  (error) => {
-    if (error.response?.status === 401) {
-      // Clear tokens on unauthorized
-      const isAdminRequest = error.config?.url?.includes('/admin');
-      
-      if (isAdminRequest) {
-        console.warn('Admin authentication failed, clearing admin token');
-        localStorage.removeItem('adminToken');
-        // Optionally redirect to admin login
-        if (window.location.pathname.includes('/admin') && !window.location.pathname.includes('/admin/login')) {
-          window.location.href = '/admin';
-        }
-      } else {
-        localStorage.removeItem('eventToken');
-        localStorage.removeItem('username');
+// ═══════════════════════════════════════════════════════════════════════════
+// AUTHENTICATION
+// ═══════════════════════════════════════════════════════════════════════════
+
+// Admin login
+router.post('/login',
+  authLimiter,
+  [
+    body('username').trim().notEmpty().withMessage('Username is required'),
+    body('password').notEmpty().withMessage('Password is required'),
+    validate
+  ],
+  async (req, res) => {
+    try {
+      const { username, password } = req.body;
+
+      // Check credentials against environment variables
+      const adminUsername = process.env.ADMIN_USERNAME || 'admin';
+      const adminPassword = process.env.ADMIN_PASSWORD || 'admin123';
+
+      if (username !== adminUsername || password !== adminPassword) {
+        return res.status(401).json({ error: 'Invalid credentials' });
       }
+
+      // Generate admin token
+      const token = jwt.sign(
+        { username, isAdmin: true, role: 'super_admin' },
+        process.env.JWT_SECRET,
+        { expiresIn: '24h' }
+      );
+
+      res.json({
+        message: 'Admin login successful',
+        token,
+        user: { username, role: 'super_admin' }
+      });
+    } catch (error) {
+      res.status(500).json({ error: 'Login failed' });
     }
-    return Promise.reject(error);
   }
 );
 
-export const eventAPI = {
-  create: (data) => api.post('/events', data),
-  getBySubdomain: (subdomain) => api.get(`/events/subdomain/${subdomain}`),
-  getById: (id) => api.get(`/events/${id}`),
-  getPublicInfo: (id) => api.get(`/events/public/${id}`),
-  getParticipants: (id) => api.get(`/events/participants/${id}`),
-  verifyPassword: (id, data) => api.post(`/events/verify-password/${id}`, data),
-  join: (id, data) => api.post(`/events/join/${id}`, data),
-  setPassword: (id, data) => api.post(`/events/set-password/${id}`, data),
-  update: (id, data) => api.put(`/events/${id}`, data),
-  delete: (id) => api.delete(`/events/${id}`),
-  // RSVP
-  rsvp: (eventId, data) => api.post(`/events/${eventId}/rsvp`, data),
-  // Agenda
-  getAgenda: (eventId) => api.get(`/events/${eventId}/agenda`),
-  addAgendaItem: (eventId, data) => api.post(`/events/${eventId}/agenda`, data),
-  deleteAgendaItem: (eventId, itemId) => api.delete(`/events/${eventId}/agenda/${itemId}`),
-};
+// ═══════════════════════════════════════════════════════════════════════════
+// DASHBOARD & STATISTICS
+// ═══════════════════════════════════════════════════════════════════════════
 
-export const chatAPI = {
-  getMessages: (eventId, params) => api.get(`/chat/${eventId}/messages`, { params }),
-  sendMessage: (eventId, data) => api.post(`/chat/${eventId}/messages`, data),
-  editMessage: (eventId, messageId, data) => api.put(`/chat/${eventId}/messages/${messageId}`, data),
-  deleteMessage: (eventId, messageId, data) => api.delete(`/chat/${eventId}/messages/${messageId}`, { data }),
-  addReaction: (eventId, messageId, data) => api.post(`/chat/${eventId}/messages/${messageId}/reactions`, data),
-  removeReaction: (eventId, messageId, data) => api.delete(`/chat/${eventId}/messages/${messageId}/reactions`, { data }),
-};
+// Get dashboard statistics
+router.get('/stats', verifyAdmin, async (req, res, next) => {
+  try {
+    const [
+      totalEvents,
+      activeEvents,
+      totalMessages,
+      totalPolls,
+      totalFiles
+    ] = await Promise.all([
+      Event.countDocuments(),
+      Event.countDocuments({ status: 'active' }),
+      Message.countDocuments({ isDeleted: false }),
+      Poll.countDocuments(),
+      File.countDocuments({ isDeleted: false })
+    ]);
 
-export const pollAPI = {
-  getAll: (eventId) => api.get(`/polls/${eventId}`),
-  create: (eventId, data) => api.post(`/polls/${eventId}`, data),
-  vote: (eventId, pollId, data) => api.post(`/polls/${eventId}/polls/${pollId}/vote`, data),
-  getResults: (eventId, pollId) => api.get(`/polls/${eventId}/polls/${pollId}/results`),
-  close: (eventId, pollId, data) => api.post(`/polls/${eventId}/polls/${pollId}/close`, data),
-  delete: (eventId, pollId, data) => api.delete(`/polls/${eventId}/polls/${pollId}`, { data }),
-};
-
-export const fileAPI = {
-  upload: (eventId, formData) => api.post(`/files/${eventId}/upload`, formData, {
-    headers: { 'Content-Type': 'multipart/form-data' },
-  }),
-  getAll: (eventId) => api.get(`/files/${eventId}`),
-  download: (eventId, fileId) => api.get(`/files/${eventId}/download/${fileId}`, { responseType: 'blob' }),
-  delete: (eventId, fileId, data) => api.delete(`/files/${eventId}/${fileId}`, { data }),
-};
-
-export const adminAPI = {
-  login: (data) => api.post('/admin/login', data),
-  getStats: () => api.get('/admin/stats'),
-  getEvents: (params) => api.get('/admin/events', { params }),
-  getEvent: (id) => api.get(`/admin/events/${id}`),
-  updateEventStatus: (id, data) => api.patch(`/admin/events/${id}/status`, data),
-  deleteEvent: (id) => api.delete(`/admin/events/${id}`),
-  getActivity: (params) => api.get('/admin/activity', { params }),
-  // Messages
-  getMessages: (eventId) => api.get(`/admin/events/${eventId}/messages`),
-  deleteMessage: (eventId, messageId) => api.delete(`/admin/events/${eventId}/messages/${messageId}`),
-  // Participants
-  getParticipants: (eventId) => api.get(`/admin/events/${eventId}/participants`),
-  removeParticipant: (eventId, username) => api.delete(`/admin/events/${eventId}/participants/${username}`),
-  resetParticipantPassword: (eventId, username) => api.delete(`/admin/events/${eventId}/participants/${username}/password`),
-  // Polls
-  getPolls: (eventId) => api.get(`/admin/events/${eventId}/polls`),
-};
-
-// Tasks
-export const taskAPI = {
-  getAll: (eventId) => api.get(`/events/${eventId}/tasks`),
-  create: (eventId, data) => api.post(`/events/${eventId}/tasks`, data),
-  toggle: (eventId, taskId) => api.patch(`/events/${eventId}/tasks/${taskId}/toggle`),
-  delete: (eventId, taskId) => api.delete(`/events/${eventId}/tasks/${taskId}`)
-};
-
-// Announcements
-export const announcementAPI = {
-  getAll: (eventId) => api.get(`/events/${eventId}/announcements`),
-  create: (eventId, data) => api.post(`/events/${eventId}/announcements`, data),
-  delete: (eventId, announcementId) => api.delete(`/events/${eventId}/announcements/${announcementId}`)
-};
-
-// Expenses
-export const expenseAPI = {
-  getAll: (eventId) => api.get(`/events/${eventId}/expenses`),
-  create: (eventId, data) => api.post(`/events/${eventId}/expenses`, data),
-  delete: (eventId, expenseId) => api.delete(`/events/${eventId}/expenses/${expenseId}`),
-  updateBudget: (eventId, budget) => api.patch(`/events/${eventId}/budget`, { budget })
-};
-
-// Notes
-export const noteAPI = {
-  getAll: (eventId) => api.get(`/events/${eventId}/notes`),
-  create: (eventId, data) => api.post(`/events/${eventId}/notes`, data),
-  update: (eventId, noteId, data) => api.put(`/events/${eventId}/notes/${noteId}`, data),
-  delete: (eventId, noteId) => api.delete(`/events/${eventId}/notes/${noteId}`)
-};
-
-// Analytics
-export const analyticsAPI = {
-  get: (eventId) => api.get(`/events/${eventId}/analytics`)
-};
-
-// Utilities
-export const utilityAPI = {
-  downloadCalendar: (eventId, token) => {
-    const url = `${API_URL}/events/${eventId}/calendar.ics`;
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'event.ics';
-    a.style.display = 'none';
-    document.body.appendChild(a);
-    fetch(url, {
-      headers: { 'x-event-token': token }
-    }).then(res => res.blob()).then(blob => {
-      const blobUrl = URL.createObjectURL(blob);
-      a.href = blobUrl;
-      a.click();
-      URL.revokeObjectURL(blobUrl);
-      document.body.removeChild(a);
+    // Get events created in last 24 hours
+    const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    const recentEvents = await Event.countDocuments({ 
+      createdAt: { $gte: yesterday } 
     });
-  },
-  downloadParticipants: (eventId, token) => {
-    const url = `${API_URL}/events/${eventId}/participants.csv`;
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'participants.csv';
-    a.style.display = 'none';
-    document.body.appendChild(a);
-    fetch(url, {
-      headers: { 'x-event-token': token }
-    }).then(res => res.blob()).then(blob => {
-      const blobUrl = URL.createObjectURL(blob);
-      a.href = blobUrl;
-      a.click();
-      URL.revokeObjectURL(blobUrl);
-      document.body.removeChild(a);
+
+    // Get total participants
+    const events = await Event.find({}, 'participants');
+    const totalParticipants = events.reduce(
+      (sum, event) => sum + event.participants.length, 
+      0
+    );
+
+    // Calculate total file storage used
+    const fileStats = await File.aggregate([
+      { $match: { isDeleted: false } },
+      { $group: { _id: null, totalSize: { $sum: '$size' } } }
+    ]);
+    const totalStorage = fileStats.length > 0 ? fileStats[0].totalSize : 0;
+
+    res.json({
+      totalEvents,
+      activeEvents,
+      totalMessages,
+      totalPolls,
+      totalFiles,
+      totalParticipants,
+      recentEvents,
+      totalStorage,
+      averageParticipantsPerEvent: totalEvents > 0 
+        ? Math.round(totalParticipants / totalEvents) 
+        : 0
     });
-  },
-  generateQRCode: (url) => {
-    return `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(url)}`;
+  } catch (error) {
+    next(error);
   }
-};
+});
 
-export default api;
+// ═══════════════════════════════════════════════════════════════════════════
+// EVENT MANAGEMENT
+// ═══════════════════════════════════════════════════════════════════════════
+
+// Get all events with pagination and filtering
+router.get('/events', verifyAdmin, async (req, res, next) => {
+  try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 20;
+    const skip = (page - 1) * limit;
+
+    const filter = {};
+    if (req.query.status && req.query.status !== 'all') {
+      filter.status = req.query.status;
+    }
+    if (req.query.search) {
+      filter.$or = [
+        { title: { $regex: req.query.search, $options: 'i' } },
+        { subdomain: { $regex: req.query.search, $options: 'i' } },
+        { organizerEmail: { $regex: req.query.search, $options: 'i' } },
+        { organizerName: { $regex: req.query.search, $options: 'i' } }
+      ];
+    }
+
+    const [events, total] = await Promise.all([
+      Event.find(filter)
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+      Event.countDocuments(filter)
+    ]);
+
+    res.json({
+      events,
+      pagination: {
+        page,
+        limit,
+        total,
+        pages: Math.ceil(total / limit)
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Get single event details
+router.get('/events/:eventId', verifyAdmin, async (req, res, next) => {
+  try {
+    const event = await Event.findById(req.params.eventId);
+
+    if (!event) {
+      return res.status(404).json({ error: 'Event not found' });
+    }
+
+    // Get related statistics
+    const [messageCount, pollCount, fileCount, participantCount] = await Promise.all([
+      Message.countDocuments({ eventId: event._id, isDeleted: false }),
+      Poll.countDocuments({ eventId: event._id }),
+      File.countDocuments({ eventId: event._id, isDeleted: false }),
+      EventParticipant.countDocuments({ eventId: event._id })
+    ]);
+
+    res.json({
+      event,
+      stats: {
+        messages: messageCount,
+        polls: pollCount,
+        files: fileCount,
+        participants: participantCount
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Update event (full edit capabilities)
+router.patch('/events/:eventId', verifyAdmin, async (req, res, next) => {
+  try {
+    const allowedFields = [
+      'title', 'description', 'date', 'location', 
+      'organizerName', 'organizerEmail', 'maxParticipants',
+      'isPasswordProtected', 'isEnterpriseMode', 'subdomain', 'status'
+    ];
+
+    const updates = {};
+    for (const field of allowedFields) {
+      if (req.body[field] !== undefined) {
+        updates[field] = req.body[field];
+      }
+    }
+
+    const event = await Event.findByIdAndUpdate(
+      req.params.eventId,
+      updates,
+      { new: true, runValidators: true }
+    );
+
+    if (!event) {
+      return res.status(404).json({ error: 'Event not found' });
+    }
+
+    res.json({
+      message: 'Event updated successfully',
+      event
+    });
+  } catch (error) {
+    if (error.code === 11000) {
+      return res.status(400).json({ error: 'Subdomain already taken' });
+    }
+    next(error);
+  }
+});
+
+// Update event status
+router.patch('/events/:eventId/status', 
+  verifyAdmin,
+  [
+    body('status')
+      .isIn(['draft', 'active', 'completed', 'cancelled'])
+      .withMessage('Invalid status'),
+    validate
+  ],
+  async (req, res, next) => {
+    try {
+      const event = await Event.findByIdAndUpdate(
+        req.params.eventId,
+        { status: req.body.status },
+        { new: true }
+      );
+
+      if (!event) {
+        return res.status(404).json({ error: 'Event not found' });
+      }
+
+      res.json({
+        message: 'Event status updated',
+        event
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+// Delete event and all related data
+router.delete('/events/:eventId', verifyAdmin, async (req, res, next) => {
+  try {
+    const event = await Event.findById(req.params.eventId);
+
+    if (!event) {
+      return res.status(404).json({ error: 'Event not found' });
+    }
+
+    // Delete all related data
+    await Promise.all([
+      Message.deleteMany({ eventId: event._id }),
+      Poll.deleteMany({ eventId: event._id }),
+      EventParticipant.deleteMany({ eventId: event._id }),
+      Invite ? Invite.deleteMany({ eventId: event._id }) : Promise.resolve(),
+      File.updateMany(
+        { eventId: event._id },
+        { isDeleted: true, deletedAt: new Date() }
+      ),
+      Event.findByIdAndDelete(event._id)
+    ]);
+
+    res.json({ message: 'Event and all related data deleted successfully' });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// MESSAGES MANAGEMENT
+// ═══════════════════════════════════════════════════════════════════════════
+
+// Get all messages for an event
+router.get('/events/:eventId/messages', verifyAdmin, async (req, res, next) => {
+  try {
+    const messages = await Message.find({ 
+      eventId: req.params.eventId, 
+      isDeleted: false 
+    })
+      .sort({ createdAt: 1 })
+      .lean();
+    res.json({ messages });
+  } catch (error) { next(error); }
+});
+
+// Delete a specific message
+router.delete('/events/:eventId/messages/:messageId', verifyAdmin, async (req, res, next) => {
+  try {
+    await Message.findByIdAndUpdate(
+      req.params.messageId, 
+      { isDeleted: true, deletedAt: new Date() }
+    );
+    res.json({ message: 'Message deleted' });
+  } catch (error) { next(error); }
+});
+
+// Bulk delete messages
+router.post('/events/:eventId/messages/bulk-delete', verifyAdmin, async (req, res, next) => {
+  try {
+    const { messageIds } = req.body;
+    await Message.updateMany(
+      { _id: { $in: messageIds }, eventId: req.params.eventId },
+      { isDeleted: true, deletedAt: new Date() }
+    );
+    res.json({ message: `${messageIds.length} messages deleted` });
+  } catch (error) { next(error); }
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// PARTICIPANTS MANAGEMENT
+// ═══════════════════════════════════════════════════════════════════════════
+
+// Get all participants for an event
+router.get('/events/:eventId/participants', verifyAdmin, async (req, res, next) => {
+  try {
+    const participants = await EventParticipant.find({ eventId: req.params.eventId })
+      .select('-password')
+      .sort({ joinedAt: 1 })
+      .lean();
+    res.json({ participants });
+  } catch (error) { next(error); }
+});
+
+// Remove a participant from an event
+router.delete('/events/:eventId/participants/:username', verifyAdmin, async (req, res, next) => {
+  try {
+    await EventParticipant.deleteOne({ 
+      eventId: req.params.eventId, 
+      username: req.params.username 
+    });
+    await Event.findByIdAndUpdate(req.params.eventId, {
+      $pull: { participants: { username: req.params.username } }
+    });
+    res.json({ message: 'Participant removed' });
+  } catch (error) { next(error); }
+});
+
+// Reset a participant's account password
+router.delete('/events/:eventId/participants/:username/password', verifyAdmin, async (req, res, next) => {
+  try {
+    await EventParticipant.findOneAndUpdate(
+      { eventId: req.params.eventId, username: req.params.username },
+      { $unset: { password: '' }, hasPassword: false }
+    );
+    res.json({ message: 'Password reset successfully' });
+  } catch (error) { next(error); }
+});
+
+// Bulk remove participants
+router.post('/events/:eventId/participants/bulk-remove', verifyAdmin, async (req, res, next) => {
+  try {
+    const { usernames } = req.body;
+    await EventParticipant.deleteMany({
+      eventId: req.params.eventId,
+      username: { $in: usernames }
+    });
+    await Event.findByIdAndUpdate(req.params.eventId, {
+      $pull: { participants: { username: { $in: usernames } } }
+    });
+    res.json({ message: `${usernames.length} participants removed` });
+  } catch (error) { next(error); }
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// POLLS MANAGEMENT
+// ═══════════════════════════════════════════════════════════════════════════
+
+// Get all polls for an event
+router.get('/events/:eventId/polls', verifyAdmin, async (req, res, next) => {
+  try {
+    const polls = await Poll.find({ eventId: req.params.eventId })
+      .sort({ createdAt: -1 })
+      .lean();
+    res.json({ polls });
+  } catch (error) { next(error); }
+});
+
+// Delete a poll
+router.delete('/events/:eventId/polls/:pollId', verifyAdmin, async (req, res, next) => {
+  try {
+    await Poll.findByIdAndDelete(req.params.pollId);
+    res.json({ message: 'Poll deleted' });
+  } catch (error) { next(error); }
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// FILES MANAGEMENT
+// ═══════════════════════════════════════════════════════════════════════════
+
+// Get all files for an event
+router.get('/events/:eventId/files', verifyAdmin, async (req, res, next) => {
+  try {
+    const files = await File.find({ 
+      eventId: req.params.eventId,
+      isDeleted: false
+    })
+      .sort({ uploadedAt: -1 })
+      .lean();
+    res.json({ files });
+  } catch (error) { next(error); }
+});
+
+// Delete a file
+router.delete('/events/:eventId/files/:fileId', verifyAdmin, async (req, res, next) => {
+  try {
+    await File.findByIdAndUpdate(
+      req.params.fileId,
+      { isDeleted: true, deletedAt: new Date() }
+    );
+    res.json({ message: 'File deleted' });
+  } catch (error) { next(error); }
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// INVITES MANAGEMENT (Enterprise Mode)
+// ═══════════════════════════════════════════════════════════════════════════
+
+// Get all invites for an event
+router.get('/events/:eventId/invites', verifyAdmin, async (req, res, next) => {
+  try {
+    // Check if Invite model exists (enterprise feature)
+    if (!Invite) {
+      return res.json({ invites: [] });
+    }
+    
+    const invites = await Invite.find({ eventId: req.params.eventId })
+      .sort({ createdAt: -1 })
+      .lean();
+    res.json({ invites });
+  } catch (error) { next(error); }
+});
+
+// Check in a guest manually
+router.post('/events/:eventId/invites/:inviteCode/checkin', verifyAdmin, async (req, res, next) => {
+  try {
+    if (!Invite) {
+      return res.status(404).json({ error: 'Invite system not available' });
+    }
+
+    const invite = await Invite.findOneAndUpdate(
+      { eventId: req.params.eventId, inviteCode: req.params.inviteCode },
+      {
+        checkedIn: true,
+        checkedInAt: new Date(),
+        actualAttendees: req.body.actualAttendees || invite.groupSize,
+        status: 'checked-in'
+      },
+      { new: true }
+    );
+
+    if (!invite) {
+      return res.status(404).json({ error: 'Invite not found' });
+    }
+
+    res.json({ message: 'Guest checked in', invite });
+  } catch (error) { next(error); }
+});
+
+// Delete an invite
+router.delete('/events/:eventId/invites/:inviteId', verifyAdmin, async (req, res, next) => {
+  try {
+    if (!Invite) {
+      return res.status(404).json({ error: 'Invite system not available' });
+    }
+
+    await Invite.findByIdAndDelete(req.params.inviteId);
+    res.json({ message: 'Invite deleted' });
+  } catch (error) { next(error); }
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// SEARCH & ACTIVITY
+// ═══════════════════════════════════════════════════════════════════════════
+
+// Global search across all data
+router.get('/search', verifyAdmin, async (req, res, next) => {
+  try {
+    const query = req.query.q;
+    if (!query || query.length < 2) {
+      return res.status(400).json({ error: 'Search query must be at least 2 characters' });
+    }
+
+    const regex = { $regex: query, $options: 'i' };
+
+    const [events, messages, polls, participants] = await Promise.all([
+      Event.find({
+        $or: [
+          { title: regex },
+          { subdomain: regex },
+          { description: regex },
+          { organizerName: regex },
+          { organizerEmail: regex }
+        ]
+      }).limit(20).lean(),
+      Message.find({
+        content: regex,
+        isDeleted: false
+      })
+      .limit(20)
+      .populate('eventId', 'title subdomain')
+      .lean(),
+      Poll.find({ question: regex })
+        .limit(20)
+        .populate('eventId', 'title subdomain')
+        .lean(),
+      EventParticipant.find({ username: regex })
+        .limit(20)
+        .populate('eventId', 'title subdomain')
+        .select('-password')
+        .lean()
+    ]);
+
+    res.json({
+      results: {
+        events,
+        messages,
+        polls,
+        participants
+      },
+      total: events.length + messages.length + polls.length + participants.length
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Get recent activity
+router.get('/activity', verifyAdmin, async (req, res, next) => {
+  try {
+    const limit = parseInt(req.query.limit) || 50;
+
+    // Get recent events, messages, and polls
+    const [recentEvents, recentMessages, recentPolls] = await Promise.all([
+      Event.find()
+        .sort({ createdAt: -1 })
+        .limit(limit)
+        .select('title subdomain organizerName createdAt status')
+        .lean(),
+      Message.find({ isDeleted: false })
+        .sort({ createdAt: -1 })
+        .limit(limit)
+        .populate('eventId', 'title subdomain')
+        .lean(),
+      Poll.find()
+        .sort({ createdAt: -1 })
+        .limit(limit)
+        .populate('eventId', 'title subdomain')
+        .lean()
+    ]);
+
+    // Combine and sort by date
+    const activity = [
+      ...recentEvents.map(e => ({ type: 'event', data: e, timestamp: e.createdAt })),
+      ...recentMessages.map(m => ({ type: 'message', data: m, timestamp: m.createdAt })),
+      ...recentPolls.map(p => ({ type: 'poll', data: p, timestamp: p.createdAt }))
+    ]
+    .sort((a, b) => b.timestamp - a.timestamp)
+    .slice(0, limit);
+
+    res.json({ activity });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// DATA EXPORT
+// ═══════════════════════════════════════════════════════════════════════════
+
+// Export data
+router.get('/export', verifyAdmin, async (req, res, next) => {
+  try {
+    const type = req.query.type || 'events';
+    const eventId = req.query.eventId;
+
+    let data;
+    let filter = eventId ? { eventId } : {};
+
+    switch (type) {
+      case 'events':
+        data = await Event.find(filter).lean();
+        break;
+      case 'messages':
+        data = await Message.find({ ...filter, isDeleted: false }).lean();
+        break;
+      case 'polls':
+        data = await Poll.find(filter).lean();
+        break;
+      case 'files':
+        data = await File.find({ ...filter, isDeleted: false }).lean();
+        break;
+      case 'participants':
+        data = await EventParticipant.find(filter).select('-password').lean();
+        break;
+      case 'invites':
+        if (Invite) {
+          data = await Invite.find(filter).lean();
+        } else {
+          data = [];
+        }
+        break;
+      case 'all':
+        // Export everything for an event
+        if (!eventId) {
+          return res.status(400).json({ error: 'Event ID required for full export' });
+        }
+        const [events, messages, polls, files, participants, invites] = await Promise.all([
+          Event.findById(eventId).lean(),
+          Message.find({ eventId, isDeleted: false }).lean(),
+          Poll.find({ eventId }).lean(),
+          File.find({ eventId, isDeleted: false }).lean(),
+          EventParticipant.find({ eventId }).select('-password').lean(),
+          Invite ? Invite.find({ eventId }).lean() : Promise.resolve([])
+        ]);
+        data = { event: events, messages, polls, files, participants, invites };
+        break;
+      default:
+        return res.status(400).json({ error: 'Invalid export type' });
+    }
+
+    res.json({ data, exportedAt: new Date(), type });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Export system statistics
+router.get('/export/stats', verifyAdmin, async (req, res, next) => {
+  try {
+    const stats = await Promise.all([
+      Event.aggregate([
+        {
+          $group: {
+            _id: '$status',
+            count: { $sum: 1 }
+          }
+        }
+      ]),
+      Event.aggregate([
+        {
+          $group: {
+            _id: { $dateToString: { format: '%Y-%m', date: '$createdAt' } },
+            count: { $sum: 1 }
+          }
+        },
+        { $sort: { _id: -1 } },
+        { $limit: 12 }
+      ]),
+      Message.aggregate([
+        { $match: { isDeleted: false } },
+        {
+          $group: {
+            _id: { $dateToString: { format: '%Y-%m-%d', date: '$createdAt' } },
+            count: { $sum: 1 }
+          }
+        },
+        { $sort: { _id: -1 } },
+        { $limit: 30 }
+      ])
+    ]);
+
+    res.json({
+      eventsByStatus: stats[0],
+      eventsByMonth: stats[1],
+      messagesByDay: stats[2],
+      generatedAt: new Date()
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+module.exports = router;
