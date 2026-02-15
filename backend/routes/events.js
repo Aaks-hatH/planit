@@ -232,6 +232,7 @@ router.get('/:eventId', verifyEventAccess, async (req, res, next) => {
         organizerName: event.organizerName, settings: event.settings,
         participants: event.participants, maxParticipants: event.maxParticipants,
         status: event.status, isPasswordProtected: event.isPasswordProtected,
+        isEnterpriseMode: event.isEnterpriseMode,
         rsvps: event.rsvps, rsvpSummary: event.getRsvpSummary(),
         agenda: event.agenda ? [...event.agenda].sort((a, b) => a.order - b.order) : [],
         createdAt: event.createdAt
