@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { 
   Calendar, MapPin, Users, QrCode, Check, X, Clock, Mail,
   Copy, Share2, CheckCircle, AlertCircle, Info, Shield,
-  Ticket, IdCard, Phone, ExternalLink, Download
+  Ticket, Phone, ExternalLink, Download, User
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { formatDateInTimezone } from '../utils/timezoneUtils';
@@ -306,7 +306,7 @@ export default function GuestInvite() {
           {/* Enhanced Guest Information - Airline Style */}
           <div className="mb-6 bg-gradient-to-br from-neutral-900 to-neutral-800 rounded-xl p-6 text-white shadow-lg">
             <div className="flex items-center gap-2 mb-4">
-              <IdCard className="w-5 h-5" />
+              <User className="w-5 h-5" />
               <h3 className="text-sm font-bold uppercase tracking-wide">Guest Credentials</h3>
             </div>
             
