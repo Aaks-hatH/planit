@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { BarChart3, Users, MessageSquare, FileText, Vote, Eye, TrendingUp, CheckCircle2, DollarSign } from 'lucide-react';
+import { BarChart3, Users, MessageSquare, FileText, Vote, Eye, TrendingUp, CheckCircle2, DollarSign, UserCheck, Clock, AlertCircle } from 'lucide-react';
 import { analyticsAPI } from '../services/api';
 import toast from 'react-hot-toast';
 
@@ -39,7 +39,7 @@ export default function Analytics({ eventId }) {
     );
   }
 
-  const StatCard = ({ icon: Icon, label, value, color = 'neutral' }) => {
+  const StatCard = ({ icon: Icon, label, value, color = 'neutral', subValue = null, subLabel = null }) => {
     const colorClasses = {
       neutral: 'bg-neutral-50 text-neutral-600',
       blue: 'bg-blue-50 text-blue-600',
@@ -58,6 +58,9 @@ export default function Analytics({ eventId }) {
           <div className="flex-1">
             <div className="text-2xl font-bold text-neutral-900">{value}</div>
             <div className="text-sm text-neutral-500">{label}</div>
+            {subValue !== null && (
+              <div className="text-xs text-neutral-400 mt-1">{subValue} {subLabel}</div>
+            )}
           </div>
         </div>
       </div>
@@ -67,6 +70,8 @@ export default function Analytics({ eventId }) {
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount);
   };
+
+  const hasCheckins = analytics.checkins !== undefined;
 
   return (
     <div className="h-full overflow-y-auto">
@@ -81,6 +86,72 @@ export default function Analytics({ eventId }) {
             Last updated: {new Date(analytics.lastActivity).toLocaleString()}
           </p>
         </div>
+
+        {/* Enterprise Check-in Stats */}
+        {hasCheckins && (
+          <div className="card p-6 border-2 border-emerald-100 bg-emerald-50/30">
+            <h3 className="text-lg font-semibold text-neutral-900 mb-4 flex items-center gap-2">
+              <UserCheck className="w-5 h-5 text-emerald-600" />
+              Check-in Statistics
+            </h3>
+            
+            {/* Check-in Overview */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+              <div className="bg-white rounded-xl p-4 shadow-sm">
+                <div className="text-3xl font-bold text-emerald-600">{analytics.checkins.checkedInInvites}</div>
+                <div className="text-sm text-neutral-500 mt-1">Checked In</div>
+                <div className="text-xs text-neutral-400">of {analytics.checkins.totalInvites} invites</div>
+              </div>
+              <div className="bg-white rounded-xl p-4 shadow-sm">
+                <div className="text-3xl font-bold text-amber-600">{analytics.checkins.pendingInvites}</div>
+                <div className="text-sm text-neutral-500 mt-1">Pending</div>
+                <div className="text-xs text-neutral-400">awaiting check-in</div>
+              </div>
+              <div className="bg-white rounded-xl p-4 shadow-sm">
+                <div className="text-3xl font-bold text-blue-600">{analytics.checkins.totalCheckedIn}</div>
+                <div className="text-sm text-neutral-500 mt-1">Guests Admitted</div>
+                <div className="text-xs text-neutral-400">of {analytics.checkins.totalExpectedGuests} expected</div>
+              </div>
+              <div className="bg-white rounded-xl p-4 shadow-sm">
+                <div className="text-3xl font-bold text-purple-600">{analytics.checkins.checkInRate}%</div>
+                <div className="text-sm text-neutral-500 mt-1">Check-in Rate</div>
+                <div className="text-xs text-neutral-400">invitation completion</div>
+              </div>
+            </div>
+
+            {/* Progress Bar */}
+            <div className="space-y-2">
+              <div className="flex justify-between text-sm">
+                <span className="text-neutral-600">Check-in Progress</span>
+                <span className="font-semibold text-neutral-900">
+                  {analytics.checkins.checkedInInvites} / {analytics.checkins.totalInvites}
+                </span>
+              </div>
+              <div className="h-3 bg-white rounded-full overflow-hidden shadow-inner">
+                <div 
+                  className="h-full bg-gradient-to-r from-emerald-500 to-emerald-600 transition-all duration-500"
+                  style={{ width: `${analytics.checkins.checkInRate}%` }}
+                />
+              </div>
+            </div>
+
+            {/* Attendance Progress */}
+            <div className="space-y-2 mt-4">
+              <div className="flex justify-between text-sm">
+                <span className="text-neutral-600">Guest Attendance</span>
+                <span className="font-semibold text-neutral-900">
+                  {analytics.checkins.totalCheckedIn} / {analytics.checkins.totalExpectedGuests}
+                </span>
+              </div>
+              <div className="h-3 bg-white rounded-full overflow-hidden shadow-inner">
+                <div 
+                  className="h-full bg-gradient-to-r from-blue-500 to-blue-600 transition-all duration-500"
+                  style={{ width: `${analytics.checkins.attendanceRate}%` }}
+                />
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Main Stats */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
