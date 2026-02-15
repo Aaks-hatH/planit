@@ -6,7 +6,7 @@ import {
   LogOut, ArrowLeft, Copy, Check, Lock, MapPin,
   ChevronRight, Clock, QrCode, CalendarDown,
   Smile, ThumbsUp, Heart, Laugh,
-  CheckCircle2, Megaphone, DollarSign, StickyNote, Share2
+  CheckCircle2, Megaphone, DollarSign, StickyNote, Share2, UserCheck
 } from 'lucide-react';
 import { eventAPI, chatAPI, pollAPI, fileAPI } from '../services/api';
 import socketService from '../services/socket';
@@ -1195,6 +1195,15 @@ export default function EventSpace() {
                 <p className="text-xs text-neutral-400 mb-0.5">Title</p>
                 <p className="text-sm font-medium text-neutral-900">{event?.title}</p>
               </div>
+              {event?.isEnterpriseMode && (
+                <div>
+                  <p className="text-xs text-neutral-400 mb-0.5">Event Type</p>
+                  <div className="inline-flex items-center gap-1.5 px-2 py-1 bg-blue-50 border border-blue-200 rounded text-xs font-medium text-blue-700">
+                    <Users className="w-3 h-3" />
+                    Enterprise Mode
+                  </div>
+                </div>
+              )}
               {event?.date && (
                 <div>
                   <p className="text-xs text-neutral-400 mb-0.5">Date</p>
@@ -1224,6 +1233,14 @@ export default function EventSpace() {
             </div>
 
             <div className="mt-5 pt-4 border-t border-neutral-100 space-y-2">
+              {event?.isEnterpriseMode && isOrganizer && (
+                <button 
+                  onClick={() => navigate(`/event/${eventId}/checkin`)}
+                  className="flex items-center gap-2 w-full px-3 py-2 text-xs bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors font-medium">
+                  <UserCheck className="w-3.5 h-3.5" />
+                  <span>Manage Invites & Check-in</span>
+                </button>
+              )}
               <button onClick={handleCopyLink}
                 className="flex items-center gap-2 w-full px-3 py-2 text-xs bg-neutral-50 hover:bg-neutral-100 border border-neutral-200 rounded-lg text-neutral-600 transition-colors">
                 {copied ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" />}
