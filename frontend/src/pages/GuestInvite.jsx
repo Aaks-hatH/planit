@@ -95,7 +95,8 @@ export default function GuestInvite() {
     return null;
   }
 
-  const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${inviteCode}`;
+  const inviteUrl = `${window.location.origin}/invite/${inviteCode}`;
+  const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(inviteUrl)}`;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-neutral-50 to-neutral-100">
@@ -204,7 +205,7 @@ export default function GuestInvite() {
                     className="w-64 h-64 mb-3"
                   />
                   <p className="text-xs text-neutral-500 mb-1">Show this code at the event entrance</p>
-                  <p className="text-lg font-mono font-bold text-neutral-900">{invite.code}</p>
+                  <p className="text-lg font-mono font-bold text-neutral-900">{invite.code || inviteCode}</p>
                 </div>
               </div>
 
