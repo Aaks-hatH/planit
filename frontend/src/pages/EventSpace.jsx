@@ -788,6 +788,29 @@ export default function EventSpace() {
 
         {/* Main panel */}
         <div className="flex-1 min-w-0 flex flex-col">
+          {event?.isEnterpriseMode && isOrganizer && (
+            <div className="mb-4 p-4 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-xl border border-blue-700 shadow-lg">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3 flex-1">
+                  <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center flex-shrink-0">
+                    <UserCheck className="w-5 h-5 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-semibold text-white mb-0.5">Enterprise Mode Active</h3>
+                    <p className="text-xs text-blue-100">Manage guest invites and check-in for your event</p>
+                  </div>
+                </div>
+                <button 
+                  onClick={() => navigate(`/event/${eventId}/checkin`)}
+                  className="flex items-center gap-2 px-4 py-2.5 bg-white text-blue-600 rounded-lg font-medium text-sm hover:bg-blue-50 transition-colors shadow-sm flex-shrink-0"
+                >
+                  <UserCheck className="w-4 h-4" />
+                  Manage Invites
+                </button>
+              </div>
+            </div>
+          )}
+          
           <div className="bg-white rounded-xl border border-neutral-200 overflow-hidden flex-1 flex flex-col" style={{ boxShadow: 'var(--shadow-sm)' }}>
 
             {/* Tabs */}
@@ -1236,9 +1259,9 @@ export default function EventSpace() {
               {event?.isEnterpriseMode && isOrganizer && (
                 <button 
                   onClick={() => navigate(`/event/${eventId}/checkin`)}
-                  className="flex items-center gap-2 w-full px-3 py-2 text-xs bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors font-medium">
-                  <UserCheck className="w-3.5 h-3.5" />
-                  <span>Manage Invites & Check-in</span>
+                  className="flex items-center justify-center gap-2 w-full px-4 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-lg transition-all font-semibold text-sm shadow-lg hover:shadow-xl">
+                  <UserCheck className="w-4 h-4" />
+                  <span>Manage Invites</span>
                 </button>
               )}
               <button onClick={handleCopyLink}
