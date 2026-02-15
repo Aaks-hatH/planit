@@ -1,6 +1,8 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Home from './pages/Home';
 import EventSpace from './pages/EventSpace';
+import EnterpriseCheckin from './pages/EnterpriseCheckin';
+import GuestInvite from './pages/GuestInvite';
 import Admin from './pages/Admin';
 import Terms from './pages/Terms';
 import Privacy from './pages/Privacy';
@@ -15,10 +17,10 @@ function App() {
       <Routes>
         <Route path="/" element={<Home />} />
         
-        {/* ── FIX: Add subdomain route for clean URLs ── */}
         <Route path="/e/:subdomain" element={<EventSpace />} />
-        {/* Keep ID route for backward compatibility */}
         <Route path="/event/:eventId" element={<EventSpace />} />
+        <Route path="/event/:eventId/checkin" element={<EnterpriseCheckin />} />
+        <Route path="/invite/:inviteCode" element={<GuestInvite />} />
         <Route path="/admin" element={<Admin />} />
         <Route path="/terms" element={<Terms />} />
         <Route path="/privacy" element={<Privacy />} />
