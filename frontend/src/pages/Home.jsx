@@ -77,6 +77,7 @@ export default function Home() {
     location: '',
     organizerName: '',
     organizerEmail: '',
+    accountPassword: '',
     password: '',
     isEnterpriseMode: false,
     maxParticipants: 100
@@ -105,8 +106,11 @@ export default function Home() {
     e.preventDefault();
     setLoading(true);
 
+    const dateValue = formData.date ? new Date(formData.date).toISOString() : formData.date;
+
     const payload = {
       ...formData,
+      date: dateValue,
       subdomain: formData.subdomain || makeSubdomain(formData.title) || `event-${Date.now()}`,
       isEnterpriseMode: mode === 'enterprise'
     };
@@ -119,7 +123,6 @@ export default function Home() {
       setCreated(response.data.event);
     } catch (error) {
       const msg = error.response?.data?.error || 'Failed to create event';
-      // If subdomain collision, retry with a fresh slug
       if (msg.includes('already taken')) {
         setFormData(prev => ({ ...prev, subdomain: makeSubdomain(prev.title) }));
       }
@@ -335,7 +338,29 @@ export default function Home() {
                     </div>
                   </div>
 
-                  {/* Password */}
+                  {/* Account Password for Organizer */}
+                  <div>
+                    <label className="block text-sm font-medium text-neutral-700 mb-1.5">
+                      <span className="flex items-center gap-1.5">
+                        <Lock className="w-3.5 h-3.5 text-neutral-400" />
+                        Your Account Password <span className="text-red-500">*</span>
+                      </span>
+                    </label>
+                    <input
+                      type="password"
+                      required
+                      className="input"
+                      placeholder="Create a password (min 4 characters)"
+                      value={formData.accountPassword}
+                      onChange={update('accountPassword')}
+                      minLength={4}
+                    />
+                    <p className="text-xs text-neutral-400 mt-1.5">
+                      You'll need this to access the event from other devices or browsers
+                    </p>
+                  </div>
+
+                  {/* Event Password */}
                   <div>
                     <label className="block text-sm font-medium text-neutral-700 mb-1.5">
                       <span className="flex items-center gap-1.5">
