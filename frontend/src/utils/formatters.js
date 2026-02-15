@@ -1,5 +1,9 @@
 import { format, formatDistanceToNow, isToday, isYesterday } from 'date-fns';
 
+/**
+ * Format date - displays in browser's local timezone by default
+ * The date is stored in UTC on the server, so this will show it correctly localized
+ */
 export const formatDate = (date) => {
   const d = new Date(date);
   if (isToday(d)) return `Today at ${format(d, 'HH:mm')}`;
