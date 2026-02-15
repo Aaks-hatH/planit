@@ -29,7 +29,7 @@ router.post('/',
   ],
   async (req, res, next) => {
     try {
-      const { subdomain, title, description, date, location, organizerName, organizerEmail, password, accountPassword, settings, maxParticipants } = req.body;
+      const { subdomain, title, description, date, location, organizerName, organizerEmail, password, accountPassword, isEnterpriseMode, settings, maxParticipants } = req.body;
 
       const existing = await Event.findOne({ subdomain });
       if (existing) return res.status(409).json({ error: 'This event link is already taken.' });
@@ -44,6 +44,7 @@ router.post('/',
       const event = new Event({
         subdomain, title, description, date, location, organizerName, organizerEmail,
         password: hashedPassword, isPasswordProtected,
+        isEnterpriseMode: isEnterpriseMode || false,
         settings: settings || {}, maxParticipants: maxParticipants || 100,
         participants: [{ username: organizerName, role: 'organizer' }]
       });
