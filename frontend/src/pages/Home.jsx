@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { getUserTimezone, localDateTimeToUTC } from '../utils/timezoneUtils';
 import { useNavigate } from 'react-router-dom';
 import {
   Calendar, Users, MessageSquare, BarChart3, FileText, Shield, Copy, Check, Lock,
@@ -153,7 +154,7 @@ export default function Home() {
   const navigate = useNavigate();
   const [mode, setMode] = useState('standard');
   const [formData, setFormData] = useState({
-    subdomain: '', title: '', description: '', date: '', location: '',
+    subdomain: '', title: '', description: '', date: '', timezone: getUserTimezone(), location: '',
     organizerName: '', organizerEmail: '', accountPassword: '', password: '',
     isEnterpriseMode: false, maxParticipants: 10000,
   });
@@ -172,8 +173,8 @@ export default function Home() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-    const dateValue = formData.date ? new Date(formData.date).toISOString() : formData.date;
-    const payload = { ...formData, date: dateValue, subdomain: formData.subdomain || makeSubdomain(formData.title) || `event-${Date.now()}`, isEnterpriseMode: mode === 'enterprise' };
+    const dateValue = formData.date ? localDateTimeToUTC(formData.date, formData.timezone) : formData.date;
+    const payload = { ...formData, date: dateValue, timezone: formData.timezone, subdomain: formData.subdomain || makeSubdomain(formData.title) || `event-${Date.now()}`, isEnterpriseMode: mode === 'enterprise' };
     delete payload._subdomainTouched;
     try {
       const response = await eventAPI.create(payload);
