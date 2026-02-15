@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Calendar, MapPin, Users, QrCode, Check, X, Clock, Mail } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { formatDateInTimezone } from '../utils/timezoneUtils';
 
 export default function GuestInvite() {
   const { inviteCode } = useParams();
@@ -51,16 +52,31 @@ export default function GuestInvite() {
     }
   };
 
-  const formatDate = (dateStr) => {
-    const date = new Date(dateStr);
-    return date.toLocaleDateString('en-US', { 
-      weekday: 'long', 
-      year: 'numeric', 
-      month: 'long', 
-      day: 'numeric',
-      hour: 'numeric',
-      minute: '2-digit'
-    });
+  const formatDate = (dateStr, timezone = 'UTC') => {
+    if (!dateStr) return '';
+    
+    try {
+      // Use the timezone-aware formatter
+      return formatDateInTimezone(dateStr, timezone, {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: 'numeric',
+        minute: '2-digit'
+      });
+    } catch (error) {
+      // Fallback to basic formatting if timezone utils fail
+      const date = new Date(dateStr);
+      return date.toLocaleDateString('en-US', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: 'numeric',
+        minute: '2-digit'
+      });
+    }
   };
 
   const getStatusColor = (status) => {
@@ -131,7 +147,14 @@ export default function GuestInvite() {
                   <Calendar className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
                   <div>
                     <p className="text-sm font-medium text-neutral-900">Date & Time</p>
-                    <p className="text-sm text-neutral-600">{formatDate(event.date)}</p>
+                    <p className="text-sm text-neutral-600">
+                      {formatDate(event.date, event.timezone)}
+                    </p>
+                    {event.timezone && event.timezone !== 'UTC' && (
+                      <p className="text-xs text-neutral-400 mt-0.5">
+                        {event.timezone}
+                      </p>
+                    )}
                   </div>
                 </div>
               )}
@@ -146,14 +169,24 @@ export default function GuestInvite() {
                 </div>
               )}
 
-              {invite.groupSize > 1 && (
+              {(invite.adults !== undefined || invite.children !== undefined || invite.groupSize > 1) && (
                 <div className="flex items-start gap-3">
                   <Users className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
                   <div>
                     <p className="text-sm font-medium text-neutral-900">Group Size</p>
                     <p className="text-sm text-neutral-600">
-                      {invite.groupSize} {invite.groupSize === 1 ? 'person' : 'people'}
-                      {invite.plusOnes > 0 && ` (+ ${invite.plusOnes} optional)`}
+                      {invite.adults !== undefined && invite.children !== undefined ? (
+                        <>
+                          {invite.adults} adult{invite.adults !== 1 ? 's' : ''}
+                          {invite.children > 0 && <> + {invite.children} child{invite.children !== 1 ? 'ren' : ''}</>}
+                          {' '}({invite.adults + invite.children} total)
+                        </>
+                      ) : (
+                        <>
+                          {invite.groupSize} {invite.groupSize === 1 ? 'person' : 'people'}
+                        </>
+                      )}
+                      {invite.plusOnes > 0 && <> (+ {invite.plusOnes} optional plus-one{invite.plusOnes !== 1 ? 's' : ''})</>}
                     </p>
                   </div>
                 </div>
@@ -191,7 +224,15 @@ export default function GuestInvite() {
               </div>
               <p className="text-sm font-semibold text-emerald-900 mb-1">Already Checked In</p>
               <p className="text-xs text-emerald-700">
-                {new Date(invite.checkedInAt).toLocaleString()}
+                {event.timezone 
+                  ? formatDateInTimezone(invite.checkedInAt, event.timezone, {
+                      month: 'short',
+                      day: 'numeric',
+                      hour: 'numeric',
+                      minute: '2-digit'
+                    })
+                  : new Date(invite.checkedInAt).toLocaleString()
+                }
               </p>
             </div>
           ) : (
