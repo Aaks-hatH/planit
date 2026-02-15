@@ -370,6 +370,17 @@ export default function EventSpace() {
   const isOrganizer = event?.organizerName === currentUser;
   const myRsvp = rsvps.find(r => r.username === currentUser)?.status || null;
 
+  useEffect(() => {
+    if (event) {
+      console.log('=== ORGANIZER DEBUG ===');
+      console.log('Current User:', currentUser);
+      console.log('Organizer Name:', event.organizerName);
+      console.log('Is Organizer:', isOrganizer);
+      console.log('Is Enterprise:', event.isEnterpriseMode);
+      console.log('Event Data:', event);
+    }
+  }, [event, currentUser, isOrganizer]);
+
   // ── FIX: Resolve subdomain to ID if needed ──
   useEffect(() => {
     if (paramEventId) {
