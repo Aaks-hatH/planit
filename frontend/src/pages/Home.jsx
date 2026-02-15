@@ -402,29 +402,76 @@ export default function Home() {
       {/* Custom animations CSS */}
       <style>{`
         @keyframes float-particle {
-          0%, 100% { transform: translate(0, 0) rotate(0deg); }
-          25% { transform: translate(10px, -15px) rotate(90deg); }
-          50% { transform: translate(-5px, -25px) rotate(180deg); }
-          75% { transform: translate(-15px, -10px) rotate(270deg); }
+          0%, 100% { transform: translate(0, 0) scale(1); opacity: 0.08; }
+          33% { transform: translate(12px, -18px) scale(1.4); opacity: 0.18; }
+          66% { transform: translate(-8px, -28px) scale(0.8); opacity: 0.12; }
         }
         @keyframes pulse-glow {
-          0%, 100% { box-shadow: 0 0 0 0 rgba(0, 0, 0, 0.1); }
-          50% { box-shadow: 0 0 20px 5px rgba(0, 0, 0, 0.05); }
+          0%, 100% { box-shadow: 0 0 0 0 rgba(0, 0, 0, 0.08); }
+          50% { box-shadow: 0 0 24px 6px rgba(0, 0, 0, 0.04); }
         }
         @keyframes shimmer {
           0% { background-position: -200% center; }
           100% { background-position: 200% center; }
         }
+        @keyframes hero-fade-up {
+          0% { opacity: 0; transform: translateY(32px); }
+          100% { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes orb-drift {
+          0%, 100% { transform: translate(-50%, -50%) scale(1); }
+          50% { transform: translate(-50%, -50%) scale(1.12); }
+        }
+        @keyframes orb-drift-2 {
+          0%, 100% { transform: translate(50%, -50%) scale(1); }
+          50% { transform: translate(50%, -50%) scale(1.08); }
+        }
+        @keyframes orb-drift-3 {
+          0%, 100% { transform: translate(-50%, 50%) scale(1); }
+          50% { transform: translate(-50%, 50%) scale(1.15); }
+        }
+        @keyframes ring-pulse {
+          0%, 100% { opacity: 0.06; transform: scale(1); }
+          50% { opacity: 0.16; transform: scale(1.05); }
+        }
         .animate-pulse-glow {
           animation: pulse-glow 3s ease-in-out infinite;
         }
         .text-shimmer {
-          background: linear-gradient(90deg, #171717 25%, #525252 50%, #171717 75%);
+          background: linear-gradient(90deg, #0a0a0a 20%, #6b7280 45%, #0a0a0a 70%);
           background-size: 200% auto;
           -webkit-background-clip: text;
           background-clip: text;
           -webkit-text-fill-color: transparent;
-          animation: shimmer 3s linear infinite;
+          animation: shimmer 4s ease-in-out infinite;
+        }
+        .hero-aura {
+          position: absolute;
+          inset: 0;
+          background: 
+            radial-gradient(ellipse 80% 60% at 20% 30%, rgba(160,170,255,0.10) 0%, transparent 60%),
+            radial-gradient(ellipse 70% 50% at 80% 70%, rgba(180,210,255,0.08) 0%, transparent 55%),
+            radial-gradient(ellipse 60% 80% at 50% 5%, rgba(210,220,255,0.07) 0%, transparent 50%);
+          pointer-events: none;
+        }
+        .hero-enter-1 { animation: hero-fade-up 1s cubic-bezier(0.22, 1, 0.36, 1) 0.1s both; }
+        .hero-enter-2 { animation: hero-fade-up 1s cubic-bezier(0.22, 1, 0.36, 1) 0.28s both; }
+        .hero-enter-3 { animation: hero-fade-up 1s cubic-bezier(0.22, 1, 0.36, 1) 0.46s both; }
+        .hero-enter-4 { animation: hero-fade-up 1s cubic-bezier(0.22, 1, 0.36, 1) 0.62s both; }
+        .hero-enter-5 { animation: hero-fade-up 1s cubic-bezier(0.22, 1, 0.36, 1) 0.78s both; }
+        .hero-enter-6 { animation: hero-fade-up 1s cubic-bezier(0.22, 1, 0.36, 1) 0.94s both; }
+        .orb-1 { animation: orb-drift 10s ease-in-out infinite; }
+        .orb-2 { animation: orb-drift-2 14s ease-in-out infinite; }
+        .orb-3 { animation: orb-drift-3 17s ease-in-out infinite; }
+        .hero-ring { animation: ring-pulse 7s ease-in-out infinite; }
+        .hero-ring-2 { animation: ring-pulse 9s ease-in-out infinite 1.5s; }
+        .effortless-word {
+          background: linear-gradient(135deg, #1a1a1a 0%, #4a5568 40%, #1a1a1a 80%);
+          background-size: 200% auto;
+          -webkit-background-clip: text;
+          background-clip: text;
+          -webkit-text-fill-color: transparent;
+          animation: shimmer 5s ease-in-out infinite;
         }
       `}</style>
 
@@ -461,58 +508,119 @@ export default function Home() {
       </header>
 
       <main className="relative">
-        {/* Hero Section with Animated Background */}
-        <section className="relative overflow-hidden min-h-[90vh] flex items-center">
-          <AnimatedGradientBackground />
-          
-          <div className="relative max-w-7xl mx-auto px-6 py-32">
+        {/* Hero Section — Aura Edition */}
+        <section className="relative overflow-hidden min-h-[92vh] flex items-center bg-[#fafafa]">
+          {/* Deep ambient aura layer */}
+          <div className="hero-aura" />
+
+          {/* Soft grain texture */}
+          <div 
+            className="absolute inset-0 pointer-events-none opacity-[0.025]"
+            style={{
+              backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")`,
+              backgroundRepeat: 'repeat',
+            }}
+          />
+
+          {/* Large glowing orbs — softly animated, seamlessly blended */}
+          <div 
+            className="absolute orb-1 pointer-events-none"
+            style={{
+              top: '22%', left: '12%',
+              width: '700px', height: '700px',
+              background: 'radial-gradient(circle, rgba(148,163,255,0.13) 0%, rgba(180,200,255,0.06) 40%, transparent 70%)',
+              filter: 'blur(80px)',
+            }}
+          />
+          <div 
+            className="absolute orb-2 pointer-events-none"
+            style={{
+              top: '55%', right: '8%',
+              width: '560px', height: '560px',
+              background: 'radial-gradient(circle, rgba(200,215,255,0.10) 0%, rgba(210,225,255,0.04) 40%, transparent 70%)',
+              filter: 'blur(70px)',
+            }}
+          />
+          <div 
+            className="absolute orb-3 pointer-events-none"
+            style={{
+              bottom: '10%', left: '40%',
+              width: '480px', height: '480px',
+              background: 'radial-gradient(circle, rgba(160,180,255,0.08) 0%, transparent 65%)',
+              filter: 'blur(60px)',
+            }}
+          />
+
+          {/* Subtle concentric ring auras centered on heading */}
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+            <div 
+              className="hero-ring rounded-full border border-neutral-300/40"
+              style={{ width: '600px', height: '600px' }}
+            />
+            <div 
+              className="absolute hero-ring-2 rounded-full border border-neutral-200/30"
+              style={{ width: '900px', height: '900px' }}
+            />
+          </div>
+
+          {/* Floating particles — subtle, eased */}
+          {[...Array(18)].map((_, i) => (
+            <div
+              key={i}
+              className="absolute rounded-full pointer-events-none"
+              style={{
+                left: `${(i * 17 + 5) % 95}%`,
+                top: `${(i * 23 + 8) % 88}%`,
+                width: i % 3 === 0 ? '3px' : '2px',
+                height: i % 3 === 0 ? '3px' : '2px',
+                background: `rgba(${100 + i * 8}, ${120 + i * 5}, ${200 + i * 2}, 0.25)`,
+                animation: `float-particle ${10 + (i % 6) * 2}s ease-in-out infinite`,
+                animationDelay: `${i * 0.6}s`,
+              }}
+            />
+          ))}
+
+          <div className="relative max-w-7xl mx-auto px-6 py-32 w-full">
             <div className="text-center max-w-5xl mx-auto">
-              {/* Badge with animation */}
-              <div className="inline-flex items-center gap-2 px-5 py-2.5 bg-white/80 backdrop-blur-sm rounded-full text-xs font-medium text-neutral-700 mb-8 border border-neutral-200 shadow-lg hover:scale-105 transition-transform duration-300 cursor-default">
-                <Sparkles className="w-4 h-4 animate-pulse" />
-                Plan Before • Execute During • Celebrate After
+
+              {/* Badge */}
+              <div className="hero-enter-1 inline-flex items-center gap-2 px-5 py-2.5 bg-white/90 backdrop-blur-md rounded-full text-xs font-medium text-neutral-500 mb-10 border border-neutral-200/80 shadow-sm hover:shadow-md hover:scale-105 transition-all duration-500 cursor-default">
+                <Sparkles className="w-3.5 h-3.5 text-neutral-400" style={{ animation: 'ring-pulse 3s ease-in-out infinite' }} />
+                <span>The planning hub teams swear by</span>
               </div>
 
-              {/* Main heading with INSANE animations */}
-              <h1 className="text-6xl md:text-7xl lg:text-8xl font-black text-neutral-900 mb-8 tracking-tight leading-[0.95] relative">
-                <span className="block mb-3 hover:scale-105 transition-transform duration-300 inline-block">
-                  Plan it right,
-                </span>
-                <span className="block bg-gradient-to-r from-neutral-600 via-neutral-800 to-neutral-900 bg-clip-text text-transparent hover:scale-105 transition-transform duration-300 inline-block text-shimmer">
-                  Execute it bright
-                </span>
-                <div className="absolute -inset-4 bg-gradient-to-r from-transparent via-neutral-200/20 to-transparent opacity-0 hover:opacity-100 transition-opacity duration-500 blur-xl -z-10" />
+              {/* Main heading */}
+              <h1 className="hero-enter-2 text-6xl md:text-7xl lg:text-[5.5rem] font-black text-neutral-900 mb-6 tracking-tight leading-[0.93]">
+                <span className="block mb-2">Plan it right,</span>
+                <span className="block text-shimmer">Execute it bright</span>
               </h1>
 
-              {/* Subtitle with emphasis on PLANNING */}
-              <p className="text-xl md:text-2xl text-neutral-600 mb-6 max-w-3xl mx-auto leading-relaxed">
-                The <span className="font-bold text-neutral-900 underline decoration-wavy decoration-neutral-300">ultimate event planning hub</span> for teams.
-              </p>
-              <p className="text-base md:text-lg text-neutral-500 mb-12 max-w-2xl mx-auto">
-                <span className="inline-flex items-center gap-2 px-4 py-2 bg-amber-50 border border-amber-200 rounded-xl font-medium text-amber-900 mb-2">
-                  <Clock className="w-4 h-4" />
-                  Use <strong>before & during</strong> your event — not as a live tool
-                </span>
-                <br />
-                <span className="text-sm text-neutral-400 mt-2 inline-block">
-                  Perfect for pre-event coordination, planning, and post-event wrap-up
-                </span>
+              {/* Tagline — "Effortless, by design." */}
+              <p className="hero-enter-3 text-2xl md:text-3xl font-light tracking-wide mb-6" style={{ color: '#6b7280', letterSpacing: '0.04em' }}>
+                <span className="effortless-word font-semibold">Effortless</span>
+                <span className="text-neutral-300 mx-2">,</span>
+                <span className="text-neutral-400">by design.</span>
               </p>
 
-              {/* CTA Buttons with more animations */}
-              <div className="flex flex-col sm:flex-row items-center justify-center gap-5 mb-16">
-                <a href="#create" className="group px-10 py-5 bg-gradient-to-r from-neutral-900 to-black text-white rounded-2xl font-semibold hover:scale-110 transition-all duration-300 shadow-2xl hover:shadow-neutral-500/50 flex items-center gap-3 text-lg">
-                  Start planning now
-                  <ArrowRight className="w-5 h-5 group-hover:translate-x-2 transition-transform duration-300" />
+              {/* Subtitle */}
+              <p className="hero-enter-4 text-lg md:text-xl text-neutral-500 mb-12 max-w-2xl mx-auto leading-relaxed font-light">
+                The all-in-one workspace for event teams — from first idea to final wrap-up.
+              </p>
+
+              {/* CTA Buttons */}
+              <div className="hero-enter-5 flex flex-col sm:flex-row items-center justify-center gap-4 mb-16">
+                <a href="#create" className="group px-10 py-4.5 bg-neutral-900 text-white rounded-2xl font-semibold hover:scale-105 hover:bg-black transition-all duration-500 shadow-xl hover:shadow-neutral-900/30 flex items-center gap-3 text-base" style={{ paddingTop: '1.1rem', paddingBottom: '1.1rem' }}>
+                  Start planning
+                  <ArrowRight className="w-5 h-5 group-hover:translate-x-1.5 transition-transform duration-300" />
                 </a>
-                <a href="#features" className="px-10 py-5 bg-white/80 backdrop-blur-sm border-2 border-neutral-300 text-neutral-700 rounded-2xl font-semibold hover:border-neutral-500 hover:bg-white hover:scale-105 transition-all duration-300 shadow-lg flex items-center gap-3 text-lg">
-                  Explore features
-                  <ChevronRight className="w-5 h-5" />
+                <a href="#features" className="px-10 py-4.5 bg-white/70 backdrop-blur-sm border border-neutral-200 text-neutral-600 rounded-2xl font-medium hover:border-neutral-400 hover:bg-white hover:scale-105 transition-all duration-500 shadow-sm hover:shadow-md flex items-center gap-3 text-base" style={{ paddingTop: '1.1rem', paddingBottom: '1.1rem' }}>
+                  See features
+                  <ChevronRight className="w-4 h-4" />
                 </a>
               </div>
 
-              {/* Stats with INSANE animations */}
-              <div className="grid grid-cols-3 gap-8 max-w-3xl mx-auto">
+              {/* Stats */}
+              <div className="hero-enter-6 grid grid-cols-3 gap-5 max-w-2xl mx-auto">
                 {[
                   { value: 50000, suffix: '+', label: 'Events planned' },
                   { value: 500, suffix: 'k+', label: 'Teams organized' },
@@ -520,37 +628,32 @@ export default function Home() {
                 ].map((stat, idx) => (
                   <div 
                     key={idx}
-                    className="text-center p-6 bg-white/60 backdrop-blur-sm rounded-3xl border border-neutral-200 hover:border-neutral-400 hover:scale-110 hover:shadow-2xl transition-all duration-500 cursor-default"
+                    className="text-center p-5 bg-white/60 backdrop-blur-sm rounded-2xl border border-neutral-200/70 hover:border-neutral-300 hover:scale-105 hover:bg-white/90 hover:shadow-lg transition-all duration-500 cursor-default"
                   >
-                    <div className="text-4xl md:text-5xl font-black text-neutral-900 mb-2">
+                    <div className="text-3xl md:text-4xl font-black text-neutral-900 mb-1">
                       <AnimatedCounter end={stat.value} suffix={stat.suffix} />
                     </div>
-                    <div className="text-sm font-medium text-neutral-600">{stat.label}</div>
+                    <div className="text-xs font-medium text-neutral-500">{stat.label}</div>
                   </div>
                 ))}
               </div>
             </div>
           </div>
 
-          {/* Additional floating elements */}
-          <div className="absolute top-20 left-10 w-20 h-20 bg-neutral-200 rounded-full blur-3xl opacity-30 animate-pulse" />
-          <div className="absolute bottom-40 right-20 w-32 h-32 bg-neutral-300 rounded-full blur-3xl opacity-20 animate-pulse" style={{ animationDelay: '1s' }} />
+          {/* Bottom gradient fade to white */}
+          <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-white to-transparent pointer-events-none" />
         </section>
 
-        {/* Purpose Clarification Section */}
-        <section className="py-24 bg-gradient-to-b from-amber-50/30 to-white border-y border-amber-100">
+        {/* How It Works — naturally integrated, no harsh disclaimer */}
+        <section className="py-20 bg-white relative">
           <div className="max-w-5xl mx-auto px-6">
-            <div className="text-center mb-12">
-              <div className="inline-flex items-center gap-2 px-4 py-2 bg-amber-100 rounded-full text-sm font-semibold text-amber-900 mb-6">
-                <Lightbulb className="w-4 h-4" />
-                Important to know
-              </div>
-              <h2 className="text-4xl md:text-5xl font-bold text-neutral-900 mb-6">
-                Built for the <span className="text-amber-700">planning phase</span>
+            <div className="text-center mb-14">
+              <p className="text-xs font-semibold text-neutral-400 uppercase tracking-widest mb-4">How teams use it</p>
+              <h2 className="text-4xl md:text-5xl font-black text-neutral-900 mb-5">
+                Your event, every step
               </h2>
-              <p className="text-xl text-neutral-600 leading-relaxed max-w-3xl mx-auto">
-                PlanIt is designed for <strong>pre-event coordination</strong> and <strong>execution planning</strong>. 
-                Not a live event management tool — think of it as your team's mission control center.
+              <p className="text-lg text-neutral-500 max-w-2xl mx-auto leading-relaxed">
+                Built for the full arc — from months-out planning to the final goodbye.
               </p>
             </div>
 
@@ -559,34 +662,38 @@ export default function Home() {
                 {
                   icon: Brain,
                   phase: 'Before',
-                  title: 'Planning & Coordination',
-                  description: 'Create tasks, split expenses, coordinate logistics, send invites, and get everyone on the same page before the big day.'
+                  label: '01',
+                  title: 'Coordinate your team',
+                  description: 'Assign tasks, split expenses, finalize the guest list, share files, and get every detail locked in before the big day.'
                 },
                 {
                   icon: Zap,
                   phase: 'During',
-                  title: 'Quick Updates & Check-ins',
-                  description: 'Use for quick team updates, QR check-ins, and last-minute coordination. Keep the main action offline!'
+                  label: '02',
+                  title: 'Stay on top of it',
+                  description: 'Quick check-ins, QR guest arrivals, last-minute updates. Your team stays synced while the event runs itself.'
                 },
                 {
                   icon: CheckCircle2,
                   phase: 'After',
-                  title: 'Wrap-up & Review',
-                  description: 'Share photos, close out expenses, review feedback, and celebrate your successful event execution.'
+                  label: '03',
+                  title: 'Wrap it up right',
+                  description: 'Close expenses, share memories, collect feedback. Every loose end, tied.'
                 }
               ].map((item, idx) => (
                 <div 
                   key={idx}
-                  className="p-8 bg-white rounded-3xl border-2 border-amber-200 hover:border-amber-400 hover:shadow-2xl transition-all duration-500 hover:scale-105"
+                  className="group relative p-8 bg-neutral-50 rounded-3xl border border-neutral-200 hover:border-neutral-300 hover:bg-white hover:shadow-xl transition-all duration-500 hover:scale-105"
                 >
-                  <div className="w-14 h-14 rounded-2xl bg-amber-100 flex items-center justify-center mb-5">
-                    <item.icon className="w-7 h-7 text-amber-700" />
+                  <div className="flex items-start justify-between mb-6">
+                    <div className="w-12 h-12 rounded-2xl bg-neutral-100 group-hover:bg-neutral-900 flex items-center justify-center transition-all duration-500">
+                      <item.icon className="w-6 h-6 text-neutral-500 group-hover:text-white transition-colors duration-500" />
+                    </div>
+                    <span className="text-3xl font-black text-neutral-100 group-hover:text-neutral-200 transition-colors duration-500">{item.label}</span>
                   </div>
-                  <div className="text-xs font-bold text-amber-700 uppercase tracking-wider mb-2">
-                    {item.phase}
-                  </div>
+                  <p className="text-xs font-bold text-neutral-400 uppercase tracking-widest mb-2">{item.phase}</p>
                   <h3 className="text-lg font-bold text-neutral-900 mb-3">{item.title}</h3>
-                  <p className="text-sm text-neutral-600 leading-relaxed">{item.description}</p>
+                  <p className="text-sm text-neutral-500 leading-relaxed">{item.description}</p>
                 </div>
               ))}
             </div>
