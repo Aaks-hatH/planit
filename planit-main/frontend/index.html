@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/planit-icon.svg" />
+
+    <!--
+      viewport-fit=cover  →  content extends under the Dynamic Island / notch.
+      We then use env(safe-area-inset-*) in CSS to push content back into view.
+    -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="description" content="Plan It - The easiest way to plan events together. Secure, collaborative event planning with real-time chat, polls, and file sharing." />
+    <meta name="keywords" content="event planning, plan it, group collaboration, secure chat, polls, file sharing, event organizer" />
+
+    <!-- PWA theme colour — matches the white header in light mode -->
+    <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#0a0a0a" media="(prefers-color-scheme: dark)" />
+
+    <!--
+      iOS PWA
+      "default" → iOS renders an opaque status bar ABOVE the app content.
+      The header sits cleanly below the Dynamic Island with no blending.
+      (black-translucent is what caused the overlap — removed.)
+    -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="PlanIt" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Plan It - Collaborative Event Planning Made Easy" />
+    <meta property="og:description" content="Plan events together with secure chat, polls, and file sharing. Simple. Secure. Collaborative." />
+    <meta property="og:image" content="/planit-og.png" />
+
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image" />
+    <meta property="twitter:title" content="Plan It - Collaborative Event Planning" />
+    <meta property="twitter:description" content="Plan events together with secure chat, polls, and file sharing." />
+    <meta property="twitter:image" content="/planit-og.png" />
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=Outfit:wght@600;700;800&display=swap" rel="stylesheet">
+
+    <title>Plan It - Collaborative Event Planning Made Easy</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>

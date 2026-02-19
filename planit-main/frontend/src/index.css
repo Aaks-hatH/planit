@@ -1,0 +1,207 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=DM+Mono:wght@400;500&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --color-border: #e5e5e5;
+    --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+    --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.07), 0 2px 4px -2px rgb(0 0 0 / 0.05);
+
+    /*
+      Safe-area custom properties.
+      On non-iOS or in browser mode these resolve to 0px — zero side-effects.
+      On iPhone standalone PWA they carry the actual inset values from the OS.
+    */
+    --safe-top:    env(safe-area-inset-top,    0px);
+    --safe-right:  env(safe-area-inset-right,  0px);
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
+    --safe-left:   env(safe-area-inset-left,   0px);
+  }
+
+  * { box-sizing: border-box; }
+
+  /*
+    Prevent elastic overscroll from revealing an uncoloured gap above the header
+    on iOS when the user pulls down past the top of the page.
+  */
+  /*
+    Prevent horizontal pan/swipe from revealing white edges in PWA.
+    overscroll-behavior-x blocks the iOS rubber-band horizontal bounce.
+    We do NOT use overflow-x:hidden here as that breaks sticky positioning.
+  */
+  html {
+    background-color: #06060c;
+    overscroll-behavior-x: none;
+    overscroll-behavior-y: none;
+  }
+
+  body {
+    background-color: #ffffff;
+    color: #0a0a0a;
+    font-family: 'DM Sans', system-ui, -apple-system, sans-serif;
+    font-size: 15px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'DM Sans', system-ui, sans-serif;
+    font-weight: 600;
+    letter-spacing: -0.025em;
+    line-height: 1.25;
+  }
+
+  input, textarea, select, button {
+    font-family: 'DM Sans', system-ui, sans-serif;
+  }
+}
+
+@layer components {
+
+  /* ─── Safe-area header rule ───────────────────────────────────────────────
+   *
+   * Every <header> in the app is sticky/fixed at the top.
+   * This single rule adds padding-top equal to the OS safe-area inset so the
+   * header background paints behind the Dynamic Island / notch, and the
+   * header's own content sits below it.
+   *
+   * - In browser mode:  --safe-top = 0px  →  no visual change whatsoever.
+   * - In PWA mode on iPhone with notch/Dynamic Island:
+   *     --safe-top ≈ 47px–59px depending on device.
+   *     The header grows by that amount, background fills the gap, content
+   *     remains at the correct height below the status bar.
+   *
+   * No JSX changes required. All pages are covered automatically.
+   * ───────────────────────────────────────────────────────────────────────── */
+  header {
+    padding-top: var(--safe-top);
+  }
+
+  /*
+   * Dark headers (Admin, GuestInvite) need their background-color to match
+   * so the safe-area zone is the same dark colour, not white.
+   * These are already set inline via Tailwind on the header element itself,
+   * so no extra rule is needed — padding-top simply extends that existing bg.
+   */
+
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-all duration-150 focus:outline-none disabled:opacity-40 disabled:cursor-not-allowed whitespace-nowrap;
+    letter-spacing: -0.01em;
+  }
+
+  .btn-primary {
+    @apply bg-neutral-900 text-white hover:bg-neutral-800;
+  }
+
+  .btn-secondary {
+    @apply bg-white text-neutral-700 border border-neutral-200 hover:bg-neutral-50 hover:border-neutral-300;
+  }
+
+  .btn-danger {
+    @apply bg-white text-red-600 border border-red-200 hover:bg-red-50;
+  }
+
+  .btn-ghost {
+    @apply bg-transparent text-neutral-500 hover:bg-neutral-100 hover:text-neutral-900;
+  }
+
+  .input {
+    @apply w-full px-3 py-2.5 text-sm rounded-lg border border-neutral-200 bg-white placeholder-neutral-400 text-neutral-900 transition-all duration-150;
+    @apply focus:outline-none focus:border-neutral-900 focus:ring-1 focus:ring-neutral-900;
+  }
+
+  .input:disabled {
+    @apply bg-neutral-50 cursor-not-allowed opacity-60;
+  }
+
+  .card {
+    @apply bg-white rounded-xl border border-neutral-200;
+    box-shadow: var(--shadow-sm);
+  }
+
+  .badge {
+    @apply inline-flex items-center px-2 py-0.5 text-xs font-medium rounded-md;
+  }
+
+  .badge-primary { @apply bg-neutral-900 text-white; }
+  .badge-green { @apply bg-emerald-50 text-emerald-700 border border-emerald-200; }
+  .badge-gray { @apply bg-neutral-100 text-neutral-600 border border-neutral-200; }
+  .badge-red { @apply bg-red-50 text-red-700 border border-red-200; }
+  .badge-amber { @apply bg-amber-50 text-amber-700 border border-amber-200; }
+
+  .logo-text {
+    @apply text-lg font-semibold text-neutral-900 tracking-tight;
+  }
+
+  .planit-card {
+    @apply bg-white rounded-xl border border-neutral-200 transition-all duration-200;
+    box-shadow: var(--shadow-sm);
+  }
+
+  .planit-card:hover {
+    box-shadow: var(--shadow-md);
+    border-color: #d4d4d4;
+  }
+
+  .planit-hero {
+    background: #fafafa;
+  }
+}
+
+@layer utilities {
+  .text-balance { text-wrap: balance; }
+
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .scrollbar-hide::-webkit-scrollbar { display: none; }
+
+  /* Utility classes for safe area — use anywhere else in the app if needed */
+  .pt-safe { padding-top:    var(--safe-top); }
+  .pb-safe { padding-bottom: var(--safe-bottom); }
+  .pl-safe { padding-left:   var(--safe-left); }
+  .pr-safe { padding-right:  var(--safe-right); }
+}
+
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #d4d4d4; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #a3a3a3; }
+
+@keyframes spin { to { transform: rotate(360deg); } }
+.spinner {
+  animation: spin 0.75s linear infinite;
+  border-radius: 50%;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  10%, 30%, 50%, 70%, 90% { transform: translateX(-4px); }
+  20%, 40%, 60%, 80% { transform: translateX(4px); }
+}
+
+.animate-fade-in { animation: fadeIn 0.3s ease-out; }
+.animate-slide-up { animation: slideUp 0.35s ease-out; }
+.animate-pulse-dot { animation: pulse-dot 1.5s ease-in-out infinite; }
+.animate-shake { animation: shake 0.5s ease-in-out; }
+
+*:focus-visible {
+  outline: 2px solid #0a0a0a;
+  outline-offset: 2px;
+}
