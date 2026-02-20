@@ -47,7 +47,7 @@ const io = socketIo(server, {
   }
 });
 
-const FRONTEND_URL = process.env.FRONTEND_URL
+const FRONTEND_URL = process.env.FRONTEND_URL?.split(',')
 
 // ── CRITICAL FIX: make io accessible in all route handlers ──
 app.set('io', io);
@@ -170,9 +170,36 @@ app.head('/', (req, res) => {
   res.sendStatus(200);
 });
 
+const frontendUrls = (process.env.FRONTEND_URL || '')
+  .split(',')
+  .map(url => url.trim())
+  .filter(Boolean);
 
 app.get('*', (req, res) => {
-  res.redirect(301, process.env.FRONTEND_URL + req.path);
+  // Never redirect API routes
+  if (req.path.startsWith('/api')) {
+    return res.status(404).json({ error: 'Not found' });
+  }
+
+  const requestHost = req.hostname;
+
+  // Try to match exact hostname
+  const match = frontendUrls.find(url => {
+    try {
+      return new URL(url).hostname === requestHost;
+    } catch {
+      return false;
+    }
+  });
+
+  // Fallback to first frontend as canonical
+  const target = match || frontendUrls[0];
+
+  if (!target) {
+    return res.status(500).send('Frontend URL not configured');
+  }
+
+  return res.redirect(301, target + req.originalUrl);
 });
 
 app.use(errorHandler);
