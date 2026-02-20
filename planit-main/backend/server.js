@@ -168,12 +168,9 @@ app.head('/', (req, res) => {
   res.sendStatus(200);
 });
 
-// ─── Frontend redirect — all non-API GET requests ─────────────────────────
-// Backend lives at planit-2ipg.onrender.com.  Any browser that lands here
-// gets bounced to the real frontend.  API routes and /uploads are already
-// matched above, so only unhandled GETs reach this.
+
 app.get('*', (req, res) => {
-  res.redirect(301, 'https://planitapp.onrender.com' + req.path);
+  res.redirect(301, 'FRONTEND_URL' + req.path);
 });
 
 app.use(errorHandler);
