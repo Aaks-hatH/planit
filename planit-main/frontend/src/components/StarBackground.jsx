@@ -1,13 +1,12 @@
 import { useEffect, useRef, useMemo } from 'react';
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// STAR BACKGROUND v6 — PHOTOREALISTIC ADAPTIVE RENDERER
-// Cherry Springs State Park grade dark sky simulation
+// STAR BACKGROUND v7 — PHOTOREALISTIC ADAPTIVE RENDERER
+// Larger Milky Way band · enhanced low-device optimisation
 //
 // console: window.__starExplosion() | window.__starShower() | window.__tier()
 // ═══════════════════════════════════════════════════════════════════════════════
 
-// ─── UTILS ────────────────────────────────────────────────────────────────────
 const lerp   = (a,b,t) => a+(b-a)*t;
 const clamp  = (v,lo,hi) => Math.max(lo,Math.min(hi,v));
 const rgba   = (r,g,b,a) => `rgba(${r|0},${g|0},${b|0},${clamp(a,0,1).toFixed(3)})`;
@@ -16,17 +15,16 @@ const dist2  = (ax,ay,bx,by) => (ax-bx)**2+(ay-by)**2;
 const TAU    = Math.PI * 2;
 
 // ─── DEVICE TIER DETECTION ────────────────────────────────────────────────────
-// Tiers: 0=low (mobile/old), 1=mid, 2=high (desktop GPU)
-// Drives star count, MW resolution, effect quality
 function detectTier() {
+  // Honour reduced-motion preference → force tier 0
+  if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return 0;
   try {
     const mem = navigator.deviceMemory ?? 4;
     const cpu = navigator.hardwareConcurrency ?? 4;
-    // Quick canvas benchmark
-    const t0 = performance.now();
-    const c = document.createElement('canvas');
+    const t0  = performance.now();
+    const c   = document.createElement('canvas');
     c.width = 256; c.height = 256;
-    const cx = c.getContext('2d');
+    const cx  = c.getContext('2d');
     for (let i=0; i<200; i++) {
       const g = cx.createRadialGradient(128,128,0,128,128,128);
       g.addColorStop(0,'rgba(255,255,255,0.5)');
@@ -34,8 +32,7 @@ function detectTier() {
       cx.fillStyle = g;
       cx.beginPath(); cx.arc(128,128,128,0,TAU); cx.fill();
     }
-    const ms = performance.now() - t0;
-    // Score: fast canvas + high mem + many cores = high tier
+    const ms    = performance.now() - t0;
     const score = (ms < 10 ? 2 : ms < 25 ? 1 : 0)
                 + (mem >= 4 ? 1 : 0)
                 + (cpu >= 4 ? 1 : 0);
@@ -44,25 +41,25 @@ function detectTier() {
 }
 
 // ─── TIER CONFIG ──────────────────────────────────────────────────────────────
+// Low tier: drastically reduced work, 30 fps cap, no dust, no spikes, no ion
 const TIER_CFG = [
-  // Low
-  { stars:180, mwStars:2500, mwGlow:14,  drawSpikes:false, ionTrail:false,  fragmentation:false, sparkles:false, targetFPS:30 },
+  // Low  — mobile / integrated GPU
+  { stars:120, mwStars:1400, mwGlow:8,  drawSpikes:false, ionTrail:false, fragmentation:false, sparkles:false, targetFPS:30, mwDust:false, mwAnimStars:false },
   // Mid
-  { stars:280, mwStars:5000, mwGlow:22,  drawSpikes:true,  ionTrail:false,  fragmentation:true,  sparkles:true,  targetFPS:60 },
-  // High
-  { stars:420, mwStars:9000, mwGlow:32,  drawSpikes:true,  ionTrail:true,   fragmentation:true,  sparkles:true,  targetFPS:60 },
+  { stars:280, mwStars:5000, mwGlow:22, drawSpikes:true,  ionTrail:false, fragmentation:true,  sparkles:true,  targetFPS:60, mwDust:true,  mwAnimStars:true  },
+  // High — discrete GPU
+  { stars:420, mwStars:9000, mwGlow:32, drawSpikes:true,  ionTrail:true,  fragmentation:true,  sparkles:true,  targetFPS:60, mwDust:true,  mwAnimStars:true  },
 ];
 
 // ─── SPECTRAL STAR COLOURS ────────────────────────────────────────────────────
-// Physically-based O/B/A/F/G/K/M weighted by stellar population fraction
 const SPECTRAL = [
-  { col:[160,180,255], w:0.003 }, // O  — blue-violet (extremely rare)
-  { col:[175,195,255], w:0.012 }, // B  — blue-white
-  { col:[210,222,255], w:0.065 }, // A  — white-blue (Vega, Sirius)
-  { col:[250,248,255], w:0.120 }, // F  — white (Procyon)
-  { col:[255,248,225], w:0.210 }, // G  — yellow-white (Sun)
-  { col:[255,220,155], w:0.300 }, // K  — orange (Arcturus)
-  { col:[255,185,105], w:0.290 }, // M  — red-orange (Betelgeuse)
+  { col:[160,180,255], w:0.003 },
+  { col:[175,195,255], w:0.012 },
+  { col:[210,222,255], w:0.065 },
+  { col:[250,248,255], w:0.120 },
+  { col:[255,248,225], w:0.210 },
+  { col:[255,220,155], w:0.300 },
+  { col:[255,185,105], w:0.290 },
 ];
 const SPEC_CDF = (() => {
   let acc=0, total=SPECTRAL.reduce((s,t)=>s+t.w,0);
@@ -74,144 +71,97 @@ function spectralColor() {
   return [255,255,255];
 }
 
-// ─── REALISTIC STAR GENERATION ────────────────────────────────────────────────
-// Stars use apparent visual magnitude (Pogson scale).
-// Brightness drops ×2.512 per magnitude step.
-// mag 1 = brilliant (Vega), mag 6 = naked-eye limit, mag 7-9 = sky glow
+// ─── STAR GENERATION ─────────────────────────────────────────────────────────
 function makeStar(layerBias) {
   const u = Math.random();
-  let mag = u < 0.003 ? 1.0 + Math.random()       // brilliant
-          : u < 0.015 ? 2.0 + Math.random() * 0.9  // very bright
-          : u < 0.06  ? 2.9 + Math.random() * 1.1  // bright
-          : u < 0.22  ? 4.0 + Math.random() * 1.0  // medium
-          : u < 0.60  ? 5.0 + Math.random() * 1.5  // faint
-          :             6.5 + Math.random() * 2.5;  // very faint
+  let mag = u < 0.003 ? 1.0 + Math.random()
+          : u < 0.015 ? 2.0 + Math.random() * 0.9
+          : u < 0.06  ? 2.9 + Math.random() * 1.1
+          : u < 0.22  ? 4.0 + Math.random() * 1.0
+          : u < 0.60  ? 5.0 + Math.random() * 1.5
+          :             6.5 + Math.random() * 2.5;
   mag += layerBias;
-
   const cls = mag<2?'A': mag<3?'B': mag<4?'C': mag<5.5?'D': mag<7?'E':'F';
   const col = spectralColor();
-
-  // Scintillation amplitude: fainter = more scintillation as fraction
   const scintAmp = cls==='A'?0.05 : cls==='B'?0.09 : cls==='C'?0.16 : cls==='D'?0.28 : 0.42;
-
-  // Airy disk radius (px): sub-pixel for faint, visible for bright
-  const airyR = mag<2 ? 2.0+Math.random()*0.9
-              : mag<3 ? 1.3+Math.random()*0.5
-              : mag<4 ? 0.85+Math.random()*0.28
-              : mag<5 ? 0.50
-              :         0.32;
-
-  // Diffraction spikes (bright stars only)
-  const spikeCount = cls==='A' ? (Math.random()<0.45?6:4)
-                   : cls==='B' ? 4 : 0;
-  const spikeLen   = cls==='A' ? 16+Math.random()*24
-                   : cls==='B' ? 7+Math.random()*9 : 0;
+  const airyR = mag<2 ? 2.0+Math.random()*0.9 : mag<3 ? 1.3+Math.random()*0.5
+              : mag<4 ? 0.85+Math.random()*0.28 : mag<5 ? 0.50 : 0.32;
+  const spikeCount = cls==='A' ? (Math.random()<0.45?6:4) : cls==='B' ? 4 : 0;
+  const spikeLen   = cls==='A' ? 16+Math.random()*24 : cls==='B' ? 7+Math.random()*9 : 0;
   const bloomMult  = cls==='A' ? 6+Math.random()*4 : cls==='B' ? 3.5+Math.random()*2 : cls==='C' ? 2.2 : 1.1;
-
   return {
     xr: Math.random(), yr: Math.random(),
     mag, cls, col, airyR, bloomMult, spikeCount, spikeLen, scintAmp,
-    // 3 incommensurable oscillators → aperiodic shimmer
     ts0:0.17+Math.random()*0.52, ts1:0.29+Math.random()*0.78, ts2:0.43+Math.random()*1.1,
     to0:Math.random()*TAU, to1:Math.random()*TAU, to2:Math.random()*TAU,
     spikeRot: Math.random() * Math.PI / (spikeCount||4),
-    // Wink-out (stellar occultation / atmospheric shadow)
     winking:false, winkTimer:0, winkDur:0, winkNext:200+Math.random()*900,
   };
 }
 
 // ─── STAR RENDERER ────────────────────────────────────────────────────────────
-// Multi-layer optical PSF: outer halo → seeing disk → Airy core → chromatic ring → spikes
 function drawStar(ctx, s, sx, sy, scint, drawSpikes) {
   const { mag, cls, col, airyR, bloomMult, spikeCount, spikeLen } = s;
-
-  // Pogson: mag 1→0.9, mag 6→0.009
   const magB  = Math.pow(10, -(mag - 1) * 0.4) * 0.9;
   const B     = clamp(magB * (1.0 - s.scintAmp * (1 - scint)), 0, 1);
   if (B < 0.003) return;
-
-  // Chromatic scintillation: dim→warmer, bright→cooler
   const warm = (1 - scint) * 0.18;
   const cr = clamp(col[0] + warm * 20, 0, 255)|0;
   const cg = col[1]|0;
   const cb = clamp(col[2] - warm * 12, 0, 255)|0;
-
-  // Sub-pixel centroid jitter (atmospheric seeing displacement)
   const jAmp = (cls==='A'?0.12 : cls==='B'?0.22 : cls==='C'?0.38 : 0.50) * (1-scint);
   const px = sx + Math.cos(s.to1 * 2.7 + scint) * jAmp;
   const py = sy + Math.sin(s.to2 * 2.3 + scint) * jAmp;
 
-  // ── F/E: pure sub-pixel Gaussian smear ─────────────────────────────────────
   if (cls==='F') {
     const g = ctx.createRadialGradient(px,py,0,px,py,airyR*1.6);
     g.addColorStop(0, rgba(cr,cg,cb,B*0.22)); g.addColorStop(1,'rgba(0,0,0,0)');
-    ctx.beginPath(); ctx.arc(px,py,airyR*1.6,0,TAU); ctx.fillStyle=g; ctx.fill();
-    return;
+    ctx.beginPath(); ctx.arc(px,py,airyR*1.6,0,TAU); ctx.fillStyle=g; ctx.fill(); return;
   }
   if (cls==='E') {
     const g = ctx.createRadialGradient(px,py,0,px,py,airyR*2.2);
     g.addColorStop(0, rgba(cr,cg,cb,B*0.48)); g.addColorStop(0.5,rgba(cr,cg,cb,B*0.15)); g.addColorStop(1,'rgba(0,0,0,0)');
-    ctx.beginPath(); ctx.arc(px,py,airyR*2.2,0,TAU); ctx.fillStyle=g; ctx.fill();
-    return;
+    ctx.beginPath(); ctx.arc(px,py,airyR*2.2,0,TAU); ctx.fillStyle=g; ctx.fill(); return;
   }
-
-  // ── D: double-Gaussian ─────────────────────────────────────────────────────
   if (cls==='D') {
     const g1 = ctx.createRadialGradient(px,py,0,px,py,airyR*3.2);
     g1.addColorStop(0,rgba(cr,cg,cb,B*0.28)); g1.addColorStop(1,'rgba(0,0,0,0)');
     ctx.beginPath(); ctx.arc(px,py,airyR*3.2,0,TAU); ctx.fillStyle=g1; ctx.fill();
     const g2 = ctx.createRadialGradient(px,py,0,px,py,airyR*1.5);
     g2.addColorStop(0,rgba(255,255,255,B)); g2.addColorStop(0.4,rgba(cr,cg,cb,B*0.55)); g2.addColorStop(1,'rgba(0,0,0,0)');
-    ctx.beginPath(); ctx.arc(px,py,airyR*1.5,0,TAU); ctx.fillStyle=g2; ctx.fill();
-    return;
+    ctx.beginPath(); ctx.arc(px,py,airyR*1.5,0,TAU); ctx.fillStyle=g2; ctx.fill(); return;
   }
-
-  // ── C: seeing disk + tight core ────────────────────────────────────────────
   if (cls==='C') {
     const sr = airyR * 3;
     const g1 = ctx.createRadialGradient(px,py,0,px,py,sr);
-    g1.addColorStop(0,  rgba(255,255,255,B*0.88));
+    g1.addColorStop(0, rgba(255,255,255,B*0.88));
     g1.addColorStop(0.3,rgba(lerp(255,cr,0.35)|0,lerp(255,cg,0.35)|0,lerp(255,cb,0.35)|0, B*0.52));
-    g1.addColorStop(0.7,rgba(cr,cg,cb,B*0.14));
-    g1.addColorStop(1,  'rgba(0,0,0,0)');
+    g1.addColorStop(0.7,rgba(cr,cg,cb,B*0.14)); g1.addColorStop(1,'rgba(0,0,0,0)');
     ctx.beginPath(); ctx.arc(px,py,sr,0,TAU); ctx.fillStyle=g1; ctx.fill();
     const g2 = ctx.createRadialGradient(px,py,0,px,py,airyR*1.05);
     g2.addColorStop(0,rgba(255,255,255,B)); g2.addColorStop(1,'rgba(0,0,0,0)');
-    ctx.beginPath(); ctx.arc(px,py,airyR*1.05,0,TAU); ctx.fillStyle=g2; ctx.fill();
-    return;
+    ctx.beginPath(); ctx.arc(px,py,airyR*1.05,0,TAU); ctx.fillStyle=g2; ctx.fill(); return;
   }
-
-  // ── A/B: full multi-layer PSF ──────────────────────────────────────────────
   const bloom = airyR * bloomMult;
-
-  // Layer 1 — outer PSF wings (very diffuse atmospheric halo)
   {
     const g = ctx.createRadialGradient(px,py,airyR*0.8,px,py,bloom);
-    g.addColorStop(0,  rgba(cr,cg,cb,B*0.20)); g.addColorStop(0.25,rgba(cr,cg,cb,B*0.08));
-    g.addColorStop(0.6,rgba(cr,cg,cb,B*0.025));g.addColorStop(1,  'rgba(0,0,0,0)');
+    g.addColorStop(0,rgba(cr,cg,cb,B*0.20)); g.addColorStop(0.25,rgba(cr,cg,cb,B*0.08));
+    g.addColorStop(0.6,rgba(cr,cg,cb,B*0.025)); g.addColorStop(1,'rgba(0,0,0,0)');
     ctx.beginPath(); ctx.arc(px,py,bloom,0,TAU); ctx.fillStyle=g; ctx.fill();
   }
-
-  // Layer 2 — seeing disk (atmospheric turbulence, coloured)
   {
     const sr = airyR * 4.2;
     const g  = ctx.createRadialGradient(px,py,0,px,py,sr);
-    g.addColorStop(0,  rgba(255,255,255,B*0.92));
+    g.addColorStop(0,rgba(255,255,255,B*0.92));
     g.addColorStop(0.18,rgba(lerp(255,cr,0.3)|0,lerp(255,cg,0.3)|0,lerp(255,cb,0.3)|0,B*0.72));
-    g.addColorStop(0.50,rgba(cr,cg,cb,B*0.32));
-    g.addColorStop(0.80,rgba(cr,cg,cb,B*0.08));
-    g.addColorStop(1,  'rgba(0,0,0,0)');
+    g.addColorStop(0.50,rgba(cr,cg,cb,B*0.32)); g.addColorStop(0.80,rgba(cr,cg,cb,B*0.08)); g.addColorStop(1,'rgba(0,0,0,0)');
     ctx.beginPath(); ctx.arc(px,py,sr,0,TAU); ctx.fillStyle=g; ctx.fill();
   }
-
-  // Layer 3 — Airy disk core (diffraction limit of human pupil)
   {
     const g = ctx.createRadialGradient(px,py,0,px,py,airyR*1.1);
-    g.addColorStop(0, rgba(255,255,255,B)); g.addColorStop(0.7,rgba(255,255,255,B*0.88)); g.addColorStop(1,'rgba(0,0,0,0)');
+    g.addColorStop(0,rgba(255,255,255,B)); g.addColorStop(0.7,rgba(255,255,255,B*0.88)); g.addColorStop(1,'rgba(0,0,0,0)');
     ctx.beginPath(); ctx.arc(px,py,airyR*1.1,0,TAU); ctx.fillStyle=g; ctx.fill();
   }
-
-  // Layer 4 — chromatic aberration ring (blue channel disperses further)
   if (cls==='A') {
     const cR = airyR*5.8;
     const g  = ctx.createRadialGradient(px,py,airyR*1.6,px,py,cR);
@@ -223,8 +173,6 @@ function drawStar(ctx, s, sx, sy, scint, drawSpikes) {
     g.addColorStop(0,'rgba(0,0,0,0)'); g.addColorStop(0.5,rgba(160,178,255,B*0.06)); g.addColorStop(1,'rgba(0,0,0,0)');
     ctx.beginPath(); ctx.arc(px,py,cR,0,TAU); ctx.fillStyle=g; ctx.fill();
   }
-
-  // Layer 5 — diffraction spikes (telescope/eye pupil edge diffraction)
   if (drawSpikes && spikeCount>0 && B>0.04) {
     ctx.save(); ctx.translate(px,py); ctx.rotate(s.spikeRot);
     const step = Math.PI / spikeCount;
@@ -232,17 +180,13 @@ function drawStar(ctx, s, sx, sy, scint, drawSpikes) {
       const a = k * step;
       for (const d of [1,-1]) {
         const ex = Math.cos(a)*spikeLen*B*d, ey = Math.sin(a)*spikeLen*B*d;
-        // Soft glow channel behind spike
         const sg2 = ctx.createLinearGradient(0,0,ex,ey);
         sg2.addColorStop(0,rgba(cr,cg,cb,B*0.22)); sg2.addColorStop(1,'rgba(0,0,0,0)');
         ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(ex,ey);
         ctx.strokeStyle=sg2; ctx.lineWidth=airyR*(cls==='A'?3.8:2.4); ctx.lineCap='round'; ctx.stroke();
-        // Sharp spike line
         const sg = ctx.createLinearGradient(0,0,ex,ey);
-        sg.addColorStop(0,  rgba(255,255,255,B*0.88));
-        sg.addColorStop(0.12,rgba(cr,cg,cb,B*0.65));
-        sg.addColorStop(0.45,rgba(cr,cg,cb,B*0.20));
-        sg.addColorStop(1,  'rgba(0,0,0,0)');
+        sg.addColorStop(0,rgba(255,255,255,B*0.88)); sg.addColorStop(0.12,rgba(cr,cg,cb,B*0.65));
+        sg.addColorStop(0.45,rgba(cr,cg,cb,B*0.20)); sg.addColorStop(1,'rgba(0,0,0,0)');
         ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(ex,ey);
         ctx.strokeStyle=sg; ctx.lineWidth=airyR*(cls==='A'?0.48:0.30); ctx.stroke();
       }
@@ -251,34 +195,33 @@ function drawStar(ctx, s, sx, sy, scint, drawSpikes) {
   }
 }
 
-// ─── MILKY WAY (offscreen cached canvas) ─────────────────────────────────────
-// Rendered to an offscreen canvas once on resize, redrawn to main canvas each frame
-// Band is LONG — 2.5× screen width, runs NE→SW
+// ─── MILKY WAY — enlarged ─────────────────────────────────────────────────────
+// bandW bumped from 0.13 → 0.22, coreR from 0.10 → 0.18, length 2.5 → 2.8
 const MW = {
-  coreCX:0.38, coreCY:0.58,
-  bandAngle:-0.50,    // ~-28.6° (NE–SW diagonal like Sagittarius view)
-  bandW:0.13,         // half-width relative to min dim
-  coreR:0.10,
-  length:2.5,         // band length relative to screen width
+  coreCX:0.38, coreCY:0.55,
+  bandAngle:-0.50,
+  bandW:0.22,          // ← wider band
+  coreR:0.18,          // ← bigger core
+  length:2.8,
 };
 
 function buildMWStars(count) {
   const stars=[]; const {coreCX,coreCY,bandAngle,bandW,coreR} = MW;
   const cos=Math.cos(bandAngle), sin=Math.sin(bandAngle);
   for (let i=0;i<count;i++) {
-    const t  = (Math.random()*2-1);                        // along band axis
-    const wm = 1.0 + Math.abs(t)*0.55;                    // wider near ends
+    const t  = (Math.random()*2-1);
+    const wm = 1.0 + Math.abs(t)*0.55;
     const s  = (Math.random()-0.5)*2;
-    const pS = s*Math.abs(s)*bandW*wm;                    // non-linear scatter
+    const pS = s*Math.abs(s)*bandW*wm;
     const xr = coreCX + cos*t*1.1 - sin*pS;
     const yr = coreCY + sin*t*1.1 + cos*pS;
-    if (xr<-0.08||xr>1.08||yr<-0.08||yr>1.08) continue;
+    if (xr<-0.12||xr>1.12||yr<-0.12||yr>1.12) continue;
     const dx=xr-coreCX, dy=yr-coreCY;
     const cd=Math.sqrt(dx*dx+dy*dy);
     const cBoost=Math.exp(-cd/coreR*2.2);
     const sz=Math.random();
     const r = sz<0.75?0.10+Math.random()*0.20 : sz<0.93?0.20+Math.random()*0.32 : 0.34+Math.random()*0.52;
-    const baseA=clamp((0.025+Math.random()*0.10)*(Math.exp(-Math.abs(t)*1.1)*0.65+0.35)*(1+cBoost*2.8), 0, 0.58);
+    const baseA=clamp((0.028+Math.random()*0.12)*(Math.exp(-Math.abs(t)*1.1)*0.65+0.35)*(1+cBoost*3.2), 0, 0.68);
     const coreC=lerpC([255,208,135],[255,228,175],Math.random());
     const armC =lerpC([195,212,255],[230,238,255],Math.random());
     const col  =lerpC(armC,coreC,clamp(cBoost*3,0,1));
@@ -288,91 +231,90 @@ function buildMWStars(count) {
   return stars;
 }
 
-function buildMWDust(count=50) {
+function buildMWDust(count=60) {
   const {coreCX,coreCY,bandAngle}=MW; const cos=Math.cos(bandAngle),sin=Math.sin(bandAngle);
   const d=[];
   for (let i=0;i<count;i++) {
-    const t=(Math.random()*2-1)*0.88, perp=(Math.random()-0.5)*0.09;
+    const t=(Math.random()*2-1)*0.88, perp=(Math.random()-0.5)*0.14;
     d.push({
       xr:coreCX+cos*t-sin*perp, yr:coreCY+sin*t+cos*perp,
-      rr:0.022+Math.random()*0.065, ax:0.5+Math.random()*1.6, ay:0.3+Math.random()*0.75,
-      rot:bandAngle+(Math.random()-0.5)*0.45, op:0.020+Math.random()*0.038,
+      rr:0.028+Math.random()*0.08, ax:0.5+Math.random()*1.6, ay:0.3+Math.random()*0.75,
+      rot:bandAngle+(Math.random()-0.5)*0.45, op:0.022+Math.random()*0.042,
     });
   }
   return d;
 }
 
-// Render Milky Way to an offscreen canvas at given W,H
-// Returns the offscreen canvas element
-function renderMWOffscreen(W, H, mwStars, mwDust, blobCount) {
+function renderMWOffscreen(W, H, mwStars, mwDust, blobCount, useDust) {
   const oc = document.createElement('canvas'); oc.width=W; oc.height=H;
   const cx = oc.getContext('2d');
   const minD=Math.min(W,H);
   const {coreCX,coreCY,bandAngle,bandW,coreR,length}=MW;
   const cos=Math.cos(bandAngle), sin=Math.sin(bandAngle);
 
-  // ── Pass 0: large-scale galactic background luminance ──────────────────────
-  for (let i=0;i<9;i++) {
-    const t=(i/8)*2-1;
+  // Pass 0: large-scale background luminance
+  for (let i=0;i<12;i++) {
+    const t=(i/11)*2-1;
     const cx2=(coreCX+cos*t*1.15)*W, cy2=(coreCY+sin*t*1.15)*H;
-    const r=minD*(0.22+Math.exp(-Math.abs(t)*1.2)*0.08);
-    const a=0.004*Math.exp(-Math.abs(t)*0.75);
+    const r=minD*(0.30+Math.exp(-Math.abs(t)*1.2)*0.12);   // ← larger halos
+    const a=0.006*Math.exp(-Math.abs(t)*0.75);
     const g=cx.createRadialGradient(cx2,cy2,0,cx2,cy2,r);
     g.addColorStop(0,rgba(215,215,228,a)); g.addColorStop(1,'rgba(0,0,0,0)');
     cx.beginPath(); cx.arc(cx2,cy2,r,0,TAU); cx.fillStyle=g; cx.fill();
   }
 
-  // ── Pass 1: diffuse band glow blobs ───────────────────────────────────────
+  // Pass 1: diffuse band glow blobs (wider scale)
   for (let i=0;i<blobCount;i++) {
     const t=(i/(blobCount-1))*2-1;
     const bx=(coreCX+cos*t*(length*0.5))*W, by=(coreCY+sin*t*(length*0.5))*H;
     const dist=Math.abs(t);
-    const intensity=Math.exp(-dist*1.5)*0.8+0.2;
-    const wm=dist<0.18?1.65:1.0+Math.random()*0.3;
+    const intensity=Math.exp(-dist*1.4)*0.85+0.22;
+    const wm=dist<0.18?1.80:1.0+Math.random()*0.3;
     const warmth=Math.exp(-dist*2.4);
     const rc=lerp(205,255,warmth), gc=lerp(195,235,warmth), bc=lerp(192,215,warmth*0.25+0.75);
-    const rAlong=bandW*minD*(0.9+Math.random()*0.4);
-    const rPerp =bandW*minD*wm*(0.7+Math.random()*0.5);
+    const rAlong=bandW*minD*(1.1+Math.random()*0.5);      // ← bigger blobs
+    const rPerp =bandW*minD*wm*(0.9+Math.random()*0.6);
     const rmax=Math.max(rAlong,rPerp);
     cx.save(); cx.translate(bx,by); cx.rotate(bandAngle);
     cx.scale(rAlong/rmax, rPerp/rmax);
-    // Wide outer bloom
-    const g1=cx.createRadialGradient(0,0,0,0,0,rmax*1.6);
-    g1.addColorStop(0,rgba(rc,gc,bc,intensity*0.011)); g1.addColorStop(1,'rgba(0,0,0,0)');
-    cx.beginPath(); cx.arc(0,0,rmax*1.6,0,TAU); cx.fillStyle=g1; cx.fill();
-    // Inner concentrated
-    const g2=cx.createRadialGradient(0,0,0,0,0,rmax*0.65);
-    g2.addColorStop(0,rgba(rc,gc,bc,intensity*0.024)); g2.addColorStop(0.6,rgba(rc,gc,bc,intensity*0.008)); g2.addColorStop(1,'rgba(0,0,0,0)');
-    cx.beginPath(); cx.arc(0,0,rmax*0.65,0,TAU); cx.fillStyle=g2; cx.fill();
+    const g1=cx.createRadialGradient(0,0,0,0,0,rmax*1.9);
+    g1.addColorStop(0,rgba(rc,gc,bc,intensity*0.014)); g1.addColorStop(1,'rgba(0,0,0,0)');
+    cx.beginPath(); cx.arc(0,0,rmax*1.9,0,TAU); cx.fillStyle=g1; cx.fill();
+    const g2=cx.createRadialGradient(0,0,0,0,0,rmax*0.75);
+    g2.addColorStop(0,rgba(rc,gc,bc,intensity*0.030)); g2.addColorStop(0.6,rgba(rc,gc,bc,intensity*0.010)); g2.addColorStop(1,'rgba(0,0,0,0)');
+    cx.beginPath(); cx.arc(0,0,rmax*0.75,0,TAU); cx.fillStyle=g2; cx.fill();
     cx.restore();
   }
 
-  // ── Pass 2: galactic core bulge (Sagittarius direction) ───────────────────
+  // Pass 2: galactic core bulge — now larger
   const ccx=coreCX*W, ccy=coreCY*H;
   for (const [r,a,col] of [
-    [coreR*0.55*minD, 0.068, [255,228,168]],
-    [coreR*1.9*minD,  0.038, [245,218,155]],
-    [coreR*4.0*minD,  0.016, [230,208,148]],
-    [coreR*7.5*minD,  0.007, [218,200,140]],
+    [coreR*0.65*minD, 0.080, [255,228,168]],
+    [coreR*2.2*minD,  0.048, [245,218,155]],
+    [coreR*5.0*minD,  0.022, [230,208,148]],
+    [coreR*9.0*minD,  0.010, [218,200,140]],
+    [coreR*14*minD,   0.004, [210,195,135]],   // ← extra outer bloom
   ]) {
     const g=cx.createRadialGradient(ccx,ccy,0,ccx,ccy,r);
     g.addColorStop(0,rgba(col[0],col[1],col[2],a)); g.addColorStop(0.5,rgba(col[0],col[1],col[2],a*0.45)); g.addColorStop(1,'rgba(0,0,0,0)');
     cx.beginPath(); cx.arc(ccx,ccy,r,0,TAU); cx.fillStyle=g; cx.fill();
   }
 
-  // ── Pass 3: dust lanes (multiply blend) ───────────────────────────────────
-  cx.save(); cx.globalCompositeOperation='multiply';
-  for (const d of mwDust) {
-    const dx=d.xr*W, dy=d.yr*H, r=d.rr*minD, rx=r*d.ax, ry=r*d.ay, rm=Math.max(rx,ry);
-    cx.save(); cx.translate(dx,dy); cx.rotate(d.rot); cx.scale(rx/rm,ry/rm);
-    const g=cx.createRadialGradient(0,0,0,0,0,rm);
-    g.addColorStop(0,rgba(0,0,0,d.op)); g.addColorStop(0.5,rgba(0,0,0,d.op*0.45)); g.addColorStop(1,'rgba(0,0,0,0)');
-    cx.beginPath(); cx.arc(0,0,rm,0,TAU); cx.fillStyle=g; cx.fill();
+  // Pass 3: dust lanes — skipped on low tier
+  if (useDust) {
+    cx.save(); cx.globalCompositeOperation='multiply';
+    for (const d of mwDust) {
+      const dx=d.xr*W, dy=d.yr*H, r=d.rr*minD, rx=r*d.ax, ry=r*d.ay, rm=Math.max(rx,ry);
+      cx.save(); cx.translate(dx,dy); cx.rotate(d.rot); cx.scale(rx/rm,ry/rm);
+      const g=cx.createRadialGradient(0,0,0,0,0,rm);
+      g.addColorStop(0,rgba(0,0,0,d.op)); g.addColorStop(0.5,rgba(0,0,0,d.op*0.45)); g.addColorStop(1,'rgba(0,0,0,0)');
+      cx.beginPath(); cx.arc(0,0,rm,0,TAU); cx.fillStyle=g; cx.fill();
+      cx.restore();
+    }
     cx.restore();
   }
-  cx.restore();
 
-  // ── Pass 4: resolved micro-stars (static, drawn once) ─────────────────────
+  // Pass 4: resolved micro-stars
   for (const s of mwStars) {
     const sx=s.xr*W, sy=s.yr*H;
     cx.beginPath(); cx.arc(sx,sy,s.r,0,TAU);
@@ -383,16 +325,14 @@ function renderMWOffscreen(W, H, mwStars, mwDust, blobCount) {
   return oc;
 }
 
-// Per-frame: draw the cached MW offscreen canvas + animated star twinkle layer
-function drawMilkyWay(ctx, mwCanvas, mwStars, W, H, t) {
+function drawMilkyWay(ctx, mwCanvas, mwStars, W, H, t, doAnim) {
   if (mwCanvas) ctx.drawImage(mwCanvas, 0, 0);
-
-  // Animate only the brighter MW stars (tiny twinkle overlay)
+  if (!doAnim) return;
   for (const s of mwStars) {
-    if (s.baseA < 0.12) continue;  // skip dim ones — too subtle to notice
+    if (s.baseA < 0.12) continue;
     const sx=s.xr*W, sy=s.yr*H;
     const tw=0.65+0.35*Math.sin(t*s.ts*0.38+s.to);
-    const a=(s.baseA*tw - s.baseA)*0.6;  // only the delta, not the base
+    const a=(s.baseA*tw - s.baseA)*0.6;
     if (Math.abs(a)<0.005) continue;
     ctx.beginPath(); ctx.arc(sx,sy,s.r,0,TAU);
     ctx.fillStyle=rgba(s.col[0],s.col[1],s.col[2],Math.max(0,a));
@@ -401,7 +341,6 @@ function drawMilkyWay(ctx, mwCanvas, mwStars, W, H, t) {
 }
 
 // ─── METEOR SYSTEM ────────────────────────────────────────────────────────────
-// Trails are smooth LINES (3 stroke passes), not dot chains
 const MSPEC = [
   { head:[255,255,255], coma:[255,238,195], plasma:[255,218,145], trail:[185,205,255], corona:[228,232,255] },
   { head:[255,255,248], coma:[255,245,185], plasma:[255,228,128], trail:[205,215,255], corona:[238,240,255] },
@@ -417,7 +356,6 @@ function makeMeteor(W, H, opts={}) {
   const vy = Math.sin(ang)*spd;
   const canFrag = (opts.isFragment!==true) && Math.random()<0.22;
   const hasIon  = (opts.isFragment!==true) && Math.random()<0.38;
-
   return {
     x: opts.x ?? (goR ? -30 : W+30),
     y: opts.y ?? H*(0.02+Math.random()*0.44),
@@ -450,7 +388,6 @@ function stepMeteor(m, meteors, W, H, cfg) {
   if (m.entryFlash>0) m.entryFlash=Math.max(0,m.entryFlash-m.entryDecay);
   m.life -= m.decay;
   const lf = 1-m.life;
-
   m.bright=1;
   for (const f of m.flares) {
     if (!f.fired && lf>=f.t){ f.fired=true; f.active=true; f.prog=0; }
@@ -461,7 +398,6 @@ function stepMeteor(m, meteors, W, H, cfg) {
       if(f.prog>=1) f.active=false;
     }
   }
-
   if (cfg.fragmentation && m.canFrag && !m.fragmented && lf>=m.fragAt) {
     m.fragmented=true;
     const spd=m.curSpd, pieces=2+Math.floor(Math.random()*2);
@@ -474,7 +410,6 @@ function stepMeteor(m, meteors, W, H, cfg) {
     }
     m.decay*=2.0;
   }
-
   if (cfg.ionTrail && m.hasIon) {
     m.ionTrail.unshift({x:m.x,y:m.y,life:1.0});
     if (m.ionTrail.length>70) m.ionTrail.pop();
@@ -483,7 +418,6 @@ function stepMeteor(m, meteors, W, H, cfg) {
       if(m.ionTrail[i].life<=0) m.ionTrail.splice(i,1);
     }
   }
-
   if (cfg.sparkles && --m.nextSpark<=0) {
     m.nextSpark=1+Math.floor(Math.random()*3);
     m.sparkles.push({
@@ -502,29 +436,22 @@ function stepMeteor(m, meteors, W, H, cfg) {
 function drawMeteor(ctx, m) {
   if (m.history.length<2) return;
   const eb=clamp(m.bright*m.life,0,1);
-
-  // Ion trail (green persistence glow)
   if (m.hasIon && m.ionTrail.length>2) {
     ctx.save(); ctx.globalCompositeOperation='screen';
     for (let i=1;i<m.ionTrail.length;i++) {
-      const a=m.ionTrail[i].life*0.048;
-      if (a<0.003) continue;
+      const a=m.ionTrail[i].life*0.048; if (a<0.003) continue;
       const w=(1-i/m.ionTrail.length)*2.8;
       ctx.beginPath(); ctx.moveTo(m.ionTrail[i-1].x,m.ionTrail[i-1].y); ctx.lineTo(m.ionTrail[i].x,m.ionTrail[i].y);
       ctx.strokeStyle=rgba(135,228,175,a); ctx.lineWidth=w; ctx.stroke();
     }
     ctx.restore();
   }
-
-  // Build visible trail
   let dist=0; const pts=[m.history[0]];
   for (let i=1;i<m.history.length;i++) {
     dist+=Math.hypot(m.history[i].x-m.history[i-1].x,m.history[i].y-m.history[i-1].y);
     if(dist>m.tailMax) break; pts.push(m.history[i]);
   }
   const N=pts.length; if(N<2) return;
-
-  // Pass 1: outer diffuse glow
   ctx.save(); ctx.globalCompositeOperation='screen';
   for (let i=1;i<N;i++) {
     const t=i/(N-1), te=Math.pow(t,0.55);
@@ -535,8 +462,6 @@ function drawMeteor(ctx, m) {
     ctx.strokeStyle=rgba(col[0],col[1],col[2],a); ctx.lineWidth=w; ctx.lineCap='round'; ctx.stroke();
   }
   ctx.restore();
-
-  // Pass 2: mid plasma channel
   ctx.save(); ctx.globalCompositeOperation='screen';
   for (let i=1;i<N;i++) {
     const t=i/(N-1), te=Math.pow(t,0.65);
@@ -547,8 +472,6 @@ function drawMeteor(ctx, m) {
     ctx.strokeStyle=rgba(col[0],col[1],col[2],a); ctx.lineWidth=w; ctx.lineCap='round'; ctx.stroke();
   }
   ctx.restore();
-
-  // Pass 3: sharp ablation core
   for (let i=1;i<N;i++) {
     const t=i/(N-1), te=Math.pow(t,0.72);
     const a=eb*Math.pow(1-te,1.35)*0.92; if(a<0.006) continue;
@@ -557,18 +480,13 @@ function drawMeteor(ctx, m) {
     ctx.beginPath(); ctx.moveTo(pts[i-1].x,pts[i-1].y); ctx.lineTo(pts[i].x,pts[i].y);
     ctx.strokeStyle=rgba(col[0],col[1],col[2],a); ctx.lineWidth=w; ctx.lineCap='round'; ctx.lineJoin='round'; ctx.stroke();
   }
-
   const hx=m.history[0].x, hy=m.history[0].y;
-
-  // Entry flash
   if (m.entryFlash>0) {
     const ef=m.entryFlash, er=m.headR*(4+ef*9);
     const g=ctx.createRadialGradient(hx,hy,0,hx,hy,er);
     g.addColorStop(0,rgba(255,255,255,ef*0.88)); g.addColorStop(0.3,rgba(255,255,255,ef*0.4)); g.addColorStop(1,'rgba(0,0,0,0)');
     ctx.beginPath(); ctx.arc(hx,hy,er,0,TAU); ctx.fillStyle=g; ctx.fill();
   }
-
-  // Head nucleus
   const fr=m.headR*clamp(m.bright,1,4.5);
   { const g=ctx.createRadialGradient(hx,hy,0,hx,hy,fr);
     g.addColorStop(0,rgba(255,255,255,eb)); g.addColorStop(0.35,rgba(255,255,255,eb*0.9)); g.addColorStop(1,'rgba(0,0,0,0)');
@@ -577,8 +495,6 @@ function drawMeteor(ctx, m) {
     const g=ctx.createRadialGradient(hx,hy,0,hx,hy,hr);
     g.addColorStop(0,rgba(cc[0],cc[1],cc[2],eb*0.72)); g.addColorStop(0.4,rgba(cc[0],cc[1],cc[2],eb*0.25)); g.addColorStop(1,'rgba(0,0,0,0)');
     ctx.beginPath(); ctx.arc(hx,hy,hr,0,TAU); ctx.fillStyle=g; ctx.fill(); }
-
-  // Forward spike
   if (m.headR>1.8 && eb>0.35) {
     const a=Math.atan2(m.vy,m.vx), sl=fr*12*eb;
     ctx.save(); ctx.translate(hx,hy); ctx.rotate(a);
@@ -588,8 +504,6 @@ function drawMeteor(ctx, m) {
     ctx.strokeStyle=sg; ctx.lineWidth=fr*0.55; ctx.lineCap='round'; ctx.stroke();
     ctx.restore();
   }
-
-  // Sparkles
   for (const s of m.sparkles) {
     if(s.life<=0) continue;
     const sa=clamp(s.life*0.9,0,1);
@@ -624,7 +538,6 @@ function makeExplosion(x,y) {
   return {x,y,debris,rings,remnant,phase:0,phaseTime:0,nova:2.3,novaPeak:2.3,
     col:[218,228,255],active:true, fireball:{r:0,maxR:88+Math.random()*42,life:1,decay:.017}};
 }
-
 function stepExplosion(e) {
   e.phaseTime+=0.013; if(e.nova>0) e.nova-=0.009;
   const fb=e.fireball; if(fb.life>0){fb.r+=(fb.maxR-fb.r)*0.08; fb.life-=fb.decay;}
@@ -639,7 +552,6 @@ function stepExplosion(e) {
   }
   e.active=e.nova>-0.5||e.debris.length>0||e.rings.some(r=>r.life>0)||fb.life>0||e.remnant.some(n=>n.life>0);
 }
-
 function drawExplosion(ctx,e) {
   const {x,y}=e;
   if(e.nova>0){
@@ -743,13 +655,11 @@ function drawSatellite(ctx,sat){
     ctx.beginPath(); ctx.arc(sat.x,sat.y,r*4.5,0,TAU); ctx.fillStyle=g; ctx.fill();}
 }
 
-// ─── VIGNETTE ─────────────────────────────────────────────────────────────────
 function drawVignette(ctx,W,H){
   const g=ctx.createRadialGradient(W*.5,H*.5,Math.min(W,H)*.26,W*.5,H*.5,Math.max(W,H)*.84);
   g.addColorStop(0,'rgba(0,0,0,0)'); g.addColorStop(1,'rgba(0,0,0,0.78)');
   ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
 }
-
 function drawAirglow(ctx,W,H){
   const g=ctx.createLinearGradient(0,H*.76,0,H);
   g.addColorStop(0,'rgba(0,0,0,0)'); g.addColorStop(.4,'rgba(20,55,30,.020)'); g.addColorStop(1,'rgba(10,30,16,.030)');
@@ -765,7 +675,6 @@ export default function StarBackground({ fixed=true, starCount=null }) {
   const cfg       = TIER_CFG[tier];
   const count     = starCount ?? cfg.stars;
 
-  // Build star layers once
   const layers = useMemo(() => [
     Array.from({length:Math.floor(count*0.28)}, ()=>makeStar(0)),
     Array.from({length:Math.floor(count*0.42)}, ()=>makeStar(1.2)),
@@ -783,10 +692,8 @@ export default function StarBackground({ fixed=true, starCount=null }) {
     let nextShowerMs=2800+Math.random()*3800, showerAccumMs=0;
     let satellite=null, nextSatMs=42000+Math.random()*95000, satAccumMs=0;
     let scrollY=0;
-    // Adaptive FPS: skip frames on low-end
     const minFrameMs = cfg.targetFPS >= 60 ? 0 : 1000/cfg.targetFPS;
     let lastDrawTs=0;
-    // Offscreen MW canvas (rebuilt on resize)
     let mwCanvas=null, mwW=0, mwH=0;
     const sessionStart=performance.now();
 
@@ -796,12 +703,10 @@ export default function StarBackground({ fixed=true, starCount=null }) {
     function resize(){
       canvas.width =canvas.offsetWidth;
       canvas.height=canvas.offsetHeight;
-      // Rebuild MW offscreen canvas at new size
       if(canvas.width!==mwW||canvas.height!==mwH){
         mwW=canvas.width; mwH=canvas.height;
-        // Async to avoid jank on resize
         requestAnimationFrame(()=>{
-          mwCanvas=renderMWOffscreen(mwW,mwH,mwStars,mwDust,cfg.mwGlow);
+          mwCanvas=renderMWOffscreen(mwW,mwH,mwStars,mwDust,cfg.mwGlow,cfg.mwDust);
         });
       }
     }
@@ -830,7 +735,6 @@ export default function StarBackground({ fixed=true, starCount=null }) {
       const m=makeMeteor(W,H,{headR:3.8+Math.random()*2.0,decay:0.0015,isEgg:true,target});
       m.x=startX; m.y=startY; m.vx=Math.cos(angle)*speed; m.vy=Math.sin(angle)*speed; m.history=[];
       meteors.push(m);
-      console.log('%c☄️  Egg meteor!','color:#fa0;font-size:13px;font-weight:bold');
     }
 
     window.__starExplosion=()=>{eggFired=false;triggerEgg(canvas.width,canvas.height);};
@@ -838,13 +742,11 @@ export default function StarBackground({ fixed=true, starCount=null }) {
       const W=canvas.width,H=canvas.height;
       const map={parallel:showerParallel,radial:showerRadial,vformation:showerVformation,cluster:showerCluster};
       addShower((p&&map[p]?map[p]:showerRandom)(W,H));
-      console.log(`%c🌠 Shower: ${p||'random'}`,'color:#8df;font-size:12px');
     };
     window.__tier=()=>console.log(`Device tier: ${tier} (0=low,1=mid,2=high)`);
-    console.log(`%c✨ StarBG v6 | tier=${tier} | stars=${count} | mwStars=${cfg.mwStars}`,'color:#adf;font-size:11px');
+    console.log(`%c✨ StarBG v7 | tier=${tier} | stars=${count} | mwStars=${cfg.mwStars}`,'color:#adf;font-size:11px');
 
     function tick(ts){
-      // Adaptive frame skip
       if(ts-lastDrawTs < minFrameMs){raf=requestAnimationFrame(tick);return;}
       const dt=Math.min(ts-lastTs,50); lastTs=ts; lastDrawTs=ts;
       showerAccumMs+=dt; satAccumMs+=dt;
@@ -852,10 +754,8 @@ export default function StarBackground({ fixed=true, starCount=null }) {
       ctx.clearRect(0,0,W,H);
       const t=ts*.001;
 
-      // ── Milky Way (offscreen blit) ───────────────────────────────────────
-      drawMilkyWay(ctx,mwCanvas,mwStars,W,H,t);
+      drawMilkyWay(ctx,mwCanvas,mwStars,W,H,t,cfg.mwAnimStars);
 
-      // ── Stars ─────────────────────────────────────────────────────────────
       for(let li=layers.length-1;li>=0;li--){
         const pShift=scrollY*(0.0006*(li+1));
         for(const s of layers[li]){
@@ -863,23 +763,17 @@ export default function StarBackground({ fixed=true, starCount=null }) {
           const sy=s.yr*H+Math.cos(t*.024+s.to0)*.35*(li+1)-pShift;
           const margin=s.cls==='A'?65:s.cls==='B'?32:12;
           if(sx<-margin||sx>W+margin||sy<-margin||sy>H+margin) continue;
-
-          // Wink-out
           if(!s.winking){
             s.winkNext--;
             if(s.winkNext<=0){s.winking=true;s.winkTimer=0;s.winkDur=80+Math.random()*220;s.winkNext=250+Math.random()*950;}
           } else {s.winkTimer++;if(s.winkTimer>=s.winkDur)s.winking=false;}
           const wm=s.winking ? clamp(Math.sin(s.winkTimer/s.winkDur*Math.PI),0,1) : 1;
           if(wm<0.01) continue;
-
-          // 3-oscillator scintillation (aperiodic)
           const atm=0.45+s.yr*0.85;
           const sc0=0.5+0.5*Math.sin(t*s.ts0*atm+s.to0);
           const sc1=0.5+0.5*Math.sin(t*s.ts1*atm+s.to1);
           const sc2=0.5+0.5*Math.sin(t*s.ts2*atm+s.to2);
           const scint=clamp((sc0*.50+sc1*.32+sc2*.18)*wm,0,1);
-
-          // Atmospheric extinction (horizon fading + colour shift)
           const horizFade=clamp(1-(s.yr-0.74)*4.5,0.12,1);
           const magAdj=s.mag+(1-horizFade)*2.8;
           const savedMag=s.mag; s.mag=magAdj;
@@ -888,42 +782,37 @@ export default function StarBackground({ fixed=true, starCount=null }) {
         }
       }
 
-      // ── Airglow ─────────────────────────────────────────────────────────
       drawAirglow(ctx,W,H);
 
-      // ── Satellite ───────────────────────────────────────────────────────
-      if(satAccumMs>=nextSatMs){satAccumMs=0;nextSatMs=48000+Math.random()*105000;satellite=makeSatellite(W,H);}
-      if(satellite){stepSatellite(satellite);drawSatellite(ctx,satellite);if(satellite.dead)satellite=null;}
+      // Skip satellites on low tier
+      if(tier>0){
+        if(satAccumMs>=nextSatMs){satAccumMs=0;nextSatMs=48000+Math.random()*105000;satellite=makeSatellite(W,H);}
+        if(satellite){stepSatellite(satellite);drawSatellite(ctx,satellite);if(satellite.dead)satellite=null;}
+      }
 
-      // ── Shower spawner ──────────────────────────────────────────────────
       if(showerAccumMs>=nextShowerMs){
         showerAccumMs=0; nextShowerMs=3000+Math.random()*6200;
         addShower(showerRandom(W,H));
       }
 
-      // ── Easter egg (5 min) ──────────────────────────────────────────────
       if(!eggFired&&performance.now()-sessionStart>=5*60*1000) triggerEgg(W,H);
 
-      // ── Meteors ─────────────────────────────────────────────────────────
       for(let i=meteors.length-1;i>=0;i--){
         const m=meteors[i];
         stepMeteor(m,meteors,W,H,cfg);
         if(m.isEgg&&m.target&&m.history.length>5&&dist2(m.x,m.y,m.target.x,m.target.y)<32*32){
           explosions.push(makeExplosion(m.target.x,m.target.y));
-          console.log('%c SUPERNOVA!','color:#f60;font-size:18px;font-weight:bold');
           meteors.splice(i,1); continue;
         }
         if(m.life<=0||m.x<-700||m.x>W+700||m.y<-600||m.y>H+600){meteors.splice(i,1);continue;}
         drawMeteor(ctx,m);
       }
 
-      // ── Explosions ──────────────────────────────────────────────────────
       for(let i=explosions.length-1;i>=0;i--){
         stepExplosion(explosions[i]); drawExplosion(ctx,explosions[i]);
         if(!explosions[i].active) explosions.splice(i,1);
       }
 
-      // ── Vignette ────────────────────────────────────────────────────────
       drawVignette(ctx,W,H);
       raf=requestAnimationFrame(tick);
     }
@@ -941,8 +830,8 @@ export default function StarBackground({ fixed=true, starCount=null }) {
   },[layers,mwStars,mwDust,cfg,tier]);
 
   const style = fixed
-    ? {position:'fixed',inset:0,width:'100%',height:'100%',pointerEvents:'none',zIndex:0,background:'#000',transform:'translateZ(0)'}
-    : {position:'absolute',inset:0,width:'100%',height:'100%',pointerEvents:'none',background:'#000',transform:'translateZ(0)'};
+    ? {position:'fixed',inset:0,width:'100%',height:'100%',pointerEvents:'none',zIndex:0,background:'#000',transform:'translateZ(0)',willChange:'auto'}
+    : {position:'absolute',inset:0,width:'100%',height:'100%',pointerEvents:'none',background:'#000',transform:'translateZ(0)',willChange:'auto'};
 
   return <canvas ref={canvasRef} style={style} />;
 }
