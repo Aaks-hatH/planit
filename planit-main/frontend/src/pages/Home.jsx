@@ -147,6 +147,25 @@ function TestimonialCard({ quote, author, role, event, delay = 0 }) {
 }
 
 // ─────────────────────────────────────────────
+// COSMIC AMBIENT LAYER — soft nebulae, aurora
+// These sit between the star canvas and page content.
+// opacity is intentionally low so they don't compete.
+// ─────────────────────────────────────────────
+
+function CosmicAmbient() {
+  return (
+    <div className="fixed inset-0 pointer-events-none overflow-hidden" style={{ zIndex: 1 }}>
+      {/* Slow-drifting nebula blobs */}
+      <div className="cosmic-orb cosmic-orb-1" />
+      <div className="cosmic-orb cosmic-orb-2" />
+      <div className="cosmic-orb cosmic-orb-3" />
+      {/* Horizon aurora shimmer */}
+      <div className="cosmic-aurora" />
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────
 // MAIN
 // ─────────────────────────────────────────────
 
@@ -195,11 +214,79 @@ export default function Home() {
 
   return (
     <div className="min-h-screen text-white overflow-x-hidden" style={{ background: '#06060c' }}>
-      {/* StarBackground: a lightweight 2D canvas star field with shooting stars.
-          No Three.js or WebGL required. See /about for why this page is dark. */}
       <StarBackground fixed={true} starCount={220} />
+      <CosmicAmbient />
 
       <style>{`
+        /* ── Cosmic orbs ─────────────────────────────────────────── */
+        .cosmic-orb {
+          position: absolute;
+          border-radius: 50%;
+          filter: blur(90px);
+          opacity: 0;
+          animation: orb-breathe 0s linear infinite;
+        }
+        .cosmic-orb-1 {
+          width: 580px; height: 380px;
+          top: -8%; left: -10%;
+          background: radial-gradient(ellipse, rgba(80,60,180,0.18) 0%, rgba(40,20,100,0.06) 55%, transparent 75%);
+          animation: orb-drift-1 32s ease-in-out infinite;
+          animation-delay: 0s;
+        }
+        .cosmic-orb-2 {
+          width: 480px; height: 520px;
+          top: 20%; right: -8%;
+          background: radial-gradient(ellipse, rgba(20,80,160,0.14) 0%, rgba(10,40,90,0.05) 55%, transparent 75%);
+          animation: orb-drift-2 44s ease-in-out infinite;
+          animation-delay: -14s;
+        }
+        .cosmic-orb-3 {
+          width: 420px; height: 300px;
+          bottom: 12%; left: 30%;
+          background: radial-gradient(ellipse, rgba(100,40,140,0.12) 0%, rgba(50,15,80,0.04) 55%, transparent 75%);
+          animation: orb-drift-3 38s ease-in-out infinite;
+          animation-delay: -8s;
+        }
+
+        /* ── Aurora shimmer at bottom ────────────────────────────── */
+        .cosmic-aurora {
+          position: absolute;
+          bottom: 0; left: 0; right: 0;
+          height: 280px;
+          background: linear-gradient(
+            to top,
+            rgba(20, 60, 40, 0.06) 0%,
+            rgba(30, 80, 80, 0.04) 40%,
+            transparent 100%
+          );
+          animation: aurora-pulse 18s ease-in-out infinite;
+        }
+
+        @keyframes orb-drift-1 {
+          0%   { opacity: 1; transform: translate(0px, 0px) scale(1); }
+          25%  { transform: translate(45px, 30px) scale(1.06); }
+          50%  { transform: translate(20px, 60px) scale(0.95); }
+          75%  { transform: translate(-25px, 25px) scale(1.03); }
+          100% { opacity: 1; transform: translate(0px, 0px) scale(1); }
+        }
+        @keyframes orb-drift-2 {
+          0%   { opacity: 1; transform: translate(0px, 0px) scale(1); }
+          33%  { transform: translate(-40px, 50px) scale(1.08); }
+          66%  { transform: translate(30px, -20px) scale(0.94); }
+          100% { opacity: 1; transform: translate(0px, 0px) scale(1); }
+        }
+        @keyframes orb-drift-3 {
+          0%   { opacity: 1; transform: translate(0px, 0px) scale(1); }
+          40%  { transform: translate(30px, -40px) scale(1.05); }
+          80%  { transform: translate(-20px, 20px) scale(0.97); }
+          100% { opacity: 1; transform: translate(0px, 0px) scale(1); }
+        }
+        @keyframes aurora-pulse {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.4; }
+        }
+
+        /* ── Shimmer text ─────────────────────────────────────────── */
         @keyframes shimmer-slide {
           0%   { background-position: -200% center; }
           100% { background-position:  200% center; }
@@ -218,6 +305,71 @@ export default function Home() {
           -webkit-text-fill-color: transparent;
           animation: shimmer-slide 5s ease-in-out infinite;
         }
+
+        /* ── Cosmic glow ring — hero badge pulse ─────────────────── */
+        @keyframes ring-pulse {
+          0%, 100% { box-shadow: 0 0 0 0px rgba(148,163,184,0), 0 0 28px 4px rgba(100,116,139,0.10); }
+          50%       { box-shadow: 0 0 0 8px rgba(148,163,184,0.04), 0 0 40px 8px rgba(100,116,139,0.18); }
+        }
+        .hero-badge { animation: ring-pulse 5s ease-in-out infinite; }
+
+        /* ── Floating constellation dots — hero section ──────────── */
+        @keyframes float-dot {
+          0%, 100% { transform: translateY(0px) scale(1);   opacity: 0.35; }
+          50%       { transform: translateY(-14px) scale(1.2); opacity: 0.65; }
+        }
+        .constellate {
+          position: absolute;
+          width: 3px; height: 3px;
+          background: white;
+          border-radius: 50%;
+          pointer-events: none;
+        }
+        .constellate:nth-child(1)  { top:18%; left:8%;  animation: float-dot 7.2s ease-in-out infinite 0.0s; }
+        .constellate:nth-child(2)  { top:12%; left:22%; animation: float-dot 8.8s ease-in-out infinite 1.2s; }
+        .constellate:nth-child(3)  { top:28%; left:5%;  animation: float-dot 6.5s ease-in-out infinite 2.4s; }
+        .constellate:nth-child(4)  { top:8%;  left:72%; animation: float-dot 9.1s ease-in-out infinite 0.6s; }
+        .constellate:nth-child(5)  { top:22%; left:85%; animation: float-dot 7.7s ease-in-out infinite 3.0s; }
+        .constellate:nth-child(6)  { top:35%; left:91%; animation: float-dot 8.3s ease-in-out infinite 1.8s; }
+        .constellate:nth-child(7)  { top:55%; left:4%;  animation: float-dot 7.0s ease-in-out infinite 2.1s; }
+        .constellate:nth-child(8)  { top:62%; left:94%; animation: float-dot 9.4s ease-in-out infinite 0.9s; }
+
+        /* ── Pulsing hero glow disc ──────────────────────────────── */
+        @keyframes hero-disc-pulse {
+          0%, 100% { opacity: 0.07; transform: scale(1); }
+          50%       { opacity: 0.13; transform: scale(1.04); }
+        }
+        .hero-disc {
+          position: absolute;
+          left: 50%; top: 42%;
+          transform: translate(-50%, -50%);
+          width: 680px; height: 340px;
+          border-radius: 50%;
+          background: radial-gradient(ellipse, rgba(120,100,200,0.35) 0%, transparent 70%);
+          filter: blur(60px);
+          animation: hero-disc-pulse 8s ease-in-out infinite;
+          pointer-events: none;
+        }
+
+        /* ── Scan-line sweep on stat cards ──────────────────────── */
+        @keyframes scan-sweep {
+          0%   { transform: translateX(-120%); }
+          100% { transform: translateX(220%);  }
+        }
+        .stat-card { position: relative; overflow: hidden; }
+        .stat-card::after {
+          content: '';
+          position: absolute;
+          inset: 0;
+          background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.04) 50%, transparent 100%);
+          transform: translateX(-120%);
+          animation: scan-sweep 5s ease-in-out infinite;
+          pointer-events: none;
+        }
+        .stat-card:nth-child(2)::after { animation-delay: 1.6s; }
+        .stat-card:nth-child(3)::after { animation-delay: 3.2s; }
+
+        /* ── Input styles ─────────────────────────────────────────── */
         .dark-input {
           width: 100%;
           padding: 0.75rem 1rem;
@@ -232,6 +384,13 @@ export default function Home() {
         .dark-input:focus { border-color: #64748b; }
         .dark-input::placeholder { color: #475569; }
         .dark-input option { background: #0f172a; color: white; }
+
+        /* ── Respect reduced motion ──────────────────────────────── */
+        @media (prefers-reduced-motion: reduce) {
+          .cosmic-orb, .cosmic-aurora, .hero-badge,
+          .constellate, .hero-disc, .stat-card::after,
+          .shimmer-white, .shimmer-slate { animation: none !important; }
+        }
       `}</style>
 
       {/* Nav */}
@@ -240,7 +399,7 @@ export default function Home() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6 }}
         className="sticky top-0 z-50 border-b border-neutral-800/60"
-        style={{ background: 'rgba(6,6,12,0.8)', backdropFilter: 'blur(20px)' }}
+        style={{ background: 'rgba(6,6,12,0.85)', backdropFilter: 'blur(20px)' }}
       >
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -264,10 +423,22 @@ export default function Home() {
         </div>
       </motion.header>
 
-      <main className="relative z-10">
+      <main className="relative" style={{ zIndex: 2 }}>
 
         {/* HERO */}
-        <section className="relative min-h-[92vh] flex items-center">
+        <section className="relative min-h-[92vh] flex items-center overflow-hidden">
+          {/* Constellation dots floating in hero periphery */}
+          <div className="constellate" />
+          <div className="constellate" />
+          <div className="constellate" />
+          <div className="constellate" />
+          <div className="constellate" />
+          <div className="constellate" />
+          <div className="constellate" />
+          <div className="constellate" />
+          {/* Central glow disc */}
+          <div className="hero-disc" />
+
           <div className="w-full">
             <div className="max-w-4xl mx-auto px-6 py-28 text-center">
 
@@ -275,7 +446,7 @@ export default function Home() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.6, delay: 0.15 }}
-                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full text-xs font-medium text-neutral-400 mb-10 border border-neutral-700/60 cursor-default"
+                className="hero-badge inline-flex items-center gap-2 px-5 py-2.5 rounded-full text-xs font-medium text-neutral-400 mb-10 border border-neutral-700/60 cursor-default"
                 style={{ background: 'rgba(255,255,255,0.04)', backdropFilter: 'blur(10px)' }}
               >
                 <Sparkles className="w-3.5 h-3.5 text-neutral-500" />
@@ -329,11 +500,11 @@ export default function Home() {
               >
                 {[
                   { value: 50000, suffix: '+', label: 'Events planned' },
-                  { value: 500, suffix: 'k+', label: 'Teams organized' },
-                  { value: 100, suffix: '%', label: 'Success rate' },
+                  { value: 500,   suffix: 'k+', label: 'Teams organized' },
+                  { value: 100,   suffix: '%',  label: 'Success rate' },
                 ].map((stat, i) => (
                   <div key={i}
-                    className="text-center p-5 rounded-2xl border border-neutral-800 hover:border-neutral-600 transition-all duration-400 cursor-default hover:scale-105"
+                    className="stat-card text-center p-5 rounded-2xl border border-neutral-800 hover:border-neutral-600 transition-all duration-400 cursor-default hover:scale-105"
                     style={{ background: 'rgba(255,255,255,0.04)', backdropFilter: 'blur(8px)' }}>
                     <div className="text-3xl font-black text-white mb-1">
                       <AnimatedCounter end={stat.value} suffix={stat.suffix} />
@@ -352,9 +523,9 @@ export default function Home() {
             <SectionHeader eyebrow="How teams use it" title="Your event, every step" subtitle="Built for the full arc. Months of prep to the final goodbye." />
             <div className="grid md:grid-cols-3 gap-6">
               {[
-                { icon: Brain, phase: 'Before', num: '01', title: 'Coordinate your team', desc: 'Assign tasks, split expenses, finalize the guest list, share files, and get every detail locked in before the big day.' },
-                { icon: Zap, phase: 'During', num: '02', title: 'Stay on top of it', desc: 'Quick check-ins, QR guest arrivals, last-minute updates. Your team stays synced while the event runs itself.' },
-                { icon: CheckCircle2, phase: 'After', num: '03', title: 'Wrap it up right', desc: 'Close expenses, share memories, collect feedback. Every loose end, tied.' },
+                { icon: Brain,        phase: 'Before', num: '01', title: 'Coordinate your team',  desc: 'Assign tasks, split expenses, finalize the guest list, share files, and get every detail locked in before the big day.' },
+                { icon: Zap,          phase: 'During', num: '02', title: 'Stay on top of it',     desc: 'Quick check-ins, QR guest arrivals, last-minute updates. Your team stays synced while the event runs itself.' },
+                { icon: CheckCircle2, phase: 'After',  num: '03', title: 'Wrap it up right',      desc: 'Close expenses, share memories, collect feedback. Every loose end, tied.' },
               ].map((item, i) => (
                 <Reveal key={i} delay={i * 120}>
                   <div className="group relative p-8 bg-neutral-900/50 rounded-3xl border border-neutral-800 hover:border-neutral-600 hover:bg-neutral-800/50 transition-all duration-500 backdrop-blur-sm">
@@ -379,12 +550,12 @@ export default function Home() {
           <div className="max-w-7xl mx-auto px-6">
             <SectionHeader eyebrow="Features" title="Everything you need" subtitle="Powerful tools for seamless event planning and coordination" />
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-              <FeatureCard icon={MessageSquare} title="Real-time team chat" description="Instant messaging with typing indicators, reactions, and threaded conversations. Keep your planning team connected and aligned." delay={0} />
-              <FeatureCard icon={ListChecks} title="Task management" description="Create checklists, assign tasks, set deadlines, and track completion. Never miss a critical planning milestone." delay={80} />
-              <FeatureCard icon={BarChart3} title="Quick polls and voting" description="Make team decisions faster with live polls. Vote on venues, dates, menus, and more. See results instantly." delay={160} />
-              <FeatureCard icon={FileText} title="Unlimited file sharing" description="Share contracts, floor plans, schedules, and more. Everything your team needs in one organized space." delay={240} />
-              <FeatureCard icon={Clock} title="Timeline and scheduling" description="Build your event timeline, coordinate arrival times, and manage your run-of-show with precision." delay={320} />
-              <FeatureCard icon={Users} title="Unlimited participants" description="No limits on team size. Bring your entire planning committee, vendors, volunteers, everyone who needs to be involved." delay={400} />
+              <FeatureCard icon={MessageSquare} title="Real-time team chat"       description="Instant messaging with typing indicators, reactions, and threaded conversations. Keep your planning team connected and aligned." delay={0} />
+              <FeatureCard icon={ListChecks}    title="Task management"           description="Create checklists, assign tasks, set deadlines, and track completion. Never miss a critical planning milestone." delay={80} />
+              <FeatureCard icon={BarChart3}     title="Quick polls and voting"    description="Make team decisions faster with live polls. Vote on venues, dates, menus, and more. See results instantly." delay={160} />
+              <FeatureCard icon={FileText}      title="Unlimited file sharing"    description="Share contracts, floor plans, schedules, and more. Everything your team needs in one organized space." delay={240} />
+              <FeatureCard icon={Clock}         title="Timeline and scheduling"   description="Build your event timeline, coordinate arrival times, and manage your run-of-show with precision." delay={320} />
+              <FeatureCard icon={Users}         title="Unlimited participants"    description="No limits on team size. Bring your entire planning committee, vendors, volunteers, everyone who needs to be involved." delay={400} />
             </div>
           </div>
         </section>
@@ -404,9 +575,9 @@ export default function Home() {
                 <div className="space-y-4">
                   {[
                     { icon: CheckCircle2, text: 'QR code-based guest check-in system' },
-                    { icon: Users, text: 'Personalized digital invitations for each guest' },
-                    { icon: TrendingUp, text: 'Real-time attendance analytics dashboard' },
-                    { icon: Timer, text: 'Track check-in times and flow metrics' },
+                    { icon: Users,        text: 'Personalized digital invitations for each guest' },
+                    { icon: TrendingUp,   text: 'Real-time attendance analytics dashboard' },
+                    { icon: Timer,        text: 'Track check-in times and flow metrics' },
                   ].map((item, i) => (
                     <Reveal key={i} delay={i * 80}>
                       <div className="flex items-center gap-4 p-4 bg-neutral-900/50 rounded-2xl border border-neutral-800 hover:border-neutral-700 hover:bg-neutral-800/50 transition-all duration-300 backdrop-blur-sm">
@@ -573,9 +744,7 @@ export default function Home() {
                               )}
                             </label>
                             <div className="flex items-center bg-neutral-950/60 border border-neutral-800 rounded-lg overflow-hidden focus-within:border-neutral-600 transition-colors">
-                              <span className="pl-3 pr-1 text-xs text-neutral-600 font-mono whitespace-nowrap flex-shrink-0">
-                                /e/
-                              </span>
+                              <span className="pl-3 pr-1 text-xs text-neutral-600 font-mono whitespace-nowrap flex-shrink-0">/e/</span>
                               <input
                                 type="text"
                                 value={formData.subdomain}
@@ -598,9 +767,7 @@ export default function Home() {
                                 </button>
                               )}
                             </div>
-                            <p className="text-xs text-neutral-700">
-                              Only lowercase letters, numbers, and hyphens. Edit freely or leave as generated.
-                            </p>
+                            <p className="text-xs text-neutral-700">Only lowercase letters, numbers, and hyphens.</p>
                           </div>
                         )}
                       </div>
