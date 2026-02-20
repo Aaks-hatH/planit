@@ -47,6 +47,8 @@ const io = socketIo(server, {
   }
 });
 
+const FRONTEND_URL = process.env.FRONTEND_URL
+
 // ── CRITICAL FIX: make io accessible in all route handlers ──
 app.set('io', io);
 
