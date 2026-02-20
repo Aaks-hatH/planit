@@ -172,7 +172,7 @@ app.head('/', (req, res) => {
 
 
 app.get('*', (req, res) => {
-  res.redirect(301, 'FRONTEND_URL' + req.path);
+  res.redirect(301, process.env.FRONTEND_URL + req.path);
 });
 
 app.use(errorHandler);
