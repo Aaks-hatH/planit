@@ -1,37 +1,62 @@
-const express = require('express');
-const router = express.Router();
+const express  = require('express');
+const router   = express.Router();
 const mongoose = require('mongoose');
-const Incident = require('../models/Incident');
+const axios    = require('axios');
+const Incident     = require('../models/Incident');
 const UptimeReport = require('../models/UptimeReport');
 const { verifyAdmin } = require('../middleware/auth');
 
-// ─── Public: get current status + active incidents ───────────────────────────
+// ─── ntfy helper ──────────────────────────────────────────────────────────────
+// Set NTFY_URL in your .env, e.g. https://ntfy.sh/your-topic
+// or a self-hosted ntfy server URL.
+async function sendNtfy(report) {
+  const url = process.env.NTFY_URL;
+  if (!url) return; // silently skip if not configured
+
+  const isAuto   = report.description?.startsWith('[AUTO]');
+  const priority = isAuto ? 'urgent' : 'high';
+  const title    = isAuto
+    ? '🔴 AUTO-DETECTED: API unreachable'
+    : `⚠️ New Issue Report: ${report.affectedService}`;
+
+  try {
+    await axios.post(url, report.description, {
+      timeout: 5000,
+      headers: {
+        'Title':    title,
+        'Priority': priority,
+        'Tags':     isAuto ? 'rotating_light,server' : 'warning,loudspeaker',
+        'Content-Type': 'text/plain',
+      },
+    });
+  } catch (err) {
+    // Non-critical — log but don't fail the request
+    console.error('[ntfy] Failed to send notification:', err.message);
+  }
+}
+
+// ─── Public: get current status + active incidents ────────────────────────────
 router.get('/status', async (req, res) => {
   try {
-    const activeIncidents = await Incident.find({
-      status: { $ne: 'resolved' }
-    }).sort({ createdAt: -1 });
-
-    const recentResolved = await Incident.find({
+    const activeIncidents = await Incident.find({ status: { $ne: 'resolved' } }).sort({ createdAt: -1 });
+    const recentResolved  = await Incident.find({
       status: 'resolved',
       resolvedAt: { $gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) }
     }).sort({ resolvedAt: -1 }).limit(10);
 
     const dbOk = mongoose.connection.readyState === 1;
-    const uptimeSeconds = Math.floor(process.uptime());
 
     let overallStatus = 'operational';
     if (activeIncidents.some(i => i.severity === 'critical')) overallStatus = 'outage';
-    else if (activeIncidents.some(i => i.severity === 'major')) overallStatus = 'degraded';
     else if (activeIncidents.length > 0) overallStatus = 'degraded';
 
     res.json({
       status: overallStatus,
       dbStatus: dbOk ? 'connected' : 'disconnected',
-      uptimeSeconds,
+      uptimeSeconds: Math.floor(process.uptime()),
       activeIncidents,
       recentResolved,
-      checkedAt: new Date().toISOString()
+      checkedAt: new Date().toISOString(),
     });
   } catch (err) {
     res.status(500).json({ error: 'Failed to fetch status' });
@@ -39,7 +64,7 @@ router.get('/status', async (req, res) => {
 });
 
 // ─── Public: ping (lightweight) ──────────────────────────────────────────────
-// HEAD /api/uptime/ping  — UptimeRobot free plan only supports HEAD requests
+// HEAD /api/uptime/ping  — UptimeRobot / external monitors
 router.head('/ping', (req, res) => {
   res.set({
     'X-Service': 'planit-backend',
@@ -54,22 +79,28 @@ router.get('/ping', (req, res) => {
   res.json({
     ok: true,
     db: mongoose.connection.readyState === 1 ? 'ok' : 'down',
-    uptime: Math.floor(process.uptime())
+    uptime: Math.floor(process.uptime()),
   });
 });
 
 // ─── Public: submit an issue report ──────────────────────────────────────────
+// Saves the report and fires a ntfy push notification to the admin.
 router.post('/report', async (req, res) => {
   try {
     const { description, email, affectedService } = req.body;
     if (!description || description.trim().length < 5) {
       return res.status(400).json({ error: 'Description is required (min 5 chars)' });
     }
+
     const report = await UptimeReport.create({
-      description: description.trim().slice(0, 500),
-      email: (email || '').trim().slice(0, 200),
-      affectedService: (affectedService || 'General').trim()
+      description:     description.trim().slice(0, 500),
+      email:           (email || '').trim().slice(0, 200),
+      affectedService: (affectedService || 'General').trim(),
     });
+
+    // Fire-and-forget ntfy notification
+    sendNtfy(report);
+
     res.status(201).json({ success: true, reportId: report._id });
   } catch (err) {
     res.status(500).json({ error: 'Failed to submit report' });
@@ -79,9 +110,7 @@ router.post('/report', async (req, res) => {
 // ─── Admin: get all reports ───────────────────────────────────────────────────
 router.get('/admin/reports', verifyAdmin, async (req, res) => {
   try {
-    const reports = await UptimeReport.find()
-      .sort({ createdAt: -1 })
-      .limit(100);
+    const reports = await UptimeReport.find().sort({ createdAt: -1 }).limit(100);
     res.json({ reports });
   } catch (err) {
     res.status(500).json({ error: 'Failed to fetch reports' });
@@ -92,11 +121,7 @@ router.get('/admin/reports', verifyAdmin, async (req, res) => {
 router.patch('/admin/reports/:id', verifyAdmin, async (req, res) => {
   try {
     const { status } = req.body;
-    const report = await UptimeReport.findByIdAndUpdate(
-      req.params.id,
-      { status },
-      { new: true }
-    );
+    const report = await UptimeReport.findByIdAndUpdate(req.params.id, { status }, { new: true });
     if (!report) return res.status(404).json({ error: 'Report not found' });
     res.json({ report });
   } catch (err) {
@@ -107,9 +132,7 @@ router.patch('/admin/reports/:id', verifyAdmin, async (req, res) => {
 // ─── Admin: get all incidents ─────────────────────────────────────────────────
 router.get('/admin/incidents', verifyAdmin, async (req, res) => {
   try {
-    const incidents = await Incident.find()
-      .sort({ createdAt: -1 })
-      .limit(50);
+    const incidents = await Incident.find().sort({ createdAt: -1 }).limit(50);
     res.json({ incidents });
   } catch (err) {
     res.status(500).json({ error: 'Failed to fetch incidents' });
@@ -128,16 +151,16 @@ router.post('/admin/incidents', verifyAdmin, async (req, res) => {
     }
 
     const incident = await Incident.create({
-      title: title.trim(),
-      description: (description || '').trim(),
-      severity: severity || 'minor',
+      title:            title.trim(),
+      description:      (description || '').trim(),
+      severity:         severity || 'minor',
       affectedServices: affectedServices || [],
       timeline,
-      reportIds: reportIds || []
+      reportIds:        reportIds || [],
     });
 
     // Mark associated reports as confirmed
-    if (reportIds && reportIds.length > 0) {
+    if (reportIds?.length > 0) {
       await UptimeReport.updateMany(
         { _id: { $in: reportIds } },
         { status: 'confirmed', incidentId: incident._id }
@@ -163,9 +186,8 @@ router.post('/admin/incidents/:id/timeline', verifyAdmin, async (req, res) => {
     incident.status = status;
 
     if (status === 'resolved') {
-      incident.resolvedAt = new Date();
-      const createdAt = incident.createdAt;
-      incident.downtimeMinutes = Math.round((incident.resolvedAt - createdAt) / 60000);
+      incident.resolvedAt     = new Date();
+      incident.downtimeMinutes = Math.round((incident.resolvedAt - incident.createdAt) / 60000);
     }
 
     await incident.save();
