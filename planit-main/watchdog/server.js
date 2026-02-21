@@ -149,7 +149,7 @@ async function createDownIncident(errorMsg) {
     });
 
     const incident = await Incident.create({
-      title:            '🔴 API Unreachable — Backend Down',
+      title:            ' API Unreachable — Backend Down',
       description:      `The PlanIt backend failed to respond to ${THRESHOLD} consecutive health checks from the external watchdog monitor. Users cannot access the application.`,
       severity:         'critical',
       status:           'investigating',
@@ -286,7 +286,7 @@ async function pingMainServer() {
     state.lastError  = err.message;
     state.lastPingMs = null;
 
-    console.warn(`[${ts()}] 🔴  Ping FAILED (${state.consecutiveFailures}/${THRESHOLD}): ${err.message}`);
+    console.warn(`[${ts()}]   Ping FAILED (${state.consecutiveFailures}/${THRESHOLD}): ${err.message}`);
 
     // ── Threshold hit — server officially down ───────────────────────────────
     if (state.consecutiveFailures === THRESHOLD && !state.isDown) {
