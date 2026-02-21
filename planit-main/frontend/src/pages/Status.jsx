@@ -15,11 +15,17 @@ function formatUTCDate(dateStr) {
 }
 
 function formatDayLabel(date) {
+  // Use local date so the header matches the user's actual calendar day
   return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
 function getDayKey(date) {
-  return date.toISOString().slice(0, 10); // YYYY-MM-DD
+  // Use local date methods — toISOString() is always UTC which causes
+  // off-by-one errors for users in timezones ahead of UTC
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
 }
 
 // Build 90-day bar data for a service from incidents
@@ -42,25 +48,26 @@ function buildBars(incidents, serviceName) {
 
     // Mark every day the incident spanned
     const cursor = new Date(start);
-    cursor.setUTCHours(0, 0, 0, 0);
-    while (cursor <= end) {
+    cursor.setHours(0, 0, 0, 0); // local midnight
+    const endMidnight = new Date(end);
+    endMidnight.setHours(23, 59, 59, 999);
+    while (cursor <= endMidnight) {
       const key = getDayKey(cursor);
       const existing = dayMap[key];
       const nextStatus = inc.severity === 'critical' ? 'outage' : 'degraded';
       if (!existing || (existing === 'degraded' && nextStatus === 'outage')) {
         dayMap[key] = nextStatus;
       }
-      cursor.setUTCDate(cursor.getUTCDate() + 1);
+      cursor.setDate(cursor.getDate() + 1); // local date increment
     }
   });
 
   const bars = [];
   for (let i = days - 1; i >= 0; i--) {
-    const d = new Date(today);
-    d.setUTCDate(d.getUTCDate() - i);
-    d.setUTCHours(0, 0, 0, 0);
-    const key = getDayKey(d);
-    bars.push({ date: new Date(d), status: dayMap[key] || 'ok' });
+    const d = new Date();
+    d.setDate(d.getDate() - i);   // local date arithmetic
+    d.setHours(0, 0, 0, 0);
+    bars.push({ date: new Date(d), status: dayMap[getDayKey(d)] || 'ok' });
   }
   return bars;
 }
@@ -81,12 +88,12 @@ function groupByDate(incidents) {
   return groups;
 }
 
-// Generate date keys for the last 7 days (for "no incidents reported" rows)
+// Generate date keys for the last 7 days using local time
 function last7DayKeys() {
   const keys = [];
   for (let i = 0; i < 7; i++) {
     const d = new Date();
-    d.setUTCDate(d.getUTCDate() - i);
+    d.setDate(d.getDate() - i);  // local date arithmetic
     keys.push(getDayKey(d));
   }
   return keys;
@@ -551,7 +558,8 @@ export default function Status() {
             </h2>
 
             {dayKeys.map(dayKey => {
-              const dayDate = new Date(dayKey + 'T00:00:00Z');
+            const [y, mo, d] = dayKey.split('-').map(Number);
+              const dayDate = new Date(y, mo - 1, d); // local date constructor
               const label = formatDayLabel(dayDate);
               const dayIncidents = incidentsByDay[dayKey] || [];
 
