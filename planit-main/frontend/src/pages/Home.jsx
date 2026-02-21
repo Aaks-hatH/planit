@@ -126,7 +126,7 @@ function SectionHeader({ eyebrow, title, subtitle }) {
 function FeatureCard({ icon: Icon, title, description, delay = 0 }) {
   return (
     <Reveal delay={delay}>
-      <div className="group relative p-8 rounded-3xl border border-neutral-800 bg-neutral-900/50 hover:border-neutral-600 hover:bg-neutral-800/50 transition-all duration-500 backdrop-blur-sm h-full">
+      <div className="group relative p-8 rounded-3xl border border-neutral-800 bg-neutral-900/50 hover:border-neutral-600 hover:bg-neutral-800/50 transition-all duration-500 h-full">
         <div className="mb-5">
           <div className="w-14 h-14 rounded-2xl bg-neutral-800 flex items-center justify-center group-hover:bg-white transition-all duration-500 group-hover:scale-110">
             <Icon className="w-7 h-7 text-neutral-400 group-hover:text-neutral-900 transition-colors duration-500" />
@@ -142,7 +142,7 @@ function FeatureCard({ icon: Icon, title, description, delay = 0 }) {
 function TestimonialCard({ quote, author, role, event, delay = 0 }) {
   return (
     <Reveal delay={delay}>
-      <div className="p-8 rounded-3xl border border-neutral-800 bg-neutral-900/50 hover:border-neutral-700 hover:bg-neutral-800/50 transition-all duration-500 backdrop-blur-sm h-full">
+      <div className="p-8 rounded-3xl border border-neutral-800 bg-neutral-900/50 hover:border-neutral-700 hover:bg-neutral-800/50 transition-all duration-500 h-full">
         <div className="flex items-start gap-4 mb-5">
           <div className="flex-shrink-0 w-12 h-12 rounded-2xl bg-white flex items-center justify-center">
             <span className="text-base font-bold text-neutral-900">{author.charAt(0)}</span>
@@ -170,7 +170,7 @@ function TestimonialCard({ quote, author, role, event, delay = 0 }) {
 
 function CosmicAmbient() {
   return (
-    <div className="fixed inset-0 pointer-events-none overflow-hidden" style={{ zIndex: 1 }}>
+    <div className="fixed inset-0 pointer-events-none overflow-hidden" style={{ zIndex: 1, willChange: 'transform', backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden' }}>
       {/* Slow-drifting nebula blobs */}
       <div className="cosmic-orb cosmic-orb-1" />
       <div className="cosmic-orb cosmic-orb-2" />
@@ -229,7 +229,7 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen text-white overflow-x-hidden" style={{ background: '#06060c' }}>
+    <div className="min-h-screen text-white" style={{ background: '#06060c' }}>
       <StarBackground fixed={true} starCount={220} />
       <CosmicAmbient />
 
@@ -415,7 +415,7 @@ export default function Home() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6 }}
         className="sticky top-0 z-50 border-b border-neutral-800/60"
-        style={{ background: 'rgba(6,6,12,0.85)', backdropFilter: 'blur(20px)' }}
+        style={{ background: 'rgba(6,6,12,0.94)' }}
       >
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -439,7 +439,7 @@ export default function Home() {
         </div>
       </motion.header>
 
-      <main className="relative" style={{ zIndex: 2 }}>
+      <main className="relative overflow-x-hidden" style={{ zIndex: 2 }}>
 
         {/* HERO */}
         <section className="relative min-h-[92vh] flex items-center overflow-hidden">
@@ -463,7 +463,7 @@ export default function Home() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.6, delay: 0.15 }}
                 className="hero-badge inline-flex items-center gap-2 px-5 py-2.5 rounded-full text-xs font-medium text-neutral-400 mb-10 border border-neutral-700/60 cursor-default"
-                style={{ background: 'rgba(255,255,255,0.04)', backdropFilter: 'blur(10px)' }}
+                style={{ background: 'rgba(255,255,255,0.04)' }}
               >
                 <Sparkles className="w-3.5 h-3.5 text-neutral-500" />
                 The planning hub teams swear by
@@ -503,7 +503,7 @@ export default function Home() {
                 </a>
                 <a href="#features"
                   className="inline-flex items-center gap-2 px-9 py-4 border border-neutral-700 text-neutral-300 text-base font-medium rounded-2xl hover:border-neutral-500 hover:text-white hover:scale-105 transition-all duration-300"
-                  style={{ background: 'rgba(255,255,255,0.04)', backdropFilter: 'blur(8px)' }}>
+                  style={{ background: 'rgba(255,255,255,0.04)' }}>
                   See features <ChevronRight className="w-4 h-4" />
                 </a>
               </motion.div>
@@ -521,7 +521,7 @@ export default function Home() {
                 ].map((stat, i) => (
                   <div key={i}
                     className="stat-card text-center p-5 rounded-2xl border border-neutral-800 hover:border-neutral-600 transition-all duration-400 cursor-default hover:scale-105"
-                    style={{ background: 'rgba(255,255,255,0.04)', backdropFilter: 'blur(8px)' }}>
+                    style={{ background: 'rgba(255,255,255,0.04)' }}>
                     <div className="text-3xl font-black text-white mb-1">
                       <AnimatedCounter end={stat.value} suffix={stat.suffix} />
                     </div>
@@ -544,7 +544,7 @@ export default function Home() {
                 { icon: CheckCircle2, phase: 'After',  num: '03', title: 'Wrap it up right',      desc: 'Close expenses, share memories, collect feedback. Every loose end, tied.' },
               ].map((item, i) => (
                 <Reveal key={i} delay={i * 120}>
-                  <div className="group relative p-8 bg-neutral-900/50 rounded-3xl border border-neutral-800 hover:border-neutral-600 hover:bg-neutral-800/50 transition-all duration-500 backdrop-blur-sm">
+                  <div className="group relative p-8 bg-neutral-900/50 rounded-3xl border border-neutral-800 hover:border-neutral-600 hover:bg-neutral-800/50 transition-all duration-500">
                     <div className="flex items-start justify-between mb-6">
                       <div className="w-12 h-12 rounded-2xl bg-neutral-800 group-hover:bg-white flex items-center justify-center transition-all duration-500">
                         <item.icon className="w-6 h-6 text-neutral-400 group-hover:text-neutral-900 transition-colors duration-500" />
@@ -596,7 +596,7 @@ export default function Home() {
                     { icon: Timer,        text: 'Track check-in times and flow metrics' },
                   ].map((item, i) => (
                     <Reveal key={i} delay={i * 80}>
-                      <div className="flex items-center gap-4 p-4 bg-neutral-900/50 rounded-2xl border border-neutral-800 hover:border-neutral-700 hover:bg-neutral-800/50 transition-all duration-300 backdrop-blur-sm">
+                      <div className="flex items-center gap-4 p-4 bg-neutral-900/50 rounded-2xl border border-neutral-800 hover:border-neutral-700 hover:bg-neutral-800/50 transition-all duration-300">
                         <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center flex-shrink-0">
                           <item.icon className="w-5 h-5 text-neutral-900" />
                         </div>
@@ -608,7 +608,7 @@ export default function Home() {
               </Reveal>
 
               <Reveal delay={140}>
-                <div className="bg-neutral-900/60 rounded-3xl border border-neutral-800 p-10 backdrop-blur-sm hover:border-neutral-700 transition-all duration-500">
+                <div className="bg-neutral-900/60 rounded-3xl border border-neutral-800 p-10 hover:border-neutral-700 transition-all duration-500">
                   <div className="text-center mb-8">
                     <div className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-500/10 border border-emerald-500/30 rounded-full text-sm font-bold text-emerald-400 mb-6 animate-pulse">
                       <CheckCircle2 className="w-4 h-4" />Guest Check-in Active
@@ -667,13 +667,13 @@ export default function Home() {
                   <Reveal delay={100}>
                     <div className="grid grid-cols-3 gap-4 mb-10">
                       {[{ icon: Clock, label: '60 seconds' }, { icon: Shield, label: 'Secure' }, { icon: Gift, label: 'Free forever' }].map((item, i) => (
-                        <div key={i} className="text-center p-5 bg-neutral-900/50 rounded-2xl border border-neutral-800 hover:border-neutral-700 hover:bg-neutral-800/50 transition-all duration-300 backdrop-blur-sm hover:scale-105">
+                        <div key={i} className="text-center p-5 bg-neutral-900/50 rounded-2xl border border-neutral-800 hover:border-neutral-700 hover:bg-neutral-800/50 transition-all duration-300 hover:scale-105">
                           <item.icon className="w-6 h-6 text-neutral-400 mx-auto mb-2" />
                           <p className="text-sm font-semibold text-neutral-300">{item.label}</p>
                         </div>
                       ))}
                     </div>
-                    <div className="space-y-3 p-8 bg-neutral-900/50 rounded-3xl border border-neutral-800 backdrop-blur-sm">
+                    <div className="space-y-3 p-8 bg-neutral-900/50 rounded-3xl border border-neutral-800">
                       <p className="text-base font-bold text-white mb-4">Everything included:</p>
                       {['Private event space with custom branded URL', 'Unlimited team members, no caps', 'Real-time chat with file sharing', 'Task lists and deadline tracking', 'Polls, voting, and decision tools', 'RSVP management and tracking', 'Expense splitting and budgets', 'QR check-in for large events', 'Timeline and scheduling tools'].map((item, i) => (
                         <div key={i} className="flex items-start gap-3 text-sm text-neutral-400">
@@ -697,7 +697,7 @@ export default function Home() {
                         </div>
                       </div>
                       {mode === 'enterprise' ? (
-                        <div className="p-8 bg-neutral-900/50 border border-neutral-800 rounded-3xl backdrop-blur-sm">
+                        <div className="p-8 bg-neutral-900/50 border border-neutral-800 rounded-3xl">
                           <div className="flex items-start gap-4">
                             <Zap className="w-6 h-6 text-neutral-400 flex-shrink-0 mt-1" />
                             <div>
@@ -733,7 +733,7 @@ export default function Home() {
 
               {!created && (
                 <Reveal delay={80}>
-                  <div className="bg-neutral-900/60 rounded-3xl border border-neutral-800 p-10 backdrop-blur-md hover:border-neutral-700 transition-all duration-500 sticky top-24">
+                  <div className="bg-neutral-900/60 rounded-3xl border border-neutral-800 p-10 hover:border-neutral-700 transition-all duration-500 sticky top-24">
                     <div className="mb-8 p-5 bg-neutral-950/80 rounded-2xl border border-neutral-800">
                       <label className="block text-xs font-bold text-neutral-500 uppercase tracking-wider mb-4">Event Type</label>
                       <div className="grid grid-cols-2 gap-3">
@@ -855,7 +855,7 @@ export default function Home() {
         </section>
 
         {/* FOOTER */}
-        <footer className="border-t border-neutral-800/50" style={{ background: 'rgba(6,6,12,0.95)', backdropFilter: 'blur(20px)' }}>
+        <footer className="border-t border-neutral-800/50" style={{ background: 'rgba(6,6,12,0.95)' }}>
           <div className="max-w-7xl mx-auto px-6 py-16">
             <div className="grid md:grid-cols-4 gap-12 mb-12">
               <div>
