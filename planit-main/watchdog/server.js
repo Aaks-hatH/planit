@@ -159,7 +159,7 @@ async function createDownIncident(errorMsg) {
     });
 
     const incident = await Incident.create({
-      title:            ' API Unreachable — Backend Down',
+      title:            '🔴 API Unreachable — Backend Down',
       description:      `The PlanIt backend failed to respond to ${THRESHOLD} consecutive health checks from the external watchdog monitor. Users cannot access the application.`,
       severity:         'critical',
       status:           'investigating',
@@ -280,7 +280,7 @@ async function pingMainServer() {
       }
 
       await sendNtfy({
-        title:    '🟢 PlanIt Recovered',
+        title:    'PlanIt Recovered',
         message:  `Backend is back online after ${downtimeMins < 1 ? '<1' : downtimeMins} min of downtime.\nResponse time: ${ms}ms\nThe status page has been updated automatically.`,
         priority: 'high',
         tags:     ['white_check_mark', 'tada'],
@@ -302,20 +302,20 @@ async function pingMainServer() {
     // Record failed ping for bar chart history (non-blocking)
     UptimeCheck.create({ status: 'down', error: err.message }).catch(() => {});
 
-    console.warn(`[${ts()}]   Ping FAILED (${state.consecutiveFailures}/${THRESHOLD}): ${err.message}`);
+    console.warn(`[${ts()}] 🔴  Ping FAILED (${state.consecutiveFailures}/${THRESHOLD}): ${err.message}`);
 
     // ── Threshold hit — server officially down ───────────────────────────────
     if (state.consecutiveFailures === THRESHOLD && !state.isDown) {
       state.isDown = true;
       downSince    = Date.now();
 
-      console.error(`[${ts()}]   THRESHOLD HIT — declaring server DOWN, writing incident to DB`);
+      console.error(`[${ts()}] 🚨  THRESHOLD HIT — declaring server DOWN, writing incident to DB`);
 
       const incidentId = await createDownIncident(err.message);
       state.activeIncidentId = incidentId;
 
       await sendNtfy({
-        title:    ' PlanIt Backend Down',
+        title:    'PlanIt Backend Down',
         message:  `The PlanIt API has been unreachable for ${THRESHOLD} consecutive checks (every ${PING_MS / 1000}s).\n\nError: ${err.message}\n\nIncident ID: ${incidentId || 'DB write failed'}\nStatus page updated automatically.`,
         priority: 'urgent',
         tags:     ['rotating_light', 'fire'],
@@ -326,7 +326,7 @@ async function pingMainServer() {
     if (state.isDown && state.consecutiveFailures > THRESHOLD && state.consecutiveFailures % 10 === 0) {
       const downMins = Math.round((Date.now() - downSince) / 60000);
       await sendNtfy({
-        title:    ` PlanIt Still Down (${downMins}m)`,
+        title:    `PlanIt Still Down (${downMins}m)`,
         message:  `Backend has been unreachable for ${downMins} minutes.\nFailed pings: ${state.consecutiveFailures}\nLast error: ${err.message}`,
         priority: 'high',
         tags:     ['warning', 'clock'],
@@ -379,8 +379,8 @@ async function boot() {
 
   // 2. Start HTTP server
   app.listen(PORT, () => {
-    console.log(`[${ts()}]   Health server → http://0.0.0.0:${PORT}`);
-    console.log(`[${ts()}]   Status       → http://0.0.0.0:${PORT}/watchdog/status`);
+    console.log(`[${ts()}] 🌐  Health server → http://0.0.0.0:${PORT}`);
+    console.log(`[${ts()}] 📊  Status       → http://0.0.0.0:${PORT}/watchdog/status`);
   });
 
   // 3. Fire an immediate test ping so you see in logs straight away whether
@@ -411,7 +411,7 @@ process.on('SIGTERM', () => shutdown('SIGTERM'));
 process.on('SIGINT',  () => shutdown('SIGINT'));
 
 boot().catch(err => {
-  console.error(`[${ts()}]   Fatal boot error: ${err.message}`);
+  console.error(`[${ts()}] ❌  Fatal boot error: ${err.message}`);
   console.error(err.stack);
   process.exit(1);
 });
