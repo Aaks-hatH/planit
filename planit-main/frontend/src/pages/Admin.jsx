@@ -11,6 +11,7 @@ import {
   XCircle, Wifi
 } from 'lucide-react';
 import { adminAPI, uptimeAPI } from '../services/api';
+import { SERVICE_CATEGORIES } from '../utils/serviceCategories';
 import { formatNumber, formatFileSize } from '../utils/formatters';
 import { DateTime } from 'luxon';
 
@@ -726,9 +727,11 @@ function EventDetail({ event: initialEvent, onBack, onDelete, onUpdate }) {
   );
 }
 
+
 // ─────────────────────────────────────────────────────────────────
 // UPTIME PANEL
 // ─────────────────────────────────────────────────────────────────
+
 
 const SEVERITY_META = {
   minor:    { label: 'Minor',    bg: 'bg-amber-100',  text: 'text-amber-700'  },
@@ -759,22 +762,132 @@ function formatDowntime(mins) {
   return m ? `${h}h ${m}m` : `${h}h`;
 }
 
+// ── Service Picker (for create incident) ──────────────────────────────────────
+// Two-pane: left = category list, right = services with checkboxes
+function ServicePicker({ selected, onChange }) {
+  const [activeCategory, setActiveCategory] = useState(SERVICE_CATEGORIES[0].id);
+  const cat = SERVICE_CATEGORIES.find(c => c.id === activeCategory);
+
+  const toggle = (key) => {
+    onChange(prev =>
+      prev.includes(key) ? prev.filter(k => k !== key) : [...prev, key]
+    );
+  };
+
+  const toggleAll = () => {
+    const catKeys = cat.services.map(s => s.key);
+    const allSelected = catKeys.every(k => selected.includes(k));
+    if (allSelected) {
+      onChange(prev => prev.filter(k => !catKeys.includes(k)));
+    } else {
+      onChange(prev => [...new Set([...prev, ...catKeys])]);
+    }
+  };
+
+  return (
+    <div className="border border-neutral-200 rounded-xl overflow-hidden flex" style={{ minHeight: '260px' }}>
+      {/* Left: Category list */}
+      <div className="w-44 border-r border-neutral-200 bg-neutral-50 flex-shrink-0 overflow-y-auto">
+        {SERVICE_CATEGORIES.map(c => {
+          const catSelectedCount = c.services.filter(s => selected.includes(s.key)).length;
+          return (
+            <button
+              key={c.id}
+              onClick={() => setActiveCategory(c.id)}
+              className={`w-full text-left px-3 py-2.5 flex items-center justify-between gap-1 transition-colors border-b border-neutral-100 last:border-0 ${
+                activeCategory === c.id ? 'bg-white text-neutral-900' : 'text-neutral-500 hover:bg-neutral-100 hover:text-neutral-700'
+              }`}
+            >
+              <span className="flex items-center gap-2 text-xs font-medium min-w-0">
+                <span>{c.icon}</span>
+                <span className="truncate">{c.label}</span>
+              </span>
+              {catSelectedCount > 0 && (
+                <span className="text-xs bg-red-100 text-red-600 font-semibold px-1.5 py-0.5 rounded-full flex-shrink-0">{catSelectedCount}</span>
+              )}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Right: Services with checkboxes */}
+      <div className="flex-1 overflow-y-auto p-3">
+        {cat && (
+          <>
+            <div className="flex items-center justify-between mb-2 pb-2 border-b border-neutral-100">
+              <span className="text-xs font-semibold text-neutral-700">{cat.icon} {cat.label}</span>
+              <button onClick={toggleAll} className="text-xs text-neutral-400 hover:text-neutral-600 transition-colors">
+                {cat.services.every(s => selected.includes(s.key)) ? 'Deselect all' : 'Select all'}
+              </button>
+            </div>
+            <div className="space-y-1">
+              {cat.services.map(svc => (
+                <label key={svc.key}
+                  className="flex items-center gap-2.5 px-2 py-2 rounded-lg hover:bg-neutral-50 cursor-pointer transition-colors group"
+                >
+                  <div className={`w-4 h-4 rounded border-2 flex items-center justify-center flex-shrink-0 transition-all ${
+                    selected.includes(svc.key)
+                      ? 'bg-neutral-900 border-neutral-900'
+                      : 'border-neutral-300 group-hover:border-neutral-400'
+                  }`}>
+                    {selected.includes(svc.key) && (
+                      <svg width="10" height="10" viewBox="0 0 12 12" fill="none">
+                        <polyline points="2 6 5 9 10 3" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+                      </svg>
+                    )}
+                  </div>
+                  <input type="checkbox" className="sr-only" checked={selected.includes(svc.key)} onChange={() => toggle(svc.key)} />
+                  <span className="text-sm text-neutral-700">{svc.name}</span>
+                </label>
+              ))}
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ── Selected services summary chips ──────────────────────────────────────────
+function SelectedServiceChips({ selected, onRemove }) {
+  if (selected.length === 0) return (
+    <p className="text-xs text-neutral-400 italic">No services selected — incident will affect all services.</p>
+  );
+  const allFlat = SERVICE_CATEGORIES.flatMap(c => c.services.map(s => ({ ...s, catLabel: c.label })));
+  return (
+    <div className="flex flex-wrap gap-1.5">
+      {selected.map(key => {
+        const svc = allFlat.find(s => s.key === key);
+        return (
+          <span key={key} className="inline-flex items-center gap-1 text-xs bg-neutral-100 text-neutral-700 px-2 py-1 rounded-full font-medium">
+            {svc?.name || key}
+            <button onClick={() => onRemove(key)} className="text-neutral-400 hover:text-neutral-700 ml-0.5">
+              <X className="w-3 h-3" />
+            </button>
+          </span>
+        );
+      })}
+    </div>
+  );
+}
+
 function UptimePanel() {
-  const [reports, setReports] = useState([]);
-  const [incidents, setIncidents] = useState([]);
-  const [loadingReports, setLoadingReports] = useState(true);
+  const [reports, setReports]       = useState([]);
+  const [incidents, setIncidents]   = useState([]);
+  const [loadingReports, setLoadingReports]     = useState(true);
   const [loadingIncidents, setLoadingIncidents] = useState(true);
-  const [activeTab, setActiveTab] = useState('reports');
+  const [activeTab, setActiveTab]   = useState('reports');
   const [expandedIncident, setExpandedIncident] = useState(null);
 
-  // Create incident form
+  // Create incident
   const [showCreateIncident, setShowCreateIncident] = useState(false);
   const [createForm, setCreateForm] = useState({
-    title: '', description: '', severity: 'minor', affectedServices: '', initialMessage: '', reportIds: []
+    title: '', description: '', severity: 'minor', initialMessage: '', reportIds: [],
   });
-  const [creating, setCreating] = useState(false);
+  const [selectedServices, setSelectedServices] = useState([]);
+  const [creating, setCreating]     = useState(false);
 
-  // Timeline update form
+  // Timeline update
   const [timelineTarget, setTimelineTarget] = useState(null);
   const [tlForm, setTlForm] = useState({ status: 'investigating', message: '' });
   const [tlSubmitting, setTlSubmitting] = useState(false);
@@ -783,19 +896,15 @@ function UptimePanel() {
 
   const loadReports = async () => {
     setLoadingReports(true);
-    try {
-      const res = await uptimeAPI.getReports();
-      setReports(res.data.reports || []);
-    } catch { /* silent */ }
+    try { const res = await uptimeAPI.getReports(); setReports(res.data.reports || []); }
+    catch { /* silent */ }
     finally { setLoadingReports(false); }
   };
 
   const loadIncidents = async () => {
     setLoadingIncidents(true);
-    try {
-      const res = await uptimeAPI.getIncidents();
-      setIncidents(res.data.incidents || []);
-    } catch { /* silent */ }
+    try { const res = await uptimeAPI.getIncidents(); setIncidents(res.data.incidents || []); }
+    catch { /* silent */ }
     finally { setLoadingIncidents(false); }
   };
 
@@ -806,22 +915,28 @@ function UptimePanel() {
     } catch { toast.error('Failed to update report'); }
   };
 
+  const openCreateFromReport = (report) => {
+    setCreateForm(f => ({ ...f, reportIds: [report._id], description: report.description, title: `Issue with ${report.affectedService}` }));
+    setSelectedServices([]);
+    setShowCreateIncident(true);
+  };
+
   const handleCreateIncident = async () => {
     if (!createForm.title.trim()) { toast.error('Title required'); return; }
     setCreating(true);
     try {
-      const payload = {
+      await uptimeAPI.createIncident({
         title: createForm.title,
         description: createForm.description,
         severity: createForm.severity,
-        affectedServices: createForm.affectedServices ? createForm.affectedServices.split(',').map(s => s.trim()).filter(Boolean) : [],
+        affectedServices: selectedServices,
         initialMessage: createForm.initialMessage,
         reportIds: createForm.reportIds,
-      };
-      await uptimeAPI.createIncident(payload);
+      });
       toast.success('Incident created');
       setShowCreateIncident(false);
-      setCreateForm({ title: '', description: '', severity: 'minor', affectedServices: '', initialMessage: '', reportIds: [] });
+      setCreateForm({ title: '', description: '', severity: 'minor', initialMessage: '', reportIds: [] });
+      setSelectedServices([]);
       loadIncidents();
       loadReports();
     } catch { toast.error('Failed to create incident'); }
@@ -851,7 +966,7 @@ function UptimePanel() {
   };
 
   const pendingCount = reports.filter(r => r.status === 'pending').length;
-  const activeCount = incidents.filter(i => i.status !== 'resolved').length;
+  const activeCount  = incidents.filter(i => i.status !== 'resolved').length;
 
   return (
     <div className="space-y-6">
@@ -869,11 +984,10 @@ function UptimePanel() {
           </p>
         </div>
         <div className="flex gap-2">
-          <a href="/status" target="_blank" rel="noopener noreferrer"
-            className="btn btn-secondary gap-2 text-sm">
+          <a href="/status" target="_blank" rel="noopener noreferrer" className="btn btn-secondary gap-2 text-sm">
             <ExternalLink className="w-4 h-4" /> Public Page
           </a>
-          <button onClick={() => setShowCreateIncident(true)}
+          <button onClick={() => { setCreateForm({ title: '', description: '', severity: 'minor', initialMessage: '', reportIds: [] }); setSelectedServices([]); setShowCreateIncident(true); }}
             className="btn btn-primary gap-2 text-sm bg-neutral-900 hover:bg-neutral-800 text-white border-neutral-900">
             <Plus className="w-4 h-4" /> New Incident
           </button>
@@ -883,8 +997,8 @@ function UptimePanel() {
       {/* Sub-tabs */}
       <div className="flex gap-1 bg-neutral-100 rounded-xl p-1 w-fit">
         {[
-          { id: 'reports',   label: 'Reports',   count: pendingCount  },
-          { id: 'incidents', label: 'Incidents', count: activeCount   },
+          { id: 'reports',   label: 'Reports',   count: pendingCount },
+          { id: 'incidents', label: 'Incidents', count: activeCount  },
         ].map(t => (
           <button key={t.id} onClick={() => setActiveTab(t.id)}
             className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-all flex items-center gap-1.5 ${
@@ -904,9 +1018,7 @@ function UptimePanel() {
       {activeTab === 'reports' && (
         <div className="fade-up">
           {loadingReports ? (
-            <div className="flex justify-center py-12">
-              <span className="spinner w-6 h-6 border-2 border-neutral-200 border-t-neutral-600" />
-            </div>
+            <div className="flex justify-center py-12"><span className="spinner w-6 h-6 border-2 border-neutral-200 border-t-neutral-600" /></div>
           ) : reports.length === 0 ? (
             <div className="text-center py-16 text-neutral-400">
               <Radio className="w-10 h-10 mx-auto mb-3 opacity-30" />
@@ -915,42 +1027,28 @@ function UptimePanel() {
           ) : (
             <div className="space-y-2">
               {reports.map((r, i) => (
-                <div key={r._id} className={`card p-4 flex items-start gap-4 transition-all fade-up`}
-                  style={{ animationDelay: `${i * 0.04}s` }}>
-                  <div className={`w-2 h-2 rounded-full mt-1.5 flex-shrink-0 ${
-                    r.status === 'pending' ? 'bg-amber-400 animate-pulse' :
-                    r.status === 'confirmed' ? 'bg-red-500' : 'bg-neutral-300'
-                  }`} />
+                <div key={r._id} className="card p-4 flex items-start gap-4 transition-all fade-up" style={{ animationDelay: `${i * 0.04}s` }}>
+                  <div className={`w-2 h-2 rounded-full mt-1.5 flex-shrink-0 ${r.status === 'pending' ? 'bg-amber-400 animate-pulse' : r.status === 'confirmed' ? 'bg-red-500' : 'bg-neutral-300'}`} />
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className="text-xs font-medium text-neutral-500 bg-neutral-100 px-2 py-0.5 rounded-full">
-                        {r.affectedService}
-                      </span>
-                      <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${
-                        r.status === 'pending' ? 'bg-amber-100 text-amber-700' :
-                        r.status === 'confirmed' ? 'bg-red-100 text-red-700' :
-                        'bg-neutral-100 text-neutral-400'
-                      }`}>{r.status}</span>
+                      <span className="text-xs font-medium text-neutral-500 bg-neutral-100 px-2 py-0.5 rounded-full">{r.affectedService}</span>
+                      <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${r.status === 'pending' ? 'bg-amber-100 text-amber-700' : r.status === 'confirmed' ? 'bg-red-100 text-red-700' : 'bg-neutral-100 text-neutral-400'}`}>{r.status}</span>
                       <span className="text-xs text-neutral-400">{uptimeTimeAgo(r.createdAt)}</span>
+                      {r.description?.startsWith('[AUTO]') && (
+                        <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-blue-100 text-blue-700">auto-detected</span>
+                      )}
                     </div>
                     <p className="text-sm text-neutral-800 mt-1.5 leading-relaxed">{r.description}</p>
                     {r.email && <p className="text-xs text-neutral-400 mt-1">{r.email}</p>}
                   </div>
                   {r.status === 'pending' && (
                     <div className="flex gap-2 flex-shrink-0">
-                      <button
-                        onClick={() => {
-                          setCreateForm(f => ({ ...f, reportIds: [r._id], description: r.description }));
-                          setShowCreateIncident(true);
-                        }}
-                        className="text-xs px-3 py-1.5 rounded-lg bg-neutral-900 text-white hover:bg-neutral-800 transition-colors font-medium"
-                      >
+                      <button onClick={() => openCreateFromReport(r)}
+                        className="text-xs px-3 py-1.5 rounded-lg bg-neutral-900 text-white hover:bg-neutral-800 transition-colors font-medium">
                         Make Incident
                       </button>
-                      <button
-                        onClick={() => handleDismissReport(r._id)}
-                        className="text-xs px-3 py-1.5 rounded-lg border border-neutral-200 text-neutral-500 hover:bg-neutral-50 transition-colors"
-                      >
+                      <button onClick={() => handleDismissReport(r._id)}
+                        className="text-xs px-3 py-1.5 rounded-lg border border-neutral-200 text-neutral-500 hover:bg-neutral-50 transition-colors">
                         Dismiss
                       </button>
                     </div>
@@ -966,9 +1064,7 @@ function UptimePanel() {
       {activeTab === 'incidents' && (
         <div className="fade-up space-y-3">
           {loadingIncidents ? (
-            <div className="flex justify-center py-12">
-              <span className="spinner w-6 h-6 border-2 border-neutral-200 border-t-neutral-600" />
-            </div>
+            <div className="flex justify-center py-12"><span className="spinner w-6 h-6 border-2 border-neutral-200 border-t-neutral-600" /></div>
           ) : incidents.length === 0 ? (
             <div className="text-center py-16 text-neutral-400">
               <CheckCircle className="w-10 h-10 mx-auto mb-3 opacity-30" />
@@ -1001,15 +1097,12 @@ function UptimePanel() {
                   </div>
                   <div className="flex items-center gap-2 flex-shrink-0">
                     {inc.status !== 'resolved' && (
-                      <button
-                        onClick={e => { e.stopPropagation(); setTimelineTarget(inc._id); setTlForm({ status: 'investigating', message: '' }); }}
-                        className="text-xs px-3 py-1.5 rounded-lg bg-neutral-900 text-white hover:bg-neutral-800 transition-colors font-medium"
-                      >
+                      <button onClick={e => { e.stopPropagation(); setTimelineTarget(inc._id); setTlForm({ status: 'investigating', message: '' }); }}
+                        className="text-xs px-3 py-1.5 rounded-lg bg-neutral-900 text-white hover:bg-neutral-800 transition-colors font-medium">
                         Update
                       </button>
                     )}
-                    <button onClick={e => { e.stopPropagation(); handleDeleteIncident(inc._id); }}
-                      className="p-1.5 text-neutral-300 hover:text-red-500 transition-colors">
+                    <button onClick={e => { e.stopPropagation(); handleDeleteIncident(inc._id); }} className="p-1.5 text-neutral-300 hover:text-red-500 transition-colors">
                       <Trash2 className="w-4 h-4" />
                     </button>
                     {isExpanded ? <ChevronUp className="w-4 h-4 text-neutral-400" /> : <ChevronDown className="w-4 h-4 text-neutral-400" />}
@@ -1018,9 +1111,7 @@ function UptimePanel() {
 
                 {isExpanded && (
                   <div className="px-5 pb-5 border-t border-neutral-100">
-                    {inc.description && (
-                      <p className="text-sm text-neutral-600 mt-4 mb-4 leading-relaxed">{inc.description}</p>
-                    )}
+                    {inc.description && <p className="text-sm text-neutral-600 mt-4 mb-4 leading-relaxed">{inc.description}</p>}
                     {inc.timeline?.length > 0 && (
                       <div className="relative pl-4 mt-4">
                         <div className="absolute left-0 top-0 bottom-0 w-px bg-neutral-200" />
@@ -1047,13 +1138,12 @@ function UptimePanel() {
         </div>
       )}
 
-      {/* Create Incident Modal */}
+      {/* ── Create Incident Modal (NEW: checkbox service picker) ── */}
       {showCreateIncident && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 px-4"
           onClick={e => e.target === e.currentTarget && setShowCreateIncident(false)}>
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden"
-            style={{ animation: 'fadeUp 0.2s ease both' }}>
-            <div className="px-6 py-5 border-b border-neutral-100 flex items-center justify-between">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden" style={{ animation: 'fadeUp 0.2s ease both', maxHeight: '90vh', display: 'flex', flexDirection: 'column' }}>
+            <div className="px-6 py-5 border-b border-neutral-100 flex items-center justify-between flex-shrink-0">
               <div>
                 <h3 className="text-base font-bold text-neutral-900">Create Incident</h3>
                 <p className="text-xs text-neutral-500 mt-0.5">This will appear publicly on the status page</p>
@@ -1062,43 +1152,64 @@ function UptimePanel() {
                 <X className="w-4 h-4 text-neutral-400" />
               </button>
             </div>
-            <div className="px-6 py-5 space-y-4 max-h-[60vh] overflow-y-auto">
-              <div>
-                <label className="block text-xs font-medium text-neutral-600 mb-1.5">Title <span className="text-red-400">*</span></label>
-                <input value={createForm.title} onChange={e => setCreateForm(f => ({ ...f, title: e.target.value }))}
-                  placeholder="e.g. API Response Delays" className="input w-full text-sm" />
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-medium text-neutral-600 mb-1.5">Severity</label>
-                  <select value={createForm.severity} onChange={e => setCreateForm(f => ({ ...f, severity: e.target.value }))}
-                    className="input w-full text-sm">
-                    <option value="minor">Minor</option>
-                    <option value="major">Major</option>
-                    <option value="critical">Critical</option>
-                  </select>
+
+            <div className="overflow-y-auto flex-1">
+              <div className="px-6 py-5 space-y-5">
+
+                {/* Title + Severity row */}
+                <div className="grid grid-cols-3 gap-3">
+                  <div className="col-span-2">
+                    <label className="block text-xs font-medium text-neutral-600 mb-1.5">Title <span className="text-red-400">*</span></label>
+                    <input value={createForm.title} onChange={e => setCreateForm(f => ({ ...f, title: e.target.value }))}
+                      placeholder="e.g. API Response Delays" className="input w-full text-sm" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-neutral-600 mb-1.5">Severity</label>
+                    <select value={createForm.severity} onChange={e => setCreateForm(f => ({ ...f, severity: e.target.value }))} className="input w-full text-sm">
+                      <option value="minor">Minor</option>
+                      <option value="major">Major</option>
+                      <option value="critical">Critical</option>
+                    </select>
+                  </div>
                 </div>
+
+                {/* Affected services picker */}
                 <div>
-                  <label className="block text-xs font-medium text-neutral-600 mb-1.5">Affected Services</label>
-                  <input value={createForm.affectedServices} onChange={e => setCreateForm(f => ({ ...f, affectedServices: e.target.value }))}
-                    placeholder="API, Chat (comma-sep)" className="input w-full text-sm" />
+                  <label className="block text-xs font-medium text-neutral-600 mb-2">
+                    Affected Services
+                    <span className="ml-2 text-neutral-400 font-normal">— select from categories below</span>
+                  </label>
+                  <ServicePicker selected={selectedServices} onChange={setSelectedServices} />
+                  <div className="mt-2">
+                    <SelectedServiceChips selected={selectedServices} onRemove={key => setSelectedServices(p => p.filter(k => k !== key))} />
+                  </div>
                 </div>
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-neutral-600 mb-1.5">Description</label>
-                <textarea value={createForm.description} onChange={e => setCreateForm(f => ({ ...f, description: e.target.value }))}
-                  placeholder="Brief summary of the issue..." rows={2} className="input w-full text-sm resize-none" />
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-neutral-600 mb-1.5">Initial Status Message</label>
-                <textarea value={createForm.initialMessage} onChange={e => setCreateForm(f => ({ ...f, initialMessage: e.target.value }))}
-                  placeholder="We are investigating reports of..." rows={2} className="input w-full text-sm resize-none" />
+
+                {/* Description */}
+                <div>
+                  <label className="block text-xs font-medium text-neutral-600 mb-1.5">Description</label>
+                  <textarea value={createForm.description} onChange={e => setCreateForm(f => ({ ...f, description: e.target.value }))}
+                    placeholder="Brief summary of the issue..." rows={2} className="input w-full text-sm resize-none" />
+                </div>
+
+                {/* Initial status message */}
+                <div>
+                  <label className="block text-xs font-medium text-neutral-600 mb-1.5">Initial Status Message</label>
+                  <textarea value={createForm.initialMessage} onChange={e => setCreateForm(f => ({ ...f, initialMessage: e.target.value }))}
+                    placeholder="We are investigating reports of..." rows={2} className="input w-full text-sm resize-none" />
+                </div>
+
+                {createForm.reportIds?.length > 0 && (
+                  <div className="flex items-center gap-2 p-3 bg-amber-50 border border-amber-200 rounded-xl">
+                    <AlertCircle className="w-4 h-4 text-amber-600 flex-shrink-0" />
+                    <span className="text-xs text-amber-700">{createForm.reportIds.length} user report{createForm.reportIds.length > 1 ? 's' : ''} will be linked to this incident.</span>
+                  </div>
+                )}
               </div>
             </div>
-            <div className="px-6 py-4 border-t border-neutral-100 flex gap-3">
-              <button onClick={() => setShowCreateIncident(false)} className="flex-1 btn btn-secondary text-sm">
-                Cancel
-              </button>
+
+            <div className="px-6 py-4 border-t border-neutral-100 flex gap-3 flex-shrink-0">
+              <button onClick={() => setShowCreateIncident(false)} className="flex-1 btn btn-secondary text-sm">Cancel</button>
               <button onClick={handleCreateIncident} disabled={creating}
                 className="flex-1 btn bg-neutral-900 hover:bg-neutral-800 text-white text-sm gap-2 disabled:opacity-50">
                 {creating ? <span className="spinner w-4 h-4 border-2 border-white/30 border-t-white" /> : <Plus className="w-4 h-4" />}
@@ -1113,8 +1224,7 @@ function UptimePanel() {
       {timelineTarget && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 px-4"
           onClick={e => e.target === e.currentTarget && setTimelineTarget(null)}>
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden"
-            style={{ animation: 'fadeUp 0.2s ease both' }}>
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden" style={{ animation: 'fadeUp 0.2s ease both' }}>
             <div className="px-6 py-5 border-b border-neutral-100 flex items-center justify-between">
               <h3 className="text-base font-bold text-neutral-900">Post Update</h3>
               <button onClick={() => setTimelineTarget(null)} className="p-1.5 hover:bg-neutral-100 rounded-lg transition-colors">
@@ -1124,8 +1234,7 @@ function UptimePanel() {
             <div className="px-6 py-5 space-y-4">
               <div>
                 <label className="block text-xs font-medium text-neutral-600 mb-1.5">New Status</label>
-                <select value={tlForm.status} onChange={e => setTlForm(f => ({ ...f, status: e.target.value }))}
-                  className="input w-full text-sm">
+                <select value={tlForm.status} onChange={e => setTlForm(f => ({ ...f, status: e.target.value }))} className="input w-full text-sm">
                   <option value="investigating">Investigating</option>
                   <option value="identified">Identified</option>
                   <option value="monitoring">Monitoring</option>
@@ -1147,9 +1256,7 @@ function UptimePanel() {
             <div className="px-6 py-4 border-t border-neutral-100 flex gap-3">
               <button onClick={() => setTimelineTarget(null)} className="flex-1 btn btn-secondary text-sm">Cancel</button>
               <button onClick={handleAddTimeline} disabled={tlSubmitting}
-                className={`flex-1 btn text-sm text-white gap-2 disabled:opacity-50 ${
-                  tlForm.status === 'resolved' ? 'bg-emerald-600 hover:bg-emerald-700 border-emerald-600' : 'bg-neutral-900 hover:bg-neutral-800'
-                }`}>
+                className={`flex-1 btn text-sm text-white gap-2 disabled:opacity-50 ${tlForm.status === 'resolved' ? 'bg-emerald-600 hover:bg-emerald-700 border-emerald-600' : 'bg-neutral-900 hover:bg-neutral-800'}`}>
                 {tlSubmitting ? <span className="spinner w-4 h-4 border-2 border-white/30 border-t-white" /> : null}
                 {tlForm.status === 'resolved' ? 'Mark Resolved' : 'Post Update'}
               </button>
@@ -1160,6 +1267,7 @@ function UptimePanel() {
     </div>
   );
 }
+
 
 // Main Admin Component
 export default function Admin() {
