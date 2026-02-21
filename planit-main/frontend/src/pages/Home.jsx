@@ -229,7 +229,7 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen text-white relative" style={{ background: '#06060c' }}>
+    <div className="min-h-screen text-white relative" style={{ background: '#06060c', overflowX: 'hidden' }}>
       <StarBackground fixed={true} starCount={220} />
       <CosmicAmbient />
 
@@ -429,8 +429,9 @@ export default function Home() {
               const [label, href] = s.split('|');
               return <a key={label} href={href} className="px-3 py-2 text-sm text-neutral-500 hover:text-neutral-200 hover:bg-neutral-800/50 rounded-xl transition-all duration-200">{label}</a>;
             })}
-            <a href="/support" className="ml-2 px-5 py-2.5 text-sm font-medium text-white bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 rounded-xl transition-all duration-200 flex items-center gap-2">
-              <Heart className="w-4 h-4" fill="currentColor" />Support
+            <a href="/support" className="ml-2 px-3 sm:px-5 py-2.5 text-sm font-medium text-white bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 rounded-xl transition-all duration-200 flex items-center gap-2">
+              <Heart className="w-4 h-4 flex-shrink-0" fill="currentColor" />
+              <span className="hidden sm:inline">Support</span>
             </a>
           </nav>
         </div>
