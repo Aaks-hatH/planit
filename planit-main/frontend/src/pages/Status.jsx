@@ -139,7 +139,8 @@ function UptimeBar({ bar, index }) {
     <div
       title={`${formatDayLabel(bar.date)} — ${label}`}
       style={{
-        width: '100%',
+        flex: '1 1 0',
+        minWidth: 0,
         height: '36px',
         backgroundColor: color,
         borderRadius: '999px',
@@ -187,7 +188,7 @@ function ServiceRow({ service, incidents, online }) {
           {disrupted ? (!online ? 'Offline' : 'Disrupted') : 'Operational'}
         </span>
       </div>
-      <div style={{ display: 'flex', gap: '3px', width: '100%', overflow: 'hidden' }}>
+      <div style={{ display: 'flex', gap: '2px', width: '100%', overflow: 'hidden' }}>
         {bars.map((bar, i) => <UptimeBar key={i} bar={bar} index={i} />)}
       </div>
       <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '5px' }}>
