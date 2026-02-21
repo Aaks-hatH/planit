@@ -31,6 +31,7 @@ const http = require('http');
 const socketIo = require('socket.io');
 const path = require('path');
 const supportRoutes = require('./routes/support');
+const uptimeRoutes = require('./routes/uptime');
 
 // ═══════════════════════════════════════════════════════════════════════════
 // IMPORT CLEANUP SCHEDULER
@@ -140,6 +141,7 @@ app.use('/api/polls', pollRoutes);
 app.use('/api/files', fileRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/support', supportRoutes);
+app.use('/api/uptime', uptimeRoutes);
 app.use('/api', publicRoutes);
 app.use('/api/events', checkinRoutes);
 app.use('/api/events', dataRetentionRoutes);
