@@ -170,7 +170,7 @@ function TestimonialCard({ quote, author, role, event, delay = 0 }) {
 
 function CosmicAmbient() {
   return (
-    <div className="fixed inset-0 pointer-events-none overflow-hidden" style={{ zIndex: 1, willChange: 'transform', backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden' }}>
+    <div className="fixed inset-0 pointer-events-none overflow-hidden" style={{ zIndex: 1, transform: 'translateZ(0)', WebkitTransform: 'translateZ(0)' }}>
       {/* Slow-drifting nebula blobs */}
       <div className="cosmic-orb cosmic-orb-1" />
       <div className="cosmic-orb cosmic-orb-2" />
@@ -229,7 +229,7 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen text-white" style={{ background: '#06060c' }}>
+    <div className="min-h-screen text-white relative" style={{ background: '#06060c' }}>
       <StarBackground fixed={true} starCount={220} />
       <CosmicAmbient />
 
@@ -410,12 +410,9 @@ export default function Home() {
       `}</style>
 
       {/* Nav */}
-      <motion.header
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6 }}
+      <header
         className="sticky top-0 z-50 border-b border-neutral-800/60"
-        style={{ background: 'rgba(6,6,12,0.94)' }}
+        style={{ background: 'rgba(6,6,12,0.96)' }}
       >
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -437,10 +434,9 @@ export default function Home() {
             </a>
           </nav>
         </div>
-      </motion.header>
+      </header>
 
       <main className="relative overflow-x-hidden" style={{ zIndex: 2 }}>
-
         {/* HERO */}
         <section className="relative min-h-[92vh] flex items-center overflow-hidden">
           {/* Constellation dots floating in hero periphery */}
