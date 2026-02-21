@@ -31,7 +31,7 @@ function getDayKey(date) {
  * before the watchdog has a chance to write an incident to the DB.
  */
 function buildBars(incidents, serviceKey, serverDown = false) {
-  const DAYS = 90;
+  const DAYS = 15;
   const dayMap = {};
 
   if (serverDown) {
@@ -141,7 +141,7 @@ function UptimeBar({ bar, index }) {
       style={{
         flex: '1 1 0',
         minWidth: 0,
-        height: '36px',
+        height: '44px',
         backgroundColor: color,
         borderRadius: '999px',
         cursor: 'default',
@@ -188,11 +188,11 @@ function ServiceRow({ service, incidents, online }) {
           {disrupted ? (!online ? 'Offline' : 'Disrupted') : 'Operational'}
         </span>
       </div>
-      <div style={{ display: 'flex', gap: '2px', width: '100%', overflow: 'hidden' }}>
+      <div style={{ display: 'flex', gap: '6px', width: '100%', overflow: 'hidden' }}>
         {bars.map((bar, i) => <UptimeBar key={i} bar={bar} index={i} />)}
       </div>
       <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '5px' }}>
-        <span style={{ fontSize: '11px', color: '#9ca3af', fontFamily: '"DM Sans", sans-serif' }}>90 days ago</span>
+        <span style={{ fontSize: '11px', color: '#9ca3af', fontFamily: '"DM Sans", sans-serif' }}>15 days ago</span>
         <span style={{ fontSize: '11px', color: '#9ca3af', fontFamily: '"DM Sans", sans-serif' }}>{pct}% uptime</span>
         <span style={{ fontSize: '11px', color: '#9ca3af', fontFamily: '"DM Sans", sans-serif' }}>Today</span>
       </div>
@@ -597,7 +597,7 @@ export default function Status() {
               )}
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px', flexShrink: 0 }}>
-              <span style={{ fontSize: '12px', color: '#9ca3af', fontFamily: '"DM Sans", sans-serif' }}>{totalPct}% uptime (90d)</span>
+              <span style={{ fontSize: '12px', color: '#9ca3af', fontFamily: '"DM Sans", sans-serif' }}>{totalPct}% uptime (15d)</span>
               <span style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '12px', color: online ? '#16a34a' : '#dc2626', fontFamily: '"DM Sans", sans-serif' }}>
                 <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: online ? '#22c55e' : '#ef4444', display: 'inline-block', animation: online ? 'none' : 'pulse 1.5s infinite' }} />
                 {latency !== null ? `${latency}ms` : online ? 'Checking...' : 'Offline'}
