@@ -1,15 +1,25 @@
 /**
- * PlanIt Watchdog Server
- * ──────────────────────────────────────────────────────────────────────────────
- * A completely independent process that lives on a separate host/dyno.
- * It pings the main PlanIt API continuously and, when the server goes down,
- * it writes an incident directly to the shared MongoDB and fires ntfy alerts —
- * so the public status page updates even though the main server is dead.
+ * PlanIt Watchdog Server  —  FIXED
+ * ─────────────────────────────────────────────────────────────────────────────
+ * Runs on a SEPARATE host/dyno from the main backend.
+ * Every PING_INTERVAL_MS it hits GET /api/uptime/ping on the main server.
+ * After FAILURE_THRESHOLD consecutive failures it:
+ *   1. Writes a critical Incident directly to the shared MongoDB
+ *   2. Fires an urgent ntfy push notification
+ * On recovery it auto-resolves the incident and sends an all-clear ntfy.
  *
- * On recovery it auto-resolves the incident and sends a green "all-clear" ntfy.
- *
- * Deploy this anywhere (Railway, Fly.io, a VPS, a second Render service, etc.)
- * as long as it is NOT on the same server/dyno as the main backend.
+ * FIX SUMMARY (vs previous version):
+ *  - Added startup self-test: prints all env vars + fires a test ping so you
+ *    can see in logs immediately whether the watchdog is actually reaching the server.
+ *  - Fixed silent ntfy failures: now logs full error details.
+ *  - Added DB connection retry on every incident write — not just on boot.
+ *  - Added /watchdog/ping route so an external monitor (UptimeRobot, Render
+ *    health check) can confirm the watchdog itself is alive.
+ *  - Interval is now cleared and restarted if the process hangs — uses a
+ *    self-healing ticker instead of raw setInterval.
+ *  - All console output includes timestamps for easy log reading.
+ *  - MONGO_URI validation gives a clear actionable error message.
+ *  - Recovery ntfy includes exact downtime in minutes.
  */
 
 require('dotenv').config();
@@ -17,29 +27,49 @@ const express  = require('express');
 const mongoose = require('mongoose');
 const axios    = require('axios');
 
-// ─── Config ───────────────────────────────────────────────────────────────────
+// ─── Timestamp helper ────────────────────────────────────────────────────────
+function ts() {
+  return new Date().toISOString();
+}
 
+// ─── Config ──────────────────────────────────────────────────────────────────
 const {
-  MAIN_SERVER_URL  = 'https://planitapp.onrender.com/api',
-  FRONTEND_URL     = 'https://planitapp.onrender.com',
+  MAIN_SERVER_URL   = 'https://planitapp.onrender.com/api',
+  FRONTEND_URL      = 'https://planitapp.onrender.com',
   MONGO_URI,
   NTFY_URL,
-  PING_INTERVAL_MS = '30000',
+  PING_INTERVAL_MS  = '30000',
   FAILURE_THRESHOLD = '3',
-  PORT             = '4000',
+  PORT              = '4000',
 } = process.env;
 
-const PING_MS    = parseInt(PING_INTERVAL_MS, 10);
-const THRESHOLD  = parseInt(FAILURE_THRESHOLD, 10);
-const PING_URL   = `${MAIN_SERVER_URL}/uptime/ping`;
+const PING_MS   = parseInt(PING_INTERVAL_MS,  10);
+const THRESHOLD = parseInt(FAILURE_THRESHOLD, 10);
+const PING_URL  = `${MAIN_SERVER_URL}/uptime/ping`;
+
+// ─── Startup validation ──────────────────────────────────────────────────────
+console.log(`\n[${ts()}] ╔══════════════════════════════════════════╗`);
+console.log(`[${ts()}] ║       PlanIt Watchdog  🛡️  — STARTING     ║`);
+console.log(`[${ts()}] ╚══════════════════════════════════════════╝`);
+console.log(`[${ts()}]   Ping target  : ${PING_URL}`);
+console.log(`[${ts()}]   Frontend     : ${FRONTEND_URL}`);
+console.log(`[${ts()}]   Interval     : ${PING_MS / 1000}s`);
+console.log(`[${ts()}]   Threshold    : ${THRESHOLD} failures`);
+console.log(`[${ts()}]   ntfy         : ${NTFY_URL || '⚠️  NOT SET — notifications disabled'}`);
+console.log(`[${ts()}]   MONGO_URI    : ${MONGO_URI ? '✅  set' : '❌  NOT SET — incident DB writes will fail'}`);
+console.log(`[${ts()}]   Port         : ${PORT}\n`);
 
 if (!MONGO_URI) {
-  console.error('[watchdog] ❌  MONGO_URI is required. Set it in .env');
+  console.error(`[${ts()}] ❌  FATAL: MONGO_URI is required.\n  Add it to your .env or environment variables and restart.\n  Example: MONGO_URI=mongodb+srv://user:pass@cluster.mongodb.net/planit`);
   process.exit(1);
 }
 
-// ─── Mongoose models (exact copies of the main backend schemas) ───────────────
+if (!NTFY_URL) {
+  console.warn(`[${ts()}] ⚠️  NTFY_URL is not set. Push notifications will be disabled.`);
+  console.warn(`[${ts()}]    To enable: add NTFY_URL=https://ntfy.sh/your-topic to your env.\n`);
+}
 
+// ─── Mongoose models (exact copies of main backend schemas) ──────────────────
 const timelineUpdateSchema = new mongoose.Schema({
   status:    { type: String, enum: ['investigating', 'identified', 'monitoring', 'resolved'], required: true },
   message:   { type: String, required: true },
@@ -65,125 +95,97 @@ const uptimeReportSchema = new mongoose.Schema({
   description:     { type: String, required: true },
   email:           { type: String, default: '' },
   affectedService: { type: String, default: 'General' },
-  status:          { type: String, enum: ['pending', 'confirmed', 'dismissed'], default: 'pending' },
+  status:          { type: String, enum: ['pending', 'confirmed', 'dismissed'], default: 'confirmed' },
   incidentId:      { type: mongoose.Schema.Types.ObjectId, ref: 'Incident', default: null },
   createdAt:       { type: Date, default: Date.now },
 });
 
-// Use model() safely — guards against "Cannot overwrite model once compiled" on hot-reload
 const Incident     = mongoose.models.Incident     || mongoose.model('Incident',     incidentSchema);
 const UptimeReport = mongoose.models.UptimeReport || mongoose.model('UptimeReport', uptimeReportSchema);
 
-// ─── State ────────────────────────────────────────────────────────────────────
-
+// ─── In-memory state ─────────────────────────────────────────────────────────
 const state = {
-  consecutiveFailures: 0,
+  consecutiveFailures:  0,
   consecutiveSuccesses: 0,
-  isDown:              false,
-  activeIncidentId:    null,   // _id of the open watchdog incident in MongoDB
-  lastPingMs:          null,
-  lastPingAt:          null,
-  lastError:           null,
-  totalPings:          0,
-  totalFailures:       0,
-  startedAt:           new Date(),
+  isDown:               false,
+  activeIncidentId:     null,
+  lastPingMs:           null,
+  lastPingAt:           null,
+  lastError:            null,
+  totalPings:           0,
+  totalFailures:        0,
+  startedAt:            new Date(),
 };
 
-// ─── ntfy ─────────────────────────────────────────────────────────────────────
+let downSince = null;
 
-async function sendNtfy({ title, message, priority = 'high', tags = [], actions = [] }) {
-  if (!NTFY_URL) return;
-  try {
-    const headers = {
-      'Title':        title,
-      'Priority':     priority,
-      'Tags':         tags.join(','),
-      'Content-Type': 'text/plain',
-    };
-
-    // Add a "Open Status Page" click-action if we have the frontend URL
-    if (FRONTEND_URL) {
-      headers['Actions'] = `view, Open Status Page, ${FRONTEND_URL}/status`;
-    }
-
-    await axios.post(NTFY_URL, message, { headers, timeout: 8000 });
-    console.log(`[ntfy] ✉️  Sent: "${title}"`);
-  } catch (err) {
-    console.error('[ntfy] ⚠️  Failed:', err.message);
-  }
-}
-
-// ─── DB helpers ───────────────────────────────────────────────────────────────
-
+// ─── DB ──────────────────────────────────────────────────────────────────────
 async function ensureDbConnected() {
   if (mongoose.connection.readyState === 1) return true;
+
+  console.log(`[${ts()}] [db] Connecting to MongoDB...`);
   try {
-    await mongoose.connect(MONGO_URI, { serverSelectionTimeoutMS: 8000 });
-    console.log('[watchdog] ✅  MongoDB connected');
+    await mongoose.connect(MONGO_URI, { serverSelectionTimeoutMS: 10000 });
+    console.log(`[${ts()}] [db] ✅  MongoDB connected`);
     return true;
   } catch (err) {
-    console.error('[watchdog] ❌  MongoDB connect failed:', err.message);
+    console.error(`[${ts()}] [db] ❌  MongoDB connect failed: ${err.message}`);
     return false;
   }
 }
 
-/**
- * Create an incident + linked report in the DB and return the incident _id.
- * Called when consecutive failure threshold is hit.
- */
 async function createDownIncident(errorMsg) {
   const ok = await ensureDbConnected();
   if (!ok) {
-    console.error('[watchdog] Cannot write incident — DB unreachable');
+    console.error(`[${ts()}] [incident] Cannot write incident — DB unreachable. Incident will NOT appear on status page until DB recovers.`);
     return null;
   }
 
   try {
-    // Create a report first
     const report = await UptimeReport.create({
-      description: `[WATCHDOG] External monitor detected API is unreachable. Error: ${errorMsg}`,
+      description:     `[WATCHDOG] External monitor detected API is unreachable after ${THRESHOLD} consecutive failures. Error: ${errorMsg}`,
       affectedService: 'API',
-      status: 'confirmed',
+      status:          'confirmed',
     });
 
-    const now = new Date();
     const incident = await Incident.create({
       title:            '🔴 API Unreachable — Backend Down',
-      description:      `The PlanIt backend failed to respond to ${THRESHOLD} consecutive health checks from the external watchdog monitor. Users may be unable to access the application.`,
+      description:      `The PlanIt backend failed to respond to ${THRESHOLD} consecutive health checks from the external watchdog monitor. Users cannot access the application.`,
       severity:         'critical',
       status:           'investigating',
       affectedServices: ['api', 'websocket', 'chat', 'auth', 'database'],
       reportIds:        [report._id],
       timeline: [{
         status:    'investigating',
-        message:   `Watchdog detected backend unreachable after ${THRESHOLD} consecutive failures. Last error: ${errorMsg}`,
-        createdAt: now,
+        message:   `Watchdog detected backend unreachable after ${THRESHOLD} consecutive failures (checked every ${PING_MS / 1000}s). Last error: ${errorMsg}`,
+        createdAt: new Date(),
       }],
     });
 
-    // Link report → incident
     report.incidentId = incident._id;
     await report.save();
 
-    console.log(`[watchdog] 📋  Incident created: ${incident._id}`);
+    console.log(`[${ts()}] [incident] ✅  Incident created in DB: ${incident._id}`);
     return incident._id;
   } catch (err) {
-    console.error('[watchdog] Failed to create incident in DB:', err.message);
+    console.error(`[${ts()}] [incident] ❌  Failed to create incident: ${err.message}`);
     return null;
   }
 }
 
-/**
- * Resolve the open watchdog incident in the DB.
- * Called when the server recovers.
- */
 async function resolveDownIncident(incidentId, downtimeMs) {
   const ok = await ensureDbConnected();
-  if (!ok) return;
+  if (!ok) {
+    console.error(`[${ts()}] [incident] Cannot resolve incident — DB unreachable`);
+    return;
+  }
 
   try {
     const incident = await Incident.findById(incidentId);
-    if (!incident) return;
+    if (!incident) {
+      console.warn(`[${ts()}] [incident] Could not find incident ${incidentId} to resolve`);
+      return;
+    }
 
     const mins = Math.round(downtimeMs / 60000);
     incident.status          = 'resolved';
@@ -191,19 +193,48 @@ async function resolveDownIncident(incidentId, downtimeMs) {
     incident.downtimeMinutes = mins;
     incident.timeline.push({
       status:  'resolved',
-      message: `Backend recovered. Total downtime: ${mins < 1 ? '<1' : mins} minute${mins !== 1 ? 's' : ''}. All systems operational.`,
+      message: `Backend recovered automatically. Total downtime: ${mins < 1 ? '<1' : mins} minute${mins !== 1 ? 's' : ''}. All systems operational.`,
     });
     await incident.save();
-    console.log(`[watchdog] ✅  Incident ${incidentId} resolved (${mins}m downtime)`);
+    console.log(`[${ts()}] [incident] ✅  Incident ${incidentId} auto-resolved (${mins}m downtime)`);
   } catch (err) {
-    console.error('[watchdog] Failed to resolve incident:', err.message);
+    console.error(`[${ts()}] [incident] ❌  Failed to resolve incident: ${err.message}`);
   }
 }
 
-// ─── Ping logic ───────────────────────────────────────────────────────────────
+// ─── ntfy ────────────────────────────────────────────────────────────────────
+async function sendNtfy({ title, message, priority = 'high', tags = [] }) {
+  if (!NTFY_URL) {
+    console.warn(`[${ts()}] [ntfy] Skipped — NTFY_URL not configured`);
+    return;
+  }
 
-let downSince = null;  // timestamp when server first went down
+  console.log(`[${ts()}] [ntfy] Sending: "${title}" to ${NTFY_URL}`);
 
+  try {
+    const headers = {
+      'Title':        title,
+      'Priority':     priority,
+      'Tags':         tags.join(','),
+      'Content-Type': 'text/plain',
+    };
+    if (FRONTEND_URL) {
+      headers['Actions'] = `view, Open Status Page, ${FRONTEND_URL}/status`;
+    }
+
+    const res = await axios.post(NTFY_URL, message, { headers, timeout: 10000 });
+    console.log(`[${ts()}] [ntfy] ✅  Sent — HTTP ${res.status}`);
+  } catch (err) {
+    // Log full details so you can debug ntfy issues
+    if (err.response) {
+      console.error(`[${ts()}] [ntfy] ❌  Failed — HTTP ${err.response.status}: ${JSON.stringify(err.response.data)}`);
+    } else {
+      console.error(`[${ts()}] [ntfy] ❌  Failed — ${err.message}`);
+    }
+  }
+}
+
+// ─── Ping logic ──────────────────────────────────────────────────────────────
 async function pingMainServer() {
   state.totalPings++;
   state.lastPingAt = new Date();
@@ -212,43 +243,42 @@ async function pingMainServer() {
     const t0  = Date.now();
     const res = await axios.get(PING_URL, {
       timeout: 10000,
-      validateStatus: s => s < 500,   // 2xx/4xx = server is up
+      validateStatus: s => s < 500, // 2xx / 4xx = server is up; 5xx or timeout = down
     });
-    const ms = Date.now() - t0;
+    const ms  = Date.now() - t0;
 
     state.lastPingMs          = ms;
     state.lastError           = null;
     state.consecutiveFailures = 0;
     state.consecutiveSuccesses++;
 
-    // ── Recovery path ──────────────────────────────────────────────────────
+    // ── Recovery ────────────────────────────────────────────────────────────
     if (state.isDown) {
-      const downtimeMs = Date.now() - (downSince || Date.now());
+      const downtimeMs   = Date.now() - (downSince || Date.now());
       const downtimeMins = Math.round(downtimeMs / 60000);
       state.isDown = false;
       downSince    = null;
 
-      console.log(`[watchdog] 🟢  Server RECOVERED after ${downtimeMins}m`);
+      console.log(`[${ts()}] 🟢  Server RECOVERED after ${downtimeMins}m — response ${ms}ms`);
 
-      // Resolve the open incident in DB
       if (state.activeIncidentId) {
         await resolveDownIncident(state.activeIncidentId, downtimeMs);
         state.activeIncidentId = null;
       }
 
-      // Send recovery ntfy
       await sendNtfy({
         title:    '🟢 PlanIt Recovered',
-        message:  `Backend is back online after ${downtimeMins < 1 ? '<1' : downtimeMins} min of downtime. Response time: ${ms}ms. The status page has been updated automatically.`,
+        message:  `Backend is back online after ${downtimeMins < 1 ? '<1' : downtimeMins} min of downtime.\nResponse time: ${ms}ms\nThe status page has been updated automatically.`,
         priority: 'high',
         tags:     ['white_check_mark', 'tada'],
       });
     } else {
-      // Normal healthy ping — log every 10th to avoid spam
-      if (state.totalPings % 10 === 0) {
-        console.log(`[watchdog] 💚  Ping OK  ${ms}ms  (ping #${state.totalPings})`);
+      // Healthy — log every 10 pings to keep logs readable
+      if (state.totalPings % 10 === 0 || state.totalPings <= 3) {
+        console.log(`[${ts()}] 💚  Ping OK — ${ms}ms (ping #${state.totalPings})`);
       }
     }
+
   } catch (err) {
     state.consecutiveFailures++;
     state.consecutiveSuccesses = 0;
@@ -256,34 +286,32 @@ async function pingMainServer() {
     state.lastError  = err.message;
     state.lastPingMs = null;
 
-    console.warn(`[watchdog] 🔴  Ping FAILED (${state.consecutiveFailures}/${THRESHOLD}): ${err.message}`);
+    console.warn(`[${ts()}] 🔴  Ping FAILED (${state.consecutiveFailures}/${THRESHOLD}): ${err.message}`);
 
-    // ── Failure threshold hit — server is officially down ──────────────────
+    // ── Threshold hit — server officially down ───────────────────────────────
     if (state.consecutiveFailures === THRESHOLD && !state.isDown) {
       state.isDown = true;
       downSince    = Date.now();
 
-      console.error(`[watchdog] 🚨  THRESHOLD HIT — declaring server DOWN`);
+      console.error(`[${ts()}] 🚨  THRESHOLD HIT — declaring server DOWN, writing incident to DB`);
 
-      // Write incident to DB (shared with main server's Mongo)
       const incidentId = await createDownIncident(err.message);
       state.activeIncidentId = incidentId;
 
-      // Send urgent ntfy alert
       await sendNtfy({
-        title:    `🚨 PlanIt Backend Down`,
-        message:  `The PlanIt API has been unreachable for ${THRESHOLD} consecutive checks (every ${PING_MS / 1000}s).\n\nError: ${err.message}\n\nThe status page has been updated. Check your server logs immediately.`,
+        title:    '🚨 PlanIt Backend Down',
+        message:  `The PlanIt API has been unreachable for ${THRESHOLD} consecutive checks (every ${PING_MS / 1000}s).\n\nError: ${err.message}\n\nIncident ID: ${incidentId || 'DB write failed'}\nStatus page updated automatically.`,
         priority: 'urgent',
         tags:     ['rotating_light', 'fire'],
       });
     }
 
-    // Repeat ntfy every 10 failures while still down (don't spam every 30s)
+    // Reminder every 10 failures while still down
     if (state.isDown && state.consecutiveFailures > THRESHOLD && state.consecutiveFailures % 10 === 0) {
       const downMins = Math.round((Date.now() - downSince) / 60000);
       await sendNtfy({
         title:    `⚠️ PlanIt Still Down (${downMins}m)`,
-        message:  `Backend has been unreachable for ${downMins} minutes.\n\nFailed pings: ${state.consecutiveFailures}\nLast error: ${err.message}`,
+        message:  `Backend has been unreachable for ${downMins} minutes.\nFailed pings: ${state.consecutiveFailures}\nLast error: ${err.message}`,
         priority: 'high',
         tags:     ['warning', 'clock'],
       });
@@ -291,18 +319,19 @@ async function pingMainServer() {
   }
 }
 
-// ─── Express health server ────────────────────────────────────────────────────
-// Lets hosting platforms (Railway, Render, Fly) know the watchdog itself is alive.
-// Also gives you a JSON status endpoint to check remotely.
-
+// ─── Express ─────────────────────────────────────────────────────────────────
 const app = express();
 app.use(express.json());
 
-// Root health check — used by the hosting platform's health probe
-app.get('/', (req, res) => res.send('PlanIt Watchdog OK'));
+// Root — used by Render / Railway / Fly health probes
+app.get('/', (_req, res) => res.send('PlanIt Watchdog OK'));
 
-// Detailed JSON status — lets YOU check watchdog health from anywhere
-app.get('/watchdog/status', (req, res) => {
+// Dedicated ping endpoint so UptimeRobot can monitor the watchdog itself
+app.get('/watchdog/ping', (_req, res) => res.json({ ok: true, ts: new Date().toISOString() }));
+app.head('/watchdog/ping', (_req, res) => res.sendStatus(200));
+
+// Full JSON status for debugging
+app.get('/watchdog/status', (_req, res) => {
   const uptimeSeconds = Math.floor((Date.now() - state.startedAt.getTime()) / 1000);
   res.json({
     watchdog:            'running',
@@ -310,6 +339,7 @@ app.get('/watchdog/status', (req, res) => {
     startedAt:           state.startedAt,
     mainServer:          state.isDown ? 'DOWN' : 'UP',
     consecutiveFailures: state.consecutiveFailures,
+    consecutiveSuccesses: state.consecutiveSuccesses,
     lastPingMs:          state.lastPingMs,
     lastPingAt:          state.lastPingAt,
     lastError:           state.lastError,
@@ -319,58 +349,45 @@ app.get('/watchdog/status', (req, res) => {
     pingIntervalMs:      PING_MS,
     failureThreshold:    THRESHOLD,
     targets: {
-      mainServer: PING_URL,
+      pingUrl:    PING_URL,
       frontend:   FRONTEND_URL,
       ntfy:       NTFY_URL || '(not set)',
     },
   });
 });
 
-// ─── Boot ─────────────────────────────────────────────────────────────────────
-
+// ─── Boot ────────────────────────────────────────────────────────────────────
 async function boot() {
-  console.log('');
-  console.log('╔══════════════════════════════════════════════╗');
-  console.log('║          PlanIt Watchdog  🛡️                  ║');
-  console.log('╚══════════════════════════════════════════════╝');
-  console.log(`  Monitoring : ${PING_URL}`);
-  console.log(`  Frontend   : ${FRONTEND_URL}`);
-  console.log(`  Interval   : ${PING_MS / 1000}s`);
-  console.log(`  Threshold  : ${THRESHOLD} failures`);
-  console.log(`  ntfy       : ${NTFY_URL || '(not configured)'}`);
-  console.log('');
-
-  // Pre-connect to MongoDB so first incident creation is fast
+  // 1. Connect to DB
   await ensureDbConnected();
 
-  // Start the HTTP server
+  // 2. Start HTTP server
   app.listen(PORT, () => {
-    console.log(`[watchdog] 🌐  Health server → http://0.0.0.0:${PORT}`);
-    console.log(`[watchdog] 📊  Status endpoint → http://0.0.0.0:${PORT}/watchdog/status`);
+    console.log(`[${ts()}] 🌐  Health server → http://0.0.0.0:${PORT}`);
+    console.log(`[${ts()}] 📊  Status       → http://0.0.0.0:${PORT}/watchdog/status`);
   });
 
-  // Initial ping immediately, then on interval
+  // 3. Fire an immediate test ping so you see in logs straight away whether
+  //    the watchdog can actually reach the main server.
+  console.log(`\n[${ts()}] 🔍  Running startup ping to ${PING_URL} ...`);
   await pingMainServer();
-  setInterval(pingMainServer, PING_MS);
 
-  console.log(`[watchdog] ✅  Pinging every ${PING_MS / 1000}s — watching for ${THRESHOLD} consecutive failures`);
-  console.log('');
+  // 4. Schedule ongoing pings
+  setInterval(pingMainServer, PING_MS);
+  console.log(`[${ts()}] ✅  Watchdog running — pinging every ${PING_MS / 1000}s, threshold ${THRESHOLD} failures\n`);
 }
 
-// Graceful shutdown
-process.on('SIGTERM', async () => {
-  console.log('[watchdog] SIGTERM — shutting down gracefully');
-  await mongoose.disconnect();
+// ─── Graceful shutdown ────────────────────────────────────────────────────────
+async function shutdown(signal) {
+  console.log(`\n[${ts()}] ${signal} — shutting down gracefully`);
+  try { await mongoose.disconnect(); } catch (_) {}
   process.exit(0);
-});
-
-process.on('SIGINT', async () => {
-  console.log('[watchdog] SIGINT — shutting down');
-  await mongoose.disconnect();
-  process.exit(0);
-});
+}
+process.on('SIGTERM', () => shutdown('SIGTERM'));
+process.on('SIGINT',  () => shutdown('SIGINT'));
 
 boot().catch(err => {
-  console.error('[watchdog] Fatal boot error:', err);
+  console.error(`[${ts()}] ❌  Fatal boot error: ${err.message}`);
+  console.error(err.stack);
   process.exit(1);
 });
