@@ -19,7 +19,6 @@ const mongoose = require('mongoose');
 const axios    = require('axios');
 const Incident     = require('../models/Incident');
 const UptimeReport = require('../models/UptimeReport');
-const UptimeCheck  = require('../models/UptimeCheck');
 const { verifyAdmin } = require('../middleware/auth');
 
 // ─── ntfy helper ─────────────────────────────────────────────────────────────
@@ -167,61 +166,13 @@ router.head('/ping', (req, res) => {
 });
 
 // GET — used by the frontend for latency display and the watchdog for health checks
-// Also records the ping result so the status page bars have real data
-router.get('/ping', async (req, res) => {
-  const t0 = Date.now();
+router.get('/ping', (req, res) => {
   res.json({
     ok:     true,
     db:     mongoose.connection.readyState === 1 ? 'ok' : 'down',
     uptime: Math.floor(process.uptime()),
     ts:     new Date().toISOString(),
   });
-  // Record after responding so it never slows down the ping itself
-  try {
-    await UptimeCheck.create({ status: 'up', latencyMs: Date.now() - t0 });
-  } catch (_) { /* non-critical */ }
-});
-
-// ─── Public: check history (for uptime bars) ──────────────────────────────────
-// Returns aggregated per-day results for the last 90 days.
-// Status page uses this to colour bars: green=up, red=down, gray=no data.
-router.get('/checks', async (req, res) => {
-  try {
-    const since = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000);
-    const checks = await UptimeCheck.aggregate([
-      { $match: { createdAt: { $gte: since } } },
-      {
-        $group: {
-          _id: {
-            y: { $year:         '$createdAt' },
-            m: { $month:        '$createdAt' },
-            d: { $dayOfMonth:   '$createdAt' },
-          },
-          totalChecks:  { $sum: 1 },
-          upChecks:     { $sum: { $cond: [{ $eq: ['$status', 'up'] }, 1, 0] } },
-          downChecks:   { $sum: { $cond: [{ $eq: ['$status', 'down'] }, 1, 0] } },
-          avgLatencyMs: { $avg: '$latencyMs' },
-        },
-      },
-      { $sort: { '_id.y': 1, '_id.m': 1, '_id.d': 1 } },
-    ]);
-
-    const byDay = {};
-    checks.forEach(c => {
-      const key = `${c._id.y}-${String(c._id.m).padStart(2,'0')}-${String(c._id.d).padStart(2,'0')}`;
-      byDay[key] = {
-        totalChecks:  c.totalChecks,
-        upChecks:     c.upChecks,
-        downChecks:   c.downChecks,
-        avgLatencyMs: c.avgLatencyMs ? Math.round(c.avgLatencyMs) : null,
-      };
-    });
-
-    res.json({ checks: byDay });
-  } catch (err) {
-    console.error('[uptime] /checks error:', err.message);
-    res.status(500).json({ error: 'Failed to fetch check history' });
-  }
 });
 
 // ─── Public: submit report ────────────────────────────────────────────────────
