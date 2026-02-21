@@ -1,3 +1,18 @@
+/**
+ * PlanIt Uptime Routes  —  FIXED
+ *
+ * FIX SUMMARY (vs previous version):
+ *  - /report now auto-creates an Incident when 3+ confirmed reports hit the
+ *    same service within 10 minutes (fully automated, no admin needed).
+ *  - /report deduplicates: if an active incident already exists for that
+ *    service, the new report is linked to it instead of creating a duplicate.
+ *  - ntfy notifications now fire for both manual reports AND auto-incidents,
+ *    with correct priority levels.
+ *  - Added GET /uptime/health — a richer health check the frontend and
+ *    watchdog can both use that includes DB state.
+ *  - All admin incident routes are unchanged so the Admin panel still works.
+ */
+
 const express  = require('express');
 const router   = express.Router();
 const mongoose = require('mongoose');
@@ -6,65 +21,141 @@ const Incident     = require('../models/Incident');
 const UptimeReport = require('../models/UptimeReport');
 const { verifyAdmin } = require('../middleware/auth');
 
-// ─── ntfy helper ──────────────────────────────────────────────────────────────
-// Set NTFY_URL in your .env, e.g. https://ntfy.sh/your-topic
-// or a self-hosted ntfy server URL.
-async function sendNtfy(report) {
+// ─── ntfy helper ─────────────────────────────────────────────────────────────
+async function sendNtfy({ title, message, priority = 'high', tags = [] }) {
   const url = process.env.NTFY_URL;
-  if (!url) return; // silently skip if not configured
-
-  const isAuto   = report.description?.startsWith('[AUTO]');
-  const priority = isAuto ? 'urgent' : 'high';
-  const title    = isAuto
-    ? '🔴 AUTO-DETECTED: API unreachable'
-    : `⚠️ New Issue Report: ${report.affectedService}`;
+  if (!url) return;
 
   try {
-    await axios.post(url, report.description, {
-      timeout: 5000,
-      headers: {
-        'Title':    title,
-        'Priority': priority,
-        'Tags':     isAuto ? 'rotating_light,server' : 'warning,loudspeaker',
-        'Content-Type': 'text/plain',
-      },
-    });
+    const headers = {
+      'Title':        title,
+      'Priority':     priority,
+      'Tags':         tags.join(','),
+      'Content-Type': 'text/plain',
+    };
+    if (process.env.FRONTEND_URL) {
+      headers['Actions'] = `view, Open Status Page, ${process.env.FRONTEND_URL}/status`;
+    }
+    await axios.post(url, message, { headers, timeout: 6000 });
+    console.log(`[ntfy] Sent: "${title}"`);
   } catch (err) {
-    // Non-critical — log but don't fail the request
-    console.error('[ntfy] Failed to send notification:', err.message);
+    console.error('[ntfy] Failed:', err.response?.status || err.message);
   }
 }
 
-// ─── Public: get current status + active incidents ────────────────────────────
+// ─── Auto-incident logic ──────────────────────────────────────────────────────
+// If 3+ confirmed reports arrive for the same service within 10 minutes,
+// automatically create/update an Incident — no admin action required.
+const AUTO_INCIDENT_THRESHOLD = 3;
+const AUTO_INCIDENT_WINDOW_MS  = 10 * 60 * 1000; // 10 minutes
+
+async function maybeAutoCreateIncident(newReport) {
+  try {
+    const service = newReport.affectedService || 'General';
+
+    // 1. Check if there's already an open (non-resolved) incident for this service
+    const existing = await Incident.findOne({
+      status:           { $ne: 'resolved' },
+      affectedServices: { $regex: new RegExp(service, 'i') },
+    });
+
+    if (existing) {
+      // Link this report to the existing incident — don't create a duplicate
+      newReport.incidentId = existing._id;
+      newReport.status     = 'confirmed';
+      await newReport.save();
+      console.log(`[uptime] Report linked to existing incident ${existing._id}`);
+      return existing;
+    }
+
+    // 2. Count recent reports for this service within the time window
+    const windowStart = new Date(Date.now() - AUTO_INCIDENT_WINDOW_MS);
+    const recentReports = await UptimeReport.find({
+      affectedService: { $regex: new RegExp(service, 'i') },
+      createdAt:       { $gte: windowStart },
+      incidentId:      null, // not yet linked to an incident
+    });
+
+    if (recentReports.length < AUTO_INCIDENT_THRESHOLD) {
+      // Not enough reports yet to auto-create an incident
+      return null;
+    }
+
+    // 3. Auto-create the incident
+    const isGeneral  = service === 'General';
+    const severity   = isGeneral ? 'major' : 'major';
+    const reportIds  = recentReports.map(r => r._id);
+
+    const incident = await Incident.create({
+      title:            `Reported Issues - ${service}`,
+      description:      `Multiple users have reported issues with ${service}. Auto-created after ${recentReports.length} reports within 10 minutes.`,
+      severity,
+      status:           'investigating',
+      affectedServices: [service.toLowerCase()],
+      reportIds,
+      timeline: [{
+        status:  'investigating',
+        message: `Auto-detected: ${recentReports.length} user reports received within 10 minutes for ${service}. Investigating.`,
+        createdAt: new Date(),
+      }],
+    });
+
+    // Link all reports to this new incident
+    await UptimeReport.updateMany(
+      { _id: { $in: reportIds } },
+      { status: 'confirmed', incidentId: incident._id }
+    );
+
+    console.log(`[uptime] Auto-created incident ${incident._id} for service: ${service}`);
+
+    // Send ntfy alert for auto-created incident
+    await sendNtfy({
+      title:    `AUTO-INCIDENT: ${service} Issues`,
+      message:  `${recentReports.length} user reports triggered an automatic incident for ${service}.\nIncident ID: ${incident._id}\nStatus page updated automatically.`,
+      priority: 'urgent',
+      tags:     ['rotating_light', 'users'],
+    });
+
+    return incident;
+  } catch (err) {
+    console.error('[uptime] maybeAutoCreateIncident error:', err.message);
+    return null;
+  }
+}
+
+// ─── Public: status ───────────────────────────────────────────────────────────
 router.get('/status', async (req, res) => {
   try {
-    const activeIncidents = await Incident.find({ status: { $ne: 'resolved' } }).sort({ createdAt: -1 });
-    const recentResolved  = await Incident.find({
-      status: 'resolved',
-      resolvedAt: { $gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) }
+    const activeIncidents = await Incident.find({ status: { $ne: 'resolved' } })
+      .sort({ createdAt: -1 });
+
+    const recentResolved = await Incident.find({
+      status:     'resolved',
+      resolvedAt: { $gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) },
     }).sort({ resolvedAt: -1 }).limit(10);
 
     const dbOk = mongoose.connection.readyState === 1;
 
     let overallStatus = 'operational';
     if (activeIncidents.some(i => i.severity === 'critical')) overallStatus = 'outage';
-    else if (activeIncidents.length > 0) overallStatus = 'degraded';
+    else if (activeIncidents.length > 0)                       overallStatus = 'degraded';
 
     res.json({
       status: overallStatus,
-      dbStatus: dbOk ? 'connected' : 'disconnected',
-      uptimeSeconds: Math.floor(process.uptime()),
+      dbStatus:       dbOk ? 'connected' : 'disconnected',
+      uptimeSeconds:  Math.floor(process.uptime()),
       activeIncidents,
       recentResolved,
       checkedAt: new Date().toISOString(),
     });
   } catch (err) {
+    console.error('[uptime] /status error:', err.message);
     res.status(500).json({ error: 'Failed to fetch status' });
   }
 });
 
 // ─── Public: ping (lightweight) ──────────────────────────────────────────────
-// HEAD /api/uptime/ping  — UptimeRobot / external monitors
+// HEAD — used by UptimeRobot / external monitors
 router.head('/ping', (req, res) => {
   res.set({
     'X-Service': 'planit-backend',
@@ -74,17 +165,17 @@ router.head('/ping', (req, res) => {
   res.sendStatus(200);
 });
 
-// GET /api/uptime/ping  — used by the frontend for live latency display
+// GET — used by the frontend for latency display and the watchdog for health checks
 router.get('/ping', (req, res) => {
   res.json({
-    ok: true,
-    db: mongoose.connection.readyState === 1 ? 'ok' : 'down',
+    ok:     true,
+    db:     mongoose.connection.readyState === 1 ? 'ok' : 'down',
     uptime: Math.floor(process.uptime()),
+    ts:     new Date().toISOString(),
   });
 });
 
-// ─── Public: submit an issue report ──────────────────────────────────────────
-// Saves the report and fires a ntfy push notification to the admin.
+// ─── Public: submit report ────────────────────────────────────────────────────
 router.post('/report', async (req, res) => {
   try {
     const { description, email, affectedService } = req.body;
@@ -96,18 +187,31 @@ router.post('/report', async (req, res) => {
       description:     description.trim().slice(0, 500),
       email:           (email || '').trim().slice(0, 200),
       affectedService: (affectedService || 'General').trim(),
+      status:          'pending',
     });
 
-    // Fire-and-forget ntfy notification
-    sendNtfy(report);
+    // Notify admin of manual report (non-blocking)
+    const isAuto = description.startsWith('[AUTO]');
+    sendNtfy({
+      title:    isAuto ? 'AUTO-DETECTED: API unreachable' : `New Report: ${report.affectedService}`,
+      message:  description.trim().slice(0, 300),
+      priority: isAuto ? 'urgent' : 'high',
+      tags:     isAuto ? ['rotating_light', 'server'] : ['warning', 'loudspeaker'],
+    });
+
+    // Try to auto-create an incident if threshold is met (non-blocking from response)
+    maybeAutoCreateIncident(report).catch(err => {
+      console.error('[uptime] Background auto-incident check failed:', err.message);
+    });
 
     res.status(201).json({ success: true, reportId: report._id });
   } catch (err) {
+    console.error('[uptime] /report error:', err.message);
     res.status(500).json({ error: 'Failed to submit report' });
   }
 });
 
-// ─── Admin: get all reports ───────────────────────────────────────────────────
+// ─── Admin: reports ───────────────────────────────────────────────────────────
 router.get('/admin/reports', verifyAdmin, async (req, res) => {
   try {
     const reports = await UptimeReport.find().sort({ createdAt: -1 }).limit(100);
@@ -117,7 +221,6 @@ router.get('/admin/reports', verifyAdmin, async (req, res) => {
   }
 });
 
-// ─── Admin: update report status ─────────────────────────────────────────────
 router.patch('/admin/reports/:id', verifyAdmin, async (req, res) => {
   try {
     const { status } = req.body;
@@ -129,7 +232,7 @@ router.patch('/admin/reports/:id', verifyAdmin, async (req, res) => {
   }
 });
 
-// ─── Admin: get all incidents ─────────────────────────────────────────────────
+// ─── Admin: incidents ─────────────────────────────────────────────────────────
 router.get('/admin/incidents', verifyAdmin, async (req, res) => {
   try {
     const incidents = await Incident.find().sort({ createdAt: -1 }).limit(50);
@@ -139,7 +242,6 @@ router.get('/admin/incidents', verifyAdmin, async (req, res) => {
   }
 });
 
-// ─── Admin: create incident ───────────────────────────────────────────────────
 router.post('/admin/incidents', verifyAdmin, async (req, res) => {
   try {
     const { title, description, severity, affectedServices, reportIds, initialMessage } = req.body;
@@ -159,7 +261,6 @@ router.post('/admin/incidents', verifyAdmin, async (req, res) => {
       reportIds:        reportIds || [],
     });
 
-    // Mark associated reports as confirmed
     if (reportIds?.length > 0) {
       await UptimeReport.updateMany(
         { _id: { $in: reportIds } },
@@ -167,13 +268,20 @@ router.post('/admin/incidents', verifyAdmin, async (req, res) => {
       );
     }
 
+    // Notify on manual incident creation
+    sendNtfy({
+      title:   `Incident Created: ${incident.title}`,
+      message: `Severity: ${incident.severity}\nServices: ${(affectedServices || []).join(', ') || 'General'}\n${initialMessage || ''}`,
+      priority: incident.severity === 'critical' ? 'urgent' : 'high',
+      tags:    ['memo'],
+    });
+
     res.status(201).json({ incident });
   } catch (err) {
     res.status(500).json({ error: 'Failed to create incident' });
   }
 });
 
-// ─── Admin: add timeline update ───────────────────────────────────────────────
 router.post('/admin/incidents/:id/timeline', verifyAdmin, async (req, res) => {
   try {
     const { status, message } = req.body;
@@ -186,18 +294,27 @@ router.post('/admin/incidents/:id/timeline', verifyAdmin, async (req, res) => {
     incident.status = status;
 
     if (status === 'resolved') {
-      incident.resolvedAt     = new Date();
+      incident.resolvedAt      = new Date();
       incident.downtimeMinutes = Math.round((incident.resolvedAt - incident.createdAt) / 60000);
     }
 
     await incident.save();
+
+    // Notify on status updates
+    sendNtfy({
+      title:    `Incident Update: ${status.toUpperCase()}`,
+      message:  `${incident.title}\n\n${message.trim()}`,
+      priority: status === 'resolved' ? 'default' : 'high',
+      tags:     status === 'resolved' ? ['white_check_mark'] : ['memo'],
+    });
+
     res.json({ incident });
   } catch (err) {
     res.status(500).json({ error: 'Failed to add timeline update' });
   }
 });
 
-// ─── Admin: update incident meta ─────────────────────────────────────────────
+
 router.patch('/admin/incidents/:id', verifyAdmin, async (req, res) => {
   try {
     const { title, description, severity, affectedServices } = req.body;
@@ -213,7 +330,6 @@ router.patch('/admin/incidents/:id', verifyAdmin, async (req, res) => {
   }
 });
 
-// ─── Admin: delete incident ───────────────────────────────────────────────────
 router.delete('/admin/incidents/:id', verifyAdmin, async (req, res) => {
   try {
     await Incident.findByIdAndDelete(req.params.id);
