@@ -830,8 +830,12 @@ export default function StarBackground({ fixed=true, starCount=null }) {
   },[layers,mwStars,mwDust,cfg,tier]);
 
   const style = fixed
-    ? {position:'fixed',inset:0,width:'100%',height:'100%',pointerEvents:'none',zIndex:0,background:'#000',transform:'translateZ(0)',willChange:'auto'}
-    : {position:'absolute',inset:0,width:'100%',height:'100%',pointerEvents:'none',background:'#000',transform:'translateZ(0)',willChange:'auto'};
+    ? { position:'fixed', inset:0, width:'100%', height:'100%', pointerEvents:'none', zIndex:0, background:'#000',
+        transform:'translateZ(0)', WebkitTransform:'translateZ(0)',
+        willChange:'transform', backfaceVisibility:'hidden', WebkitBackfaceVisibility:'hidden' }
+    : { position:'absolute', inset:0, width:'100%', height:'100%', pointerEvents:'none', background:'#000',
+        transform:'translateZ(0)', WebkitTransform:'translateZ(0)',
+        willChange:'transform', backfaceVisibility:'hidden', WebkitBackfaceVisibility:'hidden' };
 
   return <canvas ref={canvasRef} style={style} />;
 }
