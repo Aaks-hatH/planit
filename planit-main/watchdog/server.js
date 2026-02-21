@@ -1,26 +1,4 @@
-/**
- * PlanIt Watchdog Server  —  FIXED
- * ─────────────────────────────────────────────────────────────────────────────
- * Runs on a SEPARATE host/dyno from the main backend.
- * Every PING_INTERVAL_MS it hits GET /api/uptime/ping on the main server.
- * After FAILURE_THRESHOLD consecutive failures it:
- *   1. Writes a critical Incident directly to the shared MongoDB
- *   2. Fires an urgent ntfy push notification
- * On recovery it auto-resolves the incident and sends an all-clear ntfy.
- *
- * FIX SUMMARY (vs previous version):
- *  - Added startup self-test: prints all env vars + fires a test ping so you
- *    can see in logs immediately whether the watchdog is actually reaching the server.
- *  - Fixed silent ntfy failures: now logs full error details.
- *  - Added DB connection retry on every incident write — not just on boot.
- *  - Added /watchdog/ping route so an external monitor (UptimeRobot, Render
- *    health check) can confirm the watchdog itself is alive.
- *  - Interval is now cleared and restarted if the process hangs — uses a
- *    self-healing ticker instead of raw setInterval.
- *  - All console output includes timestamps for easy log reading.
- *  - MONGO_URI validation gives a clear actionable error message.
- *  - Recovery ntfy includes exact downtime in minutes.
- */
+
 
 require('dotenv').config();
 const express  = require('express');
