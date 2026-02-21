@@ -26,9 +26,9 @@ function getDayKey(date) {
 }
 
 /**
- * Build 90-day uptime bars.
- * serverDown=true marks today as an outage even if no DB incident exists yet —
- * this covers the gap between the server dying and the watchdog writing to DB.
+ * Build 90-day uptime bars from incident history.
+ * Days with no incident are green. serverDown marks today red immediately,
+ * before the watchdog has a chance to write an incident to the DB.
  */
 function buildBars(incidents, serviceKey, serverDown = false) {
   const DAYS = 90;
@@ -130,16 +130,23 @@ function UptimeBar({ bar, index }) {
   const color =
     bar.status === 'outage'   ? '#ef4444' :
     bar.status === 'degraded' ? '#f97316' : '#22c55e';
+
+  const label =
+    bar.status === 'outage'   ? 'Outage' :
+    bar.status === 'degraded' ? 'Degraded' : 'Operational';
+
   return (
     <div
-      title={`${formatDayLabel(bar.date)} — ${
-        bar.status === 'ok' ? 'No incidents' :
-        bar.status === 'degraded' ? 'Degraded' : 'Outage'
-      }`}
+      title={`${formatDayLabel(bar.date)} — ${label}`}
       style={{
-        width: '100%', height: '32px', backgroundColor: color,
-        borderRadius: '2px', cursor: 'default', flexShrink: 0,
-        opacity: 0, animation: `barIn 0.3s ease ${index * 0.006}s both`,
+        width: '100%',
+        height: '36px',
+        backgroundColor: color,
+        borderRadius: '999px',
+        cursor: 'default',
+        flexShrink: 0,
+        opacity: 0,
+        animation: `barIn 0.3s ease ${index * 0.006}s both`,
       }}
     />
   );
@@ -180,7 +187,7 @@ function ServiceRow({ service, incidents, online }) {
           {disrupted ? (!online ? 'Offline' : 'Disrupted') : 'Operational'}
         </span>
       </div>
-      <div style={{ display: 'flex', gap: '1.5px', width: '100%', overflow: 'hidden' }}>
+      <div style={{ display: 'flex', gap: '3px', width: '100%', overflow: 'hidden' }}>
         {bars.map((bar, i) => <UptimeBar key={i} bar={bar} index={i} />)}
       </div>
       <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '5px' }}>
