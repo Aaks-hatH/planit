@@ -12,6 +12,7 @@ import Support from './pages/Support';
 import SupportSuccess from './pages/SupportSuccess';
 import WallOfSupporters from './pages/WallOfSupporters';
 import About from './pages/About';
+import Status from './pages/Status';
 
 function App() {
   return (
@@ -31,6 +32,7 @@ function App() {
         <Route path="/support/success" element={<SupportSuccess />} />
         <Route path="/support/wall" element={<WallOfSupporters />} />
         <Route path="/about" element={<About />} />
+        <Route path="/status" element={<Status />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
     </Router>
