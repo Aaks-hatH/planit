@@ -7,9 +7,10 @@ import {
   RefreshCw, ShieldOff, Edit2, Save, X, FileText, Image,
   Clock, Mail, MapPin, User, Settings, AlertTriangle, CheckCircle,
   Server, Zap, DollarSign, Cpu, Info, Upload, FileUp, Trash,
-  ExternalLink
+  ExternalLink, Radio, AlertCircle, Plus, ChevronDown, ChevronUp,
+  XCircle, Wifi
 } from 'lucide-react';
-import { adminAPI } from '../services/api';
+import { adminAPI, uptimeAPI } from '../services/api';
 import { formatNumber, formatFileSize } from '../utils/formatters';
 import { DateTime } from 'luxon';
 
@@ -725,6 +726,441 @@ function EventDetail({ event: initialEvent, onBack, onDelete, onUpdate }) {
   );
 }
 
+// ─────────────────────────────────────────────────────────────────
+// UPTIME PANEL
+// ─────────────────────────────────────────────────────────────────
+
+const SEVERITY_META = {
+  minor:    { label: 'Minor',    bg: 'bg-amber-100',  text: 'text-amber-700'  },
+  major:    { label: 'Major',    bg: 'bg-orange-100', text: 'text-orange-700' },
+  critical: { label: 'Critical', bg: 'bg-red-100',    text: 'text-red-700'    },
+};
+const STATUS_META = {
+  investigating: { label: 'Investigating', dot: 'bg-red-500'     },
+  identified:    { label: 'Identified',    dot: 'bg-orange-400'  },
+  monitoring:    { label: 'Monitoring',    dot: 'bg-amber-400'   },
+  resolved:      { label: 'Resolved',      dot: 'bg-emerald-500' },
+};
+
+function uptimeTimeAgo(dateStr) {
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return 'just now';
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  return `${Math.floor(hrs / 24)}d ago`;
+}
+
+function formatDowntime(mins) {
+  if (!mins) return null;
+  if (mins < 60) return `${mins}m`;
+  const h = Math.floor(mins / 60), m = mins % 60;
+  return m ? `${h}h ${m}m` : `${h}h`;
+}
+
+function UptimePanel() {
+  const [reports, setReports] = useState([]);
+  const [incidents, setIncidents] = useState([]);
+  const [loadingReports, setLoadingReports] = useState(true);
+  const [loadingIncidents, setLoadingIncidents] = useState(true);
+  const [activeTab, setActiveTab] = useState('reports');
+  const [expandedIncident, setExpandedIncident] = useState(null);
+
+  // Create incident form
+  const [showCreateIncident, setShowCreateIncident] = useState(false);
+  const [createForm, setCreateForm] = useState({
+    title: '', description: '', severity: 'minor', affectedServices: '', initialMessage: '', reportIds: []
+  });
+  const [creating, setCreating] = useState(false);
+
+  // Timeline update form
+  const [timelineTarget, setTimelineTarget] = useState(null);
+  const [tlForm, setTlForm] = useState({ status: 'investigating', message: '' });
+  const [tlSubmitting, setTlSubmitting] = useState(false);
+
+  useEffect(() => { loadReports(); loadIncidents(); }, []);
+
+  const loadReports = async () => {
+    setLoadingReports(true);
+    try {
+      const res = await uptimeAPI.getReports();
+      setReports(res.data.reports || []);
+    } catch { /* silent */ }
+    finally { setLoadingReports(false); }
+  };
+
+  const loadIncidents = async () => {
+    setLoadingIncidents(true);
+    try {
+      const res = await uptimeAPI.getIncidents();
+      setIncidents(res.data.incidents || []);
+    } catch { /* silent */ }
+    finally { setLoadingIncidents(false); }
+  };
+
+  const handleDismissReport = async (id) => {
+    try {
+      await uptimeAPI.updateReport(id, { status: 'dismissed' });
+      setReports(r => r.map(x => x._id === id ? { ...x, status: 'dismissed' } : x));
+    } catch { toast.error('Failed to update report'); }
+  };
+
+  const handleCreateIncident = async () => {
+    if (!createForm.title.trim()) { toast.error('Title required'); return; }
+    setCreating(true);
+    try {
+      const payload = {
+        title: createForm.title,
+        description: createForm.description,
+        severity: createForm.severity,
+        affectedServices: createForm.affectedServices ? createForm.affectedServices.split(',').map(s => s.trim()).filter(Boolean) : [],
+        initialMessage: createForm.initialMessage,
+        reportIds: createForm.reportIds,
+      };
+      await uptimeAPI.createIncident(payload);
+      toast.success('Incident created');
+      setShowCreateIncident(false);
+      setCreateForm({ title: '', description: '', severity: 'minor', affectedServices: '', initialMessage: '', reportIds: [] });
+      loadIncidents();
+      loadReports();
+    } catch { toast.error('Failed to create incident'); }
+    finally { setCreating(false); }
+  };
+
+  const handleAddTimeline = async () => {
+    if (!tlForm.message.trim()) { toast.error('Message required'); return; }
+    setTlSubmitting(true);
+    try {
+      const res = await uptimeAPI.addTimelineUpdate(timelineTarget, tlForm);
+      setIncidents(inc => inc.map(i => i._id === timelineTarget ? res.data.incident : i));
+      setTlForm({ status: 'investigating', message: '' });
+      setTimelineTarget(null);
+      toast.success('Timeline updated');
+    } catch { toast.error('Failed to update timeline'); }
+    finally { setTlSubmitting(false); }
+  };
+
+  const handleDeleteIncident = async (id) => {
+    if (!confirm('Delete this incident permanently?')) return;
+    try {
+      await uptimeAPI.deleteIncident(id);
+      setIncidents(i => i.filter(x => x._id !== id));
+      toast.success('Incident deleted');
+    } catch { toast.error('Failed to delete incident'); }
+  };
+
+  const pendingCount = reports.filter(r => r.status === 'pending').length;
+  const activeCount = incidents.filter(i => i.status !== 'resolved').length;
+
+  return (
+    <div className="space-y-6">
+      <style>{`
+        @keyframes fadeUp { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
+        .fade-up { animation: fadeUp 0.25s ease both; }
+      `}</style>
+
+      {/* Top bar */}
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <div>
+          <h2 className="text-lg font-bold text-neutral-900">Uptime & Incidents</h2>
+          <p className="text-sm text-neutral-500 mt-0.5">
+            {activeCount > 0 ? `${activeCount} active incident${activeCount > 1 ? 's' : ''}` : 'All systems nominal'} · {pendingCount} pending report{pendingCount !== 1 ? 's' : ''}
+          </p>
+        </div>
+        <div className="flex gap-2">
+          <a href="/status" target="_blank" rel="noopener noreferrer"
+            className="btn btn-secondary gap-2 text-sm">
+            <ExternalLink className="w-4 h-4" /> Public Page
+          </a>
+          <button onClick={() => setShowCreateIncident(true)}
+            className="btn btn-primary gap-2 text-sm bg-neutral-900 hover:bg-neutral-800 text-white border-neutral-900">
+            <Plus className="w-4 h-4" /> New Incident
+          </button>
+        </div>
+      </div>
+
+      {/* Sub-tabs */}
+      <div className="flex gap-1 bg-neutral-100 rounded-xl p-1 w-fit">
+        {[
+          { id: 'reports',   label: 'Reports',   count: pendingCount  },
+          { id: 'incidents', label: 'Incidents', count: activeCount   },
+        ].map(t => (
+          <button key={t.id} onClick={() => setActiveTab(t.id)}
+            className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-all flex items-center gap-1.5 ${
+              activeTab === t.id ? 'bg-white shadow-sm text-neutral-900' : 'text-neutral-500 hover:text-neutral-700'
+            }`}>
+            {t.label}
+            {t.count > 0 && (
+              <span className={`text-xs px-1.5 py-0.5 rounded-full font-semibold ${activeTab === t.id ? 'bg-red-100 text-red-600' : 'bg-neutral-200 text-neutral-500'}`}>
+                {t.count}
+              </span>
+            )}
+          </button>
+        ))}
+      </div>
+
+      {/* Reports tab */}
+      {activeTab === 'reports' && (
+        <div className="fade-up">
+          {loadingReports ? (
+            <div className="flex justify-center py-12">
+              <span className="spinner w-6 h-6 border-2 border-neutral-200 border-t-neutral-600" />
+            </div>
+          ) : reports.length === 0 ? (
+            <div className="text-center py-16 text-neutral-400">
+              <Radio className="w-10 h-10 mx-auto mb-3 opacity-30" />
+              <p className="text-sm">No reports yet</p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {reports.map((r, i) => (
+                <div key={r._id} className={`card p-4 flex items-start gap-4 transition-all fade-up`}
+                  style={{ animationDelay: `${i * 0.04}s` }}>
+                  <div className={`w-2 h-2 rounded-full mt-1.5 flex-shrink-0 ${
+                    r.status === 'pending' ? 'bg-amber-400 animate-pulse' :
+                    r.status === 'confirmed' ? 'bg-red-500' : 'bg-neutral-300'
+                  }`} />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-xs font-medium text-neutral-500 bg-neutral-100 px-2 py-0.5 rounded-full">
+                        {r.affectedService}
+                      </span>
+                      <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${
+                        r.status === 'pending' ? 'bg-amber-100 text-amber-700' :
+                        r.status === 'confirmed' ? 'bg-red-100 text-red-700' :
+                        'bg-neutral-100 text-neutral-400'
+                      }`}>{r.status}</span>
+                      <span className="text-xs text-neutral-400">{uptimeTimeAgo(r.createdAt)}</span>
+                    </div>
+                    <p className="text-sm text-neutral-800 mt-1.5 leading-relaxed">{r.description}</p>
+                    {r.email && <p className="text-xs text-neutral-400 mt-1">{r.email}</p>}
+                  </div>
+                  {r.status === 'pending' && (
+                    <div className="flex gap-2 flex-shrink-0">
+                      <button
+                        onClick={() => {
+                          setCreateForm(f => ({ ...f, reportIds: [r._id], description: r.description }));
+                          setShowCreateIncident(true);
+                        }}
+                        className="text-xs px-3 py-1.5 rounded-lg bg-neutral-900 text-white hover:bg-neutral-800 transition-colors font-medium"
+                      >
+                        Make Incident
+                      </button>
+                      <button
+                        onClick={() => handleDismissReport(r._id)}
+                        className="text-xs px-3 py-1.5 rounded-lg border border-neutral-200 text-neutral-500 hover:bg-neutral-50 transition-colors"
+                      >
+                        Dismiss
+                      </button>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Incidents tab */}
+      {activeTab === 'incidents' && (
+        <div className="fade-up space-y-3">
+          {loadingIncidents ? (
+            <div className="flex justify-center py-12">
+              <span className="spinner w-6 h-6 border-2 border-neutral-200 border-t-neutral-600" />
+            </div>
+          ) : incidents.length === 0 ? (
+            <div className="text-center py-16 text-neutral-400">
+              <CheckCircle className="w-10 h-10 mx-auto mb-3 opacity-30" />
+              <p className="text-sm">No incidents on record</p>
+            </div>
+          ) : incidents.map((inc, i) => {
+            const sm = STATUS_META[inc.status] || STATUS_META.investigating;
+            const sv = SEVERITY_META[inc.severity] || SEVERITY_META.minor;
+            const isExpanded = expandedIncident === inc._id;
+            return (
+              <div key={inc._id} className="card overflow-hidden fade-up" style={{ animationDelay: `${i * 0.04}s` }}>
+                <button className="w-full px-5 py-4 flex items-start gap-3 text-left hover:bg-neutral-50 transition-colors"
+                  onClick={() => setExpandedIncident(isExpanded ? null : inc._id)}>
+                  <span className={`w-2.5 h-2.5 rounded-full mt-1.5 flex-shrink-0 ${sm.dot} ${inc.status !== 'resolved' ? 'animate-pulse' : ''}`} />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <p className="text-sm font-semibold text-neutral-900">{inc.title}</p>
+                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${sv.bg} ${sv.text}`}>{sv.label}</span>
+                      <span className="text-xs text-neutral-400 font-medium">{sm.label}</span>
+                      {inc.downtimeMinutes && (
+                        <span className="text-xs text-neutral-400 flex items-center gap-1">
+                          <Clock className="w-3 h-3" />{formatDowntime(inc.downtimeMinutes)}
+                        </span>
+                      )}
+                    </div>
+                    {inc.affectedServices?.length > 0 && (
+                      <p className="text-xs text-neutral-500 mt-0.5">Affects: {inc.affectedServices.join(', ')}</p>
+                    )}
+                    <p className="text-xs text-neutral-400 mt-0.5">{uptimeTimeAgo(inc.createdAt)}</p>
+                  </div>
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    {inc.status !== 'resolved' && (
+                      <button
+                        onClick={e => { e.stopPropagation(); setTimelineTarget(inc._id); setTlForm({ status: 'investigating', message: '' }); }}
+                        className="text-xs px-3 py-1.5 rounded-lg bg-neutral-900 text-white hover:bg-neutral-800 transition-colors font-medium"
+                      >
+                        Update
+                      </button>
+                    )}
+                    <button onClick={e => { e.stopPropagation(); handleDeleteIncident(inc._id); }}
+                      className="p-1.5 text-neutral-300 hover:text-red-500 transition-colors">
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                    {isExpanded ? <ChevronUp className="w-4 h-4 text-neutral-400" /> : <ChevronDown className="w-4 h-4 text-neutral-400" />}
+                  </div>
+                </button>
+
+                {isExpanded && (
+                  <div className="px-5 pb-5 border-t border-neutral-100">
+                    {inc.description && (
+                      <p className="text-sm text-neutral-600 mt-4 mb-4 leading-relaxed">{inc.description}</p>
+                    )}
+                    {inc.timeline?.length > 0 && (
+                      <div className="relative pl-4 mt-4">
+                        <div className="absolute left-0 top-0 bottom-0 w-px bg-neutral-200" />
+                        {[...inc.timeline].reverse().map((update, j) => {
+                          const usm = STATUS_META[update.status] || STATUS_META.investigating;
+                          return (
+                            <div key={j} className="relative mb-4 last:mb-0">
+                              <span className={`absolute -left-[17px] w-2.5 h-2.5 rounded-full border-2 border-white ${usm.dot}`} />
+                              <div className="flex items-center gap-2">
+                                <span className="text-xs font-semibold text-neutral-700">{usm.label}</span>
+                                <span className="text-xs text-neutral-400">{uptimeTimeAgo(update.createdAt)}</span>
+                              </div>
+                              <p className="text-sm text-neutral-600 mt-0.5 leading-relaxed">{update.message}</p>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Create Incident Modal */}
+      {showCreateIncident && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 px-4"
+          onClick={e => e.target === e.currentTarget && setShowCreateIncident(false)}>
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden"
+            style={{ animation: 'fadeUp 0.2s ease both' }}>
+            <div className="px-6 py-5 border-b border-neutral-100 flex items-center justify-between">
+              <div>
+                <h3 className="text-base font-bold text-neutral-900">Create Incident</h3>
+                <p className="text-xs text-neutral-500 mt-0.5">This will appear publicly on the status page</p>
+              </div>
+              <button onClick={() => setShowCreateIncident(false)} className="p-1.5 hover:bg-neutral-100 rounded-lg transition-colors">
+                <X className="w-4 h-4 text-neutral-400" />
+              </button>
+            </div>
+            <div className="px-6 py-5 space-y-4 max-h-[60vh] overflow-y-auto">
+              <div>
+                <label className="block text-xs font-medium text-neutral-600 mb-1.5">Title <span className="text-red-400">*</span></label>
+                <input value={createForm.title} onChange={e => setCreateForm(f => ({ ...f, title: e.target.value }))}
+                  placeholder="e.g. API Response Delays" className="input w-full text-sm" />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-medium text-neutral-600 mb-1.5">Severity</label>
+                  <select value={createForm.severity} onChange={e => setCreateForm(f => ({ ...f, severity: e.target.value }))}
+                    className="input w-full text-sm">
+                    <option value="minor">Minor</option>
+                    <option value="major">Major</option>
+                    <option value="critical">Critical</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-neutral-600 mb-1.5">Affected Services</label>
+                  <input value={createForm.affectedServices} onChange={e => setCreateForm(f => ({ ...f, affectedServices: e.target.value }))}
+                    placeholder="API, Chat (comma-sep)" className="input w-full text-sm" />
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-neutral-600 mb-1.5">Description</label>
+                <textarea value={createForm.description} onChange={e => setCreateForm(f => ({ ...f, description: e.target.value }))}
+                  placeholder="Brief summary of the issue..." rows={2} className="input w-full text-sm resize-none" />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-neutral-600 mb-1.5">Initial Status Message</label>
+                <textarea value={createForm.initialMessage} onChange={e => setCreateForm(f => ({ ...f, initialMessage: e.target.value }))}
+                  placeholder="We are investigating reports of..." rows={2} className="input w-full text-sm resize-none" />
+              </div>
+            </div>
+            <div className="px-6 py-4 border-t border-neutral-100 flex gap-3">
+              <button onClick={() => setShowCreateIncident(false)} className="flex-1 btn btn-secondary text-sm">
+                Cancel
+              </button>
+              <button onClick={handleCreateIncident} disabled={creating}
+                className="flex-1 btn bg-neutral-900 hover:bg-neutral-800 text-white text-sm gap-2 disabled:opacity-50">
+                {creating ? <span className="spinner w-4 h-4 border-2 border-white/30 border-t-white" /> : <Plus className="w-4 h-4" />}
+                Create Incident
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add Timeline Update Modal */}
+      {timelineTarget && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 px-4"
+          onClick={e => e.target === e.currentTarget && setTimelineTarget(null)}>
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden"
+            style={{ animation: 'fadeUp 0.2s ease both' }}>
+            <div className="px-6 py-5 border-b border-neutral-100 flex items-center justify-between">
+              <h3 className="text-base font-bold text-neutral-900">Post Update</h3>
+              <button onClick={() => setTimelineTarget(null)} className="p-1.5 hover:bg-neutral-100 rounded-lg transition-colors">
+                <X className="w-4 h-4 text-neutral-400" />
+              </button>
+            </div>
+            <div className="px-6 py-5 space-y-4">
+              <div>
+                <label className="block text-xs font-medium text-neutral-600 mb-1.5">New Status</label>
+                <select value={tlForm.status} onChange={e => setTlForm(f => ({ ...f, status: e.target.value }))}
+                  className="input w-full text-sm">
+                  <option value="investigating">Investigating</option>
+                  <option value="identified">Identified</option>
+                  <option value="monitoring">Monitoring</option>
+                  <option value="resolved">Resolved ✓</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-neutral-600 mb-1.5">Message <span className="text-red-400">*</span></label>
+                <textarea value={tlForm.message} onChange={e => setTlForm(f => ({ ...f, message: e.target.value }))}
+                  placeholder="What's the latest..." rows={3} className="input w-full text-sm resize-none" />
+              </div>
+              {tlForm.status === 'resolved' && (
+                <div className="flex items-start gap-2 p-3 bg-emerald-50 rounded-xl text-xs text-emerald-700">
+                  <CheckCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                  Marking as resolved will auto-calculate downtime duration and close the incident.
+                </div>
+              )}
+            </div>
+            <div className="px-6 py-4 border-t border-neutral-100 flex gap-3">
+              <button onClick={() => setTimelineTarget(null)} className="flex-1 btn btn-secondary text-sm">Cancel</button>
+              <button onClick={handleAddTimeline} disabled={tlSubmitting}
+                className={`flex-1 btn text-sm text-white gap-2 disabled:opacity-50 ${
+                  tlForm.status === 'resolved' ? 'bg-emerald-600 hover:bg-emerald-700 border-emerald-600' : 'bg-neutral-900 hover:bg-neutral-800'
+                }`}>
+                {tlSubmitting ? <span className="spinner w-4 h-4 border-2 border-white/30 border-t-white" /> : null}
+                {tlForm.status === 'resolved' ? 'Mark Resolved' : 'Post Update'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // Main Admin Component
 export default function Admin() {
   const navigate = useNavigate();
@@ -743,6 +1179,7 @@ export default function Admin() {
   const [cleanupRunning, setCleanupRunning] = useState(false);
   const [cleanupResult, setCleanupResult] = useState(null);
   const [showCleanupModal, setShowCleanupModal] = useState(false);
+  const [uptimeView, setUptimeView] = useState(false);
 
   useEffect(() => {
     checkAuth();
@@ -964,6 +1401,13 @@ export default function Admin() {
           <div className="flex items-center gap-3">
             {!selectedEvent && (
               <>
+                <button
+                  onClick={() => setUptimeView(v => !v)}
+                  className={`btn gap-2 text-sm ${uptimeView ? 'bg-neutral-900 text-white border-neutral-900' : 'bg-neutral-800 hover:bg-neutral-700 text-white border-neutral-700'}`}
+                  title="Uptime & Incidents"
+                >
+                  <Radio className="w-4 h-4" /> Uptime
+                </button>
                 <button onClick={handleBulkExport} className="btn bg-neutral-800 hover:bg-neutral-700 text-white border-neutral-700 gap-2 text-sm">
                   <Download className="w-4 h-4" /> Export All
                 </button>
@@ -991,6 +1435,8 @@ export default function Admin() {
             onDelete={handleDeleteEvent}
             onUpdate={loadDashboard}
           />
+        ) : uptimeView ? (
+          <UptimePanel />
         ) : (
           <>
             {/* Enhanced Stats Grid */}
