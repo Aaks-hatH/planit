@@ -79,15 +79,10 @@ export const eventAPI = {
   // Invites Management
   getInvites: (eventId) => api.get(`/events/${eventId}/invites`),
   createInvite: (eventId, data) => {
-    // Backend expects { guests: [...] } format
-    const payload = {
-      guests: [data] // Wrap single guest in array
-    };
+    const payload = { guests: [data] };
     return api.post(`/events/${eventId}/invites`, payload);
   },
   updateInvite: (eventId, inviteId, data) => {
-    // Note: Backend doesn't have update route, so we'll need to add it
-    // For now, return a rejected promise with clear message
     return Promise.reject(new Error('Update invite endpoint not yet implemented on backend'));
   },
   deleteInvite: (eventId, inviteId) => api.delete(`/events/${eventId}/invites/${inviteId}`),
@@ -222,6 +217,23 @@ export const noteAPI = {
 // Analytics
 export const analyticsAPI = {
   get: (eventId) => api.get(`/events/${eventId}/analytics`)
+};
+
+// ─── Uptime API ───────────────────────────────────────────────────────────────
+export const uptimeAPI = {
+  // Public
+  ping:         ()     => api.get('/uptime/ping'),
+  getStatus:    ()     => api.get('/uptime/status'),
+  submitReport: (data) => api.post('/uptime/report', data),
+
+  // Admin
+  getReports:          ()           => api.get('/uptime/admin/reports'),
+  updateReport:        (id, data)   => api.patch(`/uptime/admin/reports/${id}`, data),
+  getIncidents:        ()           => api.get('/uptime/admin/incidents'),
+  createIncident:      (data)       => api.post('/uptime/admin/incidents', data),
+  addTimelineUpdate:   (id, data)   => api.post(`/uptime/admin/incidents/${id}/timeline`, data),
+  updateIncident:      (id, data)   => api.patch(`/uptime/admin/incidents/${id}`, data),
+  deleteIncident:      (id)         => api.delete(`/uptime/admin/incidents/${id}`),
 };
 
 // Utilities
