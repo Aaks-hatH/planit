@@ -1,16 +1,96 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Link } from 'react-router-dom';
-import { CheckCircle, AlertTriangle, XCircle, Clock, ChevronDown, ChevronUp, ArrowLeft, Wifi, WifiOff, Send, X } from 'lucide-react';
 import { uptimeAPI } from '../services/api';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
-const BACKEND_BASE = API_URL.replace('/api', '');
+// ─── Helpers ─────────────────────────────────────────────────────────────────
 
-const SEVERITY_COLORS = {
-  minor:    { bg: 'bg-amber-50',   border: 'border-amber-200',   text: 'text-amber-700',   dot: 'bg-amber-400'   },
-  major:    { bg: 'bg-orange-50',  border: 'border-orange-200',  text: 'text-orange-700',  dot: 'bg-orange-500'  },
-  critical: { bg: 'bg-red-50',     border: 'border-red-200',     text: 'text-red-700',     dot: 'bg-red-500'     },
-};
+function formatUTCDate(dateStr) {
+  if (!dateStr) return '';
+  const d = new Date(dateStr);
+  return d.toLocaleString('en-US', {
+    month: 'short', day: 'numeric', year: 'numeric',
+    hour: '2-digit', minute: '2-digit', timeZone: 'UTC',
+    hour12: false,
+  }).replace(',', '') + ' UTC';
+}
+
+function formatDayLabel(date) {
+  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+function getDayKey(date) {
+  return date.toISOString().slice(0, 10); // YYYY-MM-DD
+}
+
+// Build 90-day bar data for a service from incidents
+function buildBars(incidents, serviceName) {
+  const days = 90;
+  const today = new Date();
+  today.setUTCHours(23, 59, 59, 999);
+
+  // Map: YYYY-MM-DD -> 'ok' | 'degraded' | 'outage'
+  const dayMap = {};
+
+  incidents.forEach(inc => {
+    const start = new Date(inc.createdAt);
+    const end   = inc.resolvedAt ? new Date(inc.resolvedAt) : new Date();
+    const affects = !serviceName ||
+      !inc.affectedServices?.length ||
+      inc.affectedServices.some(s => s.toLowerCase().includes(serviceName.toLowerCase()) || serviceName.toLowerCase().includes(s.toLowerCase()));
+
+    if (!affects) return;
+
+    // Mark every day the incident spanned
+    const cursor = new Date(start);
+    cursor.setUTCHours(0, 0, 0, 0);
+    while (cursor <= end) {
+      const key = getDayKey(cursor);
+      const existing = dayMap[key];
+      const nextStatus = inc.severity === 'critical' ? 'outage' : 'degraded';
+      if (!existing || (existing === 'degraded' && nextStatus === 'outage')) {
+        dayMap[key] = nextStatus;
+      }
+      cursor.setUTCDate(cursor.getUTCDate() + 1);
+    }
+  });
+
+  const bars = [];
+  for (let i = days - 1; i >= 0; i--) {
+    const d = new Date(today);
+    d.setUTCDate(d.getUTCDate() - i);
+    d.setUTCHours(0, 0, 0, 0);
+    const key = getDayKey(d);
+    bars.push({ date: new Date(d), status: dayMap[key] || 'ok' });
+  }
+  return bars;
+}
+
+function uptimePct(bars) {
+  const ok = bars.filter(b => b.status === 'ok').length;
+  return ((ok / bars.length) * 100).toFixed(2);
+}
+
+// Group incidents by calendar date
+function groupByDate(incidents) {
+  const groups = {};
+  incidents.forEach(inc => {
+    const key = getDayKey(new Date(inc.createdAt));
+    if (!groups[key]) groups[key] = [];
+    groups[key].push(inc);
+  });
+  return groups;
+}
+
+// Generate date keys for the last 7 days (for "no incidents reported" rows)
+function last7DayKeys() {
+  const keys = [];
+  for (let i = 0; i < 7; i++) {
+    const d = new Date();
+    d.setUTCDate(d.getUTCDate() - i);
+    keys.push(getDayKey(d));
+  }
+  return keys;
+}
 
 const STATUS_LABEL = {
   investigating: 'Investigating',
@@ -19,161 +99,254 @@ const STATUS_LABEL = {
   resolved:      'Resolved',
 };
 
-const STATUS_DOT = {
-  investigating: 'bg-red-500',
-  identified:    'bg-orange-400',
-  monitoring:    'bg-amber-400',
-  resolved:      'bg-emerald-500',
+const SEVERITY_COLOR = {
+  minor:    'text-amber-600',
+  major:    'text-orange-600',
+  critical: 'text-red-600',
 };
 
-function formatDuration(minutes) {
-  if (!minutes) return null;
-  if (minutes < 60) return `${minutes}m`;
-  const h = Math.floor(minutes / 60);
-  const m = minutes % 60;
-  return m > 0 ? `${h}h ${m}m` : `${h}h`;
-}
+const SERVICES = [
+  { name: 'API',           key: 'api'           },
+  { name: 'Database',      key: 'database'      },
+  { name: 'File Storage',  key: 'storage'       },
+  { name: 'WebSocket Chat',key: 'chat'          },
+  { name: 'Authentication',key: 'auth'          },
+];
 
-function timeAgo(dateStr) {
-  const diff = Date.now() - new Date(dateStr).getTime();
-  const mins = Math.floor(diff / 60000);
-  if (mins < 1) return 'just now';
-  if (mins < 60) return `${mins}m ago`;
-  const hrs = Math.floor(mins / 60);
-  if (hrs < 24) return `${hrs}h ago`;
-  const days = Math.floor(hrs / 24);
-  return `${days}d ago`;
-}
+// ─── Components ──────────────────────────────────────────────────────────────
 
-function IncidentCard({ incident }) {
-  const [expanded, setExpanded] = useState(incident.status !== 'resolved');
-  const s = SEVERITY_COLORS[incident.severity] || SEVERITY_COLORS.minor;
+function UptimeBar({ bar, index }) {
+  const color =
+    bar.status === 'outage'   ? '#ef4444' :
+    bar.status === 'degraded' ? '#f97316' :
+    '#22c55e';
+
+  const title = `${formatDayLabel(bar.date)} — ${
+    bar.status === 'ok' ? 'No incidents' :
+    bar.status === 'degraded' ? 'Degraded' : 'Outage'
+  }`;
 
   return (
-    <div className={`rounded-2xl border ${s.border} ${s.bg} overflow-hidden transition-all duration-300`}>
+    <div
+      title={title}
+      style={{
+        width: '100%',
+        height: '36px',
+        backgroundColor: color,
+        borderRadius: '2px',
+        cursor: 'default',
+        opacity: 0,
+        animation: `barIn 0.3s ease ${index * 0.008}s both`,
+        flexShrink: 0,
+      }}
+    />
+  );
+}
+
+function ServiceRow({ service, incidents, online }) {
+  const bars = buildBars(incidents, service.key);
+  const pct  = uptimePct(bars);
+
+  const hasActive = incidents.some(inc =>
+    inc.status !== 'resolved' &&
+    (!inc.affectedServices?.length ||
+      inc.affectedServices.some(s =>
+        s.toLowerCase().includes(service.key.toLowerCase()) ||
+        service.key.toLowerCase().includes(s.toLowerCase())
+      ))
+  );
+
+  const isOperational = online && !hasActive;
+
+  return (
+    <div style={{ padding: '20px 0', borderBottom: '1px solid #e5e7eb' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+        <span style={{ fontSize: '15px', fontWeight: '500', color: '#111827', fontFamily: '"DM Sans", sans-serif' }}>
+          {service.name}
+        </span>
+        <span style={{ fontSize: '14px', fontWeight: '500', color: isOperational ? '#16a34a' : '#f97316', fontFamily: '"DM Sans", sans-serif' }}>
+          {isOperational ? 'Operational' : 'Disrupted'}
+        </span>
+      </div>
+
+      <div style={{ display: 'flex', gap: '2px', width: '100%', overflow: 'hidden' }}>
+        {bars.map((bar, i) => (
+          <UptimeBar key={i} bar={bar} index={i} />
+        ))}
+      </div>
+
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '8px' }}>
+        <span style={{ fontSize: '12px', color: '#9ca3af', fontFamily: '"DM Sans", sans-serif' }}>90 days ago</span>
+        <span style={{ fontSize: '12px', color: '#9ca3af', fontFamily: '"DM Sans", sans-serif' }}>
+          {pct}% uptime
+        </span>
+        <span style={{ fontSize: '12px', color: '#9ca3af', fontFamily: '"DM Sans", sans-serif' }}>Today</span>
+      </div>
+    </div>
+  );
+}
+
+function IncidentTimeline({ incident }) {
+  const [expanded, setExpanded] = useState(true);
+  const titleColor = SEVERITY_COLOR[incident.severity] || 'text-amber-600';
+
+  return (
+    <div style={{ marginBottom: '24px' }}>
       <button
         onClick={() => setExpanded(e => !e)}
-        className="w-full px-5 py-4 flex items-start gap-3 text-left hover:brightness-[0.98] transition-all"
+        style={{
+          background: 'none', border: 'none', padding: 0, cursor: 'pointer',
+          textAlign: 'left', width: '100%',
+        }}
       >
-        <span className={`w-2 h-2 rounded-full mt-2 flex-shrink-0 ${s.dot} ${incident.status !== 'resolved' ? 'animate-pulse' : ''}`} />
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 flex-wrap">
-            <p className={`text-sm font-semibold ${s.text}`}>{incident.title}</p>
-            <span className={`text-xs px-2 py-0.5 rounded-full font-medium border ${s.border} ${s.text} bg-white/60`}>
-              {incident.severity}
-            </span>
-            {incident.resolvedAt && incident.downtimeMinutes && (
-              <span className="text-xs text-neutral-400 flex items-center gap-1">
-                <Clock className="w-3 h-3" /> {formatDuration(incident.downtimeMinutes)}
-              </span>
-            )}
-          </div>
-          {incident.affectedServices?.length > 0 && (
-            <p className="text-xs text-neutral-500 mt-0.5">
-              Affects: {incident.affectedServices.join(', ')}
-            </p>
-          )}
-          <p className="text-xs text-neutral-400 mt-0.5">{timeAgo(incident.createdAt)}</p>
-        </div>
-        <span className={`${s.text} flex-shrink-0`}>
-          {expanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+        <span style={{
+          fontSize: '15px', fontWeight: '600',
+          color: incident.severity === 'critical' ? '#dc2626' :
+                 incident.severity === 'major'    ? '#ea580c' : '#d97706',
+          fontFamily: '"DM Sans", sans-serif',
+          textDecoration: 'none',
+        }}>
+          {incident.title}
         </span>
       </button>
 
-      {expanded && incident.timeline?.length > 0 && (
-        <div className="px-5 pb-5 border-t border-neutral-100/80">
-          <div className="relative mt-4 pl-4">
-            <div className="absolute left-0 top-0 bottom-0 w-px bg-neutral-200" />
-            {[...incident.timeline].reverse().map((update, i) => (
-              <div
-                key={i}
-                className="relative mb-4 last:mb-0"
-                style={{ animation: `fadeSlideIn 0.3s ease ${i * 0.05}s both` }}
-              >
-                <span className={`absolute -left-[17px] w-2.5 h-2.5 rounded-full border-2 border-white ${STATUS_DOT[update.status] || 'bg-neutral-400'}`} />
-                <div className="flex items-center gap-2 mb-0.5">
-                  <span className="text-xs font-semibold text-neutral-700">{STATUS_LABEL[update.status]}</span>
-                  <span className="text-xs text-neutral-400">{timeAgo(update.createdAt)}</span>
-                </div>
-                <p className="text-sm text-neutral-600 leading-relaxed">{update.message}</p>
-              </div>
-            ))}
-          </div>
+      {expanded && incident.timeline && [...incident.timeline].reverse().map((update, i) => (
+        <div key={i} style={{ marginTop: '10px' }}>
+          <p style={{ fontSize: '14px', color: '#111827', lineHeight: '1.6', fontFamily: '"DM Sans", sans-serif', margin: 0 }}>
+            <strong style={{ fontWeight: '700' }}>{STATUS_LABEL[update.status] || update.status}</strong>
+            {' - '}{update.message}
+          </p>
+          <p style={{ fontSize: '12px', color: '#9ca3af', marginTop: '2px', fontFamily: '"DM Sans", sans-serif' }}>
+            {formatUTCDate(update.createdAt)}
+          </p>
         </div>
+      ))}
+
+      {!incident.timeline?.length && (
+        <p style={{ fontSize: '14px', color: '#6b7280', marginTop: '8px', fontFamily: '"DM Sans", sans-serif' }}>
+          <strong>Investigating</strong> - We are currently investigating this issue.
+        </p>
       )}
     </div>
   );
 }
 
-function ReportModal({ onClose, onSubmit, submitting }) {
+function ReportModal({ onClose, onSubmit, submitting, success }) {
   const [form, setForm] = useState({ description: '', email: '', affectedService: 'General' });
+  const SERVICES_LIST = ['General', 'API', 'Database', 'File Storage', 'WebSocket Chat', 'Authentication'];
 
-  const services = ['General', 'Event Creation', 'Chat', 'File Upload', 'Check-in', 'Authentication'];
+  useEffect(() => {
+    const onKey = e => e.key === 'Escape' && onClose();
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [onClose]);
+
+  if (success) return (
+    <div style={{
+      position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)',
+      display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000,
+    }}>
+      <div style={{
+        background: '#fff', borderRadius: '12px', padding: '40px',
+        textAlign: 'center', maxWidth: '360px', width: '90%',
+        animation: 'modalIn 0.25s ease both',
+      }}>
+        <div style={{ fontSize: '40px', marginBottom: '12px' }}>✓</div>
+        <p style={{ fontSize: '16px', fontWeight: '600', color: '#111827', fontFamily: '"DM Sans", sans-serif' }}>
+          Report received
+        </p>
+        <p style={{ fontSize: '14px', color: '#6b7280', marginTop: '6px', fontFamily: '"DM Sans", sans-serif' }}>
+          Thank you for helping us improve reliability.
+        </p>
+      </div>
+    </div>
+  );
 
   return (
-    <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-end sm:items-center justify-center z-50 p-4"
-      onClick={e => e.target === e.currentTarget && onClose()}>
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden"
-        style={{ animation: 'modalIn 0.25s cubic-bezier(0.34,1.56,0.64,1) both' }}>
-        <div className="px-6 pt-6 pb-4 flex items-center justify-between border-b border-neutral-100">
-          <div>
-            <h2 className="text-base font-semibold text-neutral-900">Report an Issue</h2>
-            <p className="text-xs text-neutral-500 mt-0.5">Help us identify problems faster</p>
-          </div>
-          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-neutral-100 transition-colors">
-            <X className="w-4 h-4 text-neutral-500" />
-          </button>
+    <div
+      style={{
+        position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        zIndex: 1000, padding: '16px',
+      }}
+      onClick={e => e.target === e.currentTarget && onClose()}
+    >
+      <div style={{
+        background: '#fff', borderRadius: '12px', width: '100%', maxWidth: '460px',
+        overflow: 'hidden', animation: 'modalIn 0.2s ease both',
+        boxShadow: '0 20px 60px rgba(0,0,0,0.15)',
+      }}>
+        <div style={{ padding: '24px 28px 20px', borderBottom: '1px solid #f3f4f6' }}>
+          <h2 style={{ fontSize: '17px', fontWeight: '700', color: '#111827', margin: 0, fontFamily: '"DM Sans", sans-serif' }}>
+            Report an issue
+          </h2>
+          <p style={{ fontSize: '13px', color: '#9ca3af', marginTop: '4px', fontFamily: '"DM Sans", sans-serif' }}>
+            Help us identify problems faster
+          </p>
         </div>
 
-        <div className="px-6 py-5 space-y-4">
+        <div style={{ padding: '20px 28px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
           <div>
-            <label className="block text-xs font-medium text-neutral-600 mb-1.5">What's affected?</label>
+            <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: '#374151', marginBottom: '6px', fontFamily: '"DM Sans", sans-serif', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              Affected area
+            </label>
             <select
               value={form.affectedService}
               onChange={e => setForm(f => ({ ...f, affectedService: e.target.value }))}
-              className="w-full px-3 py-2.5 rounded-xl border border-neutral-200 text-sm bg-neutral-50 focus:outline-none focus:ring-2 focus:ring-neutral-900/10 focus:border-neutral-400 transition-all"
+              style={{ width: '100%', padding: '10px 12px', border: '1px solid #e5e7eb', borderRadius: '8px', fontSize: '14px', color: '#111827', background: '#f9fafb', outline: 'none', fontFamily: '"DM Sans", sans-serif' }}
             >
-              {services.map(s => <option key={s} value={s}>{s}</option>)}
+              {SERVICES_LIST.map(s => <option key={s} value={s}>{s}</option>)}
             </select>
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-neutral-600 mb-1.5">Description <span className="text-red-400">*</span></label>
+            <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: '#374151', marginBottom: '6px', fontFamily: '"DM Sans", sans-serif', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              Description <span style={{ color: '#ef4444' }}>*</span>
+            </label>
             <textarea
               value={form.description}
               onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
-              placeholder="Describe what you're experiencing..."
+              placeholder="What are you experiencing?"
               rows={3}
-              className="w-full px-3 py-2.5 rounded-xl border border-neutral-200 text-sm bg-neutral-50 focus:outline-none focus:ring-2 focus:ring-neutral-900/10 focus:border-neutral-400 transition-all resize-none"
+              style={{ width: '100%', padding: '10px 12px', border: '1px solid #e5e7eb', borderRadius: '8px', fontSize: '14px', color: '#111827', background: '#f9fafb', outline: 'none', resize: 'none', boxSizing: 'border-box', fontFamily: '"DM Sans", sans-serif' }}
             />
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-neutral-600 mb-1.5">Email <span className="text-neutral-400">(optional)</span></label>
+            <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: '#374151', marginBottom: '6px', fontFamily: '"DM Sans", sans-serif', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              Email <span style={{ color: '#9ca3af', fontWeight: '400', textTransform: 'none' }}>(optional)</span>
+            </label>
             <input
               type="email"
               value={form.email}
               onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
               placeholder="you@example.com"
-              className="w-full px-3 py-2.5 rounded-xl border border-neutral-200 text-sm bg-neutral-50 focus:outline-none focus:ring-2 focus:ring-neutral-900/10 focus:border-neutral-400 transition-all"
+              style={{ width: '100%', padding: '10px 12px', border: '1px solid #e5e7eb', borderRadius: '8px', fontSize: '14px', color: '#111827', background: '#f9fafb', outline: 'none', boxSizing: 'border-box', fontFamily: '"DM Sans", sans-serif' }}
             />
           </div>
         </div>
 
-        <div className="px-6 pb-6 flex gap-3">
-          <button onClick={onClose} className="flex-1 py-2.5 rounded-xl border border-neutral-200 text-sm font-medium text-neutral-600 hover:bg-neutral-50 transition-colors">
+        <div style={{ padding: '16px 28px 24px', display: 'flex', gap: '10px' }}>
+          <button
+            onClick={onClose}
+            style={{ flex: 1, padding: '10px', border: '1px solid #e5e7eb', borderRadius: '8px', background: '#fff', color: '#374151', fontSize: '14px', fontWeight: '500', cursor: 'pointer', fontFamily: '"DM Sans", sans-serif' }}
+          >
             Cancel
           </button>
           <button
             onClick={() => onSubmit(form)}
             disabled={submitting || form.description.trim().length < 5}
-            className="flex-1 py-2.5 rounded-xl bg-neutral-900 text-white text-sm font-medium flex items-center justify-center gap-2 hover:bg-neutral-800 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+            style={{
+              flex: 1, padding: '10px', border: 'none', borderRadius: '8px',
+              background: form.description.trim().length < 5 ? '#e5e7eb' : '#111827',
+              color: form.description.trim().length < 5 ? '#9ca3af' : '#fff',
+              fontSize: '14px', fontWeight: '600', cursor: form.description.trim().length < 5 ? 'default' : 'pointer',
+              fontFamily: '"DM Sans", sans-serif',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+            }}
           >
-            {submitting ? (
-              <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-            ) : (
-              <><Send className="w-3.5 h-3.5" /> Submit Report</>
-            )}
+            {submitting ? <span style={{ width: 16, height: 16, border: '2px solid rgba(255,255,255,0.3)', borderTopColor: '#fff', borderRadius: '50%', display: 'inline-block', animation: 'spin 0.7s linear infinite' }} /> : null}
+            Submit report
           </button>
         </div>
       </div>
@@ -181,20 +354,28 @@ function ReportModal({ onClose, onSubmit, submitting }) {
   );
 }
 
+// ─── Main Page ────────────────────────────────────────────────────────────────
+
 export default function Status() {
-  const [data, setData] = useState(null);
-  const [latency, setLatency] = useState(null);
-  const [online, setOnline] = useState(true);
-  const [lastChecked, setLastChecked] = useState(null);
+  const [data, setData]           = useState(null);
+  const [online, setOnline]       = useState(true);
+  const [latency, setLatency]     = useState(null);
   const [showReport, setShowReport] = useState(false);
-  const [reportSubmitting, setReportSubmitting] = useState(false);
-  const [reportSuccess, setReportSuccess] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [success, setSuccess]     = useState(false);
+
+  const fetchStatus = useCallback(async () => {
+    try {
+      const res = await uptimeAPI.getStatus();
+      setData(res.data);
+    } catch { /* keep stale */ }
+  }, []);
 
   const ping = useCallback(async () => {
-    const start = Date.now();
+    const t = Date.now();
     try {
       await uptimeAPI.ping();
-      setLatency(Date.now() - start);
+      setLatency(Date.now() - t);
       setOnline(true);
     } catch {
       setOnline(false);
@@ -202,227 +383,215 @@ export default function Status() {
     }
   }, []);
 
-  const fetchStatus = useCallback(async () => {
-    try {
-      const res = await uptimeAPI.getStatus();
-      setData(res.data);
-      setLastChecked(new Date());
-    } catch {
-      // keep stale data
-    }
-  }, []);
-
   useEffect(() => {
     fetchStatus();
     ping();
-    const statusInterval = setInterval(fetchStatus, 30000);
-    const pingInterval = setInterval(ping, 15000);
-    return () => { clearInterval(statusInterval); clearInterval(pingInterval); };
+    const si = setInterval(fetchStatus, 30000);
+    const pi = setInterval(ping, 15000);
+    return () => { clearInterval(si); clearInterval(pi); };
   }, [fetchStatus, ping]);
 
-  const handleSubmitReport = async (form) => {
-    setReportSubmitting(true);
+  const handleSubmit = async (form) => {
+    setSubmitting(true);
     try {
       await uptimeAPI.submitReport(form);
-      setReportSuccess(true);
-      setTimeout(() => {
-        setShowReport(false);
-        setReportSuccess(false);
-      }, 2000);
-    } catch {
-      // keep modal open
-    } finally {
-      setReportSubmitting(false);
-    }
+      setSuccess(true);
+      setTimeout(() => { setShowReport(false); setSuccess(false); }, 2200);
+    } catch { /* keep open */ }
+    finally { setSubmitting(false); }
   };
 
-  const overallStatus = data?.status || 'operational';
+  const allIncidents = [
+    ...(data?.activeIncidents  || []),
+    ...(data?.recentResolved   || []),
+  ];
 
-  const statusConfig = {
-    operational: {
-      icon: CheckCircle,
-      color: 'text-emerald-600',
-      bg: 'bg-emerald-50',
-      border: 'border-emerald-200',
-      dot: 'bg-emerald-500',
-      label: 'All Systems Operational',
-    },
-    degraded: {
-      icon: AlertTriangle,
-      color: 'text-amber-600',
-      bg: 'bg-amber-50',
-      border: 'border-amber-200',
-      dot: 'bg-amber-500',
-      label: 'Partial Degradation',
-    },
-    outage: {
-      icon: XCircle,
-      color: 'text-red-600',
-      bg: 'bg-red-50',
-      border: 'border-red-200',
-      dot: 'bg-red-500',
-      label: 'Service Disruption',
-    },
-  };
+  const overallStatus = data?.status || (online ? 'operational' : 'outage');
+  const activeCount = data?.activeIncidents?.length || 0;
 
-  const sc = statusConfig[overallStatus];
-  const StatusIcon = sc.icon;
+  // Build past-incidents grouped by date
+  const incidentsByDay = groupByDate(allIncidents);
+  const dayKeys = last7DayKeys();
+
+  // Total uptime display
+  const allBars = buildBars(allIncidents, '');
+  const totalPct = uptimePct(allBars);
 
   return (
-    <div className="min-h-screen bg-neutral-50">
+    <>
       <style>{`
-        @keyframes fadeSlideIn {
-          from { opacity: 0; transform: translateY(6px); }
-          to   { opacity: 1; transform: translateY(0); }
-        }
-        @keyframes modalIn {
-          from { opacity: 0; transform: translateY(16px) scale(0.97); }
-          to   { opacity: 1; transform: translateY(0) scale(1); }
-        }
-        @keyframes shimmer {
-          0%   { opacity: 0.4; }
-          50%  { opacity: 1;   }
-          100% { opacity: 0.4; }
-        }
+        @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&display=swap');
+        @keyframes barIn   { from { opacity:0; transform:scaleY(0.4); } to { opacity:1; transform:scaleY(1); } }
+        @keyframes fadeIn  { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
+        @keyframes modalIn { from { opacity:0; transform:scale(0.97) translateY(8px); } to { opacity:1; transform:scale(1) translateY(0); } }
+        @keyframes spin    { to { transform: rotate(360deg); } }
+        @keyframes pulse   { 0%,100% { opacity:1; } 50% { opacity:0.5; } }
+        * { box-sizing: border-box; }
+        body { margin: 0; }
       `}</style>
 
-      {/* Header */}
-      <header className="bg-white border-b border-neutral-100 sticky top-0 z-40">
-        <div className="max-w-2xl mx-auto px-6 h-14 flex items-center justify-between">
-          <Link to="/" className="flex items-center gap-2 text-neutral-400 hover:text-neutral-700 transition-colors text-sm">
-            <ArrowLeft className="w-4 h-4" />
-            PlanIt
-          </Link>
-          <span className="text-sm font-semibold text-neutral-900">Status</span>
-          <div className="flex items-center gap-2">
-            {online ? (
-              <Wifi className="w-4 h-4 text-emerald-500" />
-            ) : (
-              <WifiOff className="w-4 h-4 text-red-400" />
-            )}
-            {latency !== null && (
-              <span className="text-xs text-neutral-400 font-mono">{latency}ms</span>
-            )}
+      <div style={{ minHeight: '100vh', background: '#f9fafb', fontFamily: '"DM Sans", sans-serif' }}>
+
+        {/* Header */}
+        <header style={{
+          background: '#fff', borderBottom: '1px solid #e5e7eb',
+          position: 'sticky', top: 0, zIndex: 50,
+        }}>
+          <div style={{ maxWidth: '760px', margin: '0 auto', padding: '0 24px', height: '56px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <Link to="/" style={{ fontSize: '14px', color: '#6b7280', textDecoration: 'none', fontWeight: '500', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              ← PlanIt
+            </Link>
+            <span style={{ fontSize: '15px', fontWeight: '600', color: '#111827' }}>
+              System Status
+            </span>
+            <button
+              onClick={() => setShowReport(true)}
+              style={{
+                padding: '7px 14px', border: '1px solid #e5e7eb', borderRadius: '6px',
+                background: '#fff', color: '#374151', fontSize: '13px', fontWeight: '500',
+                cursor: 'pointer', fontFamily: '"DM Sans", sans-serif',
+                transition: 'background 0.15s',
+              }}
+              onMouseEnter={e => e.target.style.background = '#f9fafb'}
+              onMouseLeave={e => e.target.style.background = '#fff'}
+            >
+              Report issue
+            </button>
           </div>
-        </div>
-      </header>
+        </header>
 
-      <main className="max-w-2xl mx-auto px-6 py-10 space-y-8">
+        <main style={{ maxWidth: '760px', margin: '0 auto', padding: '0 24px 80px' }}>
 
-        {/* Hero status card */}
-        <div className={`rounded-2xl border ${sc.border} ${sc.bg} px-6 py-8 flex flex-col items-center text-center`}
-          style={{ animation: 'fadeSlideIn 0.4s ease both' }}>
-          <div className="relative mb-4">
-            <span className={`w-3.5 h-3.5 rounded-full ${sc.dot} block ${overallStatus !== 'operational' ? 'animate-pulse' : ''}`} />
+          {/* Overall status banner */}
+          <div style={{
+            margin: '40px 0 32px',
+            padding: '24px 28px',
+            border: `1px solid ${activeCount > 0 ? '#fed7aa' : '#bbf7d0'}`,
+            borderRadius: '12px',
+            background: activeCount > 0 ? '#fff7ed' : '#f0fdf4',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: '12px',
+            animation: 'fadeIn 0.4s ease both',
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <div style={{
+                width: '12px', height: '12px', borderRadius: '50%',
+                background: activeCount > 0 ? '#f97316' : '#22c55e',
+                animation: activeCount > 0 ? 'pulse 2s infinite' : 'none',
+                flexShrink: 0,
+              }} />
+              <span style={{ fontSize: '18px', fontWeight: '700', color: '#111827' }}>
+                {activeCount > 0 ? `${activeCount} Active Incident${activeCount > 1 ? 's' : ''}` : 'All Systems Operational'}
+              </span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+              <span style={{ fontSize: '13px', color: '#9ca3af' }}>
+                {totalPct}% uptime (90 days)
+              </span>
+              <span style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '13px', color: online ? '#16a34a' : '#dc2626' }}>
+                <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: online ? '#22c55e' : '#ef4444', display: 'inline-block' }} />
+                {latency !== null ? `${latency}ms` : online ? 'Live' : 'Offline'}
+              </span>
+            </div>
           </div>
-          <StatusIcon className={`w-10 h-10 ${sc.color} mb-3`} />
-          <h1 className={`text-xl font-bold ${sc.color}`}>{sc.label}</h1>
-          {lastChecked && (
-            <p className="text-xs text-neutral-400 mt-2">
-              Last checked {timeAgo(lastChecked)}
-              {data?.uptimeSeconds && ` · Server up ${Math.floor(data.uptimeSeconds / 3600)}h ${Math.floor((data.uptimeSeconds % 3600) / 60)}m`}
-            </p>
-          )}
-        </div>
 
-        {/* Services */}
-        <div style={{ animation: 'fadeSlideIn 0.4s ease 0.1s both' }}>
-          <h2 className="text-xs font-semibold text-neutral-500 uppercase tracking-wider mb-3">Services</h2>
-          <div className="bg-white rounded-2xl border border-neutral-100 divide-y divide-neutral-50 overflow-hidden">
-            {[
-              { name: 'API', key: 'api' },
-              { name: 'Database', key: 'db' },
-              { name: 'File Storage', key: 'storage' },
-              { name: 'WebSocket Chat', key: 'chat' },
-            ].map(({ name, key }) => {
-              const hasIncident = data?.activeIncidents?.some(i =>
-                i.affectedServices?.some(s => s.toLowerCase().includes(name.toLowerCase()))
-              );
-              const isOk = !hasIncident && online && (key !== 'db' || data?.dbStatus === 'connected');
+          {/* Active incidents alert */}
+          {data?.activeIncidents?.map(inc => (
+            <div key={inc._id} style={{
+              border: `1px solid ${inc.severity === 'critical' ? '#fecaca' : '#fed7aa'}`,
+              borderLeft: `4px solid ${inc.severity === 'critical' ? '#ef4444' : '#f97316'}`,
+              borderRadius: '8px',
+              background: inc.severity === 'critical' ? '#fef2f2' : '#fff7ed',
+              padding: '16px 20px',
+              marginBottom: '16px',
+              animation: 'fadeIn 0.3s ease both',
+            }}>
+              <p style={{ fontSize: '14px', fontWeight: '700', color: inc.severity === 'critical' ? '#dc2626' : '#ea580c', margin: '0 0 4px', fontFamily: '"DM Sans", sans-serif' }}>
+                {inc.title}
+              </p>
+              {inc.timeline?.length > 0 && (
+                <>
+                  <p style={{ fontSize: '13px', color: '#374151', margin: 0, fontFamily: '"DM Sans", sans-serif' }}>
+                    <strong>{STATUS_LABEL[inc.timeline[inc.timeline.length - 1].status]}</strong>
+                    {' - '}{inc.timeline[inc.timeline.length - 1].message}
+                  </p>
+                  <p style={{ fontSize: '12px', color: '#9ca3af', margin: '4px 0 0', fontFamily: '"DM Sans", sans-serif' }}>
+                    {formatUTCDate(inc.timeline[inc.timeline.length - 1].createdAt)}
+                  </p>
+                </>
+              )}
+            </div>
+          ))}
+
+          {/* Services uptime section */}
+          <section style={{ animation: 'fadeIn 0.4s ease 0.1s both' }}>
+            <h2 style={{ fontSize: '11px', fontWeight: '600', color: '#9ca3af', letterSpacing: '0.08em', textTransform: 'uppercase', margin: '0 0 4px' }}>
+              Uptime over the past 90 days
+            </h2>
+
+            <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: '12px', padding: '0 24px', overflow: 'hidden' }}>
+              {SERVICES.map((svc, i) => (
+                <ServiceRow
+                  key={svc.key}
+                  service={svc}
+                  incidents={allIncidents}
+                  online={online}
+                />
+              ))}
+            </div>
+          </section>
+
+          {/* Past Incidents */}
+          <section style={{ marginTop: '48px', animation: 'fadeIn 0.4s ease 0.2s both' }}>
+            <h2 style={{ fontSize: '22px', fontWeight: '700', color: '#111827', margin: '0 0 24px' }}>
+              Past Incidents
+            </h2>
+
+            {dayKeys.map(dayKey => {
+              const dayDate = new Date(dayKey + 'T00:00:00Z');
+              const label = formatDayLabel(dayDate);
+              const dayIncidents = incidentsByDay[dayKey] || [];
+
               return (
-                <div key={key} className="px-5 py-3.5 flex items-center justify-between">
-                  <span className="text-sm text-neutral-700">{name}</span>
-                  <div className="flex items-center gap-2">
-                    <span className={`w-2 h-2 rounded-full ${isOk ? 'bg-emerald-400' : 'bg-amber-400'}`} />
-                    <span className={`text-xs font-medium ${isOk ? 'text-emerald-600' : 'text-amber-600'}`}>
-                      {isOk ? 'Operational' : 'Disrupted'}
+                <div key={dayKey} style={{ marginBottom: '32px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '14px' }}>
+                    <span style={{ fontSize: '15px', fontWeight: '700', color: '#111827', whiteSpace: 'nowrap' }}>
+                      {label}
                     </span>
+                    <div style={{ flex: 1, height: '1px', background: '#e5e7eb' }} />
                   </div>
+
+                  {dayIncidents.length === 0 ? (
+                    <p style={{ fontSize: '14px', color: '#9ca3af', margin: '0', fontFamily: '"DM Sans", sans-serif' }}>
+                      No incidents reported.
+                    </p>
+                  ) : dayIncidents.map(inc => (
+                    <IncidentTimeline key={inc._id} incident={inc} />
+                  ))}
                 </div>
               );
             })}
-          </div>
-        </div>
 
-        {/* Active incidents */}
-        {data?.activeIncidents?.length > 0 && (
-          <div style={{ animation: 'fadeSlideIn 0.4s ease 0.15s both' }}>
-            <h2 className="text-xs font-semibold text-neutral-500 uppercase tracking-wider mb-3">
-              Active Incidents
-            </h2>
-            <div className="space-y-3">
-              {data.activeIncidents.map(incident => (
-                <IncidentCard key={incident._id} incident={incident} />
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Recent resolved */}
-        {data?.recentResolved?.length > 0 && (
-          <div style={{ animation: 'fadeSlideIn 0.4s ease 0.2s both' }}>
-            <h2 className="text-xs font-semibold text-neutral-500 uppercase tracking-wider mb-3">
-              Recent History
-            </h2>
-            <div className="space-y-2">
-              {data.recentResolved.map(incident => (
-                <IncidentCard key={incident._id} incident={incident} />
-              ))}
-            </div>
-          </div>
-        )}
-
-        {data?.activeIncidents?.length === 0 && data?.recentResolved?.length === 0 && (
-          <div className="text-center py-8" style={{ animation: 'fadeSlideIn 0.4s ease 0.2s both' }}>
-            <p className="text-sm text-neutral-400">No incidents in the past 7 days.</p>
-          </div>
-        )}
-
-        {/* Report button */}
-        <div className="pt-2 text-center" style={{ animation: 'fadeSlideIn 0.4s ease 0.25s both' }}>
-          <p className="text-xs text-neutral-400 mb-3">Experiencing something not listed here?</p>
-          <button
-            onClick={() => setShowReport(true)}
-            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-neutral-900 text-white text-sm font-medium hover:bg-neutral-800 transition-all hover:shadow-lg hover:-translate-y-0.5"
-          >
-            <AlertTriangle className="w-3.5 h-3.5" />
-            Report an Issue
-          </button>
-        </div>
-
-        <div className="text-center pb-4">
-          <p className="text-xs text-neutral-300">Auto-refreshes every 30s</p>
-        </div>
-      </main>
+            {allIncidents.length === 0 && (
+              <p style={{ fontSize: '14px', color: '#9ca3af' }}>
+                No incidents in the past 7 days.
+              </p>
+            )}
+          </section>
+        </main>
+      </div>
 
       {showReport && (
-        reportSuccess ? (
-          <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50">
-            <div className="bg-white rounded-2xl shadow-2xl p-8 text-center max-w-xs mx-4"
-              style={{ animation: 'modalIn 0.25s cubic-bezier(0.34,1.56,0.64,1) both' }}>
-              <CheckCircle className="w-12 h-12 text-emerald-500 mx-auto mb-3" />
-              <p className="text-base font-semibold text-neutral-900">Report submitted</p>
-              <p className="text-sm text-neutral-500 mt-1">Thanks for helping us improve.</p>
-            </div>
-          </div>
-        ) : (
-          <ReportModal
-            onClose={() => setShowReport(false)}
-            onSubmit={handleSubmitReport}
-            submitting={reportSubmitting}
-          />
-        )
+        <ReportModal
+          onClose={() => { setShowReport(false); setSuccess(false); }}
+          onSubmit={handleSubmit}
+          submitting={submitting}
+          success={success}
+        />
       )}
-    </div>
+    </>
   );
 }
