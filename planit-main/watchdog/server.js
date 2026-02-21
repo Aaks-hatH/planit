@@ -103,6 +103,16 @@ const uptimeReportSchema = new mongoose.Schema({
 const Incident     = mongoose.models.Incident     || mongoose.model('Incident',     incidentSchema);
 const UptimeReport = mongoose.models.UptimeReport || mongoose.model('UptimeReport', uptimeReportSchema);
 
+// UptimeCheck — one doc per ping so the status page bars have real historical data
+const uptimeCheckSchema = new mongoose.Schema({
+  status:    { type: String, enum: ['up', 'down'], required: true },
+  latencyMs: { type: Number, default: null },
+  error:     { type: String, default: null },
+  createdAt: { type: Date, default: Date.now },
+});
+uptimeCheckSchema.index({ createdAt: 1 }, { expireAfterSeconds: 7776000 });
+const UptimeCheck = mongoose.models.UptimeCheck || mongoose.model('UptimeCheck', uptimeCheckSchema);
+
 // ─── In-memory state ─────────────────────────────────────────────────────────
 const state = {
   consecutiveFailures:  0,
@@ -252,6 +262,9 @@ async function pingMainServer() {
     state.consecutiveFailures = 0;
     state.consecutiveSuccesses++;
 
+    // Record successful ping for bar chart history (non-blocking)
+    UptimeCheck.create({ status: 'up', latencyMs: ms }).catch(() => {});
+
     // ── Recovery ────────────────────────────────────────────────────────────
     if (state.isDown) {
       const downtimeMs   = Date.now() - (downSince || Date.now());
@@ -286,6 +299,9 @@ async function pingMainServer() {
     state.lastError  = err.message;
     state.lastPingMs = null;
 
+    // Record failed ping for bar chart history (non-blocking)
+    UptimeCheck.create({ status: 'down', error: err.message }).catch(() => {});
+
     console.warn(`[${ts()}]   Ping FAILED (${state.consecutiveFailures}/${THRESHOLD}): ${err.message}`);
 
     // ── Threshold hit — server officially down ───────────────────────────────
@@ -293,13 +309,13 @@ async function pingMainServer() {
       state.isDown = true;
       downSince    = Date.now();
 
-      console.error(`[${ts()}] 🚨  THRESHOLD HIT — declaring server DOWN, writing incident to DB`);
+      console.error(`[${ts()}]   THRESHOLD HIT — declaring server DOWN, writing incident to DB`);
 
       const incidentId = await createDownIncident(err.message);
       state.activeIncidentId = incidentId;
 
       await sendNtfy({
-        title:    '🚨 PlanIt Backend Down',
+        title:    ' PlanIt Backend Down',
         message:  `The PlanIt API has been unreachable for ${THRESHOLD} consecutive checks (every ${PING_MS / 1000}s).\n\nError: ${err.message}\n\nIncident ID: ${incidentId || 'DB write failed'}\nStatus page updated automatically.`,
         priority: 'urgent',
         tags:     ['rotating_light', 'fire'],
@@ -310,7 +326,7 @@ async function pingMainServer() {
     if (state.isDown && state.consecutiveFailures > THRESHOLD && state.consecutiveFailures % 10 === 0) {
       const downMins = Math.round((Date.now() - downSince) / 60000);
       await sendNtfy({
-        title:    `⚠️ PlanIt Still Down (${downMins}m)`,
+        title:    ` PlanIt Still Down (${downMins}m)`,
         message:  `Backend has been unreachable for ${downMins} minutes.\nFailed pings: ${state.consecutiveFailures}\nLast error: ${err.message}`,
         priority: 'high',
         tags:     ['warning', 'clock'],
@@ -363,8 +379,8 @@ async function boot() {
 
   // 2. Start HTTP server
   app.listen(PORT, () => {
-    console.log(`[${ts()}] 🌐  Health server → http://0.0.0.0:${PORT}`);
-    console.log(`[${ts()}] 📊  Status       → http://0.0.0.0:${PORT}/watchdog/status`);
+    console.log(`[${ts()}]   Health server → http://0.0.0.0:${PORT}`);
+    console.log(`[${ts()}]   Status       → http://0.0.0.0:${PORT}/watchdog/status`);
   });
 
   // 3. Fire an immediate test ping so you see in logs straight away whether
@@ -374,7 +390,15 @@ async function boot() {
 
   // 4. Schedule ongoing pings
   setInterval(pingMainServer, PING_MS);
-  console.log(`[${ts()}] ✅  Watchdog running — pinging every ${PING_MS / 1000}s, threshold ${THRESHOLD} failures\n`);
+  console.log(`[${ts()}] Watchdog running — pinging every ${PING_MS / 1000}s, threshold ${THRESHOLD} failures\n`);
+
+  // 5. Send startup notification so you know the watchdog is live
+  await sendNtfy({
+    title:    'Watchdog Started',
+    message:  `PlanIt watchdog is online and monitoring ${PING_URL} every ${PING_MS / 1000}s.\nFailure threshold: ${THRESHOLD} consecutive failures.`,
+    priority: 'urgent',
+    tags:     ['shield', 'white_check_mark'],
+  });
 }
 
 // ─── Graceful shutdown ────────────────────────────────────────────────────────
@@ -387,7 +411,7 @@ process.on('SIGTERM', () => shutdown('SIGTERM'));
 process.on('SIGINT',  () => shutdown('SIGINT'));
 
 boot().catch(err => {
-  console.error(`[${ts()}] ❌  Fatal boot error: ${err.message}`);
+  console.error(`[${ts()}]   Fatal boot error: ${err.message}`);
   console.error(err.stack);
   process.exit(1);
 });
