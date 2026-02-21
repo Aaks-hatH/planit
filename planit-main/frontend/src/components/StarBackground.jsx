@@ -691,13 +691,13 @@ export default function StarBackground({ fixed=true, starCount=null }) {
     let raf=null, meteors=[], explosions=[], lastTs=0, eggFired=false;
     let nextShowerMs=2800+Math.random()*3800, showerAccumMs=0;
     let satellite=null, nextSatMs=42000+Math.random()*95000, satAccumMs=0;
-    let scrollY=0;
+    let isScrolling=false, scrollTimer=null;
     const minFrameMs = cfg.targetFPS >= 60 ? 0 : 1000/cfg.targetFPS;
     let lastDrawTs=0;
     let mwCanvas=null, mwW=0, mwH=0;
     const sessionStart=performance.now();
 
-    const onScroll=()=>{scrollY=window.scrollY;};
+    const onScroll=()=>{ isScrolling=true; clearTimeout(scrollTimer); scrollTimer=setTimeout(()=>{ isScrolling=false; },150); };
     window.addEventListener('scroll',onScroll,{passive:true});
 
     function resize(){
@@ -748,6 +748,9 @@ export default function StarBackground({ fixed=true, starCount=null }) {
 
     function tick(ts){
       if(ts-lastDrawTs < minFrameMs){raf=requestAnimationFrame(tick);return;}
+      // While scrolling, skip canvas redraws so iOS compositor can use its
+      // fast off-thread scroll path. Stars are frozen but imperceptible.
+      if(isScrolling){lastTs=ts; raf=requestAnimationFrame(tick); return;}
       const dt=Math.min(ts-lastTs,50); lastTs=ts; lastDrawTs=ts;
       showerAccumMs+=dt; satAccumMs+=dt;
       const W=canvas.width, H=canvas.height;
@@ -757,10 +760,9 @@ export default function StarBackground({ fixed=true, starCount=null }) {
       drawMilkyWay(ctx,mwCanvas,mwStars,W,H,t,cfg.mwAnimStars);
 
       for(let li=layers.length-1;li>=0;li--){
-        const pShift=scrollY*(0.0006*(li+1));
-        for(const s of layers[li]){
+                for(const s of layers[li]){
           const sx=s.xr*W+Math.sin(t*.030+s.to0)*.5*(li+1);
-          const sy=s.yr*H+Math.cos(t*.024+s.to0)*.35*(li+1)-pShift;
+          const sy=s.yr*H+Math.cos(t*.024+s.to0)*.35*(li+1);
           const margin=s.cls==='A'?65:s.cls==='B'?32:12;
           if(sx<-margin||sx>W+margin||sy<-margin||sy>H+margin) continue;
           if(!s.winking){
@@ -829,13 +831,7 @@ export default function StarBackground({ fixed=true, starCount=null }) {
     };
   },[layers,mwStars,mwDust,cfg,tier]);
 
-  const style = fixed
-    ? { position:'fixed', inset:0, width:'100%', height:'100%', pointerEvents:'none', zIndex:0, background:'#000',
-        transform:'translateZ(0)', WebkitTransform:'translateZ(0)',
-        willChange:'transform', backfaceVisibility:'hidden', WebkitBackfaceVisibility:'hidden' }
-    : { position:'absolute', inset:0, width:'100%', height:'100%', pointerEvents:'none', background:'#000',
-        transform:'translateZ(0)', WebkitTransform:'translateZ(0)',
-        willChange:'transform', backfaceVisibility:'hidden', WebkitBackfaceVisibility:'hidden' };
+  const style = {position:'absolute',top:0,left:0,right:0,height:'100vh',pointerEvents:'none',zIndex:0,background:'#000',transform:'translateZ(0)',WebkitTransform:'translateZ(0)',willChange:'transform',backfaceVisibility:'hidden',WebkitBackfaceVisibility:'hidden'};
 
   return <canvas ref={canvasRef} style={style} />;
 }
