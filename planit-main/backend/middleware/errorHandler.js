@@ -83,6 +83,20 @@ const errorHandler = (err, req, res, next) => {
     });
   }
 
+  // Cloudinary errors — the SDK sets http_code on the error object.
+  // Without this case they fall through to the 500 default, and in production
+  // the real message is hidden behind "An unexpected error occurred."
+  // Now we surface a meaningful response and the correct HTTP status.
+  if (err.http_code) {
+    const status = err.http_code >= 400 && err.http_code < 600 ? err.http_code : 502;
+    return res.status(status).json({
+      error: 'Storage Error',
+      // Cloudinary error messages are their API errors (invalid params, auth
+      // failures, etc.) — not internal app state, so safe to expose in production.
+      message: err.message || 'File storage service returned an error.'
+    });
+  }
+
   // Default error
   const statusCode = err.statusCode || 500;
   const message = err.message || 'Internal Server Error';
