@@ -966,19 +966,32 @@ process.on('SIGINT', () => {
 });
 
 // Handle unhandled promise rejections
+//
+// FIX: The original handler called server.close() + process.exit(1) here.
+// That means any single unhandled rejection — e.g. a network blip on a file
+// upload — would kill the entire server, drop all active connections, and make
+// the uptime monitor report a 503 until the process restarted.
+//
+// The correct approach is to LOG the error so it can be diagnosed, but keep the
+// server running. Legitimate reasons to exit (out of memory, corrupted state)
+// will surface through other means. An upload failing is not one of them.
 process.on('unhandledRejection', (err) => {
-  console.error(' Unhandled Promise Rejection:', err);
-  console.error('   Stack:', err.stack);
-  // Close server & exit process
-  server.close(() => process.exit(1));
+  console.error('[PlanIt] Unhandled Promise Rejection (server kept alive):', err);
+  console.error('   Stack:', err?.stack);
 });
 
 // Handle uncaught exceptions
+//
+// FIX: Same issue as above. The original handler exited the process on any
+// uncaught exception. A stream 'error' event with no listener (e.g. from the
+// Cloudinary upload stream on a network failure) becomes an uncaughtException
+// in Node.js — which was crashing the whole server on every failed upload.
+//
+// Fatal system errors (ENOMEM, etc.) will still surface here and can be
+// identified in logs, but routine runtime errors no longer take the server down.
 process.on('uncaughtException', (err) => {
-  console.error(' Uncaught Exception:', err);
-  console.error('   Stack:', err.stack);
-  // Close server & exit process
-  server.close(() => process.exit(1));
+  console.error('[PlanIt] Uncaught Exception (server kept alive):', err);
+  console.error('   Stack:', err?.stack);
 });
 
 module.exports = { app, server, io };
