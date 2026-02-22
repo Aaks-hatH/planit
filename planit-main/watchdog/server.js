@@ -25,23 +25,23 @@ const PING_URL  = `${MAIN_SERVER_URL}/uptime/ping`;
 
 // ─── Startup validation ──────────────────────────────────────────────────────
 console.log(`\n[${ts()}] ╔══════════════════════════════════════════╗`);
-console.log(`[${ts()}] ║       PlanIt Watchdog  🛡️  — STARTING     ║`);
+console.log(`[${ts()}] ║       PlanIt Watchdog    — STARTING     ║`);
 console.log(`[${ts()}] ╚══════════════════════════════════════════╝`);
 console.log(`[${ts()}]   Ping target  : ${PING_URL}`);
 console.log(`[${ts()}]   Frontend     : ${FRONTEND_URL}`);
 console.log(`[${ts()}]   Interval     : ${PING_MS / 1000}s`);
 console.log(`[${ts()}]   Threshold    : ${THRESHOLD} failures`);
-console.log(`[${ts()}]   ntfy         : ${NTFY_URL || '⚠️  NOT SET — notifications disabled'}`);
-console.log(`[${ts()}]   MONGO_URI    : ${MONGO_URI ? '✅  set' : '❌  NOT SET — incident DB writes will fail'}`);
+console.log(`[${ts()}]   ntfy         : ${NTFY_URL || '  NOT SET — notifications disabled'}`);
+console.log(`[${ts()}]   MONGO_URI    : ${MONGO_URI ? '  set' : '  NOT SET — incident DB writes will fail'}`);
 console.log(`[${ts()}]   Port         : ${PORT}\n`);
 
 if (!MONGO_URI) {
-  console.error(`[${ts()}] ❌  FATAL: MONGO_URI is required.\n  Add it to your .env or environment variables and restart.\n  Example: MONGO_URI=mongodb+srv://user:pass@cluster.mongodb.net/planit`);
+  console.error(`[${ts()}]   FATAL: MONGO_URI is required.\n  Add it to your .env or environment variables and restart.\n  Example: MONGO_URI=mongodb+srv://user:pass@cluster.mongodb.net/planit`);
   process.exit(1);
 }
 
 if (!NTFY_URL) {
-  console.warn(`[${ts()}] ⚠️  NTFY_URL is not set. Push notifications will be disabled.`);
+  console.warn(`[${ts()}]   NTFY_URL is not set. Push notifications will be disabled.`);
   console.warn(`[${ts()}]    To enable: add NTFY_URL=https://ntfy.sh/your-topic to your env.\n`);
 }
 
@@ -112,10 +112,10 @@ async function ensureDbConnected() {
   console.log(`[${ts()}] [db] Connecting to MongoDB...`);
   try {
     await mongoose.connect(MONGO_URI, { serverSelectionTimeoutMS: 10000 });
-    console.log(`[${ts()}] [db] ✅  MongoDB connected`);
+    console.log(`[${ts()}] [db]   MongoDB connected`);
     return true;
   } catch (err) {
-    console.error(`[${ts()}] [db] ❌  MongoDB connect failed: ${err.message}`);
+    console.error(`[${ts()}] [db]   MongoDB connect failed: ${err.message}`);
     return false;
   }
 }
@@ -135,7 +135,7 @@ async function createDownIncident(errorMsg) {
     });
 
     const incident = await Incident.create({
-      title:            '🔴 API Unreachable — Backend Down',
+      title:            ' API Unreachable — Backend Down',
       description:      `The PlanIt backend failed to respond to ${THRESHOLD} consecutive health checks from the external watchdog monitor. Users cannot access the application.`,
       severity:         'critical',
       status:           'investigating',
@@ -151,10 +151,10 @@ async function createDownIncident(errorMsg) {
     report.incidentId = incident._id;
     await report.save();
 
-    console.log(`[${ts()}] [incident] ✅  Incident created in DB: ${incident._id}`);
+    console.log(`[${ts()}] [incident]   Incident created in DB: ${incident._id}`);
     return incident._id;
   } catch (err) {
-    console.error(`[${ts()}] [incident] ❌  Failed to create incident: ${err.message}`);
+    console.error(`[${ts()}] [incident]   Failed to create incident: ${err.message}`);
     return null;
   }
 }
@@ -182,9 +182,9 @@ async function resolveDownIncident(incidentId, downtimeMs) {
       message: `Backend recovered automatically. Total downtime: ${mins < 1 ? '<1' : mins} minute${mins !== 1 ? 's' : ''}. All systems operational.`,
     });
     await incident.save();
-    console.log(`[${ts()}] [incident] ✅  Incident ${incidentId} auto-resolved (${mins}m downtime)`);
+    console.log(`[${ts()}] [incident]   Incident ${incidentId} auto-resolved (${mins}m downtime)`);
   } catch (err) {
-    console.error(`[${ts()}] [incident] ❌  Failed to resolve incident: ${err.message}`);
+    console.error(`[${ts()}] [incident]   Failed to resolve incident: ${err.message}`);
   }
 }
 
@@ -209,13 +209,13 @@ async function sendNtfy({ title, message, priority = 'high', tags = [] }) {
     }
 
     const res = await axios.post(NTFY_URL, message, { headers, timeout: 10000 });
-    console.log(`[${ts()}] [ntfy] ✅  Sent — HTTP ${res.status}`);
+    console.log(`[${ts()}] [ntfy]   Sent — HTTP ${res.status}`);
   } catch (err) {
     // Log full details so you can debug ntfy issues
     if (err.response) {
-      console.error(`[${ts()}] [ntfy] ❌  Failed — HTTP ${err.response.status}: ${JSON.stringify(err.response.data)}`);
+      console.error(`[${ts()}] [ntfy]   Failed — HTTP ${err.response.status}: ${JSON.stringify(err.response.data)}`);
     } else {
-      console.error(`[${ts()}] [ntfy] ❌  Failed — ${err.message}`);
+      console.error(`[${ts()}] [ntfy]   Failed — ${err.message}`);
     }
   }
 }
@@ -248,7 +248,7 @@ async function pingMainServer() {
       state.isDown = false;
       downSince    = null;
 
-      console.log(`[${ts()}] 🟢  Server RECOVERED after ${downtimeMins}m — response ${ms}ms`);
+      console.log(`[${ts()}]   Server RECOVERED after ${downtimeMins}m — response ${ms}ms`);
 
       if (state.activeIncidentId) {
         await resolveDownIncident(state.activeIncidentId, downtimeMs);
@@ -278,14 +278,14 @@ async function pingMainServer() {
     // Record failed ping for bar chart history (non-blocking)
     UptimeCheck.create({ status: 'down', error: err.message }).catch(() => {});
 
-    console.warn(`[${ts()}] 🔴  Ping FAILED (${state.consecutiveFailures}/${THRESHOLD}): ${err.message}`);
+    console.warn(`[${ts()}]   Ping FAILED (${state.consecutiveFailures}/${THRESHOLD}): ${err.message}`);
 
     // ── Threshold hit — server officially down ───────────────────────────────
     if (state.consecutiveFailures === THRESHOLD && !state.isDown) {
       state.isDown = true;
       downSince    = Date.now();
 
-      console.error(`[${ts()}] 🚨  THRESHOLD HIT — declaring server DOWN, writing incident to DB`);
+      console.error(`[${ts()}]   THRESHOLD HIT — declaring server DOWN, writing incident to DB`);
 
       const incidentId = await createDownIncident(err.message);
       state.activeIncidentId = incidentId;
