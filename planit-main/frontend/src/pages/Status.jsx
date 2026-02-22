@@ -141,9 +141,9 @@ function UptimeBar({ bar, index }) {
       style={{
         flex: '1 1 0',
         minWidth: 0,
-        height: '44px',
+        height: '28px',
         backgroundColor: color,
-        borderRadius: '999px',
+        borderRadius: '4px',
         cursor: 'default',
         flexShrink: 0,
         opacity: 0,
@@ -431,18 +431,14 @@ export default function Status() {
 
     // Main server is down. Ask the watchdog — it stays up independently and
     // reads incidents directly from the shared MongoDB.
+    // NOTE: never call setOnline here. Only ping() controls online state,
+    // otherwise changing online triggers the useEffect which re-runs fetchStatus
+    // which changes online again — causing a feedback loop.
     try {
       const res = await watchdogAPI.getStatus();
       if (!res) return; // VITE_WATCHDOG_URL not configured
-
       setData(res.data);
       setLastFetch(new Date());
-
-      // Watchdog also tells us definitively the server is down
-      if (res.data?.watchdog?.mainServer === 'DOWN') {
-        onlineRef.current = false;
-        setOnline(false);
-      }
     } catch {
       // Watchdog unreachable too — keep stale data
     }
