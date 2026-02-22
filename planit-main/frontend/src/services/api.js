@@ -118,9 +118,7 @@ export const pollAPI = {
 };
 
 export const fileAPI = {
-  upload: (eventId, formData) => api.post(`/files/${eventId}/upload`, formData, {
-    headers: { 'Content-Type': 'multipart/form-data' },
-  }),
+  upload: (eventId, formData) => api.post(`/files/${eventId}/upload`, formData),
   getAll: (eventId) => api.get(`/files/${eventId}`),
   download: (eventId, fileId) => api.get(`/files/${eventId}/download/${fileId}`, { responseType: 'blob' }),
   delete: (eventId, fileId, data) => api.delete(`/files/${eventId}/${fileId}`, { data }),
