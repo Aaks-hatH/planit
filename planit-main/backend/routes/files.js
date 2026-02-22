@@ -22,7 +22,6 @@ const upload = multer({
     fileSize: 10 * 1024 * 1024, // 10MB limit
   },
   fileFilter: (req, file, cb) => {
-    // Allowed file types for security
     const allowedMimes = [
       'image/jpeg',
       'image/png',
@@ -55,38 +54,51 @@ const upload = multer({
 // Helper function to upload to Cloudinary from buffer
 const uploadToCloudinary = (buffer, filename, mimetype) => {
   return new Promise((resolve, reject) => {
-    // Determine resource type
-    let resourceType = 'raw'; // default for documents
-    if (mimetype.startsWith('image/')) {
-      resourceType = 'image';
-    } else if (mimetype.startsWith('video/')) {
-      resourceType = 'video';
-    }
+    let resourceType = 'raw';
+    if (mimetype.startsWith('image/')) resourceType = 'image';
+    else if (mimetype.startsWith('video/')) resourceType = 'video';
 
-    // Create upload stream
+    // Sanitize filename: strip extension, spaces → underscores, remove unsafe chars.
+    // Cloudinary rejects public_ids containing spaces, causing a 500 on any
+    // upload whose filename has a space or special character.
+    const safeName = filename
+      .replace(/\.[^/.]+$/, '')
+      .replace(/\s+/g, '_')
+      .replace(/[^a-zA-Z0-9_-]/g, '');
+
     const uploadStream = cloudinary.uploader.upload_stream(
       {
-        folder: 'planit-events', // Organize files in folder
+        folder: 'planit-events',
         resource_type: resourceType,
-        public_id: `${Date.now()}-${filename.replace(/\.[^/.]+$/, '')}`, // Remove extension, Cloudinary adds it
+        public_id: `${Date.now()}-${safeName}`,
         secure: true,
-        // Add transformation for images (optimize)
+        // NOTE: fetch_format is a delivery/URL parameter, NOT an upload parameter.
+        // Passing it here caused Cloudinary to reject every image upload with an
+        // error. Removed — quality: 'auto' still applies compression on upload.
         ...(resourceType === 'image' && {
-          transformation: [
-            { quality: 'auto', fetch_format: 'auto' }
-          ]
+          transformation: [{ quality: 'auto' }]
         })
       },
       (error, result) => {
-        if (error) {
-          reject(error);
-        } else {
-          resolve(result);
-        }
+        if (error) reject(error);
+        else resolve(result);
       }
     );
 
-    // Pipe buffer to upload stream
+    // FIX: Attach an 'error' event handler directly on the stream.
+    //
+    // When a network-level failure occurs (TCP refused, timeout, DNS failure)
+    // the Cloudinary SDK emits an 'error' event on the stream object BEFORE the
+    // callback above fires. In Node.js, an unhandled 'error' event on any
+    // EventEmitter throws an uncaughtException — bypassing every try/catch.
+    // Without this line, a single failed upload crashes the entire server process,
+    // killing all active connections and triggering the process.exit(1) in server.js.
+    //
+    // Routing it through reject() means the error surfaces as a normal rejected
+    // Promise, is caught by the try/catch in the route handler, and passed to
+    // next(error) — returning a clean 500 to the client with no crash.
+    uploadStream.on('error', reject);
+
     uploadStream.end(buffer);
   });
 };
@@ -109,16 +121,20 @@ router.post('/:eventId/upload',
     });
   },
   async (req, res, next) => {
+    // Track what was uploaded to Cloudinary so we can roll it back if the DB
+    // save subsequently fails. The original code checked error.cloudinaryPublicId
+    // which is never set on an Error object — orphaned files were never cleaned up.
+    let uploadedPublicId = null;
+    let uploadedResourceType = null;
+
     try {
       const { eventId } = req.params;
 
-      // req.event is already loaded by verifyEventToken middleware — no second DB call needed
       const event = req.event;
       if (!event) {
         return res.status(404).json({ error: 'Event not found' });
       }
 
-      // Get username from the decoded token — try both fields defensively
       const username = req.eventAccess?.username || req.eventAccess?.sub;
       if (!username) {
         return res.status(403).json({ error: 'Not authorized — could not identify user' });
@@ -128,14 +144,15 @@ router.post('/:eventId/upload',
         return res.status(400).json({ error: 'No file uploaded' });
       }
 
-      // Upload to Cloudinary from buffer
       const cloudinaryResult = await uploadToCloudinary(
         req.file.buffer,
         req.file.originalname,
         req.file.mimetype
       );
 
-      // Create file record in MongoDB (only metadata + URL)
+      uploadedPublicId = cloudinaryResult.public_id;
+      uploadedResourceType = cloudinaryResult.resource_type;
+
       const file = new File({
         eventId,
         filename: req.file.originalname,
@@ -150,7 +167,6 @@ router.post('/:eventId/upload',
 
       await file.save();
 
-      // Emit socket event for real-time update
       const io = req.app.get('io');
       if (io) {
         io.to(`event-${eventId}`).emit('file_uploaded', {
@@ -179,10 +195,12 @@ router.post('/:eventId/upload',
         }
       });
     } catch (error) {
-      // Clean up Cloudinary upload if database save fails
-      if (req.file && error.cloudinaryPublicId) {
+      // Roll back the Cloudinary upload if the DB save failed
+      if (uploadedPublicId) {
         try {
-          await cloudinary.uploader.destroy(error.cloudinaryPublicId);
+          await cloudinary.uploader.destroy(uploadedPublicId, {
+            resource_type: uploadedResourceType || 'raw'
+          });
         } catch (cleanupError) {
           console.error('Failed to cleanup Cloudinary upload:', cleanupError);
         }
@@ -197,15 +215,11 @@ router.get('/:eventId', verifyEventToken, async (req, res, next) => {
   try {
     const { eventId } = req.params;
 
-    const files = await File.find({
-      eventId,
-      isDeleted: false
-    })
+    const files = await File.find({ eventId, isDeleted: false })
       .sort({ uploadedAt: -1 })
-      .select('-cloudinaryPublicId') // Don't expose internal IDs
+      .select('-cloudinaryPublicId')
       .lean();
 
-    // Map to safe response format
     const safeFiles = files.map(f => ({
       _id: f._id,
       filename: f.filename,
@@ -227,18 +241,12 @@ router.get('/:eventId/download/:fileId', verifyEventToken, async (req, res, next
   try {
     const { eventId, fileId } = req.params;
 
-    const file = await File.findOne({
-      _id: fileId,
-      eventId,
-      isDeleted: false
-    });
+    const file = await File.findOne({ _id: fileId, eventId, isDeleted: false });
 
     if (!file) {
       return res.status(404).json({ error: 'File not found' });
     }
 
-    // Return the Cloudinary URL for download
-    // The client can use this URL directly
     res.json({
       url: file.cloudinaryUrl,
       filename: file.filename,
@@ -254,17 +262,12 @@ router.delete('/:eventId/:fileId', verifyEventToken, async (req, res, next) => {
   try {
     const { eventId, fileId } = req.params;
 
-    const file = await File.findOne({
-      _id: fileId,
-      eventId,
-      isDeleted: false
-    });
+    const file = await File.findOne({ _id: fileId, eventId, isDeleted: false });
 
     if (!file) {
       return res.status(404).json({ error: 'File not found' });
     }
 
-    // req.event is already loaded by verifyEventToken middleware
     const event = req.event;
     const username = req.eventAccess?.username || req.eventAccess?.sub;
     const isOrganizer = event.participants.some(
@@ -276,16 +279,13 @@ router.delete('/:eventId/:fileId', verifyEventToken, async (req, res, next) => {
       return res.status(403).json({ error: 'Not authorized to delete this file' });
     }
 
-    // Delete from Cloudinary
     await file.deleteFromCloudinary();
 
-    // Soft delete in database
     file.isDeleted = true;
     file.deletedAt = new Date();
     file.deletedBy = username;
     await file.save();
 
-    // Emit socket event
     const io = req.app.get('io');
     if (io) {
       io.to(`event-${eventId}`).emit('file_deleted', { fileId });
