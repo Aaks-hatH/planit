@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { Link } from 'react-router-dom';
-import { uptimeAPI } from '../services/api';
+import { uptimeAPI, watchdogAPI } from '../services/api';
 import { SERVICE_CATEGORIES, ALL_SERVICES_FLAT } from '../utils/serviceCategories';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -420,13 +420,42 @@ export default function Status() {
 
   const fetchStatus = useCallback(async () => {
     try {
+      // Try the watchdog first — it has authoritative incident data from MongoDB
+      // and stays reachable even when the main server is down.
+      const watchdogRes = await watchdogAPI.getStatus();
+
+      if (watchdogRes?.data) {
+        setData(watchdogRes.data);
+        setLastFetch(new Date());
+
+        // Watchdog tells us definitively whether the main server is up or down.
+        // This is more reliable than the browser's own ping because the watchdog
+        // pings from an external network location every 30s.
+        const serverDown = watchdogRes.data.watchdog?.mainServer === 'DOWN';
+        if (serverDown) {
+          onlineRef.current = false;
+          setOnline(false);
+        }
+
+        // Use the watchdog's measured latency if we don't have a fresh browser ping
+        if (watchdogRes.data.watchdog?.lastPingMs && latency === null) {
+          setLatency(watchdogRes.data.watchdog.lastPingMs);
+        }
+        return;
+      }
+    } catch {
+      // Watchdog unreachable — fall back to main API below
+    }
+
+    // Fallback: watchdog not configured or unreachable, use main API directly
+    try {
       const res = await uptimeAPI.getStatus();
       setData(res.data);
       setLastFetch(new Date());
     } catch {
-      // Keep stale — the ping loop controls online/offline state
+      // Keep stale data — the ping loop controls online/offline state
     }
-  }, []);
+  }, [latency]);
 
   const ping = useCallback(async () => {
     const t = Date.now();
@@ -444,10 +473,16 @@ export default function Status() {
       if (wasOffline) fetchStatus();
 
     } catch {
-      onlineRef.current = false;
-      setOnline(false);
-      setLatency(null);
       pingFailsRef.current += 1;
+
+      // Only mark offline if watchdog also says down, OR we've failed enough times
+      // locally. This prevents false positives from transient browser connectivity.
+      const watchdogSaysDown = !onlineRef.current; // already set by fetchStatus if watchdog reported DOWN
+      if (pingFailsRef.current >= AUTO_REPORT_FAILURES || watchdogSaysDown) {
+        onlineRef.current = false;
+        setOnline(false);
+        setLatency(null);
+      }
 
       if (
         pingFailsRef.current >= AUTO_REPORT_FAILURES &&
@@ -455,8 +490,6 @@ export default function Status() {
       ) {
         lastAutoReport.current = Date.now();
         setAutoReported(true);
-        // Best-effort — will fail if server is completely dead, but the
-        // watchdog is the reliable path for writing the DB incident.
         uptimeAPI.submitReport({
           description:     `[AUTO] Status page detected ${AUTO_REPORT_FAILURES} consecutive API ping failures. Backend appears unreachable.`,
           email:           '',
