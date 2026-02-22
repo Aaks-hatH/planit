@@ -870,8 +870,22 @@ const connectDB = async () => {
     }
 
     await mongoose.connect(process.env.MONGODB_URI, {
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
+      useNewUrlParser:        true,
+      useUnifiedTopology:     true,
+      // ── Multi-instance pool sizing ──────────────────────────────────────
+      // Each backend instance opens its own connection pool. With 10 backends
+      // running on Render free tier, we limit each pool to 3 connections so
+      // the total across all instances stays at 30 — well within Atlas M0's
+      // 500-connection limit and avoids saturating the shared cluster CPU.
+      // Raise maxPoolSize if you move to a paid Atlas tier or self-hosted MongoDB.
+      maxPoolSize:            3,
+      minPoolSize:            1,
+      // ── Timeouts ────────────────────────────────────────────────────────
+      // Render cold starts and Atlas shared-cluster wake-ups can take a few
+      // seconds. These values prevent connection errors during startup.
+      serverSelectionTimeoutMS: 8000,
+      connectTimeoutMS:         10000,
+      socketTimeoutMS:          45000,
     });
 
     console.log('✓ MongoDB connected successfully');
