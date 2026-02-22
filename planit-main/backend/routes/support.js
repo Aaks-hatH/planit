@@ -113,7 +113,8 @@ router.post('/create-payment',
     try {
       const stripe = getStripe();
       const { amount, email, name, message } = req.body;
-
+      console.log('FRONTEND_URL:', JSON.stringify(process.env.FRONTEND_URL));
+console.log('success_url:', `${process.env.FRONTEND_URL}/support/success?session_id={CHECKOUT_SESSION_ID}`);
       const session = await stripe.checkout.sessions.create({
         payment_method_types: ['card'],
         mode: 'payment',
