@@ -185,24 +185,27 @@ function CosmicAmbient() {
 // ENTERPRISE INTERACTIVE DEMO
 // ─────────────────────────────────────────────
 
+// ─────────────────────────────────────────────
+// ENTERPRISE INTERACTIVE DEMO
+// ─────────────────────────────────────────────
+
 const DEMO_GUESTS = [
-  { id: 1, name: 'Sarah Johnson',   group: 4, table: 12, code: 'SJ4A-X9', role: 'VIP' },
-  { id: 2, name: 'Marcus Rivera',   group: 2, table: 5,  code: 'MR2B-K3', role: 'Speaker' },
-  { id: 3, name: 'Priya Sharma',    group: 1, table: 8,  code: 'PS1C-M7', role: 'Attendee' },
-  { id: 4, name: 'Tom & Lisa Chen', group: 2, table: 3,  code: 'TC2D-R1', role: 'Sponsor' },
-  { id: 5, name: 'Dev Patel',       group: 6, table: 15, code: 'DP6E-N5', role: 'Attendee' },
-  { id: 6, name: 'Amara Okafor',    group: 1, table: 7,  code: 'AO1F-Q2', role: 'Attendee' },
+  { id: 1, name: 'Sarah Johnson',   group: 4, table: 12, code: 'SJ4A-X9', role: 'VIP',      status: 'normal' },
+  { id: 2, name: 'Marcus Rivera',   group: 2, table: 5,  code: 'MR2B-K3', role: 'Speaker',  status: 'normal' },
+  { id: 3, name: 'Priya Sharma',    group: 1, table: 8,  code: 'PS1C-M7', role: 'Attendee', status: 'normal' },
+  { id: 4, name: 'Tom & Lisa Chen', group: 2, table: 3,  code: 'TC2D-R1', role: 'Sponsor',  status: 'normal' },
+  { id: 5, name: 'Dev Patel',       group: 6, table: 15, code: 'DP6E-N5', role: 'Attendee', status: 'blocked',  blockReason: 'Duplicate identity — another invite with same email already checked in' },
+  { id: 6, name: 'Amara Okafor',    group: 1, table: 7,  code: 'AO1F-Q2', role: 'Attendee', status: 'flagged',  flagReason: 'Low trust score: 42/100 — scanned from 3 different devices' },
 ];
 
-// Deterministic QR-like pattern based on code string
-function QRPattern({ code, size = 80 }) {
+function QRPattern({ code, size = 40, faded = false }) {
   const cells = 10;
   const hash = code.split('').reduce((acc, c) => acc * 31 + c.charCodeAt(0), 7);
   return (
-    <div style={{ width: size, height: size, display: 'grid', gridTemplateColumns: `repeat(${cells}, 1fr)`, gap: 1, padding: 4, background: 'white', borderRadius: 6 }}>
+    <div style={{ width: size, height: size, display: 'grid', gridTemplateColumns: `repeat(${cells}, 1fr)`, gap: 1, padding: 3, background: faded ? '#333' : 'white', borderRadius: 6, opacity: faded ? 0.4 : 1 }}>
       {Array.from({ length: cells * cells }, (_, i) => {
         const filled = ((hash * (i + 13) * 1103515245 + 12345) & 0x7fffffff) % 3 !== 0;
-        return <div key={i} style={{ background: filled ? '#111' : 'white', borderRadius: 1 }} />;
+        return <div key={i} style={{ background: filled ? (faded ? '#888' : '#111') : (faded ? '#333' : 'white'), borderRadius: 1 }} />;
       })}
     </div>
   );
@@ -210,59 +213,180 @@ function QRPattern({ code, size = 80 }) {
 
 function EnterpriseDemo() {
   const [tab, setTab] = useState('guests');
-  const [guests, setGuests] = useState(DEMO_GUESTS.map(g => ({ ...g, checkedIn: false, checking: false, checkedAt: null })));
-  const [scanning, setScanning] = useState(null); // guest id currently being scanned
+  const [guests, setGuests] = useState(DEMO_GUESTS.map(g => ({ ...g, checkedIn: false, checking: false, checkedAt: null, scanCount: 0 })));
+  const [scanning, setScanning] = useState(null);
   const [lastChecked, setLastChecked] = useState(null);
+  const [securityLog, setSecurityLog] = useState([]);
+  const [overrideTarget, setOverrideTarget] = useState(null); // guest being overridden
+  const [overridePin, setOverridePin] = useState('');
+  const [overrideError, setOverrideError] = useState('');
+  const [overrideSuccess, setOverrideSuccess] = useState(false);
+  const [simulating, setSimulating] = useState(false);
 
   const checkedInCount = guests.filter(g => g.checkedIn).length;
   const totalGuests = guests.reduce((s, g) => s + g.group, 0);
   const checkedInPeople = guests.filter(g => g.checkedIn).reduce((s, g) => s + g.group, 0);
   const pct = Math.round((checkedInPeople / totalGuests) * 100);
 
-  const handleCheckIn = (id) => {
+  const addLog = (entry) => setSecurityLog(prev => [{ ...entry, id: Date.now() + Math.random(), ts: new Date() }, ...prev].slice(0, 20));
+
+  const handleCheckIn = (guest) => {
     if (scanning) return;
-    setScanning(id);
-    setGuests(prev => prev.map(g => g.id === id ? { ...g, checking: true } : g));
+
+    // Already checked in → duplicate attempt
+    if (guest.checkedIn) {
+      addLog({ type: 'duplicate', severity: 'high', name: guest.name, msg: `Duplicate scan — ${guest.name} already checked in at ${guest.checkedAt?.toLocaleTimeString()}` });
+      return;
+    }
+
+    // Blocked guest
+    if (guest.status === 'blocked') {
+      addLog({ type: 'blocked', severity: 'critical', name: guest.name, msg: `BLOCKED: ${guest.name} — ${guest.blockReason}` });
+      setOverrideTarget(guest);
+      return;
+    }
+
+    // Flagged guest
+    if (guest.status === 'flagged') {
+      addLog({ type: 'flagged', severity: 'high', name: guest.name, msg: `WARNING: ${guest.name} — ${guest.flagReason}` });
+      setOverrideTarget(guest);
+      return;
+    }
+
+    // Normal check-in
+    setScanning(guest.id);
+    setGuests(prev => prev.map(g => g.id === guest.id ? { ...g, checking: true, scanCount: g.scanCount + 1 } : g));
     setTimeout(() => {
       const now = new Date();
-      setGuests(prev => prev.map(g => g.id === id ? { ...g, checkedIn: true, checking: false, checkedAt: now } : g));
-      setLastChecked(id);
+      setGuests(prev => prev.map(g => g.id === guest.id ? { ...g, checkedIn: true, checking: false, checkedAt: now } : g));
+      setLastChecked(guest.id);
       setScanning(null);
+      addLog({ type: 'success', severity: 'ok', name: guest.name, msg: `✓ ${guest.name} checked in — party of ${guest.group}, table ${guest.table}` });
       setTimeout(() => setLastChecked(null), 2500);
-    }, 1100);
+    }, 900);
+  };
+
+  const handleOverride = () => {
+    if (overridePin !== '1234') {
+      setOverrideError('Wrong PIN. Try 1234 for this demo.');
+      return;
+    }
+    setOverrideError('');
+    setOverrideSuccess(true);
+    const target = overrideTarget;
+    setTimeout(() => {
+      const now = new Date();
+      setGuests(prev => prev.map(g => g.id === target.id ? { ...g, checkedIn: true, checking: false, checkedAt: now, status: 'normal' } : g));
+      addLog({ type: 'override', severity: 'medium', name: target.name, msg: `Manager override approved — ${target.name} manually checked in` });
+      setOverrideTarget(null);
+      setOverridePin('');
+      setOverrideSuccess(false);
+    }, 1000);
+  };
+
+  const simulateUnauthorized = () => {
+    if (simulating) return;
+    setSimulating(true);
+    const fakeCodes = ['XX99-ZZ', 'FAKE-001', 'HACK-123'];
+    const code = fakeCodes[Math.floor(Math.random() * fakeCodes.length)];
+    addLog({ type: 'unauthorized', severity: 'critical', name: 'Unknown', msg: `UNAUTHORIZED: Code "${code}" not found — possible forged ticket` });
+    setTimeout(() => {
+      addLog({ type: 'ratelimit', severity: 'medium', name: 'System', msg: `Rate limit triggered — IP blocked for 60s after 3 failed attempts` });
+      setSimulating(false);
+    }, 1200);
+    if (tab !== 'security') setTab('security');
   };
 
   const handleReset = () => {
-    setGuests(DEMO_GUESTS.map(g => ({ ...g, checkedIn: false, checking: false, checkedAt: null })));
+    setGuests(DEMO_GUESTS.map(g => ({ ...g, checkedIn: false, checking: false, checkedAt: null, scanCount: 0 })));
+    setSecurityLog([]);
     setLastChecked(null);
     setScanning(null);
+    setOverrideTarget(null);
+    setOverridePin('');
+    setOverrideError('');
   };
 
-  const roleColors = { VIP: 'text-amber-400 bg-amber-400/10', Speaker: 'text-blue-400 bg-blue-400/10', Sponsor: 'text-purple-400 bg-purple-400/10', Attendee: 'text-neutral-400 bg-neutral-800' };
+  const roleColors = {
+    VIP: 'text-amber-400 bg-amber-400/10',
+    Speaker: 'text-blue-400 bg-blue-400/10',
+    Sponsor: 'text-purple-400 bg-purple-400/10',
+    Attendee: 'text-neutral-400 bg-neutral-800',
+  };
+  const logColors = {
+    ok: 'text-emerald-400 border-emerald-800/40 bg-emerald-950/20',
+    high: 'text-amber-400 border-amber-800/40 bg-amber-950/20',
+    critical: 'text-red-400 border-red-800/40 bg-red-950/20',
+    medium: 'text-blue-400 border-blue-800/40 bg-blue-950/20',
+  };
+  const logIcons = { success: '✓', duplicate: '⚠', blocked: '✕', flagged: '⚑', unauthorized: '✕', override: '⚙', ratelimit: '⊘' };
 
   return (
     <div className="bg-neutral-900/60 rounded-3xl border border-neutral-800 overflow-hidden">
+
+      {/* Manager override modal */}
+      {overrideTarget && !overrideSuccess && (
+        <div className="absolute inset-0 z-10 flex items-center justify-center" style={{ background: 'rgba(0,0,0,0.85)', borderRadius: 24 }}>
+          <div className="w-full max-w-xs mx-4 bg-neutral-900 rounded-2xl border border-neutral-700 p-6">
+            <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold mb-4 ${overrideTarget.status === 'blocked' ? 'bg-red-950/50 border border-red-800/50 text-red-400' : 'bg-amber-950/50 border border-amber-800/50 text-amber-400'}`}>
+              {overrideTarget.status === 'blocked' ? '✕ Guest Blocked' : '⚑ Guest Flagged'}
+            </div>
+            <p className="text-sm font-bold text-white mb-1">{overrideTarget.name}</p>
+            <p className="text-xs text-neutral-500 mb-4">{overrideTarget.blockReason || overrideTarget.flagReason}</p>
+            <p className="text-xs font-bold text-neutral-400 mb-2">Manager PIN required to override</p>
+            <input
+              type="password"
+              maxLength={4}
+              value={overridePin}
+              onChange={e => { setOverridePin(e.target.value); setOverrideError(''); }}
+              placeholder="Enter PIN (hint: 1234)"
+              className="dark-input text-center text-lg font-mono tracking-widest mb-2"
+              autoFocus
+            />
+            {overrideError && <p className="text-xs text-red-400 mb-2">{overrideError}</p>}
+            <div className="flex gap-2 mt-3">
+              <button onClick={() => { setOverrideTarget(null); setOverridePin(''); setOverrideError(''); }}
+                className="flex-1 py-2 text-xs font-bold text-neutral-400 bg-neutral-800 rounded-xl hover:bg-neutral-700 transition-all">
+                Cancel
+              </button>
+              <button onClick={handleOverride}
+                className="flex-1 py-2 text-xs font-bold text-white bg-white/10 border border-white/20 rounded-xl hover:bg-white/20 transition-all">
+                Override
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {overrideTarget && overrideSuccess && (
+        <div className="absolute inset-0 z-10 flex items-center justify-center" style={{ background: 'rgba(0,0,0,0.85)', borderRadius: 24 }}>
+          <div className="text-center">
+            <div className="w-14 h-14 bg-emerald-500 rounded-full flex items-center justify-center mx-auto mb-3 animate-bounce">
+              <Check className="w-7 h-7 text-white" />
+            </div>
+            <p className="text-sm font-bold text-emerald-400">Override approved</p>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
-      <div className="px-6 pt-6 pb-0">
+      <div className="px-5 pt-5 pb-0" style={{ position: 'relative' }}>
         <div className="flex items-center justify-between mb-4">
           <div>
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-emerald-500/10 border border-emerald-500/30 rounded-full text-xs font-bold text-emerald-400 mb-3">
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-emerald-500/10 border border-emerald-500/30 rounded-full text-xs font-bold text-emerald-400 mb-2">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse inline-block" />
               Live Check-in Demo
             </div>
-            <h3 className="text-base font-bold text-white">Tech Summit 2025</h3>
-            <p className="text-xs text-neutral-500">{DEMO_GUESTS.length} invites · {totalGuests} guests total</p>
+            <h3 className="text-sm font-bold text-white">Tech Summit 2025</h3>
+            <p className="text-xs text-neutral-500">{DEMO_GUESTS.length} invites · {totalGuests} guests</p>
           </div>
-          {/* Mini progress ring */}
-          <div className="relative w-14 h-14 flex-shrink-0">
-            <svg className="w-14 h-14 -rotate-90" viewBox="0 0 56 56">
-              <circle cx="28" cy="28" r="22" fill="none" stroke="#262626" strokeWidth="5" />
-              <circle cx="28" cy="28" r="22" fill="none" stroke="#10b981" strokeWidth="5"
-                strokeDasharray={`${2 * Math.PI * 22}`}
-                strokeDashoffset={`${2 * Math.PI * 22 * (1 - pct / 100)}`}
+          <div className="relative w-12 h-12 flex-shrink-0">
+            <svg className="w-12 h-12 -rotate-90" viewBox="0 0 48 48">
+              <circle cx="24" cy="24" r="18" fill="none" stroke="#262626" strokeWidth="4" />
+              <circle cx="24" cy="24" r="18" fill="none" stroke="#10b981" strokeWidth="4"
+                strokeDasharray={`${2 * Math.PI * 18}`}
+                strokeDashoffset={`${2 * Math.PI * 18 * (1 - pct / 100)}`}
                 strokeLinecap="round"
-                style={{ transition: 'stroke-dashoffset 0.6s ease' }}
-              />
+                style={{ transition: 'stroke-dashoffset 0.6s ease' }} />
             </svg>
             <div className="absolute inset-0 flex items-center justify-center">
               <span className="text-xs font-black text-white">{pct}%</span>
@@ -272,9 +396,14 @@ function EnterpriseDemo() {
 
         {/* Tabs */}
         <div className="flex gap-1 border-b border-neutral-800">
-          {['guests', 'analytics'].map(t => (
+          {['guests', 'security', 'analytics'].map(t => (
             <button key={t} onClick={() => setTab(t)}
-              className={`px-4 py-2.5 text-xs font-bold capitalize transition-all duration-200 border-b-2 -mb-px ${tab === t ? 'text-white border-white' : 'text-neutral-500 border-transparent hover:text-neutral-300'}`}>
+              className={`px-3 py-2.5 text-xs font-bold capitalize transition-all duration-200 border-b-2 -mb-px flex items-center gap-1.5 ${tab === t ? 'text-white border-white' : 'text-neutral-500 border-transparent hover:text-neutral-300'}`}>
+              {t === 'security' && securityLog.length > 0 && (
+                <span className="w-4 h-4 rounded-full bg-red-500 text-white text-xs flex items-center justify-center font-black" style={{ fontSize: 9 }}>
+                  {securityLog.filter(l => l.severity === 'critical' || l.severity === 'high').length}
+                </span>
+              )}
               {t}
             </button>
           ))}
@@ -283,83 +412,170 @@ function EnterpriseDemo() {
 
       {/* GUESTS TAB */}
       {tab === 'guests' && (
-        <div className="p-4" style={{ height: 340, overflowY: 'auto' }}>
+        <div className="p-3" style={{ height: 360, overflowY: 'auto' }}>
           <div className="space-y-2">
-            {guests.map(guest => (
-              <div key={guest.id}
-                className={`flex items-center gap-3 p-3 rounded-2xl border transition-all duration-300 ${
-                  guest.checkedIn ? 'border-emerald-800/50 bg-emerald-950/30' :
-                  guest.checking  ? 'border-neutral-600 bg-neutral-800/80' :
-                  'border-neutral-800 bg-neutral-900/50 hover:border-neutral-700'
-                }`}>
-                {/* QR */}
-                <div className="flex-shrink-0">
-                  {guest.checking ? (
-                    <div className="w-10 h-10 rounded-lg border border-neutral-700 bg-neutral-800 flex items-center justify-center">
-                      <div className="w-4 h-4 border-2 border-neutral-400 border-t-white rounded-full animate-spin" />
-                    </div>
-                  ) : guest.checkedIn ? (
-                    <div className="w-10 h-10 rounded-lg bg-emerald-500 flex items-center justify-center">
-                      <Check className="w-5 h-5 text-white" />
-                    </div>
-                  ) : (
-                    <QRPattern code={guest.code} size={40} />
-                  )}
-                </div>
+            {guests.map(guest => {
+              const isBlocked = guest.status === 'blocked' && !guest.checkedIn;
+              const isFlagged = guest.status === 'flagged' && !guest.checkedIn;
+              return (
+                <div key={guest.id}
+                  className={`flex items-center gap-3 p-3 rounded-2xl border transition-all duration-300 ${
+                    guest.checkedIn  ? 'border-emerald-800/50 bg-emerald-950/30' :
+                    guest.checking   ? 'border-neutral-600 bg-neutral-800/80' :
+                    isBlocked        ? 'border-red-900/60 bg-red-950/20' :
+                    isFlagged        ? 'border-amber-900/50 bg-amber-950/15' :
+                    'border-neutral-800 bg-neutral-900/50 hover:border-neutral-700'
+                  }`}>
 
-                {/* Info */}
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <p className="text-sm font-semibold text-white truncate">{guest.name}</p>
-                    <span className={`text-xs px-1.5 py-0.5 rounded font-medium flex-shrink-0 ${roleColors[guest.role]}`}>{guest.role}</span>
+                  {/* QR / status icon */}
+                  <div className="flex-shrink-0">
+                    {guest.checking ? (
+                      <div className="w-10 h-10 rounded-lg border border-neutral-700 bg-neutral-800 flex items-center justify-center">
+                        <div className="w-4 h-4 border-2 border-neutral-400 border-t-white rounded-full animate-spin" />
+                      </div>
+                    ) : guest.checkedIn ? (
+                      <div className="w-10 h-10 rounded-lg bg-emerald-500 flex items-center justify-center">
+                        <Check className="w-5 h-5 text-white" />
+                      </div>
+                    ) : isBlocked ? (
+                      <div className="w-10 h-10 rounded-lg bg-red-950/60 border border-red-900/50 flex items-center justify-center">
+                        <Shield className="w-5 h-5 text-red-400" />
+                      </div>
+                    ) : isFlagged ? (
+                      <div className="w-10 h-10 rounded-lg bg-amber-950/60 border border-amber-900/50 flex items-center justify-center">
+                        <span className="text-amber-400 font-black text-base">⚑</span>
+                      </div>
+                    ) : (
+                      <QRPattern code={guest.code} size={40} />
+                    )}
                   </div>
-                  <p className="text-xs text-neutral-500">
-                    {guest.checkedIn
-                      ? `✓ Checked in · Party of ${guest.group} · Table ${guest.table}`
-                      : `Party of ${guest.group} · Table ${guest.table} · ${guest.code}`}
-                  </p>
-                </div>
 
-                {/* Action */}
-                {!guest.checkedIn && (
+                  {/* Info */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <p className="text-sm font-semibold text-white truncate">{guest.name}</p>
+                      <span className={`text-xs px-1.5 py-0.5 rounded font-medium flex-shrink-0 ${roleColors[guest.role]}`}>{guest.role}</span>
+                      {isBlocked && <span className="text-xs px-1.5 py-0.5 rounded font-bold flex-shrink-0 bg-red-950/60 text-red-400 border border-red-900/40">BLOCKED</span>}
+                      {isFlagged && <span className="text-xs px-1.5 py-0.5 rounded font-bold flex-shrink-0 bg-amber-950/50 text-amber-400 border border-amber-900/40">FLAGGED</span>}
+                    </div>
+                    <p className="text-xs text-neutral-500 truncate">
+                      {guest.checkedIn
+                        ? `✓ Checked in · Party of ${guest.group} · Table ${guest.table}`
+                        : isBlocked ? guest.blockReason
+                        : isFlagged ? guest.flagReason
+                        : `Party of ${guest.group} · Table ${guest.table}`}
+                    </p>
+                  </div>
+
+                  {/* Action */}
                   <button
-                    onClick={() => handleCheckIn(guest.id)}
+                    onClick={() => handleCheckIn(guest)}
                     disabled={!!scanning}
                     className={`flex-shrink-0 px-3 py-1.5 rounded-xl text-xs font-bold transition-all duration-200 ${
+                      guest.checkedIn   ? 'bg-emerald-950/40 text-emerald-600 cursor-default' :
                       scanning === guest.id ? 'bg-neutral-700 text-neutral-400 cursor-wait' :
-                      scanning ? 'bg-neutral-800 text-neutral-600 cursor-not-allowed' :
+                      scanning          ? 'bg-neutral-800 text-neutral-600 cursor-not-allowed' :
+                      isBlocked         ? 'bg-red-950/50 text-red-400 border border-red-900/40 hover:bg-red-900/40' :
+                      isFlagged         ? 'bg-amber-950/50 text-amber-400 border border-amber-900/40 hover:bg-amber-900/40' :
                       'bg-white text-neutral-900 hover:bg-neutral-100 hover:scale-105 active:scale-95'
                     }`}>
-                    {scanning === guest.id ? 'Scanning…' : 'Scan'}
+                    {guest.checkedIn ? 'Done' : scanning === guest.id ? '…' : isBlocked ? 'Blocked' : isFlagged ? 'Review' : 'Scan'}
                   </button>
-                )}
 
-                {/* Success flash */}
-                {lastChecked === guest.id && (
-                  <span className="flex-shrink-0 text-xs text-emerald-400 font-bold animate-pulse">Checked in!</span>
-                )}
+                  {lastChecked === guest.id && (
+                    <span className="flex-shrink-0 text-xs text-emerald-400 font-bold animate-pulse">In!</span>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Simulate unauthorized */}
+          <div className="mt-3 p-3 rounded-2xl border border-dashed border-neutral-700 bg-neutral-900/30">
+            <p className="text-xs text-neutral-600 mb-2 font-medium">Simulate security scenarios:</p>
+            <div className="flex gap-2">
+              <button onClick={simulateUnauthorized} disabled={simulating}
+                className="flex-1 py-1.5 text-xs font-bold text-red-400 border border-red-900/50 rounded-xl bg-red-950/20 hover:bg-red-950/40 transition-all disabled:opacity-40">
+                {simulating ? 'Scanning…' : '⚠ Try forged ticket'}
+              </button>
+              {(checkedInCount > 0 || securityLog.length > 0) && (
+                <button onClick={handleReset} className="px-3 py-1.5 text-xs text-neutral-600 hover:text-neutral-400 border border-neutral-800 rounded-xl transition-colors">
+                  Reset
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* SECURITY TAB */}
+      {tab === 'security' && (
+        <div className="p-4" style={{ height: 360, overflowY: 'auto' }}>
+          {/* Security overview badges */}
+          <div className="grid grid-cols-3 gap-2 mb-4">
+            {[
+              { label: 'Blocked', count: guests.filter(g => g.status === 'blocked' && !g.checkedIn).length, color: 'text-red-400', bg: 'bg-red-950/30 border-red-900/40' },
+              { label: 'Flagged', count: guests.filter(g => g.status === 'flagged' && !g.checkedIn).length, color: 'text-amber-400', bg: 'bg-amber-950/30 border-amber-900/40' },
+              { label: 'Alerts', count: securityLog.filter(l => l.severity !== 'ok').length, color: 'text-blue-400', bg: 'bg-blue-950/30 border-blue-900/40' },
+            ].map(s => (
+              <div key={s.label} className={`text-center p-2.5 rounded-xl border ${s.bg}`}>
+                <div className={`text-xl font-black tabular-nums ${s.color}`}>{s.count}</div>
+                <div className="text-xs text-neutral-500">{s.label}</div>
               </div>
             ))}
           </div>
 
-          {/* Reset */}
-          {checkedInCount > 0 && (
-            <button onClick={handleReset} className="mt-3 w-full py-2 text-xs text-neutral-600 hover:text-neutral-400 transition-colors">
-              ↺ Reset demo
-            </button>
+          {/* Security features list */}
+          <div className="space-y-2 mb-4">
+            <p className="text-xs font-bold text-neutral-600 uppercase tracking-widest">Active protections</p>
+            {[
+              { icon: '✕', label: 'Duplicate detection', desc: 'Flags same identity across multiple invites', active: true, color: 'text-emerald-400' },
+              { icon: '⊘', label: 'Rate limiting', desc: '3 failed scans → 60s IP lockout', active: true, color: 'text-emerald-400' },
+              { icon: '⚑', label: 'Trust scoring', desc: 'Flags low-trust guests for manual review', active: true, color: 'text-emerald-400' },
+              { icon: '⚙', label: 'Manager override', desc: 'PIN-protected override for blocked guests', active: true, color: 'text-emerald-400' },
+              { icon: '◎', label: 'QR forgery detection', desc: 'Rejects codes not in guest registry', active: true, color: 'text-emerald-400' },
+            ].map((f, i) => (
+              <div key={i} className="flex items-start gap-3 p-2.5 bg-neutral-900/40 rounded-xl border border-neutral-800">
+                <span className={`text-sm font-black flex-shrink-0 mt-0.5 ${f.color}`}>{f.icon}</span>
+                <div>
+                  <p className="text-xs font-bold text-white">{f.label}</p>
+                  <p className="text-xs text-neutral-500">{f.desc}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Live log */}
+          <p className="text-xs font-bold text-neutral-600 uppercase tracking-widest mb-2">Security log</p>
+          {securityLog.length === 0 ? (
+            <div className="text-center py-6">
+              <p className="text-xs text-neutral-700">No events yet.</p>
+              <p className="text-xs text-neutral-700 mt-1">Go to Guests → try scanning blocked/flagged guests or a forged ticket.</p>
+            </div>
+          ) : (
+            <div className="space-y-1.5">
+              {securityLog.map(entry => (
+                <div key={entry.id} className={`flex items-start gap-2.5 p-2.5 rounded-xl border text-xs ${logColors[entry.severity]}`}>
+                  <span className="font-black flex-shrink-0 mt-0.5">{logIcons[entry.type] || '·'}</span>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium leading-snug">{entry.msg}</p>
+                    <p className="opacity-50 mt-0.5">{entry.ts.toLocaleTimeString()}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
           )}
         </div>
       )}
 
       {/* ANALYTICS TAB */}
       {tab === 'analytics' && (
-        <div className="p-5" style={{ height: 340, overflowY: 'auto' }}>
-          {/* Big stat */}
-          <div className="grid grid-cols-3 gap-3 mb-5">
+        <div className="p-4" style={{ height: 360, overflowY: 'auto' }}>
+          <div className="grid grid-cols-3 gap-2 mb-4">
             {[
-              { label: 'Arrived',  value: checkedInPeople, total: totalGuests, color: 'text-emerald-400' },
-              { label: 'Pending',  value: totalGuests - checkedInPeople, total: totalGuests, color: 'text-amber-400' },
-              { label: 'Invites',  value: checkedInCount, total: DEMO_GUESTS.length, color: 'text-blue-400' },
+              { label: 'Arrived',  value: checkedInPeople, color: 'text-emerald-400' },
+              { label: 'Pending',  value: totalGuests - checkedInPeople, color: 'text-amber-400' },
+              { label: 'Checked',  value: checkedInCount, color: 'text-blue-400' },
             ].map(s => (
               <div key={s.label} className="text-center p-3 bg-neutral-900 rounded-2xl border border-neutral-800">
                 <div className={`text-2xl font-black tabular-nums ${s.color}`}>{s.value}</div>
@@ -368,9 +584,8 @@ function EnterpriseDemo() {
             ))}
           </div>
 
-          {/* Per-invite progress */}
           <p className="text-xs font-bold text-neutral-600 uppercase tracking-widest mb-3">Guest breakdown</p>
-          <div className="space-y-2.5">
+          <div className="space-y-2.5 mb-4">
             {guests.map(g => (
               <div key={g.id}>
                 <div className="flex justify-between items-center mb-1">
@@ -380,26 +595,24 @@ function EnterpriseDemo() {
                   </span>
                 </div>
                 <div className="h-1.5 bg-neutral-800 rounded-full overflow-hidden">
-                  <div
-                    className={`h-full rounded-full transition-all duration-700 ${g.checkedIn ? 'bg-emerald-500' : g.checking ? 'bg-neutral-600' : 'bg-neutral-700'}`}
-                    style={{ width: g.checkedIn ? '100%' : g.checking ? '45%' : '0%' }}
-                  />
+                  <div className={`h-full rounded-full transition-all duration-700 ${
+                    g.checkedIn ? 'bg-emerald-500' :
+                    g.checking  ? 'bg-neutral-600' :
+                    g.status === 'blocked' ? 'bg-red-800' :
+                    g.status === 'flagged' ? 'bg-amber-800' : 'bg-neutral-700'
+                  }`} style={{ width: g.checkedIn ? '100%' : g.checking ? '45%' : '0%' }} />
                 </div>
               </div>
             ))}
           </div>
 
-          {/* Capacity bar */}
-          <div className="mt-5 p-4 bg-neutral-900 rounded-2xl border border-neutral-800">
+          <div className="p-4 bg-neutral-900 rounded-2xl border border-neutral-800">
             <div className="flex justify-between mb-2">
               <span className="text-xs font-bold text-neutral-400">Overall attendance</span>
               <span className="text-xs font-black text-white">{pct}%</span>
             </div>
             <div className="h-2 bg-neutral-800 rounded-full overflow-hidden">
-              <div
-                className="h-full bg-emerald-500 rounded-full transition-all duration-700"
-                style={{ width: `${pct}%` }}
-              />
+              <div className="h-full bg-emerald-500 rounded-full transition-all duration-700" style={{ width: `${pct}%` }} />
             </div>
             <p className="text-xs text-neutral-600 mt-2">{checkedInPeople} of {totalGuests} guests arrived</p>
           </div>
@@ -837,7 +1050,9 @@ export default function Home() {
               </Reveal>
 
               <Reveal delay={140}>
-                <EnterpriseDemo />
+                <div className="relative">
+                  <EnterpriseDemo />
+                </div>
               </Reveal>
             </div>
           </div>
