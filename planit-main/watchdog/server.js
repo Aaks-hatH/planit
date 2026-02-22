@@ -1,5 +1,3 @@
-
-
 require('dotenv').config();
 const express  = require('express');
 const mongoose = require('mongoose');
@@ -317,6 +315,16 @@ async function pingMainServer() {
 const app = express();
 app.use(express.json());
 
+// Allow the frontend to call the watchdog directly from any origin.
+// This is a public read-only status endpoint — no auth, no sensitive data.
+app.use((req, res, next) => {
+  res.setHeader('Access-Control-Allow-Origin',  '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  if (req.method === 'OPTIONS') return res.sendStatus(204);
+  next();
+});
+
 // Root — used by Render / Railway / Fly health probes
 app.get('/', (_req, res) => res.send('PlanIt Watchdog OK'));
 
@@ -324,28 +332,59 @@ app.get('/', (_req, res) => res.send('PlanIt Watchdog OK'));
 app.get('/watchdog/ping', (_req, res) => res.json({ ok: true, ts: new Date().toISOString() }));
 app.head('/watchdog/ping', (_req, res) => res.sendStatus(200));
 
-// Full JSON status for debugging
-app.get('/watchdog/status', (_req, res) => {
-  const uptimeSeconds = Math.floor((Date.now() - state.startedAt.getTime()) / 1000);
+// Full status endpoint — reads incidents from the shared MongoDB so the
+// frontend gets real data regardless of whether the main server is reachable.
+// Returns the same shape as the main backend's /api/uptime/status so the
+// frontend needs no special casing.
+app.get('/watchdog/status', async (_req, res) => {
+  const dbOk = await ensureDbConnected();
+
+  let activeIncidents = [];
+  let recentResolved  = [];
+
+  if (dbOk) {
+    try {
+      activeIncidents = await Incident.find({ status: { $ne: 'resolved' } })
+        .sort({ createdAt: -1 })
+        .lean();
+
+      recentResolved = await Incident.find({
+        status:     'resolved',
+        resolvedAt: { $gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) },
+      })
+        .sort({ resolvedAt: -1 })
+        .limit(10)
+        .lean();
+    } catch (err) {
+      console.error(`[${ts()}] [status] DB query failed: ${err.message}`);
+    }
+  }
+
+  let overallStatus = 'operational';
+  if (state.isDown) {
+    overallStatus = 'outage';
+  } else if (activeIncidents.some(i => i.severity === 'critical')) {
+    overallStatus = 'outage';
+  } else if (activeIncidents.length > 0) {
+    overallStatus = 'degraded';
+  }
+
   res.json({
-    watchdog:            'running',
-    uptimeSeconds,
-    startedAt:           state.startedAt,
-    mainServer:          state.isDown ? 'DOWN' : 'UP',
-    consecutiveFailures: state.consecutiveFailures,
-    consecutiveSuccesses: state.consecutiveSuccesses,
-    lastPingMs:          state.lastPingMs,
-    lastPingAt:          state.lastPingAt,
-    lastError:           state.lastError,
-    activeIncidentId:    state.activeIncidentId,
-    totalPings:          state.totalPings,
-    totalFailures:       state.totalFailures,
-    pingIntervalMs:      PING_MS,
-    failureThreshold:    THRESHOLD,
-    targets: {
-      pingUrl:    PING_URL,
-      frontend:   FRONTEND_URL,
-      ntfy:       NTFY_URL || '(not set)',
+    // Same shape as /api/uptime/status so frontend works without changes
+    status:          overallStatus,
+    dbStatus:        dbOk ? 'connected' : 'disconnected',
+    activeIncidents,
+    recentResolved,
+    checkedAt:       new Date().toISOString(),
+    // Extra watchdog-specific fields the frontend can optionally use
+    watchdog: {
+      mainServer:           state.isDown ? 'DOWN' : 'UP',
+      lastPingMs:           state.lastPingMs,
+      lastPingAt:           state.lastPingAt,
+      lastError:            state.lastError,
+      consecutiveFailures:  state.consecutiveFailures,
+      totalPings:           state.totalPings,
+      uptimeSeconds:        Math.floor((Date.now() - state.startedAt.getTime()) / 1000),
     },
   });
 });
