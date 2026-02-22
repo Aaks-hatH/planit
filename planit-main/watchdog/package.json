@@ -1,7 +1,7 @@
 {
   "name": "planit-watchdog",
   "version": "1.0.0",
-  "description": "External watchdog server that monitors PlanIt, writes incidents to the shared DB, and sends ntfy alerts",
+  "description": "External watchdog that monitors all PlanIt backend instances and the router",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
@@ -17,6 +17,6 @@
     "nodemon": "^3.0.2"
   },
   "engines": {
-    "node": "18.x"
+    "node": "20.x"
   }
 }
