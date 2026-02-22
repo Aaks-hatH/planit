@@ -4,7 +4,6 @@ const multer = require('multer');
 const cloudinary = require('cloudinary').v2;
 const { verifyEventAccess: verifyEventToken } = require('../middleware/auth');
 const File = require('../models/File');
-const Event = require('../models/Event');
 
 // Configure Cloudinary
 cloudinary.config({
@@ -113,25 +112,16 @@ router.post('/:eventId/upload',
     try {
       const { eventId } = req.params;
 
-      // Verify event exists
-      const event = await Event.findById(eventId);
+      // req.event is already loaded by verifyEventToken middleware — no second DB call needed
+      const event = req.event;
       if (!event) {
         return res.status(404).json({ error: 'Event not found' });
       }
 
-      // Verify user is participant
-      const username = req.eventAccess?.username;
+      // Get username from the decoded token — try both fields defensively
+      const username = req.eventAccess?.username || req.eventAccess?.sub;
       if (!username) {
-        return res.status(403).json({ error: 'Not authorized' });
-      }
-
-      const isParticipant =
-        !event.isPasswordProtected ||
-        event.participants.some(p => p.username === username) ||
-        req.eventAccess?.isAdminAccess === true;
-
-      if (!isParticipant) {
-        return res.status(403).json({ error: 'Not authorized' });
+        return res.status(403).json({ error: 'Not authorized — could not identify user' });
       }
 
       if (!req.file) {
@@ -274,9 +264,9 @@ router.delete('/:eventId/:fileId', verifyEventToken, async (req, res, next) => {
       return res.status(404).json({ error: 'File not found' });
     }
 
-    // Verify user is the uploader or organizer
-    const event = await Event.findById(eventId);
-    const username = req.eventAccess?.username;
+    // req.event is already loaded by verifyEventToken middleware
+    const event = req.event;
+    const username = req.eventAccess?.username || req.eventAccess?.sub;
     const isOrganizer = event.participants.some(
       p => p.username === username && p.role === 'organizer'
     );
