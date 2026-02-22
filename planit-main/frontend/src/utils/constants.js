@@ -1,6 +1,7 @@
-export const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
-export const WS_URL = import.meta.env.VITE_WS_URL || 'ws://localhost:5000';
-export const BASE_DOMAIN = import.meta.env.VITE_BASE_DOMAIN || 'localhost:5173';
+export const API_URL      = import.meta.env.VITE_API_URL      || 'http://localhost:5000/api';
+export const WS_URL       = import.meta.env.VITE_WS_URL       || 'ws://localhost:5000';
+export const WATCHDOG_URL = import.meta.env.VITE_WATCHDOG_URL || '';
+export const BASE_DOMAIN  = import.meta.env.VITE_BASE_DOMAIN  || 'localhost:5173';
 
 export const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 export const MAX_FILES_PER_UPLOAD = 5;
