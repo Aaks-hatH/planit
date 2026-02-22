@@ -831,7 +831,7 @@ export default function StarBackground({ fixed=true, starCount=null }) {
     };
   },[layers,mwStars,mwDust,cfg,tier]);
 
-  const style = {position:'absolute',top:0,left:0,right:0,height:'100vh',pointerEvents:'none',zIndex:0,background:'#000',transform:'translateZ(0)',WebkitTransform:'translateZ(0)',willChange:'transform',backfaceVisibility:'hidden',WebkitBackfaceVisibility:'hidden'};
+  const style = {position:fixed?'fixed':'absolute',top:0,left:0,right:0,bottom:fixed?0:undefined,height:fixed?'100%':'100vh',pointerEvents:'none',zIndex:0,background:'#000',transform:'translateZ(0)',WebkitTransform:'translateZ(0)',willChange:'transform',backfaceVisibility:'hidden',WebkitBackfaceVisibility:'hidden'};
 
   return <canvas ref={canvasRef} style={style} />;
 }
