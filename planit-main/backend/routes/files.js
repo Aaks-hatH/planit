@@ -58,13 +58,15 @@ const uploadToCloudinary = (buffer, filename, mimetype) => {
     if (mimetype.startsWith('image/')) resourceType = 'image';
     else if (mimetype.startsWith('video/')) resourceType = 'video';
 
-    // Sanitize filename: strip extension, spaces → underscores, remove unsafe chars.
-    // Cloudinary rejects public_ids containing spaces, causing a 500 on any
-    // upload whose filename has a space or special character.
-    const safeName = filename
-      .replace(/\.[^/.]+$/, '')
-      .replace(/\s+/g, '_')
-      .replace(/[^a-zA-Z0-9_-]/g, '');
+    // Sanitize filename for use as a Cloudinary public_id.
+    // Cloudinary rejects public_ids with spaces or special characters.
+    // Fall back to 'upload' if the entire name sanitizes away.
+    const safeName = (
+      filename
+        .replace(/\.[^/.]+$/, '')   // strip extension
+        .replace(/\s+/g, '_')       // spaces → underscores
+        .replace(/[^a-zA-Z0-9_-]/g, '') // remove anything else unsafe
+    ) || 'upload';
 
     const uploadStream = cloudinary.uploader.upload_stream(
       {
@@ -72,12 +74,16 @@ const uploadToCloudinary = (buffer, filename, mimetype) => {
         resource_type: resourceType,
         public_id: `${Date.now()}-${safeName}`,
         secure: true,
-        // NOTE: fetch_format is a delivery/URL parameter, NOT an upload parameter.
-        // Passing it here caused Cloudinary to reject every image upload with an
-        // error. Removed — quality: 'auto' still applies compression on upload.
-        ...(resourceType === 'image' && {
-          transformation: [{ quality: 'auto' }]
-        })
+        // NOTE: Do NOT pass a 'transformation' block here.
+        //
+        // 'quality: auto' and 'fetch_format: auto' are DELIVERY parameters —
+        // they tell Cloudinary's CDN how to serve the file to a browser.
+        // Passing them as upload-time transformations has no meaning (there is
+        // no browser at upload time) and Cloudinary's API rejects them,
+        // returning an error that propagated all the way to a 500 response.
+        //
+        // Quality optimisation and format negotiation happen automatically
+        // when you append ?q_auto,f_auto to the delivery URL if needed.
       },
       (error, result) => {
         if (error) reject(error);
@@ -85,18 +91,14 @@ const uploadToCloudinary = (buffer, filename, mimetype) => {
       }
     );
 
-    // FIX: Attach an 'error' event handler directly on the stream.
+    // Attach an 'error' listener directly on the stream.
     //
-    // When a network-level failure occurs (TCP refused, timeout, DNS failure)
-    // the Cloudinary SDK emits an 'error' event on the stream object BEFORE the
-    // callback above fires. In Node.js, an unhandled 'error' event on any
-    // EventEmitter throws an uncaughtException — bypassing every try/catch.
-    // Without this line, a single failed upload crashes the entire server process,
-    // killing all active connections and triggering the process.exit(1) in server.js.
-    //
-    // Routing it through reject() means the error surfaces as a normal rejected
-    // Promise, is caught by the try/catch in the route handler, and passed to
-    // next(error) — returning a clean 500 to the client with no crash.
+    // Network-level failures (TCP refused, DNS failure, timeout) emit an
+    // 'error' event on the stream BEFORE the callback above fires.
+    // In Node.js, an unhandled 'error' event on an EventEmitter throws an
+    // uncaughtException — bypassing every try/catch and crashing the server.
+    // Routing it through reject() keeps it inside the Promise chain so
+    // it surfaces as a normal caught error in the route handler.
     uploadStream.on('error', reject);
 
     uploadStream.end(buffer);
@@ -121,9 +123,18 @@ router.post('/:eventId/upload',
     });
   },
   async (req, res, next) => {
+    // Guard: if Cloudinary is not configured, fail fast with a clear message
+    // rather than letting the SDK throw an opaque error deep in the upload stream.
+    if (!process.env.CLOUDINARY_CLOUD_NAME || !process.env.CLOUDINARY_API_KEY || !process.env.CLOUDINARY_API_SECRET) {
+      console.error('[PlanIt] Upload failed: Cloudinary environment variables are not configured.');
+      return res.status(503).json({
+        error: 'Storage not configured',
+        message: 'File storage is not available. Please contact the administrator.'
+      });
+    }
+
     // Track what was uploaded to Cloudinary so we can roll it back if the DB
-    // save subsequently fails. The original code checked error.cloudinaryPublicId
-    // which is never set on an Error object — orphaned files were never cleaned up.
+    // save subsequently fails.
     let uploadedPublicId = null;
     let uploadedResourceType = null;
 
@@ -195,6 +206,9 @@ router.post('/:eventId/upload',
         }
       });
     } catch (error) {
+      // Log the real error so it appears in server logs even in production
+      console.error('[PlanIt] File upload error:', error?.message || error);
+
       // Roll back the Cloudinary upload if the DB save failed
       if (uploadedPublicId) {
         try {
@@ -202,7 +216,7 @@ router.post('/:eventId/upload',
             resource_type: uploadedResourceType || 'raw'
           });
         } catch (cleanupError) {
-          console.error('Failed to cleanup Cloudinary upload:', cleanupError);
+          console.error('[PlanIt] Failed to cleanup Cloudinary upload:', cleanupError);
         }
       }
       next(error);
