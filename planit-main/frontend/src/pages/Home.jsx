@@ -182,6 +182,238 @@ function CosmicAmbient() {
 }
 
 // ─────────────────────────────────────────────
+// ENTERPRISE INTERACTIVE DEMO
+// ─────────────────────────────────────────────
+
+const DEMO_GUESTS = [
+  { id: 1, name: 'Sarah Johnson',   group: 4, table: 12, code: 'SJ4A-X9', role: 'VIP' },
+  { id: 2, name: 'Marcus Rivera',   group: 2, table: 5,  code: 'MR2B-K3', role: 'Speaker' },
+  { id: 3, name: 'Priya Sharma',    group: 1, table: 8,  code: 'PS1C-M7', role: 'Attendee' },
+  { id: 4, name: 'Tom & Lisa Chen', group: 2, table: 3,  code: 'TC2D-R1', role: 'Sponsor' },
+  { id: 5, name: 'Dev Patel',       group: 6, table: 15, code: 'DP6E-N5', role: 'Attendee' },
+  { id: 6, name: 'Amara Okafor',    group: 1, table: 7,  code: 'AO1F-Q2', role: 'Attendee' },
+];
+
+// Deterministic QR-like pattern based on code string
+function QRPattern({ code, size = 80 }) {
+  const cells = 10;
+  const hash = code.split('').reduce((acc, c) => acc * 31 + c.charCodeAt(0), 7);
+  return (
+    <div style={{ width: size, height: size, display: 'grid', gridTemplateColumns: `repeat(${cells}, 1fr)`, gap: 1, padding: 4, background: 'white', borderRadius: 6 }}>
+      {Array.from({ length: cells * cells }, (_, i) => {
+        const filled = ((hash * (i + 13) * 1103515245 + 12345) & 0x7fffffff) % 3 !== 0;
+        return <div key={i} style={{ background: filled ? '#111' : 'white', borderRadius: 1 }} />;
+      })}
+    </div>
+  );
+}
+
+function EnterpriseDemo() {
+  const [tab, setTab] = useState('guests');
+  const [guests, setGuests] = useState(DEMO_GUESTS.map(g => ({ ...g, checkedIn: false, checking: false, checkedAt: null })));
+  const [scanning, setScanning] = useState(null); // guest id currently being scanned
+  const [lastChecked, setLastChecked] = useState(null);
+
+  const checkedInCount = guests.filter(g => g.checkedIn).length;
+  const totalGuests = guests.reduce((s, g) => s + g.group, 0);
+  const checkedInPeople = guests.filter(g => g.checkedIn).reduce((s, g) => s + g.group, 0);
+  const pct = Math.round((checkedInPeople / totalGuests) * 100);
+
+  const handleCheckIn = (id) => {
+    if (scanning) return;
+    setScanning(id);
+    setGuests(prev => prev.map(g => g.id === id ? { ...g, checking: true } : g));
+    setTimeout(() => {
+      const now = new Date();
+      setGuests(prev => prev.map(g => g.id === id ? { ...g, checkedIn: true, checking: false, checkedAt: now } : g));
+      setLastChecked(id);
+      setScanning(null);
+      setTimeout(() => setLastChecked(null), 2500);
+    }, 1100);
+  };
+
+  const handleReset = () => {
+    setGuests(DEMO_GUESTS.map(g => ({ ...g, checkedIn: false, checking: false, checkedAt: null })));
+    setLastChecked(null);
+    setScanning(null);
+  };
+
+  const roleColors = { VIP: 'text-amber-400 bg-amber-400/10', Speaker: 'text-blue-400 bg-blue-400/10', Sponsor: 'text-purple-400 bg-purple-400/10', Attendee: 'text-neutral-400 bg-neutral-800' };
+
+  return (
+    <div className="bg-neutral-900/60 rounded-3xl border border-neutral-800 overflow-hidden">
+      {/* Header */}
+      <div className="px-6 pt-6 pb-0">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-emerald-500/10 border border-emerald-500/30 rounded-full text-xs font-bold text-emerald-400 mb-3">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse inline-block" />
+              Live Check-in Demo
+            </div>
+            <h3 className="text-base font-bold text-white">Tech Summit 2025</h3>
+            <p className="text-xs text-neutral-500">{DEMO_GUESTS.length} invites · {totalGuests} guests total</p>
+          </div>
+          {/* Mini progress ring */}
+          <div className="relative w-14 h-14 flex-shrink-0">
+            <svg className="w-14 h-14 -rotate-90" viewBox="0 0 56 56">
+              <circle cx="28" cy="28" r="22" fill="none" stroke="#262626" strokeWidth="5" />
+              <circle cx="28" cy="28" r="22" fill="none" stroke="#10b981" strokeWidth="5"
+                strokeDasharray={`${2 * Math.PI * 22}`}
+                strokeDashoffset={`${2 * Math.PI * 22 * (1 - pct / 100)}`}
+                strokeLinecap="round"
+                style={{ transition: 'stroke-dashoffset 0.6s ease' }}
+              />
+            </svg>
+            <div className="absolute inset-0 flex items-center justify-center">
+              <span className="text-xs font-black text-white">{pct}%</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Tabs */}
+        <div className="flex gap-1 border-b border-neutral-800">
+          {['guests', 'analytics'].map(t => (
+            <button key={t} onClick={() => setTab(t)}
+              className={`px-4 py-2.5 text-xs font-bold capitalize transition-all duration-200 border-b-2 -mb-px ${tab === t ? 'text-white border-white' : 'text-neutral-500 border-transparent hover:text-neutral-300'}`}>
+              {t}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* GUESTS TAB */}
+      {tab === 'guests' && (
+        <div className="p-4" style={{ height: 340, overflowY: 'auto' }}>
+          <div className="space-y-2">
+            {guests.map(guest => (
+              <div key={guest.id}
+                className={`flex items-center gap-3 p-3 rounded-2xl border transition-all duration-300 ${
+                  guest.checkedIn ? 'border-emerald-800/50 bg-emerald-950/30' :
+                  guest.checking  ? 'border-neutral-600 bg-neutral-800/80' :
+                  'border-neutral-800 bg-neutral-900/50 hover:border-neutral-700'
+                }`}>
+                {/* QR */}
+                <div className="flex-shrink-0">
+                  {guest.checking ? (
+                    <div className="w-10 h-10 rounded-lg border border-neutral-700 bg-neutral-800 flex items-center justify-center">
+                      <div className="w-4 h-4 border-2 border-neutral-400 border-t-white rounded-full animate-spin" />
+                    </div>
+                  ) : guest.checkedIn ? (
+                    <div className="w-10 h-10 rounded-lg bg-emerald-500 flex items-center justify-center">
+                      <Check className="w-5 h-5 text-white" />
+                    </div>
+                  ) : (
+                    <QRPattern code={guest.code} size={40} />
+                  )}
+                </div>
+
+                {/* Info */}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <p className="text-sm font-semibold text-white truncate">{guest.name}</p>
+                    <span className={`text-xs px-1.5 py-0.5 rounded font-medium flex-shrink-0 ${roleColors[guest.role]}`}>{guest.role}</span>
+                  </div>
+                  <p className="text-xs text-neutral-500">
+                    {guest.checkedIn
+                      ? `✓ Checked in · Party of ${guest.group} · Table ${guest.table}`
+                      : `Party of ${guest.group} · Table ${guest.table} · ${guest.code}`}
+                  </p>
+                </div>
+
+                {/* Action */}
+                {!guest.checkedIn && (
+                  <button
+                    onClick={() => handleCheckIn(guest.id)}
+                    disabled={!!scanning}
+                    className={`flex-shrink-0 px-3 py-1.5 rounded-xl text-xs font-bold transition-all duration-200 ${
+                      scanning === guest.id ? 'bg-neutral-700 text-neutral-400 cursor-wait' :
+                      scanning ? 'bg-neutral-800 text-neutral-600 cursor-not-allowed' :
+                      'bg-white text-neutral-900 hover:bg-neutral-100 hover:scale-105 active:scale-95'
+                    }`}>
+                    {scanning === guest.id ? 'Scanning…' : 'Scan'}
+                  </button>
+                )}
+
+                {/* Success flash */}
+                {lastChecked === guest.id && (
+                  <span className="flex-shrink-0 text-xs text-emerald-400 font-bold animate-pulse">Checked in!</span>
+                )}
+              </div>
+            ))}
+          </div>
+
+          {/* Reset */}
+          {checkedInCount > 0 && (
+            <button onClick={handleReset} className="mt-3 w-full py-2 text-xs text-neutral-600 hover:text-neutral-400 transition-colors">
+              ↺ Reset demo
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* ANALYTICS TAB */}
+      {tab === 'analytics' && (
+        <div className="p-5" style={{ height: 340, overflowY: 'auto' }}>
+          {/* Big stat */}
+          <div className="grid grid-cols-3 gap-3 mb-5">
+            {[
+              { label: 'Arrived',  value: checkedInPeople, total: totalGuests, color: 'text-emerald-400' },
+              { label: 'Pending',  value: totalGuests - checkedInPeople, total: totalGuests, color: 'text-amber-400' },
+              { label: 'Invites',  value: checkedInCount, total: DEMO_GUESTS.length, color: 'text-blue-400' },
+            ].map(s => (
+              <div key={s.label} className="text-center p-3 bg-neutral-900 rounded-2xl border border-neutral-800">
+                <div className={`text-2xl font-black tabular-nums ${s.color}`}>{s.value}</div>
+                <div className="text-xs text-neutral-500 mt-0.5">{s.label}</div>
+              </div>
+            ))}
+          </div>
+
+          {/* Per-invite progress */}
+          <p className="text-xs font-bold text-neutral-600 uppercase tracking-widest mb-3">Guest breakdown</p>
+          <div className="space-y-2.5">
+            {guests.map(g => (
+              <div key={g.id}>
+                <div className="flex justify-between items-center mb-1">
+                  <span className="text-xs text-neutral-400 truncate">{g.name}</span>
+                  <span className="text-xs text-neutral-500 flex-shrink-0 ml-2">
+                    {g.checkedIn ? `${g.group}/${g.group}` : `0/${g.group}`}
+                  </span>
+                </div>
+                <div className="h-1.5 bg-neutral-800 rounded-full overflow-hidden">
+                  <div
+                    className={`h-full rounded-full transition-all duration-700 ${g.checkedIn ? 'bg-emerald-500' : g.checking ? 'bg-neutral-600' : 'bg-neutral-700'}`}
+                    style={{ width: g.checkedIn ? '100%' : g.checking ? '45%' : '0%' }}
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Capacity bar */}
+          <div className="mt-5 p-4 bg-neutral-900 rounded-2xl border border-neutral-800">
+            <div className="flex justify-between mb-2">
+              <span className="text-xs font-bold text-neutral-400">Overall attendance</span>
+              <span className="text-xs font-black text-white">{pct}%</span>
+            </div>
+            <div className="h-2 bg-neutral-800 rounded-full overflow-hidden">
+              <div
+                className="h-full bg-emerald-500 rounded-full transition-all duration-700"
+                style={{ width: `${pct}%` }}
+              />
+            </div>
+            <p className="text-xs text-neutral-600 mt-2">{checkedInPeople} of {totalGuests} guests arrived</p>
+          </div>
+
+          {checkedInCount === 0 && (
+            <p className="text-center text-xs text-neutral-600 mt-4">← Switch to Guests and start checking people in</p>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────
 // MAIN
 // ─────────────────────────────────────────────
 
@@ -605,25 +837,7 @@ export default function Home() {
               </Reveal>
 
               <Reveal delay={140}>
-                <div className="bg-neutral-900/60 rounded-3xl border border-neutral-800 p-10 hover:border-neutral-700 transition-all duration-500">
-                  <div className="text-center mb-8">
-                    <div className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-500/10 border border-emerald-500/30 rounded-full text-sm font-bold text-emerald-400 mb-6 animate-pulse">
-                      <CheckCircle2 className="w-4 h-4" />Guest Check-in Active
-                    </div>
-                    <h3 className="text-2xl font-bold text-white mb-1">Sarah Johnson</h3>
-                    <p className="text-neutral-500 text-sm">Party of 4 · Table 12</p>
-                  </div>
-                  <div className="bg-neutral-950 rounded-2xl p-8 border border-neutral-800">
-                    <div className="w-52 h-52 mx-auto bg-white rounded-2xl grid grid-cols-8 grid-rows-8 gap-1 p-3">
-                      {[...Array(64)].map((_, i) => <div key={i} className={`rounded-sm ${Math.random() > 0.5 ? 'bg-neutral-900' : 'bg-white'}`} />)}
-                    </div>
-                  </div>
-                  <div className="mt-8 text-center space-y-3">
-                    <p className="text-xs font-semibold text-neutral-600 uppercase tracking-wider">Invite Code</p>
-                    <p className="text-2xl font-mono font-black text-white tracking-wider">AB12CD34</p>
-                    <button className="px-6 py-3 bg-white text-neutral-900 rounded-xl font-bold hover:bg-neutral-100 transition-all hover:scale-105">Scan to Check In</button>
-                  </div>
-                </div>
+                <EnterpriseDemo />
               </Reveal>
             </div>
           </div>
