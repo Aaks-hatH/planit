@@ -3,49 +3,72 @@ const express  = require('express');
 const mongoose = require('mongoose');
 const axios    = require('axios');
 
-// ─── Timestamp helper ────────────────────────────────────────────────────────
-function ts() {
-  return new Date().toISOString();
+function ts() { return new Date().toISOString(); }
+
+// ─── Config ───────────────────────────────────────────────────────────────────
+//
+// BACKEND_URLS  = comma-separated list of ALL your backend URLs
+//                 e.g. https://planit-2ipg.onrender.com,https://planit-be-2.onrender.com
+// ROUTER_URL    = your router URL e.g. https://planit-router.onrender.com
+// FRONTEND_URL  = your frontend URL e.g. https://planitapp.onrender.com
+//
+const BACKEND_URLS_RAW = process.env.BACKEND_URLS  || process.env.MAIN_SERVER_URL || '';
+const ROUTER_URL       = process.env.ROUTER_URL    || '';
+const FRONTEND_URL     = process.env.FRONTEND_URL  || 'https://planitapp.onrender.com';
+const MONGO_URI        = process.env.MONGO_URI;
+const NTFY_URL         = process.env.NTFY_URL;
+const PING_MS          = parseInt(process.env.PING_INTERVAL_MS  || '60000', 10); // 1 min default
+const THRESHOLD        = parseInt(process.env.FAILURE_THRESHOLD || '3',     10);
+const PORT             = process.env.PORT || '4000';
+
+// Build the list of targets to monitor
+// Each target: { name, url, pingUrl, type }
+const targets = [];
+
+// Add all backends
+BACKEND_URLS_RAW.split(',').map(u => u.trim()).filter(Boolean).forEach((url, i) => {
+  const label = BACKEND_URLS_RAW.split(',').length > 1 ? `Backend ${i + 1}` : 'Backend';
+  targets.push({
+    name:    label,
+    url,
+    pingUrl: `${url}/api/health`,
+    type:    'backend',
+  });
+});
+
+// Add router if configured
+if (ROUTER_URL) {
+  targets.push({
+    name:    'Router',
+    url:     ROUTER_URL,
+    pingUrl: `${ROUTER_URL}/health`,
+    type:    'router',
+  });
 }
 
-// ─── Config ──────────────────────────────────────────────────────────────────
-const {
-  MAIN_SERVER_URL   = 'https://planitapp.onrender.com/api',
-  FRONTEND_URL      = 'https://planitapp.onrender.com',
-  MONGO_URI,
-  NTFY_URL,
-  PING_INTERVAL_MS  = '30000',
-  FAILURE_THRESHOLD = '3',
-  PORT              = '4000',
-} = process.env;
-
-const PING_MS   = parseInt(PING_INTERVAL_MS,  10);
-const THRESHOLD = parseInt(FAILURE_THRESHOLD, 10);
-const PING_URL  = `${MAIN_SERVER_URL}/uptime/ping`;
-
-// ─── Startup validation ──────────────────────────────────────────────────────
-console.log(`\n[${ts()}] ╔══════════════════════════════════════════╗`);
-console.log(`[${ts()}] ║       PlanIt Watchdog    — STARTING     ║`);
-console.log(`[${ts()}] ╚══════════════════════════════════════════╝`);
-console.log(`[${ts()}]   Ping target  : ${PING_URL}`);
-console.log(`[${ts()}]   Frontend     : ${FRONTEND_URL}`);
-console.log(`[${ts()}]   Interval     : ${PING_MS / 1000}s`);
-console.log(`[${ts()}]   Threshold    : ${THRESHOLD} failures`);
-console.log(`[${ts()}]   ntfy         : ${NTFY_URL || '  NOT SET — notifications disabled'}`);
-console.log(`[${ts()}]   MONGO_URI    : ${MONGO_URI ? '  set' : '  NOT SET — incident DB writes will fail'}`);
-console.log(`[${ts()}]   Port         : ${PORT}\n`);
-
-if (!MONGO_URI) {
-  console.error(`[${ts()}]   FATAL: MONGO_URI is required.\n  Add it to your .env or environment variables and restart.\n  Example: MONGO_URI=mongodb+srv://user:pass@cluster.mongodb.net/planit`);
+if (targets.length === 0) {
+  console.error(`[${ts()}] FATAL: No targets configured. Set BACKEND_URLS and/or ROUTER_URL.`);
   process.exit(1);
 }
 
-if (!NTFY_URL) {
-  console.warn(`[${ts()}]   NTFY_URL is not set. Push notifications will be disabled.`);
-  console.warn(`[${ts()}]    To enable: add NTFY_URL=https://ntfy.sh/your-topic to your env.\n`);
+// ─── Startup log ──────────────────────────────────────────────────────────────
+console.log(`\n[${ts()}] ╔══════════════════════════════════════════════════╗`);
+console.log(`[${ts()}] ║     PlanIt Watchdog — MULTI-TARGET — STARTING   ║`);
+console.log(`[${ts()}] ╚══════════════════════════════════════════════════╝`);
+console.log(`[${ts()}]   Monitoring ${targets.length} target(s):`);
+targets.forEach(t => console.log(`[${ts()}]     [${t.type}] ${t.name} → ${t.pingUrl}`));
+console.log(`[${ts()}]   Interval  : ${PING_MS / 1000}s`);
+console.log(`[${ts()}]   Threshold : ${THRESHOLD} failures`);
+console.log(`[${ts()}]   ntfy      : ${NTFY_URL || 'NOT SET — alerts disabled'}`);
+console.log(`[${ts()}]   MONGO_URI : ${MONGO_URI ? 'set' : 'NOT SET — incidents will not be written to DB'}`);
+console.log(`[${ts()}]   Port      : ${PORT}\n`);
+
+if (!MONGO_URI) {
+  console.error(`[${ts()}] FATAL: MONGO_URI is required.`);
+  process.exit(1);
 }
 
-// ─── Mongoose models (exact copies of main backend schemas) ──────────────────
+// ─── Mongoose models ──────────────────────────────────────────────────────────
 const timelineUpdateSchema = new mongoose.Schema({
   status:    { type: String, enum: ['investigating', 'identified', 'monitoring', 'resolved'], required: true },
   message:   { type: String, required: true },
@@ -76,127 +99,108 @@ const uptimeReportSchema = new mongoose.Schema({
   createdAt:       { type: Date, default: Date.now },
 });
 
-const Incident     = mongoose.models.Incident     || mongoose.model('Incident',     incidentSchema);
-const UptimeReport = mongoose.models.UptimeReport || mongoose.model('UptimeReport', uptimeReportSchema);
-
-// UptimeCheck — one doc per ping so the status page bars have real historical data
 const uptimeCheckSchema = new mongoose.Schema({
+  service:   { type: String, required: true }, // which target this ping is for
   status:    { type: String, enum: ['up', 'down'], required: true },
   latencyMs: { type: Number, default: null },
   error:     { type: String, default: null },
   createdAt: { type: Date, default: Date.now },
 });
-uptimeCheckSchema.index({ createdAt: 1 }, { expireAfterSeconds: 7776000 });
-const UptimeCheck = mongoose.models.UptimeCheck || mongoose.model('UptimeCheck', uptimeCheckSchema);
+uptimeCheckSchema.index({ createdAt: 1 }, { expireAfterSeconds: 7776000 }); // 90 day TTL
+uptimeCheckSchema.index({ service: 1, createdAt: -1 });
 
-// ─── In-memory state ─────────────────────────────────────────────────────────
-const state = {
-  consecutiveFailures:  0,
-  consecutiveSuccesses: 0,
-  isDown:               false,
-  activeIncidentId:     null,
-  lastPingMs:           null,
-  lastPingAt:           null,
-  lastError:            null,
-  totalPings:           0,
-  totalFailures:        0,
-  startedAt:            new Date(),
-};
+const Incident     = mongoose.models.Incident     || mongoose.model('Incident',     incidentSchema);
+const UptimeReport = mongoose.models.UptimeReport || mongoose.model('UptimeReport', uptimeReportSchema);
+const UptimeCheck  = mongoose.models.UptimeCheck  || mongoose.model('UptimeCheck',  uptimeCheckSchema);
 
-let downSince = null;
+// ─── Per-target state ─────────────────────────────────────────────────────────
+// One state object per target, keyed by target name
+const states = {};
+targets.forEach(t => {
+  states[t.name] = {
+    consecutiveFailures:  0,
+    consecutiveSuccesses: 0,
+    isDown:               false,
+    activeIncidentId:     null,
+    lastPingMs:           null,
+    lastPingAt:           null,
+    lastError:            null,
+    totalPings:           0,
+    totalFailures:        0,
+    downSince:            null,
+  };
+});
 
-// ─── DB ──────────────────────────────────────────────────────────────────────
+// ─── DB ───────────────────────────────────────────────────────────────────────
 async function ensureDbConnected() {
   if (mongoose.connection.readyState === 1) return true;
-
-  console.log(`[${ts()}] [db] Connecting to MongoDB...`);
   try {
     await mongoose.connect(MONGO_URI, { serverSelectionTimeoutMS: 10000 });
-    console.log(`[${ts()}] [db]   MongoDB connected`);
+    console.log(`[${ts()}] [db] MongoDB connected`);
     return true;
   } catch (err) {
-    console.error(`[${ts()}] [db]   MongoDB connect failed: ${err.message}`);
+    console.error(`[${ts()}] [db] MongoDB connect failed: ${err.message}`);
     return false;
   }
 }
 
-async function createDownIncident(errorMsg) {
+async function createDownIncident(target, errorMsg) {
   const ok = await ensureDbConnected();
-  if (!ok) {
-    console.error(`[${ts()}] [incident] Cannot write incident — DB unreachable. Incident will NOT appear on status page until DB recovers.`);
-    return null;
-  }
-
+  if (!ok) return null;
   try {
     const report = await UptimeReport.create({
-      description:     `[WATCHDOG] External monitor detected API is unreachable after ${THRESHOLD} consecutive failures. Error: ${errorMsg}`,
-      affectedService: 'API',
+      description:     `[WATCHDOG] ${target.name} unreachable after ${THRESHOLD} consecutive failures. Error: ${errorMsg}`,
+      affectedService: target.name,
       status:          'confirmed',
     });
-
     const incident = await Incident.create({
-      title:            ' API Unreachable — Backend Down',
-      description:      `The PlanIt backend failed to respond to ${THRESHOLD} consecutive health checks from the external watchdog monitor. Users cannot access the application.`,
-      severity:         'critical',
+      title:            `${target.name} Down — Unreachable`,
+      description:      `${target.name} (${target.url}) failed ${THRESHOLD} consecutive health checks from the external watchdog.`,
+      severity:         target.type === 'router' ? 'critical' : 'major',
       status:           'investigating',
-      affectedServices: ['api', 'websocket', 'chat', 'auth', 'database'],
-      reportIds:        [report._id],
+      affectedServices: target.type === 'router'
+        ? ['router', 'api', 'websocket', 'chat']
+        : [target.name.toLowerCase().replace(' ', '-'), 'api'],
+      reportIds: [report._id],
       timeline: [{
-        status:    'investigating',
-        message:   `Watchdog detected backend unreachable after ${THRESHOLD} consecutive failures (checked every ${PING_MS / 1000}s). Last error: ${errorMsg}`,
-        createdAt: new Date(),
+        status:  'investigating',
+        message: `Watchdog detected ${target.name} unreachable after ${THRESHOLD} failures. Last error: ${errorMsg}`,
       }],
     });
-
     report.incidentId = incident._id;
     await report.save();
-
-    console.log(`[${ts()}] [incident]   Incident created in DB: ${incident._id}`);
+    console.log(`[${ts()}] [incident] Created for ${target.name}: ${incident._id}`);
     return incident._id;
   } catch (err) {
-    console.error(`[${ts()}] [incident]   Failed to create incident: ${err.message}`);
+    console.error(`[${ts()}] [incident] Failed to create: ${err.message}`);
     return null;
   }
 }
 
-async function resolveDownIncident(incidentId, downtimeMs) {
+async function resolveDownIncident(target, incidentId, downtimeMs) {
   const ok = await ensureDbConnected();
-  if (!ok) {
-    console.error(`[${ts()}] [incident] Cannot resolve incident — DB unreachable`);
-    return;
-  }
-
+  if (!ok) return;
   try {
     const incident = await Incident.findById(incidentId);
-    if (!incident) {
-      console.warn(`[${ts()}] [incident] Could not find incident ${incidentId} to resolve`);
-      return;
-    }
-
+    if (!incident) return;
     const mins = Math.round(downtimeMs / 60000);
     incident.status          = 'resolved';
     incident.resolvedAt      = new Date();
     incident.downtimeMinutes = mins;
     incident.timeline.push({
       status:  'resolved',
-      message: `Backend recovered automatically. Total downtime: ${mins < 1 ? '<1' : mins} minute${mins !== 1 ? 's' : ''}. All systems operational.`,
+      message: `${target.name} recovered. Total downtime: ${mins < 1 ? '<1' : mins} minute(s).`,
     });
     await incident.save();
-    console.log(`[${ts()}] [incident]   Incident ${incidentId} auto-resolved (${mins}m downtime)`);
+    console.log(`[${ts()}] [incident] Resolved for ${target.name} (${mins}m downtime)`);
   } catch (err) {
-    console.error(`[${ts()}] [incident]   Failed to resolve incident: ${err.message}`);
+    console.error(`[${ts()}] [incident] Failed to resolve: ${err.message}`);
   }
 }
 
-// ─── ntfy ────────────────────────────────────────────────────────────────────
+// ─── ntfy ─────────────────────────────────────────────────────────────────────
 async function sendNtfy({ title, message, priority = 'high', tags = [] }) {
-  if (!NTFY_URL) {
-    console.warn(`[${ts()}] [ntfy] Skipped — NTFY_URL not configured`);
-    return;
-  }
-
-  console.log(`[${ts()}] [ntfy] Sending: "${title}" to ${NTFY_URL}`);
-
+  if (!NTFY_URL) return;
   try {
     const headers = {
       'Title':        title,
@@ -204,106 +208,98 @@ async function sendNtfy({ title, message, priority = 'high', tags = [] }) {
       'Tags':         tags.join(','),
       'Content-Type': 'text/plain',
     };
-    if (FRONTEND_URL) {
-      headers['Actions'] = `view, Open Status Page, ${FRONTEND_URL}/status`;
-    }
-
-    const res = await axios.post(NTFY_URL, message, { headers, timeout: 10000 });
-    console.log(`[${ts()}] [ntfy]   Sent — HTTP ${res.status}`);
+    if (FRONTEND_URL) headers['Actions'] = `view, Open Status Page, ${FRONTEND_URL}/status`;
+    await axios.post(NTFY_URL, message, { headers, timeout: 10000 });
+    console.log(`[${ts()}] [ntfy] Sent: "${title}"`);
   } catch (err) {
-    // Log full details so you can debug ntfy issues
-    if (err.response) {
-      console.error(`[${ts()}] [ntfy]   Failed — HTTP ${err.response.status}: ${JSON.stringify(err.response.data)}`);
-    } else {
-      console.error(`[${ts()}] [ntfy]   Failed — ${err.message}`);
-    }
+    console.error(`[${ts()}] [ntfy] Failed: ${err.message}`);
   }
 }
 
-// ─── Ping logic ──────────────────────────────────────────────────────────────
-async function pingMainServer() {
-  state.totalPings++;
-  state.lastPingAt = new Date();
+// ─── Ping a single target ─────────────────────────────────────────────────────
+async function pingTarget(target) {
+  const s = states[target.name];
+  s.totalPings++;
+  s.lastPingAt = new Date();
 
   try {
     const t0  = Date.now();
-    const res = await axios.get(PING_URL, {
-      timeout: 10000,
-      validateStatus: s => s < 500, // 2xx / 4xx = server is up; 5xx or timeout = down
+    await axios.get(target.pingUrl, {
+      timeout:        10000,
+      validateStatus: code => code < 500,
     });
-    const ms  = Date.now() - t0;
+    const ms = Date.now() - t0;
 
-    state.lastPingMs          = ms;
-    state.lastError           = null;
-    state.consecutiveFailures = 0;
-    state.consecutiveSuccesses++;
+    s.lastPingMs          = ms;
+    s.lastError           = null;
+    s.consecutiveFailures = 0;
+    s.consecutiveSuccesses++;
 
-    // Record successful ping for bar chart history (non-blocking)
-    UptimeCheck.create({ status: 'up', latencyMs: ms }).catch(() => {});
+    // Store check history (non-blocking)
+    UptimeCheck.create({ service: target.name, status: 'up', latencyMs: ms }).catch(() => {});
 
-    // ── Recovery ────────────────────────────────────────────────────────────
-    if (state.isDown) {
-      const downtimeMs   = Date.now() - (downSince || Date.now());
-      const downtimeMins = Math.round(downtimeMs / 60000);
-      state.isDown = false;
-      downSince    = null;
+    // Recovery
+    if (s.isDown) {
+      const downtimeMs = Date.now() - s.downSince;
+      const mins       = Math.round(downtimeMs / 60000);
+      s.isDown    = false;
+      s.downSince = null;
 
-      console.log(`[${ts()}]   Server RECOVERED after ${downtimeMins}m — response ${ms}ms`);
+      console.log(`[${ts()}] ✅ ${target.name} RECOVERED after ${mins}m — ${ms}ms`);
 
-      if (state.activeIncidentId) {
-        await resolveDownIncident(state.activeIncidentId, downtimeMs);
-        state.activeIncidentId = null;
+      if (s.activeIncidentId) {
+        await resolveDownIncident(target, s.activeIncidentId, downtimeMs);
+        s.activeIncidentId = null;
       }
 
       await sendNtfy({
-        title:    'PlanIt Recovered',
-        message:  `Backend is back online after ${downtimeMins < 1 ? '<1' : downtimeMins} min of downtime.\nResponse time: ${ms}ms\nThe status page has been updated automatically.`,
+        title:    `${target.name} Recovered`,
+        message:  `${target.name} is back online after ${mins < 1 ? '<1' : mins} min downtime.\nResponse: ${ms}ms`,
         priority: 'high',
         tags:     ['white_check_mark', 'tada'],
       });
     } else {
       // Healthy — log every 10 pings to keep logs readable
-      if (state.totalPings % 10 === 0 || state.totalPings <= 3) {
-        console.log(`[${ts()}] 💚  Ping OK — ${ms}ms (ping #${state.totalPings})`);
+      if (s.totalPings % 10 === 0 || s.totalPings <= 2) {
+        console.log(`[${ts()}] 💚 ${target.name} OK — ${ms}ms (ping #${s.totalPings})`);
       }
     }
 
   } catch (err) {
-    state.consecutiveFailures++;
-    state.consecutiveSuccesses = 0;
-    state.totalFailures++;
-    state.lastError  = err.message;
-    state.lastPingMs = null;
+    s.consecutiveFailures++;
+    s.consecutiveSuccesses = 0;
+    s.totalFailures++;
+    s.lastError  = err.message;
+    s.lastPingMs = null;
 
-    // Record failed ping for bar chart history (non-blocking)
-    UptimeCheck.create({ status: 'down', error: err.message }).catch(() => {});
+    UptimeCheck.create({ service: target.name, status: 'down', error: err.message }).catch(() => {});
 
-    console.warn(`[${ts()}]   Ping FAILED (${state.consecutiveFailures}/${THRESHOLD}): ${err.message}`);
+    console.warn(`[${ts()}] ⚠ ${target.name} FAILED (${s.consecutiveFailures}/${THRESHOLD}): ${err.message}`);
 
-    // ── Threshold hit — server officially down ───────────────────────────────
-    if (state.consecutiveFailures === THRESHOLD && !state.isDown) {
-      state.isDown = true;
-      downSince    = Date.now();
+    // Threshold hit — declare down
+    if (s.consecutiveFailures === THRESHOLD && !s.isDown) {
+      s.isDown    = true;
+      s.downSince = Date.now();
 
-      console.error(`[${ts()}]   THRESHOLD HIT — declaring server DOWN, writing incident to DB`);
+      console.error(`[${ts()}] 🔴 ${target.name} DOWN — writing incident to DB`);
 
-      const incidentId = await createDownIncident(err.message);
-      state.activeIncidentId = incidentId;
+      const incidentId   = await createDownIncident(target, err.message);
+      s.activeIncidentId = incidentId;
 
       await sendNtfy({
-        title:    'PlanIt Backend Down',
-        message:  `The PlanIt API has been unreachable for ${THRESHOLD} consecutive checks (every ${PING_MS / 1000}s).\n\nError: ${err.message}\n\nIncident ID: ${incidentId || 'DB write failed'}\nStatus page updated automatically.`,
+        title:    `${target.name} is DOWN`,
+        message:  `${target.name} has been unreachable for ${THRESHOLD} consecutive checks.\n\nURL: ${target.url}\nError: ${err.message}`,
         priority: 'urgent',
         tags:     ['rotating_light', 'fire'],
       });
     }
 
     // Reminder every 10 failures while still down
-    if (state.isDown && state.consecutiveFailures > THRESHOLD && state.consecutiveFailures % 10 === 0) {
-      const downMins = Math.round((Date.now() - downSince) / 60000);
+    if (s.isDown && s.consecutiveFailures > THRESHOLD && s.consecutiveFailures % 10 === 0) {
+      const downMins = Math.round((Date.now() - s.downSince) / 60000);
       await sendNtfy({
-        title:    `PlanIt Still Down (${downMins}m)`,
-        message:  `Backend has been unreachable for ${downMins} minutes.\nFailed pings: ${state.consecutiveFailures}\nLast error: ${err.message}`,
+        title:    `${target.name} Still Down (${downMins}m)`,
+        message:  `${target.name} has been down for ${downMins} minutes.\nFailed pings: ${s.consecutiveFailures}\nError: ${err.message}`,
         priority: 'high',
         tags:     ['warning', 'clock'],
       });
@@ -311,31 +307,29 @@ async function pingMainServer() {
   }
 }
 
-// ─── Express ─────────────────────────────────────────────────────────────────
+// Ping ALL targets (staggered 2s apart so Render doesn't get hammered at once)
+async function pingAll() {
+  targets.forEach((target, i) => {
+    setTimeout(() => pingTarget(target), i * 2000);
+  });
+}
+
+// ─── Express ──────────────────────────────────────────────────────────────────
 const app = express();
 app.use(express.json());
-
-// Allow the frontend to call the watchdog directly from any origin.
-// This is a public read-only status endpoint — no auth, no sensitive data.
-app.use((req, res, next) => {
+app.use((_req, res, next) => {
   res.setHeader('Access-Control-Allow-Origin',  '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-  if (req.method === 'OPTIONS') return res.sendStatus(204);
+  if (_req.method === 'OPTIONS') return res.sendStatus(204);
   next();
 });
 
-// Root — used by Render / Railway / Fly health probes
-app.get('/', (_req, res) => res.send('PlanIt Watchdog OK'));
+app.get('/',                (_req, res) => res.send('PlanIt Watchdog OK'));
+app.get('/watchdog/ping',   (_req, res) => res.json({ ok: true, ts: new Date().toISOString() }));
+app.head('/watchdog/ping',  (_req, res) => res.sendStatus(200));
 
-// Dedicated ping endpoint so UptimeRobot can monitor the watchdog itself
-app.get('/watchdog/ping', (_req, res) => res.json({ ok: true, ts: new Date().toISOString() }));
-app.head('/watchdog/ping', (_req, res) => res.sendStatus(200));
-
-// Full status endpoint — reads incidents from the shared MongoDB so the
-// frontend gets real data regardless of whether the main server is reachable.
-// Returns the same shape as the main backend's /api/uptime/status so the
-// frontend needs no special casing.
+// Full status — same shape as before so frontend works without changes
 app.get('/watchdog/status', async (_req, res) => {
   const dbOk = await ensureDbConnected();
 
@@ -345,90 +339,91 @@ app.get('/watchdog/status', async (_req, res) => {
   if (dbOk) {
     try {
       activeIncidents = await Incident.find({ status: { $ne: 'resolved' } })
-        .sort({ createdAt: -1 })
-        .lean();
-
+        .sort({ createdAt: -1 }).lean();
       recentResolved = await Incident.find({
         status:     'resolved',
         resolvedAt: { $gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) },
-      })
-        .sort({ resolvedAt: -1 })
-        .limit(10)
-        .lean();
+      }).sort({ resolvedAt: -1 }).limit(10).lean();
     } catch (err) {
       console.error(`[${ts()}] [status] DB query failed: ${err.message}`);
     }
   }
 
-  let overallStatus = 'operational';
-  if (state.isDown) {
-    overallStatus = 'outage';
-  } else if (activeIncidents.some(i => i.severity === 'critical')) {
-    overallStatus = 'outage';
-  } else if (activeIncidents.length > 0) {
-    overallStatus = 'degraded';
-  }
+  const anyDown = Object.values(states).some(s => s.isDown);
+  const overallStatus = anyDown ? 'outage'
+    : activeIncidents.some(i => i.severity === 'critical') ? 'outage'
+    : activeIncidents.length > 0 ? 'degraded'
+    : 'operational';
+
+  // Build per-service summary for the response
+  const services = targets.map(t => {
+    const s = states[t.name];
+    return {
+      name:                 t.name,
+      type:                 t.type,
+      url:                  t.url,
+      status:               s.isDown ? 'down' : 'up',
+      lastPingMs:           s.lastPingMs,
+      lastPingAt:           s.lastPingAt,
+      lastError:            s.lastError,
+      consecutiveFailures:  s.consecutiveFailures,
+      totalPings:           s.totalPings,
+      totalFailures:        s.totalFailures,
+    };
+  });
 
   res.json({
-    // Same shape as /api/uptime/status so frontend works without changes
     status:          overallStatus,
     dbStatus:        dbOk ? 'connected' : 'disconnected',
     activeIncidents,
     recentResolved,
     checkedAt:       new Date().toISOString(),
-    // Extra watchdog-specific fields the frontend can optionally use
     watchdog: {
-      mainServer:           state.isDown ? 'DOWN' : 'UP',
-      lastPingMs:           state.lastPingMs,
-      lastPingAt:           state.lastPingAt,
-      lastError:            state.lastError,
-      consecutiveFailures:  state.consecutiveFailures,
-      totalPings:           state.totalPings,
-      uptimeSeconds:        Math.floor((Date.now() - state.startedAt.getTime()) / 1000),
+      // Legacy single-target field — uses router if present, otherwise first backend
+      mainServer:          anyDown ? 'DOWN' : 'UP',
+      lastPingMs:          states[targets[0].name]?.lastPingMs,
+      lastPingAt:          states[targets[0].name]?.lastPingAt,
+      lastError:           states[targets[0].name]?.lastError,
+      consecutiveFailures: states[targets[0].name]?.consecutiveFailures,
+      totalPings:          Object.values(states).reduce((sum, s) => sum + s.totalPings, 0),
+      uptimeSeconds:       Math.floor((Date.now() - startedAt) / 1000),
+      // New multi-target breakdown
+      services,
     },
   });
 });
 
-// ─── Boot ────────────────────────────────────────────────────────────────────
+// ─── Boot ─────────────────────────────────────────────────────────────────────
+const startedAt = Date.now();
+
 async function boot() {
-  // 1. Connect to DB
   await ensureDbConnected();
 
-  // 2. Start HTTP server
   app.listen(PORT, () => {
-    console.log(`[${ts()}] 🌐  Health server → http://0.0.0.0:${PORT}`);
-    console.log(`[${ts()}] 📊  Status       → http://0.0.0.0:${PORT}/watchdog/status`);
+    console.log(`[${ts()}] 🌐 Watchdog HTTP → http://0.0.0.0:${PORT}`);
+    console.log(`[${ts()}] 📊 Status        → http://0.0.0.0:${PORT}/watchdog/status\n`);
   });
 
-  // 3. Fire an immediate test ping so you see in logs straight away whether
-  //    the watchdog can actually reach the main server.
-  console.log(`\n[${ts()}] 🔍  Running startup ping to ${PING_URL} ...`);
-  await pingMainServer();
+  // Immediate startup ping of all targets
+  console.log(`[${ts()}] 🔍 Running startup pings...`);
+  await pingAll();
 
-  // 4. Schedule ongoing pings
-  setInterval(pingMainServer, PING_MS);
-  console.log(`[${ts()}] Watchdog running — pinging every ${PING_MS / 1000}s, threshold ${THRESHOLD} failures\n`);
+  // Ongoing pings
+  setInterval(pingAll, PING_MS);
+  console.log(`[${ts()}] ✅ Watchdog running — pinging ${targets.length} target(s) every ${PING_MS / 1000}s\n`);
 
-  // 5. Send startup notification so you know the watchdog is live
   await sendNtfy({
     title:    'Watchdog Started',
-    message:  `PlanIt watchdog is online and monitoring ${PING_URL} every ${PING_MS / 1000}s.\nFailure threshold: ${THRESHOLD} consecutive failures.`,
-    priority: 'urgent',
+    message:  `PlanIt watchdog is online.\nMonitoring ${targets.length} target(s) every ${PING_MS / 1000}s:\n${targets.map(t => `• ${t.name}: ${t.url}`).join('\n')}`,
+    priority: 'default',
     tags:     ['shield', 'white_check_mark'],
   });
 }
 
-// ─── Graceful shutdown ────────────────────────────────────────────────────────
-async function shutdown(signal) {
-  console.log(`\n[${ts()}] ${signal} — shutting down gracefully`);
-  try { await mongoose.disconnect(); } catch (_) {}
-  process.exit(0);
-}
-process.on('SIGTERM', () => shutdown('SIGTERM'));
-process.on('SIGINT',  () => shutdown('SIGINT'));
+process.on('SIGTERM', async () => { try { await mongoose.disconnect(); } catch (_) {} process.exit(0); });
+process.on('SIGINT',  async () => { try { await mongoose.disconnect(); } catch (_) {} process.exit(0); });
 
 boot().catch(err => {
-  console.error(`[${ts()}] ❌  Fatal boot error: ${err.message}`);
-  console.error(err.stack);
+  console.error(`[${ts()}] ❌ Fatal boot error: ${err.message}`);
   process.exit(1);
 });
