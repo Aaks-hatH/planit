@@ -697,12 +697,33 @@ export default function StarBackground({ fixed=true, starCount=null }) {
     let mwCanvas=null, mwW=0, mwH=0;
     const sessionStart=performance.now();
 
+    // Mobile detection — used to avoid iOS scroll flickering.
+    // On iOS/Android, position:fixed canvases repaint during scroll and the
+    // browser chrome (address bar) causes viewport height changes that trigger
+    // ResizeObserver, which re-renders the Milky Way mid-scroll → flicker.
+    const isMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent)
+                  || (window.innerWidth <= 768 && 'ontouchstart' in window);
+
     const onScroll=()=>{ isScrolling=true; clearTimeout(scrollTimer); scrollTimer=setTimeout(()=>{ isScrolling=false; },150); };
     window.addEventListener('scroll',onScroll,{passive:true});
 
     function resize(){
-      canvas.width =canvas.offsetWidth;
-      canvas.height=canvas.offsetHeight;
+      const newW = canvas.offsetWidth;
+      // On mobile, lock height to screen.availHeight — the physical screen size.
+      // This never changes when the iOS address bar shows/hides, so we avoid
+      // triggering a MW re-render from a trivial ~50px viewport fluctuation.
+      const newH = isMobile
+        ? (window.screen?.availHeight || window.innerHeight)
+        : canvas.offsetHeight;
+
+      // Skip if the change is tiny (iOS address bar = ~50px). Threshold of 80px
+      // means real orientation changes still trigger a proper resize.
+      const wDelta = Math.abs(newW - canvas.width);
+      const hDelta = Math.abs(newH - canvas.height);
+      if (canvas.width > 0 && wDelta < 80 && hDelta < 80) return;
+
+      canvas.width  = newW;
+      canvas.height = newH;
       if(canvas.width!==mwW||canvas.height!==mwH){
         mwW=canvas.width; mwH=canvas.height;
         requestAnimationFrame(()=>{
@@ -831,7 +852,24 @@ export default function StarBackground({ fixed=true, starCount=null }) {
     };
   },[layers,mwStars,mwDust,cfg,tier]);
 
-  const style = {position:fixed?'fixed':'absolute',top:0,left:0,right:0,bottom:fixed?0:undefined,height:fixed?'100%':'100vh',pointerEvents:'none',zIndex:0,background:'#000',transform:'translateZ(0)',WebkitTransform:'translateZ(0)',willChange:'transform',backfaceVisibility:'hidden',WebkitBackfaceVisibility:'hidden'};
+  // On mobile: the canvas is position:fixed but we set an explicit height so the
+  // browser doesn't try to recalculate it during scroll. -webkit-fill-available
+  // covers the full screen including under the address bar on iOS Safari.
+  const style = {
+    position: fixed ? 'fixed' : 'absolute',
+    top: 0, left: 0, right: 0,
+    bottom: fixed ? 0 : undefined,
+    height: fixed ? '100%' : '100vh',
+    pointerEvents: 'none',
+    zIndex: 0,
+    background: '#000',
+    // GPU compositing hints — critical on mobile to prevent scroll repaints
+    transform: 'translateZ(0)',
+    WebkitTransform: 'translateZ(0)',
+    willChange: 'transform',
+    backfaceVisibility: 'hidden',
+    WebkitBackfaceVisibility: 'hidden',
+  };
 
   return <canvas ref={canvasRef} style={style} />;
 }
