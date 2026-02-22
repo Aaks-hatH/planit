@@ -419,43 +419,34 @@ export default function Status() {
   const pingTimerRef    = useRef(null);
 
   const fetchStatus = useCallback(async () => {
-    try {
-      // Try the watchdog first — it has authoritative incident data from MongoDB
-      // and stays reachable even when the main server is down.
-      const watchdogRes = await watchdogAPI.getStatus();
-
-      if (watchdogRes?.data) {
-        setData(watchdogRes.data);
-        setLastFetch(new Date());
-
-        // Watchdog tells us definitively whether the main server is up or down.
-        // This is more reliable than the browser's own ping because the watchdog
-        // pings from an external network location every 30s.
-        const serverDown = watchdogRes.data.watchdog?.mainServer === 'DOWN';
-        if (serverDown) {
-          onlineRef.current = false;
-          setOnline(false);
-        }
-
-        // Use the watchdog's measured latency if we don't have a fresh browser ping
-        if (watchdogRes.data.watchdog?.lastPingMs && latency === null) {
-          setLatency(watchdogRes.data.watchdog.lastPingMs);
-        }
-        return;
-      }
-    } catch {
-      // Watchdog unreachable — fall back to main API below
-    }
-
-    // Fallback: watchdog not configured or unreachable, use main API directly
+    // Try the main API first. If it responds, it is the source of truth.
     try {
       const res = await uptimeAPI.getStatus();
       setData(res.data);
       setLastFetch(new Date());
+      return;
     } catch {
-      // Keep stale data — the ping loop controls online/offline state
+      // Main server unreachable — fall through to watchdog
     }
-  }, [latency]);
+
+    // Main server is down. Ask the watchdog — it stays up independently and
+    // reads incidents directly from the shared MongoDB.
+    try {
+      const res = await watchdogAPI.getStatus();
+      if (!res) return; // VITE_WATCHDOG_URL not configured
+
+      setData(res.data);
+      setLastFetch(new Date());
+
+      // Watchdog also tells us definitively the server is down
+      if (res.data?.watchdog?.mainServer === 'DOWN') {
+        onlineRef.current = false;
+        setOnline(false);
+      }
+    } catch {
+      // Watchdog unreachable too — keep stale data
+    }
+  }, []);
 
   const ping = useCallback(async () => {
     const t = Date.now();
@@ -469,20 +460,13 @@ export default function Status() {
       setOnline(true);
       pingFailsRef.current = 0;
 
-      // Immediately refresh status data when coming back online
       if (wasOffline) fetchStatus();
 
     } catch {
+      onlineRef.current = false;
+      setOnline(false);
+      setLatency(null);
       pingFailsRef.current += 1;
-
-      // Only mark offline if watchdog also says down, OR we've failed enough times
-      // locally. This prevents false positives from transient browser connectivity.
-      const watchdogSaysDown = !onlineRef.current; // already set by fetchStatus if watchdog reported DOWN
-      if (pingFailsRef.current >= AUTO_REPORT_FAILURES || watchdogSaysDown) {
-        onlineRef.current = false;
-        setOnline(false);
-        setLatency(null);
-      }
 
       if (
         pingFailsRef.current >= AUTO_REPORT_FAILURES &&
