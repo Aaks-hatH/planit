@@ -120,9 +120,16 @@ router.post('/:eventId/upload',
       }
 
       // Verify user is participant
-      const isParticipant = event.participants.some(
-        p => p.username === req.username
-      );
+      const username = req.eventAccess?.username;
+      if (!username) {
+        return res.status(403).json({ error: 'Not authorized' });
+      }
+
+      const isParticipant =
+        !event.isPasswordProtected ||
+        event.participants.some(p => p.username === username) ||
+        req.eventAccess?.isAdminAccess === true;
+
       if (!isParticipant) {
         return res.status(403).json({ error: 'Not authorized' });
       }
@@ -148,7 +155,7 @@ router.post('/:eventId/upload',
         cloudinaryUrl: cloudinaryResult.secure_url,
         cloudinaryPublicId: cloudinaryResult.public_id,
         cloudinaryResourceType: cloudinaryResult.resource_type,
-        uploadedBy: req.username
+        uploadedBy: username
       });
 
       await file.save();
@@ -269,12 +276,13 @@ router.delete('/:eventId/:fileId', verifyEventToken, async (req, res, next) => {
 
     // Verify user is the uploader or organizer
     const event = await Event.findById(eventId);
+    const username = req.eventAccess?.username;
     const isOrganizer = event.participants.some(
-      p => p.username === req.username && p.role === 'organizer'
+      p => p.username === username && p.role === 'organizer'
     );
-    const isUploader = file.uploadedBy === req.username;
+    const isUploader = file.uploadedBy === username;
 
-    if (!isOrganizer && !isUploader) {
+    if (!isOrganizer && !isUploader && req.eventAccess?.isAdminAccess !== true) {
       return res.status(403).json({ error: 'Not authorized to delete this file' });
     }
 
@@ -284,7 +292,7 @@ router.delete('/:eventId/:fileId', verifyEventToken, async (req, res, next) => {
     // Soft delete in database
     file.isDeleted = true;
     file.deletedAt = new Date();
-    file.deletedBy = req.username;
+    file.deletedBy = username;
     await file.save();
 
     // Emit socket event
