@@ -4,6 +4,9 @@ const multer = require('multer');
 const cloudinary = require('cloudinary').v2;
 const { verifyEventAccess: verifyEventToken } = require('../middleware/auth');
 const File = require('../models/File');
+const fs = require('fs');
+const os = require('os');
+const path = require('path');
 
 // Configure Cloudinary
 cloudinary.config({
@@ -13,7 +16,7 @@ cloudinary.config({
   secure: true
 });
 
-// Use memory storage - files go directly to Cloudinary, not disk
+// Use memory storage - files held in memory until we write to a temp path
 const storage = multer.memoryStorage();
 
 const upload = multer({
@@ -42,7 +45,6 @@ const upload = multer({
       'application/x-zip',
       'multipart/x-zip',
     ];
-
     if (allowedMimes.includes(file.mimetype)) {
       cb(null, true);
     } else {
@@ -51,47 +53,46 @@ const upload = multer({
   }
 });
 
-// Upload buffer to Cloudinary using a base64 data URI.
+// Upload buffer to Cloudinary via a temporary file on disk.
 //
-// The previous implementation used upload_stream, piping the multer Buffer
-// into a Cloudinary writable stream via uploadStream.end(buffer). With SDK v1
-// this approach can deliver corrupt or incomplete data to Cloudinary, causing
-// the "Invalid image file" error even for perfectly valid files — because the
-// internal stream may not be fully flushed before Cloudinary processes the bytes.
+// Previous attempts used upload_stream (stream flushing issues with SDK v1)
+// and base64 data URIs (SDK v1 runs local format validation before sending,
+// failing with "Invalid image file" even for valid files when resource_type
+// is set explicitly).
 //
-// The correct approach when you already have the file in memory is to encode
-// it as a base64 data URI and use the standard upload() method, which is
-// fully Promise-based and has no stream flushing edge cases.
-const uploadToCloudinary = (buffer, filename, mimetype) => {
+// The only fully reliable method with Cloudinary SDK v1 is to write the buffer
+// to a temp file and pass the file path to upload(). This bypasses all client-
+// side validation and stream concerns — Cloudinary reads the file directly from
+// disk and detects the format itself.
+//
+// resource_type: 'auto' lets Cloudinary's servers detect image/video/raw —
+// removing our manual mimetype check which was the source of the "Invalid image
+// file" rejection.
+const uploadToCloudinary = async (buffer, filename) => {
   // Sanitize filename for use as a Cloudinary public_id.
-  // Cloudinary rejects public_ids with spaces or special characters.
-  // Fall back to 'upload' if the entire name sanitizes to empty.
   const safeName = (
     filename
       .replace(/\.[^/.]+$/, '')        // strip extension
       .replace(/\s+/g, '_')            // spaces → underscores
-      .replace(/[^a-zA-Z0-9_-]/g, '')  // remove anything else unsafe
+      .replace(/[^a-zA-Z0-9_-]/g, '')  // remove unsafe chars
   ) || 'upload';
 
-  // Determine Cloudinary resource type from mimetype
-  let resourceType = 'raw'; // default for documents, zips, etc.
-  if (mimetype.startsWith('image/')) resourceType = 'image';
-  else if (mimetype.startsWith('video/')) resourceType = 'video';
+  // Write the buffer to a uniquely named temp file
+  const tmpPath = path.join(os.tmpdir(), `planit-${Date.now()}-${safeName}`);
+  fs.writeFileSync(tmpPath, buffer);
 
-  // Encode buffer as a base64 data URI — Cloudinary's upload() accepts this
-  // directly and handles decoding on their end with no stream concerns.
-  const dataURI = `data:${mimetype};base64,${buffer.toString('base64')}`;
-
-  // cloudinary.uploader.upload() returns a Promise natively in SDK v1+
-  return cloudinary.uploader.upload(dataURI, {
-    folder: 'planit-events',
-    resource_type: resourceType,
-    public_id: `${Date.now()}-${safeName}`,
-    secure: true,
-    // No transformation block — quality/format optimisation belongs on the
-    // delivery URL, not the upload call (upload-time transformation params
-    // are different and were previously causing Cloudinary API errors).
-  });
+  try {
+    const result = await cloudinary.uploader.upload(tmpPath, {
+      folder: 'planit-events',
+      resource_type: 'auto', // Let Cloudinary detect type — avoids client-side validation errors
+      public_id: `${Date.now()}-${safeName}`,
+      secure: true,
+    });
+    return result;
+  } finally {
+    // Always clean up the temp file whether upload succeeded or failed
+    try { fs.unlinkSync(tmpPath); } catch (_) {}
+  }
 };
 
 // Upload file
@@ -112,8 +113,7 @@ router.post('/:eventId/upload',
     });
   },
   async (req, res, next) => {
-    // Guard: fail fast with a clear message if Cloudinary is not configured,
-    // rather than letting the SDK throw an opaque error.
+    // Fail fast if Cloudinary is not configured
     if (!process.env.CLOUDINARY_CLOUD_NAME || !process.env.CLOUDINARY_API_KEY || !process.env.CLOUDINARY_API_SECRET) {
       console.error('[PlanIt] Upload failed: Cloudinary environment variables are not set.');
       return res.status(503).json({
@@ -122,8 +122,7 @@ router.post('/:eventId/upload',
       });
     }
 
-    // Track the Cloudinary public_id so we can delete the orphaned file if
-    // the subsequent MongoDB save fails.
+    // Track Cloudinary public_id for rollback if DB save fails
     let uploadedPublicId = null;
     let uploadedResourceType = null;
 
@@ -150,8 +149,7 @@ router.post('/:eventId/upload',
 
       const cloudinaryResult = await uploadToCloudinary(
         req.file.buffer,
-        req.file.originalname,
-        req.file.mimetype
+        req.file.originalname
       );
 
       uploadedPublicId = cloudinaryResult.public_id;
@@ -201,7 +199,7 @@ router.post('/:eventId/upload',
     } catch (error) {
       console.error('[PlanIt] File upload error:', error?.message || error);
 
-      // Roll back the Cloudinary upload if the MongoDB save failed
+      // Roll back Cloudinary upload if DB save failed
       if (uploadedPublicId) {
         try {
           await cloudinary.uploader.destroy(uploadedPublicId, {
