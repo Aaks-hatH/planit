@@ -1,6 +1,7 @@
 import axios from 'axios';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+const API_URL      = import.meta.env.VITE_API_URL      || 'http://localhost:5000/api';
+const WATCHDOG_URL = import.meta.env.VITE_WATCHDOG_URL || '';
 
 const api = axios.create({
   baseURL: API_URL,
@@ -234,6 +235,27 @@ export const uptimeAPI = {
   addTimelineUpdate:   (id, data)   => api.post(`/uptime/admin/incidents/${id}/timeline`, data),
   updateIncident:      (id, data)   => api.patch(`/uptime/admin/incidents/${id}`, data),
   deleteIncident:      (id)         => api.delete(`/uptime/admin/incidents/${id}`),
+};
+
+// ─── Watchdog API ─────────────────────────────────────────────────────────────
+// Calls the external watchdog service directly so the status page always has
+// fresh incident data even when the main server is down or unreachable.
+// Falls back gracefully — if VITE_WATCHDOG_URL is not set, all calls resolve
+// with null and the status page uses the main API instead.
+const watchdogAxios = WATCHDOG_URL
+  ? axios.create({ baseURL: WATCHDOG_URL, timeout: 8000 })
+  : null;
+
+export const watchdogAPI = {
+  // Returns same shape as uptimeAPI.getStatus() plus a .watchdog field
+  getStatus: () => {
+    if (!watchdogAxios) return Promise.resolve(null);
+    return watchdogAxios.get('/watchdog/status');
+  },
+  ping: () => {
+    if (!watchdogAxios) return Promise.resolve(null);
+    return watchdogAxios.get('/watchdog/ping');
+  },
 };
 
 // Utilities
