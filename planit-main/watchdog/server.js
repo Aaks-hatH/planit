@@ -5,23 +5,14 @@ const axios    = require('axios');
 
 function ts() { return new Date().toISOString(); }
 
-// ─── Config ───────────────────────────────────────────────────────────────────
-//
-// BACKEND_URLS  = comma-separated list of ALL your backend URLs
-//                 e.g. https://planit-2ipg.onrender.com,https://planit-be-2.onrender.com
-// ROUTER_URL    = your router URL e.g. https://planit-router.onrender.com
-// FRONTEND_URL  = your frontend URL e.g. https://planitapp.onrender.com
-//
+
 const BACKEND_URLS_RAW = process.env.BACKEND_URLS  || process.env.MAIN_SERVER_URL || '';
 const ROUTER_URL       = process.env.ROUTER_URL    || '';
 const FRONTEND_URL     = process.env.FRONTEND_URL  || 'https://planitapp.onrender.com';
 const MONGO_URI        = process.env.MONGO_URI;
 const NTFY_URL         = process.env.NTFY_URL;
 const PING_MS          = parseInt(process.env.PING_INTERVAL_MS  || '60000', 10); // 1 min default
-// BACKEND_LABELS = optional comma-separated display names for backends
-//   e.g. "US East,EU West" — used in incidents instead of "API Service — Region 1"
-// INCIDENT_INCLUDE_TECHNICAL = 'true' to append raw error messages to incident timeline
-//   (useful for debugging, keep false for clean customer-facing status page)
+
 const THRESHOLD        = parseInt(process.env.FAILURE_THRESHOLD || '3',     10);
 const PORT             = process.env.PORT || '4000';
 
@@ -29,22 +20,8 @@ const PORT             = process.env.PORT || '4000';
 // Each target: { name, url, pingUrl, type }
 const targets = [];
 
-// ── Server codenames & display labels ─────────────────────────────────────────
-//
-// Servers use codenames (Maverick, Goose, etc.) — these appear in:
-//   • Your private logs and ntfy alerts: "Maverick tripped circuit breaker"
-//   • The Status page Infrastructure section: "Maverick  API Server  US East"
-//   • Incident titles: "Service Degradation — the Maverick server"
-//   • Incident body:   "...the Maverick server (US East) is not responding..."
-//
-// Set in your Render env vars:
-//   BACKEND_LABELS=Maverick,Goose,Iceman,Slider,Viper,Jester,Cougar
-//   BACKEND_REGIONS=US East (Virginia),US West (Oregon),EU West,...
-//     → BACKEND_REGIONS is optional — just adds geographic context to incidents
-//
-// The load balancer / router has no codename — it's always called "Load Balancer"
-// because that is immediately understood by users on the status page.
-//
+
+
 const backendUrls    = BACKEND_URLS_RAW.split(',').map(u => u.trim()).filter(Boolean);
 const customLabels   = (process.env.BACKEND_LABELS   || '').split(',').map(s => s.trim()).filter(Boolean);
 const customRegions  = (process.env.BACKEND_REGIONS  || '').split(',').map(s => s.trim()).filter(Boolean);
@@ -376,6 +353,14 @@ async function pingTarget(target) {
 
     // Threshold hit — declare down
     if (s.consecutiveFailures === THRESHOLD && !s.isDown) {
+      // Check mesh fleet state: if the router has this backend as standby,
+      // it's intentionally inactive — suppress the public incident.
+      const isStandby = !isBackendActive(target.name);
+      if (isStandby) {
+        console.log(`[${ts()}] [mesh] ${target.name} is STANDBY in fleet — down but suppressing incident`);
+        return;
+      }
+
       s.isDown    = true;
       s.downSince = Date.now();
 
@@ -427,6 +412,28 @@ app.use((_req, res, next) => {
 
 app.get('/',                (_req, res) => res.send('PlanIt Watchdog OK'));
 app.get('/watchdog/ping',   (_req, res) => res.json({ ok: true, ts: new Date().toISOString() }));
+
+// ─── Mesh: watchdog internal status (auth required) ──────────────────────────
+app.get('/mesh/status', meshAuth(SERVICE_NAME), (_req, res) => {
+  res.json({
+    service: SERVICE_NAME,
+    uptime:  Math.floor(process.uptime()),
+    targets: Object.entries(states).map(([name, s]) => ({
+      name,
+      isDown:              s.isDown,
+      consecutiveFailures: s.consecutiveFailures,
+      lastPingMs:          s.lastPingMs,
+      lastPingAt:          s.lastPingAt,
+      totalPings:          s.totalPings,
+    })),
+    meshFleetState: meshFleetState ? {
+      activeCount: meshFleetState.scaling?.activeBackendCount,
+      totalCount:  meshFleetState.scaling?.totalBackends,
+      lastSynced:  meshFleetState.timestamp,
+    } : null,
+    timestamp: new Date().toISOString(),
+  });
+});
 app.head('/watchdog/ping',  (_req, res) => res.sendStatus(200));
 
 // Full status — same shape as before so frontend works without changes
