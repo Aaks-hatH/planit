@@ -21,25 +21,41 @@ const KEEPALIVE_MS      = 4 * 60 * 1000;
 
 // ── Auto-scaling thresholds ───────────────────────────────────────────────────
 //
-// We can't spin Render instances up/down, but we CAN concentrate traffic onto
-// fewer backends when load is low. This keeps most backends at zero real load
-// (just keepalive pings) while 1-2 handle all actual users. As traffic grows,
-// the router automatically spreads load across more backends.
+// HOW THE SCALING WORKS (plain English):
 //
-// How it works:
-//   - Each backend tracks active connections (requests in flight)
-//   - activeBackendCount = how many backends are currently accepting real traffic
-//   - When all active backends are busy (avg connections > SCALE_UP_THRESHOLD),
-//     activeBackendCount increases to include another backend
-//   - When active backends are mostly idle (avg < SCALE_DOWN_THRESHOLD for
-//     SCALE_DOWN_PATIENCE consecutive checks), activeBackendCount decreases
-//   - Inactive backends still get keepalive pings so they never sleep —
-//     they're warm and ready instantly when needed
+// Render free tier gives you several idle instances. Rather than routing traffic
+// to all of them at once (which dilutes the warm connection pool and makes each
+// backend do very little), we concentrate real traffic onto as few backends as
+// possible and only expand when those backends are actually getting busy.
 //
-const SCALE_UP_THRESHOLD   = parseInt(process.env.SCALE_UP_THRESHOLD   || '20', 10); // avg active connections
-const SCALE_DOWN_THRESHOLD = parseInt(process.env.SCALE_DOWN_THRESHOLD || '5',  10); // avg active connections
-const SCALE_DOWN_PATIENCE  = parseInt(process.env.SCALE_DOWN_PATIENCE  || '3',  10); // consecutive checks before scaling down
-const SCALE_CHECK_MS       = 30 * 1000; // check every 30 seconds
+// Think of it like a restaurant opening extra sections only when needed:
+//   - Start with 1 server station (1 active backend)
+//   - When that station gets busy (>SCALE_UP_THRESHOLD avg requests in flight),
+//     open another station (promote 1 more backend into the active set)
+//   - When stations are quiet again for a sustained period, consolidate back down
+//   - Closed stations still have staff on standby (keepalive pings) — they can
+//     be opened instantly, no cold start delay
+//
+// CIRCUIT BREAKER:
+//   If a backend starts returning errors or becomes unreachable, it gets marked
+//   as "tripped" and removed from the active routing set immediately, regardless
+//   of scaling state. Traffic fails over to remaining healthy backends. The tripped
+//   backend gets periodic recovery probes — once it responds healthily for
+//   CIRCUIT_RECOVERY_CHECKS consecutive checks, it re-enters the active pool.
+//
+// CONFIGURABLE via env vars:
+//   SCALE_UP_THRESHOLD   — avg in-flight requests per active backend to trigger scale-up   (default: 20)
+//   SCALE_DOWN_THRESHOLD — avg in-flight requests to allow scale-down                      (default: 5)
+//   SCALE_DOWN_PATIENCE  — consecutive quiet checks before scaling down                    (default: 5)
+//   CIRCUIT_TRIP_ERRORS  — consecutive errors before tripping circuit breaker              (default: 3)
+//   CIRCUIT_RECOVERY_CHECKS — healthy pings needed to restore a tripped backend           (default: 2)
+//
+const SCALE_UP_THRESHOLD      = parseInt(process.env.SCALE_UP_THRESHOLD      || '20', 10);
+const SCALE_DOWN_THRESHOLD    = parseInt(process.env.SCALE_DOWN_THRESHOLD    || '5',  10);
+const SCALE_DOWN_PATIENCE     = parseInt(process.env.SCALE_DOWN_PATIENCE     || '5',  10); // raised from 3 — less jittery
+const CIRCUIT_TRIP_ERRORS     = parseInt(process.env.CIRCUIT_TRIP_ERRORS     || '3',  10);
+const CIRCUIT_RECOVERY_CHECKS = parseInt(process.env.CIRCUIT_RECOVERY_CHECKS || '2',  10);
+const SCALE_CHECK_MS          = 30 * 1000;
 
 console.log(`\n${'═'.repeat(60)}`);
 console.log(` PlanIt Router — Smart Scaling — starting`);
@@ -53,23 +69,40 @@ console.log(`${'═'.repeat(60)}\n`);
 // ─── Per-backend state ────────────────────────────────────────────────────────
 const backendStatus = BACKENDS.map((url) => ({
   url,
-  alive:             true,
-  latencyMs:         null,
-  lastPing:          null,
-  requests:          0,           // total lifetime requests
-  activeConnections: 0,           // currently in-flight requests
-  active:            false,       // is this backend currently receiving real traffic?
+  alive:              true,
+  latencyMs:          null,
+  lastPing:           null,
+  requests:           0,            // total lifetime requests
+  activeConnections:  0,            // currently in-flight requests
+  active:             false,        // is this backend in the active routing set?
+  // Circuit breaker state
+  circuitTripped:     false,        // true = backend removed from routing due to errors
+  consecutiveErrors:  0,            // errors since last success
+  recoveryProbes:     0,            // successful health checks while tripped
 }));
 
-// Start with just 1 active backend — scale up from there
-let activeBackendCount  = 1;
-let scaleDownStreak     = 0; // consecutive checks below SCALE_DOWN_THRESHOLD
+// ── Scaling state ─────────────────────────────────────────────────────────────
+let activeBackendCount = 1;   // start with 1 — expand as load grows
+let scaleDownStreak    = 0;   // consecutive quiet checks — must reach SCALE_DOWN_PATIENCE
 
-// Mark initial active backends
+// scalingLog: keep last 20 scaling decisions for the /health endpoint
+const scalingLog = [];
+function logScale(action, reason) {
+  const entry = { time: new Date().toISOString(), action, reason, activeBackendCount };
+  scalingLog.unshift(entry);
+  if (scalingLog.length > 20) scalingLog.pop();
+  console.log(`  [scale] ${action} → ${activeBackendCount} active — ${reason}`);
+}
+
+// Mark which backends are in the active set
+// Active = index < activeBackendCount AND circuit not tripped
 function updateActiveSet() {
-  const count = Math.min(activeBackendCount, BACKENDS.length);
-  backendStatus.forEach((b, i) => { b.active = i < count; });
-  console.log(`  [scale] Active backends: ${count}/${BACKENDS.length} — [${backendStatus.filter(b => b.active).map((_, i) => i).join(', ')}]`);
+  backendStatus.forEach((b, i) => {
+    b.active = i < activeBackendCount && !b.circuitTripped;
+  });
+  const activeList = backendStatus
+    .map((b, i) => b.active ? i : null).filter(i => i !== null);
+  console.log(`  [scale] Active set: [${activeList.join(', ')}] of ${BACKENDS.length} total`);
 }
 updateActiveSet();
 
@@ -82,55 +115,137 @@ function djb2(str) {
     h = ((h << 5) + h) ^ str.charCodeAt(i);
     h = h >>> 0;
   }
-  // IMPORTANT: hash within active backends only, not all backends
-  // This ensures sticky routing still works when activeBackendCount changes —
-  // existing cookies are re-mapped to the active set
   return h % activeBackendCount;
 }
 
-function pickBackendIndex(req) {
-  // 1. EventId in URL — hashed to active set
-  const match = req.url.match(OBJECTID_RE);
-  if (match) return djb2(match[0]);
+// Pick a backend — skips tripped (circuit-broken) backends automatically
+function pickHealthyBackend(preferredIndex) {
+  // If preferred is healthy, use it
+  if (!backendStatus[preferredIndex]?.circuitTripped) return preferredIndex;
+  // Otherwise find next healthy backend in the active set
+  for (let i = 0; i < activeBackendCount; i++) {
+    if (!backendStatus[i].circuitTripped) return i;
+  }
+  // All active backends are tripped — try any backend as last resort
+  for (let i = 0; i < BACKENDS.length; i++) {
+    if (!backendStatus[i].circuitTripped) return i;
+  }
+  // Truly all tripped — return preferred anyway (will fail, but cleanly)
+  return preferredIndex;
+}
 
-  // 2. Sticky cookie — validate it's still in active set
+function pickBackendIndex(req) {
+  let preferred;
+
+  // 1. EventId in URL — deterministic hash ensures all users in same event → same backend
+  const match = req.url.match(OBJECTID_RE);
+  if (match) {
+    preferred = djb2(match[0]);
+    return pickHealthyBackend(preferred);
+  }
+
+  // 2. Sticky cookie — honour previous assignment if still valid
   const cookie = req.cookies?.[COOKIE_NAME];
   if (cookie !== undefined) {
     const idx = parseInt(cookie, 10);
-    if (!isNaN(idx) && idx >= 0 && idx < activeBackendCount) return idx;
-    // Cookie points to an inactive backend — reroute via IP
+    if (!isNaN(idx) && idx >= 0 && idx < activeBackendCount) {
+      return pickHealthyBackend(idx);
+    }
   }
 
-  // 3. IP-based fallback within active set
+  // 3. IP-based fallback
   const ip = req.headers['x-forwarded-for']?.split(',')[0]?.trim()
            || req.socket?.remoteAddress || '0';
-  return djb2(ip);
+  preferred = djb2(ip);
+  return pickHealthyBackend(preferred);
+}
+
+// ─── Circuit breaker ─────────────────────────────────────────────────────────
+// Records an error for a backend. If errors reach the trip threshold, the
+// backend is removed from routing immediately regardless of scaling state.
+function recordBackendError(index) {
+  const b = backendStatus[index];
+  b.consecutiveErrors++;
+  b.alive = false;
+
+  if (!b.circuitTripped && b.consecutiveErrors >= CIRCUIT_TRIP_ERRORS) {
+    b.circuitTripped = true;
+    b.recoveryProbes = 0;
+    updateActiveSet();
+    logScale(`⚡ Circuit tripped on backend [${index}]`,
+      `${b.consecutiveErrors} consecutive errors — removed from routing`);
+  }
+}
+
+function recordBackendSuccess(index) {
+  const b = backendStatus[index];
+  b.consecutiveErrors = 0;
+  b.alive = true;
+
+  if (b.circuitTripped) {
+    b.recoveryProbes++;
+    if (b.recoveryProbes >= CIRCUIT_RECOVERY_CHECKS) {
+      b.circuitTripped = false;
+      b.recoveryProbes = 0;
+      updateActiveSet();
+      logScale(`✅ Circuit restored on backend [${index}]`,
+        `${CIRCUIT_RECOVERY_CHECKS} consecutive healthy probes — re-added to routing`);
+    }
+  }
 }
 
 // ─── Auto-scaling logic ───────────────────────────────────────────────────────
 function checkAndScale() {
-  const active = backendStatus.slice(0, activeBackendCount);
-  const avgConnections = active.reduce((sum, b) => sum + b.activeConnections, 0) / active.length;
+  // Only consider non-tripped backends in the active set for load measurement
+  const activeHealthy = backendStatus
+    .slice(0, activeBackendCount)
+    .filter(b => !b.circuitTripped);
 
-  // Scale UP — if active backends are getting busy and we have more available
-  if (avgConnections >= SCALE_UP_THRESHOLD && activeBackendCount < BACKENDS.length) {
-    activeBackendCount++;
-    scaleDownStreak = 0;
-    updateActiveSet();
-    console.log(`  [scale] ↑ Scaled UP to ${activeBackendCount} backends (avg ${avgConnections.toFixed(1)} connections)`);
+  if (activeHealthy.length === 0) {
+    // All active backends are tripped — emergency: expand to include next backend
+    if (activeBackendCount < BACKENDS.length) {
+      activeBackendCount++;
+      scaleDownStreak = 0;
+      updateActiveSet();
+      logScale('🚨 Emergency scale-up', 'All active backends tripped — promoting next backend');
+    }
     return;
   }
 
-  // Scale DOWN — only if consistently quiet AND we have more than 1 active
+  const totalConnections = activeHealthy.reduce((sum, b) => sum + b.activeConnections, 0);
+  const avgConnections   = totalConnections / activeHealthy.length;
+
+  // Scale UP — active backends are busy AND we have more available AND they're healthy
+  if (avgConnections >= SCALE_UP_THRESHOLD && activeBackendCount < BACKENDS.length) {
+    // Only scale up to a backend that isn't tripped
+    const nextIndex = activeBackendCount;
+    if (!backendStatus[nextIndex]?.circuitTripped) {
+      activeBackendCount++;
+      scaleDownStreak = 0;
+      updateActiveSet();
+      logScale(`↑ Scale up`, `avg ${avgConnections.toFixed(1)} connections ≥ threshold ${SCALE_UP_THRESHOLD}`);
+    }
+    return;
+  }
+
+  // Scale DOWN — quiet for sustained period AND minimum 1 active
   if (avgConnections <= SCALE_DOWN_THRESHOLD && activeBackendCount > 1) {
     scaleDownStreak++;
     if (scaleDownStreak >= SCALE_DOWN_PATIENCE) {
       activeBackendCount--;
       scaleDownStreak = 0;
       updateActiveSet();
-      console.log(`  [scale] ↓ Scaled DOWN to ${activeBackendCount} backends (avg ${avgConnections.toFixed(1)} connections)`);
+      logScale(`↓ Scale down`,
+        `avg ${avgConnections.toFixed(1)} connections ≤ threshold ${SCALE_DOWN_THRESHOLD} for ${SCALE_DOWN_PATIENCE} checks`);
     }
-  } else {
+    // else: quiet but not yet patient enough — log progress
+    else if (scaleDownStreak === 1) {
+      console.log(`  [scale] Quiet (${avgConnections.toFixed(1)} avg) — will scale down after ${SCALE_DOWN_PATIENCE - scaleDownStreak} more quiet checks`);
+    }
+  } else if (avgConnections > SCALE_DOWN_THRESHOLD) {
+    if (scaleDownStreak > 0) {
+      console.log(`  [scale] Load increased (${avgConnections.toFixed(1)} avg) — reset scale-down streak`);
+    }
     scaleDownStreak = 0;
   }
 }
@@ -145,14 +260,14 @@ async function pingBackend(index) {
   const start = Date.now();
   try {
     await axios.get(`${url}/api/health`, { timeout: 10000 });
-    backendStatus[index].alive     = true;
     backendStatus[index].latencyMs = Date.now() - start;
     backendStatus[index].lastPing  = new Date().toISOString();
-  } catch {
-    backendStatus[index].alive     = false;
+    recordBackendSuccess(index);
+  } catch (err) {
     backendStatus[index].latencyMs = null;
     backendStatus[index].lastPing  = new Date().toISOString();
-    console.warn(`  [router] ⚠ backend [${index}] ${url} is not responding`);
+    recordBackendError(index);
+    console.warn(`  [router] ⚠ backend [${index}] ${url} — ${err.message}`);
   }
 }
 
@@ -169,13 +284,31 @@ app.use(cookieParser());
 
 // ─── Health endpoint ──────────────────────────────────────────────────────────
 app.get('/health', (_req, res) => {
-  const allActiveAlive = backendStatus.slice(0, activeBackendCount).every(b => b.alive);
+  const activeBackends  = backendStatus.filter(b => b.active);
+  const trippedBackends = backendStatus.filter(b => b.circuitTripped);
+  const allActiveAlive  = activeBackends.every(b => b.alive);
+
   res.status(allActiveAlive ? 200 : 207).json({
     status:             allActiveAlive ? 'ok' : 'degraded',
     uptime:             Math.floor(process.uptime()),
-    activeBackendCount,
-    totalBackends:      BACKENDS.length,
-    backends:           backendStatus.map((s, i) => ({ index: i, ...s })),
+    scaling: {
+      activeBackendCount,
+      totalBackends:    BACKENDS.length,
+      trippedCount:     trippedBackends.length,
+      scaleDownStreak,
+      scaleDownPatience: SCALE_DOWN_PATIENCE,
+      thresholds: {
+        scaleUp:   SCALE_UP_THRESHOLD,
+        scaleDown: SCALE_DOWN_THRESHOLD,
+      },
+    },
+    scalingLog:         scalingLog.slice(0, 10),
+    backends:           backendStatus.map((s, i) => ({
+      index: i, url: s.url, active: s.active,
+      alive: s.alive, latencyMs: s.latencyMs, lastPing: s.lastPing,
+      requests: s.requests, activeConnections: s.activeConnections,
+      circuitTripped: s.circuitTripped, consecutiveErrors: s.consecutiveErrors,
+    })),
     timestamp:          new Date().toISOString(),
   });
 });
@@ -207,7 +340,7 @@ const proxies = BACKENDS.map((target, index) =>
 
       error(err, _req, res) {
         backendStatus[index].activeConnections = Math.max(0, backendStatus[index].activeConnections - 1);
-        backendStatus[index].alive = false;
+        recordBackendError(index);
         console.error(`  [router] proxy error → backend [${index}]: ${err.message}`);
         if (res.headersSent) return;
         res.status(502).json({
