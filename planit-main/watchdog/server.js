@@ -12,7 +12,6 @@ const FRONTEND_URL     = process.env.FRONTEND_URL  || 'https://planitapp.onrende
 const MONGO_URI        = process.env.MONGO_URI;
 const NTFY_URL         = process.env.NTFY_URL;
 const PING_MS          = parseInt(process.env.PING_INTERVAL_MS  || '60000', 10); // 1 min default
-
 const THRESHOLD        = parseInt(process.env.FAILURE_THRESHOLD || '3',     10);
 const PORT             = process.env.PORT || '4000';
 
