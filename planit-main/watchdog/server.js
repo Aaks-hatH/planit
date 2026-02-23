@@ -472,6 +472,67 @@ app.get('/watchdog/status', async (_req, res) => {
   });
 });
 
+// Per-service 15-day uptime history from UptimeCheck collection
+app.get('/watchdog/uptime', async (_req, res) => {
+  const dbOk = await ensureDbConnected();
+  if (!dbOk) return res.status(503).json({ error: 'DB unavailable' });
+
+  try {
+    const since = new Date(Date.now() - 15 * 24 * 60 * 60 * 1000);
+    const checks = await UptimeCheck.find({ createdAt: { $gte: since } })
+      .select('service status createdAt -_id')
+      .lean();
+
+    // Group by service → day
+    const byService = {};
+    checks.forEach(c => {
+      const svc = c.service;
+      if (!byService[svc]) byService[svc] = {};
+      const y = c.createdAt.getFullYear();
+      const m = String(c.createdAt.getMonth() + 1).padStart(2, '0');
+      const d = String(c.createdAt.getDate()).padStart(2, '0');
+      const day = `${y}-${m}-${d}`;
+      if (!byService[svc][day]) byService[svc][day] = { up: 0, total: 0 };
+      byService[svc][day].total++;
+      if (c.status === 'up') byService[svc][day].up++;
+    });
+
+    // Build 15-day array per service (fill missing days with null)
+    const days = [];
+    for (let i = 14; i >= 0; i--) {
+      const dt = new Date();
+      dt.setDate(dt.getDate() - i);
+      const y = dt.getFullYear();
+      const m = String(dt.getMonth() + 1).padStart(2, '0');
+      const d = String(dt.getDate()).padStart(2, '0');
+      days.push(`${y}-${m}-${d}`);
+    }
+
+    const result = {};
+    Object.entries(byService).forEach(([svc, dayMap]) => {
+      const dayData = days.map(day => {
+        const d = dayMap[day];
+        return d
+          ? { date: day, up: d.up, total: d.total, pct: d.total > 0 ? (d.up / d.total) * 100 : null }
+          : { date: day, up: null, total: null, pct: null };
+      });
+      const totalUp    = Object.values(dayMap).reduce((s, d) => s + d.up,    0);
+      const totalChecks = Object.values(dayMap).reduce((s, d) => s + d.total, 0);
+      result[svc] = {
+        days:       dayData,
+        totalChecks,
+        totalUp,
+        uptimePct: totalChecks > 0 ? +((totalUp / totalChecks) * 100).toFixed(2) : null,
+      };
+    });
+
+    res.json({ services: result, generatedAt: new Date().toISOString() });
+  } catch (err) {
+    console.error(`[${ts()}] [uptime] ${err.message}`);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ─── Boot ─────────────────────────────────────────────────────────────────────
 const startedAt = Date.now();
 
