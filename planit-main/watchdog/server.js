@@ -403,8 +403,18 @@ async function pingAll() {
 // ─── Express ──────────────────────────────────────────────────────────────────
 const app = express();
 app.use(express.json());
+// Only allow cross-origin requests from the configured frontend — prevents
+// other sites from silently harvesting status data via browser requests.
+const ALLOWED_ORIGINS = new Set(
+  [FRONTEND_URL, process.env.EXTRA_CORS_ORIGIN].filter(Boolean)
+);
+
 app.use((_req, res, next) => {
-  res.setHeader('Access-Control-Allow-Origin',  '*');
+  const origin = _req.headers.origin;
+  if (origin && ALLOWED_ORIGINS.has(origin)) {
+    res.setHeader('Access-Control-Allow-Origin',  origin);
+    res.setHeader('Vary', 'Origin');
+  }
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
   if (_req.method === 'OPTIONS') return res.sendStatus(204);
@@ -520,21 +530,18 @@ app.get('/watchdog/status', async (_req, res) => {
     : activeIncidents.length > 0 ? 'degraded'
     : 'operational';
 
-  // Build per-service summary for the response
+  // Build per-service summary for the response — strip internal URLs and
+  // raw error strings which would expose infrastructure details publicly.
   const services = targets.map(t => {
     const s = states[t.name];
     return {
-      name:                 t.name,
-      region:               t.region || null,   // e.g. "US East (Virginia)"
-      type:                 t.type,
-      url:                  t.url,
-      status:               s.isDown ? 'down' : 'up',
-      lastPingMs:           s.lastPingMs,
-      lastPingAt:           s.lastPingAt,
-      lastError:            s.lastError,
-      consecutiveFailures:  s.consecutiveFailures,
-      totalPings:           s.totalPings,
-      totalFailures:        s.totalFailures,
+      name:      t.name,
+      region:    t.region || null,
+      type:      t.type,
+      status:    s.isDown ? 'down' : 'up',
+      lastPingMs: s.lastPingMs,
+      lastPingAt: s.lastPingAt,
+      // lastError and url intentionally omitted — public endpoint
     };
   });
 
@@ -547,14 +554,9 @@ app.get('/watchdog/status', async (_req, res) => {
     checkedAt:       new Date().toISOString(),
     watchdog: {
       // Legacy single-target field — uses router if present, otherwise first backend
-      mainServer:          anyDown ? 'DOWN' : 'UP',
-      lastPingMs:          states[targets[0].name]?.lastPingMs,
-      lastPingAt:          states[targets[0].name]?.lastPingAt,
-      lastError:           states[targets[0].name]?.lastError,
-      consecutiveFailures: states[targets[0].name]?.consecutiveFailures,
-      totalPings:          Object.values(states).reduce((sum, s) => sum + s.totalPings, 0),
-      uptimeSeconds:       Math.floor((Date.now() - startedAt) / 1000),
-      // New multi-target breakdown
+      mainServer: anyDown ? 'DOWN' : 'UP',
+      // lastError, consecutiveFailures, totalPings, uptimeSeconds intentionally
+      // omitted — public endpoint; use /mesh/status (auth-required) for internals
       services,
     },
   });
