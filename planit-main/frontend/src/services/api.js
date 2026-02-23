@@ -85,9 +85,7 @@ export const eventAPI = {
     const payload = { guests: [data] };
     return api.post(`/events/${eventId}/invites`, payload);
   },
-  updateInvite: (eventId, inviteId, data) => {
-    return Promise.reject(new Error('Update invite endpoint not yet implemented on backend'));
-  },
+  updateInvite: (eventId, inviteId, data) => api.put(`/events/${eventId}/invites/${inviteId}`, data),
   deleteInvite: (eventId, inviteId) => api.delete(`/events/${eventId}/invites/${inviteId}`),
   
   // Check-in Process
