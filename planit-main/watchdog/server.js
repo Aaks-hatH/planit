@@ -332,7 +332,7 @@ async function pingTarget(target) {
       }
 
       await sendNtfy({
-        title:    `✅ ${target.name} Recovered`,
+        title:    ` ${target.name} Recovered`,
         message:  `${target.name} is back online and operating normally.\nDowntime: ${mins < 1 ? '<1' : mins} minute(s)\nResponse time: ${ms}ms\nIncident auto-resolved on status page.`,
         priority: 'high',
         tags:     ['white_check_mark', 'tada'],
@@ -366,7 +366,7 @@ async function pingTarget(target) {
       s.activeIncidentId = incidentId;
 
       await sendNtfy({
-        title:    `🔴 ${target.name} — Service Disruption`,
+        title:    ` ${target.name} — Service Disruption`,
         message:  `${target.name} is not responding.\n\nFailed checks: ${THRESHOLD}/${THRESHOLD}\nMonitored URL: ${target.url}\nError: ${err.message}\n\nStatus page has been updated automatically.`,
         priority: 'urgent',
         tags:     ['rotating_light', 'fire'],
@@ -377,7 +377,7 @@ async function pingTarget(target) {
     if (s.isDown && s.consecutiveFailures > THRESHOLD && s.consecutiveFailures % 10 === 0) {
       const downMins = Math.round((Date.now() - s.downSince) / 60000);
       await sendNtfy({
-        title:    `⚠️ ${target.name} — Still Unavailable (${downMins}m)`,
+        title:    ` ${target.name} — Still Unavailable (${downMins}m)`,
         message:  `${target.name} has been unavailable for ${downMins} minutes.\nConsecutive failures: ${s.consecutiveFailures}\nError: ${err.message}\n\nStatus page reflects current outage.`,
         priority: 'high',
         tags:     ['warning', 'clock'],
@@ -553,7 +553,7 @@ async function boot() {
   console.log(`[${ts()}] ✅ Watchdog running — pinging ${targets.length} target(s) every ${PING_MS / 1000}s\n`);
 
   await sendNtfy({
-    title:    '🛡️ Monitoring Active',
+    title:    ' Monitoring Active',
     message:  `PlanIt automated monitoring is online.\nChecking ${targets.length} service(s) every ${PING_MS / 1000}s:\n${targets.map(t => `• ${t.name}`).join('\n')}\n\nYou will be notified immediately of any service disruptions.`,
     priority: 'default',
     tags:     ['shield', 'white_check_mark'],
