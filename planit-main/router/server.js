@@ -356,7 +356,8 @@ function cacheMiddleware(req, res, next) {
       }
     }
 
-    res.set('X-Cache', 'MISS');
+    // Set header BEFORE calling originalEnd — headers cannot be set after response is sent
+    if (!res.headersSent) res.set('X-Cache', 'MISS');
     return originalEnd(chunk, encoding, callback);
   };
 
