@@ -18,6 +18,10 @@ const FRONTEND_URL     = process.env.FRONTEND_URL  || 'https://planitapp.onrende
 const MONGO_URI        = process.env.MONGO_URI;
 const NTFY_URL         = process.env.NTFY_URL;
 const PING_MS          = parseInt(process.env.PING_INTERVAL_MS  || '60000', 10); // 1 min default
+// BACKEND_LABELS = optional comma-separated display names for backends
+//   e.g. "US East,EU West" — used in incidents instead of "API Service — Region 1"
+// INCIDENT_INCLUDE_TECHNICAL = 'true' to append raw error messages to incident timeline
+//   (useful for debugging, keep false for clean customer-facing status page)
 const THRESHOLD        = parseInt(process.env.FAILURE_THRESHOLD || '3',     10);
 const PORT             = process.env.PORT || '4000';
 
@@ -25,21 +29,41 @@ const PORT             = process.env.PORT || '4000';
 // Each target: { name, url, pingUrl, type }
 const targets = [];
 
-// Add all backends
-BACKEND_URLS_RAW.split(',').map(u => u.trim()).filter(Boolean).forEach((url, i) => {
-  const label = BACKEND_URLS_RAW.split(',').length > 1 ? `Backend ${i + 1}` : 'Backend';
+// ── Professional service naming ───────────────────────────────────────────────
+// Incidents shown to users should never mention internal infrastructure names
+// like "Backend 1" or "Router". We use customer-facing service tier names instead:
+//   1 backend  → "API Service"
+//   2 backends → "API Service (Primary)", "API Service (Secondary)"
+//   3+         → "API Service — Region 1", "API Service — Region 2", ...
+// The router is always called "Load Balancer" — that's what it is to the user.
+//
+// You can override any label by setting BACKEND_LABELS in your env:
+//   BACKEND_LABELS=US East,EU West,Asia Pacific
+const backendUrls  = BACKEND_URLS_RAW.split(',').map(u => u.trim()).filter(Boolean);
+const customLabels = (process.env.BACKEND_LABELS || '').split(',').map(s => s.trim()).filter(Boolean);
+
+function getBackendLabel(i, total) {
+  if (customLabels[i]) return customLabels[i];
+  if (total === 1)     return 'API Service';
+  if (total === 2)     return i === 0 ? 'API Service (Primary)' : 'API Service (Secondary)';
+  const regions = ['Region 1', 'Region 2', 'Region 3', 'Region 4', 'Region 5',
+                   'Region 6', 'Region 7', 'Region 8', 'Region 9', 'Region 10'];
+  return `API Service — ${regions[i] || `Node ${i + 1}`}`;
+}
+
+backendUrls.forEach((url, i) => {
   targets.push({
-    name:    label,
+    name:    getBackendLabel(i, backendUrls.length),
     url,
     pingUrl: `${url}/api/health`,
     type:    'backend',
   });
 });
 
-// Add router if configured
+// Add load balancer if configured
 if (ROUTER_URL) {
   targets.push({
-    name:    'Router',
+    name:    'Load Balancer',
     url:     ROUTER_URL,
     pingUrl: `${ROUTER_URL}/health`,
     type:    'router',
@@ -144,27 +168,82 @@ async function ensureDbConnected() {
   }
 }
 
+// ── Incident message templates ────────────────────────────────────────────────
+// All user-facing text in incidents must be professional status-page language.
+// No internal names, no tech jargon, no mention of "backend" or "router".
+//
+function incidentTitle(target) {
+  if (target.type === 'router') return 'Service Disruption — Platform Unavailable';
+  if (backendUrls.length === 1) return 'Service Disruption — API Unavailable';
+  return `Service Degradation — ${target.name} Unavailable`;
+}
+
+function incidentDescription(target) {
+  if (target.type === 'router') {
+    return 'Our monitoring systems have detected that the PlanIt platform is currently unreachable. ' +
+           'Users may be unable to access events, send messages, or use any platform features. ' +
+           'Our team has been alerted and is investigating the issue.';
+  }
+  if (backendUrls.length === 1) {
+    return 'Our monitoring systems have detected that the PlanIt API is not responding. ' +
+           'Some users may experience difficulty accessing events or using platform features. ' +
+           'Our team has been alerted and is actively investigating.';
+  }
+  return `Our monitoring systems have detected that one of our API service nodes (${target.name}) ` +
+         'is not responding. Users assigned to this node may experience degraded performance or ' +
+         'temporary inability to access their events. Our team is actively investigating. ' +
+         'Other platform functions remain operational.';
+}
+
+function incidentAffectedServices(target) {
+  if (target.type === 'router') return ['api', 'websocket', 'chat', 'file-sharing', 'polls'];
+  return ['api', 'websocket', 'chat'];
+}
+
+function investigatingMessage(target, errorMsg) {
+  const technical = process.env.INCIDENT_INCLUDE_TECHNICAL === 'true'
+    ? ` (Technical detail: ${errorMsg})`
+    : '';
+  if (target.type === 'router') {
+    return `Our automated monitoring detected the platform became unreachable at ${new Date().toUTCString()}. ` +
+           `Health checks failed ${THRESHOLD} consecutive times over ${Math.round((THRESHOLD * PING_MS) / 60000)} minutes. ` +
+           `We are investigating the cause.${technical}`;
+  }
+  return `Automated monitoring detected ${target.name} stopped responding at ${new Date().toUTCString()}. ` +
+         `${THRESHOLD} consecutive health checks failed over ${Math.round((THRESHOLD * PING_MS) / 60000)} minutes. ` +
+         `Traffic has been redistributed where possible. We are investigating.${technical}`;
+}
+
+function recoveryMessage(target, mins) {
+  const duration = mins < 1 ? 'less than a minute' : `${mins} minute${mins !== 1 ? 's' : ''}`;
+  if (target.type === 'router') {
+    return `The platform has fully recovered and is operating normally. ` +
+           `Total disruption duration: ${duration}. We apologise for any inconvenience caused.`;
+  }
+  return `${target.name} has recovered and is operating normally. ` +
+         `Total disruption duration: ${duration}. All traffic has been restored. ` +
+         `We apologise for any inconvenience caused.`;
+}
+
 async function createDownIncident(target, errorMsg) {
   const ok = await ensureDbConnected();
   if (!ok) return null;
   try {
     const report = await UptimeReport.create({
-      description:     `[WATCHDOG] ${target.name} unreachable after ${THRESHOLD} consecutive failures. Error: ${errorMsg}`,
+      description:     `Automated monitoring detected ${target.name} unreachable after ${THRESHOLD} consecutive health check failures.`,
       affectedService: target.name,
       status:          'confirmed',
     });
     const incident = await Incident.create({
-      title:            `${target.name} Down — Unreachable`,
-      description:      `${target.name} (${target.url}) failed ${THRESHOLD} consecutive health checks from the external watchdog.`,
-      severity:         target.type === 'router' ? 'critical' : 'major',
+      title:            incidentTitle(target),
+      description:      incidentDescription(target),
+      severity:         target.type === 'router' ? 'critical' : backendUrls.length === 1 ? 'critical' : 'major',
       status:           'investigating',
-      affectedServices: target.type === 'router'
-        ? ['router', 'api', 'websocket', 'chat']
-        : [target.name.toLowerCase().replace(' ', '-'), 'api'],
-      reportIds: [report._id],
+      affectedServices: incidentAffectedServices(target),
+      reportIds:        [report._id],
       timeline: [{
         status:  'investigating',
-        message: `Watchdog detected ${target.name} unreachable after ${THRESHOLD} failures. Last error: ${errorMsg}`,
+        message: investigatingMessage(target, errorMsg),
       }],
     });
     report.incidentId = incident._id;
@@ -189,7 +268,7 @@ async function resolveDownIncident(target, incidentId, downtimeMs) {
     incident.downtimeMinutes = mins;
     incident.timeline.push({
       status:  'resolved',
-      message: `${target.name} recovered. Total downtime: ${mins < 1 ? '<1' : mins} minute(s).`,
+      message: recoveryMessage(target, mins),
     });
     await incident.save();
     console.log(`[${ts()}] [incident] Resolved for ${target.name} (${mins}m downtime)`);
@@ -253,8 +332,8 @@ async function pingTarget(target) {
       }
 
       await sendNtfy({
-        title:    `${target.name} Recovered`,
-        message:  `${target.name} is back online after ${mins < 1 ? '<1' : mins} min downtime.\nResponse: ${ms}ms`,
+        title:    `✅ ${target.name} Recovered`,
+        message:  `${target.name} is back online and operating normally.\nDowntime: ${mins < 1 ? '<1' : mins} minute(s)\nResponse time: ${ms}ms\nIncident auto-resolved on status page.`,
         priority: 'high',
         tags:     ['white_check_mark', 'tada'],
       });
@@ -287,8 +366,8 @@ async function pingTarget(target) {
       s.activeIncidentId = incidentId;
 
       await sendNtfy({
-        title:    `${target.name} is DOWN`,
-        message:  `${target.name} has been unreachable for ${THRESHOLD} consecutive checks.\n\nURL: ${target.url}\nError: ${err.message}`,
+        title:    `🔴 ${target.name} — Service Disruption`,
+        message:  `${target.name} is not responding.\n\nFailed checks: ${THRESHOLD}/${THRESHOLD}\nMonitored URL: ${target.url}\nError: ${err.message}\n\nStatus page has been updated automatically.`,
         priority: 'urgent',
         tags:     ['rotating_light', 'fire'],
       });
@@ -298,8 +377,8 @@ async function pingTarget(target) {
     if (s.isDown && s.consecutiveFailures > THRESHOLD && s.consecutiveFailures % 10 === 0) {
       const downMins = Math.round((Date.now() - s.downSince) / 60000);
       await sendNtfy({
-        title:    `${target.name} Still Down (${downMins}m)`,
-        message:  `${target.name} has been down for ${downMins} minutes.\nFailed pings: ${s.consecutiveFailures}\nError: ${err.message}`,
+        title:    `⚠️ ${target.name} — Still Unavailable (${downMins}m)`,
+        message:  `${target.name} has been unavailable for ${downMins} minutes.\nConsecutive failures: ${s.consecutiveFailures}\nError: ${err.message}\n\nStatus page reflects current outage.`,
         priority: 'high',
         tags:     ['warning', 'clock'],
       });
@@ -413,8 +492,8 @@ async function boot() {
   console.log(`[${ts()}] ✅ Watchdog running — pinging ${targets.length} target(s) every ${PING_MS / 1000}s\n`);
 
   await sendNtfy({
-    title:    'Watchdog Started',
-    message:  `PlanIt watchdog is online.\nMonitoring ${targets.length} target(s) every ${PING_MS / 1000}s:\n${targets.map(t => `• ${t.name}: ${t.url}`).join('\n')}`,
+    title:    '🛡️ Monitoring Active',
+    message:  `PlanIt automated monitoring is online.\nChecking ${targets.length} service(s) every ${PING_MS / 1000}s:\n${targets.map(t => `• ${t.name}`).join('\n')}\n\nYou will be notified immediately of any service disruptions.`,
     priority: 'default',
     tags:     ['shield', 'white_check_mark'],
   });
