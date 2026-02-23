@@ -1,20 +1,5 @@
 'use strict';
-/**
- * PlanIt Backend — Mesh Routes
- * ──────────────────────────────────────────────────────────────────────────────
- * These endpoints are INTERNAL ONLY — protected by mesh auth.
- * They expose richer data than the public /api/health endpoint and allow
- * the router/watchdog to coordinate with this backend.
- *
- * Endpoints:
- *   GET  /api/mesh/health   — rich health snapshot (router pings this every keepalive)
- *   POST /api/mesh/seen     — router confirms it has registered this backend
- *
- * Environment variables read here:
- *   BACKEND_LABEL   = "Maverick"       (this backend's codename)
- *   BACKEND_REGION  = "US East (Virginia)"
- *   MESH_SECRET     = <shared secret>
- */
+
 
 const express    = require('express');
 const mongoose   = require('mongoose');
