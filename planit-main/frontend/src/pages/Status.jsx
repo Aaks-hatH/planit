@@ -638,19 +638,33 @@ export default function Status() {
   }, []);
 
   const fetchStatus = useCallback(async () => {
-    try {
-      const res = await uptimeAPI.getStatus();
-      setData(res.data);
-      setLastFetch(new Date());
-      return;
-    } catch { /* fall through */ }
+    // Fetch both in parallel — main backend for incidents/status,
+    // watchdog for live server health. Neither being down blocks the other.
+    const [mainRes, watchdogRes] = await Promise.allSettled([
+      uptimeAPI.getStatus(),
+      watchdogAPI.getStatus(),
+    ]);
 
-    try {
-      const res = await watchdogAPI.getStatus();
-      if (!res) return;
-      setData(res.data);
-      setLastFetch(new Date());
-    } catch { /* keep stale */ }
+    const mainData     = mainRes.status     === 'fulfilled' ? mainRes.value?.data     : null;
+    const watchdogData = watchdogRes.status === 'fulfilled' ? watchdogRes.value?.data : null;
+
+    if (!mainData && !watchdogData) return; // both failed, keep stale
+
+    // Start with whichever source has incident data
+    const base = mainData || watchdogData;
+
+    // Always inject watchdog.services so Infrastructure section has data
+    // even when the main backend is healthy and doesn't include server metrics
+    const merged = {
+      ...base,
+      watchdog: {
+        ...(base?.watchdog || {}),
+        services: watchdogData?.watchdog?.services || base?.watchdog?.services || [],
+      },
+    };
+
+    setData(merged);
+    setLastFetch(new Date());
   }, []);
 
   const ping = useCallback(async () => {
