@@ -1,30 +1,27 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   QrCode, UserCheck, Users, X, ArrowLeft, Camera, CameraOff, Plus,
   Keyboard, AlertTriangle, Baby, User, Settings, Lock, Edit2, Trash2,
   Clock, CheckCircle2, Loader2, CheckCircle, Flag, AlertOctagon, XCircle, 
-  Mail, Phone, Copy, ExternalLink, Share2
+  Mail, Phone, Copy, ExternalLink, Share2, FileText, LogOut, Eye, EyeOff,
+  TrendingUp, ScanLine, BarChart2
 } from 'lucide-react';
 import { eventAPI } from '../services/api';
 import toast from 'react-hot-toast';
 import ManagerOverrideDialog from '../components/ManagerOverrideDialog';
 import SecuritySettingsPanel from '../components/SecuritySettingsPanel';
+import socketService from '../services/socket';
 
-/**
- * ═══════════════════════════════════════════════════════════════════════════
- * ENTERPRISE CHECK-IN SYSTEM - COMPLETE VERSION
- * Features:
- * - QR Code Scanning (using html5-qrcode library)
- * - Manual code entry
- * - PIN verification
- * - Security settings panel
- * - Invite link copying with QR code generation
- * - Manager override
- * - Real-time stats
- * - Haptic feedback (vibration)
- * ═══════════════════════════════════════════════════════════════════════════
- */
+// Simple JWT decode (not for security — only for reading role/username from stored token)
+function decodeJWT(token) {
+  try {
+    const base64 = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
+    return JSON.parse(atob(base64));
+  } catch { return null; }
+}
+
+
 
 // ═══════════════════════════════════════════════════════════════════════════
 // HAPTIC FEEDBACK UTILITIES
@@ -44,15 +41,123 @@ const hapticError = () => triggerHaptic([200, 100, 200]); // Double vibration fo
 const hapticWarning = () => triggerHaptic([100, 50, 100]); // Quick double for warning
 
 // ═══════════════════════════════════════════════════════════════════════════
+// STAFF LOGIN SCREEN
+// ═══════════════════════════════════════════════════════════════════════════
+function StaffLoginScreen({ eventId, eventTitle, onLogin }) {
+  const [username, setUsername] = useState('');
+  const [pin, setPin] = useState('');
+  const [showPin, setShowPin] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  const handleLogin = async (e) => {
+    e.preventDefault();
+    if (!username.trim() || !pin) { setError('Username and PIN are required'); return; }
+    setLoading(true);
+    setError('');
+    try {
+      const response = await eventAPI.staffLogin(eventId, username.trim(), pin);
+      const { token, role } = response.data;
+      localStorage.setItem('eventToken', token);
+      onLogin({ token, role, username: response.data.username });
+    } catch (err) {
+      setError(err.response?.data?.error || 'Invalid username or PIN');
+      setPin('');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-neutral-950 flex flex-col items-center justify-center p-6">
+      <div className="w-full max-w-sm">
+        {/* Logo / Brand */}
+        <div className="text-center mb-8">
+          <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-neutral-800 border border-neutral-700 flex items-center justify-center">
+            <ScanLine className="w-8 h-8 text-white" />
+          </div>
+          <h1 className="text-white text-2xl font-black mb-1">Check-in Staff Login</h1>
+          <p className="text-neutral-400 text-sm">{eventTitle || 'Event Check-in'}</p>
+        </div>
+
+        {/* Form */}
+        <form onSubmit={handleLogin} className="space-y-4">
+          <div>
+            <label className="block text-xs font-bold text-neutral-400 uppercase tracking-wider mb-2">Username</label>
+            <input
+              type="text"
+              value={username}
+              onChange={e => { setUsername(e.target.value); setError(''); }}
+              placeholder="Your staff username"
+              autoFocus
+              autoCapitalize="none"
+              autoCorrect="off"
+              spellCheck={false}
+              className="w-full bg-neutral-800 border border-neutral-700 text-white rounded-xl px-4 py-3 text-base focus:outline-none focus:border-neutral-500 placeholder-neutral-600"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-bold text-neutral-400 uppercase tracking-wider mb-2">PIN</label>
+            <div className="relative">
+              <input
+                type={showPin ? 'text' : 'password'}
+                value={pin}
+                onChange={e => { setPin(e.target.value.replace(/\D/g, '').slice(0, 8)); setError(''); }}
+                placeholder="4–8 digit PIN"
+                inputMode="numeric"
+                className="w-full bg-neutral-800 border border-neutral-700 text-white rounded-xl px-4 py-3 pr-12 text-base font-mono tracking-[0.3em] focus:outline-none focus:border-neutral-500 placeholder-neutral-600"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPin(v => !v)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-500 hover:text-neutral-300"
+              >
+                {showPin ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+              </button>
+            </div>
+          </div>
+
+          {error && (
+            <div className="bg-red-900/40 border border-red-700 rounded-xl px-4 py-3">
+              <p className="text-sm text-red-300 font-medium">{error}</p>
+            </div>
+          )}
+
+          <button
+            type="submit"
+            disabled={loading || !username.trim() || pin.length < 4}
+            className="w-full bg-white text-neutral-900 font-black rounded-xl py-3 text-base hover:bg-neutral-100 transition-all disabled:opacity-40 disabled:cursor-not-allowed mt-2 flex items-center justify-center gap-2"
+          >
+            {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <UserCheck className="w-5 h-5" />}
+            {loading ? 'Logging in...' : 'Log In to Check-in'}
+          </button>
+        </form>
+
+        <p className="text-center text-xs text-neutral-600 mt-6">
+          Contact your event organizer if you don't have a staff account
+        </p>
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
 // SUCCESS SCREEN
 // ═══════════════════════════════════════════════════════════════════════════
 function AdmitSuccessScreen({ guest, onDone }) {
-  // Auto-dismiss after 3 seconds
+  const [countdown, setCountdown] = useState(5);
+  const [paused, setPaused] = useState(false);
+
   useEffect(() => {
     hapticSuccess();
-    const timer = setTimeout(() => onDone(), 3000);
+  }, []);
+
+  useEffect(() => {
+    if (paused) return;
+    if (countdown <= 0) { onDone(); return; }
+    const timer = setTimeout(() => setCountdown(c => c - 1), 1000);
     return () => clearTimeout(timer);
-  }, [onDone]);
+  }, [countdown, paused, onDone]);
 
   return (
     <div className="fixed inset-0 bg-emerald-600 z-50 flex flex-col items-center justify-center p-8">
@@ -100,8 +205,24 @@ function AdmitSuccessScreen({ guest, onDone }) {
         </div>
         
         {/* Footer */}
-        <div className="bg-neutral-50 px-12 py-6 border-t border-neutral-200 text-center">
-          <p className="text-sm text-neutral-500">Auto-closing in 3 seconds...</p>
+        <div className="bg-neutral-50 px-12 py-6 border-t border-neutral-200 flex items-center justify-between">
+          <p className="text-sm text-neutral-500">
+            {paused ? 'Screen paused — tap Done when ready' : `Auto-closing in ${countdown}s...`}
+          </p>
+          <div className="flex gap-3">
+            <button
+              onClick={() => setPaused(v => !v)}
+              className="px-4 py-2 text-sm font-semibold text-neutral-600 border border-neutral-200 rounded-xl hover:bg-neutral-100 transition-all"
+            >
+              {paused ? 'Resume' : 'Keep Open'}
+            </button>
+            <button
+              onClick={onDone}
+              className="px-4 py-2 text-sm font-semibold bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 transition-all"
+            >
+              Done
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -272,7 +393,7 @@ function DenyScreen({ reason, message, details, onDone, canOverride, onOverride 
             {canOverride && (
               <button 
                 onClick={onOverride} 
-                className="flex-1 px-8 py-4 bg-yellow-500 text-yellow-900 text-xl font-bold rounded-lg hover:bg-yellow-400 transition-all"
+                className="flex-1 px-8 py-4 bg-white text-neutral-900 text-xl font-bold rounded-lg hover:bg-neutral-100 transition-all border-2 border-white/80"
               >
                 Manager Override
               </button>
@@ -902,6 +1023,22 @@ export default function EnterpriseCheckin() {
   const { eventId } = useParams();
   const navigate = useNavigate();
   
+  // Auth / staff gate
+  const [authState, setAuthState] = useState(() => {
+    const token = localStorage.getItem('eventToken');
+    if (!token) return { ready: false, role: null };
+    const decoded = decodeJWT(token);
+    if (!decoded) return { ready: false, role: null };
+    // Check token not expired
+    if (decoded.exp && decoded.exp * 1000 < Date.now()) {
+      localStorage.removeItem('eventToken');
+      return { ready: false, role: null };
+    }
+    // Must be organizer or staff
+    if (decoded.role !== 'organizer' && decoded.role !== 'staff') return { ready: false, role: null };
+    return { ready: true, role: decoded.role, username: decoded.username };
+  });
+
   const [event, setEvent] = useState(null);
   const [invites, setInvites] = useState([]);
   const [stats, setStats] = useState(null);
@@ -932,10 +1069,62 @@ export default function EnterpriseCheckin() {
   const [showSettingsPanel, setShowSettingsPanel] = useState(false);
 
   useEffect(() => {
-    if (eventId) {
+    if (eventId && authState.ready) {
       loadAllData();
     }
-  }, [eventId]);
+  }, [eventId, authState.ready]);
+
+  // Real-time socket updates
+  useEffect(() => {
+    if (!eventId || !authState.ready) return;
+    const token = localStorage.getItem('eventToken');
+    if (!token) return;
+    
+    const socket = socketService.connect(token);
+    if (socket) {
+      socket.emit('join_event', eventId);
+      socket.on('guest_checked_in', () => {
+        loadInvites();
+        loadStats();
+      });
+    }
+    return () => {
+      if (socket) {
+        socket.off('guest_checked_in');
+      }
+    };
+  }, [eventId, authState.ready]);
+
+  // Keyboard shortcuts: S = scan, Escape = close
+  useEffect(() => {
+    const handler = (e) => {
+      // Don't fire if typing in an input
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+      if (e.key === 's' || e.key === 'S') {
+        if (!scanMode && !currentGuest && !showAdmitSuccess && !showDenyScreen && !showOverrideDialog) {
+          resetScan();
+          setScanMode(true);
+        }
+      }
+      if (e.key === 'Escape') {
+        if (scanMode) setScanMode(false);
+        if (showManual) setShowManual(false);
+        if (showSettingsPanel) setShowSettingsPanel(false);
+        if (showInviteDialog) { setShowInviteDialog(false); setEditingInvite(null); }
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [scanMode, currentGuest, showAdmitSuccess, showDenyScreen, showOverrideDialog, showManual, showSettingsPanel, showInviteDialog]);
+
+  const handleStaffLogin = ({ token, role, username }) => {
+    setAuthState({ ready: true, role, username });
+  };
+
+  const handleStaffLogout = () => {
+    localStorage.removeItem('eventToken');
+    setAuthState({ ready: false, role: null });
+  };
 
   const loadAllData = async () => {
     console.log('🔄 Starting to load check-in data...');
@@ -1203,7 +1392,25 @@ export default function EnterpriseCheckin() {
       invite.guestEmail?.toLowerCase().includes(q)
     );
   });
-  
+
+  // Sort: pending guests first, checked-in guests at bottom
+  const sorted = [...filtered].sort((a, b) => {
+    if (a.checkedIn && !b.checkedIn) return 1;
+    if (!a.checkedIn && b.checkedIn) return -1;
+    return 0;
+  });
+
+  // Staff login gate
+  if (!authState.ready) {
+    return (
+      <StaffLoginScreen
+        eventId={eventId}
+        eventTitle={event?.title}
+        onLogin={handleStaffLogin}
+      />
+    );
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen bg-neutral-50 flex items-center justify-center">
@@ -1304,6 +1511,7 @@ export default function EnterpriseCheckin() {
       {showSettingsPanel && (
         <SecuritySettingsPanel
           eventId={eventId}
+          userRole={authState.role}
           onClose={() => setShowSettingsPanel(false)}
           onSettingsUpdated={() => {
             loadSettings();
@@ -1315,12 +1523,21 @@ export default function EnterpriseCheckin() {
       <header className="bg-white border-b border-neutral-200 sticky top-0 z-10">
         <div className="max-w-5xl mx-auto px-6 h-14 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <button onClick={() => navigate(`/event/${eventId}`)} className="p-1.5 hover:bg-neutral-100 rounded-lg transition-colors">
-              <ArrowLeft className="w-4 h-4" />
-            </button>
+            {authState.role === 'organizer' && (
+              <button onClick={() => navigate(`/event/${eventId}`)} className="p-1.5 hover:bg-neutral-100 rounded-lg transition-colors">
+                <ArrowLeft className="w-4 h-4" />
+              </button>
+            )}
             <div>
               <h1 className="text-sm font-bold text-neutral-900 truncate max-w-[180px]">{event?.title || 'Event'}</h1>
-              <p className="text-xs text-neutral-400">Enterprise Check-in</p>
+              <div className="flex items-center gap-1.5">
+                <p className="text-xs text-neutral-400">Check-in</p>
+                {authState.username && (
+                  <span className={`text-xs font-semibold px-1.5 py-0.5 rounded ${authState.role === 'staff' ? 'bg-blue-100 text-blue-700' : 'bg-emerald-100 text-emerald-700'}`}>
+                    {authState.role === 'staff' ? '👷 ' : '⭐ '}{authState.username}
+                  </span>
+                )}
+              </div>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -1332,13 +1549,15 @@ export default function EnterpriseCheckin() {
               <Settings className="w-3.5 h-3.5" />
               <span className="hidden sm:inline">Settings</span>
             </button>
-            <button
-              onClick={() => setShowInviteDialog(true)}
-              className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-xl hover:bg-emerald-100 transition-all"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Add Guest</span>
-            </button>
+            {authState.role === 'organizer' && (
+              <button
+                onClick={() => setShowInviteDialog(true)}
+                className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-xl hover:bg-emerald-100 transition-all"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Add Guest</span>
+              </button>
+            )}
             <button
               onClick={() => setShowManual(v => !v)}
               className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-neutral-600 border border-neutral-200 rounded-xl hover:bg-neutral-50 transition-all"
@@ -1355,7 +1574,18 @@ export default function EnterpriseCheckin() {
             >
               <Camera className="w-4 h-4" />
               Scan QR
+              <span className="hidden lg:inline text-xs text-white/60 font-normal ml-1">[S]</span>
             </button>
+            {authState.role === 'staff' && (
+              <button
+                onClick={handleStaffLogout}
+                title="Log out of check-in"
+                className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-neutral-500 border border-neutral-200 rounded-xl hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition-all"
+              >
+                <LogOut className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Log Out</span>
+              </button>
+            )}
           </div>
         </div>
         {showManual && (
@@ -1374,6 +1604,10 @@ export default function EnterpriseCheckin() {
                 placeholder="Enter invite code e.g. AB12CD34"
                 className="flex-1 border border-neutral-200 rounded-xl px-4 py-2.5 text-sm font-mono tracking-widest focus:outline-none focus:border-neutral-400 bg-white"
                 autoFocus
+                autoCapitalize="characters"
+                autoCorrect="off"
+                spellCheck={false}
+                inputMode="text"
               />
               <button type="submit" disabled={!manualCode.trim()} className="px-4 py-2.5 bg-neutral-900 text-white rounded-xl text-sm font-semibold disabled:opacity-40 hover:bg-black transition-all">
                 Verify
@@ -1388,7 +1622,7 @@ export default function EnterpriseCheckin() {
           {[
             { label: 'Total Groups', value: stats?.total ?? invites.length, color: 'text-neutral-900' },
             { label: 'Checked In', value: stats?.checkedIn ?? 0, color: 'text-emerald-600' },
-            { label: 'Total Expected', value: stats?.totalExpectedAttendees ?? 0, color: 'text-blue-600' },
+            { label: 'Total Admitted', value: stats?.totalActualAttendees ?? invites.filter(i => i.checkedIn).reduce((s, i) => s + (i.actualAttendees || i.groupSize || 1), 0), color: 'text-emerald-700' },
             { label: 'Adults Expected', value: stats?.totalExpectedAdults ?? 0, color: 'text-neutral-600' },
             { label: 'Children', value: stats?.totalExpectedChildren ?? 0, color: 'text-indigo-600' },
           ].map(({ label, value, color }) => (
@@ -1400,21 +1634,37 @@ export default function EnterpriseCheckin() {
         </div>
         
         <div className="bg-white rounded-2xl border border-neutral-200">
+          {/* Progress bar */}
+          {invites.length > 0 && (() => {
+            const pct = Math.round(((stats?.checkedIn ?? invites.filter(i => i.checkedIn).length) / invites.length) * 100);
+            return (
+              <div className="px-6 pt-4 pb-2">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-xs font-semibold text-neutral-500">Check-in progress</span>
+                  <span className="text-xs font-bold text-emerald-600">{pct}%</span>
+                </div>
+                <div className="w-full h-2 bg-neutral-100 rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-emerald-500 rounded-full transition-all duration-500"
+                    style={{ width: `${pct}%` }}
+                  />
+                </div>
+              </div>
+            );
+          })()}
           <div className="px-6 py-4 border-b border-neutral-100 flex items-center gap-3 flex-wrap">
             <h2 className="text-base font-bold text-neutral-900 flex-1">Guest List</h2>
-            {invites.length > 5 && (
-              <input
-                type="text"
-                placeholder="Search…"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="border border-neutral-200 rounded-xl px-4 py-2 text-sm focus:outline-none focus:border-neutral-400 w-48"
-              />
-            )}
+            <input
+              type="text"
+              placeholder="Search…"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="border border-neutral-200 rounded-xl px-4 py-2 text-sm focus:outline-none focus:border-neutral-400 w-48"
+            />
           </div>
           
           <div className="divide-y divide-neutral-100">
-            {filtered.length === 0 ? (
+            {sorted.length === 0 ? (
               <div className="text-center py-12 text-neutral-400 text-sm">
                 {invites.length === 0 ? (
                   <div>
@@ -1432,7 +1682,7 @@ export default function EnterpriseCheckin() {
                 )}
               </div>
             ) : (
-              filtered.map((invite) => {
+              sorted.map((invite) => {
                 const adults = invite.adults || 1;
                 const children = invite.children || 0;
                 const total = adults + children;
@@ -1455,6 +1705,9 @@ export default function EnterpriseCheckin() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
                         <p className="text-sm font-semibold text-neutral-900">{invite.guestName}</p>
+                        {invite.notes && (
+                          <span title={invite.notes} className="text-base cursor-help" aria-label="Has notes">📝</span>
+                        )}
                       </div>
                       <div className="flex items-center gap-3 mt-0.5 text-xs text-neutral-400 flex-wrap">
                         <span className="font-mono font-medium">{invite.inviteCode}</span>
