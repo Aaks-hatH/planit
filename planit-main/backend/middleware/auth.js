@@ -187,9 +187,48 @@ const verifyAdmin = (req, res, next) => {
   }
 };
 
+// Verify user is organizer OR check-in staff
+// Used for check-in-only routes that staff should be able to access
+const verifyCheckinAccess = async (req, res, next) => {
+  try {
+    const eventId = req.params.eventId || req.body.eventId;
+    const event = await getCachedEvent(eventId);
+
+    if (!event) {
+      return res.status(404).json({ error: 'Event not found.' });
+    }
+
+    const token = req.headers.authorization?.split(' ')[1] ||
+                  req.headers['x-event-token'] ||
+                  req.cookies?.[`event_${eventId}`];
+
+    if (!token) {
+      return res.status(401).json({ error: 'Authentication required.' });
+    }
+
+    try {
+      const decoded = jwt.verify(token, secrets.jwt);
+      const role = decoded.role;
+
+      if (role !== 'organizer' && role !== 'staff') {
+        return res.status(403).json({ error: 'Check-in staff or organizer access required.' });
+      }
+
+      req.event = event;
+      req.eventAccess = decoded;
+      next();
+    } catch (err) {
+      return res.status(401).json({ error: 'Invalid or expired token.' });
+    }
+  } catch (error) {
+    res.status(500).json({ error: 'Server error verifying access.' });
+  }
+};
+
 module.exports = {
   verifyToken,
   verifyEventAccess,
   verifyOrganizer,
+  verifyCheckinAccess,
   verifyAdmin
 };
