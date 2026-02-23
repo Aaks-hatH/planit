@@ -708,13 +708,16 @@ export default function StarBackground({ fixed=true, starCount=null }) {
     window.addEventListener('scroll',onScroll,{passive:true});
 
     function resize(){
-      const newW = canvas.offsetWidth;
+      // Use window.innerWidth — more reliable than canvas.offsetWidth on iOS
+      // Safari where a fixed-position canvas can report a slightly narrow
+      // offsetWidth, leaving a 1-5px dark strip on the right edge.
+      const newW = window.innerWidth;
       // On mobile, lock height to screen.availHeight — the physical screen size.
       // This never changes when the iOS address bar shows/hides, so we avoid
       // triggering a MW re-render from a trivial ~50px viewport fluctuation.
       const newH = isMobile
         ? (window.screen?.availHeight || window.innerHeight)
-        : canvas.offsetHeight;
+        : window.innerHeight;
 
       // Skip if the change is tiny (iOS address bar = ~50px). Threshold of 80px
       // means real orientation changes still trigger a proper resize.
@@ -858,11 +861,15 @@ export default function StarBackground({ fixed=true, starCount=null }) {
   const style = {
     position: fixed ? 'fixed' : 'absolute',
     top: 0, left: 0, right: 0,
+    // Explicit width:100vw ensures the canvas CSS box covers the full viewport
+    // width even if the browser reports a slightly different offsetWidth.
+    // Without this, iOS Safari can leave a 1-5px dark strip on the right edge.
+    width: '100vw',
     bottom: fixed ? 0 : undefined,
-    height: fixed ? '100%' : '100vh',
+    height: fixed ? '100dvh' : '100vh',
     pointerEvents: 'none',
     zIndex: 0,
-    background: '#000',
+    background: '#06060c',  // match root bg so any uncovered edge blends in
     // GPU compositing hints — critical on mobile to prevent scroll repaints
     transform: 'translateZ(0)',
     WebkitTransform: 'translateZ(0)',
