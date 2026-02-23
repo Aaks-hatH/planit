@@ -272,114 +272,104 @@ function CategorySection({ category, incidents, online, defaultOpen }) {
   );
 }
 
-// ─── Server Health Row ────────────────────────────────────────────────────────
+// ─── Server Health Row — UptimeRobot style ────────────────────────────────────
+//
+// Layout mirrors the screenshot exactly:
+//   Name  |  XX.XXX%                              (dot) Operational
+//   [████████████████████████████████████████████████]
+//
+// No URLs, no pills, no icons, no emojis. Just name, percentage, bars, status.
 
 function ServerHealthRow({ server, uptimeHistory }) {
   const isDown   = server.status === 'down';
   const histDays = uptimeHistory?.services?.[server.name]?.days ?? null;
   const bars     = buildServerBars(histDays, isDown);
   const pct      = uptimeHistory?.services?.[server.name]?.uptimePct ?? null;
-  const latency  = formatLatency(server.lastPingMs);
-  const ago      = timeAgo(server.lastPingAt);
 
-  const typeLabel = server.type === 'router'  ? 'Load Balancer'
-    : server.type === 'backend' ? 'API Server'    : server.type;
-  const typeStyle = server.type === 'router'
-    ? { bg: '#ede9fe', color: '#7c3aed' }
-    : { bg: '#f0f9ff', color: '#0369a1' };
+  // Label shown next to the name — region if set, otherwise type
+  const subLabel = server.region
+    ? server.region
+    : server.type === 'router' ? 'Load Balancer' : null;
 
-  // Region badge e.g. "US East (Virginia)"
-  const regionStyle = { bg: '#f0fdf4', color: '#15803d' };
+  const statusColor = isDown ? '#e53e3e' : '#38a169';
+  const statusText  = isDown ? 'Offline'  : 'Operational';
 
   return (
-    <div style={{ padding: '16px 20px', borderBottom: '1px solid #f3f4f6' }}>
-      {/* Header row */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flex: 1, minWidth: 0 }}>
-          {/* Animated dot */}
-          <div style={{ position: 'relative', width: '18px', height: '18px', flexShrink: 0 }}>
+    <div style={{
+      padding: '18px 0',
+      borderBottom: '1px solid #edf2f7',
+    }}>
+      {/* Top row: name + pct on left, dot + status on right */}
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        marginBottom: '10px',
+      }}>
+        {/* Left: name, optional sub-label, separator, percentage */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', minWidth: 0, flex: 1 }}>
+          <span style={{
+            fontSize: '15px', fontWeight: '500', color: '#1a202c',
+            fontFamily: '"DM Sans", sans-serif', whiteSpace: 'nowrap',
+          }}>
+            {server.name}
+          </span>
+          {subLabel && (
+            <>
+              <span style={{ color: '#cbd5e0', fontSize: '13px', userSelect: 'none' }}>·</span>
+              <span style={{
+                fontSize: '13px', color: '#718096',
+                fontFamily: '"DM Sans", sans-serif', whiteSpace: 'nowrap',
+              }}>
+                {subLabel}
+              </span>
+            </>
+          )}
+          {pct !== null && (
+            <>
+              <span style={{ color: '#cbd5e0', fontSize: '13px', userSelect: 'none' }}>|</span>
+              <span style={{
+                fontSize: '13px', fontWeight: '500',
+                color: isDown ? '#e53e3e' : '#38a169',
+                fontFamily: '"DM Sans", sans-serif',
+              }}>
+                {pct}%
+              </span>
+            </>
+          )}
+        </div>
+
+        {/* Right: coloured dot + status label */}
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: '7px',
+          flexShrink: 0, marginLeft: '16px',
+        }}>
+          {/* Pulsing dot when up, static when down */}
+          <div style={{ position: 'relative', width: '10px', height: '10px', flexShrink: 0 }}>
             <div style={{
-              width: '18px', height: '18px', borderRadius: '50%',
-              background: isDown ? '#ef4444' : '#22c55e',
+              width: '10px', height: '10px', borderRadius: '50%',
+              background: statusColor,
             }} />
             {!isDown && (
               <div style={{
                 position: 'absolute', inset: 0, borderRadius: '50%',
-                background: '#22c55e', opacity: 0.4,
+                background: statusColor, opacity: 0.35,
                 animation: 'pingPulse 2s ease-out infinite',
               }} />
             )}
           </div>
-
-          <div style={{ minWidth: 0, flex: 1 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-              {/* Codename — the main identifier */}
-              <span style={{ fontSize: '14px', fontWeight: '700', color: '#111827', fontFamily: '"DM Sans", sans-serif' }}>
-                {server.name}
-              </span>
-              {/* Type pill */}
-              <span style={{
-                fontSize: '10px', fontWeight: '600', letterSpacing: '0.04em',
-                textTransform: 'uppercase', padding: '2px 8px', borderRadius: '999px',
-                background: typeStyle.bg, color: typeStyle.color,
-                fontFamily: '"DM Sans", sans-serif',
-              }}>
-                {typeLabel}
-              </span>
-              {/* Region pill — shown when available, e.g. "US East (Virginia)" */}
-              {server.region && server.type !== 'router' && (
-                <span style={{
-                  fontSize: '10px', fontWeight: '500', letterSpacing: '0.03em',
-                  padding: '2px 8px', borderRadius: '999px',
-                  background: regionStyle.bg, color: regionStyle.color,
-                  fontFamily: '"DM Sans", sans-serif',
-                }}>
-                  {server.region}
-                </span>
-              )}
-            </div>
-            {server.url && (
-              <span style={{
-                fontSize: '11px', color: '#9ca3af', fontFamily: '"DM Sans", sans-serif',
-                display: 'block', marginTop: '2px',
-                overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                maxWidth: '360px',
-              }}>
-                {server.url.replace(/^https?:\/\//, '')}
-              </span>
-            )}
-          </div>
-        </div>
-
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px', flexShrink: 0, marginLeft: '12px' }}>
-          <span style={{ fontSize: '12px', fontWeight: '700', color: isDown ? '#dc2626' : '#16a34a', fontFamily: '"DM Sans", sans-serif' }}>
-            {isDown ? 'Offline' : 'Operational'}
+          <span style={{
+            fontSize: '14px', fontWeight: '500', color: statusColor,
+            fontFamily: '"DM Sans", sans-serif',
+          }}>
+            {statusText}
           </span>
-          <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
-            {latency && !isDown && (
-              <span style={{ fontSize: '11px', color: '#6b7280', background: '#f3f4f6', borderRadius: '4px', padding: '2px 6px', fontFamily: '"DM Sans", sans-serif' }}>
-                {latency}
-              </span>
-            )}
-            {ago && (
-              <span style={{ fontSize: '11px', color: '#9ca3af', fontFamily: '"DM Sans", sans-serif' }}>
-                {ago}
-              </span>
-            )}
-          </div>
         </div>
       </div>
 
-      {/* Uptime bars */}
-      <div style={{ display: 'flex', gap: '3px', width: '100%', overflow: 'hidden' }}>
+      {/* Bars — full width, no gap label row underneath */}
+      <div style={{ display: 'flex', gap: '2px', width: '100%' }}>
         {bars.map((bar, i) => <UptimeBar key={i} bar={bar} index={i} />)}
-      </div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '5px' }}>
-        <span style={{ fontSize: '11px', color: '#9ca3af', fontFamily: '"DM Sans", sans-serif' }}>15 days ago</span>
-        <span style={{ fontSize: '11px', color: '#9ca3af', fontFamily: '"DM Sans", sans-serif' }}>
-          {pct !== null ? `${pct}% uptime` : 'Collecting data…'}
-        </span>
-        <span style={{ fontSize: '11px', color: '#9ca3af', fontFamily: '"DM Sans", sans-serif' }}>Today</span>
       </div>
     </div>
   );
@@ -388,87 +378,25 @@ function ServerHealthRow({ server, uptimeHistory }) {
 // ─── Infrastructure Section ───────────────────────────────────────────────────
 
 function InfrastructureSection({ servers, uptimeHistory }) {
-  const [expanded, setExpanded] = useState(true);
   if (!servers || servers.length === 0) return null;
 
-  const downCount = servers.filter(s => s.status === 'down').length;
-  const allOk     = downCount === 0;
-
-  // Router first, then backends sorted by name
+  // Router first, then backends in original order (already ordered by BACKEND_LABELS index)
   const sorted = [...servers].sort((a, b) => {
     if (a.type === 'router' && b.type !== 'router') return -1;
     if (a.type !== 'router' && b.type === 'router') return  1;
-    return a.name.localeCompare(b.name);
+    return 0;
   });
 
   return (
-    <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: '12px', overflow: 'hidden' }}>
-      <button
-        onClick={() => setExpanded(e => !e)}
-        style={{ width: '100%', background: 'none', border: 'none', padding: '18px 20px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '12px', textAlign: 'left', transition: 'background 0.1s' }}
-        onMouseEnter={e => e.currentTarget.style.background = '#f9fafb'}
-        onMouseLeave={e => e.currentTarget.style.background = 'none'}
-      >
-        {/* Server rack icon */}
-        <div style={{
-          width: '38px', height: '38px', borderRadius: '8px', flexShrink: 0,
-          background: allOk ? '#f0fdf4' : '#fef2f2',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          border: `1px solid ${allOk ? '#bbf7d0' : '#fecaca'}`,
-        }}>
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
-            stroke={allOk ? '#16a34a' : '#dc2626'}
-            strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-            <rect x="2" y="3" width="20" height="5" rx="1" />
-            <rect x="2" y="10" width="20" height="5" rx="1" />
-            <rect x="2" y="17" width="20" height="4" rx="1" />
-            <circle cx="6" cy="5.5" r="0.8" fill={allOk ? '#16a34a' : '#dc2626'} />
-            <circle cx="6" cy="12.5" r="0.8" fill={allOk ? '#16a34a' : '#dc2626'} />
-            <circle cx="6" cy="19" r="0.8" fill={allOk ? '#16a34a' : '#dc2626'} />
-          </svg>
-        </div>
-
-        <div style={{ flex: 1 }}>
-          <span style={{ fontSize: '15px', fontWeight: '700', color: '#111827', fontFamily: '"DM Sans", sans-serif', display: 'block' }}>
-            Infrastructure
-          </span>
-          <span style={{ fontSize: '12px', color: '#6b7280', fontFamily: '"DM Sans", sans-serif' }}>
-            {servers.length} server{servers.length !== 1 ? 's' : ''} monitored
-          </span>
-        </div>
-
-        <span style={{ fontSize: '12px', fontWeight: '700', color: allOk ? '#16a34a' : '#dc2626', fontFamily: '"DM Sans", sans-serif' }}>
-          {allOk ? 'All servers healthy' : `${downCount} offline`}
-        </span>
-
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2"
-          style={{ flexShrink: 0, transition: 'transform 0.2s', transform: expanded ? 'rotate(180deg)' : 'rotate(0deg)' }}>
-          <polyline points="6 9 12 15 18 9" />
-        </svg>
-      </button>
-
-      {expanded && (
-        <div style={{ borderTop: '1px solid #f3f4f6', animation: 'expandIn 0.18s ease both' }}>
-          {/* Legend row */}
-          <div style={{ padding: '10px 20px', background: '#fafafa', borderBottom: '1px solid #f3f4f6', display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
-            {[
-              { color: '#22c55e', label: 'Operational' },
-              { color: '#f97316', label: 'Degraded (< 99%)' },
-              { color: '#ef4444', label: 'Outage (< 80%)' },
-              { color: '#e5e7eb', label: 'No data yet' },
-            ].map(({ color, label }) => (
-              <div key={label} style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-                <div style={{ width: '10px', height: '10px', borderRadius: '2px', background: color }} />
-                <span style={{ fontSize: '11px', color: '#6b7280', fontFamily: '"DM Sans", sans-serif' }}>{label}</span>
-              </div>
-            ))}
-          </div>
-
-          {sorted.map((server, i) => (
-            <ServerHealthRow key={i} server={server} uptimeHistory={uptimeHistory} />
-          ))}
-        </div>
-      )}
+    <div style={{
+      background: '#fff',
+      border: '1px solid #e5e7eb',
+      borderRadius: '12px',
+      padding: '4px 24px 8px',
+    }}>
+      {sorted.map((server, i) => (
+        <ServerHealthRow key={i} server={server} uptimeHistory={uptimeHistory} />
+      ))}
     </div>
   );
 }
