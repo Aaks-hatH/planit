@@ -671,7 +671,7 @@ export default function Status() {
   // servers come from watchdog.services — names are exactly what you set in
   // BACKEND_LABELS on the watchdog. Only include entries that have a URL
   // (i.e., they were actually configured and running).
-  const servers = (data?.watchdog?.services || []).filter(s => s.url);
+  const servers = (data?.watchdog?.services || []).filter(s => s.name);
 
   const bannerState =
     !online                    ? 'offline'   :
