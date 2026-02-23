@@ -161,7 +161,7 @@ export default function About() {
         { href: '#no-account',       label: 'No-account tradeoffs'           },
         { href: '#status-system',    label: 'Status system'                  },
         { href: '#watchdog',         label: 'Watchdog monitoring'            },
-        { href: '#open-source',      label: 'Open source & license'          },
+        { href: '#license',          label: 'License and permitted use'      },
       ]
     },
     {
@@ -1320,31 +1320,33 @@ export default function About() {
             </Callout>
           </Section>
 
-          {/* ─── OPEN SOURCE ─────────────────────────────────────── */}
-          <Section id="open-source">
+          {/* ─── LICENSE ─────────────────────────────────────────── */}
+          <Section id="license">
             <SectionTitle
-              icon={Globe}
-              title="Open source and license"
-              subtitle="PlanIt is free and open source software, released under the GNU Affero General Public License version 3 (AGPLv3). The license has specific implications worth understanding if you are running, modifying, or building on this software."
+              icon={Shield}
+              title="License and permitted use"
+              subtitle="PlanIt is proprietary software. All rights are reserved by the author. The terms below govern what you are and are not permitted to do with the software."
             />
-            <p className="text-neutral-500 leading-relaxed mb-4">
-              The AGPLv3 is a copyleft license specifically designed for network server software. It extends the protections of the standard GPL to cover the SaaS deployment scenario: if you run a modified version of PlanIt on a server and make it available to users over a network, you are required to make your modified source code publicly available under the same license. You cannot take PlanIt, add proprietary features, and run a closed-source fork that serves users without releasing those changes.
-            </p>
-            <p className="text-neutral-500 leading-relaxed mb-4">
-              Using PlanIt unmodified — running it as-is for your own events or your organization's events — does not require you to publish anything. The source availability requirement is triggered by distributing a modified version or offering modified software as a networked service to others.
+            <p className="text-neutral-500 leading-relaxed mb-6">
+              PlanIt is not open source software. The source code may be visible in a public repository for reference purposes only. Visibility does not grant any rights to use, copy, deploy, or build upon the code beyond what is explicitly permitted below.
             </p>
             <FeatureRow
-              icon={ShieldCheck}
-              title="What the license means for you"
-              description="If you are an organizer using PlanIt to plan events: the license does not affect you at all. Use the platform freely. If you are a developer self-hosting PlanIt without modification: same situation — no source release required. If you are a developer who has modified PlanIt and is running a public-facing instance of your modified version: you must make your modified source available to users, typically by linking to a public repository."
+              icon={CheckCircle2}
+              title="What you can do"
+              description="You can use the publicly hosted version of PlanIt at planitapp.onrender.com for planning your events. You can view the source code for personal educational reference. You can submit bug reports or suggestions to the maintainer."
+            />
+            <FeatureRow
+              icon={Ban}
+              title="What you cannot do"
+              description="You may not copy, clone, fork, or download the source code to deploy your own instance. You may not use PlanIt's code, architecture, or design as the basis for any other product or service, commercial or otherwise. You may not distribute, sublicense, or transfer any portion of the software to any third party."
             />
             <FeatureRow
               icon={Key}
-              title="The license integrity system"
-              description="The backend includes a cryptographic license integrity verification system that runs at startup and every 4 hours. This system uses HMAC proof chains derived from the deployment's license key to verify that the server configuration is valid. If the verification fails — for example, if someone attempts to tamper with the license key or run an unauthorized copy — the server refuses to start or shuts down. This is a technical enforcement layer on top of the legal protections of the AGPLv3."
+              title="License integrity enforcement"
+              description="The backend includes a cryptographic license verification system that runs at startup and every 4 hours. It uses HMAC proof chains derived from the deployment's license key to verify the server is an authorized instance. If verification fails, the server refuses to start. This is a technical enforcement layer that makes unauthorized deployments non-functional, not just unauthorized."
             />
-            <Callout>
-              The full text of the GNU Affero General Public License v3 is included at the top of the backend server's source file. The canonical text and further information about the license are available at gnu.org/licenses/agpl-3.0.html.
+            <Callout accent>
+              All rights to PlanIt — including the source code, design, architecture, and visual assets — are the exclusive property of Aakshat Hariharan. For licensing inquiries or permission requests, reach out through the support page.
             </Callout>
           </Section>
 
