@@ -298,15 +298,10 @@ router.post('/:eventId/checkin-with-override/:inviteCode',
         });
       }
 
-      // Check if already checked in (override can't undo check-ins)
-      if (invite.checkedIn) {
-        return res.status(400).json({
-          error: 'Already checked in',
-          message: 'This ticket was already used. Override cannot reverse check-ins.',
-          checkedInAt: invite.checkedInAt,
-          checkedInBy: invite.checkedInBy,
-        });
-      }
+      // If already checked in, a manager override allows re-admission (e.g. app glitch, returning guest)
+      // Track the previous check-in info for the audit trail
+      const previousCheckedInAt = invite.checkedIn ? invite.checkedInAt : null;
+      const previousCheckedInBy = invite.checkedIn ? invite.checkedInBy : null;
 
       const event = await Event.findById(eventId).select('checkinSettings').lean();
       const settings = event?.checkinSettings || {};
@@ -340,8 +335,8 @@ router.post('/:eventId/checkin-with-override/:inviteCode',
       invite.blockedAt = null;
       invite.blockedBy = null;
 
-      // Add to check-in history with override flag
-      invite.checkInHistory.push({
+      // Add to check-in history with override flag (and re-admission info if applicable)
+      const historyEntry = {
         checkedInAt: checkInTime,
         checkedInBy: staffUser,
         actualAttendees: invite.actualAttendees,
@@ -349,7 +344,13 @@ router.post('/:eventId/checkin-with-override/:inviteCode',
         overrideBy: decoded.managerUsername,
         overrideReason: decoded.reason,
         originalBlockReason: originalBlockReason,
-      });
+      };
+      if (previousCheckedInAt) {
+        historyEntry.reAdmission = true;
+        historyEntry.previousCheckedInAt = previousCheckedInAt;
+        historyEntry.previousCheckedInBy = previousCheckedInBy;
+      }
+      invite.checkInHistory.push(historyEntry);
 
       // Add security flag documenting the override
       await invite.addSecurityFlag(
@@ -369,7 +370,8 @@ router.post('/:eventId/checkin-with-override/:inviteCode',
       await invite.save();
 
       // Log to console for audit
-      console.log(`[OVERRIDE] EXECUTED - Manager: ${decoded.managerUsername}, Staff: ${staffUser}, Invite: ${inviteCode}, Guest: ${invite.guestName}, Reason: ${decoded.reason}`);
+      const actionType = previousCheckedInAt ? 'RE-ADMISSION' : 'EXECUTED';
+      console.log(`[OVERRIDE] ${actionType} - Manager: ${decoded.managerUsername}, Staff: ${staffUser}, Invite: ${inviteCode}, Guest: ${invite.guestName}, Reason: ${decoded.reason}${previousCheckedInAt ? `, Previously checked in at: ${previousCheckedInAt}` : ''}`);
 
       // Real-time notification with override flag
       const io = req.app.get('io');
@@ -411,6 +413,8 @@ router.post('/:eventId/checkin-with-override/:inviteCode',
           executedBy: staffUser,
           wasBlocked,
           originalBlockReason,
+          reAdmission: !!previousCheckedInAt,
+          ...(previousCheckedInAt ? { previousCheckedInAt, previousCheckedInBy } : {}),
         }
       });
       
