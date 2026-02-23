@@ -97,6 +97,16 @@ export const eventAPI = {
   getCheckInStats: (eventId) => api.get(`/events/${eventId}/checkin-stats`),
   getCheckInSettings: (eventId) => api.get(`/events/${eventId}/checkin-settings`),
   updateCheckInSettings: (eventId, settings) => api.patch(`/events/${eventId}/checkin-settings`, settings),
+
+  // Staff Check-in Accounts
+  staffLogin: (eventId, username, pin) => api.post(`/events/${eventId}/staff-login`, { username, pin }),
+  getStaff: (eventId) => api.get(`/events/${eventId}/staff`),
+  createStaff: (eventId, data) => api.post(`/events/${eventId}/staff`, data),
+  deleteStaff: (eventId, username) => api.delete(`/events/${eventId}/staff/${username}`),
+  updateStaffPin: (eventId, username, pin) => api.patch(`/events/${eventId}/staff/${username}/pin`, { pin }),
+
+  // Override History (audit trail)
+  getOverrideHistory: (eventId) => api.get(`/events/${eventId}/override-history`),
 };
 
 export const chatAPI = {
