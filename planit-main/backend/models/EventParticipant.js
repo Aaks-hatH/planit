@@ -10,7 +10,7 @@ const eventParticipantSchema = new mongoose.Schema({
   // bcrypt-hashed account password (optional — guests can still join without one)
   password:     { type: String, select: false },
   hasPassword:  { type: Boolean, default: false },
-  role:         { type: String, enum: ['organizer', 'participant'], default: 'participant' },
+  role:         { type: String, enum: ['organizer', 'participant', 'staff'], default: 'participant' },
   joinedAt:     { type: Date, default: Date.now },
   lastSeenAt:   { type: Date, default: Date.now },
 }, { timestamps: true });
