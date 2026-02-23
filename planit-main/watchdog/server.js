@@ -342,7 +342,7 @@ async function pingTarget(target) {
       s.isDown    = false;
       s.downSince = null;
 
-      console.log(`[${ts()}] ✅ ${target.name} RECOVERED after ${mins}m — ${ms}ms`);
+      console.log(`[${ts()}] ${target.name} RECOVERED after ${mins}m — ${ms}ms`);
 
       if (s.activeIncidentId) {
         await resolveDownIncident(target, s.activeIncidentId, downtimeMs);
@@ -351,7 +351,7 @@ async function pingTarget(target) {
 
       const ref = target.type === 'router' ? 'Load Balancer' : `the ${target.name} server`;
       await sendNtfy({
-        title:    `✅ ${target.name} — Back Online`,
+        title:    `${target.name} — Back Online`,
         message:  `${ref} is back online and operating normally.\nDowntime: ${mins < 1 ? '<1' : mins} minute(s)\nResponse time: ${ms}ms\nIncident auto-resolved on status page.`,
         priority: 'high',
         tags:     ['white_check_mark', 'tada'],
@@ -359,7 +359,7 @@ async function pingTarget(target) {
     } else {
       // Healthy — log every 10 pings to keep logs readable
       if (s.totalPings % 10 === 0 || s.totalPings <= 2) {
-        console.log(`[${ts()}] 💚 ${target.name} OK — ${ms}ms (ping #${s.totalPings})`);
+        console.log(`[${ts()}] ${target.name} OK — ${ms}ms (ping #${s.totalPings})`);
       }
     }
 
@@ -372,21 +372,21 @@ async function pingTarget(target) {
 
     UptimeCheck.create({ service: target.name, status: 'down', error: err.message }).catch(() => {});
 
-    console.warn(`[${ts()}] ⚠ ${target.name} FAILED (${s.consecutiveFailures}/${THRESHOLD}): ${err.message}`);
+    console.warn(`[${ts()}] ${target.name} FAILED (${s.consecutiveFailures}/${THRESHOLD}): ${err.message}`);
 
     // Threshold hit — declare down
     if (s.consecutiveFailures === THRESHOLD && !s.isDown) {
       s.isDown    = true;
       s.downSince = Date.now();
 
-      console.error(`[${ts()}] 🔴 ${target.name} DOWN — writing incident to DB`);
+      console.error(`[${ts()}] ${target.name} DOWN — writing incident to DB`);
 
       const incidentId   = await createDownIncident(target, err.message);
       s.activeIncidentId = incidentId;
 
       const downRef = target.type === 'router' ? 'Load Balancer' : `the ${target.name} server`;
       await sendNtfy({
-        title:    `🔴 ${target.name} — Service Disruption`,
+        title:    `${target.name} — Service Disruption`,
         message:  `${downRef} is not responding.\n\nFailed checks: ${THRESHOLD}/${THRESHOLD}\nError: ${err.message}\n\nStatus page has been updated automatically.`,
         priority: 'urgent',
         tags:     ['rotating_light', 'fire'],
@@ -398,7 +398,7 @@ async function pingTarget(target) {
       const downMins = Math.round((Date.now() - s.downSince) / 60000);
       const stillRef = target.type === 'router' ? 'Load Balancer' : `the ${target.name} server`;
       await sendNtfy({
-        title:    `⚠️ ${target.name} — Still Unavailable (${downMins}m)`,
+        title:    `${target.name} — Still Unavailable (${downMins}m)`,
         message:  `${stillRef} has been unavailable for ${downMins} minutes.\nConsecutive failures: ${s.consecutiveFailures}\nError: ${err.message}\n\nStatus page reflects current outage.`,
         priority: 'high',
         tags:     ['warning', 'clock'],
@@ -562,17 +562,17 @@ async function boot() {
   await ensureDbConnected();
 
   app.listen(PORT, () => {
-    console.log(`[${ts()}] 🌐 Watchdog HTTP → http://0.0.0.0:${PORT}`);
-    console.log(`[${ts()}] 📊 Status        → http://0.0.0.0:${PORT}/watchdog/status\n`);
+    console.log(`[${ts()}] Watchdog HTTP → http://0.0.0.0:${PORT}`);
+    console.log(`[${ts()}] Status        → http://0.0.0.0:${PORT}/watchdog/status\n`);
   });
 
   // Immediate startup ping of all targets
-  console.log(`[${ts()}] 🔍 Running startup pings...`);
+  console.log(`[${ts()}] Running startup pings...`);
   await pingAll();
 
   // Ongoing pings
   setInterval(pingAll, PING_MS);
-  console.log(`[${ts()}] ✅ Watchdog running — pinging ${targets.length} target(s) every ${PING_MS / 1000}s\n`);
+  console.log(`[${ts()}] Watchdog running — pinging ${targets.length} target(s) every ${PING_MS / 1000}s\n`);
 
   await sendNtfy({
     title:    ' Monitoring Active',
@@ -586,6 +586,6 @@ process.on('SIGTERM', async () => { try { await mongoose.disconnect(); } catch (
 process.on('SIGINT',  async () => { try { await mongoose.disconnect(); } catch (_) {} process.exit(0); });
 
 boot().catch(err => {
-  console.error(`[${ts()}] ❌ Fatal boot error: ${err.message}`);
+  console.error(`[${ts()}] Fatal boot error: ${err.message}`);
   process.exit(1);
 });
