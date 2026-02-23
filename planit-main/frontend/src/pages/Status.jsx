@@ -25,23 +25,14 @@ function getDayKey(date) {
   return `${y}-${m}-${d}`;
 }
 
-/**
- * Build 90-day uptime bars from incident history.
- * Days with no incident are green. serverDown marks today red immediately,
- * before the watchdog has a chance to write an incident to the DB.
- */
 function buildBars(incidents, serviceKey, serverDown = false) {
   const DAYS = 15;
   const dayMap = {};
-
-  if (serverDown) {
-    dayMap[getDayKey(new Date())] = 'outage';
-  }
+  if (serverDown) dayMap[getDayKey(new Date())] = 'outage';
 
   incidents.forEach(inc => {
     const start = new Date(inc.createdAt);
     const end   = inc.resolvedAt ? new Date(inc.resolvedAt) : new Date();
-
     const affects =
       !serviceKey ||
       !inc.affectedServices?.length ||
@@ -50,12 +41,8 @@ function buildBars(incidents, serviceKey, serverDown = false) {
         serviceKey.toLowerCase().includes(s.toLowerCase())
       );
     if (!affects) return;
-
-    const cursor = new Date(start);
-    cursor.setHours(0, 0, 0, 0);
-    const endDay = new Date(end);
-    endDay.setHours(23, 59, 59, 999);
-
+    const cursor = new Date(start); cursor.setHours(0, 0, 0, 0);
+    const endDay = new Date(end);   endDay.setHours(23, 59, 59, 999);
     while (cursor <= endDay) {
       const key  = getDayKey(cursor);
       const next = inc.severity === 'critical' ? 'outage' : 'degraded';
@@ -67,17 +54,38 @@ function buildBars(incidents, serviceKey, serverDown = false) {
 
   const bars = [];
   for (let i = DAYS - 1; i >= 0; i--) {
-    const d = new Date();
-    d.setDate(d.getDate() - i);
-    d.setHours(0, 0, 0, 0);
+    const d = new Date(); d.setDate(d.getDate() - i); d.setHours(0, 0, 0, 0);
     bars.push({ date: new Date(d), status: dayMap[getDayKey(d)] || 'ok' });
   }
   return bars;
 }
 
+// Build uptime bars from UptimeCheck history (per-server)
+function buildServerBars(historyDays, isCurrentlyDown) {
+  if (!historyDays) {
+    const bars = [];
+    for (let i = 14; i >= 0; i--) {
+      const d = new Date(); d.setDate(d.getDate() - i); d.setHours(0, 0, 0, 0);
+      bars.push({ date: new Date(d), status: i === 0 && isCurrentlyDown ? 'outage' : 'nodata' });
+    }
+    return bars;
+  }
+  return historyDays.map((day, idx) => {
+    const date    = new Date(day.date + 'T00:00:00');
+    const isToday = idx === historyDays.length - 1;
+    if (isToday && isCurrentlyDown) return { date, status: 'outage' };
+    if (day.pct === null)  return { date, status: 'nodata' };
+    if (day.pct >= 99)     return { date, status: 'ok' };
+    if (day.pct >= 80)     return { date, status: 'degraded' };
+    return { date, status: 'outage' };
+  });
+}
+
 function uptimePct(bars) {
-  const ok = bars.filter(b => b.status === 'ok').length;
-  return ((ok / bars.length) * 100).toFixed(2);
+  const counted = bars.filter(b => b.status !== 'nodata');
+  if (counted.length === 0) return null;
+  const ok = counted.filter(b => b.status === 'ok').length;
+  return ((ok / counted.length) * 100).toFixed(2);
 }
 
 function groupByDate(incidents) {
@@ -93,17 +101,12 @@ function groupByDate(incidents) {
 function last7DayKeys() {
   const keys = [];
   for (let i = 0; i < 7; i++) {
-    const d = new Date();
-    d.setDate(d.getDate() - i);
+    const d = new Date(); d.setDate(d.getDate() - i);
     keys.push(getDayKey(d));
   }
   return keys;
 }
 
-/**
- * A service is disrupted if the server is offline OR there's an active incident
- * for it. Both conditions are checked — they were previously inconsistent.
- */
 function isServiceDisrupted(serviceKey, incidents, online) {
   if (!online) return true;
   return incidents.some(
@@ -115,6 +118,19 @@ function isServiceDisrupted(serviceKey, incidents, online) {
           serviceKey.toLowerCase().includes(s.toLowerCase())
         ))
   );
+}
+
+function formatLatency(ms) {
+  if (ms === null || ms === undefined) return null;
+  return ms < 1000 ? `${ms}ms` : `${(ms / 1000).toFixed(1)}s`;
+}
+
+function timeAgo(dateStr) {
+  if (!dateStr) return null;
+  const diff = Date.now() - new Date(dateStr).getTime();
+  if (diff < 60000)   return `${Math.floor(diff / 1000)}s ago`;
+  if (diff < 3600000) return `${Math.floor(diff / 60000)}m ago`;
+  return `${Math.floor(diff / 3600000)}h ago`;
 }
 
 const STATUS_LABEL = {
@@ -129,24 +145,21 @@ const STATUS_LABEL = {
 function UptimeBar({ bar, index }) {
   const color =
     bar.status === 'outage'   ? '#ef4444' :
-    bar.status === 'degraded' ? '#f97316' : '#22c55e';
+    bar.status === 'degraded' ? '#f97316' :
+    bar.status === 'nodata'   ? '#e5e7eb' : '#22c55e';
 
   const label =
     bar.status === 'outage'   ? 'Outage' :
-    bar.status === 'degraded' ? 'Degraded' : 'Operational';
+    bar.status === 'degraded' ? 'Degraded' :
+    bar.status === 'nodata'   ? 'No data' : 'Operational';
 
   return (
     <div
       title={`${formatDayLabel(bar.date)} — ${label}`}
       style={{
-        flex: '1 1 0',
-        minWidth: 0,
-        height: '28px',
-        backgroundColor: color,
-        borderRadius: '4px',
-        cursor: 'default',
-        flexShrink: 0,
-        opacity: 0,
+        flex: '1 1 0', minWidth: 0, height: '28px',
+        backgroundColor: color, borderRadius: '4px',
+        cursor: 'default', flexShrink: 0, opacity: 0,
         animation: `barIn 0.3s ease ${index * 0.006}s both`,
       }}
     />
@@ -188,12 +201,12 @@ function ServiceRow({ service, incidents, online }) {
           {disrupted ? (!online ? 'Offline' : 'Disrupted') : 'Operational'}
         </span>
       </div>
-      <div style={{ display: 'flex', gap: '6px', width: '100%', overflow: 'hidden' }}>
+      <div style={{ display: 'flex', gap: '3px', width: '100%', overflow: 'hidden' }}>
         {bars.map((bar, i) => <UptimeBar key={i} bar={bar} index={i} />)}
       </div>
       <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '5px' }}>
         <span style={{ fontSize: '11px', color: '#9ca3af', fontFamily: '"DM Sans", sans-serif' }}>15 days ago</span>
-        <span style={{ fontSize: '11px', color: '#9ca3af', fontFamily: '"DM Sans", sans-serif' }}>{pct}% uptime</span>
+        <span style={{ fontSize: '11px', color: '#9ca3af', fontFamily: '"DM Sans", sans-serif' }}>{pct !== null ? `${pct}% uptime` : '—'}</span>
         <span style={{ fontSize: '11px', color: '#9ca3af', fontFamily: '"DM Sans", sans-serif' }}>Today</span>
       </div>
     </div>
@@ -231,11 +244,9 @@ function CategorySection({ category, incidents, online, defaultOpen }) {
             <circle cx="12" cy="17" r="1.2" fill="#fff" />
           </svg>
         )}
-
         <span style={{ flex: 1, fontSize: '15px', fontWeight: '600', color: '#111827', fontFamily: '"DM Sans", sans-serif' }}>
           {category.label}
         </span>
-
         {!allOk && (
           <span style={{
             fontSize: '12px', fontWeight: '600',
@@ -245,6 +256,174 @@ function CategorySection({ category, incidents, online, defaultOpen }) {
             {disruptedCount} {!online ? 'offline' : 'disrupted'}
           </span>
         )}
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2"
+          style={{ flexShrink: 0, transition: 'transform 0.2s', transform: expanded ? 'rotate(180deg)' : 'rotate(0deg)' }}>
+          <polyline points="6 9 12 15 18 9" />
+        </svg>
+      </button>
+      {expanded && (
+        <div style={{ padding: '0 20px 8px 52px', animation: 'expandIn 0.18s ease both' }}>
+          {category.services.map(svc => (
+            <ServiceRow key={svc.key} service={svc} incidents={incidents} online={online} />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Server Health Row ────────────────────────────────────────────────────────
+
+function ServerHealthRow({ server, uptimeHistory }) {
+  const isDown   = server.status === 'down';
+  const histDays = uptimeHistory?.services?.[server.name]?.days ?? null;
+  const bars     = buildServerBars(histDays, isDown);
+  const pct      = uptimeHistory?.services?.[server.name]?.uptimePct ?? null;
+  const latency  = formatLatency(server.lastPingMs);
+  const ago      = timeAgo(server.lastPingAt);
+
+  const typeLabel = server.type === 'router'  ? 'Load Balancer'
+    : server.type === 'backend' ? 'API Server'    : server.type;
+  const typeStyle = server.type === 'router'
+    ? { bg: '#ede9fe', color: '#7c3aed' }
+    : { bg: '#f0f9ff', color: '#0369a1' };
+
+  return (
+    <div style={{ padding: '16px 20px', borderBottom: '1px solid #f3f4f6' }}>
+      {/* Header row */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flex: 1, minWidth: 0 }}>
+          {/* Animated dot */}
+          <div style={{ position: 'relative', width: '18px', height: '18px', flexShrink: 0 }}>
+            <div style={{
+              width: '18px', height: '18px', borderRadius: '50%',
+              background: isDown ? '#ef4444' : '#22c55e',
+            }} />
+            {!isDown && (
+              <div style={{
+                position: 'absolute', inset: 0, borderRadius: '50%',
+                background: '#22c55e', opacity: 0.4,
+                animation: 'pingPulse 2s ease-out infinite',
+              }} />
+            )}
+          </div>
+
+          <div style={{ minWidth: 0, flex: 1 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+              <span style={{ fontSize: '14px', fontWeight: '600', color: '#111827', fontFamily: '"DM Sans", sans-serif' }}>
+                {server.name}
+              </span>
+              <span style={{
+                fontSize: '10px', fontWeight: '600', letterSpacing: '0.04em',
+                textTransform: 'uppercase', padding: '2px 8px', borderRadius: '999px',
+                background: typeStyle.bg, color: typeStyle.color,
+                fontFamily: '"DM Sans", sans-serif',
+              }}>
+                {typeLabel}
+              </span>
+            </div>
+            {server.url && (
+              <span style={{
+                fontSize: '11px', color: '#9ca3af', fontFamily: '"DM Sans", sans-serif',
+                display: 'block', marginTop: '2px',
+                overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                maxWidth: '360px',
+              }}>
+                {server.url.replace(/^https?:\/\//, '')}
+              </span>
+            )}
+          </div>
+        </div>
+
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px', flexShrink: 0, marginLeft: '12px' }}>
+          <span style={{ fontSize: '12px', fontWeight: '700', color: isDown ? '#dc2626' : '#16a34a', fontFamily: '"DM Sans", sans-serif' }}>
+            {isDown ? 'Offline' : 'Operational'}
+          </span>
+          <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+            {latency && !isDown && (
+              <span style={{ fontSize: '11px', color: '#6b7280', background: '#f3f4f6', borderRadius: '4px', padding: '2px 6px', fontFamily: '"DM Sans", sans-serif' }}>
+                {latency}
+              </span>
+            )}
+            {ago && (
+              <span style={{ fontSize: '11px', color: '#9ca3af', fontFamily: '"DM Sans", sans-serif' }}>
+                {ago}
+              </span>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Uptime bars */}
+      <div style={{ display: 'flex', gap: '3px', width: '100%', overflow: 'hidden' }}>
+        {bars.map((bar, i) => <UptimeBar key={i} bar={bar} index={i} />)}
+      </div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '5px' }}>
+        <span style={{ fontSize: '11px', color: '#9ca3af', fontFamily: '"DM Sans", sans-serif' }}>15 days ago</span>
+        <span style={{ fontSize: '11px', color: '#9ca3af', fontFamily: '"DM Sans", sans-serif' }}>
+          {pct !== null ? `${pct}% uptime` : 'Collecting data…'}
+        </span>
+        <span style={{ fontSize: '11px', color: '#9ca3af', fontFamily: '"DM Sans", sans-serif' }}>Today</span>
+      </div>
+    </div>
+  );
+}
+
+// ─── Infrastructure Section ───────────────────────────────────────────────────
+
+function InfrastructureSection({ servers, uptimeHistory }) {
+  const [expanded, setExpanded] = useState(true);
+  if (!servers || servers.length === 0) return null;
+
+  const downCount = servers.filter(s => s.status === 'down').length;
+  const allOk     = downCount === 0;
+
+  // Router first, then backends sorted by name
+  const sorted = [...servers].sort((a, b) => {
+    if (a.type === 'router' && b.type !== 'router') return -1;
+    if (a.type !== 'router' && b.type === 'router') return  1;
+    return a.name.localeCompare(b.name);
+  });
+
+  return (
+    <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: '12px', overflow: 'hidden' }}>
+      <button
+        onClick={() => setExpanded(e => !e)}
+        style={{ width: '100%', background: 'none', border: 'none', padding: '18px 20px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '12px', textAlign: 'left', transition: 'background 0.1s' }}
+        onMouseEnter={e => e.currentTarget.style.background = '#f9fafb'}
+        onMouseLeave={e => e.currentTarget.style.background = 'none'}
+      >
+        {/* Server rack icon */}
+        <div style={{
+          width: '38px', height: '38px', borderRadius: '8px', flexShrink: 0,
+          background: allOk ? '#f0fdf4' : '#fef2f2',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          border: `1px solid ${allOk ? '#bbf7d0' : '#fecaca'}`,
+        }}>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
+            stroke={allOk ? '#16a34a' : '#dc2626'}
+            strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="2" y="3" width="20" height="5" rx="1" />
+            <rect x="2" y="10" width="20" height="5" rx="1" />
+            <rect x="2" y="17" width="20" height="4" rx="1" />
+            <circle cx="6" cy="5.5" r="0.8" fill={allOk ? '#16a34a' : '#dc2626'} />
+            <circle cx="6" cy="12.5" r="0.8" fill={allOk ? '#16a34a' : '#dc2626'} />
+            <circle cx="6" cy="19" r="0.8" fill={allOk ? '#16a34a' : '#dc2626'} />
+          </svg>
+        </div>
+
+        <div style={{ flex: 1 }}>
+          <span style={{ fontSize: '15px', fontWeight: '700', color: '#111827', fontFamily: '"DM Sans", sans-serif', display: 'block' }}>
+            Infrastructure
+          </span>
+          <span style={{ fontSize: '12px', color: '#6b7280', fontFamily: '"DM Sans", sans-serif' }}>
+            {servers.length} server{servers.length !== 1 ? 's' : ''} monitored
+          </span>
+        </div>
+
+        <span style={{ fontSize: '12px', fontWeight: '700', color: allOk ? '#16a34a' : '#dc2626', fontFamily: '"DM Sans", sans-serif' }}>
+          {allOk ? 'All servers healthy' : `${downCount} offline`}
+        </span>
 
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2"
           style={{ flexShrink: 0, transition: 'transform 0.2s', transform: expanded ? 'rotate(180deg)' : 'rotate(0deg)' }}>
@@ -253,9 +432,24 @@ function CategorySection({ category, incidents, online, defaultOpen }) {
       </button>
 
       {expanded && (
-        <div style={{ padding: '0 20px 8px 52px', animation: 'expandIn 0.18s ease both' }}>
-          {category.services.map(svc => (
-            <ServiceRow key={svc.key} service={svc} incidents={incidents} online={online} />
+        <div style={{ borderTop: '1px solid #f3f4f6', animation: 'expandIn 0.18s ease both' }}>
+          {/* Legend row */}
+          <div style={{ padding: '10px 20px', background: '#fafafa', borderBottom: '1px solid #f3f4f6', display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
+            {[
+              { color: '#22c55e', label: 'Operational' },
+              { color: '#f97316', label: 'Degraded (< 99%)' },
+              { color: '#ef4444', label: 'Outage (< 80%)' },
+              { color: '#e5e7eb', label: 'No data yet' },
+            ].map(({ color, label }) => (
+              <div key={label} style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                <div style={{ width: '10px', height: '10px', borderRadius: '2px', background: color }} />
+                <span style={{ fontSize: '11px', color: '#6b7280', fontFamily: '"DM Sans", sans-serif' }}>{label}</span>
+              </div>
+            ))}
+          </div>
+
+          {sorted.map((server, i) => (
+            <ServerHealthRow key={i} server={server} uptimeHistory={uptimeHistory} />
           ))}
         </div>
       )}
@@ -403,45 +597,44 @@ const AUTO_REPORT_FAILURES = 3;
 const AUTO_REPORT_COOLDOWN = 10 * 60 * 1000;
 
 export default function Status() {
-  const [data, setData]                 = useState(null);
-  const [online, setOnline]             = useState(true);
-  const [latency, setLatency]           = useState(null);
-  const [showReport, setShowReport]     = useState(false);
-  const [submitting, setSubmitting]     = useState(false);
-  const [success, setSuccess]           = useState(false);
-  const [autoReported, setAutoReported] = useState(false);
-  const [lastFetch, setLastFetch]       = useState(null);
+  const [data, setData]                   = useState(null);
+  const [uptimeHistory, setUptimeHistory] = useState(null);
+  const [online, setOnline]               = useState(true);
+  const [latency, setLatency]             = useState(null);
+  const [showReport, setShowReport]       = useState(false);
+  const [submitting, setSubmitting]       = useState(false);
+  const [success, setSuccess]             = useState(false);
+  const [autoReported, setAutoReported]   = useState(false);
+  const [lastFetch, setLastFetch]         = useState(null);
 
-  const pingFailsRef    = useRef(0);
-  const lastAutoReport  = useRef(0);
-  const onlineRef       = useRef(true); // ref so ping callback can read latest value
-  const statusTimerRef  = useRef(null);
-  const pingTimerRef    = useRef(null);
+  const pingFailsRef   = useRef(0);
+  const lastAutoReport = useRef(0);
+  const onlineRef      = useRef(true);
+  const statusTimerRef = useRef(null);
+  const pingTimerRef   = useRef(null);
+  const histTimerRef   = useRef(null);
+
+  const fetchUptimeHistory = useCallback(async () => {
+    try {
+      const res = await watchdogAPI.getUptimeHistory();
+      if (res?.data) setUptimeHistory(res.data);
+    } catch { /* leave stale */ }
+  }, []);
 
   const fetchStatus = useCallback(async () => {
-    // Try the main API first. If it responds, it is the source of truth.
     try {
       const res = await uptimeAPI.getStatus();
       setData(res.data);
       setLastFetch(new Date());
       return;
-    } catch {
-      // Main server unreachable — fall through to watchdog
-    }
+    } catch { /* fall through */ }
 
-    // Main server is down. Ask the watchdog — it stays up independently and
-    // reads incidents directly from the shared MongoDB.
-    // NOTE: never call setOnline here. Only ping() controls online state,
-    // otherwise changing online triggers the useEffect which re-runs fetchStatus
-    // which changes online again — causing a feedback loop.
     try {
       const res = await watchdogAPI.getStatus();
-      if (!res) return; // VITE_WATCHDOG_URL not configured
+      if (!res) return;
       setData(res.data);
       setLastFetch(new Date());
-    } catch {
-      // Watchdog unreachable too — keep stale data
-    }
+    } catch { /* keep stale */ }
   }, []);
 
   const ping = useCallback(async () => {
@@ -450,20 +643,16 @@ export default function Status() {
       await uptimeAPI.ping();
       const ms = Date.now() - t;
       setLatency(ms);
-
       const wasOffline = !onlineRef.current;
       onlineRef.current = true;
       setOnline(true);
       pingFailsRef.current = 0;
-
       if (wasOffline) fetchStatus();
-
     } catch {
       onlineRef.current = false;
       setOnline(false);
       setLatency(null);
       pingFailsRef.current += 1;
-
       if (
         pingFailsRef.current >= AUTO_REPORT_FAILURES &&
         Date.now() - lastAutoReport.current > AUTO_REPORT_COOLDOWN
@@ -479,21 +668,23 @@ export default function Status() {
     }
   }, [fetchStatus]);
 
-  // Re-schedule intervals whenever online state changes so we use
-  // fast (5s) polling while offline and normal (15s) when online.
   useEffect(() => {
     if (statusTimerRef.current) clearInterval(statusTimerRef.current);
     if (pingTimerRef.current)   clearInterval(pingTimerRef.current);
+    if (histTimerRef.current)   clearInterval(histTimerRef.current);
 
     fetchStatus();
     ping();
+    fetchUptimeHistory();
 
-    statusTimerRef.current = setInterval(fetchStatus, 30_000);
-    pingTimerRef.current   = setInterval(ping, online ? 15_000 : 5_000);
+    statusTimerRef.current = setInterval(fetchStatus,        30_000);
+    pingTimerRef.current   = setInterval(ping,               online ? 15_000 : 5_000);
+    histTimerRef.current   = setInterval(fetchUptimeHistory, 5 * 60_000);
 
     return () => {
       clearInterval(statusTimerRef.current);
       clearInterval(pingTimerRef.current);
+      clearInterval(histTimerRef.current);
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [online]);
@@ -504,21 +695,22 @@ export default function Status() {
       await uptimeAPI.submitReport(form);
       setSuccess(true);
       setTimeout(() => { setShowReport(false); setSuccess(false); }, 2200);
-    } catch {
-      // Keep modal open
-    } finally {
-      setSubmitting(false);
-    }
+    } catch { /* Keep modal open */ }
+    finally { setSubmitting(false); }
   };
 
   // ── Derived ──────────────────────────────────────────────────────────────────
   const allIncidents    = [...(data?.activeIncidents || []), ...(data?.recentResolved || [])];
   const activeIncidents = data?.activeIncidents || [];
 
-  // Banner state: offline beats incident beats operational
+  // servers come from watchdog.services — names are exactly what you set in
+  // BACKEND_LABELS on the watchdog. Only include entries that have a URL
+  // (i.e., they were actually configured and running).
+  const servers = (data?.watchdog?.services || []).filter(s => s.url);
+
   const bannerState =
-    !online                    ? 'offline'     :
-    activeIncidents.length > 0 ? 'incident'    : 'operational';
+    !online                    ? 'offline'   :
+    activeIncidents.length > 0 ? 'incident'  : 'operational';
 
   const BANNER = {
     offline:     { bg: '#fef2f2', border: '#fecaca', iconFill: '#ef4444', title: 'Service Unavailable',   sub: 'We cannot reach the PlanIt servers. All services may be affected.' },
@@ -526,7 +718,6 @@ export default function Status() {
     operational: { bg: '#f0fdf4', border: '#bbf7d0', iconFill: '#22c55e', title: 'All Systems Operational', sub: "We're not aware of any issues affecting our systems." },
   }[bannerState];
 
-  // Overall uptime — serverDown=true so today's bar is red when offline
   const allBars  = buildBars(allIncidents, '', !online);
   const totalPct = uptimePct(allBars);
 
@@ -537,12 +728,13 @@ export default function Status() {
     <>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&display=swap');
-        @keyframes barIn    { from { opacity:0; transform:scaleY(0.4); } to { opacity:1; transform:scaleY(1); } }
-        @keyframes fadeIn   { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
-        @keyframes expandIn { from { opacity:0; transform:translateY(-4px); } to { opacity:1; transform:translateY(0); } }
-        @keyframes modalIn  { from { opacity:0; transform:scale(0.97) translateY(8px); } to { opacity:1; transform:scale(1) translateY(0); } }
-        @keyframes spin     { to { transform:rotate(360deg); } }
-        @keyframes pulse    { 0%,100%{opacity:1;} 50%{opacity:0.4;} }
+        @keyframes barIn     { from { opacity:0; transform:scaleY(0.4); } to { opacity:1; transform:scaleY(1); } }
+        @keyframes fadeIn    { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
+        @keyframes expandIn  { from { opacity:0; transform:translateY(-4px); } to { opacity:1; transform:translateY(0); } }
+        @keyframes modalIn   { from { opacity:0; transform:scale(0.97) translateY(8px); } to { opacity:1; transform:scale(1) translateY(0); } }
+        @keyframes spin      { to { transform:rotate(360deg); } }
+        @keyframes pulse     { 0%,100%{opacity:1;} 50%{opacity:0.4;} }
+        @keyframes pingPulse { 0% { transform:scale(1); opacity:0.4; } 70% { transform:scale(2.4); opacity:0; } 100% { transform:scale(2.4); opacity:0; } }
         * { box-sizing:border-box; }
         body { margin:0; }
       `}</style>
@@ -551,7 +743,7 @@ export default function Status() {
 
         {/* Header */}
         <header style={{ background: '#fff', borderBottom: '1px solid #e5e7eb', position: 'sticky', top: 0, zIndex: 50 }}>
-          <div style={{ maxWidth: '800px', margin: '0 auto', padding: '0 24px', height: '56px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div style={{ maxWidth: '860px', margin: '0 auto', padding: '0 24px', height: '56px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <Link to="/" style={{ fontSize: '14px', color: '#6b7280', textDecoration: 'none', fontWeight: '500' }}>← PlanIt</Link>
             <span style={{ fontSize: '15px', fontWeight: '600', color: '#111827' }}>System Status</span>
             <button
@@ -565,7 +757,7 @@ export default function Status() {
           </div>
         </header>
 
-        <main style={{ maxWidth: '800px', margin: '0 auto', padding: '0 24px 80px' }}>
+        <main style={{ maxWidth: '860px', margin: '0 auto', padding: '0 24px 80px' }}>
 
           {/* Auto-report banner */}
           {autoReported && !online && (
@@ -610,7 +802,9 @@ export default function Status() {
               )}
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px', flexShrink: 0 }}>
-              <span style={{ fontSize: '12px', color: '#9ca3af', fontFamily: '"DM Sans", sans-serif' }}>{totalPct}% uptime (15d)</span>
+              <span style={{ fontSize: '12px', color: '#9ca3af', fontFamily: '"DM Sans", sans-serif' }}>
+                {totalPct !== null ? `${totalPct}% uptime (15d)` : '—'}
+              </span>
               <span style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '12px', color: online ? '#16a34a' : '#dc2626', fontFamily: '"DM Sans", sans-serif' }}>
                 <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: online ? '#22c55e' : '#ef4444', display: 'inline-block', animation: online ? 'none' : 'pulse 1.5s infinite' }} />
                 {latency !== null ? `${latency}ms` : online ? 'Checking...' : 'Offline'}
@@ -640,9 +834,21 @@ export default function Status() {
             </div>
           ))}
 
-          {/* System status categories */}
+          {/* ── Server Health ───────────────────────────────────────────────── */}
+          {servers.length > 0 && (
+            <section style={{ marginBottom: '24px', animation: 'fadeIn 0.4s ease 0.05s both' }}>
+              <h2 style={{ fontSize: '13px', fontWeight: '700', color: '#6b7280', letterSpacing: '0.06em', textTransform: 'uppercase', margin: '0 0 12px' }}>
+                Server Health
+              </h2>
+              <InfrastructureSection servers={servers} uptimeHistory={uptimeHistory} />
+            </section>
+          )}
+
+          {/* ── System Status Categories ─────────────────────────────────── */}
           <section style={{ animation: 'fadeIn 0.4s ease 0.1s both' }}>
-            <h2 style={{ fontSize: '13px', fontWeight: '700', color: '#6b7280', letterSpacing: '0.06em', textTransform: 'uppercase', margin: '0 0 12px' }}>System Status</h2>
+            <h2 style={{ fontSize: '13px', fontWeight: '700', color: '#6b7280', letterSpacing: '0.06em', textTransform: 'uppercase', margin: '0 0 12px' }}>
+              System Status
+            </h2>
             <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: '12px', overflow: 'hidden' }}>
               {SERVICE_CATEGORIES.map((cat, i) => (
                 <CategorySection key={cat.id} category={cat} incidents={allIncidents} online={online} defaultOpen={i === 0} />
@@ -650,7 +856,7 @@ export default function Status() {
             </div>
           </section>
 
-          {/* Past incidents */}
+          {/* ── Past Incidents ──────────────────────────────────────────────── */}
           <section style={{ marginTop: '48px', animation: 'fadeIn 0.4s ease 0.2s both' }}>
             <h2 style={{ fontSize: '22px', fontWeight: '700', color: '#111827', margin: '0 0 24px' }}>Past Incidents</h2>
             {dayKeys.map(dayKey => {
