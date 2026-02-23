@@ -170,12 +170,19 @@ function TestimonialCard({ quote, author, role, event, delay = 0 }) {
 
 function CosmicAmbient() {
   return (
-    <div className="fixed inset-0 pointer-events-none overflow-hidden" style={{ zIndex: 1, transform: 'translateZ(0)', WebkitTransform: 'translateZ(0)' }}>
-      {/* Slow-drifting nebula blobs */}
+    <div
+      className="fixed inset-0 pointer-events-none"
+      style={{
+        zIndex: 1,
+        overflow: 'hidden',
+        contain: 'strict',
+        transform: 'translateZ(0)',
+        WebkitTransform: 'translateZ(0)',
+      }}
+    >
       <div className="cosmic-orb cosmic-orb-1" />
       <div className="cosmic-orb cosmic-orb-2" />
       <div className="cosmic-orb cosmic-orb-3" />
-      {/* Horizon aurora shimmer */}
       <div className="cosmic-aurora" />
     </div>
   );
@@ -674,7 +681,7 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen text-white relative" style={{ background: '#06060c', overflowX: 'hidden' }}>
+    <div className="min-h-screen text-white relative" style={{ background: '#06060c', overflowX: 'clip', maxWidth: '100vw', isolation: 'isolate' }}>
       <StarBackground fixed={true} starCount={220} />
       <CosmicAmbient />
 
@@ -695,8 +702,8 @@ export default function Home() {
           animation-delay: 0s;
         }
         .cosmic-orb-2 {
-          width: 480px; height: 520px;
-          top: 20%; right: -8%;
+          width: 420px; height: 420px;
+          top: 20%; right: -15%;
           background: radial-gradient(ellipse, rgba(20,80,160,0.14) 0%, rgba(10,40,90,0.05) 55%, transparent 75%);
           animation: orb-drift-2 44s ease-in-out infinite;
           animation-delay: -14s;
@@ -790,10 +797,10 @@ export default function Home() {
         .constellate:nth-child(2)  { top:12%; left:22%; animation: float-dot 8.8s ease-in-out infinite 1.2s; }
         .constellate:nth-child(3)  { top:28%; left:5%;  animation: float-dot 6.5s ease-in-out infinite 2.4s; }
         .constellate:nth-child(4)  { top:8%;  left:72%; animation: float-dot 9.1s ease-in-out infinite 0.6s; }
-        .constellate:nth-child(5)  { top:22%; left:85%; animation: float-dot 7.7s ease-in-out infinite 3.0s; }
-        .constellate:nth-child(6)  { top:35%; left:91%; animation: float-dot 8.3s ease-in-out infinite 1.8s; }
+        .constellate:nth-child(5)  { top:22%; left:82%; animation: float-dot 7.7s ease-in-out infinite 3.0s; }
+        .constellate:nth-child(6)  { top:35%; left:86%; animation: float-dot 8.3s ease-in-out infinite 1.8s; }
         .constellate:nth-child(7)  { top:55%; left:4%;  animation: float-dot 7.0s ease-in-out infinite 2.1s; }
-        .constellate:nth-child(8)  { top:62%; left:94%; animation: float-dot 9.4s ease-in-out infinite 0.9s; }
+        .constellate:nth-child(8)  { top:62%; left:88%; animation: float-dot 9.4s ease-in-out infinite 0.9s; }
 
         /* ── Pulsing hero glow disc ──────────────────────────────── */
         @keyframes hero-disc-pulse {
@@ -804,7 +811,7 @@ export default function Home() {
           position: absolute;
           left: 50%; top: 42%;
           transform: translate(-50%, -50%);
-          width: 680px; height: 340px;
+          width: min(680px, 90vw); height: min(340px, 45vw);
           border-radius: 50%;
           background: radial-gradient(ellipse, rgba(120,100,200,0.35) 0%, transparent 70%);
           filter: blur(60px);
@@ -882,9 +889,9 @@ export default function Home() {
         </div>
       </header>
 
-      <main className="relative overflow-x-hidden" style={{ zIndex: 2 }}>
+      <main className="relative" style={{ zIndex: 2, overflowX: 'hidden', maxWidth: '100vw' }}>
         {/* HERO */}
-        <section className="relative min-h-[92vh] flex items-center overflow-hidden">
+        <section className="relative min-h-[92vh] flex items-center" style={{ overflow: 'hidden', maxWidth: '100vw' }}>
           {/* Constellation dots floating in hero periphery */}
           <div className="constellate" />
           <div className="constellate" />
@@ -937,14 +944,14 @@ export default function Home() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.7, delay: 0.55 }}
-                className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-16"
+                className="flex flex-col sm:flex-row items-center justify-center gap-3 mb-16 w-full px-0 sm:px-0"
               >
-                <a href="#create" className="group inline-flex items-center gap-3 px-9 py-4 bg-white text-neutral-900 text-base font-bold rounded-2xl hover:bg-neutral-100 hover:scale-105 transition-all duration-300 shadow-2xl">
+                <a href="#create" className="group inline-flex items-center justify-center gap-3 w-full sm:w-auto px-9 py-4 bg-white text-neutral-900 text-base font-bold rounded-2xl hover:bg-neutral-100 hover:scale-105 transition-all duration-300 shadow-2xl">
                   Start planning
                   <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform duration-300" />
                 </a>
                 <a href="#features"
-                  className="inline-flex items-center gap-2 px-9 py-4 border border-neutral-700 text-neutral-300 text-base font-medium rounded-2xl hover:border-neutral-500 hover:text-white hover:scale-105 transition-all duration-300"
+                  className="inline-flex items-center justify-center gap-2 w-full sm:w-auto px-9 py-4 border border-neutral-700 text-neutral-300 text-base font-medium rounded-2xl hover:border-neutral-500 hover:text-white hover:scale-105 transition-all duration-300"
                   style={{ background: 'rgba(255,255,255,0.04)' }}>
                   See features <ChevronRight className="w-4 h-4" />
                 </a>
