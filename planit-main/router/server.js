@@ -4,6 +4,7 @@ const cookieParser = require('cookie-parser');
 const { createProxyMiddleware } = require('http-proxy-middleware');
 const axios        = require('axios');
 const http         = require('http');
+const { meshAuth, meshGet, meshPost, meshHeaders } = require('./mesh');
 
 // ─── Config ───────────────────────────────────────────────────────────────────
 const BACKENDS = (process.env.BACKEND_URLS || '')
@@ -13,6 +14,19 @@ if (BACKENDS.length === 0) {
   console.error('\n  FATAL: BACKEND_URLS env var is not set.\n');
   process.exit(1);
 }
+
+// ── Backend identity labels (codenames) ───────────────────────────────────────
+// BACKEND_LABELS = comma-separated names matching BACKEND_URLS order
+//   e.g. BACKEND_LABELS=Maverick,Goose,Iceman
+// If not set, falls back to index-based names.
+const FALLBACK_NAMES  = ['Alpha','Bravo','Charlie','Delta','Echo','Foxtrot','Golf','Hotel'];
+const customLabels    = (process.env.BACKEND_LABELS || '').split(',').map(s => s.trim()).filter(Boolean);
+function backendName(i) {
+  return customLabels[i] || FALLBACK_NAMES[i] || `Backend-${i + 1}`;
+}
+
+// SERVICE_NAME identifies this router in mesh logs
+const SERVICE_NAME = process.env.SERVICE_NAME || 'Router';
 
 const PORT              = process.env.PORT || 3000;
 const COOKIE_NAME       = 'planit_route';
@@ -61,25 +75,35 @@ console.log(`\n${'═'.repeat(60)}`);
 console.log(` PlanIt Router — Smart Scaling — starting`);
 console.log(`${'═'.repeat(60)}`);
 console.log(` Total backends : ${BACKENDS.length}`);
-BACKENDS.forEach((b, i) => console.log(`   [${i}] ${b}`));
+BACKENDS.forEach((b, i) => console.log(`   [${i}] ${backendName(i)}`));
 console.log(` Scale up at    : ${SCALE_UP_THRESHOLD} avg connections`);
 console.log(` Scale down at  : ${SCALE_DOWN_THRESHOLD} avg connections`);
 console.log(`${'═'.repeat(60)}\n`);
 
 // ─── Per-backend state ────────────────────────────────────────────────────────
-const backendStatus = BACKENDS.map((url) => ({
+const backendStatus = BACKENDS.map((url, i) => ({
   url,
+  name:               backendName(i),
   alive:              true,
   latencyMs:          null,
   lastPing:           null,
   requests:           0,            // total lifetime requests
   activeConnections:  0,            // currently in-flight requests
   active:             false,        // is this backend in the active routing set?
+  coldStart:          false,        // true for first 90s after backend restart
+  socketConnections:  0,            // live socket.io connections (from mesh health)
+  memoryPct:          null,         // heap usage pct (from mesh health)
   // Circuit breaker state
   circuitTripped:     false,        // true = backend removed from routing due to errors
   consecutiveErrors:  0,            // errors since last success
   recoveryProbes:     0,            // successful health checks while tripped
 }));
+
+// ── Dynamic backend registry ───────────────────────────────────────────────────
+// Backends can announce themselves on startup via POST /mesh/register.
+// This allows adding new backends without restarting the router.
+// dynamicBackends: array of { url, name, region, registeredAt }
+const dynamicBackends = [];
 
 // ── Scaling state ─────────────────────────────────────────────────────────────
 let activeBackendCount = 1;   // start with 1 — expand as load grows
@@ -172,7 +196,7 @@ function recordBackendError(index) {
     b.circuitTripped = true;
     b.recoveryProbes = 0;
     updateActiveSet();
-    logScale(`⚡ Circuit tripped on backend [${index}]`,
+    logScale(`Circuit tripped: ${b.name}`,
       `${b.consecutiveErrors} consecutive errors — removed from routing`);
   }
 }
@@ -188,7 +212,7 @@ function recordBackendSuccess(index) {
       b.circuitTripped = false;
       b.recoveryProbes = 0;
       updateActiveSet();
-      logScale(`✅ Circuit restored on backend [${index}]`,
+      logScale(`Circuit restored: ${b.name}`,
         `${CIRCUIT_RECOVERY_CHECKS} consecutive healthy probes — re-added to routing`);
     }
   }
@@ -212,14 +236,20 @@ function checkAndScale() {
     return;
   }
 
-  const totalConnections = activeHealthy.reduce((sum, b) => sum + b.activeConnections, 0);
+  // Use real socketConnections from mesh health if available, else fall back to
+  // the proxy-tracked activeConnections counter.
+  const totalConnections = activeHealthy.reduce((sum, b) => {
+    const sockets = b.socketConnections || 0;
+    const proxy   = b.activeConnections || 0;
+    return sum + (sockets > 0 ? sockets : proxy);
+  }, 0);
   const avgConnections   = totalConnections / activeHealthy.length;
 
   // Scale UP — active backends are busy AND we have more available AND they're healthy
   if (avgConnections >= SCALE_UP_THRESHOLD && activeBackendCount < BACKENDS.length) {
-    // Only scale up to a backend that isn't tripped
+    // Only scale up to a backend that isn't tripped and isn't cold-starting
     const nextIndex = activeBackendCount;
-    if (!backendStatus[nextIndex]?.circuitTripped) {
+    if (!backendStatus[nextIndex]?.circuitTripped && !backendStatus[nextIndex]?.coldStart) {
       activeBackendCount++;
       scaleDownStreak = 0;
       updateActiveSet();
@@ -253,21 +283,43 @@ function checkAndScale() {
 setInterval(checkAndScale, SCALE_CHECK_MS);
 
 // ─── Keep-alive pinger ────────────────────────────────────────────────────────
-// ALL backends get pinged — not just active ones. Inactive backends must stay
-// warm so they can be promoted instantly when load increases.
+// ALL backends get pinged via the mesh health endpoint — not just active ones.
+// Inactive backends must stay warm so they can be promoted instantly.
+// We use the mesh endpoint to get real socket counts + memory for scaling decisions.
 async function pingBackend(index) {
-  const url   = BACKENDS[index];
+  const b     = backendStatus[index];
   const start = Date.now();
-  try {
-    await axios.get(`${url}/api/health`, { timeout: 10000 });
-    backendStatus[index].latencyMs = Date.now() - start;
-    backendStatus[index].lastPing  = new Date().toISOString();
+
+  // Try the rich mesh health endpoint first — falls back to public /api/health
+  const meshResult = await meshGet(SERVICE_NAME, `${b.url}/api/mesh/health`, { timeout: 10000 });
+
+  b.latencyMs = Date.now() - start;
+  b.lastPing  = new Date().toISOString();
+
+  if (meshResult.ok) {
+    const d = meshResult.data;
+    // Enrich backend status with real data from the backend itself
+    b.socketConnections = d.socketConnections ?? 0;
+    b.memoryPct         = d.memory?.pct       ?? null;
+    b.coldStart         = d.coldStart          ?? false;
     recordBackendSuccess(index);
-  } catch (err) {
-    backendStatus[index].latencyMs = null;
-    backendStatus[index].lastPing  = new Date().toISOString();
-    recordBackendError(index);
-    console.warn(`  [router] ⚠ backend [${index}] ${url} — ${err.message}`);
+
+    // Confirm back to the backend that we've seen it (non-blocking)
+    meshPost(SERVICE_NAME, `${b.url}/api/mesh/seen`, {
+      registeredAs: b.name,
+      activeInFleet: backendStatus.filter(s => s.active).length,
+    }).catch(() => {}); // fire-and-forget
+  } else {
+    // Mesh ping failed — try public health as fallback
+    try {
+      await axios.get(`${b.url}/api/health`, { timeout: 10000 });
+      b.socketConnections = 0;
+      recordBackendSuccess(index);
+    } catch (err) {
+      b.latencyMs = null;
+      recordBackendError(index);
+      console.warn(`  [${b.name}] ping failed — ${err.message}`);
+    }
   }
 }
 
@@ -368,19 +420,46 @@ function cacheMiddleware(req, res, next) {
 const app = express();
 app.use(cookieParser());
 
-// ─── Health endpoint ──────────────────────────────────────────────────────────
+// ─── Public health endpoint ───────────────────────────────────────────────────
+// URLs are NEVER exposed here. Only names, status, and aggregate counts.
+// For full internal state use GET /mesh/status (mesh auth required).
 app.get('/health', (_req, res) => {
   const activeBackends  = backendStatus.filter(b => b.active);
   const trippedBackends = backendStatus.filter(b => b.circuitTripped);
   const allActiveAlive  = activeBackends.every(b => b.alive);
 
   res.status(allActiveAlive ? 200 : 207).json({
-    status:             allActiveAlive ? 'ok' : 'degraded',
-    uptime:             Math.floor(process.uptime()),
+    status:     allActiveAlive ? 'ok' : 'degraded',
+    uptime:     Math.floor(process.uptime()),
+    scaling: {
+      activeCount:  activeBackendCount,
+      totalCount:   BACKENDS.length,
+      trippedCount: trippedBackends.length,
+    },
+    // Names and health only — no URLs ever exposed publicly
+    backends: backendStatus.map(s => ({
+      name:           s.name,
+      active:         s.active,
+      alive:          s.alive,
+      latencyMs:      s.latencyMs,
+      circuitTripped: s.circuitTripped,
+      coldStart:      s.coldStart,
+    })),
+    timestamp: new Date().toISOString(),
+  });
+});
+
+// ─── Mesh: full internal status (auth required) ───────────────────────────────
+// Full router state including scaling log and dynamic backend registry.
+// Only accessible by mesh members (watchdog, backends) — not the public.
+app.get('/mesh/status', meshAuth(SERVICE_NAME), (_req, res) => {
+  res.json({
+    service:    SERVICE_NAME,
+    uptime:     Math.floor(process.uptime()),
     scaling: {
       activeBackendCount,
-      totalBackends:    BACKENDS.length,
-      trippedCount:     trippedBackends.length,
+      totalBackends:     BACKENDS.length + dynamicBackends.length,
+      trippedCount:      backendStatus.filter(b => b.circuitTripped).length,
       scaleDownStreak,
       scaleDownPatience: SCALE_DOWN_PATIENCE,
       thresholds: {
@@ -388,15 +467,108 @@ app.get('/health', (_req, res) => {
         scaleDown: SCALE_DOWN_THRESHOLD,
       },
     },
-    scalingLog:         scalingLog.slice(0, 10),
-    backends:           backendStatus.map((s, i) => ({
-      index: i, url: s.url, active: s.active,
-      alive: s.alive, latencyMs: s.latencyMs, lastPing: s.lastPing,
-      requests: s.requests, activeConnections: s.activeConnections,
-      circuitTripped: s.circuitTripped, consecutiveErrors: s.consecutiveErrors,
+    scalingLog: scalingLog.slice(0, 20),
+    // Full backend detail — names, status, metrics, no URLs
+    backends: backendStatus.map((s, i) => ({
+      index:              i,
+      name:               s.name,
+      active:             s.active,
+      alive:              s.alive,
+      latencyMs:          s.latencyMs,
+      lastPing:           s.lastPing,
+      requests:           s.requests,
+      activeConnections:  s.activeConnections,
+      socketConnections:  s.socketConnections,
+      memoryPct:          s.memoryPct,
+      coldStart:          s.coldStart,
+      circuitTripped:     s.circuitTripped,
+      consecutiveErrors:  s.consecutiveErrors,
     })),
-    timestamp:          new Date().toISOString(),
+    dynamicBackends: dynamicBackends.map(d => ({
+      name:         d.name,
+      region:       d.region,
+      registeredAt: d.registeredAt,
+    })),
+    timestamp: new Date().toISOString(),
   });
+});
+
+// ─── Mesh: dynamic backend registration ──────────────────────────────────────
+// A new backend POSTs here on startup to join the fleet without router restart.
+// If the URL is already in BACKEND_URLS (env), this just enriches the name/region.
+// If it's a new URL not in env, it's added to the dynamic pool.
+app.post('/mesh/register', meshAuth(SERVICE_NAME), express.json(), (req, res) => {
+  const { url, name, region } = req.body;
+
+  if (!url) {
+    return res.status(400).json({ error: 'url is required' });
+  }
+
+  // Check if this backend is already known from env config
+  const existingIdx = BACKENDS.findIndex(b => b === url || b === url.replace(/\/$/, ''));
+  if (existingIdx >= 0) {
+    // Known backend — update its display name and region if provided
+    if (name)   backendStatus[existingIdx].name   = name;
+    if (region) backendStatus[existingIdx].region = region;
+    console.log(`[mesh] Register: ${name || backendStatus[existingIdx].name} (${region || 'no region'}) — already in fleet at index ${existingIdx}`);
+    return res.json({ ok: true, joined: false, reason: 'already registered', index: existingIdx });
+  }
+
+  // New backend — not in BACKEND_URLS env. Add to dynamic pool.
+  const already = dynamicBackends.find(d => d.url === url);
+  if (already) {
+    already.name       = name || already.name;
+    already.region     = region || already.region;
+    already.lastSeenAt = new Date().toISOString();
+    console.log(`[mesh] Register: ${already.name} re-announced (dynamic pool)`);
+    return res.json({ ok: true, joined: false, reason: 'already in dynamic pool' });
+  }
+
+  // First-time join
+  const entry = { url, name: name || `Dynamic-${dynamicBackends.length + 1}`, region: region || null, registeredAt: new Date().toISOString(), lastSeenAt: new Date().toISOString() };
+  dynamicBackends.push(entry);
+
+  // Add to BACKENDS array and create a status entry so routing + pinging works
+  BACKENDS.push(url);
+  backendStatus.push({
+    url,
+    name:               entry.name,
+    alive:              true,
+    latencyMs:          null,
+    lastPing:           null,
+    requests:           0,
+    activeConnections:  0,
+    active:             false,
+    coldStart:          true,
+    socketConnections:  0,
+    memoryPct:          null,
+    circuitTripped:     false,
+    consecutiveErrors:  0,
+    recoveryProbes:     0,
+  });
+
+  // Create a proxy for the new backend
+  const { createProxyMiddleware } = require('http-proxy-middleware');
+  proxies.push(createProxyMiddleware({
+    target: url,
+    changeOrigin: true,
+    ws: true,
+    proxyTimeout: 60000,
+    timeout: 60000,
+    on: {
+      proxyReq(_pReq, _req, _res) { backendStatus[backendStatus.length - 1].activeConnections++; },
+      proxyRes(_pRes, _req, _res) { const b = backendStatus[backendStatus.length - 1]; b.activeConnections = Math.max(0, b.activeConnections - 1); b.requests++; },
+      error(_err, _req, res)     { const b = backendStatus[backendStatus.length - 1]; b.activeConnections = Math.max(0, b.activeConnections - 1); recordBackendError(backendStatus.length - 1); if (!res.headersSent) res.status(502).json({ error: 'Backend unavailable' }); },
+    },
+  }));
+
+  // Immediately ping the new backend to warm it up
+  pingBackend(backendStatus.length - 1);
+
+  logScale(`+ Dynamic join: ${entry.name}`, `backend announced itself from ${url.split('/')[2]}`);
+  console.log(`[mesh] Fleet now: ${backendStatus.map(b => b.name).join(', ')}`);
+
+  res.json({ ok: true, joined: true, name: entry.name, totalBackends: BACKENDS.length });
 });
 
 // ─── Proxy instances ──────────────────────────────────────────────────────────
@@ -444,7 +616,8 @@ app.use(cacheMiddleware);
 // ─── Main routing middleware ──────────────────────────────────────────────────
 app.use((req, res, next) => {
   const index = pickBackendIndex(req);
-  console.log(`  → [${index}${backendStatus[index].active ? '' : '!'}] ${req.method} ${req.url.slice(0, 100)}`);
+  const b = backendStatus[index];
+  console.log(`  → [${b.name}${b.active ? '' : '!'}] ${req.method} ${req.url.slice(0, 100)}`);
   proxies[index](req, res, next);
 });
 
@@ -473,7 +646,7 @@ server.on('upgrade', (req, socket, head) => {
     index = match ? djb2(match[0]) : djb2(req.socket?.remoteAddress || '0');
   }
 
-  console.log(`  ↑ WS upgrade → backend [${index}] ${req.url.slice(0, 80)}`);
+  console.log(`  ↑ WS upgrade → ${backendStatus[index]?.name || index} ${req.url.slice(0, 80)}`);
   proxies[index].upgrade(req, socket, head);
 });
 
