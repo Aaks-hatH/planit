@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Shield, Lock, AlertTriangle, X, CheckCircle, Loader2, Clock } from 'lucide-react';
+import { Shield, Lock, AlertTriangle, X, CheckCircle, Loader2, Clock, Eye, EyeOff } from 'lucide-react';
 
 /**
  * ═══════════════════════════════════════════════════════════════════════════
@@ -246,9 +246,9 @@ export default function ManagerOverrideDialog({
                     disabled={loading}
                   >
                     {showPassword ? (
-                      <Lock className="w-5 h-5" />
+                      <EyeOff className="w-5 h-5" />
                     ) : (
-                      <Lock className="w-5 h-5" />
+                      <Eye className="w-5 h-5" />
                     )}
                   </button>
                 </div>
