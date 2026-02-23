@@ -2,6 +2,7 @@ require('dotenv').config();
 const express  = require('express');
 const mongoose = require('mongoose');
 const axios    = require('axios');
+const { meshAuth } = require('./mesh');
 
 function ts() { return new Date().toISOString(); }
 
