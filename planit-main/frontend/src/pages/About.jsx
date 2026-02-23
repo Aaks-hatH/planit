@@ -152,11 +152,16 @@ export default function About() {
     {
       label: 'Security & Data',
       items: [
-        { href: '#security',       label: 'Passwords and security'         },
-        { href: '#ratelimiting',   label: 'Rate limiting'                  },
-        { href: '#realtime',       label: 'Real-time features'             },
-        { href: '#analytics',      label: 'Analytics'                      },
-        { href: '#data-retention', label: 'Data retention'                 },
+        { href: '#security',         label: 'Passwords and security'         },
+        { href: '#response-signing', label: 'Response signing'               },
+        { href: '#ratelimiting',     label: 'Rate limiting'                  },
+        { href: '#realtime',         label: 'Real-time features'             },
+        { href: '#analytics',        label: 'Analytics'                      },
+        { href: '#data-retention',   label: 'Data retention'                 },
+        { href: '#no-account',       label: 'No-account tradeoffs'           },
+        { href: '#status-system',    label: 'Status system'                  },
+        { href: '#watchdog',         label: 'Watchdog monitoring'            },
+        { href: '#open-source',      label: 'Open source & license'          },
       ]
     },
     {
@@ -1176,6 +1181,171 @@ export default function About() {
               title="Made with coffee, not love"
               description="The footer reads 'Made with coffee, not love.' The heart icon that appears in the footers of approximately every other web application ever built is replaced with a coffee cup. It is a small, honest joke that acknowledges how software actually gets made. Only people who scroll to the very bottom of the home page ever see it, which makes it feel like a reward for reading rather than a marketing statement."
             />
+          </Section>
+
+          {/* ─── RESPONSE SIGNING ────────────────────────────────── */}
+          <Section id="response-signing">
+            <SectionTitle
+              icon={ShieldCheck}
+              title="Response signing"
+              subtitle="Every API response sent by the PlanIt backend carries a cryptographic signature that allows the client to verify the response came from the real server — not a proxy, a man-in-the-middle, or a tampered replica."
+            />
+            <p className="text-neutral-500 leading-relaxed mb-4">
+              When the server sends an API response, a middleware running on every route computes an HMAC-SHA256 digest of the response body and the request path, using a key derived from the server's license key. This signature is attached as a custom response header. The client can independently verify the signature before trusting the response content.
+            </p>
+            <p className="text-neutral-500 leading-relaxed mb-4">
+              The signing key is never stored directly. It is derived on-demand from the master license key using a one-way HMAC derivation function with a purpose-specific label. This means that even if an attacker intercepted a request, they could not forge a valid signature without possessing the original license key — which lives only in the server's environment variables and is never transmitted or logged.
+            </p>
+            <Callout>
+              This is an unusual security measure for a web application of this scale. Most apps at this level do not sign individual API responses. It was included because PlanIt's check-in system makes security decisions — admitting or denying guests — based on API responses. A forged or tampered response at that layer could admit unauthorized people. Response signing makes that class of attack cryptographically infeasible.
+            </Callout>
+          </Section>
+
+          {/* ─── NO-ACCOUNT TRADEOFFS ────────────────────────────── */}
+          <Section id="no-account">
+            <SectionTitle
+              icon={UserX}
+              title="No-account model: deliberate tradeoffs"
+              subtitle="PlanIt requires no email address, no registration, and no account. This is a deliberate design decision with real consequences that every organizer should understand before relying on it for an important event."
+            />
+            <p className="text-neutral-500 leading-relaxed mb-4">
+              The no-account model exists because the single biggest friction point in most event tools is the requirement to create an account before you can do anything. For a team that needs to start planning immediately, requiring email verification, password emails, and profile setup adds unnecessary delay. Removing the account layer means you can go from the home page to a live planning workspace in under two minutes.
+            </p>
+            <p className="text-neutral-500 leading-relaxed mb-6">
+              But that convenience comes with tradeoffs that are worth being explicit about.
+            </p>
+            <FeatureRow
+              icon={Key}
+              title="Passwords cannot be reset"
+              description="The account password — the one that proves your identity as the organizer — cannot be changed or recovered after the event is created. There is no 'forgot my password' flow because there is no email address on file to send a reset link to. If you forget the account password, you cannot reclaim the organizer role. Store it somewhere safe before you share your event link with your team."
+            />
+            <FeatureRow
+              icon={Link}
+              title="The event link is the key"
+              description="Whoever has the event URL can navigate to the join screen. If your event has no event password set, anyone with the link can join the workspace. If your event is confidential, set an event password at creation time. Once set, it also cannot be changed."
+            />
+            <FeatureRow
+              icon={Download}
+              title="Export before 7 days"
+              description="Because there is no account, there is no persistent storage tied to your identity. All event data — files, chat logs, guest lists, expense records, task history — is permanently deleted 7 days after the event date. The utilities panel provides download and export options specifically for this reason. If you need records beyond 7 days, download them before the window closes."
+            />
+            <FeatureRow
+              icon={Clock}
+              title="Sessions are temporary"
+              description="Your session is stored as a JWT in localStorage tied to your browser. If you clear your browser data, switch browsers, or use a new device, you will need to re-enter the event URL and your account password to re-authenticate as the organizer. The session is not synced across devices."
+            />
+            <Callout accent>
+              These are not bugs or oversights — they are the direct consequences of not requiring an account. For the vast majority of events, none of these tradeoffs matter. For long-running events, high-stakes guest lists, or situations where multiple organizers need seamless account handoff, they are worth factoring into how you use the system.
+            </Callout>
+          </Section>
+
+          {/* ─── STATUS SYSTEM ───────────────────────────────────── */}
+          <Section id="status-system">
+            <SectionTitle
+              icon={Activity}
+              title="Status system"
+              subtitle="PlanIt includes a public status page at /status that gives anyone — organizers, guests, and the team — real-time visibility into whether the platform is operating normally. It is backed by a fully automated incident management system."
+            />
+            <p className="text-neutral-500 leading-relaxed mb-4">
+              The status page shows an overall platform health indicator (operational, degraded, or outage), a list of any active incidents, and the 10 most recently resolved incidents from the past 7 days. Each incident shows its title, severity, affected services, and a full timeline of status updates from investigation through resolution.
+            </p>
+            <p className="text-neutral-500 leading-relaxed mb-4">
+              The 15-day uptime history bars show per-service reliability over the rolling window. Green bars indicate ≥99% uptime for that day. Amber bars indicate 80–99%. Red bars indicate an outage. Gray bars indicate no monitoring data for that day. The history is built from the same UptimeCheck collection that the watchdog service writes to with every ping.
+            </p>
+            <FeatureRow
+              icon={Users}
+              title="User-submitted reports"
+              description="Any visitor can submit a report from the status page describing an issue they are experiencing, with an optional email address and an affected service selection. Reports are stored and visible in the admin panel. They feed directly into the auto-incident creation system."
+            />
+            <FeatureRow
+              icon={Zap}
+              title="Automatic incident creation"
+              description="If 3 or more reports targeting the same service arrive within a 10-minute window, the system automatically creates an incident without requiring any admin action. The incident is marked as 'investigating', all triggering reports are linked to it, and the status page reflects the degradation immediately. A push notification fires to the admin at 'urgent' priority."
+            />
+            <FeatureRow
+              icon={Bell}
+              title="ntfy push notifications"
+              description="Every significant status event sends a push notification via ntfy to the admin's configured channel: new user reports (high priority), auto-created incidents (urgent), manual incident creation, status timeline updates, and resolutions. Each notification includes a direct action link to the status page. ntfy works across iOS, Android, and web browsers without requiring a separate app account."
+            />
+            <FeatureRow
+              icon={ClipboardList}
+              title="Admin incident management"
+              description="Admins can manually create incidents, update their status through the standard investigating → identified → monitoring → resolved lifecycle, edit severity and affected services, and delete incidents. Resolving an incident automatically calculates and stores the total downtime in minutes from creation to resolution."
+            />
+            <Callout>
+              The status system is specifically designed so that the platform can self-report problems without requiring the admin to be watching a dashboard. When things go wrong at 3 AM, the auto-incident creation and ntfy alerts surface the issue automatically, the status page updates immediately, and organizers checking the platform can see what is happening before they have to ask.
+            </Callout>
+          </Section>
+
+          {/* ─── WATCHDOG ────────────────────────────────────────── */}
+          <Section id="watchdog">
+            <SectionTitle
+              icon={Wifi}
+              title="Watchdog monitoring"
+              subtitle="PlanIt's infrastructure includes a dedicated watchdog service that runs independently of the main backend and continuously monitors every server in the fleet. It is the first line of automated detection when something goes wrong."
+            />
+            <p className="text-neutral-500 leading-relaxed mb-4">
+              The watchdog is a separate Node.js service deployed on its own instance. It is not the main backend, not the router, and not the frontend — it has no user-facing function. Its only job is to ping every configured server at a regular interval, detect failures, and take automated action when failure thresholds are met.
+            </p>
+            <p className="text-neutral-500 leading-relaxed mb-4">
+              Every backend server and the load balancer are all monitored targets. The watchdog pings each target's health endpoint on a configurable interval (default: 60 seconds), staggered two seconds apart to avoid hitting all instances simultaneously. Latency for every ping is recorded to the database, building the 15-day uptime history that appears on the status page.
+            </p>
+            <FeatureRow
+              icon={Server}
+              title="Circuit breaker per target"
+              description="Each monitored target has its own independent state. After a configurable number of consecutive failures (default: 3), the watchdog declares the target down, creates an incident in the database, and sends an urgent ntfy push notification. The circuit is per-target — one backend going down does not affect the monitoring or status of any other target."
+            />
+            <FeatureRow
+              icon={RefreshCw}
+              title="Automatic recovery detection"
+              description="The watchdog continuously probes targets even while they are marked down. When a target starts responding again, the watchdog detects the recovery, resolves the open incident in the database with the total downtime duration in minutes, and sends a recovery notification. No human intervention is needed for the status page to clear."
+            />
+            <FeatureRow
+              icon={Bell}
+              title="Persistent reminder alerts"
+              description="While a target remains down, the watchdog sends a reminder notification every 10 consecutive failures. These reminders include how long the service has been unavailable. This prevents a long outage from going unnoticed if the initial alert was missed or dismissed."
+            />
+            <FeatureRow
+              icon={Server}
+              title="Codename system"
+              description="Each backend server is assigned a codename (configurable via environment variables — examples: Maverick, Goose, Iceman). These codenames appear in private admin logs and ntfy alerts for quick identification. The public status page uses clean, non-technical language — 'the Maverick server (US East) is not responding' — keeping internal infrastructure labels visible to the team but approachable for any organizer checking the status page."
+            />
+            <FeatureRow
+              icon={Database}
+              title="UptimeCheck history"
+              description="Every ping result — up or down, latency in milliseconds — is written to a UptimeCheck collection in MongoDB with a 90-day TTL index. This collection is what builds the 15-day history bars on the status page. It also means that historical uptime data is available for review long after individual incidents are resolved."
+            />
+            <Callout accent>
+              The watchdog is intentionally separate from everything it monitors. If the main backend crashes, the watchdog continues running and detecting the outage. If the router goes down, the watchdog still pings all the backends directly and updates the status page. The only scenario where the watchdog cannot report is if its own instance fails — which is why UptimeRobot is also configured to monitor the watchdog itself from outside the entire infrastructure.
+            </Callout>
+          </Section>
+
+          {/* ─── OPEN SOURCE ─────────────────────────────────────── */}
+          <Section id="open-source">
+            <SectionTitle
+              icon={Globe}
+              title="Open source and license"
+              subtitle="PlanIt is free and open source software, released under the GNU Affero General Public License version 3 (AGPLv3). The license has specific implications worth understanding if you are running, modifying, or building on this software."
+            />
+            <p className="text-neutral-500 leading-relaxed mb-4">
+              The AGPLv3 is a copyleft license specifically designed for network server software. It extends the protections of the standard GPL to cover the SaaS deployment scenario: if you run a modified version of PlanIt on a server and make it available to users over a network, you are required to make your modified source code publicly available under the same license. You cannot take PlanIt, add proprietary features, and run a closed-source fork that serves users without releasing those changes.
+            </p>
+            <p className="text-neutral-500 leading-relaxed mb-4">
+              Using PlanIt unmodified — running it as-is for your own events or your organization's events — does not require you to publish anything. The source availability requirement is triggered by distributing a modified version or offering modified software as a networked service to others.
+            </p>
+            <FeatureRow
+              icon={ShieldCheck}
+              title="What the license means for you"
+              description="If you are an organizer using PlanIt to plan events: the license does not affect you at all. Use the platform freely. If you are a developer self-hosting PlanIt without modification: same situation — no source release required. If you are a developer who has modified PlanIt and is running a public-facing instance of your modified version: you must make your modified source available to users, typically by linking to a public repository."
+            />
+            <FeatureRow
+              icon={Key}
+              title="The license integrity system"
+              description="The backend includes a cryptographic license integrity verification system that runs at startup and every 4 hours. This system uses HMAC proof chains derived from the deployment's license key to verify that the server configuration is valid. If the verification fails — for example, if someone attempts to tamper with the license key or run an unauthorized copy — the server refuses to start or shuts down. This is a technical enforcement layer on top of the legal protections of the AGPLv3."
+            />
+            <Callout>
+              The full text of the GNU Affero General Public License v3 is included at the top of the backend server's source file. The canonical text and further information about the license are available at gnu.org/licenses/agpl-3.0.html.
+            </Callout>
           </Section>
 
           {/* Footer */}
