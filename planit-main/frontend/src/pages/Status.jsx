@@ -157,8 +157,8 @@ function UptimeBar({ bar, index }) {
     <div
       title={`${formatDayLabel(bar.date)} — ${label}`}
       style={{
-        flex: '1 1 0', minWidth: 0, height: '28px',
-        backgroundColor: color, borderRadius: '4px',
+        flex: '1 1 0', minWidth: 0, height: '22px',
+        backgroundColor: color, borderRadius: '999px',
         cursor: 'default', flexShrink: 0, opacity: 0,
         animation: `barIn 0.3s ease ${index * 0.006}s both`,
       }}
@@ -368,7 +368,7 @@ function ServerHealthRow({ server, uptimeHistory }) {
       </div>
 
       {/* Bars — full width, no gap label row underneath */}
-      <div style={{ display: 'flex', gap: '2px', width: '100%' }}>
+      <div style={{ display: 'flex', gap: '3px', width: '100%' }}>
         {bars.map((bar, i) => <UptimeBar key={i} bar={bar} index={i} />)}
       </div>
     </div>
