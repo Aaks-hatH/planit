@@ -15,10 +15,7 @@ if (BACKENDS.length === 0) {
   process.exit(1);
 }
 
-// ── Backend identity labels (codenames) ───────────────────────────────────────
-// BACKEND_LABELS = comma-separated names matching BACKEND_URLS order
-//   e.g. BACKEND_LABELS=Maverick,Goose,Iceman
-// If not set, falls back to index-based names.
+
 const FALLBACK_NAMES  = ['Alpha','Bravo','Charlie','Delta','Echo','Foxtrot','Golf','Hotel'];
 const customLabels    = (process.env.BACKEND_LABELS || '').split(',').map(s => s.trim()).filter(Boolean);
 function backendName(i) {
@@ -33,37 +30,7 @@ const COOKIE_NAME       = 'planit_route';
 const COOKIE_MAX_AGE_MS = 24 * 60 * 60 * 1000;
 const KEEPALIVE_MS      = 4 * 60 * 1000;
 
-// ── Auto-scaling thresholds ───────────────────────────────────────────────────
-//
-// HOW THE SCALING WORKS (plain English):
-//
-// Render free tier gives you several idle instances. Rather than routing traffic
-// to all of them at once (which dilutes the warm connection pool and makes each
-// backend do very little), we concentrate real traffic onto as few backends as
-// possible and only expand when those backends are actually getting busy.
-//
-// Think of it like a restaurant opening extra sections only when needed:
-//   - Start with 1 server station (1 active backend)
-//   - When that station gets busy (>SCALE_UP_THRESHOLD avg requests in flight),
-//     open another station (promote 1 more backend into the active set)
-//   - When stations are quiet again for a sustained period, consolidate back down
-//   - Closed stations still have staff on standby (keepalive pings) — they can
-//     be opened instantly, no cold start delay
-//
-// CIRCUIT BREAKER:
-//   If a backend starts returning errors or becomes unreachable, it gets marked
-//   as "tripped" and removed from the active routing set immediately, regardless
-//   of scaling state. Traffic fails over to remaining healthy backends. The tripped
-//   backend gets periodic recovery probes — once it responds healthily for
-//   CIRCUIT_RECOVERY_CHECKS consecutive checks, it re-enters the active pool.
-//
-// CONFIGURABLE via env vars:
-//   SCALE_UP_THRESHOLD   — avg in-flight requests per active backend to trigger scale-up   (default: 20)
-//   SCALE_DOWN_THRESHOLD — avg in-flight requests to allow scale-down                      (default: 5)
-//   SCALE_DOWN_PATIENCE  — consecutive quiet checks before scaling down                    (default: 5)
-//   CIRCUIT_TRIP_ERRORS  — consecutive errors before tripping circuit breaker              (default: 3)
-//   CIRCUIT_RECOVERY_CHECKS — healthy pings needed to restore a tripped backend           (default: 2)
-//
+
 const SCALE_UP_THRESHOLD      = parseInt(process.env.SCALE_UP_THRESHOLD      || '20', 10);
 const SCALE_DOWN_THRESHOLD    = parseInt(process.env.SCALE_DOWN_THRESHOLD    || '5',  10);
 const SCALE_DOWN_PATIENCE     = parseInt(process.env.SCALE_DOWN_PATIENCE     || '5',  10); // raised from 3 — less jittery
@@ -449,9 +416,7 @@ app.get('/health', (_req, res) => {
   });
 });
 
-// ─── Mesh: full internal status (auth required) ───────────────────────────────
-// Full router state including scaling log and dynamic backend registry.
-// Only accessible by mesh members (watchdog, backends) — not the public.
+
 app.get('/mesh/status', meshAuth(SERVICE_NAME), (_req, res) => {
   res.json({
     service:    SERVICE_NAME,
@@ -493,10 +458,7 @@ app.get('/mesh/status', meshAuth(SERVICE_NAME), (_req, res) => {
   });
 });
 
-// ─── Mesh: dynamic backend registration ──────────────────────────────────────
-// A new backend POSTs here on startup to join the fleet without router restart.
-// If the URL is already in BACKEND_URLS (env), this just enriches the name/region.
-// If it's a new URL not in env, it's added to the dynamic pool.
+
 app.post('/mesh/register', meshAuth(SERVICE_NAME), express.json(), (req, res) => {
   const { url, name, region } = req.body;
 
