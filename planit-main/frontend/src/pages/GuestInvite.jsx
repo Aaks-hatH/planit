@@ -4,29 +4,31 @@ import {
   Calendar, MapPin, Users, QrCode, Check, X, Clock, Mail,
   Copy, Share2, CheckCircle, AlertCircle, Info, Shield,
   Ticket, Phone, ExternalLink, Download, User, Sparkles,
-  Navigation, CalendarPlus, MessageCircle
+  Navigation, CalendarPlus, MessageCircle, AlertTriangle
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { formatDateInTimezone } from '../utils/timezoneUtils';
 import { motion } from 'framer-motion';
 import StarBackground from '../components/StarBackground';
 
+const API = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+
 export default function GuestInvite() {
   const { inviteCode } = useParams();
   const navigate = useNavigate();
   const [invite, setInvite] = useState(null);
   const [event, setEvent] = useState(null);
+  const [rsvpInfo, setRsvpInfo] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [rsvpLoading, setRsvpLoading] = useState(false);
   const [copied, setCopied] = useState(false);
   const [showQRFullscreen, setShowQRFullscreen] = useState(false);
 
-  useEffect(() => {
-    loadInvite();
-  }, [inviteCode]);
+  useEffect(() => { loadInvite(); }, [inviteCode]);
 
   const loadInvite = async () => {
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000/api'}/events/invite/${inviteCode}`);
+      const response = await fetch(`${API}/events/invite/${inviteCode}`);
       const data = await response.json();
       if (!response.ok) {
         toast.error(data.error || 'Invite not found');
@@ -35,6 +37,11 @@ export default function GuestInvite() {
       }
       setInvite(data.invite);
       setEvent(data.event);
+
+      // Load RSVP summary separately (public endpoint, no auth needed)
+      if (data.event?.id) {
+        loadRsvpInfo(data.event.id);
+      }
     } catch (error) {
       toast.error('Failed to load invite');
       navigate('/');
@@ -43,17 +50,37 @@ export default function GuestInvite() {
     }
   };
 
-  const handleRSVP = async (status) => {
+  const loadRsvpInfo = async (eventId) => {
     try {
-      await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000/api'}/events/${event.id}/invites/${inviteCode}/rsvp`, {
-        method: 'POST',
+      const res = await fetch(`${API}/events/${eventId}/rsvp-summary`);
+      if (res.ok) setRsvpInfo(await res.json());
+    } catch { /* non-critical, fail silently */ }
+  };
+
+  const handleRSVP = async (status) => {
+    if (rsvpInfo?.deadlinePast) {
+      toast.error('The RSVP deadline has passed.');
+      return;
+    }
+    setRsvpLoading(true);
+    try {
+      const res = await fetch(`${API}/events/${event.id}/invites/${inviteCode}/rsvp`, {
+        method:  'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status })
+        body:    JSON.stringify({ status }),
       });
-      toast.success(`RSVP updated: ${status}`);
-      loadInvite();
-    } catch (error) {
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(data.error || 'Failed to update RSVP');
+        return;
+      }
+      const labels = { yes: "You're going! 🎉", maybe: "Marked as maybe", no: "Declined" };
+      toast.success(labels[status] || 'RSVP updated');
+      loadInvite(); // refresh to get updated status
+    } catch {
       toast.error('Failed to update RSVP');
+    } finally {
+      setRsvpLoading(false);
     }
   };
 
@@ -64,9 +91,7 @@ export default function GuestInvite() {
       setCopied(true);
       toast.success('Invite link copied!');
       setTimeout(() => setCopied(false), 2000);
-    } catch (error) {
-      toast.error('Failed to copy link');
-    }
+    } catch { toast.error('Failed to copy link'); }
   };
 
   const handleDownloadQR = () => {
@@ -85,16 +110,34 @@ export default function GuestInvite() {
     if (!event.date) return;
     const startDate = new Date(event.date);
     const endDate = new Date(startDate.getTime() + 2 * 60 * 60 * 1000);
-    const formatDateForCal = (date) => date.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
-    const calendarUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(event.title)}&dates=${formatDateForCal(startDate)}/${formatDateForCal(endDate)}&details=${encodeURIComponent(`You're invited! Code: ${inviteCode}`)}&location=${encodeURIComponent(event.location || '')}`;
-    window.open(calendarUrl, '_blank');
+    const fmt = (d) => d.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+    const url = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(event.title)}&dates=${fmt(startDate)}/${fmt(endDate)}&details=${encodeURIComponent(`You're invited! Code: ${inviteCode}`)}&location=${encodeURIComponent(event.location || '')}`;
+    window.open(url, '_blank');
   };
 
   const getDirections = () => {
     if (!event.location) return;
-    const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(event.location)}`;
-    window.open(mapsUrl, '_blank');
+    window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(event.location)}`, '_blank');
   };
+
+  // Format deadline countdown
+  const getDeadlineText = () => {
+    if (!rsvpInfo?.deadline) return null;
+    const deadline = new Date(rsvpInfo.deadline);
+    const now = new Date();
+    if (now > deadline) return { text: 'RSVP deadline has passed', urgent: true };
+    const diffMs = deadline - now;
+    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+    const diffHours = Math.floor((diffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+    if (diffDays === 0 && diffHours <= 3) return { text: `RSVP closes in ${diffHours}h`, urgent: true };
+    if (diffDays === 0) return { text: `RSVP closes today`, urgent: true };
+    if (diffDays === 1) return { text: `RSVP closes tomorrow`, urgent: false };
+    return { text: `RSVP by ${deadline.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`, urgent: false };
+  };
+
+  const deadlineInfo = getDeadlineText();
+  const rsvpClosed = rsvpInfo?.deadlinePast;
+  const currentRsvpStatus = invite?.status;
 
   if (loading) {
     return (
@@ -111,9 +154,6 @@ export default function GuestInvite() {
 
   return (
     <div className="min-h-screen relative overflow-hidden" style={{ background: '#040407' }}>
-      {/* StarBackground: the dark theme here is intentional. See /about for a full explanation.
-          Short version: if you open your phone at a show or presentation in the dark,
-          a white screen blinds everyone nearby. This page stays dark so you never disturb the room. */}
       <StarBackground fixed={false} starCount={160} />
 
       <div className="relative z-10">
@@ -210,18 +250,14 @@ export default function GuestInvite() {
                       <div className="flex-1 min-w-0">
                         <p className="text-xs font-semibold text-neutral-500 uppercase tracking-wider mb-1">Location</p>
                         <p className="text-neutral-200 font-medium">{event.location}</p>
-                        <button
-                          onClick={getDirections}
-                          className="text-xs text-blue-400 hover:text-blue-300 font-medium mt-1 flex items-center gap-1"
-                        >
-                          <Navigation className="w-3 h-3" />
-                          Get Directions
+                        <button onClick={getDirections} className="text-xs text-blue-400 hover:text-blue-300 font-medium mt-1 flex items-center gap-1">
+                          <Navigation className="w-3 h-3" /> Get Directions
                         </button>
                       </div>
                     </div>
                   )}
 
-                  {((invite.adults !== undefined && invite.adults > 0) || (invite.children !== undefined && invite.children > 0)) && (
+                  {((invite.adults > 0) || (invite.children > 0)) && (
                     <div className="flex gap-4">
                       <div className="flex-shrink-0 w-12 h-12 rounded-xl bg-neutral-800/50 flex items-center justify-center">
                         <Users className="w-6 h-6 text-neutral-400" />
@@ -229,16 +265,8 @@ export default function GuestInvite() {
                       <div className="flex-1">
                         <p className="text-xs font-semibold text-neutral-500 uppercase tracking-wider mb-1">Party Size</p>
                         <div className="flex items-center gap-4">
-                          {invite.adults > 0 && (
-                            <span className="text-neutral-200 font-medium">
-                              {invite.adults} Adult{invite.adults !== 1 ? 's' : ''}
-                            </span>
-                          )}
-                          {invite.children > 0 && (
-                            <span className="text-neutral-200 font-medium">
-                              {invite.children} Child{invite.children !== 1 ? 'ren' : ''}
-                            </span>
-                          )}
+                          {invite.adults > 0 && <span className="text-neutral-200 font-medium">{invite.adults} Adult{invite.adults !== 1 ? 's' : ''}</span>}
+                          {invite.children > 0 && <span className="text-neutral-200 font-medium">{invite.children} Child{invite.children !== 1 ? 'ren' : ''}</span>}
                         </div>
                       </div>
                     </div>
@@ -261,6 +289,16 @@ export default function GuestInvite() {
                   </div>
                 )}
 
+                {/* Custom RSVP message from organizer */}
+                {rsvpInfo?.message && (
+                  <div className="mb-8 p-4 bg-blue-500/10 border border-blue-500/20 rounded-xl">
+                    <div className="flex items-start gap-3">
+                      <MessageCircle className="w-5 h-5 text-blue-400 flex-shrink-0 mt-0.5" />
+                      <p className="text-blue-200/90 text-sm leading-relaxed">{rsvpInfo.message}</p>
+                    </div>
+                  </div>
+                )}
+
                 {invite.notes && (
                   <div className="mb-8 p-4 bg-amber-500/10 border border-amber-500/30 rounded-xl">
                     <div className="flex items-start gap-3">
@@ -273,6 +311,72 @@ export default function GuestInvite() {
                   </div>
                 )}
 
+                {/* ── RSVP Section ─────────────────────────────────────────────── */}
+                <div className="mb-8 p-6 bg-neutral-800/30 rounded-2xl border border-neutral-700/50">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-lg font-bold text-neutral-100 flex items-center gap-2">
+                      <CheckCircle className="w-5 h-5 text-emerald-400" />
+                      RSVP
+                    </h3>
+                    {/* Deadline badge */}
+                    {deadlineInfo && (
+                      <span className={`flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full border ${
+                        deadlineInfo.urgent
+                          ? 'bg-red-500/10 border-red-500/30 text-red-400'
+                          : 'bg-amber-500/10 border-amber-500/30 text-amber-400'
+                      }`}>
+                        <Clock className="w-3.5 h-3.5" />
+                        {deadlineInfo.text}
+                      </span>
+                    )}
+                  </div>
+
+                  {/* RSVP counts (if organizer hasn't hidden them) */}
+                  {rsvpInfo?.showCount && rsvpInfo.total > 0 && (
+                    <div className="flex gap-4 mb-5 text-sm">
+                      <span className="text-emerald-400 font-medium">{rsvpInfo.summary.yes} going</span>
+                      <span className="text-amber-400 font-medium">{rsvpInfo.summary.maybe} maybe</span>
+                      <span className="text-neutral-500 font-medium">{rsvpInfo.summary.no} not going</span>
+                    </div>
+                  )}
+
+                  {rsvpClosed ? (
+                    <div className="flex items-center gap-2 p-3 bg-red-500/10 border border-red-500/20 rounded-xl text-red-300 text-sm">
+                      <AlertTriangle className="w-4 h-4 flex-shrink-0" />
+                      The RSVP deadline has passed. No changes can be made.
+                    </div>
+                  ) : (
+                    <>
+                      <p className="text-sm text-neutral-400 mb-3">
+                        {currentRsvpStatus
+                          ? `Your current response: ${currentRsvpStatus === 'yes' ? '✅ Going' : currentRsvpStatus === 'maybe' ? '🤔 Maybe' : '❌ Not going'} — you can change this anytime before the deadline.`
+                          : 'Let the organizer know if you can make it.'
+                        }
+                      </p>
+                      <div className="flex gap-3 flex-wrap">
+                        {[
+                          ['yes',   '✅ Going',     'bg-emerald-500/20 text-emerald-300 border-emerald-500/40 hover:bg-emerald-500/30'],
+                          ['maybe', '🤔 Maybe',     'bg-amber-500/20 text-amber-300 border-amber-500/40 hover:bg-amber-500/30'],
+                          ['no',    "❌ Can't make it", 'bg-red-500/20 text-red-300 border-red-500/40 hover:bg-red-500/30'],
+                        ].map(([status, label, cls]) => (
+                          <button
+                            key={status}
+                            onClick={() => handleRSVP(status)}
+                            disabled={rsvpLoading}
+                            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl border font-medium text-sm transition-all disabled:opacity-50 ${cls} ${
+                              currentRsvpStatus === status ? 'ring-2 ring-white/20 scale-105' : ''
+                            }`}
+                          >
+                            {rsvpLoading && currentRsvpStatus !== status ? null : label}
+                            {currentRsvpStatus === status && <Check className="w-3.5 h-3.5" />}
+                          </button>
+                        ))}
+                      </div>
+                    </>
+                  )}
+                </div>
+                {/* ─────────────────────────────────────────────────────────────── */}
+
                 {/* QR Code */}
                 {!invite.checkedIn && (
                   <div className="mb-8">
@@ -281,12 +385,8 @@ export default function GuestInvite() {
                         <QrCode className="w-5 h-5" />
                         Your Entry Pass
                       </h3>
-                      <button
-                        onClick={handleDownloadQR}
-                        className="text-sm text-neutral-400 hover:text-neutral-200 font-medium flex items-center gap-2 transition-colors"
-                      >
-                        <Download className="w-4 h-4" />
-                        Download
+                      <button onClick={handleDownloadQR} className="text-sm text-neutral-400 hover:text-neutral-200 font-medium flex items-center gap-2 transition-colors">
+                        <Download className="w-4 h-4" /> Download
                       </button>
                     </div>
 
@@ -295,21 +395,16 @@ export default function GuestInvite() {
                       className="group relative bg-white p-8 rounded-2xl cursor-pointer hover:shadow-2xl hover:shadow-neutral-900/50 transition-all"
                     >
                       <div className="flex flex-col items-center">
-                        <img
-                          src={qrUrl}
-                          alt="Entry QR Code"
-                          className="w-72 h-72 group-hover:scale-105 transition-transform duration-300"
-                        />
+                        <img src={qrUrl} alt="Entry QR Code" className="w-72 h-72 group-hover:scale-105 transition-transform duration-300" />
                         <div className="mt-6 text-center">
                           <p className="text-sm text-neutral-600 mb-2">Present this code at the entrance</p>
                           <p className="text-xs text-blue-600 font-medium flex items-center justify-center gap-1.5 group-hover:text-blue-700">
-                            <ExternalLink className="w-3.5 h-3.5" />
-                            Tap for fullscreen view
+                            <ExternalLink className="w-3.5 h-3.5" /> Tap for fullscreen view
                           </p>
                         </div>
                       </div>
                       <div className="absolute left-0 right-0 -top-2 h-4 bg-repeat-x opacity-30"
-                        style={{ backgroundImage: "url('data:image/svg+xml,%3Csvg width='20' height='8' xmlns='http://www.w3.org/2000/svg'%3E%3Ccircle cx='4' cy='4' r='3' fill='%23000'/%3E%3C/svg%3E')" }} />
+                        style={{ backgroundImage: "url('data:image/svg+xml,%3Csvg width=\"20\" height=\"8\" xmlns=\"http://www.w3.org/2000/svg\"%3E%3Ccircle cx=\"4\" cy=\"4\" r=\"3\" fill=\"%23000\"/%3E%3C/svg%3E')" }} />
                     </div>
 
                     <div className="mt-4 p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl flex items-start gap-2.5">
@@ -324,18 +419,11 @@ export default function GuestInvite() {
                 {/* Action Buttons */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {event.date && (
-                    <button
-                      onClick={addToCalendar}
-                      className="flex items-center justify-center gap-2 px-6 py-4 bg-neutral-800/50 hover:bg-neutral-700/50 border border-neutral-700 rounded-xl font-semibold text-neutral-200 transition-all"
-                    >
-                      <CalendarPlus className="w-5 h-5" />
-                      Add to Calendar
+                    <button onClick={addToCalendar} className="flex items-center justify-center gap-2 px-6 py-4 bg-neutral-800/50 hover:bg-neutral-700/50 border border-neutral-700 rounded-xl font-semibold text-neutral-200 transition-all">
+                      <CalendarPlus className="w-5 h-5" /> Add to Calendar
                     </button>
                   )}
-                  <button
-                    onClick={handleCopyLink}
-                    className="flex items-center justify-center gap-2 px-6 py-4 bg-neutral-800/50 hover:bg-neutral-700/50 border border-neutral-700 rounded-xl font-semibold text-neutral-200 transition-all"
-                  >
+                  <button onClick={handleCopyLink} className="flex items-center justify-center gap-2 px-6 py-4 bg-neutral-800/50 hover:bg-neutral-700/50 border border-neutral-700 rounded-xl font-semibold text-neutral-200 transition-all">
                     {copied ? <Check className="w-5 h-5 text-emerald-400" /> : <Share2 className="w-5 h-5" />}
                     {copied ? 'Link Copied!' : 'Share Invite'}
                   </button>
@@ -345,7 +433,7 @@ export default function GuestInvite() {
               {/* Ticket Footer */}
               <div className="relative h-8 bg-neutral-950 border-t border-neutral-800/50">
                 <div className="absolute left-0 right-0 -top-2 h-4 bg-repeat-x opacity-20"
-                  style={{ backgroundImage: "url('data:image/svg+xml,%3Csvg width='20' height='8' xmlns='http://www.w3.org/2000/svg'%3E%3Ccircle cx='4' cy='4' r='3' fill='%23fff'/%3E%3C/svg%3E')" }} />
+                  style={{ backgroundImage: "url('data:image/svg+xml,%3Csvg width=\"20\" height=\"8\" xmlns=\"http://www.w3.org/2000/svg\"%3E%3Ccircle cx=\"4\" cy=\"4\" r=\"3\" fill=\"%23fff\"/%3E%3C/svg%3E')" }} />
               </div>
             </div>
 
@@ -360,12 +448,8 @@ export default function GuestInvite() {
                   </div>
                   <p className="text-xs text-neutral-500 mt-1">Professional Event Management</p>
                 </div>
-                <a
-                  href="/"
-                  className="px-6 py-3 bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 rounded-xl text-sm font-semibold text-neutral-200 transition-all flex items-center gap-2"
-                >
-                  Create Your Event
-                  <ExternalLink className="w-4 h-4" />
+                <a href="/" className="px-6 py-3 bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 rounded-xl text-sm font-semibold text-neutral-200 transition-all flex items-center gap-2">
+                  Create Your Event <ExternalLink className="w-4 h-4" />
                 </a>
               </div>
             </div>
@@ -375,28 +459,18 @@ export default function GuestInvite() {
 
       {/* Fullscreen QR Modal */}
       {showQRFullscreen && (
-        <div
-          className="fixed inset-0 bg-black/98 z-50 flex items-center justify-center p-6 backdrop-blur-sm"
-          onClick={() => setShowQRFullscreen(false)}
-        >
+        <div className="fixed inset-0 bg-black/98 z-50 flex items-center justify-center p-6 backdrop-blur-sm" onClick={() => setShowQRFullscreen(false)}>
           <div className="max-w-2xl w-full">
             <div className="text-center mb-8">
               <h2 className="text-3xl font-black text-white mb-2">{event.title}</h2>
               <p className="text-neutral-400 text-lg">{invite.guestName}</p>
             </div>
             <div className="bg-white p-12 rounded-3xl shadow-2xl">
-              <img
-                src={`https://api.qrserver.com/v1/create-qr-code/?size=800x800&data=${encodeURIComponent(inviteUrl)}`}
-                alt="QR Code Fullscreen"
-                className="w-full max-w-lg mx-auto"
-              />
-              <p className="text-4xl font-mono font-black text-neutral-900 text-center mt-8 tracking-[0.3em]">
-                {inviteCode}
-              </p>
+              <img src={`https://api.qrserver.com/v1/create-qr-code/?size=800x800&data=${encodeURIComponent(inviteUrl)}`} alt="QR Code Fullscreen" className="w-full max-w-lg mx-auto" />
+              <p className="text-4xl font-mono font-black text-neutral-900 text-center mt-8 tracking-[0.3em]">{inviteCode}</p>
             </div>
             <p className="text-center text-neutral-400 text-sm mt-8 flex items-center justify-center gap-2">
-              <Info className="w-4 h-4" />
-              Tap anywhere to close
+              <Info className="w-4 h-4" /> Tap anywhere to close
             </p>
           </div>
         </div>
