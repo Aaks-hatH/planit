@@ -59,7 +59,7 @@ export default function GuestInvite() {
 
   const handleRSVP = async (status) => {
     if (rsvpInfo?.deadlinePast) {
-      toast.error('The RSVP deadline has passed.');
+      toast.error('The RSVP deadline has passed. No changes can be made.');
       return;
     }
     setRsvpLoading(true);
@@ -74,7 +74,7 @@ export default function GuestInvite() {
         toast.error(data.error || 'Failed to update RSVP');
         return;
       }
-      const labels = { yes: "You're going! 🎉", maybe: "Marked as maybe", no: "Declined" };
+      const labels = { yes: "You're going — RSVP confirmed", maybe: "RSVP saved as Maybe", no: "RSVP saved — Not attending" };
       toast.success(labels[status] || 'RSVP updated');
       loadInvite(); // refresh to get updated status
     } catch {
@@ -137,7 +137,10 @@ export default function GuestInvite() {
 
   const deadlineInfo = getDeadlineText();
   const rsvpClosed = rsvpInfo?.deadlinePast;
-  const currentRsvpStatus = invite?.status;
+  // The database stores 'confirmed'/'declined'/'maybe'; the button values are 'yes'/'no'/'maybe'.
+  // Normalise so the selected-button highlight works correctly after a reload.
+  const statusToDisplay = { confirmed: 'yes', declined: 'no', maybe: 'maybe', yes: 'yes', no: 'no' };
+  const currentRsvpStatus = statusToDisplay[invite?.status] || null;
 
   if (loading) {
     return (
@@ -349,15 +352,15 @@ export default function GuestInvite() {
                     <>
                       <p className="text-sm text-neutral-400 mb-3">
                         {currentRsvpStatus
-                          ? `Your current response: ${currentRsvpStatus === 'yes' ? '✅ Going' : currentRsvpStatus === 'maybe' ? '🤔 Maybe' : '❌ Not going'} — you can change this anytime before the deadline.`
+                          ? `Your current response: ${currentRsvpStatus === 'yes' ? 'Going' : currentRsvpStatus === 'maybe' ? 'Maybe' : 'Not going'} — you can change this anytime before the deadline.`
                           : 'Let the organizer know if you can make it.'
                         }
                       </p>
                       <div className="flex gap-3 flex-wrap">
                         {[
-                          ['yes',   '✅ Going',     'bg-emerald-500/20 text-emerald-300 border-emerald-500/40 hover:bg-emerald-500/30'],
-                          ['maybe', '🤔 Maybe',     'bg-amber-500/20 text-amber-300 border-amber-500/40 hover:bg-amber-500/30'],
-                          ['no',    "❌ Can't make it", 'bg-red-500/20 text-red-300 border-red-500/40 hover:bg-red-500/30'],
+                          ['yes',   'Going',        'bg-emerald-500/20 text-emerald-300 border-emerald-500/40 hover:bg-emerald-500/30'],
+                          ['maybe', 'Maybe',        'bg-amber-500/20 text-amber-300 border-amber-500/40 hover:bg-amber-500/30'],
+                          ['no',    "Can't make it", 'bg-red-500/20 text-red-300 border-red-500/40 hover:bg-red-500/30'],
                         ].map(([status, label, cls]) => (
                           <button
                             key={status}
