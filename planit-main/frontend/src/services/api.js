@@ -256,6 +256,11 @@ export const watchdogAPI = {
     if (!watchdogAxios) return Promise.resolve(null);
     return watchdogAxios.get('/watchdog/ping');
   },
+  // Returns per-service 15-day uptime history from UptimeCheck records
+  getUptimeHistory: () => {
+    if (!watchdogAxios) return Promise.resolve(null);
+    return watchdogAxios.get('/watchdog/uptime');
+  },
 };
 
 // Utilities
