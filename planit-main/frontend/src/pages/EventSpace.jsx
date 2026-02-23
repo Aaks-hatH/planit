@@ -761,23 +761,9 @@ export default function EventSpace() {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  /* ── Gate / Loading ── */
-  if (resolving || (loading && !event)) return (
-    <div className="min-h-screen bg-white flex items-center justify-center">
-      <span className="spinner w-5 h-5 border-2 border-neutral-200 border-t-neutral-500" />
-    </div>
-  );
-  
-  if (needsJoin) return <JoinGate eventId={eventId} onJoined={handleJoined} />;
-
-  if (!event) return null;
-  if (needsJoin) return <JoinGate eventId={eventId} onJoined={handleJoined} />;
-  if (loading) return (
-    <div className="min-h-screen bg-white flex items-center justify-center">
-      <span className="spinner w-5 h-5 border-2 border-neutral-200 border-t-neutral-500" />
-    </div>
-  );
-
+  // ── Compute tabs and settings before any early returns so hooks are never
+  // called conditionally (Rules of Hooks). event may be null here; all
+  // accesses use optional chaining / fallback values so that's fine.
   const settings = event?.settings || {};
   const tabs = [
     ...(settings.allowChat !== false        ? [{ id: 'chat',          label: 'Chat',          icon: MessageSquare, count: messages.length }] : []),
@@ -794,13 +780,30 @@ export default function EventSpace() {
   ];
 
   // If the active tab is hidden by a settings change, redirect to the first visible tab.
-  // Done in useEffect (not inline) to avoid triggering a side-effect during render.
+  // Must be called here (before any returns) to comply with Rules of Hooks.
   useEffect(() => {
     if (tabs.length > 0 && !tabs.find(t => t.id === activeTab)) {
       setActiveTab(tabs[0].id);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [settings.allowChat, settings.allowPolls, settings.allowFileSharing]);
+
+  /* ── Gate / Loading ── */
+  if (resolving || (loading && !event)) return (
+    <div className="min-h-screen bg-white flex items-center justify-center">
+      <span className="spinner w-5 h-5 border-2 border-neutral-200 border-t-neutral-500" />
+    </div>
+  );
+
+  if (needsJoin) return <JoinGate eventId={eventId} onJoined={handleJoined} />;
+
+  if (!event) return null;
+
+  if (loading) return (
+    <div className="min-h-screen bg-white flex items-center justify-center">
+      <span className="spinner w-5 h-5 border-2 border-neutral-200 border-t-neutral-500" />
+    </div>
+  );
 
   return (
     <div className="min-h-screen bg-neutral-50 flex flex-col">
