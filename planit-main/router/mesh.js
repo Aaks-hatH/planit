@@ -1,27 +1,4 @@
 'use strict';
-/**
- * PlanIt Internal Mesh — Auth + Logging
- * ──────────────────────────────────────────────────────────────────────────────
- * Every service in the fleet (backends, router, watchdog) uses this module to:
- *   1. Sign outgoing internal requests  →  meshHeaders(callerName)
- *   2. Verify incoming internal requests →  meshAuth middleware
- *   3. Make authenticated mesh calls     →  meshGet / meshPost
- *
- * Token format:  X-Mesh-Token: {timestamp}:{callerName}:{hmac}
- *   timestamp  = ms since epoch — tokens older than MESH_TOKEN_TTL_MS are rejected
- *   callerName = human-readable service name e.g. "Router", "Maverick", "Watchdog"
- *   hmac       = HMAC-SHA256( "{timestamp}:{callerName}", MESH_SECRET )
- *
- * Every accepted or rejected mesh call is logged:
- *   [mesh] Router → Maverick  GET /api/mesh/health — 48ms
- *   [mesh] REJECTED  unknown source — bad signature
- *
- * Environment variable required on EVERY service:
- *   MESH_SECRET=<long random string, same value on all services>
- *
- * Generate a good secret once:
- *   node -e "console.log(require('crypto').randomBytes(48).toString('hex'))"
- */
 
 const crypto = require('crypto');
 const axios  = require('axios');
