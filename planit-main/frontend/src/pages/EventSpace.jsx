@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   Calendar, Users, MessageSquare, BarChart3, FileText,
-  Send, Paperclip, X, Download, Trash2, Plus,
+  Send, Paperclip, X, Download, Trash2, Plus, Sliders,
   LogOut, ArrowLeft, Copy, Check, Lock, MapPin,
   ChevronRight, Clock, QrCode, CalendarDays,
   Smile, ThumbsUp, Heart, Laugh,
@@ -23,6 +23,7 @@ import Analytics from '../components/Analytics';
 import Utilities from '../components/Utilities';
 import Countdown from '../components/Countdown';
 import DeletionWarningBanner from '../components/DeletionWarningBanner';
+import OrganizerSettings from '../components/OrganizerSettings';
 
 /* ─── QR Modal ───────────────────────────────────────────────────────────── */
 function QRModal({ url, onClose }) {
@@ -381,6 +382,7 @@ export default function EventSpace() {
 
   const [copied, setCopied] = useState(false);
   const [showQR, setShowQR] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
 
   const currentUser = localStorage.getItem('username');
   const isOrganizer = event?.organizerName === currentUser;
@@ -793,6 +795,14 @@ export default function EventSpace() {
       <DeletionWarningBanner eventId={eventId} />
       
       {showQR && <QRModal url={`${window.location.origin}/event/${eventId}`} onClose={() => setShowQR(false)} />}
+      {showSettings && isOrganizer && (
+        <OrganizerSettings
+          eventId={eventId}
+          event={event}
+          onClose={() => setShowSettings(false)}
+          onUpdated={() => { loadEvent(); }}
+        />
+      )}
 
       {/* Header */}
       <header className="bg-white border-b border-neutral-100 sticky top-0 z-50">
@@ -1328,6 +1338,13 @@ export default function EventSpace() {
                       <span>Manage Guest Check-in</span>
                     </button>
                   )}
+                  <button
+                    onClick={() => setShowSettings(true)}
+                    className="flex items-center gap-2 w-full px-3 py-2.5 text-xs bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg transition-colors font-medium mb-1.5"
+                  >
+                    <Sliders className="w-3.5 h-3.5" />
+                    <span>Event Settings</span>
+                  </button>
                   <button
                     onClick={() => navigate(`/event/${eventId}/login`)}
                     className="flex items-center gap-2 w-full px-3 py-2 text-xs bg-neutral-900 hover:bg-neutral-700 text-white rounded-lg transition-colors"
