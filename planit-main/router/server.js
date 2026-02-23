@@ -1,5 +1,6 @@
 require('dotenv').config();
 const express      = require('express');
+const cors         = require('cors');
 const cookieParser = require('cookie-parser');
 const { createProxyMiddleware } = require('http-proxy-middleware');
 const axios        = require('axios');
@@ -386,6 +387,25 @@ function cacheMiddleware(req, res, next) {
 // ─── Express app ──────────────────────────────────────────────────────────────
 const app = express();
 app.use(cookieParser());
+
+// ─── CORS ─────────────────────────────────────────────────────────────────────
+// Allow the frontend origin(s) to reach the router (needed for Socket.IO polling)
+const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || '')
+  .split(',').map(o => o.trim()).filter(Boolean);
+
+app.use(cors({
+  origin: (origin, callback) => {
+    // Allow requests with no origin (server-to-server, curl, etc.)
+    if (!origin) return callback(null, true);
+    if (ALLOWED_ORIGINS.length === 0 || ALLOWED_ORIGINS.includes(origin)) {
+      return callback(null, true);
+    }
+    callback(new Error(`CORS: origin ${origin} not allowed`));
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'x-mesh-secret'],
+}));
 
 // ─── Public health endpoint ───────────────────────────────────────────────────
 // URLs are NEVER exposed here. Only names, status, and aggregate counts.
