@@ -593,6 +593,13 @@ export default function Status() {
 
     setData(merged);
     setLastFetch(new Date());
+
+    // Use the 15-day history embedded in the watchdog status response.
+    // This keeps server bar charts in sync with the same fetch that provides
+    // live status, just like how regular services use allIncidents from status.
+    if (watchdogData?.uptimeHistory) {
+      setUptimeHistory(watchdogData.uptimeHistory);
+    }
   }, []);
 
   const ping = useCallback(async () => {
