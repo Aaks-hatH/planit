@@ -66,7 +66,9 @@ export const eventAPI = {
   delete: (id) => api.delete(`/events/${id}`),
   
   // RSVP
-  rsvp: (eventId, data) => api.post(`/events/${eventId}/rsvp`, data),
+  rsvp:               (eventId, data)     => api.post(`/events/${eventId}/rsvp`, data),
+  updateRsvpSettings: (eventId, settings) => api.patch(`/events/${eventId}/rsvp-settings`, settings),
+  getRsvpSummary:     (eventId)           => api.get(`/events/${eventId}/rsvp-summary`),
   
   // Agenda
   getAgenda: (eventId) => api.get(`/events/${eventId}/agenda`),
