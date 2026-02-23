@@ -153,8 +153,8 @@ const proxies = BACKENDS.map((target, index) =>
     target,
     changeOrigin: true,
     ws: true,
-    proxyTimeout: 30000,
-    timeout:      30000,
+    proxyTimeout: 60000,
+    timeout:      60000,
 
     on: {
       // Set the sticky cookie on every response so the browser always comes
