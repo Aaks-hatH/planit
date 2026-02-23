@@ -288,6 +288,9 @@ function ServerHealthRow({ server, uptimeHistory }) {
     ? { bg: '#ede9fe', color: '#7c3aed' }
     : { bg: '#f0f9ff', color: '#0369a1' };
 
+  // Region badge e.g. "US East (Virginia)"
+  const regionStyle = { bg: '#f0fdf4', color: '#15803d' };
+
   return (
     <div style={{ padding: '16px 20px', borderBottom: '1px solid #f3f4f6' }}>
       {/* Header row */}
@@ -310,9 +313,11 @@ function ServerHealthRow({ server, uptimeHistory }) {
 
           <div style={{ minWidth: 0, flex: 1 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-              <span style={{ fontSize: '14px', fontWeight: '600', color: '#111827', fontFamily: '"DM Sans", sans-serif' }}>
+              {/* Codename — the main identifier */}
+              <span style={{ fontSize: '14px', fontWeight: '700', color: '#111827', fontFamily: '"DM Sans", sans-serif' }}>
                 {server.name}
               </span>
+              {/* Type pill */}
               <span style={{
                 fontSize: '10px', fontWeight: '600', letterSpacing: '0.04em',
                 textTransform: 'uppercase', padding: '2px 8px', borderRadius: '999px',
@@ -321,6 +326,17 @@ function ServerHealthRow({ server, uptimeHistory }) {
               }}>
                 {typeLabel}
               </span>
+              {/* Region pill — shown when available, e.g. "US East (Virginia)" */}
+              {server.region && server.type !== 'router' && (
+                <span style={{
+                  fontSize: '10px', fontWeight: '500', letterSpacing: '0.03em',
+                  padding: '2px 8px', borderRadius: '999px',
+                  background: regionStyle.bg, color: regionStyle.color,
+                  fontFamily: '"DM Sans", sans-serif',
+                }}>
+                  {server.region}
+                </span>
+              )}
             </div>
             {server.url && (
               <span style={{
