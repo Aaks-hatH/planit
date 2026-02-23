@@ -6,7 +6,7 @@ import {
   LogOut, ArrowLeft, Copy, Check, Lock, MapPin,
   ChevronRight, Clock, QrCode, CalendarDays,
   Smile, ThumbsUp, Heart, Laugh,
-  CheckCircle2, Megaphone, DollarSign, StickyNote, Share2, UserCheck
+  CheckCircle2, Megaphone, DollarSign, StickyNote, Share2, UserCheck, XCircle
 } from 'lucide-react';
 import { eventAPI, chatAPI, pollAPI, fileAPI } from '../services/api';
 import socketService from '../services/socket';
@@ -479,6 +479,9 @@ export default function EventSpace() {
     socketService.on('agenda_updated', ({ agenda }) => setAgenda([...agenda].sort((a, b) => a.order - b.order)));
     socketService.on('files_uploaded', ({ files: newFiles }) => setFiles(prev => [...newFiles, ...prev]));
     socketService.on('file_deleted', ({ fileId }) => setFiles(prev => prev.filter(f => (f._id || f.id) !== fileId)));
+    // Re-fetch the full event whenever the organizer saves settings so all
+    // participants immediately see tab changes, status banners, etc.
+    socketService.on('event_settings_updated', () => { loadEvent(); });
     
     // Error handler
     socketService.on('error', (error) => {
@@ -500,7 +503,7 @@ export default function EventSpace() {
 
     // Rate limit warning — approaching the limit but not yet blocked
     socketService.on('rate_limit_warning', ({ message }) => {
-      toast(message, { icon: '⚠️', duration: 3000 });
+      toast(message, { duration: 3000 });
     });
 
     return () => { 
@@ -775,19 +778,29 @@ export default function EventSpace() {
     </div>
   );
 
+  const settings = event?.settings || {};
   const tabs = [
-    { id: 'chat', label: 'Chat', icon: MessageSquare, count: messages.length },
-    { id: 'polls', label: 'Polls', icon: BarChart3, count: polls.length },
-    { id: 'files', label: 'Files', icon: FileText, count: files.length },
-    { id: 'agenda', label: 'Agenda', icon: Clock, count: agenda.length },
-    { id: 'people', label: 'People', icon: Users, count: participants.length },
-    { id: 'tasks', label: 'Tasks', icon: CheckCircle2 },
+    ...(settings.allowChat !== false        ? [{ id: 'chat',          label: 'Chat',          icon: MessageSquare, count: messages.length }] : []),
+    ...(settings.allowPolls !== false       ? [{ id: 'polls',         label: 'Polls',         icon: BarChart3,     count: polls.length    }] : []),
+    ...(settings.allowFileSharing !== false ? [{ id: 'files',         label: 'Files',         icon: FileText,      count: files.length    }] : []),
+    { id: 'agenda',        label: 'Agenda',        icon: Clock,      count: agenda.length },
+    { id: 'people',        label: 'People',        icon: Users,      count: participants.length },
+    { id: 'tasks',         label: 'Tasks',         icon: CheckCircle2 },
     { id: 'announcements', label: 'Announcements', icon: Megaphone },
-    { id: 'expenses', label: 'Budget', icon: DollarSign },
-    { id: 'notes', label: 'Notes', icon: StickyNote },
+    { id: 'expenses',      label: 'Budget',        icon: DollarSign },
+    { id: 'notes',         label: 'Notes',         icon: StickyNote },
     ...(isOrganizer && event?.isEnterpriseMode ? [{ id: 'analytics', label: 'Analytics', icon: BarChart3 }] : []),
     { id: 'utilities', label: 'Share', icon: Share2 },
   ];
+
+  // If the active tab is hidden by a settings change, redirect to the first visible tab.
+  // Done in useEffect (not inline) to avoid triggering a side-effect during render.
+  useEffect(() => {
+    if (tabs.length > 0 && !tabs.find(t => t.id === activeTab)) {
+      setActiveTab(tabs[0].id);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [settings.allowChat, settings.allowPolls, settings.allowFileSharing]);
 
   return (
     <div className="min-h-screen bg-neutral-50 flex flex-col">
@@ -873,6 +886,26 @@ export default function EventSpace() {
                   <UserCheck className="w-4 h-4" />
                   Manage Invites
                 </button>
+              </div>
+            </div>
+          )}
+
+          {/* ── Event status banner (cancelled / completed) ── */}
+          {event?.status === 'cancelled' && (
+            <div className="mb-4 flex items-center gap-3 p-4 bg-red-50 border border-red-200 rounded-xl">
+              <XCircle className="w-5 h-5 text-red-500 flex-shrink-0" />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold text-red-800">This event has been cancelled</p>
+                <p className="text-xs text-red-600 mt-0.5">The organizer has cancelled this event. New RSVPs and joins are disabled.</p>
+              </div>
+            </div>
+          )}
+          {event?.status === 'completed' && (
+            <div className="mb-4 flex items-center gap-3 p-4 bg-neutral-100 border border-neutral-200 rounded-xl">
+              <CheckCircle2 className="w-5 h-5 text-neutral-500 flex-shrink-0" />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold text-neutral-700">This event has ended</p>
+                <p className="text-xs text-neutral-500 mt-0.5">The event has been marked as completed. Content is read-only.</p>
               </div>
             </div>
           )}
