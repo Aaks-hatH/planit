@@ -106,7 +106,13 @@ const eventSchema = new mongoose.Schema({
     allowPolls: { type: Boolean, default: true },
     allowFileSharing: { type: Boolean, default: true },
     requireApproval: { type: Boolean, default: false },
-    isPublic: { type: Boolean, default: false }
+    isPublic: { type: Boolean, default: false },
+    // RSVP improvements
+    rsvpEnabled:       { type: Boolean, default: true  },
+    rsvpDeadline:      { type: Date,    default: null  }, // null = no deadline
+    rsvpAllowMaybe:    { type: Boolean, default: true  }, // allow 'maybe' responses
+    rsvpShowCount:     { type: Boolean, default: true  }, // show RSVP counts to guests
+    rsvpMessage:       { type: String,  default: ''    }, // custom message shown on RSVP
   },
   
   participants: [{
