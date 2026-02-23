@@ -19,20 +19,31 @@ class SocketService {
 
     this.socket = io(WS_URL, {
       auth: { token },
-      transports: ['websocket', 'polling'],
+      // polling first — connects instantly and always works through Render's proxy.
+      // Socket.IO automatically upgrades to WebSocket in the background once
+      // the connection is stable. This eliminates the 3-second delay caused by
+      // waiting for a WebSocket attempt to time out before falling back.
+      transports: ['polling', 'websocket'],
       reconnection: true,
       reconnectionDelay: 1000,
       reconnectionDelayMax: 5000,
       reconnectionAttempts: Infinity,
+      // Faster timeout so failed connections are detected and retried sooner
+      timeout: 10000,
     });
 
     this.socket.on('connect', () => {
-      console.log('Socket connected:', this.socket.id);
+      console.log('Socket connected:', this.socket.id, '| transport:', this.socket.io.engine.transport.name);
       this.connected = true;
       // Rejoin event room automatically after reconnect
       if (this._currentEventId) {
         this.socket.emit('join_event', this._currentEventId);
       }
+    });
+
+    // Log when Socket.IO upgrades from polling → websocket in the background
+    this.socket.io.engine.on('upgrade', (transport) => {
+      console.log('Socket upgraded to:', transport.name);
     });
 
     this.socket.on('disconnect', (reason) => {
