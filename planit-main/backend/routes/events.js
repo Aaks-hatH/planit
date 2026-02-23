@@ -262,16 +262,31 @@ router.post('/:eventId/rsvp',
   async (req, res, next) => {
     try {
       const event = req.event;
+
+      // ── RSVP deadline enforcement ──────────────────────────────────────────
+      if (event.settings?.rsvpEnabled === false) {
+        return res.status(403).json({ error: 'RSVPs are not enabled for this event.' });
+      }
+      if (event.settings?.rsvpDeadline && new Date() > new Date(event.settings.rsvpDeadline)) {
+        return res.status(403).json({
+          error: 'The RSVP deadline has passed.',
+          deadline: event.settings.rsvpDeadline,
+        });
+      }
+      if (req.body.status === 'maybe' && event.settings?.rsvpAllowMaybe === false) {
+        return res.status(400).json({ error: 'Maybe responses are not allowed for this event.' });
+      }
+      // ──────────────────────────────────────────────────────────────────────
+
       await event.setRsvp(req.body.username, req.body.status);
 
-      // ── FIX: Emit complete RSVP data including rsvps array ──
       const io = req.app.get('io');
       if (io) {
         io.to(`event_${req.params.eventId}`).emit('rsvp_updated', {
           username: req.body.username,
-          status: req.body.status,
-          rsvps: event.rsvps,
-          summary: event.getRsvpSummary()
+          status:   req.body.status,
+          rsvps:    event.rsvps,
+          summary:  event.getRsvpSummary()
         });
       }
 
@@ -279,6 +294,48 @@ router.post('/:eventId/rsvp',
     } catch (error) { next(error); }
   }
 );
+
+// ── RSVP settings (organizer only) ────────────────────────────────────────
+router.patch('/:eventId/rsvp-settings',
+  verifyOrganizer,
+  async (req, res, next) => {
+    try {
+      const event = req.event;
+      const { rsvpEnabled, rsvpDeadline, rsvpAllowMaybe, rsvpShowCount, rsvpMessage } = req.body;
+
+      if (rsvpEnabled      !== undefined) event.settings.rsvpEnabled      = rsvpEnabled;
+      if (rsvpDeadline     !== undefined) event.settings.rsvpDeadline     = rsvpDeadline ? new Date(rsvpDeadline) : null;
+      if (rsvpAllowMaybe   !== undefined) event.settings.rsvpAllowMaybe   = rsvpAllowMaybe;
+      if (rsvpShowCount    !== undefined) event.settings.rsvpShowCount    = rsvpShowCount;
+      if (rsvpMessage      !== undefined) event.settings.rsvpMessage      = rsvpMessage.slice(0, 500);
+
+      await event.save();
+      res.json({ message: 'RSVP settings updated', settings: event.settings });
+    } catch (error) { next(error); }
+  }
+);
+
+// ── RSVP summary — public, no auth needed ─────────────────────────────────
+// Used by the guest invite page to show counts without requiring login
+router.get('/:eventId/rsvp-summary', async (req, res, next) => {
+  try {
+    const Event = require('../models/Event');
+    const event = await Event.findById(req.params.eventId).select('rsvps settings title date').lean();
+    if (!event) return res.status(404).json({ error: 'Event not found' });
+
+    const summary = { yes: 0, maybe: 0, no: 0 };
+    event.rsvps.forEach(r => { if (summary[r.status] !== undefined) summary[r.status]++; });
+
+    res.json({
+      summary,
+      total:        event.rsvps.length,
+      deadline:     event.settings?.rsvpDeadline || null,
+      deadlinePast: event.settings?.rsvpDeadline ? new Date() > new Date(event.settings.rsvpDeadline) : false,
+      showCount:    event.settings?.rsvpShowCount !== false,
+      message:      event.settings?.rsvpMessage || '',
+    });
+  } catch (error) { next(error); }
+});
 
 // ── TASKS ─────────────────────────────────────────────────────────────────
 // Get tasks
