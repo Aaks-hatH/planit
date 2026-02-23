@@ -23,7 +23,7 @@ const inviteSchema = new mongoose.Schema({
   checkedInBy: { type: String },
 
   notes:  { type: String, trim: true, maxlength: 500 },
-  status: { type: String, enum: ['pending', 'confirmed', 'declined', 'checked-in', 'blocked'], default: 'pending' },
+  status: { type: String, enum: ['pending', 'confirmed', 'maybe', 'declined', 'checked-in', 'blocked'], default: 'pending' },
 
   // ═══════════════════════════════════════════════════════════════════════════
   // ANTI-FRAUD & SECURITY FEATURES
