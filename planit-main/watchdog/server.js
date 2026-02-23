@@ -29,31 +29,41 @@ const PORT             = process.env.PORT || '4000';
 // Each target: { name, url, pingUrl, type }
 const targets = [];
 
-// ── Professional service naming ───────────────────────────────────────────────
-// Incidents shown to users should never mention internal infrastructure names
-// like "Backend 1" or "Router". We use customer-facing service tier names instead:
-//   1 backend  → "API Service"
-//   2 backends → "API Service (Primary)", "API Service (Secondary)"
-//   3+         → "API Service — Region 1", "API Service — Region 2", ...
-// The router is always called "Load Balancer" — that's what it is to the user.
+// ── Server codenames & display labels ─────────────────────────────────────────
 //
-// You can override any label by setting BACKEND_LABELS in your env:
-//   BACKEND_LABELS=US East,EU West,Asia Pacific
-const backendUrls  = BACKEND_URLS_RAW.split(',').map(u => u.trim()).filter(Boolean);
-const customLabels = (process.env.BACKEND_LABELS || '').split(',').map(s => s.trim()).filter(Boolean);
+// Servers use codenames (Maverick, Goose, etc.) — these appear in:
+//   • Your private logs and ntfy alerts: "Maverick tripped circuit breaker"
+//   • The Status page Infrastructure section: "Maverick  API Server  US East"
+//   • Incident titles: "Service Degradation — the Maverick server"
+//   • Incident body:   "...the Maverick server (US East) is not responding..."
+//
+// Set in your Render env vars:
+//   BACKEND_LABELS=Maverick,Goose,Iceman,Slider,Viper,Jester,Cougar
+//   BACKEND_REGIONS=US East (Virginia),US West (Oregon),EU West,...
+//     → BACKEND_REGIONS is optional — just adds geographic context to incidents
+//
+// The load balancer / router has no codename — it's always called "Load Balancer"
+// because that is immediately understood by users on the status page.
+//
+const backendUrls    = BACKEND_URLS_RAW.split(',').map(u => u.trim()).filter(Boolean);
+const customLabels   = (process.env.BACKEND_LABELS   || '').split(',').map(s => s.trim()).filter(Boolean);
+const customRegions  = (process.env.BACKEND_REGIONS  || '').split(',').map(s => s.trim()).filter(Boolean);
 
-function getBackendLabel(i, total) {
-  if (customLabels[i]) return customLabels[i];
-  if (total === 1)     return 'API Service';
-  if (total === 2)     return i === 0 ? 'API Service (Primary)' : 'API Service (Secondary)';
-  const regions = ['Region 1', 'Region 2', 'Region 3', 'Region 4', 'Region 5',
-                   'Region 6', 'Region 7', 'Region 8', 'Region 9', 'Region 10'];
-  return `API Service — ${regions[i] || `Node ${i + 1}`}`;
+// Fallback codenames if BACKEND_LABELS not set
+const FALLBACK_NAMES = ['Alpha','Bravo','Charlie','Delta','Echo','Foxtrot','Golf'];
+
+function getBackendLabel(i) {
+  return customLabels[i] || FALLBACK_NAMES[i] || `Server ${i + 1}`;
+}
+
+function getBackendRegion(i) {
+  return customRegions[i] || null;
 }
 
 backendUrls.forEach((url, i) => {
   targets.push({
-    name:    getBackendLabel(i, backendUrls.length),
+    name:    getBackendLabel(i),
+    region:  getBackendRegion(i),   // e.g. "US East (Virginia)" — optional, shown in incidents
     url,
     pingUrl: `${url}/api/health`,
     type:    'backend',
@@ -175,7 +185,15 @@ async function ensureDbConnected() {
 function incidentTitle(target) {
   if (target.type === 'router') return 'Service Disruption — Platform Unavailable';
   if (backendUrls.length === 1) return 'Service Disruption — API Unavailable';
-  return `Service Degradation — ${target.name} Unavailable`;
+  // "the Maverick server" — codename is clear, "server" contextualises it for users
+  return `Service Degradation — the ${target.name} server is unavailable`;
+}
+
+function serverRef(target) {
+  // "the Maverick server (US East)" or just "the Maverick server"
+  return target.region
+    ? `the ${target.name} server (${target.region})`
+    : `the ${target.name} server`;
 }
 
 function incidentDescription(target) {
@@ -189,9 +207,9 @@ function incidentDescription(target) {
            'Some users may experience difficulty accessing events or using platform features. ' +
            'Our team has been alerted and is actively investigating.';
   }
-  return `Our monitoring systems have detected that one of our API service nodes (${target.name}) ` +
-         'is not responding. Users assigned to this node may experience degraded performance or ' +
-         'temporary inability to access their events. Our team is actively investigating. ' +
+  return `Our monitoring systems have detected that ${serverRef(target)} is not responding. ` +
+         'Users assigned to this server may experience degraded performance or a temporary ' +
+         'inability to access their events. Our team is actively investigating. ' +
          'Other platform functions remain operational.';
 }
 
@@ -209,9 +227,9 @@ function investigatingMessage(target, errorMsg) {
            `Health checks failed ${THRESHOLD} consecutive times over ${Math.round((THRESHOLD * PING_MS) / 60000)} minutes. ` +
            `We are investigating the cause.${technical}`;
   }
-  return `Automated monitoring detected ${target.name} stopped responding at ${new Date().toUTCString()}. ` +
+  return `Automated monitoring detected that ${serverRef(target)} stopped responding at ${new Date().toUTCString()}. ` +
          `${THRESHOLD} consecutive health checks failed over ${Math.round((THRESHOLD * PING_MS) / 60000)} minutes. ` +
-         `Traffic has been redistributed where possible. We are investigating.${technical}`;
+         `Traffic has been redistributed to other servers where possible. We are investigating.${technical}`;
 }
 
 function recoveryMessage(target, mins) {
@@ -220,7 +238,7 @@ function recoveryMessage(target, mins) {
     return `The platform has fully recovered and is operating normally. ` +
            `Total disruption duration: ${duration}. We apologise for any inconvenience caused.`;
   }
-  return `${target.name} has recovered and is operating normally. ` +
+  return `${serverRef(target)} has recovered and is operating normally. ` +
          `Total disruption duration: ${duration}. All traffic has been restored. ` +
          `We apologise for any inconvenience caused.`;
 }
@@ -331,9 +349,10 @@ async function pingTarget(target) {
         s.activeIncidentId = null;
       }
 
+      const ref = target.type === 'router' ? 'Load Balancer' : `the ${target.name} server`;
       await sendNtfy({
-        title:    ` ${target.name} Recovered`,
-        message:  `${target.name} is back online and operating normally.\nDowntime: ${mins < 1 ? '<1' : mins} minute(s)\nResponse time: ${ms}ms\nIncident auto-resolved on status page.`,
+        title:    `✅ ${target.name} — Back Online`,
+        message:  `${ref} is back online and operating normally.\nDowntime: ${mins < 1 ? '<1' : mins} minute(s)\nResponse time: ${ms}ms\nIncident auto-resolved on status page.`,
         priority: 'high',
         tags:     ['white_check_mark', 'tada'],
       });
@@ -365,9 +384,10 @@ async function pingTarget(target) {
       const incidentId   = await createDownIncident(target, err.message);
       s.activeIncidentId = incidentId;
 
+      const downRef = target.type === 'router' ? 'Load Balancer' : `the ${target.name} server`;
       await sendNtfy({
-        title:    ` ${target.name} — Service Disruption`,
-        message:  `${target.name} is not responding.\n\nFailed checks: ${THRESHOLD}/${THRESHOLD}\nMonitored URL: ${target.url}\nError: ${err.message}\n\nStatus page has been updated automatically.`,
+        title:    `🔴 ${target.name} — Service Disruption`,
+        message:  `${downRef} is not responding.\n\nFailed checks: ${THRESHOLD}/${THRESHOLD}\nError: ${err.message}\n\nStatus page has been updated automatically.`,
         priority: 'urgent',
         tags:     ['rotating_light', 'fire'],
       });
@@ -376,9 +396,10 @@ async function pingTarget(target) {
     // Reminder every 10 failures while still down
     if (s.isDown && s.consecutiveFailures > THRESHOLD && s.consecutiveFailures % 10 === 0) {
       const downMins = Math.round((Date.now() - s.downSince) / 60000);
+      const stillRef = target.type === 'router' ? 'Load Balancer' : `the ${target.name} server`;
       await sendNtfy({
-        title:    ` ${target.name} — Still Unavailable (${downMins}m)`,
-        message:  `${target.name} has been unavailable for ${downMins} minutes.\nConsecutive failures: ${s.consecutiveFailures}\nError: ${err.message}\n\nStatus page reflects current outage.`,
+        title:    `⚠️ ${target.name} — Still Unavailable (${downMins}m)`,
+        message:  `${stillRef} has been unavailable for ${downMins} minutes.\nConsecutive failures: ${s.consecutiveFailures}\nError: ${err.message}\n\nStatus page reflects current outage.`,
         priority: 'high',
         tags:     ['warning', 'clock'],
       });
@@ -439,6 +460,7 @@ app.get('/watchdog/status', async (_req, res) => {
     const s = states[t.name];
     return {
       name:                 t.name,
+      region:               t.region || null,   // e.g. "US East (Virginia)"
       type:                 t.type,
       url:                  t.url,
       status:               s.isDown ? 'down' : 'up',
