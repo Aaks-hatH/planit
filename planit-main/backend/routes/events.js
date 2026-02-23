@@ -6,7 +6,7 @@ const jwt = require('jsonwebtoken');
 const { v4: uuidv4 } = require('uuid');
 const Event = require('../models/Event');
 const EventParticipant = require('../models/EventParticipant');
-const { verifyEventAccess, verifyOrganizer } = require('../middleware/auth');
+const { verifyEventAccess, verifyOrganizer, verifyCheckinAccess } = require('../middleware/auth');
 const { createEventLimiter, authLimiter } = require('../middleware/rateLimiter');
 const { secrets } = require('../keys');
 
@@ -956,7 +956,7 @@ router.post('/:eventId/invites', verifyOrganizer,
 );
 
 // Get all invites for event
-router.get('/:eventId/invites', verifyOrganizer, async (req, res, next) => {
+router.get('/:eventId/invites', verifyCheckinAccess, async (req, res, next) => {
   try {
     const Invite = require('../models/Invite');
     const invites = await Invite.find({ eventId: req.params.eventId }).sort({ createdAt: -1 });
@@ -1324,7 +1324,7 @@ router.post('/:eventId/checkin/:inviteCode',
 });
 
 // Get check-in analytics
-router.get('/:eventId/checkin-stats', verifyOrganizer, async (req, res, next) => {
+router.get('/:eventId/checkin-stats', verifyCheckinAccess, async (req, res, next) => {
   try {
     const Invite = require('../models/Invite');
     const invites = await Invite.find({ eventId: req.params.eventId });
@@ -1356,7 +1356,7 @@ router.get('/:eventId/checkin-stats', verifyOrganizer, async (req, res, next) =>
 });
 
 // Get / update checkin security settings (organizer only)
-router.get('/:eventId/checkin-settings', verifyOrganizer, async (req, res, next) => {
+router.get('/:eventId/checkin-settings', verifyCheckinAccess, async (req, res, next) => {
   try {
     const event = await Event.findById(req.params.eventId).select('checkinSettings').lean();
     if (!event) return res.status(404).json({ error: 'Event not found' });
@@ -1519,6 +1519,142 @@ router.delete('/:eventId/invites/:inviteId', verifyOrganizer, async (req, res, n
     const Invite = require('../models/Invite');
     await Invite.findByIdAndDelete(req.params.inviteId);
     res.json({ message: 'Invite deleted' });
+  } catch (error) { next(error); }
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// STAFF CHECK-IN ACCOUNTS
+// Organizers create staff accounts with PINs; staff use them to log into
+// the check-in page without getting full organizer privileges.
+// ═══════════════════════════════════════════════════════════════════════════
+
+// POST /:eventId/staff-login  — public, no auth, used on check-in login screen
+router.post('/:eventId/staff-login', authLimiter, async (req, res, next) => {
+  try {
+    const { eventId } = req.params;
+    const { username, pin } = req.body;
+
+    if (!username || !pin) {
+      return res.status(400).json({ error: 'Username and PIN are required' });
+    }
+
+    const staff = await EventParticipant
+      .findOne({ eventId, username: username.trim(), role: 'staff' })
+      .select('+password');
+
+    if (!staff || !staff.password) {
+      return res.status(401).json({ error: 'Invalid username or PIN' });
+    }
+
+    const valid = await bcrypt.compare(String(pin), staff.password);
+    if (!valid) {
+      console.log(`[STAFF-LOGIN] Failed attempt: ${username} for event ${eventId}`);
+      return res.status(401).json({ error: 'Invalid username or PIN' });
+    }
+
+    staff.lastSeenAt = new Date();
+    await staff.save();
+
+    const token = jwt.sign(
+      { eventId: eventId.toString(), username: staff.username, role: 'staff' },
+      secrets.jwt,
+      { expiresIn: '12h' }
+    );
+
+    console.log(`[STAFF-LOGIN] Success: ${username} for event ${eventId}`);
+    res.json({ success: true, token, username: staff.username, role: 'staff' });
+
+  } catch (error) {
+    next(error);
+  }
+});
+
+// GET /:eventId/staff — list all staff accounts (organizer only)
+router.get('/:eventId/staff', verifyOrganizer, async (req, res, next) => {
+  try {
+    const staff = await EventParticipant
+      .find({ eventId: req.params.eventId, role: 'staff' })
+      .select('username hasPassword createdAt lastSeenAt')
+      .sort({ createdAt: -1 });
+
+    res.json({ staff });
+  } catch (error) { next(error); }
+});
+
+// POST /:eventId/staff — create a staff account (organizer only)
+router.post('/:eventId/staff', verifyOrganizer, async (req, res, next) => {
+  try {
+    const { eventId } = req.params;
+    const { username, pin } = req.body;
+
+    if (!username || !username.trim()) {
+      return res.status(400).json({ error: 'Username is required' });
+    }
+    if (!pin || String(pin).length < 4 || String(pin).length > 8) {
+      return res.status(400).json({ error: 'PIN must be 4–8 digits' });
+    }
+    if (!/^\d+$/.test(String(pin))) {
+      return res.status(400).json({ error: 'PIN must contain only numbers' });
+    }
+
+    // Prevent duplicate username within this event (any role)
+    const existing = await EventParticipant.findOne({ eventId, username: username.trim() });
+    if (existing) {
+      return res.status(409).json({ error: 'Username already taken for this event' });
+    }
+
+    const hashed = await bcrypt.hash(String(pin), 10);
+    const staff = await EventParticipant.create({
+      eventId,
+      username: username.trim(),
+      password: hashed,
+      hasPassword: true,
+      role: 'staff',
+    });
+
+    console.log(`[STAFF] Created staff account: ${username} for event ${eventId}`);
+    res.status(201).json({
+      success: true,
+      staff: { username: staff.username, createdAt: staff.createdAt }
+    });
+
+  } catch (error) {
+    next(error);
+  }
+});
+
+// DELETE /:eventId/staff/:username — remove a staff account (organizer only)
+router.delete('/:eventId/staff/:staffUsername', verifyOrganizer, async (req, res, next) => {
+  try {
+    const { eventId, staffUsername } = req.params;
+    const deleted = await EventParticipant.findOneAndDelete({ eventId, username: staffUsername, role: 'staff' });
+    if (!deleted) {
+      return res.status(404).json({ error: 'Staff account not found' });
+    }
+    res.json({ success: true, message: 'Staff account removed' });
+  } catch (error) { next(error); }
+});
+
+// PATCH /:eventId/staff/:username/pin — update staff PIN (organizer only)
+router.patch('/:eventId/staff/:staffUsername/pin', verifyOrganizer, async (req, res, next) => {
+  try {
+    const { eventId, staffUsername } = req.params;
+    const { pin } = req.body;
+
+    if (!pin || String(pin).length < 4 || String(pin).length > 8 || !/^\d+$/.test(String(pin))) {
+      return res.status(400).json({ error: 'PIN must be 4–8 digits' });
+    }
+
+    const staff = await EventParticipant.findOne({ eventId, username: staffUsername, role: 'staff' });
+    if (!staff) {
+      return res.status(404).json({ error: 'Staff account not found' });
+    }
+
+    staff.password = await bcrypt.hash(String(pin), 10);
+    staff.hasPassword = true;
+    await staff.save();
+
+    res.json({ success: true, message: 'PIN updated' });
   } catch (error) { next(error); }
 });
 
