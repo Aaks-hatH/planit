@@ -3,136 +3,123 @@ import { useParams, useNavigate } from 'react-router-dom';
 import {
   QrCode, UserCheck, Users, X, ArrowLeft, Camera, CameraOff, Plus,
   Keyboard, AlertTriangle, Baby, User, Settings, Lock, Edit2, Trash2,
-  Clock, CheckCircle2, Loader2, CheckCircle, Flag, AlertOctagon, XCircle,
-  Mail, Phone, Copy, ExternalLink, Share2, ShieldAlert, Shield
+  Clock, CheckCircle2, Loader2, CheckCircle, Flag, AlertOctagon, XCircle, 
+  Mail, Phone, Copy, ExternalLink, Share2
 } from 'lucide-react';
 import { eventAPI } from '../services/api';
 import toast from 'react-hot-toast';
 import ManagerOverrideDialog from '../components/ManagerOverrideDialog';
 import SecuritySettingsPanel from '../components/SecuritySettingsPanel';
 
+/**
+ * ═══════════════════════════════════════════════════════════════════════════
+ * ENTERPRISE CHECK-IN SYSTEM - COMPLETE VERSION
+ * Features:
+ * - QR Code Scanning (using html5-qrcode library)
+ * - Manual code entry
+ * - PIN verification
+ * - Security settings panel
+ * - Invite link copying with QR code generation
+ * - Manager override
+ * - Real-time stats
+ * - Haptic feedback (vibration)
+ * ═══════════════════════════════════════════════════════════════════════════
+ */
+
+// ═══════════════════════════════════════════════════════════════════════════
+// HAPTIC FEEDBACK UTILITIES
+// ═══════════════════════════════════════════════════════════════════════════
 const triggerHaptic = (pattern) => {
   if ('vibrate' in navigator) {
-    try { navigator.vibrate(pattern); } catch (_) {}
+    try {
+      navigator.vibrate(pattern);
+    } catch (e) {
+      console.log('Vibration not supported:', e);
+    }
   }
 };
-const hapticSuccess = () => triggerHaptic(200);
-const hapticError   = () => triggerHaptic([200, 100, 200]);
-const hapticWarning = () => triggerHaptic([100, 50, 100]);
 
-function formatReason(raw) {
-  if (!raw) return 'Unknown';
-  return raw.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
-}
+const hapticSuccess = () => triggerHaptic(200); // Short vibration for success
+const hapticError = () => triggerHaptic([200, 100, 200]); // Double vibration for error
+const hapticWarning = () => triggerHaptic([100, 50, 100]); // Quick double for warning
 
-function InfoRow({ label, value, mono = false, accent = false }) {
-  return (
-    <div className="flex items-start justify-between py-2.5 border-b border-white/20 last:border-0">
-      <span className="text-xs font-semibold uppercase tracking-wider text-white/60 pt-0.5 flex-shrink-0 w-36">
-        {label}
-      </span>
-      <span className={`text-sm text-right flex-1 ${mono ? 'font-mono tracking-wider' : 'font-medium'} ${accent ? 'text-white font-bold' : 'text-white/90'}`}>
-        {value}
-      </span>
-    </div>
-  );
-}
-
-function InfoRowLight({ label, value, mono = false, accent = false }) {
-  return (
-    <div className="flex items-start justify-between py-2.5 border-b border-neutral-100 last:border-0">
-      <span className="text-xs font-semibold uppercase tracking-wider text-neutral-400 pt-0.5 flex-shrink-0 w-36">
-        {label}
-      </span>
-      <span className={`text-sm text-right flex-1 ${mono ? 'font-mono tracking-wider' : 'font-medium'} ${accent ? 'text-red-600 font-semibold' : 'text-neutral-900'}`}>
-        {value}
-      </span>
-    </div>
-  );
-}
-
-// PLANIT BRAND FOOTER
-function PlanItBrand() {
-  return (
-    <div className="flex items-center justify-center gap-2.5 py-4 px-6 bg-white/10 backdrop-blur-sm rounded-2xl border border-white/20">
-      <div className="w-px h-4 bg-white/30" />
-      <div className="text-center">
-        <span className="text-xs font-medium text-white/50 tracking-widest uppercase">Powered by</span>
-        <span className="ml-2 text-base font-black text-white tracking-tight" style={{ letterSpacing: '-0.02em' }}>PlanIt</span>
-      </div>
-      <div className="w-px h-4 bg-white/30" />
-    </div>
-  );
-}
-
-// SUCCESS SCREEN — full-screen green
+// ═══════════════════════════════════════════════════════════════════════════
+// SUCCESS SCREEN
+// ═══════════════════════════════════════════════════════════════════════════
 function AdmitSuccessScreen({ guest, onDone }) {
-  const [secondsLeft, setSecondsLeft] = useState(5);
-
+  // Auto-dismiss after 3 seconds
   useEffect(() => {
     hapticSuccess();
-    const interval = setInterval(() => {
-      setSecondsLeft((s) => {
-        if (s <= 1) { clearInterval(interval); onDone(); return 0; }
-        return s - 1;
-      });
-    }, 1000);
-    return () => clearInterval(interval);
+    const timer = setTimeout(() => onDone(), 3000);
+    return () => clearTimeout(timer);
   }, [onDone]);
 
-  const checkedInTime = guest.checkedInAt
-    ? new Date(guest.checkedInAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })
-    : new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-
   return (
-    <div className="fixed inset-0 z-50 flex flex-col" style={{ background: 'linear-gradient(160deg, #065f46 0%, #047857 40%, #059669 100%)' }}>
-      
-      {/* Top section — status */}
-      <div className="flex-1 flex flex-col items-center justify-center px-8 pt-12 pb-6">
-        <div className="w-20 h-20 rounded-full bg-white/15 border-2 border-white/30 flex items-center justify-center mb-8">
-          <CheckCircle2 className="w-10 h-10 text-white" strokeWidth={1.5} />
+    <div className="fixed inset-0 bg-emerald-600 z-50 flex flex-col items-center justify-center p-8">
+      <div className="max-w-3xl w-full bg-white rounded-lg overflow-hidden shadow-2xl">
+        {/* Green status bar */}
+        <div className="h-3 bg-emerald-600" />
+        
+        {/* Main content */}
+        <div className="p-12 text-center">
+          {/* Checkmark circle */}
+          <div className="mb-8">
+            <div className="w-32 h-32 mx-auto rounded-full border-8 border-emerald-600 flex items-center justify-center">
+              <CheckCircle className="w-20 h-20 text-emerald-600" strokeWidth={3} />
+            </div>
+          </div>
+          
+          {/* Status text */}
+          <div className="mb-8">
+            <p className="text-sm font-bold text-emerald-600 uppercase tracking-widest mb-3">
+               Pass Accepted
+            </p>
+            <h1 className="text-6xl font-bold text-neutral-900 mb-4">
+              ADMITTED
+            </h1>
+            <p className="text-3xl font-semibold text-neutral-700">
+              {guest.guestName}
+            </p>
+          </div>
+          
+          {/* Passenger details */}
+          <div className="border-t border-neutral-200 pt-8">
+            <div className="flex justify-center gap-16 text-lg">
+              <div>
+                <p className="text-neutral-500 font-medium mb-1">Adults</p>
+                <p className="text-4xl font-bold text-neutral-900">{guest.adults}</p>
+              </div>
+              {guest.children > 0 && (
+                <div>
+                  <p className="text-neutral-500 font-medium mb-1">Children</p>
+                  <p className="text-4xl font-bold text-neutral-900">{guest.children}</p>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
-
-        <p className="text-xs font-bold uppercase tracking-widest text-emerald-200 mb-3">
-          Access Granted
-        </p>
-        <h1 className="text-4xl font-black text-white tracking-tight text-center mb-2" style={{ letterSpacing: '-0.03em' }}>
-          {guest.guestName}
-        </h1>
-        <p className="text-sm text-emerald-200 font-mono tracking-widest mt-1">
-          {guest.inviteCode}
-        </p>
-      </div>
-
-      {/* Middle — details card */}
-      <div className="mx-6 mb-6 bg-white/10 backdrop-blur-sm rounded-2xl border border-white/20 px-6 py-2">
-        <InfoRow label="Check-in Time"  value={checkedInTime} />
-        <InfoRow label="Adults"         value={guest.adults ?? '—'} />
-        {(guest.children > 0) && (
-          <InfoRow label="Children"     value={guest.children} />
-        )}
-        <InfoRow label="Total Admitted" value={guest.actualAttendees ?? guest.groupSize ?? '—'} />
-        {guest.checkedInBy && (
-          <InfoRow label="Admitted By"  value={guest.checkedInBy} />
-        )}
-      </div>
-
-      {/* Bottom — actions + PlanIt */}
-      <div className="px-6 pb-10 space-y-3">
-        <button
-          onClick={onDone}
-          className="w-full py-4 bg-white text-emerald-900 text-sm font-bold rounded-2xl hover:bg-emerald-50 transition-colors tracking-wide"
-        >
-          Done — continuing in {secondsLeft}s
-        </button>
-        <PlanItBrand />
+        
+        {/* Footer */}
+        <div className="bg-neutral-50 px-12 py-6 border-t border-neutral-200 text-center">
+          <p className="text-sm text-neutral-500">Auto-closing in 3 seconds...</p>
+        </div>
       </div>
     </div>
   );
 }
 
-// DENY SCREEN — full-screen red / orange / amber based on severity
+// ═══════════════════════════════════════════════════════════════════════════
+// DENY SCREEN
+// ═══════════════════════════════════════════════════════════════════════════
 function DenyScreen({ reason, message, details, onDone, canOverride, onOverride }) {
+  const severityConfig = {
+    critical: { bg: 'bg-red-600', text: 'ACCESS DENIED' },
+    high: { bg: 'bg-orange-600', text: 'ACCESS DENIED' },
+    medium: { bg: 'bg-yellow-500', text: 'VERIFY REQUIRED' },
+  };
+  const config = severityConfig[details?.severity] || severityConfig.critical;
+  const IconComponent = details?.severity === 'medium' ? AlertTriangle : XCircle;
+
   useEffect(() => {
     if (details?.severity === 'critical' || details?.severity === 'high') {
       hapticError();
@@ -141,136 +128,179 @@ function DenyScreen({ reason, message, details, onDone, canOverride, onOverride 
     }
   }, [details?.severity]);
 
-  const severity = details?.severity || 'critical';
-
-  const bg =
-    severity === 'critical' ? 'linear-gradient(160deg, #7f1d1d 0%, #991b1b 40%, #b91c1c 100%)' :
-    severity === 'high'     ? 'linear-gradient(160deg, #7c2d12 0%, #9a3412 40%, #c2410c 100%)' :
-                              'linear-gradient(160deg, #78350f 0%, #92400e 40%, #b45309 100%)';
-
-  const iconBg =
-    severity === 'critical' ? 'bg-red-400/20 border-red-300/30' :
-    severity === 'high'     ? 'bg-orange-400/20 border-orange-300/30' :
-                              'bg-amber-400/20 border-amber-300/30';
-
-  const labelColor =
-    severity === 'critical' ? 'text-red-200' :
-    severity === 'high'     ? 'text-orange-200' :
-                              'text-amber-200';
-
-  const statusLabel =
-    severity === 'critical' ? 'Access Denied' :
-    severity === 'high'     ? 'Entry Blocked' :
-                              'Verification Required';
-
-  const btnBg =
-    severity === 'critical' ? 'bg-red-950/60 hover:bg-red-950/80 border border-red-300/20' :
-    severity === 'high'     ? 'bg-orange-950/60 hover:bg-orange-950/80 border border-orange-300/20' :
-                              'bg-amber-950/60 hover:bg-amber-950/80 border border-amber-300/20';
-
   return (
-    <div className="fixed inset-0 z-50 flex flex-col" style={{ background: bg }}>
-
-      {/* Top section */}
-      <div className="flex-1 flex flex-col items-center justify-center px-8 pt-12 pb-6">
-        <div className={`w-20 h-20 rounded-full border-2 flex items-center justify-center mb-8 ${iconBg}`}>
-          <XCircle className="w-10 h-10 text-white" strokeWidth={1.5} />
-        </div>
-
-        <p className={`text-xs font-bold uppercase tracking-widest mb-3 ${labelColor}`}>
-          {statusLabel}
-        </p>
-        <h1 className="text-4xl font-black text-white tracking-tight text-center mb-2" style={{ letterSpacing: '-0.03em' }}>
-          {details?.guestName || 'Unknown Guest'}
-        </h1>
-        {details?.inviteCode && (
-          <p className={`text-sm font-mono tracking-widest mt-1 ${labelColor}`}>
-            {details.inviteCode}
-          </p>
-        )}
-      </div>
-
-      {/* Details card */}
-      <div className="mx-6 mb-6 bg-white/10 backdrop-blur-sm rounded-2xl border border-white/20 px-6 py-2">
-        {details?.blockedReason && (
-          <InfoRow label="Reason"         value={formatReason(details.blockedReason)} accent />
-        )}
-        {message && (
-          <InfoRow label="Details"        value={message} />
-        )}
-        {details?.checkedInAt && (
-          <InfoRow
-            label="Previous Entry"
-            value={new Date(details.checkedInAt).toLocaleString([], {
-              month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit',
-            })}
-          />
-        )}
-        {details?.checkedInBy && (
-          <InfoRow label="Admitted By"    value={details.checkedInBy} />
-        )}
-        {details?.currentCapacity !== undefined && (
-          <InfoRow
-            label="Capacity"
-            value={`${details.currentCapacity} / ${details.maxCapacity}`}
-            accent
-          />
-        )}
-        {details?.trustScore !== undefined && (
-          <InfoRow
-            label="Trust Score"
-            value={`${details.trustScore}${details.minimumRequired ? ` (min. ${details.minimumRequired})` : ''}`}
-            accent={details.trustScore < (details.minimumRequired || 50)}
-          />
-        )}
-        {details?.lockdownReason && (
-          <InfoRow label="Lockdown"       value={details.lockdownReason} accent />
-        )}
-        {details?.groupSize && (
-          <InfoRow label="Group Size"     value={details.groupSize} />
-        )}
-      </div>
-
-      {/* Actions */}
-      <div className="px-6 pb-10 space-y-3">
-        <div className="flex gap-3">
-          <button
-            onClick={onDone}
-            className={`flex-1 py-4 text-white text-sm font-semibold rounded-2xl transition-colors ${btnBg}`}
-          >
-            Dismiss
-          </button>
-          {canOverride && (
-            <button
-              onClick={onOverride}
-              className="flex-1 py-4 bg-white text-neutral-900 text-sm font-bold rounded-2xl hover:bg-neutral-100 transition-colors"
+    <div className={`fixed inset-0 ${config.bg} z-50 flex flex-col items-center justify-center p-8`}>
+      <div className="max-w-3xl w-full bg-white rounded-lg overflow-hidden shadow-2xl">
+        {/* Status bar */}
+        <div className={`h-3 ${config.bg}`} />
+        
+        {/* Main content */}
+        <div className="p-12">
+          {/* Large X icon */}
+          <div className="mb-8 text-center">
+            <div className={`w-32 h-32 mx-auto rounded-full border-8 ${
+              details?.severity === 'critical' ? 'border-red-600' :
+              details?.severity === 'high' ? 'border-orange-600' :
+              'border-yellow-500'
+            } flex items-center justify-center`}>
+              <IconComponent className={`w-20 h-20 ${
+                details?.severity === 'critical' ? 'text-red-600' :
+                details?.severity === 'high' ? 'text-orange-600' :
+                'text-yellow-500'
+              }`} strokeWidth={3} />
+            </div>
+          </div>
+          
+          {/* Status text */}
+          <div className="text-center mb-8">
+            <p className={`text-sm font-bold uppercase tracking-widest mb-3 ${
+              details?.severity === 'critical' ? 'text-red-600' :
+              details?.severity === 'high' ? 'text-orange-600' :
+              'text-yellow-600'
+            }`}>
+              {details?.severity === 'critical' ? 'Security Alert' :
+               details?.severity === 'high' ? 'Entry Blocked' :
+               'Verification Required'}
+            </p>
+            <h1 className="text-5xl font-bold text-neutral-900 mb-6">
+              {config.text}
+            </h1>
+            <p className="text-2xl font-semibold text-neutral-700 mb-8">
+              {message || details?.displayMessage || 'Access denied'}
+            </p>
+          </div>
+          
+          {/* BLOCK REASONS - CLEAR AND PROMINENT */}
+          <div className="bg-neutral-50 border-2 border-neutral-200 rounded-lg p-6 mb-8">
+            <p className="text-xs font-bold text-neutral-500 uppercase tracking-wider mb-4">
+              Denial Information
+            </p>
+            
+            <div className="space-y-4">
+              {/* Primary Reason */}
+              {details?.blockedReason && (
+                <div className="flex items-start gap-3">
+                  <div className="w-2 h-2 bg-red-600 rounded-full mt-2 flex-shrink-0" />
+                  <div className="flex-1">
+                    <p className="font-bold text-neutral-900 mb-1">Reason</p>
+                    <p className="text-lg text-neutral-700">
+                      {details.blockedReason.replace(/_/g, ' ').toUpperCase()}
+                    </p>
+                  </div>
+                </div>
+              )}
+              
+              {/* Check-in History */}
+              {details?.checkedInAt && (
+                <div className="flex items-start gap-3">
+                  <div className="w-2 h-2 bg-neutral-400 rounded-full mt-2 flex-shrink-0" />
+                  <div className="flex-1">
+                    <p className="font-bold text-neutral-900 mb-1">Previous Check-In</p>
+                    <p className="text-lg text-neutral-700">
+                      {new Date(details.checkedInAt).toLocaleString()}
+                    </p>
+                    {details.checkedInBy && (
+                      <p className="text-sm text-neutral-500 mt-1">
+                        By: {details.checkedInBy}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )}
+              
+              {/* Additional Details */}
+              {details?.message && details.message !== message && (
+                <div className="flex items-start gap-3">
+                  <div className="w-2 h-2 bg-neutral-400 rounded-full mt-2 flex-shrink-0" />
+                  <div className="flex-1">
+                    <p className="font-bold text-neutral-900 mb-1">Details</p>
+                    <p className="text-neutral-700">{details.message}</p>
+                  </div>
+                </div>
+              )}
+              
+              {/* Capacity Info */}
+              {details?.currentCapacity !== undefined && (
+                <div className="flex items-start gap-3">
+                  <div className="w-2 h-2 bg-neutral-400 rounded-full mt-2 flex-shrink-0" />
+                  <div className="flex-1">
+                    <p className="font-bold text-neutral-900 mb-1">Capacity Status</p>
+                    <p className="text-lg text-neutral-700">
+                      {details.currentCapacity} / {details.maxCapacity} attendees
+                    </p>
+                  </div>
+                </div>
+              )}
+              
+              {/* Trust Score */}
+              {details?.trustScore !== undefined && (
+                <div className="flex items-start gap-3">
+                  <div className="w-2 h-2 bg-neutral-400 rounded-full mt-2 flex-shrink-0" />
+                  <div className="flex-1">
+                    <p className="font-bold text-neutral-900 mb-1">Trust Score</p>
+                    <p className="text-lg text-neutral-700">
+                      {details.trustScore} / {details.minimumRequired || 100}
+                      {details.trustScore < (details.minimumRequired || 50) && 
+                        <span className="text-red-600 ml-2">(Below Minimum)</span>
+                      }
+                    </p>
+                  </div>
+                </div>
+              )}
+              
+              {/* Lockdown Reason */}
+              {details?.lockdownReason && (
+                <div className="flex items-start gap-3">
+                  <div className="w-2 h-2 bg-red-600 rounded-full mt-2 flex-shrink-0" />
+                  <div className="flex-1">
+                    <p className="font-bold text-neutral-900 mb-1">Lockdown Active</p>
+                    <p className="text-lg text-neutral-700">{details.lockdownReason}</p>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+          
+          {/* Action buttons */}
+          <div className="flex gap-4">
+            <button 
+              onClick={onDone} 
+              className="flex-1 px-8 py-4 bg-neutral-200 text-neutral-900 text-xl font-bold rounded-lg hover:bg-neutral-300 transition-all"
             >
-              Manager Override
+              Close
             </button>
-          )}
+            {canOverride && (
+              <button 
+                onClick={onOverride} 
+                className="flex-1 px-8 py-4 bg-yellow-500 text-yellow-900 text-xl font-bold rounded-lg hover:bg-yellow-400 transition-all"
+              >
+                Manager Override
+              </button>
+            )}
+          </div>
         </div>
-        <PlanItBrand />
       </div>
     </div>
   );
 }
 
-// BOARDING PASS
+// ═══════════════════════════════════════════════════════════════════════════
+// BOARDING PASS REVIEW - Airport Style with Warnings
+// ═══════════════════════════════════════════════════════════════════════════
 function BoardingPass({ guest, security, requiresPin, onAdmit, onDeny, onPinVerify }) {
-  const [pin, setPin]               = useState('');
-  const [pinError, setPinError]     = useState('');
+  const [pin, setPin] = useState('');
+  const [pinError, setPinError] = useState('');
   const [verifyingPin, setVerifyingPin] = useState(false);
-  const [pinVerified, setPinVerified]   = useState(false);
-
-  const hasWarnings = (security?.warnings?.length ?? 0) > 0 || (security?.flags?.length ?? 0) > 0;
-  const trustScore  = security?.trustScore ?? 100;
-  const trustColor  =
-    trustScore >= 80 ? 'text-emerald-600' :
-    trustScore >= 50 ? 'text-amber-600'   :
-                       'text-red-600';
+  const [pinVerified, setPinVerified] = useState(false);
+  
+  const hasWarnings = security?.warnings?.length > 0 || security?.flags?.length > 0;
+  const trustScore = security?.trustScore || 100;
 
   const handlePinSubmit = async () => {
-    if (!pin.trim()) { setPinError('PIN required'); return; }
+    if (!pin.trim()) {
+      setPinError('Please enter PIN');
+      return;
+    }
     setVerifyingPin(true);
     setPinError('');
     try {
@@ -278,89 +308,117 @@ function BoardingPass({ guest, security, requiresPin, onAdmit, onDeny, onPinVeri
       setPinVerified(true);
       setPin('');
     } catch (err) {
-      setPinError(err.message || 'Incorrect PIN');
+      setPinError(err.message || 'Invalid PIN');
     } finally {
       setVerifyingPin(false);
     }
   };
 
   return (
-    <div className="fixed inset-0 bg-black/85 z-50 flex items-center justify-center p-6 backdrop-blur-sm">
-      <div className="bg-white w-full max-w-lg rounded-2xl overflow-hidden shadow-2xl max-h-[92vh] flex flex-col">
-        <div className={`h-1.5 w-full flex-shrink-0 ${hasWarnings ? 'bg-amber-400' : 'bg-neutral-900'}`} />
-
-        <div className="px-8 pt-7 pb-5 border-b border-neutral-100 flex-shrink-0">
+    <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-6">
+      <div className="bg-white rounded-lg max-w-3xl w-full max-h-[90vh] overflow-y-auto shadow-2xl">
+        {/* Status bar - Yellow if warnings, Green if clear */}
+        <div className={`h-3 ${hasWarnings ? 'bg-yellow-500' : 'bg-green-600'}`} />
+        
+        {/* Header */}
+        <div className="p-6 border-b border-neutral-200">
           <div className="flex items-start justify-between">
-            <div className="flex-1 min-w-0 pr-4">
-              <span className="text-xs font-bold uppercase tracking-widest text-neutral-400">
-                Guest Review
-              </span>
-              <h2 className="text-2xl font-bold text-neutral-900 mt-1 leading-tight truncate">
-                {guest.guestName}
-              </h2>
+            <div>
+              <p className="text-xs font-bold text-neutral-500 uppercase tracking-wider mb-2">
+                Pass Review
+              </p>
+              <h2 className="text-3xl font-bold text-neutral-900">{guest.guestName}</h2>
             </div>
-            <div className="text-right flex-shrink-0">
-              <span className="text-xs font-semibold uppercase tracking-wider text-neutral-400 block mb-1">Code</span>
-              <span className="text-lg font-mono font-bold text-neutral-900 tracking-widest">{guest.inviteCode}</span>
+            <div className="text-right">
+              <p className="text-xs font-bold text-neutral-500 uppercase tracking-wider mb-2">
+                Confirmation Code
+              </p>
+              <p className="text-2xl font-mono font-bold text-neutral-900">{guest.inviteCode}</p>
             </div>
           </div>
         </div>
 
-        <div className="overflow-y-auto flex-1 px-8 py-5 space-y-5">
-          <div>
-            <p className="text-xs font-bold uppercase tracking-wider text-neutral-400 mb-3">Party</p>
-            <div className="grid grid-cols-3 gap-3">
-              {[
-                { label: 'Adults',      value: guest.adults   ?? '—' },
-                { label: 'Children',    value: guest.children ?? 0 },
-                { label: 'Trust Score', value: trustScore, color: trustColor },
-              ].map(({ label, value, color }) => (
-                <div key={label} className="border border-neutral-200 rounded-xl p-3 text-center">
-                  <p className="text-xs font-semibold uppercase tracking-wider text-neutral-400 mb-1">{label}</p>
-                  <p className={`text-2xl font-bold ${color ?? 'text-neutral-900'}`}>{value}</p>
-                </div>
-              ))}
+        {/* Body */}
+        <div className="p-6 space-y-6">
+          {/* Passenger details */}
+          <div className="grid grid-cols-3 gap-4">
+            <div className="border border-neutral-200 rounded-lg p-4">
+              <p className="text-xs font-bold text-neutral-500 uppercase mb-2">Adults</p>
+              <p className="text-4xl font-bold text-neutral-900">{guest.adults}</p>
+            </div>
+            <div className="border border-neutral-200 rounded-lg p-4">
+              <p className="text-xs font-bold text-neutral-500 uppercase mb-2">Children</p>
+              <p className="text-4xl font-bold text-neutral-900">{guest.children}</p>
+            </div>
+            <div className="border border-neutral-200 rounded-lg p-4">
+              <p className="text-xs font-bold text-neutral-500 uppercase mb-2">Trust Score</p>
+              <p className={`text-4xl font-bold ${
+                trustScore >= 80 ? 'text-green-600' : 
+                trustScore >= 50 ? 'text-yellow-600' : 
+                'text-red-600'
+              }`}>{trustScore}</p>
             </div>
           </div>
 
+          {/* Contact info */}
           {(guest.guestEmail || guest.guestPhone) && (
-            <div>
-              <p className="text-xs font-bold uppercase tracking-wider text-neutral-400 mb-2">Contact</p>
-              <div className="border border-neutral-200 rounded-xl px-4 divide-y divide-neutral-100">
-                {guest.guestEmail && <InfoRowLight label="Email" value={guest.guestEmail} />}
-                {guest.guestPhone && <InfoRowLight label="Phone" value={guest.guestPhone} />}
-              </div>
-            </div>
-          )}
-
-          {guest.notes && (
-            <div className="border-l-2 border-amber-400 bg-amber-50 rounded-r-xl px-4 py-3">
-              <p className="text-xs font-bold uppercase tracking-wider text-amber-700 mb-1">Staff Note</p>
-              <p className="text-sm text-amber-900">{guest.notes}</p>
-            </div>
-          )}
-
-          {hasWarnings && (
-            <div>
-              <div className="flex items-center gap-2 mb-3">
-                <AlertTriangle className="w-4 h-4 text-amber-600" strokeWidth={2.5} />
-                <p className="text-xs font-bold uppercase tracking-wider text-amber-700">
-                  Security Flags — Review Before Admitting
-                </p>
-              </div>
+            <div className="border border-neutral-200 rounded-lg p-4">
+              <p className="text-xs font-bold text-neutral-500 uppercase mb-3">Contact Information</p>
               <div className="space-y-2">
-                {security?.warnings?.map((w, i) => (
-                  <div key={i} className="border border-amber-200 bg-amber-50 rounded-xl px-4 py-3">
-                    <p className="text-xs font-bold uppercase tracking-wider text-amber-800 mb-0.5">{formatReason(w.type)}</p>
-                    <p className="text-sm text-amber-900">{w.message}</p>
+                {guest.guestEmail && (
+                  <p className="text-neutral-700">
+                    <span className="font-semibold">Email:</span> {guest.guestEmail}
+                  </p>
+                )}
+                {guest.guestPhone && (
+                  <p className="text-neutral-700">
+                    <span className="font-semibold">Phone:</span> {guest.guestPhone}
+                  </p>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Notes */}
+          {guest.notes && (
+            <div className="bg-blue-50 border-2 border-blue-200 rounded-lg p-4">
+              <p className="text-xs font-bold text-blue-900 uppercase mb-2">Special Notes</p>
+              <p className="text-neutral-700">{guest.notes}</p>
+            </div>
+          )}
+
+          {/* SECURITY WARNINGS - PROMINENT */}
+          {hasWarnings && (
+            <div className="bg-yellow-50 border-2 border-yellow-500 rounded-lg p-6">
+              <div className="flex items-start gap-3 mb-4">
+                <AlertTriangle className="w-6 h-6 text-yellow-700 flex-shrink-0 mt-1" />
+                <div>
+                  <p className="text-sm font-bold text-yellow-900 uppercase tracking-wider mb-1">
+                    Security Alert
+                  </p>
+                  <p className="text-yellow-800">
+                    Review the following warnings before admitting attendee
+                  </p>
+                </div>
+              </div>
+              
+              <div className="space-y-3">
+                {security?.warnings?.map((warning, idx) => (
+                  <div key={idx} className="bg-white rounded p-3 border border-yellow-300">
+                    <p className="font-bold text-neutral-900 mb-1">
+                      {warning.type?.replace(/_/g, ' ').toUpperCase()}
+                    </p>
+                    <p className="text-neutral-700">{warning.message}</p>
                   </div>
                 ))}
-                {security?.flags?.map((f, i) => (
-                  <div key={i} className="border border-amber-200 bg-amber-50 rounded-xl px-4 py-3">
-                    <p className="text-xs font-bold uppercase tracking-wider text-amber-800 mb-0.5">{formatReason(f.flag)}</p>
-                    {f.notes && <p className="text-sm text-amber-900">{f.notes}</p>}
-                    <p className="text-xs text-amber-600 mt-1">
-                      {new Date(f.flaggedAt).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                {security?.flags?.map((flag, idx) => (
+                  <div key={idx} className="bg-white rounded p-3 border border-yellow-300">
+                    <p className="font-bold text-neutral-900 mb-1">
+                      {flag.flag?.replace(/_/g, ' ').toUpperCase()}
+                    </p>
+                    {flag.notes && <p className="text-neutral-700">{flag.notes}</p>}
+                    <p className="text-xs text-neutral-500 mt-2">
+                      Flagged: {new Date(flag.flaggedAt).toLocaleString()}
                     </p>
                   </div>
                 ))}
@@ -368,57 +426,67 @@ function BoardingPass({ guest, security, requiresPin, onAdmit, onDeny, onPinVeri
             </div>
           )}
 
+          {/* PIN entry */}
           {requiresPin && guest.hasPin && (
-            <div>
-              <div className="flex items-center gap-2 mb-3">
-                <Lock className="w-4 h-4 text-neutral-700" strokeWidth={2.5} />
-                <p className="text-xs font-bold uppercase tracking-wider text-neutral-700">PIN Verification Required</p>
-              </div>
-              <div className="border border-neutral-200 rounded-xl px-4 py-4">
-                <p className="text-sm text-neutral-500 mb-3">Ask the guest for their security PIN before admitting.</p>
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={pin}
-                    onChange={(e) => { setPin(e.target.value.toUpperCase()); setPinError(''); }}
-                    placeholder="PIN"
-                    className="flex-1 border border-neutral-300 rounded-xl px-4 py-2.5 text-base font-mono font-bold tracking-widest focus:outline-none focus:border-neutral-500"
-                    maxLength={6}
-                    disabled={pinVerified}
-                  />
-                  {!pinVerified ? (
-                    <button
-                      onClick={handlePinSubmit}
-                      disabled={verifyingPin || !pin.trim()}
-                      className="px-5 py-2.5 bg-neutral-900 text-white text-sm font-semibold rounded-xl hover:bg-black disabled:opacity-40 transition-colors"
-                    >
-                      {verifyingPin ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Verify'}
-                    </button>
-                  ) : (
-                    <div className="flex items-center gap-2 px-4 text-emerald-600 font-semibold text-sm">
-                      <CheckCircle2 className="w-4 h-4" /> Verified
-                    </div>
-                  )}
+            <div className="bg-red-50 border-2 border-red-500 rounded-lg p-6">
+              <div className="flex items-start gap-3 mb-4">
+                <Lock className="w-6 h-6 text-red-700 flex-shrink-0 mt-1" />
+                <div>
+                  <p className="text-sm font-bold text-red-900 uppercase tracking-wider mb-1">
+                    PIN Verification Required
+                  </p>
+                  <p className="text-red-800">
+                    This attendee must provide their security PIN
+                  </p>
                 </div>
-                {pinError && <p className="text-sm text-red-600 font-medium mt-2">{pinError}</p>}
               </div>
+              
+              <div className="flex gap-3">
+                <input
+                  type="text"
+                  value={pin}
+                  onChange={(e) => {
+                    setPin(e.target.value.toUpperCase());
+                    setPinError('');
+                  }}
+                  placeholder="Enter PIN"
+                  className="flex-1 border-2 border-red-300 rounded-lg px-4 py-3 text-xl font-mono font-bold focus:outline-none focus:border-red-500 bg-white"
+                  maxLength={6}
+                />
+                <button 
+                  onClick={handlePinSubmit} 
+                  disabled={verifyingPin}
+                  className="px-8 py-3 bg-red-600 text-white font-bold rounded-lg hover:bg-red-700 transition-all disabled:opacity-50"
+                >
+                  {verifyingPin ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Verify'}
+                </button>
+              </div>
+              {pinError && (
+                <p className="text-sm text-red-700 font-semibold mt-2">{pinError}</p>
+              )}
+              {pinVerified && (
+                <p className="text-sm text-green-700 font-semibold mt-2 flex items-center gap-2">
+                  <CheckCircle className="w-4 h-4" /> PIN Verified
+                </p>
+              )}
             </div>
           )}
         </div>
 
-        <div className="flex-shrink-0 border-t border-neutral-100 px-8 py-5 flex gap-3 bg-white">
-          <button
-            onClick={onDeny}
-            className="flex-1 py-3.5 border border-neutral-300 text-neutral-700 text-sm font-semibold rounded-xl hover:bg-neutral-50 transition-colors"
+        {/* Footer actions */}
+        <div className="border-t border-neutral-200 p-6 flex gap-4 bg-neutral-50">
+          <button 
+            onClick={onDeny} 
+            className="flex-1 px-8 py-4 bg-red-100 text-red-700 text-xl font-bold rounded-lg hover:bg-red-200 transition-all border-2 border-red-300"
           >
-            Deny Entry
+            DENY ENTRY
           </button>
-          <button
-            onClick={onAdmit}
-            disabled={requiresPin && guest.hasPin && !pinVerified}
-            className="flex-1 py-3.5 bg-neutral-900 text-white text-sm font-semibold rounded-xl hover:bg-black disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+          <button 
+            onClick={onAdmit} 
+            disabled={requiresPin && !pinVerified}
+            className="flex-1 px-8 py-4 bg-green-600 text-white text-xl font-bold rounded-lg hover:bg-green-700 transition-all disabled:opacity-40 disabled:cursor-not-allowed shadow-lg"
           >
-            Admit Guest
+            ADMIT ATTENDEE
           </button>
         </div>
       </div>
@@ -426,17 +494,23 @@ function BoardingPass({ guest, security, requiresPin, onAdmit, onDeny, onPinVeri
   );
 }
 
-// QR SCANNER
+// ═══════════════════════════════════════════════════════════════════════════
+// QR SCANNER WITH HTML5-QRCODE
+// ═══════════════════════════════════════════════════════════════════════════
 function QRScanner({ onScan, onClose }) {
-  const [error, setError]     = useState(null);
-  const html5QrCodeRef        = useRef(null);
-  const isMountedRef          = useRef(true);
-  const isStoppingRef         = useRef(false);
+  const [scanning, setScanning] = useState(false);
+  const [error, setError] = useState(null);
+  const html5QrCodeRef = useRef(null);
+  const isMountedRef = useRef(true);
+  const isStoppingRef = useRef(false);
 
   useEffect(() => {
     isMountedRef.current = true;
     startScanner();
-    return () => { isMountedRef.current = false; stopScanner(); };
+    return () => {
+      isMountedRef.current = false;
+      stopScanner();
+    };
   }, []);
 
   const stopScanner = async () => {
@@ -444,74 +518,151 @@ function QRScanner({ onScan, onClose }) {
     if (!scanner || isStoppingRef.current) return;
     isStoppingRef.current = true;
     html5QrCodeRef.current = null;
-    try { if (scanner.getState() === 2) await scanner.stop(); } catch (_) {}
-    finally { isStoppingRef.current = false; }
+    try {
+      const state = scanner.getState();
+      // Only call stop() if actually running (state 2 = SCANNING)
+      if (state === 2) {
+        await scanner.stop();
+      }
+    } catch (err) {
+      // Swallow — scanner was never running, nothing to stop
+    } finally {
+      isStoppingRef.current = false;
+    }
   };
 
   const startScanner = async () => {
     if (!isMountedRef.current) return;
     try {
+      setScanning(true);
       setError(null);
+
       const { Html5Qrcode } = await import('html5-qrcode');
-      if (!isMountedRef.current) return;
-      const html5QrCode = new Html5Qrcode('qr-reader');
+
+      if (!isMountedRef.current) return; // Component unmounted during import
+
+      const html5QrCode = new Html5Qrcode("qr-reader");
       html5QrCodeRef.current = html5QrCode;
-      const config = { fps: 10, qrbox: { width: 240, height: 240 }, aspectRatio: 1.0, experimentalFeatures: { useBarCodeDetectorIfSupported: true } };
-      const onSuccess = (decoded) => { stopScanner(); onScan(decoded); };
-      const onScanError = () => {};
+
+      const config = {
+        fps: 10,
+        qrbox: { width: 250, height: 250 },
+        aspectRatio: 1.0,
+        experimentalFeatures: { useBarCodeDetectorIfSupported: true }
+      };
+
+      const onSuccess = (decodedText) => {
+        stopScanner();
+        onScan(decodedText);
+      };
+
+      const onScanError = () => {
+        // Suppress per-frame scan errors — normal while searching for QR
+      };
+
+      // First try back camera (environment)
       try {
-        await html5QrCode.start({ facingMode: { exact: 'environment' } }, config, onSuccess, onScanError);
-      } catch (_) {
+        await html5QrCode.start(
+          { facingMode: { exact: "environment" } },
+          config,
+          onSuccess,
+          onScanError
+        );
+      } catch (envErr) {
+        // AbortError or OverconstrainedError — back camera unavailable or timed out
+        // Fall back to any available camera
         if (!isMountedRef.current) return;
-        try { if (html5QrCodeRef.current?.getState() === 2) await html5QrCodeRef.current.stop(); } catch (_) {}
-        const fallback = new Html5Qrcode('qr-reader');
-        html5QrCodeRef.current = fallback;
-        await fallback.start({ facingMode: 'user' }, config, onSuccess, onScanError);
+        if (html5QrCodeRef.current) {
+          try {
+            const state = html5QrCode.getState();
+            if (state === 2) await html5QrCode.stop();
+          } catch (_) {}
+        }
+        const fallbackScanner = new Html5Qrcode("qr-reader");
+        html5QrCodeRef.current = fallbackScanner;
+        await fallbackScanner.start(
+          { facingMode: "user" }, // Front camera fallback
+          config,
+          onSuccess,
+          onScanError
+        );
       }
+
+      if (isMountedRef.current) setScanning(true);
+
     } catch (err) {
       if (!isMountedRef.current) return;
-      let msg;
-      if (err.name === 'NotAllowedError' || err.message?.includes('Permission'))
-        msg = 'Camera permission denied. Allow camera access in your browser settings, then try again.';
-      else if (err.name === 'NotFoundError') msg = 'No camera found on this device.';
-      else if (err.name === 'NotReadableError' || err.message?.includes('in use'))
-        msg = 'Camera is in use by another application. Close other apps and try again.';
-      else if (err.name === 'AbortError' || err.message?.includes('Timeout'))
-        msg = 'Camera took too long to start. Close other apps using the camera, then tap Retry.';
-      else msg = `Could not start camera. ${err.message || 'Check permissions and try again.'}`;
-      setError(msg);
+
+      let message;
+      if (err.name === 'NotAllowedError' || err.message?.includes('Permission')) {
+        message = 'Camera permission denied. Tap the camera icon in your browser address bar and allow access, then try again.';
+      } else if (err.name === 'NotFoundError' || err.message?.includes('Requested device not found')) {
+        message = 'No camera found on this device.';
+      } else if (err.name === 'NotReadableError' || err.message?.includes('in use')) {
+        message = 'Camera is in use by another app. Close any other apps or tabs using the camera and try again.';
+      } else if (err.name === 'AbortError' || err.message?.includes('Timeout') || err.message?.includes('AbortError')) {
+        message = 'Camera took too long to start. Close other apps using the camera, then tap Retry.';
+      } else if (err.name === 'OverconstrainedError') {
+        message = 'Camera settings not supported on this device. Tap Retry to try again.';
+      } else {
+        message = `Could not start camera. ${err.message || 'Please check permissions and try again.'}`;
+      }
+
+      setError(message);
+      setScanning(false);
     }
   };
 
   const handleRetry = async () => {
     await stopScanner();
-    setTimeout(() => { if (isMountedRef.current) startScanner(); }, 800);
+    // Small delay to let the camera hardware fully release
+    setTimeout(() => {
+      if (isMountedRef.current) startScanner();
+    }, 800);
   };
 
   return (
     <div className="fixed inset-0 bg-black z-50 flex flex-col">
-      <div className="flex items-center justify-between px-5 py-4 border-b border-white/10">
-        <button onClick={onClose} className="flex items-center gap-2 text-white/80 hover:text-white text-sm font-medium transition-colors">
-          <ArrowLeft className="w-4 h-4" /> Back
+      <div className="flex items-center justify-between px-4 py-3 bg-black/80 backdrop-blur-sm border-b border-white/10">
+        <button onClick={onClose} className="text-white flex items-center gap-2 hover:opacity-80">
+          <ArrowLeft className="w-4 h-4" />
+          Back
         </button>
-        <span className="text-white text-xs font-bold uppercase tracking-widest">Scan QR Code</span>
+        <span className="text-white text-sm font-semibold">SCAN QR CODE</span>
         <div className="w-16" />
       </div>
+      
       <div className="flex-1 relative flex items-center justify-center bg-black">
         {error ? (
-          <div className="text-center text-white px-8 max-w-sm mx-auto">
-            <CameraOff className="w-12 h-12 mx-auto mb-5 text-neutral-500" strokeWidth={1.5} />
-            <p className="text-base font-semibold mb-2">Camera Unavailable</p>
-            <p className="text-sm text-neutral-400 mb-8 leading-relaxed">{error}</p>
-            <div className="flex flex-col gap-3">
-              <button onClick={handleRetry} className="px-6 py-3 bg-white text-black rounded-xl text-sm font-semibold hover:bg-neutral-100 transition-colors">Retry</button>
-              <button onClick={onClose} className="px-6 py-3 bg-neutral-800 text-white rounded-xl text-sm font-semibold hover:bg-neutral-700 transition-colors">Close</button>
+          <div className="text-center text-white p-8">
+            <CameraOff className="w-16 h-16 mx-auto mb-4 text-red-400" />
+            <p className="text-lg font-semibold mb-2">Camera Error</p>
+            <p className="text-sm text-neutral-300 mb-8 max-w-xs mx-auto">{error}</p>
+            <div className="flex flex-col gap-3 max-w-xs mx-auto">
+              <button
+                onClick={handleRetry}
+                className="px-6 py-3 bg-white text-black rounded-xl font-semibold hover:bg-neutral-200"
+              >
+                Retry Camera
+              </button>
+              <button
+                onClick={onClose}
+                className="px-6 py-3 bg-neutral-700 text-white rounded-xl font-semibold hover:bg-neutral-600"
+              >
+                Close
+              </button>
             </div>
           </div>
         ) : (
-          <div className="w-full max-w-sm px-6">
-            <div id="qr-reader" className="rounded-2xl overflow-hidden shadow-2xl" />
-            <p className="text-neutral-400 text-center mt-5 text-xs tracking-wide">Position the QR code within the frame to scan</p>
+          <div className="w-full max-w-md px-4">
+            {/* QR Reader div - DO NOT REMOVE */}
+            <div id="qr-reader" className="rounded-2xl overflow-hidden shadow-2xl"></div>
+            <p className="text-white text-center mt-6 text-sm">
+              📷 Position QR code within the frame
+            </p>
+            <p className="text-neutral-400 text-center mt-2 text-xs">
+              Scanning automatically when QR code is detected
+            </p>
           </div>
         )}
       </div>
@@ -519,25 +670,29 @@ function QRScanner({ onScan, onClose }) {
   );
 }
 
-// INVITE DIALOG
+// ═══════════════════════════════════════════════════════════════════════════
+// INVITE DIALOG WITH LINK COPYING
+// ═══════════════════════════════════════════════════════════════════════════
 function InviteDialog({ invite, eventId, event, onClose, onSave }) {
   const [formData, setFormData] = useState({
-    guestName:   invite?.guestName   || '',
-    guestEmail:  invite?.guestEmail  || '',
-    guestPhone:  invite?.guestPhone  || '',
-    adults:      invite?.adults      ?? 1,
-    children:    invite?.children    ?? 0,
-    notes:       invite?.notes       || '',
+    guestName: invite?.guestName || '',
+    guestEmail: invite?.guestEmail || '',
+    guestPhone: invite?.guestPhone || '',
+    adults: invite?.adults || 1,
+    children: invite?.children || 0,
+    notes: invite?.notes || '',
     securityPin: invite?.securityPin || '',
   });
-  const [saving, setSaving]           = useState(false);
+  const [saving, setSaving] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [createdInvite, setCreatedInvite] = useState(null);
-  const [copied, setCopied]           = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!formData.guestName.trim()) { toast.error('Guest name is required'); return; }
+    if (!formData.guestName.trim()) {
+      toast.error('Guest name is required');
+      return;
+    }
     setSaving(true);
     try {
       if (invite) {
@@ -545,64 +700,99 @@ function InviteDialog({ invite, eventId, event, onClose, onSave }) {
         toast.success('Invite updated');
         onSave();
       } else {
-        const res = await eventAPI.createInvite(eventId, formData);
-        const created = res.data.invites?.[0] || res.data.invite || res.data;
-        setCreatedInvite(created);
+        const response = await eventAPI.createInvite(eventId, formData);
+        const newInvite = response.data.invites?.[0] || response.data.invite || response.data;
+        setCreatedInvite(newInvite);
         setShowSuccess(true);
+        toast.success('Invite created!');
       }
-    } catch (err) {
-      toast.error(err.response?.data?.error || 'Failed to save invite');
+    } catch (error) {
+      toast.error(error.response?.data?.error || 'Failed to save invite');
     } finally {
       setSaving(false);
     }
   };
 
-  const inviteLink = createdInvite ? `${window.location.origin}/invite/${createdInvite.inviteCode}` : '';
-
-  const copyLink = async () => {
-    try { await navigator.clipboard.writeText(inviteLink); setCopied(true); setTimeout(() => setCopied(false), 2000); }
-    catch (_) { toast.error('Failed to copy'); }
+  const getInviteLink = () => {
+    if (!createdInvite) return '';
+    const baseUrl = window.location.origin;
+    return `${baseUrl}/invite/${createdInvite.inviteCode}`;
   };
 
-  const handleShare = () => {
-    if (navigator.share) navigator.share({ title: `Invite to ${event?.title}`, url: inviteLink });
-    else window.open(`mailto:${formData.guestEmail}?subject=You're Invited&body=${inviteLink}`);
+  const copyInviteLink = () => {
+    const link = getInviteLink();
+    navigator.clipboard.writeText(link);
+    toast.success('Invite link copied!');
+  };
+
+  const getQRCodeUrl = () => {
+    if (!createdInvite) return '';
+    const link = getInviteLink();
+    return `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(link)}`;
   };
 
   if (showSuccess && createdInvite) {
     return (
-      <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm" onClick={onClose}>
-        <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden" onClick={(e) => e.stopPropagation()}>
-          <div className="h-1 bg-emerald-500" />
-          <div className="px-7 pt-7 pb-5 border-b border-neutral-100">
-            <div className="flex items-center justify-between">
-              <div>
-                <span className="text-xs font-bold uppercase tracking-widest text-emerald-600">Invite Created</span>
-                <h2 className="text-xl font-bold text-neutral-900 mt-1">{formData.guestName}</h2>
-              </div>
-              <CheckCircle2 className="w-6 h-6 text-emerald-500 flex-shrink-0" />
+      <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={onClose}>
+        <div className="bg-white rounded-2xl p-6 w-full max-w-lg shadow-xl" onClick={e => e.stopPropagation()}>
+          <div className="text-center mb-6">
+            <CheckCircle className="w-16 h-16 text-emerald-600 mx-auto mb-4" />
+            <h2 className="text-2xl font-bold mb-2">Invite Created!</h2>
+            <p className="text-neutral-600">Send this link to {formData.guestName}</p>
+          </div>
+
+          {/* QR Code */}
+          <div className="bg-neutral-50 rounded-xl p-6 mb-4">
+            <img src={getQRCodeUrl()} alt="QR Code" className="w-48 h-48 mx-auto mb-4" />
+            <p className="text-center font-mono font-bold text-lg">{createdInvite.inviteCode}</p>
+          </div>
+
+          {/* Invite Link */}
+          <div className="mb-6">
+            <label className="block text-sm font-semibold mb-2">Invite Link</label>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={getInviteLink()}
+                readOnly
+                className="flex-1 border border-neutral-200 rounded-xl px-4 py-2.5 text-sm font-mono bg-neutral-50"
+              />
+              <button
+                onClick={copyInviteLink}
+                className="px-4 py-2.5 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-700 flex items-center gap-2"
+              >
+                <Copy className="w-4 h-4" />
+                Copy
+              </button>
             </div>
           </div>
-          <div className="px-7 py-5">
-            <div className="flex justify-center mb-5">
-              <div className="bg-white border border-neutral-200 rounded-xl p-4 inline-block">
-                <img src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(inviteLink)}`} alt="Invite QR" className="w-44 h-44" />
-              </div>
-            </div>
-            <p className="text-center font-mono text-lg font-bold text-neutral-900 tracking-widest mb-5">{createdInvite.inviteCode}</p>
-            <div className="flex gap-2 mb-5">
-              <input type="text" value={inviteLink} readOnly className="flex-1 border border-neutral-200 rounded-xl px-4 py-2.5 text-xs font-mono bg-neutral-50 text-neutral-600 focus:outline-none" />
-              <button onClick={copyLink} className="px-4 py-2.5 bg-neutral-900 text-white rounded-xl text-sm font-semibold hover:bg-black transition-colors flex items-center gap-2">
-                {copied ? <CheckCircle2 className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
-                {copied ? 'Copied' : 'Copy'}
-              </button>
-            </div>
-            <div className="flex gap-3">
-              <button onClick={() => { setShowSuccess(false); setCreatedInvite(null); onSave(); }} className="flex-1 py-2.5 bg-neutral-900 text-white rounded-xl text-sm font-semibold hover:bg-black transition-colors">Done</button>
-              <button onClick={handleShare} className="flex-1 py-2.5 border border-neutral-200 rounded-xl text-sm font-semibold hover:bg-neutral-50 transition-colors flex items-center justify-center gap-2 text-neutral-700">
-                <Share2 className="w-4 h-4" /> Share
-              </button>
-            </div>
+
+          {/* Actions */}
+          <div className="flex gap-3">
+            <button
+              onClick={() => {
+                setShowSuccess(false);
+                setCreatedInvite(null);
+                onSave();
+              }}
+              className="flex-1 px-4 py-2.5 bg-neutral-900 text-white rounded-xl font-semibold hover:bg-black"
+            >
+              Done
+            </button>
+            <button
+              onClick={() => {
+                const link = getInviteLink();
+                if (navigator.share) {
+                  navigator.share({ title: `Invite to ${event?.title}`, text: `You're invited!`, url: link });
+                } else {
+                  window.open(`mailto:${formData.guestEmail}?subject=Event Invite&body=You're invited! ${link}`);
+                }
+              }}
+              className="flex-1 px-4 py-2.5 border border-neutral-200 rounded-xl font-semibold hover:bg-neutral-50 flex items-center justify-center gap-2"
+            >
+              <Share2 className="w-4 h-4" />
+              Share
+            </button>
           </div>
         </div>
       </div>
@@ -610,53 +800,92 @@ function InviteDialog({ invite, eventId, event, onClose, onSave }) {
   }
 
   return (
-    <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm" onClick={onClose}>
-      <div className="bg-white rounded-2xl w-full max-w-lg shadow-2xl" onClick={(e) => e.stopPropagation()}>
-        <div className="flex items-center justify-between px-6 py-5 border-b border-neutral-100">
-          <h2 className="text-base font-bold text-neutral-900">{invite ? 'Edit Invite' : 'New Invite'}</h2>
-          <button onClick={onClose} className="p-1.5 hover:bg-neutral-100 rounded-lg transition-colors"><X className="w-4 h-4 text-neutral-500" /></button>
+    <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={onClose}>
+      <div className="bg-white rounded-2xl p-6 w-full max-w-lg shadow-xl" onClick={e => e.stopPropagation()}>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-xl font-bold">{invite ? 'Edit' : 'Create'} Invite</h2>
+          <button onClick={onClose} className="p-1 hover:bg-neutral-100 rounded-lg"><X className="w-5 h-5" /></button>
         </div>
-        <form onSubmit={handleSubmit} className="px-6 py-5 space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-xs font-semibold text-neutral-500 uppercase tracking-wider mb-1.5">Guest Name *</label>
-            <input type="text" value={formData.guestName} onChange={(e) => setFormData({ ...formData, guestName: e.target.value })}
-              className="w-full border border-neutral-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-neutral-400" placeholder="Full name" required />
+            <label className="block text-sm font-semibold mb-1">Guest Name *</label>
+            <input
+              type="text"
+              value={formData.guestName}
+              onChange={(e) => setFormData({ ...formData, guestName: e.target.value })}
+              className="w-full border border-neutral-200 rounded-xl px-4 py-2.5 focus:outline-none focus:border-neutral-400"
+              placeholder="John Smith"
+              required
+            />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-semibold text-neutral-500 uppercase tracking-wider mb-1.5">Adults</label>
-              <input type="number" value={formData.adults} onChange={(e) => setFormData({ ...formData, adults: parseInt(e.target.value) || 0 })}
-                className="w-full border border-neutral-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-neutral-400" min="0" />
+              <label className="block text-sm font-semibold mb-1">Adults</label>
+              <input
+                type="number"
+                value={formData.adults}
+                onChange={(e) => setFormData({ ...formData, adults: parseInt(e.target.value) || 0 })}
+                className="w-full border border-neutral-200 rounded-xl px-4 py-2.5 focus:outline-none focus:border-neutral-400"
+                min="0"
+              />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-neutral-500 uppercase tracking-wider mb-1.5">Children</label>
-              <input type="number" value={formData.children} onChange={(e) => setFormData({ ...formData, children: parseInt(e.target.value) || 0 })}
-                className="w-full border border-neutral-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-neutral-400" min="0" />
+              <label className="block text-sm font-semibold mb-1">Children</label>
+              <input
+                type="number"
+                value={formData.children}
+                onChange={(e) => setFormData({ ...formData, children: parseInt(e.target.value) || 0 })}
+                className="w-full border border-neutral-200 rounded-xl px-4 py-2.5 focus:outline-none focus:border-neutral-400"
+                min="0"
+              />
             </div>
           </div>
           <div>
-            <label className="block text-xs font-semibold text-neutral-500 uppercase tracking-wider mb-1.5">Email</label>
-            <input type="email" value={formData.guestEmail} onChange={(e) => setFormData({ ...formData, guestEmail: e.target.value })}
-              className="w-full border border-neutral-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-neutral-400" placeholder="guest@email.com" />
+            <label className="block text-sm font-semibold mb-1">Email</label>
+            <input
+              type="email"
+              value={formData.guestEmail}
+              onChange={(e) => setFormData({ ...formData, guestEmail: e.target.value })}
+              className="w-full border border-neutral-200 rounded-xl px-4 py-2.5 focus:outline-none focus:border-neutral-400"
+              placeholder="john@email.com"
+            />
           </div>
           <div>
-            <label className="block text-xs font-semibold text-neutral-500 uppercase tracking-wider mb-1.5">Phone</label>
-            <input type="tel" value={formData.guestPhone} onChange={(e) => setFormData({ ...formData, guestPhone: e.target.value })}
-              className="w-full border border-neutral-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-neutral-400" placeholder="+1 555 0100" />
+            <label className="block text-sm font-semibold mb-1">Phone</label>
+            <input
+              type="tel"
+              value={formData.guestPhone}
+              onChange={(e) => setFormData({ ...formData, guestPhone: e.target.value })}
+              className="w-full border border-neutral-200 rounded-xl px-4 py-2.5 focus:outline-none focus:border-neutral-400"
+              placeholder="555-1234"
+            />
           </div>
           <div>
-            <label className="block text-xs font-semibold text-neutral-500 uppercase tracking-wider mb-1.5">Security PIN <span className="normal-case font-normal text-neutral-400">(optional)</span></label>
-            <input type="text" value={formData.securityPin} onChange={(e) => setFormData({ ...formData, securityPin: e.target.value.toUpperCase() })}
-              className="w-full border border-neutral-200 rounded-xl px-4 py-2.5 text-sm font-mono tracking-widest focus:outline-none focus:border-neutral-400" placeholder="ABC123" maxLength={6} />
+            <label className="block text-sm font-semibold mb-1">Security PIN (optional)</label>
+            <input
+              type="text"
+              value={formData.securityPin}
+              onChange={(e) => setFormData({ ...formData, securityPin: e.target.value.toUpperCase() })}
+              className="w-full border border-neutral-200 rounded-xl px-4 py-2.5 focus:outline-none focus:border-neutral-400 font-mono"
+              placeholder="ABC123"
+              maxLength={6}
+            />
           </div>
           <div>
-            <label className="block text-xs font-semibold text-neutral-500 uppercase tracking-wider mb-1.5">Notes</label>
-            <textarea value={formData.notes} onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-              className="w-full border border-neutral-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-neutral-400 resize-none" rows={2} placeholder="Dietary requirements, accessibility needs, etc." />
+            <label className="block text-sm font-semibold mb-1">Notes</label>
+            <textarea
+              value={formData.notes}
+              onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+              className="w-full border border-neutral-200 rounded-xl px-4 py-2.5 focus:outline-none focus:border-neutral-400 resize-none"
+              rows={3}
+              placeholder="Special requirements, dietary restrictions, etc."
+            />
           </div>
-          <div className="flex gap-3 pt-1">
-            <button type="button" onClick={onClose} className="flex-1 py-2.5 border border-neutral-200 rounded-xl text-sm font-semibold hover:bg-neutral-50 transition-colors">Cancel</button>
-            <button type="submit" disabled={saving} className="flex-1 py-2.5 bg-neutral-900 text-white rounded-xl text-sm font-semibold hover:bg-black disabled:opacity-50 transition-colors">
+          <div className="flex gap-3 pt-2">
+            <button type="button" onClick={onClose} className="flex-1 px-4 py-2.5 border border-neutral-200 rounded-xl font-semibold hover:bg-neutral-50">
+              Cancel
+            </button>
+            <button type="submit" disabled={saving} className="flex-1 px-4 py-2.5 bg-neutral-900 text-white rounded-xl font-semibold hover:bg-black disabled:opacity-50">
               {saving ? 'Saving...' : invite ? 'Update' : 'Create'}
             </button>
           </div>
@@ -666,80 +895,209 @@ function InviteDialog({ invite, eventId, event, onClose, onSave }) {
   );
 }
 
+// ═══════════════════════════════════════════════════════════════════════════
 // MAIN COMPONENT
+// ═══════════════════════════════════════════════════════════════════════════
 export default function EnterpriseCheckin() {
   const { eventId } = useParams();
-  const navigate    = useNavigate();
-
-  const [event, setEvent]       = useState(null);
-  const [invites, setInvites]   = useState([]);
-  const [stats, setStats]       = useState(null);
+  const navigate = useNavigate();
+  
+  const [event, setEvent] = useState(null);
+  const [invites, setInvites] = useState([]);
+  const [stats, setStats] = useState(null);
   const [settings, setSettings] = useState(null);
-  const [loading, setLoading]   = useState(true);
+  const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
-
-  const [scanMode, setScanMode]   = useState(false);
+  
+  const [scanMode, setScanMode] = useState(false);
   const [showManual, setShowManual] = useState(false);
   const [manualCode, setManualCode] = useState('');
-  const [currentGuest, setCurrentGuest]       = useState(null);
+  const [currentGuest, setCurrentGuest] = useState(null);
   const [currentSecurity, setCurrentSecurity] = useState(null);
-  const [requiresPin, setRequiresPin]         = useState(false);
-  const [pinVerified, setPinVerified]         = useState(false);
-
+  const [requiresPin, setRequiresPin] = useState(false);
+  const [pinVerified, setPinVerified] = useState(false);
+  
   const [showAdmitSuccess, setShowAdmitSuccess] = useState(false);
-  const [showDenyScreen, setShowDenyScreen]     = useState(false);
-  const [denyDetails, setDenyDetails]           = useState(null);
-  const [admittedGuest, setAdmittedGuest]       = useState(null);
-
+  const [showDenyScreen, setShowDenyScreen] = useState(false);
+  const [denyDetails, setDenyDetails] = useState(null);
+  const [admittedGuest, setAdmittedGuest] = useState(null);
+  
   const [showOverrideDialog, setShowOverrideDialog] = useState(false);
-  const [overrideInvite, setOverrideInvite]         = useState(null);
-  const [showInviteDialog, setShowInviteDialog]     = useState(false);
-  const [editingInvite, setEditingInvite]           = useState(null);
-  const [showSettingsPanel, setShowSettingsPanel]   = useState(false);
+  const [overrideInvite, setOverrideInvite] = useState(null);
+  
+  const [showInviteDialog, setShowInviteDialog] = useState(false);
+  const [editingInvite, setEditingInvite] = useState(null);
+  
+  const [showSettingsPanel, setShowSettingsPanel] = useState(false);
 
-  useEffect(() => { if (eventId) loadAllData(); }, [eventId]);
+  useEffect(() => {
+    if (eventId) {
+      loadAllData();
+    }
+  }, [eventId]);
 
   const loadAllData = async () => {
+    console.log('🔄 Starting to load check-in data...');
     try {
-      setLoading(true); setLoadError(null);
-      await loadEvent(); await loadInvites(); await loadStats(); await loadSettings();
+      setLoading(true);
+      setLoadError(null);
+      
+      console.log('📥 Loading event...');
+      await loadEvent();
+      
+      console.log('📥 Loading invites...');
+      await loadInvites();
+      
+      console.log('📥 Loading stats...');
+      await loadStats();
+      
+      console.log('📥 Loading settings...');
+      await loadSettings();
+      
+      console.log('✅ All data loaded successfully');
     } catch (error) {
-      const msg = error.response?.data?.error || error.message || 'Failed to load check-in data';
-      setLoadError(msg); toast.error(msg);
-    } finally { setLoading(false); }
+      console.error('❌ Failed to load data:', error);
+      const errorMsg = error.response?.data?.error || error.message || 'Failed to load check-in data';
+      setLoadError(errorMsg);
+      toast.error(errorMsg);
+    } finally {
+      setLoading(false);
+    }
   };
-
-  const loadEvent    = async () => { const res = await eventAPI.getById(eventId); setEvent(res.data.event || res.data); };
-  const loadInvites  = async () => { try { const res = await eventAPI.getInvites(eventId); setInvites(res.data.invites || res.data || []); } catch (_) { setInvites([]); } };
-  const loadStats    = async () => { try { const res = await eventAPI.getCheckInStats(eventId); setStats(res.data.stats || res.data); } catch (_) {} };
-  const loadSettings = async () => { try { const res = await eventAPI.getCheckInSettings(eventId); setSettings(res.data.settings || res.data || {}); } catch (_) { setSettings({}); } };
-
-  const handleScan = async (code) => {
-    if (!code?.trim()) { toast.error('Invalid code'); return; }
-    let inviteCode = code.trim();
-    const match = inviteCode.match(/\/invite\/([A-Z0-9]+)(?:[?#]|$)/i);
-    if (match) inviteCode = match[1];
-    else inviteCode = inviteCode.replace(/^https?:\/\/[^/]+\/?/i, '');
-    inviteCode = inviteCode.toUpperCase().trim();
-    setScanMode(false); setShowManual(false); setManualCode('');
+  
+  const loadEvent = async () => {
     try {
-      const res  = await eventAPI.verifyScan(eventId, inviteCode);
-      const data = res.data;
+      const response = await eventAPI.getById(eventId);
+      console.log('Event loaded:', response.data);
+      setEvent(response.data.event || response.data);
+    } catch (error) {
+      console.error('Failed to load event:', error);
+      throw error;
+    }
+  };
+  
+  const loadInvites = async () => {
+    try {
+      const response = await eventAPI.getInvites(eventId);
+      console.log('Invites loaded:', response.data);
+      setInvites(response.data.invites || response.data || []);
+    } catch (error) {
+      console.error('Failed to load invites:', error);
+      setInvites([]);
+    }
+  };
+  
+  const loadStats = async () => {
+    try {
+      const response = await eventAPI.getCheckInStats(eventId);
+      console.log('Stats loaded:', response.data);
+      setStats(response.data.stats || response.data);
+    } catch (error) {
+      console.error('Failed to load stats:', error);
+    }
+  };
+  
+  const loadSettings = async () => {
+    try {
+      const response = await eventAPI.getCheckInSettings(eventId);
+      console.log('Settings loaded:', response.data);
+      setSettings(response.data.settings || response.data || {});
+    } catch (error) {
+      console.error('Failed to load settings:', error);
+      setSettings({});
+    }
+  };
+  
+  const handleScan = async (code) => {
+    if (!code || !code.trim()) {
+      toast.error('Invalid code');
+      return;
+    }
+
+    console.log('📷 Raw QR scan result:', code);
+
+    let inviteCode = code.trim();
+
+    // 🔥 Extract invite code from URL if it's a full URL
+    // Handles: 
+    // - https://planitapp.onrender.com/invite/ABC123
+    // - /invite/ABC123?ref=email
+    // - /invite/ABC123#section
+    const match = inviteCode.match(/\/invite\/([A-Z0-9]+)(?:[?#]|$)/i);
+    if (match) {
+      inviteCode = match[1];
+      console.log('✅ Extracted invite code from URL:', inviteCode);
+    } else {
+      // If no /invite/ pattern, remove any protocol and domain
+      inviteCode = inviteCode.replace(/^https?:\/\/[^\/]+\/?/i, '');
+      console.log('ℹ️ Using cleaned input as invite code:', inviteCode);
+    }
+
+    inviteCode = inviteCode.toUpperCase().trim();
+    
+    setScanMode(false);
+    setShowManual(false);
+    setManualCode('');
+    
+    try {
+      const response = await eventAPI.verifyScan(eventId, inviteCode);
+      const data = response.data;
+      
       if (!data.valid) {
+        // Trigger error haptic for invalid scan
         hapticError();
-        setDenyDetails({ reason: data.reason, severity: data.severity || 'critical', message: data.message, displayMessage: data.displayMessage, checkedInAt: data.checkedInAt, checkedInBy: data.checkedInBy, blockedReason: data.blockedReason, requiresOverride: data.requiresOverride, inviteCode: data.inviteCode, guestName: data.guestName, groupSize: data.groupSize });
-        setShowDenyScreen(true); return;
+        
+        setDenyDetails({
+          reason: data.reason,
+          severity: data.severity || 'critical',
+          message: data.message,
+          displayMessage: data.displayMessage,
+          checkedInAt: data.checkedInAt,
+          checkedInBy: data.checkedInBy,
+          blockedReason: data.blockedReason,
+          requiresOverride: data.requiresOverride,
+          inviteCode: data.inviteCode,
+          guestName: data.guestName,
+          groupSize: data.groupSize,
+        });
+        setShowDenyScreen(true);
+        return;
       }
+      
+      // Trigger success haptic for valid scan
       hapticSuccess();
-      setCurrentGuest(data.guest); setCurrentSecurity(data.security); setRequiresPin(data.requiresPin); setPinVerified(false);
+      
+      setCurrentGuest(data.guest);
+      setCurrentSecurity(data.security);
+      setRequiresPin(data.requiresPin);
+      setPinVerified(false);
+      
     } catch (error) {
       hapticError();
+
+      // 400 responses from verify-scan contain structured deny data (already_checked_in, blocked, etc)
       const errData = error.response?.data;
-      if (errData?.valid === false) {
-        setDenyDetails({ reason: errData.reason, severity: errData.severity || 'critical', message: errData.message, displayMessage: errData.displayMessage, checkedInAt: errData.checkedInAt, checkedInBy: errData.checkedInBy, blockedReason: errData.blockedReason, requiresOverride: errData.requiresOverride, inviteCode: errData.inviteCode, guestName: errData.guestName, groupSize: errData.groupSize });
+      if (errData && errData.valid === false) {
+        setDenyDetails({
+          reason: errData.reason,
+          severity: errData.severity || 'critical',
+          message: errData.message,
+          displayMessage: errData.displayMessage,
+          checkedInAt: errData.checkedInAt,
+          checkedInBy: errData.checkedInBy,
+          blockedReason: errData.blockedReason,
+          requiresOverride: errData.requiresOverride,
+          inviteCode: errData.inviteCode,
+          guestName: errData.guestName,
+          groupSize: errData.groupSize,
+        });
       } else {
-        setDenyDetails({ reason: 'error', severity: 'critical', message: errData?.message || error.message || 'Scan failed' });
+        setDenyDetails({
+          reason: 'error',
+          severity: 'critical',
+          message: errData?.message || error.message || 'Scan failed',
+        });
       }
       setShowDenyScreen(true);
     }
@@ -747,52 +1105,112 @@ export default function EnterpriseCheckin() {
 
   const handlePinVerify = async (pin) => {
     try {
-      const res = await eventAPI.verifyPin(eventId, currentGuest.inviteCode, pin);
-      if (res.data.valid) { hapticSuccess(); setPinVerified(true); toast.success('PIN verified'); }
-      else throw new Error(res.data.message || 'Invalid PIN');
-    } catch (err) { hapticError(); throw new Error(err.response?.data?.message || err.message); }
+      const response = await eventAPI.verifyPin(eventId, currentGuest.inviteCode, pin);
+      if (response.data.valid) {
+        // Trigger success haptic for correct PIN
+        hapticSuccess();
+        
+        setPinVerified(true);
+        toast.success('PIN verified');
+      } else {
+        throw new Error(response.data.message || 'Invalid PIN');
+      }
+    } catch (error) {
+      // Trigger error haptic for wrong PIN
+      hapticError();
+      
+      throw new Error(error.response?.data?.message || error.message);
+    }
   };
-
+  
   const handleAdmit = async () => {
     try {
-      const res = await eventAPI.checkIn(eventId, currentGuest.inviteCode, { actualAttendees: currentGuest.groupSize, pinVerified });
-      setAdmittedGuest(res.data.invite); setCurrentGuest(null); setShowAdmitSuccess(true);
-      loadInvites(); loadStats();
-    } catch (error) { toast.error(error.response?.data?.error || 'Check-in failed'); setCurrentGuest(null); }
+      const response = await eventAPI.checkIn(eventId, currentGuest.inviteCode, {
+        actualAttendees: currentGuest.groupSize,
+        pinVerified,
+      });
+      setAdmittedGuest(response.data.invite);
+      setCurrentGuest(null);
+      setShowAdmitSuccess(true);
+      
+      // Immediate refresh for real-time stats (no setTimeout)
+      loadInvites();
+      loadStats();
+    } catch (error) {
+      console.error('Check-in error:', error);
+      toast.error(error.response?.data?.error || 'Check-in failed');
+      setCurrentGuest(null);
+    }
   };
-
+  
   const handleDenyFromBoarding = () => {
     setCurrentGuest(null);
-    setDenyDetails({ reason: 'staff_denied', severity: 'medium', message: 'Entry denied by security staff', displayMessage: 'Entry denied by security staff' });
+    setDenyDetails({
+      reason: 'staff_denied',
+      severity: 'medium',
+      message: 'Staff denied entry',
+      displayMessage: 'Entry denied by security staff',
+    });
     setShowDenyScreen(true);
   };
-
+  
   const handleRequestOverride = () => {
-    const invite = currentGuest || (denyDetails ? { inviteCode: denyDetails.inviteCode, guestName: denyDetails.guestName || 'Guest', groupSize: denyDetails.groupSize || 1, actualAttendees: denyDetails.actualAttendees, blockedReason: denyDetails.blockedReason } : null);
+    // When coming from DenyScreen (already checked in / blocked),
+    // currentGuest is null — reconstruct a minimal invite from denyDetails
+    const invite = currentGuest || (denyDetails ? {
+      inviteCode: denyDetails.inviteCode,
+      guestName: denyDetails.guestName || 'Guest',
+      groupSize: denyDetails.groupSize || 1,
+      actualAttendees: denyDetails.actualAttendees,
+      blockedReason: denyDetails.blockedReason,
+    } : null);
+
     if (!invite) return;
-    setOverrideInvite(invite); setShowOverrideDialog(true); setCurrentGuest(null); setShowDenyScreen(false);
+
+    setOverrideInvite(invite);
+    setShowOverrideDialog(true);
+    setCurrentGuest(null);
+    setShowDenyScreen(false);
   };
-
-  const resetScan = () => { setShowAdmitSuccess(false); setShowDenyScreen(false); setCurrentGuest(null); setAdmittedGuest(null); setDenyDetails(null); setPinVerified(false); };
-
+  
+  const resetScan = () => {
+    setShowAdmitSuccess(false);
+    setShowDenyScreen(false);
+    setCurrentGuest(null);
+    setAdmittedGuest(null);
+    setDenyDetails(null);
+    setPinVerified(false);
+  };
+  
   const handleDeleteInvite = async (inviteId) => {
     if (!confirm('Delete this invite?')) return;
-    try { await eventAPI.deleteInvite(eventId, inviteId); toast.success('Invite deleted'); loadInvites(); loadStats(); }
-    catch (_) { toast.error('Failed to delete invite'); }
+    try {
+      await eventAPI.deleteInvite(eventId, inviteId);
+      toast.success('Invite deleted');
+      loadInvites();
+      loadStats();
+    } catch (error) {
+      toast.error('Failed to delete invite');
+    }
   };
-
-  const filtered = invites.filter((inv) => {
+  
+  const filtered = invites.filter(invite => {
     if (!searchQuery.trim()) return true;
     const q = searchQuery.toLowerCase();
-    return inv.guestName.toLowerCase().includes(q) || inv.inviteCode.toLowerCase().includes(q) || inv.guestEmail?.toLowerCase().includes(q);
+    return (
+      invite.guestName.toLowerCase().includes(q) ||
+      invite.inviteCode.toLowerCase().includes(q) ||
+      invite.guestEmail?.toLowerCase().includes(q)
+    );
   });
-
+  
   if (loading) {
     return (
       <div className="min-h-screen bg-neutral-50 flex items-center justify-center">
         <div className="text-center">
-          <Loader2 className="w-8 h-8 animate-spin text-neutral-400 mx-auto mb-3" strokeWidth={1.5} />
-          <p className="text-sm text-neutral-500">Loading check-in system…</p>
+          <Loader2 className="w-12 h-12 animate-spin text-neutral-400 mx-auto mb-4" />
+          <p className="text-neutral-600">Loading check-in system...</p>
+          <p className="text-xs text-neutral-400 mt-2">Check console (F12) if stuck</p>
         </div>
       </div>
     );
@@ -801,205 +1219,299 @@ export default function EnterpriseCheckin() {
   if (loadError) {
     return (
       <div className="min-h-screen bg-neutral-50 flex items-center justify-center p-6">
-        <div className="text-center max-w-sm">
-          <AlertTriangle className="w-10 h-10 text-neutral-400 mx-auto mb-4" strokeWidth={1.5} />
-          <h2 className="text-lg font-bold text-neutral-900 mb-2">Unable to Load</h2>
-          <p className="text-sm text-neutral-500 mb-6">{loadError}</p>
+        <div className="text-center max-w-md">
+          <AlertTriangle className="w-16 h-16 text-red-500 mx-auto mb-4" />
+          <h2 className="text-2xl font-bold text-neutral-900 mb-2">Failed to Load</h2>
+          <p className="text-neutral-600 mb-6">{loadError}</p>
           <div className="flex gap-3 justify-center">
-            <button onClick={() => navigate(`/event/${eventId}`)} className="px-4 py-2.5 border border-neutral-200 rounded-xl text-sm font-semibold hover:bg-neutral-50 transition-colors">Go Back</button>
-            <button onClick={loadAllData} className="px-4 py-2.5 bg-neutral-900 text-white rounded-xl text-sm font-semibold hover:bg-black transition-colors">Retry</button>
+            <button
+              onClick={() => navigate(`/event/${eventId}`)}
+              className="px-4 py-2 border border-neutral-200 rounded-xl font-semibold hover:bg-neutral-50"
+            >
+              Go Back
+            </button>
+            <button
+              onClick={loadAllData}
+              className="px-4 py-2 bg-neutral-900 text-white rounded-xl font-semibold hover:bg-black"
+            >
+              Retry
+            </button>
           </div>
         </div>
       </div>
     );
   }
-
+  
   return (
     <div className="min-h-screen bg-neutral-50">
-
-      {/* Overlays */}
       {showAdmitSuccess && admittedGuest && <AdmitSuccessScreen guest={admittedGuest} onDone={resetScan} />}
       {showDenyScreen && denyDetails && (
-        <DenyScreen reason={denyDetails.reason} message={denyDetails.message} details={denyDetails} onDone={resetScan}
-          canOverride={denyDetails.requiresOverride && settings?.allowManualOverride} onOverride={handleRequestOverride} />
+        <DenyScreen
+          reason={denyDetails.reason}
+          message={denyDetails.message}
+          details={denyDetails}
+          onDone={resetScan}
+          canOverride={denyDetails.requiresOverride && settings?.allowManualOverride}
+          onOverride={handleRequestOverride}
+        />
       )}
       {currentGuest && (
-        <BoardingPass guest={currentGuest} security={currentSecurity} requiresPin={requiresPin}
-          onAdmit={handleAdmit} onDeny={handleDenyFromBoarding} onPinVerify={handlePinVerify} />
+        <BoardingPass
+          guest={currentGuest}
+          security={currentSecurity}
+          requiresPin={requiresPin}
+          onAdmit={handleAdmit}
+          onDeny={handleDenyFromBoarding}
+          onPinVerify={handlePinVerify}
+        />
       )}
       {showOverrideDialog && overrideInvite && (
-        <ManagerOverrideDialog eventId={eventId} invite={overrideInvite} blockDetails={denyDetails}
-          onOverrideSuccess={(result) => { setAdmittedGuest(result.invite); setShowOverrideDialog(false); setShowAdmitSuccess(true); loadInvites(); loadStats(); }}
-          onCancel={() => { setShowOverrideDialog(false); setOverrideInvite(null); }} />
+        <ManagerOverrideDialog
+          eventId={eventId}
+          invite={overrideInvite}
+          blockDetails={denyDetails}
+          onOverrideSuccess={(result) => {
+            setAdmittedGuest(result.invite);
+            setShowOverrideDialog(false);
+            setShowAdmitSuccess(true);
+            loadInvites();
+            loadStats();
+          }}
+          onCancel={() => {
+            setShowOverrideDialog(false);
+            setOverrideInvite(null);
+          }}
+        />
       )}
       {scanMode && <QRScanner onScan={handleScan} onClose={() => setScanMode(false)} />}
       {showInviteDialog && (
-        <InviteDialog invite={editingInvite} eventId={eventId} event={event}
-          onClose={() => { setShowInviteDialog(false); setEditingInvite(null); }}
-          onSave={() => { setShowInviteDialog(false); setEditingInvite(null); loadInvites(); loadStats(); }} />
+        <InviteDialog
+          invite={editingInvite}
+          eventId={eventId}
+          event={event}
+          onClose={() => {
+            setShowInviteDialog(false);
+            setEditingInvite(null);
+          }}
+          onSave={() => {
+            setShowInviteDialog(false);
+            setEditingInvite(null);
+            loadInvites();
+            loadStats();
+          }}
+        />
       )}
       {showSettingsPanel && (
-        <SecuritySettingsPanel eventId={eventId} onClose={() => setShowSettingsPanel(false)}
-          onSettingsUpdated={() => { loadSettings(); toast.success('Settings saved'); }} />
+        <SecuritySettingsPanel
+          eventId={eventId}
+          onClose={() => setShowSettingsPanel(false)}
+          onSettingsUpdated={() => {
+            loadSettings();
+            toast.success('Settings updated');
+          }}
+        />
       )}
-
-      {/* Header */}
+      
       <header className="bg-white border-b border-neutral-200 sticky top-0 z-10">
-        <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between gap-4">
-          <div className="flex items-center gap-4 min-w-0">
-            <button onClick={() => navigate(`/event/${eventId}`)} className="p-2 hover:bg-neutral-100 rounded-lg transition-colors flex-shrink-0">
-              <ArrowLeft className="w-4 h-4 text-neutral-600" />
+        <div className="max-w-5xl mx-auto px-6 h-14 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <button onClick={() => navigate(`/event/${eventId}`)} className="p-1.5 hover:bg-neutral-100 rounded-lg transition-colors">
+              <ArrowLeft className="w-4 h-4" />
             </button>
-            <div className="w-px h-6 bg-neutral-200 flex-shrink-0" />
-            <div className="min-w-0">
-              <h1 className="text-sm font-bold text-neutral-900 truncate max-w-[240px]">{event?.title || 'Event'}</h1>
-              <p className="text-xs text-neutral-400 font-medium">Enterprise Check-in</p>
+            <div>
+              <h1 className="text-sm font-bold text-neutral-900 truncate max-w-[180px]">{event?.title || 'Event'}</h1>
+              <p className="text-xs text-neutral-400">Enterprise Check-in</p>
             </div>
           </div>
-
-          <div className="flex items-center gap-2 flex-shrink-0">
-            <button onClick={() => setShowSettingsPanel(true)}
-              className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-neutral-600 border border-neutral-200 rounded-xl hover:bg-neutral-50 transition-colors">
-              <Settings className="w-3.5 h-3.5" /><span className="hidden sm:inline">Settings</span>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowSettingsPanel(true)}
+              className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-neutral-600 border border-neutral-200 rounded-xl hover:bg-neutral-50 transition-all"
+              title="Security Settings"
+            >
+              <Settings className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Settings</span>
             </button>
-            <button onClick={() => { setEditingInvite(null); setShowInviteDialog(true); }}
-              className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-neutral-700 border border-neutral-200 rounded-xl hover:bg-neutral-50 transition-colors">
-              <Plus className="w-3.5 h-3.5" /><span className="hidden sm:inline">Add Guest</span>
+            <button
+              onClick={() => setShowInviteDialog(true)}
+              className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-xl hover:bg-emerald-100 transition-all"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Add Guest</span>
             </button>
-            <button onClick={() => setShowManual((v) => !v)}
-              className={`flex items-center gap-1.5 px-3 py-2 text-xs font-semibold border rounded-xl transition-colors ${showManual ? 'bg-neutral-900 text-white border-neutral-900' : 'text-neutral-600 border-neutral-200 hover:bg-neutral-50'}`}>
-              <Keyboard className="w-3.5 h-3.5" /><span className="hidden sm:inline">Manual</span>
+            <button
+              onClick={() => setShowManual(v => !v)}
+              className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-neutral-600 border border-neutral-200 rounded-xl hover:bg-neutral-50 transition-all"
+            >
+              <Keyboard className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Manual</span>
             </button>
-            <button onClick={() => { resetScan(); setScanMode(true); }}
-              className="flex items-center gap-2 px-4 py-2 bg-neutral-900 text-white text-sm font-semibold rounded-xl hover:bg-black transition-colors">
-              <Camera className="w-4 h-4" />Scan QR
+            <button
+              onClick={() => {
+                resetScan();
+                setScanMode(true);
+              }}
+              className="flex items-center gap-2 px-4 py-2 bg-neutral-900 text-white text-sm font-semibold rounded-xl hover:bg-black transition-all shadow-sm"
+            >
+              <Camera className="w-4 h-4" />
+              Scan QR
             </button>
           </div>
         </div>
-
         {showManual && (
           <div className="border-t border-neutral-100 bg-neutral-50 px-6 py-3">
-            <form onSubmit={(e) => { e.preventDefault(); handleScan(manualCode); }} className="flex gap-2 max-w-md">
-              <input type="text" value={manualCode} onChange={(e) => setManualCode(e.target.value.toUpperCase())}
-                placeholder="Enter invite code"
-                className="flex-1 border border-neutral-200 rounded-xl px-4 py-2.5 text-sm font-mono tracking-widest focus:outline-none focus:border-neutral-400 bg-white" autoFocus />
-              <button type="submit" disabled={!manualCode.trim()}
-                className="px-5 py-2.5 bg-neutral-900 text-white rounded-xl text-sm font-semibold disabled:opacity-40 hover:bg-black transition-colors">
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                handleScan(manualCode);
+              }}
+              className="flex gap-2 max-w-sm"
+            >
+              <input
+                type="text"
+                value={manualCode}
+                onChange={(e) => setManualCode(e.target.value.toUpperCase())}
+                placeholder="Enter invite code e.g. AB12CD34"
+                className="flex-1 border border-neutral-200 rounded-xl px-4 py-2.5 text-sm font-mono tracking-widest focus:outline-none focus:border-neutral-400 bg-white"
+                autoFocus
+              />
+              <button type="submit" disabled={!manualCode.trim()} className="px-4 py-2.5 bg-neutral-900 text-white rounded-xl text-sm font-semibold disabled:opacity-40 hover:bg-black transition-all">
                 Verify
               </button>
             </form>
           </div>
         )}
       </header>
-
-      {/* Main */}
-      <main className="max-w-6xl mx-auto px-6 py-8">
-
-        {/* Stats row */}
-        <div className="grid grid-cols-2 sm:grid-cols-5 gap-4 mb-8">
+      
+      <main className="max-w-5xl mx-auto px-6 py-6">
+        <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-6">
           {[
-            { label: 'Total Groups',    value: stats?.total                  ?? invites.length, highlight: false },
-            { label: 'Checked In',      value: stats?.checkedIn              ?? 0,              highlight: true  },
-            { label: 'Total Expected',  value: stats?.totalExpectedAttendees ?? 0,              highlight: false },
-            { label: 'Adults',          value: stats?.totalExpectedAdults    ?? 0,              highlight: false },
-            { label: 'Children',        value: stats?.totalExpectedChildren  ?? 0,              highlight: false },
-          ].map(({ label, value, highlight }) => (
-            <div key={label} className="bg-white rounded-2xl border border-neutral-200 p-5">
-              <p className={`text-3xl font-black tracking-tight ${highlight ? 'text-emerald-600' : 'text-neutral-900'}`} style={{ letterSpacing: '-0.03em' }}>
-                {value}
-              </p>
-              <p className="text-xs font-medium text-neutral-400 mt-1 uppercase tracking-wider">{label}</p>
+            { label: 'Total Groups', value: stats?.total ?? invites.length, color: 'text-neutral-900' },
+            { label: 'Checked In', value: stats?.checkedIn ?? 0, color: 'text-emerald-600' },
+            { label: 'Total Expected', value: stats?.totalExpectedAttendees ?? 0, color: 'text-blue-600' },
+            { label: 'Adults Expected', value: stats?.totalExpectedAdults ?? 0, color: 'text-neutral-600' },
+            { label: 'Children', value: stats?.totalExpectedChildren ?? 0, color: 'text-indigo-600' },
+          ].map(({ label, value, color }) => (
+            <div key={label} className="bg-white rounded-2xl border border-neutral-200 p-4">
+              <div className={`text-2xl font-black ${color}`}>{value}</div>
+              <div className="text-xs text-neutral-500 mt-0.5">{label}</div>
             </div>
           ))}
         </div>
-
-        {/* Guest list */}
-        <div className="bg-white rounded-2xl border border-neutral-200 overflow-hidden">
-          <div className="px-6 py-5 border-b border-neutral-100 flex items-center gap-4 flex-wrap">
-            <div className="flex-1 min-w-0">
-              <h2 className="text-sm font-bold text-neutral-900">Guest List</h2>
-              <p className="text-xs text-neutral-400 mt-0.5">{invites.length} invite{invites.length !== 1 ? 's' : ''} total</p>
-            </div>
+        
+        <div className="bg-white rounded-2xl border border-neutral-200">
+          <div className="px-6 py-4 border-b border-neutral-100 flex items-center gap-3 flex-wrap">
+            <h2 className="text-base font-bold text-neutral-900 flex-1">Guest List</h2>
             {invites.length > 5 && (
-              <input type="text" placeholder="Search by name, code or email…" value={searchQuery}
+              <input
+                type="text"
+                placeholder="Search…"
+                value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="border border-neutral-200 rounded-xl px-4 py-2 text-sm focus:outline-none focus:border-neutral-400 w-64" />
+                className="border border-neutral-200 rounded-xl px-4 py-2 text-sm focus:outline-none focus:border-neutral-400 w-48"
+              />
             )}
           </div>
-
+          
           <div className="divide-y divide-neutral-100">
             {filtered.length === 0 ? (
-              <div className="py-16 text-center">
+              <div className="text-center py-12 text-neutral-400 text-sm">
                 {invites.length === 0 ? (
                   <div>
-                    <p className="text-sm text-neutral-400 mb-4">No guests added yet.</p>
-                    <button onClick={() => setShowInviteDialog(true)}
-                      className="inline-flex items-center gap-2 px-4 py-2.5 bg-neutral-900 text-white text-sm font-semibold rounded-xl hover:bg-black transition-colors">
-                      <Plus className="w-4 h-4" />Add First Guest
+                    <p className="mb-4">No guests yet.</p>
+                    <button
+                      onClick={() => setShowInviteDialog(true)}
+                      className="inline-flex items-center gap-2 px-4 py-2 bg-neutral-900 text-white text-sm font-semibold rounded-xl hover:bg-black"
+                    >
+                      <Plus className="w-4 h-4" />
+                      Add First Guest
                     </button>
                   </div>
                 ) : (
-                  <p className="text-sm text-neutral-400">No guests match your search.</p>
+                  'No guests match your search.'
                 )}
               </div>
             ) : (
               filtered.map((invite) => {
-                const adults   = invite.adults   || 1;
+                const adults = invite.adults || 1;
                 const children = invite.children || 0;
-                const total    = adults + children;
-
+                const total = adults + children;
+                
                 return (
-                  <div key={invite._id}
-                    className={`flex items-center gap-5 px-6 py-4 hover:bg-neutral-50 transition-colors ${invite.checkedIn ? 'bg-emerald-50/40' : ''}`}>
-
-                    {/* Avatar */}
-                    <div className={`w-10 h-10 rounded-full flex-shrink-0 flex items-center justify-center text-sm font-bold ${invite.checkedIn ? 'bg-emerald-100 text-emerald-700' : 'bg-neutral-100 text-neutral-500'}`}>
+                  <div
+                    key={invite._id}
+                    className={`flex items-center gap-4 px-6 py-4 hover:bg-neutral-50 transition-colors ${
+                      invite.checkedIn ? 'bg-emerald-50/50 hover:bg-emerald-50' : ''
+                    }`}
+                  >
+                    <div
+                      className={`w-10 h-10 rounded-full flex-shrink-0 flex items-center justify-center text-sm font-bold ${
+                        invite.checkedIn ? 'bg-emerald-100 text-emerald-700' : 'bg-neutral-100 text-neutral-500'
+                      }`}
+                    >
                       {invite.guestName.charAt(0).toUpperCase()}
                     </div>
-
-                    {/* Name + code */}
+                    
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold text-neutral-900 truncate">{invite.guestName}</p>
-                      <p className="text-xs font-mono text-neutral-400 tracking-wider mt-0.5">{invite.inviteCode}</p>
-                    </div>
-
-                    {/* Party size */}
-                    <div className="hidden sm:flex items-center gap-4 flex-shrink-0 text-xs text-neutral-500">
-                      <span className="flex items-center gap-1.5">
-                        <User className="w-3.5 h-3.5" />{adults} adult{adults !== 1 ? 's' : ''}
-                      </span>
-                      {children > 0 && (
-                        <span className="flex items-center gap-1.5">
-                          <Baby className="w-3.5 h-3.5" />{children} child{children !== 1 ? 'ren' : ''}
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <p className="text-sm font-semibold text-neutral-900">{invite.guestName}</p>
+                      </div>
+                      <div className="flex items-center gap-3 mt-0.5 text-xs text-neutral-400 flex-wrap">
+                        <span className="font-mono font-medium">{invite.inviteCode}</span>
+                        <span className="flex items-center gap-1">
+                          <User className="w-3 h-3" />
+                          {adults} adult{adults !== 1 ? 's' : ''}
                         </span>
-                      )}
-                      <span className="text-neutral-300">{total} total</span>
+                        {children > 0 && (
+                          <span className="flex items-center gap-1">
+                            <Baby className="w-3 h-3 text-blue-400" />
+                            {children} child{children !== 1 ? 'ren' : ''}
+                          </span>
+                        )}
+                        <span className="flex items-center gap-1">
+                          <Users className="w-3 h-3" />
+                          {total} total
+                        </span>
+                      </div>
                     </div>
-
-                    {/* Status / actions */}
+                    
                     <div className="flex-shrink-0 flex items-center gap-2">
                       {invite.checkedIn ? (
                         <div className="text-right">
-                          <div className="flex items-center gap-1.5 text-emerald-600 text-xs font-semibold">
-                            <CheckCircle2 className="w-3.5 h-3.5" />Admitted
+                          <div className="flex items-center gap-1 text-emerald-600 text-xs font-bold mb-0.5">
+                            <CheckCircle2 className="w-3.5 h-3.5" />
+                            Admitted
                           </div>
-                          <p className="text-xs text-neutral-400 mt-0.5">
+                          <p className="text-xs text-neutral-400 flex items-center gap-1 justify-end">
+                            <Clock className="w-3 h-3" />
                             {new Date(invite.checkedInAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                           </p>
                         </div>
                       ) : (
                         <>
-                          <button onClick={() => { setEditingInvite(invite); setShowInviteDialog(true); }}
-                            className="p-2 text-neutral-400 hover:text-neutral-600 hover:bg-neutral-100 rounded-lg transition-colors" title="Edit">
-                            <Edit2 className="w-3.5 h-3.5" />
+                          <button
+                            onClick={() => {
+                              setEditingInvite(invite);
+                              setShowInviteDialog(true);
+                            }}
+                            className="p-1.5 text-neutral-400 hover:text-neutral-600 hover:bg-neutral-100 rounded-lg transition-all"
+                            title="Edit"
+                          >
+                            <Edit2 className="w-4 h-4" />
                           </button>
-                          <button onClick={() => handleDeleteInvite(invite._id)}
-                            className="p-2 text-neutral-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors" title="Delete">
-                            <Trash2 className="w-3.5 h-3.5" />
+                          <button
+                            onClick={() => handleDeleteInvite(invite._id)}
+                            className="p-1.5 text-neutral-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
+                            title="Delete"
+                          >
+                            <Trash2 className="w-4 h-4" />
                           </button>
-                          <button onClick={() => handleScan(invite.inviteCode)}
-                            className="flex items-center gap-1.5 px-3 py-2 bg-neutral-900 text-white text-xs font-semibold rounded-xl hover:bg-black transition-colors">
-                            <UserCheck className="w-3.5 h-3.5" />Check In
+                          <button
+                            onClick={() => handleScan(invite.inviteCode)}
+                            className="flex items-center gap-1.5 px-3 py-1.5 bg-neutral-900 text-white text-xs font-semibold rounded-xl hover:bg-black transition-all"
+                          >
+                            <UserCheck className="w-3.5 h-3.5" />
+                            Check In
                           </button>
                         </>
                       )}
