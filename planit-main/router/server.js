@@ -278,6 +278,91 @@ async function pingAll() {
 BACKENDS.forEach((_, i) => setTimeout(() => pingBackend(i), i * 2000));
 setInterval(pingAll, KEEPALIVE_MS);
 
+// ─── Response Cache ───────────────────────────────────────────────────────────
+// Caches GET responses for routes that change infrequently.
+// Bypassed for non-GET requests, non-200 responses, and non-JSON content.
+// Each rule has its own TTL — shorter for live data, longer for stable data.
+//
+const responseCache = new Map(); // key → { body, status, headers, expiresAt }
+
+const CACHE_RULES = [
+  { pattern: /^\/api\/uptime\/status$/,        ttl: 30_000 }, // 30s — platform status
+  { pattern: /^\/api\/uptime\/ping$/,          ttl: 10_000 }, // 10s — lightweight ping
+  { pattern: /^\/api\/events\/public\//,       ttl: 60_000 }, // 60s — public event info (join gate)
+  { pattern: /^\/api\/events\/subdomain\//,    ttl: 60_000 }, // 60s — subdomain → event ID lookup
+  { pattern: /^\/api\/events\/participants\//, ttl: 30_000 }, // 30s — participant name list (join gate)
+];
+
+// Purge expired entries every 2 minutes
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, entry] of responseCache) {
+    if (entry.expiresAt <= now) responseCache.delete(key);
+  }
+}, 2 * 60_000).unref?.();
+
+function getCacheRule(path) {
+  return CACHE_RULES.find(r =>
+    r.pattern instanceof RegExp ? r.pattern.test(path) : path.startsWith(r.pattern)
+  ) || null;
+}
+
+function cacheKey(req) {
+  return req.method + ':' + req.url; // include query string so ?foo=bar is separate
+}
+
+// Middleware: serve from cache on HIT, or intercept & store response on MISS
+function cacheMiddleware(req, res, next) {
+  if (req.method !== 'GET') return next();
+
+  const rule = getCacheRule(req.path);
+  if (!rule) return next();
+
+  const key = cacheKey(req);
+  const now  = Date.now();
+
+  const cached = responseCache.get(key);
+  if (cached && cached.expiresAt > now) {
+    // Cache HIT — respond immediately, backend not touched
+    res.set(cached.headers);
+    res.set('X-Cache', 'HIT');
+    res.set('X-Cache-Age', String(Math.floor((now - (cached.expiresAt - rule.ttl)) / 1000)));
+    return res.status(cached.status).send(cached.body);
+  }
+
+  // Cache MISS — intercept the proxied response to capture and store it
+  const chunks = [];
+  const originalWrite = res.write.bind(res);
+  const originalEnd   = res.end.bind(res);
+
+  res.write = (chunk, encoding, callback) => {
+    if (chunk) chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk, encoding || 'utf8'));
+    return originalWrite(chunk, encoding, callback);
+  };
+
+  res.end = (chunk, encoding, callback) => {
+    if (chunk) chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk, encoding || 'utf8'));
+
+    // Only cache successful JSON responses
+    if (res.statusCode === 200) {
+      const contentType = res.getHeader('content-type') || '';
+      if (contentType.includes('application/json')) {
+        const body = Buffer.concat(chunks);
+        const headers = {};
+        (res.getHeaderNames?.() || []).forEach(h => {
+          if (h !== 'x-cache' && h !== 'x-cache-age') headers[h] = res.getHeader(h);
+        });
+        responseCache.set(key, { body, status: 200, headers, expiresAt: now + rule.ttl });
+      }
+    }
+
+    res.set('X-Cache', 'MISS');
+    return originalEnd(chunk, encoding, callback);
+  };
+
+  next();
+}
+
 // ─── Express app ──────────────────────────────────────────────────────────────
 const app = express();
 app.use(cookieParser());
@@ -351,6 +436,9 @@ const proxies = BACKENDS.map((target, index) =>
     },
   })
 );
+
+// ─── Cache middleware (runs before proxy) ────────────────────────────────────
+app.use(cacheMiddleware);
 
 // ─── Main routing middleware ──────────────────────────────────────────────────
 app.use((req, res, next) => {
