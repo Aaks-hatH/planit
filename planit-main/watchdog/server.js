@@ -15,6 +15,7 @@ const NTFY_URL         = process.env.NTFY_URL;
 const PING_MS          = parseInt(process.env.PING_INTERVAL_MS  || '60000', 10); // 1 min default
 const THRESHOLD        = parseInt(process.env.FAILURE_THRESHOLD || '3',     10);
 const PORT             = process.env.PORT || '4000';
+const SERVICE_NAME     = process.env.SERVICE_NAME || 'watchdog';
 
 // Build the list of targets to monitor
 // Each target: { name, url, pingUrl, type }
