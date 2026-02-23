@@ -693,7 +693,19 @@ const io = socketIo(server, {
     origin: process.env.CORS_ORIGIN?.split(',') || 'http://localhost:5173',
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE']
-  }
+  },
+  // Accept both transports — client starts with polling (instant, always works
+  // through Render's proxy) then Socket.IO upgrades to WebSocket automatically.
+  transports:    ['polling', 'websocket'],
+  allowUpgrades: true,
+  // Give the WebSocket upgrade handshake enough time to succeed through the router proxy.
+  upgradeTimeout: 15000,
+  // Detect dead connections faster. Default pingTimeout of 20s means a dropped
+  // connection isn't noticed for 20s — keeping it but lowering pingInterval so
+  // the server pings more frequently and notices drops sooner.
+  pingTimeout:     20000,
+  pingInterval:    10000,
+  httpCompression: true,
 });
 
 const FRONTEND_URL = process.env.FRONTEND_URL?.split(',')
@@ -870,22 +882,8 @@ const connectDB = async () => {
     }
 
     await mongoose.connect(process.env.MONGODB_URI, {
-      useNewUrlParser:        true,
-      useUnifiedTopology:     true,
-      // ── Multi-instance pool sizing ──────────────────────────────────────
-      // Each backend instance opens its own connection pool. With 10 backends
-      // running on Render free tier, we limit each pool to 3 connections so
-      // the total across all instances stays at 30 — well within Atlas M0's
-      // 500-connection limit and avoids saturating the shared cluster CPU.
-      // Raise maxPoolSize if you move to a paid Atlas tier or self-hosted MongoDB.
-      maxPoolSize:            3,
-      minPoolSize:            1,
-      // ── Timeouts ────────────────────────────────────────────────────────
-      // Render cold starts and Atlas shared-cluster wake-ups can take a few
-      // seconds. These values prevent connection errors during startup.
-      serverSelectionTimeoutMS: 8000,
-      connectTimeoutMS:         10000,
-      socketTimeoutMS:          45000,
+      useNewUrlParser: true,
+      useUnifiedTopology: true,
     });
 
     console.log('✓ MongoDB connected successfully');
