@@ -131,6 +131,14 @@ router.post('/verify-password/:eventId', authLimiter,
       if (!event) return res.status(404).json({ error: 'Event not found.' });
       if (!event.isPasswordProtected) return res.status(400).json({ error: 'Event is not password protected.' });
 
+      // ── Status checks ──────────────────────────────────────────────────────
+      if (event.status === 'cancelled') {
+        return res.status(403).json({ error: 'This event has been cancelled and is no longer accepting participants.' });
+      }
+      if (event.status === 'completed') {
+        return res.status(403).json({ error: 'This event has ended and is no longer accepting new participants.' });
+      }
+
       const isMatch = await bcrypt.compare(req.body.password, event.password);
       if (!isMatch) return res.status(401).json({ error: 'Incorrect event password.' });
 
@@ -186,6 +194,22 @@ router.post('/join/:eventId',
       const event = await Event.findById(req.params.eventId);
       if (!event) return res.status(404).json({ error: 'Event not found.' });
       if (event.isPasswordProtected) return res.status(403).json({ error: 'This event requires a password.' });
+
+      // ── Require approval ───────────────────────────────────────────────────
+      if (event.settings?.requireApproval) {
+        return res.status(403).json({
+          error: 'This event requires organizer approval to join. Please contact the organizer to get access.',
+          requiresApproval: true,
+        });
+      }
+
+      // ── Status checks ──────────────────────────────────────────────────────
+      if (event.status === 'cancelled') {
+        return res.status(403).json({ error: 'This event has been cancelled and is no longer accepting participants.' });
+      }
+      if (event.status === 'completed') {
+        return res.status(403).json({ error: 'This event has ended and is no longer accepting new participants.' });
+      }
 
       const { username, accountPassword } = req.body;
 
@@ -310,6 +334,14 @@ router.patch('/:eventId/rsvp-settings',
       if (rsvpMessage      !== undefined) event.settings.rsvpMessage      = rsvpMessage.slice(0, 500);
 
       await event.save();
+
+      const io = req.app.get('io');
+      if (io) {
+        io.to(`event_${req.params.eventId}`).emit('event_settings_updated', {
+          settings: event.settings,
+        });
+      }
+
       res.json({ message: 'RSVP settings updated', settings: event.settings });
     } catch (error) { next(error); }
   }
@@ -853,6 +885,17 @@ router.put('/:eventId', verifyOrganizer,
       if (maxParticipants) event.maxParticipants = maxParticipants;
       if (status && ['active', 'completed', 'cancelled'].includes(status)) event.status = status;
       await event.save();
+
+      const io = req.app.get('io');
+      if (io) {
+        io.to(`event_${req.params.eventId}`).emit('event_settings_updated', {
+          settings: event.settings,
+          status:   event.status,
+          title:    event.title,
+          maxParticipants: event.maxParticipants,
+        });
+      }
+
       res.json({ message: 'Event updated', event });
     } catch (error) { next(error); }
   }
@@ -965,21 +1008,55 @@ router.post('/:eventId/invites/:inviteCode/rsvp', async (req, res, next) => {
   try {
     const Invite = require('../models/Invite');
     const { status } = req.body;
-    
-    if (!['confirmed', 'declined'].includes(status)) {
-      return res.status(400).json({ error: 'Invalid status' });
+
+    // ── Normalise and validate the incoming status ─────────────────────────
+    // GuestInvite.jsx sends 'yes'/'maybe'/'no'; the model stores
+    // 'confirmed'/'maybe'/'declined'.  Accept both conventions.
+    const normalise = { yes: 'confirmed', confirmed: 'confirmed',
+                        no: 'declined',   declined:  'declined',
+                        maybe: 'maybe' };
+    const normalisedStatus = normalise[status];
+    if (!normalisedStatus) {
+      return res.status(400).json({ error: 'Invalid RSVP response. Choose "Going", "Maybe", or "Can\'t make it".' });
     }
-    
-    const invite = await Invite.findOne({ 
-      eventId: req.params.eventId, 
-      inviteCode: req.params.inviteCode 
+
+    // ── Load invite ────────────────────────────────────────────────────────
+    const invite = await Invite.findOne({
+      eventId:    req.params.eventId,
+      inviteCode: req.params.inviteCode,
     });
-    
     if (!invite) return res.status(404).json({ error: 'Invite not found' });
-    
-    invite.status = status;
+
+    // ── Load event settings ────────────────────────────────────────────────
+    const event = await Event.findById(req.params.eventId).select('settings').lean();
+    if (!event) return res.status(404).json({ error: 'Event not found' });
+    const settings = event.settings || {};
+
+    // ── Enforce rsvpEnabled ────────────────────────────────────────────────
+    if (settings.rsvpEnabled === false) {
+      return res.status(403).json({ error: 'RSVPs are not enabled for this event.' });
+    }
+
+    // ── Enforce rsvpDeadline ───────────────────────────────────────────────
+    if (settings.rsvpDeadline && new Date() > new Date(settings.rsvpDeadline)) {
+      const fmt = new Date(settings.rsvpDeadline).toLocaleDateString('en-US', {
+        month: 'long', day: 'numeric', year: 'numeric',
+      });
+      return res.status(403).json({
+        error: `The RSVP deadline passed on ${fmt}. No further changes can be made.`,
+        deadline: settings.rsvpDeadline,
+        deadlinePast: true,
+      });
+    }
+
+    // ── Enforce rsvpAllowMaybe ─────────────────────────────────────────────
+    if (normalisedStatus === 'maybe' && settings.rsvpAllowMaybe === false) {
+      return res.status(400).json({ error: '"Maybe" responses are not allowed for this event. Please choose Going or Can\'t make it.' });
+    }
+
+    invite.status = normalisedStatus;
     await invite.save();
-    
+
     res.json({ message: 'RSVP updated', invite });
   } catch (error) { next(error); }
 });
@@ -1632,7 +1709,7 @@ router.get('/:eventId/backup-info', verifyEventAccess, async (req, res, next) =>
       warningLevel: daysUntilDeletion <= 3 && hasOccurred ? 'critical' :
                     daysUntilDeletion <= 5 && hasOccurred ? 'warning' : 'normal',
       message: willBeDeleted 
-        ? `⚠️ This event will be automatically deleted in ${daysUntilDeletion} day(s). Download a backup now!`
+        ? `This event will be automatically deleted in ${daysUntilDeletion} day(s). Download a backup now.`
         : hasOccurred
         ? 'This event has occurred. It will be deleted 7 days after the event date.'
         : 'Your event data is safe. Automatic deletion happens 7 days after the event date.'
