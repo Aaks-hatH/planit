@@ -808,7 +808,7 @@ function LogsPanel() {
     if (esRef.current) return;
     const token = localStorage.getItem('adminToken');
     const apiUrl = import.meta.env?.VITE_API_URL || '';
-    const es = new EventSource(`${apiUrl}/api/admin/logs/stream`, { withCredentials: false });
+    const es = new EventSource(`${apiUrl}/api/admin/logs/stream?token=${encodeURIComponent(token)}`, { withCredentials: false });
     esRef.current = es;
     es.onmessage = (e) => { try { const entry = JSON.parse(e.data); setLogs(prev => [...prev.slice(-1999), entry]); } catch {} };
     es.onerror   = () => { toast.error('Live log stream disconnected'); stopLive(); };
@@ -885,7 +885,7 @@ function EmployeesPanel() {
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editing, setEditing] = useState(null);
-  const [form, setForm] = useState({ name: '', email: '', role: 'support', department: '', phone: '', notes: '', status: 'active', permissions: { canDeleteEvents: false, canManageUsers: false, canViewLogs: false, canManageIncidents: true, canExportData: false, canRunCleanup: false } });
+  const [form, setForm] = useState({ name: '', email: '', role: 'support', department: '', phone: '', notes: '', status: 'active', password: '', permissions: { canDeleteEvents: false, canManageUsers: false, canViewLogs: false, canManageIncidents: true, canExportData: false, canRunCleanup: false } });
   const [saving, setSaving] = useState(false);
 
   useEffect(() => { load(); }, []);
@@ -898,18 +898,19 @@ function EmployeesPanel() {
 
   const openCreate = () => {
     setEditing(null);
-    setForm({ name: '', email: '', role: 'support', department: '', phone: '', notes: '', status: 'active', permissions: { canDeleteEvents: false, canManageUsers: false, canViewLogs: false, canManageIncidents: true, canExportData: false, canRunCleanup: false } });
+    setForm({ name: '', email: '', role: 'support', department: '', phone: '', notes: '', status: 'active', password: '', permissions: { canDeleteEvents: false, canManageUsers: false, canViewLogs: false, canManageIncidents: true, canExportData: false, canRunCleanup: false } });
     setShowModal(true);
   };
 
   const openEdit = (emp) => {
     setEditing(emp._id);
-    setForm({ name: emp.name, email: emp.email, role: emp.role, department: emp.department || '', phone: emp.phone || '', notes: emp.notes || '', status: emp.status, permissions: { ...emp.permissions } });
+    setForm({ name: emp.name, email: emp.email, role: emp.role, department: emp.department || '', phone: emp.phone || '', notes: emp.notes || '', status: emp.status, password: '', permissions: { ...emp.permissions } });
     setShowModal(true);
   };
 
   const save = async () => {
     if (!form.name.trim() || !form.email.trim()) { toast.error('Name and email required'); return; }
+    if (!editing && !form.password.trim()) { toast.error('Password is required for new employees'); return; }
     setSaving(true);
     try {
       if (editing) { await adminAPI.updateEmployee(editing, form); toast.success('Employee updated'); }
@@ -1026,6 +1027,14 @@ function EmployeesPanel() {
                 <div>
                   <label className="block text-xs font-medium text-neutral-600 mb-1.5">Phone</label>
                   <input className="input w-full text-sm" placeholder="+1 555 000 0000" value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} />
+                </div>
+                <div className="col-span-2">
+                  <label className="block text-xs font-medium text-neutral-600 mb-1.5">
+                    {editing ? 'New Password' : 'Password *'}
+                    {editing && <span className="text-neutral-400 font-normal ml-1">(leave blank to keep existing)</span>}
+                  </label>
+                  <input type="password" className="input w-full text-sm" placeholder={editing ? 'Leave blank to keep current' : 'Set login password'} value={form.password} onChange={e => setForm(f => ({ ...f, password: e.target.value }))} />
+                  <p className="text-xs text-neutral-400 mt-1">Employees log in at the admin page using their email + this password.</p>
                 </div>
               </div>
               <div>
