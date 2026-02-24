@@ -337,10 +337,17 @@ router.patch('/events/:eventId', verifyAdmin, async (req, res, next) => {
       'title', 'description', 'date', 'location',
       'organizerName', 'organizerEmail', 'maxParticipants',
       'isPasswordProtected', 'isEnterpriseMode', 'subdomain', 'status',
+      'themeColor', 'tags', 'coverImage',
     ];
     const updates = {};
     for (const field of allowed) {
       if (req.body[field] !== undefined) updates[field] = req.body[field];
+    }
+    // Allow patching nested settings fields
+    if (req.body.settings && typeof req.body.settings === 'object') {
+      for (const [k, v] of Object.entries(req.body.settings)) {
+        updates[`settings.${k}`] = v;
+      }
     }
 
     const event = await Event.findByIdAndUpdate(
