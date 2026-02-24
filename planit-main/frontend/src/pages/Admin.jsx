@@ -803,24 +803,56 @@ function SystemPanel() {
             <h3 className="text-sm font-bold text-neutral-700 flex items-center gap-2"><Radio className="w-4 h-4" /> Watchdog Monitor</h3>
             <StatusBadge status={watchdogData.status === 'operational' ? 'up' : 'down'} />
           </div>
+
+          {/* Active incidents from watchdog */}
+          {watchdogData.activeIncidents?.filter(i => i.status !== 'resolved').map(inc => (
+            <div key={inc._id} className={`mb-3 p-3 rounded-xl border-l-4 ${inc.severity === 'critical' ? 'bg-red-50 border-red-500' : 'bg-amber-50 border-amber-400'}`}>
+              <div className="flex items-center gap-2 mb-1">
+                <div className={`w-2 h-2 rounded-full animate-pulse ${inc.severity === 'critical' ? 'bg-red-500' : 'bg-amber-400'}`} />
+                <p className={`text-xs font-semibold ${inc.severity === 'critical' ? 'text-red-700' : 'text-amber-700'}`}>{inc.title}</p>
+              </div>
+              {inc.timeline?.length > 0 && (
+                <p className="text-xs text-neutral-600 ml-4">{inc.timeline[inc.timeline.length - 1].message}</p>
+              )}
+            </div>
+          ))}
+
           <div className="space-y-3">
             {watchdogData.watchdog?.services?.map(svc => (
-              <div key={svc.name} className="flex items-center justify-between p-3 rounded-xl bg-neutral-50">
+              <div key={svc.name} className={`flex items-center justify-between p-3 rounded-xl ${svc.status === 'down' ? 'bg-red-50 border border-red-200' : 'bg-neutral-50'}`}>
                 <div className="flex items-center gap-3">
-                  <div className={`w-3 h-3 rounded-full ${svc.status === 'up' ? 'bg-emerald-400' : 'bg-red-400 animate-pulse'}`} />
+                  <div className={`w-3 h-3 rounded-full flex-shrink-0 ${svc.status === 'up' ? 'bg-emerald-400' : 'bg-red-400 animate-pulse'}`} />
                   <div>
                     <p className="text-sm font-medium">{svc.name}</p>
-                    <p className="text-xs text-neutral-400">{svc.type} {svc.region ? `· ${svc.region}` : ''}</p>
+                    <p className="text-xs text-neutral-400">{svc.type}{svc.region ? ` · ${svc.region}` : ''}</p>
                   </div>
                 </div>
                 <div className="text-right">
                   <StatusBadge status={svc.status} />
-                  {svc.lastPingMs && <p className="text-xs text-neutral-400 mt-1">{svc.lastPingMs}ms</p>}
+                  {svc.lastPingMs ? <p className="text-xs text-neutral-400 mt-1">{svc.lastPingMs}ms</p> : svc.status === 'down' ? <p className="text-xs text-red-400 mt-1">No response</p> : null}
                 </div>
               </div>
             ))}
           </div>
-          <p className="text-xs text-neutral-400 mt-3">DB: {watchdogData.dbStatus} · Checked {rel(watchdogData.checkedAt)}</p>
+          <div className="flex items-center justify-between mt-3">
+            <p className="text-xs text-neutral-400">DB: {watchdogData.dbStatus} · Checked {rel(watchdogData.checkedAt)}</p>
+            <button
+              onClick={async () => {
+                const secret = prompt('Enter MESH_SECRET to send a test ntfy notification:');
+                if (!secret) return;
+                try {
+                  const r = await watchdogAPI.testNtfy(secret);
+                  toast.success(`ntfy test sent (HTTP ${r.data.status}) — check your phone`);
+                } catch (e) {
+                  const msg = e.response?.data?.error || e.message;
+                  toast.error(`ntfy test failed: ${msg}`);
+                }
+              }}
+              className="text-xs px-2 py-1 rounded-lg border border-neutral-200 text-neutral-500 hover:bg-neutral-50"
+            >
+              Test ntfy
+            </button>
+          </div>
         </div>
       )}
     </div>
@@ -1433,6 +1465,23 @@ export default function Admin() {
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
+  // Watchdog state — polled top-level so outage banner shows on any tab
+  const [outageStatus, setOutageStatus] = useState(null); // null | 'operational' | 'degraded' | 'outage'
+  const [downServices, setDownServices] = useState([]);
+  useEffect(() => {
+    if (!auth) return;
+    const fetchWatchdog = () => watchdogAPI.getStatus()
+      .then(r => {
+        if (r?.data) {
+          setOutageStatus(r.data.status || 'operational');
+          setDownServices((r.data.watchdog?.services || []).filter(s => s.status === 'down').map(s => s.name));
+        }
+      }).catch(() => {});
+    fetchWatchdog();
+    const t = setInterval(fetchWatchdog, 15000);
+    return () => clearInterval(t);
+  }, [auth]);
+
   // Dashboard data
   const [stats, setStats] = useState(null);
   const [events, setEvents] = useState([]);
@@ -1620,6 +1669,28 @@ export default function Admin() {
           {/* Dashboard */}
           {activeSection === 'dashboard' && !selectedEvent && (
             <div className="space-y-6 max-w-7xl mx-auto">
+
+              {/* Outage banner — shown whenever watchdog reports degraded or outage status */}
+              {outageStatus && outageStatus !== 'operational' && (
+                <button
+                  onClick={() => setActiveSection('system')}
+                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl border text-left transition-colors ${outageStatus === 'outage' ? 'bg-red-50 border-red-300 hover:bg-red-100' : 'bg-amber-50 border-amber-300 hover:bg-amber-100'}`}
+                >
+                  <div className={`w-3 h-3 rounded-full flex-shrink-0 animate-pulse ${outageStatus === 'outage' ? 'bg-red-500' : 'bg-amber-400'}`} />
+                  <div className="flex-1 min-w-0">
+                    <p className={`text-sm font-semibold ${outageStatus === 'outage' ? 'text-red-700' : 'text-amber-700'}`}>
+                      {outageStatus === 'outage' ? '⚠ Service Outage Detected' : '⚠ Service Degradation Detected'}
+                    </p>
+                    {downServices.length > 0 && (
+                      <p className={`text-xs mt-0.5 ${outageStatus === 'outage' ? 'text-red-600' : 'text-amber-600'}`}>
+                        {downServices.length === 1 ? `${downServices[0]} is not responding` : `${downServices.join(', ')} are not responding`}
+                      </p>
+                    )}
+                  </div>
+                  <span className="text-xs font-medium text-neutral-500 flex-shrink-0">View System →</span>
+                </button>
+              )}
+
               {stats && (
                 <>
                   <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
