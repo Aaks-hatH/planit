@@ -691,14 +691,14 @@ function SystemPanel() {
 
   const load = useCallback(async () => {
     setLoading(true);
-    try {
-      const [sysRes, wdRes] = await Promise.all([
-        adminAPI.getSystem().catch(() => null),
-        watchdogAPI.getStatus().catch(() => null),
-      ]);
-      setSys(sysRes?.data || null);
-      setWatchdogData(wdRes?.data || null);
-    } catch {} finally { setLoading(false); }
+    // Fire both independently — system stats and watchdog render as they arrive
+    adminAPI.getSystem()
+      .then(r => { if (r?.data) setSys(r.data); })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+    watchdogAPI.getStatus()
+      .then(r => { if (r?.data) setWatchdogData(r.data); })
+      .catch(() => {});
   }, []);
 
   useEffect(() => { load(); const t = setInterval(load, 15000); return () => clearInterval(t); }, [load]);
