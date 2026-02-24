@@ -7,6 +7,7 @@ const api = axios.create({
   baseURL: API_URL,
   headers: { 'Content-Type': 'application/json' },
   withCredentials: true,
+  timeout: 15000, // 15s — prevents XHRs hanging until browser cancels them
 });
 
 api.interceptors.request.use((config) => {
@@ -279,7 +280,7 @@ export const uptimeAPI = {
 // fresh data even when the main server is down or unreachable.
 // Falls back gracefully — if VITE_WATCHDOG_URL is not set, all calls return null.
 const watchdogAxios = WATCHDOG_URL
-  ? axios.create({ baseURL: WATCHDOG_URL, timeout: 8000 })
+  ? axios.create({ baseURL: WATCHDOG_URL, timeout: 12000 })
   : null;
 
 export const watchdogAPI = {
