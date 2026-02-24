@@ -1408,6 +1408,62 @@ export default function Home() {
           </div>
         </section>
 
+        {/* DISCOVER + STATUS CARDS */}
+        <section className="py-20 border-t border-neutral-800/40">
+          <div className="max-w-5xl mx-auto px-6">
+            <Reveal className="text-center mb-12">
+              <p className="text-xs font-semibold text-neutral-500 uppercase tracking-widest mb-3">Explore more</p>
+              <h2 className="text-4xl md:text-5xl font-black text-white mb-4">Everything you need</h2>
+              <p className="text-lg text-neutral-400 max-w-md mx-auto">Find public events and check our service health — all in one place.</p>
+            </Reveal>
+            <div className="grid md:grid-cols-2 gap-6">
+              {/* Discover Card */}
+              <Reveal delay={0}>
+                <a href="/discover" className="group relative block p-8 rounded-3xl border border-neutral-800 bg-neutral-900/50 hover:border-neutral-500 hover:bg-neutral-800/60 transition-all duration-500 overflow-hidden">
+                  <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500"
+                    style={{ background: 'radial-gradient(ellipse at top left, rgba(80,60,200,0.12) 0%, transparent 65%)' }} />
+                  <div className="relative">
+                    <div className="w-14 h-14 rounded-2xl bg-neutral-800 border border-neutral-700 flex items-center justify-center mb-6 group-hover:bg-white group-hover:border-white transition-all duration-500 group-hover:scale-110">
+                      <Zap className="w-7 h-7 text-neutral-300 group-hover:text-neutral-900 transition-colors duration-500" />
+                    </div>
+                    <h3 className="text-2xl font-bold text-white mb-3">Discover Events</h3>
+                    <p className="text-neutral-400 leading-relaxed mb-6">Browse public events happening right now. Find meetups, workshops, and gatherings open to everyone.</p>
+                    <div className="flex items-center gap-2 text-sm font-medium text-neutral-300 group-hover:text-white transition-colors">
+                      Browse events
+                      <ArrowUpRight className="w-4 h-4 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform duration-200" />
+                    </div>
+                  </div>
+                </a>
+              </Reveal>
+
+              {/* Status Card */}
+              <Reveal delay={120}>
+                <a href="/status" className="group relative block p-8 rounded-3xl border border-neutral-800 bg-neutral-900/50 hover:border-neutral-500 hover:bg-neutral-800/60 transition-all duration-500 overflow-hidden">
+                  <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500"
+                    style={{ background: 'radial-gradient(ellipse at top right, rgba(20,180,80,0.10) 0%, transparent 65%)' }} />
+                  <div className="relative">
+                    <div className="w-14 h-14 rounded-2xl bg-neutral-800 border border-neutral-700 flex items-center justify-center mb-6 group-hover:bg-white group-hover:border-white transition-all duration-500 group-hover:scale-110">
+                      <TrendingUp className="w-7 h-7 text-neutral-300 group-hover:text-neutral-900 transition-colors duration-500" />
+                    </div>
+                    <div className="flex items-center gap-3 mb-3">
+                      <h3 className="text-2xl font-bold text-white">System Status</h3>
+                      <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-950/60 border border-emerald-900/50 text-emerald-400">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse inline-block" />
+                        Operational
+                      </span>
+                    </div>
+                    <p className="text-neutral-400 leading-relaxed mb-6">Monitor real-time uptime, API performance, and incident history. Stay informed about service health.</p>
+                    <div className="flex items-center gap-2 text-sm font-medium text-neutral-300 group-hover:text-white transition-colors">
+                      View status
+                      <ArrowUpRight className="w-4 h-4 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform duration-200" />
+                    </div>
+                  </div>
+                </a>
+              </Reveal>
+            </div>
+          </div>
+        </section>
+
         {/* CREATE EVENT */}
         <section id="create" className="py-28 border-t border-neutral-800/40">
           <div className="max-w-6xl mx-auto px-6">
@@ -1614,62 +1670,6 @@ export default function Home() {
                   </div>
                 </Reveal>
               )}
-            </div>
-          </div>
-        </section>
-
-        {/* DISCOVER + STATUS CARDS */}
-        <section className="py-20 border-t border-neutral-800/40">
-          <div className="max-w-5xl mx-auto px-6">
-            <Reveal className="text-center mb-12">
-              <p className="text-xs font-semibold text-neutral-500 uppercase tracking-widest mb-3">Explore more</p>
-              <h2 className="text-4xl md:text-5xl font-black text-white mb-4">Everything you need</h2>
-              <p className="text-lg text-neutral-400 max-w-md mx-auto">Find public events and check our service health — all in one place.</p>
-            </Reveal>
-            <div className="grid md:grid-cols-2 gap-6">
-              {/* Discover Card */}
-              <Reveal delay={0}>
-                <a href="/discover" className="group relative block p-8 rounded-3xl border border-neutral-800 bg-neutral-900/50 hover:border-neutral-500 hover:bg-neutral-800/60 transition-all duration-500 overflow-hidden">
-                  <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500"
-                    style={{ background: 'radial-gradient(ellipse at top left, rgba(80,60,200,0.12) 0%, transparent 65%)' }} />
-                  <div className="relative">
-                    <div className="w-14 h-14 rounded-2xl bg-neutral-800 border border-neutral-700 flex items-center justify-center mb-6 group-hover:bg-white group-hover:border-white transition-all duration-500 group-hover:scale-110">
-                      <Zap className="w-7 h-7 text-neutral-300 group-hover:text-neutral-900 transition-colors duration-500" />
-                    </div>
-                    <h3 className="text-2xl font-bold text-white mb-3">Discover Events</h3>
-                    <p className="text-neutral-400 leading-relaxed mb-6">Browse public events happening right now. Find meetups, workshops, and gatherings open to everyone.</p>
-                    <div className="flex items-center gap-2 text-sm font-medium text-neutral-300 group-hover:text-white transition-colors">
-                      Browse events
-                      <ArrowUpRight className="w-4 h-4 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform duration-200" />
-                    </div>
-                  </div>
-                </a>
-              </Reveal>
-
-              {/* Status Card */}
-              <Reveal delay={120}>
-                <a href="/status" className="group relative block p-8 rounded-3xl border border-neutral-800 bg-neutral-900/50 hover:border-neutral-500 hover:bg-neutral-800/60 transition-all duration-500 overflow-hidden">
-                  <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500"
-                    style={{ background: 'radial-gradient(ellipse at top right, rgba(20,180,80,0.10) 0%, transparent 65%)' }} />
-                  <div className="relative">
-                    <div className="w-14 h-14 rounded-2xl bg-neutral-800 border border-neutral-700 flex items-center justify-center mb-6 group-hover:bg-white group-hover:border-white transition-all duration-500 group-hover:scale-110">
-                      <TrendingUp className="w-7 h-7 text-neutral-300 group-hover:text-neutral-900 transition-colors duration-500" />
-                    </div>
-                    <div className="flex items-center gap-3 mb-3">
-                      <h3 className="text-2xl font-bold text-white">System Status</h3>
-                      <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-950/60 border border-emerald-900/50 text-emerald-400">
-                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse inline-block" />
-                        Operational
-                      </span>
-                    </div>
-                    <p className="text-neutral-400 leading-relaxed mb-6">Monitor real-time uptime, API performance, and incident history. Stay informed about service health.</p>
-                    <div className="flex items-center gap-2 text-sm font-medium text-neutral-300 group-hover:text-white transition-colors">
-                      View status
-                      <ArrowUpRight className="w-4 h-4 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform duration-200" />
-                    </div>
-                  </div>
-                </a>
-              </Reveal>
             </div>
           </div>
         </section>
