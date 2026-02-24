@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import {
   Settings, X, Users, MessageSquare, BarChart3, FileText,
   Calendar, Save, Lock, Globe, Clock, CheckCircle, AlertTriangle,
-  ChevronDown, ChevronUp, Info
+  ChevronDown, ChevronUp, Info, Webhook, Copy, Trash2, Plus, RefreshCw
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { eventAPI } from '../services/api';
@@ -89,6 +89,33 @@ export default function OrganizerSettings({ eventId, event, onClose, onUpdated }
   );
   const [rsvpMessage, setRsvpMessage]         = useState(event?.settings?.rsvpMessage || '');
 
+  // Integrations / Webhooks
+  const [webhooks, setWebhooks]         = useState([]);
+  const [webhooksLoading, setWebhooksLoading] = useState(false);
+  const [newWh, setNewWh]               = useState({ url: '', events: [], secret: '' });
+  const [addingWh, setAddingWh]         = useState(false);
+  // Clone
+  const [cloneDate, setCloneDate]       = useState('');
+  const [cloneTitle, setCloneTitle]     = useState('');
+  const [cloning, setCloning]           = useState(false);
+
+  const WEBHOOK_EVENT_TYPES = [
+    { id: 'participant_joined', label: 'Participant joined' },
+    { id: 'rsvp_updated',       label: 'RSVP updated' },
+    { id: 'checkin',            label: 'Guest checked in' },
+    { id: 'message_sent',       label: 'Message sent' },
+  ];
+
+  useEffect(() => {
+    if (activeTab === 'integrations') {
+      setWebhooksLoading(true);
+      eventAPI.getWebhooks(event._id)
+        .then(r => setWebhooks(r.data.webhooks || []))
+        .catch(() => {})
+        .finally(() => setWebhooksLoading(false));
+    }
+  }, [activeTab, event._id]);
+
   const handleSave = async () => {
     setSaving(true);
     try {
@@ -154,6 +181,7 @@ export default function OrganizerSettings({ eventId, event, onClose, onUpdated }
             { id: 'general', label: 'General' },
             { id: 'features', label: 'Features' },
             { id: 'rsvp', label: 'RSVP' },
+            { id: 'integrations', label: 'Integrations' },
           ].map(tab => (
             <button
               key={tab.id}
@@ -375,22 +403,159 @@ export default function OrganizerSettings({ eventId, event, onClose, onUpdated }
           )}
         </div>
 
-        {/* Footer */}
+          {/* ── Integrations tab ── */}
+          {activeTab === 'integrations' && (
+            <div className="space-y-5">
+
+              {/* ── Clone event ── */}
+              <div className="border border-neutral-200 rounded-xl overflow-hidden">
+                <div className="flex items-center gap-2 px-4 py-3 bg-neutral-50 border-b border-neutral-200">
+                  <RefreshCw className="w-4 h-4 text-neutral-500" />
+                  <span className="text-sm font-semibold text-neutral-700">Recurring / Clone Event</span>
+                </div>
+                <div className="px-4 py-4 space-y-3">
+                  <p className="text-xs text-neutral-500">Copy this event (title, agenda, settings) to a new date. The clone starts fresh with no participants or messages.</p>
+                  <div>
+                    <label className="block text-xs font-medium text-neutral-600 mb-1.5">New title <span className="font-normal text-neutral-400">(optional — defaults to same title)</span></label>
+                    <input type="text" className="input text-sm" placeholder={event?.title} value={cloneTitle} onChange={e => setCloneTitle(e.target.value)} />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-neutral-600 mb-1.5">New date & time <span className="text-red-500">*</span></label>
+                    <input type="datetime-local" className="input text-sm" value={cloneDate} onChange={e => setCloneDate(e.target.value)} />
+                  </div>
+                  <button
+                    disabled={!cloneDate || cloning}
+                    onClick={async () => {
+                      if (!cloneDate) return;
+                      setCloning(true);
+                      try {
+                        const r = await eventAPI.clone(event._id, { date: cloneDate, title: cloneTitle || undefined });
+                        toast.success('Event cloned! Opening…');
+                        setTimeout(() => window.open(`/event/${r.data.event.id}`, '_blank'), 800);
+                      } catch (err) {
+                        toast.error(err.response?.data?.error || 'Clone failed');
+                      } finally { setCloning(false); }
+                    }}
+                    className="btn btn-secondary text-sm gap-1.5 w-full"
+                  >
+                    {cloning ? <><span className="spinner w-3.5 h-3.5 border-2 border-neutral-300 border-t-neutral-600" />Cloning…</> : <><RefreshCw className="w-3.5 h-3.5" />Clone to new date</>}
+                  </button>
+                </div>
+              </div>
+
+              {/* ── Webhooks ── */}
+              <div className="border border-neutral-200 rounded-xl overflow-hidden">
+                <div className="flex items-center gap-2 px-4 py-3 bg-neutral-50 border-b border-neutral-200">
+                  <Webhook className="w-4 h-4 text-neutral-500" />
+                  <span className="text-sm font-semibold text-neutral-700">Webhooks</span>
+                </div>
+                <div className="px-4 py-4 space-y-4">
+                  <p className="text-xs text-neutral-500">PlanIt will POST a JSON payload to your URL when selected events occur. Max 5 per event.</p>
+
+                  {webhooksLoading ? (
+                    <div className="flex justify-center py-4"><span className="spinner w-4 h-4 border-2 border-neutral-200 border-t-neutral-500" /></div>
+                  ) : webhooks.length > 0 ? (
+                    <div className="space-y-2">
+                      {webhooks.map(wh => (
+                        <div key={wh._id} className="flex items-center justify-between gap-3 px-3 py-2.5 bg-neutral-50 border border-neutral-200 rounded-lg">
+                          <div className="min-w-0">
+                            <p className="text-xs font-medium text-neutral-800 truncate">{wh.url}</p>
+                            <p className="text-xs text-neutral-400 mt-0.5">{wh.events.join(', ')}</p>
+                          </div>
+                          <div className="flex items-center gap-1.5 flex-shrink-0">
+                            <button
+                              onClick={async () => {
+                                await eventAPI.updateWebhook(event._id, wh._id, { active: !wh.active });
+                                setWebhooks(prev => prev.map(w => w._id === wh._id ? { ...w, active: !w.active } : w));
+                              }}
+                              className={`text-xs px-2 py-0.5 rounded-full font-medium border ${wh.active ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-neutral-100 text-neutral-500 border-neutral-200'}`}
+                            >{wh.active ? 'Active' : 'Paused'}</button>
+                            <button
+                              onClick={async () => {
+                                await eventAPI.deleteWebhook(event._id, wh._id);
+                                setWebhooks(prev => prev.filter(w => w._id !== wh._id));
+                                toast.success('Webhook removed');
+                              }}
+                              className="p-1 text-neutral-400 hover:text-red-500 transition-colors"
+                            ><Trash2 className="w-3.5 h-3.5" /></button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-xs text-neutral-400 text-center py-2">No webhooks yet</p>
+                  )}
+
+                  {webhooks.length < 5 && (
+                    <div className="border border-dashed border-neutral-300 rounded-xl p-4 space-y-3">
+                      <p className="text-xs font-medium text-neutral-600">Add webhook</p>
+                      <input
+                        type="url" className="input text-sm" placeholder="https://your-server.com/webhook"
+                        value={newWh.url} onChange={e => setNewWh(p => ({ ...p, url: e.target.value }))}
+                      />
+                      <div className="space-y-1.5">
+                        <p className="text-xs font-medium text-neutral-600">Trigger on</p>
+                        <div className="grid grid-cols-2 gap-1.5">
+                          {WEBHOOK_EVENT_TYPES.map(et => (
+                            <label key={et.id} className="flex items-center gap-2 cursor-pointer">
+                              <input
+                                type="checkbox"
+                                checked={newWh.events.includes(et.id)}
+                                onChange={e => setNewWh(p => ({ ...p, events: e.target.checked ? [...p.events, et.id] : p.events.filter(x => x !== et.id) }))}
+                                className="rounded"
+                              />
+                              <span className="text-xs text-neutral-700">{et.label}</span>
+                            </label>
+                          ))}
+                        </div>
+                      </div>
+                      <input
+                        type="text" className="input text-sm" placeholder="Signing secret (optional)"
+                        value={newWh.secret} onChange={e => setNewWh(p => ({ ...p, secret: e.target.value }))}
+                      />
+                      <button
+                        disabled={!newWh.url || newWh.events.length === 0 || addingWh}
+                        onClick={async () => {
+                          setAddingWh(true);
+                          try {
+                            const r = await eventAPI.createWebhook(event._id, newWh);
+                            setWebhooks(prev => [...prev, r.data.webhook]);
+                            setNewWh({ url: '', events: [], secret: '' });
+                            toast.success('Webhook added');
+                          } catch (err) {
+                            toast.error(err.response?.data?.error || 'Failed to add webhook');
+                          } finally { setAddingWh(false); }
+                        }}
+                        className="btn btn-primary text-sm gap-1.5 w-full"
+                      >
+                        {addingWh ? <><span className="spinner w-3.5 h-3.5 border-2 border-white/30 border-t-white" />Adding…</> : <><Plus className="w-3.5 h-3.5" />Add Webhook</>}
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+            </div>
+          )}
+
+
         <div className="flex items-center justify-between px-6 py-4 border-t border-neutral-100 bg-neutral-50">
           <button onClick={onClose} className="btn btn-secondary text-sm">
             Cancel
           </button>
-          <button
-            onClick={handleSave}
-            disabled={saving}
-            className="btn btn-primary text-sm gap-1.5"
-          >
-            {saving ? (
-              <><span className="spinner w-3.5 h-3.5 border-2 border-white/30 border-t-white" />Saving...</>
-            ) : (
-              <><Save className="w-3.5 h-3.5" />Save Changes</>
-            )}
-          </button>
+          {activeTab !== 'integrations' && (
+            <button
+              onClick={handleSave}
+              disabled={saving}
+              className="btn btn-primary text-sm gap-1.5"
+            >
+              {saving ? (
+                <><span className="spinner w-3.5 h-3.5 border-2 border-white/30 border-t-white" />Saving...</>
+              ) : (
+                <><Save className="w-3.5 h-3.5" />Save Changes</>
+              )}
+            </button>
+          )}
         </div>
       </div>
     </div>
