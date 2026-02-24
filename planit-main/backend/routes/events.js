@@ -1956,7 +1956,9 @@ router.post('/:eventId/clone', verifyOrganizer,
 async function fireWebhooks(eventId, eventType, payload) {
   try {
     const crypto = require('crypto');
-    const event = await Event.findById(eventId).select('webhooks title subdomain').lean();
+    const event = await Event.findById(eventId)
+      .select('webhooks title subdomain organizerName date location status maxParticipants participants settings')
+      .lean();
     if (!event || !event.webhooks?.length) return;
 
     const active = event.webhooks.filter(wh => wh.active && wh.events.includes(eventType));
@@ -1972,8 +1974,20 @@ async function fireWebhooks(eventId, eventType, payload) {
     });
 
     const isDiscordUrl = (url) => url.toLowerCase().includes('discord.com/api/webhooks/');
+    const isSlackUrl   = (url) => url.toLowerCase().includes('hooks.slack.com');
 
-    const buildDiscordPayload = (eventType, planItPayload, eventName) => {
+    const titleMap = {
+      participant_joined: 'New participant joined',
+      rsvp_updated:       'RSVP updated',
+      checkin:            'Guest checked in',
+      message_sent:       'New message',
+    };
+
+    // Build a Discord embed. ALL field values must be non-empty strings — Discord
+    // rejects the entire embed with 400 if any field is missing its value.
+    const safeStr = (v, fallback = 'N/A') => (v !== undefined && v !== null && String(v).trim() !== '') ? String(v) : fallback;
+
+    const buildDiscordPayload = (evType, planItPayload, eventName) => {
       const parsed = JSON.parse(planItPayload);
       const colorMap = {
         participant_joined: 0x10b981,
@@ -1981,23 +1995,22 @@ async function fireWebhooks(eventId, eventType, payload) {
         checkin:            0x6366f1,
         message_sent:       0x8b5cf6,
       };
-      const titleMap = {
-        participant_joined: 'New participant joined',
-        rsvp_updated:       'RSVP updated',
-        checkin:            'Guest checked in',
-        message_sent:       'New message',
-      };
       const fields = [];
-      if (parsed.data && parsed.data.username)    fields.push({ name: 'Participant', value: parsed.data.username, inline: true });
-      if (parsed.data && parsed.data.rsvp)        fields.push({ name: 'RSVP',        value: parsed.data.rsvp,      inline: true });
-      if (parsed.data && parsed.data.message)     fields.push({ name: 'Message',     value: String(parsed.data.message).slice(0, 200), inline: false });
-      if (parsed.data && parsed.data.actualCount !== undefined) fields.push({ name: 'Attendees', value: String(parsed.data.actualCount), inline: true });
-      fields.push({ name: 'Time', value: new Date(parsed.timestamp).toLocaleString(), inline: true });
+      // Only push data fields when they actually have content (truthy after safeStr check)
+      if (parsed.data?.username)                    fields.push({ name: 'Participant', value: safeStr(parsed.data.username),                           inline: true });
+      if (parsed.data?.rsvp)                        fields.push({ name: 'RSVP',        value: safeStr(parsed.data.rsvp),                               inline: true });
+      if (parsed.data?.message)                     fields.push({ name: 'Message',     value: safeStr(parsed.data.message).slice(0, 1024),             inline: false });
+      if (parsed.data?.actualCount !== undefined)   fields.push({ name: 'Attendees',   value: safeStr(parsed.data.actualCount, '0'),                   inline: true });
+      if (parsed.data?.guestName && parsed.data.guestName !== parsed.data.username)
+                                                    fields.push({ name: 'Guest',       value: safeStr(parsed.data.guestName),                          inline: true });
+      if (parsed.data?.inviteCode)                  fields.push({ name: 'Invite',      value: safeStr(parsed.data.inviteCode),                         inline: true });
+      // Always include event + time — these are always present
+      fields.push({ name: 'Event', value: safeStr(eventName, 'PlanIt Event'), inline: true });
+      fields.push({ name: 'Time',  value: new Date(parsed.timestamp).toLocaleString(),  inline: true });
       return JSON.stringify({
         embeds: [{
-          title:       titleMap[eventType] || eventType,
-          description: '**' + eventName + '**',
-          color:       colorMap[eventType] || 0x6366f1,
+          title:       titleMap[evType] || evType,
+          color:       colorMap[evType] || 0x6366f1,
           fields,
           footer:      { text: 'PlanIt' },
           timestamp:   parsed.timestamp,
@@ -2005,21 +2018,51 @@ async function fireWebhooks(eventId, eventType, payload) {
       });
     };
 
+    // Slack incoming webhooks require {"text":"..."} — anything else is silently dropped.
+    const buildSlackPayload = (evType, planItPayload, eventName) => {
+      const parsed = JSON.parse(planItPayload);
+      const d      = parsed.data || {};
+      const evLabel = titleMap[evType] || evType;
+      let text = `*${evLabel}* — ${eventName}`;
+      if (d.username)                  text += `
+*Who:* ${d.username}`;
+      if (d.rsvp)                      text += `
+*RSVP:* ${d.rsvp}`;
+      if (d.message)                   text += `
+*Message:* ${String(d.message).slice(0, 200)}`;
+      if (d.actualCount !== undefined) text += `
+*Attendees:* ${d.actualCount}`;
+      text += `
+_${new Date(parsed.timestamp).toLocaleString()}_`;
+      return JSON.stringify({ text });
+    };
+
     for (const wh of active) {
       try {
-        const discord = isDiscordUrl(wh.url);
-        const outBody = discord ? buildDiscordPayload(eventType, body, event.title) : body;
+        const urlLower = wh.url.toLowerCase();
+        const discord  = isDiscordUrl(urlLower);
+        const slack    = isSlackUrl(urlLower);
+
+        const outBody = discord ? buildDiscordPayload(eventType, body, event.title)
+                      : slack   ? buildSlackPayload(eventType, body, event.title)
+                      : body;
+
         const headers = { 'Content-Type': 'application/json' };
-        if (!discord) {
+        if (!discord && !slack) {
           headers['X-PlanIt-Event']   = eventType;
           headers['X-PlanIt-EventId'] = eventId.toString();
         }
-        if (wh.secret && !discord) {
+        if (wh.secret && !discord && !slack) {
           const sig = crypto.createHmac('sha256', wh.secret).update(body).digest('hex');
           headers['X-PlanIt-Signature'] = 'sha256=' + sig;
         }
         await axios.post(wh.url, outBody, { headers, timeout: 5000 });
-      } catch (_) { /* non-blocking */ }
+        console.log(`[webhook] Fired ${eventType} → ${discord ? 'discord' : slack ? 'slack' : 'generic'} (${wh._id})`);
+      } catch (whErr) {
+        const status = whErr.response?.status;
+        const detail = whErr.response?.data ? JSON.stringify(whErr.response.data).slice(0, 200) : whErr.message;
+        console.error(`[webhook] FAILED ${eventType} → ${wh._id}: HTTP ${status || 'network'} — ${detail}`);
+      }
     }
   } catch (_) {}
 }
@@ -2068,6 +2111,7 @@ router.post('/:eventId/webhooks', verifyOrganizer,
       // Send a config confirmation message to the webhook immediately
       try {
         const isDiscord = wh.url.toLowerCase().includes('discord.com/api/webhooks/');
+        const isSlack   = wh.url.toLowerCase().includes('hooks.slack.com');
         const triggerLabels = {
           participant_joined: 'Participant joined',
           rsvp_updated: 'RSVP updated',
@@ -2108,6 +2152,12 @@ router.post('/:eventId/webhooks', verifyOrganizer,
             }]
           });
           await axios.post(wh.url, configPayload, { headers: { 'Content-Type': 'application/json' }, timeout: 5000 });
+        } else if (isSlack) {
+          // Slack requires {"text":"..."} — anything else is silently ignored
+          const slackPayload = JSON.stringify({
+            text: `*PlanIt Webhook Connected* — ${event.title}\nTriggers: ${triggersText}\nParticipants: ${participantCount} / ${maxP}\nDate: ${eventDate}`,
+          });
+          await axios.post(wh.url, slackPayload, { headers: { 'Content-Type': 'application/json' }, timeout: 5000 });
         } else {
           const configPayload = JSON.stringify({
             event: 'webhook_configured',
@@ -2140,7 +2190,12 @@ router.post('/:eventId/webhooks', verifyOrganizer,
           });
           await axios.post(wh.url, configPayload, { headers: { 'Content-Type': 'application/json', 'X-PlanIt-Event': 'webhook_configured', 'X-PlanIt-EventId': event._id.toString() }, timeout: 5000 });
         }
-      } catch (_) { /* config ping is best-effort, never block webhook creation */ }
+      } catch (cfgErr) {
+        // Config ping is best-effort — don't block webhook creation, but DO log so we can debug.
+        const cfgStatus = cfgErr.response?.status;
+        const cfgDetail = cfgErr.response?.data ? JSON.stringify(cfgErr.response.data).slice(0, 300) : cfgErr.message;
+        console.error(`[webhook] Config ping FAILED for ${wh._id}: HTTP ${cfgStatus || 'network'} — ${cfgDetail}`);
+      }
 
       res.status(201).json({ webhook: { _id: wh._id, url: wh.url, events: wh.events, active: wh.active, createdAt: wh.createdAt } });
     } catch (error) { next(error); }
