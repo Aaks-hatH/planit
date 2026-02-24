@@ -1953,7 +1953,7 @@ async function fireWebhooks(eventId, eventType, payload) {
       data:      payload,
     });
 
-    const isDiscordUrl = (url) => /discord.com/api/webhooks//i.test(url);
+    const isDiscordUrl = (url) => url.toLowerCase().includes('discord.com/api/webhooks/');
 
     const buildDiscordPayload = (eventType, planItPayload, eventName) => {
       const parsed = JSON.parse(planItPayload);
