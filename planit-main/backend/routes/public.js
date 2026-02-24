@@ -187,7 +187,7 @@ router.get('/events/public', async (req, res, next) => {
       status: 'active',
       date: { $gte: new Date() }
     })
-    .select('subdomain title description date location participants maxParticipants createdAt')
+    .select('subdomain title description date location participants maxParticipants coverImage themeColor tags createdAt')
     .sort({ date: 1 })
     .skip(skip)
     .limit(limit)
