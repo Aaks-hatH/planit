@@ -1,11 +1,12 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   Settings, X, Users, MessageSquare, BarChart3, FileText,
   Calendar, Save, Lock, Globe, Clock, CheckCircle, AlertTriangle,
-  ChevronDown, ChevronUp, Info, Webhook, Copy, Trash2, Plus, RefreshCw
+  ChevronDown, ChevronUp, Info, Webhook, Copy, Trash2, Plus, RefreshCw,
+  Image, Palette, Tag, Upload
 } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { eventAPI } from '../services/api';
+import { eventAPI, fileAPI } from '../services/api';
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
@@ -99,6 +100,19 @@ export default function OrganizerSettings({ eventId, event, onClose, onUpdated }
   const [cloneTitle, setCloneTitle]     = useState('');
   const [cloning, setCloning]           = useState(false);
 
+  // Theme
+  const [coverImage, setCoverImage]     = useState(event?.coverImage || null);
+  const [themeColor, setThemeColor]     = useState(event?.themeColor || null);
+  const [tags, setTags]                 = useState(event?.tags || []);
+  const [tagInput, setTagInput]         = useState('');
+  const [uploadingCover, setUploadingCover] = useState(false);
+  const coverInputRef                   = useRef(null);
+
+  const THEME_COLORS = [
+    '#6366f1', '#8b5cf6', '#ec4899', '#ef4444',
+    '#f59e0b', '#10b981', '#06b6d4', '#3b82f6',
+  ];
+
   const WEBHOOK_EVENT_TYPES = [
     { id: 'participant_joined', label: 'Participant joined' },
     { id: 'rsvp_updated',       label: 'RSVP updated' },
@@ -134,6 +148,9 @@ export default function OrganizerSettings({ eventId, event, onClose, onUpdated }
           requireApproval,
           isPublic,
         },
+        coverImage:  coverImage  || null,
+        themeColor:  themeColor  || null,
+        tags:        tags,
       });
 
       // 2. Update RSVP-specific settings via PATCH /events/:id/rsvp-settings
@@ -181,6 +198,7 @@ export default function OrganizerSettings({ eventId, event, onClose, onUpdated }
             { id: 'general', label: 'General' },
             { id: 'features', label: 'Features' },
             { id: 'rsvp', label: 'RSVP' },
+            { id: 'theme', label: 'Theme' },
             { id: 'integrations', label: 'Integrations' },
           ].map(tab => (
             <button
@@ -402,6 +420,173 @@ export default function OrganizerSettings({ eventId, event, onClose, onUpdated }
             </div>
           )}
         </div>
+
+          {/* ── Theme tab ── */}
+          {activeTab === 'theme' && (
+            <div className="space-y-5">
+              {/* Cover image */}
+              <div>
+                <label className="block text-xs font-medium text-neutral-600 mb-2 flex items-center gap-1.5">
+                  <Image className="w-3.5 h-3.5" /> Cover Image
+                </label>
+
+                {/* Preview */}
+                {coverImage && (
+                  <div className="relative mb-3 rounded-xl overflow-hidden border border-neutral-200 h-32">
+                    <img src={coverImage} alt="Cover" className="w-full h-full object-cover" />
+                    <button
+                      type="button"
+                      onClick={() => setCoverImage(null)}
+                      className="absolute top-2 right-2 w-6 h-6 bg-black/60 hover:bg-black/80 rounded-full flex items-center justify-center transition-colors"
+                    >
+                      <X className="w-3 h-3 text-white" />
+                    </button>
+                  </div>
+                )}
+
+                <input
+                  ref={coverInputRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp,image/gif"
+                  className="hidden"
+                  onChange={async (e) => {
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+                    if (file.size > 5 * 1024 * 1024) {
+                      toast.error('Image must be under 5MB');
+                      return;
+                    }
+                    setUploadingCover(true);
+                    try {
+                      const fd = new FormData();
+                      fd.append('files', file);
+                      const res = await fileAPI.upload(eventId, fd);
+                      setCoverImage(res.data.file.url);
+                      toast.success('Cover uploaded');
+                    } catch {
+                      toast.error('Upload failed — check Cloudinary is configured');
+                    } finally {
+                      setUploadingCover(false);
+                      e.target.value = '';
+                    }
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={() => coverInputRef.current?.click()}
+                  disabled={uploadingCover}
+                  className="flex items-center gap-2 w-full justify-center py-2.5 text-sm text-neutral-600 border border-dashed border-neutral-300 rounded-xl hover:border-neutral-400 hover:text-neutral-800 transition-colors"
+                >
+                  {uploadingCover
+                    ? <><span className="spinner w-3.5 h-3.5 border-2 border-neutral-300 border-t-neutral-600" />Uploading…</>
+                    : <><Upload className="w-3.5 h-3.5" />{coverImage ? 'Replace cover image' : 'Upload cover image'}</>
+                  }
+                </button>
+                <p className="text-xs text-neutral-400 mt-1.5">
+                  Shown on the Discover page and as a banner in your event. Max 5MB, JPG/PNG/WebP.
+                </p>
+              </div>
+
+              {/* Theme color */}
+              <div>
+                <label className="block text-xs font-medium text-neutral-600 mb-2 flex items-center gap-1.5">
+                  <Palette className="w-3.5 h-3.5" /> Theme Color
+                </label>
+                <div className="flex items-center gap-2 flex-wrap">
+                  {THEME_COLORS.map(color => (
+                    <button
+                      key={color}
+                      type="button"
+                      onClick={() => setThemeColor(themeColor === color ? null : color)}
+                      className="w-8 h-8 rounded-full border-2 transition-all hover:scale-110"
+                      style={{
+                        background: color,
+                        borderColor: themeColor === color ? '#111' : 'transparent',
+                        boxShadow: themeColor === color ? `0 0 0 2px ${color}` : 'none',
+                      }}
+                    />
+                  ))}
+                  {themeColor && (
+                    <button
+                      type="button"
+                      onClick={() => setThemeColor(null)}
+                      className="text-xs text-neutral-400 hover:text-neutral-600 ml-1"
+                    >
+                      Clear
+                    </button>
+                  )}
+                </div>
+                <p className="text-xs text-neutral-400 mt-1.5">
+                  Accent color shown on your event card in Discover.
+                </p>
+              </div>
+
+              {/* Tags */}
+              <div>
+                <label className="block text-xs font-medium text-neutral-600 mb-2 flex items-center gap-1.5">
+                  <Tag className="w-3.5 h-3.5" /> Tags <span className="font-normal text-neutral-400">(up to 5)</span>
+                </label>
+
+                <div className="flex flex-wrap gap-2 mb-2">
+                  {tags.map(tag => (
+                    <span key={tag} className="flex items-center gap-1 px-2.5 py-1 bg-neutral-100 border border-neutral-200 rounded-full text-xs font-medium text-neutral-700">
+                      {tag}
+                      <button
+                        type="button"
+                        onClick={() => setTags(t => t.filter(x => x !== tag))}
+                        className="text-neutral-400 hover:text-neutral-700 transition-colors"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </span>
+                  ))}
+                </div>
+
+                {tags.length < 5 && (
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      className="input text-sm flex-1"
+                      placeholder="Add a tag (e.g. Conference, Networking)"
+                      value={tagInput}
+                      onChange={e => setTagInput(e.target.value.slice(0, 30))}
+                      onKeyDown={e => {
+                        if ((e.key === 'Enter' || e.key === ',') && tagInput.trim()) {
+                          e.preventDefault();
+                          const t = tagInput.trim().toLowerCase().replace(/[^a-z0-9\s-]/g, '');
+                          if (t && !tags.includes(t)) setTags(prev => [...prev, t]);
+                          setTagInput('');
+                        }
+                      }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const t = tagInput.trim().toLowerCase().replace(/[^a-z0-9\s-]/g, '');
+                        if (t && !tags.includes(t)) { setTags(prev => [...prev, t]); setTagInput(''); }
+                      }}
+                      className="btn btn-secondary text-sm px-3"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                )}
+
+                <div className="flex flex-wrap gap-1.5 mt-2">
+                  {['conference', 'networking', 'workshop', 'social', 'sports', 'music', 'tech', 'arts'].filter(t => !tags.includes(t)).slice(0, 6).map(suggestion => (
+                    <button
+                      key={suggestion}
+                      type="button"
+                      onClick={() => { if (tags.length < 5) setTags(prev => [...prev, suggestion]); }}
+                      className="px-2 py-0.5 text-xs text-neutral-500 border border-neutral-200 rounded-full hover:bg-neutral-100 transition-colors"
+                    >
+                      + {suggestion}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* ── Integrations tab ── */}
           {activeTab === 'integrations' && (
