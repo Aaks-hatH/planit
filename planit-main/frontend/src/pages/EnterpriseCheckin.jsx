@@ -1538,7 +1538,7 @@ export default function EnterpriseCheckin() {
                 <p className="text-xs text-neutral-400">Check-in</p>
                 {authState.username && (
                   <span className={`text-xs font-semibold px-1.5 py-0.5 rounded ${authState.role === 'staff' ? 'bg-blue-100 text-blue-700' : 'bg-emerald-100 text-emerald-700'}`}>
-                    {authState.role === 'staff' ? '👷 ' : '⭐ '}{authState.username}
+                    {authState.role === 'staff' ? ' ' : ' '}{authState.username}
                   </span>
                 )}
               </div>
