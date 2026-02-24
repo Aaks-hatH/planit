@@ -248,6 +248,22 @@ function EventDetail({ event: initialEvent, onBack, onDelete, onUpdate }) {
                   {l}
                 </label>
               ))}
+              <label className="flex items-center gap-2 text-sm cursor-pointer">
+                <input type="checkbox" checked={editForm.settings?.isPublic || false}
+                  onChange={e => setEditForm({ ...editForm, settings: { ...(editForm.settings || {}), isPublic: e.target.checked } })} />
+                Public Listing
+              </label>
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-neutral-600 mb-1">Theme Color <span className="text-neutral-400 font-normal">(hex, e.g. #6366f1)</span></label>
+              <div className="flex items-center gap-2">
+                <input type="text" className="input text-sm flex-1" placeholder="#6366f1" value={editForm.themeColor || ''} onChange={e => setEditForm({ ...editForm, themeColor: e.target.value })} />
+                {editForm.themeColor && <div className="w-8 h-8 rounded-lg border border-neutral-200 flex-shrink-0" style={{ background: editForm.themeColor }} />}
+              </div>
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-neutral-600 mb-1">Tags <span className="text-neutral-400 font-normal">(comma-separated)</span></label>
+              <input type="text" className="input text-sm" placeholder="conference, networking, tech" value={(editForm.tags || []).join(', ')} onChange={e => setEditForm({ ...editForm, tags: e.target.value.split(',').map(t => t.trim()).filter(Boolean) })} />
             </div>
             <div className="col-span-2">
               <label className="block text-xs font-medium text-neutral-600 mb-1">Description</label>
@@ -310,13 +326,43 @@ function EventDetail({ event: initialEvent, onBack, onDelete, onUpdate }) {
                       ['Status', event.status],
                       ['Password', event.isPasswordProtected ? '✓ Protected' : '✗ None'],
                       ['Enterprise', event.isEnterpriseMode ? '✓ Enabled' : '✗ Disabled'],
+                      ['Public Listing', event.settings?.isPublic ? '✓ Public' : '✗ Private'],
+                      ['Chat', event.settings?.allowChat !== false ? '✓ On' : '✗ Off'],
+                      ['Polls', event.settings?.allowPolls !== false ? '✓ On' : '✗ Off'],
+                      ['File Sharing', event.settings?.allowFileSharing !== false ? '✓ On' : '✗ Off'],
                     ].map(([l, v]) => (
                       <div key={l} className="flex justify-between">
                         <p className="text-xs text-neutral-400">{l}</p>
-                        <p className="text-sm font-medium text-neutral-900">{v}</p>
+                        <p className={`text-sm font-medium ${String(v).startsWith('✓') ? 'text-emerald-700' : String(v).startsWith('✗') ? 'text-neutral-400' : 'text-neutral-900'}`}>{v}</p>
                       </div>
                     ))}
                   </dl>
+
+                  {/* Theme */}
+                  {(event.themeColor || event.coverImage || event.tags?.length > 0) && (
+                    <div className="mt-4">
+                      <p className="text-xs font-bold text-neutral-400 uppercase tracking-widest mb-3">Theme</p>
+                      <div className="space-y-2">
+                        {event.themeColor && (
+                          <div className="flex items-center gap-2">
+                            <div className="w-5 h-5 rounded-full border border-neutral-200" style={{ background: event.themeColor }} />
+                            <span className="text-xs font-mono text-neutral-500">{event.themeColor}</span>
+                          </div>
+                        )}
+                        {event.tags?.length > 0 && (
+                          <div className="flex flex-wrap gap-1">
+                            {event.tags.map(t => <span key={t} className="text-xs bg-neutral-100 text-neutral-600 px-2 py-0.5 rounded-full">{t}</span>)}
+                          </div>
+                        )}
+                        {event.coverImage && (
+                          <div className="mt-2 rounded-lg overflow-hidden border border-neutral-200 h-20">
+                            <img src={event.coverImage} alt="Cover" className="w-full h-full object-cover" />
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
                   {event.description && (
                     <div className="mt-4">
                       <p className="text-xs font-bold text-neutral-400 uppercase tracking-widest mb-2">Description</p>
@@ -885,7 +931,7 @@ function EmployeesPanel() {
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editing, setEditing] = useState(null);
-  const [form, setForm] = useState({ name: '', email: '', role: 'support', department: '', phone: '', notes: '', status: 'active', password: '', permissions: { canDeleteEvents: false, canManageUsers: false, canViewLogs: false, canManageIncidents: true, canExportData: false, canRunCleanup: false } });
+  const [form, setForm] = useState({ name: '', email: '', role: 'support', department: '', phone: '', notes: '', status: 'active', password: '', startDate: '', permissions: { canDeleteEvents: false, canManageUsers: false, canViewLogs: false, canManageIncidents: true, canExportData: false, canRunCleanup: false } });
   const [saving, setSaving] = useState(false);
 
   useEffect(() => { load(); }, []);
@@ -898,13 +944,13 @@ function EmployeesPanel() {
 
   const openCreate = () => {
     setEditing(null);
-    setForm({ name: '', email: '', role: 'support', department: '', phone: '', notes: '', status: 'active', password: '', permissions: { canDeleteEvents: false, canManageUsers: false, canViewLogs: false, canManageIncidents: true, canExportData: false, canRunCleanup: false } });
+    setForm({ name: '', email: '', role: 'support', department: '', phone: '', notes: '', status: 'active', password: '', startDate: '', permissions: { canDeleteEvents: false, canManageUsers: false, canViewLogs: false, canManageIncidents: true, canExportData: false, canRunCleanup: false } });
     setShowModal(true);
   };
 
   const openEdit = (emp) => {
     setEditing(emp._id);
-    setForm({ name: emp.name, email: emp.email, role: emp.role, department: emp.department || '', phone: emp.phone || '', notes: emp.notes || '', status: emp.status, password: '', permissions: { ...emp.permissions } });
+    setForm({ name: emp.name, email: emp.email, role: emp.role, department: emp.department || '', phone: emp.phone || '', notes: emp.notes || '', status: emp.status, password: '', startDate: emp.startDate || '', permissions: { ...emp.permissions } });
     setShowModal(true);
   };
 
@@ -971,6 +1017,7 @@ function EmployeesPanel() {
                   </div>
                   <p className="text-xs text-neutral-500 mb-1">{emp.email}</p>
                   {emp.department && <p className="text-xs text-neutral-400">{emp.department}</p>}
+                  {emp.startDate && <p className="text-xs text-neutral-400">Since {fmt(emp.startDate)}</p>}
                   <div className="flex flex-wrap gap-1 mt-2">
                     {PERMS.filter(([k]) => emp.permissions?.[k]).map(([k, l]) => (
                       <span key={k} className="text-xs bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full font-medium">{l}</span>
@@ -1027,6 +1074,10 @@ function EmployeesPanel() {
                 <div>
                   <label className="block text-xs font-medium text-neutral-600 mb-1.5">Phone</label>
                   <input className="input w-full text-sm" placeholder="+1 555 000 0000" value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-neutral-600 mb-1.5">Start Date</label>
+                  <input type="date" className="input w-full text-sm" value={form.startDate ? new Date(form.startDate).toISOString().slice(0, 10) : ''} onChange={e => setForm(f => ({ ...f, startDate: e.target.value || undefined }))} />
                 </div>
                 <div className="col-span-2">
                   <label className="block text-xs font-medium text-neutral-600 mb-1.5">
@@ -1371,7 +1422,8 @@ export default function Admin() {
   const [totalPages, setTotalPages] = useState(1);
   const [statusFilter, setStatusFilter] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
-  const [cleanupRunning, setCleanupRunning] = useState(false);
+  const [searchResults, setSearchResults] = useState(null);
+  const [searchLoading, setSearchLoading] = useState(false);
   const [cleanupResult, setCleanupResult] = useState(null);
   const [showCleanup, setShowCleanup] = useState(false);
 
@@ -1512,11 +1564,23 @@ export default function Admin() {
           </div>
 
           {/* Global search */}
-          <form onSubmit={async (e) => { e.preventDefault(); if (!searchQuery.trim()) return; try { const r = await adminAPI.search(searchQuery); toast.success(`Found ${r.data.results.events.length} events, ${r.data.results.participants.length} users`); } catch { toast.error('Search failed'); } }} className="flex gap-2">
+          <form onSubmit={async (e) => {
+            e.preventDefault();
+            if (!searchQuery.trim()) return;
+            setSearchLoading(true);
+            try {
+              const r = await adminAPI.search(searchQuery);
+              setSearchResults({ query: searchQuery, ...r.data.results });
+            } catch { toast.error('Search failed'); }
+            finally { setSearchLoading(false); }
+          }} className="flex gap-2">
             <div className="relative">
               <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400" />
               <input type="text" placeholder="Global search..." className="input py-1.5 pl-9 text-sm w-48" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} />
             </div>
+            <button type="submit" disabled={searchLoading} className="btn btn-secondary text-xs py-1.5 px-3 gap-1">
+              {searchLoading ? <span className="spinner w-3 h-3 border-2 border-neutral-300 border-t-neutral-600" /> : <Search className="w-3 h-3" />}
+            </button>
           </form>
 
           <button onClick={async () => { try { const r = await adminAPI.exportData('events'); const b = new Blob([JSON.stringify(r.data.data, null, 2)], { type: 'application/json' }); const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = `planit-export-${Date.now()}.json`; a.click(); toast.success('Exported'); } catch { toast.error('Export failed'); } }} className="btn btn-secondary text-xs gap-1.5 py-1.5">
@@ -1653,6 +1717,96 @@ export default function Admin() {
           {activeSection === 'uptime'     && !selectedEvent && <div className="max-w-4xl mx-auto"><UptimePanel /></div>}
         </main>
       </div>
+
+      {/* Search Results Modal */}
+      {searchResults && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-start justify-center z-50 pt-16 px-4" onClick={() => setSearchResults(null)}>
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden" style={{ maxHeight: '80vh', display: 'flex', flexDirection: 'column' }} onClick={e => e.stopPropagation()}>
+            <div className="px-5 py-4 border-b flex items-center justify-between flex-shrink-0">
+              <div>
+                <h3 className="font-bold text-neutral-900">Search results for "{searchResults.query}"</h3>
+                <p className="text-xs text-neutral-500 mt-0.5">
+                  {(searchResults.events?.length || 0)} events · {(searchResults.participants?.length || 0)} users · {(searchResults.messages?.length || 0)} messages · {(searchResults.polls?.length || 0)} polls
+                </p>
+              </div>
+              <button onClick={() => setSearchResults(null)} className="p-1.5 hover:bg-neutral-100 rounded-lg"><X className="w-4 h-4 text-neutral-400" /></button>
+            </div>
+            <div className="overflow-y-auto p-5 space-y-5">
+              {/* Events */}
+              {searchResults.events?.length > 0 && (
+                <div>
+                  <p className="text-xs font-bold text-neutral-500 uppercase tracking-wider mb-2 flex items-center gap-1.5"><Calendar className="w-3.5 h-3.5" /> Events ({searchResults.events.length})</p>
+                  <div className="space-y-1.5">
+                    {searchResults.events.map(ev => (
+                      <button key={ev._id} onClick={() => { setSearchResults(null); setSelectedEvent(ev); setActiveSection('events'); }} className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-neutral-50 border border-neutral-100 text-left transition-colors">
+                        <div className="w-8 h-8 rounded-lg bg-blue-100 text-blue-700 flex items-center justify-center text-xs font-bold flex-shrink-0">{ev.title?.charAt(0)}</div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-semibold text-neutral-900 truncate">{ev.title}</p>
+                          <p className="text-xs text-neutral-400 font-mono">/{ev.subdomain} · {ev.organizerName}</p>
+                        </div>
+                        <StatusBadge status={ev.status} />
+                        <ChevronRight className="w-4 h-4 text-neutral-300 flex-shrink-0" />
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {/* Participants */}
+              {searchResults.participants?.length > 0 && (
+                <div>
+                  <p className="text-xs font-bold text-neutral-500 uppercase tracking-wider mb-2 flex items-center gap-1.5"><Users className="w-3.5 h-3.5" /> Users ({searchResults.participants.length})</p>
+                  <div className="space-y-1.5">
+                    {searchResults.participants.map(p => (
+                      <div key={p._id} className="flex items-center gap-3 p-3 rounded-xl border border-neutral-100 bg-neutral-50">
+                        <div className="w-8 h-8 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center text-xs font-bold flex-shrink-0">{p.username?.charAt(0)?.toUpperCase()}</div>
+                        <div>
+                          <p className="text-sm font-semibold text-neutral-900">{p.username}</p>
+                          <p className="text-xs text-neutral-400">Joined {rel(p.joinedAt)}{p.role ? ` · ${p.role}` : ''}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {/* Messages */}
+              {searchResults.messages?.length > 0 && (
+                <div>
+                  <p className="text-xs font-bold text-neutral-500 uppercase tracking-wider mb-2 flex items-center gap-1.5"><MessageSquare className="w-3.5 h-3.5" /> Messages ({searchResults.messages.length})</p>
+                  <div className="space-y-1.5">
+                    {searchResults.messages.map(m => (
+                      <div key={m._id} className="p-3 rounded-xl border border-neutral-100 bg-neutral-50">
+                        <p className="text-xs font-semibold text-neutral-500 mb-0.5">{m.username} · {rel(m.createdAt)}</p>
+                        <p className="text-sm text-neutral-800 line-clamp-2">{m.content}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {/* Polls */}
+              {searchResults.polls?.length > 0 && (
+                <div>
+                  <p className="text-xs font-bold text-neutral-500 uppercase tracking-wider mb-2 flex items-center gap-1.5"><BarChart3 className="w-3.5 h-3.5" /> Polls ({searchResults.polls.length})</p>
+                  <div className="space-y-1.5">
+                    {searchResults.polls.map(p => (
+                      <div key={p._id} className="p-3 rounded-xl border border-neutral-100 bg-neutral-50">
+                        <p className="text-sm font-medium text-neutral-800">{p.question}</p>
+                        <p className="text-xs text-neutral-400 mt-0.5">{p.options?.length || 0} options · {rel(p.createdAt)}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {/* No results */}
+              {!searchResults.events?.length && !searchResults.participants?.length && !searchResults.messages?.length && !searchResults.polls?.length && (
+                <div className="text-center py-12">
+                  <Search className="w-10 h-10 text-neutral-300 mx-auto mb-3" />
+                  <p className="text-sm text-neutral-400">No results found for "{searchResults.query}"</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Cleanup Modal */}
       {showCleanup && (
