@@ -1503,7 +1503,6 @@ export default function Home() {
         </footer>
 
       </main>
-    </div>
 
       {/* ── Feature 8: Confetti canvas ─────────────────────────── */}
       <canvas
@@ -1525,5 +1524,6 @@ export default function Home() {
           <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform duration-200" />
         </a>
       </div>
+    </div>
   );
 }
