@@ -134,7 +134,12 @@ export const pollAPI = {
 
 // ─── File API ─────────────────────────────────────────────────────────────────
 export const fileAPI = {
-  upload:   (eventId, formData) => api.post(`/files/${eventId}/upload`, formData),
+  // Content-Type must be undefined here so axios auto-detects multipart/form-data
+  // with the correct boundary from the FormData object. Inheriting the global
+  // 'application/json' default breaks multer parsing and causes "No file uploaded".
+  upload:   (eventId, formData) => api.post(`/files/${eventId}/upload`, formData, {
+    headers: { 'Content-Type': undefined },
+  }),
   getAll:   (eventId)           => api.get(`/files/${eventId}`),
   download: (eventId, fileId)   => api.get(`/files/${eventId}/download/${fileId}`, { responseType: 'blob' }),
   delete:   (eventId, fileId, data) => api.delete(`/files/${eventId}/${fileId}`, { data }),
