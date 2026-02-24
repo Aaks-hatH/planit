@@ -320,6 +320,11 @@ async function resolveDownIncident(target, incidentId, downtimeMs) {
 }
 
 // ─── ntfy ─────────────────────────────────────────────────────────────────────
+// NTFY_URL  — full topic URL e.g. https://ntfy.sh/my-secret-topic
+// NTFY_TOKEN — Bearer token for private topics (ntfy.sh → Account → Access tokens)
+//              Required if your topic has access control enabled.
+const NTFY_TOKEN = process.env.NTFY_TOKEN || '';
+
 async function sendNtfy({ title, message, priority = 'high', tags = [] }) {
   if (!NTFY_URL) return;
   try {
@@ -327,13 +332,19 @@ async function sendNtfy({ title, message, priority = 'high', tags = [] }) {
       'Title':        title,
       'Priority':     priority,
       'Tags':         tags.join(','),
-      'Content-Type': 'text/plain',
+      'Content-Type': 'text/plain; charset=utf-8',
     };
+    if (NTFY_TOKEN)  headers['Authorization'] = `Bearer ${NTFY_TOKEN}`;
     if (FRONTEND_URL) headers['Actions'] = `view, Open Status Page, ${FRONTEND_URL}/status`;
-    await axios.post(NTFY_URL, message, { headers, timeout: 10000 });
-    console.log(`[${ts()}] [ntfy] Sent: "${title}"`);
+    const res = await axios.post(NTFY_URL, message, { headers, timeout: 10000 });
+    console.log(`[${ts()}] [ntfy] Sent: "${title}" (HTTP ${res.status})`);
   } catch (err) {
-    console.error(`[${ts()}] [ntfy] Failed: ${err.message}`);
+    const status = err.response?.status;
+    const hint = status === 401 ? ' — check NTFY_TOKEN (topic may require auth)'
+               : status === 403 ? ' — access denied, check NTFY_TOKEN permissions'
+               : status === 404 ? ' — topic not found, check NTFY_URL'
+               : '';
+    console.error(`[${ts()}] [ntfy] Failed: ${err.message}${hint}`);
   }
 }
 
@@ -494,6 +505,44 @@ app.use((_req, res, next) => {
 
 app.get('/',                (_req, res) => res.send('PlanIt Watchdog OK'));
 app.get('/watchdog/ping',   (_req, res) => res.json({ ok: true, ts: new Date().toISOString() }));
+
+// ─── ntfy test endpoint ───────────────────────────────────────────────────────
+// POST /watchdog/test-ntfy — fires a real test notification so you can verify
+// NTFY_URL and NTFY_TOKEN are correct without waiting for an actual outage.
+// Protected by a simple shared secret (MESH_SECRET) to prevent abuse.
+app.post('/watchdog/test-ntfy', express.json(), async (req, res) => {
+  const secret = req.headers['x-test-secret'] || '';
+  // Basic auth: require MESH_SECRET header (same secret the router uses)
+  const meshSecret = process.env.MESH_SECRET || '';
+  if (!meshSecret || secret !== meshSecret) {
+    return res.status(401).json({ error: 'Unauthorized — send X-Test-Secret header with MESH_SECRET value' });
+  }
+  if (!NTFY_URL) {
+    return res.status(503).json({ error: 'NTFY_URL is not configured on this watchdog' });
+  }
+  try {
+    const axios = require('axios');
+    const headers = {
+      'Title':        'PlanIt — ntfy Test',
+      'Priority':     'high',
+      'Tags':         'white_check_mark,test',
+      'Content-Type': 'text/plain; charset=utf-8',
+    };
+    if (NTFY_TOKEN) headers['Authorization'] = `Bearer ${NTFY_TOKEN}`;
+    if (FRONTEND_URL) headers['Actions'] = `view, Open Status Page, ${FRONTEND_URL}/status`;
+    const r = await axios.post(NTFY_URL, `PlanIt watchdog ntfy test fired at ${new Date().toUTCString()}.\nIf you received this, notifications are working correctly.`, { headers, timeout: 10000 });
+    console.log(`[${ts()}] [ntfy] Test notification sent (HTTP ${r.status})`);
+    res.json({ ok: true, status: r.status, ntfyUrl: NTFY_URL, tokenSet: !!NTFY_TOKEN });
+  } catch (err) {
+    const status = err.response?.status;
+    const hint = status === 401 ? 'NTFY_TOKEN missing or wrong'
+               : status === 403 ? 'NTFY_TOKEN lacks permission'
+               : status === 404 ? 'NTFY_URL topic not found'
+               : err.message;
+    console.error(`[${ts()}] [ntfy] Test failed: ${hint}`);
+    res.status(502).json({ ok: false, error: hint, httpStatus: status });
+  }
+});
 
 // ─── Mesh: watchdog internal status (auth required) ──────────────────────────
 app.get('/mesh/status', meshAuth(SERVICE_NAME), (_req, res) => {
