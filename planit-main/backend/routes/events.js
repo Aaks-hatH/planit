@@ -173,6 +173,9 @@ router.post('/verify-password/:eventId', authLimiter,
         });
       }
 
+      // Fire webhooks non-blocking
+      fireWebhooks(req.params.eventId, 'participant_joined', { username }).catch(() => {});
+
       // Preserve organizer role if this is the organizer logging back in
       const isOrganizer = event.organizerName === username ||
         event.participants.some(p => p.username === username && p.role === 'organizer');
@@ -241,6 +244,9 @@ router.post('/join/:eventId',
           username, role: 'participant', joinedAt: new Date(), participants: event.participants
         });
       }
+
+      // Fire webhooks non-blocking
+      fireWebhooks(req.params.eventId, 'participant_joined', { username }).catch(() => {});
 
       // Preserve organizer role if this is the organizer logging back in
       const isOrganizer = event.organizerName === username || 
@@ -348,6 +354,9 @@ router.post('/:eventId/rsvp',
           summary:  event.getRsvpSummary()
         });
       }
+
+      // Fire webhooks non-blocking
+      fireWebhooks(req.params.eventId, 'rsvp_updated', { username: req.body.username, rsvp: req.body.status }).catch(() => {});
 
       res.json({ message: 'RSVP recorded', rsvpSummary: event.getRsvpSummary() });
     } catch (error) { next(error); }
@@ -1405,6 +1414,14 @@ router.post('/:eventId/checkin/:inviteCode',
       });
     }
 
+    // Fire webhooks non-blocking
+    fireWebhooks(eventId, 'checkin', {
+      username:       invite.guestName,
+      guestName:      invite.guestName,
+      inviteCode:     invite.inviteCode,
+      actualCount:    invite.actualAttendees,
+    }).catch(() => {});
+
     res.json({
       message: 'Guest checked in successfully',
       invite: {
@@ -2046,6 +2063,84 @@ router.post('/:eventId/webhooks', verifyOrganizer,
 
       await event.save();
       const wh = event.webhooks[event.webhooks.length - 1];
+
+      // Send a config confirmation message to the webhook immediately
+      try {
+        const isDiscord = wh.url.toLowerCase().includes('discord.com/api/webhooks/');
+        const triggerLabels = {
+          participant_joined: 'Participant joined',
+          rsvp_updated: 'RSVP updated',
+          checkin: 'Guest checked in',
+          message_sent: 'New message sent',
+        };
+        const triggersText = wh.events.map(e => triggerLabels[e] || e).join(', ');
+        const eventDate = event.date ? new Date(event.date).toLocaleString('en-GB', { dateStyle: 'full', timeStyle: 'short' }) : 'Not set';
+        const participantCount = (event.participants || []).length;
+        const maxP = event.maxParticipants || 'Unlimited';
+
+        if (isDiscord) {
+          const configPayload = JSON.stringify({
+            embeds: [{
+              title: 'PlanIt Webhook Connected',
+              description: 'This channel will now receive live notifications from your PlanIt event.',
+              color: 0x10b981,
+              fields: [
+                { name: 'Event', value: event.title, inline: true },
+                { name: 'Subdomain', value: event.subdomain || 'N/A', inline: true },
+                { name: 'Status', value: event.status || 'active', inline: true },
+                { name: 'Date', value: eventDate, inline: false },
+                { name: 'Location', value: event.location || 'Not set', inline: true },
+                { name: 'Participants', value: `${participantCount} / ${maxP}`, inline: true },
+                { name: 'Organizer', value: event.organizerName, inline: true },
+                { name: 'Triggers', value: triggersText, inline: false },
+                { name: 'Chat', value: event.settings?.allowChat !== false ? 'Enabled' : 'Disabled', inline: true },
+                { name: 'Polls', value: event.settings?.allowPolls !== false ? 'Enabled' : 'Disabled', inline: true },
+                { name: 'File Sharing', value: event.settings?.allowFileSharing !== false ? 'Enabled' : 'Disabled', inline: true },
+                { name: 'RSVP', value: event.settings?.rsvpEnabled !== false ? 'Enabled' : 'Disabled', inline: true },
+                { name: 'Public Event', value: event.settings?.isPublic ? 'Yes' : 'No', inline: true },
+                { name: 'Require Approval', value: event.settings?.requireApproval ? 'Yes' : 'No', inline: true },
+                { name: 'Webhook ID', value: wh._id.toString(), inline: false },
+                { name: 'Signing Secret', value: wh.secret ? 'Configured' : 'None', inline: true },
+              ],
+              footer: { text: 'PlanIt — You will receive a notification for each selected trigger.' },
+              timestamp: new Date().toISOString(),
+            }]
+          });
+          await axios.post(wh.url, configPayload, { headers: { 'Content-Type': 'application/json' }, timeout: 5000 });
+        } else {
+          const configPayload = JSON.stringify({
+            event: 'webhook_configured',
+            eventId: event._id.toString(),
+            eventName: event.title,
+            subdomain: event.subdomain,
+            timestamp: new Date().toISOString(),
+            webhook: {
+              id: wh._id.toString(),
+              triggers: wh.events,
+              triggerLabels: triggersText,
+              hasSecret: !!wh.secret,
+            },
+            eventDetails: {
+              date: event.date,
+              location: event.location || null,
+              organizer: event.organizerName,
+              status: event.status,
+              participants: participantCount,
+              maxParticipants: maxP,
+              settings: {
+                allowChat: event.settings?.allowChat !== false,
+                allowPolls: event.settings?.allowPolls !== false,
+                allowFileSharing: event.settings?.allowFileSharing !== false,
+                rsvpEnabled: event.settings?.rsvpEnabled !== false,
+                isPublic: event.settings?.isPublic === true,
+                requireApproval: event.settings?.requireApproval === true,
+              },
+            },
+          });
+          await axios.post(wh.url, configPayload, { headers: { 'Content-Type': 'application/json', 'X-PlanIt-Event': 'webhook_configured', 'X-PlanIt-EventId': event._id.toString() }, timeout: 5000 });
+        }
+      } catch (_) { /* config ping is best-effort, never block webhook creation */ }
+
       res.status(201).json({ webhook: { _id: wh._id, url: wh.url, events: wh.events, active: wh.active, createdAt: wh.createdAt } });
     } catch (error) { next(error); }
   }
@@ -2076,6 +2171,7 @@ router.delete('/:eventId/webhooks/:webhookId', verifyOrganizer, async (req, res,
 });
 
 module.exports = router;
+module.exports.fireWebhooks = fireWebhooks;
 
 // ═══════════════════════════════════════════════════════════════════════════
 // BACKUP & DATA EXPORT ROUTES
