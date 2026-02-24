@@ -10,24 +10,21 @@ const api = axios.create({
 });
 
 api.interceptors.request.use((config) => {
-  // Check if this is an admin request first
   const isAdminRequest = config.url && config.url.includes('/admin');
-  
+
   if (isAdminRequest) {
-    // For admin requests, ONLY use admin token
     const adminToken = localStorage.getItem('adminToken');
     if (adminToken) {
       config.headers.Authorization = `Bearer ${adminToken}`;
     }
   } else {
-    // For regular event requests, use event token
     const token = localStorage.getItem('eventToken');
     if (token) {
       config.headers['x-event-token'] = token;
-      config.headers.Authorization = `Bearer ${token}`;
+      config.headers.Authorization    = `Bearer ${token}`;
     }
   }
-  
+
   return config;
 });
 
@@ -36,12 +33,10 @@ api.interceptors.response.use(
   (error) => {
     if (error.response?.status === 401) {
       const isAdminRequest = error.config?.url?.includes('/admin');
-      
+
       if (isAdminRequest) {
         console.warn('Admin authentication failed, clearing admin token');
         localStorage.removeItem('adminToken');
-        // Fire a custom event — React components listen for this and call
-        // navigate('/admin') themselves, avoiding a full-page reload loop.
         window.dispatchEvent(new CustomEvent('planit:admin-logout'));
       } else {
         localStorage.removeItem('eventToken');
@@ -53,179 +48,194 @@ api.interceptors.response.use(
   }
 );
 
+// ─── Event API ────────────────────────────────────────────────────────────────
 export const eventAPI = {
-  create: (data) => api.post('/events', data),
-  getBySubdomain: (subdomain) => api.get(`/events/subdomain/${subdomain}`),
-  getById: (id) => api.get(`/events/${id}`),
-  getPublicInfo: (id) => api.get(`/events/public/${id}`),
-  getParticipants: (id) => api.get(`/events/participants/${id}`),
-  verifyPassword: (id, data) => api.post(`/events/verify-password/${id}`, data),
-  join: (id, data) => api.post(`/events/join/${id}`, data),
-  setPassword: (id, data) => api.post(`/events/set-password/${id}`, data),
-  update: (id, data) => api.put(`/events/${id}`, data),
-  delete: (id) => api.delete(`/events/${id}`),
-  
+  create:         (data)              => api.post('/events', data),
+  getBySubdomain: (subdomain)         => api.get(`/events/subdomain/${subdomain}`),
+  getById:        (id)                => api.get(`/events/${id}`),
+  getPublicInfo:  (id)                => api.get(`/events/public/${id}`),
+  getParticipants:(id)                => api.get(`/events/participants/${id}`),
+  verifyPassword: (id, data)          => api.post(`/events/verify-password/${id}`, data),
+  join:           (id, data)          => api.post(`/events/join/${id}`, data),
+  setPassword:    (id, data)          => api.post(`/events/set-password/${id}`, data),
+  update:         (id, data)          => api.put(`/events/${id}`, data),
+  delete:         (id)                => api.delete(`/events/${id}`),
+
   // RSVP
   rsvp:               (eventId, data)     => api.post(`/events/${eventId}/rsvp`, data),
   updateRsvpSettings: (eventId, settings) => api.patch(`/events/${eventId}/rsvp-settings`, settings),
   getRsvpSummary:     (eventId)           => api.get(`/events/${eventId}/rsvp-summary`),
-  
+
   // Agenda
-  getAgenda: (eventId) => api.get(`/events/${eventId}/agenda`),
-  addAgendaItem: (eventId, data) => api.post(`/events/${eventId}/agenda`, data),
-  deleteAgendaItem: (eventId, itemId) => api.delete(`/events/${eventId}/agenda/${itemId}`),
-  
-  // ═══════════════════════════════════════════════════════════════════════════
-  // ENTERPRISE CHECK-IN & INVITES
-  // ═══════════════════════════════════════════════════════════════════════════
-  
-  // Invites Management
-  getInvites: (eventId) => api.get(`/events/${eventId}/invites`),
-  createInvite: (eventId, data) => {
-    const payload = { guests: [data] };
-    return api.post(`/events/${eventId}/invites`, payload);
-  },
-  updateInvite: (eventId, inviteId, data) => api.put(`/events/${eventId}/invites/${inviteId}`, data),
-  deleteInvite: (eventId, inviteId) => api.delete(`/events/${eventId}/invites/${inviteId}`),
-  
-  // Check-in Process
-  verifyScan: (eventId, inviteCode) => api.get(`/events/${eventId}/verify-scan/${inviteCode}`),
-  verifyPin: (eventId, inviteCode, pin) => api.post(`/events/${eventId}/verify-pin/${inviteCode}`, { pin }),
-  checkIn: (eventId, inviteCode, data) => api.post(`/events/${eventId}/checkin/${inviteCode}`, data),
-  
-  // Check-in Stats & Settings
-  getCheckInStats: (eventId) => api.get(`/events/${eventId}/checkin-stats`),
-  getCheckInSettings: (eventId) => api.get(`/events/${eventId}/checkin-settings`),
-  updateCheckInSettings: (eventId, settings) => api.patch(`/events/${eventId}/checkin-settings`, settings),
+  getAgenda:      (eventId)           => api.get(`/events/${eventId}/agenda`),
+  addAgendaItem:  (eventId, data)     => api.post(`/events/${eventId}/agenda`, data),
+  deleteAgendaItem:(eventId, itemId)  => api.delete(`/events/${eventId}/agenda/${itemId}`),
 
-  // Staff Check-in Accounts
-  staffLogin: (eventId, username, pin) => api.post(`/events/${eventId}/staff-login`, { username, pin }),
-  getStaff: (eventId) => api.get(`/events/${eventId}/staff`),
-  createStaff: (eventId, data) => api.post(`/events/${eventId}/staff`, data),
-  deleteStaff: (eventId, username) => api.delete(`/events/${eventId}/staff/${username}`),
-  updateStaffPin: (eventId, username, pin) => api.patch(`/events/${eventId}/staff/${username}/pin`, { pin }),
+  // Enterprise Check-in & Invites
+  getInvites:    (eventId)            => api.get(`/events/${eventId}/invites`),
+  createInvite:  (eventId, data)      => api.post(`/events/${eventId}/invites`, { guests: [data] }),
+  updateInvite:  (eventId, inviteId, data) => api.put(`/events/${eventId}/invites/${inviteId}`, data),
+  deleteInvite:  (eventId, inviteId)  => api.delete(`/events/${eventId}/invites/${inviteId}`),
 
-  // Override History (audit trail)
+  // Check-in process
+  verifyScan:    (eventId, inviteCode)        => api.get(`/events/${eventId}/verify-scan/${inviteCode}`),
+  verifyPin:     (eventId, inviteCode, pin)   => api.post(`/events/${eventId}/verify-pin/${inviteCode}`, { pin }),
+  checkIn:       (eventId, inviteCode, data)  => api.post(`/events/${eventId}/checkin/${inviteCode}`, data),
+
+  // Check-in stats & settings
+  getCheckInStats:      (eventId)          => api.get(`/events/${eventId}/checkin-stats`),
+  getCheckInSettings:   (eventId)          => api.get(`/events/${eventId}/checkin-settings`),
+  updateCheckInSettings:(eventId, settings)=> api.patch(`/events/${eventId}/checkin-settings`, settings),
+
+  // Staff check-in accounts
+  staffLogin:    (eventId, username, pin)  => api.post(`/events/${eventId}/staff-login`, { username, pin }),
+  getStaff:      (eventId)                 => api.get(`/events/${eventId}/staff`),
+  createStaff:   (eventId, data)           => api.post(`/events/${eventId}/staff`, data),
+  deleteStaff:   (eventId, username)       => api.delete(`/events/${eventId}/staff/${username}`),
+  updateStaffPin:(eventId, username, pin)  => api.patch(`/events/${eventId}/staff/${username}/pin`, { pin }),
+
+  // Override history (audit trail)
   getOverrideHistory: (eventId) => api.get(`/events/${eventId}/override-history`),
 };
 
+// ─── Chat API ─────────────────────────────────────────────────────────────────
 export const chatAPI = {
-  getMessages: (eventId, params) => api.get(`/chat/${eventId}/messages`, { params }),
-  sendMessage: (eventId, data) => api.post(`/chat/${eventId}/messages`, data),
-  editMessage: (eventId, messageId, data) => api.put(`/chat/${eventId}/messages/${messageId}`, data),
-  deleteMessage: (eventId, messageId, data) => api.delete(`/chat/${eventId}/messages/${messageId}`, { data }),
-  addReaction: (eventId, messageId, data) => api.post(`/chat/${eventId}/messages/${messageId}/reactions`, data),
-  removeReaction: (eventId, messageId, data) => api.delete(`/chat/${eventId}/messages/${messageId}/reactions`, { data }),
+  getMessages:    (eventId, params)              => api.get(`/chat/${eventId}/messages`, { params }),
+  sendMessage:    (eventId, data)                => api.post(`/chat/${eventId}/messages`, data),
+  editMessage:    (eventId, messageId, data)     => api.put(`/chat/${eventId}/messages/${messageId}`, data),
+  deleteMessage:  (eventId, messageId, data)     => api.delete(`/chat/${eventId}/messages/${messageId}`, { data }),
+  addReaction:    (eventId, messageId, data)     => api.post(`/chat/${eventId}/messages/${messageId}/reactions`, data),
+  removeReaction: (eventId, messageId, data)     => api.delete(`/chat/${eventId}/messages/${messageId}/reactions`, { data }),
 };
 
+// ─── Poll API ─────────────────────────────────────────────────────────────────
 export const pollAPI = {
-  getAll: (eventId) => api.get(`/polls/${eventId}`),
-  create: (eventId, data) => api.post(`/polls/${eventId}`, data),
-  vote: (eventId, pollId, data) => api.post(`/polls/${eventId}/polls/${pollId}/vote`, data),
-  getResults: (eventId, pollId) => api.get(`/polls/${eventId}/polls/${pollId}/results`),
-  close: (eventId, pollId, data) => api.post(`/polls/${eventId}/polls/${pollId}/close`, data),
-  delete: (eventId, pollId, data) => api.delete(`/polls/${eventId}/polls/${pollId}`, { data }),
+  getAll:     (eventId)               => api.get(`/polls/${eventId}`),
+  create:     (eventId, data)         => api.post(`/polls/${eventId}`, data),
+  vote:       (eventId, pollId, data) => api.post(`/polls/${eventId}/polls/${pollId}/vote`, data),
+  getResults: (eventId, pollId)       => api.get(`/polls/${eventId}/polls/${pollId}/results`),
+  close:      (eventId, pollId, data) => api.post(`/polls/${eventId}/polls/${pollId}/close`, data),
+  delete:     (eventId, pollId, data) => api.delete(`/polls/${eventId}/polls/${pollId}`, { data }),
 };
 
+// ─── File API ─────────────────────────────────────────────────────────────────
 export const fileAPI = {
-  upload: (eventId, formData) => api.post(`/files/${eventId}/upload`, formData),
-  getAll: (eventId) => api.get(`/files/${eventId}`),
-  download: (eventId, fileId) => api.get(`/files/${eventId}/download/${fileId}`, { responseType: 'blob' }),
-  delete: (eventId, fileId, data) => api.delete(`/files/${eventId}/${fileId}`, { data }),
+  upload:   (eventId, formData) => api.post(`/files/${eventId}/upload`, formData),
+  getAll:   (eventId)           => api.get(`/files/${eventId}`),
+  download: (eventId, fileId)   => api.get(`/files/${eventId}/download/${fileId}`, { responseType: 'blob' }),
+  delete:   (eventId, fileId, data) => api.delete(`/files/${eventId}/${fileId}`, { data }),
 };
 
-// ═══════════════════════════════════════════════════════════════════════════
-// ENHANCED ADMIN API - FULL CONTROL CAPABILITIES
-// ═══════════════════════════════════════════════════════════════════════════
-
+// ─── Admin API ────────────────────────────────────────────────────────────────
 export const adminAPI = {
-  // ─── Authentication ─────────────────────────────────────────────────────
+  // Authentication
   login: (username, password) => api.post('/admin/login', { username, password }),
-  
-  // ─── Dashboard & Statistics ─────────────────────────────────────────────
-  getStats: () => api.get('/admin/stats'),
+
+  // Dashboard & Statistics
+  getStats:    ()       => api.get('/admin/stats'),
   getActivity: (params) => api.get('/admin/activity', { params }),
-  
-  // ─── Event Management ───────────────────────────────────────────────────
-  getEvents: (params) => api.get('/admin/events', { params }),
-  getEvent: (id) => api.get(`/admin/events/${id}`),
-  getEventAccess: (id) => api.post(`/admin/events/${id}/access`),
-  updateEvent: (id, data) => api.patch(`/admin/events/${id}`, data),
-  updateEventStatus: (id, status) => api.patch(`/admin/events/${id}/status`, { status }),
-  deleteEvent: (id) => api.delete(`/admin/events/${id}`),
-  
-  // ─── Messages Management ────────────────────────────────────────────────
-  getMessages: (eventId) => api.get(`/admin/events/${eventId}/messages`),
-  deleteMessage: (eventId, messageId) => api.delete(`/admin/events/${eventId}/messages/${messageId}`),
-  bulkDeleteMessages: (eventId, messageIds) => api.post(`/admin/events/${eventId}/messages/bulk-delete`, { messageIds }),
-  
-  // ─── Participants Management ────────────────────────────────────────────
-  getParticipants: (eventId) => api.get(`/admin/events/${eventId}/participants`),
-  removeParticipant: (eventId, username) => api.delete(`/admin/events/${eventId}/participants/${username}`),
-  resetParticipantPassword: (eventId, username) => api.delete(`/admin/events/${eventId}/participants/${username}/password`),
-  bulkRemoveParticipants: (eventId, usernames) => api.post(`/admin/events/${eventId}/participants/bulk-remove`, { usernames }),
-  
-  // ─── Polls Management ───────────────────────────────────────────────────
-  getPolls: (eventId) => api.get(`/admin/events/${eventId}/polls`),
+
+  // System Info
+  getSystem: () => api.get('/admin/system'),
+
+  // Live Logs
+  getLogs: (n = 200) => api.get('/admin/logs', { params: { n } }),
+  // Note: SSE real-time stream is consumed directly via:
+  //   new EventSource(`${API_URL}/admin/logs/stream`)
+  // with an Authorization header injected by the component.
+
+  // Event Management
+  getEvents:         (params)       => api.get('/admin/events', { params }),
+  getEvent:          (id)           => api.get(`/admin/events/${id}`),
+  getEventAccess:    (id)           => api.post(`/admin/events/${id}/access`),
+  updateEvent:       (id, data)     => api.patch(`/admin/events/${id}`, data),
+  updateEventStatus: (id, status)   => api.patch(`/admin/events/${id}/status`, { status }),
+  deleteEvent:       (id)           => api.delete(`/admin/events/${id}`),
+
+  // Messages Management
+  getMessages:       (eventId)             => api.get(`/admin/events/${eventId}/messages`),
+  deleteMessage:     (eventId, messageId)  => api.delete(`/admin/events/${eventId}/messages/${messageId}`),
+  bulkDeleteMessages:(eventId, messageIds) => api.post(`/admin/events/${eventId}/messages/bulk-delete`, { messageIds }),
+
+  // Participants Management
+  getParticipants:         (eventId)           => api.get(`/admin/events/${eventId}/participants`),
+  removeParticipant:       (eventId, username) => api.delete(`/admin/events/${eventId}/participants/${username}`),
+  resetParticipantPassword:(eventId, username) => api.delete(`/admin/events/${eventId}/participants/${username}/password`),
+  bulkRemoveParticipants:  (eventId, usernames)=> api.post(`/admin/events/${eventId}/participants/bulk-remove`, { usernames }),
+
+  // Polls Management
+  getPolls:   (eventId)         => api.get(`/admin/events/${eventId}/polls`),
   deletePoll: (eventId, pollId) => api.delete(`/admin/events/${eventId}/polls/${pollId}`),
-  
-  // ─── Files Management ───────────────────────────────────────────────────
-  getFiles: (eventId) => api.get(`/admin/events/${eventId}/files`),
+
+  // Files Management
+  getFiles:   (eventId)         => api.get(`/admin/events/${eventId}/files`),
   deleteFile: (eventId, fileId) => api.delete(`/admin/events/${eventId}/files/${fileId}`),
-  
-  // ─── Invites Management (Enterprise) ────────────────────────────────────
-  getInvites: (eventId) => api.get(`/admin/events/${eventId}/invites`),
-  checkInGuest: (eventId, inviteCode, actualAttendees) => 
-    api.post(`/admin/events/${eventId}/invites/${inviteCode}/checkin`, { actualAttendees }),
-  deleteInvite: (eventId, inviteId) => api.delete(`/admin/events/${eventId}/invites/${inviteId}`),
-  
-  // ─── Search & Discovery ─────────────────────────────────────────────────
+
+  // Invites Management (Enterprise)
+  getInvites:  (eventId)                     => api.get(`/admin/events/${eventId}/invites`),
+  checkInGuest:(eventId, inviteCode, actual) => api.post(`/admin/events/${eventId}/invites/${inviteCode}/checkin`, { actualAttendees: actual }),
+  deleteInvite:(eventId, inviteId)           => api.delete(`/admin/events/${eventId}/invites/${inviteId}`),
+
+  // Search & Discovery
   search: (query) => api.get('/admin/search', { params: { q: query } }),
-  
-  // ─── Data Export ────────────────────────────────────────────────────────
-  exportData: (type, eventId) => api.get('/admin/export', { 
-    params: { type, eventId } 
-  }),
-  exportStats: () => api.get('/admin/export/stats'),
 
-  // Manual cleanup
+  // Data Export
+  exportData:  (type, eventId) => api.get('/admin/export', { params: { type, eventId } }),
+  exportStats: ()              => api.get('/admin/export/stats'),
+
+  // Cleanup
   manualCleanup: () => api.post('/admin/cleanup'),
+
+  // Organizers (aggregated from events)
+  getOrganizers: () => api.get('/admin/organizers'),
+
+  // All staff across every event
+  getAllStaff: () => api.get('/admin/staff'),
+
+  // All participants across every event (paginated)
+  getAllParticipants: (params) => api.get('/admin/all-participants', { params }),
+
+  // Employee CRUD
+  getEmployees:   ()          => api.get('/admin/employees'),
+  createEmployee: (data)      => api.post('/admin/employees', data),
+  updateEmployee: (id, data)  => api.patch(`/admin/employees/${id}`, data),
+  deleteEmployee: (id)        => api.delete(`/admin/employees/${id}`),
 };
 
-// Tasks
+// ─── Task API ─────────────────────────────────────────────────────────────────
 export const taskAPI = {
-  getAll: (eventId) => api.get(`/events/${eventId}/tasks`),
-  create: (eventId, data) => api.post(`/events/${eventId}/tasks`, data),
-  toggle: (eventId, taskId) => api.patch(`/events/${eventId}/tasks/${taskId}/toggle`),
-  delete: (eventId, taskId) => api.delete(`/events/${eventId}/tasks/${taskId}`)
+  getAll: (eventId)           => api.get(`/events/${eventId}/tasks`),
+  create: (eventId, data)     => api.post(`/events/${eventId}/tasks`, data),
+  toggle: (eventId, taskId)   => api.patch(`/events/${eventId}/tasks/${taskId}/toggle`),
+  delete: (eventId, taskId)   => api.delete(`/events/${eventId}/tasks/${taskId}`),
 };
 
-// Announcements
+// ─── Announcement API ─────────────────────────────────────────────────────────
 export const announcementAPI = {
-  getAll: (eventId) => api.get(`/events/${eventId}/announcements`),
-  create: (eventId, data) => api.post(`/events/${eventId}/announcements`, data),
-  delete: (eventId, announcementId) => api.delete(`/events/${eventId}/announcements/${announcementId}`)
+  getAll:  (eventId)                     => api.get(`/events/${eventId}/announcements`),
+  create:  (eventId, data)               => api.post(`/events/${eventId}/announcements`, data),
+  delete:  (eventId, announcementId)     => api.delete(`/events/${eventId}/announcements/${announcementId}`),
 };
 
-// Expenses
+// ─── Expense API ──────────────────────────────────────────────────────────────
 export const expenseAPI = {
-  getAll: (eventId) => api.get(`/events/${eventId}/expenses`),
-  create: (eventId, data) => api.post(`/events/${eventId}/expenses`, data),
-  delete: (eventId, expenseId) => api.delete(`/events/${eventId}/expenses/${expenseId}`),
-  updateBudget: (eventId, budget) => api.patch(`/events/${eventId}/budget`, { budget })
+  getAll:       (eventId)          => api.get(`/events/${eventId}/expenses`),
+  create:       (eventId, data)    => api.post(`/events/${eventId}/expenses`, data),
+  delete:       (eventId, expId)   => api.delete(`/events/${eventId}/expenses/${expId}`),
+  updateBudget: (eventId, budget)  => api.patch(`/events/${eventId}/budget`, { budget }),
 };
 
-// Notes
+// ─── Note API ─────────────────────────────────────────────────────────────────
 export const noteAPI = {
-  getAll: (eventId) => api.get(`/events/${eventId}/notes`),
-  create: (eventId, data) => api.post(`/events/${eventId}/notes`, data),
-  update: (eventId, noteId, data) => api.put(`/events/${eventId}/notes/${noteId}`, data),
-  delete: (eventId, noteId) => api.delete(`/events/${eventId}/notes/${noteId}`)
+  getAll: (eventId)                => api.get(`/events/${eventId}/notes`),
+  create: (eventId, data)          => api.post(`/events/${eventId}/notes`, data),
+  update: (eventId, noteId, data)  => api.put(`/events/${eventId}/notes/${noteId}`, data),
+  delete: (eventId, noteId)        => api.delete(`/events/${eventId}/notes/${noteId}`),
 };
 
-// Analytics
+// ─── Analytics API ────────────────────────────────────────────────────────────
 export const analyticsAPI = {
-  get: (eventId) => api.get(`/events/${eventId}/analytics`)
+  get: (eventId) => api.get(`/events/${eventId}/analytics`),
 };
 
 // ─── Uptime API ───────────────────────────────────────────────────────────────
@@ -236,26 +246,24 @@ export const uptimeAPI = {
   submitReport: (data) => api.post('/uptime/report', data),
 
   // Admin
-  getReports:          ()           => api.get('/uptime/admin/reports'),
-  updateReport:        (id, data)   => api.patch(`/uptime/admin/reports/${id}`, data),
-  getIncidents:        ()           => api.get('/uptime/admin/incidents'),
-  createIncident:      (data)       => api.post('/uptime/admin/incidents', data),
-  addTimelineUpdate:   (id, data)   => api.post(`/uptime/admin/incidents/${id}/timeline`, data),
-  updateIncident:      (id, data)   => api.patch(`/uptime/admin/incidents/${id}`, data),
-  deleteIncident:      (id)         => api.delete(`/uptime/admin/incidents/${id}`),
+  getReports:        ()          => api.get('/uptime/admin/reports'),
+  updateReport:      (id, data)  => api.patch(`/uptime/admin/reports/${id}`, data),
+  getIncidents:      ()          => api.get('/uptime/admin/incidents'),
+  createIncident:    (data)      => api.post('/uptime/admin/incidents', data),
+  addTimelineUpdate: (id, data)  => api.post(`/uptime/admin/incidents/${id}/timeline`, data),
+  updateIncident:    (id, data)  => api.patch(`/uptime/admin/incidents/${id}`, data),
+  deleteIncident:    (id)        => api.delete(`/uptime/admin/incidents/${id}`),
 };
 
 // ─── Watchdog API ─────────────────────────────────────────────────────────────
 // Calls the external watchdog service directly so the status page always has
-// fresh incident data even when the main server is down or unreachable.
-// Falls back gracefully — if VITE_WATCHDOG_URL is not set, all calls resolve
-// with null and the status page uses the main API instead.
+// fresh data even when the main server is down or unreachable.
+// Falls back gracefully — if VITE_WATCHDOG_URL is not set, all calls return null.
 const watchdogAxios = WATCHDOG_URL
   ? axios.create({ baseURL: WATCHDOG_URL, timeout: 8000 })
   : null;
 
 export const watchdogAPI = {
-  // Returns same shape as uptimeAPI.getStatus() plus a .watchdog field
   getStatus: () => {
     if (!watchdogAxios) return Promise.resolve(null);
     return watchdogAxios.get('/watchdog/status');
@@ -264,14 +272,13 @@ export const watchdogAPI = {
     if (!watchdogAxios) return Promise.resolve(null);
     return watchdogAxios.get('/watchdog/ping');
   },
-  // Returns per-service 15-day uptime history from UptimeCheck records
   getUptimeHistory: () => {
     if (!watchdogAxios) return Promise.resolve(null);
     return watchdogAxios.get('/watchdog/uptime');
   },
 };
 
-// Utilities
+// ─── Utility API ──────────────────────────────────────────────────────────────
 export const utilityAPI = {
   downloadCalendar: (eventId, token) => {
     const url = `${API_URL}/events/${eventId}/calendar.ics`;
@@ -280,15 +287,15 @@ export const utilityAPI = {
     a.download = 'event.ics';
     a.style.display = 'none';
     document.body.appendChild(a);
-    fetch(url, {
-      headers: { 'x-event-token': token }
-    }).then(res => res.blob()).then(blob => {
-      const blobUrl = URL.createObjectURL(blob);
-      a.href = blobUrl;
-      a.click();
-      URL.revokeObjectURL(blobUrl);
-      document.body.removeChild(a);
-    });
+    fetch(url, { headers: { 'x-event-token': token } })
+      .then(res => res.blob())
+      .then(blob => {
+        const blobUrl = URL.createObjectURL(blob);
+        a.href = blobUrl;
+        a.click();
+        URL.revokeObjectURL(blobUrl);
+        document.body.removeChild(a);
+      });
   },
   downloadParticipants: (eventId, token) => {
     const url = `${API_URL}/events/${eventId}/participants.csv`;
@@ -297,19 +304,18 @@ export const utilityAPI = {
     a.download = 'participants.csv';
     a.style.display = 'none';
     document.body.appendChild(a);
-    fetch(url, {
-      headers: { 'x-event-token': token }
-    }).then(res => res.blob()).then(blob => {
-      const blobUrl = URL.createObjectURL(blob);
-      a.href = blobUrl;
-      a.click();
-      URL.revokeObjectURL(blobUrl);
-      document.body.removeChild(a);
-    });
+    fetch(url, { headers: { 'x-event-token': token } })
+      .then(res => res.blob())
+      .then(blob => {
+        const blobUrl = URL.createObjectURL(blob);
+        a.href = blobUrl;
+        a.click();
+        URL.revokeObjectURL(blobUrl);
+        document.body.removeChild(a);
+      });
   },
-  generateQRCode: (url) => {
-    return `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(url)}`;
-  }
+  generateQRCode: (url) =>
+    `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(url)}`,
 };
 
 export default api;
