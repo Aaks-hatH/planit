@@ -127,6 +127,20 @@ const eventSchema = new mongoose.Schema({
     updatedAt: { type: Date, default: Date.now }
   }],
 
+  waitlist: [{
+    username: { type: String, required: true },
+    email:    { type: String, default: '' },
+    joinedAt: { type: Date, default: Date.now },
+  }],
+
+  webhooks: [{
+    url:    { type: String, required: true, trim: true },
+    events: [{ type: String }], // e.g. ['participant_joined','rsvp_updated','checkin']
+    secret: { type: String, default: '' }, // HMAC-SHA256 signing secret
+    active: { type: Boolean, default: true },
+    createdAt: { type: Date, default: Date.now },
+  }],
+
   agenda: [{
     id: { type: String, required: true },
     time: { type: String, trim: true, maxlength: 20 },
