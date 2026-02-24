@@ -209,7 +209,11 @@ function AdmitSuccessScreen({ guest, onDone }) {
           <p className="text-sm text-neutral-500">
             {paused ? 'Screen paused — tap Done when ready' : `Auto-closing in ${countdown}s...`}
           </p>
-          <div className="flex gap-3">
+          <div className="flex items-center gap-3">
+            <span className="text-xs text-neutral-400 font-medium tracking-wide">
+              Powered by <span className="font-black text-neutral-600">Planit</span>
+            </span>
+            <div className="w-px h-4 bg-neutral-200" />
             <button
               onClick={() => setPaused(v => !v)}
               className="px-4 py-2 text-sm font-semibold text-neutral-600 border border-neutral-200 rounded-xl hover:bg-neutral-100 transition-all"
@@ -1776,6 +1780,12 @@ export default function EnterpriseCheckin() {
           </div>
         </div>
       </main>
+
+      <footer className="max-w-5xl mx-auto px-6 py-5 flex items-center justify-center">
+        <p className="text-xs text-neutral-400 font-medium tracking-wide">
+          Powered by <span className="font-black text-neutral-500">Planit</span>
+        </p>
+      </footer>
     </div>
   );
 }
