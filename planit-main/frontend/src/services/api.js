@@ -96,6 +96,20 @@ export const eventAPI = {
 
   // Override history (audit trail)
   getOverrideHistory: (eventId) => api.get(`/events/${eventId}/override-history`),
+
+  // Waitlist
+  joinWaitlist:   (eventId, data)   => api.post(`/events/${eventId}/waitlist`, data),
+  getWaitlist:    (eventId)         => api.get(`/events/${eventId}/waitlist`),
+  leaveWaitlist:  (eventId, name)   => api.delete(`/events/${eventId}/waitlist/${encodeURIComponent(name)}`),
+
+  // Clone / recurring
+  clone: (eventId, data) => api.post(`/events/${eventId}/clone`, data),
+
+  // Webhooks
+  getWebhooks:    (eventId)             => api.get(`/events/${eventId}/webhooks`),
+  createWebhook:  (eventId, data)       => api.post(`/events/${eventId}/webhooks`, data),
+  updateWebhook:  (eventId, whId, data) => api.patch(`/events/${eventId}/webhooks/${whId}`, data),
+  deleteWebhook:  (eventId, whId)       => api.delete(`/events/${eventId}/webhooks/${whId}`),
 };
 
 // ─── Chat API ─────────────────────────────────────────────────────────────────
@@ -314,8 +328,13 @@ export const utilityAPI = {
         document.body.removeChild(a);
       });
   },
-  generateQRCode: (url) =>
-    `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(url)}`,
+  generateQRCode: (eventId) =>
+    `${API_URL}/events/${eventId}/qr.svg`,
+};
+
+// ─── Discover API ─────────────────────────────────────────────────────────────
+export const discoverAPI = {
+  getPublicEvents: (params) => api.get('/events/public', { baseURL: API_URL.replace('/api', '') + '/api', params }),
 };
 
 export default api;
