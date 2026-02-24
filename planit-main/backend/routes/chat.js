@@ -3,6 +3,7 @@ const router = express.Router();
 const { body, validationResult } = require('express-validator');
 const Message = require('../models/Message');
 const { verifyEventAccess } = require('../middleware/auth');
+const { fireWebhooks } = require('./events');
 const { chatLimiter } = require('../middleware/rateLimiter');
 
 // Validation middleware
@@ -73,6 +74,13 @@ router.post('/:eventId/messages',
       if (io) {
         io.to(`event_${req.params.eventId}`).emit('new_message', message);
       }
+
+      // Fire webhooks non-blocking
+      fireWebhooks(req.params.eventId, 'message_sent', {
+        username: message.username,
+        message:  message.content,
+        messageId: message._id.toString(),
+      }).catch(() => {});
 
       res.status(201).json(message);
     } catch (error) {
