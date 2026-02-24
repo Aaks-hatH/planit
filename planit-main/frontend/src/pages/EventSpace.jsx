@@ -26,19 +26,33 @@ import DeletionWarningBanner from '../components/DeletionWarningBanner';
 import OrganizerSettings from '../components/OrganizerSettings';
 
 /* ─── QR Modal ───────────────────────────────────────────────────────────── */
-function QRModal({ url, onClose }) {
-  const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${encodeURIComponent(url)}`;
+function QRModal({ eventId, onClose }) {
+  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+  const qrSrc = `${apiUrl}/events/${eventId}/qr.svg`;
+
+  const handleDownload = () => {
+    const a = document.createElement('a');
+    a.href = qrSrc;
+    a.download = `planit-qr-${eventId}.svg`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  };
+
   return (
     <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={onClose}>
       <div className="bg-white rounded-2xl p-6 w-80 shadow-xl" onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-sm font-semibold text-neutral-900">QR Code</h3>
+          <h3 className="text-sm font-semibold text-neutral-900">Event QR Code</h3>
           <button onClick={onClose} className="btn btn-ghost p-1"><X className="w-4 h-4" /></button>
         </div>
-        <div className="flex justify-center mb-4">
-          <img src={qrUrl} alt="QR Code" className="w-60 h-60 border border-neutral-200 rounded-lg" />
+        <div className="flex justify-center mb-3">
+          <img src={qrSrc} alt="PlanIt QR Code" className="w-64 h-auto rounded-xl border border-neutral-100" />
         </div>
-        <p className="text-xs text-neutral-400 text-center">Scan to join this event</p>
+        <p className="text-xs text-neutral-400 text-center mb-3">Scan to join · branded for sharing</p>
+        <button onClick={handleDownload} className="btn btn-secondary w-full text-xs gap-1.5">
+          <Download className="w-3.5 h-3.5" /> Download SVG
+        </button>
       </div>
     </div>
   );
@@ -57,6 +71,12 @@ function JoinGate({ eventId, onJoined }) {
   const [needsAccountPassword, setNeedsAccountPassword] = useState(false);
   const [selectedHasPassword, setSelectedHasPassword] = useState(false);
   const [error, setError] = useState('');
+  // Waitlist
+  const [isFull, setIsFull] = useState(false);
+  const [waitlistName, setWaitlistName] = useState('');
+  const [waitlistEmail, setWaitlistEmail] = useState('');
+  const [waitlistDone, setWaitlistDone] = useState(false);
+  const [waitlistJoining, setWaitlistJoining] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -66,8 +86,10 @@ function JoinGate({ eventId, onJoined }) {
       eventAPI.getParticipants(eventId),
     ])
       .then(([infoRes, partRes]) => {
-        setPublicInfo(infoRes.data.event);
+        const info = infoRes.data.event;
+        setPublicInfo(info);
         setKnownParticipants(partRes.data.participants || []);
+        setIsFull(info.participantCount >= info.maxParticipants);
       })
       .catch(() => navigate('/'))
       .finally(() => setLoading(false));
@@ -181,6 +203,51 @@ function JoinGate({ eventId, onJoined }) {
             </div>
 
             <>
+              {isFull ? (
+                /* ── Event full: waitlist ── */
+                waitlistDone ? (
+                  <div className="text-center py-4">
+                    <div className="w-10 h-10 rounded-full bg-emerald-50 border border-emerald-200 flex items-center justify-center mx-auto mb-3">
+                      <CheckCircle2 className="w-5 h-5 text-emerald-600" />
+                    </div>
+                    <p className="text-sm font-semibold text-neutral-900 mb-1">You're on the waitlist</p>
+                    <p className="text-xs text-neutral-400">The organizer will contact you if a spot opens up.</p>
+                  </div>
+                ) : (
+                  <div>
+                    <div className="flex items-center gap-2 mb-4 px-3 py-2 bg-amber-50 rounded-lg border border-amber-200">
+                      <Users className="w-3.5 h-3.5 text-amber-600 flex-shrink-0" />
+                      <span className="text-xs text-amber-700 font-medium">This event is full — join the waitlist</span>
+                    </div>
+                    <div className="space-y-3">
+                      <div>
+                        <label className="block text-sm font-medium text-neutral-700 mb-1.5">Your name</label>
+                        <input type="text" className="input" placeholder="Enter your name" value={waitlistName} onChange={e => setWaitlistName(e.target.value)} />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-neutral-700 mb-1.5">Email <span className="font-normal text-neutral-400">(optional)</span></label>
+                        <input type="email" className="input" placeholder="your@email.com" value={waitlistEmail} onChange={e => setWaitlistEmail(e.target.value)} />
+                      </div>
+                      <button
+                        onClick={async () => {
+                          if (!waitlistName.trim()) return;
+                          setWaitlistJoining(true);
+                          try {
+                            await eventAPI.joinWaitlist(eventId, { username: waitlistName.trim(), email: waitlistEmail.trim() });
+                            setWaitlistDone(true);
+                          } catch (err) {
+                            toast.error(err.response?.data?.error || 'Failed to join waitlist');
+                          } finally { setWaitlistJoining(false); }
+                        }}
+                        disabled={waitlistJoining || !waitlistName.trim()}
+                        className="btn btn-primary w-full py-2.5"
+                      >
+                        {waitlistJoining ? <><span className="spinner w-4 h-4 border-2 border-white/30 border-t-white" />Joining...</> : 'Join waitlist'}
+                      </button>
+                    </div>
+                  </div>
+                )
+              ) : (
               <h2 className="text-base font-semibold text-neutral-900 mb-4">Join this event</h2>
                 <form onSubmit={handleJoin} className="space-y-4">
                   {/* Name field with dropdown */}
@@ -252,7 +319,8 @@ function JoinGate({ eventId, onJoined }) {
                       : <>Join event<ChevronRight className="w-4 h-4" /></>}
                   </button>
                 </form>
-              </>
+              )}
+            </>
           </div>
           <div className="mt-6 pt-4 border-t border-neutral-100">
             <div className="text-center space-y-3">
@@ -810,7 +878,7 @@ export default function EventSpace() {
       {/* Deletion Warning Banner - Shows 7-day countdown */}
       <DeletionWarningBanner eventId={eventId} />
       
-      {showQR && <QRModal url={`${window.location.origin}/event/${eventId}`} onClose={() => setShowQR(false)} />}
+      {showQR && <QRModal eventId={eventId} onClose={() => setShowQR(false)} />}
       {showSettings && isOrganizer && (
         <OrganizerSettings
           eventId={eventId}
