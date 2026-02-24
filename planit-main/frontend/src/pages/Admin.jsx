@@ -110,14 +110,16 @@ const MemBar = ({ label, used, total, color = 'blue' }) => {
 
 // ─── Log Line ─────────────────────────────────────────────────────────────────
 const LogLine = ({ entry }) => {
-  const colors = { error: 'text-red-400', warn: 'text-amber-400', info: 'text-neutral-300' };
-  const prefix = { error: '[ERR]', warn: '[WRN]', info: '[INF]' };
+  const colors  = { error: 'text-red-400', warn: 'text-amber-400', info: 'text-neutral-300' };
+  const bgColor = { error: 'bg-red-950/30', warn: 'bg-amber-950/20', info: '' };
+  const prefix  = { error: 'ERR', warn: 'WRN', info: 'INF' };
   const t = DateTime.fromISO(entry.ts).toFormat('HH:mm:ss.SSS');
+  const date = DateTime.fromISO(entry.ts).toFormat('MM/dd');
   return (
-    <div className="flex gap-3 text-xs font-mono leading-relaxed py-0.5 hover:bg-white/5 px-2 rounded">
-      <span className="text-neutral-600 flex-shrink-0 select-none">{t}</span>
-      <span className={`flex-shrink-0 font-bold ${colors[entry.level] || 'text-neutral-400'}`}>{prefix[entry.level] || '[LOG]'}</span>
-      <span className="text-neutral-300 break-all">{entry.msg}</span>
+    <div className={`flex gap-2 text-xs font-mono leading-relaxed py-0.5 hover:bg-white/5 px-2 rounded ${bgColor[entry.level] || ''}`}>
+      <span className="text-neutral-600 flex-shrink-0 select-none tabular-nums w-28">{date} {t}</span>
+      <span className={`flex-shrink-0 font-bold w-7 ${colors[entry.level] || 'text-neutral-400'}`}>{prefix[entry.level] || 'LOG'}</span>
+      <span className={`flex-shrink-0 break-all ${colors[entry.level] || 'text-neutral-300'}`}>{entry.msg}</span>
     </div>
   );
 };
@@ -840,7 +842,7 @@ function LogsPanel() {
 
   const loadLogs = async () => {
     setLoading(true);
-    try { const r = await adminAPI.getLogs(500); setLogs(r.data.logs || []); } catch { toast.error('Failed to load logs'); }
+    try { const r = await adminAPI.getLogs('all'); setLogs(r.data.logs || []); } catch { toast.error('Failed to load logs'); }
     finally { setLoading(false); }
   };
 
@@ -866,6 +868,21 @@ function LogsPanel() {
     setLive(false);
   };
 
+  const downloadFull = async () => {
+    try {
+      const token  = localStorage.getItem('adminToken');
+      const apiUrl = import.meta.env?.VITE_API_URL || '';
+      const r = await fetch(`${apiUrl}/api/admin/logs/full`, { headers: { Authorization: `Bearer ${token}` } });
+      const data = await r.json();
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `planit-full-dump-${Date.now()}.json`;
+      a.click();
+      toast.success('Full system dump downloaded');
+    } catch { toast.error('Failed to fetch full dump'); }
+  };
+
   useEffect(() => () => esRef.current?.close(), []);
 
   const filtered = logs.filter(l => {
@@ -888,7 +905,8 @@ function LogsPanel() {
           <button onClick={live ? stopLive : startLive} className={`btn text-sm gap-2 ${live ? 'bg-red-600 text-white border-red-600 hover:bg-red-700' : 'bg-emerald-600 text-white border-emerald-600 hover:bg-emerald-700'}`}>
             {live ? <><Power className="w-3.5 h-3.5" /> Stop Live</> : <><Radio className="w-3.5 h-3.5" /> Go Live</>}
           </button>
-          <button onClick={() => { const blob = new Blob([logs.map(l => `[${l.ts}] [${l.level.toUpperCase()}] ${l.msg}`).join('\n')], { type: 'text/plain' }); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `logs-${Date.now()}.txt`; a.click(); }} className="btn btn-secondary text-sm gap-1"><Download className="w-3.5 h-3.5" /> Export</button>
+          <button onClick={() => { const blob = new Blob([logs.map(l => `[${l.ts}] [${l.level.toUpperCase()}] ${l.msg}`).join('\n')], { type: 'text/plain' }); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `logs-${Date.now()}.txt`; a.click(); }} className="btn btn-secondary text-sm gap-1"><Download className="w-3.5 h-3.5" /> Export .txt</button>
+          <button onClick={downloadFull} className="btn btn-secondary text-sm gap-1"><Download className="w-3.5 h-3.5" /> Full Dump</button>
           <button onClick={loadLogs} className="btn btn-secondary text-sm gap-1"><RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} /></button>
         </div>
       </div>
