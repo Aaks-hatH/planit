@@ -301,11 +301,48 @@ export const watchdogAPI = {
 
 // ─── Router API ───────────────────────────────────────────────────────────────
 // Talks to the PlanIt Router (VITE_ROUTER_URL) for fleet control + boost mode.
-// The router uses x-mesh-secret for auth — same secret as the backend mesh.
+// The router uses meshAuth middleware which expects a signed HMAC token in
+// X-Mesh-Token (format: timestamp:callerName:hmac-sha256), NOT the raw secret.
 const MESH_SECRET   = import.meta.env.VITE_MESH_SECRET || '';
+const MESH_CALLER   = 'AdminUI';
+
+/**
+ * Generate a signed X-Mesh-Token using the Web Crypto API (browser-native).
+ * Format matches backend/middleware/mesh.js signToken():
+ *   `${timestamp}:${callerName}:${hmac-sha256-hex}`
+ */
+async function signMeshToken() {
+  const timestamp = Date.now().toString();
+  const payload   = `${timestamp}:${MESH_CALLER}`;
+  const enc       = new TextEncoder();
+  const key       = await crypto.subtle.importKey(
+    'raw',
+    enc.encode(MESH_SECRET),
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['sign']
+  );
+  const sigBuf = await crypto.subtle.sign('HMAC', key, enc.encode(payload));
+  const hmac   = Array.from(new Uint8Array(sigBuf))
+    .map(b => b.toString(16).padStart(2, '0'))
+    .join('');
+  return `${payload}:${hmac}`;
+}
+
 const routerAxios = ROUTER_URL
-  ? axios.create({ baseURL: ROUTER_URL, timeout: 10000, headers: { 'x-mesh-secret': MESH_SECRET } })
+  ? axios.create({ baseURL: ROUTER_URL, timeout: 10000 })
   : null;
+
+// Attach a fresh signed token before every request (tokens expire in 30s)
+if (routerAxios) {
+  routerAxios.interceptors.request.use(async (config) => {
+    const token = await signMeshToken();
+    config.headers['X-Mesh-Token']  = token;
+    config.headers['X-Mesh-Caller'] = MESH_CALLER;
+    config.headers['X-Mesh-Version'] = '1';
+    return config;
+  });
+}
 
 export const routerAPI = {
   getHealth: () => {
