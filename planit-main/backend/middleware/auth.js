@@ -66,6 +66,11 @@ const verifyToken = (req, res, next) => {
 const verifyEventAccess = async (req, res, next) => {
   try {
     const eventId = req.params.eventId || req.body.eventId;
+
+    if (!eventId || eventId === 'undefined' || eventId === 'null') {
+      return res.status(400).json({ error: 'No event ID was provided in this request.' });
+    }
+
     const event = await getCachedEvent(eventId); // ← was: Event.findById(eventId)
 
     if (!event) {
@@ -128,6 +133,12 @@ const verifyEventAccess = async (req, res, next) => {
 const verifyOrganizer = async (req, res, next) => {
   try {
     const eventId = req.params.eventId || req.body.eventId;
+
+    // Guard: catch undefined/null before hitting the DB
+    if (!eventId || eventId === 'undefined' || eventId === 'null') {
+      return res.status(400).json({ error: 'No event ID was provided in this request. This is likely a frontend bug — please refresh and try again.' });
+    }
+
     const event = await getCachedEvent(eventId); // ← was: Event.findById(eventId)
 
     if (!event) {
