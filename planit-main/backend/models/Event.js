@@ -195,6 +195,12 @@ const eventSchema = new mongoose.Schema({
     updatedAt: { type: Date, default: Date.now }
   }],
 
+  // ── Theme / Discovery ─────────────────────────────────────────────────────
+  coverImage:  { type: String, default: null }, // Cloudinary URL
+  themeColor:  { type: String, default: null }, // hex e.g. '#6366f1'
+  tags:        [{ type: String, trim: true, maxlength: 30 }], // up to 5 tags
+  // ─────────────────────────────────────────────────────────────────────────
+
   status: { type: String, enum: ['draft', 'active', 'completed', 'cancelled'], default: 'active' },
   metadata: {
     views: { type: Number, default: 0 },
