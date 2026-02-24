@@ -1987,6 +1987,10 @@ async function fireWebhooks(eventId, eventType, payload) {
     // rejects the entire embed with 400 if any field is missing its value.
     const safeStr = (v, fallback = 'N/A') => (v !== undefined && v !== null && String(v).trim() !== '') ? String(v) : fallback;
 
+    // BUG FIX: builders now return a plain JS object, NOT a JSON string.
+    // Previously they returned JSON.stringify(...) which axios then serialised
+    // again, producing double-encoded JSON. Discord received a string literal
+    // instead of an object and showed an empty message body.
     const buildDiscordPayload = (evType, planItPayload, eventName) => {
       const parsed = JSON.parse(planItPayload);
       const colorMap = {
@@ -1996,7 +2000,6 @@ async function fireWebhooks(eventId, eventType, payload) {
         message_sent:       0x8b5cf6,
       };
 
-      // Build a human-readable description (the embed "body") shown prominently below the title
       const d = parsed.data || {};
       let description = '';
       if (evType === 'message_sent' && d.message) {
@@ -2010,17 +2013,15 @@ async function fireWebhooks(eventId, eventType, payload) {
       }
 
       const fields = [];
-      // Only push data fields when they actually have content (truthy after safeStr check)
-      if (parsed.data?.username)                    fields.push({ name: 'Participant', value: safeStr(parsed.data.username),                           inline: true });
-      if (parsed.data?.rsvp)                        fields.push({ name: 'RSVP',        value: safeStr(parsed.data.rsvp),                               inline: true });
-      if (parsed.data?.message)                     fields.push({ name: 'Message',     value: safeStr(parsed.data.message).slice(0, 1024),             inline: false });
-      if (parsed.data?.actualCount !== undefined)   fields.push({ name: 'Attendees',   value: safeStr(parsed.data.actualCount, '0'),                   inline: true });
+      if (parsed.data?.username)                    fields.push({ name: 'Participant', value: safeStr(parsed.data.username),                inline: true });
+      if (parsed.data?.rsvp)                        fields.push({ name: 'RSVP',        value: safeStr(parsed.data.rsvp),                   inline: true });
+      if (parsed.data?.message)                     fields.push({ name: 'Message',     value: safeStr(parsed.data.message).slice(0, 1024), inline: false });
+      if (parsed.data?.actualCount !== undefined)   fields.push({ name: 'Attendees',   value: safeStr(parsed.data.actualCount, '0'),        inline: true });
       if (parsed.data?.guestName && parsed.data.guestName !== parsed.data.username)
-                                                    fields.push({ name: 'Guest',       value: safeStr(parsed.data.guestName),                          inline: true });
-      if (parsed.data?.inviteCode)                  fields.push({ name: 'Invite',      value: safeStr(parsed.data.inviteCode),                         inline: true });
-      // Always include event + time — these are always present
+                                                    fields.push({ name: 'Guest',       value: safeStr(parsed.data.guestName),              inline: true });
+      if (parsed.data?.inviteCode)                  fields.push({ name: 'Invite',      value: safeStr(parsed.data.inviteCode),             inline: true });
       fields.push({ name: 'Event', value: safeStr(eventName, 'PlanIt Event'), inline: true });
-      fields.push({ name: 'Time',  value: new Date(parsed.timestamp).toLocaleString(),  inline: true });
+      fields.push({ name: 'Time',  value: new Date(parsed.timestamp).toLocaleString(), inline: true });
 
       const embed = {
         title:     titleMap[evType] || evType,
@@ -2031,7 +2032,8 @@ async function fireWebhooks(eventId, eventType, payload) {
       };
       if (description) embed.description = description;
 
-      return JSON.stringify({ embeds: [embed] });
+      // Return plain object — axios handles serialisation
+      return { embeds: [embed] };
     };
 
     // Slack incoming webhooks require {"text":"..."} — anything else is silently dropped.
@@ -2050,7 +2052,7 @@ async function fireWebhooks(eventId, eventType, payload) {
 *Attendees:* ${d.actualCount}`;
       text += `
 _${new Date(parsed.timestamp).toLocaleString()}_`;
-      return JSON.stringify({ text });
+      return { text }; // plain object — axios serialises, don't stringify
     };
 
     for (const wh of active) {
@@ -2059,9 +2061,11 @@ _${new Date(parsed.timestamp).toLocaleString()}_`;
         const discord  = isDiscordUrl(urlLower);
         const slack    = isSlackUrl(urlLower);
 
+        // All three builders now return plain objects — axios serialises them.
+        // Generic webhooks receive the raw PlanIt payload parsed back to object.
         const outBody = discord ? buildDiscordPayload(eventType, body, event.title)
                       : slack   ? buildSlackPayload(eventType, body, event.title)
-                      : body;
+                      : JSON.parse(body);
 
         const headers = { 'Content-Type': 'application/json' };
         if (!discord && !slack) {
