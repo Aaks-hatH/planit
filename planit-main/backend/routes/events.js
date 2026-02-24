@@ -255,6 +255,41 @@ router.post('/join/:eventId',
   }
 );
 
+// ── PUBLIC EVENTS LISTING ──────────────────────────────────────────────────
+// IMPORTANT: This MUST appear before router.get('/:eventId', ...) otherwise
+// Express matches "public" as an eventId and verifyEventAccess throws an error.
+router.get('/public', async (req, res, next) => {
+  try {
+    const page  = parseInt(req.query.page)  || 1;
+    const limit = Math.min(parseInt(req.query.limit) || 20, 50);
+    const skip  = (page - 1) * limit;
+
+    const query = {
+      'settings.isPublic': true,
+      status: 'active',
+      date: { $gte: new Date() }
+    };
+
+    const events = await Event.find(query)
+      .select('subdomain title description date location participants maxParticipants coverImage themeColor tags createdAt')
+      .sort({ date: 1 })
+      .skip(skip)
+      .limit(limit)
+      .lean();
+
+    const total = await Event.countDocuments(query);
+
+    res.json({
+      events: events.map(ev => ({
+        ...ev,
+        participantCount: (ev.participants || []).length,
+        participants: undefined,
+      })),
+      pagination: { page, limit, total, pages: Math.ceil(total / limit) },
+    });
+  } catch (error) { next(error); }
+});
+
 // Get full event details (authenticated)
 router.get('/:eventId', verifyEventAccess, async (req, res, next) => {
   try {
@@ -875,15 +910,21 @@ router.put('/:eventId', verifyOrganizer,
   ],
   async (req, res, next) => {
     try {
-      const { title, description, date, location, settings, maxParticipants, status } = req.body;
+      const { title, description, date, location, settings, maxParticipants, status, coverImage, themeColor, tags } = req.body;
       const event = req.event;
       if (title) event.title = title;
       if (description !== undefined) event.description = description;
       if (date) event.date = date;
       if (location !== undefined) event.location = location;
-      if (settings) event.settings = { ...event.settings, ...settings };
+      if (settings) {
+        event.settings = { ...event.settings, ...settings };
+        event.markModified('settings'); // required for Mongoose to detect nested object changes
+      }
       if (maxParticipants) event.maxParticipants = maxParticipants;
       if (status && ['active', 'completed', 'cancelled'].includes(status)) event.status = status;
+      if (coverImage !== undefined) event.coverImage = coverImage;
+      if (themeColor !== undefined) event.themeColor = themeColor;
+      if (tags !== undefined) event.tags = Array.isArray(tags) ? tags.slice(0, 5) : [];
       await event.save();
 
       const io = req.app.get('io');
@@ -900,6 +941,65 @@ router.put('/:eventId', verifyOrganizer,
     } catch (error) { next(error); }
   }
 );
+
+// Upload cover image for event (organizer only)
+router.post('/:eventId/cover', verifyOrganizer, async (req, res, next) => {
+  const multer     = require('multer');
+  const cloudinary = require('cloudinary').v2;
+  const fs         = require('fs');
+  const os         = require('os');
+  const path       = require('path');
+
+  cloudinary.config({
+    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+    api_key:    process.env.CLOUDINARY_API_KEY,
+    api_secret: process.env.CLOUDINARY_API_SECRET,
+    secure:     true,
+  });
+
+  const upload = multer({
+    storage: multer.memoryStorage(),
+    limits: { fileSize: 5 * 1024 * 1024 },
+    fileFilter: (_, file, cb) => {
+      ['image/jpeg','image/png','image/webp','image/gif'].includes(file.mimetype)
+        ? cb(null, true)
+        : cb(new Error('Only images are allowed for cover photos'));
+    },
+  }).single('cover');
+
+  upload(req, res, async (err) => {
+    if (err) return res.status(400).json({ error: err.message });
+    if (!req.file) return res.status(400).json({ error: 'No image uploaded' });
+
+    if (!process.env.CLOUDINARY_CLOUD_NAME) {
+      return res.status(503).json({ error: 'Image storage is not configured' });
+    }
+
+    const safeName = `cover-${req.params.eventId}`;
+    const tmpPath  = path.join(os.tmpdir(), `planit-cover-${Date.now()}`);
+    fs.writeFileSync(tmpPath, req.file.buffer);
+
+    try {
+      const result = await cloudinary.uploader.upload(tmpPath, {
+        folder:        'planit-covers',
+        resource_type: 'image',
+        public_id:     safeName,
+        overwrite:     true,
+        transformation: [{ width: 1200, height: 400, crop: 'fill', quality: 'auto' }],
+        secure:        true,
+      });
+
+      req.event.coverImage = result.secure_url;
+      await req.event.save();
+
+      res.json({ coverImage: result.secure_url });
+    } catch (uploadErr) {
+      next(uploadErr);
+    } finally {
+      try { fs.unlinkSync(tmpPath); } catch (_) {}
+    }
+  });
+});
 
 // Delete event (organizer only)
 router.delete('/:eventId', verifyOrganizer, async (req, res, next) => {
