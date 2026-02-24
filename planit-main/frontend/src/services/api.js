@@ -158,7 +158,7 @@ export const adminAPI = {
   getSystem: () => api.get('/admin/system'),
 
   // Live Logs
-  getLogs: (n = 200) => api.get('/admin/logs', { params: { n } }),
+  getLogs: (n = 'all') => api.get('/admin/logs', { params: { n } }),
   // Note: SSE real-time stream is consumed directly via:
   //   new EventSource(`${API_URL}/admin/logs/stream`)
   // with an Authorization header injected by the component.
