@@ -566,40 +566,44 @@ export default function Status() {
   }, []);
 
   const fetchStatus = useCallback(async () => {
-    // Fetch both in parallel — main backend for incidents/status,
-    // watchdog for live server health. Neither being down blocks the other.
-    const [mainRes, watchdogRes] = await Promise.allSettled([
-      uptimeAPI.getStatus(),
-      watchdogAPI.getStatus(),
-    ]);
-
-    const mainData     = mainRes.status     === 'fulfilled' ? mainRes.value?.data     : null;
-    const watchdogData = watchdogRes.status === 'fulfilled' ? watchdogRes.value?.data : null;
-
-    if (!mainData && !watchdogData) return; // both failed, keep stale
-
-    // Start with whichever source has incident data
-    const base = mainData || watchdogData;
-
-    // Always inject watchdog.services so Infrastructure section has data
-    // even when the main backend is healthy and doesn't include server metrics
-    const merged = {
-      ...base,
-      watchdog: {
-        ...(base?.watchdog || {}),
-        services: watchdogData?.watchdog?.services || base?.watchdog?.services || [],
-      },
+    // Fire both requests independently — update state as each one resolves
+    // so a slow or hung main backend never blocks the watchdog data from rendering.
+    const mergeWatchdog = (watchdogData) => {
+      if (!watchdogData) return;
+      setData(prev => {
+        const base = prev || watchdogData;
+        return {
+          ...base,
+          watchdog: {
+            ...(base?.watchdog || {}),
+            services: watchdogData.watchdog?.services || base?.watchdog?.services || [],
+          },
+        };
+      });
+      setLastFetch(new Date());
+      if (watchdogData.uptimeHistory) setUptimeHistory(watchdogData.uptimeHistory);
     };
 
-    setData(merged);
-    setLastFetch(new Date());
+    const mergeMain = (mainData) => {
+      if (!mainData) return;
+      setData(prev => ({
+        ...mainData,
+        watchdog: {
+          ...(mainData?.watchdog || {}),
+          services: prev?.watchdog?.services || mainData?.watchdog?.services || [],
+        },
+      }));
+      setLastFetch(new Date());
+    };
 
-    // Use the 15-day history embedded in the watchdog status response.
-    // This keeps server bar charts in sync with the same fetch that provides
-    // live status, just like how regular services use allIncidents from status.
-    if (watchdogData?.uptimeHistory) {
-      setUptimeHistory(watchdogData.uptimeHistory);
-    }
+    // Both in parallel — each updates independently when it lands
+    watchdogAPI.getStatus()
+      .then(res => mergeWatchdog(res?.data))
+      .catch(() => {});
+
+    uptimeAPI.getStatus()
+      .then(res => mergeMain(res?.data))
+      .catch(() => {});
   }, []);
 
   const ping = useCallback(async () => {
