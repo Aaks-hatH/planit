@@ -2,6 +2,7 @@ import axios from 'axios';
 
 const API_URL      = import.meta.env.VITE_API_URL      || 'http://localhost:5000/api';
 const WATCHDOG_URL = import.meta.env.VITE_WATCHDOG_URL || '';
+const ROUTER_URL   = import.meta.env.VITE_ROUTER_URL   || '';
 
 const api = axios.create({
   baseURL: API_URL,
@@ -295,6 +296,34 @@ export const watchdogAPI = {
   getUptimeHistory: () => {
     if (!watchdogAxios) return Promise.resolve(null);
     return watchdogAxios.get('/watchdog/uptime');
+  },
+};
+
+// ─── Router API ───────────────────────────────────────────────────────────────
+// Talks to the PlanIt Router (VITE_ROUTER_URL) for fleet control + boost mode.
+// The router uses x-mesh-secret for auth — same secret as the backend mesh.
+const MESH_SECRET   = import.meta.env.VITE_MESH_SECRET || '';
+const routerAxios = ROUTER_URL
+  ? axios.create({ baseURL: ROUTER_URL, timeout: 10000, headers: { 'x-mesh-secret': MESH_SECRET } })
+  : null;
+
+export const routerAPI = {
+  getHealth: () => {
+    if (!routerAxios) return Promise.resolve(null);
+    return routerAxios.get('/health');
+  },
+  getStatus: () => {
+    if (!routerAxios) return Promise.resolve(null);
+    return routerAxios.get('/mesh/status');
+  },
+  activateBoost: (opts) => {
+    // opts: { durationMinutes, reason, minBackends, pinnedEventIds }
+    if (!routerAxios) return Promise.resolve(null);
+    return routerAxios.post('/mesh/boost', opts);
+  },
+  cancelBoost: () => {
+    if (!routerAxios) return Promise.resolve(null);
+    return routerAxios.delete('/mesh/boost');
   },
 };
 
