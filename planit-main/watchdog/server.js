@@ -41,7 +41,7 @@ function getBackendRegion(i) {
 backendUrls.forEach((url, i) => {
   targets.push({
     name:    getBackendLabel(i),
-    region:  getBackendRegion(i),   // e.g. "US East (Virginia)" — optional, shown in incidents
+    region:  getBackendRegion(i),   // e.g. "US East (Virginia)" - optional, shown in incidents
     url,
     pingUrl: `${url}/api/health`,
     type:    'backend',
@@ -63,26 +63,26 @@ if (targets.length === 0) {
   process.exit(1);
 }
 
-// ─── Mesh fleet state ─────────────────────────────────────────────────────────
+// --- Mesh fleet state ---------------------------------------------------------
 // Synced periodically from the router's /mesh/status endpoint.
 // Used to suppress incidents for backends that are intentionally on standby
 // (scaled-down by the router's auto-scaling logic) vs genuinely failing.
 //
 // IMPORTANT: defaults to null. isBackendActive() returns true if fleet state
-// is unavailable — we always prefer false positives (spurious alerts) over
+// is unavailable - we always prefer false positives (spurious alerts) over
 // the silent failure that occurs when this is undefined and crashes pingTarget.
 let meshFleetState = null;
 
 function isBackendActive(name) {
-  // No fleet data yet or no router configured — treat all as active (safe default)
+  // No fleet data yet or no router configured - treat all as active (safe default)
   if (!meshFleetState || !meshFleetState.backends) return true;
   const backend = meshFleetState.backends.find(b => b.name === name);
-  // Not in fleet state at all — assume active
+  // Not in fleet state at all - assume active
   if (!backend) return true;
 
-  // The router confirmed this backend is broken via circuit breaker — always alert
+  // The router confirmed this backend is broken via circuit breaker - always alert
   if (backend.circuitTripped) return true;
-  // Router's last keep-alive ping to this backend failed — it knows something's wrong
+  // Router's last keep-alive ping to this backend failed - it knows something's wrong
   if (backend.alive === false) return true;
 
   // Only truly suppress when: not active AND router believes it's alive AND circuit not tripped.
@@ -97,7 +97,7 @@ async function syncFleetState() {
     const result = await meshGet(SERVICE_NAME, `${ROUTER_URL}/mesh/status`, { timeout: 5000 });
     if (result.ok && result.data) {
       meshFleetState = result.data;
-      console.log(`[${ts()}] [fleet] Synced — ${meshFleetState.backends?.filter(b => b.active).length ?? '?'} active backend(s)`);
+      console.log(`[${ts()}] [fleet] Synced - ${meshFleetState.backends?.filter(b => b.active).length ?? '?'} active backend(s)`);
     }
   } catch (err) {
     console.warn(`[${ts()}] [fleet] Sync failed: ${err.message}`);
@@ -109,16 +109,16 @@ if (ROUTER_URL) {
   setInterval(syncFleetState, 30_000);
 }
 
-// ─── Startup log ──────────────────────────────────────────────────────────────
-console.log(`\n[${ts()}] ╔══════════════════════════════════════════════════╗`);
-console.log(`[${ts()}] ║     PlanIt Watchdog — MULTI-TARGET — STARTING   ║`);
-console.log(`[${ts()}] ╚══════════════════════════════════════════════════╝`);
+// --- Startup log --------------------------------------------------------------
+console.log(`\n[${ts()}] +==================================================+`);
+console.log(`[${ts()}] |     PlanIt Watchdog - MULTI-TARGET - STARTING   |`);
+console.log(`[${ts()}] +==================================================+`);
 console.log(`[${ts()}]   Monitoring ${targets.length} target(s):`);
-targets.forEach(t => console.log(`[${ts()}]     [${t.type}] ${t.name} → ${t.pingUrl}`));
+targets.forEach(t => console.log(`[${ts()}]     [${t.type}] ${t.name} -> ${t.pingUrl}`));
 console.log(`[${ts()}]   Interval  : ${PING_MS / 1000}s`);
 console.log(`[${ts()}]   Threshold : ${THRESHOLD} failures`);
-console.log(`[${ts()}]   ntfy      : ${NTFY_URL || 'NOT SET — alerts disabled'}`);
-console.log(`[${ts()}]   MONGO_URI : ${MONGO_URI ? 'set' : 'NOT SET — incidents will not be written to DB'}`);
+console.log(`[${ts()}]   ntfy      : ${NTFY_URL || 'NOT SET - alerts disabled'}`);
+console.log(`[${ts()}]   MONGO_URI : ${MONGO_URI ? 'set' : 'NOT SET - incidents will not be written to DB'}`);
 console.log(`[${ts()}]   Port      : ${PORT}\n`);
 
 if (!MONGO_URI) {
@@ -126,7 +126,7 @@ if (!MONGO_URI) {
   process.exit(1);
 }
 
-// ─── Mongoose models ──────────────────────────────────────────────────────────
+// --- Mongoose models ----------------------------------------------------------
 const timelineUpdateSchema = new mongoose.Schema({
   status:    { type: String, enum: ['investigating', 'identified', 'monitoring', 'resolved'], required: true },
   message:   { type: String, required: true },
@@ -171,7 +171,7 @@ const Incident     = mongoose.models.Incident     || mongoose.model('Incident', 
 const UptimeReport = mongoose.models.UptimeReport || mongoose.model('UptimeReport', uptimeReportSchema);
 const UptimeCheck  = mongoose.models.UptimeCheck  || mongoose.model('UptimeCheck',  uptimeCheckSchema);
 
-// ─── Per-target state ─────────────────────────────────────────────────────────
+// --- Per-target state ---------------------------------------------------------
 // One state object per target, keyed by target name
 const states = {};
 targets.forEach(t => {
@@ -189,7 +189,7 @@ targets.forEach(t => {
   };
 });
 
-// ─── DB ───────────────────────────────────────────────────────────────────────
+// --- DB -----------------------------------------------------------------------
 async function ensureDbConnected() {
   if (mongoose.connection.readyState === 1) return true;
   try {
@@ -202,15 +202,15 @@ async function ensureDbConnected() {
   }
 }
 
-// ── Incident message templates ────────────────────────────────────────────────
+// -- Incident message templates ------------------------------------------------
 // All user-facing text in incidents must be professional status-page language.
 // No internal names, no tech jargon, no mention of "backend" or "router".
 //
 function incidentTitle(target) {
-  if (target.type === 'router') return 'Service Disruption — Platform Unavailable';
-  if (backendUrls.length === 1) return 'Service Disruption — API Unavailable';
-  // "the Maverick server" — codename is clear, "server" contextualises it for users
-  return `Service Degradation — the ${target.name} server is unavailable`;
+  if (target.type === 'router') return 'Service Disruption - Platform Unavailable';
+  if (backendUrls.length === 1) return 'Service Disruption - API Unavailable';
+  // "the Maverick server" - codename is clear, "server" contextualises it for users
+  return `Service Degradation - the ${target.name} server is unavailable`;
 }
 
 function serverRef(target) {
@@ -319,9 +319,9 @@ async function resolveDownIncident(target, incidentId, downtimeMs) {
   }
 }
 
-// ─── ntfy ─────────────────────────────────────────────────────────────────────
-// NTFY_URL  — full topic URL e.g. https://ntfy.sh/my-secret-topic
-// NTFY_TOKEN — Bearer token for private topics (ntfy.sh → Account → Access tokens)
+// --- ntfy ---------------------------------------------------------------------
+// NTFY_URL  - full topic URL e.g. https://ntfy.sh/my-secret-topic
+// NTFY_TOKEN - Bearer token for private topics (ntfy.sh -> Account -> Access tokens)
 //              Required if your topic has access control enabled.
 const NTFY_TOKEN = process.env.NTFY_TOKEN || '';
 
@@ -340,15 +340,15 @@ async function sendNtfy({ title, message, priority = 'high', tags = [] }) {
     console.log(`[${ts()}] [ntfy] Sent: "${title}" (HTTP ${res.status})`);
   } catch (err) {
     const status = err.response?.status;
-    const hint = status === 401 ? ' — check NTFY_TOKEN (topic may require auth)'
-               : status === 403 ? ' — access denied, check NTFY_TOKEN permissions'
-               : status === 404 ? ' — topic not found, check NTFY_URL'
+    const hint = status === 401 ? ' - check NTFY_TOKEN (topic may require auth)'
+               : status === 403 ? ' - access denied, check NTFY_TOKEN permissions'
+               : status === 404 ? ' - topic not found, check NTFY_URL'
                : '';
     console.error(`[${ts()}] [ntfy] Failed: ${err.message}${hint}`);
   }
 }
 
-// ─── Ping a single target ─────────────────────────────────────────────────────
+// --- Ping a single target -----------------------------------------------------
 async function pingTarget(target) {
   const s = states[target.name];
   s.totalPings++;
@@ -377,7 +377,7 @@ async function pingTarget(target) {
       s.isDown    = false;
       s.downSince = null;
 
-      console.log(`[${ts()}] ${target.name} RECOVERED after ${mins}m — ${ms}ms`);
+      console.log(`[${ts()}] ${target.name} RECOVERED after ${mins}m - ${ms}ms`);
 
       if (s.activeIncidentId) {
         await resolveDownIncident(target, s.activeIncidentId, downtimeMs);
@@ -386,15 +386,15 @@ async function pingTarget(target) {
 
       const ref = target.type === 'router' ? 'Load Balancer' : `the ${target.name} server`;
       await sendNtfy({
-        title:    `${target.name} — Back Online`,
+        title:    `${target.name} - Back Online`,
         message:  `${ref} is back online and operating normally.\nDowntime: ${mins < 1 ? '<1' : mins} minute(s)\nResponse time: ${ms}ms\nIncident auto-resolved on status page.`,
         priority: 'high',
-        tags:     ['white_check_mark', 'tada'],
+        tags:     ['recovered'],
       });
     } else {
-      // Healthy — log every 10 pings to keep logs readable
+      // Healthy - log every 10 pings to keep logs readable
       if (s.totalPings % 10 === 0 || s.totalPings <= 2) {
-        console.log(`[${ts()}] ${target.name} OK — ${ms}ms (ping #${s.totalPings})`);
+        console.log(`[${ts()}] ${target.name} OK - ${ms}ms (ping #${s.totalPings})`);
       }
     }
 
@@ -409,42 +409,42 @@ async function pingTarget(target) {
 
     console.warn(`[${ts()}] ${target.name} FAILED (${s.consecutiveFailures}/${THRESHOLD}): ${err.message}`);
 
-    // Threshold hit — decide whether to declare down or hold for standby check
+    // Threshold hit - decide whether to declare down or hold for standby check
     if (s.consecutiveFailures === THRESHOLD && !s.isDown) {
       const isStandby = !isBackendActive(target.name);
       if (isStandby) {
         // Record when failures started so the override below has accurate downtime.
-        // Do NOT fire an incident yet — backend may legitimately be scaled down.
+        // Do NOT fire an incident yet - backend may legitimately be scaled down.
         s.downSince = s.downSince || Date.now();
         const fleetBackend = meshFleetState && meshFleetState.backends
           ? meshFleetState.backends.find(b => b.name === target.name) : null;
-        console.log(`[${ts()}] [mesh] ${target.name} is STANDBY — suppressing for now (circuitTripped=${fleetBackend ? fleetBackend.circuitTripped : 'unknown'}, alive=${fleetBackend ? fleetBackend.alive : 'unknown'}). Will escalate at ${THRESHOLD * 2} failures.`);
+        console.log(`[${ts()}] [mesh] ${target.name} is STANDBY - suppressing for now (circuitTripped=${fleetBackend ? fleetBackend.circuitTripped : 'unknown'}, alive=${fleetBackend ? fleetBackend.alive : 'unknown'}). Will escalate at ${THRESHOLD * 2} failures.`);
       } else {
         s.isDown    = true;
         s.downSince = Date.now();
 
-        console.error(`[${ts()}] ${target.name} DOWN — writing incident to DB`);
+        console.error(`[${ts()}] ${target.name} DOWN - writing incident to DB`);
 
         const incidentId   = await createDownIncident(target, err.message);
         s.activeIncidentId = incidentId;
 
         const downRef = target.type === 'router' ? 'Load Balancer' : 'the ' + target.name + ' server';
         await sendNtfy({
-          title:    target.name + ' — Service Disruption',
+          title:    target.name + ' - Service Disruption',
           message:  downRef + ' is not responding.\n\nFailed checks: ' + THRESHOLD + '/' + THRESHOLD + '\nError: ' + err.message + '\n\nStatus page has been updated automatically.',
           priority: 'urgent',
-          tags:     ['rotating_light', 'fire'],
+          tags:     ['down'],
         });
       }
     }
 
     // Hard override: router pings every 4 min so it may not know a backend is broken
     // until long after the watchdog does. If a standby keeps failing past 2x threshold
-    // with zero recovery, it is a genuine outage — escalate unconditionally.
+    // with zero recovery, it is a genuine outage - escalate unconditionally.
     const OVERRIDE_AT = THRESHOLD * 2;
     if (!s.isDown && s.consecutiveFailures === OVERRIDE_AT) {
       const downMins = s.downSince ? Math.round((Date.now() - s.downSince) / 60000) : 0;
-      console.error(`[${ts()}] [mesh] OVERRIDE: ${target.name} has ${s.consecutiveFailures} failures despite STANDBY — escalating (failing ~${downMins}m)`);
+      console.error(`[${ts()}] [mesh] OVERRIDE: ${target.name} has ${s.consecutiveFailures} failures despite STANDBY - escalating (failing ~${downMins}m)`);
 
       s.isDown    = true;
       s.downSince = s.downSince || Date.now();
@@ -454,10 +454,10 @@ async function pingTarget(target) {
 
       const downRef2 = target.type === 'router' ? 'Load Balancer' : 'the ' + target.name + ' server';
       await sendNtfy({
-        title:    target.name + ' — Service Disruption',
+        title:    target.name + ' - Service Disruption',
         message:  downRef2 + ' has been unavailable for ~' + downMins + ' minute(s).\n\nInitially classified as standby but ' + s.consecutiveFailures + ' consecutive failures confirm a genuine outage.\nError: ' + err.message + '\n\nStatus page has been updated automatically.',
         priority: 'urgent',
-        tags:     ['rotating_light', 'fire'],
+        tags:     ['down'],
       });
     }
 
@@ -466,10 +466,10 @@ async function pingTarget(target) {
       const downMins = Math.round((Date.now() - s.downSince) / 60000);
       const stillRef = target.type === 'router' ? 'Load Balancer' : 'the ' + target.name + ' server';
       await sendNtfy({
-        title:    target.name + ' — Still Unavailable (' + downMins + 'm)',
+        title:    target.name + ' - Still Unavailable (' + downMins + 'm)',
         message:  stillRef + ' has been unavailable for ' + downMins + ' minutes.\nConsecutive failures: ' + s.consecutiveFailures + '\nError: ' + err.message + '\n\nStatus page reflects current outage.',
         priority: 'high',
-        tags:     ['warning', 'clock'],
+        tags:     ['warning'],
       });
     }
   }
@@ -482,10 +482,10 @@ async function pingAll() {
   });
 }
 
-// ─── Express ──────────────────────────────────────────────────────────────────
+// --- Express ------------------------------------------------------------------
 const app = express();
 app.use(express.json());
-// Only allow cross-origin requests from the configured frontend — prevents
+// Only allow cross-origin requests from the configured frontend - prevents
 // other sites from silently harvesting status data via browser requests.
 const ALLOWED_ORIGINS = new Set(
   [FRONTEND_URL, process.env.EXTRA_CORS_ORIGIN].filter(Boolean)
@@ -506,8 +506,8 @@ app.use((_req, res, next) => {
 app.get('/',                (_req, res) => res.send('PlanIt Watchdog OK'));
 app.get('/watchdog/ping',   (_req, res) => res.json({ ok: true, ts: new Date().toISOString() }));
 
-// ─── ntfy test endpoint ───────────────────────────────────────────────────────
-// POST /watchdog/test-ntfy — fires a real test notification so you can verify
+// --- ntfy test endpoint -------------------------------------------------------
+// POST /watchdog/test-ntfy - fires a real test notification so you can verify
 // NTFY_URL and NTFY_TOKEN are correct without waiting for an actual outage.
 // Protected by a simple shared secret (MESH_SECRET) to prevent abuse.
 app.post('/watchdog/test-ntfy', express.json(), async (req, res) => {
@@ -515,7 +515,7 @@ app.post('/watchdog/test-ntfy', express.json(), async (req, res) => {
   // Basic auth: require MESH_SECRET header (same secret the router uses)
   const meshSecret = process.env.MESH_SECRET || '';
   if (!meshSecret || secret !== meshSecret) {
-    return res.status(401).json({ error: 'Unauthorized — send X-Test-Secret header with MESH_SECRET value' });
+    return res.status(401).json({ error: 'Unauthorized - send X-Test-Secret header with MESH_SECRET value' });
   }
   if (!NTFY_URL) {
     return res.status(503).json({ error: 'NTFY_URL is not configured on this watchdog' });
@@ -525,7 +525,7 @@ app.post('/watchdog/test-ntfy', express.json(), async (req, res) => {
     const headers = {
       'Title':        'PlanIt ntfy Test',
       'Priority':     'high',
-      'Tags':         'white_check_mark,test',
+      'Tags':         'test',
       'Content-Type': 'text/plain; charset=utf-8',
     };
     if (NTFY_TOKEN) headers['Authorization'] = `Bearer ${NTFY_TOKEN}`;
@@ -544,7 +544,7 @@ app.post('/watchdog/test-ntfy', express.json(), async (req, res) => {
   }
 });
 
-// ─── Mesh: watchdog internal status (auth required) ──────────────────────────
+// --- Mesh: watchdog internal status (auth required) --------------------------
 app.get('/mesh/status', meshAuth(SERVICE_NAME), (_req, res) => {
   res.json({
     service: SERVICE_NAME,
@@ -567,7 +567,7 @@ app.get('/mesh/status', meshAuth(SERVICE_NAME), (_req, res) => {
 });
 app.head('/watchdog/ping',  (_req, res) => res.sendStatus(200));
 
-// ─── Shared: compute 15-day uptime history from UptimeCheck records ──────────
+// --- Shared: compute 15-day uptime history from UptimeCheck records ----------
 async function computeUptimeHistory() {
   const since  = new Date(Date.now() - 15 * 24 * 60 * 60 * 1000);
   const checks = await UptimeCheck.find({ createdAt: { $gte: since } })
@@ -585,7 +585,7 @@ async function computeUptimeHistory() {
     days.push(`${y}-${m}-${d}`);
   }
 
-  // Group checks by service → day
+  // Group checks by service -> day
   const byService = {};
   checks.forEach(c => {
     const svc = c.service;
@@ -621,7 +621,7 @@ async function computeUptimeHistory() {
   return { services: result, generatedAt: new Date().toISOString() };
 }
 
-// Full status — same shape as before so frontend works without changes
+// Full status - same shape as before so frontend works without changes
 app.get('/watchdog/status', async (_req, res) => {
   const dbOk = await ensureDbConnected();
 
@@ -650,7 +650,7 @@ app.get('/watchdog/status', async (_req, res) => {
     : activeIncidents.length > 0 ? 'degraded'
     : 'operational';
 
-  // Build per-service summary for the response — strip internal URLs and
+  // Build per-service summary for the response - strip internal URLs and
   // raw error strings which would expose infrastructure details publicly.
   const services = targets.map(t => {
     const s = states[t.name];
@@ -661,7 +661,7 @@ app.get('/watchdog/status', async (_req, res) => {
       status:    s.isDown ? 'down' : 'up',
       lastPingMs: s.lastPingMs,
       lastPingAt: s.lastPingAt,
-      // lastError and url intentionally omitted — public endpoint
+      // lastError and url intentionally omitted - public endpoint
     };
   });
 
@@ -673,10 +673,10 @@ app.get('/watchdog/status', async (_req, res) => {
     uptimeHistory,
     checkedAt:       new Date().toISOString(),
     watchdog: {
-      // Legacy single-target field — uses router if present, otherwise first backend
+      // Legacy single-target field - uses router if present, otherwise first backend
       mainServer: anyDown ? 'DOWN' : 'UP',
       // lastError, consecutiveFailures, totalPings, uptimeSeconds intentionally
-      // omitted — public endpoint; use /mesh/status (auth-required) for internals
+      // omitted - public endpoint; use /mesh/status (auth-required) for internals
       services,
     },
   });
@@ -695,15 +695,15 @@ app.get('/watchdog/uptime', async (_req, res) => {
   }
 });
 
-// ─── Boot ─────────────────────────────────────────────────────────────────────
+// --- Boot ---------------------------------------------------------------------
 const startedAt = Date.now();
 
 async function boot() {
   await ensureDbConnected();
 
   app.listen(PORT, () => {
-    console.log(`[${ts()}] Watchdog HTTP → http://0.0.0.0:${PORT}`);
-    console.log(`[${ts()}] Status        → http://0.0.0.0:${PORT}/watchdog/status\n`);
+    console.log(`[${ts()}] Watchdog HTTP -> http://0.0.0.0:${PORT}`);
+    console.log(`[${ts()}] Status        -> http://0.0.0.0:${PORT}/watchdog/status\n`);
   });
 
   // Immediate startup ping of all targets
@@ -712,13 +712,13 @@ async function boot() {
 
   // Ongoing pings
   setInterval(pingAll, PING_MS);
-  console.log(`[${ts()}] Watchdog running — pinging ${targets.length} target(s) every ${PING_MS / 1000}s\n`);
+  console.log(`[${ts()}] Watchdog running - pinging ${targets.length} target(s) every ${PING_MS / 1000}s\n`);
 
   await sendNtfy({
-    title:    ' Monitoring Active',
-    message:  `PlanIt automated monitoring is online.\nChecking ${targets.length} service(s) every ${PING_MS / 1000}s:\n${targets.map(t => `• ${t.name}`).join('\n')}\n\nYou will be notified immediately of any service disruptions.`,
+    title:    'Monitoring Active',
+    message:  `PlanIt automated monitoring is online.\nChecking ${targets.length} service(s) every ${PING_MS / 1000}s:\n${targets.map(t => `* ${t.name}`).join('\n')}\n\nYou will be notified immediately of any service disruptions.`,
     priority: 'default',
-    tags:     ['shield', 'white_check_mark'],
+    tags:     ['monitoring'],
   });
 }
 
