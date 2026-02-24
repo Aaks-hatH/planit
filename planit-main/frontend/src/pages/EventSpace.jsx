@@ -455,6 +455,7 @@ export default function EventSpace() {
   const [copied, setCopied] = useState(false);
   const [showQR, setShowQR] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [waitlistCount, setWaitlistCount] = useState(0);
 
   const currentUser = localStorage.getItem('username');
   const isOrganizer = event?.organizerName === currentUser;
@@ -479,21 +480,13 @@ export default function EventSpace() {
   }, [event, isOrganizer, searchParams, eventId]);
 
   useEffect(() => {
-    if (event) {
-      console.log('=== ORGANIZER DEBUG ===');
-      console.log('Current User:', currentUser);
-      console.log('Organizer Name:', event.organizerName);
-      console.log('Is Organizer:', isOrganizer);
-      console.log('Is Enterprise:', event.isEnterpriseMode);
-      console.log('Event Data:', event);
-    }
-    // Load waitlist count for organizer
+    // Load waitlist count for organizer badge
     if (isOrganizer && eventId) {
       eventAPI.getWaitlist(eventId)
         .then(r => setWaitlistCount(r.data.count || 0))
         .catch(() => {});
     }
-  }, [event, currentUser, isOrganizer, eventId]);
+  }, [event, isOrganizer, eventId]);
 
   // ── FIX: Resolve subdomain to ID if needed ──
   useEffect(() => {
