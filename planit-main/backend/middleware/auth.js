@@ -167,7 +167,9 @@ const verifyOrganizer = async (req, res, next) => {
 
 // Verify admin access
 const verifyAdmin = (req, res, next) => {
-  const token = req.headers.authorization?.split(' ')[1] || req.cookies.adminToken;
+  // req.query.token is accepted so browser EventSource (SSE) can authenticate —
+  // EventSource cannot send custom headers, so the token must travel in the URL.
+  const token = req.headers.authorization?.split(' ')[1] || req.cookies.adminToken || req.query.token;
 
   if (!token) {
     return res.status(401).json({ error: 'Admin access denied.' });
