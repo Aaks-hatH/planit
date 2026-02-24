@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import {
   Calendar, Users, MessageSquare, BarChart3, FileText,
   Send, Paperclip, X, Download, Trash2, Plus, Sliders,
@@ -24,6 +24,7 @@ import Utilities from '../components/Utilities';
 import Countdown from '../components/Countdown';
 import DeletionWarningBanner from '../components/DeletionWarningBanner';
 import OrganizerSettings from '../components/OrganizerSettings';
+import Onboarding from '../components/Onboarding';
 
 /* ─── QR Modal ───────────────────────────────────────────────────────────── */
 function QRModal({ eventId, onClose }) {
@@ -458,6 +459,24 @@ export default function EventSpace() {
   const isOrganizer = event?.organizerName === currentUser;
   const myRsvp = rsvps.find(r => r.username === currentUser)?.status || null;
 
+  const [searchParams] = useSearchParams();
+  const [showOnboarding, setShowOnboarding] = useState(false);
+
+  // Show onboarding for new events: organizers and standard participants,
+  // but NOT for enterprise guests (they have a separate check-in flow)
+  useEffect(() => {
+    if (!event) return;
+    const isNewEvent = searchParams.get('new') === '1';
+    if (!isNewEvent) return;
+    const isEnterpriseGuest = event.isEnterpriseMode && !isOrganizer;
+    if (isEnterpriseGuest) return;
+    const seenKey = `planit_onboarding_${event._id || eventId}`;
+    if (!localStorage.getItem(seenKey)) {
+      localStorage.setItem(seenKey, '1');
+      setShowOnboarding(true);
+    }
+  }, [event, isOrganizer, searchParams, eventId]);
+
   useEffect(() => {
     if (event) {
       console.log('=== ORGANIZER DEBUG ===');
@@ -888,6 +907,27 @@ export default function EventSpace() {
           onClose={() => setShowSettings(false)}
           onUpdated={() => { loadEvent(); }}
         />
+      )}
+
+      {showOnboarding && (
+        <Onboarding
+          eventId={eventId}
+          subdomain={event?.subdomain}
+          isOrganizer={isOrganizer}
+          onClose={() => setShowOnboarding(false)}
+        />
+      )}
+
+      {/* Cover banner */}
+      {event?.coverImage && (
+        <div className="w-full h-40 md:h-52 overflow-hidden flex-shrink-0 relative">
+          <img
+            src={event.coverImage}
+            alt="Event cover"
+            className="w-full h-full object-cover"
+          />
+          <div className="absolute inset-0" style={{ background: 'linear-gradient(to bottom, transparent 50%, rgba(249,250,251,0.95) 100%)' }} />
+        </div>
       )}
 
       {/* Header */}
