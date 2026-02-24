@@ -523,7 +523,7 @@ app.post('/watchdog/test-ntfy', express.json(), async (req, res) => {
   try {
     const axios = require('axios');
     const headers = {
-      'Title':        'PlanIt — ntfy Test',
+      'Title':        'PlanIt ntfy Test',
       'Priority':     'high',
       'Tags':         'white_check_mark,test',
       'Content-Type': 'text/plain; charset=utf-8',
