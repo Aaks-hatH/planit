@@ -408,7 +408,7 @@ app.use(cors({
   },
   credentials: true,
   methods: ['GET','POST','PUT','PATCH','DELETE','OPTIONS'],
-  allowedHeaders: ['Content-Type','Authorization','x-mesh-secret','x-event-token'],
+  allowedHeaders: ['Content-Type','Authorization','x-mesh-token','x-mesh-caller','x-mesh-version','x-event-token'],
 }));
 
 // ─── Health endpoint ──────────────────────────────────────────────────────────
