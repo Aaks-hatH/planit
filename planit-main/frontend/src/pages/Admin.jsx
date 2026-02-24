@@ -14,8 +14,9 @@ import {
   ChevronLeft, Filter, MoreVertical, Send, Eye as EyeIcon,
   Scroll, Gauge, HardDriveDownload, Fingerprint, Building2,
   WifiOff, AlertOctagon, TrendingDown, GitBranch, Boxes,
+  Rocket, Timer, Wifi as WifiOn, Cpu as CpuIcon,
 } from 'lucide-react';
-import { adminAPI, uptimeAPI, watchdogAPI } from '../services/api';
+import { adminAPI, uptimeAPI, watchdogAPI, routerAPI } from '../services/api';
 import { SERVICE_CATEGORIES } from '../utils/serviceCategories';
 import { formatNumber, formatFileSize } from '../utils/formatters';
 import { DateTime } from 'luxon';
@@ -1451,10 +1452,204 @@ const NAV_ITEMS = [
   { id: 'staff',       label: 'Staff',        icon: UserCheck },
   { id: 'employees',   label: 'Team',         icon: Briefcase },
   { id: 'analytics',   label: 'Analytics',    icon: BarChart3 },
+  { id: 'fleet',       label: 'Fleet',        icon: Rocket },
   { id: 'system',      label: 'System',       icon: Server },
   { id: 'logs',        label: 'Logs',         icon: Terminal },
   { id: 'uptime',      label: 'Uptime',       icon: Radio },
 ];
+
+// ─── Fleet Control Panel ──────────────────────────────────────────────────────
+function FleetControl() {
+  const [status, setStatus]         = useState(null);
+  const [loading, setLoading]       = useState(true);
+  const [boostForm, setBoostForm]   = useState({ durationMinutes: 60, reason: '', minBackends: '', pinnedEventIds: '' });
+  const [boosting, setBoosting]     = useState(false);
+  const [cancelling, setCancelling] = useState(false);
+
+  const load = async () => {
+    try {
+      const r = await routerAPI.getStatus();
+      if (r?.data) setStatus(r.data);
+    } catch { /* router may not be configured */ }
+    setLoading(false);
+  };
+
+  useEffect(() => { load(); const t = setInterval(load, 10000); return () => clearInterval(t); }, []);
+
+  const handleBoost = async (e) => {
+    e.preventDefault();
+    setBoosting(true);
+    try {
+      const opts = {
+        durationMinutes: parseInt(boostForm.durationMinutes) || 60,
+        reason:          boostForm.reason || 'Admin boost',
+        minBackends:     boostForm.minBackends ? parseInt(boostForm.minBackends) : undefined,
+        pinnedEventIds:  boostForm.pinnedEventIds ? boostForm.pinnedEventIds.split(',').map(s => s.trim()).filter(Boolean) : [],
+      };
+      await routerAPI.activateBoost(opts);
+      toast.success('⚡ Boost activated');
+      load();
+    } catch (err) {
+      toast.error(err.response?.data?.error || 'Failed to activate boost');
+    }
+    setBoosting(false);
+  };
+
+  const handleCancelBoost = async () => {
+    setCancelling(true);
+    try {
+      await routerAPI.cancelBoost();
+      toast.success('Boost cancelled');
+      load();
+    } catch { toast.error('Failed to cancel boost'); }
+    setCancelling(false);
+  };
+
+  if (!import.meta.env.VITE_ROUTER_URL) {
+    return (
+      <div className="p-8 text-center">
+        <Rocket className="w-12 h-12 text-neutral-300 mx-auto mb-4" />
+        <h3 className="text-lg font-bold text-neutral-700 mb-2">Router not configured</h3>
+        <p className="text-sm text-neutral-500">Add <code className="bg-neutral-100 px-1 rounded">VITE_ROUTER_URL</code> and <code className="bg-neutral-100 px-1 rounded">VITE_MESH_SECRET</code> to your frontend environment variables.</p>
+      </div>
+    );
+  }
+
+  if (loading) return <div className="p-8 flex justify-center"><span className="spinner w-6 h-6 border-2 border-neutral-200 border-t-neutral-700" /></div>;
+
+  if (!status) {
+    return (
+      <div className="p-8 text-center">
+        <WifiOff className="w-12 h-12 text-red-300 mx-auto mb-4" />
+        <h3 className="text-lg font-bold text-neutral-700 mb-2">Router unreachable</h3>
+        <p className="text-sm text-neutral-500">Could not connect to the router. Check VITE_ROUTER_URL and VITE_MESH_SECRET.</p>
+      </div>
+    );
+  }
+
+  const boost      = status.boost;
+  const scaling    = status.scaling;
+  const backends   = status.backends || [];
+  const activeList = backends.filter(b => b.active);
+  const minutesLeft = boost?.active ? Math.max(0, Math.round((new Date(boost.activeUntil) - Date.now()) / 60000)) : 0;
+
+  return (
+    <div className="p-6 space-y-6 max-w-5xl">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-xl font-bold text-neutral-900 flex items-center gap-2"><Rocket className="w-5 h-5" /> Fleet Control</h2>
+          <p className="text-sm text-neutral-500 mt-0.5">Router · {backends.length} backends · uptime {Math.floor((status.uptime || 0) / 3600)}h {Math.floor(((status.uptime || 0) % 3600) / 60)}m</p>
+        </div>
+        <button onClick={load} className="btn btn-secondary text-xs gap-1.5"><RefreshCw className="w-3.5 h-3.5" /> Refresh</button>
+      </div>
+
+      {/* Boost banner */}
+      {boost?.active && (
+        <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex items-center gap-4">
+          <div className="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center flex-shrink-0">
+            <Zap className="w-5 h-5 text-amber-600" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="font-semibold text-amber-900 text-sm">Boost Mode Active</p>
+            <p className="text-xs text-amber-700 mt-0.5">{boost.reason} · {boost.minBackends} backends minimum · {minutesLeft}m remaining</p>
+          </div>
+          <button onClick={handleCancelBoost} disabled={cancelling} className="btn text-xs bg-amber-600 hover:bg-amber-700 text-white gap-1.5 disabled:opacity-60">
+            {cancelling ? <span className="spinner w-3.5 h-3.5 border border-white/30 border-t-white" /> : <X className="w-3.5 h-3.5" />}
+            Cancel boost
+          </button>
+        </div>
+      )}
+
+      {/* Fleet overview */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div className="card p-4"><p className="text-xs text-neutral-500 mb-1">Active</p><p className="text-2xl font-bold text-neutral-900">{scaling.activeBackendCount}</p><p className="text-xs text-neutral-400">of {scaling.totalBackends} total</p></div>
+        <div className="card p-4"><p className="text-xs text-neutral-500 mb-1">Tripped</p><p className={`text-2xl font-bold ${scaling.trippedCount > 0 ? 'text-red-600' : 'text-neutral-900'}`}>{scaling.trippedCount}</p><p className="text-xs text-neutral-400">circuit breakers</p></div>
+        <div className="card p-4"><p className="text-xs text-neutral-500 mb-1">Avg Latency</p><p className="text-2xl font-bold text-neutral-900">{Math.round(activeList.filter(b => b.latencyMs).reduce((s, b) => s + b.latencyMs, 0) / Math.max(1, activeList.filter(b => b.latencyMs).length)) || '—'}<span className="text-sm font-normal text-neutral-400">ms</span></p><p className="text-xs text-neutral-400">active backends</p></div>
+        <div className="card p-4"><p className="text-xs text-neutral-500 mb-1">Boost</p><p className={`text-2xl font-bold ${boost?.active ? 'text-amber-600' : 'text-neutral-400'}`}>{boost?.active ? 'ON' : 'OFF'}</p><p className="text-xs text-neutral-400">{boost?.active ? `${minutesLeft}m left` : 'auto-scaling'}</p></div>
+      </div>
+
+      {/* Backend cards */}
+      <div>
+        <h3 className="text-sm font-bold text-neutral-700 mb-3 flex items-center gap-2"><Server className="w-4 h-4" /> Backends</h3>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          {backends.map(b => (
+            <div key={b.index} className={`card p-4 border-2 transition-colors ${b.circuitTripped ? 'border-red-200 bg-red-50' : b.active ? 'border-emerald-200 bg-emerald-50' : 'border-neutral-100'}`}>
+              <div className="flex items-center justify-between mb-2">
+                <span className="font-semibold text-sm text-neutral-900">{b.name}</span>
+                <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${b.circuitTripped ? 'bg-red-100 text-red-700' : b.active ? 'bg-emerald-100 text-emerald-700' : 'bg-neutral-100 text-neutral-500'}`}>
+                  {b.circuitTripped ? 'tripped' : b.active ? 'active' : 'standby'}
+                </span>
+              </div>
+              <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-neutral-600">
+                <span>Latency</span><span className="font-mono font-medium">{b.latencyMs ? `${b.latencyMs}ms` : '—'}</span>
+                <span>Requests</span><span className="font-mono font-medium">{(b.requests || 0).toLocaleString()}</span>
+                <span>Sockets</span><span className="font-mono font-medium">{b.socketConnections || 0}</span>
+                {b.memoryPct != null && <><span>Memory</span><span className="font-mono font-medium">{b.memoryPct}%</span></>}
+                {b.coldStart && <><span className="col-span-2 text-amber-600 font-medium">⚠ Cold starting</span></>}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Boost form */}
+      {!boost?.active && (
+        <div className="card p-5">
+          <h3 className="text-sm font-bold text-neutral-700 mb-1 flex items-center gap-2"><Zap className="w-4 h-4 text-amber-500" /> Activate Boost Mode</h3>
+          <p className="text-xs text-neutral-500 mb-4">Instantly expand the fleet and lock it at full capacity for a set period. Use before large events, announcements, or expected traffic spikes.</p>
+          <form onSubmit={handleBoost} className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-medium text-neutral-600 mb-1">Duration (minutes)</label>
+              <input type="number" min="5" max="1440" value={boostForm.durationMinutes}
+                onChange={e => setBoostForm(p => ({ ...p, durationMinutes: e.target.value }))}
+                className="input text-sm" placeholder="60" />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-neutral-600 mb-1">Min backends to hold active</label>
+              <input type="number" min="1" max={backends.length} value={boostForm.minBackends}
+                onChange={e => setBoostForm(p => ({ ...p, minBackends: e.target.value }))}
+                className="input text-sm" placeholder={`${backends.length} (all)`} />
+            </div>
+            <div className="sm:col-span-2">
+              <label className="block text-xs font-medium text-neutral-600 mb-1">Reason (shown in logs)</label>
+              <input type="text" value={boostForm.reason}
+                onChange={e => setBoostForm(p => ({ ...p, reason: e.target.value }))}
+                className="input text-sm" placeholder="e.g. Saturday conference, product launch" />
+            </div>
+            <div className="sm:col-span-2">
+              <label className="block text-xs font-medium text-neutral-600 mb-1">Pin specific event IDs to backend 0 <span className="text-neutral-400 font-normal">(comma-separated, optional)</span></label>
+              <input type="text" value={boostForm.pinnedEventIds}
+                onChange={e => setBoostForm(p => ({ ...p, pinnedEventIds: e.target.value }))}
+                className="input text-sm font-mono" placeholder="64abc123..., 64def456..." />
+              <p className="text-xs text-neutral-400 mt-1">Pinned events always route to backend 0, guaranteed active during boost. Other events distribute across the full fleet.</p>
+            </div>
+            <div className="sm:col-span-2">
+              <button type="submit" disabled={boosting} className="btn bg-amber-500 hover:bg-amber-600 text-white gap-2 disabled:opacity-60">
+                {boosting ? <><span className="spinner w-4 h-4 border-2 border-white/30 border-t-white" /> Activating...</> : <><Zap className="w-4 h-4" /> Activate Boost</>}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {/* Scaling log */}
+      {status.scalingLog?.length > 0 && (
+        <div className="card p-4">
+          <h3 className="text-sm font-bold text-neutral-700 mb-3 flex items-center gap-2"><Activity className="w-4 h-4" /> Recent Scaling Events</h3>
+          <div className="space-y-1.5 max-h-64 overflow-y-auto">
+            {status.scalingLog.map((e, i) => (
+              <div key={i} className="flex items-start gap-3 text-xs">
+                <span className="text-neutral-400 font-mono flex-shrink-0 w-36">{new Date(e.time).toLocaleTimeString()}</span>
+                <span className="font-medium text-neutral-800">{e.action}</span>
+                <span className="text-neutral-500 truncate">{e.reason}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function Admin() {
   const [auth, setAuth] = useState(false);
@@ -1801,6 +1996,7 @@ export default function Admin() {
           {activeSection === 'staff'      && !selectedEvent && <div className="max-w-7xl mx-auto"><StaffPanel /></div>}
           {activeSection === 'employees'  && !selectedEvent && <div className="max-w-5xl mx-auto"><EmployeesPanel /></div>}
           {activeSection === 'analytics'  && !selectedEvent && <div className="max-w-5xl mx-auto"><AnalyticsPanel stats={stats} /></div>}
+          {activeSection === 'fleet'      && !selectedEvent && <FleetControl />}
           {activeSection === 'system'     && !selectedEvent && <div className="max-w-5xl mx-auto"><SystemPanel /></div>}
           {activeSection === 'logs'       && !selectedEvent && <div className="max-w-6xl mx-auto"><LogsPanel /></div>}
           {activeSection === 'uptime'     && !selectedEvent && <div className="max-w-4xl mx-auto"><UptimePanel /></div>}
