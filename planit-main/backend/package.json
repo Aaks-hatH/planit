@@ -35,7 +35,8 @@
     "stripe": "^14.21.0",
     "cloudinary": "^1.41.0",
     "node-cron": "^3.0.3",
-    "axios": "^1.x.x"
+    "axios": "^1.x.x",
+    "qrcode": "^1.5.3"
   },
   "devDependencies": {
     "nodemon": "^3.0.2"
