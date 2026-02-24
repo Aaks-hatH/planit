@@ -58,7 +58,7 @@ const verifyToken = (req, res, next) => {
     req.user = decoded;
     next();
   } catch (error) {
-    res.status(401).json({ error: 'Invalid or expired token.' });
+    res.status(401).json({ error: 'Your session has expired. Please log in again.' });
   }
 };
 
@@ -69,7 +69,7 @@ const verifyEventAccess = async (req, res, next) => {
     const event = await getCachedEvent(eventId); // ← was: Event.findById(eventId)
 
     if (!event) {
-      return res.status(404).json({ error: 'Event not found.' });
+      return res.status(404).json({ error: 'This event does not exist or has been removed.' });
     }
 
     // Always try to decode the token for username/role info
@@ -93,7 +93,7 @@ const verifyEventAccess = async (req, res, next) => {
 
     if (!token) {
       return res.status(403).json({
-        error: 'This event is password protected.',
+        error: 'This event requires a password to access.',
         requiresPassword: true
       });
     }
@@ -104,7 +104,7 @@ const verifyEventAccess = async (req, res, next) => {
 
       if (!isAdminAccess && decoded.eventId !== eventId && decoded.eventId !== eventId.toString()) {
         return res.status(403).json({
-          error: 'Invalid event access token.',
+          error: 'Your access token is not valid for this event.',
           requiresPassword: true
         });
       }
@@ -114,12 +114,13 @@ const verifyEventAccess = async (req, res, next) => {
       next();
     } catch (error) {
       res.status(403).json({
-        error: 'Invalid or expired event access token.',
+        error: 'Your session for this event has expired. Please enter the password again.',
         requiresPassword: true
       });
     }
   } catch (error) {
-    res.status(500).json({ error: 'Server error verifying event access.' });
+    console.error('[PlanIt] verifyEventAccess error:', error?.message || error);
+    res.status(500).json({ error: 'Something went wrong loading this event. Please try again.' });
   }
 };
 
@@ -135,10 +136,10 @@ const verifyOrganizer = async (req, res, next) => {
 
     const token = req.headers.authorization?.split(' ')[1] ||
                   req.headers['x-event-token'] ||
-                  req.cookies[`event_${eventId}`];
+                  req.cookies?.[`event_${eventId}`];
 
     if (!token) {
-      return res.status(401).json({ error: 'Authentication required.' });
+      return res.status(401).json({ error: 'You need to be logged in to do that. Please refresh and try again.' });
     }
 
     try {
@@ -151,17 +152,18 @@ const verifyOrganizer = async (req, res, next) => {
       const isOrganizerByName  = event.organizerName === username;
 
       if (!isOrganizerByJWT && !isOrganizerByEvent && !isOrganizerByName) {
-        return res.status(403).json({ error: 'Only organizers can perform this action.' });
+        return res.status(403).json({ error: 'Only the event organizer can do that.' });
       }
 
       req.event = event;
       req.eventAccess = decoded;
       next();
     } catch (err) {
-      return res.status(401).json({ error: 'Invalid or expired token.' });
+      return res.status(401).json({ error: 'Your session has expired. Please refresh the page and log in again.' });
     }
   } catch (error) {
-    res.status(500).json({ error: 'Server error verifying organizer status.' });
+    console.error('[PlanIt] verifyOrganizer error:', error?.message || error);
+    res.status(500).json({ error: 'Something went wrong checking your permissions. Please try again.' });
   }
 };
 
@@ -172,20 +174,20 @@ const verifyAdmin = (req, res, next) => {
   const token = req.headers.authorization?.split(' ')[1] || req.cookies.adminToken || req.query.token;
 
   if (!token) {
-    return res.status(401).json({ error: 'Admin access denied.' });
+    return res.status(401).json({ error: 'Admin login required.' });
   }
 
   try {
     const decoded = jwt.verify(token, secrets.jwt);
 
     if (!decoded.isAdmin) {
-      return res.status(403).json({ error: 'Admin privileges required.' });
+      return res.status(403).json({ error: 'Your account does not have admin privileges.' });
     }
 
     req.admin = decoded;
     next();
   } catch (error) {
-    res.status(401).json({ error: 'Invalid admin token.' });
+    res.status(401).json({ error: 'Admin session expired. Please log in again.' });
   }
 };
 
@@ -205,7 +207,7 @@ const verifyCheckinAccess = async (req, res, next) => {
                   req.cookies?.[`event_${eventId}`];
 
     if (!token) {
-      return res.status(401).json({ error: 'Authentication required.' });
+      return res.status(401).json({ error: 'You need to be logged in to access this.' });
     }
 
     try {
@@ -213,17 +215,18 @@ const verifyCheckinAccess = async (req, res, next) => {
       const role = decoded.role;
 
       if (role !== 'organizer' && role !== 'staff') {
-        return res.status(403).json({ error: 'Check-in staff or organizer access required.' });
+        return res.status(403).json({ error: 'You need check-in staff or organizer access to do that.' });
       }
 
       req.event = event;
       req.eventAccess = decoded;
       next();
     } catch (err) {
-      return res.status(401).json({ error: 'Invalid or expired token.' });
+      return res.status(401).json({ error: 'Your session has expired. Please refresh the page.' });
     }
   } catch (error) {
-    res.status(500).json({ error: 'Server error verifying access.' });
+    console.error('[PlanIt] verifyCheckinAccess error:', error?.message || error);
+    res.status(500).json({ error: 'Something went wrong verifying your access. Please try again.' });
   }
 };
 
