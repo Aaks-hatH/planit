@@ -14,6 +14,7 @@ import WallOfSupporters from './pages/WallOfSupporters';
 import About from './pages/About';
 import Status from './pages/Status';
 import Discover from './pages/Discover';
+import Waitlist from './pages/Waitlist';
 
 function App() {
   return (
@@ -21,21 +22,26 @@ function App() {
       <Routes>
         <Route path="/" element={<Home />} />
 
-        <Route path="/e/:subdomain" element={<EventSpace />} />
-        <Route path="/event/:eventId" element={<EventSpace />} />
-        <Route path="/event/:eventId/checkin" element={<EnterpriseCheckin />} />
-        <Route path="/event/:eventId/login" element={<OrganizerLogin />} />
-        <Route path="/invite/:inviteCode" element={<GuestInvite />} />
-        <Route path="/admin" element={<Admin />} />
-        <Route path="/terms" element={<Terms />} />
-        <Route path="/privacy" element={<Privacy />} />
-        <Route path="/support" element={<Support />} />
+        <Route path="/e/:subdomain"              element={<EventSpace />} />
+        <Route path="/event/:eventId"            element={<EventSpace />} />
+        <Route path="/event/:eventId/checkin"    element={<EnterpriseCheckin />} />
+        <Route path="/e/:subdomain/checkin"      element={<EnterpriseCheckin />} />
+        <Route path="/event/:eventId/login"      element={<OrganizerLogin />} />
+        <Route path="/e/:subdomain/login"        element={<OrganizerLogin />} />
+        <Route path="/event/:eventId/waitlist"   element={<Waitlist />} />
+        <Route path="/e/:subdomain/waitlist"     element={<Waitlist />} />
+        <Route path="/invite/:inviteCode"        element={<GuestInvite />} />
+
+        <Route path="/admin"           element={<Admin />} />
+        <Route path="/terms"           element={<Terms />} />
+        <Route path="/privacy"         element={<Privacy />} />
+        <Route path="/support"         element={<Support />} />
         <Route path="/support/success" element={<SupportSuccess />} />
-        <Route path="/support/wall" element={<WallOfSupporters />} />
-        <Route path="/about" element={<About />} />
-        <Route path="/status" element={<Status />} />
-        <Route path="/discover" element={<Discover />} />
-        <Route path="*" element={<NotFound />} />
+        <Route path="/support/wall"    element={<WallOfSupporters />} />
+        <Route path="/about"           element={<About />} />
+        <Route path="/status"          element={<Status />} />
+        <Route path="/discover"        element={<Discover />} />
+        <Route path="*"                element={<NotFound />} />
       </Routes>
     </Router>
   );
