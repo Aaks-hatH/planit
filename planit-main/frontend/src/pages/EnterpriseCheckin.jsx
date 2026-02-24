@@ -783,7 +783,7 @@ function QRScanner({ onScan, onClose }) {
             {/* QR Reader div - DO NOT REMOVE */}
             <div id="qr-reader" className="rounded-2xl overflow-hidden shadow-2xl"></div>
             <p className="text-white text-center mt-6 text-sm">
-              📷 Position QR code within the frame
+               Position QR code within the frame
             </p>
             <p className="text-neutral-400 text-center mt-2 text-xs">
               Scanning automatically when QR code is detected
