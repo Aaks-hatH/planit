@@ -74,11 +74,19 @@ if (targets.length === 0) {
 let meshFleetState = null;
 
 function isBackendActive(name) {
-  // No fleet data yet or no router configured — treat all as active
+  // No fleet data yet or no router configured — treat all as active (safe default)
   if (!meshFleetState || !meshFleetState.backends) return true;
   const backend = meshFleetState.backends.find(b => b.name === name);
-  // Backend not in fleet state (e.g. not registered yet) — assume active
+  // Not in fleet state at all — assume active
   if (!backend) return true;
+
+  // The router confirmed this backend is broken via circuit breaker — always alert
+  if (backend.circuitTripped) return true;
+  // Router's last keep-alive ping to this backend failed — it knows something's wrong
+  if (backend.alive === false) return true;
+
+  // Only truly suppress when: not active AND router believes it's alive AND circuit not tripped.
+  // This is the genuine "scaled-down standby" case.
   return backend.active === true;
 }
 
@@ -390,40 +398,65 @@ async function pingTarget(target) {
 
     console.warn(`[${ts()}] ${target.name} FAILED (${s.consecutiveFailures}/${THRESHOLD}): ${err.message}`);
 
-    // Threshold hit — declare down
+    // Threshold hit — decide whether to declare down or hold for standby check
     if (s.consecutiveFailures === THRESHOLD && !s.isDown) {
-      // Check mesh fleet state: if the router has this backend as standby,
-      // it's intentionally inactive — suppress the public incident.
       const isStandby = !isBackendActive(target.name);
       if (isStandby) {
-        console.log(`[${ts()}] [mesh] ${target.name} is STANDBY in fleet — down but suppressing incident`);
-        return;
+        // Record when failures started so the override below has accurate downtime.
+        // Do NOT fire an incident yet — backend may legitimately be scaled down.
+        s.downSince = s.downSince || Date.now();
+        const fleetBackend = meshFleetState && meshFleetState.backends
+          ? meshFleetState.backends.find(b => b.name === target.name) : null;
+        console.log(`[${ts()}] [mesh] ${target.name} is STANDBY — suppressing for now (circuitTripped=${fleetBackend ? fleetBackend.circuitTripped : 'unknown'}, alive=${fleetBackend ? fleetBackend.alive : 'unknown'}). Will escalate at ${THRESHOLD * 2} failures.`);
+      } else {
+        s.isDown    = true;
+        s.downSince = Date.now();
+
+        console.error(`[${ts()}] ${target.name} DOWN — writing incident to DB`);
+
+        const incidentId   = await createDownIncident(target, err.message);
+        s.activeIncidentId = incidentId;
+
+        const downRef = target.type === 'router' ? 'Load Balancer' : 'the ' + target.name + ' server';
+        await sendNtfy({
+          title:    target.name + ' — Service Disruption',
+          message:  downRef + ' is not responding.\n\nFailed checks: ' + THRESHOLD + '/' + THRESHOLD + '\nError: ' + err.message + '\n\nStatus page has been updated automatically.',
+          priority: 'urgent',
+          tags:     ['rotating_light', 'fire'],
+        });
       }
+    }
+
+    // Hard override: router pings every 4 min so it may not know a backend is broken
+    // until long after the watchdog does. If a standby keeps failing past 2x threshold
+    // with zero recovery, it is a genuine outage — escalate unconditionally.
+    const OVERRIDE_AT = THRESHOLD * 2;
+    if (!s.isDown && s.consecutiveFailures === OVERRIDE_AT) {
+      const downMins = s.downSince ? Math.round((Date.now() - s.downSince) / 60000) : 0;
+      console.error(`[${ts()}] [mesh] OVERRIDE: ${target.name} has ${s.consecutiveFailures} failures despite STANDBY — escalating (failing ~${downMins}m)`);
 
       s.isDown    = true;
-      s.downSince = Date.now();
-
-      console.error(`[${ts()}] ${target.name} DOWN — writing incident to DB`);
+      s.downSince = s.downSince || Date.now();
 
       const incidentId   = await createDownIncident(target, err.message);
       s.activeIncidentId = incidentId;
 
-      const downRef = target.type === 'router' ? 'Load Balancer' : `the ${target.name} server`;
+      const downRef2 = target.type === 'router' ? 'Load Balancer' : 'the ' + target.name + ' server';
       await sendNtfy({
-        title:    `${target.name} — Service Disruption`,
-        message:  `${downRef} is not responding.\n\nFailed checks: ${THRESHOLD}/${THRESHOLD}\nError: ${err.message}\n\nStatus page has been updated automatically.`,
+        title:    target.name + ' — Service Disruption',
+        message:  downRef2 + ' has been unavailable for ~' + downMins + ' minute(s).\n\nInitially classified as standby but ' + s.consecutiveFailures + ' consecutive failures confirm a genuine outage.\nError: ' + err.message + '\n\nStatus page has been updated automatically.',
         priority: 'urgent',
         tags:     ['rotating_light', 'fire'],
       });
     }
 
-    // Reminder every 10 failures while still down
+    // Reminder every 10 failures while confirmed down
     if (s.isDown && s.consecutiveFailures > THRESHOLD && s.consecutiveFailures % 10 === 0) {
       const downMins = Math.round((Date.now() - s.downSince) / 60000);
-      const stillRef = target.type === 'router' ? 'Load Balancer' : `the ${target.name} server`;
+      const stillRef = target.type === 'router' ? 'Load Balancer' : 'the ' + target.name + ' server';
       await sendNtfy({
-        title:    `${target.name} — Still Unavailable (${downMins}m)`,
-        message:  `${stillRef} has been unavailable for ${downMins} minutes.\nConsecutive failures: ${s.consecutiveFailures}\nError: ${err.message}\n\nStatus page reflects current outage.`,
+        title:    target.name + ' — Still Unavailable (' + downMins + 'm)',
+        message:  stillRef + ' has been unavailable for ' + downMins + ' minutes.\nConsecutive failures: ' + s.consecutiveFailures + '\nError: ' + err.message + '\n\nStatus page reflects current outage.',
         priority: 'high',
         tags:     ['warning', 'clock'],
       });
