@@ -118,7 +118,7 @@ const uptimeCheckSchema = new mongoose.Schema({
   error:     { type: String, default: null },
   createdAt: { type: Date, default: Date.now },
 });
-uptimeCheckSchema.index({ createdAt: 1 }, { expireAfterSeconds: 7776000 }); // 90 day TTL
+uptimeCheckSchema.index({ createdAt: 1 }, { expireAfterSeconds: 1296000 }); // 15 day TTL
 uptimeCheckSchema.index({ service: 1, createdAt: -1 });
 
 const Incident     = mongoose.models.Incident     || mongoose.model('Incident',     incidentSchema);
