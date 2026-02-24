@@ -1658,6 +1658,287 @@ router.patch('/:eventId/staff/:staffUsername/pin', verifyOrganizer, async (req, 
   } catch (error) { next(error); }
 });
 
+// ═══════════════════════════════════════════════════════════════════════════
+// BRANDED QR CODE
+// ═══════════════════════════════════════════════════════════════════════════
+
+// GET /:eventId/qr.svg — no auth required, encodes the public join URL
+router.get('/:eventId/qr.svg', async (req, res, next) => {
+  try {
+    const QRCode = require('qrcode');
+    const event = await Event.findById(req.params.eventId).select('title subdomain').lean();
+    if (!event) return res.status(404).send('Event not found');
+
+    const protocol = process.env.NODE_ENV === 'production' ? 'https' : req.protocol;
+    const host = process.env.BASE_DOMAIN || req.get('host');
+    const joinUrl = `${protocol}://${host}/event/${req.params.eventId}`;
+
+    const dataUrl = await QRCode.toDataURL(joinUrl, {
+      width: 220,
+      margin: 1,
+      color: { dark: '#1a1a1a', light: '#ffffff' },
+      errorCorrectionLevel: 'M',
+    });
+
+    const svg = `<svg width="280" height="330" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+  <defs>
+    <linearGradient id="hdr" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#7c3aed"/>
+      <stop offset="100%" stop-color="#6d28d9"/>
+    </linearGradient>
+    <clipPath id="outer">
+      <rect width="280" height="330" rx="16"/>
+    </clipPath>
+  </defs>
+  <!-- card background -->
+  <rect width="280" height="330" rx="16" fill="#ffffff" filter="drop-shadow(0 2px 8px rgba(0,0,0,0.12))"/>
+  <!-- purple header bar -->
+  <rect width="280" height="52" rx="16" fill="url(#hdr)" clip-path="url(#outer)"/>
+  <rect y="36" width="280" height="16" fill="#7c3aed"/>
+  <!-- logo dot -->
+  <rect x="18" y="14" width="24" height="24" rx="7" fill="rgba(255,255,255,0.25)"/>
+  <text x="30" y="31" text-anchor="middle" fill="white" font-family="system-ui,-apple-system,sans-serif" font-size="14" font-weight="bold">P</text>
+  <!-- PlanIt wordmark -->
+  <text x="52" y="31" fill="white" font-family="system-ui,-apple-system,sans-serif" font-size="16" font-weight="bold" letter-spacing="-0.3">PlanIt</text>
+  <!-- QR code image -->
+  <image x="30" y="60" width="220" height="220" href="${dataUrl}"/>
+  <!-- divider -->
+  <line x1="20" y1="288" x2="260" y2="288" stroke="#f3f4f6" stroke-width="1"/>
+  <!-- event title -->
+  <text x="140" y="308" text-anchor="middle" fill="#374151" font-family="system-ui,-apple-system,sans-serif" font-size="11" font-weight="600">${event.title.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').slice(0, 35)}</text>
+  <text x="140" y="323" text-anchor="middle" fill="#9ca3af" font-family="system-ui,-apple-system,sans-serif" font-size="10">Scan to join</text>
+</svg>`;
+
+    res.setHeader('Content-Type', 'image/svg+xml');
+    res.setHeader('Cache-Control', 'public, max-age=3600');
+    res.send(svg);
+  } catch (error) { next(error); }
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// WAITLIST
+// ═══════════════════════════════════════════════════════════════════════════
+
+// POST /:eventId/waitlist — join the waitlist when event is full
+router.post('/:eventId/waitlist',
+  [body('username').trim().isLength({ min: 1, max: 100 }), body('email').optional().isEmail(), validate],
+  async (req, res, next) => {
+    try {
+      const event = await Event.findById(req.params.eventId);
+      if (!event) return res.status(404).json({ error: 'Event not found' });
+
+      // Only allow if event is actually full
+      if (event.participants.length < event.maxParticipants) {
+        return res.status(400).json({ error: 'Event is not full — join directly instead' });
+      }
+
+      const { username, email } = req.body;
+      const alreadyOn = event.waitlist.some(w => w.username.toLowerCase() === username.toLowerCase());
+      if (alreadyOn) return res.status(409).json({ error: 'Already on the waitlist' });
+
+      const alreadyIn = event.participants.some(p => p.username.toLowerCase() === username.toLowerCase());
+      if (alreadyIn) return res.status(400).json({ error: 'Already a participant' });
+
+      event.waitlist.push({ username, email: email || '' });
+      await event.save();
+
+      res.status(201).json({
+        message: 'Added to waitlist',
+        position: event.waitlist.length,
+      });
+    } catch (error) { next(error); }
+  }
+);
+
+// GET /:eventId/waitlist — organizer only
+router.get('/:eventId/waitlist', verifyOrganizer, async (req, res, next) => {
+  try {
+    const event = await Event.findById(req.params.eventId).select('waitlist').lean();
+    if (!event) return res.status(404).json({ error: 'Event not found' });
+    res.json({ waitlist: event.waitlist || [], count: (event.waitlist || []).length });
+  } catch (error) { next(error); }
+});
+
+// DELETE /:eventId/waitlist/:username — leave the waitlist
+router.delete('/:eventId/waitlist/:username', async (req, res, next) => {
+  try {
+    const event = await Event.findById(req.params.eventId);
+    if (!event) return res.status(404).json({ error: 'Event not found' });
+    event.waitlist = event.waitlist.filter(w => w.username !== req.params.username);
+    await event.save();
+    res.json({ message: 'Removed from waitlist' });
+  } catch (error) { next(error); }
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// RECURRING EVENTS — clone with a new date
+// ═══════════════════════════════════════════════════════════════════════════
+
+router.post('/:eventId/clone', verifyOrganizer,
+  [body('date').isISO8601().withMessage('Valid date required'), validate],
+  async (req, res, next) => {
+    try {
+      const source = await Event.findById(req.params.eventId).select('+password').lean();
+      if (!source) return res.status(404).json({ error: 'Event not found' });
+
+      const { date, title } = req.body;
+
+      // Generate a unique subdomain based on original + timestamp
+      const baseSubdomain = source.subdomain.replace(/-\d+$/, '');
+      const newSubdomain = `${baseSubdomain}-${Date.now().toString(36)}`;
+
+      const cloned = new Event({
+        subdomain:          newSubdomain,
+        title:              (title || source.title).trim(),
+        description:        source.description,
+        date:               new Date(date),
+        timezone:           source.timezone,
+        location:           source.location,
+        organizerName:      source.organizerName,
+        organizerEmail:     source.organizerEmail,
+        password:           source.password,
+        isPasswordProtected: source.isPasswordProtected,
+        isEnterpriseMode:   source.isEnterpriseMode,
+        maxParticipants:    source.maxParticipants,
+        settings:           source.settings,
+        agenda:             source.agenda || [],
+        status:             'active',
+        participants:       [{ username: source.organizerName, role: 'organizer' }],
+      });
+
+      await cloned.save();
+
+      // Re-create organizer's EventParticipant record
+      await EventParticipant.create({
+        eventId:  cloned._id,
+        username: source.organizerName,
+        role:     'organizer',
+      });
+
+      const token = jwt.sign(
+        { eventId: cloned._id.toString(), username: source.organizerName, role: 'organizer' },
+        secrets.jwt,
+        { expiresIn: '30d' }
+      );
+
+      res.status(201).json({
+        message:   'Event cloned successfully',
+        event:     { id: cloned._id, subdomain: cloned.subdomain, title: cloned.title },
+        token,
+      });
+    } catch (error) { next(error); }
+  }
+);
+
+// ═══════════════════════════════════════════════════════════════════════════
+// WEBHOOKS
+// ═══════════════════════════════════════════════════════════════════════════
+
+// Utility: fire all active webhooks for a given event + event type
+async function fireWebhooks(eventId, eventType, payload) {
+  try {
+    const crypto = require('crypto');
+    const event = await Event.findById(eventId).select('webhooks title subdomain').lean();
+    if (!event || !event.webhooks?.length) return;
+
+    const active = event.webhooks.filter(wh => wh.active && wh.events.includes(eventType));
+    if (!active.length) return;
+
+    const body = JSON.stringify({
+      event:     eventType,
+      eventId:   eventId.toString(),
+      eventName: event.title,
+      subdomain: event.subdomain,
+      timestamp: new Date().toISOString(),
+      data:      payload,
+    });
+
+    for (const wh of active) {
+      try {
+        const headers = {
+          'Content-Type': 'application/json',
+          'X-PlanIt-Event': eventType,
+          'X-PlanIt-EventId': eventId.toString(),
+        };
+        if (wh.secret) {
+          const sig = crypto.createHmac('sha256', wh.secret).update(body).digest('hex');
+          headers['X-PlanIt-Signature'] = `sha256=${sig}`;
+        }
+        await axios.post(wh.url, body, { headers, timeout: 5000 });
+      } catch (_) { /* non-blocking — webhook failures never break the main flow */ }
+    }
+  } catch (_) {}
+}
+
+// GET /:eventId/webhooks — list webhooks (organizer only)
+router.get('/:eventId/webhooks', verifyOrganizer, async (req, res, next) => {
+  try {
+    const event = await Event.findById(req.params.eventId).select('webhooks').lean();
+    if (!event) return res.status(404).json({ error: 'Event not found' });
+    // Never expose the secret in list view
+    const safe = (event.webhooks || []).map(({ _id, url, events, active, createdAt }) => ({ _id, url, events, active, createdAt }));
+    res.json({ webhooks: safe });
+  } catch (error) { next(error); }
+});
+
+// POST /:eventId/webhooks — create webhook (organizer only)
+router.post('/:eventId/webhooks', verifyOrganizer,
+  [
+    body('url').isURL({ require_protocol: true }).withMessage('Valid URL required'),
+    body('events').isArray({ min: 1 }).withMessage('At least one event type required'),
+    body('secret').optional().isLength({ max: 200 }),
+    validate,
+  ],
+  async (req, res, next) => {
+    try {
+      const event = await Event.findById(req.params.eventId);
+      if (!event) return res.status(404).json({ error: 'Event not found' });
+
+      if ((event.webhooks || []).length >= 5) {
+        return res.status(400).json({ error: 'Maximum 5 webhooks per event' });
+      }
+
+      const VALID_EVENTS = ['participant_joined', 'rsvp_updated', 'checkin', 'message_sent'];
+      const filteredEvents = (req.body.events || []).filter(e => VALID_EVENTS.includes(e));
+
+      event.webhooks.push({
+        url:    req.body.url.trim(),
+        events: filteredEvents,
+        secret: req.body.secret?.trim() || '',
+        active: true,
+      });
+
+      await event.save();
+      const wh = event.webhooks[event.webhooks.length - 1];
+      res.status(201).json({ webhook: { _id: wh._id, url: wh.url, events: wh.events, active: wh.active, createdAt: wh.createdAt } });
+    } catch (error) { next(error); }
+  }
+);
+
+// PATCH /:eventId/webhooks/:webhookId — toggle active (organizer only)
+router.patch('/:eventId/webhooks/:webhookId', verifyOrganizer, async (req, res, next) => {
+  try {
+    const event = await Event.findById(req.params.eventId);
+    if (!event) return res.status(404).json({ error: 'Event not found' });
+    const wh = event.webhooks.id(req.params.webhookId);
+    if (!wh) return res.status(404).json({ error: 'Webhook not found' });
+    if (req.body.active !== undefined) wh.active = req.body.active;
+    await event.save();
+    res.json({ webhook: { _id: wh._id, url: wh.url, events: wh.events, active: wh.active } });
+  } catch (error) { next(error); }
+});
+
+// DELETE /:eventId/webhooks/:webhookId — delete webhook (organizer only)
+router.delete('/:eventId/webhooks/:webhookId', verifyOrganizer, async (req, res, next) => {
+  try {
+    const event = await Event.findById(req.params.eventId);
+    if (!event) return res.status(404).json({ error: 'Event not found' });
+    event.webhooks = event.webhooks.filter(w => w._id.toString() !== req.params.webhookId);
+    await event.save();
+    res.json({ message: 'Webhook deleted' });
+  } catch (error) { next(error); }
+});
+
 module.exports = router;
 
 // ═══════════════════════════════════════════════════════════════════════════
