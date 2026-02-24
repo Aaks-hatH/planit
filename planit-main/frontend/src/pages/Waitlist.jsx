@@ -26,10 +26,10 @@ export default function Waitlist() {
     try {
       const [wlRes, evRes] = await Promise.all([
         eventAPI.getWaitlist(eventId),
-        eventAPI.getEvent(eventId).catch(() => null),
+        eventAPI.getById(eventId).catch(() => null),
       ]);
       setWaitlist(wlRes.data.waitlist || []);
-      if (evRes?.data?.title) setEventTitle(evRes.data.title);
+      if (evRes?.data?.event?.title) setEventTitle(evRes.data.event.title);
     } catch (err) {
       if (err.response?.status === 401 || err.response?.status === 403) {
         setUnauthorized(true);
