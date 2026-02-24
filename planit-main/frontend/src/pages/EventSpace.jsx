@@ -6,7 +6,7 @@ import {
   LogOut, ArrowLeft, Copy, Check, Lock, MapPin,
   ChevronRight, Clock, QrCode, CalendarDays,
   Smile, ThumbsUp, Heart, Laugh,
-  CheckCircle2, Megaphone, DollarSign, StickyNote, Share2, UserCheck, XCircle
+  CheckCircle2, Megaphone, DollarSign, StickyNote, Share2, UserCheck, XCircle, ClipboardList
 } from 'lucide-react';
 import { eventAPI, chatAPI, pollAPI, fileAPI } from '../services/api';
 import socketService from '../services/socket';
@@ -78,6 +78,7 @@ function JoinGate({ eventId, onJoined }) {
   const [waitlistEmail, setWaitlistEmail] = useState('');
   const [waitlistDone, setWaitlistDone] = useState(false);
   const [waitlistJoining, setWaitlistJoining] = useState(false);
+  const [waitlistCount, setWaitlistCount] = useState(0);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -486,7 +487,13 @@ export default function EventSpace() {
       console.log('Is Enterprise:', event.isEnterpriseMode);
       console.log('Event Data:', event);
     }
-  }, [event, currentUser, isOrganizer]);
+    // Load waitlist count for organizer
+    if (isOrganizer && eventId) {
+      eventAPI.getWaitlist(eventId)
+        .then(r => setWaitlistCount(r.data.count || 0))
+        .catch(() => {});
+    }
+  }, [event, currentUser, isOrganizer, eventId]);
 
   // ── FIX: Resolve subdomain to ID if needed ──
   useEffect(() => {
@@ -967,6 +974,21 @@ export default function EventSpace() {
                 title="Enterprise Check-in"
               >
                 <UserCheck className="w-3.5 h-3.5" /><span className="hidden sm:inline">Check-in</span>
+              </button>
+            )}
+            {isOrganizer && (
+              <button
+                onClick={() => navigate(`/event/${eventId}/waitlist`)}
+                className="btn btn-secondary px-3 py-1.5 text-xs gap-1.5 relative"
+                title="View Waitlist"
+              >
+                <ClipboardList className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Waitlist</span>
+                {waitlistCount > 0 && (
+                  <span className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-amber-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center leading-none">
+                    {waitlistCount > 9 ? '9+' : waitlistCount}
+                  </span>
+                )}
               </button>
             )}
             <button onClick={() => { localStorage.removeItem('eventToken'); localStorage.removeItem('username'); navigate('/'); }} className="btn btn-secondary px-3 py-1.5 text-xs gap-1.5">
