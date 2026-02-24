@@ -1,638 +1,731 @@
 require('dotenv').config();
-const express      = require('express');
-const cors         = require('cors');
-const cookieParser = require('cookie-parser');
-const { createProxyMiddleware } = require('http-proxy-middleware');
-const axios        = require('axios');
-const http         = require('http');
-const { meshAuth, meshGet, meshPost, meshHeaders } = require('./mesh');
+const express  = require('express');
+const mongoose = require('mongoose');
+const axios    = require('axios');
+const { meshAuth, meshGet } = require('./mesh');
 
-// ─── Config ───────────────────────────────────────────────────────────────────
-const BACKENDS = (process.env.BACKEND_URLS || '')
-  .split(',').map(u => u.trim()).filter(Boolean);
+function ts() { return new Date().toISOString(); }
 
-if (BACKENDS.length === 0) {
-  console.error('\n  FATAL: BACKEND_URLS env var is not set.\n');
+
+const BACKEND_URLS_RAW = process.env.BACKEND_URLS  || process.env.MAIN_SERVER_URL || '';
+const ROUTER_URL       = process.env.ROUTER_URL    || '';
+const FRONTEND_URL     = process.env.FRONTEND_URL  || 'https://planitapp.onrender.com';
+const MONGO_URI        = process.env.MONGO_URI;
+const NTFY_URL         = process.env.NTFY_URL;
+const PING_MS          = parseInt(process.env.PING_INTERVAL_MS  || '60000', 10); // 1 min default
+const THRESHOLD        = parseInt(process.env.FAILURE_THRESHOLD || '3',     10);
+const PORT             = process.env.PORT || '4000';
+const SERVICE_NAME     = process.env.SERVICE_NAME || 'watchdog';
+
+// Build the list of targets to monitor
+// Each target: { name, url, pingUrl, type }
+const targets = [];
+
+
+
+const backendUrls    = BACKEND_URLS_RAW.split(',').map(u => u.trim()).filter(Boolean);
+const customLabels   = (process.env.BACKEND_LABELS   || '').split(',').map(s => s.trim()).filter(Boolean);
+const customRegions  = (process.env.BACKEND_REGIONS  || '').split(',').map(s => s.trim()).filter(Boolean);
+
+// Fallback codenames if BACKEND_LABELS not set
+const FALLBACK_NAMES = ['Alpha','Bravo','Charlie','Delta','Echo','Foxtrot','Golf'];
+
+function getBackendLabel(i) {
+  return customLabels[i] || FALLBACK_NAMES[i] || `Server ${i + 1}`;
+}
+
+function getBackendRegion(i) {
+  return customRegions[i] || null;
+}
+
+backendUrls.forEach((url, i) => {
+  targets.push({
+    name:    getBackendLabel(i),
+    region:  getBackendRegion(i),   // e.g. "US East (Virginia)" — optional, shown in incidents
+    url,
+    pingUrl: `${url}/api/health`,
+    type:    'backend',
+  });
+});
+
+// Add load balancer if configured
+if (ROUTER_URL) {
+  targets.push({
+    name:    'Load Balancer',
+    url:     ROUTER_URL,
+    pingUrl: `${ROUTER_URL}/health`,
+    type:    'router',
+  });
+}
+
+if (targets.length === 0) {
+  console.error(`[${ts()}] FATAL: No targets configured. Set BACKEND_URLS and/or ROUTER_URL.`);
   process.exit(1);
 }
 
-
-const FALLBACK_NAMES  = ['Alpha','Bravo','Charlie','Delta','Echo','Foxtrot','Golf','Hotel'];
-const customLabels    = (process.env.BACKEND_LABELS || '').split(',').map(s => s.trim()).filter(Boolean);
-function backendName(i) {
-  return customLabels[i] || FALLBACK_NAMES[i] || `Backend-${i + 1}`;
-}
-
-// SERVICE_NAME identifies this router in mesh logs
-const SERVICE_NAME = process.env.SERVICE_NAME || 'Router';
-
-const PORT              = process.env.PORT || 3000;
-const COOKIE_NAME       = 'planit_route';
-const COOKIE_MAX_AGE_MS = 24 * 60 * 60 * 1000;
-const KEEPALIVE_MS      = 4 * 60 * 1000;
-
-
-const SCALE_UP_THRESHOLD      = parseInt(process.env.SCALE_UP_THRESHOLD      || '20', 10);
-const SCALE_DOWN_THRESHOLD    = parseInt(process.env.SCALE_DOWN_THRESHOLD    || '5',  10);
-const SCALE_DOWN_PATIENCE     = parseInt(process.env.SCALE_DOWN_PATIENCE     || '5',  10); // raised from 3 — less jittery
-const CIRCUIT_TRIP_ERRORS     = parseInt(process.env.CIRCUIT_TRIP_ERRORS     || '3',  10);
-const CIRCUIT_RECOVERY_CHECKS = parseInt(process.env.CIRCUIT_RECOVERY_CHECKS || '2',  10);
-const SCALE_CHECK_MS          = 30 * 1000;
-
-console.log(`\n${'═'.repeat(60)}`);
-console.log(` PlanIt Router — Smart Scaling — starting`);
-console.log(`${'═'.repeat(60)}`);
-console.log(` Total backends : ${BACKENDS.length}`);
-BACKENDS.forEach((b, i) => console.log(`   [${i}] ${backendName(i)}`));
-console.log(` Scale up at    : ${SCALE_UP_THRESHOLD} avg connections`);
-console.log(` Scale down at  : ${SCALE_DOWN_THRESHOLD} avg connections`);
-console.log(`${'═'.repeat(60)}\n`);
-
-// ─── Per-backend state ────────────────────────────────────────────────────────
-const backendStatus = BACKENDS.map((url, i) => ({
-  url,
-  name:               backendName(i),
-  alive:              true,
-  latencyMs:          null,
-  lastPing:           null,
-  requests:           0,            // total lifetime requests
-  activeConnections:  0,            // currently in-flight requests
-  active:             false,        // is this backend in the active routing set?
-  coldStart:          false,        // true for first 90s after backend restart
-  socketConnections:  0,            // live socket.io connections (from mesh health)
-  memoryPct:          null,         // heap usage pct (from mesh health)
-  // Circuit breaker state
-  circuitTripped:     false,        // true = backend removed from routing due to errors
-  consecutiveErrors:  0,            // errors since last success
-  recoveryProbes:     0,            // successful health checks while tripped
-}));
-
-// ── Dynamic backend registry ───────────────────────────────────────────────────
-// Backends can announce themselves on startup via POST /mesh/register.
-// This allows adding new backends without restarting the router.
-// dynamicBackends: array of { url, name, region, registeredAt }
-const dynamicBackends = [];
-
-// ── Scaling state ─────────────────────────────────────────────────────────────
-let activeBackendCount = 1;   // start with 1 — expand as load grows
-let scaleDownStreak    = 0;   // consecutive quiet checks — must reach SCALE_DOWN_PATIENCE
-
-// scalingLog: keep last 20 scaling decisions for the /health endpoint
-const scalingLog = [];
-function logScale(action, reason) {
-  const entry = { time: new Date().toISOString(), action, reason, activeBackendCount };
-  scalingLog.unshift(entry);
-  if (scalingLog.length > 20) scalingLog.pop();
-  console.log(`  [scale] ${action} → ${activeBackendCount} active — ${reason}`);
-}
-
-// Mark which backends are in the active set
-// Active = index < activeBackendCount AND circuit not tripped
-function updateActiveSet() {
-  backendStatus.forEach((b, i) => {
-    b.active = i < activeBackendCount && !b.circuitTripped;
-  });
-  const activeList = backendStatus
-    .map((b, i) => b.active ? i : null).filter(i => i !== null);
-  console.log(`  [scale] Active set: [${activeList.join(', ')}] of ${BACKENDS.length} total`);
-}
-updateActiveSet();
-
-// ─── Routing ──────────────────────────────────────────────────────────────────
-const OBJECTID_RE = /[a-f0-9]{24}/i;
-
-function djb2(str) {
-  let h = 5381;
-  for (let i = 0; i < str.length; i++) {
-    h = ((h << 5) + h) ^ str.charCodeAt(i);
-    h = h >>> 0;
-  }
-  return h % activeBackendCount;
-}
-
-// Pick a backend — skips tripped (circuit-broken) backends automatically
-function pickHealthyBackend(preferredIndex) {
-  // If preferred is healthy, use it
-  if (!backendStatus[preferredIndex]?.circuitTripped) return preferredIndex;
-  // Otherwise find next healthy backend in the active set
-  for (let i = 0; i < activeBackendCount; i++) {
-    if (!backendStatus[i].circuitTripped) return i;
-  }
-  // All active backends are tripped — try any backend as last resort
-  for (let i = 0; i < BACKENDS.length; i++) {
-    if (!backendStatus[i].circuitTripped) return i;
-  }
-  // Truly all tripped — return preferred anyway (will fail, but cleanly)
-  return preferredIndex;
-}
-
-function pickBackendIndex(req) {
-  let preferred;
-
-  // 1. EventId in URL — deterministic hash ensures all users in same event → same backend
-  const match = req.url.match(OBJECTID_RE);
-  if (match) {
-    preferred = djb2(match[0]);
-    return pickHealthyBackend(preferred);
-  }
-
-  // 2. Sticky cookie — honour previous assignment if still valid
-  const cookie = req.cookies?.[COOKIE_NAME];
-  if (cookie !== undefined) {
-    const idx = parseInt(cookie, 10);
-    if (!isNaN(idx) && idx >= 0 && idx < activeBackendCount) {
-      return pickHealthyBackend(idx);
-    }
-  }
-
-  // 3. IP-based fallback
-  const ip = req.headers['x-forwarded-for']?.split(',')[0]?.trim()
-           || req.socket?.remoteAddress || '0';
-  preferred = djb2(ip);
-  return pickHealthyBackend(preferred);
-}
-
-// ─── Circuit breaker ─────────────────────────────────────────────────────────
-// Records an error for a backend. If errors reach the trip threshold, the
-// backend is removed from routing immediately regardless of scaling state.
-function recordBackendError(index) {
-  const b = backendStatus[index];
-  b.consecutiveErrors++;
-  b.alive = false;
-
-  if (!b.circuitTripped && b.consecutiveErrors >= CIRCUIT_TRIP_ERRORS) {
-    b.circuitTripped = true;
-    b.recoveryProbes = 0;
-    updateActiveSet();
-    logScale(`Circuit tripped: ${b.name}`,
-      `${b.consecutiveErrors} consecutive errors — removed from routing`);
-  }
-}
-
-function recordBackendSuccess(index) {
-  const b = backendStatus[index];
-  b.consecutiveErrors = 0;
-  b.alive = true;
-
-  if (b.circuitTripped) {
-    b.recoveryProbes++;
-    if (b.recoveryProbes >= CIRCUIT_RECOVERY_CHECKS) {
-      b.circuitTripped = false;
-      b.recoveryProbes = 0;
-      updateActiveSet();
-      logScale(`Circuit restored: ${b.name}`,
-        `${CIRCUIT_RECOVERY_CHECKS} consecutive healthy probes — re-added to routing`);
-    }
-  }
-}
-
-// ─── Auto-scaling logic ───────────────────────────────────────────────────────
-function checkAndScale() {
-  // Only consider non-tripped backends in the active set for load measurement
-  const activeHealthy = backendStatus
-    .slice(0, activeBackendCount)
-    .filter(b => !b.circuitTripped);
-
-  if (activeHealthy.length === 0) {
-    // All active backends are tripped — emergency: expand to include next backend
-    if (activeBackendCount < BACKENDS.length) {
-      activeBackendCount++;
-      scaleDownStreak = 0;
-      updateActiveSet();
-      logScale('🚨 Emergency scale-up', 'All active backends tripped — promoting next backend');
-    }
-    return;
-  }
-
-  // Use real socketConnections from mesh health if available, else fall back to
-  // the proxy-tracked activeConnections counter.
-  const totalConnections = activeHealthy.reduce((sum, b) => {
-    const sockets = b.socketConnections || 0;
-    const proxy   = b.activeConnections || 0;
-    return sum + (sockets > 0 ? sockets : proxy);
-  }, 0);
-  const avgConnections   = totalConnections / activeHealthy.length;
-
-  // Scale UP — active backends are busy AND we have more available AND they're healthy
-  if (avgConnections >= SCALE_UP_THRESHOLD && activeBackendCount < BACKENDS.length) {
-    // Only scale up to a backend that isn't tripped and isn't cold-starting
-    const nextIndex = activeBackendCount;
-    if (!backendStatus[nextIndex]?.circuitTripped && !backendStatus[nextIndex]?.coldStart) {
-      activeBackendCount++;
-      scaleDownStreak = 0;
-      updateActiveSet();
-      logScale(`↑ Scale up`, `avg ${avgConnections.toFixed(1)} connections ≥ threshold ${SCALE_UP_THRESHOLD}`);
-    }
-    return;
-  }
-
-  // Scale DOWN — quiet for sustained period AND minimum 1 active
-  if (avgConnections <= SCALE_DOWN_THRESHOLD && activeBackendCount > 1) {
-    scaleDownStreak++;
-    if (scaleDownStreak >= SCALE_DOWN_PATIENCE) {
-      activeBackendCount--;
-      scaleDownStreak = 0;
-      updateActiveSet();
-      logScale(`↓ Scale down`,
-        `avg ${avgConnections.toFixed(1)} connections ≤ threshold ${SCALE_DOWN_THRESHOLD} for ${SCALE_DOWN_PATIENCE} checks`);
-    }
-    // else: quiet but not yet patient enough — log progress
-    else if (scaleDownStreak === 1) {
-      console.log(`  [scale] Quiet (${avgConnections.toFixed(1)} avg) — will scale down after ${SCALE_DOWN_PATIENCE - scaleDownStreak} more quiet checks`);
-    }
-  } else if (avgConnections > SCALE_DOWN_THRESHOLD) {
-    if (scaleDownStreak > 0) {
-      console.log(`  [scale] Load increased (${avgConnections.toFixed(1)} avg) — reset scale-down streak`);
-    }
-    scaleDownStreak = 0;
-  }
-}
-
-setInterval(checkAndScale, SCALE_CHECK_MS);
-
-// ─── Keep-alive pinger ────────────────────────────────────────────────────────
-// ALL backends get pinged via the mesh health endpoint — not just active ones.
-// Inactive backends must stay warm so they can be promoted instantly.
-// We use the mesh endpoint to get real socket counts + memory for scaling decisions.
-async function pingBackend(index) {
-  const b     = backendStatus[index];
-  const start = Date.now();
-
-  // Try the rich mesh health endpoint first — falls back to public /api/health
-  const meshResult = await meshGet(SERVICE_NAME, `${b.url}/api/mesh/health`, { timeout: 10000 });
-
-  b.latencyMs = Date.now() - start;
-  b.lastPing  = new Date().toISOString();
-
-  if (meshResult.ok) {
-    const d = meshResult.data;
-    // Enrich backend status with real data from the backend itself
-    b.socketConnections = d.socketConnections ?? 0;
-    b.memoryPct         = d.memory?.pct       ?? null;
-    b.coldStart         = d.coldStart          ?? false;
-    recordBackendSuccess(index);
-
-    // Confirm back to the backend that we've seen it (non-blocking)
-    meshPost(SERVICE_NAME, `${b.url}/api/mesh/seen`, {
-      registeredAs: b.name,
-      activeInFleet: backendStatus.filter(s => s.active).length,
-    }).catch(() => {}); // fire-and-forget
-  } else {
-    // Mesh ping failed — try public health as fallback
-    try {
-      await axios.get(`${b.url}/api/health`, { timeout: 10000 });
-      b.socketConnections = 0;
-      recordBackendSuccess(index);
-    } catch (err) {
-      b.latencyMs = null;
-      recordBackendError(index);
-      console.warn(`  [${b.name}] ping failed — ${err.message}`);
-    }
-  }
-}
-
-async function pingAll() {
-  await Promise.all(BACKENDS.map((_, i) => pingBackend(i)));
-}
-
-BACKENDS.forEach((_, i) => setTimeout(() => pingBackend(i), i * 2000));
-setInterval(pingAll, KEEPALIVE_MS);
-
-// ─── Response Cache ───────────────────────────────────────────────────────────
-// Caches GET responses for routes that change infrequently.
-// Bypassed for non-GET requests, non-200 responses, and non-JSON content.
-// Each rule has its own TTL — shorter for live data, longer for stable data.
+// ─── Mesh fleet state ─────────────────────────────────────────────────────────
+// Synced periodically from the router's /mesh/status endpoint.
+// Used to suppress incidents for backends that are intentionally on standby
+// (scaled-down by the router's auto-scaling logic) vs genuinely failing.
 //
-const responseCache = new Map(); // key → { body, status, headers, expiresAt }
+// IMPORTANT: defaults to null. isBackendActive() returns true if fleet state
+// is unavailable — we always prefer false positives (spurious alerts) over
+// the silent failure that occurs when this is undefined and crashes pingTarget.
+let meshFleetState = null;
 
-const CACHE_RULES = [
-  { pattern: /^\/api\/uptime\/status$/,        ttl: 30_000 }, // 30s — platform status
-  { pattern: /^\/api\/uptime\/ping$/,          ttl: 10_000 }, // 10s — lightweight ping
-  { pattern: /^\/api\/events\/public\//,       ttl: 60_000 }, // 60s — public event info (join gate)
-  { pattern: /^\/api\/events\/subdomain\//,    ttl: 60_000 }, // 60s — subdomain → event ID lookup
-  { pattern: /^\/api\/events\/participants\//, ttl: 30_000 }, // 30s — participant name list (join gate)
-];
+function isBackendActive(name) {
+  // No fleet data yet or no router configured — treat all as active (safe default)
+  if (!meshFleetState || !meshFleetState.backends) return true;
+  const backend = meshFleetState.backends.find(b => b.name === name);
+  // Not in fleet state at all — assume active
+  if (!backend) return true;
 
-// Purge expired entries every 2 minutes
-setInterval(() => {
-  const now = Date.now();
-  for (const [key, entry] of responseCache) {
-    if (entry.expiresAt <= now) responseCache.delete(key);
-  }
-}, 2 * 60_000).unref?.();
+  // The router confirmed this backend is broken via circuit breaker — always alert
+  if (backend.circuitTripped) return true;
+  // Router's last keep-alive ping to this backend failed — it knows something's wrong
+  if (backend.alive === false) return true;
 
-function getCacheRule(path) {
-  return CACHE_RULES.find(r =>
-    r.pattern instanceof RegExp ? r.pattern.test(path) : path.startsWith(r.pattern)
-  ) || null;
+  // Only truly suppress when: not active AND router believes it's alive AND circuit not tripped.
+  // This is the genuine "scaled-down standby" case.
+  return backend.active === true;
 }
 
-function cacheKey(req) {
-  return req.method + ':' + req.url; // include query string so ?foo=bar is separate
+// Sync fleet state from the router every 30 s (if ROUTER_URL is set)
+async function syncFleetState() {
+  if (!ROUTER_URL) return;
+  try {
+    const result = await meshGet(SERVICE_NAME, `${ROUTER_URL}/mesh/status`, { timeout: 5000 });
+    if (result.ok && result.data) {
+      meshFleetState = result.data;
+      console.log(`[${ts()}] [fleet] Synced — ${meshFleetState.backends?.filter(b => b.active).length ?? '?'} active backend(s)`);
+    }
+  } catch (err) {
+    console.warn(`[${ts()}] [fleet] Sync failed: ${err.message}`);
+  }
 }
 
-// Middleware: serve from cache on HIT, or intercept & store response on MISS
-function cacheMiddleware(req, res, next) {
-  if (req.method !== 'GET') return next();
+if (ROUTER_URL) {
+  syncFleetState(); // immediate first sync
+  setInterval(syncFleetState, 30_000);
+}
 
-  const rule = getCacheRule(req.path);
-  if (!rule) return next();
+// ─── Startup log ──────────────────────────────────────────────────────────────
+console.log(`\n[${ts()}] ╔══════════════════════════════════════════════════╗`);
+console.log(`[${ts()}] ║     PlanIt Watchdog — MULTI-TARGET — STARTING   ║`);
+console.log(`[${ts()}] ╚══════════════════════════════════════════════════╝`);
+console.log(`[${ts()}]   Monitoring ${targets.length} target(s):`);
+targets.forEach(t => console.log(`[${ts()}]     [${t.type}] ${t.name} → ${t.pingUrl}`));
+console.log(`[${ts()}]   Interval  : ${PING_MS / 1000}s`);
+console.log(`[${ts()}]   Threshold : ${THRESHOLD} failures`);
+console.log(`[${ts()}]   ntfy      : ${NTFY_URL || 'NOT SET — alerts disabled'}`);
+console.log(`[${ts()}]   MONGO_URI : ${MONGO_URI ? 'set' : 'NOT SET — incidents will not be written to DB'}`);
+console.log(`[${ts()}]   Port      : ${PORT}\n`);
 
-  const key = cacheKey(req);
-  const now  = Date.now();
+if (!MONGO_URI) {
+  console.error(`[${ts()}] FATAL: MONGO_URI is required.`);
+  process.exit(1);
+}
 
-  const cached = responseCache.get(key);
-  if (cached && cached.expiresAt > now) {
-    // Cache HIT — respond immediately, backend not touched
-    res.set(cached.headers);
-    res.set('X-Cache', 'HIT');
-    res.set('X-Cache-Age', String(Math.floor((now - (cached.expiresAt - rule.ttl)) / 1000)));
-    return res.status(cached.status).send(cached.body);
-  }
+// ─── Mongoose models ──────────────────────────────────────────────────────────
+const timelineUpdateSchema = new mongoose.Schema({
+  status:    { type: String, enum: ['investigating', 'identified', 'monitoring', 'resolved'], required: true },
+  message:   { type: String, required: true },
+  createdAt: { type: Date, default: Date.now },
+});
 
-  // Cache MISS — intercept the proxied response to capture and store it
-  const chunks = [];
-  const originalWrite = res.write.bind(res);
-  const originalEnd   = res.end.bind(res);
+const incidentSchema = new mongoose.Schema({
+  title:            { type: String, required: true },
+  description:      { type: String, default: '' },
+  severity:         { type: String, enum: ['minor', 'major', 'critical'], default: 'critical' },
+  status:           { type: String, enum: ['investigating', 'identified', 'monitoring', 'resolved'], default: 'investigating' },
+  affectedServices: [{ type: String }],
+  timeline:         [timelineUpdateSchema],
+  resolvedAt:       { type: Date, default: null },
+  downtimeMinutes:  { type: Number, default: null },
+  reportIds:        [{ type: mongoose.Schema.Types.ObjectId, ref: 'UptimeReport' }],
+  createdAt:        { type: Date, default: Date.now },
+  updatedAt:        { type: Date, default: Date.now },
+});
+incidentSchema.pre('save', function (next) { this.updatedAt = new Date(); next(); });
 
-  res.write = (chunk, encoding, callback) => {
-    if (chunk) chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk, encoding || 'utf8'));
-    return originalWrite(chunk, encoding, callback);
+const uptimeReportSchema = new mongoose.Schema({
+  description:     { type: String, required: true },
+  email:           { type: String, default: '' },
+  affectedService: { type: String, default: 'General' },
+  status:          { type: String, enum: ['pending', 'confirmed', 'dismissed'], default: 'confirmed' },
+  incidentId:      { type: mongoose.Schema.Types.ObjectId, ref: 'Incident', default: null },
+  createdAt:       { type: Date, default: Date.now },
+});
+
+const uptimeCheckSchema = new mongoose.Schema({
+  service:   { type: String, required: true }, // which target this ping is for
+  status:    { type: String, enum: ['up', 'down'], required: true },
+  latencyMs: { type: Number, default: null },
+  error:     { type: String, default: null },
+  createdAt: { type: Date, default: Date.now },
+});
+uptimeCheckSchema.index({ createdAt: 1 }, { expireAfterSeconds: 1296000 }); // 15 day TTL
+uptimeCheckSchema.index({ service: 1, createdAt: -1 });
+
+const Incident     = mongoose.models.Incident     || mongoose.model('Incident',     incidentSchema);
+const UptimeReport = mongoose.models.UptimeReport || mongoose.model('UptimeReport', uptimeReportSchema);
+const UptimeCheck  = mongoose.models.UptimeCheck  || mongoose.model('UptimeCheck',  uptimeCheckSchema);
+
+// ─── Per-target state ─────────────────────────────────────────────────────────
+// One state object per target, keyed by target name
+const states = {};
+targets.forEach(t => {
+  states[t.name] = {
+    consecutiveFailures:  0,
+    consecutiveSuccesses: 0,
+    isDown:               false,
+    activeIncidentId:     null,
+    lastPingMs:           null,
+    lastPingAt:           null,
+    lastError:            null,
+    totalPings:           0,
+    totalFailures:        0,
+    downSince:            null,
   };
+});
 
-  res.end = (chunk, encoding, callback) => {
-    if (chunk) chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk, encoding || 'utf8'));
+// ─── DB ───────────────────────────────────────────────────────────────────────
+async function ensureDbConnected() {
+  if (mongoose.connection.readyState === 1) return true;
+  try {
+    await mongoose.connect(MONGO_URI, { serverSelectionTimeoutMS: 10000 });
+    console.log(`[${ts()}] [db] MongoDB connected`);
+    return true;
+  } catch (err) {
+    console.error(`[${ts()}] [db] MongoDB connect failed: ${err.message}`);
+    return false;
+  }
+}
 
-    // Only cache successful JSON responses
-    if (res.statusCode === 200) {
-      const contentType = res.getHeader('content-type') || '';
-      if (contentType.includes('application/json')) {
-        const body = Buffer.concat(chunks);
-        const headers = {};
-        (res.getHeaderNames?.() || []).forEach(h => {
-          if (h !== 'x-cache' && h !== 'x-cache-age') headers[h] = res.getHeader(h);
-        });
-        responseCache.set(key, { body, status: 200, headers, expiresAt: now + rule.ttl });
+// ── Incident message templates ────────────────────────────────────────────────
+// All user-facing text in incidents must be professional status-page language.
+// No internal names, no tech jargon, no mention of "backend" or "router".
+//
+function incidentTitle(target) {
+  if (target.type === 'router') return 'Service Disruption — Platform Unavailable';
+  if (backendUrls.length === 1) return 'Service Disruption — API Unavailable';
+  // "the Maverick server" — codename is clear, "server" contextualises it for users
+  return `Service Degradation — the ${target.name} server is unavailable`;
+}
+
+function serverRef(target) {
+  // "the Maverick server (US East)" or just "the Maverick server"
+  return target.region
+    ? `the ${target.name} server (${target.region})`
+    : `the ${target.name} server`;
+}
+
+function incidentDescription(target) {
+  if (target.type === 'router') {
+    return 'Our monitoring systems have detected that the PlanIt platform is currently unreachable. ' +
+           'Users may be unable to access events, send messages, or use any platform features. ' +
+           'Our team has been alerted and is investigating the issue.';
+  }
+  if (backendUrls.length === 1) {
+    return 'Our monitoring systems have detected that the PlanIt API is not responding. ' +
+           'Some users may experience difficulty accessing events or using platform features. ' +
+           'Our team has been alerted and is actively investigating.';
+  }
+  return `Our monitoring systems have detected that ${serverRef(target)} is not responding. ` +
+         'Users assigned to this server may experience degraded performance or a temporary ' +
+         'inability to access their events. Our team is actively investigating. ' +
+         'Other platform functions remain operational.';
+}
+
+function incidentAffectedServices(target) {
+  if (target.type === 'router') return ['api', 'websocket', 'chat', 'file-sharing', 'polls'];
+  return ['api', 'websocket', 'chat'];
+}
+
+function investigatingMessage(target, errorMsg) {
+  const technical = process.env.INCIDENT_INCLUDE_TECHNICAL === 'true'
+    ? ` (Technical detail: ${errorMsg})`
+    : '';
+  if (target.type === 'router') {
+    return `Our automated monitoring detected the platform became unreachable at ${new Date().toUTCString()}. ` +
+           `Health checks failed ${THRESHOLD} consecutive times over ${Math.round((THRESHOLD * PING_MS) / 60000)} minutes. ` +
+           `We are investigating the cause.${technical}`;
+  }
+  return `Automated monitoring detected that ${serverRef(target)} stopped responding at ${new Date().toUTCString()}. ` +
+         `${THRESHOLD} consecutive health checks failed over ${Math.round((THRESHOLD * PING_MS) / 60000)} minutes. ` +
+         `Traffic has been redistributed to other servers where possible. We are investigating.${technical}`;
+}
+
+function recoveryMessage(target, mins) {
+  const duration = mins < 1 ? 'less than a minute' : `${mins} minute${mins !== 1 ? 's' : ''}`;
+  if (target.type === 'router') {
+    return `The platform has fully recovered and is operating normally. ` +
+           `Total disruption duration: ${duration}. We apologise for any inconvenience caused.`;
+  }
+  return `${serverRef(target)} has recovered and is operating normally. ` +
+         `Total disruption duration: ${duration}. All traffic has been restored. ` +
+         `We apologise for any inconvenience caused.`;
+}
+
+async function createDownIncident(target, errorMsg) {
+  const ok = await ensureDbConnected();
+  if (!ok) return null;
+  try {
+    const report = await UptimeReport.create({
+      description:     `Automated monitoring detected ${target.name} unreachable after ${THRESHOLD} consecutive health check failures.`,
+      affectedService: target.name,
+      status:          'confirmed',
+    });
+    const incident = await Incident.create({
+      title:            incidentTitle(target),
+      description:      incidentDescription(target),
+      severity:         target.type === 'router' ? 'critical' : backendUrls.length === 1 ? 'critical' : 'major',
+      status:           'investigating',
+      affectedServices: incidentAffectedServices(target),
+      reportIds:        [report._id],
+      timeline: [{
+        status:  'investigating',
+        message: investigatingMessage(target, errorMsg),
+      }],
+    });
+    report.incidentId = incident._id;
+    await report.save();
+    console.log(`[${ts()}] [incident] Created for ${target.name}: ${incident._id}`);
+    return incident._id;
+  } catch (err) {
+    console.error(`[${ts()}] [incident] Failed to create: ${err.message}`);
+    return null;
+  }
+}
+
+async function resolveDownIncident(target, incidentId, downtimeMs) {
+  const ok = await ensureDbConnected();
+  if (!ok) return;
+  try {
+    const incident = await Incident.findById(incidentId);
+    if (!incident) return;
+    const mins = Math.round(downtimeMs / 60000);
+    incident.status          = 'resolved';
+    incident.resolvedAt      = new Date();
+    incident.downtimeMinutes = mins;
+    incident.timeline.push({
+      status:  'resolved',
+      message: recoveryMessage(target, mins),
+    });
+    await incident.save();
+    console.log(`[${ts()}] [incident] Resolved for ${target.name} (${mins}m downtime)`);
+  } catch (err) {
+    console.error(`[${ts()}] [incident] Failed to resolve: ${err.message}`);
+  }
+}
+
+// ─── ntfy ─────────────────────────────────────────────────────────────────────
+// NTFY_URL  — full topic URL e.g. https://ntfy.sh/my-secret-topic
+// NTFY_TOKEN — Bearer token for private topics (ntfy.sh → Account → Access tokens)
+//              Required if your topic has access control enabled.
+const NTFY_TOKEN = process.env.NTFY_TOKEN || '';
+
+async function sendNtfy({ title, message, priority = 'high', tags = [] }) {
+  if (!NTFY_URL) return;
+  try {
+    const headers = {
+      'Title':        title,
+      'Priority':     priority,
+      'Tags':         tags.join(','),
+      'Content-Type': 'text/plain; charset=utf-8',
+    };
+    if (NTFY_TOKEN)  headers['Authorization'] = `Bearer ${NTFY_TOKEN}`;
+    if (FRONTEND_URL) headers['Actions'] = `view, Open Status Page, ${FRONTEND_URL}/status`;
+    const res = await axios.post(NTFY_URL, message, { headers, timeout: 10000 });
+    console.log(`[${ts()}] [ntfy] Sent: "${title}" (HTTP ${res.status})`);
+  } catch (err) {
+    const status = err.response?.status;
+    const hint = status === 401 ? ' — check NTFY_TOKEN (topic may require auth)'
+               : status === 403 ? ' — access denied, check NTFY_TOKEN permissions'
+               : status === 404 ? ' — topic not found, check NTFY_URL'
+               : '';
+    console.error(`[${ts()}] [ntfy] Failed: ${err.message}${hint}`);
+  }
+}
+
+// ─── Ping a single target ─────────────────────────────────────────────────────
+async function pingTarget(target) {
+  const s = states[target.name];
+  s.totalPings++;
+  s.lastPingAt = new Date();
+
+  try {
+    const t0  = Date.now();
+    await axios.get(target.pingUrl, {
+      timeout:        10000,
+      validateStatus: code => code < 500,
+    });
+    const ms = Date.now() - t0;
+
+    s.lastPingMs          = ms;
+    s.lastError           = null;
+    s.consecutiveFailures = 0;
+    s.consecutiveSuccesses++;
+
+    // Store check history (non-blocking)
+    UptimeCheck.create({ service: target.name, status: 'up', latencyMs: ms }).catch(() => {});
+
+    // Recovery
+    if (s.isDown) {
+      const downtimeMs = Date.now() - s.downSince;
+      const mins       = Math.round(downtimeMs / 60000);
+      s.isDown    = false;
+      s.downSince = null;
+
+      console.log(`[${ts()}] ${target.name} RECOVERED after ${mins}m — ${ms}ms`);
+
+      if (s.activeIncidentId) {
+        await resolveDownIncident(target, s.activeIncidentId, downtimeMs);
+        s.activeIncidentId = null;
+      }
+
+      const ref = target.type === 'router' ? 'Load Balancer' : `the ${target.name} server`;
+      await sendNtfy({
+        title:    `${target.name} — Back Online`,
+        message:  `${ref} is back online and operating normally.\nDowntime: ${mins < 1 ? '<1' : mins} minute(s)\nResponse time: ${ms}ms\nIncident auto-resolved on status page.`,
+        priority: 'high',
+        tags:     ['white_check_mark', 'tada'],
+      });
+    } else {
+      // Healthy — log every 10 pings to keep logs readable
+      if (s.totalPings % 10 === 0 || s.totalPings <= 2) {
+        console.log(`[${ts()}] ${target.name} OK — ${ms}ms (ping #${s.totalPings})`);
       }
     }
 
-    // Set header BEFORE calling originalEnd — headers cannot be set after response is sent
-    if (!res.headersSent) res.set('X-Cache', 'MISS');
-    return originalEnd(chunk, encoding, callback);
-  };
+  } catch (err) {
+    s.consecutiveFailures++;
+    s.consecutiveSuccesses = 0;
+    s.totalFailures++;
+    s.lastError  = err.message;
+    s.lastPingMs = null;
 
-  next();
+    UptimeCheck.create({ service: target.name, status: 'down', error: err.message }).catch(() => {});
+
+    console.warn(`[${ts()}] ${target.name} FAILED (${s.consecutiveFailures}/${THRESHOLD}): ${err.message}`);
+
+    // Threshold hit — decide whether to declare down or hold for standby check
+    if (s.consecutiveFailures === THRESHOLD && !s.isDown) {
+      const isStandby = !isBackendActive(target.name);
+      if (isStandby) {
+        // Record when failures started so the override below has accurate downtime.
+        // Do NOT fire an incident yet — backend may legitimately be scaled down.
+        s.downSince = s.downSince || Date.now();
+        const fleetBackend = meshFleetState && meshFleetState.backends
+          ? meshFleetState.backends.find(b => b.name === target.name) : null;
+        console.log(`[${ts()}] [mesh] ${target.name} is STANDBY — suppressing for now (circuitTripped=${fleetBackend ? fleetBackend.circuitTripped : 'unknown'}, alive=${fleetBackend ? fleetBackend.alive : 'unknown'}). Will escalate at ${THRESHOLD * 2} failures.`);
+      } else {
+        s.isDown    = true;
+        s.downSince = Date.now();
+
+        console.error(`[${ts()}] ${target.name} DOWN — writing incident to DB`);
+
+        const incidentId   = await createDownIncident(target, err.message);
+        s.activeIncidentId = incidentId;
+
+        const downRef = target.type === 'router' ? 'Load Balancer' : 'the ' + target.name + ' server';
+        await sendNtfy({
+          title:    target.name + ' — Service Disruption',
+          message:  downRef + ' is not responding.\n\nFailed checks: ' + THRESHOLD + '/' + THRESHOLD + '\nError: ' + err.message + '\n\nStatus page has been updated automatically.',
+          priority: 'urgent',
+          tags:     ['rotating_light', 'fire'],
+        });
+      }
+    }
+
+    // Hard override: router pings every 4 min so it may not know a backend is broken
+    // until long after the watchdog does. If a standby keeps failing past 2x threshold
+    // with zero recovery, it is a genuine outage — escalate unconditionally.
+    const OVERRIDE_AT = THRESHOLD * 2;
+    if (!s.isDown && s.consecutiveFailures === OVERRIDE_AT) {
+      const downMins = s.downSince ? Math.round((Date.now() - s.downSince) / 60000) : 0;
+      console.error(`[${ts()}] [mesh] OVERRIDE: ${target.name} has ${s.consecutiveFailures} failures despite STANDBY — escalating (failing ~${downMins}m)`);
+
+      s.isDown    = true;
+      s.downSince = s.downSince || Date.now();
+
+      const incidentId   = await createDownIncident(target, err.message);
+      s.activeIncidentId = incidentId;
+
+      const downRef2 = target.type === 'router' ? 'Load Balancer' : 'the ' + target.name + ' server';
+      await sendNtfy({
+        title:    target.name + ' — Service Disruption',
+        message:  downRef2 + ' has been unavailable for ~' + downMins + ' minute(s).\n\nInitially classified as standby but ' + s.consecutiveFailures + ' consecutive failures confirm a genuine outage.\nError: ' + err.message + '\n\nStatus page has been updated automatically.',
+        priority: 'urgent',
+        tags:     ['rotating_light', 'fire'],
+      });
+    }
+
+    // Reminder every 10 failures while confirmed down
+    if (s.isDown && s.consecutiveFailures > THRESHOLD && s.consecutiveFailures % 10 === 0) {
+      const downMins = Math.round((Date.now() - s.downSince) / 60000);
+      const stillRef = target.type === 'router' ? 'Load Balancer' : 'the ' + target.name + ' server';
+      await sendNtfy({
+        title:    target.name + ' — Still Unavailable (' + downMins + 'm)',
+        message:  stillRef + ' has been unavailable for ' + downMins + ' minutes.\nConsecutive failures: ' + s.consecutiveFailures + '\nError: ' + err.message + '\n\nStatus page reflects current outage.',
+        priority: 'high',
+        tags:     ['warning', 'clock'],
+      });
+    }
+  }
 }
 
-// ─── Express app ──────────────────────────────────────────────────────────────
+// Ping ALL targets (staggered 2s apart so Render doesn't get hammered at once)
+async function pingAll() {
+  targets.forEach((target, i) => {
+    setTimeout(() => pingTarget(target), i * 2000);
+  });
+}
+
+// ─── Express ──────────────────────────────────────────────────────────────────
 const app = express();
-app.use(cookieParser());
-
-// ─── CORS ─────────────────────────────────────────────────────────────────────
-// Allow the frontend origin(s) to reach the router (needed for Socket.IO polling)
-const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || '')
-  .split(',').map(o => o.trim()).filter(Boolean);
-
-app.use(cors({
-  origin: (origin, callback) => {
-    // Allow requests with no origin (server-to-server, curl, etc.)
-    if (!origin) return callback(null, true);
-    if (ALLOWED_ORIGINS.length === 0 || ALLOWED_ORIGINS.includes(origin)) {
-      return callback(null, true);
-    }
-    callback(new Error(`CORS: origin ${origin} not allowed`));
-  },
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'x-mesh-secret', 'x-event-token'],
-}));
-
-// ─── Public health endpoint ───────────────────────────────────────────────────
-// URLs are NEVER exposed here. Only names, status, and aggregate counts.
-// For full internal state use GET /mesh/status (mesh auth required).
-app.get('/health', (_req, res) => {
-  const activeBackends  = backendStatus.filter(b => b.active);
-  const trippedBackends = backendStatus.filter(b => b.circuitTripped);
-  const allActiveAlive  = activeBackends.every(b => b.alive);
-
-  res.status(allActiveAlive ? 200 : 207).json({
-    status:     allActiveAlive ? 'ok' : 'degraded',
-    uptime:     Math.floor(process.uptime()),
-    scaling: {
-      activeCount:  activeBackendCount,
-      totalCount:   BACKENDS.length,
-      trippedCount: trippedBackends.length,
-    },
-    // Names and health only — no URLs ever exposed publicly
-    backends: backendStatus.map(s => ({
-      name:           s.name,
-      active:         s.active,
-      alive:          s.alive,
-      latencyMs:      s.latencyMs,
-      circuitTripped: s.circuitTripped,
-      coldStart:      s.coldStart,
-    })),
-    timestamp: new Date().toISOString(),
-  });
-});
-
-
-app.get('/mesh/status', meshAuth(SERVICE_NAME), (_req, res) => {
-  res.json({
-    service:    SERVICE_NAME,
-    uptime:     Math.floor(process.uptime()),
-    scaling: {
-      activeBackendCount,
-      totalBackends:     BACKENDS.length + dynamicBackends.length,
-      trippedCount:      backendStatus.filter(b => b.circuitTripped).length,
-      scaleDownStreak,
-      scaleDownPatience: SCALE_DOWN_PATIENCE,
-      thresholds: {
-        scaleUp:   SCALE_UP_THRESHOLD,
-        scaleDown: SCALE_DOWN_THRESHOLD,
-      },
-    },
-    scalingLog: scalingLog.slice(0, 20),
-    // Full backend detail — names, status, metrics, no URLs
-    backends: backendStatus.map((s, i) => ({
-      index:              i,
-      name:               s.name,
-      active:             s.active,
-      alive:              s.alive,
-      latencyMs:          s.latencyMs,
-      lastPing:           s.lastPing,
-      requests:           s.requests,
-      activeConnections:  s.activeConnections,
-      socketConnections:  s.socketConnections,
-      memoryPct:          s.memoryPct,
-      coldStart:          s.coldStart,
-      circuitTripped:     s.circuitTripped,
-      consecutiveErrors:  s.consecutiveErrors,
-    })),
-    dynamicBackends: dynamicBackends.map(d => ({
-      name:         d.name,
-      region:       d.region,
-      registeredAt: d.registeredAt,
-    })),
-    timestamp: new Date().toISOString(),
-  });
-});
-
-
-app.post('/mesh/register', meshAuth(SERVICE_NAME), express.json(), (req, res) => {
-  const { url, name, region } = req.body;
-
-  if (!url) {
-    return res.status(400).json({ error: 'url is required' });
-  }
-
-  // Check if this backend is already known from env config
-  const existingIdx = BACKENDS.findIndex(b => b === url || b === url.replace(/\/$/, ''));
-  if (existingIdx >= 0) {
-    // Known backend — update its display name and region if provided
-    if (name)   backendStatus[existingIdx].name   = name;
-    if (region) backendStatus[existingIdx].region = region;
-    console.log(`[mesh] Register: ${name || backendStatus[existingIdx].name} (${region || 'no region'}) — already in fleet at index ${existingIdx}`);
-    return res.json({ ok: true, joined: false, reason: 'already registered', index: existingIdx });
-  }
-
-  // New backend — not in BACKEND_URLS env. Add to dynamic pool.
-  const already = dynamicBackends.find(d => d.url === url);
-  if (already) {
-    already.name       = name || already.name;
-    already.region     = region || already.region;
-    already.lastSeenAt = new Date().toISOString();
-    console.log(`[mesh] Register: ${already.name} re-announced (dynamic pool)`);
-    return res.json({ ok: true, joined: false, reason: 'already in dynamic pool' });
-  }
-
-  // First-time join
-  const entry = { url, name: name || `Dynamic-${dynamicBackends.length + 1}`, region: region || null, registeredAt: new Date().toISOString(), lastSeenAt: new Date().toISOString() };
-  dynamicBackends.push(entry);
-
-  // Add to BACKENDS array and create a status entry so routing + pinging works
-  BACKENDS.push(url);
-  backendStatus.push({
-    url,
-    name:               entry.name,
-    alive:              true,
-    latencyMs:          null,
-    lastPing:           null,
-    requests:           0,
-    activeConnections:  0,
-    active:             false,
-    coldStart:          true,
-    socketConnections:  0,
-    memoryPct:          null,
-    circuitTripped:     false,
-    consecutiveErrors:  0,
-    recoveryProbes:     0,
-  });
-
-  // Create a proxy for the new backend
-  const { createProxyMiddleware } = require('http-proxy-middleware');
-  proxies.push(createProxyMiddleware({
-    target: url,
-    changeOrigin: true,
-    ws: true,
-    proxyTimeout: 60000,
-    timeout: 60000,
-    on: {
-      proxyReq(_pReq, _req, _res) { backendStatus[backendStatus.length - 1].activeConnections++; },
-      proxyRes(_pRes, _req, _res) { const b = backendStatus[backendStatus.length - 1]; b.activeConnections = Math.max(0, b.activeConnections - 1); b.requests++; },
-      error(_err, _req, res)     { const b = backendStatus[backendStatus.length - 1]; b.activeConnections = Math.max(0, b.activeConnections - 1); recordBackendError(backendStatus.length - 1); if (!res.headersSent) res.status(502).json({ error: 'Backend unavailable' }); },
-    },
-  }));
-
-  // Immediately ping the new backend to warm it up
-  pingBackend(backendStatus.length - 1);
-
-  logScale(`+ Dynamic join: ${entry.name}`, `backend announced itself from ${url.split('/')[2]}`);
-  console.log(`[mesh] Fleet now: ${backendStatus.map(b => b.name).join(', ')}`);
-
-  res.json({ ok: true, joined: true, name: entry.name, totalBackends: BACKENDS.length });
-});
-
-// ─── Proxy instances ──────────────────────────────────────────────────────────
-const proxies = BACKENDS.map((target, index) =>
-  createProxyMiddleware({
-    target,
-    changeOrigin: true,
-    ws:           true,
-    proxyTimeout: 60000,
-    timeout:      60000,
-
-    on: {
-      proxyReq(_proxyReq, _req, _res) {
-        backendStatus[index].activeConnections++;
-      },
-
-      proxyRes(_proxyRes, req, res) {
-        backendStatus[index].activeConnections = Math.max(0, backendStatus[index].activeConnections - 1);
-        backendStatus[index].requests++;
-        res.cookie(COOKIE_NAME, String(index), {
-          maxAge:   COOKIE_MAX_AGE_MS,
-          httpOnly: true,
-          sameSite: 'None',
-          secure:   true,
-        });
-      },
-
-      error(err, _req, res) {
-        backendStatus[index].activeConnections = Math.max(0, backendStatus[index].activeConnections - 1);
-        recordBackendError(index);
-        console.error(`  [router] proxy error → backend [${index}]: ${err.message}`);
-        if (res.headersSent) return;
-        res.status(502).json({
-          error:   'Backend unavailable',
-          message: 'This backend is temporarily unavailable. Please retry.',
-        });
-      },
-    },
-  })
+app.use(express.json());
+// Only allow cross-origin requests from the configured frontend — prevents
+// other sites from silently harvesting status data via browser requests.
+const ALLOWED_ORIGINS = new Set(
+  [FRONTEND_URL, process.env.EXTRA_CORS_ORIGIN].filter(Boolean)
 );
 
-// ─── Cache middleware (runs before proxy) ────────────────────────────────────
-app.use(cacheMiddleware);
-
-// ─── Main routing middleware ──────────────────────────────────────────────────
-app.use((req, res, next) => {
-  const index = pickBackendIndex(req);
-  const b = backendStatus[index];
-  console.log(`  → [${b.name}${b.active ? '' : '!'}] ${req.method} ${req.url.slice(0, 100)}`);
-  proxies[index](req, res, next);
+app.use((_req, res, next) => {
+  const origin = _req.headers.origin;
+  if (origin && ALLOWED_ORIGINS.has(origin)) {
+    res.setHeader('Access-Control-Allow-Origin',  origin);
+    res.setHeader('Vary', 'Origin');
+  }
+  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  if (_req.method === 'OPTIONS') return res.sendStatus(204);
+  next();
 });
 
-// ─── HTTP server + WebSocket upgrade ─────────────────────────────────────────
-const server = http.createServer(app);
+app.get('/',                (_req, res) => res.send('PlanIt Watchdog OK'));
+app.get('/watchdog/ping',   (_req, res) => res.json({ ok: true, ts: new Date().toISOString() }));
 
-server.on('upgrade', (req, socket, head) => {
-  const rawCookies = req.headers.cookie || '';
-  const cookies = Object.fromEntries(
-    rawCookies.split(';').map(c => {
-      const [k, ...v] = c.trim().split('=');
-      return [k?.trim() ?? '', v.join('=')?.trim() ?? ''];
-    })
-  );
+// ─── ntfy test endpoint ───────────────────────────────────────────────────────
+// POST /watchdog/test-ntfy — fires a real test notification so you can verify
+// NTFY_URL and NTFY_TOKEN are correct without waiting for an actual outage.
+// Protected by a simple shared secret (MESH_SECRET) to prevent abuse.
+app.post('/watchdog/test-ntfy', express.json(), async (req, res) => {
+  const secret = req.headers['x-test-secret'] || '';
+  // Basic auth: require MESH_SECRET header (same secret the router uses)
+  const meshSecret = process.env.MESH_SECRET || '';
+  if (!meshSecret || secret !== meshSecret) {
+    return res.status(401).json({ error: 'Unauthorized — send X-Test-Secret header with MESH_SECRET value' });
+  }
+  if (!NTFY_URL) {
+    return res.status(503).json({ error: 'NTFY_URL is not configured on this watchdog' });
+  }
+  try {
+    const axios = require('axios');
+    const headers = {
+      'Title':        'PlanIt — ntfy Test',
+      'Priority':     'high',
+      'Tags':         'white_check_mark,test',
+      'Content-Type': 'text/plain; charset=utf-8',
+    };
+    if (NTFY_TOKEN) headers['Authorization'] = `Bearer ${NTFY_TOKEN}`;
+    if (FRONTEND_URL) headers['Actions'] = `view, Open Status Page, ${FRONTEND_URL}/status`;
+    const r = await axios.post(NTFY_URL, `PlanIt watchdog ntfy test fired at ${new Date().toUTCString()}.\nIf you received this, notifications are working correctly.`, { headers, timeout: 10000 });
+    console.log(`[${ts()}] [ntfy] Test notification sent (HTTP ${r.status})`);
+    res.json({ ok: true, status: r.status, ntfyUrl: NTFY_URL, tokenSet: !!NTFY_TOKEN });
+  } catch (err) {
+    const status = err.response?.status;
+    const hint = status === 401 ? 'NTFY_TOKEN missing or wrong'
+               : status === 403 ? 'NTFY_TOKEN lacks permission'
+               : status === 404 ? 'NTFY_URL topic not found'
+               : err.message;
+    console.error(`[${ts()}] [ntfy] Test failed: ${hint}`);
+    res.status(502).json({ ok: false, error: hint, httpStatus: status });
+  }
+});
 
-  let index;
-  const cookieVal = cookies[COOKIE_NAME];
-  if (cookieVal !== undefined) {
-    const parsed = parseInt(cookieVal, 10);
-    // If cookie points to active backend, use it. Otherwise re-route.
-    index = (!isNaN(parsed) && parsed >= 0 && parsed < activeBackendCount)
-      ? parsed
-      : djb2(req.socket?.remoteAddress || '0');
-  } else {
-    const match = req.url.match(OBJECTID_RE);
-    index = match ? djb2(match[0]) : djb2(req.socket?.remoteAddress || '0');
+// ─── Mesh: watchdog internal status (auth required) ──────────────────────────
+app.get('/mesh/status', meshAuth(SERVICE_NAME), (_req, res) => {
+  res.json({
+    service: SERVICE_NAME,
+    uptime:  Math.floor(process.uptime()),
+    targets: Object.entries(states).map(([name, s]) => ({
+      name,
+      isDown:              s.isDown,
+      consecutiveFailures: s.consecutiveFailures,
+      lastPingMs:          s.lastPingMs,
+      lastPingAt:          s.lastPingAt,
+      totalPings:          s.totalPings,
+    })),
+    meshFleetState: meshFleetState ? {
+      activeCount: meshFleetState.scaling?.activeBackendCount,
+      totalCount:  meshFleetState.scaling?.totalBackends,
+      lastSynced:  meshFleetState.timestamp,
+    } : null,
+    timestamp: new Date().toISOString(),
+  });
+});
+app.head('/watchdog/ping',  (_req, res) => res.sendStatus(200));
+
+// ─── Shared: compute 15-day uptime history from UptimeCheck records ──────────
+async function computeUptimeHistory() {
+  const since  = new Date(Date.now() - 15 * 24 * 60 * 60 * 1000);
+  const checks = await UptimeCheck.find({ createdAt: { $gte: since } })
+    .select('service status createdAt -_id')
+    .lean();
+
+  // Build day list (last 15 days, oldest first)
+  const days = [];
+  for (let i = 14; i >= 0; i--) {
+    const dt = new Date();
+    dt.setDate(dt.getDate() - i);
+    const y = dt.getFullYear();
+    const m = String(dt.getMonth() + 1).padStart(2, '0');
+    const d = String(dt.getDate()).padStart(2, '0');
+    days.push(`${y}-${m}-${d}`);
   }
 
-  console.log(`  ↑ WS upgrade → ${backendStatus[index]?.name || index} ${req.url.slice(0, 80)}`);
-  proxies[index].upgrade(req, socket, head);
+  // Group checks by service → day
+  const byService = {};
+  checks.forEach(c => {
+    const svc = c.service;
+    if (!byService[svc]) byService[svc] = {};
+    const y = c.createdAt.getFullYear();
+    const m = String(c.createdAt.getMonth() + 1).padStart(2, '0');
+    const d = String(c.createdAt.getDate()).padStart(2, '0');
+    const day = `${y}-${m}-${d}`;
+    if (!byService[svc][day]) byService[svc][day] = { up: 0, total: 0 };
+    byService[svc][day].total++;
+    if (c.status === 'up') byService[svc][day].up++;
+  });
+
+  // Build per-service result with 15-day arrays (null for missing days)
+  const result = {};
+  Object.entries(byService).forEach(([svc, dayMap]) => {
+    const dayData = days.map(day => {
+      const d = dayMap[day];
+      return d
+        ? { date: day, up: d.up, total: d.total, pct: d.total > 0 ? (d.up / d.total) * 100 : null }
+        : { date: day, up: null, total: null, pct: null };
+    });
+    const totalUp     = Object.values(dayMap).reduce((s, d) => s + d.up,    0);
+    const totalChecks = Object.values(dayMap).reduce((s, d) => s + d.total, 0);
+    result[svc] = {
+      days:       dayData,
+      totalChecks,
+      totalUp,
+      uptimePct: totalChecks > 0 ? +((totalUp / totalChecks) * 100).toFixed(2) : null,
+    };
+  });
+
+  return { services: result, generatedAt: new Date().toISOString() };
+}
+
+// Full status — same shape as before so frontend works without changes
+app.get('/watchdog/status', async (_req, res) => {
+  const dbOk = await ensureDbConnected();
+
+  let activeIncidents = [];
+  let recentResolved  = [];
+  let uptimeHistory   = null;
+
+  if (dbOk) {
+    try {
+      [activeIncidents, recentResolved, uptimeHistory] = await Promise.all([
+        Incident.find({ status: { $ne: 'resolved' } }).sort({ createdAt: -1 }).lean(),
+        Incident.find({
+          status:     'resolved',
+          resolvedAt: { $gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) },
+        }).sort({ resolvedAt: -1 }).limit(10).lean(),
+        computeUptimeHistory(),
+      ]);
+    } catch (err) {
+      console.error(`[${ts()}] [status] DB query failed: ${err.message}`);
+    }
+  }
+
+  const anyDown = Object.values(states).some(s => s.isDown);
+  const overallStatus = anyDown ? 'outage'
+    : activeIncidents.some(i => i.severity === 'critical') ? 'outage'
+    : activeIncidents.length > 0 ? 'degraded'
+    : 'operational';
+
+  // Build per-service summary for the response — strip internal URLs and
+  // raw error strings which would expose infrastructure details publicly.
+  const services = targets.map(t => {
+    const s = states[t.name];
+    return {
+      name:      t.name,
+      region:    t.region || null,
+      type:      t.type,
+      status:    s.isDown ? 'down' : 'up',
+      lastPingMs: s.lastPingMs,
+      lastPingAt: s.lastPingAt,
+      // lastError and url intentionally omitted — public endpoint
+    };
+  });
+
+  res.json({
+    status:          overallStatus,
+    dbStatus:        dbOk ? 'connected' : 'disconnected',
+    activeIncidents,
+    recentResolved,
+    uptimeHistory,
+    checkedAt:       new Date().toISOString(),
+    watchdog: {
+      // Legacy single-target field — uses router if present, otherwise first backend
+      mainServer: anyDown ? 'DOWN' : 'UP',
+      // lastError, consecutiveFailures, totalPings, uptimeSeconds intentionally
+      // omitted — public endpoint; use /mesh/status (auth-required) for internals
+      services,
+    },
+  });
 });
 
-server.listen(PORT, () => {
-  console.log(`\n  PlanIt Router listening on port ${PORT}`);
-  console.log(`  ${BACKENDS.length} backends registered, 1 active to start\n`);
+// Per-service 15-day uptime history from UptimeCheck collection
+app.get('/watchdog/uptime', async (_req, res) => {
+  const dbOk = await ensureDbConnected();
+  if (!dbOk) return res.status(503).json({ error: 'DB unavailable' });
+  try {
+    const result = await computeUptimeHistory();
+    res.json(result);
+  } catch (err) {
+    console.error(`[${ts()}] [uptime] ${err.message}`);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ─── Boot ─────────────────────────────────────────────────────────────────────
+const startedAt = Date.now();
+
+async function boot() {
+  await ensureDbConnected();
+
+  app.listen(PORT, () => {
+    console.log(`[${ts()}] Watchdog HTTP → http://0.0.0.0:${PORT}`);
+    console.log(`[${ts()}] Status        → http://0.0.0.0:${PORT}/watchdog/status\n`);
+  });
+
+  // Immediate startup ping of all targets
+  console.log(`[${ts()}] Running startup pings...`);
+  await pingAll();
+
+  // Ongoing pings
+  setInterval(pingAll, PING_MS);
+  console.log(`[${ts()}] Watchdog running — pinging ${targets.length} target(s) every ${PING_MS / 1000}s\n`);
+
+  await sendNtfy({
+    title:    ' Monitoring Active',
+    message:  `PlanIt automated monitoring is online.\nChecking ${targets.length} service(s) every ${PING_MS / 1000}s:\n${targets.map(t => `• ${t.name}`).join('\n')}\n\nYou will be notified immediately of any service disruptions.`,
+    priority: 'default',
+    tags:     ['shield', 'white_check_mark'],
+  });
+}
+
+process.on('SIGTERM', async () => { try { await mongoose.disconnect(); } catch (_) {} process.exit(0); });
+process.on('SIGINT',  async () => { try { await mongoose.disconnect(); } catch (_) {} process.exit(0); });
+
+boot().catch(err => {
+  console.error(`[${ts()}] Fatal boot error: ${err.message}`);
+  process.exit(1);
 });
