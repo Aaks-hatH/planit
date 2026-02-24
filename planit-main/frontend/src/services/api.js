@@ -334,7 +334,10 @@ export const utilityAPI = {
 
 // ─── Discover API ─────────────────────────────────────────────────────────────
 export const discoverAPI = {
-  getPublicEvents: (params) => api.get('/events/public', { baseURL: API_URL.replace('/api', '') + '/api', params }),
+  getPublicEvents: (params) => api.get('/events/public', { params }),
+  uploadCover: (eventId, formData) => api.post(`/events/${eventId}/cover`, formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  }),
 };
 
 export default api;
