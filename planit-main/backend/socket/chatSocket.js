@@ -174,6 +174,13 @@ module.exports = (io) => {
         await message.save();
         io.to(`event_${eventId}`).emit('new_message', message);
 
+        // Fire webhooks non-blocking
+        const { fireWebhooks } = require('../routes/events');
+        fireWebhooks(eventId, 'message_sent', {
+          username: socket.user.username,
+          message: content.trim().slice(0, 200),
+        }).catch(() => {});
+
       } catch (error) {
         console.error('Error sending message:', error);
         socket.emit('error', { message: 'Failed to send message' });
