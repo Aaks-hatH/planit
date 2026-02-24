@@ -12,6 +12,348 @@ import toast from 'react-hot-toast';
 import { motion } from 'framer-motion';
 import StarBackground from '../components/StarBackground';
 
+/*
+PLANIT SOFTWARE LICENSE AGREEMENT
+Copyright (c) 2026 Aakshat Hariharan. All rights reserved.
+
+PLEASE READ THIS LICENSE AGREEMENT CAREFULLY BEFORE ACCESSING, VIEWING,
+OR USING THIS SOFTWARE. BY ACCESSING THE REPOSITORY, VIEWING THE SOURCE
+CODE, OR USING THE HOSTED SERVICE, YOU ACKNOWLEDGE THAT YOU HAVE READ
+THIS AGREEMENT, UNDERSTAND IT, AND AGREE TO BE BOUND BY ITS TERMS. IF
+YOU DO NOT AGREE TO THESE TERMS, YOU MUST IMMEDIATELY CEASE ALL ACCESS
+TO AND USE OF THIS SOFTWARE.
+
+================================================================================
+SECTION 1 -- DEFINITIONS
+================================================================================
+
+1.1  "Software" means the PlanIt application in its entirety, including but
+     not limited to all source code, object code, compiled binaries, scripts,
+     configuration files, database schemas, API definitions, frontend
+     components, backend services, routing infrastructure, watchdog services,
+     documentation, design assets, visual layouts, user interface elements,
+     architectural decisions, and all related materials made available in this
+     repository or through the hosted service.
+
+1.2  "Author" means Aakshat Hariharan, the sole creator and owner of the
+     Software and all intellectual property rights therein.
+
+1.3  "You" or "Licensee" means any individual, organization, company,
+     partnership, or other legal entity that accesses, views, downloads,
+     copies, or otherwise interacts with the Software or any portion thereof.
+
+1.4  "Hosted Service" means the publicly accessible deployment of the
+     Software operated by the Author at planitapp.onrender.com and any
+     associated domains or subdomains.
+
+1.5  "Derivative Work" means any work, software, product, service, or
+     creation that is based on, derived from, substantially similar to,
+     inspired by, or incorporates any portion of the Software, including
+     works that replicate the design, architecture, functionality, or
+     user experience of the Software in any form.
+
+1.6  "Commercial Use" means any use of the Software or any portion thereof
+     in connection with any activity intended to generate revenue, profit,
+     or other financial or commercial benefit, whether directly or indirectly.
+
+1.7  "Distribute" means to make available, publish, transmit, share,
+     sublicense, sell, rent, lease, lend, or otherwise transfer the Software
+     or any portion thereof to any third party by any means.
+
+1.8  "Deploy" means to install, run, host, execute, or operate the Software
+     or any portion thereof on any server, device, infrastructure, cloud
+     platform, virtual machine, container, or computing environment.
+
+================================================================================
+SECTION 2 -- GRANT OF LIMITED LICENSE
+================================================================================
+
+2.1  Subject to the terms and conditions of this Agreement, the Author
+     hereby grants You a limited, non-exclusive, non-transferable,
+     non-sublicensable, revocable license to:
+
+     (a) View the source code of the Software solely for personal,
+         non-commercial educational and reference purposes; and
+
+     (b) Access and use the Hosted Service for its intended purpose of
+         event planning, subject to the Terms of Service of the Hosted
+         Service.
+
+2.2  This license does not grant You any rights to the Software except
+     as expressly set forth in Section 2.1. All rights not expressly
+     granted herein are reserved by the Author.
+
+2.3  The Author reserves the right to revoke this limited license at any
+     time, for any reason or no reason, upon notice or without notice.
+
+2.4  Making the repository publicly accessible does not, under any
+     circumstances, constitute a grant of any rights beyond those expressly
+     set forth in Section 2.1, nor does it constitute a dedication of the
+     Software to the public domain.
+
+================================================================================
+SECTION 3 -- RESTRICTIONS
+================================================================================
+
+3.1  You expressly agree that You will NOT, without prior explicit written
+     permission from the Author:
+
+     (a) Copy, clone, fork, mirror, scrape, or otherwise reproduce the
+         Software or any portion thereof, in whole or in part, in any
+         medium or format, whether digital or physical;
+
+     (b) Deploy, host, run, or execute the Software or any portion thereof
+         on any server, device, or infrastructure other than the Author's
+         official Hosted Service;
+
+     (c) Distribute, sublicense, sell, rent, lease, transfer, publish,
+         or otherwise make the Software or any portion thereof available
+         to any third party in any form;
+
+     (d) Modify, adapt, translate, reverse engineer, decompile, disassemble,
+         or attempt to derive the source code of any compiled portion of
+         the Software;
+
+     (e) Create any Derivative Work based on or substantially similar to
+         the Software, including recreating its functionality, architecture,
+         design, or user experience in any other codebase or product;
+
+     (f) Use the Software or any portion of its source code, design,
+         architecture, or functionality as the basis for any competing
+         product or service, whether commercial or non-commercial;
+
+     (g) Use the Software for any Commercial Use without a separately
+         negotiated commercial license agreement executed in writing by
+         the Author;
+
+     (h) Remove, alter, obscure, or replace any copyright notices, license
+         notices, proprietary markings, or attribution notices contained
+         in or accompanying the Software;
+
+     (i) Use the name "PlanIt", the PlanIt logo, or the name "Aakshat
+         Hariharan" in connection with any product, service, or
+         organization in a manner that suggests endorsement, affiliation,
+         or sponsorship without prior written permission from the Author;
+
+     (j) Use the Software in any manner that violates any applicable local,
+         state, national, or international law or regulation;
+
+     (k) Circumvent, disable, or interfere with any technical measures
+         implemented in the Software to enforce the terms of this license,
+         including but not limited to the cryptographic license integrity
+         verification system embedded in the Software's backend;
+
+     (l) Access the Software's backend services, APIs, or database
+         infrastructure through any means other than the official Hosted
+         Service's user interface, except as explicitly authorized by
+         the Author in writing;
+
+     (m) Use any automated tools, bots, scrapers, or scripts to access,
+         download, or index the Software's source code or the Hosted
+         Service's content at scale.
+
+3.2  The restrictions set forth in Section 3.1 apply regardless of whether
+     Your intended use is personal, educational, academic, commercial,
+     non-profit, or for any other purpose.
+
+3.3  The restrictions set forth in this Agreement apply to the Software
+     as a whole and to any portion, excerpt, component, module, or file
+     thereof, no matter how small.
+
+================================================================================
+SECTION 4 -- INTELLECTUAL PROPERTY OWNERSHIP
+================================================================================
+
+4.1  The Software and all copies, modifications, and Derivative Works
+     thereof, and all intellectual property rights therein, including
+     without limitation all copyrights, patents, trade secrets, trademarks,
+     and other proprietary rights, are and shall remain the exclusive
+     property of the Author.
+
+4.2  Nothing in this Agreement shall be construed to transfer, assign, or
+     convey to You any ownership interest in the Software or any intellectual
+     property rights therein.
+
+4.3  The design, architecture, visual appearance, user experience, and
+     functionality of the Software are trade secrets and confidential
+     information of the Author, and You agree to treat them as such.
+
+4.4  Any feedback, suggestions, bug reports, or contributions You provide
+     to the Author regarding the Software shall be the sole and exclusive
+     property of the Author, and You hereby assign to the Author all
+     rights in such feedback without any obligation of compensation or
+     attribution to You.
+
+4.5  You acknowledge that the Software embodies substantial creative effort
+     and investment by the Author, and that unauthorized use or copying
+     would cause irreparable harm to the Author for which monetary damages
+     would be inadequate.
+
+================================================================================
+SECTION 5 -- TECHNICAL ENFORCEMENT
+================================================================================
+
+5.1  The Software includes a cryptographic license integrity verification
+     system that runs at server startup and periodically during operation.
+     This system uses HMAC proof chains derived from a deployment-specific
+     license key to verify that each running instance of the Software is
+     an authorized deployment.
+
+5.2  Any attempt to tamper with, circumvent, disable, or bypass this
+     verification system constitutes a material breach of this Agreement
+     and may also constitute a violation of applicable computer fraud and
+     abuse laws.
+
+5.3  Unauthorized deployments will fail to start or will terminate
+     automatically. The Author reserves the right to implement additional
+     technical measures to prevent unauthorized use at any time.
+
+================================================================================
+SECTION 6 -- CONFIDENTIALITY
+================================================================================
+
+6.1  You acknowledge that the Software contains confidential and proprietary
+     information belonging to the Author, including but not limited to
+     source code, algorithms, data structures, database schemas, security
+     implementations, and architectural design.
+
+6.2  You agree to maintain the confidentiality of the Software and not to
+     disclose, publish, or share any non-public portions of the Software
+     with any third party without the Author's prior written consent.
+
+6.3  You agree to take reasonable precautions to prevent unauthorized
+     access to or disclosure of the Software, using at least the same
+     degree of care You use to protect Your own confidential information,
+     but in no event less than reasonable care.
+
+================================================================================
+SECTION 7 -- DISCLAIMER OF WARRANTIES
+================================================================================
+
+7.1  THE SOFTWARE AND THE HOSTED SERVICE ARE PROVIDED "AS IS" AND "AS
+     AVAILABLE" WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED.
+
+7.2  THE AUTHOR EXPRESSLY DISCLAIMS ALL WARRANTIES, INCLUDING BUT NOT
+     LIMITED TO: (A) ANY IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS
+     FOR A PARTICULAR PURPOSE, TITLE, AND NON-INFRINGEMENT; (B) ANY
+     WARRANTIES THAT THE SOFTWARE WILL BE UNINTERRUPTED, ERROR-FREE, OR
+     FREE OF HARMFUL COMPONENTS; (C) ANY WARRANTIES REGARDING THE ACCURACY,
+     RELIABILITY, OR COMPLETENESS OF THE SOFTWARE OR ANY CONTENT THEREIN;
+     AND (D) ANY WARRANTIES ARISING FROM COURSE OF DEALING, COURSE OF
+     PERFORMANCE, OR USAGE OF TRADE.
+
+7.3  YOU ASSUME ALL RISK ARISING FROM YOUR ACCESS TO AND USE OF THE
+     SOFTWARE AND THE HOSTED SERVICE.
+
+================================================================================
+SECTION 8 -- LIMITATION OF LIABILITY
+================================================================================
+
+8.1  TO THE MAXIMUM EXTENT PERMITTED BY APPLICABLE LAW, IN NO EVENT SHALL
+     THE AUTHOR BE LIABLE FOR ANY INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY,
+     CONSEQUENTIAL, OR PUNITIVE DAMAGES, INCLUDING BUT NOT LIMITED TO LOSS
+     OF PROFITS, LOSS OF DATA, LOSS OF GOODWILL, BUSINESS INTERRUPTION,
+     OR ANY OTHER COMMERCIAL DAMAGES OR LOSSES, ARISING OUT OF OR RELATED
+     TO THIS AGREEMENT OR YOUR USE OF OR INABILITY TO USE THE SOFTWARE,
+     EVEN IF THE AUTHOR HAS BEEN ADVISED OF THE POSSIBILITY OF SUCH DAMAGES.
+
+8.2  THE AUTHOR'S TOTAL CUMULATIVE LIABILITY TO YOU FOR ANY AND ALL CLAIMS
+     ARISING OUT OF OR RELATED TO THIS AGREEMENT SHALL NOT EXCEED THE
+     GREATER OF (A) THE AMOUNT YOU PAID TO THE AUTHOR IN THE TWELVE MONTHS
+     PRECEDING THE CLAIM, OR (B) ONE HUNDRED DOLLARS (USD $100.00).
+
+================================================================================
+SECTION 9 -- INDEMNIFICATION
+================================================================================
+
+9.1  You agree to indemnify, defend, and hold harmless the Author from and
+     against any and all claims, damages, losses, liabilities, costs, and
+     expenses (including reasonable attorneys' fees) arising out of or
+     related to: (a) Your breach of this Agreement; (b) Your use of or
+     access to the Software in violation of this Agreement; (c) Your
+     violation of any applicable law or regulation; or (d) Your
+     infringement of any third-party rights.
+
+================================================================================
+SECTION 10 -- TERMINATION
+================================================================================
+
+10.1 This Agreement and the license granted herein are effective until
+     terminated. The Author may terminate this Agreement and the license
+     immediately and without notice if You breach any term of this Agreement.
+
+10.2 Upon termination of this Agreement for any reason: (a) all rights
+     granted to You hereunder shall immediately terminate; (b) You must
+     immediately cease all use of and access to the Software; (c) You must
+     immediately destroy all copies of the Software in Your possession
+     or control; and (d) You must certify in writing to the Author that
+     You have complied with the foregoing obligations upon request.
+
+10.3 Termination of this Agreement shall not limit the Author's rights
+     or remedies at law or in equity. Sections 1, 3, 4, 6, 7, 8, 9,
+     10, 11, and 12 shall survive termination of this Agreement.
+
+================================================================================
+SECTION 11 -- ENFORCEMENT AND REMEDIES
+================================================================================
+
+11.1 You acknowledge that any breach of this Agreement would cause
+     irreparable harm to the Author for which monetary damages would be
+     an inadequate remedy, and that the Author shall be entitled to seek
+     equitable relief, including injunctive relief and specific performance,
+     in addition to all other remedies available at law or in equity,
+     without the requirement of posting a bond or other security.
+
+11.2 The Author reserves the right to pursue all available legal and
+     equitable remedies for violations of this Agreement, including but
+     not limited to injunctive relief, damages, disgorgement of profits,
+     attorneys' fees, and court costs.
+
+11.3 The failure of the Author to enforce any provision of this Agreement
+     shall not constitute a waiver of the Author's right to enforce that
+     provision or any other provision in the future.
+
+================================================================================
+SECTION 12 -- GENERAL PROVISIONS
+================================================================================
+
+12.1 Governing Law. This Agreement shall be governed by and construed in
+     accordance with the laws of the jurisdiction in which the Author
+     resides, without regard to its conflict of law provisions.
+
+12.2 Entire Agreement. This Agreement constitutes the entire agreement
+     between You and the Author with respect to the subject matter hereof
+     and supersedes all prior or contemporaneous agreements, representations,
+     warranties, and understandings with respect to the Software.
+
+12.3 Severability. If any provision of this Agreement is held to be
+     invalid, illegal, or unenforceable, the remaining provisions shall
+     continue in full force and effect, and the invalid, illegal, or
+     unenforceable provision shall be modified to the minimum extent
+     necessary to make it valid, legal, and enforceable.
+
+12.4 No Waiver. No waiver by the Author of any breach of this Agreement
+     shall be deemed a waiver of any subsequent breach of the same or any
+     other provision.
+
+12.5 Assignment. You may not assign or transfer this Agreement or any
+     rights or obligations hereunder, in whole or in part, without the
+     Author's prior written consent. Any purported assignment without such
+     consent shall be null and void. The Author may assign this Agreement
+     freely without restriction.
+
+12.6 Contact. For licensing inquiries, permission requests, or to report
+     violations of this Agreement, contact the Author through the official
+     support page at planitapp.onrender.com or planit.userhelp@gmail.com
+
+================================================================================
+
+Copyright (c) 2026 Aakshat Hariharan. All rights reserved.
+*/
+
+// ─────────────────────────────────────────────
+// UTILITIES
+// ─────────────────────────────────────────────
 
 function slugify(text) {
   return text.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').substring(0, 40);
@@ -143,6 +485,12 @@ function TestimonialCard({ quote, author, role, event, delay = 0 }) {
   );
 }
 
+// ─────────────────────────────────────────────
+// COSMIC AMBIENT LAYER — soft nebulae, aurora
+// These sit between the star canvas and page content.
+// opacity is intentionally low so they don't compete.
+// ─────────────────────────────────────────────
+
 function CosmicAmbient() {
   return (
     <div
@@ -162,6 +510,14 @@ function CosmicAmbient() {
     </div>
   );
 }
+
+// ─────────────────────────────────────────────
+// ENTERPRISE INTERACTIVE DEMO
+// ─────────────────────────────────────────────
+
+// ─────────────────────────────────────────────
+// ENTERPRISE INTERACTIVE DEMO
+// ─────────────────────────────────────────────
 
 const DEMO_GUESTS = [
   { id: 1, name: 'Sarah Johnson',   group: 4, table: 12, code: 'SJ4A-X9', role: 'VIP',      status: 'normal' },
@@ -191,7 +547,7 @@ function EnterpriseDemo() {
   const [scanning, setScanning] = useState(null);
   const [lastChecked, setLastChecked] = useState(null);
   const [securityLog, setSecurityLog] = useState([]);
-  const [overrideTarget, setOverrideTarget] = useState(null);
+  const [overrideTarget, setOverrideTarget] = useState(null); // guest being overridden
   const [overridePin, setOverridePin] = useState('');
   const [overrideError, setOverrideError] = useState('');
   const [overrideSuccess, setOverrideSuccess] = useState(false);
@@ -206,20 +562,28 @@ function EnterpriseDemo() {
 
   const handleCheckIn = (guest) => {
     if (scanning) return;
+
+    // Already checked in → duplicate attempt
     if (guest.checkedIn) {
       addLog({ type: 'duplicate', severity: 'high', name: guest.name, msg: `Duplicate scan — ${guest.name} already checked in at ${guest.checkedAt?.toLocaleTimeString()}` });
       return;
     }
+
+    // Blocked guest
     if (guest.status === 'blocked') {
       addLog({ type: 'blocked', severity: 'critical', name: guest.name, msg: `BLOCKED: ${guest.name} — ${guest.blockReason}` });
       setOverrideTarget(guest);
       return;
     }
+
+    // Flagged guest
     if (guest.status === 'flagged') {
       addLog({ type: 'flagged', severity: 'high', name: guest.name, msg: `WARNING: ${guest.name} — ${guest.flagReason}` });
       setOverrideTarget(guest);
       return;
     }
+
+    // Normal check-in
     setScanning(guest.id);
     setGuests(prev => prev.map(g => g.id === guest.id ? { ...g, checking: true, scanCount: g.scanCount + 1 } : g));
     setTimeout(() => {
@@ -289,6 +653,8 @@ function EnterpriseDemo() {
 
   return (
     <div className="bg-neutral-900/60 rounded-3xl border border-neutral-800 overflow-hidden">
+
+      {/* Manager override modal */}
       {overrideTarget && !overrideSuccess && (
         <div className="absolute inset-0 z-10 flex items-center justify-center" style={{ background: 'rgba(0,0,0,0.85)', borderRadius: 24 }}>
           <div className="w-full max-w-xs mx-4 bg-neutral-900 rounded-2xl border border-neutral-700 p-6">
@@ -332,6 +698,7 @@ function EnterpriseDemo() {
         </div>
       )}
 
+      {/* Header */}
       <div className="px-5 pt-5 pb-0" style={{ position: 'relative' }}>
         <div className="flex items-center justify-between mb-4">
           <div>
@@ -357,6 +724,7 @@ function EnterpriseDemo() {
           </div>
         </div>
 
+        {/* Tabs */}
         <div className="flex gap-1 border-b border-neutral-800">
           {['guests', 'security', 'analytics'].map(t => (
             <button key={t} onClick={() => setTab(t)}
@@ -372,6 +740,7 @@ function EnterpriseDemo() {
         </div>
       </div>
 
+      {/* GUESTS TAB */}
       {tab === 'guests' && (
         <div className="p-3" style={{ height: 360, overflowY: 'auto' }}>
           <div className="space-y-2">
@@ -387,6 +756,8 @@ function EnterpriseDemo() {
                     isFlagged        ? 'border-amber-900/50 bg-amber-950/15' :
                     'border-neutral-800 bg-neutral-900/50 hover:border-neutral-700'
                   }`}>
+
+                  {/* QR / status icon */}
                   <div className="flex-shrink-0">
                     {guest.checking ? (
                       <div className="w-10 h-10 rounded-lg border border-neutral-700 bg-neutral-800 flex items-center justify-center">
@@ -408,6 +779,8 @@ function EnterpriseDemo() {
                       <QRPattern code={guest.code} size={40} />
                     )}
                   </div>
+
+                  {/* Info */}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-1.5 flex-wrap">
                       <p className="text-sm font-semibold text-white truncate">{guest.name}</p>
@@ -423,6 +796,8 @@ function EnterpriseDemo() {
                         : `Party of ${guest.group} · Table ${guest.table}`}
                     </p>
                   </div>
+
+                  {/* Action */}
                   <button
                     onClick={() => handleCheckIn(guest)}
                     disabled={!!scanning}
@@ -436,6 +811,7 @@ function EnterpriseDemo() {
                     }`}>
                     {guest.checkedIn ? 'Done' : scanning === guest.id ? '…' : isBlocked ? 'Blocked' : isFlagged ? 'Review' : 'Scan'}
                   </button>
+
                   {lastChecked === guest.id && (
                     <span className="flex-shrink-0 text-xs text-emerald-400 font-bold animate-pulse">In!</span>
                   )}
@@ -443,6 +819,8 @@ function EnterpriseDemo() {
               );
             })}
           </div>
+
+          {/* Simulate unauthorized */}
           <div className="mt-3 p-3 rounded-2xl border border-dashed border-neutral-700 bg-neutral-900/30">
             <p className="text-xs text-neutral-600 mb-2 font-medium">Simulate security scenarios:</p>
             <div className="flex gap-2">
@@ -460,8 +838,10 @@ function EnterpriseDemo() {
         </div>
       )}
 
+      {/* SECURITY TAB */}
       {tab === 'security' && (
         <div className="p-4" style={{ height: 360, overflowY: 'auto' }}>
+          {/* Security overview badges */}
           <div className="grid grid-cols-3 gap-2 mb-4">
             {[
               { label: 'Blocked', count: guests.filter(g => g.status === 'blocked' && !g.checkedIn).length, color: 'text-red-400', bg: 'bg-red-950/30 border-red-900/40' },
@@ -474,6 +854,8 @@ function EnterpriseDemo() {
               </div>
             ))}
           </div>
+
+          {/* Security features list */}
           <div className="space-y-2 mb-4">
             <p className="text-xs font-bold text-neutral-600 uppercase tracking-widest">Active protections</p>
             {[
@@ -492,6 +874,8 @@ function EnterpriseDemo() {
               </div>
             ))}
           </div>
+
+          {/* Live log */}
           <p className="text-xs font-bold text-neutral-600 uppercase tracking-widest mb-2">Security log</p>
           {securityLog.length === 0 ? (
             <div className="text-center py-6">
@@ -514,6 +898,7 @@ function EnterpriseDemo() {
         </div>
       )}
 
+      {/* ANALYTICS TAB */}
       {tab === 'analytics' && (
         <div className="p-4" style={{ height: 360, overflowY: 'auto' }}>
           <div className="grid grid-cols-3 gap-2 mb-4">
@@ -528,6 +913,7 @@ function EnterpriseDemo() {
               </div>
             ))}
           </div>
+
           <p className="text-xs font-bold text-neutral-600 uppercase tracking-widest mb-3">Guest breakdown</p>
           <div className="space-y-2.5 mb-4">
             {guests.map(g => (
@@ -549,6 +935,7 @@ function EnterpriseDemo() {
               </div>
             ))}
           </div>
+
           <div className="p-4 bg-neutral-900 rounded-2xl border border-neutral-800">
             <div className="flex justify-between mb-2">
               <span className="text-xs font-bold text-neutral-400">Overall attendance</span>
@@ -559,6 +946,7 @@ function EnterpriseDemo() {
             </div>
             <p className="text-xs text-neutral-600 mt-2">{checkedInPeople} of {totalGuests} guests arrived</p>
           </div>
+
           {checkedInCount === 0 && (
             <p className="text-center text-xs text-neutral-600 mt-4">← Switch to Guests and start checking people in</p>
           )}
@@ -567,6 +955,10 @@ function EnterpriseDemo() {
     </div>
   );
 }
+
+// ─────────────────────────────────────────────
+// MAIN
+// ─────────────────────────────────────────────
 
 export default function Home() {
   const navigate = useNavigate();
@@ -580,56 +972,6 @@ export default function Home() {
   const [created, setCreated] = useState(null);
   const [showPassword, setShowPassword] = useState(false);
   const [showAccountPassword, setShowAccountPassword] = useState(false);
-
-  // ── Feature 2: Sticky FAB ──────────────────────────────────
-  const [showFAB, setShowFAB] = useState(false);
-  useEffect(() => {
-    const onScroll = () => setShowFAB(window.scrollY > window.innerHeight * 0.8);
-    window.addEventListener('scroll', onScroll, { passive: true });
-    return () => window.removeEventListener('scroll', onScroll);
-  }, []);
-
-  // ── Feature 8: Confetti ────────────────────────────────────
-  const confettiRef = useRef(null);
-  const launchConfetti = () => {
-    const canvas = confettiRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
-    const particles = Array.from({ length: 120 }, () => ({
-      x: Math.random() * canvas.width,
-      y: -20 - Math.random() * 80,
-      r: 4 + Math.random() * 6,
-      d: 2 + Math.random() * 3,
-      color: ['#ffffff','#a3e635','#34d399','#60a5fa','#f472b6','#fbbf24'][Math.floor(Math.random()*6)],
-      tilt: Math.random() * 20 - 10,
-      tiltAngle: 0,
-      tiltSpeed: 0.05 + Math.random() * 0.1,
-    }));
-    let frame = 0;
-    const draw = () => {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      particles.forEach(p => {
-        p.tiltAngle += p.tiltSpeed;
-        p.y += p.d;
-        p.tilt = Math.sin(p.tiltAngle) * 15;
-        ctx.beginPath();
-        ctx.lineWidth = p.r;
-        ctx.strokeStyle = p.color;
-        ctx.moveTo(p.x + p.tilt + p.r / 2, p.y);
-        ctx.lineTo(p.x + p.tilt, p.y + p.tilt + p.r / 2);
-        ctx.stroke();
-      });
-      frame++;
-      if (frame < 140) requestAnimationFrame(draw);
-      else ctx.clearRect(0, 0, canvas.width, canvas.height);
-    };
-    requestAnimationFrame(draw);
-  };
-
-  // ── Feature 5: Feature plan toggle ────────────────────────
-  const [planTab, setPlanTab] = useState('standard');
 
   const handleTitleChange = (e) => {
     const title = e.target.value;
@@ -654,7 +996,6 @@ export default function Home() {
       localStorage.setItem('eventToken', response.data.token);
       localStorage.setItem('username', formData.organizerName);
       setCreated(response.data.event);
-      setTimeout(launchConfetti, 300);
     } catch (error) {
       const msg = error.response?.data?.error || 'Failed to create event';
       if (msg.includes('already taken')) setFormData(prev => ({ ...prev, subdomain: makeSubdomain(prev.title) }));
@@ -668,6 +1009,7 @@ export default function Home() {
       <CosmicAmbient />
 
       <style>{`
+        /* ── Cosmic orbs ─────────────────────────────────────────── */
         .cosmic-orb {
           position: absolute;
           border-radius: 50%;
@@ -696,6 +1038,8 @@ export default function Home() {
           animation: orb-drift-3 38s ease-in-out infinite;
           animation-delay: -8s;
         }
+
+        /* ── Aurora shimmer at bottom ────────────────────────────── */
         .cosmic-aurora {
           position: absolute;
           bottom: 0; left: 0; right: 0;
@@ -708,6 +1052,7 @@ export default function Home() {
           );
           animation: aurora-pulse 18s ease-in-out infinite;
         }
+
         @keyframes orb-drift-1 {
           0%   { opacity: 1; transform: translate(0px, 0px) scale(1); }
           25%  { transform: translate(45px, 30px) scale(1.06); }
@@ -731,6 +1076,8 @@ export default function Home() {
           0%, 100% { opacity: 1; }
           50% { opacity: 0.4; }
         }
+
+        /* ── Shimmer text ─────────────────────────────────────────── */
         @keyframes shimmer-slide {
           0%   { background-position: -200% center; }
           100% { background-position:  200% center; }
@@ -749,11 +1096,15 @@ export default function Home() {
           -webkit-text-fill-color: transparent;
           animation: shimmer-slide 5s ease-in-out infinite;
         }
+
+        /* ── Cosmic glow ring — hero badge pulse ─────────────────── */
         @keyframes ring-pulse {
           0%, 100% { box-shadow: 0 0 0 0px rgba(148,163,184,0), 0 0 28px 4px rgba(100,116,139,0.10); }
           50%       { box-shadow: 0 0 0 8px rgba(148,163,184,0.04), 0 0 40px 8px rgba(100,116,139,0.18); }
         }
         .hero-badge { animation: ring-pulse 5s ease-in-out infinite; }
+
+        /* ── Floating constellation dots — hero section ──────────── */
         @keyframes float-dot {
           0%, 100% { transform: translateY(0px) scale(1);   opacity: 0.35; }
           50%       { transform: translateY(-14px) scale(1.2); opacity: 0.65; }
@@ -773,6 +1124,8 @@ export default function Home() {
         .constellate:nth-child(6)  { top:35%; left:86%; animation: float-dot 8.3s ease-in-out infinite 1.8s; }
         .constellate:nth-child(7)  { top:55%; left:4%;  animation: float-dot 7.0s ease-in-out infinite 2.1s; }
         .constellate:nth-child(8)  { top:62%; left:88%; animation: float-dot 9.4s ease-in-out infinite 0.9s; }
+
+        /* ── Pulsing hero glow disc ──────────────────────────────── */
         @keyframes hero-disc-pulse {
           0%, 100% { opacity: 0.07; transform: scale(1); }
           50%       { opacity: 0.13; transform: scale(1.04); }
@@ -788,6 +1141,8 @@ export default function Home() {
           animation: hero-disc-pulse 8s ease-in-out infinite;
           pointer-events: none;
         }
+
+        /* ── Scan-line sweep on stat cards ──────────────────────── */
         @keyframes scan-sweep {
           0%   { transform: translateX(-120%); }
           100% { transform: translateX(220%);  }
@@ -804,6 +1159,8 @@ export default function Home() {
         }
         .stat-card:nth-child(2)::after { animation-delay: 1.6s; }
         .stat-card:nth-child(3)::after { animation-delay: 3.2s; }
+
+        /* ── Input styles ─────────────────────────────────────────── */
         .dark-input {
           width: 100%;
           padding: 0.75rem 1rem;
@@ -818,6 +1175,8 @@ export default function Home() {
         .dark-input:focus { border-color: #64748b; }
         .dark-input::placeholder { color: #475569; }
         .dark-input option { background: #0f172a; color: white; }
+
+        /* ── Respect reduced motion ──────────────────────────────── */
         @media (prefers-reduced-motion: reduce) {
           .cosmic-orb, .cosmic-aurora, .hero-badge,
           .constellate, .hero-disc, .stat-card::after,
@@ -864,6 +1223,7 @@ export default function Home() {
       <main className="relative" style={{ zIndex: 2, overflowX: 'hidden', maxWidth: '100vw' }}>
         {/* HERO */}
         <section className="relative min-h-[92vh] flex items-center" style={{ overflow: 'hidden', maxWidth: '100vw' }}>
+          {/* Constellation dots floating in hero periphery */}
           <div className="constellate" />
           <div className="constellate" />
           <div className="constellate" />
@@ -872,6 +1232,7 @@ export default function Home() {
           <div className="constellate" />
           <div className="constellate" />
           <div className="constellate" />
+          {/* Central glow disc */}
           <div className="hero-disc" />
 
           <div className="w-full">
@@ -952,69 +1313,27 @@ export default function Home() {
           </div>
         </section>
 
-        {/* HOW IT WORKS — Feature 4: Interactive vertical timeline */}
+        {/* HOW IT WORKS */}
         <section className="py-20 border-t border-neutral-800/40">
-          <div className="max-w-3xl mx-auto px-6">
+          <div className="max-w-5xl mx-auto px-6">
             <SectionHeader eyebrow="How teams use it" title="Your event, every step" subtitle="Built for the full arc. Months of prep to the final goodbye." />
-
-            {/* Timeline */}
-            <div className="relative">
-              {/* Vertical spine */}
-              <div className="absolute left-6 sm:left-8 top-0 bottom-0 w-px bg-neutral-800" />
-
+            <div className="grid md:grid-cols-3 gap-6">
               {[
-                {
-                  icon: Brain,
-                  phase: 'Before the event',
-                  num: '01',
-                  title: 'Coordinate your team',
-                  desc: 'Assign tasks, split expenses, finalize the guest list, share files, and get every detail locked in before the big day.',
-                  bullets: ['Task assignments & deadlines', 'File sharing & floor plans', 'Guest list management', 'Budget splitting'],
-                  color: 'bg-blue-500',
-                },
-                {
-                  icon: Zap,
-                  phase: 'During the event',
-                  num: '02',
-                  title: 'Stay on top of it',
-                  desc: 'Quick check-ins, QR guest arrivals, last-minute updates. Your team stays synced while the event runs itself.',
-                  bullets: ['QR code check-in', 'Real-time team chat', 'Live attendance tracking', 'On-the-fly updates'],
-                  color: 'bg-amber-500',
-                },
-                {
-                  icon: CheckCircle2,
-                  phase: 'After the event',
-                  num: '03',
-                  title: 'Wrap it up right',
-                  desc: 'Close expenses, share memories, collect feedback. Every loose end, tied.',
-                  bullets: ['Expense reconciliation', 'Feedback collection', 'Memory sharing', 'Post-event reports'],
-                  color: 'bg-emerald-500',
-                },
+                { icon: Brain,        phase: 'Before', num: '01', title: 'Coordinate your team',  desc: 'Assign tasks, split expenses, finalize the guest list, share files, and get every detail locked in before the big day.' },
+                { icon: Zap,          phase: 'During', num: '02', title: 'Stay on top of it',     desc: 'Quick check-ins, QR guest arrivals, last-minute updates. Your team stays synced while the event runs itself.' },
+                { icon: CheckCircle2, phase: 'After',  num: '03', title: 'Wrap it up right',      desc: 'Close expenses, share memories, collect feedback. Every loose end, tied.' },
               ].map((item, i) => (
-                <Reveal key={i} delay={i * 150} className="relative pl-16 sm:pl-24 pb-14 last:pb-0">
-                  {/* Node on spine */}
-                  <div className={`absolute left-3 sm:left-5 top-1 w-7 h-7 rounded-full ${item.color} flex items-center justify-center shadow-lg ring-4 ring-[#06060c]`}>
-                    <item.icon className="w-3.5 h-3.5 text-white" />
-                  </div>
-
-                  {/* Card */}
-                  <div className="group p-6 sm:p-8 bg-neutral-900/50 rounded-3xl border border-neutral-800 hover:border-neutral-600 hover:bg-neutral-800/50 transition-all duration-500">
-                    <div className="flex items-start justify-between gap-4 mb-4">
-                      <div>
-                        <p className="text-xs font-bold text-neutral-600 uppercase tracking-widest mb-1">{item.phase}</p>
-                        <h3 className="text-xl font-bold text-white">{item.title}</h3>
+                <Reveal key={i} delay={i * 120}>
+                  <div className="group relative p-8 bg-neutral-900/50 rounded-3xl border border-neutral-800 hover:border-neutral-600 hover:bg-neutral-800/50 transition-all duration-500">
+                    <div className="flex items-start justify-between mb-6">
+                      <div className="w-12 h-12 rounded-2xl bg-neutral-800 group-hover:bg-white flex items-center justify-center transition-all duration-500">
+                        <item.icon className="w-6 h-6 text-neutral-400 group-hover:text-neutral-900 transition-colors duration-500" />
                       </div>
-                      <span className="text-3xl font-black text-neutral-800 flex-shrink-0 group-hover:text-neutral-700 transition-colors select-none">{item.num}</span>
+                      <span className="text-3xl font-black text-neutral-800 group-hover:text-neutral-700 transition-colors select-none">{item.num}</span>
                     </div>
-                    <p className="text-sm text-neutral-400 leading-relaxed mb-5">{item.desc}</p>
-                    {/* Bullet chips */}
-                    <div className="flex flex-wrap gap-2">
-                      {item.bullets.map((b, j) => (
-                        <span key={j} className="px-3 py-1 text-xs font-medium text-neutral-400 bg-neutral-800/80 rounded-full border border-neutral-700 hover:border-neutral-600 transition-colors">
-                          {b}
-                        </span>
-                      ))}
-                    </div>
+                    <p className="text-xs font-bold text-neutral-600 uppercase tracking-widest mb-2">{item.phase}</p>
+                    <h3 className="text-lg font-bold text-white mb-3">{item.title}</h3>
+                    <p className="text-sm text-neutral-400 leading-relaxed">{item.desc}</p>
                   </div>
                 </Reveal>
               ))}
@@ -1022,123 +1341,18 @@ export default function Home() {
           </div>
         </section>
 
-        {/* ── Feature 3: PlanIt vs "winging it" comparison ─────── */}
-        <section className="py-20 border-t border-neutral-800/40">
-          <div className="max-w-4xl mx-auto px-6">
-            <Reveal className="text-center mb-12">
-              <p className="text-xs font-semibold text-neutral-500 uppercase tracking-widest mb-3">Why PlanIt</p>
-              <h2 className="text-4xl md:text-5xl font-black text-white mb-4">Stop winging it</h2>
-              <p className="text-lg text-neutral-400 max-w-md mx-auto">Most event teams cobble together group chats, spreadsheets, and email threads. There's a better way.</p>
-            </Reveal>
-
-            <Reveal delay={100}>
-              <div className="overflow-hidden rounded-3xl border border-neutral-800">
-                {/* Column headers */}
-                <div className="grid grid-cols-3 bg-neutral-900/80">
-                  <div className="px-4 sm:px-6 py-4 text-xs font-bold text-neutral-600 uppercase tracking-widest">Feature</div>
-                  <div className="px-4 sm:px-6 py-4 text-center">
-                    <span className="text-xs font-bold text-neutral-500 uppercase tracking-widest">Group chat + spreadsheet</span>
-                  </div>
-                  <div className="px-4 sm:px-6 py-4 text-center bg-white/[0.03] border-l border-neutral-800">
-                    <span className="text-xs font-bold text-white uppercase tracking-widest">PlanIt</span>
-                  </div>
-                </div>
-
-                {/* Rows */}
-                {[
-                  { label: 'All info in one place', them: false, us: true },
-                  { label: 'Guest check-in & QR codes', them: false, us: true },
-                  { label: 'Task assignments & deadlines', them: '⚠ Sort of', us: true },
-                  { label: 'Real-time team messaging', them: '⚠ Kind of', us: true },
-                  { label: 'Expense tracking', them: '⚠ Manually', us: true },
-                  { label: 'RSVP & attendance management', them: false, us: true },
-                  { label: 'File sharing & floor plans', them: '⚠ Scattered', us: true },
-                  { label: 'Works without account sign-up', them: true, us: true },
-                ].map((row, i) => (
-                  <div key={i} className={`grid grid-cols-3 border-t border-neutral-800/60 ${i % 2 === 0 ? '' : 'bg-neutral-900/30'}`}>
-                    <div className="px-4 sm:px-6 py-4 text-sm text-neutral-300 font-medium flex items-center">{row.label}</div>
-                    <div className="px-4 sm:px-6 py-4 flex items-center justify-center">
-                      {row.them === true ? (
-                        <span className="w-5 h-5 rounded-full bg-emerald-500/20 border border-emerald-700/40 flex items-center justify-center">
-                          <Check className="w-3 h-3 text-emerald-400" />
-                        </span>
-                      ) : row.them === false ? (
-                        <span className="w-5 h-5 rounded-full bg-red-500/10 border border-red-900/40 flex items-center justify-center">
-                          <span className="text-red-500 text-xs font-black leading-none">✕</span>
-                        </span>
-                      ) : (
-                        <span className="text-xs text-amber-500/80 font-medium text-center">{row.them}</span>
-                      )}
-                    </div>
-                    <div className="px-4 sm:px-6 py-4 flex items-center justify-center bg-white/[0.02] border-l border-neutral-800">
-                      <span className="w-5 h-5 rounded-full bg-emerald-500 flex items-center justify-center shadow-[0_0_8px_rgba(52,211,153,0.4)]">
-                        <Check className="w-3 h-3 text-white" />
-                      </span>
-                    </div>
-                  </div>
-                ))}
-
-                {/* Footer CTA row */}
-                <div className="grid grid-cols-3 border-t border-neutral-800 bg-neutral-950/60">
-                  <div className="px-4 sm:px-6 py-5" />
-                  <div className="px-4 sm:px-6 py-5 flex items-center justify-center">
-                    <span className="text-xs text-neutral-600 font-medium text-center">Good luck 👍</span>
-                  </div>
-                  <div className="px-4 sm:px-6 py-5 flex items-center justify-center bg-white/[0.02] border-l border-neutral-800">
-                    <a href="#create" className="text-xs font-bold text-white bg-white/10 border border-white/20 px-4 py-2 rounded-xl hover:bg-white/20 transition-all duration-200 whitespace-nowrap">
-                      Start free →
-                    </a>
-                  </div>
-                </div>
-              </div>
-            </Reveal>
-          </div>
-        </section>
-
         {/* FEATURES */}
         <section id="features" className="py-28 border-t border-neutral-800/40">
           <div className="max-w-7xl mx-auto px-6">
             <SectionHeader eyebrow="Features" title="Everything you need" subtitle="Powerful tools for seamless event planning and coordination" />
-
-            {/* ── Feature 5: Plan toggle ───────────────────────────── */}
-            <Reveal className="flex justify-center mb-10">
-              <div className="inline-flex items-center gap-1 p-1 bg-neutral-900 border border-neutral-800 rounded-2xl">
-                {[
-                  { val: 'standard',   label: 'Standard' },
-                  { val: 'enterprise', label: 'Enterprise' },
-                ].map(({ val, label }) => (
-                  <button
-                    key={val}
-                    onClick={() => setPlanTab(val)}
-                    className={`px-5 py-2.5 text-sm font-bold rounded-xl transition-all duration-300 ${planTab === val ? 'bg-white text-neutral-900 shadow-sm' : 'text-neutral-500 hover:text-neutral-300'}`}
-                  >
-                    {label}
-                  </button>
-                ))}
-              </div>
-            </Reveal>
-
-            {planTab === 'standard' && (
-              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                <FeatureCard icon={MessageSquare} title="Real-time team chat"       description="Instant messaging with typing indicators, reactions, and threaded conversations. Keep your planning team connected and aligned." delay={0} />
-                <FeatureCard icon={ListChecks}    title="Task management"           description="Create checklists, assign tasks, set deadlines, and track completion. Never miss a critical planning milestone." delay={80} />
-                <FeatureCard icon={BarChart3}     title="Quick polls and voting"    description="Make team decisions faster with live polls. Vote on venues, dates, menus, and more. See results instantly." delay={160} />
-                <FeatureCard icon={FileText}      title="Unlimited file sharing"    description="Share contracts, floor plans, schedules, and more. Everything your team needs in one organized space." delay={240} />
-                <FeatureCard icon={Clock}         title="Timeline and scheduling"   description="Build your event timeline, coordinate arrival times, and manage your run-of-show with precision." delay={320} />
-                <FeatureCard icon={Users}         title="Unlimited participants"    description="No limits on team size. Bring your entire planning committee, vendors, volunteers, everyone who needs to be involved." delay={400} />
-              </div>
-            )}
-
-            {planTab === 'enterprise' && (
-              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                <FeatureCard icon={Users}         title="QR guest check-in"         description="Each guest gets a unique QR code invitation. Scan at the door for instant check-in with zero friction." delay={0} />
-                <FeatureCard icon={Shield}        title="Security & fraud detection" description="Blocked guest lists, duplicate detection, trust scoring, and manager PIN overrides protect your event." delay={80} />
-                <FeatureCard icon={TrendingUp}    title="Real-time analytics"        description="Live attendance dashboard. See who's arrived, who's pending, and overall flow metrics as guests check in." delay={160} />
-                <FeatureCard icon={Timer}         title="Check-in time tracking"     description="Know exactly when each guest arrived. Export timestamps and flow data post-event." delay={240} />
-                <FeatureCard icon={MessageSquare} title="Personalised invitations"   description="Every guest receives a branded digital invitation with their name, table, and unique entry code." delay={320} />
-                <FeatureCard icon={CheckCircle2}  title="All Standard features"      description="Enterprise Mode includes everything in Standard — team chat, tasks, files, polls, and more. Nothing removed." delay={400} />
-              </div>
-            )}
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <FeatureCard icon={MessageSquare} title="Real-time team chat"       description="Instant messaging with typing indicators, reactions, and threaded conversations. Keep your planning team connected and aligned." delay={0} />
+              <FeatureCard icon={ListChecks}    title="Task management"           description="Create checklists, assign tasks, set deadlines, and track completion. Never miss a critical planning milestone." delay={80} />
+              <FeatureCard icon={BarChart3}     title="Quick polls and voting"    description="Make team decisions faster with live polls. Vote on venues, dates, menus, and more. See results instantly." delay={160} />
+              <FeatureCard icon={FileText}      title="Unlimited file sharing"    description="Share contracts, floor plans, schedules, and more. Everything your team needs in one organized space." delay={240} />
+              <FeatureCard icon={Clock}         title="Timeline and scheduling"   description="Build your event timeline, coordinate arrival times, and manage your run-of-show with precision." delay={320} />
+              <FeatureCard icon={Users}         title="Unlimited participants"    description="No limits on team size. Bring your entire planning committee, vendors, volunteers, everyone who needs to be involved." delay={400} />
+            </div>
           </div>
         </section>
 
@@ -1203,6 +1417,7 @@ export default function Home() {
               <p className="text-lg text-neutral-400 max-w-md mx-auto">Find public events and check our service health — all in one place.</p>
             </Reveal>
             <div className="grid md:grid-cols-2 gap-6">
+              {/* Discover Card */}
               <Reveal delay={0}>
                 <a href="/discover" className="group relative block p-8 rounded-3xl border border-neutral-800 bg-neutral-900/50 hover:border-neutral-500 hover:bg-neutral-800/60 transition-all duration-500 overflow-hidden">
                   <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500"
@@ -1221,6 +1436,7 @@ export default function Home() {
                 </a>
               </Reveal>
 
+              {/* Status Card */}
               <Reveal delay={120}>
                 <a href="/status" className="group relative block p-8 rounded-3xl border border-neutral-800 bg-neutral-900/50 hover:border-neutral-500 hover:bg-neutral-800/60 transition-all duration-500 overflow-hidden">
                   <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500"
@@ -1324,7 +1540,7 @@ export default function Home() {
                         </div>
                       )}
                       <button
-                        onClick={() => navigate(created.subdomain ? `/e/${created.subdomain}` : `/event/${created.id}`)}
+                        onClick={() => navigate((created.subdomain ? `/e/${created.subdomain}` : `/event/${created.id}`) + '?new=1')}
                         className="w-full px-8 py-5 bg-white text-neutral-900 rounded-2xl font-bold hover:scale-105 hover:bg-neutral-100 transition-all duration-300 shadow-xl flex items-center justify-center gap-3 text-lg"
                       >
                         {mode === 'enterprise' ? 'Set Up Guest Invites' : 'Enter your planning hub'}
@@ -1503,27 +1719,6 @@ export default function Home() {
         </footer>
 
       </main>
-
-      {/* ── Feature 8: Confetti canvas ─────────────────────────── */}
-      <canvas
-        ref={confettiRef}
-        className="fixed inset-0 pointer-events-none"
-        style={{ zIndex: 9999 }}
-      />
-
-      {/* ── Feature 2: Sticky FAB ──────────────────────────────── */}
-      <div
-        className={`fixed bottom-6 right-4 sm:right-6 z-50 transition-all duration-500 ${showFAB ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 pointer-events-none'}`}
-      >
-        <a
-          href="#create"
-          className="group flex items-center gap-2.5 px-5 py-3 bg-white text-neutral-900 font-bold text-sm rounded-2xl shadow-[0_8px_30px_rgba(0,0,0,0.5)] hover:bg-neutral-100 hover:scale-105 active:scale-95 transition-all duration-200"
-        >
-          <Calendar className="w-4 h-4 flex-shrink-0" />
-          <span>Create event</span>
-          <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform duration-200" />
-        </a>
-      </div>
     </div>
   );
 }
