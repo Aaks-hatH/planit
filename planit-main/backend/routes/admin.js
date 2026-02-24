@@ -33,14 +33,15 @@ if (!global.__adminLogBuffer) {
   global.__adminLogBuffer  = [];
   global.__adminLogClients = [];
 
-  const MAX = 2000;
+  const MAX = 10000;
   const push = (level, args) => {
     const entry = {
       ts:    new Date().toISOString(),
       level,
       msg:   args
-        .map(a => (typeof a === 'object' ? JSON.stringify(a) : String(a)))
+        .map(a => (typeof a === 'object' ? JSON.stringify(a, null, 0) : String(a)))
         .join(' '),
+      pid:   process.pid,
     };
     global.__adminLogBuffer.push(entry);
     if (global.__adminLogBuffer.length > MAX) global.__adminLogBuffer.shift();
@@ -240,11 +241,12 @@ router.get('/system', verifyAdmin, async (req, res, next) => {
 // LIVE LOGS
 // ═══════════════════════════════════════════════════════════════════════════════
 
-// GET /admin/logs  — last N log lines
+// GET /admin/logs  — last N log lines (n=all returns everything)
 router.get('/logs', verifyAdmin, (req, res) => {
-  const n   = Math.min(parseInt(req.query.n || '200'), 2000);
+  const raw = req.query.n;
+  const n   = raw === 'all' ? Infinity : (parseInt(raw) || 500);
   const lvl = req.query.level;
-  let entries = global.__adminLogBuffer.slice(-n);
+  let entries = n === Infinity ? global.__adminLogBuffer.slice() : global.__adminLogBuffer.slice(-n);
   if (lvl) entries = entries.filter(e => e.level === lvl);
   res.json({ logs: entries, total: global.__adminLogBuffer.length });
 });
@@ -271,6 +273,91 @@ router.get('/logs/stream', verifyAdmin, (req, res) => {
     const idx = global.__adminLogClients.indexOf(send);
     if (idx !== -1) global.__adminLogClients.splice(idx, 1);
   });
+});
+
+// GET /admin/logs/full — complete system snapshot: ALL logs + full system state
+// No pagination, no limits. Intended for debugging and incident investigation.
+router.get('/logs/full', verifyAdmin, async (req, res, next) => {
+  try {
+    const mem      = process.memoryUsage();
+    const load     = os.loadavg();
+    const totalMem = os.totalmem();
+    const freeMem  = os.freemem();
+    const cpus     = os.cpus();
+
+    const [evCount, msgCount, partCount, pollCount, fileCount, empCount] =
+      await Promise.all([
+        Event.countDocuments(),
+        Message.countDocuments(),
+        EventParticipant.countDocuments(),
+        Poll.countDocuments(),
+        File.countDocuments(),
+        Employee.countDocuments(),
+      ]);
+
+    const errorCount = global.__adminLogBuffer.filter(e => e.level === 'error').length;
+    const warnCount  = global.__adminLogBuffer.filter(e => e.level === 'warn').length;
+
+    res.json({
+      generatedAt: new Date().toISOString(),
+      summary: {
+        totalLogs:     global.__adminLogBuffer.length,
+        errors:        errorCount,
+        warnings:      warnCount,
+        liveClients:   global.__adminLogClients.length,
+      },
+      process: {
+        pid:         process.pid,
+        nodeVersion: process.version,
+        platform:    process.platform,
+        arch:        process.arch,
+        uptime:      Math.floor(process.uptime()),
+        uptimeHuman: `${Math.floor(process.uptime() / 3600)}h ${Math.floor((process.uptime() % 3600) / 60)}m ${Math.floor(process.uptime() % 60)}s`,
+        env:         process.env.NODE_ENV || 'production',
+        memory: {
+          rss:        `${(mem.rss       / 1024 / 1024).toFixed(1)} MB`,
+          heapUsed:   `${(mem.heapUsed  / 1024 / 1024).toFixed(1)} MB`,
+          heapTotal:  `${(mem.heapTotal / 1024 / 1024).toFixed(1)} MB`,
+          external:   `${(mem.external  / 1024 / 1024).toFixed(1)} MB`,
+        },
+      },
+      os: {
+        hostname:    os.hostname(),
+        type:        os.type(),
+        release:     os.release(),
+        cpuCount:    cpus.length,
+        cpuModel:    cpus[0]?.model || 'unknown',
+        loadAvg1m:   os.loadavg()[0].toFixed(2),
+        loadAvg5m:   os.loadavg()[1].toFixed(2),
+        loadAvg15m:  os.loadavg()[2].toFixed(2),
+        totalMemMB:  (totalMem / 1024 / 1024).toFixed(0),
+        freeMemMB:   (freeMem  / 1024 / 1024).toFixed(0),
+        usedMemPct:  (((totalMem - freeMem) / totalMem) * 100).toFixed(1) + '%',
+      },
+      database: {
+        state:       mongoose.connection.readyState === 1 ? 'connected' : 'disconnected',
+        host:        mongoose.connection.host,
+        name:        mongoose.connection.name,
+        port:        mongoose.connection.port,
+      },
+      collections: {
+        events:       evCount,
+        messages:     msgCount,
+        participants: partCount,
+        polls:        pollCount,
+        files:        fileCount,
+        employees:    empCount,
+      },
+      config: {
+        corsOrigin:      process.env.CORS_ORIGIN || 'not set',
+        cloudinarySet:   !!(process.env.CLOUDINARY_CLOUD_NAME),
+        licenseSet:      !!(process.env.PLANIT_LICENSE_KEY),
+        adminUserSet:    !!(process.env.ADMIN_USERNAME),
+      },
+      // ALL log entries — no limit
+      logs: global.__adminLogBuffer.slice(),
+    });
+  } catch (error) { next(error); }
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -737,9 +824,13 @@ router.post('/employees', verifyAdmin, async (req, res, next) => {
     const existing = await Employee.findOne({ email: email.toLowerCase().trim() });
     if (existing) return res.status(400).json({ error: 'Email already registered' });
 
-    const empData = { name, email, role, department, phone, notes, permissions, startDate, status };
-    if (req.body.password) {
-      empData.passwordHash = await bcrypt.hash(req.body.password, 10);
+    const empData = { name, email, role: role || 'support', department, phone, notes, permissions, status };
+    if (startDate && startDate.trim()) {
+      const d = new Date(startDate);
+      if (!isNaN(d.getTime())) empData.startDate = d;
+    }
+    if (req.body.password && req.body.password.trim()) {
+      empData.passwordHash = await bcrypt.hash(req.body.password.trim(), 10);
     }
     const emp = await Employee.create(empData);
     res.status(201).json({ employee: emp, message: 'Employee created' });
@@ -748,14 +839,30 @@ router.post('/employees', verifyAdmin, async (req, res, next) => {
 
 router.patch('/employees/:id', verifyAdmin, async (req, res, next) => {
   try {
-    const updateData = { ...req.body };
-    if (updateData.password) {
-      updateData.passwordHash = await bcrypt.hash(updateData.password, 10);
-      delete updateData.password;
+    const { password, startDate, ...rest } = req.body;
+    const updateData = { ...rest };
+
+    // Hash new password if provided
+    if (password && password.trim()) {
+      updateData.passwordHash = await bcrypt.hash(password.trim(), 10);
     }
+
+    // Only set startDate if it's a valid non-empty value
+    if (startDate && startDate.trim()) {
+      updateData.startDate = new Date(startDate);
+      if (isNaN(updateData.startDate.getTime())) {
+        return res.status(400).json({ error: 'Invalid start date format.' });
+      }
+    }
+
+    // Prevent accidental overwrite of _id or passwordHash from client
+    delete updateData._id;
+    delete updateData.__v;
+    delete updateData.passwordHash; // only set via password field above
+
     const emp = await Employee.findByIdAndUpdate(
       req.params.id,
-      updateData,
+      { $set: updateData },
       { new: true, runValidators: true }
     );
     if (!emp) return res.status(404).json({ error: 'Employee not found' });
