@@ -194,12 +194,12 @@ export default function OrganizerSettings({ eventId, event, onClose, onUpdated }
  useEffect(() => {
  if (activeTab === 'integrations') {
  setWebhooksLoading(true);
- eventAPI.getWebhooks(event._id)
+ eventAPI.getWebhooks(eventId)
  .then(r => setWebhooks(r.data.webhooks || []))
  .catch(() => {})
  .finally(() => setWebhooksLoading(false));
  }
- }, [activeTab, event._id]);
+ }, [activeTab, eventId]);
 
  const handleSave = async () => {
  setSaving(true);
@@ -684,7 +684,7 @@ export default function OrganizerSettings({ eventId, event, onClose, onUpdated }
  if (!cloneDate) return;
  setCloning(true);
  try {
- const r = await eventAPI.clone(event._id, { date: cloneDate, title: cloneTitle || undefined });
+ const r = await eventAPI.clone(eventId, { date: cloneDate, title: cloneTitle || undefined });
  toast.success('Event cloned! Opening…');
  setTimeout(() => window.open(`/event/${r.data.event.id}`, '_blank'), 800);
  } catch (err) {
@@ -749,14 +749,14 @@ export default function OrganizerSettings({ eventId, event, onClose, onUpdated }
  <div className="flex items-center gap-1.5 flex-shrink-0">
  <button
  onClick={async () => {
- await eventAPI.updateWebhook(event._id, wh._id, { active: !wh.active });
+ await eventAPI.updateWebhook(eventId, wh._id, { active: !wh.active });
  setWebhooks(prev => prev.map(w => w._id === wh._id ? { ...w, active: !w.active } : w));
  }}
  className={`text-xs px-2 py-0.5 rounded-full font-medium border transition-colors ${wh.active ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-neutral-100 text-neutral-500 border-neutral-200'}`}
  >{wh.active ? 'Active' : 'Paused'}</button>
  <button
  onClick={async () => {
- await eventAPI.deleteWebhook(event._id, wh._id);
+ await eventAPI.deleteWebhook(eventId, wh._id);
  setWebhooks(prev => prev.filter(w => w._id !== wh._id));
  toast.success('Webhook removed');
  }}
@@ -850,7 +850,7 @@ export default function OrganizerSettings({ eventId, event, onClose, onUpdated }
  onClick={async () => {
  setAddingWh(true);
  try {
- const r = await eventAPI.createWebhook(event._id, newWh);
+ const r = await eventAPI.createWebhook(eventId, newWh);
  setWebhooks(prev => [...prev, r.data.webhook]);
  setNewWh({ url: '', events: [], secret: '' });
  toast.success('Webhook added');
