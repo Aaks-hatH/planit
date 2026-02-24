@@ -1200,9 +1200,17 @@ export default function Home() {
             <span className="text-xl font-bold text-white">PlanIt</span>
           </div>
           <nav className="flex items-center gap-1">
-            {['Terms|/terms', 'Privacy|/privacy', 'Admin|/admin'].map(s => {
+            <a href="/discover" className="hidden md:flex items-center gap-1.5 px-3 py-2 text-sm text-neutral-400 hover:text-neutral-200 hover:bg-neutral-800/50 rounded-xl transition-all duration-200">
+              <Zap className="w-3.5 h-3.5" />
+              Discover
+            </a>
+            <a href="/status" className="hidden md:flex items-center gap-1.5 px-3 py-2 text-sm text-neutral-400 hover:text-neutral-200 hover:bg-neutral-800/50 rounded-xl transition-all duration-200">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block" />
+              Status
+            </a>
+            {['Terms|/terms', 'Privacy|/privacy'].map(s => {
               const [label, href] = s.split('|');
-              return <a key={label} href={href} className="px-3 py-2 text-sm text-neutral-500 hover:text-neutral-200 hover:bg-neutral-800/50 rounded-xl transition-all duration-200">{label}</a>;
+              return <a key={label} href={href} className="hidden lg:block px-3 py-2 text-sm text-neutral-500 hover:text-neutral-200 hover:bg-neutral-800/50 rounded-xl transition-all duration-200">{label}</a>;
             })}
             <a href="/support" className="ml-2 px-3 sm:px-5 py-2.5 text-sm font-medium text-white bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 rounded-xl transition-all duration-200 flex items-center gap-2">
               <Heart className="w-4 h-4 flex-shrink-0" fill="currentColor" />
@@ -1610,6 +1618,62 @@ export default function Home() {
           </div>
         </section>
 
+        {/* DISCOVER + STATUS CARDS */}
+        <section className="py-20 border-t border-neutral-800/40">
+          <div className="max-w-5xl mx-auto px-6">
+            <Reveal className="text-center mb-12">
+              <p className="text-xs font-semibold text-neutral-500 uppercase tracking-widest mb-3">Explore more</p>
+              <h2 className="text-4xl md:text-5xl font-black text-white mb-4">Everything you need</h2>
+              <p className="text-lg text-neutral-400 max-w-md mx-auto">Find public events and check our service health — all in one place.</p>
+            </Reveal>
+            <div className="grid md:grid-cols-2 gap-6">
+              {/* Discover Card */}
+              <Reveal delay={0}>
+                <a href="/discover" className="group relative block p-8 rounded-3xl border border-neutral-800 bg-neutral-900/50 hover:border-neutral-500 hover:bg-neutral-800/60 transition-all duration-500 overflow-hidden">
+                  <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500"
+                    style={{ background: 'radial-gradient(ellipse at top left, rgba(80,60,200,0.12) 0%, transparent 65%)' }} />
+                  <div className="relative">
+                    <div className="w-14 h-14 rounded-2xl bg-neutral-800 border border-neutral-700 flex items-center justify-center mb-6 group-hover:bg-white group-hover:border-white transition-all duration-500 group-hover:scale-110">
+                      <Zap className="w-7 h-7 text-neutral-300 group-hover:text-neutral-900 transition-colors duration-500" />
+                    </div>
+                    <h3 className="text-2xl font-bold text-white mb-3">Discover Events</h3>
+                    <p className="text-neutral-400 leading-relaxed mb-6">Browse public events happening right now. Find meetups, workshops, and gatherings open to everyone.</p>
+                    <div className="flex items-center gap-2 text-sm font-medium text-neutral-300 group-hover:text-white transition-colors">
+                      Browse events
+                      <ArrowUpRight className="w-4 h-4 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform duration-200" />
+                    </div>
+                  </div>
+                </a>
+              </Reveal>
+
+              {/* Status Card */}
+              <Reveal delay={120}>
+                <a href="/status" className="group relative block p-8 rounded-3xl border border-neutral-800 bg-neutral-900/50 hover:border-neutral-500 hover:bg-neutral-800/60 transition-all duration-500 overflow-hidden">
+                  <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500"
+                    style={{ background: 'radial-gradient(ellipse at top right, rgba(20,180,80,0.10) 0%, transparent 65%)' }} />
+                  <div className="relative">
+                    <div className="w-14 h-14 rounded-2xl bg-neutral-800 border border-neutral-700 flex items-center justify-center mb-6 group-hover:bg-white group-hover:border-white transition-all duration-500 group-hover:scale-110">
+                      <TrendingUp className="w-7 h-7 text-neutral-300 group-hover:text-neutral-900 transition-colors duration-500" />
+                    </div>
+                    <div className="flex items-center gap-3 mb-3">
+                      <h3 className="text-2xl font-bold text-white">System Status</h3>
+                      <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-950/60 border border-emerald-900/50 text-emerald-400">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse inline-block" />
+                        Operational
+                      </span>
+                    </div>
+                    <p className="text-neutral-400 leading-relaxed mb-6">Monitor real-time uptime, API performance, and incident history. Stay informed about service health.</p>
+                    <div className="flex items-center gap-2 text-sm font-medium text-neutral-300 group-hover:text-white transition-colors">
+                      View status
+                      <ArrowUpRight className="w-4 h-4 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform duration-200" />
+                    </div>
+                  </div>
+                </a>
+              </Reveal>
+            </div>
+          </div>
+        </section>
+
         {/* FOOTER */}
         <footer className="border-t border-neutral-800/50" style={{ background: 'rgba(6,6,12,0.95)' }}>
           <div className="max-w-7xl mx-auto px-6 py-16">
@@ -1625,7 +1689,7 @@ export default function Home() {
               <div>
                 <h3 className="text-xs font-bold text-neutral-500 mb-5 uppercase tracking-wider">Product</h3>
                 <ul className="space-y-3 text-sm text-neutral-500">
-                  {[['Features', '#features'], ['Get Started', '#create'], ['Support', '/support']].map(([l, h]) => (
+                  {[['Features', '#features'], ['Discover', '/discover'], ['Status', '/status'], ['Get Started', '#create'], ['Support', '/support']].map(([l, h]) => (
                     <li key={l}><a href={h} className="hover:text-neutral-200 transition-colors">{l}</a></li>
                   ))}
                 </ul>
