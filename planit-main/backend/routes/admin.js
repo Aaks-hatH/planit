@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const jwt = require('jsonwebtoken');
+const bcrypt = require('bcryptjs');
 const os = require('os');
 const mongoose = require('mongoose');
 const { body, validationResult } = require('express-validator');
@@ -74,7 +75,27 @@ router.post(
       const adminPassword = process.env.ADMIN_PASSWORD || 'admin123';
 
       if (username !== adminUsername || password !== adminPassword) {
-        return res.status(401).json({ error: 'Invalid credentials' });
+        // Super admin check failed — try employee login (email + password)
+        const employee = await Employee.findOne({ email: username.toLowerCase().trim(), status: 'active' });
+        if (!employee || !employee.passwordHash) {
+          return res.status(401).json({ error: 'Invalid credentials' });
+        }
+        const match = await bcrypt.compare(password, employee.passwordHash);
+        if (!match) {
+          return res.status(401).json({ error: 'Invalid credentials' });
+        }
+        const empToken = jwt.sign(
+          { employeeId: employee._id, name: employee.name, email: employee.email,
+            role: employee.role, isAdmin: true, isEmployee: true,
+            permissions: employee.permissions },
+          secrets.jwt,
+          { expiresIn: '24h' }
+        );
+        return res.json({
+          message: 'Employee login successful',
+          token: empToken,
+          user: { username: employee.name, email: employee.email, role: employee.role, isEmployee: true, permissions: employee.permissions },
+        });
       }
 
       const token = jwt.sign(
@@ -709,16 +730,25 @@ router.post('/employees', verifyAdmin, async (req, res, next) => {
     const existing = await Employee.findOne({ email: email.toLowerCase().trim() });
     if (existing) return res.status(400).json({ error: 'Email already registered' });
 
-    const emp = await Employee.create({ name, email, role, department, phone, notes, permissions, startDate, status });
+    const empData = { name, email, role, department, phone, notes, permissions, startDate, status };
+    if (req.body.password) {
+      empData.passwordHash = await bcrypt.hash(req.body.password, 10);
+    }
+    const emp = await Employee.create(empData);
     res.status(201).json({ employee: emp, message: 'Employee created' });
   } catch (error) { next(error); }
 });
 
 router.patch('/employees/:id', verifyAdmin, async (req, res, next) => {
   try {
+    const updateData = { ...req.body };
+    if (updateData.password) {
+      updateData.passwordHash = await bcrypt.hash(updateData.password, 10);
+      delete updateData.password;
+    }
     const emp = await Employee.findByIdAndUpdate(
       req.params.id,
-      req.body,
+      updateData,
       { new: true, runValidators: true }
     );
     if (!emp) return res.status(404).json({ error: 'Employee not found' });
