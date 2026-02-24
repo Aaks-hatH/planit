@@ -17,6 +17,7 @@ const employeeSchema = new mongoose.Schema({
     canRunCleanup:       { type: Boolean, default: false },
   },
   avatar:      { type: String }, // initials or URL
+  passwordHash: { type: String }, // bcrypt hash — set by super admin so employee can log in
   startDate:   { type: Date, default: Date.now },
 }, { timestamps: true });
 
