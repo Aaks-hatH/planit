@@ -1995,6 +1995,20 @@ async function fireWebhooks(eventId, eventType, payload) {
         checkin:            0x6366f1,
         message_sent:       0x8b5cf6,
       };
+
+      // Build a human-readable description (the embed "body") shown prominently below the title
+      const d = parsed.data || {};
+      let description = '';
+      if (evType === 'message_sent' && d.message) {
+        description = `**${safeStr(d.username, 'Someone')}:** ${String(d.message).slice(0, 500)}`;
+      } else if (evType === 'participant_joined' && d.username) {
+        description = `**${d.username}** joined the event.`;
+      } else if (evType === 'rsvp_updated' && d.username) {
+        description = `**${d.username}** responded: **${safeStr(d.rsvp)}**`;
+      } else if (evType === 'checkin' && d.guestName) {
+        description = `**${d.guestName}** checked in.`;
+      }
+
       const fields = [];
       // Only push data fields when they actually have content (truthy after safeStr check)
       if (parsed.data?.username)                    fields.push({ name: 'Participant', value: safeStr(parsed.data.username),                           inline: true });
@@ -2007,15 +2021,17 @@ async function fireWebhooks(eventId, eventType, payload) {
       // Always include event + time — these are always present
       fields.push({ name: 'Event', value: safeStr(eventName, 'PlanIt Event'), inline: true });
       fields.push({ name: 'Time',  value: new Date(parsed.timestamp).toLocaleString(),  inline: true });
-      return JSON.stringify({
-        embeds: [{
-          title:       titleMap[evType] || evType,
-          color:       colorMap[evType] || 0x6366f1,
-          fields,
-          footer:      { text: 'PlanIt' },
-          timestamp:   parsed.timestamp,
-        }]
-      });
+
+      const embed = {
+        title:     titleMap[evType] || evType,
+        color:     colorMap[evType] || 0x6366f1,
+        fields,
+        footer:    { text: 'PlanIt' },
+        timestamp: parsed.timestamp,
+      };
+      if (description) embed.description = description;
+
+      return JSON.stringify({ embeds: [embed] });
     };
 
     // Slack incoming webhooks require {"text":"..."} — anything else is silently dropped.
