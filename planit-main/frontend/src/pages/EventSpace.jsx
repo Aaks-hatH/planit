@@ -248,6 +248,7 @@ function JoinGate({ eventId, onJoined }) {
                   </div>
                 )
               ) : (
+              <>
               <h2 className="text-base font-semibold text-neutral-900 mb-4">Join this event</h2>
                 <form onSubmit={handleJoin} className="space-y-4">
                   {/* Name field with dropdown */}
@@ -319,6 +320,7 @@ function JoinGate({ eventId, onJoined }) {
                       : <>Join event<ChevronRight className="w-4 h-4" /></>}
                   </button>
                 </form>
+              </>
               )}
             </>
           </div>
