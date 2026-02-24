@@ -2,7 +2,7 @@ require('dotenv').config();
 const express  = require('express');
 const mongoose = require('mongoose');
 const axios    = require('axios');
-const { meshAuth } = require('./mesh');
+const { meshAuth, meshGet } = require('./mesh');
 
 function ts() { return new Date().toISOString(); }
 
@@ -61,6 +61,44 @@ if (ROUTER_URL) {
 if (targets.length === 0) {
   console.error(`[${ts()}] FATAL: No targets configured. Set BACKEND_URLS and/or ROUTER_URL.`);
   process.exit(1);
+}
+
+// ─── Mesh fleet state ─────────────────────────────────────────────────────────
+// Synced periodically from the router's /mesh/status endpoint.
+// Used to suppress incidents for backends that are intentionally on standby
+// (scaled-down by the router's auto-scaling logic) vs genuinely failing.
+//
+// IMPORTANT: defaults to null. isBackendActive() returns true if fleet state
+// is unavailable — we always prefer false positives (spurious alerts) over
+// the silent failure that occurs when this is undefined and crashes pingTarget.
+let meshFleetState = null;
+
+function isBackendActive(name) {
+  // No fleet data yet or no router configured — treat all as active
+  if (!meshFleetState || !meshFleetState.backends) return true;
+  const backend = meshFleetState.backends.find(b => b.name === name);
+  // Backend not in fleet state (e.g. not registered yet) — assume active
+  if (!backend) return true;
+  return backend.active === true;
+}
+
+// Sync fleet state from the router every 30 s (if ROUTER_URL is set)
+async function syncFleetState() {
+  if (!ROUTER_URL) return;
+  try {
+    const result = await meshGet(SERVICE_NAME, `${ROUTER_URL}/mesh/status`, { timeout: 5000 });
+    if (result.ok && result.data) {
+      meshFleetState = result.data;
+      console.log(`[${ts()}] [fleet] Synced — ${meshFleetState.backends?.filter(b => b.active).length ?? '?'} active backend(s)`);
+    }
+  } catch (err) {
+    console.warn(`[${ts()}] [fleet] Sync failed: ${err.message}`);
+  }
+}
+
+if (ROUTER_URL) {
+  syncFleetState(); // immediate first sync
+  setInterval(syncFleetState, 30_000);
 }
 
 // ─── Startup log ──────────────────────────────────────────────────────────────
