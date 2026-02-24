@@ -1953,19 +1953,55 @@ async function fireWebhooks(eventId, eventType, payload) {
       data:      payload,
     });
 
+    const isDiscordUrl = (url) => /discord.com/api/webhooks//i.test(url);
+
+    const buildDiscordPayload = (eventType, planItPayload, eventName) => {
+      const parsed = JSON.parse(planItPayload);
+      const colorMap = {
+        participant_joined: 0x10b981,
+        rsvp_updated:       0x3b82f6,
+        checkin:            0x6366f1,
+        message_sent:       0x8b5cf6,
+      };
+      const titleMap = {
+        participant_joined: 'New participant joined',
+        rsvp_updated:       'RSVP updated',
+        checkin:            'Guest checked in',
+        message_sent:       'New message',
+      };
+      const fields = [];
+      if (parsed.data && parsed.data.username)    fields.push({ name: 'Participant', value: parsed.data.username, inline: true });
+      if (parsed.data && parsed.data.rsvp)        fields.push({ name: 'RSVP',        value: parsed.data.rsvp,      inline: true });
+      if (parsed.data && parsed.data.message)     fields.push({ name: 'Message',     value: String(parsed.data.message).slice(0, 200), inline: false });
+      if (parsed.data && parsed.data.actualCount !== undefined) fields.push({ name: 'Attendees', value: String(parsed.data.actualCount), inline: true });
+      fields.push({ name: 'Time', value: new Date(parsed.timestamp).toLocaleString(), inline: true });
+      return JSON.stringify({
+        embeds: [{
+          title:       titleMap[eventType] || eventType,
+          description: '**' + eventName + '**',
+          color:       colorMap[eventType] || 0x6366f1,
+          fields,
+          footer:      { text: 'PlanIt' },
+          timestamp:   parsed.timestamp,
+        }]
+      });
+    };
+
     for (const wh of active) {
       try {
-        const headers = {
-          'Content-Type': 'application/json',
-          'X-PlanIt-Event': eventType,
-          'X-PlanIt-EventId': eventId.toString(),
-        };
-        if (wh.secret) {
-          const sig = crypto.createHmac('sha256', wh.secret).update(body).digest('hex');
-          headers['X-PlanIt-Signature'] = `sha256=${sig}`;
+        const discord = isDiscordUrl(wh.url);
+        const outBody = discord ? buildDiscordPayload(eventType, body, event.title) : body;
+        const headers = { 'Content-Type': 'application/json' };
+        if (!discord) {
+          headers['X-PlanIt-Event']   = eventType;
+          headers['X-PlanIt-EventId'] = eventId.toString();
         }
-        await axios.post(wh.url, body, { headers, timeout: 5000 });
-      } catch (_) { /* non-blocking — webhook failures never break the main flow */ }
+        if (wh.secret && !discord) {
+          const sig = crypto.createHmac('sha256', wh.secret).update(body).digest('hex');
+          headers['X-PlanIt-Signature'] = 'sha256=' + sig;
+        }
+        await axios.post(wh.url, outBody, { headers, timeout: 5000 });
+      } catch (_) { /* non-blocking */ }
     }
   } catch (_) {}
 }
