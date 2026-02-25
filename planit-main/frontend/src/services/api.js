@@ -221,6 +221,11 @@ export const adminAPI = {
   createEmployee: (data)      => api.post('/admin/employees', data),
   updateEmployee: (id, data)  => api.patch(`/admin/employees/${id}`, data),
   deleteEmployee: (id)        => api.delete(`/admin/employees/${id}`),
+
+  // Marketing emails
+  getMarketingTemplates: ()                       => api.get('/admin/marketing/templates'),
+  getMarketingPreviewUrl: (templateId, ctaUrl)    => `${API_URL}/admin/marketing/preview/${templateId}${ctaUrl ? `?ctaUrl=${encodeURIComponent(ctaUrl)}` : ''}`,
+  sendMarketingCampaign: (data)                   => api.post('/admin/marketing/send', data),
 };
 
 // ─── Task API ─────────────────────────────────────────────────────────────────
