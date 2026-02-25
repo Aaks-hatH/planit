@@ -4,9 +4,10 @@ import {
   Calendar, Users, MessageSquare, BarChart3, FileText,
   Send, Paperclip, X, Download, Trash2, Plus, Sliders,
   LogOut, ArrowLeft, Copy, Check, Lock, MapPin,
-  ChevronRight, Clock, QrCode, CalendarDays,
-  Smile, ThumbsUp, Heart, Laugh,
-  CheckCircle2, Megaphone, DollarSign, StickyNote, Share2, UserCheck, XCircle, ClipboardList
+  ChevronRight, Clock, QrCode,
+  Smile,
+  CheckCircle2, Megaphone, DollarSign, StickyNote, Share2, UserCheck, XCircle, ClipboardList,
+  Star, Shield, LogIn, UserPlus
 } from 'lucide-react';
 import { eventAPI, chatAPI, pollAPI, fileAPI } from '../services/api';
 import socketService from '../services/socket';
@@ -14,7 +15,6 @@ import { formatDate, formatRelativeTime, formatFileSize } from '../utils/formatt
 import { MAX_MESSAGE_LENGTH, MAX_FILE_SIZE, ALLOWED_FILE_TYPES } from '../utils/constants';
 import toast from 'react-hot-toast';
 
-// NEW COMPONENTS
 import Tasks from '../components/Tasks';
 import Announcements from '../components/Announcements';
 import Expenses from '../components/Expenses';
@@ -29,29 +29,26 @@ import Onboarding from '../components/Onboarding';
 /* ─── QR Modal ───────────────────────────────────────────────────────────── */
 function QRModal({ eventId, onClose }) {
   const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
-  const qrSrc = `${apiUrl}/events/${eventId}/qr.svg`;
-
+  const qrSrc  = `${apiUrl}/events/${eventId}/qr.svg`;
   const handleDownload = () => {
     const a = document.createElement('a');
-    a.href = qrSrc;
-    a.download = `planit-qr-${eventId}.svg`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
+    a.href = qrSrc; a.download = `planit-qr-${eventId}.svg`;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
   };
-
   return (
-    <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={onClose}>
-      <div className="bg-white rounded-2xl p-6 w-80 shadow-xl" onClick={e => e.stopPropagation()}>
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={onClose}>
+      <div className="bg-white rounded-2xl p-6 w-80 shadow-2xl border border-neutral-100 animate-fade-in" onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-sm font-semibold text-neutral-900">Event QR Code</h3>
-          <button onClick={onClose} className="btn btn-ghost p-1"><X className="w-4 h-4" /></button>
+          <button onClick={onClose} className="w-7 h-7 rounded-lg hover:bg-neutral-100 flex items-center justify-center transition-colors">
+            <X className="w-4 h-4 text-neutral-500" />
+          </button>
         </div>
-        <div className="flex justify-center mb-3">
-          <img src={qrSrc} alt="PlanIt QR Code" className="w-64 h-auto rounded-xl border border-neutral-100" />
+        <div className="flex justify-center mb-3 bg-neutral-50 rounded-xl p-4 border border-neutral-100">
+          <img src={qrSrc} alt="PlanIt QR Code" className="w-52 h-auto" />
         </div>
         <p className="text-xs text-neutral-400 text-center mb-3">Scan to join · branded for sharing</p>
-        <button onClick={handleDownload} className="btn btn-secondary w-full text-xs gap-1.5">
+        <button onClick={handleDownload} className="btn btn-secondary w-full text-xs gap-1.5 rounded-xl">
           <Download className="w-3.5 h-3.5" /> Download SVG
         </button>
       </div>
@@ -61,32 +58,30 @@ function QRModal({ eventId, onClose }) {
 
 /* ─── Join Gate ──────────────────────────────────────────────────────────── */
 function JoinGate({ eventId, onJoined }) {
-  const [publicInfo, setPublicInfo] = useState(null);
+  const [publicInfo, setPublicInfo]               = useState(null);
   const [knownParticipants, setKnownParticipants] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [joining, setJoining] = useState(false);
-  const [username, setUsername] = useState('');
-  const [showDropdown, setShowDropdown] = useState(false);
-  const [password, setPassword] = useState('');
-  const [accountPassword, setAccountPassword] = useState('');
+  const [loading, setLoading]                     = useState(true);
+  const [joining, setJoining]                     = useState(false);
+  const [username, setUsername]                   = useState('');
+  const [showDropdown, setShowDropdown]           = useState(false);
+  const [password, setPassword]                   = useState('');
+  const [accountPassword, setAccountPassword]     = useState('');
   const [needsAccountPassword, setNeedsAccountPassword] = useState(false);
-  const [selectedHasPassword, setSelectedHasPassword] = useState(false);
-  const [error, setError] = useState('');
+  const [selectedHasPassword, setSelectedHasPassword]   = useState(false);
+  const [error, setError]                         = useState('');
+  // Full-event state
+  const [isFull, setIsFull]                       = useState(false);
+  const [fullMode, setFullMode]                   = useState('waitlist'); // 'waitlist' | 'signin'
   // Waitlist
-  const [isFull, setIsFull] = useState(false);
-  const [waitlistName, setWaitlistName] = useState('');
-  const [waitlistEmail, setWaitlistEmail] = useState('');
-  const [waitlistDone, setWaitlistDone] = useState(false);
-  const [waitlistJoining, setWaitlistJoining] = useState(false);
-  const [waitlistCount, setWaitlistCount] = useState(0);
+  const [waitlistName, setWaitlistName]           = useState('');
+  const [waitlistEmail, setWaitlistEmail]         = useState('');
+  const [waitlistDone, setWaitlistDone]           = useState(false);
+  const [waitlistJoining, setWaitlistJoining]     = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
     if (!eventId) return;
-    Promise.all([
-      eventAPI.getPublicInfo(eventId),
-      eventAPI.getParticipants(eventId),
-    ])
+    Promise.all([eventAPI.getPublicInfo(eventId), eventAPI.getParticipants(eventId)])
       .then(([infoRes, partRes]) => {
         const info = infoRes.data.event;
         setPublicInfo(info);
@@ -110,12 +105,11 @@ function JoinGate({ eventId, onJoined }) {
   };
 
   const handleUsernameChange = (e) => {
-    const newUsername = e.target.value;
-    setUsername(newUsername);
-    
-    const existingUser = knownParticipants.find(p => p.username.toLowerCase() === newUsername.trim().toLowerCase());
-    setNeedsAccountPassword(existingUser?.hasPassword || false);
-    setSelectedHasPassword(existingUser?.hasPassword || false);
+    const val = e.target.value;
+    setUsername(val);
+    const existing = knownParticipants.find(p => p.username.toLowerCase() === val.trim().toLowerCase());
+    setNeedsAccountPassword(existing?.hasPassword || false);
+    setSelectedHasPassword(existing?.hasPassword || false);
     setAccountPassword('');
     setShowDropdown(true);
     setError('');
@@ -128,11 +122,9 @@ function JoinGate({ eventId, onJoined }) {
     try {
       const payload = { username: username.trim(), accountPassword: accountPassword || undefined };
       if (publicInfo.isPasswordProtected) payload.password = password;
-
       const res = publicInfo.isPasswordProtected
         ? await eventAPI.verifyPassword(eventId, payload)
         : await eventAPI.join(eventId, payload);
-
       localStorage.setItem('eventToken', res.data.token);
       localStorage.setItem('username', username.trim());
       onJoined();
@@ -142,221 +134,364 @@ function JoinGate({ eventId, onJoined }) {
         setNeedsAccountPassword(true);
         setError('This name has an account — enter your account password below.');
       } else {
-        setError(data?.error || 'Failed to join');
+        setError(data?.error || 'Failed to join. Please try again.');
       }
-    } finally {
-      setJoining(false);
-    }
+    } finally { setJoining(false); }
+  };
+
+  const handleWaitlistJoin = async () => {
+    if (!waitlistName.trim()) return;
+    setWaitlistJoining(true);
+    try {
+      await eventAPI.joinWaitlist(eventId, { username: waitlistName.trim(), email: waitlistEmail.trim() });
+      setWaitlistDone(true);
+    } catch (err) {
+      toast.error(err.response?.data?.error || 'Failed to join waitlist');
+    } finally { setWaitlistJoining(false); }
   };
 
   if (loading) return (
-    <div className="min-h-screen bg-white flex items-center justify-center">
-      <span className="spinner w-5 h-5 border-2 border-neutral-200 border-t-neutral-500" />
+    <div className="min-h-screen flex items-center justify-center" style={{ background: '#06060c' }}>
+      <div className="flex flex-col items-center gap-4">
+        <div className="w-10 h-10 rounded-xl flex items-center justify-center"
+          style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)' }}>
+          <Calendar className="w-5 h-5" style={{ color: 'rgba(255,255,255,0.4)' }} />
+        </div>
+        <span className="spinner w-4 h-4 border-2 border-white/10 border-t-white/30" />
+      </div>
     </div>
   );
   if (!publicInfo) return null;
 
   const { yes = 0, maybe = 0, no: noCount = 0 } = publicInfo.rsvpSummary || {};
+  const fillPct = publicInfo.maxParticipants
+    ? Math.min(100, Math.round((publicInfo.participantCount / publicInfo.maxParticipants) * 100))
+    : 0;
+
+  // The shared join form (used in both normal flow and signin mode when full)
+  const JoinForm = () => (
+    <form onSubmit={handleJoin} className="space-y-3.5">
+      {/* Name field */}
+      <div className="relative">
+        <label className="block text-[11px] font-bold text-neutral-500 uppercase tracking-widest mb-1.5">
+          Your Name
+        </label>
+        <input
+          type="text" required className="input rounded-xl"
+          placeholder="Enter your name"
+          value={username}
+          onChange={handleUsernameChange}
+          onFocus={() => setShowDropdown(true)}
+          onBlur={() => setTimeout(() => setShowDropdown(false), 150)}
+          autoComplete="off" autoFocus
+        />
+        {showDropdown && filteredParticipants.length > 0 && (
+          <div className="absolute z-20 w-full mt-1.5 bg-white border border-neutral-200 rounded-xl shadow-2xl overflow-hidden">
+            <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest px-3 pt-2.5 pb-1">
+              Previously joined
+            </p>
+            {filteredParticipants.slice(0, 6).map(p => (
+              <button key={p.username} type="button"
+                className="w-full flex items-center justify-between px-3 py-2.5 hover:bg-neutral-50 text-left transition-colors"
+                onMouseDown={() => handleSelectName(p)}>
+                <div className="flex items-center gap-2.5">
+                  <div className="w-7 h-7 rounded-full bg-neutral-100 flex items-center justify-center text-xs font-bold text-neutral-600">
+                    {p.username.charAt(0).toUpperCase()}
+                  </div>
+                  <span className="text-sm font-medium text-neutral-900">{p.username}</span>
+                </div>
+                {p.hasPassword
+                  ? <span className="flex items-center gap-1 text-[10px] text-neutral-400"><Lock className="w-2.5 h-2.5" />protected</span>
+                  : <span className="text-[10px] text-neutral-300">tap to select</span>
+                }
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Account password */}
+      {(needsAccountPassword || selectedHasPassword || (username.trim() && !knownParticipants.find(p => p.username.toLowerCase() === username.trim().toLowerCase()))) && (
+        <div>
+          <label className="block text-[11px] font-bold text-neutral-500 uppercase tracking-widest mb-1.5">
+            Account Password{' '}
+            {!(needsAccountPassword || selectedHasPassword) && (
+              <span className="normal-case font-normal text-neutral-400">(optional)</span>
+            )}
+          </label>
+          <input type="password" className="input rounded-xl"
+            placeholder={(needsAccountPassword || selectedHasPassword) ? 'Your account password' : 'Protect your username (min 4 chars)'}
+            value={accountPassword} onChange={e => setAccountPassword(e.target.value)} minLength={4} />
+        </div>
+      )}
+
+      {/* Event password */}
+      {publicInfo.isPasswordProtected && (
+        <div>
+          <label className="block text-[11px] font-bold text-neutral-500 uppercase tracking-widest mb-1.5">
+            Event Password
+          </label>
+          <input type="password" required className="input rounded-xl"
+            placeholder="Enter the event password"
+            value={password} onChange={e => setPassword(e.target.value)} />
+        </div>
+      )}
+
+      {error && (
+        <div className="flex items-start gap-2.5 p-3 bg-red-50 border border-red-200 rounded-xl">
+          <XCircle className="w-4 h-4 text-red-500 flex-shrink-0 mt-0.5" />
+          <p className="text-sm text-red-700">{error}</p>
+        </div>
+      )}
+
+      <button type="submit" disabled={joining}
+        className="w-full h-11 rounded-xl font-bold text-sm text-white flex items-center justify-center gap-2 transition-all hover:opacity-90 disabled:opacity-50"
+        style={{ background: isFull ? 'linear-gradient(135deg,#4338ca,#5b21b6)' : 'linear-gradient(135deg,#111827,#1f2937)' }}>
+        {joining
+          ? <><span className="spinner w-4 h-4 border-2 border-white/20 border-t-white" />Signing in…</>
+          : isFull
+          ? <><LogIn className="w-4 h-4" />Sign In<ChevronRight className="w-4 h-4 ml-auto" /></>
+          : <><UserPlus className="w-4 h-4" />Join Event<ChevronRight className="w-4 h-4 ml-auto" /></>
+        }
+      </button>
+    </form>
+  );
 
   return (
-    <div className="min-h-screen bg-neutral-50 flex flex-col">
-      <header className="bg-white border-b border-neutral-100">
-        <div className="max-w-lg mx-auto px-6 h-14 flex items-center gap-2.5">
-          <div className="w-7 h-7 rounded-lg bg-neutral-900 flex items-center justify-center">
-            <Calendar className="w-4 h-4 text-white" />
+    <div className="min-h-screen flex flex-col" style={{ background: 'linear-gradient(150deg,#06060c 0%,#0d0d1a 45%,#060610 100%)' }}>
+      {/* Ambient background glows */}
+      <div className="fixed inset-0 pointer-events-none overflow-hidden" aria-hidden>
+        <div className="absolute top-[-15%] left-[8%] w-[700px] h-[700px] rounded-full"
+          style={{ background: 'radial-gradient(circle,rgba(99,102,241,0.07) 0%,transparent 70%)' }} />
+        <div className="absolute bottom-[-10%] right-[3%] w-[500px] h-[500px] rounded-full"
+          style={{ background: 'radial-gradient(circle,rgba(139,92,246,0.05) 0%,transparent 70%)' }} />
+      </div>
+
+      {/* Top bar */}
+      <div className="relative z-10 flex items-center justify-between px-6 py-5 max-w-4xl mx-auto w-full">
+        <div className="flex items-center gap-2.5">
+          <div className="w-7 h-7 rounded-lg flex items-center justify-center"
+            style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.1)' }}>
+            <Calendar className="w-3.5 h-3.5" style={{ color: 'rgba(255,255,255,0.6)' }} />
           </div>
-          <span className="logo-text">PlanIt</span>
+          <span className="text-sm font-bold tracking-tight" style={{ color: 'rgba(255,255,255,0.7)' }}>PlanIt</span>
         </div>
-      </header>
-      <main className="flex-1 flex items-center justify-center px-6 py-12">
-        <div className="w-full max-w-md">
-          <div className="card p-8 animate-fade-in">
-            <div className="mb-6 pb-6 border-b border-neutral-100">
-              <p className="text-xs font-medium text-neutral-400 uppercase tracking-wide mb-2">Event</p>
-              <h1 className="text-2xl font-semibold text-neutral-900 mb-3 tracking-tight">{publicInfo.title}</h1>
-              <div className="flex flex-col gap-1.5">
+        <button onClick={() => navigate('/')} className="text-xs transition-colors"
+          style={{ color: 'rgba(255,255,255,0.35)' }}
+          onMouseEnter={e => e.currentTarget.style.color = 'rgba(255,255,255,0.65)'}
+          onMouseLeave={e => e.currentTarget.style.color = 'rgba(255,255,255,0.35)'}>
+          ← Home
+        </button>
+      </div>
+
+      {/* Center content */}
+      <div className="relative z-10 flex-1 flex items-center justify-center px-4 py-6">
+        <div className="w-full max-w-[420px] animate-fade-in">
+
+          {/* Event hero */}
+          <div className="rounded-2xl overflow-hidden mb-3"
+            style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', backdropFilter: 'blur(24px)' }}>
+            <div className="p-6">
+              {/* Status chips */}
+              <div className="flex items-center gap-2 mb-4 flex-wrap">
+                {isFull && (
+                  <span className="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-full"
+                    style={{ color: '#fbbf24', background: 'rgba(251,191,36,0.1)', border: '1px solid rgba(251,191,36,0.18)' }}>
+                    <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse-dot" />Event Full
+                  </span>
+                )}
+                {publicInfo.isPasswordProtected && (
+                  <span className="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-full"
+                    style={{ color: '#a78bfa', background: 'rgba(139,92,246,0.1)', border: '1px solid rgba(139,92,246,0.18)' }}>
+                    <Lock className="w-2.5 h-2.5" />Password Protected
+                  </span>
+                )}
+                {publicInfo.status === 'cancelled' && (
+                  <span className="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-full"
+                    style={{ color: '#f87171', background: 'rgba(248,113,113,0.1)', border: '1px solid rgba(248,113,113,0.18)' }}>
+                    Cancelled
+                  </span>
+                )}
+              </div>
+
+              <h1 className="text-[22px] font-bold leading-tight tracking-tight mb-4" style={{ color: 'rgba(255,255,255,0.95)' }}>
+                {publicInfo.title}
+              </h1>
+
+              <div className="space-y-2">
                 {publicInfo.date && (
-                  <div className="flex items-center gap-2 text-sm text-neutral-500">
-                    <Calendar className="w-3.5 h-3.5" /><span>{formatDate(publicInfo.date)}</span>
+                  <div className="flex items-center gap-2.5 text-sm" style={{ color: 'rgba(255,255,255,0.55)' }}>
+                    <Calendar className="w-3.5 h-3.5 flex-shrink-0" style={{ color: 'rgba(255,255,255,0.25)' }} />
+                    {formatDate(publicInfo.date)}
                   </div>
                 )}
                 {publicInfo.location && (
-                  <div className="flex items-center gap-2 text-sm text-neutral-500">
-                    <MapPin className="w-3.5 h-3.5" /><span>{publicInfo.location}</span>
+                  <div className="flex items-center gap-2.5 text-sm" style={{ color: 'rgba(255,255,255,0.55)' }}>
+                    <MapPin className="w-3.5 h-3.5 flex-shrink-0" style={{ color: 'rgba(255,255,255,0.25)' }} />
+                    {publicInfo.location}
                   </div>
                 )}
-                <div className="flex items-center gap-2 text-sm text-neutral-500">
-                  <Users className="w-3.5 h-3.5" /><span>Organized by {publicInfo.organizerName}</span>
+                <div className="flex items-center gap-2.5 text-sm" style={{ color: 'rgba(255,255,255,0.55)' }}>
+                  <Users className="w-3.5 h-3.5 flex-shrink-0" style={{ color: 'rgba(255,255,255,0.25)' }} />
+                  Hosted by <strong className="font-semibold ml-0.5" style={{ color: 'rgba(255,255,255,0.8)' }}>{publicInfo.organizerName}</strong>
                 </div>
               </div>
-              {(yes + maybe + noCount) > 0 && (
-                <div className="flex items-center gap-3 mt-3 pt-3 border-t border-neutral-100">
-                  <span className="text-xs text-emerald-600 font-medium">{yes} going</span>
-                  <span className="text-xs text-amber-600 font-medium">{maybe} maybe</span>
-                  <span className="text-xs text-neutral-400 font-medium">{noCount} not going</span>
+
+              {/* Capacity bar */}
+              <div className="mt-5 pt-4" style={{ borderTop: '1px solid rgba(255,255,255,0.07)' }}>
+                <div className="flex items-center justify-between mb-1.5">
+                  <span className="text-[11px] font-medium" style={{ color: 'rgba(255,255,255,0.35)' }}>Capacity</span>
+                  <span className="text-xs font-semibold" style={{ color: 'rgba(255,255,255,0.6)' }}>
+                    {publicInfo.participantCount} / {publicInfo.maxParticipants}
+                  </span>
                 </div>
-              )}
-              {publicInfo.isPasswordProtected && (
-                <div className="flex items-center gap-2 mt-3 px-3 py-2 bg-amber-50 rounded-lg border border-amber-200">
-                  <Lock className="w-3.5 h-3.5 text-amber-600 flex-shrink-0" />
-                  <span className="text-xs text-amber-700 font-medium">This event requires a password</span>
+                <div className="h-1.5 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.07)' }}>
+                  <div className="h-full rounded-full transition-all duration-700"
+                    style={{
+                      width: `${fillPct}%`,
+                      background: isFull
+                        ? 'linear-gradient(90deg,#f59e0b,#ef4444)'
+                        : 'linear-gradient(90deg,#6366f1,#8b5cf6)'
+                    }} />
                 </div>
-              )}
+                {(yes + maybe + noCount) > 0 && (
+                  <div className="flex items-center gap-3 mt-3">
+                    <span className="text-xs font-semibold" style={{ color: '#34d399' }}>{yes} going</span>
+                    <span className="text-[10px]" style={{ color: 'rgba(255,255,255,0.15)' }}>·</span>
+                    <span className="text-xs font-semibold" style={{ color: '#fbbf24' }}>{maybe} maybe</span>
+                    {noCount > 0 && <>
+                      <span className="text-[10px]" style={{ color: 'rgba(255,255,255,0.15)' }}>·</span>
+                      <span className="text-xs" style={{ color: 'rgba(255,255,255,0.35)' }}>{noCount} can't go</span>
+                    </>}
+                  </div>
+                )}
+              </div>
             </div>
-
-            <>
-              {isFull ? (
-                /* ── Event full: waitlist ── */
-                waitlistDone ? (
-                  <div className="text-center py-4">
-                    <div className="w-10 h-10 rounded-full bg-emerald-50 border border-emerald-200 flex items-center justify-center mx-auto mb-3">
-                      <CheckCircle2 className="w-5 h-5 text-emerald-600" />
-                    </div>
-                    <p className="text-sm font-semibold text-neutral-900 mb-1">You're on the waitlist</p>
-                    <p className="text-xs text-neutral-400">The organizer will contact you if a spot opens up.</p>
-                  </div>
-                ) : (
-                  <div>
-                    <div className="flex items-center gap-2 mb-4 px-3 py-2 bg-amber-50 rounded-lg border border-amber-200">
-                      <Users className="w-3.5 h-3.5 text-amber-600 flex-shrink-0" />
-                      <span className="text-xs text-amber-700 font-medium">This event is full — join the waitlist</span>
-                    </div>
-                    <div className="space-y-3">
-                      <div>
-                        <label className="block text-sm font-medium text-neutral-700 mb-1.5">Your name</label>
-                        <input type="text" className="input" placeholder="Enter your name" value={waitlistName} onChange={e => setWaitlistName(e.target.value)} />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-neutral-700 mb-1.5">Email <span className="font-normal text-neutral-400">(optional)</span></label>
-                        <input type="email" className="input" placeholder="your@email.com" value={waitlistEmail} onChange={e => setWaitlistEmail(e.target.value)} />
-                      </div>
-                      <button
-                        onClick={async () => {
-                          if (!waitlistName.trim()) return;
-                          setWaitlistJoining(true);
-                          try {
-                            await eventAPI.joinWaitlist(eventId, { username: waitlistName.trim(), email: waitlistEmail.trim() });
-                            setWaitlistDone(true);
-                          } catch (err) {
-                            toast.error(err.response?.data?.error || 'Failed to join waitlist');
-                          } finally { setWaitlistJoining(false); }
-                        }}
-                        disabled={waitlistJoining || !waitlistName.trim()}
-                        className="btn btn-primary w-full py-2.5"
-                      >
-                        {waitlistJoining ? <><span className="spinner w-4 h-4 border-2 border-white/30 border-t-white" />Joining...</> : 'Join waitlist'}
-                      </button>
-                    </div>
-                  </div>
-                )
-              ) : (
-              <>
-              <h2 className="text-base font-semibold text-neutral-900 mb-4">Join this event</h2>
-                <form onSubmit={handleJoin} className="space-y-4">
-                  {/* Name field with dropdown */}
-                  <div className="relative">
-                    <label className="block text-sm font-medium text-neutral-700 mb-1.5">Your name</label>
-                    <input
-                      type="text" required className="input" placeholder="Enter your name or select below"
-                      value={username}
-                      onChange={handleUsernameChange}
-                      onFocus={() => setShowDropdown(true)}
-                      onBlur={() => setTimeout(() => setShowDropdown(false), 150)}
-                      autoComplete="off"
-                    />
-                    {showDropdown && filteredParticipants.length > 0 && (
-                      <div className="absolute z-10 w-full mt-1 bg-white border border-neutral-200 rounded-lg shadow-lg overflow-hidden">
-                        <p className="text-xs text-neutral-400 px-3 pt-2 pb-1">Previously joined</p>
-                        {filteredParticipants.map(p => (
-                          <button
-                            key={p.username} type="button"
-                            className="w-full flex items-center justify-between px-3 py-2 hover:bg-neutral-50 text-left"
-                            onMouseDown={() => handleSelectName(p)}
-                          >
-                            <span className="text-sm text-neutral-900">{p.username}</span>
-                            {p.hasPassword
-                              ? <span className="text-xs text-neutral-400 flex items-center gap-1"><Lock className="w-3 h-3" />has password</span>
-                              : <span className="text-xs text-neutral-400">no password</span>
-                            }
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-
-                  {(needsAccountPassword || selectedHasPassword || (username.trim() && !knownParticipants.find(p => p.username.toLowerCase() === username.trim().toLowerCase()))) && (
-                    <div>
-                      <label className="block text-sm font-medium text-neutral-700 mb-1.5">
-                        Account password {(needsAccountPassword || selectedHasPassword) ? 
-                          <span className="text-xs font-normal text-neutral-400">(for {username})</span> :
-                          <span className="text-xs font-normal text-neutral-400">(optional, protects your name)</span>
-                        }
-                      </label>
-                      <input 
-                        type="password" 
-                        className="input" 
-                        placeholder={(needsAccountPassword || selectedHasPassword) ? "Your account password" : "Create a password (min 4 characters)"}
-                        value={accountPassword} 
-                        onChange={e => setAccountPassword(e.target.value)}
-                        minLength={4}
-                      />
-                      {!(needsAccountPassword || selectedHasPassword) && (
-                        <p className="text-xs text-neutral-400 mt-1">This password is only for this event and protects your username</p>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Event password */}
-                  {publicInfo.isPasswordProtected && (
-                    <div>
-                      <label className="block text-sm font-medium text-neutral-700 mb-1.5">Event password</label>
-                      <input type="password" required className="input" placeholder="Event password"
-                        value={password} onChange={e => setPassword(e.target.value)} />
-                    </div>
-                  )}
-
-                  {error && <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{error}</p>}
-
-                  <button type="submit" disabled={joining} className="btn btn-primary w-full py-2.5">
-                    {joining ? <><span className="spinner w-4 h-4 border-2 border-white/30 border-t-white" />Joining...</>
-                      : <>Join event<ChevronRight className="w-4 h-4" /></>}
-                  </button>
-                </form>
-              </>
-              )}
-            </>
           </div>
-          <div className="mt-6 pt-4 border-t border-neutral-100">
-            <div className="text-center space-y-3">
-              {/* Organizer Login Button - matching the style from the organizer sidebar */}
-              <button
-                onClick={() => navigate(`/event/${eventId}/login`)}
-                className="flex items-center justify-center gap-2 w-full px-4 py-2.5 text-sm bg-neutral-900 hover:bg-neutral-700 text-white rounded-lg transition-colors font-medium"
-              >
-                <Lock className="w-4 h-4" />
-                <span>Login as Organizer</span>
-              </button>
-              <p className="text-xs text-neutral-400">
-                Are you the event organizer? Log in to access organizer tools
-              </p>
-              <p className="text-sm text-neutral-400 pt-2">
-                <a href="/" className="hover:text-neutral-600 transition-colors">← Back to home</a>
-              </p>
+
+          {/* Action card */}
+          <div className="rounded-2xl overflow-hidden"
+            style={{ background: 'rgba(255,255,255,0.97)', border: '1px solid rgba(0,0,0,0.06)', boxShadow: '0 28px 72px rgba(0,0,0,0.55)' }}>
+
+            {isFull ? (
+              waitlistDone ? (
+                /* ── Waitlist success ── */
+                <div className="p-8 text-center">
+                  <div className="w-14 h-14 rounded-2xl bg-emerald-50 border border-emerald-200 flex items-center justify-center mx-auto mb-4">
+                    <CheckCircle2 className="w-7 h-7 text-emerald-600" />
+                  </div>
+                  <h2 className="text-lg font-bold text-neutral-900 mb-1.5">You're on the waitlist!</h2>
+                  <p className="text-sm text-neutral-500 leading-relaxed">
+                    The organizer will reach out if a spot opens up.
+                  </p>
+                  <button onClick={() => { setWaitlistDone(false); setFullMode('signin'); }}
+                    className="mt-5 text-sm font-semibold text-indigo-600 hover:text-indigo-800 transition-colors underline underline-offset-2">
+                    Already a member? Sign in instead
+                  </button>
+                </div>
+              ) : (
+                /* ── Full event: tab toggle ── */
+                <div className="p-5">
+                  <div className="flex rounded-xl p-1 mb-5" style={{ background: '#f2f2f5' }}>
+                    <button onClick={() => setFullMode('waitlist')}
+                      className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-sm font-bold transition-all ${
+                        fullMode === 'waitlist' ? 'bg-white shadow-sm text-neutral-900' : 'text-neutral-500 hover:text-neutral-700'
+                      }`}>
+                      <ClipboardList className="w-3.5 h-3.5" />Waitlist
+                    </button>
+                    <button onClick={() => { setFullMode('signin'); setError(''); }}
+                      className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-sm font-bold transition-all ${
+                        fullMode === 'signin' ? 'bg-white shadow-sm text-neutral-900' : 'text-neutral-500 hover:text-neutral-700'
+                      }`}>
+                      <LogIn className="w-3.5 h-3.5" />Already Joined
+                    </button>
+                  </div>
+
+                  {fullMode === 'waitlist' ? (
+                    <div>
+                      <div className="flex items-start gap-3 p-3.5 rounded-xl mb-4"
+                        style={{ background: '#fffbeb', border: '1px solid #fde68a' }}>
+                        <Users className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
+                        <div>
+                          <p className="text-sm font-bold text-amber-800">This event is full</p>
+                          <p className="text-xs text-amber-600 mt-0.5">
+                            Join the waitlist and you'll be notified if a spot opens.
+                          </p>
+                        </div>
+                      </div>
+                      <div className="space-y-3">
+                        <div>
+                          <label className="block text-[11px] font-bold text-neutral-500 uppercase tracking-widest mb-1.5">Your Name</label>
+                          <input type="text" className="input rounded-xl" placeholder="Enter your name"
+                            value={waitlistName} onChange={e => setWaitlistName(e.target.value)} />
+                        </div>
+                        <div>
+                          <label className="block text-[11px] font-bold text-neutral-500 uppercase tracking-widest mb-1.5">
+                            Email <span className="normal-case font-normal text-neutral-400">(optional)</span>
+                          </label>
+                          <input type="email" className="input rounded-xl" placeholder="your@email.com"
+                            value={waitlistEmail} onChange={e => setWaitlistEmail(e.target.value)} />
+                        </div>
+                        <button onClick={handleWaitlistJoin} disabled={waitlistJoining || !waitlistName.trim()}
+                          className="w-full h-11 rounded-xl font-bold text-sm text-white flex items-center justify-center gap-2 transition-all hover:opacity-90 disabled:opacity-50"
+                          style={{ background: 'linear-gradient(135deg,#d97706,#b45309)' }}>
+                          {waitlistJoining
+                            ? <><span className="spinner w-4 h-4 border-2 border-white/20 border-t-white" />Joining…</>
+                            : <><ClipboardList className="w-4 h-4" />Join Waitlist</>
+                          }
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div>
+                      <p className="text-sm text-neutral-500 mb-4 leading-relaxed">
+                        If you've joined this event before, sign in with your name below.
+                      </p>
+                      <JoinForm />
+                    </div>
+                  )}
+                </div>
+              )
+            ) : (
+              /* ── Normal join flow ── */
+              <div className="p-6">
+                <div className="mb-5">
+                  <h2 className="text-[17px] font-bold text-neutral-900 leading-snug">Join this event</h2>
+                  <p className="text-sm text-neutral-400 mt-0.5">Enter your name to get access</p>
+                </div>
+                <JoinForm />
+              </div>
+            )}
+
+            {/* Organizer footer */}
+            <div className="px-5 py-3.5 border-t border-neutral-100" style={{ background: 'rgba(249,249,252,0.8)' }}>
+              <div className="flex items-center justify-between">
+                <p className="text-xs text-neutral-400">Are you the organizer?</p>
+                <button onClick={() => navigate(`/event/${eventId}/login`)}
+                  className="flex items-center gap-1.5 text-xs font-bold text-neutral-700 hover:text-neutral-900 transition-colors">
+                  <Lock className="w-3 h-3" />Organizer login <ChevronRight className="w-3 h-3" />
+                </button>
+              </div>
             </div>
           </div>
         </div>
-      </main>
+      </div>
     </div>
   );
 }
 
 /* ─── Avatar ──────────────────────────────────────────────────────────────── */
 function Avatar({ name, size = 'sm' }) {
-  const colors = ['bg-blue-100 text-blue-700','bg-violet-100 text-violet-700','bg-emerald-100 text-emerald-700','bg-orange-100 text-orange-700','bg-rose-100 text-rose-700','bg-teal-100 text-teal-700'];
-  const color = colors[(name?.charCodeAt(0) || 0) % colors.length];
+  const palettes = [
+    'bg-blue-100 text-blue-700','bg-violet-100 text-violet-700',
+    'bg-emerald-100 text-emerald-700','bg-orange-100 text-orange-700',
+    'bg-rose-100 text-rose-700','bg-teal-100 text-teal-700',
+    'bg-cyan-100 text-cyan-700','bg-pink-100 text-pink-700',
+  ];
+  const color = palettes[(name?.charCodeAt(0) || 0) % palettes.length];
   const sizes = { sm: 'w-7 h-7 text-xs', md: 'w-9 h-9 text-sm', lg: 'w-11 h-11 text-base' };
   return (
-    <div className={`${sizes[size]} ${color} rounded-full flex items-center justify-center font-semibold flex-shrink-0`}>
+    <div className={`${sizes[size]} ${color} rounded-full flex items-center justify-center font-bold flex-shrink-0 select-none`}>
       {name?.charAt(0).toUpperCase() || '?'}
     </div>
   );
@@ -371,22 +506,17 @@ function ReactionBar({ messageId, reactions = [], currentUser, eventId }) {
     if (count > 0) acc.push({ emoji: e, count, mine: reactions.some(r => r.emoji === e && r.username === currentUser) });
     return acc;
   }, []);
-
   const toggle = (emoji) => {
     const mine = reactions.some(r => r.emoji === emoji && r.username === currentUser);
-    if (mine) {
-      socketService.removeReaction(eventId, messageId, emoji);
-    } else {
-      socketService.addReaction(eventId, messageId, emoji);
-    }
+    if (mine) socketService.removeReaction(eventId, messageId, emoji);
+    else       socketService.addReaction(eventId, messageId, emoji);
     setOpen(false);
   };
-
   return (
-    <div className="flex items-center gap-1 mt-1 flex-wrap">
+    <div className="flex items-center gap-1 mt-1.5 flex-wrap">
       {grouped.map(({ emoji, count, mine }) => (
         <button key={emoji} onClick={() => toggle(emoji)}
-          className={`flex items-center gap-1 px-1.5 py-0.5 rounded-full text-xs border transition-colors ${
+          className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold border transition-all ${
             mine ? 'bg-neutral-900 text-white border-neutral-900' : 'bg-white border-neutral-200 text-neutral-700 hover:border-neutral-400'
           }`}>
           <span>{emoji}</span><span>{count}</span>
@@ -394,14 +524,13 @@ function ReactionBar({ messageId, reactions = [], currentUser, eventId }) {
       ))}
       <div className="relative">
         <button onClick={() => setOpen(o => !o)}
-          className="flex items-center px-1.5 py-0.5 rounded-full text-xs border border-neutral-200 bg-white text-neutral-400 hover:text-neutral-700 hover:border-neutral-400 transition-colors">
+          className="flex items-center px-1.5 py-0.5 rounded-full text-xs border border-dashed border-neutral-300 bg-white text-neutral-400 hover:text-neutral-600 hover:border-neutral-400 transition-colors">
           <Smile className="w-3 h-3" />
         </button>
         {open && (
-          <div className="absolute bottom-6 left-0 flex gap-1 bg-white border border-neutral-200 rounded-xl p-2 shadow-lg z-20">
+          <div className="absolute bottom-7 left-0 flex gap-1.5 bg-white border border-neutral-200 rounded-2xl p-2.5 shadow-xl z-20">
             {REACTION_EMOJIS.map(e => (
-              <button key={e} onClick={() => toggle(e)}
-                className="text-lg hover:scale-125 transition-transform px-1">
+              <button key={e} onClick={() => toggle(e)} className="text-lg hover:scale-125 transition-transform">
                 {e}
               </button>
             ))}
@@ -416,62 +545,57 @@ function ReactionBar({ messageId, reactions = [], currentUser, eventId }) {
 export default function EventSpace() {
   const { eventId: paramEventId, subdomain } = useParams();
   const navigate = useNavigate();
-  const messagesEndRef = useRef(null);
-  const fileInputRef = useRef(null);
+  const messagesEndRef   = useRef(null);
+  const fileInputRef     = useRef(null);
   const typingTimeoutRef = useRef(null);
 
-  // ── FIX: Resolve subdomain to eventId ──
-  const [eventId, setEventId] = useState(paramEventId || null);
+  const [eventId, setEventId]     = useState(paramEventId || null);
   const [resolving, setResolving] = useState(!paramEventId && subdomain);
 
   const [needsJoin, setNeedsJoin] = useState(false);
-  const [event, setEvent] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [event, setEvent]         = useState(null);
+  const [loading, setLoading]     = useState(true);
   const [activeTab, setActiveTab] = useState('chat');
   const [countdown, setCountdown] = useState(null);
 
-  const [messages, setMessages] = useState([]);
-  const [messageInput, setMessageInput] = useState('');
+  const [messages, setMessages]           = useState([]);
+  const [messageInput, setMessageInput]   = useState('');
   const [sendingMessage, setSendingMessage] = useState(false);
-  const [typingUsers, setTypingUsers] = useState([]);
+  const [typingUsers, setTypingUsers]     = useState([]);
 
-  const [polls, setPolls] = useState([]);
+  const [polls, setPolls]                 = useState([]);
   const [showCreatePoll, setShowCreatePoll] = useState(false);
-  const [newPoll, setNewPoll] = useState({ question: '', options: ['', ''] });
+  const [newPoll, setNewPoll]             = useState({ question: '', options: ['', ''] });
 
-  const [files, setFiles] = useState([]);
+  const [files, setFiles]                 = useState([]);
   const [uploadingFile, setUploadingFile] = useState(false);
 
-  const [participants, setParticipants] = useState([]);
-  const [onlineUsers, setOnlineUsers] = useState([]);
-  const [rsvps, setRsvps] = useState([]);
-  const [rsvpSummary, setRsvpSummary] = useState({ yes: 0, maybe: 0, no: 0 });
+  const [participants, setParticipants]   = useState([]);
+  const [onlineUsers, setOnlineUsers]     = useState([]);
+  const [rsvps, setRsvps]                 = useState([]);
+  const [rsvpSummary, setRsvpSummary]     = useState({ yes: 0, maybe: 0, no: 0 });
 
-  // Agenda
-  const [agenda, setAgenda] = useState([]);
+  const [agenda, setAgenda]               = useState([]);
   const [showAddAgenda, setShowAddAgenda] = useState(false);
   const [newAgendaItem, setNewAgendaItem] = useState({ title: '', time: '', description: '', duration: '' });
 
-  const [copied, setCopied] = useState(false);
-  const [showQR, setShowQR] = useState(false);
-  const [showSettings, setShowSettings] = useState(false);
+  const [copied, setCopied]               = useState(false);
+  const [showQR, setShowQR]               = useState(false);
+  const [showSettings, setShowSettings]   = useState(false);
   const [waitlistCount, setWaitlistCount] = useState(0);
 
   const currentUser = localStorage.getItem('username');
   const isOrganizer = event?.organizerName === currentUser;
-  const myRsvp = rsvps.find(r => r.username === currentUser)?.status || null;
+  const myRsvp      = rsvps.find(r => r.username === currentUser)?.status || null;
 
-  const [searchParams] = useSearchParams();
+  const [searchParams]    = useSearchParams();
   const [showOnboarding, setShowOnboarding] = useState(false);
 
-  // Show onboarding for new events: organizers and standard participants,
-  // but NOT for enterprise guests (they have a separate check-in flow)
   useEffect(() => {
     if (!event) return;
     const isNewEvent = searchParams.get('new') === '1';
     if (!isNewEvent) return;
-    const isEnterpriseGuest = event.isEnterpriseMode && !isOrganizer;
-    if (isEnterpriseGuest) return;
+    if (event.isEnterpriseMode && !isOrganizer) return;
     const seenKey = `planit_onboarding_${event._id || eventId}`;
     if (!localStorage.getItem(seenKey)) {
       localStorage.setItem(seenKey, '1');
@@ -480,34 +604,19 @@ export default function EventSpace() {
   }, [event, isOrganizer, searchParams, eventId]);
 
   useEffect(() => {
-    // Load waitlist count for organizer badge
     if (isOrganizer && eventId) {
-      eventAPI.getWaitlist(eventId)
-        .then(r => setWaitlistCount(r.data.count || 0))
-        .catch(() => {});
+      eventAPI.getWaitlist(eventId).then(r => setWaitlistCount(r.data.count || 0)).catch(() => {});
     }
   }, [event, isOrganizer, eventId]);
 
-  // ── FIX: Resolve subdomain to ID if needed ──
   useEffect(() => {
-    if (paramEventId) {
-      setEventId(paramEventId);
-      setResolving(false);
-    } else if (subdomain) {
+    if (paramEventId) { setEventId(paramEventId); setResolving(false); }
+    else if (subdomain) {
       setResolving(true);
       eventAPI.getBySubdomain(subdomain)
-        .then(res => {
-          setEventId(res.data.event.id);
-          setResolving(false);
-        })
-        .catch(err => {
-          console.error('Failed to resolve subdomain:', err);
-          toast.error('Event not found');
-          navigate('/');
-        });
-    } else {
-      navigate('/');
-    }
+        .then(res => { setEventId(res.data.event.id); setResolving(false); })
+        .catch(() => { toast.error('Event not found'); navigate('/'); });
+    } else { navigate('/'); }
   }, [paramEventId, subdomain]);
 
   useEffect(() => {
@@ -526,101 +635,70 @@ export default function EventSpace() {
     socketService.joinEvent(eventId);
 
     socketService.on('new_message', (msg) => { setMessages(prev => [...prev, msg]); scrollToBottom(); });
-    socketService.on('message_edited', ({ messageId, content }) => setMessages(prev => prev.map(m => m.id === messageId || m._id === messageId ? { ...m, content, edited: true } : m)));
-    socketService.on('message_deleted', ({ messageId }) => setMessages(prev => prev.filter(m => m.id !== messageId && m._id !== messageId)));
-    socketService.on('reaction_added', ({ messageId, emoji, username }) => {
+    socketService.on('message_edited', ({ messageId, content }) =>
+      setMessages(prev => prev.map(m => m.id === messageId || m._id === messageId ? { ...m, content, edited: true } : m)));
+    socketService.on('message_deleted', ({ messageId }) =>
+      setMessages(prev => prev.filter(m => m.id !== messageId && m._id !== messageId)));
+    socketService.on('reaction_added', ({ messageId, emoji, username }) =>
       setMessages(prev => prev.map(m => {
         const id = m._id || m.id;
         if (id !== messageId) return m;
         return { ...m, reactions: [...(m.reactions || []), { emoji, username }] };
-      }));
-    });
-    socketService.on('reaction_removed', ({ messageId, emoji, username }) => {
+      })));
+    socketService.on('reaction_removed', ({ messageId, emoji, username }) =>
       setMessages(prev => prev.map(m => {
         const id = m._id || m.id;
         if (id !== messageId) return m;
         return { ...m, reactions: (m.reactions || []).filter(r => !(r.emoji === emoji && r.username === username)) };
-      }));
-    });
+      })));
     socketService.on('user_typing', ({ username }) => {
       if (username !== currentUser) {
         setTypingUsers(prev => [...new Set([...prev, username])]);
         setTimeout(() => setTypingUsers(prev => prev.filter(u => u !== username)), 3000);
       }
     });
-    socketService.on('poll_created', (poll) => setPolls(prev => [poll, ...prev]));
-    socketService.on('poll_updated', (updated) => setPolls(prev => prev.map(p => (p._id || p.id) === (updated._id || updated.id) ? updated : p)));
-    socketService.on('poll_deleted', ({ pollId }) => setPolls(prev => prev.filter(p => (p._id || p.id) !== pollId)));
-    socketService.on('user_joined', ({ username }) => setOnlineUsers(prev => [...new Set([...prev, username])]));
-    socketService.on('user_left', ({ username }) => setOnlineUsers(prev => prev.filter(u => u !== username)));
-    
-    // ── FIX: Listen for new participants joining ──
-    socketService.on('participant_joined', ({ participants }) => {
-      setParticipants(participants);
-    });
-    
-    // ── FIX: Update RSVP handler to use both rsvps array and summary ──
+    socketService.on('poll_created',  (poll)    => setPolls(prev => [poll, ...prev]));
+    socketService.on('poll_updated',  (updated) => setPolls(prev => prev.map(p => (p._id || p.id) === (updated._id || updated.id) ? updated : p)));
+    socketService.on('poll_deleted',  ({ pollId }) => setPolls(prev => prev.filter(p => (p._id || p.id) !== pollId)));
+    socketService.on('user_joined',   ({ username }) => setOnlineUsers(prev => [...new Set([...prev, username])]));
+    socketService.on('user_left',     ({ username }) => setOnlineUsers(prev => prev.filter(u => u !== username)));
+    socketService.on('participant_joined', ({ participants }) => setParticipants(participants));
     socketService.on('rsvp_updated', ({ rsvps, summary }) => {
       if (rsvps) setRsvps(rsvps);
       if (summary) setRsvpSummary(summary);
     });
-    
     socketService.on('agenda_updated', ({ agenda }) => setAgenda([...agenda].sort((a, b) => a.order - b.order)));
     socketService.on('files_uploaded', ({ files: newFiles }) => setFiles(prev => [...newFiles, ...prev]));
-    socketService.on('file_deleted', ({ fileId }) => setFiles(prev => prev.filter(f => (f._id || f.id) !== fileId)));
-    // Re-fetch the full event whenever the organizer saves settings so all
-    // participants immediately see tab changes, status banners, etc.
-    socketService.on('event_settings_updated', () => { loadEvent(); });
-    
-    // Error handler
-    socketService.on('error', (error) => {
-      console.error('Socket error:', error);
-      if (error.message) {
-        toast.error(error.message);
-      }
-    });
-
-    // Rate limit — message was dropped by the server, show reason to sender only
+    socketService.on('file_deleted',   ({ fileId }) => setFiles(prev => prev.filter(f => (f._id || f.id) !== fileId)));
+    socketService.on('event_settings_updated', () => loadEvent());
+    socketService.on('error', (error) => { if (error.message) toast.error(error.message); });
     socketService.on('rate_limited', ({ message, retryAfterMs }) => {
       toast.error(message, { duration: Math.min(retryAfterMs, 5000) });
-      // Restore the message so the user doesn't lose what they typed
       if (socketService._lastSentContent) {
         setMessageInput(socketService._lastSentContent);
         socketService._lastSentContent = null;
       }
     });
+    socketService.on('rate_limit_warning', ({ message }) => toast(message, { duration: 3000 }));
 
-    // Rate limit warning — approaching the limit but not yet blocked
-    socketService.on('rate_limit_warning', ({ message }) => {
-      toast(message, { duration: 3000 });
-    });
-
-    return () => { 
-      if (typingTimeoutRef.current) {
-        clearTimeout(typingTimeoutRef.current);
-      }
+    return () => {
+      if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
       socketService.leaveEvent(eventId);
       socketService.disconnect();
     };
   }, [event, eventId]);
 
-  // Polling fallback — refreshes messages and polls every 5s when socket is not connected
   useEffect(() => {
     if (!event || !eventId) return;
     const interval = setInterval(() => {
       if (!socketService.isConnected()) {
-        chatAPI.getMessages(eventId)
-          .then(res => setMessages(res.data.messages || []))
-          .catch(() => {});
-        pollAPI.getAll(eventId)
-          .then(res => setPolls(res.data.polls || []))
-          .catch(() => {});
+        chatAPI.getMessages(eventId).then(res => setMessages(res.data.messages || [])).catch(() => {});
+        pollAPI.getAll(eventId).then(res => setPolls(res.data.polls || [])).catch(() => {});
       }
     }, 5000);
     return () => clearInterval(interval);
   }, [event, eventId]);
 
-  // Countdown timer — ticks every second until event starts
   useEffect(() => {
     if (!event?.date) return;
     const tick = () => {
@@ -630,7 +708,7 @@ export default function EventSpace() {
       const h = Math.floor((diff % 86400000) / 3600000);
       const m = Math.floor((diff % 3600000) / 60000);
       const s = Math.floor((diff % 60000) / 1000);
-      setCountdown({ d, h, m, s, diff });
+      setCountdown({ d, h, m, s });
     };
     tick();
     const interval = setInterval(tick, 1000);
@@ -640,7 +718,7 @@ export default function EventSpace() {
   const loadEvent = async () => {
     try {
       const res = await eventAPI.getById(eventId);
-      const ev = res.data.event;
+      const ev  = res.data.event;
       setEvent(ev);
       setParticipants(ev.participants || []);
       setRsvps(ev.rsvps || []);
@@ -658,76 +736,42 @@ export default function EventSpace() {
   const handleJoined = () => { setNeedsJoin(false); setLoading(true); loadEvent(); };
 
   const loadMessages = async () => {
-    try { const res = await chatAPI.getMessages(eventId); setMessages(res.data.messages || []); scrollToBottom(); } catch {}
+    try { const r = await chatAPI.getMessages(eventId); setMessages(r.data.messages || []); scrollToBottom(); } catch {}
   };
-  const loadPolls = async () => {
-    try { const res = await pollAPI.getAll(eventId); setPolls(res.data.polls || []); } catch {}
-  };
-  const loadFiles = async () => {
-    try { const res = await fileAPI.getAll(eventId); setFiles(res.data.files || []); } catch {}
-  };
+  const loadPolls  = async () => { try { const r = await pollAPI.getAll(eventId);  setPolls(r.data.polls   || []); } catch {} };
+  const loadFiles  = async () => { try { const r = await fileAPI.getAll(eventId);  setFiles(r.data.files   || []); } catch {} };
 
   const scrollToBottom = () => setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
 
   const handleMessageInputChange = (e) => {
     setMessageInput(e.target.value);
-    
-    // Start typing indicator
     if (socketService.isConnected()) {
       socketService.startTyping(eventId);
-      
-      // Clear existing timeout
-      if (typingTimeoutRef.current) {
-        clearTimeout(typingTimeoutRef.current);
-      }
-      
-      // Stop typing after 2 seconds of inactivity
-      typingTimeoutRef.current = setTimeout(() => {
-        socketService.stopTyping(eventId);
-      }, 2000);
+      if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+      typingTimeoutRef.current = setTimeout(() => socketService.stopTyping(eventId), 2000);
     }
   };
 
   const handleSendMessage = async (e) => {
     e.preventDefault();
     if (!messageInput.trim() || sendingMessage) return;
-    
     const content = messageInput.trim();
-    setMessageInput(''); // Clear input immediately for better UX
+    setMessageInput('');
     setSendingMessage(true);
-    
     try {
-      // Use socket for real-time messaging
-      if (socketService.isConnected()) {
-        // Store the content briefly so the rate_limited handler can restore it
-        socketService._lastSentContent = content;
-        socketService.sendMessage(eventId, content);
-      } else {
-        // Fallback to HTTP API if socket is disconnected
-        await chatAPI.sendMessage(eventId, { content, username: currentUser });
-      }
+      if (socketService.isConnected()) { socketService._lastSentContent = content; socketService.sendMessage(eventId, content); }
+      else await chatAPI.sendMessage(eventId, { content, username: currentUser });
       socketService.stopTyping(eventId);
-    } catch (error) {
-      toast.error('Failed to send message');
-      setMessageInput(content); // Restore message on error
-    } finally {
-      setSendingMessage(false);
-    }
+    } catch { toast.error('Failed to send message'); setMessageInput(content); }
+    finally { setSendingMessage(false); }
   };
 
   const handleDeleteMessage = async (messageId) => {
     if (!confirm('Delete this message?')) return;
     try {
-      // Use socket for real-time updates
-      if (socketService.isConnected()) {
-        socketService.deleteMessage(eventId, messageId);
-      } else {
-        // Fallback to HTTP API if socket is disconnected
-        await chatAPI.deleteMessage(eventId, messageId, { username: currentUser });
-      }
-    } catch {
-      toast.error('Failed to delete');
-    }
+      if (socketService.isConnected()) socketService.deleteMessage(eventId, messageId);
+      else await chatAPI.deleteMessage(eventId, messageId, { username: currentUser });
+    } catch { toast.error('Failed to delete'); }
   };
 
   const handleCreatePoll = async (e) => {
@@ -736,8 +780,7 @@ export default function EventSpace() {
     if (!newPoll.question.trim() || validOptions.length < 2) { toast.error('Need a question and at least 2 options'); return; }
     try {
       await pollAPI.create(eventId, { question: newPoll.question, options: validOptions });
-      setShowCreatePoll(false);
-      setNewPoll({ question: '', options: ['', ''] });
+      setShowCreatePoll(false); setNewPoll({ question: '', options: ['', ''] });
     } catch { toast.error('Failed to create poll'); }
   };
 
@@ -757,14 +800,11 @@ export default function EventSpace() {
     for (const file of selected) {
       if (file.size > MAX_FILE_SIZE) { toast.error(`${file.name} is too large`); continue; }
       setUploadingFile(true);
-      const fd = new FormData();
-      fd.append('files', file);
-      fd.append('uploadedBy', currentUser);
+      const fd = new FormData(); fd.append('files', file); fd.append('uploadedBy', currentUser);
       try { await fileAPI.upload(eventId, fd); await loadFiles(); toast.success(`${file.name} uploaded`); }
       catch { toast.error(`Failed to upload ${file.name}`); }
     }
-    setUploadingFile(false);
-    fileInputRef.current.value = '';
+    setUploadingFile(false); fileInputRef.current.value = '';
   };
 
   const handleDownloadFile = async (fileId, filename) => {
@@ -790,7 +830,7 @@ export default function EventSpace() {
         if (existing) return prev.map(r => r.username === currentUser ? { ...r, status } : r);
         return [...prev, { username: currentUser, status }];
       });
-      toast.success(`RSVP: ${status}`);
+      toast.success('RSVP updated');
     } catch { toast.error('Failed to update RSVP'); }
   };
 
@@ -799,13 +839,10 @@ export default function EventSpace() {
     if (!newAgendaItem.title.trim()) return;
     try {
       await eventAPI.addAgendaItem(eventId, {
-        title: newAgendaItem.title,
-        time: newAgendaItem.time,
-        description: newAgendaItem.description,
-        duration: parseInt(newAgendaItem.duration) || 0
+        title: newAgendaItem.title, time: newAgendaItem.time,
+        description: newAgendaItem.description, duration: parseInt(newAgendaItem.duration) || 0
       });
-      await loadEvent();
-      setShowAddAgenda(false);
+      await loadEvent(); setShowAddAgenda(false);
       setNewAgendaItem({ title: '', time: '', description: '', duration: '' });
       toast.success('Agenda item added');
     } catch { toast.error('Failed to add item'); }
@@ -819,239 +856,213 @@ export default function EventSpace() {
   const handleCalendarExport = () => {
     if (!event) return;
     const start = new Date(event.date);
-    const end = new Date(start.getTime() + 2 * 60 * 60 * 1000);
-    const fmt = (d) => d.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+    const end   = new Date(start.getTime() + 2 * 60 * 60 * 1000);
+    const fmt = d => d.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
     const ics = [
-      'BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//PlanIt//EN',
-      'BEGIN:VEVENT',
-      `UID:${eventId}@planit`,
-      `DTSTART:${fmt(start)}`,
-      `DTEND:${fmt(end)}`,
+      'BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//PlanIt//EN','BEGIN:VEVENT',
+      `UID:${eventId}@planit`,`DTSTART:${fmt(start)}`,`DTEND:${fmt(end)}`,
       `SUMMARY:${event.title}`,
       event.description ? `DESCRIPTION:${event.description.replace(/\n/g, '\\n')}` : '',
       event.location ? `LOCATION:${event.location}` : '',
       `URL:${window.location.origin}/event/${eventId}`,
-      'END:VEVENT', 'END:VCALENDAR'
+      'END:VEVENT','END:VCALENDAR'
     ].filter(Boolean).join('\r\n');
-
     const blob = new Blob([ics], { type: 'text/calendar' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a'); a.href = url;
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a'); a.href = url;
     a.download = `${event.title.replace(/\s+/g, '-').toLowerCase()}.ics`;
-    document.body.appendChild(a); a.click(); a.remove();
-    URL.revokeObjectURL(url);
+    document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
     toast.success('Calendar file downloaded');
   };
 
   const handleCopyLink = () => {
-    const shareUrl = `${window.location.origin}/event/${eventId}`;
-    navigator.clipboard.writeText(shareUrl);
+    navigator.clipboard.writeText(`${window.location.origin}/event/${eventId}`);
     setCopied(true); toast.success('Link copied');
     setTimeout(() => setCopied(false), 2000);
   };
 
-  // ── Compute tabs and settings before any early returns so hooks are never
-  // called conditionally (Rules of Hooks). event may be null here; all
-  // accesses use optional chaining / fallback values so that's fine.
   const settings = event?.settings || {};
   const tabs = [
-    ...(settings.allowChat !== false        ? [{ id: 'chat',          label: 'Chat',          icon: MessageSquare, count: messages.length }] : []),
-    ...(settings.allowPolls !== false       ? [{ id: 'polls',         label: 'Polls',         icon: BarChart3,     count: polls.length    }] : []),
-    ...(settings.allowFileSharing !== false ? [{ id: 'files',         label: 'Files',         icon: FileText,      count: files.length    }] : []),
-    { id: 'agenda',        label: 'Agenda',        icon: Clock,      count: agenda.length },
-    { id: 'people',        label: 'People',        icon: Users,      count: participants.length },
-    { id: 'tasks',         label: 'Tasks',         icon: CheckCircle2 },
-    { id: 'announcements', label: 'Announcements', icon: Megaphone },
-    { id: 'expenses',      label: 'Budget',        icon: DollarSign },
-    { id: 'notes',         label: 'Notes',         icon: StickyNote },
+    ...(settings.allowChat !== false        ? [{ id: 'chat',          label: 'Chat',    icon: MessageSquare, count: messages.length    }] : []),
+    ...(settings.allowPolls !== false       ? [{ id: 'polls',         label: 'Polls',   icon: BarChart3,     count: polls.length       }] : []),
+    ...(settings.allowFileSharing !== false ? [{ id: 'files',         label: 'Files',   icon: FileText,      count: files.length       }] : []),
+    { id: 'agenda',        label: 'Agenda',   icon: Clock,       count: agenda.length   },
+    { id: 'people',        label: 'People',   icon: Users,       count: participants.length },
+    { id: 'tasks',         label: 'Tasks',    icon: CheckCircle2 },
+    { id: 'announcements', label: 'Bulletin', icon: Megaphone    },
+    { id: 'expenses',      label: 'Budget',   icon: DollarSign   },
+    { id: 'notes',         label: 'Notes',    icon: StickyNote   },
     ...(isOrganizer && event?.isEnterpriseMode ? [{ id: 'analytics', label: 'Analytics', icon: BarChart3 }] : []),
     { id: 'utilities', label: 'Share', icon: Share2 },
   ];
 
-  // If the active tab is hidden by a settings change, redirect to the first visible tab.
-  // Must be called here (before any returns) to comply with Rules of Hooks.
   useEffect(() => {
-    if (tabs.length > 0 && !tabs.find(t => t.id === activeTab)) {
-      setActiveTab(tabs[0].id);
-    }
+    if (tabs.length > 0 && !tabs.find(t => t.id === activeTab)) setActiveTab(tabs[0].id);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [settings.allowChat, settings.allowPolls, settings.allowFileSharing]);
 
   /* ── Gate / Loading ── */
   if (resolving || (loading && !event)) return (
-    <div className="min-h-screen bg-white flex items-center justify-center">
+    <div className="min-h-screen bg-neutral-50 flex items-center justify-center">
       <span className="spinner w-5 h-5 border-2 border-neutral-200 border-t-neutral-500" />
     </div>
   );
-
   if (needsJoin) return <JoinGate eventId={eventId} onJoined={handleJoined} />;
-
-  if (!event) return null;
-
-  if (loading) return (
-    <div className="min-h-screen bg-white flex items-center justify-center">
+  if (!event)   return null;
+  if (loading)  return (
+    <div className="min-h-screen bg-neutral-50 flex items-center justify-center">
       <span className="spinner w-5 h-5 border-2 border-neutral-200 border-t-neutral-500" />
     </div>
   );
 
   return (
-    <div className="min-h-screen bg-neutral-50 flex flex-col">
-      {/* Deletion Warning Banner - Shows 7-day countdown */}
+    <div className="min-h-screen flex flex-col" style={{ background: '#f7f7f9' }}>
       <DeletionWarningBanner eventId={eventId} />
-      
+
       {showQR && <QRModal eventId={eventId} onClose={() => setShowQR(false)} />}
       {showSettings && isOrganizer && (
-        <OrganizerSettings
-          eventId={eventId}
-          event={event}
-          onClose={() => setShowSettings(false)}
-          onUpdated={() => { loadEvent(); }}
-        />
+        <OrganizerSettings eventId={eventId} event={event}
+          onClose={() => setShowSettings(false)} onUpdated={() => loadEvent()} />
       )}
-
       {showOnboarding && (
-        <Onboarding
-          eventId={eventId}
-          subdomain={event?.subdomain}
-          isOrganizer={isOrganizer}
-          onClose={() => setShowOnboarding(false)}
-        />
+        <Onboarding eventId={eventId} subdomain={event?.subdomain}
+          isOrganizer={isOrganizer} onClose={() => setShowOnboarding(false)} />
       )}
 
       {/* Cover banner */}
       {event?.coverImage && (
         <div className="w-full h-40 md:h-52 overflow-hidden flex-shrink-0 relative">
-          <img
-            src={event.coverImage}
-            alt="Event cover"
-            className="w-full h-full object-cover"
-          />
-          <div className="absolute inset-0" style={{ background: 'linear-gradient(to bottom, transparent 50%, rgba(249,250,251,0.95) 100%)' }} />
+          <img src={event.coverImage} alt="Event cover" className="w-full h-full object-cover" />
+          <div className="absolute inset-0" style={{ background: 'linear-gradient(to bottom,transparent 50%,#f7f7f9 100%)' }} />
         </div>
       )}
 
-      {/* Header */}
-      <header className="bg-white border-b border-neutral-100 sticky top-0 z-50">
-        <div className="max-w-5xl mx-auto px-6 h-14 flex items-center justify-between gap-4">
+      {/* ── Header ── */}
+      <header className="bg-white/90 backdrop-blur-md border-b border-neutral-200/60 sticky top-0 z-50">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between gap-3">
           <div className="flex items-center gap-3 min-w-0">
-            <a href="/" className="btn btn-ghost p-1.5 -ml-1.5 flex-shrink-0"><ArrowLeft className="w-4 h-4" /></a>
+            <a href="/"
+              className="w-8 h-8 rounded-lg bg-neutral-100 hover:bg-neutral-200 flex items-center justify-center flex-shrink-0 transition-colors">
+              <ArrowLeft className="w-3.5 h-3.5 text-neutral-600" />
+            </a>
             <div className="min-w-0">
-              <h1 className="text-sm font-semibold text-neutral-900 truncate">{event?.title}</h1>
+              <h1 className="text-sm font-bold text-neutral-900 truncate leading-tight">{event?.title}</h1>
               {countdown ? (
-                <p className="text-xs text-neutral-400 truncate">
-                  {countdown.d > 0 && `${countdown.d}d `}{String(countdown.h).padStart(2,'0')}:{String(countdown.m).padStart(2,'0')}:{String(countdown.s).padStart(2,'0')} until event
+                <p className="text-[11px] font-semibold text-violet-600 truncate">
+                  {countdown.d > 0 && `${countdown.d}d `}{String(countdown.h).padStart(2,'0')}:{String(countdown.m).padStart(2,'0')}:{String(countdown.s).padStart(2,'0')} to go
                 </p>
               ) : (
-                <p className="text-xs text-neutral-400 truncate">{formatDate(event?.date)}</p>
+                <p className="text-[11px] text-neutral-400 truncate">{formatDate(event?.date)}</p>
               )}
             </div>
           </div>
-          <div className="flex items-center gap-2 flex-shrink-0">
+
+          <div className="flex items-center gap-1.5 flex-shrink-0">
             {onlineUsers.length > 0 && (
-              <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 bg-emerald-50 rounded-lg border border-emerald-200">
+              <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-xs font-bold text-emerald-700"
+                style={{ background: 'rgba(16,185,129,0.07)', border: '1px solid rgba(16,185,129,0.15)' }}>
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse-dot" />
-                <span className="text-xs font-medium text-emerald-700">{onlineUsers.length} online</span>
+                {onlineUsers.length} online
               </div>
             )}
-            <button onClick={() => setShowQR(true)} className="btn btn-secondary px-3 py-1.5 text-xs gap-1.5">
-              <QrCode className="w-3.5 h-3.5" /><span className="hidden sm:inline">QR</span>
+            <button onClick={() => setShowQR(true)} title="QR Code"
+              className="w-8 h-8 rounded-lg bg-neutral-100 hover:bg-neutral-200 flex items-center justify-center transition-colors">
+              <QrCode className="w-3.5 h-3.5 text-neutral-600" />
             </button>
-            <button onClick={handleCopyLink} className="btn btn-secondary px-3 py-1.5 text-xs gap-1.5">
-              {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
-              <span className="hidden sm:inline">{copied ? 'Copied' : 'Share'}</span>
+            <button onClick={handleCopyLink} title="Copy link"
+              className="w-8 h-8 rounded-lg bg-neutral-100 hover:bg-neutral-200 flex items-center justify-center transition-colors">
+              {copied ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5 text-neutral-600" />}
             </button>
             {isOrganizer && event?.isEnterpriseMode && (
-              <button
-                onClick={() => navigate(`/event/${eventId}/checkin`)}
-                className="btn btn-primary px-3 py-1.5 text-xs gap-1.5"
-                title="Enterprise Check-in"
-              >
-                <UserCheck className="w-3.5 h-3.5" /><span className="hidden sm:inline">Check-in</span>
+              <button onClick={() => navigate(`/event/${eventId}/checkin`)}
+                className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition-colors">
+                <UserCheck className="w-3.5 h-3.5" />Check-in
               </button>
             )}
             {isOrganizer && (
-              <button
-                onClick={() => navigate(`/event/${eventId}/waitlist`)}
-                className="btn btn-secondary px-3 py-1.5 text-xs gap-1.5 relative"
-                title="View Waitlist"
-              >
-                <ClipboardList className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">Waitlist</span>
+              <button onClick={() => navigate(`/event/${eventId}/waitlist`)} title="Waitlist"
+                className="relative w-8 h-8 rounded-lg bg-neutral-100 hover:bg-neutral-200 flex items-center justify-center transition-colors">
+                <ClipboardList className="w-3.5 h-3.5 text-neutral-600" />
                 {waitlistCount > 0 && (
-                  <span className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-amber-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center leading-none">
+                  <span className="absolute -top-1 -right-1 w-4 h-4 bg-amber-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center">
                     {waitlistCount > 9 ? '9+' : waitlistCount}
                   </span>
                 )}
               </button>
             )}
-            <button onClick={() => { localStorage.removeItem('eventToken'); localStorage.removeItem('username'); navigate('/'); }} className="btn btn-secondary px-3 py-1.5 text-xs gap-1.5">
-              <LogOut className="w-3.5 h-3.5" /><span className="hidden sm:inline">Leave</span>
+            <button title="Leave event"
+              onClick={() => { localStorage.removeItem('eventToken'); localStorage.removeItem('username'); navigate('/'); }}
+              className="w-8 h-8 rounded-lg bg-neutral-100 hover:bg-red-50 flex items-center justify-center transition-colors group">
+              <LogOut className="w-3.5 h-3.5 text-neutral-500 group-hover:text-red-500 transition-colors" />
             </button>
           </div>
         </div>
       </header>
 
-      <div className="flex-1 max-w-5xl w-full mx-auto px-6 py-6 flex gap-6">
+      <div className="flex-1 max-w-5xl w-full mx-auto px-4 sm:px-6 py-5 flex gap-5">
+        {/* ── Main panel ── */}
+        <div className="flex-1 min-w-0 flex flex-col gap-3">
 
-        {/* Main panel */}
-        <div className="flex-1 min-w-0 flex flex-col">
+          {/* Enterprise banner */}
           {event?.isEnterpriseMode && isOrganizer && (
-            <div className="mb-4 p-4 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-xl border border-blue-700 shadow-lg">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3 flex-1">
-                  <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center flex-shrink-0">
-                    <UserCheck className="w-5 h-5 text-white" />
-                  </div>
-                  <div>
-                    <h3 className="text-sm font-semibold text-white mb-0.5">Enterprise Mode Active</h3>
-                    <p className="text-xs text-blue-100">Manage guest invites and check-in for your event</p>
-                  </div>
+            <div className="p-4 rounded-2xl flex items-center justify-between gap-4 text-white"
+              style={{ background: 'linear-gradient(135deg,#1e3a5f,#1a1a2e)', border: '1px solid rgba(255,255,255,0.07)' }}>
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl bg-white/10 flex items-center justify-center flex-shrink-0">
+                  <UserCheck className="w-4.5 h-4.5" />
                 </div>
-                <button 
-                  onClick={() => navigate(`/event/${eventId}/checkin`)}
-                  className="flex items-center gap-2 px-4 py-2.5 bg-white text-blue-600 rounded-lg font-medium text-sm hover:bg-blue-50 transition-colors shadow-sm flex-shrink-0"
-                >
-                  <UserCheck className="w-4 h-4" />
-                  Manage Invites
-                </button>
+                <div>
+                  <h3 className="text-sm font-bold">Enterprise Mode</h3>
+                  <p className="text-xs opacity-50">Manage guest invites and check-in</p>
+                </div>
               </div>
+              <button onClick={() => navigate(`/event/${eventId}/checkin`)}
+                className="flex items-center gap-1.5 px-3.5 py-2 bg-white text-neutral-900 rounded-xl font-bold text-xs hover:bg-neutral-100 transition-colors flex-shrink-0">
+                <UserCheck className="w-3.5 h-3.5" />Manage
+              </button>
             </div>
           )}
 
-          {/* ── Event status banner (cancelled / completed) ── */}
+          {/* Status banners */}
           {event?.status === 'cancelled' && (
-            <div className="mb-4 flex items-center gap-3 p-4 bg-red-50 border border-red-200 rounded-xl">
+            <div className="flex items-center gap-3 p-4 rounded-2xl bg-red-50 border border-red-200">
               <XCircle className="w-5 h-5 text-red-500 flex-shrink-0" />
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold text-red-800">This event has been cancelled</p>
-                <p className="text-xs text-red-600 mt-0.5">The organizer has cancelled this event. New RSVPs and joins are disabled.</p>
+              <div>
+                <p className="text-sm font-bold text-red-800">This event has been cancelled</p>
+                <p className="text-xs text-red-600 mt-0.5">New joins and RSVPs are disabled.</p>
               </div>
             </div>
           )}
           {event?.status === 'completed' && (
-            <div className="mb-4 flex items-center gap-3 p-4 bg-neutral-100 border border-neutral-200 rounded-xl">
+            <div className="flex items-center gap-3 p-4 rounded-2xl bg-neutral-100 border border-neutral-200">
               <CheckCircle2 className="w-5 h-5 text-neutral-500 flex-shrink-0" />
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold text-neutral-700">This event has ended</p>
-                <p className="text-xs text-neutral-500 mt-0.5">The event has been marked as completed. Content is read-only.</p>
+              <div>
+                <p className="text-sm font-bold text-neutral-700">This event has ended</p>
+                <p className="text-xs text-neutral-500 mt-0.5">Content is now read-only.</p>
               </div>
             </div>
           )}
-          
-          <div className="bg-white rounded-xl border border-neutral-200 overflow-hidden flex-1 flex flex-col" style={{ boxShadow: 'var(--shadow-sm)' }}>
 
-            {/* Tabs */}
-            <div className="flex border-b border-neutral-100 overflow-x-auto scrollbar-hide">
+          {/* Main content card */}
+          <div className="bg-white rounded-2xl border border-neutral-200/80 overflow-hidden flex-1 flex flex-col"
+            style={{ boxShadow: '0 1px 4px rgba(0,0,0,0.05)' }}>
+
+            {/* ── Tabs ── */}
+            <div className="flex border-b border-neutral-100 overflow-x-auto scrollbar-hide" style={{ background: '#fafafa' }}>
               {tabs.map(({ id, label, icon: Icon, count }) => (
                 <button key={id} onClick={() => setActiveTab(id)}
-                  className={`flex items-center gap-2 px-4 py-3.5 text-sm font-medium border-b-2 transition-all duration-150 whitespace-nowrap ${
-                    activeTab === id ? 'text-neutral-900 border-neutral-900' : 'text-neutral-500 border-transparent hover:text-neutral-700 hover:bg-neutral-50'
+                  className={`flex items-center gap-1.5 px-4 py-3 text-xs font-bold whitespace-nowrap transition-all border-b-2 ${
+                    activeTab === id
+                      ? 'text-neutral-900 border-neutral-900 bg-white'
+                      : 'text-neutral-500 border-transparent hover:text-neutral-800 hover:bg-white/60'
                   }`}>
-                  <Icon className="w-4 h-4" />
+                  <Icon className="w-3.5 h-3.5" />
                   {label}
                   {count > 0 && (
-                    <span className={`text-xs px-1.5 py-0.5 rounded-full font-medium ${activeTab === id ? 'bg-neutral-900 text-white' : 'bg-neutral-100 text-neutral-500'}`}>
-                      {count}
+                    <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold leading-none ${
+                      activeTab === id ? 'bg-neutral-900 text-white' : 'bg-neutral-200 text-neutral-500'
+                    }`}>
+                      {count > 99 ? '99+' : count}
                     </span>
                   )}
                 </button>
@@ -1060,33 +1071,37 @@ export default function EventSpace() {
 
             {/* ── Chat ── */}
             {activeTab === 'chat' && (
-              <div className="flex flex-col flex-1" style={{ height: 'calc(100vh - 16rem)' }}>
-                <div className="flex-1 overflow-y-auto p-5 space-y-5">
+              <div className="flex flex-col flex-1" style={{ height: 'calc(100vh - 15rem)' }}>
+                <div className="flex-1 overflow-y-auto p-5 space-y-4">
                   {messages.length === 0 ? (
                     <div className="flex flex-col items-center justify-center h-full text-center py-16">
-                      <div className="w-12 h-12 rounded-full bg-neutral-100 flex items-center justify-center mb-3"><MessageSquare className="w-5 h-5 text-neutral-400" /></div>
-                      <p className="text-sm font-medium text-neutral-600">No messages yet</p>
-                      <p className="text-xs text-neutral-400 mt-1">Be the first to say something</p>
+                      <div className="w-14 h-14 rounded-2xl bg-neutral-100 flex items-center justify-center mb-3">
+                        <MessageSquare className="w-6 h-6 text-neutral-400" />
+                      </div>
+                      <p className="text-sm font-bold text-neutral-700">No messages yet</p>
+                      <p className="text-xs text-neutral-400 mt-1">Be the first to say hello 👋</p>
                     </div>
                   ) : messages.map((msg) => {
                     const isMine = msg.username === currentUser;
-                    const msgId = msg._id || msg.id;
+                    const msgId  = msg._id || msg.id;
                     return (
                       <div key={msgId} className={`flex gap-2.5 group ${isMine ? 'flex-row-reverse' : ''}`}>
                         <Avatar name={msg.username} />
-                        <div className={`max-w-[72%] flex flex-col ${isMine ? 'items-end' : 'items-start'}`}>
-                          <div className={`flex items-baseline gap-2 mb-1 ${isMine ? 'flex-row-reverse' : ''}`}>
-                            <span className="text-xs font-medium text-neutral-700">{msg.username}</span>
-                            <span className="text-xs text-neutral-400">{formatRelativeTime(msg.createdAt)}</span>
-                            {msg.edited && <span className="text-xs text-neutral-300">edited</span>}
+                        <div className={`max-w-[74%] flex flex-col ${isMine ? 'items-end' : 'items-start'}`}>
+                          <div className={`flex items-center gap-2 mb-1 ${isMine ? 'flex-row-reverse' : ''}`}>
+                            <span className="text-xs font-bold text-neutral-700">{msg.username}</span>
+                            <span className="text-[10px] text-neutral-400">{formatRelativeTime(msg.createdAt)}</span>
+                            {msg.edited && <span className="text-[10px] text-neutral-300 italic">edited</span>}
                           </div>
-                          <div className={`rounded-xl px-3.5 py-2 text-sm leading-relaxed ${isMine ? 'bg-neutral-900 text-white rounded-tr-sm' : 'bg-neutral-100 text-neutral-900 rounded-tl-sm'}`}>
+                          <div className={`rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed ${
+                            isMine ? 'bg-neutral-900 text-white rounded-tr-sm' : 'bg-neutral-100 text-neutral-900 rounded-tl-sm'
+                          }`}>
                             <p className="whitespace-pre-wrap break-words">{msg.content}</p>
                           </div>
                           <ReactionBar messageId={msgId} reactions={msg.reactions || []} currentUser={currentUser} eventId={eventId} />
                           {(isOrganizer || isMine) && (
                             <button onClick={() => handleDeleteMessage(msgId)}
-                              className="text-xs text-neutral-400 hover:text-red-500 mt-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                              className="text-[10px] text-neutral-400 hover:text-red-500 mt-1 opacity-0 group-hover:opacity-100 transition-opacity">
                               Delete
                             </button>
                           )}
@@ -1096,18 +1111,18 @@ export default function EventSpace() {
                   })}
                   {typingUsers.length > 0 && (
                     <p className="text-xs text-neutral-400 italic pl-9">
-                      {typingUsers.join(', ')} {typingUsers.length === 1 ? 'is' : 'are'} typing...
+                      {typingUsers.join(', ')} {typingUsers.length === 1 ? 'is' : 'are'} typing…
                     </p>
                   )}
                   <div ref={messagesEndRef} />
                 </div>
-                <div className="border-t border-neutral-100 p-4">
+                <div className="border-t border-neutral-100 p-3.5">
                   <form onSubmit={handleSendMessage} className="flex gap-2">
-                    <input type="text" value={messageInput}
-                      onChange={handleMessageInputChange}
-                      placeholder="Send a message..." className="input flex-1 text-sm" maxLength={MAX_MESSAGE_LENGTH} />
-                    <button type="submit" disabled={!messageInput.trim() || sendingMessage} className="btn btn-primary px-4">
-                      <Send className="w-4 h-4" />
+                    <input type="text" value={messageInput} onChange={handleMessageInputChange}
+                      placeholder="Send a message…" className="input flex-1 text-sm rounded-xl" maxLength={MAX_MESSAGE_LENGTH} />
+                    <button type="submit" disabled={!messageInput.trim() || sendingMessage}
+                      className="w-10 h-10 rounded-xl bg-neutral-900 hover:bg-neutral-800 disabled:opacity-40 flex items-center justify-center flex-shrink-0 transition-colors">
+                      <Send className="w-4 h-4 text-white" />
                     </button>
                   </form>
                 </div>
@@ -1119,23 +1134,23 @@ export default function EventSpace() {
               <div className="flex-1 overflow-y-auto p-5">
                 <div className="mb-5">
                   {!showCreatePoll ? (
-                    <button onClick={() => setShowCreatePoll(true)} className="btn btn-secondary text-sm gap-1.5">
-                      <Plus className="w-4 h-4" /> Create poll
+                    <button onClick={() => setShowCreatePoll(true)} className="btn btn-secondary text-sm gap-1.5 rounded-xl">
+                      <Plus className="w-4 h-4" />Create poll
                     </button>
                   ) : (
-                    <div className="card p-5 mb-5">
-                      <h3 className="text-sm font-semibold text-neutral-900 mb-4">New poll</h3>
+                    <div className="bg-white border border-neutral-200 rounded-2xl p-5 mb-5">
+                      <h3 className="text-sm font-bold text-neutral-900 mb-4">New poll</h3>
                       <form onSubmit={handleCreatePoll} className="space-y-3">
                         <input type="text" value={newPoll.question}
                           onChange={e => setNewPoll({ ...newPoll, question: e.target.value })}
-                          placeholder="What's the question?" className="input text-sm" required />
+                          placeholder="What's your question?" className="input rounded-xl text-sm" required />
                         {newPoll.options.map((opt, i) => (
                           <div key={i} className="flex gap-2">
                             <input type="text" value={opt}
-                              onChange={e => { const opts = [...newPoll.options]; opts[i] = e.target.value; setNewPoll({ ...newPoll, options: opts }); }}
-                              placeholder={`Option ${i + 1}`} className="input flex-1 text-sm" />
+                              onChange={e => { const o = [...newPoll.options]; o[i] = e.target.value; setNewPoll({ ...newPoll, options: o }); }}
+                              placeholder={`Option ${i + 1}`} className="input flex-1 text-sm rounded-xl" />
                             {newPoll.options.length > 2 && (
-                              <button type="button" className="btn btn-secondary px-2.5"
+                              <button type="button" className="btn btn-secondary px-2.5 rounded-xl"
                                 onClick={() => setNewPoll({ ...newPoll, options: newPoll.options.filter((_, idx) => idx !== i) })}>
                                 <X className="w-4 h-4" />
                               </button>
@@ -1143,14 +1158,14 @@ export default function EventSpace() {
                           </div>
                         ))}
                         {newPoll.options.length < 10 && (
-                          <button type="button" className="btn btn-ghost text-sm gap-1"
+                          <button type="button" className="btn btn-ghost text-sm gap-1 rounded-xl"
                             onClick={() => setNewPoll({ ...newPoll, options: [...newPoll.options, ''] })}>
-                            <Plus className="w-3.5 h-3.5" /> Add option
+                            <Plus className="w-3.5 h-3.5" />Add option
                           </button>
                         )}
                         <div className="flex gap-2 pt-1">
-                          <button type="submit" className="btn btn-primary text-sm">Create</button>
-                          <button type="button" className="btn btn-secondary text-sm"
+                          <button type="submit" className="btn btn-primary text-sm rounded-xl">Create</button>
+                          <button type="button" className="btn btn-secondary text-sm rounded-xl"
                             onClick={() => { setShowCreatePoll(false); setNewPoll({ question: '', options: ['', ''] }); }}>
                             Cancel
                           </button>
@@ -1159,38 +1174,43 @@ export default function EventSpace() {
                     </div>
                   )}
                 </div>
-
                 {polls.length === 0 ? (
                   <div className="flex flex-col items-center justify-center py-16 text-center">
-                    <div className="w-12 h-12 rounded-full bg-neutral-100 flex items-center justify-center mb-3"><BarChart3 className="w-5 h-5 text-neutral-400" /></div>
-                    <p className="text-sm font-medium text-neutral-600">No polls yet</p>
+                    <div className="w-14 h-14 rounded-2xl bg-neutral-100 flex items-center justify-center mb-3">
+                      <BarChart3 className="w-6 h-6 text-neutral-400" />
+                    </div>
+                    <p className="text-sm font-bold text-neutral-700">No polls yet</p>
+                    <p className="text-xs text-neutral-400 mt-1">Create one to get the group's opinion</p>
                   </div>
                 ) : polls.map(poll => {
                   const totalVotes = poll.options?.reduce((sum, o) => sum + (o.votes?.length || 0), 0) || 0;
                   const pollId = poll._id || poll.id;
                   return (
-                    <div key={pollId} className="card p-5 mb-4">
+                    <div key={pollId} className="bg-white border border-neutral-200 rounded-2xl p-5 mb-4">
                       <div className="flex items-start justify-between mb-4">
-                        <h3 className="text-sm font-semibold text-neutral-900 pr-3">{poll.question}</h3>
-                        <span className={`badge flex-shrink-0 ${poll.status === 'closed' ? 'badge-gray' : 'badge-green'}`}>
-                          {poll.status === 'closed' ? 'Closed' : 'Active'}
+                        <h3 className="text-sm font-bold text-neutral-900 pr-3 leading-snug">{poll.question}</h3>
+                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold tracking-wide flex-shrink-0 ${
+                          poll.status === 'closed' ? 'bg-neutral-100 text-neutral-500' : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                        }`}>
+                          {poll.status === 'closed' ? 'Closed' : '● Active'}
                         </span>
                       </div>
-                      <div className="space-y-2.5">
+                      <div className="space-y-2">
                         {poll.options?.map((option, i) => {
-                          const votes = option.votes?.length || 0;
-                          const pct = totalVotes > 0 ? Math.round((votes / totalVotes) * 100) : 0;
+                          const votes    = option.votes?.length || 0;
+                          const pct      = totalVotes > 0 ? Math.round((votes / totalVotes) * 100) : 0;
                           const userVoted = option.votes?.some(v => v.username === currentUser);
                           return (
                             <button key={i} onClick={() => poll.status === 'active' && handleVote(pollId, i)}
                               disabled={poll.status === 'closed'}
-                              className={`w-full text-left p-3.5 rounded-lg border transition-all duration-150 relative overflow-hidden ${
+                              className={`w-full text-left p-3.5 rounded-xl border-2 transition-all duration-150 relative overflow-hidden ${
                                 userVoted ? 'border-neutral-900 bg-neutral-900 text-white' : 'border-neutral-200 bg-white hover:border-neutral-400 text-neutral-900'
                               } ${poll.status === 'closed' ? 'cursor-default' : 'cursor-pointer'}`}>
-                              <div className={`absolute inset-0 transition-all duration-500 ${userVoted ? 'bg-white/10' : 'bg-neutral-100'}`} style={{ width: `${pct}%` }} />
-                              <div className="relative flex items-center justify-between">
-                                <span className="text-sm font-medium">{option.text}</span>
-                                <span className={`text-xs font-medium ml-2 ${userVoted ? 'text-white/80' : 'text-neutral-500'}`}>{pct}%</span>
+                              <div className={`absolute inset-0 transition-all duration-700 ${userVoted ? 'bg-white/10' : 'bg-neutral-100'}`}
+                                style={{ width: `${pct}%` }} />
+                              <div className="relative flex items-center justify-between gap-2">
+                                <span className="text-sm font-semibold">{option.text}</span>
+                                <span className={`text-xs font-bold flex-shrink-0 ${userVoted ? 'text-white/70' : 'text-neutral-400'}`}>{pct}%</span>
                               </div>
                             </button>
                           );
@@ -1199,7 +1219,10 @@ export default function EventSpace() {
                       <div className="mt-3 flex items-center justify-between">
                         <span className="text-xs text-neutral-400">{totalVotes} vote{totalVotes !== 1 ? 's' : ''}</span>
                         {isOrganizer && poll.status === 'active' && (
-                          <button onClick={() => handleClosePoll(pollId)} className="text-xs text-neutral-500 hover:text-neutral-900 font-medium transition-colors">Close poll</button>
+                          <button onClick={() => handleClosePoll(pollId)}
+                            className="text-xs text-neutral-500 hover:text-neutral-900 font-bold transition-colors">
+                            Close poll
+                          </button>
                         )}
                       </div>
                     </div>
@@ -1213,14 +1236,18 @@ export default function EventSpace() {
               <div className="flex-1 overflow-y-auto p-5">
                 <div className="mb-5">
                   <input ref={fileInputRef} type="file" multiple onChange={handleFileUpload} className="hidden" accept={ALLOWED_FILE_TYPES.join(',')} />
-                  <button onClick={() => fileInputRef.current?.click()} disabled={uploadingFile} className="btn btn-secondary text-sm gap-1.5">
-                    <Paperclip className="w-4 h-4" />{uploadingFile ? 'Uploading...' : 'Upload file'}
+                  <button onClick={() => fileInputRef.current?.click()} disabled={uploadingFile}
+                    className="btn btn-secondary text-sm gap-1.5 rounded-xl">
+                    <Paperclip className="w-4 h-4" />{uploadingFile ? 'Uploading…' : 'Upload file'}
                   </button>
                 </div>
                 {files.length === 0 ? (
                   <div className="flex flex-col items-center justify-center py-16 text-center">
-                    <div className="w-12 h-12 rounded-full bg-neutral-100 flex items-center justify-center mb-3"><FileText className="w-5 h-5 text-neutral-400" /></div>
-                    <p className="text-sm font-medium text-neutral-600">No files yet</p>
+                    <div className="w-14 h-14 rounded-2xl bg-neutral-100 flex items-center justify-center mb-3">
+                      <FileText className="w-6 h-6 text-neutral-400" />
+                    </div>
+                    <p className="text-sm font-bold text-neutral-700">No files yet</p>
+                    <p className="text-xs text-neutral-400 mt-1">Share documents, images, and more</p>
                   </div>
                 ) : (
                   <div className="space-y-2">
@@ -1229,16 +1256,24 @@ export default function EventSpace() {
                       return (
                         <div key={fid} className="flex items-center justify-between p-4 bg-white border border-neutral-200 rounded-xl hover:border-neutral-300 transition-colors">
                           <div className="flex items-center gap-3 min-w-0">
-                            <div className="w-9 h-9 bg-neutral-100 rounded-lg flex items-center justify-center flex-shrink-0"><FileText className="w-4 h-4 text-neutral-500" /></div>
+                            <div className="w-10 h-10 bg-neutral-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                              <FileText className="w-4.5 h-4.5 text-neutral-500" />
+                            </div>
                             <div className="min-w-0">
-                              <p className="text-sm font-medium text-neutral-900 truncate">{file.filename}</p>
-                              <p className="text-xs text-neutral-400">{formatFileSize(file.size)} · {file.uploadedBy}</p>
+                              <p className="text-sm font-semibold text-neutral-900 truncate">{file.filename}</p>
+                              <p className="text-xs text-neutral-400">{formatFileSize(file.size)} · by {file.uploadedBy}</p>
                             </div>
                           </div>
                           <div className="flex items-center gap-1.5 ml-4 flex-shrink-0">
-                            <button onClick={() => handleDownloadFile(fid, file.filename)} className="btn btn-secondary p-2"><Download className="w-3.5 h-3.5" /></button>
+                            <button onClick={() => handleDownloadFile(fid, file.filename)}
+                              className="w-8 h-8 rounded-lg bg-neutral-100 hover:bg-neutral-200 flex items-center justify-center transition-colors">
+                              <Download className="w-3.5 h-3.5 text-neutral-600" />
+                            </button>
                             {(isOrganizer || file.uploadedBy === currentUser) && (
-                              <button onClick={() => handleDeleteFile(fid)} className="btn btn-danger p-2"><Trash2 className="w-3.5 h-3.5" /></button>
+                              <button onClick={() => handleDeleteFile(fid)}
+                                className="w-8 h-8 rounded-lg border border-red-200 hover:bg-red-50 flex items-center justify-center transition-colors">
+                                <Trash2 className="w-3.5 h-3.5 text-red-500" />
+                              </button>
                             )}
                           </div>
                         </div>
@@ -1255,68 +1290,70 @@ export default function EventSpace() {
                 {isOrganizer && (
                   <div className="mb-5">
                     {!showAddAgenda ? (
-                      <button onClick={() => setShowAddAgenda(true)} className="btn btn-secondary text-sm gap-1.5">
-                        <Plus className="w-4 h-4" /> Add agenda item
+                      <button onClick={() => setShowAddAgenda(true)} className="btn btn-secondary text-sm gap-1.5 rounded-xl">
+                        <Plus className="w-4 h-4" />Add agenda item
                       </button>
                     ) : (
-                      <div className="card p-5 mb-5">
-                        <h3 className="text-sm font-semibold text-neutral-900 mb-4">New agenda item</h3>
+                      <div className="bg-white border border-neutral-200 rounded-2xl p-5 mb-5">
+                        <h3 className="text-sm font-bold text-neutral-900 mb-4">New agenda item</h3>
                         <form onSubmit={handleAddAgendaItem} className="space-y-3">
                           <div className="grid grid-cols-2 gap-3">
                             <div>
-                              <label className="block text-xs font-medium text-neutral-600 mb-1">Title</label>
-                              <input type="text" className="input text-sm" placeholder="Welcome speech" required
+                              <label className="block text-xs font-bold text-neutral-500 mb-1">Title</label>
+                              <input type="text" className="input text-sm rounded-xl" placeholder="Opening remarks" required
                                 value={newAgendaItem.title} onChange={e => setNewAgendaItem(p => ({ ...p, title: e.target.value }))} />
                             </div>
                             <div>
-                              <label className="block text-xs font-medium text-neutral-600 mb-1">Time</label>
-                              <input type="text" className="input text-sm" placeholder="9:00 AM"
+                              <label className="block text-xs font-bold text-neutral-500 mb-1">Time</label>
+                              <input type="text" className="input text-sm rounded-xl" placeholder="9:00 AM"
                                 value={newAgendaItem.time} onChange={e => setNewAgendaItem(p => ({ ...p, time: e.target.value }))} />
                             </div>
                           </div>
                           <div>
-                            <label className="block text-xs font-medium text-neutral-600 mb-1">Description (optional)</label>
-                            <input type="text" className="input text-sm" placeholder="Brief description"
+                            <label className="block text-xs font-bold text-neutral-500 mb-1">Description (optional)</label>
+                            <input type="text" className="input text-sm rounded-xl" placeholder="Brief description"
                               value={newAgendaItem.description} onChange={e => setNewAgendaItem(p => ({ ...p, description: e.target.value }))} />
                           </div>
                           <div>
-                            <label className="block text-xs font-medium text-neutral-600 mb-1">Duration (minutes)</label>
-                            <input type="number" className="input text-sm" placeholder="30" min="0"
+                            <label className="block text-xs font-bold text-neutral-500 mb-1">Duration (min)</label>
+                            <input type="number" className="input text-sm rounded-xl" placeholder="30" min="0"
                               value={newAgendaItem.duration} onChange={e => setNewAgendaItem(p => ({ ...p, duration: e.target.value }))} />
                           </div>
                           <div className="flex gap-2 pt-1">
-                            <button type="submit" className="btn btn-primary text-sm">Add</button>
-                            <button type="button" className="btn btn-secondary text-sm" onClick={() => setShowAddAgenda(false)}>Cancel</button>
+                            <button type="submit" className="btn btn-primary text-sm rounded-xl">Add</button>
+                            <button type="button" className="btn btn-secondary text-sm rounded-xl" onClick={() => setShowAddAgenda(false)}>Cancel</button>
                           </div>
                         </form>
                       </div>
                     )}
                   </div>
                 )}
-
                 {agenda.length === 0 ? (
                   <div className="flex flex-col items-center justify-center py-16 text-center">
-                    <div className="w-12 h-12 rounded-full bg-neutral-100 flex items-center justify-center mb-3"><Clock className="w-5 h-5 text-neutral-400" /></div>
-                    <p className="text-sm font-medium text-neutral-600">No agenda yet</p>
-                    {isOrganizer && <p className="text-xs text-neutral-400 mt-1">Add items to plan the event schedule</p>}
+                    <div className="w-14 h-14 rounded-2xl bg-neutral-100 flex items-center justify-center mb-3">
+                      <Clock className="w-6 h-6 text-neutral-400" />
+                    </div>
+                    <p className="text-sm font-bold text-neutral-700">No agenda yet</p>
+                    {isOrganizer && <p className="text-xs text-neutral-400 mt-1">Add items to plan your schedule</p>}
                   </div>
                 ) : (
                   <div className="space-y-2">
                     {agenda.map((item, idx) => (
-                      <div key={item.id || idx} className="flex items-start gap-4 p-4 bg-white border border-neutral-200 rounded-xl">
+                      <div key={item.id || idx} className="flex items-start gap-4 p-4 bg-white border border-neutral-200 rounded-xl hover:border-neutral-300 transition-colors">
                         {item.time && (
                           <div className="flex-shrink-0 text-right min-w-14">
-                            <p className="text-xs font-medium text-neutral-500 font-mono">{item.time}</p>
-                            {item.duration > 0 && <p className="text-xs text-neutral-400">{item.duration}m</p>}
+                            <p className="text-xs font-bold text-neutral-600 font-mono">{item.time}</p>
+                            {item.duration > 0 && <p className="text-[10px] text-neutral-400">{item.duration}m</p>}
                           </div>
                         )}
-                        <div className={`flex-1 min-w-0 ${item.time ? 'border-l border-neutral-200 pl-4' : ''}`}>
-                          <p className="text-sm font-medium text-neutral-900">{item.title}</p>
+                        <div className={`flex-1 min-w-0 ${item.time ? 'border-l-2 border-neutral-200 pl-4' : ''}`}>
+                          <p className="text-sm font-semibold text-neutral-900">{item.title}</p>
                           {item.description && <p className="text-xs text-neutral-500 mt-0.5">{item.description}</p>}
                         </div>
                         {isOrganizer && (
-                          <button onClick={() => handleDeleteAgendaItem(item.id)} className="btn btn-ghost p-1.5 text-neutral-400 hover:text-red-500 flex-shrink-0">
-                            <Trash2 className="w-3.5 h-3.5" />
+                          <button onClick={() => handleDeleteAgendaItem(item.id)}
+                            className="w-7 h-7 rounded-lg hover:bg-red-50 flex items-center justify-center transition-colors flex-shrink-0">
+                            <Trash2 className="w-3.5 h-3.5 text-neutral-400 hover:text-red-500 transition-colors" />
                           </button>
                         )}
                       </div>
@@ -1329,26 +1366,29 @@ export default function EventSpace() {
             {/* ── People ── */}
             {activeTab === 'people' && (
               <div className="flex-1 overflow-y-auto p-5">
-                <div className="flex items-center gap-4 mb-5 p-4 bg-neutral-50 rounded-xl border border-neutral-200">
-                  <div className="flex gap-4 text-sm">
-                    <span className="text-emerald-600 font-medium">{rsvpSummary.yes} going</span>
-                    <span className="text-amber-600 font-medium">{rsvpSummary.maybe} maybe</span>
-                    <span className="text-neutral-400 font-medium">{rsvpSummary.no} not going</span>
+                <div className="flex items-center gap-2 mb-5 flex-wrap">
+                  <div className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 border border-emerald-200 rounded-lg">
+                    <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                    <span className="text-xs font-bold text-emerald-700">{rsvpSummary.yes} going</span>
+                  </div>
+                  <div className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 border border-amber-200 rounded-lg">
+                    <span className="text-xs font-bold text-amber-700">{rsvpSummary.maybe} maybe</span>
+                  </div>
+                  <div className="flex items-center gap-1.5 px-3 py-1.5 bg-neutral-100 border border-neutral-200 rounded-lg">
+                    <span className="text-xs font-bold text-neutral-500">{rsvpSummary.no} can't go</span>
                   </div>
                 </div>
 
-                {/* My RSVP */}
                 <div className="mb-5 p-4 bg-white border border-neutral-200 rounded-xl">
-                  <p className="text-xs font-medium text-neutral-500 mb-2">Your RSVP</p>
+                  <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest mb-2.5">Your RSVP</p>
                   <div className="flex gap-2">
-                    {[['yes', 'Going', 'bg-emerald-50 text-emerald-700 border-emerald-300'],
-                      ['maybe', 'Maybe', 'bg-amber-50 text-amber-700 border-amber-300'],
-                      ['no', 'Not going', 'bg-neutral-100 text-neutral-600 border-neutral-300']
-                    ].map(([status, label, active]) => (
+                    {[
+                      ['yes',   'Going',    myRsvp === 'yes'   ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white text-neutral-600 border-neutral-200 hover:border-emerald-300'],
+                      ['maybe', 'Maybe',    myRsvp === 'maybe' ? 'bg-amber-500 text-white border-amber-500'     : 'bg-white text-neutral-600 border-neutral-200 hover:border-amber-300'],
+                      ['no',    "Can't go", myRsvp === 'no'    ? 'bg-neutral-800 text-white border-neutral-800' : 'bg-white text-neutral-600 border-neutral-200 hover:border-neutral-400'],
+                    ].map(([status, label, cls]) => (
                       <button key={status} onClick={() => handleRsvp(status)}
-                        className={`px-3 py-1.5 text-xs font-medium rounded-lg border transition-all ${
-                          myRsvp === status ? active : 'bg-white text-neutral-500 border-neutral-200 hover:border-neutral-400'
-                        }`}>
+                        className={`flex-1 py-2 text-xs font-bold rounded-lg border-2 transition-all ${cls}`}>
                         {label}
                       </button>
                     ))}
@@ -1358,26 +1398,34 @@ export default function EventSpace() {
                 <div className="space-y-2">
                   {participants.map(p => {
                     const isOnline = onlineUsers.includes(p.username);
-                    const isOrg = p.role === 'organizer';
-                    const pRsvp = rsvps.find(r => r.username === p.username);
+                    const isOrg    = p.role === 'organizer';
+                    const pRsvp    = rsvps.find(r => r.username === p.username);
                     return (
-                      <div key={p.username} className="flex items-center gap-3 p-3.5 bg-white border border-neutral-200 rounded-xl">
-                        <div className="relative">
+                      <div key={p.username} className="flex items-center gap-3 p-3.5 bg-white border border-neutral-200 rounded-xl hover:border-neutral-300 transition-colors">
+                        <div className="relative flex-shrink-0">
                           <Avatar name={p.username} size="md" />
-                          {isOnline && <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-emerald-500 rounded-full border-2 border-white" />}
+                          {isOnline && <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-emerald-500 rounded-full border-2 border-white" />}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2">
-                            <p className="text-sm font-medium text-neutral-900 truncate">{p.username}</p>
-                            {isOrg && <span className="badge badge-primary">Organizer</span>}
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <p className="text-sm font-bold text-neutral-900 truncate">{p.username}</p>
+                            {isOrg && (
+                              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-neutral-900 text-white text-[10px] font-bold">
+                                <Star className="w-2.5 h-2.5" />Organizer
+                              </span>
+                            )}
                             {pRsvp && (
-                              <span className={`badge ${pRsvp.status === 'yes' ? 'badge-green' : pRsvp.status === 'maybe' ? 'badge-amber' : 'badge-gray'}`}>
-                                {pRsvp.status === 'yes' ? 'Going' : pRsvp.status === 'maybe' ? 'Maybe' : 'Not going'}
+                              <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-md ${
+                                pRsvp.status === 'yes'   ? 'bg-emerald-50 text-emerald-700' :
+                                pRsvp.status === 'maybe' ? 'bg-amber-50 text-amber-700'     :
+                                'bg-neutral-100 text-neutral-500'
+                              }`}>
+                                {pRsvp.status === 'yes' ? 'Going' : pRsvp.status === 'maybe' ? 'Maybe' : "Can't go"}
                               </span>
                             )}
                           </div>
-                          <p className="text-xs text-neutral-400">
-                            {isOnline ? 'Online now' : `Joined ${formatRelativeTime(p.joinedAt)}`}
+                          <p className="text-xs text-neutral-400 mt-0.5">
+                            {isOnline ? <span className="text-emerald-600 font-semibold">● Online</span> : `Joined ${formatRelativeTime(p.joinedAt)}`}
                           </p>
                         </div>
                       </div>
@@ -1387,178 +1435,121 @@ export default function EventSpace() {
               </div>
             )}
 
-            {/* ── NEW FEATURES ── */}
-            {activeTab === 'tasks' && (
-              <div className="flex-1 overflow-hidden">
-                <Tasks eventId={eventId} socket={socketService} />
-              </div>
-            )}
-
-            {activeTab === 'announcements' && (
-              <div className="flex-1 overflow-hidden">
-                <Announcements eventId={eventId} socket={socketService} isOrganizer={isOrganizer} />
-              </div>
-            )}
-
-            {activeTab === 'expenses' && (
-              <div className="flex-1 overflow-hidden">
-                <Expenses eventId={eventId} socket={socketService} isOrganizer={isOrganizer} />
-              </div>
-            )}
-
-            {activeTab === 'notes' && (
-              <div className="flex-1 overflow-hidden">
-                <Notes eventId={eventId} socket={socketService} />
-              </div>
-            )}
-
-            {activeTab === 'analytics' && isOrganizer && (
-              <div className="flex-1 overflow-hidden">
-                <Analytics eventId={eventId} />
-              </div>
-            )}
-
+            {/* ── Feature tabs ── */}
+            {activeTab === 'tasks'         && <div className="flex-1 overflow-hidden"><Tasks        eventId={eventId} socket={socketService} /></div>}
+            {activeTab === 'announcements' && <div className="flex-1 overflow-hidden"><Announcements eventId={eventId} socket={socketService} isOrganizer={isOrganizer} /></div>}
+            {activeTab === 'expenses'      && <div className="flex-1 overflow-hidden"><Expenses      eventId={eventId} socket={socketService} isOrganizer={isOrganizer} /></div>}
+            {activeTab === 'notes'         && <div className="flex-1 overflow-hidden"><Notes         eventId={eventId} socket={socketService} /></div>}
+            {activeTab === 'analytics' && isOrganizer && <div className="flex-1 overflow-hidden"><Analytics eventId={eventId} /></div>}
             {activeTab === 'utilities' && (
               <div className="flex-1 overflow-hidden">
-                <Utilities 
-                  eventId={eventId} 
-                  subdomain={event.subdomain}
-                  isOrganizer={isOrganizer}
-                  isEnterpriseMode={event?.isEnterpriseMode}
-                />
+                <Utilities eventId={eventId} subdomain={event.subdomain} isOrganizer={isOrganizer} isEnterpriseMode={event?.isEnterpriseMode} />
               </div>
             )}
-
           </div>
         </div>
 
-        {/* Sidebar */}
-        <aside className="hidden lg:block w-64 flex-shrink-0">
-          <div className="card p-5 sticky top-20">
+        {/* ── Sidebar ── */}
+        <aside className="hidden lg:block w-60 flex-shrink-0">
+          <div className="sticky top-20 space-y-3">
+
             {event?.date && (
-              <div className="mb-5">
+              <div className="bg-white rounded-2xl border border-neutral-200 p-4" style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
                 <Countdown eventDate={event.date} />
               </div>
             )}
-            
-            <h3 className="text-xs font-semibold text-neutral-400 uppercase tracking-wide mb-4">Event details</h3>
-            <div className="space-y-3.5">
-              <div>
-                <p className="text-xs text-neutral-400 mb-0.5">Title</p>
-                <p className="text-sm font-medium text-neutral-900">{event?.title}</p>
-              </div>
+
+            <div className="bg-white rounded-2xl border border-neutral-200 p-4 space-y-3.5" style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
+              <h3 className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest">Event Info</h3>
               {event?.isEnterpriseMode && (
-                <div>
-                  <p className="text-xs text-neutral-400 mb-0.5">Event Type</p>
-                  <div className="inline-flex items-center gap-1.5 px-2 py-1 bg-blue-50 border border-blue-200 rounded text-xs font-medium text-blue-700">
-                    <Users className="w-3 h-3" />
-                    Enterprise Mode
-                  </div>
+                <div className="inline-flex items-center gap-1.5 px-2 py-1 bg-indigo-50 border border-indigo-200 rounded-lg text-xs font-bold text-indigo-700">
+                  <Shield className="w-3 h-3" />Enterprise
                 </div>
               )}
               {event?.date && (
                 <div>
-                  <p className="text-xs text-neutral-400 mb-0.5">Date</p>
-                  <p className="text-sm text-neutral-700">{formatDate(event.date)}</p>
+                  <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-wide">Date</p>
+                  <p className="text-xs text-neutral-700 font-semibold mt-0.5">{formatDate(event.date)}</p>
                 </div>
               )}
               {event?.location && (
                 <div>
-                  <p className="text-xs text-neutral-400 mb-0.5">Location</p>
-                  <p className="text-sm text-neutral-700">{event.location}</p>
+                  <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-wide">Location</p>
+                  <p className="text-xs text-neutral-700 font-semibold mt-0.5">{event.location}</p>
                 </div>
               )}
               {event?.description && (
                 <div>
-                  <p className="text-xs text-neutral-400 mb-0.5">Description</p>
-                  <p className="text-sm text-neutral-700 leading-relaxed">{event.description}</p>
+                  <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-wide">About</p>
+                  <p className="text-xs text-neutral-600 leading-relaxed mt-0.5 line-clamp-4">{event.description}</p>
                 </div>
               )}
-              <div>
-                <p className="text-xs text-neutral-400 mb-0.5">Participants</p>
-                <p className="text-sm text-neutral-700">{participants.length} / {event?.maxParticipants || 100}</p>
+              <div className="flex items-center justify-between py-2.5 px-3 rounded-xl bg-neutral-50 border border-neutral-100">
+                <span className="text-[10px] font-bold text-neutral-500 uppercase tracking-wide">Attendees</span>
+                <span className="text-sm font-bold text-neutral-900">
+                  {participants.length}<span className="text-xs text-neutral-400 font-medium"> / {event?.maxParticipants || 100}</span>
+                </span>
               </div>
-              <div>
-                <p className="text-xs text-neutral-400 mb-0.5">RSVP</p>
-                <p className="text-sm text-neutral-700">{rsvpSummary.yes} going · {rsvpSummary.maybe} maybe</p>
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <span className="text-xs font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-1 rounded-lg">{rsvpSummary.yes} going</span>
+                <span className="text-xs font-bold text-amber-700 bg-amber-50 border border-amber-200 px-2 py-1 rounded-lg">{rsvpSummary.maybe} maybe</span>
               </div>
             </div>
 
-            <div className="mt-5 pt-4 border-t border-neutral-100 space-y-2">
-
-              {/* ── Organizer Tools ── */}
+            <div className="bg-white rounded-2xl border border-neutral-200 p-3 space-y-1.5" style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
               {isOrganizer && (
-                <div className="mb-1">
-                  <p className="text-xs font-semibold text-neutral-400 uppercase tracking-wide mb-2 px-1">Organizer Tools</p>
+                <>
+                  <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest px-1 pt-1">Organizer</p>
                   {event?.isEnterpriseMode && (
-                    <button
-                      onClick={() => navigate(`/event/${eventId}/checkin`)}
-                      className="flex items-center gap-2 w-full px-3 py-2.5 text-xs bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors font-medium mb-1.5"
-                    >
-                      <UserCheck className="w-3.5 h-3.5" />
-                      <span>Manage Guest Check-in</span>
+                    <button onClick={() => navigate(`/event/${eventId}/checkin`)}
+                      className="flex items-center gap-2 w-full px-3 py-2.5 text-xs bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl transition-colors font-bold">
+                      <UserCheck className="w-3.5 h-3.5 flex-shrink-0" />Guest Check-in
                     </button>
                   )}
-                  <button
-                    onClick={() => setShowSettings(true)}
-                    className="flex items-center gap-2 w-full px-3 py-2.5 text-xs bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg transition-colors font-medium mb-1.5"
-                  >
-                    <Sliders className="w-3.5 h-3.5" />
-                    <span>Event Settings</span>
+                  <button onClick={() => setShowSettings(true)}
+                    className="flex items-center gap-2 w-full px-3 py-2.5 text-xs bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl transition-colors font-bold">
+                    <Sliders className="w-3.5 h-3.5 flex-shrink-0" />Event Settings
                   </button>
-                  <button
-                    onClick={() => navigate(`/event/${eventId}/login`)}
-                    className="flex items-center gap-2 w-full px-3 py-2 text-xs bg-neutral-900 hover:bg-neutral-700 text-white rounded-lg transition-colors"
-                  >
-                    <Lock className="w-3.5 h-3.5" />
-                    <span>Organizer Login (new device)</span>
+                  <button onClick={() => navigate(`/event/${eventId}/login`)}
+                    className="flex items-center gap-2 w-full px-3 py-2 text-xs bg-neutral-900 hover:bg-neutral-800 text-white rounded-xl transition-colors font-semibold">
+                    <Lock className="w-3.5 h-3.5 flex-shrink-0" />Login on new device
                   </button>
-                </div>
+                  <div className="border-t border-neutral-100 pt-1 mt-0.5" />
+                </>
               )}
-
-              {/* Share links */}
               {event?.subdomain && (
-                <button
-                  onClick={() => {
-                    const link = `${window.location.origin}/e/${event.subdomain}`;
-                    navigator.clipboard.writeText(link);
-                    toast.success('Subdomain link copied!');
-                  }}
-                  className="flex items-center gap-2 w-full px-3 py-2 text-xs bg-neutral-50 hover:bg-neutral-100 border border-neutral-200 rounded-lg text-neutral-600 transition-colors"
-                >
+                <button onClick={() => { navigator.clipboard.writeText(`${window.location.origin}/e/${event.subdomain}`); toast.success('Copied!'); }}
+                  className="flex items-center gap-2 w-full px-3 py-2 text-xs bg-neutral-50 hover:bg-neutral-100 border border-neutral-200 rounded-xl text-neutral-600 transition-colors">
                   <Copy className="w-3.5 h-3.5 flex-shrink-0" />
-                  <span className="truncate">Copy: /e/{event.subdomain}</span>
+                  <span className="truncate font-mono">Copy /e/{event.subdomain}</span>
                 </button>
               )}
               <button onClick={handleCopyLink}
-                className="flex items-center gap-2 w-full px-3 py-2 text-xs bg-neutral-50 hover:bg-neutral-100 border border-neutral-200 rounded-lg text-neutral-600 transition-colors">
-                {copied ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" />}
-                <span className="truncate">{copied ? 'Copied!' : 'Copy event link'}</span>
+                className="flex items-center gap-2 w-full px-3 py-2 text-xs bg-neutral-50 hover:bg-neutral-100 border border-neutral-200 rounded-xl text-neutral-600 transition-colors">
+                {copied ? <Check className="w-3.5 h-3.5 text-emerald-500 flex-shrink-0" /> : <Copy className="w-3.5 h-3.5 flex-shrink-0" />}
+                <span>{copied ? 'Copied!' : 'Copy event link'}</span>
               </button>
               <button onClick={handleCalendarExport}
-                className="flex items-center gap-2 w-full px-3 py-2 text-xs bg-neutral-50 hover:bg-neutral-100 border border-neutral-200 rounded-lg text-neutral-600 transition-colors">
-                <Download className="w-3.5 h-3.5" />
-                <span>Export to calendar</span>
+                className="flex items-center gap-2 w-full px-3 py-2 text-xs bg-neutral-50 hover:bg-neutral-100 border border-neutral-200 rounded-xl text-neutral-600 transition-colors">
+                <Download className="w-3.5 h-3.5 flex-shrink-0" />Export to calendar
               </button>
               <button onClick={() => setShowQR(true)}
-                className="flex items-center gap-2 w-full px-3 py-2 text-xs bg-neutral-50 hover:bg-neutral-100 border border-neutral-200 rounded-lg text-neutral-600 transition-colors">
-                <QrCode className="w-3.5 h-3.5" />
-                <span>Show event QR code</span>
+                className="flex items-center gap-2 w-full px-3 py-2 text-xs bg-neutral-50 hover:bg-neutral-100 border border-neutral-200 rounded-xl text-neutral-600 transition-colors">
+                <QrCode className="w-3.5 h-3.5 flex-shrink-0" />Show QR code
               </button>
             </div>
 
-            {/* Contact */}
-            <div className="mt-4 pt-4 border-t border-neutral-100">
-              <p className="text-xs text-neutral-400 mb-1.5">Need help or changes?</p>
-              <a
-                href="mailto:planit.userhelp@gmail.com"
-                className="flex items-center gap-2 w-full px-3 py-2 text-xs bg-neutral-50 hover:bg-neutral-100 border border-neutral-200 rounded-lg text-neutral-600 hover:text-neutral-900 transition-colors"
-              >
-                <svg className="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
+            <div className="bg-white rounded-2xl border border-neutral-200 p-4" style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
+              <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest mb-2">Need help?</p>
+              <a href="mailto:planit.userhelp@gmail.com"
+                className="flex items-center gap-2 w-full px-3 py-2 text-xs bg-neutral-50 hover:bg-neutral-100 border border-neutral-200 rounded-xl text-neutral-600 hover:text-neutral-900 transition-colors">
+                <svg className="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                </svg>
                 <span className="truncate">planit.userhelp@gmail.com</span>
               </a>
-              <p className="text-xs text-neutral-400 mt-2 leading-relaxed">
-                Contact us for inquiries, changes, or increased event capacity.
+              <p className="text-[10px] text-neutral-400 mt-2 leading-relaxed">
+                Contact us for capacity increases, event changes, or support.
               </p>
             </div>
 
