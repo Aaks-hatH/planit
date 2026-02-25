@@ -147,6 +147,13 @@ router.post('/:eventId/upload',
         return res.status(400).json({ error: 'Empty file', message: 'The uploaded file is empty.' });
       }
 
+      // Anti-malware: scan extension and MIME type before touching Cloudinary
+      const { scanUpload } = require('../middleware/security');
+      const scanResult = scanUpload(req.file);
+      if (!scanResult.ok) {
+        return res.status(400).json({ error: 'File rejected', message: scanResult.reason });
+      }
+
       const cloudinaryResult = await uploadToCloudinary(
         req.file.buffer,
         req.file.originalname
