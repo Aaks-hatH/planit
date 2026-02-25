@@ -643,6 +643,26 @@ app.post('/mesh/email/test', meshAuth(SERVICE_NAME), express.json(), async (req,
   }
 });
 
+// ─── Mesh config relay ───────────────────────────────────────────────────────
+// GET /mesh/config
+// Backends call this once on startup to pull shared env vars so you only need
+// to set them on the router — not on every backend individually.
+// Add any future shared secrets to SHARED_CONFIG_KEYS and they'll auto-propagate.
+const SHARED_CONFIG_KEYS = [
+  'UPSTASH_REDIS_URL',
+  'UPSTASH_REDIS_TOKEN',
+  'SURVEY_URL',
+  'EMAIL_REMINDER_HOURS',
+  'FRONTEND_URL',
+];
+app.get('/mesh/config', meshAuth(SERVICE_NAME), (_req, res) => {
+  const config = {};
+  for (const key of SHARED_CONFIG_KEYS) {
+    if (process.env[key]) config[key] = process.env[key];
+  }
+  res.json({ ok: true, config });
+});
+
 // ─── Mesh register ────────────────────────────────────────────────────────────
 app.post('/mesh/register', meshAuth(SERVICE_NAME), express.json(), (req, res) => {
   const { url, name, region } = req.body;
