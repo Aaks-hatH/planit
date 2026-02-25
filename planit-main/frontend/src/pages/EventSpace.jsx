@@ -69,6 +69,7 @@ function JoinGate({ eventId, onJoined }) {
   const [needsAccountPassword, setNeedsAccountPassword] = useState(false);
   const [selectedHasPassword, setSelectedHasPassword]   = useState(false);
   const [error, setError]                         = useState('');
+  const justSelectedRef                           = useRef(false);
   // Full-event state
   const [isFull, setIsFull]                       = useState(false);
   const [fullMode, setFullMode]                   = useState('waitlist'); // 'waitlist' | 'signin'
@@ -101,6 +102,7 @@ function JoinGate({ eventId, onJoined }) {
     setSelectedHasPassword(p.hasPassword);
     setNeedsAccountPassword(p.hasPassword);
     setShowDropdown(false);
+    justSelectedRef.current = true;
     setError('');
   };
 
@@ -118,6 +120,11 @@ function JoinGate({ eventId, onJoined }) {
   const handleJoin = async (e) => {
     e.preventDefault();
     if (!username.trim()) { setError('Please enter your name'); return; }
+    // If event is full, block new names from trying to join
+    if (isFull) {
+      const isKnown = knownParticipants.find(p => p.username.toLowerCase() === username.trim().toLowerCase());
+      if (!isKnown) { setError('This event is full. Only previously joined participants can sign in.'); return; }
+    }
     setJoining(true); setError('');
     try {
       const payload = { username: username.trim(), accountPassword: accountPassword || undefined };
@@ -170,7 +177,7 @@ function JoinGate({ eventId, onJoined }) {
 
   // The shared join form (used in both normal flow and signin mode when full)
   const JoinForm = () => (
-    <form onSubmit={handleJoin} className="space-y-3.5">
+    <form onSubmit={handleJoin} className="space-y-4">
       {/* Name field */}
       <div className="relative">
         <label className="block text-[11px] font-bold text-neutral-500 uppercase tracking-widest mb-1.5">
@@ -181,7 +188,7 @@ function JoinGate({ eventId, onJoined }) {
           placeholder="Enter your name"
           value={username}
           onChange={handleUsernameChange}
-          onFocus={() => setShowDropdown(true)}
+          onFocus={() => { if (!justSelectedRef.current) setShowDropdown(true); justSelectedRef.current = false; }}
           onBlur={() => setTimeout(() => setShowDropdown(false), 150)}
           autoComplete="off" autoFocus
         />
@@ -202,7 +209,7 @@ function JoinGate({ eventId, onJoined }) {
                 </div>
                 {p.hasPassword
                   ? <span className="flex items-center gap-1 text-[10px] text-neutral-400"><Lock className="w-2.5 h-2.5" />protected</span>
-                  : <span className="text-[10px] text-neutral-300">tap to select</span>
+                  : <span className="text-[10px] text-neutral-300">returning</span>
                 }
               </button>
             ))}
@@ -211,7 +218,7 @@ function JoinGate({ eventId, onJoined }) {
       </div>
 
       {/* Account password */}
-      {(needsAccountPassword || selectedHasPassword || (username.trim() && !knownParticipants.find(p => p.username.toLowerCase() === username.trim().toLowerCase()))) && (
+      {(needsAccountPassword || selectedHasPassword || (username.trim() && !isFull && !knownParticipants.find(p => p.username.toLowerCase() === username.trim().toLowerCase()))) && (
         <div>
           <label className="block text-[11px] font-bold text-neutral-500 uppercase tracking-widest mb-1.5">
             Account Password{' '}
@@ -222,6 +229,14 @@ function JoinGate({ eventId, onJoined }) {
           <input type="password" className="input rounded-xl"
             placeholder={(needsAccountPassword || selectedHasPassword) ? 'Your account password' : 'Protect your username (min 4 chars)'}
             value={accountPassword} onChange={e => setAccountPassword(e.target.value)} minLength={4} />
+        </div>
+      )}
+
+      {/* Block new names when event is full (sign-in mode) */}
+      {isFull && username.trim() && !knownParticipants.find(p => p.username.toLowerCase() === username.trim().toLowerCase()) && (
+        <div className="flex items-start gap-2.5 p-3 bg-amber-50 border border-amber-200 rounded-xl">
+          <XCircle className="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5" />
+          <p className="text-sm text-amber-700">This event is full. Only participants who have already joined can sign in.</p>
         </div>
       )}
 
@@ -244,8 +259,8 @@ function JoinGate({ eventId, onJoined }) {
         </div>
       )}
 
-      <button type="submit" disabled={joining}
-        className="w-full h-11 rounded-xl font-bold text-sm text-white flex items-center justify-center gap-2 transition-all hover:opacity-90 disabled:opacity-50"
+      <button type="submit" disabled={joining || (isFull && username.trim() && !knownParticipants.find(p => p.username.toLowerCase() === username.trim().toLowerCase()))}
+        className="w-full h-12 rounded-xl font-bold text-sm text-white flex items-center justify-center gap-2 transition-all hover:opacity-90 disabled:opacity-50"
         style={{ background: isFull ? 'linear-gradient(135deg,#4338ca,#5b21b6)' : 'linear-gradient(135deg,#111827,#1f2937)' }}>
         {joining
           ? <><span className="spinner w-4 h-4 border-2 border-white/20 border-t-white" />Signing in…</>
@@ -286,7 +301,7 @@ function JoinGate({ eventId, onJoined }) {
 
       {/* Center content */}
       <div className="relative z-10 flex-1 flex items-center justify-center px-4 py-6">
-        <div className="w-full max-w-[420px] animate-fade-in">
+        <div className="w-full max-w-[480px] sm:max-w-[540px] animate-fade-in">
 
           {/* Event hero */}
           <div className="rounded-2xl overflow-hidden mb-3"
@@ -454,9 +469,9 @@ function JoinGate({ eventId, onJoined }) {
               )
             ) : (
               /* ── Normal join flow ── */
-              <div className="p-6">
+              <div className="p-6 sm:p-8">
                 <div className="mb-5">
-                  <h2 className="text-[17px] font-bold text-neutral-900 leading-snug">Join this event</h2>
+                  <h2 className="text-[18px] font-bold text-neutral-900 leading-snug">Join this event</h2>
                   <p className="text-sm text-neutral-400 mt-0.5">Enter your name to get access</p>
                 </div>
                 <JoinForm />
