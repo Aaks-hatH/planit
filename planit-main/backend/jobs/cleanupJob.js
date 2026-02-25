@@ -181,6 +181,57 @@ async function cleanupOldEvents() {
   }
 }
 
+// ─── Email scheduling helpers ─────────────────────────────────────────────────
+// These run on one backend at a time (distributed lock ensures no duplicate sends).
+
+async function scheduleReminderEmails() {
+  try {
+    const { sendEventReminder } = require('../services/emailService');
+    const hours  = parseInt(process.env.EMAIL_REMINDER_HOURS || '24', 10);
+    const now    = new Date();
+    const target = new Date(now.getTime() + hours * 60 * 60 * 1000);
+    const window = 60 * 60 * 1000; // match events starting within ±30 min of target
+
+    const events = await Event.find({
+      status: 'active',
+      date: {
+        $gte: new Date(target.getTime() - window / 2),
+        $lte: new Date(target.getTime() + window / 2),
+      },
+      organizerEmail: { $exists: true, $ne: '' },
+    }).select('title date location organizerName organizerEmail _id').lean();
+
+    for (const event of events) {
+      sendEventReminder(event).catch(() => {});
+    }
+    if (events.length) console.log(`[email] Queued ${events.length} reminder(s) for ~${hours}h window`);
+  } catch (err) {
+    console.error('[email] Reminder scheduling error:', err.message);
+  }
+}
+
+async function scheduleThankyouEmails() {
+  try {
+    const { sendEventThankyou } = require('../services/emailService');
+    const now     = new Date();
+    const from    = new Date(now.getTime() - 90 * 60 * 1000); // ended up to 90 min ago
+    const to      = new Date(now.getTime() - 5  * 60 * 1000); // but at least 5 min ago
+
+    const events = await Event.find({
+      status: 'active', // not yet marked completed (cleanup will catch completed ones too)
+      date: { $gte: from, $lte: to },
+      organizerEmail: { $exists: true, $ne: '' },
+    }).select('title date location organizerName organizerEmail _id').lean();
+
+    for (const event of events) {
+      sendEventThankyou(event).catch(() => {});
+    }
+    if (events.length) console.log(`[email] Queued ${events.length} thank-you email(s)`);
+  } catch (err) {
+    console.error('[email] Thank-you scheduling error:', err.message);
+  }
+}
+
 // Schedule cleanup job to run daily at 2 AM
 function startCleanupScheduler() {
   console.log(' Event cleanup scheduler initialized');
@@ -195,6 +246,22 @@ function startCleanupScheduler() {
       await cleanupUptimeData();
     });
   });
+
+  // Email reminder job: runs hourly and checks which events start in ~REMINDER_HOURS
+  // EMAIL_REMINDER_HOURS defaults to 24; set to 0 to disable reminders entirely
+  const reminderHours = parseInt(process.env.EMAIL_REMINDER_HOURS || '24', 10);
+  if (reminderHours > 0) {
+    cron.schedule('0 * * * *', () => {
+      withLock('reminder', scheduleReminderEmails).catch(() => {});
+    });
+    console.log(`  Reminder emails: ${reminderHours}h before each event (hourly check)`);
+  }
+
+  // Thank-you email job: runs every 30 minutes and sends to recently-ended events
+  cron.schedule('*/30 * * * *', () => {
+    withLock('thankyou', scheduleThankyouEmails).catch(() => {});
+  });
+  console.log('  Thank-you emails: sent ~30 min after event ends');
 
   // Also run on startup to catch events missed while the server was down/sleeping
   withLock('startup', async () => {
