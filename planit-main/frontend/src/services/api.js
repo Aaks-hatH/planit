@@ -224,7 +224,17 @@ export const adminAPI = {
 
   // Marketing emails
   getMarketingTemplates: ()                       => api.get('/admin/marketing/templates'),
-  getMarketingPreviewUrl: (templateId, ctaUrl)    => `${API_URL}/admin/marketing/preview/${templateId}${ctaUrl ? `?ctaUrl=${encodeURIComponent(ctaUrl)}` : ''}`,
+  getMarketingPreviewUrl: (templateId, ctaUrl) => {
+    // The preview is loaded inside an <iframe> which cannot send Authorization headers.
+    // verifyAdmin already supports ?token= (same mechanism used for SSE streams),
+    // so we embed the token in the URL here.
+    const params = new URLSearchParams();
+    if (ctaUrl) params.set('ctaUrl', ctaUrl);
+    const adminToken = localStorage.getItem('adminToken');
+    if (adminToken) params.set('token', adminToken);
+    const qs = params.toString();
+    return `${API_URL}/admin/marketing/preview/${templateId}${qs ? `?${qs}` : ''}`;
+  },
   sendMarketingCampaign: (data)                   => api.post('/admin/marketing/send', data),
 };
 
