@@ -1076,8 +1076,12 @@ router.post('/marketing/send', verifyAdmin, async (req, res, next) => {
     const results = await sendCampaign({ templateId, recipients, subject, ctaUrl });
     res.json({ ok: true, results });
   } catch (err) {
+    // Known, user-facing errors — return a descriptive status instead of a raw 500
     if (err.message && err.message.startsWith('Unknown template')) {
       return res.status(400).json({ error: err.message });
+    }
+    if (err.message && err.message.includes('ROUTER_URL not set')) {
+      return res.status(503).json({ error: 'Email delivery is not configured on this server. Please set ROUTER_URL.' });
     }
     next(err);
   }
