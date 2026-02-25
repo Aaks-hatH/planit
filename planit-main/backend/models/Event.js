@@ -233,9 +233,17 @@ eventSchema.methods.incrementViews = function () {
 };
 
 eventSchema.methods.addParticipant = function (username, role = 'participant') {
-  if (this.participants.length >= this.maxParticipants) throw new Error('Event is full');
+  // Check capacity ONLY for users who aren't already participants.
+  // Existing participants (including organisers re-logging in) must always
+  // be allowed through regardless of the current headcount — blocking them
+  // was causing a 500 because the thrown Error had no statusCode.
   const exists = this.participants.some(p => p.username === username);
   if (!exists) {
+    if (this.participants.length >= this.maxParticipants) {
+      const err = new Error('This event is full and cannot accept new participants.');
+      err.statusCode = 400;
+      throw err;
+    }
     this.participants.push({ username, role });
     this.metadata.lastActivity = new Date();
   }
