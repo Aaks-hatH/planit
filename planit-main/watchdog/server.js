@@ -331,7 +331,7 @@ function buildNtfyUrl(raw) {
   if (raw.startsWith('http://') || raw.startsWith('https://')) return raw;
   return `https://ntfy.sh/${raw}`; // bare topic name — auto-prefix
 }
-const NTFY_URL = buildNtfyUrl(NTFY_URL);
+
 
 async function sendNtfy({ title, message, priority = 'high', tags = [] }) {
   if (!NTFY_URL) return;
