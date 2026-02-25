@@ -362,6 +362,11 @@ export const routerAPI = {
     if (!routerAxios) return Promise.resolve(null);
     return routerAxios.delete('/mesh/boost');
   },
+  // testEmail: send a test email through the router mesh relay
+  testEmail: (to) => {
+    if (!routerAxios) return Promise.resolve(null);
+    return routerAxios.post('/mesh/email/test', { to });
+  },
 };
 
 // ─── Utility API ──────────────────────────────────────────────────────────────
