@@ -66,6 +66,10 @@ router.post('/',
         { expiresIn: '30d' }
       );
 
+      // Fire confirmation email non-blocking (organizer email)
+      const { sendEventConfirmation } = require('../services/emailService');
+      sendEventConfirmation(event).catch(() => {});
+
       res.status(201).json({
         message: 'Event created successfully',
         event: { id: event._id, subdomain: event.subdomain, title: event.title, isPasswordProtected: event.isPasswordProtected },
@@ -1058,6 +1062,13 @@ router.post('/:eventId/invites', verifyOrganizer,
           notes: guest.notes || ''
         });
         invites.push(invite);
+
+        // Send guest invite confirmation email non-blocking
+        if (invite.guestEmail) {
+          const event = await Event.findById(req.params.eventId).select('title date location organizerName _id').lean();
+          const { sendGuestInviteConfirmation } = require('../services/emailService');
+          sendGuestInviteConfirmation(event, invite.guestName, invite.guestEmail).catch(() => {});
+        }
       }
       
       res.status(201).json({ message: 'Invites created', invites });
