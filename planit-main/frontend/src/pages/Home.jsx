@@ -3,14 +3,13 @@ import { getUserTimezone, localDateTimeToUTC, getTimezoneOptions } from '../util
 import { useNavigate } from 'react-router-dom';
 import {
   Calendar, Users, MessageSquare, BarChart3, FileText, Shield, Copy, Check, Lock,
-  ArrowRight, Link, Eye, EyeOff, ChevronRight, Sparkles, Zap, Clock,
-  CheckCircle2, Star, TrendingUp, Gift, Heart, Coffee, ListChecks, Timer,
-  Brain, ArrowUpRight
+  ArrowRight, Link, Eye, EyeOff, ChevronRight, Zap, Clock,
+  CheckCircle2, TrendingUp, ListChecks, Timer,
+  Brain, ArrowUpRight, Shield
 } from 'lucide-react';
 import { eventAPI } from '../services/api';
 import toast from 'react-hot-toast';
 import { motion } from 'framer-motion';
-import StarBackground from '../components/StarBackground';
 
 /*
 PLANIT SOFTWARE LICENSE AGREEMENT
@@ -440,8 +439,8 @@ function SectionHeader({ eyebrow, title, subtitle }) {
   return (
     <Reveal className="text-center mb-16">
       {eyebrow && <p className="text-xs font-semibold text-neutral-500 uppercase tracking-widest mb-3">{eyebrow}</p>}
-      <h2 className="text-5xl md:text-6xl font-black text-white mb-5">{title}</h2>
-      {subtitle && <p className="text-xl text-neutral-400 max-w-xl mx-auto">{subtitle}</p>}
+      <h2 className="text-5xl md:text-7xl font-black text-white mb-5 leading-tight">{title}</h2>
+      {subtitle && <p className="text-xl text-neutral-400 max-w-2xl mx-auto leading-relaxed">{subtitle}</p>}
     </Reveal>
   );
 }
@@ -449,7 +448,7 @@ function SectionHeader({ eyebrow, title, subtitle }) {
 function FeatureCard({ icon: Icon, title, description, delay = 0 }) {
   return (
     <Reveal delay={delay}>
-      <div className="group relative p-8 rounded-3xl border border-neutral-800 bg-neutral-900/50 hover:border-neutral-600 hover:bg-neutral-800/50 transition-all duration-500 h-full">
+      <div className="group relative p-10 rounded-3xl border border-neutral-800/80 bg-neutral-900/40 hover:border-neutral-600 hover:bg-neutral-800/50 transition-all duration-500 h-full">
         <div className="mb-5">
           <div className="w-14 h-14 rounded-2xl bg-neutral-800 flex items-center justify-center group-hover:bg-white transition-all duration-500 group-hover:scale-110">
             <Icon className="w-7 h-7 text-neutral-400 group-hover:text-neutral-900 transition-colors duration-500" />
@@ -477,39 +476,12 @@ function TestimonialCard({ quote, author, role, event, delay = 0 }) {
           </div>
         </div>
         <p className="text-sm text-neutral-300 leading-relaxed mb-4">"{quote}"</p>
-        <div className="flex items-center gap-1">
-          {[...Array(5)].map((_, i) => <Star key={i} className="w-4 h-4 text-amber-400 fill-amber-400" />)}
-        </div>
+
       </div>
     </Reveal>
   );
 }
 
-// ─────────────────────────────────────────────
-// COSMIC AMBIENT LAYER — soft nebulae, aurora
-// These sit between the star canvas and page content.
-// opacity is intentionally low so they don't compete.
-// ─────────────────────────────────────────────
-
-function CosmicAmbient() {
-  return (
-    <div
-      className="fixed inset-0 pointer-events-none"
-      style={{
-        zIndex: 1,
-        overflow: 'hidden',
-        contain: 'strict',
-        transform: 'translateZ(0)',
-        WebkitTransform: 'translateZ(0)',
-      }}
-    >
-      <div className="cosmic-orb cosmic-orb-1" />
-      <div className="cosmic-orb cosmic-orb-2" />
-      <div className="cosmic-orb cosmic-orb-3" />
-      <div className="cosmic-aurora" />
-    </div>
-  );
-}
 
 // ─────────────────────────────────────────────
 // ENTERPRISE INTERACTIVE DEMO
@@ -591,7 +563,7 @@ function EnterpriseDemo() {
       setGuests(prev => prev.map(g => g.id === guest.id ? { ...g, checkedIn: true, checking: false, checkedAt: now } : g));
       setLastChecked(guest.id);
       setScanning(null);
-      addLog({ type: 'success', severity: 'ok', name: guest.name, msg: `✓ ${guest.name} checked in — party of ${guest.group}, table ${guest.table}` });
+      addLog({ type: 'success', severity: 'ok', name: guest.name, msg: `Checked in: ${guest.name} — party of ${guest.group}, table ${guest.table}` });
       setTimeout(() => setLastChecked(null), 2500);
     }, 900);
   };
@@ -649,7 +621,7 @@ function EnterpriseDemo() {
     critical: 'text-red-400 border-red-800/40 bg-red-950/20',
     medium: 'text-blue-400 border-blue-800/40 bg-blue-950/20',
   };
-  const logIcons = { success: '✓', duplicate: '⚠', blocked: '✕', flagged: '⚑', unauthorized: '✕', override: '⚙', ratelimit: '⊘' };
+  const logIcons = { success: '+', duplicate: '!', blocked: 'x', flagged: '!', unauthorized: 'x', override: 'o', ratelimit: '-' };
 
   return (
     <div className="bg-neutral-900/60 rounded-3xl border border-neutral-800 overflow-hidden">
@@ -659,7 +631,7 @@ function EnterpriseDemo() {
         <div className="absolute inset-0 z-10 flex items-center justify-center" style={{ background: 'rgba(0,0,0,0.85)', borderRadius: 24 }}>
           <div className="w-full max-w-xs mx-4 bg-neutral-900 rounded-2xl border border-neutral-700 p-6">
             <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold mb-4 ${overrideTarget.status === 'blocked' ? 'bg-red-950/50 border border-red-800/50 text-red-400' : 'bg-amber-950/50 border border-amber-800/50 text-amber-400'}`}>
-              {overrideTarget.status === 'blocked' ? '✕ Guest Blocked' : '⚑ Guest Flagged'}
+              {overrideTarget.status === 'blocked' ? 'Guest Blocked' : 'Guest Flagged'}
             </div>
             <p className="text-sm font-bold text-white mb-1">{overrideTarget.name}</p>
             <p className="text-xs text-neutral-500 mb-4">{overrideTarget.blockReason || overrideTarget.flagReason}</p>
@@ -773,7 +745,7 @@ function EnterpriseDemo() {
                       </div>
                     ) : isFlagged ? (
                       <div className="w-10 h-10 rounded-lg bg-amber-950/60 border border-amber-900/50 flex items-center justify-center">
-                        <span className="text-amber-400 font-black text-base">⚑</span>
+                        <span className="text-amber-400 font-black text-xs">FLAG</span>
                       </div>
                     ) : (
                       <QRPattern code={guest.code} size={40} />
@@ -790,7 +762,7 @@ function EnterpriseDemo() {
                     </div>
                     <p className="text-xs text-neutral-500 truncate">
                       {guest.checkedIn
-                        ? `✓ Checked in · Party of ${guest.group} · Table ${guest.table}`
+                        ? `Checked in · Party of ${guest.group} · Table ${guest.table}`
                         : isBlocked ? guest.blockReason
                         : isFlagged ? guest.flagReason
                         : `Party of ${guest.group} · Table ${guest.table}`}
@@ -826,7 +798,7 @@ function EnterpriseDemo() {
             <div className="flex gap-2">
               <button onClick={simulateUnauthorized} disabled={simulating}
                 className="flex-1 py-1.5 text-xs font-bold text-red-400 border border-red-900/50 rounded-xl bg-red-950/20 hover:bg-red-950/40 transition-all disabled:opacity-40">
-                {simulating ? 'Scanning…' : '⚠ Try forged ticket'}
+                {simulating ? 'Scanning…' : 'Try forged ticket'}
               </button>
               {(checkedInCount > 0 || securityLog.length > 0) && (
                 <button onClick={handleReset} className="px-3 py-1.5 text-xs text-neutral-600 hover:text-neutral-400 border border-neutral-800 rounded-xl transition-colors">
@@ -859,11 +831,11 @@ function EnterpriseDemo() {
           <div className="space-y-2 mb-4">
             <p className="text-xs font-bold text-neutral-600 uppercase tracking-widest">Active protections</p>
             {[
-              { icon: '✕', label: 'Duplicate detection', desc: 'Flags same identity across multiple invites', active: true, color: 'text-emerald-400' },
-              { icon: '⊘', label: 'Rate limiting', desc: '3 failed scans → 60s IP lockout', active: true, color: 'text-emerald-400' },
-              { icon: '⚑', label: 'Trust scoring', desc: 'Flags low-trust guests for manual review', active: true, color: 'text-emerald-400' },
-              { icon: '⚙', label: 'Manager override', desc: 'PIN-protected override for blocked guests', active: true, color: 'text-emerald-400' },
-              { icon: '◎', label: 'QR forgery detection', desc: 'Rejects codes not in guest registry', active: true, color: 'text-emerald-400' },
+              { icon: 'X', label: 'Duplicate detection', desc: 'Flags same identity across multiple invites', active: true, color: 'text-emerald-400' },
+              { icon: '-', label: 'Rate limiting', desc: '3 failed scans → 60s IP lockout', active: true, color: 'text-emerald-400' },
+              { icon: '!', label: 'Trust scoring', desc: 'Flags low-trust guests for manual review', active: true, color: 'text-emerald-400' },
+              { icon: 'O', label: 'Manager override', desc: 'PIN-protected override for blocked guests', active: true, color: 'text-emerald-400' },
+              { icon: 'Q', label: 'QR forgery detection', desc: 'Rejects codes not in guest registry', active: true, color: 'text-emerald-400' },
             ].map((f, i) => (
               <div key={i} className="flex items-start gap-3 p-2.5 bg-neutral-900/40 rounded-xl border border-neutral-800">
                 <span className={`text-sm font-black flex-shrink-0 mt-0.5 ${f.color}`}>{f.icon}</span>
@@ -1004,80 +976,9 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen text-white relative" style={{ background: '#06060c', overflowX: 'clip', maxWidth: '100vw', isolation: 'isolate' }}>
-      <StarBackground fixed={true} starCount={220} />
-      <CosmicAmbient />
-
+    <div className="min-h-screen text-white relative" style={{ background: '#07070e', overflowX: 'clip', maxWidth: '100vw', isolation: 'isolate' }}>
       <style>{`
-        /* ── Cosmic orbs ─────────────────────────────────────────── */
-        .cosmic-orb {
-          position: absolute;
-          border-radius: 50%;
-          filter: blur(90px);
-          opacity: 0;
-          animation: orb-breathe 0s linear infinite;
-        }
-        .cosmic-orb-1 {
-          width: 580px; height: 380px;
-          top: -8%; left: -10%;
-          background: radial-gradient(ellipse, rgba(80,60,180,0.18) 0%, rgba(40,20,100,0.06) 55%, transparent 75%);
-          animation: orb-drift-1 32s ease-in-out infinite;
-          animation-delay: 0s;
-        }
-        .cosmic-orb-2 {
-          width: 420px; height: 420px;
-          top: 20%; right: -15%;
-          background: radial-gradient(ellipse, rgba(20,80,160,0.14) 0%, rgba(10,40,90,0.05) 55%, transparent 75%);
-          animation: orb-drift-2 44s ease-in-out infinite;
-          animation-delay: -14s;
-        }
-        .cosmic-orb-3 {
-          width: 420px; height: 300px;
-          bottom: 12%; left: 30%;
-          background: radial-gradient(ellipse, rgba(100,40,140,0.12) 0%, rgba(50,15,80,0.04) 55%, transparent 75%);
-          animation: orb-drift-3 38s ease-in-out infinite;
-          animation-delay: -8s;
-        }
-
-        /* ── Aurora shimmer at bottom ────────────────────────────── */
-        .cosmic-aurora {
-          position: absolute;
-          bottom: 0; left: 0; right: 0;
-          height: 280px;
-          background: linear-gradient(
-            to top,
-            rgba(20, 60, 40, 0.06) 0%,
-            rgba(30, 80, 80, 0.04) 40%,
-            transparent 100%
-          );
-          animation: aurora-pulse 18s ease-in-out infinite;
-        }
-
-        @keyframes orb-drift-1 {
-          0%   { opacity: 1; transform: translate(0px, 0px) scale(1); }
-          25%  { transform: translate(45px, 30px) scale(1.06); }
-          50%  { transform: translate(20px, 60px) scale(0.95); }
-          75%  { transform: translate(-25px, 25px) scale(1.03); }
-          100% { opacity: 1; transform: translate(0px, 0px) scale(1); }
-        }
-        @keyframes orb-drift-2 {
-          0%   { opacity: 1; transform: translate(0px, 0px) scale(1); }
-          33%  { transform: translate(-40px, 50px) scale(1.08); }
-          66%  { transform: translate(30px, -20px) scale(0.94); }
-          100% { opacity: 1; transform: translate(0px, 0px) scale(1); }
-        }
-        @keyframes orb-drift-3 {
-          0%   { opacity: 1; transform: translate(0px, 0px) scale(1); }
-          40%  { transform: translate(30px, -40px) scale(1.05); }
-          80%  { transform: translate(-20px, 20px) scale(0.97); }
-          100% { opacity: 1; transform: translate(0px, 0px) scale(1); }
-        }
-        @keyframes aurora-pulse {
-          0%, 100% { opacity: 1; }
-          50% { opacity: 0.4; }
-        }
-
-        /* ── Shimmer text ─────────────────────────────────────────── */
+        /* ── Shimmer text ──────────────────────────────────────── */
         @keyframes shimmer-slide {
           0%   { background-position: -200% center; }
           100% { background-position:  200% center; }
@@ -1096,52 +997,6 @@ export default function Home() {
           -webkit-text-fill-color: transparent;
           animation: shimmer-slide 5s ease-in-out infinite;
         }
-
-        /* ── Cosmic glow ring — hero badge pulse ─────────────────── */
-        @keyframes ring-pulse {
-          0%, 100% { box-shadow: 0 0 0 0px rgba(148,163,184,0), 0 0 28px 4px rgba(100,116,139,0.10); }
-          50%       { box-shadow: 0 0 0 8px rgba(148,163,184,0.04), 0 0 40px 8px rgba(100,116,139,0.18); }
-        }
-        .hero-badge { animation: ring-pulse 5s ease-in-out infinite; }
-
-        /* ── Floating constellation dots — hero section ──────────── */
-        @keyframes float-dot {
-          0%, 100% { transform: translateY(0px) scale(1);   opacity: 0.35; }
-          50%       { transform: translateY(-14px) scale(1.2); opacity: 0.65; }
-        }
-        .constellate {
-          position: absolute;
-          width: 3px; height: 3px;
-          background: white;
-          border-radius: 50%;
-          pointer-events: none;
-        }
-        .constellate:nth-child(1)  { top:18%; left:8%;  animation: float-dot 7.2s ease-in-out infinite 0.0s; }
-        .constellate:nth-child(2)  { top:12%; left:22%; animation: float-dot 8.8s ease-in-out infinite 1.2s; }
-        .constellate:nth-child(3)  { top:28%; left:5%;  animation: float-dot 6.5s ease-in-out infinite 2.4s; }
-        .constellate:nth-child(4)  { top:8%;  left:72%; animation: float-dot 9.1s ease-in-out infinite 0.6s; }
-        .constellate:nth-child(5)  { top:22%; left:82%; animation: float-dot 7.7s ease-in-out infinite 3.0s; }
-        .constellate:nth-child(6)  { top:35%; left:86%; animation: float-dot 8.3s ease-in-out infinite 1.8s; }
-        .constellate:nth-child(7)  { top:55%; left:4%;  animation: float-dot 7.0s ease-in-out infinite 2.1s; }
-        .constellate:nth-child(8)  { top:62%; left:88%; animation: float-dot 9.4s ease-in-out infinite 0.9s; }
-
-        /* ── Pulsing hero glow disc ──────────────────────────────── */
-        @keyframes hero-disc-pulse {
-          0%, 100% { opacity: 0.07; transform: scale(1); }
-          50%       { opacity: 0.13; transform: scale(1.04); }
-        }
-        .hero-disc {
-          position: absolute;
-          left: 50%; top: 42%;
-          transform: translate(-50%, -50%);
-          width: min(680px, 90vw); height: min(340px, 45vw);
-          border-radius: 50%;
-          background: radial-gradient(ellipse, rgba(120,100,200,0.35) 0%, transparent 70%);
-          filter: blur(60px);
-          animation: hero-disc-pulse 8s ease-in-out infinite;
-          pointer-events: none;
-        }
-
         /* ── Scan-line sweep on stat cards ──────────────────────── */
         @keyframes scan-sweep {
           0%   { transform: translateX(-120%); }
@@ -1150,17 +1005,15 @@ export default function Home() {
         .stat-card { position: relative; overflow: hidden; }
         .stat-card::after {
           content: '';
-          position: absolute;
-          inset: 0;
-          background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.04) 50%, transparent 100%);
+          position: absolute; inset: 0;
+          background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.03) 50%, transparent 100%);
           transform: translateX(-120%);
           animation: scan-sweep 5s ease-in-out infinite;
           pointer-events: none;
         }
         .stat-card:nth-child(2)::after { animation-delay: 1.6s; }
         .stat-card:nth-child(3)::after { animation-delay: 3.2s; }
-
-        /* ── Input styles ─────────────────────────────────────────── */
+        /* ── Input styles ────────────────────────────────────────── */
         .dark-input {
           width: 100%;
           padding: 0.75rem 1rem;
@@ -1175,12 +1028,9 @@ export default function Home() {
         .dark-input:focus { border-color: #64748b; }
         .dark-input::placeholder { color: #475569; }
         .dark-input option { background: #0f172a; color: white; }
-
         /* ── Respect reduced motion ──────────────────────────────── */
         @media (prefers-reduced-motion: reduce) {
-          .cosmic-orb, .cosmic-aurora, .hero-badge,
-          .constellate, .hero-disc, .stat-card::after,
-          .shimmer-white, .shimmer-slate { animation: none !important; }
+          .stat-card::after, .shimmer-white, .shimmer-slate { animation: none !important; }
         }
       `}</style>
 
@@ -1189,7 +1039,7 @@ export default function Home() {
         className="sticky top-0 z-50 border-b border-neutral-800/60"
         style={{ background: 'rgba(6,6,12,0.96)' }}
       >
-        <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
+        <div className="max-w-screen-xl mx-auto px-8 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="relative">
               <div className="w-9 h-9 rounded-2xl bg-neutral-800 border border-neutral-700 flex items-center justify-center">
@@ -1212,9 +1062,8 @@ export default function Home() {
               const [label, href] = s.split('|');
               return <a key={label} href={href} className="hidden lg:block px-3 py-2 text-sm text-neutral-500 hover:text-neutral-200 hover:bg-neutral-800/50 rounded-xl transition-all duration-200">{label}</a>;
             })}
-            <a href="/support" className="ml-2 px-3 sm:px-5 py-2.5 text-sm font-medium text-white bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 rounded-xl transition-all duration-200 flex items-center gap-2">
-              <Heart className="w-4 h-4 flex-shrink-0" fill="currentColor" />
-              <span className="hidden sm:inline">Support</span>
+            <a href="/support" className="ml-2 px-3 sm:px-5 py-2.5 text-sm font-medium text-white bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 rounded-xl transition-all duration-200">
+              Support
             </a>
           </nav>
         </div>
@@ -1222,39 +1071,28 @@ export default function Home() {
 
       <main className="relative" style={{ zIndex: 2, overflowX: 'hidden', maxWidth: '100vw' }}>
         {/* HERO */}
-        <section className="relative min-h-[92vh] flex items-center" style={{ overflow: 'hidden', maxWidth: '100vw' }}>
-          {/* Constellation dots floating in hero periphery */}
-          <div className="constellate" />
-          <div className="constellate" />
-          <div className="constellate" />
-          <div className="constellate" />
-          <div className="constellate" />
-          <div className="constellate" />
-          <div className="constellate" />
-          <div className="constellate" />
-          {/* Central glow disc */}
-          <div className="hero-disc" />
-
+        <section className="relative min-h-screen flex items-center" style={{ overflow: 'hidden', maxWidth: '100vw' }}>
+          {/* Subtle top gradient */}
+          <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse 80% 50% at 50% 0%, rgba(40,40,70,0.25) 0%, transparent 65%)', pointerEvents: 'none' }} />
           <div className="w-full">
-            <div className="max-w-4xl mx-auto px-6 py-28 text-center">
+            <div className="max-w-6xl mx-auto px-8 lg:px-12 py-36 text-center">
 
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.6, delay: 0.15 }}
-                className="hero-badge inline-flex items-center gap-2 px-5 py-2.5 rounded-full text-xs font-medium text-neutral-400 mb-10 border border-neutral-700/60 cursor-default"
-                style={{ background: 'rgba(255,255,255,0.04)' }}
+                className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-semibold text-neutral-500 mb-12 border border-neutral-800/80 uppercase tracking-widest cursor-default"
+                style={{ background: 'rgba(255,255,255,0.02)' }}
               >
-                <Sparkles className="w-3.5 h-3.5 text-neutral-500" />
-                The planning hub teams swear by
+                Event Management Platform
               </motion.div>
 
               <motion.h1
                 initial={{ opacity: 0, y: 30 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.9, delay: 0.28, ease: [0.22, 1, 0.36, 1] }}
-                className="font-black leading-[0.93] tracking-tight mb-7"
-                style={{ fontSize: 'clamp(3rem, 7.5vw, 5.5rem)' }}
+                className="font-black leading-[0.92] tracking-tight mb-8"
+                style={{ fontSize: 'clamp(3.5rem, 8.5vw, 7rem)' }}
               >
                 Make it{' '}
                 <span className="shimmer-slate">Effortless</span>
@@ -1266,7 +1104,7 @@ export default function Home() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.7, delay: 0.42 }}
-                className="text-lg md:text-xl text-neutral-400 max-w-lg mx-auto leading-relaxed font-light mb-12"
+                className="text-xl md:text-2xl text-neutral-400 max-w-2xl mx-auto leading-relaxed font-light mb-14"
               >
                 The all-in-one workspace for event teams. From first idea to final wrap-up.
               </motion.p>
@@ -1292,7 +1130,7 @@ export default function Home() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.7, delay: 0.68 }}
-                className="grid grid-cols-3 gap-4 max-w-md mx-auto"
+                className="grid grid-cols-3 gap-6 max-w-xl mx-auto"
               >
                 {[
                   { value: 50000, suffix: '+', label: 'Events planned' },
@@ -1300,8 +1138,8 @@ export default function Home() {
                   { value: 100,   suffix: '%',  label: 'Success rate' },
                 ].map((stat, i) => (
                   <div key={i}
-                    className="stat-card text-center p-5 rounded-2xl border border-neutral-800 hover:border-neutral-600 transition-all duration-400 cursor-default hover:scale-105"
-                    style={{ background: 'rgba(255,255,255,0.04)' }}>
+                    className="stat-card text-center p-6 rounded-2xl border border-neutral-800/70 hover:border-neutral-600 transition-all duration-400 cursor-default hover:scale-105"
+                    style={{ background: 'rgba(255,255,255,0.03)' }}>
                     <div className="text-3xl font-black text-white mb-1">
                       <AnimatedCounter end={stat.value} suffix={stat.suffix} />
                     </div>
@@ -1314,8 +1152,8 @@ export default function Home() {
         </section>
 
         {/* HOW IT WORKS */}
-        <section className="py-20 border-t border-neutral-800/40">
-          <div className="max-w-5xl mx-auto px-6">
+        <section className="py-28 border-t border-neutral-800/40">
+          <div className="max-w-screen-xl mx-auto px-8">
             <SectionHeader eyebrow="How teams use it" title="Your event, every step" subtitle="Built for the full arc. Months of prep to the final goodbye." />
             <div className="grid md:grid-cols-3 gap-6">
               {[
@@ -1342,8 +1180,8 @@ export default function Home() {
         </section>
 
         {/* FEATURES */}
-        <section id="features" className="py-28 border-t border-neutral-800/40">
-          <div className="max-w-7xl mx-auto px-6">
+        <section id="features" className="py-32 border-t border-neutral-800/40">
+          <div className="max-w-screen-xl mx-auto px-8">
             <SectionHeader eyebrow="Features" title="Everything you need" subtitle="Powerful tools for seamless event planning and coordination" />
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
               <FeatureCard icon={MessageSquare} title="Real-time team chat"       description="Instant messaging with typing indicators, reactions, and threaded conversations. Keep your planning team connected and aligned." delay={0} />
@@ -1357,8 +1195,8 @@ export default function Home() {
         </section>
 
         {/* ENTERPRISE */}
-        <section className="py-28 border-t border-neutral-800/40">
-          <div className="max-w-7xl mx-auto px-6">
+        <section className="py-32 border-t border-neutral-800/40">
+          <div className="max-w-screen-xl mx-auto px-8">
             <div className="grid lg:grid-cols-2 gap-16 items-center">
               <Reveal>
                 <div className="inline-flex items-center gap-2 px-4 py-2 bg-neutral-800 border border-neutral-700 rounded-full text-xs font-bold text-neutral-300 mb-8">
@@ -1397,8 +1235,8 @@ export default function Home() {
         </section>
 
         {/* TESTIMONIALS */}
-        <section className="py-28 border-t border-neutral-800/40">
-          <div className="max-w-7xl mx-auto px-6">
+        <section className="py-32 border-t border-neutral-800/40">
+          <div className="max-w-screen-xl mx-auto px-8">
             <SectionHeader eyebrow="Testimonials" title="Trusted by event planners" subtitle="See how teams are using PlanIt to execute flawless events" />
             <div className="grid md:grid-cols-3 gap-6">
               <TestimonialCard quote="PlanIt transformed how we coordinated our annual company conference. The task management kept our 15-person planning team organized for 6 months of prep. The QR check-in on event day was seamless for 300 attendees." author="Michael Chen" role="Senior Event Coordinator" event="Tech Summit 2025" delay={0} />
@@ -1409,8 +1247,8 @@ export default function Home() {
         </section>
 
         {/* DISCOVER + STATUS CARDS */}
-        <section className="py-20 border-t border-neutral-800/40">
-          <div className="max-w-5xl mx-auto px-6">
+        <section className="py-28 border-t border-neutral-800/40">
+          <div className="max-w-screen-xl mx-auto px-8">
             <Reveal className="text-center mb-12">
               <p className="text-xs font-semibold text-neutral-500 uppercase tracking-widest mb-3">Explore more</p>
               <h2 className="text-4xl md:text-5xl font-black text-white mb-4">Everything you need</h2>
@@ -1466,7 +1304,7 @@ export default function Home() {
 
         {/* CREATE EVENT */}
         <section id="create" className="py-28 border-t border-neutral-800/40">
-          <div className="max-w-6xl mx-auto px-6">
+          <div className="max-w-8xl mx-auto px-6">
             <div className="grid lg:grid-cols-2 gap-20 items-start">
 
               <div className="lg:sticky lg:top-24">
@@ -1486,7 +1324,7 @@ export default function Home() {
                 {!created && (
                   <Reveal delay={100}>
                     <div className="grid grid-cols-3 gap-4 mb-10">
-                      {[{ icon: Clock, label: '60 seconds' }, { icon: Shield, label: 'Secure' }, { icon: Gift, label: 'Free forever' }].map((item, i) => (
+                      {[{ icon: Clock, label: '60 seconds' }, { icon: Shield, label: 'Secure' }, { icon: CheckCircle2, label: 'Free forever' }].map((item, i) => (
                         <div key={i} className="text-center p-5 bg-neutral-900/50 rounded-2xl border border-neutral-800 hover:border-neutral-700 hover:bg-neutral-800/50 transition-all duration-300 hover:scale-105">
                           <item.icon className="w-6 h-6 text-neutral-400 mx-auto mb-2" />
                           <p className="text-sm font-semibold text-neutral-300">{item.label}</p>
@@ -1676,7 +1514,7 @@ export default function Home() {
 
         {/* FOOTER */}
         <footer className="border-t border-neutral-800/50" style={{ background: 'rgba(6,6,12,0.95)' }}>
-          <div className="max-w-7xl mx-auto px-6 py-16">
+          <div className="max-w-screen-xl mx-auto px-8 py-20">
             <div className="grid md:grid-cols-4 gap-12 mb-12">
               <div>
                 <div className="flex items-center gap-3 mb-5">
@@ -1684,7 +1522,7 @@ export default function Home() {
                   <span className="font-black text-xl text-white">PlanIt</span>
                 </div>
                 <p className="text-sm text-neutral-500 leading-relaxed mb-4">The ultimate planning hub for event teams. Plan smart, execute flawlessly.</p>
-                <p className="text-xs text-neutral-600">Made with <Coffee className="w-4 h-4 inline" /> not love</p>
+                <p className="text-xs text-neutral-600">Built by Aakshat Hariharan</p>
               </div>
               <div>
                 <h3 className="text-xs font-bold text-neutral-500 mb-5 uppercase tracking-wider">Product</h3>
