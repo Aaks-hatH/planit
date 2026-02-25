@@ -1454,6 +1454,7 @@ const NAV_ITEMS = [
   { id: 'analytics',   label: 'Analytics',    icon: BarChart3 },
   { id: 'fleet',       label: 'Fleet',        icon: Rocket },
   { id: 'security',    label: 'Security',     icon: Shield },
+  { id: 'marketing',   label: 'Marketing',    icon: Send },
   { id: 'system',      label: 'System',       icon: Server },
   { id: 'logs',        label: 'Logs',         icon: Terminal },
   { id: 'uptime',      label: 'Uptime',       icon: Radio },
@@ -1604,6 +1605,234 @@ function SecurityPanel() {
           <p><code className="font-mono">UPSTASH_REDIS_URL</code> — your Upstash REST endpoint</p>
           <p><code className="font-mono">UPSTASH_REDIS_TOKEN</code> — your Upstash REST token</p>
           <p className="text-neutral-400 mt-1">If not set, the system falls back to in-memory storage automatically. No crash, no error.</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Marketing Panel ──────────────────────────────────────────────────────────
+function MarketingPanel() {
+  const [templates, setTemplates]       = useState([]);
+  const [selected, setSelected]         = useState('');
+  const [subject, setSubject]           = useState('');
+  const [ctaUrl, setCtaUrl]             = useState('https://planit.app');
+  const [recipientText, setRecipientText] = useState('');
+  const [sending, setSending]           = useState(false);
+  const [result, setResult]             = useState(null);
+  const [previewKey, setPreviewKey]     = useState(0);
+
+  useEffect(() => {
+    adminAPI.getMarketingTemplates()
+      .then(r => {
+        setTemplates(r.data.templates || []);
+        if (r.data.templates?.length) {
+          const first = r.data.templates[0];
+          setSelected(first.id);
+          setSubject(first.defaultSubject);
+        }
+      })
+      .catch(() => toast.error('Could not load marketing templates'));
+  }, []);
+
+  const handleTemplateChange = (id) => {
+    setSelected(id);
+    const tpl = templates.find(t => t.id === id);
+    if (tpl) setSubject(tpl.defaultSubject);
+    setResult(null);
+    setPreviewKey(k => k + 1);
+  };
+
+  const parseRecipients = () =>
+    recipientText
+      .split(/[\n,;]+/)
+      .map(e => e.trim().toLowerCase())
+      .filter(e => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e));
+
+  const handleSend = async () => {
+    const recipients = parseRecipients();
+    if (!selected) return toast.error('Select a template first');
+    if (recipients.length === 0) return toast.error('Enter at least one valid email address');
+    if (recipients.length > 1000) return toast.error('Maximum 1,000 recipients per send');
+
+    const confirmed = window.confirm(
+      `Send "${templates.find(t => t.id === selected)?.name}" to ${recipients.length} recipient${recipients.length === 1 ? '' : 's'}?`
+    );
+    if (!confirmed) return;
+
+    setSending(true);
+    setResult(null);
+    try {
+      const r = await adminAPI.sendMarketingCampaign({
+        templateId: selected,
+        recipients,
+        subject:    subject || undefined,
+        ctaUrl:     ctaUrl  || undefined,
+      });
+      setResult(r.data.results);
+      toast.success(`Campaign sent: ${r.data.results.sent} delivered`);
+    } catch (err) {
+      toast.error(err.response?.data?.error || 'Send failed');
+    }
+    setSending(false);
+  };
+
+  const recipientCount = parseRecipients().length;
+  const previewSrc = selected
+    ? adminAPI.getMarketingPreviewUrl(selected, ctaUrl)
+    : null;
+
+  return (
+    <div className="p-6 space-y-6 max-w-6xl">
+      <div>
+        <h2 className="text-xl font-bold text-neutral-900 flex items-center gap-2">
+          <Send className="w-5 h-5 text-violet-600" /> Marketing Emails
+        </h2>
+        <p className="text-sm text-neutral-500 mt-0.5">Send targeted marketing campaigns to prospective PlanIt users. One email per address per day, batched to avoid rate limits.</p>
+      </div>
+
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+        {/* Left: compose */}
+        <div className="space-y-4">
+
+          {/* Template selector */}
+          <div className="card p-5">
+            <h3 className="text-sm font-bold text-neutral-700 mb-3">Template</h3>
+            <div className="space-y-2">
+              {templates.map(tpl => (
+                <label
+                  key={tpl.id}
+                  className={`flex items-start gap-3 p-3 rounded-xl border-2 cursor-pointer transition-colors ${
+                    selected === tpl.id
+                      ? 'border-violet-500 bg-violet-50'
+                      : 'border-neutral-100 hover:border-neutral-200'
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="template"
+                    value={tpl.id}
+                    checked={selected === tpl.id}
+                    onChange={() => handleTemplateChange(tpl.id)}
+                    className="mt-0.5 accent-violet-600"
+                  />
+                  <div>
+                    <p className="text-sm font-semibold text-neutral-900">{tpl.name}</p>
+                    <p className="text-xs text-neutral-500 mt-0.5">{tpl.description}</p>
+                  </div>
+                </label>
+              ))}
+              {templates.length === 0 && (
+                <div className="flex justify-center py-6">
+                  <span className="spinner w-5 h-5 border-2 border-neutral-200 border-t-neutral-600" />
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Subject and CTA */}
+          <div className="card p-5 space-y-3">
+            <h3 className="text-sm font-bold text-neutral-700 mb-1">Customise</h3>
+            <div>
+              <label className="block text-xs font-semibold text-neutral-500 mb-1">Subject line</label>
+              <input
+                type="text"
+                value={subject}
+                onChange={e => setSubject(e.target.value)}
+                className="input text-sm w-full"
+                placeholder="Default from template"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-neutral-500 mb-1">CTA button URL</label>
+              <input
+                type="url"
+                value={ctaUrl}
+                onChange={e => { setCtaUrl(e.target.value); setPreviewKey(k => k + 1); }}
+                className="input text-sm w-full font-mono"
+                placeholder="https://planit.app"
+              />
+              <p className="text-xs text-neutral-400 mt-1">This is the URL the main button in the email points to.</p>
+            </div>
+          </div>
+
+          {/* Recipient list */}
+          <div className="card p-5">
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="text-sm font-bold text-neutral-700">Recipients</h3>
+              {recipientCount > 0 && (
+                <span className="text-xs font-semibold text-violet-600 bg-violet-50 px-2 py-0.5 rounded-full">
+                  {recipientCount} valid {recipientCount === 1 ? 'address' : 'addresses'}
+                </span>
+              )}
+            </div>
+            <textarea
+              value={recipientText}
+              onChange={e => setRecipientText(e.target.value)}
+              rows={6}
+              className="input text-sm w-full font-mono resize-y"
+              placeholder={"Paste email addresses here.\nOne per line, or comma/semicolon separated.\n\nExample:\njohn@example.com\njane@example.com, alex@example.com"}
+            />
+            <p className="text-xs text-neutral-400 mt-1">Maximum 1,000 recipients per send. Invalid addresses are skipped automatically.</p>
+          </div>
+
+          {/* Send button + result */}
+          <div className="card p-5">
+            <button
+              onClick={handleSend}
+              disabled={sending || !selected || recipientCount === 0}
+              className="btn bg-violet-600 hover:bg-violet-700 text-white w-full gap-2 disabled:opacity-50 justify-center"
+            >
+              {sending
+                ? <><span className="spinner w-4 h-4 border-2 border-white/30 border-t-white" /> Sending campaign...</>
+                : <><Send className="w-4 h-4" /> Send to {recipientCount || 0} {recipientCount === 1 ? 'recipient' : 'recipients'}</>}
+            </button>
+
+            {result && (
+              <div className="mt-4 grid grid-cols-3 gap-3">
+                <div className="bg-emerald-50 rounded-xl p-3 text-center">
+                  <p className="text-xl font-bold text-emerald-700">{result.sent}</p>
+                  <p className="text-xs text-emerald-600 mt-0.5">Delivered</p>
+                </div>
+                <div className="bg-neutral-50 rounded-xl p-3 text-center">
+                  <p className="text-xl font-bold text-neutral-600">{result.skipped}</p>
+                  <p className="text-xs text-neutral-400 mt-0.5">Skipped</p>
+                </div>
+                <div className="bg-red-50 rounded-xl p-3 text-center">
+                  <p className="text-xl font-bold text-red-600">{result.failed}</p>
+                  <p className="text-xs text-red-400 mt-0.5">Failed</p>
+                </div>
+              </div>
+            )}
+
+            {result && (
+              <p className="text-xs text-neutral-400 mt-3">
+                Skipped addresses either already received marketing today or had an invalid format.
+                Failed addresses encountered a delivery error. Check backend logs for details.
+              </p>
+            )}
+          </div>
+        </div>
+
+        {/* Right: live preview */}
+        <div className="space-y-2">
+          <h3 className="text-sm font-bold text-neutral-700">Live Preview</h3>
+          <p className="text-xs text-neutral-400">Updates when you change template or CTA URL.</p>
+          {previewSrc ? (
+            <div className="rounded-xl border border-neutral-200 overflow-hidden" style={{ height: '700px' }}>
+              <iframe
+                key={`${selected}-${previewKey}`}
+                src={previewSrc}
+                title="Email preview"
+                className="w-full h-full"
+                sandbox="allow-same-origin"
+              />
+            </div>
+          ) : (
+            <div className="rounded-xl border border-neutral-100 bg-neutral-50 flex items-center justify-center" style={{ height: '700px' }}>
+              <p className="text-sm text-neutral-400">Select a template to see a preview</p>
+            </div>
+          )}
         </div>
       </div>
     </div>
@@ -2194,6 +2423,7 @@ export default function Admin() {
           {activeSection === 'analytics'  && !selectedEvent && <div className="max-w-5xl mx-auto"><AnalyticsPanel stats={stats} /></div>}
           {activeSection === 'fleet'      && !selectedEvent && <FleetControl />}
           {activeSection === 'security'   && !selectedEvent && <SecurityPanel />}
+          {activeSection === 'marketing'  && !selectedEvent && <MarketingPanel />}
           {activeSection === 'system'     && !selectedEvent && <div className="max-w-5xl mx-auto"><SystemPanel /></div>}
           {activeSection === 'logs'       && !selectedEvent && <div className="max-w-6xl mx-auto"><LogsPanel /></div>}
           {activeSection === 'uptime'     && !selectedEvent && <div className="max-w-4xl mx-auto"><UptimePanel /></div>}
