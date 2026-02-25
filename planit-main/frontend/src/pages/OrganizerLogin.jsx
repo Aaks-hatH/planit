@@ -5,9 +5,12 @@ import { eventAPI } from '../services/api';
 import toast from 'react-hot-toast';
 
 export default function OrganizerLogin() {
-  const { eventId } = useParams();
+  // The page is mounted at both /event/:eventId/login and /e/:subdomain/login.
+  // When arriving via subdomain we need to look up the real eventId first.
+  const { eventId: eventIdParam, subdomain } = useParams();
   const navigate = useNavigate();
 
+  const [resolvedEventId, setResolvedEventId] = useState(eventIdParam || null);
   const [formData, setFormData] = useState({
     username: '',
     eventPassword: '',
@@ -25,9 +28,26 @@ export default function OrganizerLogin() {
   useEffect(() => {
     const loadEvent = async () => {
       try {
-        const res = await eventAPI.getPublicInfo(eventId);
+        let eid = eventIdParam;
+
+        // Resolve subdomain → eventId when arriving via /e/:subdomain/login
+        if (!eid && subdomain) {
+          const subRes = await eventAPI.getBySubdomain(subdomain);
+          eid = subRes.data.event?.id;
+          if (!eid) throw new Error('Event not found');
+          setResolvedEventId(eid);
+        }
+
+        if (!eid) {
+          toast.error('Event not found');
+          navigate('/');
+          return;
+        }
+
+        const res = await eventAPI.getPublicInfo(eid);
         setIsPasswordProtected(res.data.event.isPasswordProtected);
         setEventTitle(res.data.event.title);
+        setResolvedEventId(eid);
       } catch {
         toast.error('Event not found');
         navigate('/');
@@ -36,7 +56,7 @@ export default function OrganizerLogin() {
       }
     };
     loadEvent();
-  }, [eventId]);
+  }, [eventIdParam, subdomain]);
 
   const handleChange = (field) => (e) =>
     setFormData(prev => ({ ...prev, [field]: e.target.value }));
@@ -49,13 +69,13 @@ export default function OrganizerLogin() {
     try {
       let res;
       if (isPasswordProtected) {
-        res = await eventAPI.verifyPassword(eventId, {
+        res = await eventAPI.verifyPassword(resolvedEventId, {
           username: formData.username.trim(),
           password: formData.eventPassword,
           accountPassword: formData.accountPassword || undefined
         });
       } else {
-        res = await eventAPI.join(eventId, {
+        res = await eventAPI.join(resolvedEventId, {
           username: formData.username.trim(),
           accountPassword: formData.accountPassword || undefined
         });
@@ -65,7 +85,7 @@ export default function OrganizerLogin() {
       localStorage.setItem('username', formData.username.trim());
 
       toast.success('Logged in successfully!');
-      navigate(`/event/${eventId}`);
+      navigate(`/event/${resolvedEventId}`);
     } catch (err) {
       const data = err.response?.data;
       const errorMsg = data?.error || 'Login failed. Please check your credentials.';
