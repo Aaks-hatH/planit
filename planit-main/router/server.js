@@ -5,7 +5,53 @@ const cookieParser = require('cookie-parser');
 const { createProxyMiddleware } = require('http-proxy-middleware');
 const axios        = require('axios');
 const http         = require('http');
+const https        = require('https');
 const { meshAuth, meshGet, meshPost } = require('./mesh');
+
+// ─── Resend email client (HTTP only — no SMTP, works on Render port 443) ──────
+// RESEND_API_KEY is set ONLY on the router. Backends relay email requests here
+// through the secure mesh endpoint /mesh/email — they never see the key.
+const RESEND_API_KEY = process.env.RESEND_API_KEY || '';
+const EMAIL_FROM     = process.env.EMAIL_FROM || 'PlanIt <notifications@planit.app>';
+if (!RESEND_API_KEY) {
+  console.warn('[email] RESEND_API_KEY not set — email sending is disabled');
+}
+
+// Send an email via Resend HTTP API (port 443, no SMTP, works on Render free tier)
+async function sendViaResend(to, subject, html) {
+  if (!RESEND_API_KEY) return { ok: false, reason: 'no api key' };
+  return new Promise((resolve) => {
+    try {
+      const body = JSON.stringify({ from: EMAIL_FROM, to, subject, html });
+      const req  = https.request({
+        hostname: 'api.resend.com',
+        path:     '/emails',
+        method:   'POST',
+        headers:  {
+          Authorization:    `Bearer ${RESEND_API_KEY}`,
+          'Content-Type':   'application/json',
+          'Content-Length': Buffer.byteLength(body),
+        },
+        timeout: 12000,
+      }, (res) => {
+        let raw = '';
+        res.on('data', d => (raw += d));
+        res.on('end', () => {
+          if (res.statusCode >= 200 && res.statusCode < 300) {
+            resolve({ ok: true });
+          } else {
+            console.error(`[email] Resend ${res.statusCode}: ${raw.slice(0, 200)}`);
+            resolve({ ok: false, reason: `HTTP ${res.statusCode}` });
+          }
+        });
+      });
+      req.on('error',   (e) => resolve({ ok: false, reason: e.message }));
+      req.on('timeout', ()  => { req.destroy(); resolve({ ok: false, reason: 'timeout' }); });
+      req.write(body);
+      req.end();
+    } catch (e) { resolve({ ok: false, reason: e.message }); }
+  });
+}
 
 // ─── Config ───────────────────────────────────────────────────────────────────
 const BACKENDS = (process.env.BACKEND_URLS || '')
@@ -240,6 +286,52 @@ function recordBackendSuccess(index) {
   }
 }
 
+// ─── Holt-Winters predictive scaling ─────────────────────────────────────────
+// Extends reactive scaling with a predictive layer using double exponential
+// smoothing (Holt's method — handles trend without requiring a seasonal period).
+//
+// Stores the last 30 observed window loads. Every check interval it fits a
+// level + trend model and forecasts the next window. If the forecast exceeds
+// the scale-up threshold AND the trend has been positive for at least 3
+// consecutive windows (sustained ramp, not a one-off spike), it pre-scales.
+//
+// Alpha: smoothing factor for level   (0 = lag heavily, 1 = no smoothing)
+// Beta:  smoothing factor for trend   (0 = ignore trend, 1 = fully reactive)
+const HW_ALPHA      = parseFloat(process.env.HW_ALPHA      || '0.4');
+const HW_BETA       = parseFloat(process.env.HW_BETA       || '0.3');
+const HW_HISTORY    = 30;   // max window samples to keep
+const HW_MIN_RAMP   = 3;    // minimum consecutive positive-trend windows before pre-scaling
+const HW_HEADROOM   = parseFloat(process.env.HW_HEADROOM   || '0.85'); // pre-scale at 85% of threshold
+
+const hwHistory   = [];   // { load, level, trend } — ring buffer
+let   hwLevel     = 0;
+let   hwTrend     = 0;
+let   hwRampCount = 0;    // consecutive windows with positive trend
+
+// Returns { forecast, trend, rampCount, willPreScale }
+function hwUpdate(currentLoad) {
+  if (hwHistory.length === 0) {
+    // Bootstrap
+    hwLevel = currentLoad;
+    hwTrend = 0;
+  } else {
+    const prevLevel = hwLevel;
+    hwLevel = HW_ALPHA * currentLoad + (1 - HW_ALPHA) * (hwLevel + hwTrend);
+    hwTrend = HW_BETA  * (hwLevel - prevLevel) + (1 - HW_BETA) * hwTrend;
+  }
+  if (hwTrend > 0) { hwRampCount++; } else { hwRampCount = 0; }
+
+  const forecast = hwLevel + hwTrend;
+  const willPreScale = hwRampCount >= HW_MIN_RAMP
+    && forecast >= SCALE_UP_THRESHOLD * HW_HEADROOM
+    && forecast < SCALE_UP_THRESHOLD; // threshold not yet breached (reactive handles that)
+
+  hwHistory.push({ load: currentLoad, level: hwLevel, trend: hwTrend });
+  if (hwHistory.length > HW_HISTORY) hwHistory.shift();
+
+  return { forecast, trend: hwTrend, rampCount: hwRampCount, willPreScale };
+}
+
 // ─── Auto-scaling ─────────────────────────────────────────────────────────────
 function checkAndScale() {
   const boost = isBoostActive();
@@ -277,6 +369,23 @@ function checkAndScale() {
   }, 0);
   const avgLoad = totalLoad / activeHealthy.length;
   const loadLabel = activeHealthy.some(b => b.socketConnections > 0) ? 'avg sockets' : 'req/window';
+
+  // ── Holt-Winters predictive pre-scale (runs every check interval) ──────────
+  const hw = hwUpdate(avgLoad);
+  if (hw.willPreScale && activeBackendCount < BACKENDS.length) {
+    scaleDownStreak = 0;
+    const next = backendStatus[activeBackendCount];
+    if (next && !next.circuitTripped && !next.coldStart) {
+      activeBackendCount++;
+      updateActiveSet();
+      logScale(
+        `~ Predictive scale-up`,
+        `forecast ${hw.forecast.toFixed(1)} ${loadLabel} approaching threshold ${SCALE_UP_THRESHOLD} ` +
+        `(ramp ${hw.rampCount} windows, trend +${hw.trend.toFixed(1)})`
+      );
+      return; // skip reactive check this window — we already acted
+    }
+  }
 
   // Scale up
   if (avgLoad >= SCALE_UP_THRESHOLD && activeBackendCount < BACKENDS.length) {
@@ -452,6 +561,14 @@ app.get('/mesh/status', meshAuth(SERVICE_NAME), (_req, res) => {
       trippedCount:  backendStatus.filter(b => b.circuitTripped).length,
       scaleDownStreak,
       thresholds: { scaleUp: SCALE_UP_THRESHOLD, scaleDown: SCALE_DOWN_THRESHOLD },
+      predictive: {
+        level:     parseFloat(hwLevel.toFixed(2)),
+        trend:     parseFloat(hwTrend.toFixed(2)),
+        rampCount: hwRampCount,
+        forecast:  parseFloat((hwLevel + hwTrend).toFixed(2)),
+        headroom:  HW_HEADROOM,
+        historyLen: hwHistory.length,
+      },
     },
     scalingLog: scalingLog.slice(0, 20),
     backends: backendStatus.map((s, i) => ({
@@ -488,6 +605,42 @@ app.post('/mesh/boost', meshAuth(SERVICE_NAME), express.json(), (req, res) => {
 app.delete('/mesh/boost', meshAuth(SERVICE_NAME), (_req, res) => {
   const cancelled = cancelBoost();
   res.json({ ok: true, cancelled });
+});
+
+// ─── Mesh email relay ─────────────────────────────────────────────────────────
+// POST /mesh/email
+// Backends call this to send transactional emails without ever holding the
+// RESEND_API_KEY. Only reachable via mesh-authenticated requests.
+// Body: { to: string, subject: string, html: string }
+app.post('/mesh/email', meshAuth(SERVICE_NAME), express.json({ limit: '512kb' }), async (req, res) => {
+  const { to, subject, html } = req.body || {};
+  if (!to || !subject || !html) {
+    return res.status(400).json({ error: 'to, subject, and html are required' });
+  }
+  const result = await sendViaResend(String(to), String(subject), String(html));
+  if (result.ok) {
+    res.json({ ok: true });
+  } else {
+    console.error(`[email] Relay failed: ${result.reason}`);
+    res.status(502).json({ ok: false, reason: result.reason || 'send failed' });
+  }
+});
+
+// POST /mesh/email/test — sends a test email to a given address (admin UI only)
+app.post('/mesh/email/test', meshAuth(SERVICE_NAME), express.json(), async (req, res) => {
+  const { to } = req.body || {};
+  if (!to) return res.status(400).json({ error: 'to is required' });
+  const html = `<div style="font-family:system-ui;padding:24px;max-width:520px">
+    <h2 style="color:#7c3aed">PlanIt — Test Email</h2>
+    <p>This is a test email from your PlanIt router. If you received this, your Resend integration is working correctly.</p>
+    <p style="color:#9ca3af;font-size:12px;margin-top:24px">Sent at ${new Date().toUTCString()}</p>
+  </div>`;
+  const result = await sendViaResend(String(to), 'PlanIt — Test Email', html);
+  if (result.ok) {
+    res.json({ ok: true });
+  } else {
+    res.status(502).json({ ok: false, reason: result.reason });
+  }
 });
 
 // ─── Mesh register ────────────────────────────────────────────────────────────
