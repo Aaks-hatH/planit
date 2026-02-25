@@ -140,6 +140,48 @@ app.use('/api/', apiLimiter);
 app.use('/api/', attachResponseSignature); // Sign every API response with the license-derived key
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
+// ─── Health check endpoints — MUST be registered before all other routes ─────
+// Registered early so no other middleware or catch-all can intercept them.
+//
+// GET  /api/health — full JSON status for browsers / curl / reqbin
+// HEAD /api/health — explicit handler for the watchdog (axios.head) and
+//                    UptimeRobot. Without an explicit HEAD route, Express
+//                    falls through to the app.get('*') catch-all which returns
+//                    404 for any /api path — causing false-positive outage alerts.
+app.get('/api/health', (req, res) => {
+  res.json({
+    status: 'ok',
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime(),
+    mongodb: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected',
+    features: {
+      cloudinaryStorage: !!process.env.CLOUDINARY_CLOUD_NAME,
+      autoCleanup: true
+    }
+  });
+});
+
+app.head('/api/health', (req, res) => {
+  res.set({
+    'X-Service': 'planit-backend',
+    'X-Uptime':  Math.floor(process.uptime()).toString(),
+    'X-Status':  mongoose.connection.readyState === 1 ? 'db-ok' : 'db-down',
+  });
+  res.sendStatus(200);
+});
+
+// ─── UptimeRobot HEAD / ping ──────────────────────────────────────────────────
+// UptimeRobot pings HEAD / to check if the server is alive.
+// Respond 200 with lightweight status headers — no body needed.
+app.head('/', (req, res) => {
+  res.set({
+    'X-Service': 'planit-backend',
+    'X-Uptime':  Math.floor(process.uptime()).toString(),
+    'X-Status':  mongoose.connection.readyState === 1 ? 'db-ok' : 'db-down',
+  });
+  res.sendStatus(200);
+});
+
 // Mount routes
 app.use('/api/events', eventRoutes);
 app.use('/api/chat', chatRoutes);
@@ -151,32 +193,6 @@ app.use('/api/uptime', uptimeRoutes);
 app.use('/api', publicRoutes);
 app.use('/api/events', checkinRoutes);
 app.use('/api/events', dataRetentionRoutes);
-
-// Health check endpoint
-app.get('/api/health', (req, res) => {
-  res.json({ 
-    status: 'ok', 
-    timestamp: new Date().toISOString(), 
-    uptime: process.uptime(),
-    mongodb: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected',
-    features: {
-      cloudinaryStorage: !!process.env.CLOUDINARY_CLOUD_NAME,
-      autoCleanup: true
-    }
-  });
-});
-
-// ─── UptimeRobot HEAD requests ────────────────────────────────────────────
-// UptimeRobot pings HEAD / to check if the server is alive.
-// Respond 200 with lightweight status headers — no body needed.
-app.head('/', (req, res) => {
-  res.set({
-    'X-Service': 'planit-backend',
-    'X-Uptime':  Math.floor(process.uptime()).toString(),
-    'X-Status':  mongoose.connection.readyState === 1 ? 'db-ok' : 'db-down',
-  });
-  res.sendStatus(200);
-});
 
 const frontendUrls = (process.env.FRONTEND_URL || '')
   .split(',')
