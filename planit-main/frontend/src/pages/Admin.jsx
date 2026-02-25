@@ -1453,10 +1453,162 @@ const NAV_ITEMS = [
   { id: 'employees',   label: 'Team',         icon: Briefcase },
   { id: 'analytics',   label: 'Analytics',    icon: BarChart3 },
   { id: 'fleet',       label: 'Fleet',        icon: Rocket },
+  { id: 'security',    label: 'Security',     icon: Shield },
   { id: 'system',      label: 'System',       icon: Server },
   { id: 'logs',        label: 'Logs',         icon: Terminal },
   { id: 'uptime',      label: 'Uptime',       icon: Radio },
 ];
+
+// ─── Security Panel ───────────────────────────────────────────────────────────
+function SecurityPanel() {
+  const [emailTest, setEmailTest]   = useState({ to: '', loading: false, result: null });
+  const [emailCfg, setEmailCfg]     = useState(null);
+
+  const handleTestEmail = async (e) => {
+    e.preventDefault();
+    if (!emailTest.to) return;
+    setEmailTest(p => ({ ...p, loading: true, result: null }));
+    try {
+      await routerAPI.testEmail(emailTest.to);
+      setEmailTest(p => ({ ...p, loading: false, result: { ok: true } }));
+      toast.success('Test email sent — check your inbox');
+    } catch (err) {
+      setEmailTest(p => ({ ...p, loading: false, result: { ok: false, msg: err.response?.data?.reason || err.message } }));
+      toast.error('Test email failed');
+    }
+  };
+
+  return (
+    <div className="p-6 space-y-6 max-w-3xl">
+      <div>
+        <h2 className="text-xl font-bold text-neutral-900 flex items-center gap-2">
+          <Shield className="w-5 h-5 text-indigo-600" /> Security
+        </h2>
+        <p className="text-sm text-neutral-500 mt-0.5">Traffic protection, email system status, and configuration reference.</p>
+      </div>
+
+      {/* Email system */}
+      <div className="card p-5 space-y-4">
+        <h3 className="text-sm font-bold text-neutral-700 flex items-center gap-2">
+          <Mail className="w-4 h-4 text-violet-500" /> Transactional Email
+        </h3>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+          <div className="bg-neutral-50 rounded-xl p-3">
+            <p className="text-xs text-neutral-500 mb-1">Provider</p>
+            <p className="font-semibold text-neutral-900">Resend (HTTP API)</p>
+          </div>
+          <div className="bg-neutral-50 rounded-xl p-3">
+            <p className="text-xs text-neutral-500 mb-1">Daily limit per address</p>
+            <p className="font-semibold text-neutral-900">3 emails / day (UTC reset)</p>
+          </div>
+          <div className="bg-neutral-50 rounded-xl p-3">
+            <p className="text-xs text-neutral-500 mb-1">Triggers</p>
+            <p className="font-semibold text-neutral-900">Create event, Guest invite, Reminder, Thank-you</p>
+          </div>
+          <div className="bg-neutral-50 rounded-xl p-3">
+            <p className="text-xs text-neutral-500 mb-1">Counter store</p>
+            <p className="font-semibold text-neutral-900">Redis (or in-memory fallback)</p>
+          </div>
+        </div>
+        <div className="border-t border-neutral-100 pt-3">
+          <p className="text-xs font-semibold text-neutral-600 mb-2">Send test email</p>
+          <form onSubmit={handleTestEmail} className="flex gap-2">
+            <input
+              type="email"
+              placeholder="recipient@example.com"
+              value={emailTest.to}
+              onChange={e => setEmailTest(p => ({ ...p, to: e.target.value }))}
+              className="input text-sm flex-1"
+              required
+            />
+            <button
+              type="submit"
+              disabled={emailTest.loading || !import.meta.env.VITE_ROUTER_URL}
+              className="btn bg-violet-600 hover:bg-violet-700 text-white text-sm gap-2 disabled:opacity-50"
+            >
+              {emailTest.loading
+                ? <span className="spinner w-4 h-4 border-2 border-white/30 border-t-white" />
+                : <Send className="w-4 h-4" />}
+              Send test
+            </button>
+          </form>
+          {!import.meta.env.VITE_ROUTER_URL && (
+            <p className="text-xs text-neutral-400 mt-1">VITE_ROUTER_URL is not set — cannot reach router mesh.</p>
+          )}
+          {emailTest.result && (
+            <p className={`text-xs mt-1 font-medium ${emailTest.result.ok ? 'text-emerald-600' : 'text-red-600'}`}>
+              {emailTest.result.ok ? 'Sent successfully' : `Failed: ${emailTest.result.msg}`}
+            </p>
+          )}
+        </div>
+      </div>
+
+      {/* Traffic guard */}
+      <div className="card p-5 space-y-3">
+        <h3 className="text-sm font-bold text-neutral-700 flex items-center gap-2">
+          <ShieldOff className="w-4 h-4 text-red-500" /> Traffic Guard
+        </h3>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+          <div className="bg-neutral-50 rounded-xl p-3">
+            <p className="text-xs text-neutral-500 mb-1">Detects</p>
+            <p className="text-xs text-neutral-700 leading-5">Rapid identical requests, path fuzzing, known scanner user-agents, oversized payload probes</p>
+          </div>
+          <div className="bg-neutral-50 rounded-xl p-3">
+            <p className="text-xs text-neutral-500 mb-1">Enforcement</p>
+            <p className="text-xs text-neutral-700 leading-5">Progressive: warn threshold logged silently, ban threshold = temporary IP block</p>
+          </div>
+          <div className="bg-neutral-50 rounded-xl p-3">
+            <p className="text-xs text-neutral-500 mb-1">Defaults</p>
+            <p className="text-xs font-mono text-neutral-700">warn: 25 req/10s · ban: 5 warns · block: 30 min</p>
+          </div>
+          <div className="bg-neutral-50 rounded-xl p-3">
+            <p className="text-xs text-neutral-500 mb-1">Storage</p>
+            <p className="text-xs text-neutral-700">Redis (Upstash) with in-memory fallback</p>
+          </div>
+        </div>
+        <div className="text-xs text-neutral-400 bg-neutral-50 rounded-xl p-3 space-y-0.5">
+          <p className="font-semibold text-neutral-500 mb-1">Configurable env vars on each backend:</p>
+          <p><code className="font-mono">SECURITY_ENABLED</code> — true / false (default: true)</p>
+          <p><code className="font-mono">SECURITY_BAN_MINUTES</code> — ban duration (default: 30)</p>
+          <p><code className="font-mono">SECURITY_WARN_THRESHOLD</code> — identical req count before warn (default: 25)</p>
+          <p><code className="font-mono">SECURITY_BAN_THRESHOLD</code> — warn count before ban (default: 5)</p>
+        </div>
+      </div>
+
+      {/* Upload scanner */}
+      <div className="card p-5 space-y-3">
+        <h3 className="text-sm font-bold text-neutral-700 flex items-center gap-2">
+          <FileUp className="w-4 h-4 text-amber-500" /> Upload Security
+        </h3>
+        <p className="text-sm text-neutral-600">All file uploads are scanned before reaching Cloudinary.</p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+          <div className="bg-neutral-50 rounded-xl p-3">
+            <p className="font-semibold text-neutral-600 mb-1">Blocked extensions</p>
+            <p className="font-mono text-neutral-500 leading-5">.exe .bat .sh .ps1 .php .asp .jsp .py .rb .js (as upload) .jar .dll …and 30+ more</p>
+          </div>
+          <div className="bg-neutral-50 rounded-xl p-3">
+            <p className="font-semibold text-neutral-600 mb-1">MIME mismatch detection</p>
+            <p className="text-neutral-500 leading-5">Extension vs Content-Type cross-checked. A file claiming to be a JPEG but sending HTML is rejected.</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Redis status */}
+      <div className="card p-5 space-y-3">
+        <h3 className="text-sm font-bold text-neutral-700 flex items-center gap-2">
+          <Database className="w-4 h-4 text-emerald-500" /> Redis (Upstash)
+        </h3>
+        <p className="text-sm text-neutral-600">Used for email counters, IP ban store, and rate limiting across all features.</p>
+        <div className="text-xs text-neutral-400 bg-neutral-50 rounded-xl p-3 space-y-0.5">
+          <p className="font-semibold text-neutral-500 mb-1">Set on each backend (and router for email counters):</p>
+          <p><code className="font-mono">UPSTASH_REDIS_URL</code> — your Upstash REST endpoint</p>
+          <p><code className="font-mono">UPSTASH_REDIS_TOKEN</code> — your Upstash REST token</p>
+          <p className="text-neutral-400 mt-1">If not set, the system falls back to in-memory storage automatically. No crash, no error.</p>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 // ─── Fleet Control Panel ──────────────────────────────────────────────────────
 function FleetControl() {
@@ -1644,6 +1796,50 @@ function FleetControl() {
                 <span className="text-neutral-500 truncate">{e.reason}</span>
               </div>
             ))}
+          </div>
+        </div>
+      )}
+
+      {/* Predictive scaling state (Holt-Winters) */}
+      {scaling?.predictive && (
+        <div className="card p-4">
+          <h3 className="text-sm font-bold text-neutral-700 mb-3 flex items-center gap-2">
+            <TrendingUp className="w-4 h-4 text-indigo-500" /> Predictive Scaling (Holt-Winters)
+          </h3>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-3">
+            <div className="bg-neutral-50 rounded-xl p-3">
+              <p className="text-xs text-neutral-500 mb-1">Smoothed Level</p>
+              <p className="text-xl font-bold text-neutral-900">{scaling.predictive.level}</p>
+              <p className="text-xs text-neutral-400">req/window</p>
+            </div>
+            <div className="bg-neutral-50 rounded-xl p-3">
+              <p className="text-xs text-neutral-500 mb-1">Trend</p>
+              <p className={`text-xl font-bold ${scaling.predictive.trend > 0 ? 'text-amber-600' : scaling.predictive.trend < 0 ? 'text-emerald-600' : 'text-neutral-900'}`}>
+                {scaling.predictive.trend > 0 ? '+' : ''}{scaling.predictive.trend}
+              </p>
+              <p className="text-xs text-neutral-400">per window</p>
+            </div>
+            <div className="bg-neutral-50 rounded-xl p-3">
+              <p className="text-xs text-neutral-500 mb-1">Forecast</p>
+              <p className={`text-xl font-bold ${scaling.predictive.forecast >= scaling.thresholds.scaleUp * (scaling.predictive.headroom || 0.85) ? 'text-amber-600' : 'text-neutral-900'}`}>
+                {scaling.predictive.forecast}
+              </p>
+              <p className="text-xs text-neutral-400">next window</p>
+            </div>
+            <div className="bg-neutral-50 rounded-xl p-3">
+              <p className="text-xs text-neutral-500 mb-1">Ramp Windows</p>
+              <p className={`text-xl font-bold ${scaling.predictive.rampCount >= 3 ? 'text-red-500' : 'text-neutral-900'}`}>
+                {scaling.predictive.rampCount}
+              </p>
+              <p className="text-xs text-neutral-400">consecutive rise</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 text-xs text-neutral-500">
+            <span>History: {scaling.predictive.historyLen}/30 windows</span>
+            <span className="text-neutral-300">·</span>
+            <span>Pre-scale threshold: {Math.round((scaling.predictive.headroom || 0.85) * 100)}% of scale-up ({Math.round((scaling.predictive.headroom || 0.85) * scaling.thresholds.scaleUp)} req/window)</span>
+            <span className="text-neutral-300">·</span>
+            <span>Min ramp: 3 windows</span>
           </div>
         </div>
       )}
@@ -1997,6 +2193,7 @@ export default function Admin() {
           {activeSection === 'employees'  && !selectedEvent && <div className="max-w-5xl mx-auto"><EmployeesPanel /></div>}
           {activeSection === 'analytics'  && !selectedEvent && <div className="max-w-5xl mx-auto"><AnalyticsPanel stats={stats} /></div>}
           {activeSection === 'fleet'      && !selectedEvent && <FleetControl />}
+          {activeSection === 'security'   && !selectedEvent && <SecurityPanel />}
           {activeSection === 'system'     && !selectedEvent && <div className="max-w-5xl mx-auto"><SystemPanel /></div>}
           {activeSection === 'logs'       && !selectedEvent && <div className="max-w-6xl mx-auto"><LogsPanel /></div>}
           {activeSection === 'uptime'     && !selectedEvent && <div className="max-w-4xl mx-auto"><UptimePanel /></div>}
