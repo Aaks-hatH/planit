@@ -16,7 +16,7 @@ import {
   WifiOff, AlertOctagon, TrendingDown, GitBranch, Boxes,
   Rocket, Timer, Wifi as WifiOn, Cpu as CpuIcon,
 } from 'lucide-react';
-import { adminAPI, uptimeAPI, watchdogAPI, routerAPI } from '../services/api';
+import api, { adminAPI, uptimeAPI, watchdogAPI, routerAPI } from '../services/api';
 import { SERVICE_CATEGORIES } from '../utils/serviceCategories';
 import { formatNumber, formatFileSize } from '../utils/formatters';
 import { DateTime } from 'luxon';
@@ -1620,7 +1620,8 @@ function MarketingPanel() {
   const [recipientText, setRecipientText] = useState('');
   const [sending, setSending]           = useState(false);
   const [result, setResult]             = useState(null);
-  const [previewKey, setPreviewKey]     = useState(0);
+  const [previewHtml, setPreviewHtml]   = useState('');
+  const [previewLoading, setPreviewLoading] = useState(false);
 
   useEffect(() => {
     adminAPI.getMarketingTemplates()
@@ -1635,12 +1636,22 @@ function MarketingPanel() {
       .catch(() => toast.error('Could not load marketing templates'));
   }, []);
 
+  // Fetch preview HTML via API (handles auth via interceptor, avoids X-Frame-Options)
+  useEffect(() => {
+    if (!selected) { setPreviewHtml(''); return; }
+    setPreviewLoading(true);
+    const params = ctaUrl ? `?ctaUrl=${encodeURIComponent(ctaUrl)}` : '';
+    api.get(`/admin/marketing/preview/${selected}${params}`, { responseType: 'text' })
+      .then(r => setPreviewHtml(typeof r.data === 'string' ? r.data : JSON.stringify(r.data)))
+      .catch(() => toast.error('Could not load preview'))
+      .finally(() => setPreviewLoading(false));
+  }, [selected, ctaUrl]);
+
   const handleTemplateChange = (id) => {
     setSelected(id);
     const tpl = templates.find(t => t.id === id);
     if (tpl) setSubject(tpl.defaultSubject);
     setResult(null);
-    setPreviewKey(k => k + 1);
   };
 
   const parseRecipients = () =>
@@ -1678,9 +1689,6 @@ function MarketingPanel() {
   };
 
   const recipientCount = parseRecipients().length;
-  const previewSrc = selected
-    ? adminAPI.getMarketingPreviewUrl(selected, ctaUrl)
-    : null;
 
   return (
     <div className="p-6 space-y-6 max-w-6xl">
@@ -1748,7 +1756,7 @@ function MarketingPanel() {
               <input
                 type="url"
                 value={ctaUrl}
-                onChange={e => { setCtaUrl(e.target.value); setPreviewKey(k => k + 1); }}
+                onChange={e => setCtaUrl(e.target.value)}
                 className="input text-sm w-full font-mono"
                 placeholder="https://planit.app"
               />
@@ -1818,11 +1826,16 @@ function MarketingPanel() {
         <div className="space-y-2">
           <h3 className="text-sm font-bold text-neutral-700">Live Preview</h3>
           <p className="text-xs text-neutral-400">Updates when you change template or CTA URL.</p>
-          {previewSrc ? (
-            <div className="rounded-xl border border-neutral-200 overflow-hidden" style={{ height: '700px' }}>
+          {selected ? (
+            <div className="rounded-xl border border-neutral-200 overflow-hidden relative" style={{ height: '700px' }}>
+              {previewLoading && (
+                <div className="absolute inset-0 flex items-center justify-center bg-neutral-50 z-10">
+                  <span className="spinner w-5 h-5 border-2 border-neutral-200 border-t-violet-500" />
+                </div>
+              )}
               <iframe
-                key={`${selected}-${previewKey}`}
-                src={previewSrc}
+                key={selected}
+                srcDoc={previewHtml}
                 title="Email preview"
                 className="w-full h-full"
                 sandbox="allow-same-origin"
