@@ -30,14 +30,25 @@
 const https = require('https');
 const urlMod = require('url');
 
-const REDIS_URL   = (process.env.UPSTASH_REDIS_URL   || '').replace(/\/$/, '');
-const REDIS_TOKEN =  process.env.UPSTASH_REDIS_TOKEN  || '';
-const USE_REDIS   = !!(REDIS_URL && REDIS_TOKEN);
-
-if (USE_REDIS) {
-  console.log('[redis] Upstash REST mode enabled');
-} else {
-  console.log('[redis] No Upstash config — in-memory fallback active (non-persistent, per-instance)');
+// ─── Lazy config ─────────────────────────────────────────────────────────────
+// Env vars are read on FIRST USE rather than at module load time.
+// This allows configSync.js to fetch UPSTASH_REDIS_URL / UPSTASH_REDIS_TOKEN
+// from the router during startup and write them into process.env before any
+// Redis operation is attempted. No circular dependency, no timing issues.
+let _cfg = null;
+function cfg() {
+  if (!_cfg) {
+    const url   = (process.env.UPSTASH_REDIS_URL   || '').replace(/\/$/, '');
+    const token =  process.env.UPSTASH_REDIS_TOKEN  || '';
+    const use   = !!(url && token);
+    _cfg = { url, token, use };
+    if (use) {
+      console.log('[redis] Upstash REST mode enabled');
+    } else {
+      console.log('[redis] No Upstash config — in-memory fallback active (non-persistent, per-instance)');
+    }
+  }
+  return _cfg;
 }
 
 // ─── In-memory fallback ───────────────────────────────────────────────────────
@@ -61,14 +72,15 @@ setInterval(() => {
 function _upstash(cmd, ...args) {
   return new Promise((resolve) => {
     try {
-      const parsed = urlMod.parse(REDIS_URL);
+      const { url, token } = cfg();
+      const parsed = urlMod.parse(url);
       const body   = JSON.stringify([cmd.toUpperCase(), ...args.map(String)]);
       const req = https.request({
         hostname: parsed.hostname,
         path:     '/',
         method:   'POST',
         headers: {
-          Authorization:    `Bearer ${REDIS_TOKEN}`,
+          Authorization:    `Bearer ${token}`,
           'Content-Type':   'application/json',
           'Content-Length': Buffer.byteLength(body),
         },
@@ -91,10 +103,10 @@ function _upstash(cmd, ...args) {
 
 // ─── Public API ───────────────────────────────────────────────────────────────
 const redis = {
-  isRedis: USE_REDIS,
+  get isRedis() { return cfg().use; },
 
   async get(key) {
-    if (USE_REDIS) {
+    if (cfg().use) {
       const r = await _upstash('GET', key);
       return (r.ok && r.result != null) ? String(r.result) : null;
     }
@@ -103,7 +115,7 @@ const redis = {
   },
 
   async set(key, value, ttlSeconds) {
-    if (USE_REDIS) {
+    if (cfg().use) {
       const r = ttlSeconds
         ? await _upstash('SET', key, String(value), 'EX', ttlSeconds)
         : await _upstash('SET', key, String(value));
@@ -116,7 +128,7 @@ const redis = {
   },
 
   async incr(key) {
-    if (USE_REDIS) {
+    if (cfg().use) {
       const r = await _upstash('INCR', key);
       return r.ok ? (Number(r.result) || 0) : 0;
     }
@@ -127,7 +139,7 @@ const redis = {
   },
 
   async expire(key, ttlSeconds) {
-    if (USE_REDIS) {
+    if (cfg().use) {
       const r = await _upstash('EXPIRE', key, ttlSeconds);
       return r.ok ? (r.result || 0) : 0;
     }
@@ -137,7 +149,7 @@ const redis = {
   },
 
   async del(key) {
-    if (USE_REDIS) {
+    if (cfg().use) {
       const r = await _upstash('DEL', key);
       return r.ok ? (r.result || 0) : 0;
     }
