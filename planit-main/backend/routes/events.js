@@ -1062,13 +1062,6 @@ router.post('/:eventId/invites', verifyOrganizer,
           notes: guest.notes || ''
         });
         invites.push(invite);
-
-        // Send guest invite confirmation email non-blocking
-        if (invite.guestEmail) {
-          const event = await Event.findById(req.params.eventId).select('title date location organizerName _id').lean();
-          const { sendGuestInviteConfirmation } = require('../services/emailService');
-          sendGuestInviteConfirmation(event, invite.guestName, invite.guestEmail).catch(() => {});
-        }
       }
       
       res.status(201).json({ message: 'Invites created', invites });
