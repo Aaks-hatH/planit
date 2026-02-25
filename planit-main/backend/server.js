@@ -71,6 +71,7 @@ const dataRetentionRoutes = require('./routes/dataRetention7Days');
 const { apiLimiter } = require('./middleware/rateLimiter');
 const { errorHandler } = require('./middleware/errorHandler');
 const { attachResponseSignature } = require('./middleware/responseSigning');
+const { trafficGuard } = require('./middleware/security');
 
 // ── Trust proxy for Render / any reverse-proxy hosting ──
 // Required so express-rate-limit can read X-Forwarded-For correctly
@@ -136,6 +137,7 @@ app.use(cors(corsOptions));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(cookieParser());
+app.use(trafficGuard); // application-layer malicious traffic detection
 app.use('/api/', apiLimiter);
 app.use('/api/', attachResponseSignature); // Sign every API response with the license-derived key
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
