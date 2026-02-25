@@ -1033,4 +1033,54 @@ router.post('/cleanup', verifyAdmin, async (req, res, next) => {
   }
 });
 
+// ═══════════════════════════════════════════════════════════════════════════════
+// MARKETING EMAIL
+// ═══════════════════════════════════════════════════════════════════════════════
+
+// GET /admin/marketing/templates
+// Returns the list of available marketing email templates.
+router.get('/marketing/templates', verifyAdmin, (_req, res) => {
+  const { listTemplates } = require('../services/marketingService');
+  res.json({ templates: listTemplates() });
+});
+
+// GET /admin/marketing/preview/:templateId
+// Returns the rendered HTML of a template for previewing in an iframe.
+router.get('/marketing/preview/:templateId', verifyAdmin, (req, res) => {
+  const { previewTemplate } = require('../services/marketingService');
+  const { ctaUrl } = req.query;
+  const html = previewTemplate(req.params.templateId, ctaUrl);
+  if (!html) return res.status(404).json({ error: 'Template not found' });
+  res.setHeader('Content-Type', 'text/html');
+  res.send(html);
+});
+
+// POST /admin/marketing/send
+// Body: { templateId, recipients: string[], subject?, ctaUrl? }
+// Sends a marketing campaign. Batched, rate-limited per address.
+router.post('/marketing/send', verifyAdmin, async (req, res, next) => {
+  try {
+    const { templateId, recipients, subject, ctaUrl } = req.body || {};
+
+    if (!templateId) {
+      return res.status(400).json({ error: 'templateId is required' });
+    }
+    if (!Array.isArray(recipients) || recipients.length === 0) {
+      return res.status(400).json({ error: 'recipients must be a non-empty array' });
+    }
+    if (recipients.length > 1000) {
+      return res.status(400).json({ error: 'Maximum 1,000 recipients per send. Split into batches for larger lists.' });
+    }
+
+    const { sendCampaign } = require('../services/marketingService');
+    const results = await sendCampaign({ templateId, recipients, subject, ctaUrl });
+    res.json({ ok: true, results });
+  } catch (err) {
+    if (err.message && err.message.startsWith('Unknown template')) {
+      return res.status(400).json({ error: err.message });
+    }
+    next(err);
+  }
+});
+
 module.exports = router;
