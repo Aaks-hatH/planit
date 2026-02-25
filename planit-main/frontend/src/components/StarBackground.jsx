@@ -1,7 +1,8 @@
-import { useEffect, useRef, useMemo } from 'react';
+import { useEffect, useRef, useMemo, useState } from 'react';
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // STAR BACKGROUND v7 — PHOTOREALISTIC ADAPTIVE RENDERER
+// Console easter egg: type  __planit_stars()  to activate.
 // Larger Milky Way band · enhanced low-device optimisation
 //
 // console: window.__starExplosion() | window.__starShower() | window.__tier()
@@ -669,7 +670,8 @@ function drawAirglow(ctx,W,H){
 // ═══════════════════════════════════════════════════════════════════════════════
 // COMPONENT
 // ═══════════════════════════════════════════════════════════════════════════════
-export default function StarBackground({ fixed=true, starCount=null }) {
+export default function StarBackground({ fixed=true, starCount=null, forceActive=false }) {
+  const [active, setActive] = useState(forceActive);
   const canvasRef = useRef(null);
   const tier      = useMemo(() => detectTier(), []);
   const cfg       = TIER_CFG[tier];
@@ -685,6 +687,20 @@ export default function StarBackground({ fixed=true, starCount=null }) {
   const mwDust  = useMemo(() => buildMWDust(), []);
 
   useEffect(() => {
+    // Console easter egg activation
+    window.__planit_stars = () => {
+      setActive(true);
+      console.log('%c PlanIt star background activated', 'color:#adf;font-size:12px');
+      console.log('%c Commands: __starExplosion() | __starShower() | __tier()', 'color:#8af;font-size:11px');
+    };
+    if (!forceActive) {
+      console.log('%c PlanIt | type __planit_stars() to activate the star background easter egg', 'color:#444;font-size:11px');
+    }
+    return () => { delete window.__planit_stars; };
+  }, [forceActive]);
+
+  useEffect(() => {
+    if (!active) return;
     const canvas = canvasRef.current; if(!canvas) return;
     const ctx    = canvas.getContext('2d');
 
@@ -768,7 +784,7 @@ export default function StarBackground({ fixed=true, starCount=null }) {
       addShower((p&&map[p]?map[p]:showerRandom)(W,H));
     };
     window.__tier=()=>console.log(`Device tier: ${tier} (0=low,1=mid,2=high)`);
-    console.log(`%c✨ StarBG v7 | tier=${tier} | stars=${count} | mwStars=${cfg.mwStars}`,'color:#adf;font-size:11px');
+    console.log(`%c PlanIt | __planit_stars() already active | tier=${tier}`, 'color:#adf;font-size:11px');
 
     function tick(ts){
       if(ts-lastDrawTs < minFrameMs){raf=requestAnimationFrame(tick);return;}
@@ -853,7 +869,7 @@ export default function StarBackground({ fixed=true, starCount=null }) {
       window.removeEventListener('scroll',onScroll);
       delete window.__starExplosion; delete window.__starShower; delete window.__tier;
     };
-  },[layers,mwStars,mwDust,cfg,tier]);
+  },[active,layers,mwStars,mwDust,cfg,tier]);
 
   // On mobile: the canvas is position:fixed but we set an explicit height so the
   // browser doesn't try to recalculate it during scroll. -webkit-fill-available
@@ -878,5 +894,6 @@ export default function StarBackground({ fixed=true, starCount=null }) {
     WebkitBackfaceVisibility: 'hidden',
   };
 
+  if (!active) return null;
   return <canvas ref={canvasRef} style={style} />;
 }
