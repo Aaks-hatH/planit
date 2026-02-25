@@ -1062,6 +1062,13 @@ router.post('/:eventId/invites', verifyOrganizer,
           notes: guest.notes || ''
         });
         invites.push(invite);
+
+        // Send guest invite confirmation email non-blocking
+        if (invite.guestEmail) {
+          const event = await Event.findById(req.params.eventId).select('title date location organizerName _id').lean();
+          const { sendGuestInviteConfirmation } = require('../services/emailService');
+          sendGuestInviteConfirmation(event, invite.guestName, invite.guestEmail).catch(() => {});
+        }
       }
       
       res.status(201).json({ message: 'Invites created', invites });
@@ -2036,8 +2043,24 @@ async function fireWebhooks(eventId, eventType, payload) {
       };
       if (description) embed.description = description;
 
+      // Top-level `content` is the plain text Discord shows as the message body.
+      // Without it the notification preview and message body appear completely blank —
+      // the embed description alone is hidden until the user clicks to expand it.
+      let topContent = '';
+      if (evType === 'message_sent' && d.username && d.message) {
+        topContent = `**${safeStr(d.username)}:** ${String(d.message).slice(0, 500)}`;
+      } else if (evType === 'participant_joined' && d.username) {
+        topContent = `${safeStr(d.username)} joined ${safeStr(eventName)}`;
+      } else if (evType === 'rsvp_updated' && d.username) {
+        topContent = `${safeStr(d.username)} updated their RSVP: ${safeStr(d.rsvp)}`;
+      } else if (evType === 'checkin' && d.guestName) {
+        topContent = `${safeStr(d.guestName)} checked in to ${safeStr(eventName)}`;
+      }
+
       // Return plain object — axios handles serialisation
-      return { embeds: [embed] };
+      const out = { embeds: [embed] };
+      if (topContent) out.content = topContent;
+      return out;
     };
 
     // Slack incoming webhooks require {"text":"..."} — anything else is silently dropped.
