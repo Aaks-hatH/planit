@@ -117,7 +117,7 @@ console.log(`[${ts()}]   Monitoring ${targets.length} target(s):`);
 targets.forEach(t => console.log(`[${ts()}]     [${t.type}] ${t.name} -> ${t.pingUrl}`));
 console.log(`[${ts()}]   Interval  : ${PING_MS / 1000}s`);
 console.log(`[${ts()}]   Threshold : ${THRESHOLD} failures`);
-console.log(`[${ts()}]   ntfy      : ${NTFY_URL || 'NOT SET - alerts disabled'}`);
+console.log(`[${ts()}]   ntfy      : ${NTFY_URL_RESOLVED || 'NOT SET - alerts disabled'}`);
 console.log(`[${ts()}]   MONGO_URI : ${MONGO_URI ? 'set' : 'NOT SET - incidents will not be written to DB'}`);
 console.log(`[${ts()}]   Port      : ${PORT}\n`);
 
@@ -321,12 +321,20 @@ async function resolveDownIncident(target, incidentId, downtimeMs) {
 
 // --- ntfy ---------------------------------------------------------------------
 // NTFY_URL  - full topic URL e.g. https://ntfy.sh/my-secret-topic
+//           - OR just the topic name e.g. my-secret-topic (we auto-prefix ntfy.sh)
 // NTFY_TOKEN - Bearer token for private topics (ntfy.sh -> Account -> Access tokens)
-//              Required if your topic has access control enabled.
 const NTFY_TOKEN = process.env.NTFY_TOKEN || '';
 
+// Normalize NTFY_URL — accept either full URL or just topic name
+function buildNtfyUrl(raw) {
+  if (!raw) return null;
+  if (raw.startsWith('http://') || raw.startsWith('https://')) return raw;
+  return `https://ntfy.sh/${raw}`; // bare topic name — auto-prefix
+}
+const NTFY_URL_RESOLVED = buildNtfyUrl(NTFY_URL);
+
 async function sendNtfy({ title, message, priority = 'high', tags = [] }) {
-  if (!NTFY_URL) return;
+  if (!NTFY_URL_RESOLVED) return;
   try {
     const headers = {
       'Title':        title,
@@ -334,9 +342,9 @@ async function sendNtfy({ title, message, priority = 'high', tags = [] }) {
       'Tags':         tags.join(','),
       'Content-Type': 'text/plain; charset=utf-8',
     };
-    if (NTFY_TOKEN)  headers['Authorization'] = `Bearer ${NTFY_TOKEN}`;
+    if (NTFY_TOKEN)   headers['Authorization'] = `Bearer ${NTFY_TOKEN}`;
     if (FRONTEND_URL) headers['Actions'] = `view, Open Status Page, ${FRONTEND_URL}/status`;
-    const res = await axios.post(NTFY_URL, message, { headers, timeout: 10000 });
+    const res = await axios.post(NTFY_URL_RESOLVED, message, { headers, timeout: 10000 });
     console.log(`[${ts()}] [ntfy] Sent: "${title}" (HTTP ${res.status})`);
   } catch (err) {
     const status = err.response?.status;
@@ -349,6 +357,12 @@ async function sendNtfy({ title, message, priority = 'high', tags = [] }) {
 }
 
 // --- Ping a single target -----------------------------------------------------
+// Uses HEAD instead of GET:
+//   - No response body to download — faster and lighter
+//   - Render returns 503 for suspended services on HEAD (correctly caught as DOWN)
+//   - Our health endpoints respond 200 to HEAD just like GET
+// axios throws on non-2xx by default, so any 503/502/etc is caught automatically.
+//
 async function pingTarget(target) {
   const s = states[target.name];
   s.totalPings++;
@@ -356,13 +370,11 @@ async function pingTarget(target) {
 
   try {
     const t0  = Date.now();
-    await axios.get(target.pingUrl, {
+    await axios.head(target.pingUrl, {
       timeout:        10000,
-      validateStatus: code => code < 500,
+      validateStatus: code => code === 200,  // Only 200 counts — 503 from suspended Render service throws
     });
     const ms = Date.now() - t0;
-
-    s.lastPingMs          = ms;
     s.lastError           = null;
     s.consecutiveFailures = 0;
     s.consecutiveSuccesses++;
@@ -517,7 +529,7 @@ app.post('/watchdog/test-ntfy', express.json(), async (req, res) => {
   if (!meshSecret || secret !== meshSecret) {
     return res.status(401).json({ error: 'Unauthorized - send X-Test-Secret header with MESH_SECRET value' });
   }
-  if (!NTFY_URL) {
+  if (!NTFY_URL_RESOLVED) {
     return res.status(503).json({ error: 'NTFY_URL is not configured on this watchdog' });
   }
   try {
@@ -530,9 +542,9 @@ app.post('/watchdog/test-ntfy', express.json(), async (req, res) => {
     };
     if (NTFY_TOKEN) headers['Authorization'] = `Bearer ${NTFY_TOKEN}`;
     if (FRONTEND_URL) headers['Actions'] = `view, Open Status Page, ${FRONTEND_URL}/status`;
-    const r = await axios.post(NTFY_URL, `PlanIt watchdog ntfy test fired at ${new Date().toUTCString()}.\nIf you received this, notifications are working correctly.`, { headers, timeout: 10000 });
+    const r = await axios.post(NTFY_URL_RESOLVED, `PlanIt watchdog ntfy test fired at ${new Date().toUTCString()}.\nIf you received this, notifications are working correctly.`, { headers, timeout: 10000 });
     console.log(`[${ts()}] [ntfy] Test notification sent (HTTP ${r.status})`);
-    res.json({ ok: true, status: r.status, ntfyUrl: NTFY_URL, tokenSet: !!NTFY_TOKEN });
+    res.json({ ok: true, status: r.status, ntfyUrl: NTFY_URL_RESOLVED, tokenSet: !!NTFY_TOKEN });
   } catch (err) {
     const status = err.response?.status;
     const hint = status === 401 ? 'NTFY_TOKEN missing or wrong'
