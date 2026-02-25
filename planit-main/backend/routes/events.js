@@ -2171,7 +2171,7 @@ router.post('/:eventId/webhooks', verifyOrganizer,
         const maxP = event.maxParticipants || 'Unlimited';
 
         if (isDiscord) {
-          const configPayload = JSON.stringify({
+          const configPayload = {
             embeds: [{
               title: 'PlanIt Webhook Connected',
               description: 'This channel will now receive live notifications from your PlanIt event.',
@@ -2197,16 +2197,16 @@ router.post('/:eventId/webhooks', verifyOrganizer,
               footer: { text: 'PlanIt — You will receive a notification for each selected trigger.' },
               timestamp: new Date().toISOString(),
             }]
-          });
+          };
           await axios.post(wh.url, configPayload, { headers: { 'Content-Type': 'application/json' }, timeout: 5000 });
         } else if (isSlack) {
-          // Slack requires {"text":"..."} — anything else is silently ignored
-          const slackPayload = JSON.stringify({
+          // Slack requires { text: "..." } — plain object, NOT a pre-stringified string
+          const slackPayload = {
             text: `*PlanIt Webhook Connected* — ${event.title}\nTriggers: ${triggersText}\nParticipants: ${participantCount} / ${maxP}\nDate: ${eventDate}`,
-          });
+          };
           await axios.post(wh.url, slackPayload, { headers: { 'Content-Type': 'application/json' }, timeout: 5000 });
         } else {
-          const configPayload = JSON.stringify({
+          const configPayload = {
             event: 'webhook_configured',
             eventId: event._id.toString(),
             eventName: event.title,
@@ -2234,8 +2234,11 @@ router.post('/:eventId/webhooks', verifyOrganizer,
                 requireApproval: event.settings?.requireApproval === true,
               },
             },
+          };
+          await axios.post(wh.url, configPayload, {
+            headers: { 'Content-Type': 'application/json', 'X-PlanIt-Event': 'webhook_configured', 'X-PlanIt-EventId': event._id.toString() },
+            timeout: 5000,
           });
-          await axios.post(wh.url, configPayload, { headers: { 'Content-Type': 'application/json', 'X-PlanIt-Event': 'webhook_configured', 'X-PlanIt-EventId': event._id.toString() }, timeout: 5000 });
         }
       } catch (cfgErr) {
         // Config ping is best-effort — don't block webhook creation, but DO log so we can debug.
