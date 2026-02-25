@@ -5,7 +5,7 @@ import {
   Keyboard, AlertTriangle, Baby, User, Settings, Lock, Edit2, Trash2,
   Clock, CheckCircle2, Loader2, CheckCircle, Flag, AlertOctagon, XCircle, 
   Mail, Phone, Copy, ExternalLink, Share2, FileText, LogOut, Eye, EyeOff,
-  TrendingUp, ScanLine, BarChart2
+  TrendingUp, ScanLine, BarChart2, Info
 } from 'lucide-react';
 import { eventAPI } from '../services/api';
 import toast from 'react-hot-toast';
@@ -907,16 +907,18 @@ function InviteDialog({ invite, eventId, event, onClose, onSave }) {
             <button
               onClick={() => {
                 const link = getInviteLink();
-                if (navigator.share) {
+                const guestEmail = formData.guestEmail?.trim();
+                const emailBody = `Hi ${formData.guestName},\n\nYou have been personally invited to ${event?.title}.\n\nUse this link to join and access your QR check-in code:\n${link}\n\nWe look forward to seeing you there!`;
+                if (navigator.share && !guestEmail) {
                   navigator.share({ title: `Invite to ${event?.title}`, text: `You're invited!`, url: link });
                 } else {
-                  window.open(`mailto:${formData.guestEmail}?subject=Event Invite&body=You're invited! ${link}`);
+                  window.open(`mailto:${guestEmail || ''}?subject=${encodeURIComponent(`You're invited: ${event?.title}`)}&body=${encodeURIComponent(emailBody)}`);
                 }
               }}
               className="flex-1 px-4 py-2.5 border border-neutral-200 rounded-xl font-semibold hover:bg-neutral-50 flex items-center justify-center gap-2"
             >
-              <Share2 className="w-4 h-4" />
-              Share
+              <Mail className="w-4 h-4" />
+              {formData.guestEmail ? 'Send Invite Email' : 'Share Invite'}
             </button>
           </div>
         </div>
@@ -966,7 +968,16 @@ function InviteDialog({ invite, eventId, event, onClose, onSave }) {
             </div>
           </div>
           <div>
-            <label className="block text-sm font-semibold mb-1">Email</label>
+            <label className="block text-sm font-semibold mb-1 flex items-center gap-1.5">
+              Email
+              <span className="relative group cursor-help">
+                <Info className="w-3.5 h-3.5 text-neutral-400" />
+                <span className="absolute left-5 top-1/2 -translate-y-1/2 w-56 bg-neutral-800 text-white text-xs rounded-lg px-3 py-2 leading-relaxed opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-10 shadow-lg">
+                  PlanIt won't automatically email guests added here. Use the Share button after saving to send from your own email.
+                </span>
+              </span>
+              <span className="text-neutral-400 font-normal text-xs">(optional)</span>
+            </label>
             <input
               type="email"
               value={formData.guestEmail}
@@ -974,6 +985,10 @@ function InviteDialog({ invite, eventId, event, onClose, onSave }) {
               className="w-full border border-neutral-200 rounded-xl px-4 py-2.5 focus:outline-none focus:border-neutral-400"
               placeholder="john@email.com"
             />
+            <p className="text-xs text-neutral-400 mt-1 flex items-center gap-1">
+              <Info className="w-3 h-3 flex-shrink-0" />
+              Emails are not automatically sent to guests added here.
+            </p>
           </div>
           <div>
             <label className="block text-sm font-semibold mb-1">Phone</label>
@@ -1131,21 +1146,21 @@ export default function EnterpriseCheckin() {
   };
 
   const loadAllData = async () => {
-    console.log('🔄 Starting to load check-in data...');
+    console.log('[checkin] Starting to load check-in data...');
     try {
       setLoading(true);
       setLoadError(null);
       
-      console.log('📥 Loading event...');
+      console.log('[checkin] Loading event...');
       await loadEvent();
       
-      console.log('📥 Loading invites...');
+      console.log('[checkin] Loading invites...');
       await loadInvites();
       
-      console.log('📥 Loading stats...');
+      console.log('[checkin] Loading stats...');
       await loadStats();
       
-      console.log('📥 Loading settings...');
+      console.log('[checkin] Loading settings...');
       await loadSettings();
       
       console.log('✅ All data loaded successfully');
@@ -1208,7 +1223,7 @@ export default function EnterpriseCheckin() {
       return;
     }
 
-    console.log('📷 Raw QR scan result:', code);
+    console.log('[checkin] Raw QR scan result:', code);
 
     let inviteCode = code.trim();
 
@@ -1524,8 +1539,8 @@ export default function EnterpriseCheckin() {
         />
       )}
       
-      <header className="bg-white border-b border-neutral-200 sticky top-0 z-10">
-        <div className="max-w-5xl mx-auto px-6 h-14 flex items-center justify-between">
+      <header className="bg-white border-b border-neutral-100 sticky top-0 z-10 shadow-sm">
+        <div className="max-w-7xl mx-auto px-6 lg:px-10 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
             {authState.role === 'organizer' && (
               <button onClick={() => navigate(`/event/${eventId}`)} className="p-1.5 hover:bg-neutral-100 rounded-lg transition-colors">
@@ -1533,7 +1548,7 @@ export default function EnterpriseCheckin() {
               </button>
             )}
             <div>
-              <h1 className="text-sm font-bold text-neutral-900 truncate max-w-[180px]">{event?.title || 'Event'}</h1>
+              <h1 className="text-base font-bold text-neutral-900 truncate max-w-[240px]">{event?.title || 'Event'}</h1>
               <div className="flex items-center gap-1.5">
                 <p className="text-xs text-neutral-400">Check-in</p>
                 {authState.username && (
@@ -1574,7 +1589,7 @@ export default function EnterpriseCheckin() {
                 resetScan();
                 setScanMode(true);
               }}
-              className="flex items-center gap-2 px-4 py-2 bg-neutral-900 text-white text-sm font-semibold rounded-xl hover:bg-black transition-all shadow-sm"
+              className="flex items-center gap-2 px-5 py-2.5 bg-neutral-900 text-white text-sm font-bold rounded-xl hover:bg-black transition-all shadow-sm"
             >
               <Camera className="w-4 h-4" />
               Scan QR
@@ -1599,7 +1614,7 @@ export default function EnterpriseCheckin() {
                 e.preventDefault();
                 handleScan(manualCode);
               }}
-              className="flex gap-2 max-w-sm"
+              className="flex gap-2 max-w-lg"
             >
               <input
                 type="text"
@@ -1621,8 +1636,8 @@ export default function EnterpriseCheckin() {
         )}
       </header>
       
-      <main className="max-w-5xl mx-auto px-6 py-6">
-        <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-6">
+      <main className="max-w-7xl mx-auto px-6 lg:px-10 py-8">
+        <div className="grid grid-cols-2 sm:grid-cols-5 gap-4 mb-8">
           {[
             { label: 'Total Groups', value: stats?.total ?? invites.length, color: 'text-neutral-900' },
             { label: 'Checked In', value: stats?.checkedIn ?? 0, color: 'text-emerald-600' },
@@ -1630,19 +1645,19 @@ export default function EnterpriseCheckin() {
             { label: 'Adults Expected', value: stats?.totalExpectedAdults ?? 0, color: 'text-neutral-600' },
             { label: 'Children', value: stats?.totalExpectedChildren ?? 0, color: 'text-indigo-600' },
           ].map(({ label, value, color }) => (
-            <div key={label} className="bg-white rounded-2xl border border-neutral-200 p-4">
-              <div className={`text-2xl font-black ${color}`}>{value}</div>
-              <div className="text-xs text-neutral-500 mt-0.5">{label}</div>
+            <div key={label} className="bg-white rounded-2xl border border-neutral-150 p-5 shadow-sm">
+              <div className={`text-3xl font-black tabular-nums ${color}`}>{value}</div>
+              <div className="text-xs text-neutral-500 mt-1 font-medium">{label}</div>
             </div>
           ))}
         </div>
         
-        <div className="bg-white rounded-2xl border border-neutral-200">
+        <div className="bg-white rounded-2xl border border-neutral-150 shadow-sm overflow-hidden">
           {/* Progress bar */}
           {invites.length > 0 && (() => {
             const pct = Math.round(((stats?.checkedIn ?? invites.filter(i => i.checkedIn).length) / invites.length) * 100);
             return (
-              <div className="px-6 pt-4 pb-2">
+              <div className="px-8 pt-5 pb-3">
                 <div className="flex items-center justify-between mb-1">
                   <span className="text-xs font-semibold text-neutral-500">Check-in progress</span>
                   <span className="text-xs font-bold text-emerald-600">{pct}%</span>
@@ -1656,14 +1671,14 @@ export default function EnterpriseCheckin() {
               </div>
             );
           })()}
-          <div className="px-6 py-4 border-b border-neutral-100 flex items-center gap-3 flex-wrap">
-            <h2 className="text-base font-bold text-neutral-900 flex-1">Guest List</h2>
+          <div className="px-8 py-5 border-b border-neutral-100 flex items-center gap-4 flex-wrap">
+            <h2 className="text-lg font-bold text-neutral-900 flex-1">Guest List</h2>
             <input
               type="text"
-              placeholder="Search…"
+              placeholder="Search guests…"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="border border-neutral-200 rounded-xl px-4 py-2 text-sm focus:outline-none focus:border-neutral-400 w-48"
+              className="border border-neutral-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-neutral-400 w-56"
             />
           </div>
           
@@ -1694,12 +1709,12 @@ export default function EnterpriseCheckin() {
                 return (
                   <div
                     key={invite._id}
-                    className={`flex items-center gap-4 px-6 py-4 hover:bg-neutral-50 transition-colors ${
-                      invite.checkedIn ? 'bg-emerald-50/50 hover:bg-emerald-50' : ''
+                    className={`flex items-center gap-5 px-8 py-5 hover:bg-neutral-50 transition-colors ${
+                      invite.checkedIn ? 'bg-emerald-50/40 hover:bg-emerald-50' : ''
                     }`}
                   >
                     <div
-                      className={`w-10 h-10 rounded-full flex-shrink-0 flex items-center justify-center text-sm font-bold ${
+                      className={`w-11 h-11 rounded-xl flex-shrink-0 flex items-center justify-center text-sm font-bold ${
                         invite.checkedIn ? 'bg-emerald-100 text-emerald-700' : 'bg-neutral-100 text-neutral-500'
                       }`}
                     >
@@ -1708,9 +1723,9 @@ export default function EnterpriseCheckin() {
                     
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <p className="text-sm font-semibold text-neutral-900">{invite.guestName}</p>
+                        <p className="text-base font-semibold text-neutral-900">{invite.guestName}</p>
                         {invite.notes && (
-                          <span title={invite.notes} className="text-base cursor-help" aria-label="Has notes">📝</span>
+                          <span title={invite.notes} className="ml-1 inline-flex items-center justify-center w-4 h-4 rounded bg-neutral-200 text-neutral-500 text-xs font-bold cursor-help" aria-label="Has notes">N</span>
                         )}
                       </div>
                       <div className="flex items-center gap-3 mt-0.5 text-xs text-neutral-400 flex-wrap">
@@ -1781,7 +1796,7 @@ export default function EnterpriseCheckin() {
         </div>
       </main>
 
-      <footer className="max-w-5xl mx-auto px-6 py-5 flex items-center justify-center">
+      <footer className="max-w-7xl mx-auto px-6 lg:px-10 py-6 flex items-center justify-center">
         <p className="text-xs text-neutral-400 font-medium tracking-wide">
           Powered by <span className="font-black text-neutral-500">Planit</span>
         </p>
