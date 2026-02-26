@@ -1007,6 +1007,7 @@ const ARTICLES = [
       }
     ]
   },
+
 ];
 
 const CATEGORIES = [
@@ -1023,6 +1024,7 @@ const CATEGORIES = [
 ];
 
 
+const ARTICLES_EXTRA = [
   // ── MORE PLANNING TOOLS ────────────────────────────────────────────────
   {
     id: 'tool-people',
@@ -1347,6 +1349,8 @@ const CATEGORIES = [
       ]},
     ],
   },
+];
+ARTICLES.push(...ARTICLES_EXTRA);
 
 const POPULAR = ['gs-create', 'err-service-crash', 'err-loading', 'err-password', 'ent-checkin', 'data-retention'];
 
