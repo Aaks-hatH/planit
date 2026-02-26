@@ -62,22 +62,26 @@ function JoinGate({ eventId, onJoined }) {
   const [knownParticipants, setKnownParticipants] = useState([]);
   const [loading, setLoading]                     = useState(true);
   const [joining, setJoining]                     = useState(false);
-  const [username, setUsername]                   = useState('');
-  const [showDropdown, setShowDropdown]           = useState(false);
-  const [password, setPassword]                   = useState('');
-  const [accountPassword, setAccountPassword]     = useState('');
-  const [needsAccountPassword, setNeedsAccountPassword] = useState(false);
-  const [selectedHasPassword, setSelectedHasPassword]   = useState(false);
-  const [error, setError]                         = useState('');
-  const justSelectedRef                           = useRef(false);
+
+  // step: 'name' | 'account-password' | 'event-password'
+  // Having a step machine means the form never collapses mid-flow.
+  const [step, setStep]                 = useState('name');
+  const [username, setUsername]         = useState('');
+  const [showDropdown, setShowDropdown] = useState(false);
+  const [password, setPassword]         = useState('');       // event password
+  const [accountPassword, setAccountPassword] = useState(''); // account password
+  const [error, setError]               = useState('');
+  const justSelectedRef                 = useRef(false);
+  const accountPwdRef                   = useRef(null);
+
   // Full-event state
-  const [isFull, setIsFull]                       = useState(false);
-  const [fullMode, setFullMode]                   = useState('waitlist'); // 'waitlist' | 'signin'
+  const [isFull, setIsFull]         = useState(false);
+  const [fullMode, setFullMode]     = useState('waitlist');
   // Waitlist
-  const [waitlistName, setWaitlistName]           = useState('');
-  const [waitlistEmail, setWaitlistEmail]         = useState('');
-  const [waitlistDone, setWaitlistDone]           = useState(false);
-  const [waitlistJoining, setWaitlistJoining]     = useState(false);
+  const [waitlistName, setWaitlistName]   = useState('');
+  const [waitlistEmail, setWaitlistEmail] = useState('');
+  const [waitlistDone, setWaitlistDone]   = useState(false);
+  const [waitlistJoining, setWaitlistJoining] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -93,55 +97,99 @@ function JoinGate({ eventId, onJoined }) {
       .finally(() => setLoading(false));
   }, [eventId]);
 
+  // Focus account password field when we switch to that step
+  useEffect(() => {
+    if (step === 'account-password') {
+      setTimeout(() => accountPwdRef.current?.focus(), 50);
+    }
+  }, [step]);
+
   const filteredParticipants = knownParticipants.filter(p =>
     username.trim() === '' || p.username.toLowerCase().includes(username.toLowerCase())
   );
 
+  const lookupParticipant = (name) =>
+    knownParticipants.find(p => p.username.toLowerCase() === name.trim().toLowerCase());
+
   const handleSelectName = (p) => {
     setUsername(p.username);
-    setSelectedHasPassword(p.hasPassword);
-    setNeedsAccountPassword(p.hasPassword);
     setShowDropdown(false);
     justSelectedRef.current = true;
     setError('');
+    // If they have an account password, jump straight to that step
+    if (p.hasPassword) {
+      setStep('account-password');
+    }
   };
 
   const handleUsernameChange = (e) => {
-    const val = e.target.value;
-    setUsername(val);
-    const existing = knownParticipants.find(p => p.username.toLowerCase() === val.trim().toLowerCase());
-    setNeedsAccountPassword(existing?.hasPassword || false);
-    setSelectedHasPassword(existing?.hasPassword || false);
+    setUsername(e.target.value);
+    setStep('name');
     setAccountPassword('');
     setShowDropdown(true);
     setError('');
   };
 
-  const handleJoin = async (e) => {
+  const handleNameContinue = (e) => {
     e.preventDefault();
-    if (!username.trim()) { setError('Please enter your name'); return; }
-    // If event is full, block new names from trying to join
+    const name = username.trim();
+    if (!name) { setError('Please enter your name'); return; }
     if (isFull) {
-      const isKnown = knownParticipants.find(p => p.username.toLowerCase() === username.trim().toLowerCase());
-      if (!isKnown) { setError('This event is full. Only previously joined participants can sign in.'); return; }
+      const known = lookupParticipant(name);
+      if (!known) { setError('This event is full. Only participants who have already joined can sign in.'); return; }
+      if (known.hasPassword) { setStep('account-password'); return; }
     }
+    const existing = lookupParticipant(name);
+    if (existing?.hasPassword) {
+      setStep('account-password');
+    } else if (publicInfo.isPasswordProtected) {
+      setStep('event-password');
+    } else {
+      submitJoin(name, '', '');
+    }
+  };
+
+  const handleAccountPasswordContinue = (e) => {
+    e.preventDefault();
+    if (!accountPassword) { setError('Please enter your account password'); return; }
+    if (publicInfo.isPasswordProtected) {
+      setStep('event-password');
+    } else {
+      submitJoin(username.trim(), accountPassword, '');
+    }
+  };
+
+  const handleEventPasswordContinue = (e) => {
+    e.preventDefault();
+    if (!password) { setError('Please enter the event password'); return; }
+    submitJoin(username.trim(), accountPassword, password);
+  };
+
+  const submitJoin = async (name, acctPwd, evtPwd) => {
     setJoining(true); setError('');
     try {
-      const payload = { username: username.trim(), accountPassword: accountPassword || undefined };
-      if (publicInfo.isPasswordProtected) payload.password = password;
-      const res = publicInfo.isPasswordProtected
+      const payload = { username: name, accountPassword: acctPwd || undefined };
+      if (evtPwd) payload.password = evtPwd;
+      const res = publicInfo.isPasswordProtected && evtPwd
         ? await eventAPI.verifyPassword(eventId, payload)
         : await eventAPI.join(eventId, payload);
       localStorage.setItem('eventToken', res.data.token);
-      localStorage.setItem('username', username.trim());
+      localStorage.setItem('username', name);
       onJoined();
     } catch (err) {
       const data = err.response?.data;
       if (data?.requiresAccountPassword) {
-        setNeedsAccountPassword(true);
-        setError('This name has an account — enter your account password below.');
+        // Server says this name needs a password — go to that step
+        setStep('account-password');
+        setError('This name is protected. Enter your account password to continue.');
+      } else if (data?.error?.toLowerCase().includes('password')) {
+        setError(data.error);
+        // Wrong event password — stay on that step
+        setStep('event-password');
+        setPassword('');
       } else {
-        setError(data?.error || 'Failed to join. Please try again.');
+        setError(data?.error || 'Unable to join. Please try again.');
+        setStep('name');
       }
     } finally { setJoining(false); }
   };
@@ -175,10 +223,9 @@ function JoinGate({ eventId, onJoined }) {
     ? Math.min(100, Math.round((publicInfo.participantCount / publicInfo.maxParticipants) * 100))
     : 0;
 
-  // The shared join form (used in both normal flow and signin mode when full)
-  const JoinForm = () => (
-    <form onSubmit={handleJoin} className="space-y-4">
-      {/* Name field */}
+  /* ── Step: enter name ── */
+  const NameStep = () => (
+    <form onSubmit={handleNameContinue} className="space-y-4">
       <div className="relative">
         <label className="block text-[11px] font-bold text-neutral-500 uppercase tracking-widest mb-1.5">
           Your Name
@@ -217,38 +264,10 @@ function JoinGate({ eventId, onJoined }) {
         )}
       </div>
 
-      {/* Account password */}
-      {(needsAccountPassword || selectedHasPassword || (username.trim() && !isFull && !knownParticipants.find(p => p.username.toLowerCase() === username.trim().toLowerCase()))) && (
-        <div>
-          <label className="block text-[11px] font-bold text-neutral-500 uppercase tracking-widest mb-1.5">
-            Account Password{' '}
-            {!(needsAccountPassword || selectedHasPassword) && (
-              <span className="normal-case font-normal text-neutral-400">(optional)</span>
-            )}
-          </label>
-          <input type="password" className="input rounded-xl"
-            placeholder={(needsAccountPassword || selectedHasPassword) ? 'Your account password' : 'Protect your username (min 4 chars)'}
-            value={accountPassword} onChange={e => setAccountPassword(e.target.value)} minLength={4} />
-        </div>
-      )}
-
-      {/* Block new names when event is full (sign-in mode) */}
-      {isFull && username.trim() && !knownParticipants.find(p => p.username.toLowerCase() === username.trim().toLowerCase()) && (
+      {isFull && username.trim() && !lookupParticipant(username) && (
         <div className="flex items-start gap-2.5 p-3 bg-amber-50 border border-amber-200 rounded-xl">
           <XCircle className="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5" />
           <p className="text-sm text-amber-700">This event is full. Only participants who have already joined can sign in.</p>
-        </div>
-      )}
-
-      {/* Event password */}
-      {publicInfo.isPasswordProtected && (
-        <div>
-          <label className="block text-[11px] font-bold text-neutral-500 uppercase tracking-widest mb-1.5">
-            Event Password
-          </label>
-          <input type="password" required className="input rounded-xl"
-            placeholder="Enter the event password"
-            value={password} onChange={e => setPassword(e.target.value)} />
         </div>
       )}
 
@@ -259,18 +278,119 @@ function JoinGate({ eventId, onJoined }) {
         </div>
       )}
 
-      <button type="submit" disabled={joining || (isFull && username.trim() && !knownParticipants.find(p => p.username.toLowerCase() === username.trim().toLowerCase()))}
+      <button type="submit"
+        disabled={joining || !username.trim() || (isFull && !lookupParticipant(username))}
         className="w-full h-12 rounded-xl font-bold text-sm text-white flex items-center justify-center gap-2 transition-all hover:opacity-90 disabled:opacity-50"
-        style={{ background: isFull ? 'linear-gradient(135deg,#4338ca,#5b21b6)' : 'linear-gradient(135deg,#111827,#1f2937)' }}>
+        style={{ background: 'linear-gradient(135deg,#111827,#1f2937)' }}>
         {joining
-          ? <><span className="spinner w-4 h-4 border-2 border-white/20 border-t-white" />Signing in…</>
-          : isFull
-          ? <><LogIn className="w-4 h-4" />Sign In<ChevronRight className="w-4 h-4 ml-auto" /></>
-          : <><UserPlus className="w-4 h-4" />Join Event<ChevronRight className="w-4 h-4 ml-auto" /></>
+          ? <><span className="spinner w-4 h-4 border-2 border-white/20 border-t-white" />Checking…</>
+          : <><UserPlus className="w-4 h-4" />Continue<ChevronRight className="w-4 h-4 ml-auto" /></>
         }
       </button>
     </form>
   );
+
+  /* ── Step: account password ── */
+  const AccountPasswordStep = () => (
+    <form onSubmit={handleAccountPasswordContinue} className="space-y-4">
+      <div className="flex items-center gap-3 p-3 bg-neutral-50 border border-neutral-200 rounded-xl">
+        <div className="w-8 h-8 rounded-full bg-neutral-200 flex items-center justify-center text-xs font-bold text-neutral-600 flex-shrink-0">
+          {username.charAt(0).toUpperCase()}
+        </div>
+        <div className="min-w-0">
+          <p className="text-sm font-bold text-neutral-900 truncate">{username}</p>
+          <p className="text-[11px] text-neutral-500">Protected account</p>
+        </div>
+        <button type="button" onClick={() => { setStep('name'); setAccountPassword(''); setError(''); }}
+          className="ml-auto text-xs text-neutral-400 hover:text-neutral-700 transition-colors flex-shrink-0">
+          Change
+        </button>
+      </div>
+
+      <div>
+        <label className="block text-[11px] font-bold text-neutral-500 uppercase tracking-widest mb-1.5">
+          Account Password
+        </label>
+        <input
+          ref={accountPwdRef}
+          type="password" required className="input rounded-xl"
+          placeholder="Enter your account password"
+          value={accountPassword}
+          onChange={e => { setAccountPassword(e.target.value); setError(''); }}
+          autoComplete="current-password"
+        />
+      </div>
+
+      {error && (
+        <div className="flex items-start gap-2.5 p-3 bg-red-50 border border-red-200 rounded-xl">
+          <XCircle className="w-4 h-4 text-red-500 flex-shrink-0 mt-0.5" />
+          <p className="text-sm text-red-700">{error}</p>
+        </div>
+      )}
+
+      <button type="submit" disabled={joining || !accountPassword}
+        className="w-full h-12 rounded-xl font-bold text-sm text-white flex items-center justify-center gap-2 transition-all hover:opacity-90 disabled:opacity-50"
+        style={{ background: 'linear-gradient(135deg,#111827,#1f2937)' }}>
+        {joining
+          ? <><span className="spinner w-4 h-4 border-2 border-white/20 border-t-white" />Verifying…</>
+          : <><LogIn className="w-4 h-4" />{publicInfo.isPasswordProtected ? 'Continue' : 'Join Event'}<ChevronRight className="w-4 h-4 ml-auto" /></>
+        }
+      </button>
+    </form>
+  );
+
+  /* ── Step: event password ── */
+  const EventPasswordStep = () => (
+    <form onSubmit={handleEventPasswordContinue} className="space-y-4">
+      <div className="flex items-center gap-3 p-3 bg-neutral-50 border border-neutral-200 rounded-xl">
+        <div className="w-8 h-8 rounded-full bg-neutral-200 flex items-center justify-center text-xs font-bold text-neutral-600 flex-shrink-0">
+          {username.charAt(0).toUpperCase()}
+        </div>
+        <div className="min-w-0">
+          <p className="text-sm font-bold text-neutral-900 truncate">{username}</p>
+        </div>
+        <button type="button" onClick={() => { setStep('name'); setPassword(''); setAccountPassword(''); setError(''); }}
+          className="ml-auto text-xs text-neutral-400 hover:text-neutral-700 transition-colors flex-shrink-0">
+          Change
+        </button>
+      </div>
+
+      <div>
+        <label className="block text-[11px] font-bold text-neutral-500 uppercase tracking-widest mb-1.5">
+          Event Password
+        </label>
+        <input type="password" required className="input rounded-xl" autoFocus
+          placeholder="Enter the event password"
+          value={password}
+          onChange={e => { setPassword(e.target.value); setError(''); }}
+          autoComplete="off"
+        />
+      </div>
+
+      {error && (
+        <div className="flex items-start gap-2.5 p-3 bg-red-50 border border-red-200 rounded-xl">
+          <XCircle className="w-4 h-4 text-red-500 flex-shrink-0 mt-0.5" />
+          <p className="text-sm text-red-700">{error}</p>
+        </div>
+      )}
+
+      <button type="submit" disabled={joining || !password}
+        className="w-full h-12 rounded-xl font-bold text-sm text-white flex items-center justify-center gap-2 transition-all hover:opacity-90 disabled:opacity-50"
+        style={{ background: 'linear-gradient(135deg,#111827,#1f2937)' }}>
+        {joining
+          ? <><span className="spinner w-4 h-4 border-2 border-white/20 border-t-white" />Joining…</>
+          : <><LogIn className="w-4 h-4" />Join Event<ChevronRight className="w-4 h-4 ml-auto" /></>
+        }
+      </button>
+    </form>
+  );
+
+  /* ── Shared join form wrapper (used in "already joined" signin mode when full) ── */
+  const JoinForm = () => {
+    if (step === 'account-password') return <AccountPasswordStep />;
+    if (step === 'event-password')   return <EventPasswordStep />;
+    return <NameStep />;
+  };
 
   return (
     <div className="min-h-screen flex flex-col" style={{ background: 'linear-gradient(150deg,#06060c 0%,#0d0d1a 45%,#060610 100%)' }}>
@@ -399,7 +519,7 @@ function JoinGate({ eventId, onJoined }) {
                   <p className="text-sm text-neutral-500 leading-relaxed">
                     The organizer will reach out if a spot opens up.
                   </p>
-                  <button onClick={() => { setWaitlistDone(false); setFullMode('signin'); }}
+                  <button onClick={() => { setWaitlistDone(false); setFullMode('signin'); setStep('name'); }}
                     className="mt-5 text-sm font-semibold text-indigo-600 hover:text-indigo-800 transition-colors underline underline-offset-2">
                     Already a member? Sign in instead
                   </button>
@@ -408,13 +528,13 @@ function JoinGate({ eventId, onJoined }) {
                 /* ── Full event: tab toggle ── */
                 <div className="p-5">
                   <div className="flex rounded-xl p-1 mb-5" style={{ background: '#f2f2f5' }}>
-                    <button onClick={() => setFullMode('waitlist')}
+                    <button onClick={() => { setFullMode('waitlist'); setStep('name'); setError(''); }}
                       className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-sm font-bold transition-all ${
                         fullMode === 'waitlist' ? 'bg-white shadow-sm text-neutral-900' : 'text-neutral-500 hover:text-neutral-700'
                       }`}>
                       <ClipboardList className="w-3.5 h-3.5" />Waitlist
                     </button>
-                    <button onClick={() => { setFullMode('signin'); setError(''); }}
+                    <button onClick={() => { setFullMode('signin'); setStep('name'); setError(''); }}
                       className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-sm font-bold transition-all ${
                         fullMode === 'signin' ? 'bg-white shadow-sm text-neutral-900' : 'text-neutral-500 hover:text-neutral-700'
                       }`}>
@@ -438,7 +558,7 @@ function JoinGate({ eventId, onJoined }) {
                         <div>
                           <label className="block text-[11px] font-bold text-neutral-500 uppercase tracking-widest mb-1.5">Your Name</label>
                           <input type="text" className="input rounded-xl" placeholder="Enter your name"
-                            value={waitlistName} onChange={e => setWaitlistName(e.target.value)} />
+                            value={waitlistName} onChange={e => setWaitlistName(e.target.value)} autoFocus />
                         </div>
                         <div>
                           <label className="block text-[11px] font-bold text-neutral-500 uppercase tracking-widest mb-1.5">
@@ -460,7 +580,7 @@ function JoinGate({ eventId, onJoined }) {
                   ) : (
                     <div>
                       <p className="text-sm text-neutral-500 mb-4 leading-relaxed">
-                        If you've joined this event before, sign in with your name below.
+                        Sign in with the name you used when you joined.
                       </p>
                       <JoinForm />
                     </div>
@@ -471,8 +591,16 @@ function JoinGate({ eventId, onJoined }) {
               /* ── Normal join flow ── */
               <div className="p-6 sm:p-8">
                 <div className="mb-5">
-                  <h2 className="text-[18px] font-bold text-neutral-900 leading-snug">Join this event</h2>
-                  <p className="text-sm text-neutral-400 mt-0.5">Enter your name to get access</p>
+                  <h2 className="text-[18px] font-bold text-neutral-900 leading-snug">
+                    {step === 'account-password' ? 'Enter your password' :
+                     step === 'event-password'   ? 'Event password required' :
+                     'Join this event'}
+                  </h2>
+                  <p className="text-sm text-neutral-400 mt-0.5">
+                    {step === 'account-password' ? 'Your username is protected with a password' :
+                     step === 'event-password'   ? 'This event requires a password to join' :
+                     'Enter your name to get access'}
+                  </p>
                 </div>
                 <JoinForm />
               </div>
