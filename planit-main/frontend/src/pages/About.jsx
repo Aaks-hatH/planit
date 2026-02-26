@@ -109,6 +109,12 @@ export default function About() {
 
   const navGroups = [
     {
+      label: 'Infrastructure',
+      items: [
+        { href: '#infrastructure',   label: 'Infrastructure transparency'    },
+      ]
+    },
+    {
       label: 'Design',
       items: [
         { href: '#why-dark',       label: 'Why the dark background'       },
@@ -168,6 +174,12 @@ export default function About() {
       label: 'Details',
       items: [
         { href: '#little-things',  label: 'The little things'              },
+      ]
+    },
+    {
+      label: 'Creator',
+      items: [
+        { href: '#creator',        label: 'About the creator'              },
       ]
     },
   ];
@@ -260,6 +272,64 @@ export default function About() {
               <Badge color="emerald">No account required</Badge>
             </div>
           </motion.div>
+
+          {/* ─── INFRASTRUCTURE TRANSPARENCY ──────────────────── */}
+          <Section id="infrastructure">
+            <SectionTitle
+              icon={Server}
+              title="Infrastructure transparency"
+              subtitle="PlanIt is not a single server behind a domain. It is a purpose-built distributed system with multiple layers of redundancy, automated scaling, and continuous self-monitoring. This section explains exactly what is running and how it works."
+            />
+            <p className="text-neutral-500 leading-relaxed mb-6">
+              Most apps at this scale are a single Node.js process and a database. PlanIt is deliberately over-engineered — not to show off, but because the architecture solves real problems: no single point of failure, no cold-start latency surprises on event day, no manual intervention needed when a server crashes at 3 AM. Everything is automated.
+            </p>
+
+            <SubHeading>The fleet: router + multiple backends</SubHeading>
+            <p className="text-neutral-500 leading-relaxed mb-4">
+              The frontend does not talk directly to a backend server. Every API request goes through a dedicated load-balancing router that sits in front of a fleet of identical backend instances. The router knows about every backend in the fleet, tracks their health in real time, and decides which backend should handle each incoming request.
+            </p>
+            <p className="text-neutral-500 leading-relaxed mb-4">
+              The fleet is auto-scaling. The router monitors request rate per backend on a rolling 30-second window. When load exceeds a configurable threshold, the router activates additional backends from a standby pool. When load drops, it scales back down. The scaling logic uses a Holt-Winters exponential smoothing model to predict demand rather than reacting to it — it smooths out spikes and avoids thrashing the fleet up and down on short bursts.
+            </p>
+            <div className="border border-neutral-200 rounded-2xl overflow-hidden my-6">
+              <TechDetail label="Routing algorithm" value="Least-connections with health weighting. The router favours backends with fewer active connections and deprioritises backends that are in a cold-start window (first 90 seconds after restart), have high memory usage, or have a degraded database connection." />
+              <TechDetail label="Sticky routing" value="Requests to the same event room are routed to the same backend instance using consistent hashing on the event ID. This ensures that all WebSocket connections and HTTP requests for a live event land on the same server, keeping the real-time room state coherent." />
+              <TechDetail label="Circuit breakers" value="Each backend has an independent circuit breaker. After a configurable number of consecutive errors, the router trips the circuit and stops sending traffic to that backend while continuing to probe it for recovery. When the backend starts responding cleanly again, the circuit closes automatically." />
+              <TechDetail label="Backend codenames" value="Each backend instance is assigned a codename (examples: Maverick, Slider) via an environment variable. These appear in admin logs and monitoring alerts for quick identification without exposing infrastructure hostnames publicly." />
+              <TechDetail label="Mesh authentication" value="All internal communication between the router, backends, and watchdog is authenticated using HMAC-SHA256 signed tokens with a 30-second TTL and replay attack protection. No internal endpoint accepts unauthenticated requests from another service." />
+              <TechDetail label="Config propagation" value="Shared environment variables (Redis credentials, feature flags, service URLs) are set once on the router and automatically propagated to all backends at startup via the /mesh/config endpoint. No manual synchronisation across instances required." />
+            </div>
+
+            <SubHeading>The watchdog: independent monitoring</SubHeading>
+            <p className="text-neutral-500 leading-relaxed mb-4">
+              The watchdog is a separate Node.js service with no user-facing function. Its entire job is to ping every monitored target on a regular interval, detect failures, create incidents, and send alerts. It is deployed on a completely separate instance from everything it monitors — if the main backend fleet crashes, the watchdog continues running and reporting.
+            </p>
+            <div className="border border-neutral-200 rounded-2xl overflow-hidden my-6">
+              <TechDetail label="Ping interval" value="Every 60 seconds per target, staggered 2 seconds apart to avoid simultaneous load. Every result — latency in milliseconds, up or down — is written to a MongoDB UptimeCheck collection that drives the 15-day history bars on the status page." />
+              <TechDetail label="Failure threshold" value="Three consecutive failures trips the circuit per target, creates an incident in the database, and fires an urgent push notification. Recovery is detected automatically and resolves the incident with total downtime duration." />
+              <TechDetail label="Persistent reminders" value="While a target is down, reminder alerts fire every 10 consecutive failures so a long outage is never silently missed." />
+              <TechDetail label="External check" value="UptimeRobot monitors the watchdog itself from outside the entire infrastructure. If the watchdog goes down, UptimeRobot catches it — the system has no blind spot for its own monitoring layer." />
+            </div>
+
+            <SubHeading>The status page: automated incident management</SubHeading>
+            <p className="text-neutral-500 leading-relaxed mb-4">
+              The public status page at <code className="text-xs bg-neutral-100 px-1.5 py-0.5 rounded font-mono">/status</code> reflects real-time platform health. Incidents are created automatically when 3 or more user reports target the same service within 10 minutes, or when the watchdog detects a failure. The status page updates immediately — no admin action required for the platform to self-report a problem.
+            </p>
+
+            <SubHeading>Response signing: API integrity</SubHeading>
+            <p className="text-neutral-500 leading-relaxed mb-4">
+              Every API response carries an HMAC-SHA256 cryptographic signature derived from the response body, the request path, and a key derived from the server's licence key. This makes it cryptographically infeasible for a proxy, man-in-the-middle, or tampered replica to forge a valid API response. This matters specifically for the check-in system, where forged responses could admit unauthorised people.
+            </p>
+
+            <SubHeading>Fleet log console</SubHeading>
+            <p className="text-neutral-500 leading-relaxed mb-4">
+              The admin panel's Logs tab pulls logs from every service in the fleet simultaneously — router, every backend, and the watchdog — sorted by timestamp into a single unified view. You can filter by source, level, or search term, and go live on the backend's log stream in real time. No SSH required. No jumping between Render dashboards.
+            </p>
+
+            <Callout accent>
+              All of this infrastructure — the router, the fleet, the watchdog, the mesh auth, the status system, the admin log console — was designed, built, and is maintained by one person. Every system described on this page exists because it solves a specific problem that would otherwise require manual intervention on event day.
+            </Callout>
+          </Section>
 
           {/* ─── WHY DARK ─────────────────────────────────────────── */}
           <Section id="why-dark">
@@ -1349,6 +1419,152 @@ export default function About() {
               All rights to PlanIt — including the source code, design, architecture, and visual assets — are the exclusive property of Aakshat Hariharan. For licensing inquiries or permission requests, reach out through the support page.
             </Callout>
           </Section>
+
+          {/* ─── ABOUT THE CREATOR ───────────────────────────────── */}
+          <section id="creator" className="py-16 border-b border-neutral-200">
+            <div className="max-w-3xl mx-auto px-6">
+
+              {/* Header */}
+              <div className="mb-12">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-10 h-10 rounded-xl bg-neutral-900 border border-neutral-800 flex items-center justify-center flex-shrink-0">
+                    <Heart className="w-5 h-5 text-white" />
+                  </div>
+                  <h2 className="text-2xl font-black text-neutral-900">About the creator</h2>
+                </div>
+              </div>
+
+              {/* Card */}
+              <div className="relative rounded-3xl overflow-hidden border border-neutral-200 bg-neutral-900">
+
+                {/* Dark gradient top band */}
+                <div className="h-32 w-full bg-gradient-to-br from-neutral-800 via-neutral-900 to-black relative overflow-hidden">
+                  {/* Subtle grid pattern */}
+                  <div className="absolute inset-0 opacity-10" style={{
+                    backgroundImage: 'repeating-linear-gradient(0deg, transparent, transparent 24px, rgba(255,255,255,0.15) 24px, rgba(255,255,255,0.15) 25px), repeating-linear-gradient(90deg, transparent, transparent 24px, rgba(255,255,255,0.15) 24px, rgba(255,255,255,0.15) 25px)'
+                  }} />
+                  <div className="absolute bottom-0 left-8 translate-y-1/2">
+                    <div className="w-20 h-20 rounded-2xl border-4 border-neutral-900 bg-gradient-to-br from-neutral-700 to-neutral-900 flex items-center justify-center shadow-2xl">
+                      <span className="text-2xl font-black text-white select-none">AH</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Content */}
+                <div className="px-8 pt-14 pb-10">
+
+                  {/* Name + badges */}
+                  <div className="flex flex-wrap items-start justify-between gap-4 mb-6">
+                    <div>
+                      <h3 className="text-2xl font-black text-white mb-1">Aakshat Hariharan</h3>
+                      <p className="text-neutral-400 text-sm font-medium">New Jersey, United States</p>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {[
+                        { label: 'Self-Taught Dev', color: 'bg-blue-950 text-blue-300 border-blue-800' },
+                        { label: 'Student',          color: 'bg-emerald-950 text-emerald-300 border-emerald-800' },
+                        { label: 'Cybersecurity',    color: 'bg-amber-950 text-amber-300 border-amber-800' },
+                        { label: 'Pentesting',       color: 'bg-red-950 text-red-300 border-red-800' },
+                      ].map(b => (
+                        <span key={b.label} className={`px-2.5 py-1 rounded-full text-xs font-bold border ${b.color}`}>{b.label}</span>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Bio */}
+                  <div className="space-y-4 mb-8">
+                    <p className="text-neutral-300 leading-relaxed text-sm">
+                      PlanIt was built by one person, self-taught, working from New Jersey. No computer science degree. No bootcamp. Just a problem worth solving and enough stubbornness to see it through.
+                    </p>
+                    <p className="text-neutral-300 leading-relaxed text-sm">
+                      The problem was real: organising an event across group chats, email threads, shared spreadsheets, and scattered note apps is genuinely exhausting. Every tool either did too little or required too much setup. PlanIt started as a solution to that specific frustration — a single workspace where the entire event lived, with no account required to get started.
+                    </p>
+                    <p className="text-neutral-300 leading-relaxed text-sm">
+                      What it became was a full-stack distributed system: a multi-backend fleet with auto-scaling, a dedicated load-balancing router, a separate watchdog monitoring service, mesh authentication between services, a real-time check-in platform with multi-layer anti-fraud middleware, and a public status page that updates itself. None of that was in the original plan. It grew piece by piece because each problem had an obvious next solution.
+                    </p>
+                    <p className="text-neutral-300 leading-relaxed text-sm">
+                      Beyond web development, the work extends into cybersecurity — pentesting, security analysis, and vulnerability research. That background informs how PlanIt is built: rate limiting is layered, passwords are hashed correctly, API responses are cryptographically signed, internal service communication is HMAC-authenticated with replay protection. Security is not an afterthought.
+                    </p>
+                    <p className="text-neutral-300 leading-relaxed text-sm">
+                      The goal is straightforward: keep building things that are actually useful, keep learning from doing rather than watching, and eventually work on problems that matter at scale. PlanIt is part of that progression — a project that grew well beyond its original scope because the problems it ran into were worth solving properly.
+                    </p>
+                  </div>
+
+                  {/* Divider */}
+                  <div className="border-t border-neutral-800 mb-8" />
+
+                  {/* Tech stack */}
+                  <div className="mb-8">
+                    <p className="text-xs font-bold text-neutral-500 uppercase tracking-widest mb-4">Technologies</p>
+                    <div className="flex flex-wrap gap-2">
+                      {[
+                        'React', 'Vite', 'Tailwind CSS', 'Node.js', 'Express',
+                        'Socket.IO', 'MongoDB', 'JWT', 'Redis', 'Cloudinary',
+                        'JavaScript', 'HTML / CSS', 'Linux', 'Git',
+                        'Pentesting', 'Network security', 'Vulnerability analysis',
+                      ].map(t => (
+                        <span key={t} className="px-2.5 py-1 bg-neutral-800 border border-neutral-700 text-neutral-300 text-xs font-medium rounded-lg">{t}</span>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Goals */}
+                  <div className="mb-8">
+                    <p className="text-xs font-bold text-neutral-500 uppercase tracking-widest mb-4">What's next</p>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                      {[
+                        { title: 'Build at scale',    desc: 'Systems that handle real traffic and real failure modes, not just demos.' },
+                        { title: 'Security work',     desc: 'Deeper into pentesting, CTFs, and eventually professional security research.' },
+                        { title: 'Ship more',         desc: 'More projects. More problems worth solving. Less waiting until it\'s perfect.' },
+                      ].map(g => (
+                        <div key={g.title} className="p-4 bg-neutral-800 border border-neutral-700 rounded-2xl">
+                          <p className="text-sm font-bold text-white mb-1">{g.title}</p>
+                          <p className="text-xs text-neutral-400 leading-relaxed">{g.desc}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Links */}
+                  <div className="border-t border-neutral-800 pt-6">
+                    <p className="text-xs font-bold text-neutral-500 uppercase tracking-widest mb-4">Find me</p>
+                    <div className="flex flex-wrap gap-3">
+                      <a
+                        href="https://github.com/Aaks-hatH"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-2.5 px-4 py-2.5 bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 hover:border-neutral-600 rounded-xl transition-all text-sm text-white font-medium"
+                      >
+                        <svg className="w-4 h-4 flex-shrink-0" viewBox="0 0 24 24" fill="currentColor">
+                          <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z" />
+                        </svg>
+                        GitHub
+                      </a>
+                      <a
+                        href="mailto:hariharanaakshat@gmail.com"
+                        className="flex items-center gap-2.5 px-4 py-2.5 bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 hover:border-neutral-600 rounded-xl transition-all text-sm text-white font-medium"
+                      >
+                        <svg className="w-4 h-4 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <rect x="2" y="4" width="20" height="16" rx="2" /><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
+                        </svg>
+                        Email
+                      </a>
+                      <a
+                        href="https://aaks-hath.pages.dev"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-2.5 px-4 py-2.5 bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 hover:border-neutral-600 rounded-xl transition-all text-sm text-white font-medium"
+                      >
+                        <Globe className="w-4 h-4 flex-shrink-0" />
+                        Personal site
+                      </a>
+                    </div>
+                  </div>
+
+                </div>
+              </div>
+            </div>
+          </section>
 
           {/* Footer */}
           <div className="pt-12 pb-8 flex items-center justify-between border-t border-neutral-200 mt-4">
