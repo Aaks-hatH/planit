@@ -71,10 +71,47 @@ const chatLimiter = rateLimit({
   message: { error: 'Too many messages, please slow down.' }
 });
 
+// ── Join endpoint limiter ─────────────────────────────────────────────────
+// Keyed on IP + eventId so a single attacker cannot bulk-register fake guests
+// across a single event even by rotating user agents.
+// 30 joins per IP per 10 minutes is generous for a real user but expensive to
+// abuse at scale.
+const joinLimiter = rateLimit({
+  windowMs: 10 * 60 * 1000,  // 10 minutes
+  max: 30,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req) => {
+    const ip = req.ip || req.socket?.remoteAddress || 'unknown';
+    const eventId = req.params.eventId || 'none';
+    return `join:${ip}:${eventId}`;
+  },
+  handler: (req, res) => {
+    res.status(429).json({
+      error: 'Too many join attempts from this network. Please try again later.',
+      retryAfter: res.getHeader('Retry-After'),
+    });
+  },
+});
+
+// ── Honeypot middleware ───────────────────────────────────────────────────
+// Expects the join body to NOT contain a field called `_confirm`.
+// Legitimate frontend never sends it; bots filling all fields often will.
+// Silent rejection — no indication to the bot that it was caught.
+function honeypotCheck(req, res, next) {
+  if (req.body && req.body._confirm !== undefined) {
+    // Return a plausible success so bots don't retry
+    return res.status(200).json({ message: 'Joined successfully', token: null, event: {} });
+  }
+  next();
+}
+
 module.exports = {
   apiLimiter,
   authLimiter,
   uploadLimiter,
   createEventLimiter,
-  chatLimiter
+  chatLimiter,
+  joinLimiter,
+  honeypotCheck,
 };
