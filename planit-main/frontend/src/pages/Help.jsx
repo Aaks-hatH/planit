@@ -10,7 +10,7 @@ import {
   UserCheck, Key, Link, Download, Upload, Trash2, Eye,
   TrendingUp, Ban, Phone, CheckSquare, List, Hash,
   LifeBuoy, Cpu, Globe, Filter, ChevronUp, ArrowRight,
-  LogOut, Copy, Navigation, Timer, PieChart
+  LogOut, Copy, Navigation, Timer, PieChart, ClipboardList
 } from 'lucide-react';
 
 /* ─── DATA ─────────────────────────────────────────────────────────────────── */
