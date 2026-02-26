@@ -8,6 +8,30 @@ const { meshAuth, meshGet } = require('./mesh');
 
 function ts() { return new Date().toISOString(); }
 
+// ─── Log ring-buffer ──────────────────────────────────────────────────────────
+// Captures every console.log/warn/error into an in-memory buffer (last 2000
+// entries) so the admin panel can fetch watchdog logs via /mesh/logs.
+const WATCHDOG_LOG_BUFFER = [];
+const WATCHDOG_LOG_MAX    = 2000;
+
+function pushWatchdogLog(level, args) {
+  const entry = {
+    ts:     new Date().toISOString(),
+    level,
+    msg:    args.map(a => (typeof a === 'object' ? JSON.stringify(a) : String(a))).join(' '),
+    source: 'watchdog',
+  };
+  WATCHDOG_LOG_BUFFER.push(entry);
+  if (WATCHDOG_LOG_BUFFER.length > WATCHDOG_LOG_MAX) WATCHDOG_LOG_BUFFER.shift();
+}
+
+const _wLog   = console.log.bind(console);
+const _wWarn  = console.warn.bind(console);
+const _wError = console.error.bind(console);
+console.log   = (...a) => { pushWatchdogLog('info',  a); _wLog(...a);   };
+console.warn  = (...a) => { pushWatchdogLog('warn',  a); _wWarn(...a);  };
+console.error = (...a) => { pushWatchdogLog('error', a); _wError(...a); };
+
 // ─── Config ───────────────────────────────────────────────────────────────────
 
 const BACKEND_URLS_RAW  = process.env.BACKEND_URLS  || process.env.MAIN_SERVER_URL || '';
@@ -16,29 +40,7 @@ const FRONTEND_URL      = process.env.FRONTEND_URL  || 'https://planitapp.onrend
 const MONGO_URI         = process.env.MONGO_URI;
 const NTFY_URL          = process.env.NTFY_URL;
 const NTFY_TOKEN        = process.env.NTFY_TOKEN    || '';
-// ─── UptimeCheck write rate-limiting ─────────────────────────────────────────
-// Each ping writes one UptimeCheck doc to MongoDB.  At the default 60s interval
-// that's 21 600 docs/service over the 15-day TTL (~2.3 MB/service at 107 bytes).
-// If PING_INTERVAL_MS is set very low (e.g. 5 s) the collection balloons 12×.
-//
-// Two guards:
-//  1. MIN_PING_MS  — hard floor so the interval can never drop below 15 s.
-//     Prevents accidental misconfiguration from flooding the DB.
-//  2. UPTIME_CHECK_SAMPLE_RATE  — only write 1 in N pings to MongoDB.
-//     Keeps the history useful while capping write volume.
-//     Example: interval=15s + rate=4 → writes every 60s (same as default).
-//     Set via UPTIME_CHECK_SAMPLE_RATE env var (default 1 = write every ping).
-const MIN_PING_MS = 15_000; // never ping faster than every 15 seconds
-const _rawPingMs  = parseInt(process.env.PING_INTERVAL_MS  || '60000', 10);
-const PING_MS     = Math.max(_rawPingMs, MIN_PING_MS);
-if (_rawPingMs < MIN_PING_MS) {
-  console.warn(`[watchdog] PING_INTERVAL_MS ${_rawPingMs}ms is below the 15s minimum — clamped to ${MIN_PING_MS}ms to protect DB quota.`);
-}
-
-// UPTIME_CHECK_SAMPLE_RATE: write 1 doc per N pings (default 1 = every ping).
-// At 60s interval with rate=1: 21 600 docs × 107B = ~2.3 MB per service per 15d.
-// At 15s interval with rate=4: same write rate, same storage.
-const UPTIME_CHECK_SAMPLE_RATE = Math.max(1, parseInt(process.env.UPTIME_CHECK_SAMPLE_RATE || '1', 10));
+const PING_MS           = parseInt(process.env.PING_INTERVAL_MS  || '60000', 10);
 const THRESHOLD         = parseInt(process.env.FAILURE_THRESHOLD || '3',     10);
 const PORT              = process.env.PORT           || '4000';
 const SERVICE_NAME      = process.env.SERVICE_NAME  || 'watchdog';
@@ -104,10 +106,6 @@ console.log(`[${ts()}] +==================================================+`);
 console.log(`[${ts()}]   Monitoring ${targets.length} target(s):`);
 targets.forEach(t => console.log(`[${ts()}]     [${t.type}] ${t.name} -> ${t.pingUrl}`));
 console.log(`[${ts()}]   Interval   : ${PING_MS / 1000}s`);
-const _effectiveWriteIntervalS = Math.round((PING_MS * UPTIME_CHECK_SAMPLE_RATE) / 1000);
-const _maxDocsPerService = Math.ceil((15 * 24 * 3600) / _effectiveWriteIntervalS);
-const _maxMBPerService   = ((_maxDocsPerService * 107) / (1024 * 1024)).toFixed(1);
-console.log(`[${ts()}]   DB writes  : every ${_effectiveWriteIntervalS}s (1 in ${UPTIME_CHECK_SAMPLE_RATE} pings) → ≤${_maxDocsPerService.toLocaleString()} docs / ~${_maxMBPerService} MB per service over 15d TTL`);
 console.log(`[${ts()}]   Threshold  : ${THRESHOLD} failures`);
 console.log(`[${ts()}]   SLO target : ${SLO_TARGET_PCT}%`);
 console.log(`[${ts()}]   Lat warn   : ${LATENCY_WARN_MS}ms  crit: ${LATENCY_CRIT_MS}ms`);
@@ -181,8 +179,6 @@ targets.forEach(t => {
     // Latency alert state — avoid spamming ntfy on every slow ping
     latencyAlertFiredAt:  null,
     latencyAlertLevel:    null, // 'warn' | 'crit' | null
-    // DB write sampling — incremented each ping, reset when a write fires
-    _dbWriteCounter:      0,
   };
 });
 
@@ -633,14 +629,8 @@ async function pingTarget(target) {
     s.latencyWindow.push(ms);
     if (s.latencyWindow.length > 100) s.latencyWindow.shift();
 
-    // Store check (non-blocking) — sampled to limit DB write volume.
-    // Always write when the service was previously down (recovery) so the
-    // first "up" after an outage is never missed.
-    s._dbWriteCounter++;
-    if (s._dbWriteCounter >= UPTIME_CHECK_SAMPLE_RATE || s.isDown) {
-      s._dbWriteCounter = 0;
-      UptimeCheck.create({ service: target.name, status: 'up', latencyMs: ms }).catch(() => {});
-    }
+    // Store check (non-blocking)
+    UptimeCheck.create({ service: target.name, status: 'up', latencyMs: ms }).catch(() => {});
 
     // Latency anomaly check (non-blocking)
     checkLatencyAnomaly(target, ms).catch(() => {});
@@ -682,8 +672,6 @@ async function pingTarget(target) {
     s.lastError  = err.message;
     s.lastPingMs = null;
 
-    // Always write "down" checks regardless of sample rate — outage data is
-    // more valuable than "up" data and we need accurate failure counts for SLO.
     UptimeCheck.create({ service: target.name, status: 'down', error: err.message }).catch(() => {});
 
     console.warn(`[${ts()}] ${target.name} FAILED (${s.consecutiveFailures}/${THRESHOLD}): ${err.message}`);
@@ -862,6 +850,19 @@ app.get('/watchdog/maintenance', (_req, res) => {
     start:     MAINTENANCE_START ? MAINTENANCE_START.toISOString() : null,
     end:       MAINTENANCE_END   ? MAINTENANCE_END.toISOString()   : null,
     checkedAt: new Date().toISOString(),
+  });
+});
+
+// ─── Mesh logs endpoint ───────────────────────────────────────────────────────
+// Returns the full watchdog log buffer. Called by the backend admin log aggregator.
+app.get('/mesh/logs', meshAuth(SERVICE_NAME), (_req, res) => {
+  res.json({
+    source:   'watchdog',
+    name:     'Watchdog',
+    logs:     WATCHDOG_LOG_BUFFER.slice(),
+    total:    WATCHDOG_LOG_BUFFER.length,
+    uptime:   Math.floor(process.uptime()),
+    ts:       new Date().toISOString(),
   });
 });
 
