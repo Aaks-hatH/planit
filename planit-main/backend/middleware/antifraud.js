@@ -1,10 +1,25 @@
 const Invite = require('../models/Invite');
-const Event = require('../models/Event');
+const Event  = require('../models/Event');
 
 /**
  * ANTI-FRAUD MIDDLEWARE SUITE
  * Comprehensive security checks for enterprise check-in system
  */
+
+// ── Organizer alert helper ────────────────────────────────────────────────
+// Emits a `security_alert` Socket.IO event to the event room so any connected
+// organizer dashboard sees it immediately without polling.
+function emitSecurityAlert(req, eventId, alert) {
+  try {
+    const io = req.app && req.app.get('io');
+    if (!io) return;
+    io.to(`event_${eventId}`).emit('security_alert', {
+      ...alert,
+      eventId,
+      timestamp: new Date().toISOString(),
+    });
+  } catch (_) {}
+}
 
 /**
  * Duplicate Detection Middleware
@@ -55,7 +70,15 @@ async function detectDuplicates(req, res, next) {
           invite.blockedReason = 'duplicate_detected';
           invite.blockedAt = new Date();
           await invite.save();
-          
+
+          emitSecurityAlert(req, eventId, {
+            type: 'duplicate_blocked',
+            severity: 'critical',
+            guestName: invite.guestName,
+            inviteCode: invite.inviteCode,
+            message: `Duplicate ticket blocked: ${invite.guestName} — already checked in as ${checkedInDuplicate.inviteCode}`,
+          });
+
           return res.status(403).json({
             valid: false,
             reason: 'duplicate_blocked',
@@ -79,7 +102,15 @@ async function detectDuplicates(req, res, next) {
           duplicateInviteCode: checkedInDuplicate.inviteCode,
           checkedInAt: checkedInDuplicate.checkedInAt,
         });
-        
+
+        emitSecurityAlert(req, eventId, {
+          type: 'duplicate_warning',
+          severity: 'high',
+          guestName: invite.guestName,
+          inviteCode: invite.inviteCode,
+          message: `Duplicate warning: ${invite.guestName} — matched checked-in ticket ${checkedInDuplicate.inviteCode}`,
+        });
+
         await invite.save();
       }
     } else {
@@ -188,6 +219,14 @@ async function detectSuspiciousPatterns(req, res, next) {
         message: `SUSPICIOUS: ${recentAttempts.length} scans in ${settings.rapidScanWindowSeconds} seconds`,
         attempts: recentAttempts.length,
       });
+
+      emitSecurityAlert(req, eventId, {
+        type: 'rapid_scanning',
+        severity: 'high',
+        guestName: invite.guestName,
+        inviteCode: invite.inviteCode,
+        message: `Rapid scan detected: ticket ${invite.inviteCode} scanned ${recentAttempts.length}x in ${settings.rapidScanWindowSeconds}s`,
+      });
     }
     
     // Check for multiple devices/IPs
@@ -204,6 +243,14 @@ async function detectSuspiciousPatterns(req, res, next) {
         severity: 'medium',
         message: `Ticket scanned from ${uniqueIPs.size} different locations`,
         ipCount: uniqueIPs.size,
+      });
+
+      emitSecurityAlert(req, eventId, {
+        type: 'multiple_devices',
+        severity: 'medium',
+        guestName: invite.guestName,
+        inviteCode: invite.inviteCode,
+        message: `Ticket ${invite.inviteCode} (${invite.guestName}) scanned from ${uniqueIPs.size} different IP addresses`,
       });
     }
     
@@ -237,6 +284,13 @@ async function enforceBlocks(req, res, next) {
     
     // Check emergency lockdown
     if (settings.emergencyLockdown) {
+      emitSecurityAlert(req, eventId, {
+        type: 'emergency_lockdown',
+        severity: 'critical',
+        guestName: null,
+        inviteCode: null,
+        message: `Emergency lockdown active — all check-ins suspended${settings.emergencyLockdownReason ? ': ' + settings.emergencyLockdownReason : ''}`,
+      });
       return res.status(403).json({
         valid: false,
         reason: 'emergency_lockdown',
@@ -283,7 +337,15 @@ async function enforceBlocks(req, res, next) {
           invite.blockedReason = 'low_trust_score';
           invite.blockedAt = new Date();
           await invite.save();
-          
+
+          emitSecurityAlert(req, eventId, {
+            type: 'low_trust_score',
+            severity: 'high',
+            guestName: invite.guestName,
+            inviteCode: invite.inviteCode,
+            message: `Low trust score blocked: ${invite.guestName} (score: ${trustScore}/${settings.minimumTrustScore})`,
+          });
+
           return res.status(403).json({
             valid: false,
             reason: 'low_trust_score',
