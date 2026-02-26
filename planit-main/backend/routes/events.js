@@ -1065,9 +1065,14 @@ router.post('/:eventId/invites', verifyOrganizer,
 
         // Send guest invite confirmation email non-blocking
         if (invite.guestEmail) {
-          const event = await Event.findById(req.params.eventId).select('title date location organizerName _id').lean();
-          const { sendGuestInviteConfirmation } = require('../services/emailService');
-          sendGuestInviteConfirmation(event, invite.guestName, invite.guestEmail).catch(() => {});
+          try {
+            const inviteEvent = await Event.findById(req.params.eventId).select('title date location organizerName subdomain _id').lean();
+            const { sendGuestInviteConfirmation } = require('../services/emailService');
+            sendGuestInviteConfirmation(inviteEvent, invite.guestName, invite.guestEmail, invite.inviteCode).catch(() => {});
+          } catch (emailErr) {
+            // Never let email errors kill the invite creation
+            console.error('[invites] Email send error (non-fatal):', emailErr.message);
+          }
         }
       }
       
