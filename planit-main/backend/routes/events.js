@@ -1802,40 +1802,80 @@ router.get('/:eventId/qr.svg', async (req, res, next) => {
     const host = process.env.BASE_DOMAIN || req.get('host');
     const joinUrl = `${protocol}://${host}/event/${req.params.eventId}`;
 
+    // Use error correction level H (30%) so the centre logo doesn't break scannability
     const dataUrl = await QRCode.toDataURL(joinUrl, {
-      width: 220,
+      width: 260,
       margin: 1,
-      color: { dark: '#1a1a1a', light: '#ffffff' },
-      errorCorrectionLevel: 'M',
+      color: { dark: '#ffffff', light: '#000000' },
+      errorCorrectionLevel: 'H',
     });
 
-    const svg = `<svg width="280" height="330" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+    const safeTitle = event.title.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').slice(0, 32);
+
+    // Card dimensions
+    const W = 300, H = 360;
+    // QR sits at (20, 20) and is 260×260
+    const QX = 20, QY = 20, QS = 260;
+    const cx = QX + QS / 2; // horizontal centre of QR = 150
+    const cy = QY + QS / 2; // vertical centre of QR  = 150
+
+    // Centre label box — sits over the QR, covering ~22% of area (within H budget)
+    const lblW = 104, lblH = 34;
+    const lblX = cx - lblW / 2;
+    const lblY = cy - lblH / 2;
+
+    const svg = `<svg width="${W}" height="${H}" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
   <defs>
-    <linearGradient id="hdr" x1="0" y1="0" x2="1" y2="0">
-      <stop offset="0%" stop-color="#7c3aed"/>
-      <stop offset="100%" stop-color="#6d28d9"/>
-    </linearGradient>
-    <clipPath id="outer">
-      <rect width="280" height="330" rx="16"/>
+    <!-- Subtle outer glow on card -->
+    <filter id="glow" x="-5%" y="-5%" width="110%" height="110%">
+      <feDropShadow dx="0" dy="4" stdDeviation="10" flood-color="#000000" flood-opacity="0.55"/>
+    </filter>
+    <!-- Clip card corners -->
+    <clipPath id="card">
+      <rect width="${W}" height="${H}" rx="20"/>
+    </clipPath>
+    <!-- Clip QR to its own box -->
+    <clipPath id="qrclip">
+      <rect x="${QX}" y="${QY}" width="${QS}" height="${QS}" rx="12"/>
     </clipPath>
   </defs>
-  <!-- card background -->
-  <rect width="280" height="330" rx="16" fill="#ffffff" filter="drop-shadow(0 2px 8px rgba(0,0,0,0.12))"/>
-  <!-- purple header bar -->
-  <rect width="280" height="52" rx="16" fill="url(#hdr)" clip-path="url(#outer)"/>
-  <rect y="36" width="280" height="16" fill="#7c3aed"/>
-  <!-- logo dot -->
-  <rect x="18" y="14" width="24" height="24" rx="7" fill="rgba(255,255,255,0.25)"/>
-  <text x="30" y="31" text-anchor="middle" fill="white" font-family="system-ui,-apple-system,sans-serif" font-size="14" font-weight="bold">P</text>
-  <!-- PlanIt wordmark -->
-  <text x="52" y="31" fill="white" font-family="system-ui,-apple-system,sans-serif" font-size="16" font-weight="bold" letter-spacing="-0.3">PlanIt</text>
-  <!-- QR code image -->
-  <image x="30" y="60" width="220" height="220" href="${dataUrl}"/>
-  <!-- divider -->
-  <line x1="20" y1="288" x2="260" y2="288" stroke="#f3f4f6" stroke-width="1"/>
-  <!-- event title -->
-  <text x="140" y="308" text-anchor="middle" fill="#374151" font-family="system-ui,-apple-system,sans-serif" font-size="11" font-weight="600">${event.title.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').slice(0, 35)}</text>
-  <text x="140" y="323" text-anchor="middle" fill="#9ca3af" font-family="system-ui,-apple-system,sans-serif" font-size="10">Scan to join</text>
+
+  <!-- ── Card background ─────────────────────────────────────────────── -->
+  <rect width="${W}" height="${H}" rx="20" fill="#0a0a0a" filter="url(#glow)"/>
+
+  <!-- ── QR code (white-on-black, rounded clip) ─────────────────────── -->
+  <image x="${QX}" y="${QY}" width="${QS}" height="${QS}"
+         href="${dataUrl}" clip-path="url(#qrclip)"/>
+
+  <!-- ── Centre logo overlay ────────────────────────────────────────── -->
+  <!-- Black backing rect so QR modules behind text are hidden -->
+  <rect x="${lblX}" y="${lblY}" width="${lblW}" height="${lblH}" rx="7" fill="#000000"/>
+  <!-- Thin white border -->
+  <rect x="${lblX}" y="${lblY}" width="${lblW}" height="${lblH}" rx="7"
+        fill="none" stroke="#ffffff" stroke-width="1.5"/>
+  <!-- PLANIT wordmark -->
+  <text x="${cx}" y="${cy + 5}"
+        text-anchor="middle" dominant-baseline="middle"
+        fill="#ffffff"
+        font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif"
+        font-size="15" font-weight="800" letter-spacing="4">PLANIT</text>
+
+  <!-- ── Bottom info strip ──────────────────────────────────────────── -->
+  <!-- Thin separator -->
+  <line x1="20" y1="${QY + QS + 16}" x2="${W - 20}" y2="${QY + QS + 16}"
+        stroke="#1f1f1f" stroke-width="1"/>
+  <!-- Event title -->
+  <text x="${W / 2}" y="${QY + QS + 36}"
+        text-anchor="middle"
+        fill="#e5e5e5"
+        font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif"
+        font-size="12" font-weight="600">${safeTitle}</text>
+  <!-- Sub-label -->
+  <text x="${W / 2}" y="${QY + QS + 54}"
+        text-anchor="middle"
+        fill="#555555"
+        font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif"
+        font-size="10" letter-spacing="1.5">SCAN TO JOIN</text>
 </svg>`;
 
     res.setHeader('Content-Type', 'image/svg+xml');
