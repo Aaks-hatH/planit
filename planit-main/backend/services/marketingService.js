@@ -1,22 +1,6 @@
 'use strict';
 
-/**
- * services/marketingService.js
- *
- * Marketing email campaigns. Sends via the router mesh endpoint (/mesh/email)
- * so RESEND_API_KEY stays on the router only.
- *
- * Templates:
- *   planners   - Professional event coordinators and agencies
- *   schools    - Schools and universities
- *   temples    - All places of worship (multi-faith)
- *   corporate  - Corporate and enterprise teams
- *   community  - Community groups and non-profits
- *   weddings   - Weddings and special occasions
- *
- * Rate limiting: max 1 marketing email per address per calendar day.
- * Sends are batched in groups of 10 with a 1.2s delay between batches.
- */
+
 
 const redis        = require('./redisClient');
 const { meshPost } = require('../middleware/mesh');
@@ -45,361 +29,473 @@ async function isMarketingAllowed(email) {
   return true;
 }
 
-// ─── Shared CSS ───────────────────────────────────────────────────────────────
+// ─── Shared inline style tokens ───────────────────────────────────────────────
 
-const CSS = `
-*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
-img{border:0;display:block;max-width:100%}
-table{border-collapse:collapse;mso-table-lspace:0;mso-table-rspace:0}
-a{color:inherit;text-decoration:none}
-body{margin:0;padding:0;background:#eeeef3;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;-webkit-font-smoothing:antialiased;color:#1a1a2e;-webkit-text-size-adjust:100%}
-.outer{width:100%;background:#eeeef3;padding:36px 16px}
-.card{max-width:580px;margin:0 auto;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.07),0 8px 40px rgba(0,0,0,.09)}
-.mast{background:#0b0b13;padding:26px 36px}
-.mast-wm{font-size:19px;font-weight:700;color:#fff;letter-spacing:-.4px;line-height:1}
-.mast-wm b{color:#7b68f5}
-.mast-tag{font-size:9px;font-weight:500;letter-spacing:1.1px;text-transform:uppercase;color:rgba(255,255,255,.28);margin-top:4px}
-.mast-pill{display:inline-block;font-size:9.5px;font-weight:600;letter-spacing:.6px;text-transform:uppercase;padding:5px 12px;border-radius:20px;float:right;margin-top:-2px}
-.hero{padding:34px 36px 28px;border-bottom:1px solid #eaeaf2}
-.eyebrow{display:inline-block;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:4px 11px;border-radius:4px;margin-bottom:14px}
-.h1{font-size:23px;font-weight:700;color:#0b0b13;letter-spacing:-.5px;line-height:1.22}
-.hero-p{font-size:14px;color:#5c5c7a;line-height:1.68;margin-top:9px}
-.bd{padding:32px 36px}
-.cap{font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:1.2px;color:#b0b0c8;margin-bottom:14px;padding-bottom:9px;border-bottom:1px solid #f0f0f7}
-.feat-outer{width:100%;border-collapse:separate;border-spacing:6px;margin:-6px 0}
-.feat-cell{background:#f7f7fb;border:1px solid #e8e8f2;border-radius:7px;padding:15px 16px;vertical-align:top;width:50%}
-.ft{font-size:12.5px;font-weight:700;color:#0b0b13;margin-bottom:5px}
-.fd{font-size:11.5px;color:#6a6a8a;line-height:1.55}
-.ideal{border-left:3px solid;border-radius:0 7px 7px 0;padding:15px 18px;margin:18px 0}
-.ideal-cap{font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#b0b0c8;margin-bottom:7px}
-.ideal-body{font-size:13px;color:#3a3a58;line-height:1.72}
-.pquote{border-left:3px solid #e0e0ec;padding:13px 18px;margin:18px 0;background:#fafafa;border-radius:0 7px 7px 0}
-.pquote-text{font-size:13.5px;color:#3a3a58;line-height:1.7;font-style:italic}
-.pquote-attr{font-size:11px;color:#b0b0c8;margin-top:8px;font-style:normal}
-.stat-outer{width:100%;border-collapse:separate;border-spacing:6px;margin:18px 0}
-.stat-cell{background:#f7f7fb;border:1px solid #e8e8f2;border-radius:7px;padding:16px 10px;text-align:center;vertical-align:top}
-.stat-n{font-size:22px;font-weight:700;letter-spacing:-.5px}
-.stat-l{font-size:9.5px;color:#b0b0c8;margin-top:4px;text-transform:uppercase;letter-spacing:.8px}
-.sig{margin-top:30px;padding-top:22px;border-top:1px solid #f0f0f7}
-.sig-copy{font-size:13.5px;color:#3a3a58;line-height:1.78}
-.sig-name{font-size:14px;font-weight:700;color:#0b0b13;margin-top:14px}
-.sig-role{font-size:11.5px;color:#b0b0c8;margin-top:2px}
-.foot{background:#f7f7fb;border-top:1px solid #eaeaf2;padding:18px 36px}
-.foot p{font-size:10.5px;color:#c0c0d2;line-height:1.6}
-@media only screen and (max-width:600px){
-  .outer{padding:0!important}
-  .card{border-radius:0!important;box-shadow:none!important}
-  .mast{padding:20px!important}
-  .mast-pill{display:none!important}
-  .hero{padding:24px 20px 20px!important}
-  .h1{font-size:20px!important}
-  .bd{padding:24px 20px!important}
-  .feat-outer,.stat-outer{border-spacing:4px!important}
-  .feat-cell{display:block!important;width:100%!important;margin-bottom:4px}
-  .stat-cell{display:block!important;width:100%!important;margin-bottom:4px}
-  .ds-btn-td{display:block!important;text-align:left!important;padding:0 24px 20px!important}
-  .ds-cta{display:block!important;text-align:center!important}
-  .foot{padding:16px 20px!important}
-}
-`;
+const FONT  = `-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif`;
+const BG    = `#EDEDF2`;
+const WHITE = `#ffffff`;
+const DARK  = `#111827`;
+const MID   = `#374151`;
+const MUTED = `#6B7280`;
+const FAINT = `#9CA3AF`;
+const RULE  = `#E9EAEF`;
+const PANEL = `#F9FAFB`;
 
-// ─── Shell ────────────────────────────────────────────────────────────────────
+// ─── Shared fragments ─────────────────────────────────────────────────────────
 
-function shell(title, preheader, pillLabel, pillColor, heroHtml, bodyHtml, sigCopy, footerNote) {
+function emailShell(title, preheader, pillLabel, pillStyle, headerRowHtml, bodyHtml, sigCopy, footerNote) {
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
   <meta name="color-scheme" content="light only"/>
+  <meta name="x-apple-disable-message-reformatting"/>
   <title>${h(title)}</title>
   <!--[if mso]><noscript><xml><o:OfficeDocumentSettings><o:PixelsPerInch>96</o:PixelsPerInch></o:OfficeDocumentSettings></xml></noscript><![endif]-->
-  <style>${CSS}</style>
+  <style>
+    body,table,td,a{-webkit-text-size-adjust:100%;-ms-text-size-adjust:100%}
+    table,td{mso-table-lspace:0pt;mso-table-rspace:0pt}
+    img{border:0;height:auto;line-height:100%;outline:none;text-decoration:none;-ms-interpolation-mode:bicubic}
+    @media only screen and (max-width:620px){
+      .card{border-radius:0!important}
+      .ep{padding-left:20px!important;padding-right:20px!important}
+      .pill{display:none!important}
+      .fc{display:block!important;width:100%!important;padding:0 0 6px 0!important}
+      .ds-btn{display:block!important;text-align:center!important;padding:0 20px 20px!important}
+      .ds-l{border-radius:8px 8px 0 0!important}
+      .sc{display:block!important;width:100%!important;padding:0 0 6px 0!important}
+    }
+  </style>
 </head>
-<body>
-  <div class="outer">
-    <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td>
-    <div style="display:none;max-height:0;overflow:hidden;mso-hide:all">${h(preheader)}&nbsp;&zwnj;&nbsp;</div>
-    <div class="card">
-      <div class="mast">
-        <div class="mast-wm">Plan<b>It</b></div>
-        <div class="mast-tag">Event Management Platform</div>
-        <div class="mast-pill" style="border:1px solid ${pillColor};color:${pillColor}">${h(pillLabel)}</div>
-      </div>
-      ${heroHtml}
-      <div class="bd">
-        ${bodyHtml}
-        <div class="sig">
-          <div class="sig-copy">${sigCopy}</div>
-          <div class="sig-name">Aakshat Hariharan</div>
-          <div class="sig-role">Founder, PlanIt</div>
-        </div>
-      </div>
-      <div class="foot"><p>${footerNote}</p></div>
-    </div>
-    </td></tr></table>
-  </div>
+<body style="margin:0;padding:0;background:${BG};font-family:${FONT};-webkit-font-smoothing:antialiased;" bgcolor="${BG}">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${BG};" bgcolor="${BG}">
+    <tr>
+      <td align="center" style="padding:40px 16px;">
+
+        <div style="display:none;max-height:0;overflow:hidden;mso-hide:all;font-size:1px;color:${BG};line-height:1px;">${h(preheader)}&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;</div>
+
+        <table role="presentation" class="card" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background:${WHITE};border-radius:12px;overflow:hidden;" bgcolor="${WHITE}">
+
+          <!-- MASTHEAD -->
+          <tr>
+            <td style="background:${DARK};padding:28px 40px;" bgcolor="${DARK}">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td>
+                    <span style="font-size:20px;font-weight:800;color:${WHITE};letter-spacing:-0.5px;font-family:${FONT};">Plan<span style="color:${FAINT};">It</span></span><br/>
+                    <span style="font-size:10px;font-weight:500;letter-spacing:1.2px;text-transform:uppercase;color:rgba(255,255,255,0.28);font-family:${FONT};">Event Management Platform</span>
+                  </td>
+                  <td align="right" valign="middle" class="pill">
+                    <span style="display:inline-block;font-size:10px;font-weight:700;letter-spacing:0.8px;text-transform:uppercase;${pillStyle};border-radius:20px;padding:5px 14px;font-family:${FONT};">${h(pillLabel)}</span>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          ${headerRowHtml}
+
+          <!-- BODY -->
+          <tr>
+            <td class="ep" style="padding:32px 40px;">
+              ${bodyHtml}
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top:36px;padding-top:24px;border-top:1px solid ${RULE};">
+                <tr>
+                  <td>
+                    <p style="margin:0 0 18px 0;font-size:15px;color:#4B5563;line-height:1.75;font-family:${FONT};">${sigCopy}</p>
+                    <p style="margin:0 0 2px 0;font-size:15px;font-weight:700;color:${DARK};font-family:${FONT};">Aakshat Hariharan</p>
+                    <p style="margin:0;font-size:12px;color:${FAINT};font-family:${FONT};">Founder, PlanIt</p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- FOOTER -->
+          <tr>
+            <td class="ep" style="background:${PANEL};border-top:1px solid ${RULE};padding:20px 40px;" bgcolor="${PANEL}">
+              <p style="margin:0 0 4px 0;font-size:11px;color:${FAINT};line-height:1.6;font-family:${FONT};">${h(footerNote)}</p>
+              <p style="margin:0;font-size:11px;color:${FAINT};line-height:1.6;font-family:${FONT};"><a href="#unsubscribe" style="color:#6B7280;text-decoration:underline;font-family:${FONT};">Unsubscribe</a> &nbsp;&middot;&nbsp; Reply with "unsubscribe" to be removed</p>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
 </body>
 </html>`;
 }
 
-// ─── Shared fragments ─────────────────────────────────────────────────────────
+function sectionCap(label) {
+  return `<p style="margin:0 0 16px 0;font-size:10px;font-weight:700;letter-spacing:1.3px;text-transform:uppercase;color:${FAINT};padding-bottom:10px;border-bottom:1px solid ${RULE};font-family:${FONT};">${h(label)}</p>`;
+}
+
+function hrule() {
+  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td style="height:1px;background:${RULE};font-size:0;line-height:0;padding:16px 0 0 0;"></td></tr></table>`;
+}
+
+function ctaButton(label, url, color) {
+  return `
+    <table role="presentation" cellpadding="0" cellspacing="0" style="margin-top:28px;width:100%;">
+      <tr>
+        <td align="center">
+          <!--[if mso]><v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" href="${h(url)}" style="height:50px;v-text-anchor:middle;width:260px;" arcsize="12%" stroke="f" fillcolor="${color}"><w:anchorlock/><center style="color:#ffffff;font-family:${FONT};font-size:15px;font-weight:700;">${h(label)}</center></v:roundrect><![endif]-->
+          <!--[if !mso]><!-->
+          <a href="${h(url)}" style="background:${color};color:#ffffff;display:inline-block;font-family:${FONT};font-size:15px;font-weight:700;line-height:50px;text-align:center;text-decoration:none;width:260px;border-radius:8px;letter-spacing:-0.2px;mso-hide:all;">${h(label)}</a>
+          <!--<![endif]-->
+        </td>
+      </tr>
+    </table>`;
+}
 
 function featGrid(items) {
   let rows = '';
   for (let i = 0; i < items.length; i += 2) {
     const a = items[i], b = items[i + 1];
-    rows += `<tr>
-      <td class="feat-cell"><div class="ft">${a.t}</div><div class="fd">${a.d}</div></td>
-      ${b ? `<td class="feat-cell"><div class="ft">${b.t}</div><div class="fd">${b.d}</div></td>` : '<td></td>'}
-    </tr>`;
+    rows += `
+      <tr>
+        <td class="fc" style="width:50%;padding:0 6px 6px 0;vertical-align:top;">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${PANEL};border:1px solid #E5E7EB;border-radius:8px;">
+            <tr><td style="padding:16px 18px;">
+              <p style="margin:0 0 5px 0;font-size:13px;font-weight:700;color:${DARK};font-family:${FONT};">${a.t}</p>
+              <p style="margin:0;font-size:13px;color:${MUTED};line-height:1.55;font-family:${FONT};">${a.d}</p>
+            </td></tr>
+          </table>
+        </td>
+        <td class="fc" style="width:50%;padding:0 0 6px 6px;vertical-align:top;">
+          ${b ? `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${PANEL};border:1px solid #E5E7EB;border-radius:8px;">
+            <tr><td style="padding:16px 18px;">
+              <p style="margin:0 0 5px 0;font-size:13px;font-weight:700;color:${DARK};font-family:${FONT};">${b.t}</p>
+              <p style="margin:0;font-size:13px;color:${MUTED};line-height:1.55;font-family:${FONT};">${b.d}</p>
+            </td></tr>
+          </table>` : ''}
+        </td>
+      </tr>`;
   }
-  return `<table class="feat-outer" role="presentation"><tbody>${rows}</tbody></table>`;
+  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0">${rows}</table>`;
 }
 
-/**
- * darkStrip — uses proper <table> markup for reliable rendering
- * in all email clients, webviews, and iframes.
- */
-function darkStrip(cap, head, sub, btnLabel, btnColor, ctaUrl) {
+function pullQuote(text, attr, accentColor) {
+  return `
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top:20px;">
+      <tr>
+        <td style="border-left:3px solid ${accentColor};padding:14px 18px;background:${PANEL};border-radius:0 8px 8px 0;">
+          <p style="margin:0 0 8px 0;font-size:14px;color:${MID};line-height:1.7;font-style:italic;font-family:${FONT};">${text}</p>
+          <p style="margin:0;font-size:11px;color:${FAINT};font-family:${FONT};">${attr}</p>
+        </td>
+      </tr>
+    </table>`;
+}
+
+function idealFor(label, content, accentColor, bgColor) {
+  return `
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top:20px;">
+      <tr>
+        <td style="border-left:3px solid ${accentColor};padding:14px 18px;background:${bgColor};border-radius:0 8px 8px 0;">
+          <p style="margin:0 0 6px 0;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:${FAINT};font-family:${FONT};">${h(label)}</p>
+          <p style="margin:0;font-size:14px;color:${MID};line-height:1.75;font-family:${FONT};">${content}</p>
+        </td>
+      </tr>
+    </table>`;
+}
+
+function darkStrip(capText, headText, subText, subColor, btnLabel, btnColor, ctaUrl) {
   const url = ctaUrl || process.env.FRONTEND_URL || 'https://planitapp.onrender.com';
-  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-radius:9px;overflow:hidden;margin:22px 0">
-  <tr>
-    <td style="background:#0b0b13;padding:22px 24px;vertical-align:middle;border-radius:9px 0 0 9px">
-      <div style="font-size:9.5px;color:rgba(255,255,255,.32);letter-spacing:.8px;text-transform:uppercase;margin-bottom:4px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif">${h(cap)}</div>
-      <div style="font-size:17px;font-weight:700;color:#ffffff;letter-spacing:-.3px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif">${h(head)}</div>
-      <div style="font-size:11px;color:${btnColor};margin-top:3px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif">${h(sub)}</div>
-    </td>
-    <td class="ds-btn-td" style="background:#0b0b13;padding:22px 24px 22px 0;vertical-align:middle;text-align:right;white-space:nowrap;border-radius:0 9px 9px 0">
-      <a href="${h(url)}" class="ds-cta" style="display:inline-block;padding:12px 22px;border-radius:6px;font-size:13px;font-weight:600;text-decoration:none;color:#ffffff;background:${btnColor};letter-spacing:-.1px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;white-space:nowrap">${h(btnLabel)}</a>
-    </td>
-  </tr>
-</table>`;
+  return `
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top:24px;border-radius:8px;overflow:hidden;">
+      <tr>
+        <td class="ds-l" style="background:${DARK};padding:20px 24px;border-radius:8px 0 0 8px;vertical-align:middle;" bgcolor="${DARK}">
+          <p style="margin:0 0 3px 0;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:rgba(255,255,255,0.28);font-family:${FONT};">${h(capText)}</p>
+          <p style="margin:0 0 3px 0;font-size:16px;font-weight:700;color:${WHITE};font-family:${FONT};">${h(headText)}</p>
+          <p style="margin:0;font-size:11px;color:${subColor};font-family:${FONT};">${h(subText)}</p>
+        </td>
+        <td class="ds-btn" style="background:${DARK};padding:20px 24px 20px 0;text-align:right;vertical-align:middle;border-radius:0 8px 8px 0;white-space:nowrap;" bgcolor="${DARK}">
+          <a href="${h(url)}" style="display:inline-block;background:${btnColor};color:${WHITE};font-family:${FONT};font-size:13px;font-weight:700;text-decoration:none;padding:12px 22px;border-radius:6px;">${h(btnLabel)}</a>
+        </td>
+      </tr>
+    </table>`;
+}
+
+function statsRow(items) {
+  const cells = items.map((item, i) => `
+    <td class="sc" style="width:${Math.floor(100/items.length)}%;padding:0 ${i < items.length - 1 ? '4px' : '0'} 0 ${i > 0 ? '4px' : '0'};vertical-align:top;">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${PANEL};border:1px solid #E5E7EB;border-radius:8px;text-align:center;">
+        <tr><td style="padding:18px 12px;">
+          <p style="margin:0 0 4px 0;font-size:22px;font-weight:800;color:${DARK};letter-spacing:-0.5px;font-family:${FONT};">${h(item.n)}</p>
+          <p style="margin:0;font-size:10px;font-weight:700;letter-spacing:0.8px;text-transform:uppercase;color:${FAINT};font-family:${FONT};">${h(item.l)}</p>
+        </td></tr>
+      </table>
+    </td>`).join('');
+  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top:20px;"><tr>${cells}</tr></table>`;
 }
 
 // ─── Template builders ────────────────────────────────────────────────────────
 
 function buildPlanners(ctaUrl) {
-  const hero = `<div class="hero">
-    <span class="eyebrow" style="background:#eff0ff;color:#3730a3">For Event Professionals</span>
-    <h1 class="h1">Your clients remember the experience. Not the effort behind it.</h1>
-    <p class="hero-p">PlanIt gives professional event coordinators a single workspace for guest management, day-of check-in, team communication, and post-event wrap-up. It looks polished to clients. It saves hours in practice.</p>
-  </div>`;
+  const url = ctaUrl || process.env.FRONTEND_URL || 'https://planitapp.onrender.com';
+
+  const headerRow = `
+    <tr>
+      <td class="ep" style="padding:36px 40px 30px 40px;border-bottom:1px solid ${RULE};">
+        <span style="display:inline-block;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#3730A3;background:#EEF2FF;padding:5px 12px;border-radius:5px;margin-bottom:16px;font-family:${FONT};">For Event Professionals</span>
+        <h1 style="margin:0 0 12px 0;font-size:24px;font-weight:800;color:${DARK};letter-spacing:-0.5px;line-height:1.2;font-family:${FONT};">Your clients remember the experience. Not the effort behind it.</h1>
+        <p style="margin:0;font-size:15px;color:${MUTED};line-height:1.65;font-family:${FONT};">PlanIt gives professional event coordinators a single workspace for guest management, day-of check-in, team communication, and post-event wrap-up. It looks polished to clients. It saves hours in practice.</p>
+      </td>
+    </tr>`;
 
   const body = `
-    <div class="cap">What Changes When You Use PlanIt</div>
+    ${sectionCap('What Changes When You Use PlanIt')}
     ${featGrid([
-      { t: 'Branded Event Links',       d: 'Every event gets its own clean URL. Share with clients and attendees without exposing your internal tooling.' },
-      { t: 'QR Check-in, Any Device',   d: 'Any team member with a smartphone can check guests in. No app download, no morning-of training required.' },
-      { t: 'Real-Time Guest Tracking',  d: 'Watch arrivals as they happen. Know exactly who has checked in and who has not, from anywhere.' },
-      { t: 'Built-in Team Chat',        d: 'Keep venue staff, caterers, AV teams, and your coordinators aligned without juggling separate group threads.' },
-      { t: 'Live Polls and Q&amp;A',    d: 'Run audience decisions mid-event. Venue vote, session preference, speaker Q&amp;A — all inside PlanIt.' },
-      { t: 'File and Document Hub',     d: 'Floor plans, run sheets, vendor contracts, seating charts. One organised place for everything your team needs.' },
+      { t: 'Branded Event Links',      d: 'Every event gets its own clean URL. Share with clients and attendees without exposing your internal tooling.' },
+      { t: 'QR Check-in, Any Device',  d: 'Any team member with a smartphone can check guests in. No app download, no morning-of training required.' },
+      { t: 'Real-Time Guest Tracking', d: 'Watch arrivals as they happen. Know exactly who has checked in and who has not, from anywhere.' },
+      { t: 'Built-in Team Chat',       d: 'Keep venue staff, caterers, AV teams, and coordinators aligned without juggling separate group threads.' },
+      { t: 'Live Polls and Q&amp;A',   d: 'Run audience decisions mid-event. Venue vote, session preference, speaker Q&amp;A — all inside PlanIt.' },
+      { t: 'File and Document Hub',    d: 'Floor plans, run sheets, vendor contracts, seating charts. One organised place for everything your team needs.' },
     ])}
-    <div class="pquote" style="border-left-color:#3730a3;margin-top:26px">
-      <div class="pquote-text">Check-in used to be our most stressful forty minutes. With PlanIt it was running before I even reached the registration desk. The client noticed. They hired us for the next two.</div>
-      <div class="pquote-attr">Senior Event Coordinator, 400-person corporate conference, London</div>
-    </div>
-    ${darkStrip('Free to start, no credit card required', 'Built for people who do this professionally.', 'Upgrade plans available for high-volume teams', 'Get Started Free', '#3730a3', ctaUrl)}`;
+    ${pullQuote(
+      'Check-in used to be our most stressful forty minutes. With PlanIt it was running before I even reached the registration desk. The client noticed. They hired us for the next two.',
+      'Senior Event Coordinator, 400-person corporate conference, London',
+      '#3730A3'
+    )}
+    ${darkStrip('Free to start, no credit card required', 'Built for people who do this professionally.', 'Upgrade plans available for high-volume teams', '#818CF8', 'Get Started Free', '#3730A3', url)}`;
 
-  return shell(
+  return emailShell(
     'The event platform your clients will notice',
     'PlanIt gives event professionals a single workspace for guests, check-in, team chat, and more.',
-    'For Event Professionals', 'rgba(55,48,163,.55)',
-    hero, body,
+    'For Event Professionals',
+    `color:rgba(167,163,247,0.85);border:1px solid rgba(99,85,240,0.4)`,
+    headerRow,
+    body,
     'I built PlanIt because I watched skilled coordinators lose time to tools that were not designed for this work. You deserve a platform that keeps pace with you.',
-    'You are receiving this because you were identified as an event management professional. To stop receiving these emails, reply with "unsubscribe."'
+    'You are receiving this because you were identified as an event management professional.'
   );
 }
 
 function buildSchools(ctaUrl) {
-  const hero = `<div class="hero">
-    <span class="eyebrow" style="background:#f0fdf5;color:#166534">For Schools and Universities</span>
-    <h1 class="h1">Campus events deserve more than a spreadsheet and a hope.</h1>
-    <p class="hero-p">From Freshers' Week and open days to graduation ceremonies and cultural festivals, PlanIt gives educational institutions a structured, accountable way to run student-facing events at any scale.</p>
-  </div>`;
+  const url = ctaUrl || process.env.FRONTEND_URL || 'https://planitapp.onrender.com';
+
+  const headerRow = `
+    <tr>
+      <td class="ep" style="padding:36px 40px 30px 40px;border-bottom:1px solid ${RULE};">
+        <span style="display:inline-block;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#166534;background:#F0FDF4;padding:5px 12px;border-radius:5px;margin-bottom:16px;font-family:${FONT};">For Schools and Universities</span>
+        <h1 style="margin:0 0 12px 0;font-size:24px;font-weight:800;color:${DARK};letter-spacing:-0.5px;line-height:1.2;font-family:${FONT};">Campus events deserve more than a spreadsheet and a hope.</h1>
+        <p style="margin:0;font-size:15px;color:${MUTED};line-height:1.65;font-family:${FONT};">From Freshers' Week and open days to graduation ceremonies and cultural festivals, PlanIt gives educational institutions a structured, accountable way to run student-facing events at any scale.</p>
+      </td>
+    </tr>`;
 
   const body = `
-    <div class="cap">Designed for Institutional Events</div>
+    ${sectionCap('Designed for Institutional Events')}
     ${featGrid([
-      { t: 'Attendance Records',     d: 'Real-time check-in produces a full attendance log — useful for welfare, access control, and institutional compliance.' },
-      { t: 'Role Access Control',    d: 'Give student union officers, faculty coordinators, and venue staff the exact level of access each role requires.' },
-      { t: 'Bulk Guest Management',  d: 'Import your entire guest list and assign QR codes in bulk. 1,200 students is as straightforward as 50.' },
-      { t: 'Instant Announcements',  d: 'Push updates to all attendees mid-event without relying on a separate messaging app or PA system.' },
-      { t: 'Multi-Event Capacity',   d: 'Run orientation, sports day, and a departmental showcase simultaneously from the same administrative view.' },
-      { t: 'Secure by Default',      d: "No attendee data is sold or profiled for advertising. Your institution's records stay with your institution." },
+      { t: 'Attendance Records',    d: 'Real-time check-in produces a full attendance log for welfare, access control, and institutional compliance.' },
+      { t: 'Role Access Control',   d: 'Give student officers, faculty coordinators, and venue staff the exact access level each role requires.' },
+      { t: 'Bulk Guest Management', d: 'Import your entire guest list and assign QR codes in bulk. 1,200 students is as straightforward as 50.' },
+      { t: 'Instant Announcements', d: 'Push updates to all attendees mid-event without relying on a separate messaging app or PA system.' },
+      { t: 'Multi-Event Capacity',  d: 'Run orientation, sports day, and a departmental showcase simultaneously from the same administrative view.' },
+      { t: 'Secure by Default',     d: "No attendee data is sold or profiled for advertising. Your institution's records stay with your institution." },
     ])}
-    <div class="ideal" style="border-left-color:#166534;background:#f0fdf5">
-      <div class="ideal-cap">Common Use Cases</div>
-      <div class="ideal-body">Freshers' and orientation weeks, graduation and convocation ceremonies, university open days, student union elections and AGMs, inter-college cultural fests, sports days, alumni networking events, department welcome evenings, and parent information sessions.</div>
-    </div>
-    ${darkStrip('No charge for educational use', 'Professional-grade tools at a student-union budget.', 'Education pricing available for larger institutions', 'Get Started Free', '#15803d', ctaUrl)}`;
+    ${idealFor(
+      'Common Use Cases',
+      "Freshers' and orientation weeks, graduation and convocation ceremonies, university open days, student union elections and AGMs, inter-college cultural fests, sports days, alumni networking events, department welcome evenings, and parent information sessions.",
+      '#166534',
+      '#F0FDF4'
+    )}
+    ${darkStrip('No charge for educational use', 'Professional-grade tools at a student-union budget.', 'Education pricing available for larger institutions', '#4ADE80', 'Get Started Free', '#15803D', url)}`;
 
-  return shell(
+  return emailShell(
     'Event management built for campus life',
     'A free, professional event platform for schools and universities.',
-    'For Educational Institutions', 'rgba(21,128,61,.55)',
-    hero, body,
+    'For Educational Institutions',
+    `color:rgba(134,239,172,0.85);border:1px solid rgba(21,128,61,0.5)`,
+    headerRow,
+    body,
     'Schools and universities should not have to pay enterprise prices to run a well-organised event. PlanIt is free to use, and that is not a trial period.',
-    'You are receiving this because your institution was identified as a potential PlanIt user. To stop receiving these emails, reply with "unsubscribe."'
+    'You are receiving this because your institution was identified as a potential PlanIt user.'
   );
 }
 
 function buildTemples(ctaUrl) {
-  const hero = `<div class="hero">
-    <span class="eyebrow" style="background:#fefce8;color:#92400e">For Places of Worship</span>
-    <h1 class="h1">Your community gathers with purpose. The tools behind it should support that.</h1>
-    <p class="hero-p">Whether your congregation is Hindu, Muslim, Christian, Jewish, Sikh, or of any other faith, the administration of bringing people together should never overshadow the occasion itself. PlanIt handles the logistics so your leaders and volunteers can give their full attention to what matters.</p>
-  </div>`;
+  const url = ctaUrl || process.env.FRONTEND_URL || 'https://planitapp.onrender.com';
+
+  const headerRow = `
+    <tr>
+      <td class="ep" style="padding:36px 40px 30px 40px;border-bottom:1px solid ${RULE};">
+        <span style="display:inline-block;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#92400E;background:#FFFBEB;padding:5px 12px;border-radius:5px;margin-bottom:16px;font-family:${FONT};">For Places of Worship</span>
+        <h1 style="margin:0 0 12px 0;font-size:24px;font-weight:800;color:${DARK};letter-spacing:-0.5px;line-height:1.2;font-family:${FONT};">Your community gathers with purpose. The tools behind it should support that.</h1>
+        <p style="margin:0;font-size:15px;color:${MUTED};line-height:1.65;font-family:${FONT};">Whether your congregation is Hindu, Muslim, Christian, Jewish, Sikh, or of any other faith, the administration of bringing people together should never overshadow the occasion itself. PlanIt handles the logistics so your leaders and volunteers can give their full attention to what matters.</p>
+      </td>
+    </tr>`;
 
   const body = `
-    <div class="cap">How PlanIt Serves Religious Congregations</div>
+    ${sectionCap('How PlanIt Serves Religious Congregations')}
     ${featGrid([
-      { t: 'Respectful Check-in',     d: 'QR-based arrival eliminates paper lists and door queues. Dignified, orderly, and manageable by any volunteer with a smartphone.' },
-      { t: 'Personal Invitations',    d: 'Send each congregation member their own invite. Appropriate for occasions where the guest list carries personal meaning.' },
-      { t: 'Private and Ad-Free',     d: "Congregation data is never sold, shared with advertisers, or used for profiling. Your community's trust is not a revenue stream." },
-      { t: 'No Account for Guests',   d: 'Attendees join with a name only. No registration form, no password, no barrier for elderly or less technical members.' },
-      { t: 'Multi-Language Ready',    d: 'PlanIt renders correctly in Devanagari, Arabic, Hebrew, Gurmukhi, and all other scripts in modern browsers.' },
-      { t: 'Volunteer Coordination',  d: 'Assign duties and timing to volunteers before the event. Keep the whole team aligned without a chain of phone calls.' },
+      { t: 'Respectful Check-in',    d: 'QR-based arrival eliminates paper lists and door queues. Dignified, orderly, and manageable by any volunteer with a smartphone.' },
+      { t: 'Personal Invitations',   d: 'Send each congregation member their own invite. Appropriate for occasions where the guest list carries personal meaning.' },
+      { t: 'Private and Ad-Free',    d: "Congregation data is never sold, shared with advertisers, or used for profiling. Your community's trust is not a revenue stream." },
+      { t: 'No Account for Guests',  d: 'Attendees join with a name only. No registration form, no password, no barrier for elderly or less technical members.' },
+      { t: 'Multi-Language Ready',   d: 'PlanIt renders correctly in Devanagari, Arabic, Hebrew, Gurmukhi, and all other scripts in modern browsers.' },
+      { t: 'Volunteer Coordination', d: 'Assign duties and timing to volunteers before the event. Keep the whole team aligned without a chain of phone calls.' },
     ])}
-    <div class="ideal" style="border-left-color:#b45309;background:#fffbeb">
-      <div class="ideal-cap">Events This Is Designed For</div>
-      <div class="ideal-body">
-        <strong style="color:#92400e">Hindu:</strong> Diwali puja, Navratri garba, Dussehra, Ram Navami, Janmashtami, Ganesh Chaturthi, havan and yagna events, classical music and cultural programmes<br/><br/>
-        <strong style="color:#92400e">Muslim:</strong> Eid al-Fitr and Eid al-Adha gatherings, Ramadan iftar, Laylat al-Qadr programmes, Jumuah overflow management, milad and nasheed events, nikah receptions<br/><br/>
-        <strong style="color:#92400e">Christian:</strong> Christmas and Easter services, Good Friday observances, baptism and confirmation celebrations, church fundraisers, harvest festivals, carol concerts<br/><br/>
-        <strong style="color:#92400e">Jewish:</strong> Rosh Hashanah and Yom Kippur services, Hanukkah evenings, Passover seders, bar and bat mitzvah receptions, Purim celebrations, Shabbat dinners<br/><br/>
-        <strong style="color:#92400e">Sikh:</strong> Gurpurab commemorations, Vaisakhi celebrations, Akhand Path programmes, langar coordination, community seva drives<br/><br/>
-        <strong style="color:#92400e">All faiths:</strong> Charity fundraisers, interfaith dialogue events, annual general meetings, community dinners, memorial services
-      </div>
-    </div>
-    ${darkStrip('Free for community and religious organisations', 'Every gathering, managed with care.', 'No fees, no advertisements, no conditions', 'Get Started Free', '#b45309', ctaUrl)}`;
+    ${idealFor(
+      'Events This Is Designed For',
+      `<strong style="color:#92400E;">Hindu:</strong> Diwali puja, Navratri garba, Dussehra, Ram Navami, Janmashtami, Ganesh Chaturthi, havan and yagna events<br/><br/><strong style="color:#92400E;">Muslim:</strong> Eid al-Fitr and Eid al-Adha gatherings, Ramadan iftar, Laylat al-Qadr programmes, Jumuah overflow, milad events, nikah receptions<br/><br/><strong style="color:#92400E;">Christian:</strong> Christmas and Easter services, Good Friday observances, baptism and confirmation celebrations, church fundraisers, carol concerts<br/><br/><strong style="color:#92400E;">Jewish:</strong> Rosh Hashanah and Yom Kippur services, Hanukkah evenings, Passover seders, bar and bat mitzvah receptions, Purim celebrations<br/><br/><strong style="color:#92400E;">Sikh:</strong> Gurpurab commemorations, Vaisakhi celebrations, Akhand Path programmes, langar coordination, community seva drives`,
+      '#B45309',
+      '#FFFBEB'
+    )}
+    ${darkStrip('Free for community and religious organisations', 'Every gathering, managed with care.', 'No fees, no advertisements, no conditions', '#FCD34D', 'Get Started Free', '#B45309', url)}`;
 
-  return shell(
+  return emailShell(
     "Organise your community's events with dignity and ease",
     'A free platform for places of worship — dignified check-in, personal invitations, volunteer coordination.',
-    'For Places of Worship', 'rgba(180,83,9,.55)',
-    hero, body,
+    'For Places of Worship',
+    `color:rgba(253,186,116,0.85);border:1px solid rgba(180,83,9,0.4)`,
+    headerRow,
+    body,
     'Community gatherings have always required careful organisation. I built PlanIt so that those doing the organising can give their energy to the occasion rather than the administration.',
-    'You are receiving this because your organisation was recommended as a potential PlanIt user. To stop receiving these emails, reply with "unsubscribe."'
+    'You are receiving this because your organisation was recommended as a potential PlanIt user.'
   );
 }
 
 function buildCorporate(ctaUrl) {
-  const hero = `<div class="hero" style="background:#0b0b13;border-bottom:1px solid #1a1a28">
-    <span class="eyebrow" style="background:rgba(99,85,240,.15);color:#9d8cfc">For Corporate Teams</span>
-    <h1 class="h1" style="color:#ffffff">Your events represent your organisation. The platform behind them should too.</h1>
-    <p class="hero-p" style="color:rgba(255,255,255,.44)">PlanIt gives enterprise teams the structure, auditability, and scale to run conferences, AGMs, product launches, and internal events — without relying on a patchwork of tools that do not talk to each other.</p>
-  </div>`;
+  const url = ctaUrl || process.env.FRONTEND_URL || 'https://planitapp.onrender.com';
+
+  const headerRow = `
+    <tr>
+      <td class="ep" style="background:${DARK};padding:36px 40px 30px 40px;border-bottom:1px solid #1F2937;" bgcolor="${DARK}">
+        <span style="display:inline-block;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:rgba(167,163,247,0.8);background:rgba(99,85,240,0.12);padding:5px 12px;border-radius:5px;margin-bottom:16px;font-family:${FONT};">For Corporate Teams</span>
+        <h1 style="margin:0 0 12px 0;font-size:24px;font-weight:800;color:${WHITE};letter-spacing:-0.5px;line-height:1.2;font-family:${FONT};">Your events represent your organisation. The platform behind them should too.</h1>
+        <p style="margin:0;font-size:15px;color:rgba(255,255,255,0.4);line-height:1.65;font-family:${FONT};">PlanIt gives enterprise teams the structure, auditability, and scale to run conferences, AGMs, product launches, and internal events without relying on a patchwork of tools that do not talk to each other.</p>
+      </td>
+    </tr>`;
 
   const body = `
-    <div class="cap">Enterprise Capabilities</div>
+    ${sectionCap('Enterprise Capabilities')}
     ${featGrid([
-      { t: 'Custom Subdomain per Event',   d: 'Every event lives at its own branded URL. Consistent, professional, and distinct from every other event.' },
-      { t: 'Scales to Any Attendance',     d: 'PlanIt handles 50 or 5,000 attendees without configuration changes or per-head pricing surprises.' },
-      { t: 'Full Audit Trail',             d: 'Complete check-in logs, message history, file access records, and poll results — ready for compliance and reporting.' },
-      { t: 'Enterprise Access Controls',   d: 'Super-admin visibility across all events. Role permissions for organisers, moderators, and read-only stakeholders.' },
-      { t: 'Integrated Task Management',   d: 'Assign pre-event deliverables to internal teams with deadlines and status tracking. No separate project tool needed.' },
-      { t: 'Expense Tracking',             d: 'Log and split event expenses against a budget. Export records for finance sign-off without additional software.' },
+      { t: 'Custom Subdomain per Event',  d: 'Every event lives at its own branded URL. Consistent, professional, and distinct from every other event.' },
+      { t: 'Scales to Any Attendance',    d: 'PlanIt handles 50 or 5,000 attendees without configuration changes or per-head pricing surprises.' },
+      { t: 'Full Audit Trail',            d: 'Complete check-in logs, message history, file access records, and poll results ready for compliance and reporting.' },
+      { t: 'Enterprise Access Controls',  d: 'Super-admin visibility across all events. Role permissions for organisers, moderators, and read-only stakeholders.' },
+      { t: 'Integrated Task Management',  d: 'Assign pre-event deliverables to internal teams with deadlines and status tracking. No separate project tool needed.' },
+      { t: 'Expense Tracking',            d: 'Log and split event expenses against a budget. Export records for finance sign-off without additional software.' },
     ])}
-    <table class="stat-outer" role="presentation">
-      <tr>
-        <td class="stat-cell"><div class="stat-n" style="color:#6355f0">50,000+</div><div class="stat-l">Events Managed</div></td>
-        <td class="stat-cell"><div class="stat-n" style="color:#6355f0">500k+</div><div class="stat-l">Attendees Tracked</div></td>
-        <td class="stat-cell"><div class="stat-n" style="color:#6355f0">99.9%</div><div class="stat-l">Platform Uptime</div></td>
-      </tr>
-    </table>
-    <div class="ideal" style="border-left-color:#6355f0;background:#f5f4ff">
-      <div class="ideal-cap">Typical Enterprise Use Cases</div>
-      <div class="ideal-body">Annual general meetings, all-hands and town halls, product launches and press events, client conferences, trade show presence management, team off-sites and leadership retreats, onboarding cohort events, and compliance training sessions.</div>
-    </div>
-    ${darkStrip('No credit card required to start', 'Built for teams that cannot afford a bad event.', 'Enterprise and volume pricing available on request', 'Request a Demo', '#4f46e5', ctaUrl)}`;
+    ${statsRow([
+      { n: '50,000+', l: 'Events Managed' },
+      { n: '500k+',   l: 'Attendees Tracked' },
+      { n: '99.9%',   l: 'Platform Uptime' },
+    ])}
+    ${idealFor(
+      'Typical Enterprise Use Cases',
+      'Annual general meetings, all-hands and town halls, product launches and press events, client conferences, trade show presence management, team off-sites and leadership retreats, onboarding cohort events, and compliance training sessions.',
+      '#4F46E5',
+      '#F5F4FF'
+    )}
+    ${darkStrip('No credit card required to start', 'Built for teams that cannot afford a bad event.', 'Enterprise and volume pricing available on request', '#A5B4FC', 'Request a Demo', '#4F46E5', url)}`;
 
-  return shell(
+  return emailShell(
     'Enterprise event infrastructure, without the enterprise cost',
     'PlanIt gives corporate teams the structure, auditability, and scale for professional events.',
-    'For Corporate Teams', 'rgba(99,85,240,.55)',
-    hero, body,
+    'For Corporate Teams',
+    `color:rgba(167,163,247,0.85);border:1px solid rgba(99,85,240,0.4)`,
+    headerRow,
+    body,
     'Large-scale events have too many moving parts to manage with spreadsheets and email threads. PlanIt was built specifically to handle the complexity so your team can focus on what the event is actually for.',
-    'You are receiving this because your company was identified as a potential PlanIt enterprise client. To stop receiving these emails, reply with "unsubscribe."'
+    'You are receiving this because your company was identified as a potential PlanIt enterprise client.'
   );
 }
 
 function buildCommunity(ctaUrl) {
-  const hero = `<div class="hero">
-    <span class="eyebrow" style="background:#eff6ff;color:#1e40af">For Community Groups</span>
-    <h1 class="h1">The people doing the most important work rarely have the largest budgets.</h1>
-    <p class="hero-p">PlanIt is free for community organisers, charities, and non-profits. Not free for fourteen days. Not free with a credit card on file. Free, because those running local events should not have to justify a tool cost to a volunteer committee.</p>
-  </div>`;
+  const url = ctaUrl || process.env.FRONTEND_URL || 'https://planitapp.onrender.com';
+
+  const headerRow = `
+    <tr>
+      <td class="ep" style="padding:36px 40px 30px 40px;border-bottom:1px solid ${RULE};">
+        <span style="display:inline-block;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#1E40AF;background:#EFF6FF;padding:5px 12px;border-radius:5px;margin-bottom:16px;font-family:${FONT};">For Community Groups</span>
+        <h1 style="margin:0 0 12px 0;font-size:24px;font-weight:800;color:${DARK};letter-spacing:-0.5px;line-height:1.2;font-family:${FONT};">The people doing the most important work rarely have the largest budgets.</h1>
+        <p style="margin:0;font-size:15px;color:${MUTED};line-height:1.65;font-family:${FONT};">PlanIt is free for community organisers, charities, and non-profits. Not free for fourteen days. Not free with a credit card on file. Free, because those running local events should not have to justify a tool cost to a volunteer committee.</p>
+      </td>
+    </tr>`;
 
   const body = `
-    <div class="cap">What You Get at No Cost</div>
+    ${sectionCap('What You Get at No Cost')}
     ${featGrid([
-      { t: 'No Attendee Accounts',          d: 'Participants join with just a name. Nothing to sign up for, nothing to download — no barrier to entry for any age group.' },
-      { t: 'QR Check-in Without Hardware',  d: "Any volunteer's smartphone becomes a check-in scanner. Print QR codes or let attendees show them on screen." },
-      { t: 'Group Communication',           d: 'Keep volunteers, committee members, and staff aligned with built-in messaging throughout planning and on the day.' },
-      { t: 'Task and Rota Management',      d: 'Assign volunteering slots and pre-event responsibilities. Track completion without chasing people over WhatsApp.' },
-      { t: 'Fundraising Tracking',          d: 'Log targets and contributions against your event budget. Useful for charity events and grant reporting requirements.' },
-      { t: 'Unlimited Participants',        d: 'No cap on team size or attendee numbers. 2,000 visitors at a street festival costs the same as a book club of 15: nothing.' },
+      { t: 'No Attendee Accounts',         d: 'Participants join with just a name. Nothing to sign up for, nothing to download — no barrier to entry for any age group.' },
+      { t: 'QR Check-in Without Hardware', d: "Any volunteer's smartphone becomes a check-in scanner. Print QR codes or let attendees show them on screen." },
+      { t: 'Group Communication',          d: 'Keep volunteers, committee members, and staff aligned with built-in messaging throughout planning and on the day.' },
+      { t: 'Task and Rota Management',     d: 'Assign volunteering slots and pre-event responsibilities. Track completion without chasing people over WhatsApp.' },
+      { t: 'Fundraising Tracking',         d: 'Log targets and contributions against your event budget. Useful for charity events and grant reporting requirements.' },
+      { t: 'Unlimited Participants',       d: 'No cap on team size or attendee numbers. 2,000 visitors at a street festival costs the same as a book club of 15: nothing.' },
     ])}
-    <div class="pquote" style="border-left-color:#1d4ed8">
-      <div class="pquote-text">We used PlanIt for our annual community health fair — over 800 attendees, 40 volunteers, three venues running simultaneously. The check-in system alone saved us eight hours of manual data entry that week.</div>
-      <div class="pquote-attr">Community coordinator, non-profit health organisation, Birmingham</div>
-    </div>
-    <div class="ideal" style="border-left-color:#1d4ed8;background:#eff6ff">
-      <div class="ideal-cap">Who This Is For</div>
-      <div class="ideal-body">Neighbourhood associations, local charities, youth clubs and sports leagues, food banks and community kitchens, cultural and arts organisations, mutual aid groups, residents' associations, awareness campaigns, and local government outreach events.</div>
-    </div>
-    ${darkStrip('Always free for community use', 'Good tools should be accessible to good people.', 'No advertisements, no data selling, no upsell pressure', 'Get Started Free', '#1d4ed8', ctaUrl)}`;
+    ${pullQuote(
+      'We used PlanIt for our annual community health fair — over 800 attendees, 40 volunteers, three venues running simultaneously. The check-in system alone saved us eight hours of manual data entry that week.',
+      'Community coordinator, non-profit health organisation, Birmingham',
+      '#1D4ED8'
+    )}
+    ${idealFor(
+      'Who This Is For',
+      'Neighbourhood associations, local charities, youth clubs and sports leagues, food banks and community kitchens, cultural and arts organisations, mutual aid groups, residents\' associations, awareness campaigns, and local government outreach events.',
+      '#1D4ED8',
+      '#EFF6FF'
+    )}
+    ${darkStrip('Always free for community use', 'Good tools should be accessible to good people.', 'No advertisements, no data selling, no upsell pressure', '#93C5FD', 'Get Started Free', '#1D4ED8', url)}`;
 
-  return shell(
+  return emailShell(
     'PlanIt is free for community organisers — genuinely, no conditions',
     'Free event management for community groups, charities, and non-profits.',
-    'For Community Groups', 'rgba(29,78,216,.55)',
-    hero, body,
+    'For Community Groups',
+    `color:rgba(147,197,253,0.85);border:1px solid rgba(29,78,216,0.4)`,
+    headerRow,
+    body,
     'Community organisers work harder than almost anyone, usually without recognition and rarely with adequate resources. PlanIt will always be free for community use. That is a personal commitment, not a marketing line.',
-    'You are receiving this because your group was recommended as a potential PlanIt community user. To stop receiving these emails, reply with "unsubscribe."'
+    'You are receiving this because your group was recommended as a potential PlanIt community user.'
   );
 }
 
 function buildWeddings(ctaUrl) {
-  const hero = `<div class="hero">
-    <span class="eyebrow" style="background:#fdf4ff;color:#86198f">For Weddings and Special Occasions</span>
-    <h1 class="h1">One day. Every detail matters. Nothing should go wrong at the door.</h1>
-    <p class="hero-p">PlanIt is used by couples and wedding coordinators to manage the guest experience from personalised invitation through to seamless arrival and check-in. It handles the administration so the day can be exactly what you imagined.</p>
-  </div>`;
+  const url = ctaUrl || process.env.FRONTEND_URL || 'https://planitapp.onrender.com';
+
+  const headerRow = `
+    <tr>
+      <td class="ep" style="padding:36px 40px 30px 40px;border-bottom:1px solid ${RULE};">
+        <span style="display:inline-block;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#86198F;background:#FDF4FF;padding:5px 12px;border-radius:5px;margin-bottom:16px;font-family:${FONT};">For Weddings and Special Occasions</span>
+        <h1 style="margin:0 0 12px 0;font-size:24px;font-weight:800;color:${DARK};letter-spacing:-0.5px;line-height:1.2;font-family:${FONT};">One day. Every detail matters. Nothing should go wrong at the door.</h1>
+        <p style="margin:0;font-size:15px;color:${MUTED};line-height:1.65;font-family:${FONT};">PlanIt is used by couples and wedding coordinators to manage the guest experience from personalised invitation through to seamless arrival and check-in. It handles the administration so the day can be exactly what you imagined.</p>
+      </td>
+    </tr>`;
 
   const body = `
-    <div class="cap">Guest Experience From Invitation to Arrival</div>
+    ${sectionCap('Guest Experience From Invitation to Arrival')}
     ${featGrid([
-      { t: 'Individual Guest Invitations', d: 'Each guest receives their own personal invite with a unique QR code — not a generic link forwarded around a group chat.' },
-      { t: 'Seating and Table Management', d: 'Assign guests to tables. Track RSVPs, dietary requirements, and plus-ones in one place, without a separate spreadsheet.' },
-      { t: 'Dignified Check-in',           d: 'Guests show their QR code on arrival. No paper list, no names being called out, no queue forming at the entrance.' },
-      { t: 'Planner and Vendor Access',    d: "Give your wedding planner, on-site coordinator, and venue manager the access they need without sharing a personal login." },
-      { t: 'Post-Event Memory Sharing',    d: 'Share photographs, a video recording, and thank-you notes with all guests through the same event space, after the day.' },
-      { t: 'Multi-Language Guest Support', d: 'Your guest list may span multiple countries. PlanIt works in any browser with no translation barriers for international attendees.' },
+      { t: 'Individual Guest Invitations',  d: 'Each guest receives their own personal invite with a unique QR code — not a generic link forwarded around a group chat.' },
+      { t: 'Seating and Table Management',  d: 'Assign guests to tables. Track RSVPs, dietary requirements, and plus-ones in one place, without a separate spreadsheet.' },
+      { t: 'Dignified Check-in',            d: 'Guests show their QR code on arrival. No paper list, no names being called out, no queue forming at the entrance.' },
+      { t: 'Planner and Vendor Access',     d: "Give your wedding planner, on-site coordinator, and venue manager the access they need without sharing a personal login." },
+      { t: 'Post-Event Memory Sharing',     d: 'Share photographs, a video recording, and thank-you notes with all guests through the same event space after the day.' },
+      { t: 'Multi-Language Guest Support',  d: 'Your guest list may span multiple countries. PlanIt works in any browser with no translation barriers for international attendees.' },
     ])}
-    <div class="pquote" style="border-left-color:#a21caf">
-      <div class="pquote-text">We had guests arriving from four countries, two family groups meeting for the first time, and a coordinator managing remotely. Check-in was the one moment I was genuinely anxious about. It took less than three minutes to clear the entire arrivals queue.</div>
-      <div class="pquote-attr">Bride, 180-person wedding reception, New York</div>
-    </div>
-    <div class="ideal" style="border-left-color:#a21caf;background:#fdf4ff">
-      <div class="ideal-cap">Occasions PlanIt Is Used For</div>
-      <div class="ideal-body">
-        <strong style="color:#86198f">Western weddings:</strong> ceremony, rehearsal dinner, reception, morning-after brunch<br/><br/>
-        <strong style="color:#86198f">South Asian celebrations:</strong> sangeet, mehendi, haldi, baraat, shaadi, walima, and reception<br/><br/>
-        <strong style="color:#86198f">Other milestone events:</strong> engagement parties, anniversary celebrations, milestone birthdays, naming ceremonies, graduation parties, and retirement dinners
-      </div>
-    </div>
-    ${darkStrip('No charge for personal occasions', 'One day. Done properly.', 'Use it for your celebration at no cost', 'Get Started Free', '#a21caf', ctaUrl)}`;
+    ${pullQuote(
+      'We had guests arriving from four countries, two family groups meeting for the first time, and a coordinator managing remotely. Check-in was the one moment I was genuinely anxious about. It took less than three minutes to clear the entire arrivals queue.',
+      'Bride, 180-person wedding reception, New York',
+      '#A21CAF'
+    )}
+    ${idealFor(
+      'Occasions PlanIt Is Used For',
+      `<strong style="color:#86198F;">Western weddings:</strong> ceremony, rehearsal dinner, reception, morning-after brunch<br/><br/><strong style="color:#86198F;">South Asian celebrations:</strong> sangeet, mehendi, haldi, baraat, shaadi, walima, and reception<br/><br/><strong style="color:#86198F;">Other milestone events:</strong> engagement parties, anniversary celebrations, milestone birthdays, naming ceremonies, graduation parties, and retirement dinners`,
+      '#A21CAF',
+      '#FDF4FF'
+    )}
+    ${darkStrip('No charge for personal occasions', 'One day. Done properly.', 'Use it for your celebration at no cost', '#E879F9', 'Get Started Free', '#A21CAF', url)}`;
 
-  return shell(
+  return emailShell(
     'For the events that have to be perfect',
     'PlanIt for weddings and special occasions — dignified check-in, personal invitations, seamless arrivals.',
-    'For Special Occasions', 'rgba(162,28,175,.55)',
-    hero, body,
+    'For Special Occasions',
+    `color:rgba(240,171,252,0.85);border:1px solid rgba(162,28,175,0.4)`,
+    headerRow,
+    body,
     'Special occasions deserve tools built with the same care that goes into the occasion itself. I hope PlanIt earns a small place in making your day exactly what you envisioned.',
-    'You are receiving this because you expressed interest in event planning tools. To stop receiving these emails, reply with "unsubscribe."'
+    'You are receiving this because you expressed interest in event planning tools.'
   );
 }
 
