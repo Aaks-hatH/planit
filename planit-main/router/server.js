@@ -228,6 +228,30 @@ function _keyPoolStats() {
   return result;
 }
 
+// ─── Log ring-buffer ──────────────────────────────────────────────────────────
+// Captures every console.log/warn/error into an in-memory buffer (last 2000
+// entries) so the admin panel can fetch router logs via /mesh/logs.
+const ROUTER_LOG_BUFFER = [];
+const ROUTER_LOG_MAX    = 2000;
+
+function pushRouterLog(level, args) {
+  const entry = {
+    ts:     new Date().toISOString(),
+    level,
+    msg:    args.map(a => (typeof a === 'object' ? JSON.stringify(a) : String(a))).join(' '),
+    source: 'router',
+  };
+  ROUTER_LOG_BUFFER.push(entry);
+  if (ROUTER_LOG_BUFFER.length > ROUTER_LOG_MAX) ROUTER_LOG_BUFFER.shift();
+}
+
+const _rLog   = console.log.bind(console);
+const _rWarn  = console.warn.bind(console);
+const _rError = console.error.bind(console);
+console.log   = (...a) => { pushRouterLog('info',  a); _rLog(...a);   };
+console.warn  = (...a) => { pushRouterLog('warn',  a); _rWarn(...a);  };
+console.error = (...a) => { pushRouterLog('error', a); _rError(...a); };
+
 // ─── Config ───────────────────────────────────────────────────────────────────
 const BACKENDS = (process.env.BACKEND_URLS || '')
   .split(',').map(u => u.trim()).filter(Boolean);
@@ -243,8 +267,9 @@ function backendName(i) {
   return customLabels[i] || FALLBACK_NAMES[i] || `Backend-${i + 1}`;
 }
 
-const SERVICE_NAME = process.env.SERVICE_NAME || 'Router';
-const PORT         = process.env.PORT || 3000;
+const SERVICE_NAME  = process.env.SERVICE_NAME  || 'Router';
+const PORT          = process.env.PORT          || 3000;
+const WATCHDOG_URL  = (process.env.WATCHDOG_URL || '').replace(/\/$/, '');
 const COOKIE_NAME  = 'planit_route';
 const COOKIE_MAX_AGE_MS = 24 * 60 * 60 * 1000;
 
@@ -759,6 +784,88 @@ app.get('/mesh/status', meshAuth(SERVICE_NAME), (_req, res) => {
   });
 });
 
+// ─── Mesh logs endpoint ───────────────────────────────────────────────────────
+// Returns the full router log buffer. Called by the backend admin log aggregator.
+app.get('/mesh/logs', meshAuth(SERVICE_NAME), (_req, res) => {
+  res.json({
+    source:   'router',
+    name:     'Router',
+    logs:     ROUTER_LOG_BUFFER.slice(),
+    total:    ROUTER_LOG_BUFFER.length,
+    uptime:   Math.floor(process.uptime()),
+    ts:       new Date().toISOString(),
+  });
+});
+
+// ─── Mesh fleet-logs aggregator ───────────────────────────────────────────────
+// Single endpoint that fans out to:
+//   - this router's own log buffer
+//   - every registered backend via GET /api/mesh/logs
+//   - the watchdog via GET /mesh/logs  (if WATCHDOG_URL is set)
+// The admin panel calls this once and gets every log from every service,
+// merged and sorted by timestamp. Failures are soft — partial results returned.
+app.get('/mesh/fleet-logs', meshAuth(SERVICE_NAME), async (_req, res) => {
+  const results = [
+    // Always include router's own logs
+    {
+      source:   'router',
+      name:     'Router',
+      ok:       true,
+      logs:     ROUTER_LOG_BUFFER.slice().map(e => ({ ...e, source: 'router', sourceName: 'Router' })),
+    },
+  ];
+
+  const fetches = [];
+
+  // Fan out to every known backend
+  backendStatus.forEach(b => {
+    fetches.push(
+      meshGet(SERVICE_NAME, `${b.url}/api/mesh/logs`, { timeout: 8000 })
+        .then(r => {
+          if (r.ok && r.data?.logs) {
+            results.push({ source: r.data.source || b.name.toLowerCase(), name: r.data.name || b.name, ok: true, logs: r.data.logs });
+          } else {
+            results.push({ source: b.name.toLowerCase(), name: b.name, ok: false, error: r.error || 'no logs returned' });
+          }
+        })
+        .catch(err => results.push({ source: b.name.toLowerCase(), name: b.name, ok: false, error: err.message }))
+    );
+  });
+
+  // Fan out to watchdog if configured
+  if (WATCHDOG_URL) {
+    fetches.push(
+      meshGet(SERVICE_NAME, `${WATCHDOG_URL}/mesh/logs`, { timeout: 8000 })
+        .then(r => {
+          if (r.ok && r.data?.logs) {
+            results.push({ source: 'watchdog', name: r.data.name || 'Watchdog', ok: true, logs: r.data.logs });
+          } else {
+            results.push({ source: 'watchdog', name: 'Watchdog', ok: false, error: r.error || 'no logs returned' });
+          }
+        })
+        .catch(err => results.push({ source: 'watchdog', name: 'Watchdog', ok: false, error: err.message }))
+    );
+  }
+
+  await Promise.all(fetches);
+
+  // Merge and sort all logs by timestamp ascending
+  const allLogs = results
+    .filter(r => r.ok && r.logs)
+    .flatMap(r => r.logs.map(e => ({ ...e, source: e.source || r.source, sourceName: e.sourceName || r.name })));
+  allLogs.sort((a, b) => (a.ts > b.ts ? 1 : a.ts < b.ts ? -1 : 0));
+
+  const sources = results.map(r => ({
+    source: r.source,
+    name:   r.name,
+    ok:     r.ok,
+    count:  r.ok ? r.logs.length : 0,
+    error:  r.error || null,
+  }));
+
+  res.json({ logs: allLogs, total: allLogs.length, sources, fetchedAt: new Date().toISOString() });
+});
+
 // ─── Boost API ────────────────────────────────────────────────────────────────
 // POST /mesh/boost — activate boost mode
 // Body: { durationMinutes, reason, minBackends, pinnedEventIds[] }
@@ -834,6 +941,7 @@ const SHARED_CONFIG_KEYS = [
   'SURVEY_URL',
   'EMAIL_REMINDER_HOURS',
   'FRONTEND_URL',
+  'WATCHDOG_URL',   // propagated to backends so they can reference it if needed
 ];
 app.get('/mesh/config', meshAuth(SERVICE_NAME), (_req, res) => {
   const config = {};
