@@ -7,7 +7,7 @@ import {
   ChevronRight, Clock, QrCode,
   Smile,
   CheckCircle2, Megaphone, DollarSign, StickyNote, Share2, UserCheck, XCircle, ClipboardList,
-  Star, Shield, LogIn, UserPlus
+  Star, Shield, LogIn, UserPlus, HelpCircle
 } from 'lucide-react';
 import { eventAPI, chatAPI, pollAPI, fileAPI } from '../services/api';
 import socketService from '../services/socket';
@@ -1162,6 +1162,10 @@ export default function EventSpace() {
               className="w-8 h-8 rounded-lg bg-neutral-100 hover:bg-red-50 flex items-center justify-center transition-colors group">
               <LogOut className="w-3.5 h-3.5 text-neutral-500 group-hover:text-red-500 transition-colors" />
             </button>
+            <a href="/help" title="Help Center"
+              className="w-8 h-8 rounded-lg bg-neutral-100 hover:bg-neutral-200 flex items-center justify-center transition-colors">
+              <HelpCircle className="w-3.5 h-3.5 text-neutral-600" />
+            </a>
           </div>
         </div>
       </header>
