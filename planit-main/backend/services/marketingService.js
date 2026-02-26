@@ -252,7 +252,7 @@ function buildPlanners(ctaUrl) {
       { t: 'QR Check-in, Any Device',  d: 'Any team member with a smartphone can check guests in. No app download, no morning-of training required.' },
       { t: 'Real-Time Guest Tracking', d: 'Watch arrivals as they happen. Know exactly who has checked in and who has not, from anywhere.' },
       { t: 'Built-in Team Chat',       d: 'Keep venue staff, caterers, AV teams, and coordinators aligned without juggling separate group threads.' },
-      { t: 'Live Polls and Q&amp;A',   d: 'Run audience decisions mid-event. Venue vote, session preference, speaker Q&amp;A — all inside PlanIt.' },
+      { t: 'Live Polls and Q&amp;A',   d: 'Run audience decisions mid-event. Venue vote, session preference, speaker Q&amp;A  all inside PlanIt.' },
       { t: 'File and Document Hub',    d: 'Floor plans, run sheets, vendor contracts, seating charts. One organised place for everything your team needs.' },
     ])}
     ${pullQuote(
@@ -348,7 +348,7 @@ function buildTemples(ctaUrl) {
 
   return emailShell(
     "Organise your community's events with dignity and ease",
-    'A free platform for places of worship — dignified check-in, personal invitations, volunteer coordination.',
+    'A free platform for places of worship, dignified check-in, personal invitations, volunteer coordination.',
     'For Places of Worship',
     `color:rgba(253,186,116,0.85);border:1px solid rgba(180,83,9,0.4)`,
     headerRow,
@@ -420,7 +420,7 @@ function buildCommunity(ctaUrl) {
   const body = `
     ${sectionCap('What You Get at No Cost')}
     ${featGrid([
-      { t: 'No Attendee Accounts',         d: 'Participants join with just a name. Nothing to sign up for, nothing to download — no barrier to entry for any age group.' },
+      { t: 'No Attendee Accounts',         d: 'Participants join with just a name. Nothing to sign up for, nothing to download. No barrier to entry for any age group.' },
       { t: 'QR Check-in Without Hardware', d: "Any volunteer's smartphone becomes a check-in scanner. Print QR codes or let attendees show them on screen." },
       { t: 'Group Communication',          d: 'Keep volunteers, committee members, and staff aligned with built-in messaging throughout planning and on the day.' },
       { t: 'Task and Rota Management',     d: 'Assign volunteering slots and pre-event responsibilities. Track completion without chasing people over WhatsApp.' },
@@ -428,7 +428,7 @@ function buildCommunity(ctaUrl) {
       { t: 'Unlimited Participants',       d: 'No cap on team size or attendee numbers. 2,000 visitors at a street festival costs the same as a book club of 15: nothing.' },
     ])}
     ${pullQuote(
-      'We used PlanIt for our annual community health fair — over 800 attendees, 40 volunteers, three venues running simultaneously. The check-in system alone saved us eight hours of manual data entry that week.',
+      'We used PlanIt for our annual community health fair, over 800 attendees, 40 volunteers, three venues running simultaneously. The check-in system alone saved us eight hours of manual data entry that week.',
       'Community coordinator, non-profit health organisation, Birmingham',
       '#1D4ED8'
     )}
@@ -441,7 +441,7 @@ function buildCommunity(ctaUrl) {
     ${darkStrip('Always free for community use', 'Good tools should be accessible to good people.', 'No advertisements, no data selling, no upsell pressure', '#93C5FD', 'Get Started Free', '#1D4ED8', url)}`;
 
   return emailShell(
-    'PlanIt is free for community organisers — genuinely, no conditions',
+    'PlanIt is free for community organisers. Genuinely, no conditions',
     'Free event management for community groups, charities, and non-profits.',
     'For Community Groups',
     `color:rgba(147,197,253,0.85);border:1px solid rgba(29,78,216,0.4)`,
@@ -467,7 +467,7 @@ function buildWeddings(ctaUrl) {
   const body = `
     ${sectionCap('Guest Experience From Invitation to Arrival')}
     ${featGrid([
-      { t: 'Individual Guest Invitations',  d: 'Each guest receives their own personal invite with a unique QR code — not a generic link forwarded around a group chat.' },
+      { t: 'Individual Guest Invitations',  d: 'Each guest receives their own personal invite with a unique QR code, not a generic link forwarded around a group chat.' },
       { t: 'Seating and Table Management',  d: 'Assign guests to tables. Track RSVPs, dietary requirements, and plus-ones in one place, without a separate spreadsheet.' },
       { t: 'Dignified Check-in',            d: 'Guests show their QR code on arrival. No paper list, no names being called out, no queue forming at the entrance.' },
       { t: 'Planner and Vendor Access',     d: "Give your wedding planner, on-site coordinator, and venue manager the access they need without sharing a personal login." },
@@ -489,7 +489,7 @@ function buildWeddings(ctaUrl) {
 
   return emailShell(
     'For the events that have to be perfect',
-    'PlanIt for weddings and special occasions — dignified check-in, personal invitations, seamless arrivals.',
+    'PlanIt for weddings and special occasions, dignified check-in, personal invitations, seamless arrivals.',
     'For Special Occasions',
     `color:rgba(240,171,252,0.85);border:1px solid rgba(162,28,175,0.4)`,
     headerRow,
@@ -534,7 +534,7 @@ const TEMPLATES = {
     id: 'community',
     name: 'Community Groups and Non-Profits',
     description: 'For community organisers. Free forever.',
-    defaultSubject: 'PlanIt is free for community organisers — genuinely, no conditions',
+    defaultSubject: 'PlanIt is free for community organisers. Genuinely, no conditions',
     build: buildCommunity,
   },
   weddings: {
