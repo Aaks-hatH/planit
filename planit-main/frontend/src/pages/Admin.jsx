@@ -17,7 +17,7 @@ import {
   Rocket, Timer, Wifi as WifiOn, Cpu as CpuIcon,
 } from 'lucide-react';
 import api, { adminAPI, uptimeAPI, watchdogAPI, routerAPI } from '../services/api';
-import { SERVICE_CATEGORIES } from '../utils/serviceCategories';
+import { SERVICE_CATEGORIES, ALL_SERVICES_FLAT } from '../utils/serviceCategories';
 import { formatNumber, formatFileSize } from '../utils/formatters';
 import { DateTime } from 'luxon';
 import toast from 'react-hot-toast';
@@ -630,7 +630,7 @@ function UptimePanel() {
       {/* Create Incident Modal */}
       {showCreate && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 px-4" onClick={e => e.target === e.currentTarget && setShowCreate(false)}>
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden" style={{ maxHeight: '90vh', display: 'flex', flexDirection: 'column' }}>
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden" style={{ maxHeight: '90vh', display: 'flex', flexDirection: 'column' }}>
             <div className="px-5 py-4 border-b flex items-center justify-between flex-shrink-0">
               <h3 className="font-bold">Create Incident</h3>
               <button onClick={() => setShowCreate(false)} className="p-1 hover:bg-neutral-100 rounded-lg"><X className="w-4 h-4 text-neutral-400" /></button>
@@ -642,6 +642,93 @@ function UptimePanel() {
               </div>
               <div><label className="block text-xs font-medium text-neutral-600 mb-1">Description</label><textarea value={createForm.description} onChange={e => setCreateForm(f => ({ ...f, description: e.target.value }))} rows={2} className="input w-full text-sm resize-none" /></div>
               <div><label className="block text-xs font-medium text-neutral-600 mb-1">Initial Message</label><textarea value={createForm.initialMessage} onChange={e => setCreateForm(f => ({ ...f, initialMessage: e.target.value }))} rows={2} className="input w-full text-sm resize-none" /></div>
+
+              {/* ── Affected Services Picker ── */}
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="text-xs font-medium text-neutral-600">
+                    Affected Services
+                    <span className="ml-1 text-neutral-400 font-normal">(leave blank = general banner only, no individual features marked down)</span>
+                  </label>
+                  <div className="flex gap-3">
+                    <button type="button" onClick={() => setSelServices(ALL_SERVICES_FLAT.map(s => s.key))} className="text-xs text-blue-600 hover:text-blue-800 font-medium">Select all</button>
+                    <button type="button" onClick={() => setSelServices([])} className="text-xs text-neutral-500 hover:text-neutral-700 font-medium">Clear</button>
+                  </div>
+                </div>
+
+                {/* Selected chips */}
+                {selServices.length > 0 && (
+                  <div className="flex flex-wrap gap-1 mb-2 p-2 bg-red-50 border border-red-100 rounded-lg">
+                    {selServices.map(key => {
+                      const svc = ALL_SERVICES_FLAT.find(s => s.key === key);
+                      return (
+                        <span key={key} className="inline-flex items-center gap-1 text-xs bg-red-500 text-white px-2 py-0.5 rounded-full font-medium">
+                          {svc?.name || key}
+                          <button type="button" onClick={() => setSelServices(p => p.filter(k => k !== key))} className="hover:opacity-70 ml-0.5">
+                            <X className="w-2.5 h-2.5" />
+                          </button>
+                        </span>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {/* Category grid */}
+                <div className="border border-neutral-200 rounded-xl overflow-hidden" style={{ maxHeight: '260px', overflowY: 'auto' }}>
+                  {SERVICE_CATEGORIES.map(cat => {
+                    const catKeys = cat.services.map(s => s.key);
+                    const allCatSelected = catKeys.every(k => selServices.includes(k));
+                    const someCatSelected = catKeys.some(k => selServices.includes(k));
+                    return (
+                      <div key={cat.id} className="border-b border-neutral-100 last:border-0">
+                        <div className="flex items-center justify-between px-3 py-2 bg-neutral-50 sticky top-0">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (allCatSelected) setSelServices(p => p.filter(k => !catKeys.includes(k)));
+                              else setSelServices(p => [...new Set([...p, ...catKeys])]);
+                            }}
+                            className="flex items-center gap-2 group"
+                          >
+                            <div className={`w-4 h-4 rounded border-2 flex items-center justify-center flex-shrink-0 transition-all ${allCatSelected ? 'bg-neutral-800 border-neutral-800' : someCatSelected ? 'border-neutral-400 bg-neutral-200' : 'border-neutral-300'}`}>
+                              {allCatSelected && <svg width="8" height="8" viewBox="0 0 10 10"><polyline points="1.5 5 4 7.5 8.5 2" stroke="white" strokeWidth="1.8" fill="none" strokeLinecap="round" strokeLinejoin="round"/></svg>}
+                              {someCatSelected && !allCatSelected && <div className="w-1.5 h-1.5 bg-neutral-500 rounded-sm" />}
+                            </div>
+                            <span className="text-xs font-bold text-neutral-700 uppercase tracking-wide group-hover:text-neutral-900">{cat.label}</span>
+                          </button>
+                          <span className="text-xs text-neutral-400">{catKeys.filter(k => selServices.includes(k)).length}/{catKeys.length}</span>
+                        </div>
+                        <div className="grid grid-cols-2 sm:grid-cols-3">
+                          {cat.services.map(svc => {
+                            const selected = selServices.includes(svc.key);
+                            return (
+                              <label key={svc.key} className={`flex items-center gap-2 px-3 py-2 cursor-pointer transition-colors border-r border-b border-neutral-50 ${selected ? 'bg-red-50' : 'hover:bg-neutral-50'}`}>
+                                <div className={`w-3.5 h-3.5 rounded border-2 flex items-center justify-center flex-shrink-0 transition-all ${selected ? 'bg-red-500 border-red-500' : 'border-neutral-300'}`}>
+                                  {selected && <svg width="7" height="7" viewBox="0 0 10 10"><polyline points="1.5 5 4 7.5 8.5 2" stroke="white" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round"/></svg>}
+                                </div>
+                                <input type="checkbox" className="sr-only" checked={selected} onChange={() => setSelServices(p => selected ? p.filter(k => k !== svc.key) : [...p, svc.key])} />
+                                <span className={`text-xs ${selected ? 'text-red-700 font-medium' : 'text-neutral-600'}`}>{svc.name}</span>
+                              </label>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {selServices.length === 0 && (
+                  <p className="text-xs text-amber-600 mt-1.5 flex items-center gap-1">
+                    <AlertTriangle className="w-3 h-3 flex-shrink-0" />
+                    No services selected — incident will appear in the status banner but won't mark any individual feature as disrupted.
+                  </p>
+                )}
+                {selServices.length > 0 && (
+                  <p className="text-xs text-red-600 mt-1.5 font-medium">
+                    {selServices.length} feature{selServices.length !== 1 ? 's' : ''} will be marked as disrupted on the public status page.
+                  </p>
+                )}
+              </div>
             </div>
             <div className="px-5 py-4 border-t flex gap-3 flex-shrink-0">
               <button onClick={() => setShowCreate(false)} className="flex-1 btn btn-secondary text-sm">Cancel</button>
@@ -650,7 +737,7 @@ function UptimePanel() {
                 setCreating(true);
                 try { await uptimeAPI.createIncident({ ...createForm, affectedServices: selServices }); toast.success('Created'); setShowCreate(false); load(); } catch { toast.error('Failed'); } finally { setCreating(false); }
               }} disabled={creating} className="flex-1 btn bg-neutral-900 hover:bg-neutral-800 text-white text-sm gap-2">
-                {creating ? <span className="spinner w-4 h-4 border-2 border-white/30 border-t-white" /> : <Plus className="w-4 h-4" />} Create
+                {creating ? <span className="spinner w-4 h-4 border-2 border-white/30 border-t-white" /> : <Plus className="w-4 h-4" />} Create Incident
               </button>
             </div>
           </div>
