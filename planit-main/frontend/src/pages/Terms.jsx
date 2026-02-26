@@ -1,26 +1,13 @@
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, FileText } from 'lucide-react';
-/*
-Copyright (C) 2026 Aakshat Hariharan 
 
-This program is free software: you can redistribute it and/or modify
-it under the terms of the GNU Affero General Public License as
-published by the Free Software Foundation, version 3.
-
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-GNU Affero General Public License for more details.
-
-You should have received a copy of the GNU Affero General Public License
-along with this program. If not, see <https://www.gnu.org/licenses/>.
-*/
-const LAST_UPDATED = 'February 20, 2026';
+const LAST_UPDATED = 'February 26, 2026';
+const EFFECTIVE_DATE = 'February 26, 2026';
 
 function Section({ number, title, children }) {
   return (
-    <section className="mb-10">
-      <h2 className="text-xl font-semibold text-neutral-900 mb-4 pb-2 border-b border-neutral-100">
+    <section className="mb-12">
+      <h2 className="text-lg font-bold text-neutral-900 mb-4 pb-3 border-b-2 border-neutral-200 tracking-tight">
         {number}. {title}
       </h2>
       <div className="space-y-4 text-neutral-700 leading-relaxed text-sm">
@@ -30,11 +17,28 @@ function Section({ number, title, children }) {
   );
 }
 
-function Sub({ title, children }) {
+function Sub({ number, title, children }) {
   return (
-    <div>
-      <h3 className="text-sm font-semibold text-neutral-800 mb-2">{title}</h3>
-      <div className="space-y-2 text-neutral-700 leading-relaxed text-sm">{children}</div>
+    <div className="mt-5">
+      <h3 className="text-sm font-bold text-neutral-800 mb-2">{number} {title}</h3>
+      <div className="space-y-3 text-neutral-700 leading-relaxed text-sm">{children}</div>
+    </div>
+  );
+}
+
+function DefItem({ term, children }) {
+  return (
+    <div className="flex gap-3 py-2.5 border-b border-neutral-100 last:border-0">
+      <span className="font-bold text-neutral-900 w-44 flex-shrink-0 text-xs uppercase tracking-wide pt-0.5">"{term}"</span>
+      <span className="text-neutral-600 text-sm leading-relaxed">{children}</span>
+    </div>
+  );
+}
+
+function LegalCallout({ children }) {
+  return (
+    <div className="my-5 p-4 bg-neutral-900 rounded-xl text-sm text-neutral-300 leading-relaxed">
+      {children}
     </div>
   );
 }
@@ -61,368 +65,387 @@ export default function Terms() {
       </header>
 
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="bg-white rounded-2xl shadow-sm border border-neutral-200 p-8 md:p-12">
+        <div className="bg-white rounded-2xl shadow-sm border border-neutral-200 p-8 md:p-14">
 
-          <div className="mb-10">
-            <h1 className="text-3xl font-bold text-neutral-900 mb-3">Terms of Service</h1>
-            <p className="text-sm text-neutral-500">Last updated: {LAST_UPDATED}</p>
-            <div className="mt-4 p-4 bg-neutral-50 border border-neutral-200 rounded-lg text-sm text-neutral-600 leading-relaxed">
-              These Terms of Service ("Terms") govern your access to and use of the PlanIt event planning platform,
-              including its website and Progressive Web App (collectively, the "Service"), operated by Aakshat Hariharan
-              ("PlanIt", "we", "us", or "our"). By accessing or using the Service in any way, you agree to be bound
-              by these Terms. If you do not agree, do not use the Service.
-            </div>
+          <div className="mb-12">
+            <h1 className="text-4xl font-black text-neutral-900 mb-2 tracking-tight">Terms of Service</h1>
+            <p className="text-sm text-neutral-500 mb-1">Last updated: {LAST_UPDATED}</p>
+            <p className="text-sm text-neutral-500 mb-6">Effective date: {EFFECTIVE_DATE}</p>
+            <LegalCallout>
+              <strong className="text-white">PLEASE READ THESE TERMS OF SERVICE CAREFULLY AND IN THEIR ENTIRETY BEFORE ACCESSING OR USING THE SERVICE.</strong> These Terms of Service constitute a legally binding agreement between you and PlanIt. Your access to or use of the Service in any manner whatsoever — including browsing, creating an Event, joining an Event workspace, submitting Content, or otherwise interacting with the Service — constitutes your unconditional acceptance of and agreement to be bound by these Terms of Service and all policies incorporated herein by reference. IF YOU DO NOT AGREE TO THESE TERMS IN THEIR ENTIRETY, YOU MUST IMMEDIATELY CEASE ALL USE OF AND ACCESS TO THE SERVICE.
+            </LegalCallout>
           </div>
 
-          <Section number="1" title="Description of the Service">
+          <Section number="1" title="Definitions and Interpretive Provisions">
             <p>
-              PlanIt is a web-based collaborative event planning platform that allows users to create event workspaces
-              ("Events") and invite other participants to collaborate in real time. Features include group chat, RSVP
-              management, polls, shared file storage, task management, announcements, shared notes, expense tracking,
-              event analytics, and, in Enterprise mode, QR-code-based guest invitation and check-in management.
+              For the purposes of these Terms of Service, the following defined terms shall have the meanings set forth herein. Capitalised terms not otherwise defined shall bear the meanings commonly attributed to them in the context of software-as-a-service agreements governed by commercial law. The singular shall include the plural and vice versa. Headings are for convenience only. References to any statute or statutory provision include all amendments, re-enactments, and consolidations thereof.
             </p>
-            <p>
-              PlanIt is provided free of charge. We reserve the right to introduce paid features or plans in the future,
-              in which case clear notice will be given before any charges are applied.
-            </p>
-          </Section>
-
-          <Section number="2" title="Eligibility">
-            <p>
-              You must be at least 13 years of age to use the Service. By using the Service, you represent and warrant
-              that you meet this minimum age requirement. If you are between 13 and 18 years of age, you represent that
-              you have your parent or guardian's permission to use the Service.
-            </p>
-            <p>
-              If you are creating an Event on behalf of a business, organisation, or other legal entity, you represent
-              that you have the authority to bind that entity to these Terms, and these Terms apply to that entity as well.
-            </p>
-          </Section>
-
-          <Section number="3" title="Accounts and Event Creation">
-            <Sub title="3.1 No Persistent User Accounts">
-              <p>
-                PlanIt does not require you to create a persistent user account. Instead, organizers create individual
-                Events and receive a unique event link. Participants join using a chosen display name. Each Event exists
-                independently, and your access to an Event does not grant you access to any other Event.
-              </p>
-            </Sub>
-            <Sub title="3.2 Organizer Responsibilities">
-              <p>
-                When you create an Event, you become the "Organizer" of that Event. As Organizer, you are responsible for:
-              </p>
-              <ul className="list-disc list-inside space-y-1.5 ml-3 mt-2">
-                <li>Providing accurate information when creating the Event, including a valid email address.</li>
-                <li>Maintaining the confidentiality of your organizer account password and any event-level password you set.</li>
-                <li>All activity that occurs within your Event, including content posted by participants you have invited.</li>
-                <li>Ensuring that participants you invite are aware of these Terms and our Privacy Policy.</li>
-                <li>Using the Event features in a lawful and responsible manner.</li>
-              </ul>
-            </Sub>
-            <Sub title="3.3 Participant Responsibilities">
-              <p>
-                When you join an Event as a participant, you are responsible for the accuracy of the display name you
-                choose and for all content you submit within that Event.
-              </p>
-            </Sub>
-            <Sub title="3.4 Account Passwords">
-              <p>
-                Participants may optionally set an account password that protects their chosen display name within a
-                given Event. If you lose your account password, we cannot recover it. You would need to contact the
-                event Organizer or reach out to us at{' '}
-                <a href="mailto:planit.userhelp@gmail.com" className="text-neutral-900 font-medium underline underline-offset-2">
-                  planit.userhelp@gmail.com
-                </a>{' '}
-                for assistance.
-              </p>
-            </Sub>
-          </Section>
-
-          <Section number="4" title="Acceptable Use">
-            <Sub title="4.1 Permitted Uses">
-              <p>
-                The Service may be used for lawful personal, social, and professional event planning and collaboration
-                purposes, including but not limited to planning social gatherings, corporate events, conferences,
-                community events, and any other legitimate group activity.
-              </p>
-            </Sub>
-            <Sub title="4.2 Prohibited Uses">
-              <p>You agree not to use the Service to:</p>
-              <ul className="list-disc list-inside space-y-1.5 ml-3 mt-2">
-                <li>Violate any applicable local, national, or international law or regulation.</li>
-                <li>Post, transmit, or share content that is defamatory, obscene, fraudulent, hateful, discriminatory, or otherwise objectionable.</li>
-                <li>Harass, threaten, intimidate, or abuse any other user of the Service.</li>
-                <li>Impersonate any person, organisation, or entity, or otherwise misrepresent your identity or affiliation.</li>
-                <li>Upload, share, or transmit any content that infringes the intellectual property rights, privacy rights, or other legal rights of any third party.</li>
-                <li>Transmit any malware, viruses, ransomware, spyware, or other harmful or malicious code.</li>
-                <li>Attempt to gain unauthorised access to any part of the Service, another user's event, or our backend infrastructure.</li>
-                <li>Use automated scripts, bots, crawlers, or other automated tools to interact with the Service without our prior written consent.</li>
-                <li>Interfere with or disrupt the integrity or performance of the Service, including by sending excessive requests that place unreasonable load on our infrastructure.</li>
-                <li>Collect, harvest, or store personal information about other users without their explicit consent.</li>
-                <li>Use the Service for unsolicited advertising, spam, or any other form of unauthorized promotion.</li>
-                <li>Circumvent, disable, or otherwise interfere with any security features of the Service, including rate limiting, authentication, or access controls.</li>
-                <li>Use the Service for any purpose that could expose PlanIt, its users, or third parties to legal liability.</li>
-              </ul>
-            </Sub>
-            <Sub title="4.3 Enforcement">
-              <p>
-                We reserve the right to investigate any suspected violation of this Section and to take appropriate
-                action, including immediate removal of content, termination of access, and where warranted, referral
-                to law enforcement authorities.
-              </p>
-            </Sub>
-          </Section>
-
-          <Section number="5" title="User Content">
-            <Sub title="5.1 Ownership">
-              <p>
-                You retain all ownership rights to content you create and submit through the Service, including messages,
-                files, poll questions and options, task descriptions, notes, and expense records ("User Content").
-              </p>
-            </Sub>
-            <Sub title="5.2 License to PlanIt">
-              <p>
-                By submitting User Content to the Service, you grant PlanIt a limited, non-exclusive, royalty-free,
-                worldwide license to store, display, transmit, and reproduce that content solely to the extent necessary
-                to operate and provide the Service to you and other participants of the same Event. This license exists
-                only for the duration that the content is stored on our servers and terminates when the content is deleted
-                in accordance with our seven-day data retention policy.
-              </p>
-              <p>
-                We do not use your User Content for any commercial purpose, advertising, or AI/machine learning training.
-              </p>
-            </Sub>
-            <Sub title="5.3 Content Standards">
-              <p>
-                All User Content must comply with Section 4 (Acceptable Use). You represent and warrant that:
-              </p>
-              <ul className="list-disc list-inside space-y-1.5 ml-3 mt-2">
-                <li>You own or have the necessary rights to submit the User Content.</li>
-                <li>The User Content does not infringe, misappropriate, or violate any third party's intellectual property rights, privacy rights, or other legal rights.</li>
-                <li>The User Content complies with all applicable laws and regulations.</li>
-              </ul>
-            </Sub>
-            <Sub title="5.4 Content Removal">
-              <p>
-                We reserve the right, but not the obligation, to review, monitor, or remove User Content at our
-                sole discretion, without notice, if we determine that such content violates these Terms or is
-                otherwise harmful. Organizers also have the ability to delete messages and content within their Events.
-              </p>
-            </Sub>
-          </Section>
-
-          <Section number="6" title="Data Retention and Event Deletion">
-            <p>
-              All data associated with an Event — including messages, files, polls, tasks, expenses, notes, RSVP
-              records, and participant information — is automatically and permanently deleted seven days after the
-              Event date. Files stored via Cloudinary are also deleted as part of this process.
-            </p>
-            <p>
-              PlanIt is not a permanent storage solution. You acknowledge and agree that you are responsible for
-              saving or exporting any content from an Event before the deletion date. We strongly recommend
-              downloading important files and exporting the calendar event before the seven-day window closes.
-              PlanIt accepts no liability for loss of data as a result of the automatic deletion process.
-            </p>
-            <p>
-              Organizers may request early deletion of their Event and all associated data by contacting us at{' '}
-              <a href="mailto:planit.userhelp@gmail.com" className="text-neutral-900 font-medium underline underline-offset-2">
-                planit.userhelp@gmail.com
-              </a>.
-            </p>
-          </Section>
-
-          <Section number="7" title="Enterprise Mode">
-            <p>
-              Enterprise mode is a feature of PlanIt that enables organizers to issue individual QR-code-based
-              invitations to guests and manage a structured check-in process. If you use Enterprise mode, the
-              following additional terms apply:
-            </p>
-            <ul className="list-disc list-inside space-y-1.5 ml-3 mt-2">
-              <li>You as the Organizer are solely responsible for the accuracy of guest information entered into the system.</li>
-              <li>Invite QR codes are single-use identifiers. You are responsible for distributing them securely to the correct individuals.</li>
-              <li>Guest personal information entered into the Enterprise invite system (name, contact details, etc.) is subject to the same seven-day deletion policy and is visible only to Organizers and authorised check-in staff for that Event.</li>
-              <li>You agree to use the check-in and manager override features only for legitimate event management purposes and not to unlawfully discriminate against or deny entry to any person on protected grounds.</li>
-              <li>You are responsible for ensuring that any personal data you collect from guests through the Enterprise invite system complies with applicable data protection and privacy laws in your jurisdiction.</li>
-            </ul>
-          </Section>
-
-          <Section number="8" title="Intellectual Property">
-            <Sub title="8.1 PlanIt's Intellectual Property">
-              <p>
-                The Service, including its design, interface, code, branding, logo, and all features and functionality,
-                is owned by PlanIt and protected by applicable intellectual property laws. You are granted a limited,
-                non-exclusive, non-transferable, revocable licence to access and use the Service for its intended
-                purpose subject to these Terms.
-              </p>
-              <p>
-                You may not copy, modify, distribute, sell, license, reverse engineer, decompile, or otherwise
-                exploit any part of the Service without our prior written consent.
-              </p>
-            </Sub>
-            <Sub title="8.2 Feedback">
-              <p>
-                If you submit feedback, suggestions, or ideas about the Service to us, you grant PlanIt a perpetual,
-                irrevocable, royalty-free licence to use that feedback without obligation or restriction.
-              </p>
-            </Sub>
-          </Section>
-
-          <Section number="9" title="Third-Party Services">
-            <p>
-              The Service integrates with certain third-party services to deliver its functionality, including Cloudinary
-              for file storage, MongoDB Atlas for database services, and Render for hosting. Your use of the Service is
-              subject to the terms and privacy policies of these third parties to the extent they govern the processing
-              of your data.
-            </p>
-            <p>
-              The Service may display links to external websites or services. These links are provided for your
-              convenience only. PlanIt has no control over the content or practices of external sites and accepts no
-              responsibility for them. Visiting third-party websites is at your own risk.
-            </p>
-          </Section>
-
-          <Section number="10" title="Disclaimers">
-            <p>
-              The Service is provided on an "as is" and "as available" basis without any warranties of any kind,
-              express or implied. To the fullest extent permitted by applicable law, PlanIt disclaims all warranties,
-              including but not limited to implied warranties of merchantability, fitness for a particular purpose,
-              title, and non-infringement.
-            </p>
-            <p>We do not warrant or represent that:</p>
-            <ul className="list-disc list-inside space-y-1.5 ml-3 mt-2">
-              <li>The Service will be available at all times or free from interruption, errors, or bugs.</li>
-              <li>The Service will meet your specific requirements or expectations.</li>
-              <li>Any errors in the Service will be corrected.</li>
-              <li>The Service or its servers are free from viruses or other harmful components.</li>
-              <li>Any content, data, or information obtained through the Service will be accurate or reliable.</li>
-            </ul>
-            <p className="mt-3">
-              We reserve the right to modify, suspend, or discontinue the Service or any part of it at any time,
-              with or without notice, and we will not be liable to you or any third party for doing so.
-            </p>
-          </Section>
-
-          <Section number="11" title="Limitation of Liability">
-            <p>
-              To the fullest extent permitted by applicable law, PlanIt, its operators, officers, employees, and agents
-              shall not be liable for any indirect, incidental, special, consequential, punitive, or exemplary damages
-              arising out of or in connection with your use of, or inability to use, the Service, including but not
-              limited to:
-            </p>
-            <ul className="list-disc list-inside space-y-1.5 ml-3 mt-2">
-              <li>Loss of data, including event content, messages, or files resulting from the automatic deletion policy or any other cause.</li>
-              <li>Loss of profits, revenue, goodwill, or business opportunities.</li>
-              <li>Unauthorised access to or alteration of your data or transmissions.</li>
-              <li>Conduct or content of any third party using the Service.</li>
-              <li>Service interruptions, downtime, or technical failures.</li>
-            </ul>
-            <p className="mt-3">
-              Our total aggregate liability to you for any claim arising under or in connection with these Terms or
-              the Service shall not exceed the amount you have paid us in the twelve months preceding the claim. As
-              PlanIt is a free service, this means our aggregate liability is zero unless and until paid features are
-              introduced.
-            </p>
-            <p>
-              Some jurisdictions do not allow the exclusion or limitation of certain warranties or liabilities.
-              In such jurisdictions, our liability is limited to the greatest extent permitted by law.
-            </p>
-          </Section>
-
-          <Section number="12" title="Indemnification">
-            <p>
-              You agree to defend, indemnify, and hold harmless PlanIt and its operators, officers, employees, and
-              agents from and against any claims, damages, losses, liabilities, costs, and expenses (including
-              reasonable legal fees) arising out of or related to:
-            </p>
-            <ul className="list-disc list-inside space-y-1.5 ml-3 mt-2">
-              <li>Your use of or access to the Service.</li>
-              <li>Your violation of any provision of these Terms.</li>
-              <li>Any User Content you submit, post, or transmit through the Service.</li>
-              <li>Your violation of any applicable law or the rights of any third party.</li>
-            </ul>
-          </Section>
-
-          <Section number="13" title="Termination and Suspension">
-            <Sub title="13.1 Termination by PlanIt">
-              <p>
-                We reserve the right to suspend or terminate your access to the Service at any time, without notice
-                and without liability, if we reasonably believe that you have violated these Terms or if your use of
-                the Service poses a risk to other users, third parties, or the Service itself.
-              </p>
-              <p>
-                Upon termination, your right to access the Service ceases immediately. Any Event data will continue
-                to be subject to the automatic seven-day deletion policy and will be deleted in due course.
-              </p>
-            </Sub>
-            <Sub title="13.2 Termination by You">
-              <p>
-                You may stop using the Service at any time. If you are an Organizer and wish to have your Event deleted
-                before the automatic seven-day window, contact us at{' '}
-                <a href="mailto:planit.userhelp@gmail.com" className="text-neutral-900 font-medium underline underline-offset-2">
-                  planit.userhelp@gmail.com
-                </a>.
-              </p>
-            </Sub>
-            <Sub title="13.3 Survival">
-              <p>
-                The following sections survive termination: Section 5.2 (License to PlanIt, for the duration content
-                exists on our servers), Section 8 (Intellectual Property), Section 10 (Disclaimers), Section 11
-                (Limitation of Liability), Section 12 (Indemnification), and Section 15 (Governing Law).
-              </p>
-            </Sub>
-          </Section>
-
-          <Section number="14" title="Changes to These Terms">
-            <p>
-              We may update these Terms from time to time. When we make material changes, we will update the "Last
-              updated" date at the top of this page. We will not retroactively reduce your rights under these Terms
-              without providing reasonable notice. Your continued use of the Service after changes are posted
-              constitutes your acceptance of the updated Terms.
-            </p>
-            <p>
-              If you disagree with any changes to these Terms, your sole remedy is to stop using the Service.
-            </p>
-          </Section>
-
-          <Section number="15" title="Governing Law and Disputes">
-            <p>
-              These Terms are governed by and construed in accordance with applicable law. Any disputes arising
-              out of or relating to these Terms or the Service shall first be addressed informally by contacting
-              us at{' '}
-              <a href="mailto:planit.userhelp@gmail.com" className="text-neutral-900 font-medium underline underline-offset-2">
-                planit.userhelp@gmail.com
-              </a>{' '}
-              and we will make a reasonable effort to resolve the matter within 30 days.
-            </p>
-          </Section>
-
-          <Section number="16" title="Contact Information">
-            <p>
-              If you have any questions about these Terms, wish to report a violation, or need assistance with
-              anything related to your use of PlanIt, please contact us:
-            </p>
-            <div className="mt-3 p-4 bg-neutral-50 border border-neutral-200 rounded-lg space-y-2 text-sm">
-              <p><strong>Email:</strong>{' '}
-                <a href="mailto:planit.userhelp@gmail.com" className="text-neutral-900 underline underline-offset-2">
-                  planit.userhelp@gmail.com
-                </a>
-              </p>
-              <p><strong>Use for:</strong> General enquiries, capacity increase requests, early event deletion, bug reports, legal or privacy matters.</p>
-              <p><strong>Response time:</strong> We aim to respond within 48 hours on business days.</p>
-              <p><strong>Operating name:</strong> PlanIt</p>
+            <div className="mt-4 border border-neutral-200 rounded-xl overflow-hidden">
+              <DefItem term="Agreement">These Terms of Service together with the Privacy Policy, any Supplemental Terms, and all other policies, notices, or guidelines published by PlanIt from time to time, each of which is incorporated herein by reference and forms an integral part of this Agreement.</DefItem>
+              <DefItem term="Authorised Use">Use of the Service strictly within the scope of the permissions expressly granted in Section 6 hereof and consistent with the features and functionalities made available through PlanIt's standard user interface, as modified from time to time.</DefItem>
+              <DefItem term="Content">Any and all data, text, messages, materials, files, images, graphics, audio, video, metadata, and information of whatever nature or kind that is uploaded, submitted, transmitted, posted, stored, or otherwise made available through the Service by any User or by PlanIt.</DefItem>
+              <DefItem term="Enterprise Mode">The operational configuration of the Service enabling advanced Guest management, QR-code-based invitation issuance and cryptographic validation, anti-fraud middleware, real-time check-in administration, and attendance analytics, as further described in the Service documentation.</DefItem>
+              <DefItem term="Event">A discrete, independently secured workspace instance created by an Organizer within the Service, together with all associated Content, configuration, Participants, Guest invitation records, and data pertaining thereto.</DefItem>
+              <DefItem term="Guest">An individual for whom an Organizer has created a personal invite record within an Enterprise Mode Event, regardless of whether that individual has accessed the Service or presented their credentials.</DefItem>
+              <DefItem term="Intellectual Property Rights">All patents, patent applications, copyrights, moral rights, trademarks, service marks, trade dress, trade names, trade secrets, database rights, design rights, rights in software, and all other intellectual or industrial property rights of whatever nature, whether registered or unregistered, including all applications and rights to apply for registration, in every jurisdiction worldwide.</DefItem>
+              <DefItem term="Operator">Aakshat Hariharan, the individual developer, proprietor, and operator of the PlanIt Service, operating under the trading designation "PlanIt."</DefItem>
+              <DefItem term="Organizer">A User who creates an Event and is thereby vested with elevated administrative privileges with respect to that Event, including the ability to manage Participants and Guests, post Announcements, configure security and Enterprise Mode settings, and administer the Guest list.</DefItem>
+              <DefItem term="Participant">Any User accessing an Event workspace in a capacity other than Organizer, regardless of the means by which access was obtained.</DefItem>
+              <DefItem term="Personal Data">Information relating to an identified or identifiable natural person, as further defined and governed by the Privacy Policy.</DefItem>
+              <DefItem term="Platform">The entirety of PlanIt's technical infrastructure, including the frontend application, backend application servers, load balancing router, watchdog monitoring service, database systems, real-time communication layer, mesh authentication infrastructure, and all associated APIs, microservices, and third-party integrations.</DefItem>
+              <DefItem term="Prohibited Content">Content falling within the categories enumerated in Section 6.2 of these Terms.</DefItem>
+              <DefItem term="Service">The PlanIt event planning platform accessible at planitapp.onrender.com and any successor domains, subdomains, or applications, including all features, functionalities, and services available therethrough, accessed via web browser, progressive web application, or any other means.</DefItem>
+              <DefItem term="User">Any individual or entity that accesses, browses, uses, or interacts with the Service in any capacity, including Organizers, Participants, and Guests.</DefItem>
+              <DefItem term="User Content">Content uploaded, submitted, transmitted, or made available through the Service by a User, including messages, tasks, poll responses, notes, announcements, expense records, and uploaded files.</DefItem>
             </div>
           </Section>
 
-          <div className="mt-10 p-5 bg-neutral-900 rounded-xl">
+          <Section number="2" title="Description, Scope, and Nature of the Service">
+            <p>
+              PlanIt is a web-based collaborative event planning and management platform providing tools for Event workspace creation, real-time team communication, task management, polling and voting, note-taking, announcement broadcasting, expense tracking, file storage and sharing, countdown functionality, analytics, and — in Enterprise Mode — guest invitation management, QR-code-based entry validation, anti-fraud detection, and real-time check-in administration.
+            </p>
+            <p>
+              The Service is provided free of charge as of the Effective Date. PlanIt expressly reserves the right, in its sole and absolute discretion, to introduce tiered pricing, premium features, paid subscription plans, or other monetisation mechanisms at any future time. PlanIt shall endeavour to provide reasonable advance notice of any material introduction of charges for features currently provided without charge; however, the provision of such notice shall not constitute a binding obligation, and failure to provide advance notice shall not give rise to any claim against PlanIt.
+            </p>
+            <p>
+              PlanIt makes no representation that the Service, or any feature thereof, shall remain available, shall be maintained in its current form, or shall continue to be offered at any particular price point or at all. The Service is provided on a best-efforts basis without any guarantee of continuity, longevity, or feature preservation.
+            </p>
+          </Section>
+
+          <Section number="3" title="Acceptance, Modifications, and Supplemental Policies">
+            <Sub number="3.1" title="Acceptance by Conduct">
+              <p>
+                Your access to, use of, or interaction with the Service in any manner constitutes your full, unconditional, and irrevocable acceptance of and agreement to be legally bound by this Agreement. Acceptance is effective as of your first moment of access and shall remain in continuous effect, notwithstanding any subsequent amendment of these Terms.
+              </p>
+            </Sub>
+            <Sub number="3.2" title="Modifications to the Agreement">
+              <p>
+                PlanIt reserves the right to modify, amend, supplement, or replace any provision of these Terms at any time and in its sole and absolute discretion, without prior consent from Users. Modifications shall become effective immediately upon publication of the revised Terms on the Service or notification by any means PlanIt deems appropriate. The "Last updated" date shall be revised to reflect material modifications. Your continued access to or use of the Service following publication of any modifications constitutes your binding acceptance of the modified Terms. If you do not agree with any modification, your sole and exclusive remedy is to immediately and permanently cease all use of the Service.
+              </p>
+            </Sub>
+            <Sub number="3.3" title="Incorporation by Reference">
+              <p>
+                The Privacy Policy is hereby incorporated into and forms an integral part of this Agreement by reference. In the event of any inconsistency between these Terms and the Privacy Policy with respect to the processing of Personal Data, the Privacy Policy shall prevail to the extent of such inconsistency.
+              </p>
+            </Sub>
+          </Section>
+
+          <Section number="4" title="Eligibility, Capacity, and Representations">
+            <Sub number="4.1" title="Minimum Age Requirement">
+              <p>
+                Access to and use of the Service is strictly limited to individuals who are at least thirteen (13) years of age. By accessing or using the Service, you represent and warrant that you are at least 13 years of age. If you are between the ages of 13 and 18, or between 13 and the age of majority in your jurisdiction of residence, you represent and warrant that you have obtained the explicit, informed consent of your parent or legal guardian to access and use the Service and to agree to these Terms on your behalf, and that such parent or guardian has reviewed and agreed to these Terms. PlanIt reserves the right to request verifiable proof of age or parental consent and to terminate access where such proof cannot be provided.
+              </p>
+            </Sub>
+            <Sub number="4.2" title="Legal Capacity">
+              <p>
+                You represent and warrant that you have the full legal capacity, right, power, and authority to enter into, execute, and perform your obligations under this Agreement, and that doing so does not violate any applicable law, regulation, or agreement to which you are a party.
+              </p>
+            </Sub>
+            <Sub number="4.3" title="Organisational Use">
+              <p>
+                If you access or use the Service on behalf of any corporation, partnership, organisation, or other legal entity, you represent and warrant that you are duly authorised to accept these Terms on behalf of such entity, and that such entity shall be jointly and severally liable with you for all obligations arising under this Agreement.
+              </p>
+            </Sub>
+            <Sub number="4.4" title="Geographic Compliance">
+              <p>
+                PlanIt makes no representation that the Service is appropriate for, legal in, or compliant with the laws of any particular jurisdiction. You are solely responsible for ensuring that your access to and use of the Service complies with all applicable local, state, national, and international laws. If access to or use of the Service is prohibited or restricted in your jurisdiction, you must immediately cease all access and use.
+              </p>
+            </Sub>
+          </Section>
+
+          <Section number="5" title="Event Creation, Organizer Obligations, and Access Credentials">
+            <Sub number="5.1" title="No Persistent Account Model">
+              <p>
+                The Service does not employ a conventional persistent user account system. Organizers create discrete Event instances independently secured. Participants access workspaces via display names and, where applicable, passwords or invite credentials. Your participation in one Event does not confer any right of access to any other Event or any other User's Content.
+              </p>
+            </Sub>
+            <Sub number="5.2" title="Organizer Responsibilities">
+              <p>By assuming the role of Organizer, you accept sole and full responsibility for:</p>
+              <ul className="list-disc list-inside space-y-2 ml-3 mt-2">
+                <li>The accuracy, completeness, and lawfulness of all information provided in connection with the Event;</li>
+                <li>Safeguarding the confidentiality of your organizer account password and any event-level access password;</li>
+                <li>All activities occurring within your Event workspace, including Content posted by Participants;</li>
+                <li>Ensuring that all Participants and Guests you invite have agreed to these Terms and the Privacy Policy;</li>
+                <li>Ensuring that your use of Enterprise Mode Guest management features complies with all applicable data protection laws in every relevant jurisdiction;</li>
+                <li>Exporting or preserving any Event data you require prior to automatic deletion.</li>
+              </ul>
+            </Sub>
+            <Sub number="5.3" title="Credential Security and Non-Recoverability">
+              <p>
+                Account and event passwords are cryptographically hashed upon creation and are not stored in recoverable form. PlanIt has no technical capability to retrieve, reset, or regenerate lost passwords. You acknowledge and accept that credential loss may result in permanent loss of Organizer access to your Event, and that PlanIt bears no liability therefor.
+              </p>
+            </Sub>
+            <Sub number="5.4" title="Session Tokens">
+              <p>
+                Upon successful authentication, the Service issues a JWT stored in your browser's local storage, tied to your browser session on your device, and not synchronised across devices. You are solely responsible for your device and browser security. PlanIt bears no liability for unauthorised access arising from your failure to secure your device or token.
+              </p>
+            </Sub>
+          </Section>
+
+          <Section number="6" title="Acceptable Use, Prohibited Conduct, and Content Standards">
+            <Sub number="6.1" title="Limited Licence for Permitted Uses">
+              <p>
+                Subject to and conditioned upon your full compliance with these Terms, PlanIt grants you a limited, non-exclusive, non-transferable, non-sublicensable, revocable licence to access and use the Service solely for lawful personal, social, professional, or organisational event planning and collaboration purposes, strictly within the scope of features made available through the Service's standard user interface. This licence does not permit any use of the Service except as expressly stated herein.
+              </p>
+            </Sub>
+            <Sub number="6.2" title="Prohibited Content">
+              <p>You shall not upload, submit, post, transmit, distribute, or otherwise make available through the Service any Content that:</p>
+              <ul className="list-disc list-inside space-y-2 ml-3 mt-2">
+                <li>Is unlawful, tortious, fraudulent, defamatory, harassing, abusive, threatening, obscene, sexually explicit, or otherwise objectionable under applicable law;</li>
+                <li>Infringes, misappropriates, or violates any third party's Intellectual Property Rights or other proprietary rights;</li>
+                <li>Contains Personal Data of third parties without their express, informed, and documented consent;</li>
+                <li>Constitutes, facilitates, encourages, promotes, or incites criminal or tortious activity, including fraud, identity theft, terrorism, or violence;</li>
+                <li>Contains malware, viruses, logic bombs, or any harmful or malicious code;</li>
+                <li>Constitutes unsolicited commercial communications, spam, or pyramid schemes;</li>
+                <li>Is designed to deceive, impersonate, or misrepresent your identity or affiliation;</li>
+                <li>Violates any applicable law, regulation, or treaty.</li>
+              </ul>
+            </Sub>
+            <Sub number="6.3" title="Prohibited Conduct">
+              <p>You shall not, directly or indirectly:</p>
+              <ul className="list-disc list-inside space-y-2 ml-3 mt-2">
+                <li>Attempt to gain unauthorised access to the Service, the Platform, or any system, network, or data associated therewith, through brute force, credential stuffing, or any other means;</li>
+                <li>Probe, scan, or test the vulnerability of any system underlying the Service, or circumvent any security, authentication, or rate-limiting mechanism;</li>
+                <li>Reverse engineer, decompile, disassemble, or derive the source code, algorithms, or architecture of the Service;</li>
+                <li>Scrape, crawl, or harvest data from the Service using automated means;</li>
+                <li>Introduce any harmful code, denial-of-service attack, or other interference with the Service's proper operation;</li>
+                <li>Engage in any activity placing an unreasonable burden on PlanIt's infrastructure;</li>
+                <li>Use the Service to collect Personal Data of other Users without their knowledge and consent;</li>
+                <li>Circumvent or interfere with the Service's anti-fraud middleware, rate limiting systems, or technical protection measures;</li>
+                <li>Assign, transfer, or sell your access rights to any third party.</li>
+              </ul>
+            </Sub>
+            <Sub number="6.4" title="Enforcement Rights">
+              <p>
+                In the event of any actual, suspected, or alleged violation of this Section or any other provision of these Terms, PlanIt reserves the right, in its sole discretion and without prior notice, to remove or disable access to Content, suspend or terminate your access, take any technical or legal measures it deems appropriate, and report conduct it believes unlawful to appropriate authorities. PlanIt's failure to enforce any provision shall not constitute a waiver of its right to enforce such provision at any subsequent time.
+              </p>
+            </Sub>
+          </Section>
+
+          <Section number="7" title="User Content: Ownership, Licences, and Warranties">
+            <Sub number="7.1" title="Ownership">
+              <p>As between you and PlanIt, you retain all right, title, and interest in and to your User Content, subject to the licence granted in Section 7.2 and the data retention policy in Section 9.</p>
+            </Sub>
+            <Sub number="7.2" title="Licence Grant to PlanIt">
+              <p>
+                By making any User Content available through the Service, you grant PlanIt a worldwide, non-exclusive, royalty-free, sublicensable, transferable licence to host, store, reproduce, modify (for formatting and technical compatibility purposes only), process, transmit, and display such Content solely to the extent necessary to provide, operate, maintain, and improve the Service. This licence terminates upon the permanent deletion of your User Content from PlanIt's servers.
+              </p>
+            </Sub>
+            <Sub number="7.3" title="Representations and Warranties">
+              <p>With respect to each item of User Content, you represent and warrant that:</p>
+              <ul className="list-disc list-inside space-y-2 ml-3 mt-2">
+                <li>You own or have obtained all necessary rights and permissions to upload such Content and grant PlanIt the licence described herein;</li>
+                <li>Such Content does not infringe any third party's Intellectual Property Rights or other rights;</li>
+                <li>Such Content does not violate any applicable law or contain any Prohibited Content;</li>
+                <li>You have obtained all required consents from individuals whose Personal Data is included in such Content.</li>
+              </ul>
+            </Sub>
+            <Sub number="7.4" title="No Monitoring Obligation">
+              <p>
+                PlanIt undertakes no obligation to pre-screen, review, or moderate User Content. PlanIt reserves the right but not the obligation to review, remove, or refuse any User Content that it determines, in its sole discretion, violates these Terms or is otherwise objectionable. PlanIt shall not be liable for any failure to remove violating Content or for any delay in doing so.
+              </p>
+            </Sub>
+          </Section>
+
+          <Section number="8" title="Intellectual Property Rights, Proprietary Technology, and Restrictions">
+            <Sub number="8.1" title="PlanIt's Proprietary Rights">
+              <p>
+                The Service, the Platform, and all components thereof — including the software, source code, object code, application architecture, design, visual assets, user interface elements, database schemas, API structures, security systems, anti-fraud middleware, load balancing algorithms, monitoring infrastructure, documentation, trademarks, logos, and trade names — are and shall remain the exclusive proprietary property of the Operator, protected by applicable copyright, trademark, patent, trade secret, and other Intellectual Property Rights laws and international conventions.
+              </p>
+            </Sub>
+            <Sub number="8.2" title="No Open Source Licence">
+              <p>
+                PlanIt is not, and shall not be construed as, open source software. Any reference to PlanIt in any public code repository does not constitute a grant of any licence, permission, or authorisation to use, reproduce, fork, clone, download, modify, distribute, sublicence, sell, or otherwise exploit the source code or any component thereof. Code visibility does not confer any rights beyond the right to view it in its published location for personal educational reference only.
+              </p>
+            </Sub>
+            <Sub number="8.3" title="Limited Licence to Use">
+              <p>
+                Subject to your compliance with these Terms, PlanIt grants you a limited, personal, non-exclusive, non-transferable, non-sublicensable, revocable licence to access and use the Service for its intended purposes through the standard user interface. No licence, right, or interest beyond this is granted, whether by implication, estoppel, or otherwise.
+              </p>
+            </Sub>
+            <Sub number="8.4" title="Restrictions">
+              <p>You shall not:</p>
+              <ul className="list-disc list-inside space-y-2 ml-3 mt-2">
+                <li>Copy, reproduce, modify, create derivative works from, or adapt any part of the Service;</li>
+                <li>Distribute, sublicence, transfer, assign, sell, or commercialise the Service or any component thereof;</li>
+                <li>Use PlanIt's name, logo, or trademarks in any manner likely to cause confusion as to any affiliation;</li>
+                <li>Remove, alter, or obscure any copyright, trademark, or proprietary marking;</li>
+                <li>Use the Service's architecture or design as a basis for any competing or derivative product.</li>
+              </ul>
+            </Sub>
+            <Sub number="8.5" title="Technical Licence Enforcement">
+              <p>
+                The Platform incorporates a cryptographic licence integrity verification system operating at backend server initialisation and at periodic intervals thereafter, utilising HMAC-SHA256 proof chains derived from a deployment-specific licence key to verify authorised deployment. Deployments failing verification will refuse to initialise. This constitutes a technical enforcement mechanism and is not subject to circumvention or challenge.
+              </p>
+            </Sub>
+          </Section>
+
+          <Section number="9" title="Data Retention, Automated Deletion, and Recovery">
+            <Sub number="9.1" title="Automatic Seven-Day Deletion Policy">
+              <p>
+                All Event data — including the Event record, all messages, tasks, polls, notes, announcements, expenses, uploaded files, Participant records, Guest invitation records, check-in logs, and analytics — is subject to permanent, irreversible automated deletion seven (7) calendar days following the Event's scheduled date. This policy applies universally to all Events and cannot be waived, extended, or suspended except as otherwise expressly stated by PlanIt in writing.
+              </p>
+            </Sub>
+            <Sub number="9.2" title="Irrecoverability">
+              <p>
+                Following execution of the automated deletion process, all deleted data is permanently and irrecoverably removed. PlanIt has no capability to restore, recover, or reconstitute deleted data. You acknowledge that PlanIt bears no liability for any loss or consequence resulting from deletion pursuant to this policy.
+              </p>
+            </Sub>
+            <Sub number="9.3" title="Organizer Export Obligation">
+              <p>
+                It is the sole responsibility of the Organizer to export or preserve any Event data required for any purpose prior to expiration of the retention window. PlanIt's provision of export functionality does not impose any obligation to preserve data beyond the window and shall not be construed as a warranty that data will be available for export at any particular time.
+              </p>
+            </Sub>
+            <Sub number="9.4" title="Early Deletion Requests">
+              <p>
+                Organizers may request early deletion of Event data by contacting PlanIt via the details in Section 17. PlanIt will endeavour to action such requests within a reasonable timeframe but makes no binding commitment. PlanIt may decline requests where doing so would conflict with applicable legal obligations.
+              </p>
+            </Sub>
+          </Section>
+
+          <Section number="10" title="Third-Party Services and External Links">
+            <p>
+              The Service integrates with third-party services including Cloudinary, Upstash Redis, MongoDB Atlas, Render, and Socket.IO. Your use of such services may be subject to their own terms and policies. PlanIt makes no warranty regarding any third-party service's availability, reliability, or security, and expressly disclaims all liability arising from your use of or reliance on any third-party service or external link provided through or accessed via the Service.
+            </p>
+          </Section>
+
+          <Section number="11" title="Privacy and Data Protection">
+            <p>
+              Your privacy and Personal Data are governed exclusively by the PlanIt Privacy Policy, incorporated herein by reference. By using the Service you acknowledge that you have read and agree to the Privacy Policy. Organizers who collect Personal Data of Guests or Participants through the Service act as independent data controllers and are solely responsible for ensuring that such collection and processing complies with all applicable data protection laws.
+            </p>
+          </Section>
+
+          <Section number="12" title="Disclaimers and Exclusions of Warranties">
+            <LegalCallout>
+              THE FOLLOWING DISCLAIMERS APPLY TO THE MAXIMUM EXTENT PERMITTED BY APPLICABLE LAW.
+            </LegalCallout>
+            <Sub number="12.1" title="As-Is Basis">
+              <p>
+                THE SERVICE IS PROVIDED ON AN "AS IS," "AS AVAILABLE," AND "WITH ALL FAULTS" BASIS WITHOUT ANY REPRESENTATION, WARRANTY, GUARANTEE, OR CONDITION OF ANY KIND, WHETHER EXPRESS, IMPLIED, STATUTORY, OR OTHERWISE. PLANIT EXPRESSLY DISCLAIMS ALL WARRANTIES INCLUDING BUT NOT LIMITED TO THE IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, TITLE, ACCURACY, AND NON-INFRINGEMENT, AND ANY WARRANTIES ARISING FROM COURSE OF DEALING OR USAGE OF TRADE.
+              </p>
+            </Sub>
+            <Sub number="12.2" title="No Warranty of Availability">
+              <p>
+                PLANIT MAKES NO WARRANTY THAT: (A) THE SERVICE WILL BE AVAILABLE ON A CONTINUOUS, UNINTERRUPTED, OR ERROR-FREE BASIS; (B) DEFECTS WILL BE CORRECTED; (C) THE SERVICE WILL MEET YOUR REQUIREMENTS; (D) THE SERVICE OR ITS SERVERS ARE FREE FROM VIRUSES OR HARMFUL ELEMENTS; (E) ANY DATA OBTAINED THROUGH THE SERVICE WILL BE ACCURATE OR RELIABLE.
+              </p>
+            </Sub>
+            <Sub number="12.3" title="Right to Modify and Discontinue">
+              <p>
+                PlanIt reserves the absolute right to modify, suspend, interrupt, or discontinue the Service or any feature thereof at any time without notice and without liability. PlanIt shall not be liable for any loss resulting from any such action.
+              </p>
+            </Sub>
+          </Section>
+
+          <Section number="13" title="Limitation of Liability">
+            <LegalCallout>
+              THE FOLLOWING LIMITATIONS APPLY TO THE MAXIMUM EXTENT PERMITTED BY APPLICABLE LAW.
+            </LegalCallout>
+            <Sub number="13.1" title="Exclusion of Indirect Damages">
+              <p>
+                TO THE FULLEST EXTENT PERMITTED BY LAW, IN NO EVENT SHALL PLANIT, ITS OPERATOR, OR THEIR RESPECTIVE AGENTS BE LIABLE FOR ANY INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL, PUNITIVE, OR EXEMPLARY DAMAGES, INCLUDING LOSS OF PROFITS, REVENUE, DATA, GOODWILL, OR BUSINESS INTERRUPTION, ARISING OUT OF OR IN CONNECTION WITH YOUR USE OF OR INABILITY TO USE THE SERVICE, REGARDLESS OF THE THEORY OF LIABILITY, EVEN IF PLANIT HAS BEEN ADVISED OF THE POSSIBILITY OF SUCH DAMAGES.
+              </p>
+            </Sub>
+            <Sub number="13.2" title="Aggregate Cap">
+              <p>
+                PLANIT'S TOTAL AGGREGATE LIABILITY FOR ALL CLAIMS ARISING UNDER THIS AGREEMENT SHALL NOT EXCEED THE GREATER OF: (A) THE TOTAL AMOUNTS YOU HAVE PAID PLANIT IN THE TWELVE MONTHS PRECEDING THE CLAIM; OR (B) ZERO UNITED STATES DOLLARS (USD $0.00). AS PLANIT IS A FREE SERVICE, THIS MEANS AGGREGATE LIABILITY IS EFFECTIVELY ZERO.
+              </p>
+            </Sub>
+            <Sub number="13.3" title="Essential Basis">
+              <p>
+                You acknowledge that the disclaimers and limitations of liability in Sections 12 and 13 reflect a reasonable and fair allocation of risk and are an essential element of the basis of the bargain between you and PlanIt.
+              </p>
+            </Sub>
+          </Section>
+
+          <Section number="14" title="Indemnification">
+            <p>
+              To the fullest extent permitted by law, you shall indemnify, defend, and hold harmless PlanIt, its Operator, and their respective agents from and against all claims, liabilities, damages, costs, and expenses — including reasonable legal fees — arising out of or relating to: (a) your access to or use of the Service; (b) your User Content; (c) your breach of any representation, warranty, or obligation herein; (d) your violation of any applicable law or third party's rights; (e) any dispute between you and any other User or third party; or (f) your operation of an Event.
+            </p>
+          </Section>
+
+          <Section number="15" title="Termination and Effect">
+            <Sub number="15.1" title="Termination by PlanIt">
+              <p>
+                PlanIt reserves the right to immediately suspend or permanently terminate your access to the Service at any time, without notice or liability, including but not limited to your breach of these Terms, conduct harmful to other Users or the Service, or any legal, regulatory, or business reason PlanIt deems sufficient.
+              </p>
+            </Sub>
+            <Sub number="15.2" title="Termination by You">
+              <p>
+                You may terminate use of the Service at any time by ceasing access. All Event data remains subject to the seven-day deletion policy in Section 9.
+              </p>
+            </Sub>
+            <Sub number="15.3" title="Survival">
+              <p>
+                Sections 1, 7, 8, 9, 11, 12, 13, 14, 15.3, 16, 17, 18, and 19 survive termination of this Agreement for any reason.
+              </p>
+            </Sub>
+          </Section>
+
+          <Section number="16" title="Governing Law and Dispute Resolution">
+            <Sub number="16.1" title="Governing Law">
+              <p>
+                These Terms and all disputes arising hereunder shall be governed by and construed in accordance with applicable law, without regard to conflict of law principles.
+              </p>
+            </Sub>
+            <Sub number="16.2" title="Informal Resolution">
+              <p>
+                Prior to initiating any formal proceeding, you agree to contact PlanIt at the address in Section 17 and make a good-faith effort to resolve the dispute informally. PlanIt will endeavour to respond within thirty (30) days. This process is a condition precedent to initiating any formal proceeding.
+              </p>
+            </Sub>
+            <Sub number="16.3" title="Limitation Period">
+              <p>
+                Any cause of action arising out of or related to these Terms or the Service must be commenced within one (1) year after it accrues; otherwise it is permanently barred to the fullest extent permitted by law.
+              </p>
+            </Sub>
+          </Section>
+
+          <Section number="17" title="Miscellaneous Provisions">
+            <Sub number="17.1" title="Entire Agreement">
+              <p>These Terms and incorporated policies constitute the entire agreement between you and PlanIt and supersede all prior negotiations, representations, and agreements relating to the subject matter hereof.</p>
+            </Sub>
+            <Sub number="17.2" title="Waiver">
+              <p>No failure by PlanIt to exercise any right or remedy shall constitute a waiver thereof. No waiver is effective unless in writing and signed by an authorised representative of PlanIt.</p>
+            </Sub>
+            <Sub number="17.3" title="Severability">
+              <p>If any provision is held invalid or unenforceable, it shall be severed and the remaining provisions shall continue in full force and effect.</p>
+            </Sub>
+            <Sub number="17.4" title="Assignment">
+              <p>You may not assign any rights or obligations hereunder without PlanIt's prior written consent. PlanIt may freely assign this Agreement in connection with a merger, acquisition, or sale of assets.</p>
+            </Sub>
+            <Sub number="17.5" title="Force Majeure">
+              <p>PlanIt shall not be liable for failure or delay in performance arising from circumstances beyond its reasonable control, including acts of God, pandemic, war, cyberattacks, infrastructure failures, or internet service provider outages.</p>
+            </Sub>
+            <Sub number="17.6" title="No Third-Party Beneficiaries">
+              <p>These Terms are for the sole benefit of the parties hereto. Nothing herein confers any right or benefit on any other person or entity.</p>
+            </Sub>
+          </Section>
+
+          <Section number="18" title="Changes to the Service and These Terms">
+            <p>
+              PlanIt reserves the right at any time to modify, restrict, suspend, or discontinue any aspect of the Service and to amend these Terms in its sole discretion. The most current version governs your use. Continued use following posting of revised Terms constitutes binding acceptance thereof.
+            </p>
+          </Section>
+
+          <Section number="19" title="Contact Information and Notices">
+            <p>All inquiries, reports, legal notices, and correspondence should be directed to:</p>
+            <div className="mt-4 p-5 bg-neutral-50 border border-neutral-200 rounded-xl space-y-2 text-sm">
+              <p><strong className="text-neutral-900">Operator:</strong> Aakshat Hariharan</p>
+              <p><strong className="text-neutral-900">Operating name:</strong> PlanIt</p>
+              <p><strong className="text-neutral-900">Email:</strong>{' '}
+                <a href="mailto:hariharanaakshat@gmail.com" className="text-neutral-900 font-medium underline underline-offset-2">hariharanaakshat@gmail.com</a>
+              </p>
+              <p><strong className="text-neutral-900">Support page:</strong>{' '}
+                <a href="/support" className="text-neutral-900 font-medium underline underline-offset-2">planitapp.onrender.com/support</a>
+              </p>
+              <p><strong className="text-neutral-900">Response time:</strong> PlanIt endeavours to respond within 48 business hours. Complex legal or technical matters may take longer.</p>
+              <p><strong className="text-neutral-900">Scope:</strong> Legal notices, Terms inquiries, privacy requests, DMCA notices, bug reports, early deletion requests, abuse reports.</p>
+            </div>
+          </Section>
+
+          <div className="mt-10 p-6 bg-neutral-900 rounded-xl">
+            <p className="text-xs font-bold text-neutral-400 uppercase tracking-widest mb-3">Plain-Language Summary (non-binding)</p>
             <p className="text-sm text-neutral-300 leading-relaxed">
-              <strong className="text-white">Summary:</strong> By using PlanIt you agree to use it lawfully and
-              responsibly, to take ownership of content you submit, and to understand that all event data is
-              permanently deleted seven days after the event date. PlanIt is provided free of charge, as is, with
-              no guarantees of uptime or suitability for any particular purpose. For any questions or assistance,
-              contact us at{' '}
-              <a href="mailto:planit.userhelp@gmail.com" className="text-neutral-300 underline underline-offset-2">
-                planit.userhelp@gmail.com
-              </a>.
+              By using PlanIt you agree to use it lawfully, to own what you submit, and to understand that all event data is permanently deleted seven days after the event — so export anything you need first. PlanIt is free, provided as-is, with no guarantees of uptime or fitness for any purpose. We can remove your access for any reason at any time. Disputes come to us directly first. All rights to PlanIt's software, design, and architecture are reserved. If something is unclear, contact us.
             </p>
           </div>
 
