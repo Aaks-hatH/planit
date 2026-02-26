@@ -67,6 +67,7 @@ const adminRoutes = require('./routes/admin');
 const publicRoutes = require('./routes/public');
 const checkinRoutes = require('./routes/checkin-with-override');
 const dataRetentionRoutes = require('./routes/dataRetention7Days');
+const meshRoutes = require('./routes/mesh');
 
 const { apiLimiter } = require('./middleware/rateLimiter');
 const { errorHandler } = require('./middleware/errorHandler');
@@ -192,6 +193,7 @@ app.use('/api/files', fileRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/support', supportRoutes);
 app.use('/api/uptime', uptimeRoutes);
+app.use('/api/mesh', meshRoutes);
 app.use('/api', publicRoutes);
 app.use('/api/events', checkinRoutes);
 app.use('/api/events', dataRetentionRoutes);
