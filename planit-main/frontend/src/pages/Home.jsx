@@ -1058,6 +1058,9 @@ export default function Home() {
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block" />
               Status
             </a>
+            <a href="/help" className="hidden md:flex items-center gap-1.5 px-3 py-2 text-sm text-neutral-400 hover:text-neutral-200 hover:bg-neutral-800/50 rounded-xl transition-all duration-200">
+              Help
+            </a>
             {['Terms|/terms', 'Privacy|/privacy'].map(s => {
               const [label, href] = s.split('|');
               return <a key={label} href={href} className="hidden lg:block px-3 py-2 text-sm text-neutral-500 hover:text-neutral-200 hover:bg-neutral-800/50 rounded-xl transition-all duration-200">{label}</a>;
@@ -1527,7 +1530,7 @@ export default function Home() {
               <div>
                 <h3 className="text-xs font-bold text-neutral-500 mb-5 uppercase tracking-wider">Product</h3>
                 <ul className="space-y-3 text-sm text-neutral-500">
-                  {[['Features', '#features'], ['Discover', '/discover'], ['Status', '/status'], ['Get Started', '#create'], ['Support', '/support']].map(([l, h]) => (
+                  {[['Features', '#features'], ['Discover', '/discover'], ['Status', '/status'], ['Help', '/help'], ['Get Started', '#create'], ['Help', '/help']].map(([l, h]) => (
                     <li key={l}><a href={h} className="hover:text-neutral-200 transition-colors">{l}</a></li>
                   ))}
                 </ul>
@@ -1543,7 +1546,7 @@ export default function Home() {
               <div>
                 <h3 className="text-xs font-bold text-neutral-500 mb-5 uppercase tracking-wider">Connect</h3>
                 <ul className="space-y-3 text-sm text-neutral-500">
-                  {[['Contact Us', '/support'], ['Wall of Supporters', '/support/wall'], ['About PlanIt', '/about']].map(([l, h]) => (
+                  {[['Contact Us', 'mailto:planit.userhelp@gmail'], ['Wall of Supporters', '/support/wall'], ['About PlanIt', '/about']].map(([l, h]) => (
                     <li key={l}><a href={h} className="hover:text-neutral-200 transition-colors">{l}</a></li>
                   ))}
                 </ul>
