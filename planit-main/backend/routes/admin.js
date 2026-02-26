@@ -241,6 +241,50 @@ router.get('/system', verifyAdmin, async (req, res, next) => {
 // LIVE LOGS
 // ═══════════════════════════════════════════════════════════════════════════════
 
+// GET /admin/logs/fleet — fetches logs from every fleet service via the router.
+// The router fans out to itself, every known backend, and the watchdog, then
+// returns everything merged by timestamp. Only ROUTER_URL needs to be set here —
+// WATCHDOG_URL and backend URLs are all managed on the router side.
+router.get('/logs/fleet', verifyAdmin, async (req, res) => {
+  const { meshGet } = require('../middleware/mesh');
+  const CALLER    = process.env.BACKEND_LABEL || 'Backend';
+  const routerUrl = process.env.ROUTER_URL    || '';
+
+  if (!routerUrl) {
+    // No router configured — return this backend's logs only as fallback
+    const name = CALLER;
+    const logs = (global.__adminLogBuffer || []).slice().map(e => ({ ...e, source: name.toLowerCase(), sourceName: name }));
+    return res.json({
+      logs,
+      total:     logs.length,
+      sources:   [{ source: name.toLowerCase(), name, ok: true, count: logs.length }],
+      fetchedAt: new Date().toISOString(),
+      note:      'ROUTER_URL not set — showing this backend only',
+    });
+  }
+
+  const result = await meshGet(CALLER, `${routerUrl}/mesh/fleet-logs`, { timeout: 15000 });
+
+  if (result.ok && result.data) {
+    return res.json(result.data);
+  }
+
+  // Router unreachable — fall back to local logs only
+  console.warn(`[admin] Fleet logs: router fetch failed — ${result.error}`);
+  const name = CALLER;
+  const logs = (global.__adminLogBuffer || []).slice().map(e => ({ ...e, source: name.toLowerCase(), sourceName: name }));
+  res.json({
+    logs,
+    total:     logs.length,
+    sources:   [
+      { source: name.toLowerCase(), name, ok: true,  count: logs.length },
+      { source: 'router',           name: 'Router',  ok: false, error: result.error },
+    ],
+    fetchedAt: new Date().toISOString(),
+    note:      'Router unreachable — showing this backend only',
+  });
+});
+
 // GET /admin/logs  — last N log lines (n=all returns everything)
 router.get('/logs', verifyAdmin, (req, res) => {
   const raw = req.query.n;
