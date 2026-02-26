@@ -80,6 +80,7 @@ export const eventAPI = {
   deleteInvite:  (eventId, inviteId)  => api.delete(`/events/${eventId}/invites/${inviteId}`),
 
   // Check-in process
+  getCheckinCache: (eventId)                    => api.get(`/events/${eventId}/checkin-cache`),
   verifyScan:    (eventId, inviteCode)        => api.get(`/events/${eventId}/verify-scan/${inviteCode}`),
   verifyPin:     (eventId, inviteCode, pin)   => api.post(`/events/${eventId}/verify-pin/${inviteCode}`, { pin }),
   checkIn:       (eventId, inviteCode, data)  => api.post(`/events/${eventId}/checkin/${inviteCode}`, data),
