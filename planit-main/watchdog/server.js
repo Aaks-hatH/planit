@@ -1,20 +1,3 @@
-// ╔══════════════════════════════════════════════════════════════════════════════╗
-// ║  PlanIt Watchdog  —  Enterprise Edition                                     ║
-// ║                                                                              ║
-// ║  New in this version:                                                        ║
-// ║  • /watchdog/status responds in <5ms via a 30-second in-memory cache        ║
-// ║    (computeUptimeHistory used to query 21 000+ docs on every request)       ║
-// ║  • SLO tracking  — rolling 30-day error budget with burn-rate alerts        ║
-// ║  • Latency percentiles (p50/p95/p99) per service, stored in-process         ║
-// ║  • Anomaly detection — latency spike alerts before a service goes fully     ║
-// ║    down (fires ntfy when p95 > LATENCY_WARN_MS)                             ║
-// ║  • Maintenance windows — set MAINTENANCE_START / MAINTENANCE_END env vars   ║
-// ║    to suppress alerts during planned downtime                                ║
-// ║  • Escalation tiers — page immediately on critical, wait on minor           ║
-// ║  • /watchdog/slo endpoint — 30-day error budget for each service            ║
-// ║  • /watchdog/latency endpoint — percentile history per service              ║
-// ║  • All existing behaviour preserved exactly                                  ║
-// ╚══════════════════════════════════════════════════════════════════════════════╝
 
 'use strict';
 
