@@ -8,27 +8,132 @@ const http         = require('http');
 const https        = require('https');
 const { meshAuth, meshGet, meshPost } = require('./mesh');
 
-// ─── Resend email client (HTTP only — no SMTP, works on Render port 443) ──────
-// RESEND_API_KEY is set ONLY on the router. Backends relay email requests here
-// through the secure mesh endpoint /mesh/email — they never see the key.
-const RESEND_API_KEY = process.env.RESEND_API_KEY || '';
-const EMAIL_FROM     = process.env.EMAIL_FROM || 'PlanIt <notifications@planit.app>';
-if (!RESEND_API_KEY) {
-  console.warn('[email] RESEND_API_KEY not set — email sending is disabled');
+
+
+const EMAIL_FROM             = process.env.EMAIL_FROM || 'PlanIt <notifications@planit.app>';
+const RATE_LIMIT_COOLDOWN_MS = parseInt(process.env.EMAIL_COOLDOWN_MS || String(60 * 60 * 1000), 10);
+
+// ── Shared helpers ────────────────────────────────────────────────────────────
+
+// Build a key pool from numbered env vars  (PREFIX_1, PREFIX_2, …)
+// plus an optional legacy single-key var.
+function _buildPool(prefix, legacyKey) {
+  const pool = [];
+  for (let i = 1; i <= 50; i++) {
+    const k = process.env[`${prefix}_${i}`];
+    if (k && k.trim()) pool.push({ key: k.trim(), suspendedUntil: null, useCount: 0 });
+  }
+  if (legacyKey && legacyKey.trim() && !pool.some(e => e.key === legacyKey.trim())) {
+    pool.push({ key: legacyKey.trim(), suspendedUntil: null, useCount: 0 });
+  }
+  return pool;
 }
 
-// Send an email via Resend HTTP API (port 443, no SMTP, works on Render free tier)
-async function sendViaResend(to, subject, html) {
-  if (!RESEND_API_KEY) return { ok: false, reason: 'no api key' };
+const _pools = {
+  brevo:   { name: 'Brevo',   freePerMonth: 9000, cursor: 0, keys: _buildPool('BREVO_API_KEY', process.env.BREVO_API_KEY)  },
+  mailjet: { name: 'Mailjet', freePerMonth: 6000, cursor: 0, keys: _buildPool('MAILJET_KEY',   process.env.MAILJET_KEY)    },
+};
+
+// Startup summary
+console.log('[email] Provider pool:');
+let _totalMonthlyFree = 0;
+Object.values(_pools).forEach(p => {
+  if (p.keys.length === 0) return;
+  const m = p.keys.length * p.freePerMonth;
+  _totalMonthlyFree += m;
+  console.log(`  ${p.name.padEnd(10)} ${p.keys.length} key(s)  →  ${m.toLocaleString()} / month free`);
+});
+if (_totalMonthlyFree > 0) {
+  console.log(`  ────────────────────────────────────────`);
+  console.log(`  TOTAL      ${_totalMonthlyFree.toLocaleString()} / month free`);
+} else {
+  console.warn('[email] WARNING: No API keys found — emails disabled.');
+  console.warn('[email] Set BREVO_API_KEY_1 and/or MAILJET_KEY_1 in Render env vars.');
+}
+
+// Pick the next active (non-suspended) key from a pool using round-robin.
+// Returns null if all keys are currently suspended.
+function _pickKey(pool) {
+  const now = Date.now();
+  pool.keys.forEach(e => { if (e.suspendedUntil && e.suspendedUntil <= now) e.suspendedUntil = null; });
+  const active = pool.keys.filter(e => !e.suspendedUntil);
+  if (active.length === 0) return null;
+  pool.cursor = pool.cursor % active.length;
+  const chosen = active[pool.cursor];
+  pool.cursor  = (pool.cursor + 1) % active.length;
+  chosen.useCount++;
+  return chosen;
+}
+
+// ── Brevo ─────────────────────────────────────────────────────────────────────
+function _sendViaBrevo(keyEntry, to, subject, html) {
   return new Promise((resolve) => {
     try {
-      const body = JSON.stringify({ from: EMAIL_FROM, to, subject, html });
-      const req  = https.request({
-        hostname: 'api.resend.com',
-        path:     '/emails',
+      const senderEmail = EMAIL_FROM.replace(/.*<(.+)>.*/, '$1').trim() || 'notifications@planit.app';
+      const body = JSON.stringify({
+        sender:      { name: 'PlanIt', email: senderEmail },
+        to:          [{ email: to }],
+        subject,
+        htmlContent: html,
+      });
+      const req = https.request({
+        hostname: 'api.brevo.com',
+        path:     '/v3/smtp/email',
         method:   'POST',
         headers:  {
-          Authorization:    `Bearer ${RESEND_API_KEY}`,
+          'api-key':       keyEntry.key,
+          'Content-Type':  'application/json',
+          'Content-Length': Buffer.byteLength(body),
+        },
+        timeout: 12000,
+      }, (res) => {
+        let raw = '';
+        res.on('data', d => (raw += d));
+        res.on('end', () => {
+          if (res.statusCode >= 200 && res.statusCode < 300) return resolve({ ok: true });
+          if (res.statusCode === 429) {
+            keyEntry.suspendedUntil = Date.now() + RATE_LIMIT_COOLDOWN_MS;
+            console.warn(`[email] Brevo key …${keyEntry.key.slice(-6)} hit 429, suspended 1h`);
+            return resolve({ ok: false, rateLimited: true });
+          }
+          console.error(`[email] Brevo HTTP ${res.statusCode}: ${raw.slice(0, 200)}`);
+          resolve({ ok: false, rateLimited: false, reason: `Brevo HTTP ${res.statusCode}` });
+        });
+      });
+      req.on('error',   e => resolve({ ok: false, rateLimited: false, reason: e.message }));
+      req.on('timeout', () => { req.destroy(); resolve({ ok: false, rateLimited: false, reason: 'timeout' }); });
+      req.write(body);
+      req.end();
+    } catch (e) { resolve({ ok: false, rateLimited: false, reason: e.message }); }
+  });
+}
+
+// ── Mailjet ───────────────────────────────────────────────────────────────────
+function _sendViaMailjet(keyEntry, to, subject, html) {
+  return new Promise((resolve) => {
+    try {
+      const [pub, sec] = keyEntry.key.split(':');
+      if (!pub || !sec) {
+        console.error('[email] Mailjet key format wrong — expected PUBLIC:SECRET');
+        return resolve({ ok: false, rateLimited: false, reason: 'bad_mailjet_key_format' });
+      }
+      const fromEmail = EMAIL_FROM.replace(/.*<(.+)>.*/, '$1').trim() || 'notifications@planit.app';
+      const fromName  = EMAIL_FROM.replace(/<.*>/, '').trim()         || 'PlanIt';
+      const body = JSON.stringify({
+        Messages: [{
+          From: { Email: fromEmail, Name: fromName },
+          To:   [{ Email: to }],
+          Subject: subject,
+          HTMLPart: html,
+        }],
+      });
+      const auth = Buffer.from(`${pub}:${sec}`).toString('base64');
+      const req  = https.request({
+        hostname: 'api.mailjet.com',
+        path:     '/v3.1/send',
+        method:   'POST',
+        headers:  {
+          Authorization:    `Basic ${auth}`,
           'Content-Type':   'application/json',
           'Content-Length': Buffer.byteLength(body),
         },
@@ -37,20 +142,90 @@ async function sendViaResend(to, subject, html) {
         let raw = '';
         res.on('data', d => (raw += d));
         res.on('end', () => {
-          if (res.statusCode >= 200 && res.statusCode < 300) {
-            resolve({ ok: true });
-          } else {
-            console.error(`[email] Resend ${res.statusCode}: ${raw.slice(0, 200)}`);
-            resolve({ ok: false, reason: `HTTP ${res.statusCode}` });
+          if (res.statusCode >= 200 && res.statusCode < 300) return resolve({ ok: true });
+          if (res.statusCode === 429) {
+            keyEntry.suspendedUntil = Date.now() + RATE_LIMIT_COOLDOWN_MS;
+            console.warn(`[email] Mailjet key …${keyEntry.key.slice(-6)} hit 429, suspended 1h`);
+            return resolve({ ok: false, rateLimited: true });
           }
+          console.error(`[email] Mailjet HTTP ${res.statusCode}: ${raw.slice(0, 200)}`);
+          resolve({ ok: false, rateLimited: false, reason: `Mailjet HTTP ${res.statusCode}` });
         });
       });
-      req.on('error',   (e) => resolve({ ok: false, reason: e.message }));
-      req.on('timeout', ()  => { req.destroy(); resolve({ ok: false, reason: 'timeout' }); });
+      req.on('error',   e => resolve({ ok: false, rateLimited: false, reason: e.message }));
+      req.on('timeout', () => { req.destroy(); resolve({ ok: false, rateLimited: false, reason: 'timeout' }); });
       req.write(body);
       req.end();
-    } catch (e) { resolve({ ok: false, reason: e.message }); }
+    } catch (e) { resolve({ ok: false, rateLimited: false, reason: e.message }); }
   });
+}
+
+// ── Dispatch map ──────────────────────────────────────────────────────────────
+const _providerSend = {
+  brevo:   (key, to, subj, html) => _sendViaBrevo(key, to, subj, html),
+  mailjet: (key, to, subj, html) => _sendViaMailjet(key, to, subj, html),
+};
+
+// ── Main send function (name kept for internal API compatibility) ──────────────
+// Tries Brevo first, falls back to Mailjet. Within each provider, rotates keys.
+async function sendViaResend(to, subject, html) {
+  const providerOrder = ['brevo', 'mailjet'];
+
+  for (const providerName of providerOrder) {
+    const pool = _pools[providerName];
+    if (pool.keys.length === 0) continue;
+
+    const tried = new Set();
+    for (let attempt = 0; attempt < pool.keys.length; attempt++) {
+      const key = _pickKey(pool);
+      if (!key || tried.has(key.key)) break;
+      tried.add(key.key);
+
+      const result = await _providerSend[providerName](key, to, subject, html);
+      if (result.ok) {
+        return { ok: true, provider: providerName };
+      }
+      if (!result.rateLimited) {
+        // Hard error — skip to next provider, won't help to retry here
+        console.warn(`[email] ${pool.name} hard error (${result.reason}) — trying next provider`);
+        break;
+      }
+      // 429 — try next key in this provider
+      console.log(`[email] ${pool.name} key rate-limited, trying next key (attempt ${attempt + 2}/${pool.keys.length})`);
+    }
+    // This provider exhausted — fall through to next
+  }
+
+  console.error('[email] All providers exhausted — email was NOT sent.');
+  return { ok: false, reason: 'all_providers_exhausted' };
+}
+
+// ── Pool stats endpoint helper ────────────────────────────────────────────────
+function _keyPoolStats() {
+  const now = Date.now();
+  const result = {};
+  let totalMonthlyFree = 0;
+  Object.entries(_pools).forEach(([name, pool]) => {
+    const keys = pool.keys.map((e, i) => ({
+      index:     i + 1,
+      keySuffix: '…' + e.key.slice(-6),
+      status:    (!e.suspendedUntil || e.suspendedUntil <= now) ? 'active' : 'suspended',
+      resumesAt: (e.suspendedUntil && e.suspendedUntil > now)
+                   ? new Date(e.suspendedUntil).toISOString() : null,
+      useCount:  e.useCount,
+    }));
+    const monthly = pool.keys.length * pool.freePerMonth;
+    totalMonthlyFree += monthly;
+    result[name] = {
+      provider:    pool.name,
+      totalKeys:   pool.keys.length,
+      activeKeys:  keys.filter(k => k.status === 'active').length,
+      monthlyFree: monthly,
+      keys,
+    };
+  });
+  result._summary = { totalMonthlyFree };
+  return result;
 }
 
 // ─── Config ───────────────────────────────────────────────────────────────────
@@ -609,8 +784,8 @@ app.delete('/mesh/boost', meshAuth(SERVICE_NAME), (_req, res) => {
 
 // ─── Mesh email relay ─────────────────────────────────────────────────────────
 // POST /mesh/email
-// Backends call this to send transactional emails without ever holding the
-// RESEND_API_KEY. Only reachable via mesh-authenticated requests.
+// Backends call this to send transactional emails (via Brevo / Mailjet)
+// without ever holding the provider API keys. Only reachable via mesh-auth.
 // Body: { to: string, subject: string, html: string }
 app.post('/mesh/email', meshAuth(SERVICE_NAME), express.json({ limit: '512kb' }), async (req, res) => {
   const { to, subject, html } = req.body || {};
@@ -641,6 +816,11 @@ app.post('/mesh/email/test', meshAuth(SERVICE_NAME), express.json(), async (req,
   } else {
     res.status(502).json({ ok: false, reason: result.reason });
   }
+});
+
+// GET /mesh/email/status — returns all-provider key pool health
+app.get('/mesh/email/status', meshAuth(SERVICE_NAME), (_req, res) => {
+  res.json(_keyPoolStats());
 });
 
 // ─── Mesh config relay ───────────────────────────────────────────────────────
