@@ -33,13 +33,18 @@ function buildBars(incidents, serviceKey, serverDown = false) {
   incidents.forEach(inc => {
     const start = new Date(inc.createdAt);
     const end   = inc.resolvedAt ? new Date(inc.resolvedAt) : new Date();
+    // If a specific serviceKey is requested, only mark it affected when it's
+    // explicitly listed in affectedServices. An empty list means "general /
+    // platform-wide" — it still shows in the overall banner but does NOT mark
+    // every individual service row as disrupted.
     const affects =
-      !serviceKey ||
-      !inc.affectedServices?.length ||
-      inc.affectedServices.some(s =>
-        s.toLowerCase().includes(serviceKey.toLowerCase()) ||
-        serviceKey.toLowerCase().includes(s.toLowerCase())
-      );
+      !serviceKey
+        ? true  // overall 15-day bar — always count the incident
+        : inc.affectedServices?.length > 0 &&
+          inc.affectedServices.some(s =>
+            s.toLowerCase().includes(serviceKey.toLowerCase()) ||
+            serviceKey.toLowerCase().includes(s.toLowerCase())
+          );
     if (!affects) return;
     const cursor = new Date(start); cursor.setHours(0, 0, 0, 0);
     const endDay = new Date(end);   endDay.setHours(23, 59, 59, 999);
@@ -112,11 +117,11 @@ function isServiceDisrupted(serviceKey, incidents, online) {
   return incidents.some(
     inc =>
       inc.status !== 'resolved' &&
-      (!inc.affectedServices?.length ||
-        inc.affectedServices.some(s =>
-          s.toLowerCase().includes(serviceKey.toLowerCase()) ||
-          serviceKey.toLowerCase().includes(s.toLowerCase())
-        ))
+      inc.affectedServices?.length > 0 &&
+      inc.affectedServices.some(s =>
+        s.toLowerCase().includes(serviceKey.toLowerCase()) ||
+        serviceKey.toLowerCase().includes(s.toLowerCase())
+      )
   );
 }
 
