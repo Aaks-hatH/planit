@@ -12,6 +12,8 @@ import toast from 'react-hot-toast';
 import ManagerOverrideDialog from '../components/ManagerOverrideDialog';
 import SecuritySettingsPanel from '../components/SecuritySettingsPanel';
 import socketService from '../services/socket';
+import offlineCheckin from '../services/offlineCheckin';
+import SecurityAlerts, { useSecurityAlerts } from '../components/SecurityAlerts';
 
 // Simple JWT decode (not for security — only for reading role/username from stored token)
 function decodeJWT(token) {
@@ -1086,6 +1088,10 @@ export default function EnterpriseCheckin() {
   const [editingInvite, setEditingInvite] = useState(null);
   
   const [showSettingsPanel, setShowSettingsPanel] = useState(false);
+  const { alerts: secAlerts, addAlert: addSecAlert, addConflicts, dismissAlert: dismissSecAlert, dismissAll: dismissAllSecAlerts } = useSecurityAlerts();
+  const [isOffline, setIsOffline]     = useState(!navigator.onLine);
+  const [pendingSync, setPendingSync] = useState(0);
+  const [cacheReady, setCacheReady]   = useState(false);
 
   useEffect(() => {
     if (eventId && authState.ready) {
@@ -1093,12 +1099,12 @@ export default function EnterpriseCheckin() {
     }
   }, [eventId, authState.ready]);
 
-  // Real-time socket updates
+  // Real-time socket updates + offline cache bootstrap
   useEffect(() => {
     if (!eventId || !authState.ready) return;
     const token = localStorage.getItem('eventToken');
     if (!token) return;
-    
+
     const socket = socketService.connect(token);
     if (socket) {
       socket.emit('join_event', eventId);
@@ -1106,11 +1112,57 @@ export default function EnterpriseCheckin() {
         loadInvites();
         loadStats();
       });
+      // Security alerts from server antifraud middleware
+      socket.on('security_alert', addSecAlert);
     }
+
+    // ── Offline cache: load from DB immediately, then refresh from server ──
+    offlineCheckin.loadCacheFromDB(eventId).then(cached => {
+      if (cached) setCacheReady(true);
+    });
+    if (offlineCheckin.isOnline()) {
+      offlineCheckin.refreshCache(eventId, () => eventAPI.getCheckinCache(eventId)).then(ok => {
+        if (ok) setCacheReady(true);
+      });
+    }
+
+    // ── Count pending offline check-ins ───────────────────────────────────
+    offlineCheckin.pendingCount(eventId).then(n => setPendingSync(n));
+
+    // ── Connectivity listeners ─────────────────────────────────────────────
+    function handleOnline() {
+      setIsOffline(false);
+      // Refresh cache first, then flush queue
+      offlineCheckin.refreshCache(eventId, () => eventAPI.getCheckinCache(eventId)).then(ok => {
+        if (ok) setCacheReady(true);
+      });
+      offlineCheckin.flushQueue(eventId, (inviteCode, actualAttendees) =>
+        eventAPI.checkIn(eventId, inviteCode, { actualAttendees, pinVerified: false })
+      ).then(results => {
+        if (results.synced > 0) {
+          loadInvites();
+          loadStats();
+        }
+        if (results.conflicts.length > 0) {
+          addConflicts(results.conflicts);
+        }
+        offlineCheckin.pendingCount(eventId).then(n => setPendingSync(n));
+      });
+    }
+    function handleOffline() {
+      setIsOffline(true);
+    }
+
+    window.addEventListener('online',  handleOnline);
+    window.addEventListener('offline', handleOffline);
+
     return () => {
       if (socket) {
         socket.off('guest_checked_in');
+        socket.off('security_alert', addSecAlert);
       }
+      window.removeEventListener('online',  handleOnline);
+      window.removeEventListener('offline', handleOffline);
     };
   }, [eventId, authState.ready]);
 
@@ -1796,11 +1848,34 @@ export default function EnterpriseCheckin() {
         </div>
       </main>
 
-      <footer className="max-w-7xl mx-auto px-6 lg:px-10 py-6 flex items-center justify-center">
-        <p className="text-xs text-neutral-400 font-medium tracking-wide">
-          Powered by <span className="font-black text-neutral-500">Planit</span>
-        </p>
+      <footer className="max-w-7xl mx-auto px-6 lg:px-10 py-6 flex items-center justify-between">
+        {/* Offline indicator */}
+        {isOffline && (
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-amber-500/10 border border-amber-500/30">
+            <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
+            <span className="text-xs font-bold text-amber-400">
+              Offline{pendingSync > 0 ? ` — ${pendingSync} check-in${pendingSync !== 1 ? 's' : ''} queued` : ' — using cached guest list'}
+            </span>
+          </div>
+        )}
+        {!isOffline && pendingSync > 0 && (
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-blue-500/10 border border-blue-500/30">
+            <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
+            <span className="text-xs font-bold text-blue-400">Syncing {pendingSync} offline check-in{pendingSync !== 1 ? 's' : ''}…</span>
+          </div>
+        )}
+        {!isOffline && pendingSync === 0 && (
+          <p className="text-xs text-neutral-400 font-medium tracking-wide">
+            Powered by <span className="font-black text-neutral-500">Planit</span>
+          </p>
+        )}
       </footer>
+
+      <SecurityAlerts
+        alerts={secAlerts}
+        onDismiss={dismissSecAlert}
+        onDismissAll={dismissAllSecAlerts}
+      />
     </div>
   );
 }
