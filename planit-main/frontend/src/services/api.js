@@ -162,6 +162,7 @@ export const adminAPI = {
 
   // Live Logs
   getLogs: (n = 'all') => api.get('/admin/logs', { params: { n } }),
+  getFleetLogs: () => api.get('/admin/logs/fleet'),
   // Note: SSE real-time stream is consumed directly via:
   //   new EventSource(`${API_URL}/admin/logs/stream`)
   // with an Authorization header injected by the component.
