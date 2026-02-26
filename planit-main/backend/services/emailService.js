@@ -72,106 +72,88 @@ function fetchQrAsBase64(event) {
   });
 }
 
-// ─── Shared CSS ───────────────────────────────────────────────────────────────
+// ─── Shared inline style tokens ───────────────────────────────────────────────
 
-const CSS = `
-*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
-img{border:0;display:block;max-width:100%}
-table{border-collapse:collapse;mso-table-lspace:0;mso-table-rspace:0}
-a{color:inherit;text-decoration:none}
-body{margin:0;padding:0;background:#eeeef3;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;-webkit-font-smoothing:antialiased;color:#1a1a2e;-webkit-text-size-adjust:100%}
-.outer{width:100%;background:#eeeef3;padding:36px 16px}
-.card{max-width:580px;margin:0 auto;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.07),0 8px 40px rgba(0,0,0,.09)}
-.mast{background:#0b0b13;padding:26px 36px}
-.mast-wm{font-size:19px;font-weight:700;color:#fff;letter-spacing:-.4px;line-height:1}
-.mast-wm b{color:#7b68f5}
-.mast-tag{font-size:9px;font-weight:500;letter-spacing:1.1px;text-transform:uppercase;color:rgba(255,255,255,.28);margin-top:4px}
-.mast-pill{display:inline-block;font-size:9.5px;font-weight:600;letter-spacing:.6px;text-transform:uppercase;padding:5px 12px;border-radius:20px;float:right;margin-top:-2px}
-.hero{padding:34px 36px 28px;border-bottom:1px solid #eaeaf2}
-.eyebrow{display:inline-block;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:4px 11px;border-radius:4px;margin-bottom:14px}
-.h1{font-size:23px;font-weight:700;color:#0b0b13;letter-spacing:-.5px;line-height:1.22}
-.hero-p{font-size:14px;color:#5c5c7a;line-height:1.68;margin-top:9px}
-.bd{padding:32px 36px}
-.cap{font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:1.2px;color:#b0b0c8;margin-bottom:14px;padding-bottom:9px;border-bottom:1px solid #f0f0f7}
-.drow{display:table;width:100%;margin-bottom:9px}
-.dk{display:table-cell;font-size:11.5px;font-weight:600;color:#b0b0c8;width:80px;vertical-align:top;padding-top:1px}
-.dv{display:table-cell;font-size:13.5px;color:#1a1a2e;line-height:1.45;padding-left:10px}
-.rule{height:1px;background:#f0f0f7;margin:26px 0;border:none}
-.link-box{background:#f7f7fb;border:1px solid #e8e8f2;border-radius:7px;padding:14px 16px;margin-top:14px}
-.link-cap{font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#b0b0c8;margin-bottom:6px}
-.link-url{font-size:12.5px;color:#4338ca;word-break:break-all;font-weight:600}
-.qr-block{background:#f7f7fb;border:1px solid #e8e8f2;border-radius:9px;padding:30px 20px;text-align:center;margin-top:22px}
-.qr-cap{font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#b0b0c8;margin-bottom:18px}
-.qr-inner{display:inline-block;background:#fff;border:1px solid #e0e0ec;border-radius:7px;padding:14px}
-.qr-note{font-size:12px;color:#9090b0;margin-top:14px;line-height:1.55}
-.qr-fb{font-size:11px;color:#9090b0;margin-top:7px}
-.qr-fb a{color:#4338ca;font-weight:600}
-.cta-wrap{margin-top:24px}
-.cta{display:block;padding:14px 30px;border-radius:7px;font-size:14px;font-weight:600;letter-spacing:-.1px;text-decoration:none;text-align:center;color:#fff;background:#0b0b13}
-.chk{width:100%;border-collapse:collapse;margin-bottom:6px}
-.chk td{padding:10px 0;border-bottom:1px solid #f2f2f8;font-size:13.5px;color:#2a2a48;line-height:1.5;vertical-align:top}
-.cdot-td{width:18px;padding-top:5px}
-.cdot{width:5px;height:5px;border-radius:50%}
-.sig{margin-top:30px;padding-top:22px;border-top:1px solid #f0f0f7}
-.sig-copy{font-size:13.5px;color:#3a3a58;line-height:1.78}
-.sig-name{font-size:14px;font-weight:700;color:#0b0b13;margin-top:14px}
-.sig-role{font-size:11.5px;color:#b0b0c8;margin-top:2px}
-.foot{background:#f7f7fb;border-top:1px solid #eaeaf2;padding:18px 36px}
-.foot p{font-size:10.5px;color:#c0c0d2;line-height:1.6}
-@media only screen and (max-width:600px){
-  .outer{padding:0!important}
-  .card{border-radius:0!important;box-shadow:none!important}
-  .mast{padding:20px!important}
-  .mast-pill{display:none!important}
-  .hero{padding:24px 20px 20px!important}
-  .h1{font-size:20px!important}
-  .bd{padding:24px 20px!important}
-  .drow{display:block!important;margin-bottom:12px!important}
-  .dk{display:block!important;width:auto!important;font-size:10px!important;margin-bottom:3px!important}
-  .dv{display:block!important;padding-left:0!important}
-  .ds-btn-td{display:block!important;text-align:left!important;padding:0 24px 20px!important}
-  .ds-cta{display:block!important;text-align:center!important}
-  .cta{padding:14px!important}
-  .foot{padding:16px 20px!important}
-}
-`;
+const FONT  = `-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif`;
+const BG    = `#EDEDF2`;
+const WHITE = `#ffffff`;
+const DARK  = `#111827`;
+const MID   = `#374151`;
+const MUTED = `#6B7280`;
+const FAINT = `#9CA3AF`;
+const RULE  = `#E9EAEF`;
+const PANEL = `#F9FAFB`;
 
-// ─── Reusable fragments ───────────────────────────────────────────────────────
+// ─── Shared fragments ─────────────────────────────────────────────────────────
 
-function shell(title, preheader, pillLabel, pillColor, heroHtml, bodyHtml, sigCopy, footerNote) {
+function emailShell(title, preheader, pillLabel, headerRowHtml, bodyHtml, footerNote) {
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
   <meta name="color-scheme" content="light only"/>
+  <meta name="x-apple-disable-message-reformatting"/>
   <title>${h(title)}</title>
   <!--[if mso]><noscript><xml><o:OfficeDocumentSettings><o:PixelsPerInch>96</o:PixelsPerInch></o:OfficeDocumentSettings></xml></noscript><![endif]-->
-  <style>${CSS}</style>
+  <style>
+    body,table,td,a{-webkit-text-size-adjust:100%;-ms-text-size-adjust:100%}
+    table,td{mso-table-lspace:0pt;mso-table-rspace:0pt}
+    img{border:0;height:auto;line-height:100%;outline:none;text-decoration:none;-ms-interpolation-mode:bicubic}
+    @media only screen and (max-width:620px){
+      .card{border-radius:0!important}
+      .ep{padding-left:20px!important;padding-right:20px!important}
+      .pill{display:none!important}
+    }
+  </style>
 </head>
-<body>
-  <div class="outer">
-    <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td>
-    <div style="display:none;max-height:0;overflow:hidden;mso-hide:all">${h(preheader)}&nbsp;&zwnj;&nbsp;</div>
-    <div class="card">
-      <div class="mast">
-        <div class="mast-wm">Plan<b>It</b></div>
-        <div class="mast-tag">Event Management Platform</div>
-        <div class="mast-pill" style="border:1px solid ${pillColor};color:${pillColor}">${h(pillLabel)}</div>
-      </div>
-      ${heroHtml}
-      <div class="bd">
-        ${bodyHtml}
-        <div class="sig">
-          <div class="sig-copy">${sigCopy}</div>
-          <div class="sig-name">Aakshat Hariharan</div>
-          <div class="sig-role">Founder, PlanIt</div>
-        </div>
-      </div>
-      <div class="foot"><p>${footerNote}</p></div>
-    </div>
-    </td></tr></table>
-  </div>
+<body style="margin:0;padding:0;background:${BG};font-family:${FONT};-webkit-font-smoothing:antialiased;" bgcolor="${BG}">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${BG};" bgcolor="${BG}">
+    <tr>
+      <td align="center" style="padding:40px 16px;">
+
+        <div style="display:none;max-height:0;overflow:hidden;mso-hide:all;font-size:1px;color:${BG};line-height:1px;">${h(preheader)}&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;</div>
+
+        <table role="presentation" class="card" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background:${WHITE};border-radius:12px;overflow:hidden;" bgcolor="${WHITE}">
+
+          <!-- MASTHEAD -->
+          <tr>
+            <td style="background:${DARK};padding:28px 40px;" bgcolor="${DARK}">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td>
+                    <span style="font-size:20px;font-weight:800;color:${WHITE};letter-spacing:-0.5px;font-family:${FONT};">Plan<span style="color:${FAINT};">It</span></span><br/>
+                    <span style="font-size:10px;font-weight:500;letter-spacing:1.2px;text-transform:uppercase;color:rgba(255,255,255,0.28);font-family:${FONT};">Event Management Platform</span>
+                  </td>
+                  <td align="right" valign="middle" class="pill">
+                    <span style="display:inline-block;font-size:10px;font-weight:700;letter-spacing:0.8px;text-transform:uppercase;color:rgba(255,255,255,0.55);border:1px solid rgba(255,255,255,0.18);border-radius:20px;padding:5px 14px;font-family:${FONT};">${h(pillLabel)}</span>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          ${headerRowHtml}
+
+          <!-- BODY -->
+          <tr>
+            <td class="ep" style="padding:32px 40px;">
+              ${bodyHtml}
+            </td>
+          </tr>
+
+          <!-- FOOTER -->
+          <tr>
+            <td class="ep" style="background:${PANEL};border-top:1px solid ${RULE};padding:20px 40px;" bgcolor="${PANEL}">
+              <p style="margin:0 0 4px 0;font-size:11px;color:${FAINT};line-height:1.6;font-family:${FONT};">${h(footerNote)}</p>
+              <p style="margin:0;font-size:11px;color:${FAINT};line-height:1.6;font-family:${FONT};"><a href="#unsubscribe" style="color:#6B7280;text-decoration:underline;font-family:${FONT};">Unsubscribe</a> &nbsp;&middot;&nbsp; <a href="#preferences" style="color:#6B7280;text-decoration:underline;font-family:${FONT};">Manage preferences</a></p>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
 </body>
 </html>`;
 }
@@ -183,66 +165,124 @@ function detailRows(event) {
     ['Location',  event.location],
     ['Organiser', event.organizerName],
   ];
-  return rows.filter(([, v]) => v).map(([k, v]) =>
-    `<div class="drow"><div class="dk">${h(k)}</div><div class="dv">${h(String(v))}</div></div>`
-  ).join('');
+  return rows.filter(([, v]) => v).map(([k, v]) => `
+    <tr>
+      <td style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:${FAINT};width:90px;padding:8px 0;vertical-align:top;font-family:${FONT};">${h(k)}</td>
+      <td style="font-size:15px;color:${MID};padding:8px 0 8px 12px;line-height:1.45;font-family:${FONT};">${h(String(v))}</td>
+    </tr>`).join('');
+}
+
+function sectionCap(label) {
+  return `<p style="margin:0 0 16px 0;font-size:10px;font-weight:700;letter-spacing:1.3px;text-transform:uppercase;color:${FAINT};padding-bottom:10px;border-bottom:1px solid ${RULE};font-family:${FONT};">${h(label)}</p>`;
+}
+
+function hrule() {
+  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td style="height:1px;background:${RULE};font-size:0;line-height:0;padding:16px 0 0 0;"></td></tr></table>`;
+}
+
+function ctaButton(label, url) {
+  return `
+    <table role="presentation" cellpadding="0" cellspacing="0" style="margin-top:28px;width:100%;">
+      <tr>
+        <td align="center">
+          <!--[if mso]><v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" href="${h(url)}" style="height:50px;v-text-anchor:middle;width:260px;" arcsize="12%" stroke="f" fillcolor="${DARK}"><w:anchorlock/><center style="color:#ffffff;font-family:${FONT};font-size:15px;font-weight:700;">${h(label)}</center></v:roundrect><![endif]-->
+          <!--[if !mso]><!-->
+          <a href="${h(url)}" style="background:${DARK};color:#ffffff;display:inline-block;font-family:${FONT};font-size:15px;font-weight:700;line-height:50px;text-align:center;text-decoration:none;width:260px;border-radius:8px;letter-spacing:-0.2px;mso-hide:all;">${h(label)}</a>
+          <!--<![endif]-->
+        </td>
+      </tr>
+    </table>`;
+}
+
+function signature(copy) {
+  return `
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top:36px;padding-top:24px;border-top:1px solid ${RULE};">
+      <tr>
+        <td>
+          <p style="margin:0 0 18px 0;font-size:15px;color:#4B5563;line-height:1.75;font-family:${FONT};">${copy}</p>
+          <p style="margin:0 0 2px 0;font-size:15px;font-weight:700;color:${DARK};font-family:${FONT};">Aakshat Hariharan</p>
+          <p style="margin:0;font-size:12px;color:${FAINT};font-family:${FONT};">Founder, PlanIt</p>
+        </td>
+      </tr>
+    </table>`;
 }
 
 function qrBlock(qrDataUri, link) {
   if (!qrDataUri) return '';
-  return `<div class="qr-block">
-    <div class="qr-cap">QR Code for Attendees</div>
-    <div class="qr-inner">
-      <img src="${qrDataUri}" alt="Event QR Code" width="156" height="156" style="display:block;border-radius:4px"/>
-    </div>
-    <p class="qr-note">Works with any smartphone camera. Print it, embed it in your materials, or display it on screen at the venue.</p>
-    <p class="qr-fb">QR code not rendering? <a href="${h(link)}">Open the event link directly</a></p>
-  </div>`;
+  return `
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top:24px;background:${PANEL};border:1px solid #E5E7EB;border-radius:10px;">
+      <tr>
+        <td style="padding:24px;text-align:center;">
+          <p style="margin:0 0 16px 0;font-size:10px;font-weight:700;letter-spacing:1.3px;text-transform:uppercase;color:${FAINT};font-family:${FONT};">QR Code for Attendees</p>
+          <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 auto;">
+            <tr>
+              <td style="background:${WHITE};border:1px solid #D1D5DB;border-radius:8px;padding:14px;line-height:0;">
+                <img src="${qrDataUri}" alt="Event QR Code" width="160" height="160" style="display:block;border-radius:4px;"/>
+              </td>
+            </tr>
+          </table>
+          <p style="margin:16px 0 6px 0;font-size:13px;color:${MUTED};line-height:1.6;font-family:${FONT};">Works with any smartphone camera. Print it, embed it in your materials, or display it on screen at the venue.</p>
+          <p style="margin:0;font-size:12px;color:${FAINT};font-family:${FONT};">QR code not rendering? <a href="${h(link)}" style="color:${DARK};font-weight:600;text-decoration:underline;font-family:${FONT};">Open the event link directly</a></p>
+        </td>
+      </tr>
+    </table>`;
 }
 
-// ─── Templates ────────────────────────────────────────────────────────────────
+// ─── Template builders ────────────────────────────────────────────────────────
 
 function buildConfirmation(event, qrDataUri) {
   const url = joinUrl(event);
 
-  const hero = `<div class="hero">
-    <span class="eyebrow" style="background:#f0eeff;color:#4338ca">Event Created</span>
-    <h1 class="h1">Your event is live and ready.</h1>
-    <p class="hero-p">Everything is set. Share the link below or show the QR code to give attendees instant access — no account required on their end.</p>
-  </div>`;
+  const headerRow = `
+    <tr>
+      <td class="ep" style="padding:36px 40px 30px 40px;border-bottom:1px solid ${RULE};">
+        <span style="display:inline-block;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:${MID};background:#F3F4F6;padding:5px 12px;border-radius:5px;margin-bottom:16px;font-family:${FONT};">Event Created</span>
+        <h1 style="margin:0 0 12px 0;font-size:24px;font-weight:800;color:${DARK};letter-spacing:-0.5px;line-height:1.2;font-family:${FONT};">Your event is live and ready.</h1>
+        <p style="margin:0;font-size:15px;color:${MUTED};line-height:1.65;font-family:${FONT};">Everything is set. Share the link below or display the QR code at your venue to give attendees instant access &mdash; no account required on their end.</p>
+      </td>
+    </tr>`;
 
   const body = `
-    <div class="cap">Event Details</div>
-    ${detailRows(event)}
-    <hr class="rule"/>
-    <div class="link-box">
-      <div class="link-cap">Shareable Join Link</div>
-      <div class="link-url">${h(url)}</div>
-    </div>
+    ${sectionCap('Event Details')}
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+      ${detailRows(event)}
+    </table>
+    ${hrule()}
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top:24px;background:${PANEL};border:1px solid #E5E7EB;border-radius:8px;">
+      <tr>
+        <td style="padding:16px 20px;">
+          <p style="margin:0 0 6px 0;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:${FAINT};font-family:${FONT};">Shareable Join Link</p>
+          <p style="margin:0;font-size:13px;color:${DARK};word-break:break-all;font-weight:600;font-family:${FONT};">${h(url)}</p>
+        </td>
+      </tr>
+    </table>
     ${qrBlock(qrDataUri, url)}
-    <div class="cta-wrap"><a href="${h(url)}" class="cta">Open Event Dashboard</a></div>`;
+    ${ctaButton('Open Event Dashboard', url)}
+    ${signature('Glad to have you on PlanIt. Your event dashboard is ready when you are. If anything is unclear, reply to this email and I will sort it out personally.')}`;
 
-  return shell(
+  return emailShell(
     `Event created: ${event.title}`,
-    `Your event "${event.title}" is live and ready.`,
-    'Confirmation', 'rgba(99,85,240,.55)',
-    hero, body,
-    'Glad to have you on PlanIt. Your event dashboard is ready when you are. If anything is unclear, reply to this email and I will sort it out personally.',
-    'You received this because you created an event on PlanIt. This is an automated confirmation. Please do not reply directly to this email.'
+    `Your event "${event.title}" is live and ready for attendees.`,
+    'Confirmation',
+    headerRow,
+    body,
+    'You received this because you created an event on PlanIt. This is an automated confirmation.'
   );
 }
 
 function buildReminder(event) {
-  const url      = joinUrl(event);
-  const timeStr  = REMINDER_HOURS === 24 ? 'tomorrow' : `in approximately ${REMINDER_HOURS} hours`;
+  const url     = joinUrl(event);
+  const timeStr = REMINDER_HOURS === 24 ? 'tomorrow' : `in approximately ${REMINDER_HOURS} hours`;
+  const label   = REMINDER_HOURS === 24 ? 'Coming Up Tomorrow' : 'Coming Up Soon';
 
-  const hero = `<div class="hero">
-    <span class="eyebrow" style="background:#fff8ed;color:#b45309">
-      ${REMINDER_HOURS}-Hour Reminder
-    </span>
-    <h1 class="h1">Your event starts ${timeStr}.</h1>
-    <p class="hero-p">A quick summary to keep close. Everything on PlanIt is ready on your end.</p>
-  </div>`;
+  const headerRow = `
+    <tr>
+      <td class="ep" style="padding:36px 40px 30px 40px;border-bottom:1px solid ${RULE};">
+        <span style="display:inline-block;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:${MID};background:#F3F4F6;padding:5px 12px;border-radius:5px;margin-bottom:16px;font-family:${FONT};">${h(label)}</span>
+        <h1 style="margin:0 0 12px 0;font-size:24px;font-weight:800;color:${DARK};letter-spacing:-0.5px;line-height:1.2;font-family:${FONT};">Your event starts ${timeStr}.</h1>
+        <p style="margin:0;font-size:15px;color:${MUTED};line-height:1.65;font-family:${FONT};">A quick summary to keep close. Everything on PlanIt is ready on your end &mdash; here is a brief checklist to help the day run smoothly.</p>
+      </td>
+    </tr>`;
 
   const checklist = [
     'Confirm your team knows their roles and arrival times',
@@ -251,62 +291,67 @@ function buildReminder(event) {
     'Keep a screenshot of the guest list as a backup in case of connectivity issues on the day',
   ];
 
-  const body = `
-    <div class="cap">Event Details</div>
-    ${detailRows(event)}
-    <hr class="rule"/>
-    <div class="cap" style="margin-top:20px">Day-of Checklist</div>
-    <table class="chk" role="presentation">
-      ${checklist.map(t => `
-        <tr>
-          <td class="cdot-td"><div class="cdot" style="background:#b45309"></div></td>
-          <td>${h(t)}</td>
-        </tr>`).join('')}
-    </table>
-    <div class="cta-wrap"><a href="${h(url)}" class="cta">Open Event Dashboard</a></div>`;
+  const checkRows = checklist.map((text, i) => `
+    <tr>
+      <td style="padding:10px 0;${i < checklist.length - 1 ? 'border-bottom:1px solid #F3F4F6;' : ''}vertical-align:top;width:20px;">
+        <div style="width:5px;height:5px;background:${MID};border-radius:50%;margin-top:6px;"></div>
+      </td>
+      <td style="padding:10px 0 10px 12px;${i < checklist.length - 1 ? 'border-bottom:1px solid #F3F4F6;' : ''}font-size:15px;color:${MID};line-height:1.55;font-family:${FONT};">${h(text)}</td>
+    </tr>`).join('');
 
-  return shell(
+  const body = `
+    ${sectionCap('Event Details')}
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+      ${detailRows(event)}
+    </table>
+    ${hrule()}
+    <p style="margin:24px 0 14px 0;font-size:10px;font-weight:700;letter-spacing:1.3px;text-transform:uppercase;color:${FAINT};font-family:${FONT};">Day-of Checklist</p>
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+      ${checkRows}
+    </table>
+    ${ctaButton('Open Event Dashboard', url)}
+    ${signature('You are nearly there. Wishing you a smooth and memorable event. PlanIt is here if anything comes up.')}`;
+
+  return emailShell(
     `Reminder: ${event.title} starts ${timeStr}`,
-    `Your event "${event.title}" is coming up soon.`,
-    `${REMINDER_HOURS}-Hour Reminder`, 'rgba(180,83,9,.55)',
-    hero, body,
-    'You are nearly there. Wishing you a smooth and memorable event. PlanIt is here if anything comes up.',
-    'You received this reminder because you are the organizer of this event on PlanIt.'
+    `Your event "${event.title}" is coming up ${timeStr}.`,
+    `${REMINDER_HOURS}-Hour Reminder`,
+    headerRow,
+    body,
+    'You received this reminder because you are the organiser of this event on PlanIt.'
   );
 }
 
 function buildThankyou(event) {
   const url = joinUrl(event);
 
-  const hero = `<div class="hero" style="background:#0b0b13;border-bottom:1px solid #1a1a28">
-    <span class="eyebrow" style="background:rgba(123,104,245,.15);color:#9d8cfc">Event Concluded</span>
-    <h1 class="h1" style="color:#ffffff">That is a wrap. Well done.</h1>
-    <p class="hero-p" style="color:rgba(255,255,255,.42)">${h(event.title)} — a personal note from the founder.</p>
-  </div>`;
+  const headerRow = `
+    <tr>
+      <td class="ep" style="background:${DARK};padding:36px 40px 30px 40px;border-bottom:1px solid #1F2937;" bgcolor="${DARK}">
+        <span style="display:inline-block;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:rgba(255,255,255,0.4);background:rgba(255,255,255,0.08);padding:5px 12px;border-radius:5px;margin-bottom:16px;font-family:${FONT};">That is a wrap</span>
+        <h1 style="margin:0 0 12px 0;font-size:24px;font-weight:800;color:${WHITE};letter-spacing:-0.5px;line-height:1.2;font-family:${FONT};">Well done. Truly.</h1>
+        <p style="margin:0;font-size:15px;color:rgba(255,255,255,0.4);line-height:1.65;font-family:${FONT};">${h(event.title)} &mdash; a personal note from the founder.</p>
+      </td>
+    </tr>`;
 
   const body = `
-    <div class="cap">Event Summary</div>
-    ${detailRows(event)}
-    <hr class="rule"/>
-    <p style="font-size:14px;color:#3a3a58;line-height:1.82;margin-bottom:16px">
-      I wanted to take a moment to personally thank you for using PlanIt.
-    </p>
-    <p style="font-size:14px;color:#3a3a58;line-height:1.82;margin-bottom:16px">
-      Every event organised on this platform matters to me — it is the reason it was built.
-      I hope the people who attended left with something memorable, and that the logistics
-      stayed firmly in the background.
-    </p>
-    <p style="font-size:14px;color:#3a3a58;line-height:1.82">
-      If you have feedback — positive or critical — I read every message. Just hit reply.
-    </p>
-    <div class="cta-wrap"><a href="${h(url)}" class="cta">View Event Summary</a></div>`;
+    ${sectionCap('Event Summary')}
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+      ${detailRows(event)}
+    </table>
+    ${hrule()}
+    <p style="margin:24px 0 16px 0;font-size:15px;color:${MID};line-height:1.78;font-family:${FONT};">I wanted to take a moment to personally thank you for using PlanIt.</p>
+    <p style="margin:0 0 16px 0;font-size:15px;color:${MID};line-height:1.78;font-family:${FONT};">Every event organised on this platform matters to me &mdash; it is the reason it was built. I hope the people who attended left with something memorable, and that the logistics stayed firmly in the background.</p>
+    <p style="margin:0;font-size:15px;color:${MID};line-height:1.78;font-family:${FONT};">If you have feedback &mdash; positive or critical &mdash; I read every message. Just hit reply.</p>
+    ${ctaButton('View Event Summary', url)}
+    ${signature('With gratitude,')}`;
 
-  return shell(
+  return emailShell(
     `Thank you for using PlanIt: ${event.title}`,
     `Your event "${event.title}" has concluded. A personal note from the founder.`,
-    'Event Concluded', 'rgba(157,140,252,.55)',
-    hero, body,
-    'With gratitude,',
+    'Event Concluded',
+    headerRow,
+    body,
     'You received this because you organised an event on PlanIt.'
   );
 }
