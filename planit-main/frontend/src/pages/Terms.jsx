@@ -432,7 +432,7 @@ export default function Terms() {
               <p><strong className="text-neutral-900">Operator:</strong> Aakshat Hariharan</p>
               <p><strong className="text-neutral-900">Operating name:</strong> PlanIt</p>
               <p><strong className="text-neutral-900">Email:</strong>{' '}
-                <a href="mailto:hariharanaakshat@gmail.com" className="text-neutral-900 font-medium underline underline-offset-2">hariharanaakshat@gmail.com</a>
+                <a href="mailto:planit.userhelp@gmail.com" className="text-neutral-900 font-medium underline underline-offset-2">planit.userhelp@gmail.com</a>
               </p>
               <p><strong className="text-neutral-900">Support page:</strong>{' '}
                 <a href="/support" className="text-neutral-900 font-medium underline underline-offset-2">planitapp.onrender.com/support</a>
