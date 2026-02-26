@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { eventAPI, chatAPI, pollAPI, fileAPI } from '../services/api';
 import socketService from '../services/socket';
+import SecurityAlerts, { useSecurityAlerts } from '../components/SecurityAlerts';
 import { formatDate, formatRelativeTime, formatFileSize } from '../utils/formatters';
 import { MAX_MESSAGE_LENGTH, MAX_FILE_SIZE, ALLOWED_FILE_TYPES } from '../utils/constants';
 import toast from 'react-hot-toast';
@@ -712,6 +713,7 @@ export default function EventSpace() {
   const typingTimeoutRef = useRef(null);
 
   const [eventId, setEventId]     = useState(paramEventId || null);
+  const { alerts: secAlerts, addAlert: addSecAlert, dismissAlert: dismissSecAlert, dismissAll: dismissAllSecAlerts } = useSecurityAlerts();
   const [resolving, setResolving] = useState(!paramEventId && subdomain);
 
   const [needsJoin, setNeedsJoin] = useState(false);
@@ -842,9 +844,11 @@ export default function EventSpace() {
       }
     });
     socketService.on('rate_limit_warning', ({ message }) => toast(message, { duration: 3000 }));
+    socketService.on('security_alert', addSecAlert);
 
     return () => {
       if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+      socketService.off('security_alert', addSecAlert);
       socketService.leaveEvent(eventId);
       socketService.disconnect();
     };
@@ -1719,5 +1723,10 @@ export default function EventSpace() {
         </aside>
       </div>
     </div>
+      <SecurityAlerts
+        alerts={secAlerts}
+        onDismiss={dismissSecAlert}
+        onDismissAll={dismissAllSecAlerts}
+      />
   );
 }
