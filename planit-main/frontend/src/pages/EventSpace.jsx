@@ -1082,6 +1082,7 @@ export default function EventSpace() {
   );
 
   return (
+    <>
     <div className="min-h-screen flex flex-col" style={{ background: '#f7f7f9' }}>
       <DeletionWarningBanner eventId={eventId} />
 
@@ -1728,5 +1729,6 @@ export default function EventSpace() {
         onDismiss={dismissSecAlert}
         onDismissAll={dismissAllSecAlerts}
       />
+    </>
   );
 }
