@@ -64,4 +64,25 @@ router.post('/seen', meshAuth(process.env.BACKEND_LABEL || 'Backend'), (req, res
   res.json({ ok: true, name: process.env.BACKEND_LABEL || 'Backend' });
 });
 
+// ─── GET /api/mesh/logs ───────────────────────────────────────────────────────
+// Returns this backend's full in-memory log ring-buffer.
+// Called by the router's /mesh/fleet-logs fan-out so admins can see every
+// backend's logs from a single endpoint without setting per-backend env vars.
+router.get('/logs', meshAuth(process.env.BACKEND_LABEL || 'Backend'), (req, res) => {
+  const name = process.env.BACKEND_LABEL || 'Backend';
+  const logs = (global.__adminLogBuffer || []).slice().map(e => ({
+    ...e,
+    source:     name.toLowerCase().replace(/\s+/g, '-'),
+    sourceName: name,
+  }));
+  res.json({
+    source:   name.toLowerCase().replace(/\s+/g, '-'),
+    name,
+    logs,
+    total:    logs.length,
+    uptime:   Math.floor(process.uptime()),
+    ts:       new Date().toISOString(),
+  });
+});
+
 module.exports = router;
