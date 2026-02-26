@@ -110,17 +110,38 @@ const MemBar = ({ label, used, total, color = 'blue' }) => {
 };
 
 // ─── Log Line ─────────────────────────────────────────────────────────────────
+const SOURCE_BADGE = {
+  router:   'bg-violet-800 text-violet-200',
+  watchdog: 'bg-sky-800 text-sky-200',
+};
+function sourceBadgeClass(source) {
+  if (!source) return 'bg-neutral-800 text-neutral-400';
+  return SOURCE_BADGE[source.toLowerCase()] || 'bg-amber-900 text-amber-200';
+}
+function sourceDotClass(source) {
+  if (!source) return 'bg-neutral-500';
+  const k = source.toLowerCase();
+  if (k === 'router')   return 'bg-violet-400';
+  if (k === 'watchdog') return 'bg-sky-400';
+  return 'bg-amber-400';
+}
+
 const LogLine = ({ entry }) => {
   const colors  = { error: 'text-red-400', warn: 'text-amber-400', info: 'text-neutral-300' };
   const bgColor = { error: 'bg-red-950/30', warn: 'bg-amber-950/20', info: '' };
   const prefix  = { error: 'ERR', warn: 'WRN', info: 'INF' };
-  const t = DateTime.fromISO(entry.ts).toFormat('HH:mm:ss.SSS');
+  const t    = DateTime.fromISO(entry.ts).toFormat('HH:mm:ss.SSS');
   const date = DateTime.fromISO(entry.ts).toFormat('MM/dd');
   return (
     <div className={`flex gap-2 text-xs font-mono leading-relaxed py-0.5 hover:bg-white/5 px-2 rounded ${bgColor[entry.level] || ''}`}>
       <span className="text-neutral-600 flex-shrink-0 select-none tabular-nums w-28">{date} {t}</span>
       <span className={`flex-shrink-0 font-bold w-7 ${colors[entry.level] || 'text-neutral-400'}`}>{prefix[entry.level] || 'LOG'}</span>
-      <span className={`flex-shrink-0 break-all ${colors[entry.level] || 'text-neutral-300'}`}>{entry.msg}</span>
+      {entry.source && (
+        <span className={`flex-shrink-0 px-1.5 py-px rounded text-[10px] font-bold uppercase tracking-wide ${sourceBadgeClass(entry.source)}`}>
+          {entry.sourceName || entry.source}
+        </span>
+      )}
+      <span className={`break-all ${colors[entry.level] || 'text-neutral-300'}`}>{entry.msg}</span>
     </div>
   );
 };
@@ -948,22 +969,35 @@ function SystemPanel() {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// LIVE LOGS PANEL
+// FLEET LOGS PANEL
 // ═══════════════════════════════════════════════════════════════════════════════
 function LogsPanel() {
-  const [logs, setLogs] = useState([]);
-  const [filter, setFilter] = useState('all');
-  const [search, setSearch] = useState('');
+  const [logs, setLogs]             = useState([]);
+  const [sources, setSources]       = useState([]);
+  const [filter, setFilter]         = useState('all');
+  const [sourceFilter, setSourceFilter] = useState('all');
+  const [search, setSearch]         = useState('');
   const [autoScroll, setAutoScroll] = useState(true);
-  const [live, setLive] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const [live, setLive]             = useState(false);
+  const [loading, setLoading]       = useState(true);
   const bottomRef = useRef(null);
-  const esRef = useRef(null);
+  const esRef     = useRef(null);
 
   const loadLogs = async () => {
     setLoading(true);
-    try { const r = await adminAPI.getLogs('all'); setLogs(r.data.logs || []); } catch { toast.error('Failed to load logs'); }
-    finally { setLoading(false); }
+    try {
+      const r = await adminAPI.getFleetLogs();
+      setLogs(r.data.logs || []);
+      setSources(r.data.sources || []);
+    } catch {
+      // fallback: local backend only
+      try {
+        const r = await adminAPI.getLogs('all');
+        const backendName = 'Backend';
+        setLogs((r.data.logs || []).map(e => ({ ...e, source: 'backend', sourceName: backendName })));
+        setSources([{ source: 'backend', name: backendName, ok: true, count: r.data.logs?.length || 0 }]);
+      } catch { toast.error('Failed to load logs'); }
+    } finally { setLoading(false); }
   };
 
   useEffect(() => { loadLogs(); }, []);
@@ -974,29 +1008,32 @@ function LogsPanel() {
 
   const startLive = () => {
     if (esRef.current) return;
-    const token = localStorage.getItem('adminToken');
+    const token  = localStorage.getItem('adminToken');
     const apiUrl = import.meta.env?.VITE_API_URL || '';
     const es = new EventSource(`${apiUrl}/api/admin/logs/stream?token=${encodeURIComponent(token)}`, { withCredentials: false });
     esRef.current = es;
-    es.onmessage = (e) => { try { const entry = JSON.parse(e.data); setLogs(prev => [...prev.slice(-1999), entry]); } catch {} };
-    es.onerror   = () => { toast.error('Live log stream disconnected'); stopLive(); };
+    es.onmessage = (e) => {
+      try {
+        const entry = JSON.parse(e.data);
+        const tagged = { ...entry, source: entry.source || 'backend', sourceName: entry.sourceName || 'Backend' };
+        setLogs(prev => [...prev.slice(-1999), tagged]);
+      } catch {}
+    };
+    es.onerror = () => { toast.error('Live log stream disconnected'); stopLive(); };
     setLive(true);
   };
 
-  const stopLive = () => {
-    esRef.current?.close(); esRef.current = null;
-    setLive(false);
-  };
+  const stopLive = () => { esRef.current?.close(); esRef.current = null; setLive(false); };
 
   const downloadFull = async () => {
     try {
       const token  = localStorage.getItem('adminToken');
       const apiUrl = import.meta.env?.VITE_API_URL || '';
-      const r = await fetch(`${apiUrl}/api/admin/logs/full`, { headers: { Authorization: `Bearer ${token}` } });
+      const r    = await fetch(`${apiUrl}/api/admin/logs/full`, { headers: { Authorization: `Bearer ${token}` } });
       const data = await r.json();
       const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-      const a = document.createElement('a');
-      a.href = URL.createObjectURL(blob);
+      const a    = document.createElement('a');
+      a.href     = URL.createObjectURL(blob);
       a.download = `planit-full-dump-${Date.now()}.json`;
       a.click();
       toast.success('Full system dump downloaded');
@@ -1007,30 +1044,64 @@ function LogsPanel() {
 
   const filtered = logs.filter(l => {
     if (filter !== 'all' && l.level !== filter) return false;
+    if (sourceFilter !== 'all' && (l.source || 'backend') !== sourceFilter) return false;
     if (search && !l.msg?.toLowerCase().includes(search.toLowerCase())) return false;
     return true;
   });
 
-  const counts = { all: logs.length, info: logs.filter(l => l.level === 'info').length, warn: logs.filter(l => l.level === 'warn').length, error: logs.filter(l => l.level === 'error').length };
+  const counts = {
+    all:   logs.length,
+    info:  logs.filter(l => l.level === 'info').length,
+    warn:  logs.filter(l => l.level === 'warn').length,
+    error: logs.filter(l => l.level === 'error').length,
+  };
+
+  const uniqueSources = [...new Set(logs.map(l => l.source || 'backend'))];
 
   return (
     <div className="space-y-4">
+      {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h2 className="text-lg font-bold">Live Log Console</h2>
-          <p className="text-sm text-neutral-500">{counts.all} entries · {counts.error} errors · {counts.warn} warnings</p>
+          <h2 className="text-lg font-bold">Fleet Log Console</h2>
+          <p className="text-sm text-neutral-500">{counts.all.toLocaleString()} entries · {counts.error} errors · {counts.warn} warnings · {sources.length} source{sources.length !== 1 ? 's' : ''}</p>
         </div>
-        <div className="flex items-center gap-2">
-          <button onClick={autoScroll ? () => setAutoScroll(false) : () => setAutoScroll(true)} className={`btn text-sm gap-1 ${autoScroll ? 'btn-primary' : 'btn-secondary'}`}>{autoScroll ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronUp className="w-3.5 h-3.5" />} Auto-scroll</button>
+        <div className="flex items-center gap-2 flex-wrap">
+          <button onClick={autoScroll ? () => setAutoScroll(false) : () => setAutoScroll(true)} className={`btn text-sm gap-1 ${autoScroll ? 'btn-primary' : 'btn-secondary'}`}>
+            {autoScroll ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronUp className="w-3.5 h-3.5" />} Auto-scroll
+          </button>
           <button onClick={live ? stopLive : startLive} className={`btn text-sm gap-2 ${live ? 'bg-red-600 text-white border-red-600 hover:bg-red-700' : 'bg-emerald-600 text-white border-emerald-600 hover:bg-emerald-700'}`}>
             {live ? <><Power className="w-3.5 h-3.5" /> Stop Live</> : <><Radio className="w-3.5 h-3.5" /> Go Live</>}
           </button>
-          <button onClick={() => { const blob = new Blob([logs.map(l => `[${l.ts}] [${l.level.toUpperCase()}] ${l.msg}`).join('\n')], { type: 'text/plain' }); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `logs-${Date.now()}.txt`; a.click(); }} className="btn btn-secondary text-sm gap-1"><Download className="w-3.5 h-3.5" /> Export .txt</button>
+          <button onClick={() => {
+            const blob = new Blob(
+              [filtered.map(l => `[${l.ts}] [${(l.sourceName || l.source || 'backend').toUpperCase()}] [${l.level.toUpperCase()}] ${l.msg}`).join('\n')],
+              { type: 'text/plain' }
+            );
+            const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `fleet-logs-${Date.now()}.txt`; a.click();
+          }} className="btn btn-secondary text-sm gap-1"><Download className="w-3.5 h-3.5" /> Export .txt</button>
           <button onClick={downloadFull} className="btn btn-secondary text-sm gap-1"><Download className="w-3.5 h-3.5" /> Full Dump</button>
           <button onClick={loadLogs} className="btn btn-secondary text-sm gap-1"><RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} /></button>
         </div>
       </div>
 
+      {/* Source status pills */}
+      {sources.length > 0 && (
+        <div className="flex items-center gap-2 flex-wrap">
+          {sources.map(s => (
+            <div key={s.source} className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border ${s.ok ? 'border-neutral-700 bg-neutral-900' : 'border-red-800 bg-red-950/40'}`}>
+              <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${s.ok ? sourceDotClass(s.source) : 'bg-red-500'}`} />
+              <span className={s.ok ? 'text-neutral-200' : 'text-red-300'}>{s.name}</span>
+              {s.ok
+                ? <span className="text-neutral-500">{s.count.toLocaleString()} logs</span>
+                : <span className="text-red-400 text-[10px]">unreachable</span>
+              }
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Filters */}
       <div className="flex items-center gap-3 flex-wrap">
         <div className="flex gap-1 bg-neutral-100 rounded-xl p-1">
           {[['all', 'All', counts.all], ['info', 'Info', counts.info], ['warn', 'Warn', counts.warn], ['error', 'Error', counts.error]].map(([id, l, c]) => (
@@ -1039,21 +1110,50 @@ function LogsPanel() {
             </button>
           ))}
         </div>
+
+        {uniqueSources.length > 1 && (
+          <div className="flex gap-1 bg-neutral-100 rounded-xl p-1">
+            <button onClick={() => setSourceFilter('all')} className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${sourceFilter === 'all' ? 'bg-white shadow-sm text-neutral-900' : 'text-neutral-500'}`}>All</button>
+            {uniqueSources.map(src => {
+              const name = sources.find(s => s.source === src)?.name || src;
+              return (
+                <button key={src} onClick={() => setSourceFilter(src)} className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center gap-1.5 ${sourceFilter === src ? 'bg-white shadow-sm text-neutral-900' : 'text-neutral-500'}`}>
+                  <span className={`inline-block w-1.5 h-1.5 rounded-full ${sourceDotClass(src)}`} />{name}
+                </button>
+              );
+            })}
+          </div>
+        )}
+
         <div className="flex-1 min-w-40 relative">
           <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400" />
-          <input type="text" placeholder="Filter logs..." className="input pl-9 text-sm py-1.5" value={search} onChange={e => setSearch(e.target.value)} />
+          <input type="text" placeholder="Search all logs..." className="input pl-9 text-sm py-1.5" value={search} onChange={e => setSearch(e.target.value)} />
         </div>
-        {live && <div className="flex items-center gap-2 text-xs font-medium text-emerald-600 bg-emerald-50 px-3 py-1.5 rounded-full"><span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" /> LIVE</div>}
+        {live && (
+          <div className="flex items-center gap-2 text-xs font-medium text-emerald-600 bg-emerald-50 px-3 py-1.5 rounded-full">
+            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" /> LIVE (backend)
+          </div>
+        )}
       </div>
 
+      {/* Terminal */}
       <div className="bg-neutral-950 rounded-2xl border border-neutral-800 overflow-hidden">
         <div className="flex items-center gap-3 px-4 py-2.5 border-b border-neutral-800 bg-neutral-900">
-          <div className="flex gap-1.5"><div className="w-2.5 h-2.5 rounded-full bg-red-500/60" /><div className="w-2.5 h-2.5 rounded-full bg-amber-500/60" /><div className="w-2.5 h-2.5 rounded-full bg-emerald-500/60" /></div>
-          <span className="text-xs text-neutral-500 font-mono">planit-backend logs</span>
-          <span className="ml-auto text-xs text-neutral-600">{filtered.length} / {counts.all}</span>
+          <div className="flex gap-1.5">
+            <div className="w-2.5 h-2.5 rounded-full bg-red-500/60" />
+            <div className="w-2.5 h-2.5 rounded-full bg-amber-500/60" />
+            <div className="w-2.5 h-2.5 rounded-full bg-emerald-500/60" />
+          </div>
+          <span className="text-xs text-neutral-500 font-mono">fleet logs · all services · sorted by time</span>
+          <span className="ml-auto text-xs text-neutral-600">{filtered.length.toLocaleString()} / {counts.all.toLocaleString()}</span>
         </div>
-        <div className="h-[500px] overflow-y-auto p-2" onScroll={e => { if (autoScroll) { const el = e.target; setAutoScroll(el.scrollHeight - el.scrollTop - el.clientHeight < 50); } }}>
-          {loading ? <p className="text-neutral-500 text-xs font-mono p-4">Loading logs...</p> : filtered.length === 0 ? <p className="text-neutral-500 text-xs font-mono p-4">No logs match filter</p> : filtered.map((entry, i) => <LogLine key={`${entry.ts}-${i}`} entry={entry} />)}
+        <div className="h-[560px] overflow-y-auto p-2" onScroll={e => { if (autoScroll) { const el = e.target; setAutoScroll(el.scrollHeight - el.scrollTop - el.clientHeight < 50); } }}>
+          {loading
+            ? <p className="text-neutral-500 text-xs font-mono p-4">Fetching logs from all fleet services...</p>
+            : filtered.length === 0
+            ? <p className="text-neutral-500 text-xs font-mono p-4">No logs match filter</p>
+            : filtered.map((entry, i) => <LogLine key={`${entry.ts}-${i}`} entry={entry} />)
+          }
           <div ref={bottomRef} />
         </div>
       </div>
