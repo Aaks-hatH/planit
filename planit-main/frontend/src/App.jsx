@@ -15,6 +15,7 @@ import About from './pages/About';
 import Status from './pages/Status';
 import Discover from './pages/Discover';
 import Waitlist from './pages/Waitlist';
+import Help from './pages/Help';
 
 function App() {
   return (
@@ -41,6 +42,7 @@ function App() {
         <Route path="/about"           element={<About />} />
         <Route path="/status"          element={<Status />} />
         <Route path="/discover"        element={<Discover />} />
+        <Route path="/help"            element={<Help />} />
         <Route path="*"                element={<NotFound />} />
       </Routes>
     </Router>
