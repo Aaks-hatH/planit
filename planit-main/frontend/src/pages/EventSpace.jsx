@@ -145,7 +145,8 @@ function JoinGate({ eventId, onJoined }) {
     } else if (publicInfo.isPasswordProtected) {
       setStep('event-password');
     } else {
-      submitJoin(name, '', '');
+      // New user may have typed an optional account password — pass it along
+      submitJoin(name, accountPassword, '');
     }
   };
 
@@ -224,71 +225,96 @@ function JoinGate({ eventId, onJoined }) {
     : 0;
 
   /* ── Step: enter name ── */
-  const NameStep = () => (
-    <form onSubmit={handleNameContinue} className="space-y-4">
-      <div className="relative">
-        <label className="block text-[11px] font-bold text-neutral-500 uppercase tracking-widest mb-1.5">
-          Your Name
-        </label>
-        <input
-          type="text" required className="input rounded-xl"
-          placeholder="Enter your name"
-          value={username}
-          onChange={handleUsernameChange}
-          onFocus={() => { if (!justSelectedRef.current) setShowDropdown(true); justSelectedRef.current = false; }}
-          onBlur={() => setTimeout(() => setShowDropdown(false), 150)}
-          autoComplete="off" autoFocus
-        />
-        {showDropdown && filteredParticipants.length > 0 && (
-          <div className="absolute z-20 w-full mt-1.5 bg-white border border-neutral-200 rounded-xl shadow-2xl overflow-hidden">
-            <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest px-3 pt-2.5 pb-1">
-              Previously joined
-            </p>
-            {filteredParticipants.slice(0, 6).map(p => (
-              <button key={p.username} type="button"
-                className="w-full flex items-center justify-between px-3 py-2.5 hover:bg-neutral-50 text-left transition-colors"
-                onMouseDown={() => handleSelectName(p)}>
-                <div className="flex items-center gap-2.5">
-                  <div className="w-7 h-7 rounded-full bg-neutral-100 flex items-center justify-center text-xs font-bold text-neutral-600">
-                    {p.username.charAt(0).toUpperCase()}
+  const NameStep = () => {
+    const isNewUser = username.trim() && !lookupParticipant(username);
+    const isFullBlocked = isFull && isNewUser;
+
+    return (
+      <form onSubmit={handleNameContinue} className="space-y-4">
+        <div className="relative">
+          <label className="block text-[11px] font-bold text-neutral-500 uppercase tracking-widest mb-1.5">
+            Your Name
+          </label>
+          <input
+            type="text" required className="input rounded-xl"
+            placeholder="Enter your name"
+            value={username}
+            onChange={handleUsernameChange}
+            onFocus={() => { if (!justSelectedRef.current) setShowDropdown(true); justSelectedRef.current = false; }}
+            onBlur={() => setTimeout(() => setShowDropdown(false), 150)}
+            autoComplete="off" autoFocus
+          />
+          {showDropdown && filteredParticipants.length > 0 && (
+            <div className="absolute z-20 w-full mt-1.5 bg-white border border-neutral-200 rounded-xl shadow-2xl overflow-hidden">
+              <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest px-3 pt-2.5 pb-1">
+                Previously joined
+              </p>
+              {filteredParticipants.slice(0, 6).map(p => (
+                <button key={p.username} type="button"
+                  className="w-full flex items-center justify-between px-3 py-2.5 hover:bg-neutral-50 text-left transition-colors"
+                  onMouseDown={() => handleSelectName(p)}>
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-7 h-7 rounded-full bg-neutral-100 flex items-center justify-center text-xs font-bold text-neutral-600">
+                      {p.username.charAt(0).toUpperCase()}
+                    </div>
+                    <span className="text-sm font-medium text-neutral-900">{p.username}</span>
                   </div>
-                  <span className="text-sm font-medium text-neutral-900">{p.username}</span>
-                </div>
-                {p.hasPassword
-                  ? <span className="flex items-center gap-1 text-[10px] text-neutral-400"><Lock className="w-2.5 h-2.5" />protected</span>
-                  : <span className="text-[10px] text-neutral-300">returning</span>
-                }
-              </button>
-            ))}
+                  {p.hasPassword
+                    ? <span className="flex items-center gap-1 text-[10px] text-neutral-400"><Lock className="w-2.5 h-2.5" />protected</span>
+                    : <span className="text-[10px] text-neutral-300">returning</span>
+                  }
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Optional account password — only shown for genuinely new usernames */}
+        {isNewUser && !isFullBlocked && (
+          <div>
+            <label className="block text-[11px] font-bold text-neutral-500 uppercase tracking-widest mb-1.5">
+              Account Password <span className="normal-case font-normal text-neutral-400">(optional)</span>
+            </label>
+            <input
+              type="password" className="input rounded-xl"
+              placeholder="Protect your username (min 4 chars)"
+              value={accountPassword}
+              onChange={e => setAccountPassword(e.target.value)}
+              minLength={4}
+              autoComplete="new-password"
+            />
+            <p className="text-[11px] text-neutral-400 mt-1.5 leading-relaxed">
+              Setting a password means only you can post as <strong className="font-semibold text-neutral-600">{username.trim()}</strong> in future.
+            </p>
           </div>
         )}
-      </div>
 
-      {isFull && username.trim() && !lookupParticipant(username) && (
-        <div className="flex items-start gap-2.5 p-3 bg-amber-50 border border-amber-200 rounded-xl">
-          <XCircle className="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5" />
-          <p className="text-sm text-amber-700">This event is full. Only participants who have already joined can sign in.</p>
-        </div>
-      )}
+        {isFullBlocked && (
+          <div className="flex items-start gap-2.5 p-3 bg-amber-50 border border-amber-200 rounded-xl">
+            <XCircle className="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5" />
+            <p className="text-sm text-amber-700">This event is full. Only participants who have already joined can sign in.</p>
+          </div>
+        )}
 
-      {error && (
-        <div className="flex items-start gap-2.5 p-3 bg-red-50 border border-red-200 rounded-xl">
-          <XCircle className="w-4 h-4 text-red-500 flex-shrink-0 mt-0.5" />
-          <p className="text-sm text-red-700">{error}</p>
-        </div>
-      )}
+        {error && (
+          <div className="flex items-start gap-2.5 p-3 bg-red-50 border border-red-200 rounded-xl">
+            <XCircle className="w-4 h-4 text-red-500 flex-shrink-0 mt-0.5" />
+            <p className="text-sm text-red-700">{error}</p>
+          </div>
+        )}
 
-      <button type="submit"
-        disabled={joining || !username.trim() || (isFull && !lookupParticipant(username))}
-        className="w-full h-12 rounded-xl font-bold text-sm text-white flex items-center justify-center gap-2 transition-all hover:opacity-90 disabled:opacity-50"
-        style={{ background: 'linear-gradient(135deg,#111827,#1f2937)' }}>
-        {joining
-          ? <><span className="spinner w-4 h-4 border-2 border-white/20 border-t-white" />Checking…</>
-          : <><UserPlus className="w-4 h-4" />Continue<ChevronRight className="w-4 h-4 ml-auto" /></>
-        }
-      </button>
-    </form>
-  );
+        <button type="submit"
+          disabled={joining || !username.trim() || isFullBlocked}
+          className="w-full h-12 rounded-xl font-bold text-sm text-white flex items-center justify-center gap-2 transition-all hover:opacity-90 disabled:opacity-50"
+          style={{ background: 'linear-gradient(135deg,#111827,#1f2937)' }}>
+          {joining
+            ? <><span className="spinner w-4 h-4 border-2 border-white/20 border-t-white" />Checking…</>
+            : <><UserPlus className="w-4 h-4" />Continue<ChevronRight className="w-4 h-4 ml-auto" /></>
+          }
+        </button>
+      </form>
+    );
+  };
 
   /* ── Step: account password ── */
   const AccountPasswordStep = () => (
