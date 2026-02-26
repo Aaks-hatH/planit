@@ -994,9 +994,8 @@ const ARTICLES = [
       {
         type: 'steps',
         items: [
-          { title: 'Use the support form', body: 'Go to planitapp.onrender.com/support and fill in the contact form. Select the category that best describes your issue, describe the problem in detail, and include your event link if relevant.' },
+          { title: 'Use the support form', body: 'Go to planitapp.onrender.com/status and fill in the report issue form. Select the category that best describes your issue, describe the problem in detail, and include your event link if relevant.' },
           { title: 'Email directly', body: 'Email planit.userhelp@gmail.com. Include: your event link, what you were trying to do, what happened instead, the browser and device you\'re using, and any error messages or screenshots.' },
-          { title: 'Report a platform issue', body: 'If you\'re seeing widespread errors (not just something specific to your event), submit a report on the status page at planitapp.onrender.com/status instead of or in addition to emailing support.' },
           { title: 'Response time', body: 'Support aims to respond within 48 business hours. Complex technical issues may take longer.' }
         ]
       },
@@ -1291,7 +1290,6 @@ const ARTICLES_EXTRA = [
       { type: 'steps', items: [
         { title: 'Confirm you want permanent deletion', body: 'Early deletion is completely irreversible. All messages, files, tasks, notes, guest records, and check-in logs will be gone permanently.' },
         { title: 'Email support', body: 'Email planit.userhelp@gmail.com with subject "Early Deletion Request". Include your event link and event name.' },
-        { title: 'Or use the support form', body: 'Go to planitapp.onrender.com/support. Select "Other" as category and include your event link in the message.' },
         { title: 'Processing time', body: 'Deletion requests are processed within 48 business hours. You will receive a confirmation reply once complete.' },
       ]},
       { type: 'callout', variant: 'warning', text: 'Export everything you need to keep before submitting a deletion request. It cannot be undone.' },
@@ -1327,8 +1325,7 @@ const ARTICLES_EXTRA = [
       { type: 'steps', items: [
         { title: 'Reproduce it', body: 'Try to trigger the bug a second time. Note the exact steps, what you expected, and what actually happened.' },
         { title: 'Collect info', body: 'Browser and version, device type, event link (if relevant), any error messages, and approximate time of the issue.' },
-        { title: 'Submit via support form', body: 'Go to planitapp.onrender.com/support. Include all details above. The more specific, the faster the fix.' },
-        { title: 'Or email directly', body: 'Email planit.userhelp@gmail.com with subject "Bug Report: [description]". Screenshots or screen recordings are extremely helpful.' },
+        { title: 'Email ASAP', body: 'Email planit.userhelp@gmail.com with subject "Bug Report: [description]". Screenshots or screen recordings are extremely helpful.' },
         { title: 'Platform-wide bugs', body: 'Also submit a report on the status page at planitapp.onrender.com/status so the automated system can track severity.' },
       ]},
       { type: 'callout', variant: 'info', text: 'Screenshots are extremely helpful. Even a brief screen recording saves significant diagnosis time. Please include one if possible.' },
@@ -1548,7 +1545,7 @@ export default function Help() {
               Status
             </a>
             <span className="text-neutral-200">·</span>
-            <a href="/support" className="text-xs text-neutral-500 hover:text-neutral-800 transition-colors">Contact Support</a>
+            <a href="mailto:planit.userhelp@gmail.com" className="text-xs text-neutral-500 hover:text-neutral-800 transition-colors">Contact Support</a>
           </div>
         </div>
       </header>
@@ -1628,7 +1625,7 @@ export default function Help() {
                     </p>
                   </div>
                   <a
-                    href="/support"
+                    href="mailto:planit.userhelp@gmail.com"
                     className="flex items-center gap-2 px-4 py-2 bg-neutral-900 text-white text-xs font-bold rounded-xl hover:bg-neutral-700 transition-colors"
                   >
                     <Mail className="w-3.5 h-3.5" />
@@ -1800,7 +1797,7 @@ export default function Help() {
                   </div>
                   <div className="flex flex-col sm:flex-row gap-3 flex-shrink-0">
                     <a
-                      href="/support"
+                      href="mailto:planit.userhelp@gmail.com"
                       className="flex items-center justify-center gap-2 px-5 py-2.5 bg-white text-neutral-900 text-sm font-bold rounded-xl hover:bg-neutral-100 transition-colors"
                     >
                       <LifeBuoy className="w-4 h-4" />
