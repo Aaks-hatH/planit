@@ -71,11 +71,11 @@ const BugReport = mongoose.model('BugReport', bugReportSchema);
 // Subscribe to your topic at https://ntfy.sh/<your-topic> or in the
 // ntfy app (iOS / Android).
 // ══════════════════════════════════════════════════════════════════════════
-
+// TODO fix
 async function sendNtfyNotification(report) {
-  const topic = process.env.NTFY_TOPIC;
+  const topic = process.env.NTFY_URL;
   if (!topic) {
-    console.warn('[bug-reports] NTFY_TOPIC not set — skipping push notification');
+    console.warn('[bug-reports] NTFY_URL not set — skipping push notification');
     return;
   }
 
