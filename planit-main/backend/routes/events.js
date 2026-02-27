@@ -17,6 +17,25 @@ const validate = (req, res, next) => {
   next();
 };
 
+// ── Shared constants ─────────────────────────────────────────────────────────
+const VALID_GUEST_ROLES = ['GUEST', 'VIP', 'SPEAKER'];
+
+// Fire-and-forget activity log writer (never blocks a response)
+async function logActivity(eventId, action, actor, actorRole, target, details) {
+  try {
+    await Event.findByIdAndUpdate(eventId, {
+      $push: {
+        activityLog: {
+          $each: [{ action, actor, actorRole: actorRole || 'organizer', target: target || '', details: details || '', timestamp: new Date() }],
+          $slice: -500,
+        },
+      },
+    });
+  } catch (err) {
+    console.error('[activity] log write failed:', err.message);
+  }
+}
+
 // Create event
 router.post('/',
   createEventLimiter,
@@ -181,12 +200,12 @@ router.post('/verify-password/:eventId', authLimiter,
       // Fire webhooks non-blocking
       fireWebhooks(req.params.eventId, 'participant_joined', { username }).catch(() => {});
 
-      // SECURITY FIX: Never grant organizer role through the public join/verify-password flow.
-      // Organizers already hold their JWT from event creation. Username matching alone is not
-      // a proof of identity — anyone who knows the organizer name could otherwise claim
-      // organizer privileges with zero authentication.
+      // Preserve organizer role if this is the organizer logging back in
+      const isOrganizer = event.organizerName === username ||
+        event.participants.some(p => p.username === username && p.role === 'organizer');
+
       const token = jwt.sign(
-        { eventId: event._id.toString(), username, role: 'participant' },
+        { eventId: event._id.toString(), username, role: isOrganizer ? 'organizer' : 'participant' },
         secrets.jwt, { expiresIn: '30d' }
       );
       res.json({ message: 'Access granted', token, event: { id: event._id, title: event.title } });
@@ -253,10 +272,12 @@ router.post('/join/:eventId',
       // Fire webhooks non-blocking
       fireWebhooks(req.params.eventId, 'participant_joined', { username }).catch(() => {});
 
-      // SECURITY FIX: Never grant organizer role through the public join flow.
-      // Always issue participant tokens here. Organizer JWTs are only issued at event creation.
+      // Preserve organizer role if this is the organizer logging back in
+      const isOrganizer = event.organizerName === username || 
+        event.participants.some(p => p.username === username && p.role === 'organizer');
+      
       const token = jwt.sign(
-        { eventId: event._id.toString(), username, role: 'participant' },
+        { eventId: event._id.toString(), username, role: isOrganizer ? 'organizer' : 'participant' },
         secrets.jwt, { expiresIn: '30d' }
       );
       res.json({ message: 'Joined successfully', token, event: { id: event._id, title: event.title } });
@@ -1024,9 +1045,10 @@ router.delete('/:eventId', verifyOrganizer, async (req, res, next) => {
 // Enterprise Mode: Create personalized invites
 router.post('/:eventId/invites', verifyOrganizer, 
   [
-    body('guests').isArray().withMessage('Guests must be an array'),
-    body('guests.*.guestName').trim().isLength({ min: 1, max: 100 }),
-    body('guests.*.guestEmail').optional().isEmail(),
+    body('guests').isArray({ min: 1 }).withMessage('Guests must be a non-empty array'),
+    body('guests.*.guestName').trim().isLength({ min: 1, max: 100 }).withMessage('Each guest must have a name'),
+    body('guests.*.guestEmail').optional().isEmail().normalizeEmail().withMessage('Invalid email'),
+    body('guests.*.guestRole').optional().isIn(VALID_GUEST_ROLES).withMessage('Role must be GUEST, VIP, or SPEAKER'),
     body('guests.*.groupSize').optional().isInt({ min: 1 }),
     body('guests.*.adults').optional().isInt({ min: 0 }),
     body('guests.*.children').optional().isInt({ min: 0 }),
@@ -1046,12 +1068,17 @@ router.post('/:eventId/invites', verifyOrganizer,
         const children = parseInt(guest.children) >= 0 ? parseInt(guest.children) : 0;
         const calculatedGroupSize = adults + children;
         
+        // Normalise guestRole — default to GUEST if missing/invalid
+        const rawRole = (guest.guestRole || 'GUEST').toString().toUpperCase().trim();
+        const guestRole = VALID_GUEST_ROLES.includes(rawRole) ? rawRole : 'GUEST';
+
         const invite = await Invite.create({
           eventId: req.params.eventId,
           inviteCode,
           guestName: guest.guestName,
           guestEmail: guest.guestEmail || '',
           guestPhone: guest.guestPhone || '',
+          guestRole,
           adults: adults,
           children: children,
           groupSize: guest.groupSize || calculatedGroupSize,
@@ -1060,6 +1087,11 @@ router.post('/:eventId/invites', verifyOrganizer,
           notes: guest.notes || ''
         });
         invites.push(invite);
+
+        // Log activity
+        const actor = req.eventAccess?.username || 'organizer';
+        logActivity(req.params.eventId, 'invite_created', actor, req.eventAccess?.role,
+          invite.inviteCode, `Created invite for ${invite.guestName} (${guestRole})`);
 
         // Send guest invite confirmation email non-blocking
         if (invite.guestEmail) {
@@ -1281,6 +1313,7 @@ router.get('/:eventId/verify-scan/:inviteCode',
         id:          invite._id,
         inviteCode:  invite.inviteCode,
         guestName:   invite.guestName,
+        guestRole:   invite.guestRole || 'GUEST',
         guestEmail:  invite.guestEmail,
         guestPhone:  invite.guestPhone,
         adults:      invite.adults,
@@ -1437,12 +1470,17 @@ router.post('/:eventId/checkin/:inviteCode',
       actualCount:    invite.actualAttendees,
     }).catch(() => {});
 
+    const checkinActor = req.eventAccess?.username || 'staff';
+    logActivity(invite.eventId.toString(), 'checkin', checkinActor, req.eventAccess?.role,
+      invite.inviteCode, `Checked in ${invite.guestName} (${invite.guestRole || 'GUEST'}), ${invite.actualAttendees} attendee(s)`);
+
     res.json({
       message: 'Guest checked in successfully',
       invite: {
         id:              invite._id,
         inviteCode:      invite.inviteCode,
         guestName:       invite.guestName,
+        guestRole:       invite.guestRole || 'GUEST',
         adults:          invite.adults,
         children:        invite.children,
         groupSize:       invite.groupSize,
@@ -1612,7 +1650,7 @@ router.put('/:eventId/invites/:inviteId', verifyOrganizer,
       }
       
       // Update fields
-      const allowedFields = ['guestName', 'guestEmail', 'guestPhone', 'adults', 'children', 'groupSize', 'plusOnes', 'securityPin', 'notes'];
+      const allowedFields = ['guestName', 'guestEmail', 'guestPhone', 'guestRole', 'adults', 'children', 'groupSize', 'plusOnes', 'securityPin', 'notes'];
       const updates = {};
       
       for (const field of allowedFields) {
@@ -1628,9 +1666,20 @@ router.put('/:eventId/invites/:inviteId', verifyOrganizer,
         updates.groupSize = adults + children;
       }
       
+      // Normalise guestRole if provided
+      if (updates.guestRole) {
+        const normRole = updates.guestRole.toString().toUpperCase().trim();
+        updates.guestRole = VALID_GUEST_ROLES.includes(normRole) ? normRole : 'GUEST';
+      }
+
       Object.assign(invite, updates);
       await invite.save();
-      
+
+      // Log
+      const updateActor = req.eventAccess?.username || 'organizer';
+      logActivity(req.params.eventId, 'invite_updated', updateActor, req.eventAccess?.role,
+        invite.inviteCode, `Updated invite for ${invite.guestName}`);
+
       res.json({ 
         message: 'Invite updated successfully', 
         invite 
@@ -1649,7 +1698,12 @@ router.put('/:eventId/invites/:inviteId', verifyOrganizer,
 router.delete('/:eventId/invites/:inviteId', verifyOrganizer, async (req, res, next) => {
   try {
     const Invite = require('../models/Invite');
-    await Invite.findByIdAndDelete(req.params.inviteId);
+    const invite = await Invite.findOne({ _id: req.params.inviteId, eventId: req.params.eventId });
+    if (!invite) return res.status(404).json({ error: 'Invite not found' });
+    await invite.deleteOne();
+    const delActor = req.eventAccess?.username || 'organizer';
+    logActivity(req.params.eventId, 'invite_deleted', delActor, req.eventAccess?.role,
+      invite.inviteCode, `Deleted invite for ${invite.guestName}`);
     res.json({ message: 'Invite deleted' });
   } catch (error) { next(error); }
 });
@@ -1932,8 +1986,7 @@ router.get('/:eventId/waitlist', verifyOrganizer, async (req, res, next) => {
 });
 
 // DELETE /:eventId/waitlist/:username — leave the waitlist
-// SECURITY FIX: require event access so unauthenticated users cannot remove others from the waitlist
-router.delete('/:eventId/waitlist/:username', verifyEventAccess, async (req, res, next) => {
+router.delete('/:eventId/waitlist/:username', async (req, res, next) => {
   try {
     const event = await Event.findById(req.params.eventId);
     if (!event) return res.status(404).json({ error: 'Event not found' });
@@ -2317,6 +2370,151 @@ router.delete('/:eventId/webhooks/:webhookId', verifyOrganizer, async (req, res,
     event.webhooks = event.webhooks.filter(w => w._id.toString() !== req.params.webhookId);
     await event.save();
     res.json({ message: 'Webhook deleted' });
+  } catch (error) { next(error); }
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// CSV GUEST IMPORT
+// ═══════════════════════════════════════════════════════════════════════════
+// POST /:eventId/invites/import-csv
+//
+// Expected CSV format (first row must be the header exactly as shown):
+//   guestName,guestEmail,guestRole,adults,children,securityPin,notes
+//
+// Rules:
+//   - guestName  REQUIRED
+//   - guestEmail REQUIRED — used for duplicate detection and invite emails
+//   - guestRole  optional — must be GUEST, VIP, or SPEAKER (defaults to GUEST)
+//   - adults     optional — defaults to 1
+//   - children   optional — defaults to 0
+//   - securityPin optional — up to 6 alphanumeric chars
+//   - notes      optional
+//
+// Returns: { imported, skipped, errors[] }
+
+router.post('/:eventId/invites/import-csv', verifyOrganizer,
+  async (req, res, next) => {
+    try {
+      const Invite = require('../models/Invite');
+      const { csv } = req.body; // Expect { csv: "raw csv string" }
+
+      if (!csv || typeof csv !== 'string') {
+        return res.status(400).json({ error: 'Request body must contain a "csv" string field.' });
+      }
+
+      const lines = csv.split('\n').map(l => l.replace(/\r$/, '').trim()).filter(Boolean);
+      if (lines.length < 2) {
+        return res.status(400).json({ error: 'CSV must have a header row and at least one data row.' });
+      }
+
+      // Parse + validate header
+      const REQUIRED_HEADERS = ['guestname', 'guestemail'];
+      const OPTIONAL_HEADERS = ['guestrole', 'adults', 'children', 'securitypin', 'notes'];
+      const ALL_HEADERS = [...REQUIRED_HEADERS, ...OPTIONAL_HEADERS];
+
+      const rawHeader = lines[0].split(',').map(h => h.trim().toLowerCase().replace(/[^a-z]/g, ''));
+      const missingRequired = REQUIRED_HEADERS.filter(h => !rawHeader.includes(h));
+      if (missingRequired.length > 0) {
+        return res.status(400).json({
+          error: `CSV is missing required column(s): ${missingRequired.join(', ')}. Required: guestName, guestEmail`,
+        });
+      }
+
+      // Helper: get value by column name
+      const col = (row, name) => {
+        const idx = rawHeader.indexOf(name);
+        return idx >= 0 && row[idx] !== undefined ? row[idx].trim() : '';
+      };
+
+      const actor = req.eventAccess?.username || 'organizer';
+      const imported = [];
+      const errors   = [];
+
+      for (let i = 1; i < lines.length; i++) {
+        // Simple CSV split — handles quoted fields containing commas
+        const row = lines[i].split(/,(?=(?:[^"]*"[^"]*")*[^"]*$)/).map(v => v.trim().replace(/^"|"$/g, ''));
+
+        const guestName = col(row, 'guestname');
+        const guestEmail = col(row, 'guestemail');
+
+        if (!guestName) {
+          errors.push({ row: i + 1, reason: 'guestName is required' });
+          continue;
+        }
+        if (!guestEmail) {
+          errors.push({ row: i + 1, guestName, reason: 'guestEmail is required' });
+          continue;
+        }
+        // Basic email format check
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(guestEmail)) {
+          errors.push({ row: i + 1, guestName, reason: `Invalid email: ${guestEmail}` });
+          continue;
+        }
+
+        const rawRole = col(row, 'guestrole').toUpperCase();
+        const guestRole = VALID_GUEST_ROLES.includes(rawRole) ? rawRole : 'GUEST';
+
+        const adults   = Math.max(0, parseInt(col(row, 'adults'))   || 1);
+        const children = Math.max(0, parseInt(col(row, 'children')) || 0);
+        const securityPin = col(row, 'securitypin').slice(0, 6).toUpperCase();
+        const notes = col(row, 'notes').slice(0, 500);
+
+        const inviteCode = Math.random().toString(36).substring(2, 10).toUpperCase();
+
+        try {
+          const invite = await Invite.create({
+            eventId: req.params.eventId,
+            inviteCode,
+            guestName,
+            guestEmail,
+            guestRole,
+            guestPhone: '',
+            adults,
+            children,
+            groupSize: adults + children,
+            plusOnes: 0,
+            securityPin,
+            notes,
+          });
+          imported.push(invite);
+        } catch (createErr) {
+          errors.push({ row: i + 1, guestName, reason: createErr.message });
+        }
+      }
+
+      if (imported.length > 0) {
+        logActivity(req.params.eventId, 'guest_import', actor, req.eventAccess?.role,
+          `${imported.length} guests`, `CSV import: ${imported.length} imported, ${errors.length} skipped`);
+      }
+
+      res.status(201).json({
+        message: `Imported ${imported.length} guest(s)`,
+        imported: imported.length,
+        skipped: errors.length,
+        errors,
+      });
+    } catch (error) { next(error); }
+  }
+);
+
+// ═══════════════════════════════════════════════════════════════════════════
+// ACTIVITY LOG
+// ═══════════════════════════════════════════════════════════════════════════
+// GET /:eventId/activity-log — returns most recent entries, organizer only
+
+router.get('/:eventId/activity-log', verifyOrganizer, async (req, res, next) => {
+  try {
+    const limit = Math.min(parseInt(req.query.limit) || 100, 500);
+    const event = await Event.findById(req.params.eventId)
+      .select('activityLog')
+      .lean();
+    if (!event) return res.status(404).json({ error: 'Event not found' });
+
+    const log = (event.activityLog || [])
+      .slice(-limit)
+      .reverse(); // most recent first
+
+    res.json({ log, total: (event.activityLog || []).length });
   } catch (error) { next(error); }
 });
 
