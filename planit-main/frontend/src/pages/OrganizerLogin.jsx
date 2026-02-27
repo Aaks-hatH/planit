@@ -24,6 +24,7 @@ export default function OrganizerLogin() {
   const [showEventPass, setShowEventPass] = useState(false);
   const [showAccountPass, setShowAccountPass] = useState(false);
   const [needsAccountPassword, setNeedsAccountPassword] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState({});
 
   useEffect(() => {
     const loadEvent = async () => {
@@ -63,26 +64,55 @@ export default function OrganizerLogin() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setLoading(true);
     setError('');
+
+    // ── Client-side field validation ──────────────────────────────────────
+    const errs = {};
+    const trimmedUsername = formData.username.trim();
+    if (!trimmedUsername)
+      errs.username = 'Please enter your organizer name.';
+    if (isPasswordProtected && !formData.eventPassword)
+      errs.eventPassword = 'Please enter the event password.';
+    if (needsAccountPassword && !formData.accountPassword)
+      errs.accountPassword = 'Account password is required for this username.';
+
+    if (Object.keys(errs).length > 0) {
+      setFieldErrors(errs);
+      return;
+    }
+    setFieldErrors({});
+    setLoading(true);
 
     try {
       let res;
       if (isPasswordProtected) {
         res = await eventAPI.verifyPassword(resolvedEventId, {
-          username: formData.username.trim(),
+          username: trimmedUsername,
           password: formData.eventPassword,
           accountPassword: formData.accountPassword || undefined
         });
       } else {
         res = await eventAPI.join(resolvedEventId, {
-          username: formData.username.trim(),
+          username: trimmedUsername,
           accountPassword: formData.accountPassword || undefined
         });
       }
 
+      // Validate the returned token belongs to this event before storing it
+      try {
+        const b64 = res.data.token.split('.')[1]?.replace(/-/g, '+').replace(/_/g, '/');
+        const decoded = b64 ? JSON.parse(atob(b64)) : null;
+        if (!decoded || decoded.eventId !== resolvedEventId) {
+          throw new Error('Token mismatch');
+        }
+      } catch {
+        setError('Server returned an unexpected response. Please try again.');
+        setLoading(false);
+        return;
+      }
+
       localStorage.setItem('eventToken', res.data.token);
-      localStorage.setItem('username', formData.username.trim());
+      localStorage.setItem('username', trimmedUsername);
 
       toast.success('Logged in successfully!');
       navigate(`/event/${resolvedEventId}`);
@@ -92,13 +122,21 @@ export default function OrganizerLogin() {
 
       if (data?.requiresAccountPassword && !needsAccountPassword) {
         setNeedsAccountPassword(true);
-        setError('This username has an account — please enter your account password below.');
+        setFieldErrors({ accountPassword: 'This username has an account — enter your account password.' });
         setLoading(false);
         return;
       }
 
-      setError(errorMsg);
-      toast.error(errorMsg);
+      // Map server field errors to specific fields when possible
+      if (errorMsg.toLowerCase().includes('password') && isPasswordProtected) {
+        setFieldErrors({ eventPassword: errorMsg });
+      } else if (errorMsg.toLowerCase().includes('account password')) {
+        setFieldErrors({ accountPassword: errorMsg });
+      } else if (errorMsg.toLowerCase().includes('name') || errorMsg.toLowerCase().includes('username')) {
+        setFieldErrors({ username: errorMsg });
+      } else {
+        setError(errorMsg);
+      }
     } finally {
       setLoading(false);
     }
@@ -133,46 +171,54 @@ export default function OrganizerLogin() {
 
             <div>
               <label className="block text-sm font-medium text-neutral-700 mb-1.5">
-                Your Organizer Name
+                Your Organizer Name <span className="text-red-500">*</span>
               </label>
               <input
                 type="text"
                 required
-                className="input"
+                className={`input ${fieldErrors.username ? 'border-red-400 focus:border-red-500 bg-red-50' : ''}`}
                 placeholder="Enter your organizer name"
                 value={formData.username}
-                onChange={handleChange('username')}
+                onChange={(e) => { handleChange('username')(e); setFieldErrors(p => ({...p, username: ''})); }}
                 autoComplete="off"
                 autoFocus
               />
+              {fieldErrors.username && (
+                <p className="flex items-center gap-1.5 text-xs text-red-600 mt-1.5">
+                  <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />{fieldErrors.username}
+                </p>
+              )}
             </div>
 
             {isPasswordProtected && (
               <div>
                 <label className="block text-sm font-medium text-neutral-700 mb-1.5">
-                  Event Password
+                  Event Password <span className="text-red-500">*</span>
                 </label>
                 <div className="relative">
                   <input
                     type={showEventPass ? 'text' : 'password'}
                     required
-                    className="input pr-10"
+                    className={`input pr-10 ${fieldErrors.eventPassword ? 'border-red-400 focus:border-red-500 bg-red-50' : ''}`}
                     placeholder="The shared event password"
                     value={formData.eventPassword}
-                    onChange={handleChange('eventPassword')}
+                    onChange={(e) => { handleChange('eventPassword')(e); setFieldErrors(p => ({...p, eventPassword: ''})); }}
                   />
-                  <button
-                    type="button"
-                    tabIndex={-1}
+                  <button type="button" tabIndex={-1}
                     onClick={() => setShowEventPass(v => !v)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-600"
-                  >
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-600">
                     {showEventPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
                 </div>
-                <p className="text-xs text-neutral-400 mt-1.5">
-                  The password that guests use to enter this event
-                </p>
+                {fieldErrors.eventPassword ? (
+                  <p className="flex items-center gap-1.5 text-xs text-red-600 mt-1.5">
+                    <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />{fieldErrors.eventPassword}
+                  </p>
+                ) : (
+                  <p className="text-xs text-neutral-400 mt-1.5">
+                    The password that guests use to enter this event
+                  </p>
+                )}
               </div>
             )}
 
@@ -185,23 +231,26 @@ export default function OrganizerLogin() {
                 <input
                   type={showAccountPass ? 'text' : 'password'}
                   required={needsAccountPassword}
-                  className="input pr-10"
+                  className={`input pr-10 ${fieldErrors.accountPassword ? 'border-red-400 focus:border-red-500 bg-red-50' : ''}`}
                   placeholder={needsAccountPassword ? 'Required — your personal account password' : 'Your personal account password'}
                   value={formData.accountPassword}
-                  onChange={handleChange('accountPassword')}
+                  onChange={(e) => { handleChange('accountPassword')(e); setFieldErrors(p => ({...p, accountPassword: ''})); }}
                 />
-                <button
-                  type="button"
-                  tabIndex={-1}
+                <button type="button" tabIndex={-1}
                   onClick={() => setShowAccountPass(v => !v)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-600"
-                >
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-600">
                   {showAccountPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
               </div>
-              <p className="text-xs text-neutral-400 mt-1.5">
-                The personal password you set when creating the event
-              </p>
+              {fieldErrors.accountPassword ? (
+                <p className="flex items-center gap-1.5 text-xs text-red-600 mt-1.5">
+                  <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />{fieldErrors.accountPassword}
+                </p>
+              ) : (
+                <p className="text-xs text-neutral-400 mt-1.5">
+                  The personal password you set when creating the event
+                </p>
+              )}
             </div>
 
             {error && (
