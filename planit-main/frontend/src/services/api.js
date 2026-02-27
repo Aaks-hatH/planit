@@ -34,13 +34,18 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      const isAdminRequest = error.config?.url?.includes('/admin');
+      const url = error.config?.url || '';
+      const isAdminRequest = url.includes('/admin');
+      // /bug-reports/admin 401s should not nuke the session — the admin token
+      // is still valid, the bug-reports endpoint may just not have received it.
+      const isCoreAdminAuth = isAdminRequest && !url.includes('/bug-reports');
 
-      if (isAdminRequest) {
+      if (isCoreAdminAuth) {
         console.warn('Admin authentication failed, clearing admin token');
         localStorage.removeItem('adminToken');
+        delete api.defaults.headers.common['Authorization'];
         window.dispatchEvent(new CustomEvent('planit:admin-logout'));
-      } else {
+      } else if (!isAdminRequest) {
         localStorage.removeItem('eventToken');
         localStorage.removeItem('username');
         window.dispatchEvent(new CustomEvent('planit:event-logout'));
