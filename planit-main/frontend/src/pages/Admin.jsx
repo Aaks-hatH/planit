@@ -2587,6 +2587,7 @@ export default function Admin() {
   const [searchResults, setSearchResults] = useState(null);
   const [searchLoading, setSearchLoading] = useState(false);
   const [cleanupResult, setCleanupResult] = useState(null);
+  const [cleanupRunning, setCleanupRunning] = useState(false);
   const [showCleanup, setShowCleanup] = useState(false);
 
   useEffect(() => {
