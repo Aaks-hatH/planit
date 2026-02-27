@@ -220,6 +220,25 @@ const eventSchema = new mongoose.Schema({
     daysUntilDeletion: { type: Number },
     emailSent: { type: Boolean, default: false },
   }],
+
+  // ── Approval Queue ──────────────────────────────────────────────────────
+  // When settings.requireApproval is true, join requests land here before
+  // being admitted. Organizer can approve or reject from the event settings panel.
+  approvalQueue: [{
+    username:    { type: String, required: true },
+    requestedAt: { type: Date, default: Date.now },
+    message:     { type: String, maxlength: 300 },
+  }],
+
+  // ── Activity Log ────────────────────────────────────────────────────────
+  activityLog: [{
+    action:    { type: String, required: true },
+    actor:     { type: String, required: true },
+    actorRole: { type: String },
+    target:    { type: String },
+    details:   { type: String },
+    timestamp: { type: Date, default: Date.now },
+  }],
 }, { timestamps: true });
 
 eventSchema.index({ subdomain: 1 });
