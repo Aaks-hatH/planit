@@ -711,7 +711,7 @@ const ARTICLES = [
         items: [
           { title: 'Hard refresh the page', body: 'Press Ctrl+Shift+R (Windows/Linux) or Cmd+Shift+R (Mac) to force a full reload bypassing cache. Wait 10–15 seconds for the backend to respond, especially if the server was recently restarted.' },
           { title: 'Check the status page', body: 'Go to planitapp.onrender.com/status to see if there\'s a known incident or outage. If a backend is marked as degraded or down, that\'s why the workspace isn\'t loading.' },
-          { title: 'Check Render', body: 'PlanIt runs on Render\'s web services. Check the Render Status page to see if Render is down, Or Check If the first load is slow, wait a minute and try again.' },
+          { title: 'Wait for cold-start', body: 'PlanIt runs on Render\'s free tier. Servers spin down after 15 minutes of inactivity and take 30–60 seconds to cold-start. If the first load is slow, wait a minute and try again.' },
           { title: 'Check your event link', body: 'Make sure the URL is correct. An incorrect slug or event ID will show a "not found" error. The correct format is planitapp.onrender.com/e/your-slug or planitapp.onrender.com/event/[id].' },
           { title: 'Try a different browser', body: 'If the issue persists on one browser, try Chrome, Firefox, or Safari. Clear localStorage on your current browser (DevTools → Application → Local Storage → Clear).' },
           { title: 'Still broken?', body: 'Email planit.userhelp@gmail.com with your event link, the browser you\'re using, and a screenshot of any error messages. We\'ll investigate.' }
@@ -720,7 +720,7 @@ const ARTICLES = [
       {
         type: 'callout',
         variant: 'info',
-        text: 'Cold-start delays (30–60 second loading on first visit) are expected when the server has been idle. Our servers are kept warm at all times.'
+        text: 'Cold-start delays (30–60 second loading on first visit) are expected when the server has been idle. This is a known limitation of the free-tier hosting. Once the server is warm, subsequent loads are fast.'
       }
     ]
   },
@@ -892,7 +892,7 @@ const ARTICLES = [
     content: [
       {
         type: 'intro',
-        text: 'PlanIt\'s backend servers may spin down after 15 minutes of inactivity. But we do take precautions to prevent it.'
+        text: 'PlanIt\'s backend servers may spin down after 15 minutes of inactivity and take 30–60 seconds to restart on the first request after being idle. We do use Uptimerobot and our own services to prevent this.'
       },
       {
         type: 'steps',
@@ -1116,6 +1116,50 @@ const ARTICLES_EXTRA = [
         { title: 'Override if needed', body: 'The organizer can temporarily override the capacity limit through the manager override flow, authenticated by account password, for VIPs or special cases.' },
         { title: 'Live counter', body: 'The current admitted count vs maximum is shown at the top of the check-in dashboard at all times, visible to all staff.' },
       ]},
+    ],
+  },
+
+  {
+    id: 'ent-offline',
+    category: 'Enterprise & Check-in',
+    title: 'Offline check-in: scanning without internet',
+    icon: WifiOff,
+    tags: ['offline', 'no internet', 'no signal', 'cache', 'queue', 'sync', 'venue signal', 'offline mode', 'pending', 'conflict'],
+    content: [
+      {
+        type: 'intro',
+        text: 'The check-in scanner works even when your venue has no internet signal. PlanIt caches the entire guest list to your device when the page loads, and queues every scan locally until connectivity returns — then syncs everything automatically. No action required from staff.'
+      },
+      {
+        type: 'steps',
+        items: [
+          { title: 'How the cache is built', body: 'When the check-in page loads on a device that is online, PlanIt silently downloads the full guest list and stores it in your browser\'s IndexedDB — a local database that survives page refreshes and stays available even with no signal. Once built, a "Cache ready" indicator shows how many guests are stored and when it was last updated. The cache refreshes automatically whenever connectivity is available.' },
+          { title: 'Scanning while offline', body: 'If your device loses signal mid-event, the scanner detects the disconnection and switches to offline mode automatically — no toggle or setting required. Every QR scan looks up the guest in the local cache instead of hitting the server. Admits are recorded locally and added to a sync queue. The guest name, party size, table assignment, and organizer notes all display correctly from cache.' },
+          { title: 'The pending sync counter', body: 'While offline, a yellow "Pending: N" badge appears on the check-in dashboard showing how many admissions are queued and waiting to sync with the server. Each number is a real guest who was admitted locally but not yet confirmed server-side. This count is shown on every staff device.' },
+          { title: 'Returning online', body: 'When connectivity returns, the queue flushes automatically in chronological order — no button to press. Each queued check-in is replayed against the server\'s full security checks. The pending counter counts down to zero as each sync completes.' },
+          { title: 'Conflict flags', body: 'If two staff members on separate offline devices both admitted the same guest — possible when multiple entrances simultaneously lose signal — the server detects the duplicate when flushing. The second admission is flagged as a conflict and surfaced to the organizer as a yellow conflict card, rather than silently accepted or rejected. The card shows the guest name and both scan timestamps so you can investigate.' },
+          { title: 'Server always wins', body: 'Offline admission is optimistic — a best-effort local decision. When the queue flushes, every queued check-in goes through the full server-side security suite: duplicate detection, trust score, capacity limits, time window enforcement, and block checks. If the server rejects an offline admission (e.g. a ticket that was blocked after the cache was built), that rejection is surfaced as a conflict flag. The guest is marked as requiring review.' },
+        ]
+      },
+      {
+        type: 'callout',
+        variant: 'warning',
+        text: 'The offline cache is built when the check-in page first loads online. If you open the check-in page for the first time while already offline, the cache will be empty and scanning will fail. Always load the check-in dashboard before entering a low-signal area.'
+      },
+      {
+        type: 'callout',
+        variant: 'info',
+        text: 'Event day tip: open the check-in page on every staff device while on venue WiFi at least 5 minutes before doors open. This builds the cache and warms the server simultaneously. Even if signal drops completely inside the venue, every device can scan the full guest list without interruption.'
+      },
+      {
+        type: 'faq',
+        items: [
+          { q: 'How old can the cache be before it\'s a problem?', a: 'The check-in UI shows the cache build time. If you added new guests after loading the page, those guests won\'t be in the local cache — they\'ll appear as "not found" when scanned offline. For large events, reload the check-in page after making final guest list changes, while still online.' },
+          { q: 'Can two staff devices both go offline at the same time?', a: 'Yes, and each device maintains its own independent queue. Both will admit guests locally and sync independently when online returns. The server detects any overlap between the two queues and flags conflicts for review.' },
+          { q: 'What happens if connectivity never returns during the event?', a: 'All check-ins remain in the sync queue until the device reconnects — even after the event is over. When the device next connects to the internet (on another network, at home, etc.) the queue flushes. If you need the check-in log immediately after the event, ensure at least one device connects before it goes out of range.' },
+          { q: 'Does the offline cache include guests added after the page loaded?', a: 'No. The cache is a snapshot taken at page load time. Guests added to the list after the cache was built will not be found by the offline scanner. For guests who arrive and are not in the cache, use manager override — it contacts the server directly, so requires connectivity.' },
+        ]
+      }
     ],
   },
 
