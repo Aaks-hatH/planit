@@ -21,6 +21,7 @@ const cors = require('cors');
 const helmet = require('helmet');
 const compression = require('compression');
 const cookieParser = require('cookie-parser');
+const mongoSanitize = require('express-mongo-sanitize');
 const http = require('http');
 const socketIo = require('socket.io');
 const path = require('path');
@@ -118,13 +119,45 @@ app.use(helmet({
 
 app.use(compression());
 
+// ── CORS origin allowlist ─────────────────────────────────────────────────────
+// CORS_ORIGIN must be an explicit comma-separated list of allowed origins.
+// e.g. "https://your-router.onrender.com,https://your-frontend.netlify.app"
+//
+// We deliberately do NOT allow all *.onrender.com — any free app on Render
+// could otherwise make credentialed cross-origin requests to this backend,
+// bypassing the intended router-only access model.
+//
+// Localhost variants are allowed only in non-production so local dev works
+// without touching env vars.
+const _corsAllowedOrigins = (process.env.CORS_ORIGIN || '')
+  .split(',')
+  .map(o => o.trim())
+  .filter(Boolean);
+
+if (_corsAllowedOrigins.length === 0) {
+  console.warn('[CORS] WARNING: CORS_ORIGIN is not set — only localhost will be allowed in dev. Set CORS_ORIGIN to your router/frontend URLs.');
+}
+
+const _localhostOrigins = [
+  'http://localhost:5173', 'http://localhost:3000',
+  'http://127.0.0.1:5173', 'http://127.0.0.1:3000',
+];
+
 const corsOptions = {
   origin: function (origin, callback) {
-    if (!origin || origin.includes('onrender.com') || origin.includes('localhost') || origin.includes('127.0.0.1')) {
+    // No origin = server-to-server, curl, or Render internal health checks
+    if (!origin) return callback(null, true);
+
+    // Explicitly allowed origins (your router URL, frontend URL, etc.)
+    if (_corsAllowedOrigins.includes(origin)) return callback(null, true);
+
+    // Localhost in development only
+    if (process.env.NODE_ENV !== 'production' && _localhostOrigins.includes(origin)) {
       return callback(null, true);
     }
-    const allowedOrigins = process.env.CORS_ORIGIN?.split(',') || [];
-    if (allowedOrigins.includes(origin)) return callback(null, true);
+
+    // Reject everything else — including other *.onrender.com apps
+    console.warn(`[CORS] Rejected origin: ${origin}`);
     callback(new Error('Not allowed by CORS'));
   },
   credentials: true,
@@ -139,6 +172,10 @@ app.use(cors(corsOptions));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(cookieParser());
+// SECURITY FIX: strip MongoDB operators ($gt, $where, etc.) from all incoming
+// request bodies, query strings, and params. express-mongo-sanitize was listed
+// in package.json but was never mounted — NoSQL injection went unsanitized.
+app.use(mongoSanitize());
 app.use(trafficGuard); // application-layer malicious traffic detection
 app.use('/api/', apiLimiter);
 app.use('/api/', attachResponseSignature); // Sign every API response with the license-derived key
