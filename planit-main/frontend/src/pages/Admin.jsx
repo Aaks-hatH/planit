@@ -16,7 +16,7 @@ import {
   WifiOff, AlertOctagon, TrendingDown, GitBranch, Boxes,
   Rocket, Timer, Wifi as WifiOn, Cpu as CpuIcon,
 } from 'lucide-react';
-import api, { adminAPI, uptimeAPI, watchdogAPI, routerAPI } from '../services/api';
+import api, { adminAPI, uptimeAPI, watchdogAPI, routerAPI, bugReportAPI } from '../services/api';
 import { SERVICE_CATEGORIES, ALL_SERVICES_FLAT } from '../utils/serviceCategories';
 import { formatNumber, formatFileSize } from '../utils/formatters';
 import { DateTime } from 'luxon';
@@ -1631,6 +1631,280 @@ function AnalyticsPanel({ stats }) {
 // ═══════════════════════════════════════════════════════════════════════════════
 // MAIN ADMIN COMPONENT
 // ═══════════════════════════════════════════════════════════════════════════════
+// ─── Bug Reports Panel ────────────────────────────────────────────────────────
+function BugReportsPanel() {
+  const [reports, setReports]     = useState([]);
+  const [total, setTotal]         = useState(0);
+  const [counts, setCounts]       = useState({ open: 0, in_progress: 0, resolved: 0, closed: 0 });
+  const [loading, setLoading]     = useState(true);
+  const [filter, setFilter]       = useState({ status: '', category: '', severity: '' });
+  const [selected, setSelected]   = useState(null);
+  const [noteText, setNoteText]   = useState('');
+  const [saving, setSaving]       = useState(false);
+
+  async function load() {
+    setLoading(true);
+    try {
+      const params = {};
+      if (filter.status)   params.status   = filter.status;
+      if (filter.category) params.category = filter.category;
+      if (filter.severity) params.severity = filter.severity;
+      const { data } = await bugReportAPI.getAll(params);
+      setReports(data.reports || []);
+      setTotal(data.total || 0);
+      setCounts(data.statusCounts || {});
+    } catch (err) {
+      console.error('Failed to load bug reports:', err);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => { load(); }, [filter]);
+
+  async function updateStatus(id, status) {
+    try {
+      await bugReportAPI.update(id, { status });
+      setReports(r => r.map(x => x._id === id ? { ...x, status } : x));
+      if (selected?._id === id) setSelected(s => ({ ...s, status }));
+      // Refresh counts
+      load();
+    } catch (err) { console.error(err); }
+  }
+
+  async function saveNote() {
+    if (!selected) return;
+    setSaving(true);
+    try {
+      await bugReportAPI.update(selected._id, { adminNotes: noteText });
+      setSelected(s => ({ ...s, adminNotes: noteText }));
+      setReports(r => r.map(x => x._id === selected._id ? { ...x, adminNotes: noteText } : x));
+    } catch (err) { console.error(err); }
+    setSaving(false);
+  }
+
+  async function deleteReport(id) {
+    if (!window.confirm('Delete this report permanently?')) return;
+    try {
+      await bugReportAPI.remove(id);
+      setReports(r => r.filter(x => x._id !== id));
+      if (selected?._id === id) setSelected(null);
+      load();
+    } catch (err) { console.error(err); }
+  }
+
+  function openDetail(report) {
+    setSelected(report);
+    setNoteText(report.adminNotes || '');
+  }
+
+  const severityColor = { low: 'emerald', medium: 'amber', high: 'orange', critical: 'red' };
+  const severityLabel = { low: 'Low', medium: 'Medium', high: 'High', critical: 'Critical' };
+  const statusColor   = { open: 'blue', in_progress: 'purple', resolved: 'emerald', closed: 'neutral' };
+  const categoryLabel = { bug: 'Bug', error: 'Error', feature: 'Feature', account: 'Account', checkin: 'Check-in', other: 'Other' };
+
+  return (
+    <div className="space-y-6 py-6 px-4">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-2xl font-bold text-neutral-900 flex items-center gap-2">
+            <Inbox className="w-6 h-6" /> Bug Reports
+          </h2>
+          <p className="text-sm text-neutral-500 mt-0.5">{total} total reports</p>
+        </div>
+        <button onClick={load} className="flex items-center gap-2 px-3 py-2 text-sm border border-neutral-200 rounded-xl hover:bg-neutral-50 transition-colors">
+          <RefreshCw className="w-3.5 h-3.5" /> Refresh
+        </button>
+      </div>
+
+      {/* Status count cards */}
+      <div className="grid grid-cols-4 gap-3">
+        {[
+          { key: 'open',        label: 'Open',        color: 'blue'    },
+          { key: 'in_progress', label: 'In Progress', color: 'purple'  },
+          { key: 'resolved',    label: 'Resolved',    color: 'emerald' },
+          { key: 'closed',      label: 'Closed',      color: 'neutral' },
+        ].map(({ key, label, color }) => (
+          <button
+            key={key}
+            onClick={() => setFilter(f => ({ ...f, status: f.status === key ? '' : key }))}
+            className={`card p-4 text-left transition-all hover:shadow-md ${filter.status === key ? `ring-2 ring-${color}-400` : ''}`}
+          >
+            <p className="text-xs text-neutral-500 font-medium">{label}</p>
+            <p className={`text-2xl font-bold text-${color}-600`}>{counts[key] ?? 0}</p>
+          </button>
+        ))}
+      </div>
+
+      {/* Filters */}
+      <div className="flex gap-3 flex-wrap">
+        <select
+          value={filter.category}
+          onChange={e => setFilter(f => ({ ...f, category: e.target.value }))}
+          className="px-3 py-2 text-sm border border-neutral-200 rounded-xl bg-white focus:outline-none"
+        >
+          <option value="">All categories</option>
+          <option value="bug">Bug</option>
+          <option value="error">Error</option>
+          <option value="feature">Feature</option>
+          <option value="account">Account</option>
+          <option value="checkin">Check-in</option>
+          <option value="other">Other</option>
+        </select>
+        <select
+          value={filter.severity}
+          onChange={e => setFilter(f => ({ ...f, severity: e.target.value }))}
+          className="px-3 py-2 text-sm border border-neutral-200 rounded-xl bg-white focus:outline-none"
+        >
+          <option value="">All severities</option>
+          <option value="low">Low</option>
+          <option value="medium">Medium</option>
+          <option value="high">High</option>
+          <option value="critical">Critical</option>
+        </select>
+        {(filter.status || filter.category || filter.severity) && (
+          <button
+            onClick={() => setFilter({ status: '', category: '', severity: '' })}
+            className="px-3 py-2 text-xs text-neutral-500 hover:text-neutral-900 border border-dashed border-neutral-300 rounded-xl"
+          >
+            Clear filters
+          </button>
+        )}
+      </div>
+
+      <div className="flex gap-6">
+        {/* Report list */}
+        <div className="flex-1 min-w-0 space-y-2">
+          {loading ? (
+            <div className="text-center py-16 text-neutral-400 text-sm">Loading reports…</div>
+          ) : reports.length === 0 ? (
+            <div className="text-center py-16 text-neutral-400 text-sm">No reports match your filters</div>
+          ) : (
+            reports.map(r => (
+              <div
+                key={r._id}
+                onClick={() => openDetail(r)}
+                className={`card p-4 cursor-pointer hover:shadow-md transition-all border-l-4 ${
+                  r.severity === 'critical' ? 'border-l-red-500' :
+                  r.severity === 'high'     ? 'border-l-orange-400' :
+                  r.severity === 'medium'   ? 'border-l-amber-400' : 'border-l-emerald-400'
+                } ${selected?._id === r._id ? 'ring-2 ring-neutral-900' : ''}`}
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1 flex-wrap">
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-${statusColor[r.status]}-100 text-${statusColor[r.status]}-700`}>
+                        {r.status.replace('_', ' ')}
+                      </span>
+                      <span className="text-xs text-neutral-400">{categoryLabel[r.category] || r.category}</span>
+                      <span className={`text-xs font-semibold text-${severityColor[r.severity]}-600`}>
+                        {severityLabel[r.severity]}
+                      </span>
+                    </div>
+                    <p className="text-sm font-semibold text-neutral-900 truncate">{r.summary}</p>
+                    <p className="text-xs text-neutral-500 mt-0.5 flex items-center gap-2">
+                      <Mail className="w-3 h-3" />
+                      <span className="font-medium text-neutral-700">{r.email}</span>
+                      <span>·</span>
+                      <span>{r.name}</span>
+                      <span>·</span>
+                      <span>{new Date(r.createdAt).toLocaleDateString()}</span>
+                    </p>
+                  </div>
+                  <button
+                    onClick={e => { e.stopPropagation(); deleteReport(r._id); }}
+                    className="text-neutral-300 hover:text-red-500 transition-colors flex-shrink-0"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+
+        {/* Detail pane */}
+        {selected && (
+          <div className="w-80 flex-shrink-0">
+            <div className="card p-5 sticky top-24 space-y-4">
+              <div className="flex items-start justify-between">
+                <h3 className="text-sm font-bold text-neutral-900 flex-1 pr-2">{selected.summary}</h3>
+                <button onClick={() => setSelected(null)} className="text-neutral-400 hover:text-neutral-700">
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              <div className="space-y-1 text-xs">
+                <div className="flex gap-2"><span className="text-neutral-400 w-16">Email</span><a href={`mailto:${selected.email}`} className="font-medium text-blue-600 underline">{selected.email}</a></div>
+                <div className="flex gap-2"><span className="text-neutral-400 w-16">Name</span><span>{selected.name}</span></div>
+                <div className="flex gap-2"><span className="text-neutral-400 w-16">Category</span><span>{categoryLabel[selected.category]}</span></div>
+                <div className="flex gap-2"><span className="text-neutral-400 w-16">Severity</span><span className={`font-semibold text-${severityColor[selected.severity]}-600`}>{severityLabel[selected.severity]}</span></div>
+                {selected.eventLink && <div className="flex gap-2"><span className="text-neutral-400 w-16">Event</span><a href={selected.eventLink} target="_blank" rel="noreferrer" className="text-blue-600 underline truncate max-w-[180px]">{selected.eventLink}</a></div>}
+                {selected.browser && <div className="flex gap-2"><span className="text-neutral-400 w-16">Browser</span><span className="truncate">{selected.browser}</span></div>}
+                <div className="flex gap-2"><span className="text-neutral-400 w-16">Submitted</span><span>{new Date(selected.createdAt).toLocaleString()}</span></div>
+              </div>
+
+              <div>
+                <p className="text-xs font-bold text-neutral-500 mb-1 uppercase tracking-wider">Description</p>
+                <p className="text-xs text-neutral-700 leading-relaxed whitespace-pre-wrap">{selected.description}</p>
+              </div>
+
+              {/* Status change */}
+              <div>
+                <p className="text-xs font-bold text-neutral-500 mb-1.5 uppercase tracking-wider">Status</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {['open', 'in_progress', 'resolved', 'closed'].map(s => (
+                    <button
+                      key={s}
+                      onClick={() => updateStatus(selected._id, s)}
+                      className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-colors ${
+                        selected.status === s
+                          ? `bg-${statusColor[s]}-600 text-white`
+                          : 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200'
+                      }`}
+                    >
+                      {s.replace('_', ' ')}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Admin notes */}
+              <div>
+                <p className="text-xs font-bold text-neutral-500 mb-1.5 uppercase tracking-wider">Internal Notes</p>
+                <textarea
+                  value={noteText}
+                  onChange={e => setNoteText(e.target.value)}
+                  rows={3}
+                  placeholder="Notes visible only to admins…"
+                  className="w-full text-xs px-3 py-2 border border-neutral-200 rounded-xl focus:outline-none focus:border-neutral-900 resize-none"
+                />
+                <button
+                  onClick={saveNote}
+                  disabled={saving}
+                  className="mt-1.5 w-full py-1.5 bg-neutral-900 text-white text-xs font-bold rounded-lg hover:bg-neutral-700 disabled:opacity-50 transition-colors"
+                >
+                  {saving ? 'Saving…' : 'Save Notes'}
+                </button>
+              </div>
+
+              {/* Email reporter link */}
+              <a
+                href={`mailto:${selected.email}?subject=Re: ${encodeURIComponent(selected.summary)}&body=Hi ${encodeURIComponent(selected.name)},%0A%0AThank you for reporting this issue. We wanted to let you know...`}
+                className="flex items-center justify-center gap-2 w-full py-2 border border-neutral-200 rounded-xl text-xs font-semibold text-neutral-700 hover:bg-neutral-50 transition-colors"
+              >
+                <Mail className="w-3.5 h-3.5" />
+                Email Reporter
+              </a>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+
 const NAV_ITEMS = [
   { id: 'dashboard',   label: 'Dashboard',    icon: Monitor },
   { id: 'events',      label: 'Events',       icon: Calendar },
@@ -1645,6 +1919,7 @@ const NAV_ITEMS = [
   { id: 'system',      label: 'System',       icon: Server },
   { id: 'logs',        label: 'Logs',         icon: Terminal },
   { id: 'uptime',      label: 'Uptime',       icon: Radio },
+  { id: 'reports',     label: 'Reports',      icon: Inbox },
 ];
 
 // ─── Security Panel ───────────────────────────────────────────────────────────
@@ -2627,6 +2902,7 @@ export default function Admin() {
           {activeSection === 'system'     && !selectedEvent && <div className="max-w-5xl mx-auto"><SystemPanel /></div>}
           {activeSection === 'logs'       && !selectedEvent && <div className="max-w-6xl mx-auto"><LogsPanel /></div>}
           {activeSection === 'uptime'     && !selectedEvent && <div className="max-w-4xl mx-auto"><UptimePanel /></div>}
+          {activeSection === 'reports'    && !selectedEvent && <div className="max-w-5xl mx-auto"><BugReportsPanel /></div>}
         </main>
       </div>
 
