@@ -1,4 +1,5 @@
-import { useState, useMemo, useRef, useEffect } from 'react';
+import { useState, useMemo, useRef, useEffect, useCallback } from 'react';
+import { bugReportAPI } from '../services/api';
 import { useNavigate } from 'react-router-dom';
 import {
   ArrowLeft, Search, ChevronRight, ChevronDown, X,
@@ -10,7 +11,7 @@ import {
   UserCheck, Key, Link, Download, Upload, Trash2, Eye,
   TrendingUp, Ban, Phone, CheckSquare, List, Hash,
   LifeBuoy, Cpu, Globe, Filter, ChevronUp, ArrowRight,
-  LogOut, Copy, Navigation, Timer, PieChart, ClipboardList
+  LogOut, Copy, Navigation, Timer, PieChart, ClipboardList, Send, CheckCircle, Loader
 } from 'lucide-react';
 
 /* ─── DATA ─────────────────────────────────────────────────────────────────── */
@@ -1474,10 +1475,239 @@ function ArticleCard({ article, onClick }) {
   );
 }
 
+
+/* ─── BUG REPORT MODAL ───────────────────────────────────────────────────────── */
+
+const CATEGORY_OPTIONS = [
+  { value: 'bug',      label: '🐛 Bug — Something is broken' },
+  { value: 'error',    label: '⚠️ Error — I see an error message' },
+  { value: 'checkin',  label: '📱 Check-in — QR / entry issue' },
+  { value: 'account',  label: '🔑 Account — Password / access issue' },
+  { value: 'feature',  label: '💡 Feature Request' },
+  { value: 'other',    label: '📋 Other' },
+];
+
+const SEVERITY_OPTIONS = [
+  { value: 'low',      label: '🟢 Low — Minor inconvenience' },
+  { value: 'medium',   label: '🟡 Medium — Something important isn\'t working' },
+  { value: 'high',     label: '🟠 High — Majorly blocking my event' },
+  { value: 'critical', label: '🔴 Critical — Event day emergency' },
+];
+
+function BugReportModal({ open, onClose }) {
+  const EMPTY = { name: '', email: '', category: 'bug', severity: 'medium', summary: '', description: '', eventLink: '', browser: '' };
+  const [form, setForm]       = useState(EMPTY);
+  const [errors, setErrors]   = useState({});
+  const [loading, setLoading] = useState(false);
+  const [done, setDone]       = useState(false);
+
+  const set = (k) => (e) => setForm(p => ({ ...p, [k]: e.target.value }));
+
+  function validate() {
+    const e = {};
+    if (!form.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) e.email = 'Valid email required';
+    if (!form.summary || form.summary.length < 5) e.summary = 'At least 5 characters';
+    if (!form.description || form.description.length < 10) e.description = 'At least 10 characters';
+    setErrors(e);
+    return Object.keys(e).length === 0;
+  }
+
+  async function handleSubmit(ev) {
+    ev.preventDefault();
+    if (!validate()) return;
+    setLoading(true);
+    try {
+      // Auto-detect browser if field left empty
+      const browser = form.browser || navigator.userAgent.slice(0, 120);
+      await bugReportAPI.submit({ ...form, browser });
+      setDone(true);
+    } catch (err) {
+      const msg = err?.response?.data?.errors?.[0]?.msg
+               || err?.response?.data?.error
+               || 'Failed to submit. Please try emailing planit.userhelp@gmail.com directly.';
+      setErrors({ _global: msg });
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  function handleClose() {
+    setForm(EMPTY);
+    setErrors({});
+    setDone(false);
+    setLoading(false);
+    onClose();
+  }
+
+  if (!open) return null;
+
+  return (
+    <div className="fixed inset-0 z-[200] flex items-center justify-center p-4" style={{ background: 'rgba(0,0,0,0.55)' }}>
+      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+        {/* Header */}
+        <div className="flex items-center justify-between p-6 border-b border-neutral-100">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-neutral-900 flex items-center justify-center">
+              <AlertTriangle className="w-4 h-4 text-white" />
+            </div>
+            <div>
+              <h2 className="text-base font-black text-neutral-900">Report an Issue</h2>
+              <p className="text-xs text-neutral-400">We'll email you when it's fixed</p>
+            </div>
+          </div>
+          <button onClick={handleClose} className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-neutral-100 transition-colors">
+            <X className="w-4 h-4 text-neutral-500" />
+          </button>
+        </div>
+
+        {done ? (
+          /* Success state */
+          <div className="p-8 text-center">
+            <div className="w-14 h-14 rounded-full bg-emerald-100 flex items-center justify-center mx-auto mb-4">
+              <CheckCircle className="w-7 h-7 text-emerald-600" />
+            </div>
+            <h3 className="text-lg font-black text-neutral-900 mb-2">Report received!</h3>
+            <p className="text-sm text-neutral-500 mb-1">We'll look into this and email you at</p>
+            <p className="text-sm font-bold text-neutral-900 mb-6">{form.email}</p>
+            <p className="text-xs text-neutral-400 mb-6">
+              For urgent event-day issues also check{' '}
+              <a href="/status" className="underline font-medium">planitapp.onrender.com/status</a>
+            </p>
+            <button
+              onClick={handleClose}
+              className="px-6 py-2.5 bg-neutral-900 text-white text-sm font-bold rounded-xl hover:bg-neutral-700 transition-colors"
+            >
+              Done
+            </button>
+          </div>
+        ) : (
+          <form onSubmit={handleSubmit} className="p-6 space-y-4">
+            {errors._global && (
+              <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-xs text-red-700">
+                {errors._global}
+              </div>
+            )}
+
+            {/* Name + Email row */}
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-bold text-neutral-700 mb-1">Your name</label>
+                <input
+                  value={form.name} onChange={set('name')}
+                  placeholder="Optional"
+                  className="w-full px-3 py-2 border border-neutral-200 rounded-xl text-sm focus:outline-none focus:border-neutral-900 transition-colors"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-neutral-700 mb-1">Email <span className="text-red-500">*</span></label>
+                <input
+                  type="email" value={form.email} onChange={set('email')}
+                  placeholder="you@example.com"
+                  className={`w-full px-3 py-2 border rounded-xl text-sm focus:outline-none focus:border-neutral-900 transition-colors ${errors.email ? 'border-red-400' : 'border-neutral-200'}`}
+                />
+                {errors.email && <p className="text-xs text-red-500 mt-1">{errors.email}</p>}
+              </div>
+            </div>
+
+            {/* Category + Severity row */}
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-bold text-neutral-700 mb-1">Category</label>
+                <select
+                  value={form.category} onChange={set('category')}
+                  className="w-full px-3 py-2 border border-neutral-200 rounded-xl text-sm focus:outline-none focus:border-neutral-900 bg-white transition-colors"
+                >
+                  {CATEGORY_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-neutral-700 mb-1">Severity</label>
+                <select
+                  value={form.severity} onChange={set('severity')}
+                  className="w-full px-3 py-2 border border-neutral-200 rounded-xl text-sm focus:outline-none focus:border-neutral-900 bg-white transition-colors"
+                >
+                  {SEVERITY_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                </select>
+              </div>
+            </div>
+
+            {/* Summary */}
+            <div>
+              <label className="block text-xs font-bold text-neutral-700 mb-1">Summary <span className="text-red-500">*</span></label>
+              <input
+                value={form.summary} onChange={set('summary')}
+                placeholder="One line description of the problem"
+                maxLength={150}
+                className={`w-full px-3 py-2 border rounded-xl text-sm focus:outline-none focus:border-neutral-900 transition-colors ${errors.summary ? 'border-red-400' : 'border-neutral-200'}`}
+              />
+              {errors.summary && <p className="text-xs text-red-500 mt-1">{errors.summary}</p>}
+            </div>
+
+            {/* Description */}
+            <div>
+              <label className="block text-xs font-bold text-neutral-700 mb-1">
+                What happened? <span className="text-red-500">*</span>
+                <span className="font-normal text-neutral-400 ml-1">(steps to reproduce, what you expected vs what occurred)</span>
+              </label>
+              <textarea
+                value={form.description} onChange={set('description')}
+                rows={4}
+                maxLength={2000}
+                placeholder="1. I clicked... 2. I expected... 3. Instead I saw..."
+                className={`w-full px-3 py-2 border rounded-xl text-sm focus:outline-none focus:border-neutral-900 transition-colors resize-none ${errors.description ? 'border-red-400' : 'border-neutral-200'}`}
+              />
+              <div className="flex justify-between">
+                {errors.description && <p className="text-xs text-red-500">{errors.description}</p>}
+                <p className="text-xs text-neutral-300 ml-auto">{form.description.length}/2000</p>
+              </div>
+            </div>
+
+            {/* Optional fields */}
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-bold text-neutral-700 mb-1">Event link <span className="text-neutral-400 font-normal">(optional)</span></label>
+                <input
+                  value={form.eventLink} onChange={set('eventLink')}
+                  placeholder="planitapp.onrender.com/e/..."
+                  className="w-full px-3 py-2 border border-neutral-200 rounded-xl text-sm focus:outline-none focus:border-neutral-900 transition-colors"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-neutral-700 mb-1">Browser / device <span className="text-neutral-400 font-normal">(optional)</span></label>
+                <input
+                  value={form.browser} onChange={set('browser')}
+                  placeholder="e.g. Chrome on iPhone"
+                  className="w-full px-3 py-2 border border-neutral-200 rounded-xl text-sm focus:outline-none focus:border-neutral-900 transition-colors"
+                />
+              </div>
+            </div>
+
+            <div className="pt-2 flex items-center justify-between gap-3">
+              <p className="text-xs text-neutral-400">
+                We'll email you at <strong>{form.email || 'your address'}</strong> when resolved.
+              </p>
+              <button
+                type="submit"
+                disabled={loading}
+                className="flex items-center gap-2 px-5 py-2.5 bg-neutral-900 text-white text-sm font-bold rounded-xl hover:bg-neutral-700 disabled:opacity-50 transition-colors flex-shrink-0"
+              >
+                {loading ? <Loader className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                {loading ? 'Sending…' : 'Submit Report'}
+              </button>
+            </div>
+          </form>
+        )}
+      </div>
+    </div>
+  );
+}
+
+
 /* ─── MAIN PAGE ─────────────────────────────────────────────────────────────── */
 
 export default function Help() {
   const navigate = useNavigate();
+  const [reportOpen, setReportOpen] = useState(false);
   const [query, setQuery] = useState('');
   const [activeCategory, setActiveCategory] = useState('all');
   const [activeArticle, setActiveArticle] = useState(null);
@@ -1519,6 +1749,8 @@ export default function Help() {
   }
 
   return (
+    <>
+    <BugReportModal open={reportOpen} onClose={() => setReportOpen(false)} />
     <div className="min-h-screen" style={{ background: '#f8f8f6' }}>
       <style>{`html { scroll-behavior: smooth; } body { background: #f8f8f6; }`}</style>
 
@@ -1545,7 +1777,7 @@ export default function Help() {
               Status
             </a>
             <span className="text-neutral-200">·</span>
-            <a href="mailto:planit.userhelp@gmail.com" className="text-xs text-neutral-500 hover:text-neutral-800 transition-colors">Contact Support</a>
+            <button onClick={() => setReportOpen(true)} className="text-xs text-neutral-500 hover:text-neutral-800 transition-colors">Report an Issue</button>
           </div>
         </div>
       </header>
@@ -1580,13 +1812,13 @@ export default function Help() {
                 <div className="mt-6 p-4 bg-white border border-neutral-200 rounded-2xl">
                   <p className="text-xs font-bold text-neutral-900 mb-1">Still stuck?</p>
                   <p className="text-xs text-neutral-500 mb-3">Our support team is here to help.</p>
-                  <a
-                    href="mailto:planit.userhelp@gmail.com"
+                  <button
+                    onClick={() => setReportOpen(true)}
                     className="flex items-center gap-1.5 text-xs font-semibold text-neutral-900 hover:underline"
                   >
-                    <Mail className="w-3.5 h-3.5" />
-                    planit.userhelp@gmail.com
-                  </a>
+                    <AlertTriangle className="w-3.5 h-3.5" />
+                    Report an Issue
+                  </button>
                 </div>
               </div>
             </aside>
@@ -1624,12 +1856,12 @@ export default function Help() {
                       <a href="mailto:planit.userhelp@gmail.com" className="text-neutral-700 underline underline-offset-2 font-medium">planit.userhelp@gmail.com</a>
                     </p>
                   </div>
-                  <a
-                    href="mailto:planit.userhelp@gmail.com"
+                  <button
+                    onClick={() => setReportOpen(true)}
                     className="flex items-center gap-2 px-4 py-2 bg-neutral-900 text-white text-xs font-bold rounded-xl hover:bg-neutral-700 transition-colors"
                   >
-                    <Mail className="w-3.5 h-3.5" />
-                    Contact Support
+                    <AlertTriangle className="w-3.5 h-3.5" />
+                    Report an Issue
                   </a>
                 </div>
               </div>
@@ -1703,7 +1935,7 @@ export default function Help() {
                     : `${filtered.length} result${filtered.length !== 1 ? 's' : ''} for "${query}"`
                   }
                   {filtered.length === 0 && (
-                    <a href="mailto:planit.userhelp@gmail.com" className="ml-1 text-neutral-900 font-semibold underline underline-offset-2">contact support</a>
+                    <button onClick={() => setReportOpen(true)} className="ml-1 text-neutral-900 font-semibold underline underline-offset-2">submit a report</button>
                   )}
                 </p>
                 <div className="space-y-2">
@@ -1796,13 +2028,13 @@ export default function Help() {
                     </p>
                   </div>
                   <div className="flex flex-col sm:flex-row gap-3 flex-shrink-0">
-                    <a
-                      href="mailto:planit.userhelp@gmail.com"
+                    <button
+                      onClick={() => setReportOpen(true)}
                       className="flex items-center justify-center gap-2 px-5 py-2.5 bg-white text-neutral-900 text-sm font-bold rounded-xl hover:bg-neutral-100 transition-colors"
                     >
-                      <LifeBuoy className="w-4 h-4" />
-                      Support Form
-                    </a>
+                      <AlertTriangle className="w-4 h-4" />
+                      Report an Issue
+                    </button>
                     <a
                       href="mailto:planit.userhelp@gmail.com"
                       className="flex items-center justify-center gap-2 px-5 py-2.5 bg-neutral-800 text-white text-sm font-bold rounded-xl hover:bg-neutral-700 border border-neutral-700 transition-colors"
@@ -1818,5 +2050,6 @@ export default function Help() {
         )}
       </div>
     </div>
+    </>
   );
 }
