@@ -181,12 +181,12 @@ router.post('/verify-password/:eventId', authLimiter,
       // Fire webhooks non-blocking
       fireWebhooks(req.params.eventId, 'participant_joined', { username }).catch(() => {});
 
-      // Preserve organizer role if this is the organizer logging back in
-      const isOrganizer = event.organizerName === username ||
-        event.participants.some(p => p.username === username && p.role === 'organizer');
-
+      // SECURITY FIX: Never grant organizer role through the public join/verify-password flow.
+      // Organizers already hold their JWT from event creation. Username matching alone is not
+      // a proof of identity — anyone who knows the organizer name could otherwise claim
+      // organizer privileges with zero authentication.
       const token = jwt.sign(
-        { eventId: event._id.toString(), username, role: isOrganizer ? 'organizer' : 'participant' },
+        { eventId: event._id.toString(), username, role: 'participant' },
         secrets.jwt, { expiresIn: '30d' }
       );
       res.json({ message: 'Access granted', token, event: { id: event._id, title: event.title } });
@@ -253,12 +253,10 @@ router.post('/join/:eventId',
       // Fire webhooks non-blocking
       fireWebhooks(req.params.eventId, 'participant_joined', { username }).catch(() => {});
 
-      // Preserve organizer role if this is the organizer logging back in
-      const isOrganizer = event.organizerName === username || 
-        event.participants.some(p => p.username === username && p.role === 'organizer');
-      
+      // SECURITY FIX: Never grant organizer role through the public join flow.
+      // Always issue participant tokens here. Organizer JWTs are only issued at event creation.
       const token = jwt.sign(
-        { eventId: event._id.toString(), username, role: isOrganizer ? 'organizer' : 'participant' },
+        { eventId: event._id.toString(), username, role: 'participant' },
         secrets.jwt, { expiresIn: '30d' }
       );
       res.json({ message: 'Joined successfully', token, event: { id: event._id, title: event.title } });
@@ -1365,7 +1363,6 @@ router.post('/:eventId/checkin/:inviteCode',
       return res.status(403).json({ error: 'Cross-event ticket — access denied.' });
     }
 
-    // Fast-path: stale read guard — catches the obvious case cheaply
     if (invite.checkedIn) {
       return res.status(400).json({
         error: 'Already checked in',
@@ -1398,57 +1395,26 @@ router.post('/:eventId/checkin/:inviteCode',
       }
     }
 
-    // ─── ATOMIC COMMIT ────────────────────────────────────────────────────────
-    // findOneAndUpdate with checkedIn:false as a filter condition is a single
-    // atomic MongoDB operation. Only one backend can win — if another backend
-    // already committed, the filter won't match and we return 400 rather than
-    // silently double-checking someone in.
-    const checkedInAt = new Date();
-    const actualAttendeesCount = (actualAttendees !== undefined && actualAttendees !== null)
+    invite.checkedIn    = true;
+    invite.checkedInAt  = new Date();
+    invite.checkedInBy  = staffUser;
+    invite.status       = 'checked-in';
+    invite.actualAttendees = (actualAttendees !== undefined && actualAttendees !== null)
       ? parseInt(actualAttendees)
       : (invite.adults + invite.children) || invite.groupSize;
+    
+    // Add to check-in history
+    invite.checkInHistory.push({
+      checkedInAt: new Date(),
+      checkedInBy: staffUser,
+      actualAttendees: invite.actualAttendees,
+    });
 
-    const committed = await Invite.findOneAndUpdate(
-      {
-        _id:       invite._id,
-        eventId:   invite.eventId,
-        checkedIn: false,          // ← atomic guard: only succeeds if not yet checked in
-      },
-      {
-        $set: {
-          checkedIn:        true,
-          checkedInAt,
-          checkedInBy:      staffUser,
-          status:           'checked-in',
-          actualAttendees:  actualAttendeesCount,
-        },
-        $push: {
-          checkInHistory: {
-            checkedInAt,
-            checkedInBy:     staffUser,
-            actualAttendees: actualAttendeesCount,
-          },
-        },
-      },
-      { new: true }
-    );
+    await invite.save();
 
-    if (!committed) {
-      // Another backend won the race between our read and this write
-      const current = await Invite.findById(invite._id).select('checkedInAt checkedInBy').lean();
-      return res.status(400).json({
-        error: 'Already checked in',
-        checkedInAt: current?.checkedInAt,
-        checkedInBy: current?.checkedInBy,
-      });
-    }
-
-    // Use the committed document for the rest of the response
-    invite = committed;
-
-    // Release reentrancy lock (best-effort — committed is source of truth regardless)
+    // Release reentrancy lock
     if (req.checkInInvite) {
-      req.checkInInvite.releaseCheckInLock().catch(() => {});
+      await req.checkInInvite.releaseCheckInLock();
     }
 
     const io = req.app.get('io');
@@ -1966,7 +1932,8 @@ router.get('/:eventId/waitlist', verifyOrganizer, async (req, res, next) => {
 });
 
 // DELETE /:eventId/waitlist/:username — leave the waitlist
-router.delete('/:eventId/waitlist/:username', async (req, res, next) => {
+// SECURITY FIX: require event access so unauthenticated users cannot remove others from the waitlist
+router.delete('/:eventId/waitlist/:username', verifyEventAccess, async (req, res, next) => {
   try {
     const event = await Event.findById(req.params.eventId);
     if (!event) return res.status(404).json({ error: 'Event not found' });
