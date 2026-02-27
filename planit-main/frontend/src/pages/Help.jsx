@@ -1862,7 +1862,7 @@ export default function Help() {
                   >
                     <AlertTriangle className="w-3.5 h-3.5" />
                     Report an Issue
-                  </a>
+                  </button>
                 </div>
               </div>
 
