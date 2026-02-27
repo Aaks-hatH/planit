@@ -24,7 +24,8 @@ const cookieParser = require('cookie-parser');
 const http = require('http');
 const socketIo = require('socket.io');
 const path = require('path');
-const supportRoutes = require('./routes/support');
+const supportRoutes    = require('./routes/support');
+const bugReportRoutes  = require('./routes/bug-reports');
 const uptimeRoutes = require('./routes/uptime');
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -192,6 +193,7 @@ app.use('/api/polls', pollRoutes);
 app.use('/api/files', fileRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/support', supportRoutes);
+app.use('/api/bug-reports', bugReportRoutes);
 app.use('/api/uptime', uptimeRoutes);
 app.use('/api/mesh', meshRoutes);
 app.use('/api', publicRoutes);
