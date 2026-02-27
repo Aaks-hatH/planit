@@ -7,6 +7,15 @@ const inviteSchema = new mongoose.Schema({
   guestEmail: { type: String, trim: true },
   guestPhone: { type: String, trim: true },
 
+  // Role shown to staff at check-in and in the guest overview.
+  // Defaults to 'GUEST' so existing invites are unaffected.
+  guestRole: {
+    type: String,
+    enum: ['GUEST', 'VIP', 'SPEAKER'],
+    default: 'GUEST',
+    uppercase: true,
+  },
+
   // Group composition — set by organizer, shown to staff at scan
   adults:    { type: Number, default: 1, min: 0 },
   children:  { type: Number, default: 0, min: 0 },
@@ -128,50 +137,46 @@ inviteSchema.methods.generateDuplicateFingerprint = function() {
 };
 
 // Method to acquire check-in lock (reentrancy protection)
-// acquireCheckInLock — fully atomic via findOneAndUpdate.
-// The old read-then-write approach let two backends both see isLocked:false
-// and both proceed. This single DB operation is guaranteed atomic in MongoDB —
-// only one caller wins regardless of how many backends fire simultaneously.
 inviteSchema.methods.acquireCheckInLock = async function(staffUser, sessionId) {
-  const staleThreshold = new Date(Date.now() - 30000); // 30s stale cutoff
-
-  const result = await this.constructor.findOneAndUpdate(
-    {
-      _id: this._id,
-      $or: [
-        { 'checkInLock.isLocked': false },                      // not locked
-        { 'checkInLock.sessionId': sessionId },                  // same session re-entering
-        { 'checkInLock.lockedAt': { $lt: staleThreshold } },   // stale lock — safe to steal
-      ],
-    },
-    {
-      $set: {
-        'checkInLock.isLocked':  true,
-        'checkInLock.lockedAt':  new Date(),
-        'checkInLock.lockedBy':  staffUser,
-        'checkInLock.sessionId': sessionId,
-      },
-    },
-    { new: true }
-  );
-
-  // null means the filter didn't match — another backend holds an active lock
-  return result !== null;
+  // Check if already locked
+  if (this.checkInLock.isLocked) {
+    // If locked by same session, allow
+    if (this.checkInLock.sessionId === sessionId) {
+      return true;
+    }
+    
+    // Check if lock is stale (older than 30 seconds)
+    const lockAge = Date.now() - new Date(this.checkInLock.lockedAt).getTime();
+    if (lockAge > 30000) {
+      // Release stale lock and acquire new one
+      this.checkInLock.isLocked = true;
+      this.checkInLock.lockedAt = new Date();
+      this.checkInLock.lockedBy = staffUser;
+      this.checkInLock.sessionId = sessionId;
+      await this.save();
+      return true;
+    }
+    
+    // Lock held by another active session
+    return false;
+  }
+  
+  // Acquire lock
+  this.checkInLock.isLocked = true;
+  this.checkInLock.lockedAt = new Date();
+  this.checkInLock.lockedBy = staffUser;
+  this.checkInLock.sessionId = sessionId;
+  await this.save();
+  return true;
 };
 
-// releaseCheckInLock — also atomic, no read required
+// Method to release check-in lock
 inviteSchema.methods.releaseCheckInLock = async function() {
-  await this.constructor.updateOne(
-    { _id: this._id },
-    {
-      $set: {
-        'checkInLock.isLocked':  false,
-        'checkInLock.lockedAt':  null,
-        'checkInLock.lockedBy':  null,
-        'checkInLock.sessionId': null,
-      },
-    }
-  );
+  this.checkInLock.isLocked = false;
+  this.checkInLock.lockedAt = null;
+  this.checkInLock.lockedBy = null;
+  this.checkInLock.sessionId = null;
+  await this.save();
 };
 
 // Method to calculate trust score based on behavior
