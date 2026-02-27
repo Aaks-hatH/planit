@@ -139,43 +139,38 @@ async function preventReentrancy(req, res, next) {
     const { eventId, inviteCode } = req.params;
     const sessionId = req.headers['x-session-id'] || req.sessionID || `${Date.now()}-${Math.random()}`;
     const staffUser = req.eventAccess?.username || 'staff';
-    
-    const invite = await Invite.findOne({ inviteCode: inviteCode.toUpperCase().trim(), eventId });
-    if (!invite) return next();
-    
+
     const event = await Event.findById(eventId).select('checkinSettings').lean();
     const settings = event?.checkinSettings || {};
-    
+
     // Skip if reentrancy protection disabled
     if (!settings.enableReentrancyProtection) return next();
-    
-    // Try to acquire lock
+
+    const invite = await Invite.findOne({ inviteCode: inviteCode.toUpperCase().trim(), eventId });
+    if (!invite) return next();
+
+    // acquireCheckInLock is now a single atomic findOneAndUpdate — safe across
+    // all backends. Two backends calling this simultaneously: only one gets a
+    // non-null result back; the other gets false and is rejected here.
     const lockAcquired = await invite.acquireCheckInLock(staffUser, sessionId);
-    
+
     if (!lockAcquired) {
+      // Fetch fresh doc to get the current lock holder for the error message
+      const fresh = await Invite.findById(invite._id).select('checkInLock').lean();
       return res.status(409).json({
         valid: false,
         reason: 'concurrent_checkin',
         severity: 'high',
         message: 'Another check-in is in progress for this ticket',
-        lockedBy: invite.checkInLock.lockedBy,
-        lockedAt: invite.checkInLock.lockedAt,
+        lockedBy: fresh?.checkInLock?.lockedBy,
+        lockedAt: fresh?.checkInLock?.lockedAt,
       });
     }
-    
-    // Store session ID for cleanup
+
+    // Store for cleanup in the route handler
     req.checkInSessionId = sessionId;
-    req.checkInInvite = invite;
-    
-    // Ensure lock is released on response
-    const originalSend = res.send;
-    res.send = function(...args) {
-      if (invite && invite.checkInLock.sessionId === sessionId) {
-        invite.releaseCheckInLock().catch(console.error);
-      }
-      originalSend.apply(res, args);
-    };
-    
+    req.checkInInvite    = invite;
+
     next();
   } catch (error) {
     next(error);
