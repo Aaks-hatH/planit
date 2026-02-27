@@ -319,6 +319,12 @@ export const watchdogAPI = {
     if (!watchdogAxios) return Promise.resolve(null);
     return watchdogAxios.get('/watchdog/uptime');
   },
+  testNtfy: (secret) => {
+    if (!watchdogAxios) return Promise.reject(new Error('VITE_WATCHDOG_URL not configured'));
+    return watchdogAxios.post('/watchdog/test-ntfy', {}, {
+      headers: { 'x-test-secret': secret },
+    });
+  },
 };
 
 // ─── Router API ───────────────────────────────────────────────────────────────
