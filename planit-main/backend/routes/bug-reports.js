@@ -79,15 +79,16 @@ async function sendNtfyNotification(report) {
     return;
   }
 
-  const severityEmoji = {
-    low: '🟢', medium: '🟡', high: '🟠', critical: '🔴',
+  const severityPrefix = {
+    low: '[LOW]', medium: '[MEDIUM]', high: '[HIGH]', critical: '[CRITICAL]',
   };
   const categoryLabel = {
     bug: 'Bug', error: 'Error', feature: 'Feature Request',
     account: 'Account Issue', checkin: 'Check-in Issue', other: 'Other',
   };
 
-  const title = `${severityEmoji[report.severity] || '⚠️'} New Report: ${report.summary}`;
+  // Title must be ASCII-safe — emoji in HTTP headers causes "Illegal header value" errors
+  const title = `${severityPrefix[report.severity] || '[REPORT]'} ${report.summary}`.slice(0, 150);
   const body  = [
     `From: ${report.name} <${report.email}>`,
     `Category: ${categoryLabel[report.category] || report.category}`,
@@ -125,13 +126,15 @@ async function sendNtfyNotification(report) {
 // ══════════════════════════════════════════════════════════════════════════
 
 const jwt = require('jsonwebtoken');
+const { secrets } = require('../keys');
 
 function verifyAdmin(req, res, next) {
   const auth = req.headers.authorization || '';
-  const token = auth.startsWith('Bearer ') ? auth.slice(7) : null;
+  // Support both Authorization header and ?token= query param (used by SSE/iframe)
+  const token = auth.startsWith('Bearer ') ? auth.slice(7) : (req.query.token || null);
   if (!token) return res.status(401).json({ error: 'No token provided' });
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback-secret');
+    const decoded = jwt.verify(token, secrets.jwt);
     if (!decoded.isAdmin) return res.status(403).json({ error: 'Admin access required' });
     req.admin = decoded;
     next();
