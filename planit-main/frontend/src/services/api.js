@@ -426,6 +426,14 @@ export const utilityAPI = {
     `${API_URL}/events/${eventId}/qr.svg`,
 };
 
+// ─── Bug Report API ───────────────────────────────────────────────────────────
+export const bugReportAPI = {
+  submit:  (data)     => api.post('/bug-reports', data),
+  getAll:  (params)   => api.get('/bug-reports/admin', { params }),
+  update:  (id, data) => api.patch(`/bug-reports/admin/${id}`, data),
+  remove:  (id)       => api.delete(`/bug-reports/admin/${id}`),
+};
+
 // ─── Discover API ─────────────────────────────────────────────────────────────
 export const discoverAPI = {
   getPublicEvents: (params) => api.get('/events/public', { params }),
