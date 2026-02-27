@@ -180,13 +180,15 @@ function JoinGate({ eventId, onJoined }) {
       onJoined();
     } catch (err) {
       const data = err.response?.data;
-      if (data?.requiresAccountPassword) {
-        // Server says this name needs a password — go to that step
+      if (err.response?.status === 202 || data?.requiresApproval) {
+        // Owner consent required — show pending state, not an error
+        setStep('pending-approval');
+        setError('');
+      } else if (data?.requiresAccountPassword) {
         setStep('account-password');
         setError('This name is protected. Enter your account password to continue.');
       } else if (data?.error?.toLowerCase().includes('password')) {
         setError(data.error);
-        // Wrong event password — stay on that step
         setStep('event-password');
         setPassword('');
       } else {
@@ -409,6 +411,32 @@ function JoinGate({ eventId, onJoined }) {
         </form>
       )}
 
+      {/* ── STEP: pending approval ── */}
+      {step === 'pending-approval' && (
+        <div className="text-center py-4 space-y-4">
+          <div className="w-16 h-16 mx-auto rounded-full bg-amber-50 border-2 border-amber-200 flex items-center justify-center">
+            <Clock className="w-7 h-7 text-amber-500" />
+          </div>
+          <div>
+            <p className="font-bold text-neutral-900 mb-1">Awaiting organizer approval</p>
+            <p className="text-sm text-neutral-500 leading-relaxed">
+              Your request to join as <strong className="text-neutral-700">{username}</strong> has been sent.
+              This page will automatically unlock once the organizer approves your request.
+            </p>
+          </div>
+          <div className="flex items-center justify-center gap-2 py-3 px-4 bg-amber-50 border border-amber-200 rounded-xl">
+            <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
+            <span className="text-xs font-semibold text-amber-700">Waiting for approval…</span>
+          </div>
+          <button
+            onClick={() => { setStep('name'); setUsername(''); setError(''); }}
+            className="text-xs text-neutral-400 hover:text-neutral-700 transition-colors underline underline-offset-2"
+          >
+            Use a different name
+          </button>
+        </div>
+      )}
+
     </div>
   );
 
@@ -614,6 +642,7 @@ function JoinGate({ eventId, onJoined }) {
                   <h2 className="text-[18px] font-bold text-neutral-900 leading-snug">
                     {step === 'account-password' ? 'Enter your password' :
                      step === 'event-password'   ? 'Event password required' :
+                     step === 'pending-approval' ? 'Request sent' :
                      'Join this event'}
                   </h2>
                   <p className="text-sm text-neutral-400 mt-0.5">
@@ -787,6 +816,30 @@ export default function EventSpace() {
     if (!eventId || resolving) return;
     const token = localStorage.getItem('eventToken');
     if (!token) { setNeedsJoin(true); setLoading(false); return; }
+
+    // Validate the stored token actually belongs to THIS event before trusting it.
+    // A token for a different event must not grant access here.
+    try {
+      const base64 = token.split('.')[1]?.replace(/-/g, '+').replace(/_/g, '/');
+      const decoded = base64 ? JSON.parse(atob(base64)) : null;
+      // Check eventId match and token expiry
+      const expired = decoded?.exp && decoded.exp * 1000 < Date.now();
+      const wrongEvent = decoded?.eventId && decoded.eventId !== eventId;
+      if (expired || wrongEvent || !decoded) {
+        localStorage.removeItem('eventToken');
+        localStorage.removeItem('username');
+        setNeedsJoin(true);
+        setLoading(false);
+        return;
+      }
+    } catch {
+      localStorage.removeItem('eventToken');
+      localStorage.removeItem('username');
+      setNeedsJoin(true);
+      setLoading(false);
+      return;
+    }
+
     loadEvent();
   }, [eventId, resolving]);
 
@@ -799,6 +852,25 @@ export default function EventSpace() {
     socketService.joinEvent(eventId);
 
     socketService.on('new_message', (msg) => { setMessages(prev => [...prev, msg]); scrollToBottom(); });
+    // Listen for organizer approval decision
+    socketService.on('approval_approved', ({ username: approvedUser, token: newToken }) => {
+      const myUsername = localStorage.getItem('username');
+      if (approvedUser === myUsername && newToken) {
+        localStorage.setItem('eventToken', newToken);
+        toast.success('Your join request was approved!');
+        setNeedsJoin(false);
+        setLoading(true);
+        loadEvent();
+      }
+    });
+    socketService.on('approval_rejected', ({ username: rejectedUser }) => {
+      const myUsername = localStorage.getItem('username');
+      if (rejectedUser === myUsername) {
+        toast.error('Your join request was declined by the organizer.');
+        setStep('name');
+        setNeedsJoin(true);
+      }
+    });
     socketService.on('message_edited', ({ messageId, content }) =>
       setMessages(prev => prev.map(m => m.id === messageId || m._id === messageId ? { ...m, content, edited: true } : m)));
     socketService.on('message_deleted', ({ messageId }) =>
