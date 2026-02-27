@@ -1365,6 +1365,7 @@ router.post('/:eventId/checkin/:inviteCode',
       return res.status(403).json({ error: 'Cross-event ticket — access denied.' });
     }
 
+    // Fast-path: stale read guard — catches the obvious case cheaply
     if (invite.checkedIn) {
       return res.status(400).json({
         error: 'Already checked in',
@@ -1397,26 +1398,57 @@ router.post('/:eventId/checkin/:inviteCode',
       }
     }
 
-    invite.checkedIn    = true;
-    invite.checkedInAt  = new Date();
-    invite.checkedInBy  = staffUser;
-    invite.status       = 'checked-in';
-    invite.actualAttendees = (actualAttendees !== undefined && actualAttendees !== null)
+    // ─── ATOMIC COMMIT ────────────────────────────────────────────────────────
+    // findOneAndUpdate with checkedIn:false as a filter condition is a single
+    // atomic MongoDB operation. Only one backend can win — if another backend
+    // already committed, the filter won't match and we return 400 rather than
+    // silently double-checking someone in.
+    const checkedInAt = new Date();
+    const actualAttendeesCount = (actualAttendees !== undefined && actualAttendees !== null)
       ? parseInt(actualAttendees)
       : (invite.adults + invite.children) || invite.groupSize;
-    
-    // Add to check-in history
-    invite.checkInHistory.push({
-      checkedInAt: new Date(),
-      checkedInBy: staffUser,
-      actualAttendees: invite.actualAttendees,
-    });
 
-    await invite.save();
+    const committed = await Invite.findOneAndUpdate(
+      {
+        _id:       invite._id,
+        eventId:   invite.eventId,
+        checkedIn: false,          // ← atomic guard: only succeeds if not yet checked in
+      },
+      {
+        $set: {
+          checkedIn:        true,
+          checkedInAt,
+          checkedInBy:      staffUser,
+          status:           'checked-in',
+          actualAttendees:  actualAttendeesCount,
+        },
+        $push: {
+          checkInHistory: {
+            checkedInAt,
+            checkedInBy:     staffUser,
+            actualAttendees: actualAttendeesCount,
+          },
+        },
+      },
+      { new: true }
+    );
 
-    // Release reentrancy lock
+    if (!committed) {
+      // Another backend won the race between our read and this write
+      const current = await Invite.findById(invite._id).select('checkedInAt checkedInBy').lean();
+      return res.status(400).json({
+        error: 'Already checked in',
+        checkedInAt: current?.checkedInAt,
+        checkedInBy: current?.checkedInBy,
+      });
+    }
+
+    // Use the committed document for the rest of the response
+    invite = committed;
+
+    // Release reentrancy lock (best-effort — committed is source of truth regardless)
     if (req.checkInInvite) {
-      await req.checkInInvite.releaseCheckInLock();
+      req.checkInInvite.releaseCheckInLock().catch(() => {});
     }
 
     const io = req.app.get('io');
