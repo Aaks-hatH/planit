@@ -1479,19 +1479,19 @@ function ArticleCard({ article, onClick }) {
 /* ─── BUG REPORT MODAL ───────────────────────────────────────────────────────── */
 
 const CATEGORY_OPTIONS = [
-  { value: 'bug',      label: '🐛 Bug — Something is broken' },
-  { value: 'error',    label: '⚠️ Error — I see an error message' },
-  { value: 'checkin',  label: '📱 Check-in — QR / entry issue' },
-  { value: 'account',  label: '🔑 Account — Password / access issue' },
-  { value: 'feature',  label: '💡 Feature Request' },
-  { value: 'other',    label: '📋 Other' },
+  { value: 'bug',      label: ' Bug — Something is broken' },
+  { value: 'error',    label: ' Error I see an error message' },
+  { value: 'checkin',  label: ' Check-in, QR / entry issue' },
+  { value: 'account',  label: ' Account, Password / access issue' },
+  { value: 'feature',  label: ' Feature Request' },
+  { value: 'other',    label: ' Other' },
 ];
 
 const SEVERITY_OPTIONS = [
-  { value: 'low',      label: '🟢 Low — Minor inconvenience' },
-  { value: 'medium',   label: '🟡 Medium — Something important isn\'t working' },
-  { value: 'high',     label: '🟠 High — Majorly blocking my event' },
-  { value: 'critical', label: '🔴 Critical — Event day emergency' },
+  { value: 'low',      label: ' Low, Minor inconvenience' },
+  { value: 'medium',   label: ' Medium, Something important isn\'t working' },
+  { value: 'high',     label: ' High, Majorly blocking my event' },
+  { value: 'critical', label: ' Critical, Event day emergency' },
 ];
 
 function BugReportModal({ open, onClose }) {
