@@ -83,6 +83,8 @@ export const eventAPI = {
   createInvite:  (eventId, data)      => api.post(`/events/${eventId}/invites`, { guests: [data] }),
   updateInvite:  (eventId, inviteId, data) => api.put(`/events/${eventId}/invites/${inviteId}`, data),
   deleteInvite:  (eventId, inviteId)  => api.delete(`/events/${eventId}/invites/${inviteId}`),
+  importGuestsCsv: (eventId, csv)     => api.post(`/events/${eventId}/invites/import-csv`, { csv }),
+  getActivityLog:  (eventId)          => api.get(`/events/${eventId}/activity-log`),
 
   // Check-in process
   getCheckinCache: (eventId)                    => api.get(`/events/${eventId}/checkin-cache`),
@@ -318,12 +320,6 @@ export const watchdogAPI = {
   getUptimeHistory: () => {
     if (!watchdogAxios) return Promise.resolve(null);
     return watchdogAxios.get('/watchdog/uptime');
-  },
-  testNtfy: (secret) => {
-    if (!watchdogAxios) return Promise.reject(new Error('VITE_WATCHDOG_URL not configured'));
-    return watchdogAxios.post('/watchdog/test-ntfy', {}, {
-      headers: { 'x-test-secret': secret },
-    });
   },
 };
 
