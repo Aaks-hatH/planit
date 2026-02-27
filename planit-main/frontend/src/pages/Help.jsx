@@ -892,7 +892,7 @@ const ARTICLES = [
     content: [
       {
         type: 'intro',
-        text: 'PlanIt\'s backend servers spin down after 15 minutes of inactivity (a Render free-tier limitation) and take 30–60 seconds to restart on the first request after being idle.'
+        text: 'PlanIt\'s backend servers may spin down after 15 minutes of inactivity. But we do take precautions to prevent it.'
       },
       {
         type: 'steps',
