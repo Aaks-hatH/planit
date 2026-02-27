@@ -274,7 +274,7 @@ export default function OrganizerSettings({ eventId, event, onClose, onUpdated }
  ].map(tab => (
  <button
  key={tab.id}
- onClick={() => setActiveTab(tab.id)}
+ onClick={() => { setActiveTab(tab.id); if (tab.id === 'approvals') loadApprovalQueue(); }}
  className={`px-3 py-2.5 text-sm font-medium border-b-2 transition-all -mb-px ${
  activeTab === tab.id
  ? 'text-neutral-900 border-neutral-900'
@@ -402,6 +402,62 @@ export default function OrganizerSettings({ eventId, event, onClose, onUpdated }
  )}
 
  {/* ── RSVP tab ── */}
+ {/* Approvals tab */}
+ {activeTab === 'approvals' && (
+  <div className="space-y-4">
+   {!requireApproval ? (
+    <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl text-sm text-amber-800">
+     <p className="font-semibold mb-1">Join approval is currently off</p>
+     <p className="text-xs">Enable "Require Join Approval" in the Features tab to use this feature.</p>
+    </div>
+   ) : (
+    <>
+     <div className="flex items-center justify-between">
+      <p className="text-sm font-semibold text-neutral-700">Pending join requests</p>
+      <button onClick={loadApprovalQueue} className="flex items-center gap-1 text-xs text-neutral-400 hover:text-neutral-600 transition-colors">
+       <RefreshCw className="w-3.5 h-3.5" /> Refresh
+      </button>
+     </div>
+     {queueLoading ? (
+      <div className="flex items-center justify-center py-8 text-neutral-400 text-sm">Loading…</div>
+     ) : approvalQueue.length === 0 ? (
+      <div className="text-center py-10 text-neutral-400 text-sm">
+       <p className="text-neutral-300 mb-1">No pending requests</p>
+       <p className="text-xs">New requests will appear here automatically</p>
+      </div>
+     ) : (
+      <div className="space-y-2">
+       {approvalQueue.map(req => (
+        <div key={req.username} className="flex items-center gap-3 p-3.5 bg-neutral-50 border border-neutral-200 rounded-xl">
+         <div className="w-9 h-9 rounded-full bg-neutral-200 flex items-center justify-center text-sm font-bold text-neutral-600 flex-shrink-0">
+          {req.username.charAt(0).toUpperCase()}
+         </div>
+         <div className="flex-1 min-w-0">
+          <p className="text-sm font-semibold text-neutral-900 truncate">{req.username}</p>
+          {req.message && <p className="text-xs text-neutral-500 mt-0.5 truncate">"{req.message}"</p>}
+          <p className="text-[10px] text-neutral-400 mt-0.5">
+           {new Date(req.requestedAt).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+          </p>
+         </div>
+         <div className="flex gap-2 flex-shrink-0">
+          <button onClick={() => handleReject(req.username)} disabled={queueActionId === req.username}
+           className="px-2.5 py-1.5 text-xs font-semibold text-neutral-500 border border-neutral-200 rounded-lg hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition-all disabled:opacity-40">
+           Reject
+          </button>
+          <button onClick={() => handleApprove(req.username)} disabled={queueActionId === req.username}
+           className="px-2.5 py-1.5 text-xs font-semibold text-white bg-neutral-900 rounded-lg hover:bg-black transition-all disabled:opacity-40">
+           {queueActionId === req.username ? '…' : 'Approve'}
+          </button>
+         </div>
+        </div>
+       ))}
+      </div>
+     )}
+    </>
+   )}
+  </div>
+ )}
+
  {activeTab === 'rsvp' && (
  <div className="space-y-4">
  <Section title="RSVP Options" icon={CheckCircle} defaultOpen>
