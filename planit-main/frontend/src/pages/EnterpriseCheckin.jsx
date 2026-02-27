@@ -5,7 +5,7 @@ import {
   Keyboard, AlertTriangle, Baby, User, Settings, Lock, Edit2, Trash2,
   Clock, CheckCircle2, Loader2, CheckCircle, Flag, AlertOctagon, XCircle, 
   Mail, Phone, Copy, ExternalLink, Share2, FileText, LogOut, Eye, EyeOff,
-  TrendingUp, ScanLine, BarChart2, Info
+  TrendingUp, ScanLine, BarChart2, Info, Upload, Star, Mic, Shield
 } from 'lucide-react';
 import { eventAPI } from '../services/api';
 import toast from 'react-hot-toast';
@@ -21,6 +21,27 @@ function decodeJWT(token) {
     const base64 = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
     return JSON.parse(atob(base64));
   } catch { return null; }
+}
+
+// ── Guest role badge ──────────────────────────────────────────────────────
+const ROLE_CONFIG = {
+  VIP:     { label: 'VIP',     bg: 'bg-amber-100',   text: 'text-amber-800',   border: 'border-amber-300',   icon: Star  },
+  SPEAKER: { label: 'SPEAKER', bg: 'bg-purple-100',  text: 'text-purple-800',  border: 'border-purple-300',  icon: Mic   },
+  GUEST:   { label: 'GUEST',   bg: 'bg-neutral-100', text: 'text-neutral-600', border: 'border-neutral-200', icon: Shield },
+};
+
+function RoleBadge({ role, size = 'sm' }) {
+  const cfg = ROLE_CONFIG[role] || ROLE_CONFIG.GUEST;
+  const Icon = cfg.icon;
+  const isSm = size === 'sm';
+  return (
+    <span className={`inline-flex items-center gap-1 rounded-md border font-bold uppercase tracking-wide
+      ${cfg.bg} ${cfg.text} ${cfg.border}
+      ${isSm ? 'px-1.5 py-0.5 text-[10px]' : 'px-2.5 py-1 text-xs'}`}>
+      <Icon className={isSm ? 'w-2.5 h-2.5' : 'w-3.5 h-3.5'} />
+      {cfg.label}
+    </span>
+  );
 }
 
 
@@ -187,6 +208,11 @@ function AdmitSuccessScreen({ guest, onDone }) {
             <p className="text-3xl font-semibold text-neutral-700">
               {guest.guestName}
             </p>
+            {guest.guestRole && guest.guestRole !== 'GUEST' && (
+              <div className="mt-3 flex justify-center">
+                <RoleBadge role={guest.guestRole} size="md" />
+              </div>
+            )}
           </div>
           
           {/* Passenger details */}
@@ -455,6 +481,9 @@ function BoardingPass({ guest, security, requiresPin, onAdmit, onDeny, onPinVeri
                 Pass Review
               </p>
               <h2 className="text-3xl font-bold text-neutral-900">{guest.guestName}</h2>
+              <div className="mt-2">
+                <RoleBadge role={guest.guestRole || 'GUEST'} size="md" />
+              </div>
             </div>
             <div className="text-right">
               <p className="text-xs font-bold text-neutral-500 uppercase tracking-wider mb-2">
@@ -805,6 +834,7 @@ function InviteDialog({ invite, eventId, event, onClose, onSave }) {
     guestName: invite?.guestName || '',
     guestEmail: invite?.guestEmail || '',
     guestPhone: invite?.guestPhone || '',
+    guestRole: invite?.guestRole || 'GUEST',
     adults: invite?.adults || 1,
     children: invite?.children || 0,
     notes: invite?.notes || '',
@@ -818,6 +848,15 @@ function InviteDialog({ invite, eventId, event, onClose, onSave }) {
     e.preventDefault();
     if (!formData.guestName.trim()) {
       toast.error('Guest name is required');
+      return;
+    }
+    if (!formData.guestEmail.trim()) {
+      toast.error('Email is required — it is used for duplicate detection and sending invite links');
+      return;
+    }
+    const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRe.test(formData.guestEmail.trim())) {
+      toast.error('Please enter a valid email address');
       return;
     }
     setSaving(true);
@@ -947,6 +986,34 @@ function InviteDialog({ invite, eventId, event, onClose, onSave }) {
               required
             />
           </div>
+          {/* Role picker */}
+          <div>
+            <label className="block text-sm font-semibold mb-1">Guest Role</label>
+            <div className="grid grid-cols-3 gap-2">
+              {['GUEST', 'VIP', 'SPEAKER'].map(role => {
+                const cfg = ROLE_CONFIG[role];
+                const Icon = cfg.icon;
+                const active = formData.guestRole === role;
+                return (
+                  <button
+                    key={role}
+                    type="button"
+                    onClick={() => setFormData({ ...formData, guestRole: role })}
+                    className={`flex flex-col items-center gap-1.5 py-3 rounded-xl border-2 text-xs font-bold uppercase tracking-wide transition-all
+                      ${active
+                        ? `${cfg.bg} ${cfg.text} ${cfg.border} shadow-sm`
+                        : 'border-neutral-200 text-neutral-400 hover:border-neutral-300'
+                      }`}
+                  >
+                    <Icon className="w-4 h-4" />
+                    {role}
+                  </button>
+                );
+              })}
+            </div>
+            <p className="text-xs text-neutral-400 mt-1">Shown to staff at check-in. Defaults to Guest.</p>
+          </div>
+
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-sm font-semibold mb-1">Adults</label>
@@ -970,15 +1037,9 @@ function InviteDialog({ invite, eventId, event, onClose, onSave }) {
             </div>
           </div>
           <div>
-            <label className="block text-sm font-semibold mb-1 flex items-center gap-1.5">
-              Email
-              <span className="relative group cursor-help">
-                <Info className="w-3.5 h-3.5 text-neutral-400" />
-                <span className="absolute left-5 top-1/2 -translate-y-1/2 w-56 bg-neutral-800 text-white text-xs rounded-lg px-3 py-2 leading-relaxed opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-10 shadow-lg">
-                  PlanIt won't automatically email guests added here. Use the Share button after saving to send from your own email.
-                </span>
-              </span>
-              <span className="text-neutral-400 font-normal text-xs">(optional)</span>
+            <label className="block text-sm font-semibold mb-1">
+              Email <span className="text-red-500">*</span>
+              <span className="ml-1.5 text-xs font-normal text-neutral-500">(required)</span>
             </label>
             <input
               type="email"
@@ -986,10 +1047,11 @@ function InviteDialog({ invite, eventId, event, onClose, onSave }) {
               onChange={(e) => setFormData({ ...formData, guestEmail: e.target.value })}
               className="w-full border border-neutral-200 rounded-xl px-4 py-2.5 focus:outline-none focus:border-neutral-400"
               placeholder="john@email.com"
+              required
             />
-            <p className="text-xs text-neutral-400 mt-1 flex items-center gap-1">
+            <p className="text-xs text-neutral-500 mt-1 flex items-center gap-1">
               <Info className="w-3 h-3 flex-shrink-0" />
-              Emails are not automatically sent to guests added here.
+              Used for duplicate detection and sending invite links. PlanIt does not auto-send emails — use the Share button after saving.
             </p>
           </div>
           <div>
@@ -1032,6 +1094,267 @@ function InviteDialog({ invite, eventId, event, onClose, onSave }) {
             </button>
           </div>
         </form>
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// CSV IMPORT DIALOG
+// ═══════════════════════════════════════════════════════════════════════════
+function CsvImportDialog({ eventId, onClose, onImported }) {
+  const [csvText, setCsvText] = useState('');
+  const [importing, setImporting] = useState(false);
+  const [result, setResult] = useState(null);
+  const fileRef = useRef(null);
+
+  const TEMPLATE = `guestName,guestEmail,guestRole,adults,children,securityPin,notes
+Jane Smith,jane@example.com,VIP,1,0,,VIP table reserved
+Bob Jones,bob@example.com,SPEAKER,1,0,,Keynote speaker
+Alice Brown,alice@example.com,GUEST,2,1,,Nut allergy`;
+
+  const handleFile = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.name.endsWith('.csv') && file.type !== 'text/csv') {
+      toast.error('Please upload a .csv file');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = (ev) => setCsvText(ev.target.result || '');
+    reader.readAsText(file);
+  };
+
+  const handleImport = async () => {
+    const trimmed = csvText.trim();
+    if (!trimmed) { toast.error('Paste or upload a CSV first'); return; }
+    setImporting(true);
+    setResult(null);
+    try {
+      const res = await eventAPI.importGuestsCsv(eventId, trimmed);
+      setResult(res.data);
+      if (res.data.imported > 0) {
+        toast.success(`Imported ${res.data.imported} guest${res.data.imported !== 1 ? 's' : ''}`);
+      }
+    } catch (err) {
+      toast.error(err.response?.data?.error || 'Import failed');
+    } finally {
+      setImporting(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={onClose}>
+      <div className="bg-white rounded-2xl w-full max-w-2xl shadow-2xl max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+        <div className="p-6 border-b border-neutral-100 flex items-center justify-between">
+          <div>
+            <h2 className="text-xl font-bold">Import Guests from CSV</h2>
+            <p className="text-sm text-neutral-500 mt-0.5">Bulk-add guests with roles, group sizes, and notes</p>
+          </div>
+          <button onClick={onClose} className="p-1.5 hover:bg-neutral-100 rounded-lg"><X className="w-5 h-5" /></button>
+        </div>
+
+        <div className="p-6 space-y-5">
+          {/* Format guide */}
+          <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 text-sm space-y-2">
+            <p className="font-bold text-blue-900">Required CSV format</p>
+            <p className="text-blue-800 font-mono text-xs leading-relaxed break-all">
+              guestName, <span className="underline decoration-dotted">guestEmail</span>, guestRole, adults, children, securityPin, notes
+            </p>
+            <div className="space-y-1 text-xs text-blue-700">
+              <p><span className="font-bold">guestName</span> — required</p>
+              <p><span className="font-bold">guestEmail</span> — <span className="font-bold text-red-600">required</span>. Used for duplicate detection and sending invite links.</p>
+              <p><span className="font-bold">guestRole</span> — optional. Must be <code className="bg-blue-100 px-1 rounded">GUEST</code>, <code className="bg-blue-100 px-1 rounded">VIP</code>, or <code className="bg-blue-100 px-1 rounded">SPEAKER</code>. Defaults to GUEST.</p>
+              <p><span className="font-bold">adults</span> — optional, defaults to 1</p>
+              <p><span className="font-bold">children</span> — optional, defaults to 0</p>
+              <p><span className="font-bold">securityPin</span> — optional, up to 6 chars</p>
+              <p><span className="font-bold">notes</span> — optional</p>
+            </div>
+          </div>
+
+          {/* Template download */}
+          <button
+            onClick={() => {
+              const blob = new Blob([TEMPLATE], { type: 'text/csv' });
+              const url = URL.createObjectURL(blob);
+              const a = document.createElement('a');
+              a.href = url; a.download = 'guest-import-template.csv'; a.click();
+              URL.revokeObjectURL(url);
+            }}
+            className="flex items-center gap-2 text-sm text-blue-700 font-semibold hover:text-blue-900"
+          >
+            <Upload className="w-4 h-4" />
+            Download template CSV
+          </button>
+
+          {/* File picker */}
+          <div>
+            <input ref={fileRef} type="file" accept=".csv,text/csv" className="hidden" onChange={handleFile} />
+            <button
+              onClick={() => fileRef.current?.click()}
+              className="w-full border-2 border-dashed border-neutral-200 rounded-xl py-6 text-sm text-neutral-500 font-medium hover:border-neutral-400 hover:text-neutral-700 transition-all flex flex-col items-center gap-2"
+            >
+              <Upload className="w-6 h-6" />
+              Click to upload a .csv file, or paste below
+            </button>
+          </div>
+
+          {/* Paste area */}
+          <div>
+            <label className="block text-sm font-semibold mb-1.5">Or paste CSV content</label>
+            <textarea
+              value={csvText}
+              onChange={e => setCsvText(e.target.value)}
+              rows={7}
+              className="w-full border border-neutral-200 rounded-xl px-4 py-3 text-xs font-mono focus:outline-none focus:border-neutral-400 resize-none"
+              placeholder={TEMPLATE}
+              spellCheck={false}
+            />
+          </div>
+
+          {/* Results */}
+          {result && (
+            <div className={`rounded-xl p-4 text-sm space-y-2 ${result.imported > 0 ? 'bg-emerald-50 border border-emerald-200' : 'bg-amber-50 border border-amber-200'}`}>
+              <p className="font-bold">{result.imported} imported, {result.skipped} skipped</p>
+              {result.errors?.length > 0 && (
+                <div className="space-y-1 text-xs text-red-700">
+                  {result.errors.slice(0, 10).map((e, i) => (
+                    <p key={i}>Row {e.row}{e.guestName ? ` (${e.guestName})` : ''}: {e.reason}</p>
+                  ))}
+                  {result.errors.length > 10 && <p>…and {result.errors.length - 10} more</p>}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        <div className="p-6 border-t border-neutral-100 flex gap-3">
+          {result?.imported > 0 ? (
+            <button onClick={onImported} className="flex-1 px-4 py-2.5 bg-neutral-900 text-white rounded-xl font-semibold hover:bg-black">
+              Done
+            </button>
+          ) : (
+            <>
+              <button onClick={onClose} className="flex-1 px-4 py-2.5 border border-neutral-200 rounded-xl font-semibold hover:bg-neutral-50">
+                Cancel
+              </button>
+              <button
+                onClick={handleImport}
+                disabled={importing || !csvText.trim()}
+                className="flex-1 px-4 py-2.5 bg-neutral-900 text-white rounded-xl font-semibold hover:bg-black disabled:opacity-40 flex items-center justify-center gap-2"
+              >
+                {importing ? <><Loader2 className="w-4 h-4 animate-spin" /> Importing…</> : 'Import Guests'}
+              </button>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// ACTIVITY LOG DIALOG
+// ═══════════════════════════════════════════════════════════════════════════
+const ACTION_LABELS = {
+  invite_created:  { label: 'Guest added',      color: 'text-emerald-700 bg-emerald-50 border-emerald-200' },
+  invite_updated:  { label: 'Guest edited',      color: 'text-blue-700 bg-blue-50 border-blue-200' },
+  invite_deleted:  { label: 'Guest removed',     color: 'text-red-700 bg-red-50 border-red-200' },
+  guest_import:    { label: 'CSV import',         color: 'text-purple-700 bg-purple-50 border-purple-200' },
+  checkin:         { label: 'Checked in',         color: 'text-emerald-700 bg-emerald-50 border-emerald-200' },
+  checkin_override:{ label: 'Override check-in',  color: 'text-amber-700 bg-amber-50 border-amber-200' },
+  settings_changed:{ label: 'Settings changed',   color: 'text-neutral-700 bg-neutral-50 border-neutral-200' },
+  staff_added:     { label: 'Staff added',         color: 'text-blue-700 bg-blue-50 border-blue-200' },
+  staff_removed:   { label: 'Staff removed',       color: 'text-red-700 bg-red-50 border-red-200' },
+};
+
+function ActivityLogDialog({ eventId, onClose }) {
+  const [log, setLog] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [filter, setFilter] = useState('all');
+
+  useEffect(() => {
+    eventAPI.getActivityLog(eventId)
+      .then(res => setLog(res.data.log || []))
+      .catch(() => setError('Failed to load activity log'))
+      .finally(() => setLoading(false));
+  }, [eventId]);
+
+  const filtered = filter === 'all' ? log : log.filter(e => e.action === filter);
+
+  const fmt = (ts) => {
+    const d = new Date(ts);
+    return d.toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={onClose}>
+      <div className="bg-white rounded-2xl w-full max-w-2xl shadow-2xl max-h-[85vh] flex flex-col" onClick={e => e.stopPropagation()}>
+        <div className="p-6 border-b border-neutral-100 flex items-center justify-between flex-shrink-0">
+          <div>
+            <h2 className="text-xl font-bold">Activity Log</h2>
+            <p className="text-sm text-neutral-500 mt-0.5">Organizer and staff actions for this event</p>
+          </div>
+          <button onClick={onClose} className="p-1.5 hover:bg-neutral-100 rounded-lg"><X className="w-5 h-5" /></button>
+        </div>
+
+        {/* Filter */}
+        <div className="px-6 py-3 border-b border-neutral-100 flex gap-2 flex-wrap flex-shrink-0">
+          {['all', 'checkin', 'invite_created', 'invite_deleted', 'guest_import'].map(f => (
+            <button
+              key={f}
+              onClick={() => setFilter(f)}
+              className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all
+                ${filter === f ? 'bg-neutral-900 text-white' : 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200'}`}
+            >
+              {f === 'all' ? 'All' : ACTION_LABELS[f]?.label || f}
+            </button>
+          ))}
+        </div>
+
+        <div className="overflow-y-auto flex-1">
+          {loading && (
+            <div className="flex items-center justify-center py-16">
+              <Loader2 className="w-6 h-6 animate-spin text-neutral-400" />
+            </div>
+          )}
+          {error && (
+            <div className="text-center py-16 text-red-500 text-sm">{error}</div>
+          )}
+          {!loading && !error && filtered.length === 0 && (
+            <div className="text-center py-16 text-neutral-400 text-sm">No activity yet</div>
+          )}
+          {!loading && !error && filtered.map((entry, i) => {
+            const cfg = ACTION_LABELS[entry.action] || { label: entry.action, color: 'text-neutral-600 bg-neutral-50 border-neutral-200' };
+            return (
+              <div key={i} className="flex items-start gap-4 px-6 py-4 border-b border-neutral-50 hover:bg-neutral-50 transition-colors">
+                <div className="flex-shrink-0 pt-0.5">
+                  <span className={`inline-block px-2 py-0.5 rounded border text-[10px] font-bold uppercase tracking-wide ${cfg.color}`}>
+                    {cfg.label}
+                  </span>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm text-neutral-800">{entry.details || entry.target || '—'}</p>
+                  <p className="text-xs text-neutral-400 mt-0.5">
+                    <span className="font-semibold text-neutral-600">{entry.actor}</span>
+                    {entry.actorRole && <span className="ml-1 text-neutral-400">({entry.actorRole})</span>}
+                    {entry.target && entry.details && <span className="ml-1">· {entry.target}</span>}
+                  </p>
+                </div>
+                <div className="flex-shrink-0 text-xs text-neutral-400 whitespace-nowrap">
+                  {fmt(entry.timestamp)}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        <div className="p-4 border-t border-neutral-100 flex-shrink-0">
+          <button onClick={onClose} className="w-full px-4 py-2.5 border border-neutral-200 rounded-xl font-semibold text-sm hover:bg-neutral-50">
+            Close
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -1086,6 +1409,8 @@ export default function EnterpriseCheckin() {
   
   const [showInviteDialog, setShowInviteDialog] = useState(false);
   const [editingInvite, setEditingInvite] = useState(null);
+  const [showCsvImport, setShowCsvImport] = useState(false);
+  const [showActivityLog, setShowActivityLog] = useState(false);
   
   const [showSettingsPanel, setShowSettingsPanel] = useState(false);
   const { alerts: secAlerts, addAlert: addSecAlert, addConflicts, dismissAlert: dismissSecAlert, dismissAll: dismissAllSecAlerts } = useSecurityAlerts();
@@ -1590,6 +1915,19 @@ export default function EnterpriseCheckin() {
           }}
         />
       )}
+      {showCsvImport && (
+        <CsvImportDialog
+          eventId={eventId}
+          onClose={() => setShowCsvImport(false)}
+          onImported={() => { setShowCsvImport(false); loadInvites(); loadStats(); }}
+        />
+      )}
+      {showActivityLog && (
+        <ActivityLogDialog
+          eventId={eventId}
+          onClose={() => setShowActivityLog(false)}
+        />
+      )}
       
       <header className="bg-white border-b border-neutral-100 sticky top-0 z-10 shadow-sm">
         <div className="max-w-7xl mx-auto px-6 lg:px-10 h-16 flex items-center justify-between">
@@ -1621,13 +1959,30 @@ export default function EnterpriseCheckin() {
               <span className="hidden sm:inline">Settings</span>
             </button>
             {authState.role === 'organizer' && (
-              <button
-                onClick={() => setShowInviteDialog(true)}
-                className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-xl hover:bg-emerald-100 transition-all"
-              >
-                <Plus className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">Add Guest</span>
-              </button>
+              <>
+                <button
+                  onClick={() => setShowActivityLog(true)}
+                  className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-neutral-600 border border-neutral-200 rounded-xl hover:bg-neutral-50 transition-all"
+                  title="Activity Log"
+                >
+                  <BarChart2 className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">Log</span>
+                </button>
+                <button
+                  onClick={() => setShowCsvImport(true)}
+                  className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-blue-700 bg-blue-50 border border-blue-200 rounded-xl hover:bg-blue-100 transition-all"
+                >
+                  <Upload className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">Import CSV</span>
+                </button>
+                <button
+                  onClick={() => setShowInviteDialog(true)}
+                  className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-xl hover:bg-emerald-100 transition-all"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">Add Guest</span>
+                </button>
+              </>
             )}
             <button
               onClick={() => setShowManual(v => !v)}
@@ -1776,6 +2131,7 @@ export default function EnterpriseCheckin() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
                         <p className="text-base font-semibold text-neutral-900">{invite.guestName}</p>
+                        <RoleBadge role={invite.guestRole || 'GUEST'} />
                         {invite.notes && (
                           <span title={invite.notes} className="ml-1 inline-flex items-center justify-center w-4 h-4 rounded bg-neutral-200 text-neutral-500 text-xs font-bold cursor-help" aria-label="Has notes">N</span>
                         )}
