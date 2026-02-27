@@ -2590,7 +2590,9 @@ export default function Admin() {
   const [showCleanup, setShowCleanup] = useState(false);
 
   useEffect(() => {
-    setAuth(!!localStorage.getItem('adminToken'));
+    const token = localStorage.getItem('adminToken');
+    if (token) api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+    setAuth(!!token);
     setLoading(false);
     const fn = () => { setAuth(false); setStats(null); setEvents([]); };
     window.addEventListener('planit:admin-logout', fn);
@@ -2619,13 +2621,14 @@ export default function Admin() {
     try {
       const r = await adminAPI.login(loginForm.username, loginForm.password);
       localStorage.setItem('adminToken', r.data.token);
+      api.defaults.headers.common['Authorization'] = `Bearer ${r.data.token}`;
       setAuth(true);
       toast.success('Welcome back, Admin');
     } catch (e) { toast.error(e.response?.data?.error || 'Login failed'); }
     finally { setLoggingIn(false); }
   };
 
-  const logout = () => { localStorage.removeItem('adminToken'); setAuth(false); toast.success('Logged out'); };
+  const logout = () => { localStorage.removeItem('adminToken'); delete api.defaults.headers.common['Authorization']; setAuth(false); toast.success('Logged out'); };
 
   const deleteEvent = async (id) => {
     if (!confirm('Permanently delete this event and ALL data? This cannot be undone!')) return;
