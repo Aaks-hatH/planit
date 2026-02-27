@@ -18,10 +18,10 @@ scheduleReverification(); // Re-checks every 4 hours — tampered process cannot
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
+const mongoSanitize = require('express-mongo-sanitize');
 const helmet = require('helmet');
 const compression = require('compression');
 const cookieParser = require('cookie-parser');
-const mongoSanitize = require('express-mongo-sanitize');
 const http = require('http');
 const socketIo = require('socket.io');
 const path = require('path');
@@ -172,10 +172,7 @@ app.use(cors(corsOptions));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(cookieParser());
-// SECURITY FIX: strip MongoDB operators ($gt, $where, etc.) from all incoming
-// request bodies, query strings, and params. express-mongo-sanitize was listed
-// in package.json but was never mounted — NoSQL injection went unsanitized.
-app.use(mongoSanitize());
+app.use(mongoSanitize()); // Strip MongoDB operators from all request bodies/params
 app.use(trafficGuard); // application-layer malicious traffic detection
 app.use('/api/', apiLimiter);
 app.use('/api/', attachResponseSignature); // Sign every API response with the license-derived key
