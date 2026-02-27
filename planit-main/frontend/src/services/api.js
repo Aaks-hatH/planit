@@ -86,6 +86,11 @@ export const eventAPI = {
   importGuestsCsv: (eventId, csv)     => api.post(`/events/${eventId}/invites/import-csv`, { csv }),
   getActivityLog:  (eventId)          => api.get(`/events/${eventId}/activity-log`),
 
+  // Approval queue (requireApproval feature)
+  getApprovalQueue:    (eventId)           => api.get(`/events/${eventId}/approval-queue`),
+  approveParticipant:  (eventId, username) => api.post(`/events/${eventId}/approval-queue/${encodeURIComponent(username)}/approve`),
+  rejectParticipant:   (eventId, username) => api.post(`/events/${eventId}/approval-queue/${encodeURIComponent(username)}/reject`),
+
   // Check-in process
   getCheckinCache: (eventId)                    => api.get(`/events/${eventId}/checkin-cache`),
   verifyScan:    (eventId, inviteCode)        => api.get(`/events/${eventId}/verify-scan/${inviteCode}`),
