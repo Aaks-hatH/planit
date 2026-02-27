@@ -5,7 +5,7 @@ import {
   Calendar, Users, MessageSquare, BarChart3, FileText, Shield, Copy, Check, Lock,
   ArrowRight, Link, Eye, EyeOff, ChevronRight, Zap, Clock,
   CheckCircle2, TrendingUp, ListChecks, Timer,
-  Brain, ArrowUpRight
+  Brain, ArrowUpRight, AlertCircle
 } from 'lucide-react';
 import { eventAPI } from '../services/api';
 import toast from 'react-hot-toast';
@@ -944,6 +944,7 @@ export default function Home() {
   const [created, setCreated] = useState(null);
   const [showPassword, setShowPassword] = useState(false);
   const [showAccountPassword, setShowAccountPassword] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState({});
 
   const handleTitleChange = (e) => {
     const title = e.target.value;
@@ -952,26 +953,74 @@ export default function Home() {
   const update = (field) => (e) =>
     setFormData(prev => ({ ...prev, [field]: e.target.value, ...(field === 'subdomain' ? { _subdomainTouched: true } : {}) }));
 
+  // Sanitise a string: trim whitespace, collapse internal whitespace
+  const sanitize = (str) => (str || '').trim().replace(/\s+/g, ' ');
+
   const handleSubmit = async (e) => {
-    e.preventDefault(); setLoading(true);
+    e.preventDefault();
+
+    // ── Client-side field validation ──────────────────────────────────────
+    const errs = {};
+    if (!formData.title.trim())            errs.title          = 'Event title is required.';
+    if (!formData.date)                    errs.date           = 'Date and time is required.';
+    if (!formData.timezone)                errs.timezone       = 'Timezone is required.';
+    if (!formData.organizerName.trim())    errs.organizerName  = 'Your name is required.';
+    if (!formData.organizerEmail.trim())   errs.organizerEmail = 'Your email is required.';
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.organizerEmail.trim()))
+                                           errs.organizerEmail = 'Please enter a valid email address.';
+    if (!formData.accountPassword)         errs.accountPassword = 'Account password is required.';
+    else if (formData.accountPassword.length < 4)
+                                           errs.accountPassword = 'Password must be at least 4 characters.';
+
+    if (Object.keys(errs).length > 0) {
+      setFieldErrors(errs);
+      // Scroll to first error
+      const firstField = document.querySelector('.field-error');
+      if (firstField) firstField.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      return;
+    }
+    setFieldErrors({});
+    setLoading(true);
+
     const dateValue = formData.date ? localDateTimeToUTC(formData.date, formData.timezone) : formData.date;
     const payload = {
-      ...formData,
-      date: dateValue,
-      timezone: formData.timezone,
-      subdomain: formData.subdomain || makeSubdomain(formData.title) || `event-${Date.now()}`,
-      isEnterpriseMode: mode === 'enterprise'
+      title:          sanitize(formData.title),
+      description:    sanitize(formData.description),
+      date:           dateValue,
+      timezone:       formData.timezone,
+      location:       sanitize(formData.location),
+      organizerName:  sanitize(formData.organizerName),
+      organizerEmail: sanitize(formData.organizerEmail),
+      accountPassword:formData.accountPassword,
+      password:       formData.password || undefined,
+      subdomain:      formData.subdomain || makeSubdomain(formData.title) || `event-${Date.now()}`,
+      isEnterpriseMode: mode === 'enterprise',
+      maxParticipants: formData.maxParticipants,
     };
-    delete payload._subdomainTouched;
     try {
       const response = await eventAPI.create(payload);
       localStorage.setItem('eventToken', response.data.token);
-      localStorage.setItem('username', formData.organizerName);
+      localStorage.setItem('username', sanitize(formData.organizerName));
       setCreated(response.data.event);
     } catch (error) {
-      const msg = error.response?.data?.error || 'Failed to create event';
-      if (msg.includes('already taken')) setFormData(prev => ({ ...prev, subdomain: makeSubdomain(prev.title) }));
-      toast.error(msg);
+      const data = error.response?.data;
+      // Map server field errors to the UI
+      if (data?.errors && Array.isArray(data.errors)) {
+        const serverErrs = {};
+        data.errors.forEach(e => {
+          const path = e.path || e.param || '';
+          serverErrs[path] = e.msg || e.message || 'Invalid value';
+        });
+        setFieldErrors(serverErrs);
+      } else {
+        const msg = data?.error || 'Failed to create event';
+        if (msg.includes('already taken')) {
+          setFieldErrors({ subdomain: 'This URL is already taken — try a different name.' });
+          setFormData(prev => ({ ...prev, subdomain: makeSubdomain(prev.title) }));
+        } else {
+          toast.error(msg);
+        }
+      }
     } finally { setLoading(false); }
   };
 
@@ -1411,7 +1460,13 @@ export default function Home() {
                     <form onSubmit={handleSubmit} className="space-y-6">
                       <div>
                         <label className="block text-sm font-bold text-neutral-300 mb-2">Event title <span className="text-red-400">*</span></label>
-                        <input type="text" required className="dark-input" placeholder="Summer Company Retreat 2025" value={formData.title} onChange={handleTitleChange} />
+                        <input type="text" required
+                          className={`dark-input ${fieldErrors.title ? 'border-red-500 focus:border-red-400' : ''}`}
+                          placeholder="Summer Company Retreat 2025"
+                          value={formData.title}
+                          onChange={(e) => { handleTitleChange(e); if (fieldErrors.title) setFieldErrors(p => ({...p, title: ''})); }}
+                        />
+                        {fieldErrors.title && <p className="field-error text-xs text-red-400 mt-1.5 flex items-center gap-1"><AlertCircle className="w-3 h-3" />{fieldErrors.title}</p>}
                         {formData.title && formData.subdomain && (
                           <div className="mt-3 space-y-1.5">
                             <label className="block text-xs font-semibold text-neutral-500 uppercase tracking-widest">
@@ -1455,7 +1510,12 @@ export default function Home() {
                       <div className="grid grid-cols-2 gap-4">
                         <div>
                           <label className="block text-sm font-bold text-neutral-300 mb-2">Date and time <span className="text-red-400">*</span></label>
-                          <input type="datetime-local" required className="dark-input" value={formData.date} onChange={update('date')} />
+                          <input type="datetime-local" required
+                            className={`dark-input ${fieldErrors.date ? 'border-red-500 focus:border-red-400' : ''}`}
+                            value={formData.date}
+                            onChange={(e) => { update('date')(e); setFieldErrors(p => ({...p, date: ''})); }}
+                          />
+                          {fieldErrors.date && <p className="field-error text-xs text-red-400 mt-1">{fieldErrors.date}</p>}
                         </div>
                         <div>
                           <label className="block text-sm font-bold text-neutral-300 mb-2">Timezone <span className="text-red-400">*</span></label>
@@ -1473,11 +1533,23 @@ export default function Home() {
                       <div className="grid grid-cols-2 gap-4">
                         <div>
                           <label className="block text-sm font-bold text-neutral-300 mb-2">Your name <span className="text-red-400">*</span></label>
-                          <input type="text" required className="dark-input" placeholder="Alex Smith" value={formData.organizerName} onChange={update('organizerName')} />
+                          <input type="text" required
+                            className={`dark-input ${fieldErrors.organizerName ? 'border-red-500 focus:border-red-400' : ''}`}
+                            placeholder="Alex Smith"
+                            value={formData.organizerName}
+                            onChange={(e) => { update('organizerName')(e); setFieldErrors(p => ({...p, organizerName: ''})); }}
+                          />
+                          {fieldErrors.organizerName && <p className="field-error text-xs text-red-400 mt-1">{fieldErrors.organizerName}</p>}
                         </div>
                         <div>
                           <label className="block text-sm font-bold text-neutral-300 mb-2">Your email <span className="text-red-400">*</span></label>
-                          <input type="email" required className="dark-input" placeholder="alex@company.com" value={formData.organizerEmail} onChange={update('organizerEmail')} />
+                          <input type="email" required
+                            className={`dark-input ${fieldErrors.organizerEmail ? 'border-red-500 focus:border-red-400' : ''}`}
+                            placeholder="alex@company.com"
+                            value={formData.organizerEmail}
+                            onChange={(e) => { update('organizerEmail')(e); setFieldErrors(p => ({...p, organizerEmail: ''})); }}
+                          />
+                          {fieldErrors.organizerEmail && <p className="field-error text-xs text-red-400 mt-1">{fieldErrors.organizerEmail}</p>}
                         </div>
                       </div>
                       <div>
@@ -1485,12 +1557,21 @@ export default function Home() {
                           <span className="flex items-center gap-2"><Lock className="w-4 h-4 text-neutral-500" />Account Password <span className="text-red-400">*</span></span>
                         </label>
                         <div className="relative">
-                          <input type={showAccountPassword ? 'text' : 'password'} required className="dark-input pr-12" placeholder="Create a secure password (min 4 characters)" value={formData.accountPassword} onChange={update('accountPassword')} minLength={4} />
+                          <input type={showAccountPassword ? 'text' : 'password'} required
+                            className={`dark-input pr-12 ${fieldErrors.accountPassword ? 'border-red-500 focus:border-red-400' : ''}`}
+                            placeholder="Create a secure password (min 4 characters)"
+                            value={formData.accountPassword}
+                            onChange={(e) => { update('accountPassword')(e); setFieldErrors(p => ({...p, accountPassword: ''})); }}
+                            minLength={4}
+                          />
                           <button type="button" onClick={() => setShowAccountPassword(!showAccountPassword)} className="absolute right-4 top-1/2 -translate-y-1/2 text-neutral-500 hover:text-neutral-300 transition-colors">
                             {showAccountPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                           </button>
                         </div>
-                        <p className="text-xs text-neutral-600 mt-2">Required to access this event from other devices or browsers</p>
+                        {fieldErrors.accountPassword
+                          ? <p className="field-error text-xs text-red-400 mt-2 flex items-center gap-1"><AlertCircle className="w-3 h-3" />{fieldErrors.accountPassword}</p>
+                          : <p className="text-xs text-neutral-600 mt-2">Required to access this event from other devices or browsers</p>
+                        }
                       </div>
                       <div>
                         <label className="block text-sm font-bold text-neutral-300 mb-2">
