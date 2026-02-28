@@ -73,11 +73,14 @@ const BugReport = mongoose.model('BugReport', bugReportSchema);
 // ══════════════════════════════════════════════════════════════════════════
 // TODO fix
 async function sendNtfyNotification(report) {
-  const topic = process.env.NTFY_URL;
-  if (!topic) {
+  const ntfyEnv = process.env.NTFY_URL;
+  if (!ntfyEnv) {
     console.warn('[bug-reports] NTFY_URL not set — skipping push notification');
     return;
   }
+  // NTFY_URL can be either a full URL (https://ntfy.sh/my-topic) or a bare
+  // topic name (my-topic). Handle both so a 404 isn't silently swallowed.
+  const ntfyEndpoint = ntfyEnv.startsWith('http') ? ntfyEnv : `https://ntfy.sh/${ntfyEnv}`;
 
   const severityPrefix = {
     low: '[LOW]', medium: '[MEDIUM]', high: '[HIGH]', critical: '[CRITICAL]',
@@ -113,7 +116,7 @@ async function sendNtfyNotification(report) {
   }
 
   try {
-    await axios.post(`https://ntfy.sh/${topic}`, body, { headers, timeout: 8000 });
+    await axios.post(ntfyEndpoint, body, { headers, timeout: 8000 });
     console.log(`[bug-reports] ntfy notification sent for report from ${report.email}`);
   } catch (err) {
     // Never let notification failure break the user's submission
