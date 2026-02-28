@@ -5,7 +5,7 @@ import {
   Keyboard, AlertTriangle, Baby, User, Settings, Lock, Edit2, Trash2,
   Clock, CheckCircle2, Loader2, CheckCircle, Flag, AlertOctagon, XCircle, 
   Mail, Phone, Copy, ExternalLink, Share2, FileText, LogOut, Eye, EyeOff,
-  TrendingUp, ScanLine, BarChart2, Info, Upload, Star, Mic, Shield
+  TrendingUp, ScanLine, BarChart2, Info, Upload, Star, Mic, Shield, MapPin,
 } from 'lucide-react';
 import { eventAPI } from '../services/api';
 import toast from 'react-hot-toast';
@@ -14,6 +14,9 @@ import SecuritySettingsPanel from '../components/SecuritySettingsPanel';
 import socketService from '../services/socket';
 import offlineCheckin from '../services/offlineCheckin';
 import SecurityAlerts, { useSecurityAlerts } from '../components/SecurityAlerts';
+import WalkieTalkieButton from '../components/WalkieTalkieButton';
+import SeatingMap from '../components/SeatingMap';
+import { useWalkieTalkie } from '../hooks/useWalkieTalkie';
 
 // Simple JWT decode (not for security — only for reading role/username from stored token)
 function decodeJWT(token) {
@@ -167,7 +170,7 @@ function StaffLoginScreen({ eventId, eventTitle, onLogin }) {
 // ═══════════════════════════════════════════════════════════════════════════
 // SUCCESS SCREEN
 // ═══════════════════════════════════════════════════════════════════════════
-function AdmitSuccessScreen({ guest, onDone }) {
+function AdmitSuccessScreen({ guest, tableInfo, onDone, onShowMap }) {
   const [countdown, setCountdown] = useState(5);
   const [paused, setPaused] = useState(false);
 
@@ -211,6 +214,25 @@ function AdmitSuccessScreen({ guest, onDone }) {
             {guest.guestRole && guest.guestRole !== 'GUEST' && (
               <div className="mt-3 flex justify-center">
                 <RoleBadge role={guest.guestRole} size="md" />
+              </div>
+            )}
+
+            {/* ── Table assignment callout ── */}
+            {tableInfo && (
+              <div className="mt-6 inline-flex items-center gap-3 px-5 py-3 bg-emerald-50 border-2 border-emerald-300 rounded-xl">
+                <MapPin className="w-5 h-5 text-emerald-600 flex-shrink-0" />
+                <div className="text-left">
+                  <p className="text-xs font-bold text-emerald-700 uppercase tracking-wide">Table Assignment</p>
+                  <p className="text-lg font-black text-emerald-900">{tableInfo.label}</p>
+                </div>
+                {onShowMap && (
+                  <button
+                    onClick={onShowMap}
+                    className="ml-2 px-3 py-1.5 bg-emerald-600 text-white text-xs font-bold rounded-lg hover:bg-emerald-700 transition-all"
+                  >
+                    Show on Map
+                  </button>
+                )}
               </div>
             )}
           </div>
@@ -492,6 +514,17 @@ function BoardingPass({ guest, security, requiresPin, onAdmit, onDeny, onPinVeri
               <p className="text-2xl font-mono font-bold text-neutral-900">{guest.inviteCode}</p>
             </div>
           </div>
+
+          {/* Table assignment banner */}
+          {guest.tableId && (
+            <div className="mt-4 flex items-center gap-2.5 px-4 py-2.5 bg-emerald-50 border border-emerald-200 rounded-xl">
+              <MapPin className="w-4 h-4 text-emerald-600 flex-shrink-0" />
+              <div>
+                <p className="text-xs font-bold text-emerald-700 uppercase tracking-wide">Table Assignment</p>
+                <p className="text-base font-black text-emerald-900">{guest.tableLabel || guest.tableId}</p>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Body */}
@@ -1363,6 +1396,9 @@ function ActivityLogDialog({ eventId, onClose }) {
 // ═══════════════════════════════════════════════════════════════════════════
 // MAIN COMPONENT
 // ═══════════════════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════════════
+// MAIN COMPONENT
+// ═══════════════════════════════════════════════════════════════════════════
 export default function EnterpriseCheckin() {
   const { eventId } = useParams();
   const navigate = useNavigate();
@@ -1418,6 +1454,24 @@ export default function EnterpriseCheckin() {
   const [pendingSync, setPendingSync] = useState(0);
   const [cacheReady, setCacheReady]   = useState(false);
 
+  // ── Seating map state ────────────────────────────────────────────────────
+  const [seatingData,    setSeatingData]    = useState(null); // { seatingMap, guestsByTable }
+  const [showSeatingMap, setShowSeatingMap] = useState(false);
+  const [seatingFocusId, setSeatingFocusId] = useState(null);
+  const [seatingIsSaving, setSeatingIsSaving] = useState(false);
+
+  // ── Socket ref (needed by walkie-talkie hook) ────────────────────────────
+  const socketRef = useRef(null);
+
+  // ── Walkie-talkie ────────────────────────────────────────────────────────
+  const token = authState.ready ? (localStorage.getItem('eventToken') || '') : '';
+  const walkie = useWalkieTalkie(
+    socketRef.current,
+    eventId,
+    token,
+    authState.username || ''
+  );
+
   useEffect(() => {
     if (eventId && authState.ready) {
       loadAllData();
@@ -1427,10 +1481,12 @@ export default function EnterpriseCheckin() {
   // Real-time socket updates + offline cache bootstrap
   useEffect(() => {
     if (!eventId || !authState.ready) return;
-    const token = localStorage.getItem('eventToken');
-    if (!token) return;
+    const storedToken = localStorage.getItem('eventToken');
+    if (!storedToken) return;
 
-    const socket = socketService.connect(token);
+    const socket = socketService.connect(storedToken);
+    socketRef.current = socket;
+
     if (socket) {
       socket.emit('join_event', eventId);
       socket.on('guest_checked_in', () => {
@@ -1439,6 +1495,19 @@ export default function EnterpriseCheckin() {
       });
       // Security alerts from server antifraud middleware
       socket.on('security_alert', addSecAlert);
+
+      // ── Seating real-time events ────────────────────────────────────────
+      socket.on('seating_map_updated', ({ seatingMap }) => {
+        setSeatingData(prev => prev ? { ...prev, seatingMap } : { seatingMap, guestsByTable: {} });
+      });
+      socket.on('seating_assignments_updated', () => {
+        loadSeating();
+      });
+      socket.on('guest_table_updated', ({ inviteId, tableId, tableLabel }) => {
+        setInvites(prev => prev.map(i =>
+          i._id === inviteId ? { ...i, tableId, tableLabel } : i
+        ));
+      });
     }
 
     // ── Offline cache: load from DB immediately, then refresh from server ──
@@ -1485,6 +1554,9 @@ export default function EnterpriseCheckin() {
       if (socket) {
         socket.off('guest_checked_in');
         socket.off('security_alert', addSecAlert);
+        socket.off('seating_map_updated');
+        socket.off('seating_assignments_updated');
+        socket.off('guest_table_updated');
       }
       window.removeEventListener('online',  handleOnline);
       window.removeEventListener('offline', handleOffline);
@@ -1503,6 +1575,7 @@ export default function EnterpriseCheckin() {
         }
       }
       if (e.key === 'Escape') {
+        if (showSeatingMap) { setShowSeatingMap(false); return; }
         if (scanMode) setScanMode(false);
         if (showManual) setShowManual(false);
         if (showSettingsPanel) setShowSettingsPanel(false);
@@ -1511,7 +1584,43 @@ export default function EnterpriseCheckin() {
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [scanMode, currentGuest, showAdmitSuccess, showDenyScreen, showOverrideDialog, showManual, showSettingsPanel, showInviteDialog]);
+  }, [scanMode, currentGuest, showAdmitSuccess, showDenyScreen, showOverrideDialog, showManual, showSettingsPanel, showInviteDialog, showSeatingMap]);
+
+  // ── Seating guest-assignment events dispatched by SeatingMap component ───
+  useEffect(() => {
+    const onAssign = async (e) => {
+      const { inviteId, tableId, tableLabel } = e.detail;
+      try {
+        await eventAPI.assignGuestTable(eventId, inviteId, tableId, tableLabel);
+        setInvites(prev => prev.map(i =>
+          i._id === inviteId ? { ...i, tableId, tableLabel } : i
+        ));
+        await loadSeating();
+        toast.success('Guest assigned to table');
+      } catch {
+        toast.error('Failed to assign guest');
+      }
+    };
+    const onUnassign = async (e) => {
+      const { inviteId } = e.detail;
+      try {
+        await eventAPI.assignGuestTable(eventId, inviteId, null, null);
+        setInvites(prev => prev.map(i =>
+          i._id === inviteId ? { ...i, tableId: null, tableLabel: null } : i
+        ));
+        await loadSeating();
+        toast.success('Guest unassigned');
+      } catch {
+        toast.error('Failed to unassign guest');
+      }
+    };
+    window.addEventListener('seating:assignGuest',   onAssign);
+    window.addEventListener('seating:unassignGuest', onUnassign);
+    return () => {
+      window.removeEventListener('seating:assignGuest',   onAssign);
+      window.removeEventListener('seating:unassignGuest', onUnassign);
+    };
+  }, [eventId]);
 
   const handleStaffLogin = ({ token, role, username }) => {
     setAuthState({ ready: true, role, username });
@@ -1539,6 +1648,9 @@ export default function EnterpriseCheckin() {
       
       console.log('[checkin] Loading settings...');
       await loadSettings();
+
+      // Non-blocking — seating may not be enabled yet
+      loadSeating().catch(() => {});
       
       console.log('✅ All data loaded successfully');
     } catch (error) {
@@ -1591,6 +1703,15 @@ export default function EnterpriseCheckin() {
     } catch (error) {
       console.error('Failed to load settings:', error);
       setSettings({});
+    }
+  };
+
+  const loadSeating = async () => {
+    try {
+      const response = await eventAPI.getSeatingMap(eventId);
+      setSeatingData(response.data);
+    } catch {
+      // seating not yet enabled — silently ignore
     }
   };
   
@@ -1714,8 +1835,15 @@ export default function EnterpriseCheckin() {
         actualAttendees: currentGuest.groupSize,
         pinVerified,
       });
-      setAdmittedGuest(response.data.invite);
+      const admitted = response.data.invite;
+      setAdmittedGuest(admitted);
       setCurrentGuest(null);
+
+      // If the admitted guest has a table and the seating map is enabled, prepare auto-focus
+      if (admitted.tableId && seatingData?.seatingMap?.enabled) {
+        setSeatingFocusId(admitted.tableId);
+      }
+
       setShowAdmitSuccess(true);
       
       // Immediate refresh for real-time stats (no setTimeout)
@@ -1726,6 +1854,13 @@ export default function EnterpriseCheckin() {
       toast.error(error.response?.data?.error || 'Check-in failed');
       setCurrentGuest(null);
     }
+  };
+
+  // Called from AdmitSuccessScreen "Show on Map" button
+  const handleShowMap = () => {
+    setShowAdmitSuccess(false);
+    setShowSeatingMap(true);
+    // seatingFocusId already set in handleAdmit
   };
   
   const handleDenyFromBoarding = () => {
@@ -1765,6 +1900,25 @@ export default function EnterpriseCheckin() {
     setAdmittedGuest(null);
     setDenyDetails(null);
     setPinVerified(false);
+    setSeatingFocusId(null);
+  };
+
+  const handleSaveSeatingMap = async (newObjects) => {
+    setSeatingIsSaving(true);
+    try {
+      await eventAPI.saveSeatingMap(eventId, {
+        enabled: true,
+        objects: newObjects,
+        canvasW: 1000,
+        canvasH: 700,
+      });
+      await loadSeating();
+      toast.success('Seating map saved');
+    } catch (err) {
+      toast.error(err.response?.data?.error || 'Failed to save seating map');
+    } finally {
+      setSeatingIsSaving(false);
+    }
   };
   
   const handleDeleteInvite = async (inviteId) => {
@@ -1844,10 +1998,22 @@ export default function EnterpriseCheckin() {
       </div>
     );
   }
+
+  const seatingEnabled = seatingData?.seatingMap?.enabled;
+  const tableInfoForAdmitted = admittedGuest?.tableId
+    ? { id: admittedGuest.tableId, label: admittedGuest.tableLabel || admittedGuest.tableId }
+    : null;
   
   return (
     <div className="min-h-screen bg-neutral-50">
-      {showAdmitSuccess && admittedGuest && <AdmitSuccessScreen guest={admittedGuest} onDone={resetScan} />}
+      {showAdmitSuccess && admittedGuest && (
+        <AdmitSuccessScreen
+          guest={admittedGuest}
+          tableInfo={tableInfoForAdmitted}
+          onDone={resetScan}
+          onShowMap={tableInfoForAdmitted ? handleShowMap : undefined}
+        />
+      )}
       {showDenyScreen && denyDetails && (
         <DenyScreen
           reason={denyDetails.reason}
@@ -1928,6 +2094,20 @@ export default function EnterpriseCheckin() {
           onClose={() => setShowActivityLog(false)}
         />
       )}
+
+      {/* ── Seating map modal ── */}
+      {showSeatingMap && seatingData && (
+        <SeatingMap
+          mode={authState.role === 'organizer' ? 'editor' : 'display'}
+          objects={seatingData.seatingMap?.objects || []}
+          guestsByTable={seatingData.guestsByTable || {}}
+          allGuests={authState.role === 'organizer' ? invites : []}
+          focusTableId={seatingFocusId}
+          onSave={handleSaveSeatingMap}
+          onClose={() => { setShowSeatingMap(false); setSeatingFocusId(null); }}
+          isSaving={seatingIsSaving}
+        />
+      )}
       
       <header className="bg-white border-b border-neutral-100 sticky top-0 z-10 shadow-sm">
         <div className="max-w-7xl mx-auto px-6 lg:px-10 h-16 flex items-center justify-between">
@@ -1958,6 +2138,18 @@ export default function EnterpriseCheckin() {
               <Settings className="w-3.5 h-3.5" />
               <span className="hidden sm:inline">Settings</span>
             </button>
+
+            {/* Seating map button — only shown when map is enabled */}
+            {seatingEnabled && (
+              <button
+                onClick={() => { setSeatingFocusId(null); setShowSeatingMap(true); }}
+                className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-violet-700 bg-violet-50 border border-violet-200 rounded-xl hover:bg-violet-100 transition-all"
+              >
+                <MapPin className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Seating</span>
+              </button>
+            )}
+
             {authState.role === 'organizer' && (
               <>
                 <button
@@ -2132,6 +2324,13 @@ export default function EnterpriseCheckin() {
                       <div className="flex items-center gap-2 flex-wrap">
                         <p className="text-base font-semibold text-neutral-900">{invite.guestName}</p>
                         <RoleBadge role={invite.guestRole || 'GUEST'} />
+                        {/* Table assignment badge */}
+                        {invite.tableLabel && (
+                          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-violet-100 text-violet-700 text-[10px] font-bold border border-violet-200">
+                            <MapPin className="w-2.5 h-2.5" />
+                            {invite.tableLabel}
+                          </span>
+                        )}
                         {invite.notes && (
                           <span title={invite.notes} className="ml-1 inline-flex items-center justify-center w-4 h-4 rounded bg-neutral-200 text-neutral-500 text-xs font-bold cursor-help" aria-label="Has notes">N</span>
                         )}
@@ -2166,6 +2365,15 @@ export default function EnterpriseCheckin() {
                             <Clock className="w-3 h-3" />
                             {new Date(invite.checkedInAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                           </p>
+                          {/* Show on map shortcut for checked-in guests with a table */}
+                          {invite.tableId && seatingEnabled && (
+                            <button
+                              onClick={() => { setSeatingFocusId(invite.tableId); setShowSeatingMap(true); }}
+                              className="mt-1 text-[10px] text-violet-600 hover:text-violet-800 font-semibold flex items-center gap-0.5 justify-end"
+                            >
+                              <MapPin className="w-2.5 h-2.5" /> Show table
+                            </button>
+                          )}
                         </div>
                       ) : (
                         <>
@@ -2232,6 +2440,9 @@ export default function EnterpriseCheckin() {
         onDismiss={dismissSecAlert}
         onDismissAll={dismissAllSecAlerts}
       />
+
+      {/* ── Walkie-talkie PTT button — visible to all staff/organizers ── */}
+      {authState.ready && <WalkieTalkieButton walkie={walkie} />}
     </div>
   );
 }
