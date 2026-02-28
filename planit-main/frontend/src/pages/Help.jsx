@@ -11,7 +11,8 @@ import {
   UserCheck, Key, Link, Download, Upload, Trash2, Eye,
   TrendingUp, Ban, Phone, CheckSquare, List, Hash,
   LifeBuoy, Cpu, Globe, Filter, ChevronUp, ArrowRight,
-  LogOut, Copy, Navigation, Timer, PieChart, ClipboardList, Send, CheckCircle, Loader
+  LogOut, Copy, Navigation, Timer, PieChart, ClipboardList, Send, CheckCircle, Loader,
+  MapPin, Volume2, Radio, Mic
 } from 'lucide-react';
 
 /* ─── DATA ─────────────────────────────────────────────────────────────────── */
@@ -1358,6 +1359,89 @@ const ARTICLES_EXTRA = [
     ],
   },
 
+  // ── WALKIE-TALKIE & SEATING MAP ────────────────────────────────────────
+  {
+    id: 'ent-walkie',
+    category: 'Enterprise & Check-in',
+    title: 'Walkie-talkie PTT: real-time voice for staff',
+    icon: Volume2,
+    tags: ['walkie talkie', 'ptt', 'push to talk', 'voice', 'radio', 'comms', 'staff', 'broadcast', 'audio'],
+    content: [
+      {
+        type: 'intro',
+        text: 'The walkie-talkie feature lets check-in staff broadcast voice to the entire team with a single button — no app switching, no phone call, no leaving the check-in screen.',
+      },
+      {
+        type: 'steps',
+        items: [
+          { title: 'Find the PTT button', body: 'A floating push-to-talk button appears in the bottom corner of the check-in dashboard for all authenticated staff and organizers. It is only visible after logging in — guests and unauthenticated visitors cannot see or use it.' },
+          { title: 'Hold to transmit', body: 'Press and hold the PTT button to start broadcasting your voice. A recording indicator appears on your screen and a "transmitting" badge appears on all other staff devices showing your username.' },
+          { title: 'Release to stop', body: 'Release the button to end your transmission. Audio stops immediately. The next staff member can transmit right after — there is no talk-lock or delay.' },
+          { title: 'Receiving audio', body: 'When another staff member is transmitting, audio plays automatically on your device through the speaker or earpiece. No button press or confirmation required — it works like a real radio.' },
+          { title: 'Speaker identification', body: 'Every transmission is labeled with the sender\'s username. You always know who is speaking without asking.' },
+          { title: 'Grant microphone permission', body: 'On first use, your browser will ask permission to access the microphone. Click Allow. If you accidentally denied it, go to your browser\'s site settings for planitapp.onrender.com and enable the microphone.' },
+        ],
+      },
+      {
+        type: 'callout',
+        variant: 'info',
+        text: 'The walkie-talkie uses the same Socket.IO connection as check-in events — no extra setup or pairing needed. It works over venue WiFi, mobile data, or a hotspot.',
+      },
+      {
+        type: 'faq',
+        items: [
+          { q: 'Can guests hear the walkie-talkie?', a: 'No. The PTT channel is only accessible to authenticated staff and organizers. Unauthenticated sessions cannot access it.' },
+          { q: 'What if two people transmit at the same time?', a: 'Audio from both transmitters plays on all receiving devices simultaneously. Unlike a physical radio there is no collision lock — if two people hold PTT at once, both voices play at the same time. Coordinate verbally as you would on any radio channel.' },
+          { q: 'Does it work when the internet is slow?', a: 'Audio quality degrades gracefully on slow connections — the stream continues at lower quality rather than dropping entirely. On very poor connections there may be noticeable audio artifacts, but the transmission still goes through.' },
+        ],
+      },
+    ],
+  },
+  {
+    id: 'ent-seating',
+    category: 'Enterprise & Check-in',
+    title: 'Seating map: designing your floor plan and assigning tables',
+    icon: MapPin,
+    tags: ['seating', 'seating map', 'table', 'seat', 'floor plan', 'assign', 'table assignment', 'layout', 'map', 'canvas'],
+    content: [
+      {
+        type: 'intro',
+        text: 'The seating map lets you design a visual layout of your venue, assign guests to tables, and monitor real-time fill status during check-in — all from the check-in dashboard.',
+      },
+      {
+        type: 'steps',
+        items: [
+          { title: 'Open the seating map editor', body: 'In the check-in dashboard header, click the purple "Seating" button. It only appears once a seating map has been enabled. If you don\'t see it, open the map editor and create your first table — saving it activates the button.' },
+          { title: 'Create tables on the canvas', body: 'In editor mode (organizer only), drag table objects from the palette onto the canvas. Each table gets a unique label (e.g. "Table 1", "VIP Table"). You can drag tables to reposition them and use the corner handles to resize.' },
+          { title: 'Label and save your layout', body: 'Give each table a clear label — guests will see this label on their invite page and on the admission screen. When the layout looks right, click Save. The layout is broadcast to all connected staff devices immediately.' },
+          { title: 'Assign guests to tables', body: 'With the map open in editor mode, you can drag guest names from the assignment panel onto tables on the canvas. Each assignment is saved instantly. You can also assign a table when adding or editing a guest record from the main guest list.' },
+          { title: 'View table fill status during check-in', body: 'Staff can open the seating map in display mode at any time. Each table shows a live count of how many assigned guests have checked in vs total assigned. Tables that are nearly full show an amber indicator; full tables show green.' },
+          { title: 'Show a guest their table after check-in', body: 'When a guest is admitted, if they have a table assignment, the admission success screen shows their table name and a "Show on Map" button. Tap it to open the map with their table highlighted — use this to point the guest in the right direction immediately.' },
+          { title: 'Find a table from the guest list', body: 'For any checked-in guest with a table assignment, a small "Show table" shortcut appears in their guest list row. Click it to open the map focused on their table.' },
+        ],
+      },
+      {
+        type: 'callout',
+        variant: 'info',
+        text: 'Table assignments are visible on the guest\'s admit screen and boarding pass review. Staff can direct every guest to their seat at the moment of admission — no separate seating chart needed.',
+      },
+      {
+        type: 'callout',
+        variant: 'warning',
+        text: 'The seating map is optional. If you don\'t create one, nothing changes — the Seating button won\'t appear and no features are affected.',
+      },
+      {
+        type: 'faq',
+        items: [
+          { q: 'Can staff edit the seating map, or only organizers?', a: 'Only organizers can edit the canvas layout and assign guests. Staff see a read-only display view with live fill indicators.' },
+          { q: 'Does the map update live if I move tables while the event is running?', a: 'Yes. Any change an organizer saves is broadcast to all staff devices instantly via the seating_map_updated event.' },
+          { q: 'Can a guest be assigned to more than one table?', a: 'No. Each guest has one table assignment. Assigning them to a new table replaces the previous one.' },
+          { q: 'What if I assigned a guest to a table before they checked in?', a: 'Their table name appears on the boarding pass review screen as soon as their QR code is scanned — even before pressing Admit.' },
+        ],
+      },
+    ],
+  },
+
   // ── CONTACT EXTRAS ────────────────────────────────────────────────────
   {
     id: 'support-bug',
@@ -1394,7 +1478,7 @@ const ARTICLES_EXTRA = [
 ];
 ARTICLES.push(...ARTICLES_EXTRA);
 
-const POPULAR = ['gs-create', 'err-service-crash', 'err-loading', 'err-password', 'ent-checkin', 'data-retention'];
+const POPULAR = ['gs-create', 'err-service-crash', 'err-loading', 'err-password', 'ent-checkin', 'data-retention', 'ent-walkie', 'ent-seating'];
 
 /* ─── SUB-COMPONENTS ────────────────────────────────────────────────────────── */
 
@@ -1500,21 +1584,26 @@ function ArticleContent({ article }) {
   );
 }
 
-function ArticleCard({ article, onClick }) {
+function ArticleCard({ article, onClick, isNew }) {
   const Icon = article.icon;
   return (
     <button
       onClick={onClick}
-      className="w-full text-left flex items-start gap-4 p-4 rounded-2xl border border-neutral-200 hover:border-neutral-400 hover:bg-neutral-50 transition-all group"
+      className="w-full text-left flex items-start gap-4 p-4 rounded-2xl border border-neutral-200 hover:border-neutral-900 hover:bg-white hover:shadow-sm transition-all group bg-white"
     >
-      <div className="w-9 h-9 rounded-xl bg-neutral-100 flex items-center justify-center flex-shrink-0 group-hover:bg-neutral-200 transition-colors">
-        <Icon className="w-4 h-4 text-neutral-600" />
+      <div className="w-9 h-9 rounded-xl bg-neutral-100 flex items-center justify-center flex-shrink-0 group-hover:bg-neutral-900 transition-colors">
+        <Icon className="w-4 h-4 text-neutral-600 group-hover:text-white transition-colors" />
       </div>
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-semibold text-neutral-900 leading-snug">{article.title}</p>
+        <div className="flex items-center gap-2 flex-wrap">
+          <p className="text-sm font-semibold text-neutral-900 leading-snug">{article.title}</p>
+          {isNew && (
+            <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-700 border border-emerald-200 flex-shrink-0">NEW</span>
+          )}
+        </div>
         <p className="text-xs text-neutral-400 mt-0.5">{article.category}</p>
       </div>
-      <ChevronRight className="w-4 h-4 text-neutral-300 group-hover:text-neutral-500 flex-shrink-0 mt-1 transition-colors" />
+      <ChevronRight className="w-4 h-4 text-neutral-300 group-hover:text-neutral-700 flex-shrink-0 mt-1 transition-colors" />
     </button>
   );
 }
@@ -1917,7 +2006,7 @@ export default function Help() {
                   {ARTICLES
                     .filter(a => a.id !== currentArticle.id && (a.category === currentArticle.category || a.tags.some(t => currentArticle.tags.includes(t))))
                     .slice(0, 4)
-                    .map(a => <ArticleCard key={a.id} article={a} onClick={() => openArticle(a.id)} />)
+                    .map(a => <ArticleCard key={a.id} article={a} onClick={() => openArticle(a.id)} isNew={['ent-walkie','ent-seating'].includes(a.id)} />)
                   }
                 </div>
               </div>
@@ -1944,7 +2033,7 @@ export default function Help() {
                   ref={searchRef}
                   value={query}
                   onChange={e => { setQuery(e.target.value); setActiveCategory('all'); }}
-                  placeholder="Search — e.g. 'reset password', 'QR code', 'service crash'..."
+                  placeholder="Search — e.g. 'reset password', 'QR code', 'seating map'..."
                   className="w-full pl-11 pr-10 py-3.5 bg-white border-2 border-neutral-200 focus:border-neutral-900 rounded-2xl text-sm text-neutral-900 placeholder-neutral-400 outline-none transition-colors shadow-sm"
                 />
                 {query && (
@@ -1957,11 +2046,11 @@ export default function Help() {
               {/* Quick topic chips */}
               {!query && (
                 <div className="flex flex-wrap justify-center gap-2">
-                  {['getting started', 'check-in', 'forgot password', 'service crash', 'QR code', 'data deletion', 'cold start'].map(t => (
+                  {['getting started', 'check-in', 'forgot password', 'service crash', 'QR code', 'seating map', 'walkie-talkie', 'data deletion', 'cold start'].map(t => (
                     <button
                       key={t}
                       onClick={() => setQuery(t)}
-                      className="px-3 py-1.5 bg-white border border-neutral-200 rounded-full text-xs font-medium text-neutral-600 hover:border-neutral-400 hover:text-neutral-900 transition-all"
+                      className="px-3 py-1.5 bg-white border border-neutral-200 rounded-full text-xs font-medium text-neutral-600 hover:border-neutral-900 hover:text-neutral-900 transition-all shadow-sm"
                     >
                       {t}
                     </button>
@@ -1983,7 +2072,7 @@ export default function Help() {
                   )}
                 </p>
                 <div className="space-y-2">
-                  {filtered.map(a => <ArticleCard key={a.id} article={a} onClick={() => openArticle(a.id)} />)}
+                  {filtered.map(a => <ArticleCard key={a.id} article={a} onClick={() => openArticle(a.id)} isNew={['ent-walkie','ent-seating'].includes(a.id)} />)}
                 </div>
               </div>
             )}
@@ -1994,7 +2083,7 @@ export default function Help() {
                 <div className="mb-12">
                   <h2 className="text-lg font-black text-neutral-900 mb-4">Popular articles</h2>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                    {popularArticles.map(a => <ArticleCard key={a.id} article={a} onClick={() => openArticle(a.id)} />)}
+                    {popularArticles.map(a => <ArticleCard key={a.id} article={a} onClick={() => openArticle(a.id)} isNew={['ent-walkie','ent-seating'].includes(a.id)} />)}
                   </div>
                 </div>
 
@@ -2055,7 +2144,7 @@ export default function Help() {
                             <span className="text-xs text-neutral-400 font-medium">{catArticles.length} articles</span>
                           </div>
                           <div className="space-y-2">
-                            {catArticles.map(a => <ArticleCard key={a.id} article={a} onClick={() => openArticle(a.id)} />)}
+                            {catArticles.map(a => <ArticleCard key={a.id} article={a} onClick={() => openArticle(a.id)} isNew={['ent-walkie','ent-seating'].includes(a.id)} />)}
                           </div>
                         </div>
                       );
