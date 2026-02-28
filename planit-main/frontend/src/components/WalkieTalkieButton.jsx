@@ -224,8 +224,8 @@ export default function WalkieTalkieButton({ walkie }) {
       <div className="fixed bottom-6 right-6 z-50 flex flex-col items-center gap-2 select-none">
         {/* "Hold to talk" label — visible while not speaking */}
         {!isSpeaking && (
-          <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest whitespace-nowrap">
-            Hold to talk
+          <span className={`text-[10px] font-bold uppercase tracking-widest whitespace-nowrap ${peers.length === 0 ? 'text-amber-400/70' : 'text-neutral-400'}`}>
+            {peers.length === 0 ? 'No staff on channel' : 'Hold to talk'}
           </span>
         )}
 
