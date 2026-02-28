@@ -901,7 +901,7 @@ export default function EventSpace() {
     socketService.on('approval_request', ({ username }) => {
       if (isOrganizer) {
         setPendingApprovals(prev => prev + 1);
-        toast(` ${username} is requesting to join`, {
+        toast(`🔔 ${username} is requesting to join`, {
           duration: 6000,
           icon: '👤',
           style: { fontWeight: 600 },
@@ -910,7 +910,12 @@ export default function EventSpace() {
     });
     socketService.on('approval_approved', ({ username: approvedUser, token: newToken }) => {
       const myUsername = localStorage.getItem('username');
-      if (approvedUser === myUsername && newToken) {
+      // IMPORTANT: Only act on this if the current user is actually waiting at the
+      // join gate (needsJoin=true). If the user is already inside the event
+      // (organizer or any other participant), this event is for someone else and
+      // we must NOT overwrite our own token — doing so would replace an organizer
+      // token with a participant token, breaking all subsequent organizer-only calls.
+      if (approvedUser === myUsername && newToken && needsJoin) {
         localStorage.setItem('eventToken', newToken);
         toast.success('Your join request was approved!');
         setNeedsJoin(false);
@@ -920,7 +925,8 @@ export default function EventSpace() {
     });
     socketService.on('approval_rejected', ({ username: rejectedUser }) => {
       const myUsername = localStorage.getItem('username');
-      if (rejectedUser === myUsername) {
+      // Same guard — only act if this user is actually waiting at the join gate
+      if (rejectedUser === myUsername && needsJoin) {
         toast.error('Your join request was declined by the organizer.');
         setStep('name');
         setNeedsJoin(true);
@@ -980,7 +986,7 @@ export default function EventSpace() {
       socketService.leaveEvent(eventId);
       socketService.disconnect();
     };
-  }, [event, eventId]);
+  }, [event, eventId, needsJoin]); // needsJoin needed so the approval_approved/rejected guards use the latest value
 
   useEffect(() => {
     if (!event || !eventId) return;
