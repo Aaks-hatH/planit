@@ -8,7 +8,7 @@ const api = axios.create({
   baseURL: API_URL,
   headers: { 'Content-Type': 'application/json' },
   withCredentials: true,
-  timeout: 15000, // 15s — prevents XHRs hanging until browser cancels them
+  timeout: 15000,
 });
 
 api.interceptors.request.use((config) => {
@@ -36,8 +36,6 @@ api.interceptors.response.use(
     if (error.response?.status === 401) {
       const url = error.config?.url || '';
       const isAdminRequest = url.includes('/admin');
-      // /bug-reports/admin 401s should not nuke the session — the admin token
-      // is still valid, the bug-reports endpoint may just not have received it.
       const isCoreAdminAuth = isAdminRequest && !url.includes('/bug-reports');
 
       if (isCoreAdminAuth) {
@@ -74,57 +72,67 @@ export const eventAPI = {
   getRsvpSummary:     (eventId)           => api.get(`/events/${eventId}/rsvp-summary`),
 
   // Agenda
-  getAgenda:      (eventId)           => api.get(`/events/${eventId}/agenda`),
-  addAgendaItem:  (eventId, data)     => api.post(`/events/${eventId}/agenda`, data),
+  getAgenda:       (eventId)          => api.get(`/events/${eventId}/agenda`),
+  addAgendaItem:   (eventId, data)    => api.post(`/events/${eventId}/agenda`, data),
   deleteAgendaItem:(eventId, itemId)  => api.delete(`/events/${eventId}/agenda/${itemId}`),
 
   // Enterprise Check-in & Invites
-  getInvites:    (eventId)            => api.get(`/events/${eventId}/invites`),
-  createInvite:  (eventId, data)      => api.post(`/events/${eventId}/invites`, { guests: [data] }),
-  updateInvite:  (eventId, inviteId, data) => api.put(`/events/${eventId}/invites/${inviteId}`, data),
-  deleteInvite:  (eventId, inviteId)  => api.delete(`/events/${eventId}/invites/${inviteId}`),
-  importGuestsCsv: (eventId, csv)     => api.post(`/events/${eventId}/invites/import-csv`, { csv }),
-  getActivityLog:  (eventId)          => api.get(`/events/${eventId}/activity-log`),
+  getInvites:      (eventId)               => api.get(`/events/${eventId}/invites`),
+  createInvite:    (eventId, data)         => api.post(`/events/${eventId}/invites`, { guests: [data] }),
+  updateInvite:    (eventId, inviteId, data) => api.put(`/events/${eventId}/invites/${inviteId}`, data),
+  deleteInvite:    (eventId, inviteId)     => api.delete(`/events/${eventId}/invites/${inviteId}`),
+  importGuestsCsv: (eventId, csv)          => api.post(`/events/${eventId}/invites/import-csv`, { csv }),
+  getActivityLog:  (eventId)               => api.get(`/events/${eventId}/activity-log`),
 
-  // Approval queue (requireApproval feature)
-  getApprovalQueue:    (eventId)           => api.get(`/events/${eventId}/approval-queue`),
-  approveParticipant:  (eventId, username) => api.post(`/events/${eventId}/approval-queue/${encodeURIComponent(username)}/approve`),
-  rejectParticipant:   (eventId, username) => api.post(`/events/${eventId}/approval-queue/${encodeURIComponent(username)}/reject`),
+  // Approval queue
+  getApprovalQueue:   (eventId)           => api.get(`/events/${eventId}/approval-queue`),
+  approveParticipant: (eventId, username) => api.post(`/events/${eventId}/approval-queue/${encodeURIComponent(username)}/approve`),
+  rejectParticipant:  (eventId, username) => api.post(`/events/${eventId}/approval-queue/${encodeURIComponent(username)}/reject`),
 
   // Check-in process
-  getCheckinCache: (eventId)                    => api.get(`/events/${eventId}/checkin-cache`),
-  verifyScan:    (eventId, inviteCode)        => api.get(`/events/${eventId}/verify-scan/${inviteCode}`),
-  verifyPin:     (eventId, inviteCode, pin)   => api.post(`/events/${eventId}/verify-pin/${inviteCode}`, { pin }),
-  checkIn:       (eventId, inviteCode, data)  => api.post(`/events/${eventId}/checkin/${inviteCode}`, data),
+  getCheckinCache: (eventId)                   => api.get(`/events/${eventId}/checkin-cache`),
+  verifyScan:      (eventId, inviteCode)        => api.get(`/events/${eventId}/verify-scan/${inviteCode}`),
+  verifyPin:       (eventId, inviteCode, pin)   => api.post(`/events/${eventId}/verify-pin/${inviteCode}`, { pin }),
+  checkIn:         (eventId, inviteCode, data)  => api.post(`/events/${eventId}/checkin/${inviteCode}`, data),
 
   // Check-in stats & settings
-  getCheckInStats:      (eventId)          => api.get(`/events/${eventId}/checkin-stats`),
-  getCheckInSettings:   (eventId)          => api.get(`/events/${eventId}/checkin-settings`),
-  updateCheckInSettings:(eventId, settings)=> api.patch(`/events/${eventId}/checkin-settings`, settings),
+  getCheckInStats:       (eventId)           => api.get(`/events/${eventId}/checkin-stats`),
+  getCheckInSettings:    (eventId)           => api.get(`/events/${eventId}/checkin-settings`),
+  updateCheckInSettings: (eventId, settings) => api.patch(`/events/${eventId}/checkin-settings`, settings),
 
   // Staff check-in accounts
-  staffLogin:    (eventId, username, pin)  => api.post(`/events/${eventId}/staff-login`, { username, pin }),
-  getStaff:      (eventId)                 => api.get(`/events/${eventId}/staff`),
-  createStaff:   (eventId, data)           => api.post(`/events/${eventId}/staff`, data),
-  deleteStaff:   (eventId, username)       => api.delete(`/events/${eventId}/staff/${username}`),
-  updateStaffPin:(eventId, username, pin)  => api.patch(`/events/${eventId}/staff/${username}/pin`, { pin }),
+  staffLogin:    (eventId, username, pin) => api.post(`/events/${eventId}/staff-login`, { username, pin }),
+  getStaff:      (eventId)                => api.get(`/events/${eventId}/staff`),
+  createStaff:   (eventId, data)          => api.post(`/events/${eventId}/staff`, data),
+  deleteStaff:   (eventId, username)      => api.delete(`/events/${eventId}/staff/${username}`),
+  updateStaffPin:(eventId, username, pin) => api.patch(`/events/${eventId}/staff/${username}/pin`, { pin }),
 
-  // Override history (audit trail)
+  // Override history
   getOverrideHistory: (eventId) => api.get(`/events/${eventId}/override-history`),
 
   // Waitlist
-  joinWaitlist:   (eventId, data)   => api.post(`/events/${eventId}/waitlist`, data),
-  getWaitlist:    (eventId)         => api.get(`/events/${eventId}/waitlist`),
-  leaveWaitlist:  (eventId, name)   => api.delete(`/events/${eventId}/waitlist/${encodeURIComponent(name)}`),
+  joinWaitlist:  (eventId, data) => api.post(`/events/${eventId}/waitlist`, data),
+  getWaitlist:   (eventId)       => api.get(`/events/${eventId}/waitlist`),
+  leaveWaitlist: (eventId, name) => api.delete(`/events/${eventId}/waitlist/${encodeURIComponent(name)}`),
 
   // Clone / recurring
   clone: (eventId, data) => api.post(`/events/${eventId}/clone`, data),
 
   // Webhooks
-  getWebhooks:    (eventId)             => api.get(`/events/${eventId}/webhooks`),
-  createWebhook:  (eventId, data)       => api.post(`/events/${eventId}/webhooks`, data),
-  updateWebhook:  (eventId, whId, data) => api.patch(`/events/${eventId}/webhooks/${whId}`, data),
-  deleteWebhook:  (eventId, whId)       => api.delete(`/events/${eventId}/webhooks/${whId}`),
+  getWebhooks:   (eventId)              => api.get(`/events/${eventId}/webhooks`),
+  createWebhook: (eventId, data)        => api.post(`/events/${eventId}/webhooks`, data),
+  updateWebhook: (eventId, whId, data)  => api.patch(`/events/${eventId}/webhooks/${whId}`, data),
+  deleteWebhook: (eventId, whId)        => api.delete(`/events/${eventId}/webhooks/${whId}`),
+
+  // ── Seating map ────────────────────────────────────────────────────────────
+  // GET  /events/:id/seating             — fetch map + per-table guest counts
+  // PUT  /events/:id/seating             — save the full map (organizer only)
+  // PATCH /events/:id/seating/guests     — bulk assign guests to tables
+  // PATCH /events/:id/invites/:id/table  — assign one guest to a table
+  getSeatingMap:    (eventId)                             => api.get(`/events/${eventId}/seating`),
+  saveSeatingMap:   (eventId, payload)                    => api.put(`/events/${eventId}/seating`, payload),
+  bulkAssignSeats:  (eventId, assignments)                => api.patch(`/events/${eventId}/seating/guests`, { assignments }),
+  assignGuestTable: (eventId, inviteId, tableId, tableLabel) => api.patch(`/events/${eventId}/invites/${inviteId}/table`, { tableId, tableLabel }),
 };
 
 // ─── Chat API ─────────────────────────────────────────────────────────────────
@@ -149,9 +157,6 @@ export const pollAPI = {
 
 // ─── File API ─────────────────────────────────────────────────────────────────
 export const fileAPI = {
-  // Content-Type must be undefined here so axios auto-detects multipart/form-data
-  // with the correct boundary from the FormData object. Inheriting the global
-  // 'application/json' default breaks multer parsing and causes "No file uploaded".
   upload:   (eventId, formData) => api.post(`/files/${eventId}/upload`, formData, {
     headers: { 'Content-Type': undefined },
   }),
@@ -173,30 +178,27 @@ export const adminAPI = {
   getSystem: () => api.get('/admin/system'),
 
   // Live Logs
-  getLogs: (n = 'all') => api.get('/admin/logs', { params: { n } }),
-  getFleetLogs: () => api.get('/admin/logs/fleet'),
-  // Note: SSE real-time stream is consumed directly via:
-  //   new EventSource(`${API_URL}/admin/logs/stream`)
-  // with an Authorization header injected by the component.
+  getLogs:      (n = 'all') => api.get('/admin/logs', { params: { n } }),
+  getFleetLogs: ()          => api.get('/admin/logs/fleet'),
 
   // Event Management
-  getEvents:         (params)       => api.get('/admin/events', { params }),
-  getEvent:          (id)           => api.get(`/admin/events/${id}`),
-  getEventAccess:    (id)           => api.post(`/admin/events/${id}/access`),
-  updateEvent:       (id, data)     => api.patch(`/admin/events/${id}`, data),
-  updateEventStatus: (id, status)   => api.patch(`/admin/events/${id}/status`, { status }),
-  deleteEvent:       (id)           => api.delete(`/admin/events/${id}`),
+  getEvents:         (params)     => api.get('/admin/events', { params }),
+  getEvent:          (id)         => api.get(`/admin/events/${id}`),
+  getEventAccess:    (id)         => api.post(`/admin/events/${id}/access`),
+  updateEvent:       (id, data)   => api.patch(`/admin/events/${id}`, data),
+  updateEventStatus: (id, status) => api.patch(`/admin/events/${id}/status`, { status }),
+  deleteEvent:       (id)         => api.delete(`/admin/events/${id}`),
 
   // Messages Management
-  getMessages:       (eventId)             => api.get(`/admin/events/${eventId}/messages`),
-  deleteMessage:     (eventId, messageId)  => api.delete(`/admin/events/${eventId}/messages/${messageId}`),
-  bulkDeleteMessages:(eventId, messageIds) => api.post(`/admin/events/${eventId}/messages/bulk-delete`, { messageIds }),
+  getMessages:        (eventId)              => api.get(`/admin/events/${eventId}/messages`),
+  deleteMessage:      (eventId, messageId)   => api.delete(`/admin/events/${eventId}/messages/${messageId}`),
+  bulkDeleteMessages: (eventId, messageIds)  => api.post(`/admin/events/${eventId}/messages/bulk-delete`, { messageIds }),
 
   // Participants Management
-  getParticipants:         (eventId)           => api.get(`/admin/events/${eventId}/participants`),
-  removeParticipant:       (eventId, username) => api.delete(`/admin/events/${eventId}/participants/${username}`),
-  resetParticipantPassword:(eventId, username) => api.delete(`/admin/events/${eventId}/participants/${username}/password`),
-  bulkRemoveParticipants:  (eventId, usernames)=> api.post(`/admin/events/${eventId}/participants/bulk-remove`, { usernames }),
+  getParticipants:          (eventId)            => api.get(`/admin/events/${eventId}/participants`),
+  removeParticipant:        (eventId, username)  => api.delete(`/admin/events/${eventId}/participants/${username}`),
+  resetParticipantPassword: (eventId, username)  => api.delete(`/admin/events/${eventId}/participants/${username}/password`),
+  bulkRemoveParticipants:   (eventId, usernames) => api.post(`/admin/events/${eventId}/participants/bulk-remove`, { usernames }),
 
   // Polls Management
   getPolls:   (eventId)         => api.get(`/admin/events/${eventId}/polls`),
@@ -221,7 +223,7 @@ export const adminAPI = {
   // Cleanup
   manualCleanup: () => api.post('/admin/cleanup'),
 
-  // Organizers (aggregated from events)
+  // Organizers
   getOrganizers: () => api.get('/admin/organizers'),
 
   // All staff across every event
@@ -231,17 +233,14 @@ export const adminAPI = {
   getAllParticipants: (params) => api.get('/admin/all-participants', { params }),
 
   // Employee CRUD
-  getEmployees:   ()          => api.get('/admin/employees'),
-  createEmployee: (data)      => api.post('/admin/employees', data),
-  updateEmployee: (id, data)  => api.patch(`/admin/employees/${id}`, data),
-  deleteEmployee: (id)        => api.delete(`/admin/employees/${id}`),
+  getEmployees:   ()         => api.get('/admin/employees'),
+  createEmployee: (data)     => api.post('/admin/employees', data),
+  updateEmployee: (id, data) => api.patch(`/admin/employees/${id}`, data),
+  deleteEmployee: (id)       => api.delete(`/admin/employees/${id}`),
 
   // Marketing emails
-  getMarketingTemplates: ()                       => api.get('/admin/marketing/templates'),
+  getMarketingTemplates:  ()                     => api.get('/admin/marketing/templates'),
   getMarketingPreviewUrl: (templateId, ctaUrl) => {
-    // The preview is loaded inside an <iframe> which cannot send Authorization headers.
-    // verifyAdmin already supports ?token= (same mechanism used for SSE streams),
-    // so we embed the token in the URL here.
     const params = new URLSearchParams();
     if (ctaUrl) params.set('ctaUrl', ctaUrl);
     const adminToken = localStorage.getItem('adminToken');
@@ -249,38 +248,38 @@ export const adminAPI = {
     const qs = params.toString();
     return `${API_URL}/admin/marketing/preview/${templateId}${qs ? `?${qs}` : ''}`;
   },
-  sendMarketingCampaign: (data)                   => api.post('/admin/marketing/send', data),
+  sendMarketingCampaign: (data) => api.post('/admin/marketing/send', data),
 };
 
 // ─── Task API ─────────────────────────────────────────────────────────────────
 export const taskAPI = {
-  getAll: (eventId)           => api.get(`/events/${eventId}/tasks`),
-  create: (eventId, data)     => api.post(`/events/${eventId}/tasks`, data),
-  toggle: (eventId, taskId)   => api.patch(`/events/${eventId}/tasks/${taskId}/toggle`),
-  delete: (eventId, taskId)   => api.delete(`/events/${eventId}/tasks/${taskId}`),
+  getAll: (eventId)         => api.get(`/events/${eventId}/tasks`),
+  create: (eventId, data)   => api.post(`/events/${eventId}/tasks`, data),
+  toggle: (eventId, taskId) => api.patch(`/events/${eventId}/tasks/${taskId}/toggle`),
+  delete: (eventId, taskId) => api.delete(`/events/${eventId}/tasks/${taskId}`),
 };
 
 // ─── Announcement API ─────────────────────────────────────────────────────────
 export const announcementAPI = {
-  getAll:  (eventId)                     => api.get(`/events/${eventId}/announcements`),
-  create:  (eventId, data)               => api.post(`/events/${eventId}/announcements`, data),
-  delete:  (eventId, announcementId)     => api.delete(`/events/${eventId}/announcements/${announcementId}`),
+  getAll: (eventId)                 => api.get(`/events/${eventId}/announcements`),
+  create: (eventId, data)           => api.post(`/events/${eventId}/announcements`, data),
+  delete: (eventId, announcementId) => api.delete(`/events/${eventId}/announcements/${announcementId}`),
 };
 
 // ─── Expense API ──────────────────────────────────────────────────────────────
 export const expenseAPI = {
-  getAll:       (eventId)          => api.get(`/events/${eventId}/expenses`),
-  create:       (eventId, data)    => api.post(`/events/${eventId}/expenses`, data),
-  delete:       (eventId, expId)   => api.delete(`/events/${eventId}/expenses/${expId}`),
-  updateBudget: (eventId, budget)  => api.patch(`/events/${eventId}/budget`, { budget }),
+  getAll:       (eventId)        => api.get(`/events/${eventId}/expenses`),
+  create:       (eventId, data)  => api.post(`/events/${eventId}/expenses`, data),
+  delete:       (eventId, expId) => api.delete(`/events/${eventId}/expenses/${expId}`),
+  updateBudget: (eventId, budget)=> api.patch(`/events/${eventId}/budget`, { budget }),
 };
 
 // ─── Note API ─────────────────────────────────────────────────────────────────
 export const noteAPI = {
-  getAll: (eventId)                => api.get(`/events/${eventId}/notes`),
-  create: (eventId, data)          => api.post(`/events/${eventId}/notes`, data),
-  update: (eventId, noteId, data)  => api.put(`/events/${eventId}/notes/${noteId}`, data),
-  delete: (eventId, noteId)        => api.delete(`/events/${eventId}/notes/${noteId}`),
+  getAll: (eventId)               => api.get(`/events/${eventId}/notes`),
+  create: (eventId, data)         => api.post(`/events/${eventId}/notes`, data),
+  update: (eventId, noteId, data) => api.put(`/events/${eventId}/notes/${noteId}`, data),
+  delete: (eventId, noteId)       => api.delete(`/events/${eventId}/notes/${noteId}`),
 };
 
 // ─── Analytics API ────────────────────────────────────────────────────────────
@@ -296,19 +295,16 @@ export const uptimeAPI = {
   submitReport: (data) => api.post('/uptime/report', data),
 
   // Admin
-  getReports:        ()          => api.get('/uptime/admin/reports'),
-  updateReport:      (id, data)  => api.patch(`/uptime/admin/reports/${id}`, data),
-  getIncidents:      ()          => api.get('/uptime/admin/incidents'),
-  createIncident:    (data)      => api.post('/uptime/admin/incidents', data),
-  addTimelineUpdate: (id, data)  => api.post(`/uptime/admin/incidents/${id}/timeline`, data),
-  updateIncident:    (id, data)  => api.patch(`/uptime/admin/incidents/${id}`, data),
-  deleteIncident:    (id)        => api.delete(`/uptime/admin/incidents/${id}`),
+  getReports:        ()         => api.get('/uptime/admin/reports'),
+  updateReport:      (id, data) => api.patch(`/uptime/admin/reports/${id}`, data),
+  getIncidents:      ()         => api.get('/uptime/admin/incidents'),
+  createIncident:    (data)     => api.post('/uptime/admin/incidents', data),
+  addTimelineUpdate: (id, data) => api.post(`/uptime/admin/incidents/${id}/timeline`, data),
+  updateIncident:    (id, data) => api.patch(`/uptime/admin/incidents/${id}`, data),
+  deleteIncident:    (id)       => api.delete(`/uptime/admin/incidents/${id}`),
 };
 
 // ─── Watchdog API ─────────────────────────────────────────────────────────────
-// Calls the external watchdog service directly so the status page always has
-// fresh data even when the main server is down or unreachable.
-// Falls back gracefully — if VITE_WATCHDOG_URL is not set, all calls return null.
 const watchdogAxios = WATCHDOG_URL
   ? axios.create({ baseURL: WATCHDOG_URL, timeout: 12000 })
   : null;
@@ -329,17 +325,9 @@ export const watchdogAPI = {
 };
 
 // ─── Router API ───────────────────────────────────────────────────────────────
-// Talks to the PlanIt Router (VITE_ROUTER_URL) for fleet control + boost mode.
-// The router uses meshAuth middleware which expects a signed HMAC token in
-// X-Mesh-Token (format: timestamp:callerName:hmac-sha256), NOT the raw secret.
-const MESH_SECRET   = import.meta.env.VITE_MESH_SECRET || '';
-const MESH_CALLER   = 'AdminUI';
+const MESH_SECRET = import.meta.env.VITE_MESH_SECRET || '';
+const MESH_CALLER = 'AdminUI';
 
-/**
- * Generate a signed X-Mesh-Token using the Web Crypto API (browser-native).
- * Format matches backend/middleware/mesh.js signToken():
- *   `${timestamp}:${callerName}:${hmac-sha256-hex}`
- */
 async function signMeshToken() {
   const timestamp = Date.now().toString();
   const payload   = `${timestamp}:${MESH_CALLER}`;
@@ -362,12 +350,11 @@ const routerAxios = ROUTER_URL
   ? axios.create({ baseURL: ROUTER_URL, timeout: 10000 })
   : null;
 
-// Attach a fresh signed token before every request (tokens expire in 30s)
 if (routerAxios) {
   routerAxios.interceptors.request.use(async (config) => {
     const token = await signMeshToken();
-    config.headers['X-Mesh-Token']  = token;
-    config.headers['X-Mesh-Caller'] = MESH_CALLER;
+    config.headers['X-Mesh-Token']   = token;
+    config.headers['X-Mesh-Caller']  = MESH_CALLER;
     config.headers['X-Mesh-Version'] = '1';
     return config;
   });
@@ -383,7 +370,6 @@ export const routerAPI = {
     return routerAxios.get('/mesh/status');
   },
   activateBoost: (opts) => {
-    // opts: { durationMinutes, reason, minBackends, pinnedEventIds }
     if (!routerAxios) return Promise.resolve(null);
     return routerAxios.post('/mesh/boost', opts);
   },
@@ -391,7 +377,6 @@ export const routerAPI = {
     if (!routerAxios) return Promise.resolve(null);
     return routerAxios.delete('/mesh/boost');
   },
-  // testEmail: send a test email through the router mesh relay
   testEmail: (to) => {
     if (!routerAxios) return Promise.resolve(null);
     return routerAxios.post('/mesh/email/test', { to });
@@ -434,16 +419,15 @@ export const utilityAPI = {
         document.body.removeChild(a);
       });
   },
-  generateQRCode: (eventId) =>
-    `${API_URL}/events/${eventId}/qr.svg`,
+  generateQRCode: (eventId) => `${API_URL}/events/${eventId}/qr.svg`,
 };
 
 // ─── Bug Report API ───────────────────────────────────────────────────────────
 export const bugReportAPI = {
-  submit:  (data)     => api.post('/bug-reports', data),
-  getAll:  (params)   => api.get('/bug-reports/admin', { params }),
-  update:  (id, data) => api.patch(`/bug-reports/admin/${id}`, data),
-  remove:  (id)       => api.delete(`/bug-reports/admin/${id}`),
+  submit: (data)     => api.post('/bug-reports', data),
+  getAll: (params)   => api.get('/bug-reports/admin', { params }),
+  update: (id, data) => api.patch(`/bug-reports/admin/${id}`, data),
+  remove: (id)       => api.delete(`/bug-reports/admin/${id}`),
 };
 
 // ─── Discover API ─────────────────────────────────────────────────────────────
