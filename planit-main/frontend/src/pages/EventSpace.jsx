@@ -819,6 +819,7 @@ export default function EventSpace() {
   const [copied, setCopied]               = useState(false);
   const [showQR, setShowQR]               = useState(false);
   const [showSettings, setShowSettings]   = useState(false);
+  const [pendingApprovals, setPendingApprovals] = useState(0); // live count of pending join requests
   const [waitlistCount, setWaitlistCount] = useState(0);
 
   const currentUser = localStorage.getItem('username');
@@ -897,6 +898,16 @@ export default function EventSpace() {
 
     socketService.on('new_message', (msg) => { setMessages(prev => [...prev, msg]); scrollToBottom(); });
     // Listen for organizer approval decision
+    socketService.on('approval_request', ({ username }) => {
+      if (isOrganizer) {
+        setPendingApprovals(prev => prev + 1);
+        toast(` ${username} is requesting to join`, {
+          duration: 6000,
+          icon: '👤',
+          style: { fontWeight: 600 },
+        });
+      }
+    });
     socketService.on('approval_approved', ({ username: approvedUser, token: newToken }) => {
       const myUsername = localStorage.getItem('username');
       if (approvedUser === myUsername && newToken) {
@@ -965,6 +976,7 @@ export default function EventSpace() {
     return () => {
       if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
       socketService.off('security_alert', addSecAlert);
+      socketService.off('approval_request');
       socketService.leaveEvent(eventId);
       socketService.disconnect();
     };
@@ -1205,7 +1217,9 @@ export default function EventSpace() {
       {showQR && <QRModal eventId={eventId} onClose={() => setShowQR(false)} />}
       {showSettings && isOrganizer && (
         <OrganizerSettings eventId={eventId} event={event}
-          onClose={() => setShowSettings(false)} onUpdated={() => loadEvent()} />
+          onClose={() => { setShowSettings(false); setPendingApprovals(0); }}
+          onUpdated={() => loadEvent()}
+          pendingCount={pendingApprovals} />
       )}
       {showOnboarding && (
         <Onboarding eventId={eventId} subdomain={event?.subdomain}
@@ -1794,8 +1808,13 @@ export default function EventSpace() {
                     </button>
                   )}
                   <button onClick={() => setShowSettings(true)}
-                    className="flex items-center gap-2 w-full px-3 py-2.5 text-xs bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl transition-colors font-bold">
+                    className="flex items-center gap-2 w-full px-3 py-2.5 text-xs bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl transition-colors font-bold relative">
                     <Sliders className="w-3.5 h-3.5 flex-shrink-0" />Event Settings
+                    {pendingApprovals > 0 && (
+                      <span className="ml-auto flex items-center justify-center w-5 h-5 text-[10px] font-black bg-red-500 text-white rounded-full ring-2 ring-white">
+                        {pendingApprovals > 9 ? '9+' : pendingApprovals}
+                      </span>
+                    )}
                   </button>
                   <button onClick={() => navigate(`/event/${eventId}/login`)}
                     className="flex items-center gap-2 w-full px-3 py-2 text-xs bg-neutral-900 hover:bg-neutral-800 text-white rounded-xl transition-colors font-semibold">
