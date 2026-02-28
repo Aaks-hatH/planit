@@ -1,141 +1,96 @@
 /*
  * PLANIT PROPRIETARY LICENSE
  * Copyright (c) 2026 Aakshat Hariharan. All rights reserved.
- *
- * This software is proprietary and confidential. Unauthorized copying,
- * deployment, distribution, or creation of derivative works is strictly
- * prohibited. Viewing the source code does not grant any rights to use,
- * copy, or deploy this software. See the LICENSE file for full terms.
  */
 
-// ── Load env and verify license key before anything else boots ───────────────
 require('dotenv').config();
 const { verifyIntegrity, scheduleReverification } = require('./keys');
 verifyIntegrity();
-scheduleReverification(); // Re-checks every 4 hours — tampered process cannot run indefinitely
-// ─────────────────────────────────────────────────────────────────────────────
+scheduleReverification();
 
-const express = require('express');
-const mongoose = require('mongoose');
-const cors = require('cors');
+const express    = require('express');
+const mongoose   = require('mongoose');
+const cors       = require('cors');
 const mongoSanitize = require('express-mongo-sanitize');
-const helmet = require('helmet');
+const helmet     = require('helmet');
 const compression = require('compression');
 const cookieParser = require('cookie-parser');
-const http = require('http');
-const socketIo = require('socket.io');
-const path = require('path');
-const supportRoutes    = require('./routes/support');
-const bugReportRoutes  = require('./routes/bug-reports');
-const uptimeRoutes = require('./routes/uptime');
+const http       = require('http');
+const socketIo   = require('socket.io');
+const path       = require('path');
 
-// ═══════════════════════════════════════════════════════════════════════════
-// IMPORT CLEANUP SCHEDULER
-// ═══════════════════════════════════════════════════════════════════════════
+const supportRoutes   = require('./routes/support');
+const bugReportRoutes = require('./routes/bug-reports');
+const uptimeRoutes    = require('./routes/uptime');
 const { startCleanupScheduler } = require('./jobs/cleanupJob');
 
-const app = express();
+const app    = express();
 const server = http.createServer(app);
+
 const io = socketIo(server, {
   cors: {
-    origin: process.env.CORS_ORIGIN?.split(',') || 'http://localhost:5173',
+    origin:      process.env.CORS_ORIGIN?.split(',') || 'http://localhost:5173',
     credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE']
+    methods:     ['GET', 'POST', 'PUT', 'DELETE'],
   },
-  // Accept both transports — client starts with polling (instant, always works
-  // through Render's proxy) then Socket.IO upgrades to WebSocket automatically.
-  transports:    ['polling', 'websocket'],
-  allowUpgrades: true,
-  // Give the WebSocket upgrade handshake enough time to succeed through the router proxy.
+  transports:     ['polling', 'websocket'],
+  allowUpgrades:  true,
   upgradeTimeout: 15000,
-  // Detect dead connections faster. Default pingTimeout of 20s means a dropped
-  // connection isn't noticed for 20s — keeping it but lowering pingInterval so
-  // the server pings more frequently and notices drops sooner.
-  pingTimeout:     20000,
-  pingInterval:    10000,
+  pingTimeout:    20000,
+  pingInterval:   10000,
   httpCompression: true,
 });
 
-const FRONTEND_URL = process.env.FRONTEND_URL?.split(',')
-
-// ── CRITICAL FIX: make io accessible in all route handlers ──
 app.set('io', io);
 
-const eventRoutes = require('./routes/events');
-const chatRoutes = require('./routes/chat');
-const pollRoutes = require('./routes/polls');
-const fileRoutes = require('./routes/files');
-const adminRoutes = require('./routes/admin');
-const publicRoutes = require('./routes/public');
-const checkinRoutes = require('./routes/checkin-with-override');
+const eventRoutes       = require('./routes/events');
+const chatRoutes        = require('./routes/chat');
+const pollRoutes        = require('./routes/polls');
+const fileRoutes        = require('./routes/files');
+const adminRoutes       = require('./routes/admin');
+const publicRoutes      = require('./routes/public');
+const checkinRoutes     = require('./routes/checkin-with-override');
 const dataRetentionRoutes = require('./routes/dataRetention7Days');
-const meshRoutes = require('./routes/mesh');
+const meshRoutes        = require('./routes/mesh');
+const seatingRoutes     = require('./routes/seating');   // NEW
 
-const { apiLimiter } = require('./middleware/rateLimiter');
-const { errorHandler } = require('./middleware/errorHandler');
+const { apiLimiter }             = require('./middleware/rateLimiter');
+const { errorHandler }           = require('./middleware/errorHandler');
 const { attachResponseSignature } = require('./middleware/responseSigning');
-const { trafficGuard } = require('./middleware/security');
+const { trafficGuard }           = require('./middleware/security');
 
-// ── Trust proxy for Render / any reverse-proxy hosting ──
-// Required so express-rate-limit can read X-Forwarded-For correctly
 app.set('trust proxy', 1);
 
-// Enhanced security headers with HSTS
 app.use(helmet({
-  // HSTS - Force HTTPS for 2 years
-  hsts: {
-    maxAge: 63072000,        // 2 years in seconds
-    includeSubDomains: true, // Apply to all subdomains
-    preload: true            // Allow browser preload list
-  },
-  
-  // Content Security Policy
+  hsts: { maxAge: 63072000, includeSubDomains: true, preload: true },
   contentSecurityPolicy: {
     directives: {
-      defaultSrc: ["'self'"],
-      scriptSrc: ["'self'", "'unsafe-inline'"],  // Allow inline scripts for React
-      styleSrc: ["'self'", "'unsafe-inline'"],   // Allow inline styles
-      imgSrc: ["'self'", "data:", "https:", "http:"],  // Allow external images (Cloudinary)
-      connectSrc: ["'self'", "wss:", "ws:", "https:", "http:"],  // Allow WebSocket
-      fontSrc: ["'self'", "data:"],
-      objectSrc: ["'none'"],
-      mediaSrc: ["'self'", "https:"],  // Allow Cloudinary media
-      frameSrc: ["'none'"],
+      defaultSrc:  ["'self'"],
+      scriptSrc:   ["'self'", "'unsafe-inline'"],
+      styleSrc:    ["'self'", "'unsafe-inline'"],
+      imgSrc:      ["'self'", 'data:', 'https:', 'http:'],
+      connectSrc:  ["'self'", 'wss:', 'ws:', 'https:', 'http:'],
+      fontSrc:     ["'self'", 'data:'],
+      objectSrc:   ["'none'"],
+      mediaSrc:    ["'self'", 'https:'],
+      frameSrc:    ["'none'"],
     },
   },
-  
-  // Cross-Origin policies
   crossOriginResourcePolicy: { policy: 'cross-origin' },
-  crossOriginEmbedderPolicy: false,  // Allow embedding
-  
-  // Additional security headers
+  crossOriginEmbedderPolicy: false,
   referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
-  noSniff: true,              // Prevent MIME sniffing
-  hidePoweredBy: true,        // Hide X-Powered-By header
-  frameguard: {               // Prevent clickjacking
-    action: 'deny'
-  }
+  noSniff:     true,
+  hidePoweredBy: true,
+  frameguard:  { action: 'deny' },
 }));
 
 app.use(compression());
 
-// ── CORS origin allowlist ─────────────────────────────────────────────────────
-// CORS_ORIGIN must be an explicit comma-separated list of allowed origins.
-// e.g. "https://your-router.onrender.com,https://your-frontend.netlify.app"
-//
-// We deliberately do NOT allow all *.onrender.com — any free app on Render
-// could otherwise make credentialed cross-origin requests to this backend,
-// bypassing the intended router-only access model.
-//
-// Localhost variants are allowed only in non-production so local dev works
-// without touching env vars.
 const _corsAllowedOrigins = (process.env.CORS_ORIGIN || '')
-  .split(',')
-  .map(o => o.trim())
-  .filter(Boolean);
+  .split(',').map(o => o.trim()).filter(Boolean);
 
 if (_corsAllowedOrigins.length === 0) {
-  console.warn('[CORS] WARNING: CORS_ORIGIN is not set — only localhost will be allowed in dev. Set CORS_ORIGIN to your router/frontend URLs.');
+  console.warn('[CORS] WARNING: CORS_ORIGIN not set — localhost only in dev.');
 }
 
 const _localhostOrigins = [
@@ -144,58 +99,44 @@ const _localhostOrigins = [
 ];
 
 const corsOptions = {
-  origin: function (origin, callback) {
-    // No origin = server-to-server, curl, or Render internal health checks
+  origin(origin, callback) {
     if (!origin) return callback(null, true);
-
-    // Explicitly allowed origins (your router URL, frontend URL, etc.)
     if (_corsAllowedOrigins.includes(origin)) return callback(null, true);
-
-    // Localhost in development only
     if (process.env.NODE_ENV !== 'production' && _localhostOrigins.includes(origin)) {
       return callback(null, true);
     }
-
-    // Reject everything else — including other *.onrender.com apps
-    console.warn(`[CORS] Rejected origin: ${origin}`);
+    console.warn(`[CORS] Rejected: ${origin}`);
     callback(new Error('Not allowed by CORS'));
   },
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'x-event-token'],
-  exposedHeaders: ['Content-Type', 'Authorization'],
+  credentials:      true,
+  methods:          ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+  allowedHeaders:   ['Content-Type', 'Authorization', 'x-event-token'],
+  exposedHeaders:   ['Content-Type', 'Authorization'],
   preflightContinue: false,
-  optionsSuccessStatus: 204
+  optionsSuccessStatus: 204,
 };
 
 app.use(cors(corsOptions));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(cookieParser());
-app.use(mongoSanitize()); // Strip MongoDB operators from all request bodies/params
-app.use(trafficGuard); // application-layer malicious traffic detection
+app.use(mongoSanitize());
+app.use(trafficGuard);
 app.use('/api/', apiLimiter);
-app.use('/api/', attachResponseSignature); // Sign every API response with the license-derived key
+app.use('/api/', attachResponseSignature);
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-// ─── Health check endpoints — MUST be registered before all other routes ─────
-// Registered early so no other middleware or catch-all can intercept them.
-//
-// GET  /api/health — full JSON status for browsers / curl / reqbin
-// HEAD /api/health — explicit handler for the watchdog (axios.head) and
-//                    UptimeRobot. Without an explicit HEAD route, Express
-//                    falls through to the app.get('*') catch-all which returns
-//                    404 for any /api path — causing false-positive outage alerts.
+// --------------------------------------------------------------------------
+// Health endpoints
+// --------------------------------------------------------------------------
 app.get('/api/health', (req, res) => {
   res.json({
-    status: 'ok',
+    status:    'ok',
     timestamp: new Date().toISOString(),
-    uptime: process.uptime(),
-    mongodb: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected',
-    features: {
-      cloudinaryStorage: !!process.env.CLOUDINARY_CLOUD_NAME,
-      autoCleanup: true
-    }
+    uptime:    process.uptime(),
+    mongodb:   mongoose.connection.readyState === 1 ? 'connected' : 'disconnected',
+    redis:     !!process.env.REDIS_URL,
+    features:  { cloudinaryStorage: !!process.env.CLOUDINARY_CLOUD_NAME, autoCleanup: true },
   });
 });
 
@@ -208,9 +149,6 @@ app.head('/api/health', (req, res) => {
   res.sendStatus(200);
 });
 
-// ─── UptimeRobot HEAD / ping ──────────────────────────────────────────────────
-// UptimeRobot pings HEAD / to check if the server is alive.
-// Respond 200 with lightweight status headers — no body needed.
 app.head('/', (req, res) => {
   res.set({
     'X-Service': 'planit-backend',
@@ -220,223 +158,207 @@ app.head('/', (req, res) => {
   res.sendStatus(200);
 });
 
-// Mount routes
-app.use('/api/events', eventRoutes);
-app.use('/api/chat', chatRoutes);
-app.use('/api/polls', pollRoutes);
-app.use('/api/files', fileRoutes);
-app.use('/api/admin', adminRoutes);
-app.use('/api/support', supportRoutes);
+// --------------------------------------------------------------------------
+// Routes
+// --------------------------------------------------------------------------
+app.use('/api/events',    eventRoutes);
+app.use('/api/chat',      chatRoutes);
+app.use('/api/polls',     pollRoutes);
+app.use('/api/files',     fileRoutes);
+app.use('/api/admin',     adminRoutes);
+app.use('/api/support',   supportRoutes);
 app.use('/api/bug-reports', bugReportRoutes);
-app.use('/api/uptime', uptimeRoutes);
-app.use('/api/mesh', meshRoutes);
-app.use('/api', publicRoutes);
-app.use('/api/events', checkinRoutes);
-app.use('/api/events', dataRetentionRoutes);
+app.use('/api/uptime',    uptimeRoutes);
+app.use('/api/mesh',      meshRoutes);
+app.use('/api',           publicRoutes);
+app.use('/api/events',    checkinRoutes);
+app.use('/api/events',    dataRetentionRoutes);
+app.use('/api/events',    seatingRoutes);     // NEW: seating map CRUD
 
 const frontendUrls = (process.env.FRONTEND_URL || '')
-  .split(',')
-  .map(url => url.trim())
-  .filter(Boolean);
+  .split(',').map(u => u.trim()).filter(Boolean);
 
 app.get('*', (req, res) => {
-  // Never redirect API routes
-  if (req.path.startsWith('/api')) {
-    return res.status(404).json({ error: 'Not found' });
-  }
-
+  if (req.path.startsWith('/api')) return res.status(404).json({ error: 'Not found' });
   const requestHost = req.hostname;
-
-  // Try to match exact hostname
-  const match = frontendUrls.find(url => {
-    try {
-      return new URL(url).hostname === requestHost;
-    } catch {
-      return false;
-    }
+  const match = frontendUrls.find(u => {
+    try { return new URL(u).hostname === requestHost; } catch { return false; }
   });
-
-  // Fallback to first frontend as canonical
   const target = match || frontendUrls[0];
-
-  if (!target) {
-    return res.status(500).send('Frontend URL not configured');
-  }
-
+  if (!target) return res.status(500).send('Frontend URL not configured');
   return res.redirect(301, target + req.originalUrl);
 });
 
 app.use(errorHandler);
 
-// ═══════════════════════════════════════════════════════════════════════════
-// ENHANCED MongoDB CONNECTION WITH CLEANUP SCHEDULER
-// ═══════════════════════════════════════════════════════════════════════════
+// --------------------------------------------------------------------------
+// Redis adapter for Socket.IO
+//
+// Set REDIS_URL in your environment to route signaling across all 5 backend
+// instances. Upstash provides a native Redis URL in the format:
+//   rediss://default:<token>@<host>:<port>
+//
+// Without REDIS_URL the server operates correctly in single-instance mode;
+// walkie-talkie still works as long as all staff connect to the same instance.
+//
+// Required packages (add to package.json):
+//   "ioredis": "^5.3.2"
+//   "@socket.io/redis-adapter": "^8.3.0"
+// --------------------------------------------------------------------------
+async function initRedisAdapter() {
+  const redisUrl = process.env.REDIS_URL;
 
+  if (!redisUrl) {
+    console.log('[io] No REDIS_URL — in-memory adapter (single-instance mode)');
+    return;
+  }
+
+  try {
+    const Redis            = require('ioredis');
+    const { createAdapter } = require('@socket.io/redis-adapter');
+
+    const tlsOptions = redisUrl.startsWith('rediss://')
+      ? { tls: { rejectUnauthorized: false } }
+      : {};
+
+    const pubClient = new Redis(redisUrl, {
+      ...tlsOptions,
+      maxRetriesPerRequest: 3,
+      enableReadyCheck:     false,
+      lazyConnect:          false,
+    });
+
+    const subClient = pubClient.duplicate();
+
+    // Wait for both connections before attaching
+    await Promise.all([
+      new Promise((resolve, reject) => {
+        pubClient.once('ready', resolve);
+        pubClient.once('error', reject);
+        setTimeout(() => reject(new Error('pub timeout')), 10_000);
+      }),
+      new Promise((resolve, reject) => {
+        subClient.once('ready', resolve);
+        subClient.once('error', reject);
+        setTimeout(() => reject(new Error('sub timeout')), 10_000);
+      }),
+    ]);
+
+    io.adapter(createAdapter(pubClient, subClient));
+
+    console.log('[io] Redis adapter active — all 5 instances share signaling bus');
+
+    // Graceful shutdown
+    const shutdown = async () => {
+      await pubClient.quit().catch(() => {});
+      await subClient.quit().catch(() => {});
+    };
+    process.once('SIGTERM', shutdown);
+    process.once('SIGINT',  shutdown);
+
+  } catch (err) {
+    console.error('[io] Redis adapter init failed, using in-memory fallback:', err.message);
+  }
+}
+
+// --------------------------------------------------------------------------
+// MongoDB + server startup
+// --------------------------------------------------------------------------
 const connectDB = async () => {
   try {
-    if (!process.env.MONGODB_URI) {
-      throw new Error('MONGODB_URI is not defined in environment variables');
-    }
+    if (!process.env.MONGODB_URI) throw new Error('MONGODB_URI not defined');
 
-    // Enable mongoose debugging in development
-    if (process.env.NODE_ENV === 'development') {
-      mongoose.set('debug', true);
-    }
+    if (process.env.NODE_ENV === 'development') mongoose.set('debug', true);
 
     await mongoose.connect(process.env.MONGODB_URI, {
-      useNewUrlParser: true,
+      useNewUrlParser:    true,
       useUnifiedTopology: true,
     });
 
-    console.log('✓ MongoDB connected successfully');
+    console.log('MongoDB connected');
     console.log(`  Database: ${mongoose.connection.name}`);
-    console.log(`  Host: ${mongoose.connection.host}`);
-    console.log(`  Port: ${mongoose.connection.port}`);
 
-    // ═══════════════════════════════════════════════════════════════════════
-    // START AUTOMATIC CLEANUP SCHEDULER
-    // ═══════════════════════════════════════════════════════════════════════
-    console.log('\n  Initializing automatic event cleanup...');
     startCleanupScheduler();
-    console.log('✓ Cleanup scheduler started');
-    console.log('  Events will be deleted 7 days after they occur');
-    console.log('  Cleanup runs daily at 2:00 AM\n');
 
-    // Handle connection events
-    mongoose.connection.on('error', (err) => {
-      console.error('MongoDB connection error:', err);
-    });
-
-    mongoose.connection.on('disconnected', () => {
-      console.warn('MongoDB disconnected. Attempting to reconnect...');
-    });
-
-    mongoose.connection.on('reconnected', () => {
-      console.log('MongoDB reconnected successfully');
-    });
+    mongoose.connection.on('error',       err  => console.error('MongoDB error:', err));
+    mongoose.connection.on('disconnected', ()   => console.warn('MongoDB disconnected'));
+    mongoose.connection.on('reconnected',  ()   => console.log('MongoDB reconnected'));
 
   } catch (err) {
-    console.error(' MongoDB connection failed:');
-    console.error('  Error:', err.message);
-    if (process.env.MONGODB_URI) {
-      // Hide credentials in logs
-      const sanitizedURI = process.env.MONGODB_URI.replace(/\/\/.*@/, '//***:***@');
-      console.error('  URI:', sanitizedURI);
-    }
-    console.error('\nPlease check:');
-    console.error('  1. MongoDB is running');
-    console.error('  2. MONGODB_URI in .env is correct');
-    console.error('  3. Network connectivity');
-    console.error('  4. Database user has proper permissions');
+    console.error('MongoDB connection failed:', err.message);
     process.exit(1);
   }
 };
 
-// ═══════════════════════════════════════════════════════════════════════════
-// START SERVER
-// ═══════════════════════════════════════════════════════════════════════════
-
-// ─── Mesh startup announcement ───────────────────────────────────────────────
-// When this backend starts, it announces itself to the router so the router
-// can enrich its fleet state — even if BACKEND_URLS was not updated.
 async function announceToRouter() {
   const routerUrl = process.env.ROUTER_URL;
   if (!routerUrl) return;
+
   const { meshPost } = require('./middleware/mesh');
   const name    = process.env.BACKEND_LABEL  || 'Backend';
-  const region  = process.env.BACKEND_REGION || null;
-  // SELF_URL must be set on Render to this backend's own URL
-  const selfUrl = process.env.SELF_URL || '';
+  const selfUrl = process.env.SELF_URL       || '';
+
   if (!selfUrl) {
-    console.warn(`[${name}] [mesh] SELF_URL not set — skipping router announcement`);
+    console.warn(`[${name}] [mesh] SELF_URL not set — skipping announcement`);
     return;
   }
-  for (let attempt = 1; attempt <= 4; attempt++) {
-    const result = await meshPost(name, `${routerUrl}/mesh/register`, { url: selfUrl, name, region });
+
+  for (let i = 1; i <= 4; i++) {
+    const result = await meshPost(name, `${routerUrl}/mesh/register`, {
+      url: selfUrl, name, region: process.env.BACKEND_REGION || null,
+    });
     if (result.ok) {
-      console.log(`[${name}] [mesh] Announced to router — joined fleet (attempt ${attempt})`);
+      console.log(`[${name}] [mesh] Announced to router (attempt ${i})`);
       return;
     }
-    if (attempt < 4) await new Promise(r => setTimeout(r, attempt * 3000));
+    if (i < 4) await new Promise(r => setTimeout(r, i * 3000));
   }
-  console.warn(`[${process.env.BACKEND_LABEL || 'Backend'}] [mesh] Could not announce to router — will be discovered on next keepalive`);
+  console.warn(`[${process.env.BACKEND_LABEL || 'Backend'}] [mesh] Could not announce to router`);
 }
 
-connectDB().then(() => {
+connectDB().then(async () => {
+  // Attach Redis adapter before any connection is accepted
+  await initRedisAdapter();
+
+  // Register all Socket.IO handlers
+  require('./socket/chatSocket')(io);
+  require('./socket/walkieTalkieSocket')(io);  // NEW
+
   const PORT = process.env.PORT || 5000;
   server.listen(PORT, () => {
     const name   = process.env.BACKEND_LABEL  || 'Backend';
     const region = process.env.BACKEND_REGION ? ` — ${process.env.BACKEND_REGION}` : '';
-    console.log('\n' + '═'.repeat(70));
+    console.log('\n' + '='.repeat(70));
     console.log(` PlanIt Backend — ${name}${region}`);
-    console.log('═'.repeat(70));
+    console.log('='.repeat(70));
     console.log(`  Port:        ${PORT}`);
     console.log(`  Environment: ${process.env.NODE_ENV || 'development'}`);
     console.log(`  CORS Origin: ${process.env.CORS_ORIGIN || 'http://localhost:5173'}`);
     console.log(`  Storage:     ${process.env.CLOUDINARY_CLOUD_NAME ? 'Cloudinary' : 'Local'}`);
-    console.log('═'.repeat(70));
-    console.log('\nServer ready. Announcing to mesh...\n');
-
-    // Announce to router after a short delay to let process fully settle
+    console.log(`  Redis:       ${process.env.REDIS_URL ? 'Adapter active' : 'In-memory'}`);
+    console.log('='.repeat(70));
     setTimeout(announceToRouter, 4000);
   });
 });
 
-// Initialize WebSocket chat
-require('./socket/chatSocket')(io);
-
-
 process.on('SIGTERM', () => {
-  console.log('\n SIGTERM signal received: closing HTTP server');
   server.close(() => {
-    console.log('✓ HTTP server closed');
-    mongoose.connection.close(false, () => {
-      console.log('✓ MongoDB connection closed');
-      console.log(' Server shutdown complete');
-      process.exit(0);
-    });
+    mongoose.connection.close(false, () => process.exit(0));
   });
 });
 
 process.on('SIGINT', () => {
-  console.log('\n SIGINT signal received: closing HTTP server');
   server.close(() => {
-    console.log('✓ HTTP server closed');
-    mongoose.connection.close(false, () => {
-      console.log('✓ MongoDB connection closed');
-      console.log(' Server shutdown complete');
-      process.exit(0);
-    });
+    mongoose.connection.close(false, () => process.exit(0));
   });
 });
 
-// Handle unhandled promise rejections
-//
-// FIX: The original handler called server.close() + process.exit(1) here.
-// That means any single unhandled rejection — e.g. a network blip on a file
-// upload — would kill the entire server, drop all active connections, and make
-// the uptime monitor report a 503 until the process restarted.
-//
-// The correct approach is to LOG the error so it can be diagnosed, but keep the
-// server running. Legitimate reasons to exit (out of memory, corrupted state)
-// will surface through other means. An upload failing is not one of them.
-process.on('unhandledRejection', (err) => {
-  console.error('[PlanIt] Unhandled Promise Rejection (server kept alive):', err);
-  console.error('   Stack:', err?.stack);
+process.on('unhandledRejection', err => {
+  console.error('[PlanIt] Unhandled Rejection:', err?.stack || err);
 });
 
-// Handle uncaught exceptions
-//
-// FIX: Same issue as above. The original handler exited the process on any
-// uncaught exception. A stream 'error' event with no listener (e.g. from the
-// Cloudinary upload stream on a network failure) becomes an uncaughtException
-// in Node.js — which was crashing the whole server on every failed upload.
-//
-// Fatal system errors (ENOMEM, etc.) will still surface here and can be
-// identified in logs, but routine runtime errors no longer take the server down.
-process.on('uncaughtException', (err) => {
-  console.error('[PlanIt] Uncaught Exception (server kept alive):', err);
-  console.error('   Stack:', err?.stack);
+process.on('uncaughtException', err => {
+  console.error('[PlanIt] Uncaught Exception:', err?.stack || err);
 });
 
 module.exports = { app, server, io };
