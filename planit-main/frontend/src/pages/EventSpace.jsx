@@ -254,7 +254,8 @@ function JoinGate({ eventId, onJoined }) {
             {showDropdown && filteredParticipants.length > 0 && (
               <div className="absolute z-20 w-full mt-1.5 bg-white border border-neutral-200 rounded-xl shadow-2xl overflow-hidden">
                 <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest px-3 pt-2.5 pb-1">Previously joined</p>
-                {filteredParticipants.slice(0, 6).map(p => (
+                <div className="max-h-52 overflow-y-auto overscroll-contain">
+                {filteredParticipants.map(p => (
                   <button key={p.username} type="button"
                     className="w-full flex items-center justify-between px-3 py-2.5 hover:bg-neutral-50 text-left transition-colors"
                     onMouseDown={() => handleSelectName(p)}>
@@ -269,6 +270,7 @@ function JoinGate({ eventId, onJoined }) {
                       : <span className="text-[10px] text-neutral-300">returning</span>}
                   </button>
                 ))}
+                </div>
               </div>
             )}
           </div>
@@ -469,10 +471,13 @@ function JoinGate({ eventId, onJoined }) {
 
       {/* Center content */}
       <div className="relative z-10 flex-1 flex items-center justify-center px-4 py-6">
-        <div className="w-full max-w-[480px] sm:max-w-[540px] animate-fade-in">
+        <div className="w-full max-w-[540px] lg:max-w-[900px] animate-fade-in">
+
+          {/* On large screens: side-by-side (event info left, join form right) */}
+          <div className="lg:flex lg:gap-5 lg:items-start">
 
           {/* Event hero */}
-          <div className="rounded-2xl overflow-hidden mb-3"
+          <div className="rounded-2xl overflow-hidden mb-3 lg:mb-0 lg:flex-1"
             style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', backdropFilter: 'blur(24px)' }}>
             <div className="p-6">
               {/* Status chips */}
@@ -552,7 +557,8 @@ function JoinGate({ eventId, onJoined }) {
             </div>
           </div>
 
-          {/* Action card */}
+          {/* Action card — on large screens this is the right column */}
+          <div className="lg:w-[400px] lg:flex-shrink-0">
           <div className="rounded-2xl overflow-hidden"
             style={{ background: 'rgba(255,255,255,0.97)', border: '1px solid rgba(0,0,0,0.06)', boxShadow: '0 28px 72px rgba(0,0,0,0.55)' }}>
 
@@ -666,6 +672,8 @@ function JoinGate({ eventId, onJoined }) {
               </div>
             </div>
           </div>
+          </div> {/* end right column */}
+          </div> {/* end lg:flex row */}
         </div>
       </div>
     </div>
