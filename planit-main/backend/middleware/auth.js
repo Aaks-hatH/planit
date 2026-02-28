@@ -88,7 +88,12 @@ const verifyEventAccess = async (req, res, next) => {
       } catch (_) { /* invalid or expired — still allow open events */ }
     }
 
-    if (!event.isPasswordProtected) {
+    // Events with requireApproval must also enforce token auth, even if they are
+    // not password-protected.  Without this, any unauthenticated HTTP request can
+    // read messages, participants, files etc. — bypassing the approval gate entirely.
+    const requiresAuth = event.isPasswordProtected || event.settings?.requireApproval;
+
+    if (!requiresAuth) {
       req.event = event;
       return next();
     }
@@ -97,6 +102,12 @@ const verifyEventAccess = async (req, res, next) => {
                   req.headers['authorization']?.split(' ')[1];
 
     if (!token) {
+      if (event.settings?.requireApproval && !event.isPasswordProtected) {
+        return res.status(403).json({
+          error: 'Access to this event requires organizer approval.',
+          requiresApproval: true
+        });
+      }
       return res.status(403).json({
         error: 'This event requires a password to access.',
         requiresPassword: true
@@ -108,6 +119,12 @@ const verifyEventAccess = async (req, res, next) => {
       const isAdminAccess = decoded.isAdminAccess === true;
 
       if (!isAdminAccess && decoded.eventId !== eventId && decoded.eventId !== eventId.toString()) {
+        if (event.settings?.requireApproval && !event.isPasswordProtected) {
+          return res.status(403).json({
+            error: 'Access to this event requires organizer approval.',
+            requiresApproval: true
+          });
+        }
         return res.status(403).json({
           error: 'Your access token is not valid for this event.',
           requiresPassword: true
@@ -118,6 +135,12 @@ const verifyEventAccess = async (req, res, next) => {
       req.eventAccess = decoded;
       next();
     } catch (error) {
+      if (event.settings?.requireApproval && !event.isPasswordProtected) {
+        return res.status(403).json({
+          error: 'Access to this event requires organizer approval.',
+          requiresApproval: true
+        });
+      }
       res.status(403).json({
         error: 'Your session for this event has expired. Please enter the password again.',
         requiresPassword: true
