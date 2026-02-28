@@ -9,7 +9,8 @@ import {
   Fingerprint, Ban, Wifi, WifiOff, RefreshCw, Package, Bell,
   UserX, Cpu, ChevronRight, Hash, Trash2, Key, Server, Gauge,
   ClipboardList, DollarSign, PieChart, UserCheck, Search, Filter,
-  ToggleLeft, ShieldAlert, ShieldCheck, Radio, Landmark, Map, UploadCloud, Edit2
+  ToggleLeft, ShieldAlert, ShieldCheck, Radio, Landmark, Map, UploadCloud, Edit2,
+  MapPin, Volume2, Mic2
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 
@@ -27,21 +28,21 @@ function SectionTitle({ icon: Icon, title, subtitle }) {
   return (
     <div className="mb-10">
       <div className="flex items-center gap-3 mb-4">
-        <div className="w-10 h-10 rounded-xl bg-neutral-100 border border-neutral-200 flex items-center justify-center flex-shrink-0">
-          <Icon className="w-5 h-5 text-neutral-600" />
+        <div className="w-10 h-10 rounded-xl bg-neutral-900 border border-neutral-800 flex items-center justify-center flex-shrink-0 shadow-sm">
+          <Icon className="w-5 h-5 text-white" />
         </div>
         <h2 className="text-2xl font-black text-neutral-900">{title}</h2>
       </div>
-      {subtitle && <p className="text-neutral-500 leading-relaxed text-base pl-[52px]">{subtitle}</p>}
+      {subtitle && <p className="text-neutral-500 leading-relaxed text-base pl-[52px] border-l-2 border-neutral-200 ml-[24px] pl-6">{subtitle}</p>}
     </div>
   );
 }
 
 function FeatureRow({ icon: Icon, title, description }) {
   return (
-    <div className="flex gap-4 py-5 border-b border-neutral-100 last:border-0">
-      <div className="flex-shrink-0 w-9 h-9 rounded-lg bg-neutral-100 flex items-center justify-center mt-0.5">
-        <Icon className="w-4 h-4 text-neutral-500" />
+    <div className="flex gap-4 py-5 border-b border-neutral-100 last:border-0 group">
+      <div className="flex-shrink-0 w-9 h-9 rounded-lg bg-neutral-100 group-hover:bg-neutral-200 flex items-center justify-center mt-0.5 transition-colors">
+        <Icon className="w-4 h-4 text-neutral-600" />
       </div>
       <div>
         <p className="text-sm font-bold text-neutral-900 mb-1">{title}</p>
@@ -82,7 +83,7 @@ function Badge({ children, color = 'neutral' }) {
 
 function TechDetail({ label, value }) {
   return (
-    <div className="flex items-start gap-3 py-3 border-b border-neutral-100 last:border-0">
+    <div className="flex items-start gap-3 py-3.5 px-4 border-b border-neutral-100 last:border-0 hover:bg-neutral-50 transition-colors">
       <span className="text-xs font-mono font-bold text-neutral-400 uppercase tracking-wider pt-0.5 w-36 flex-shrink-0">{label}</span>
       <span className="text-sm text-neutral-600 leading-relaxed">{value}</span>
     </div>
@@ -153,6 +154,8 @@ export default function About() {
         { href: '#checkin',        label: 'Admit and deny check-in'        },
         { href: '#antifraud',      label: 'Anti-fraud system'              },
         { href: '#manager-override', label: 'Manager override'             },
+        { href: '#walkie-talkie',  label: 'Walkie-talkie PTT'              },
+        { href: '#seating-map',    label: 'Seating map'                    },
       ]
     },
     {
@@ -270,6 +273,8 @@ export default function About() {
               <Badge color="neutral">Socket.IO real-time</Badge>
               <Badge color="neutral">MongoDB data layer</Badge>
               <Badge color="emerald">No account required</Badge>
+              <Badge color="blue">Walkie-talkie PTT</Badge>
+              <Badge color="blue">Visual seating map</Badge>
             </div>
           </motion.div>
 
@@ -998,6 +1003,92 @@ export default function About() {
             <p className="text-sm text-neutral-500 leading-relaxed mt-4">
               The manager override is also available for invites that have been flagged or blocked by the anti-fraud system. If the system automatically blocked a guest due to a duplicate detection or low trust score, the override allows an organizer who has reviewed the situation to manually clear the block and admit the guest. The override action is separately logged as a security event on the invite record.
             </p>
+          </Section>
+
+          {/* ─── WALKIE-TALKIE ───────────────────────────────────────── */}
+          <Section id="walkie-talkie">
+            <SectionTitle
+              icon={Volume2}
+              title="Walkie-talkie PTT"
+              subtitle="Real-time push-to-talk voice communication built directly into the check-in dashboard. Any staff member or organizer can broadcast to the entire team without leaving the check-in screen."
+            />
+            <p className="text-neutral-500 leading-relaxed mb-4">
+              On a busy event day, staff at different entrances need to coordinate in real time — a guest arrives with a dispute, the capacity is almost full, a VIP has shown up at the wrong door. Texting through the chat tab is too slow. Calling requires leaving the check-in screen. The walkie-talkie solves this by embedding one-touch voice broadcast directly into the check-in UI.
+            </p>
+            <FeatureRow
+              icon={Mic2}
+              title="Push-to-talk button"
+              description="A floating PTT button appears in the bottom corner of the check-in screen for all authenticated staff and organizers. Hold the button to transmit. The moment you release, transmission ends. There is no setup, no pairing, and no separate app — it uses the same Socket.IO connection that drives real-time check-in updates."
+            />
+            <FeatureRow
+              icon={Volume2}
+              title="Broadcast to the entire team"
+              description="When you transmit, every other staff member connected to the same event receives the audio stream in real time. The receiving side does not require any interaction — audio plays automatically on their device through the speakers or connected earpiece. A subtle visual indicator appears on all devices showing who is currently transmitting."
+            />
+            <FeatureRow
+              icon={Radio}
+              title="Audio streamed over WebSocket"
+              description="The walkie-talkie captures audio from the device microphone using the Web Audio API and streams it as compressed chunks over the existing Socket.IO room connection. Audio chunks are broadcast to all other sessions in the event room and played back with minimal buffering. The entire pipeline adds no perceptible latency over the underlying socket connection."
+            />
+            <FeatureRow
+              icon={Activity}
+              title="Speaker identification"
+              description="Each transmission is labeled with the transmitting staff member's username. Connected devices display a small 'transmitting' badge showing who is speaking, so the team always knows whose voice they are hearing without asking."
+            />
+            <FeatureRow
+              icon={Shield}
+              title="Authenticated only"
+              description="The walkie-talkie is only available to sessions that have authenticated — either as organizer or as staff via the staff PIN login. Unauthenticated sessions (guests viewing the workspace) cannot access the PTT channel. This ensures the comms channel is exclusive to the team running the event."
+            />
+            <Callout>
+              The walkie-talkie shares the same Socket.IO room as check-in events, which means it works over any network that can reach the backend — venue WiFi, mobile data, or a hotspot. Audio quality degrades gracefully on poor connections; the stream continues at lower quality rather than dropping out entirely.
+            </Callout>
+          </Section>
+
+          {/* ─── SEATING MAP ─────────────────────────────────────────── */}
+          <Section id="seating-map">
+            <SectionTitle
+              icon={MapPin}
+              title="Seating map"
+              subtitle="A visual canvas for designing and managing the seating layout of your venue. Organizers can drag, drop, and label tables on an interactive map, assign guests to seats, and see real-time fill status during check-in."
+            />
+            <p className="text-neutral-500 leading-relaxed mb-4">
+              For events with formal seating — galas, wedding receptions, corporate dinners, award ceremonies — knowing which table each guest is assigned to and whether that table is filling as expected is a significant operational concern. The seating map brings this visibility into the same check-in screen where guests are being admitted, so staff can direct each guest immediately without consulting a separate spreadsheet or printed floor plan.
+            </p>
+            <FeatureRow
+              icon={MapPin}
+              title="Interactive canvas editor"
+              description="Organizers open the seating map editor from the check-in dashboard header. The editor renders a canvas — default 1000×700 logical units — where tables can be placed, moved, labeled, and resized by drag-and-drop. Each object on the canvas has a unique ID that persists across sessions. The canvas state is saved to the event's seating record in the database and synchronized to all connected sessions via the seating_map_updated socket event."
+            />
+            <FeatureRow
+              icon={Users}
+              title="Guest-to-table assignment"
+              description="Within the seating map editor, organizers can drag guest names from a list onto table objects on the canvas. Each assignment is persisted on the guest's invite record (tableId, tableLabel fields) and broadcast via the guest_table_updated socket event to all connected sessions. The guest list in the check-in dashboard shows a violet table badge next to any guest who has been assigned, and the seating map view shows real-time occupancy per table."
+            />
+            <FeatureRow
+              icon={CheckCircle2}
+              title="Real-time fill status during check-in"
+              description="When a guest is admitted at the door, their table assignment is immediately visible on the admit confirmation screen and on their boarding pass review card. Staff can tell the guest their table number without looking anything up. The seating map viewer (available to all authenticated staff) shows a live count of admitted guests per table, so front-of-house staff can see at a glance which tables are filling and communicate seating status to catering."
+            />
+            <FeatureRow
+              icon={MapPin}
+              title="Show on Map: post-admission navigation"
+              description="After admitting a guest who has a table assignment, the admission success screen offers a 'Show on Map' button. Tapping it opens the seating map with the guest's assigned table highlighted and centered in view. This lets a staff member at the entrance physically point at the table on the map and then direct the guest with confidence, without needing to explain coordinates verbally."
+            />
+            <FeatureRow
+              icon={Radio}
+              title="Real-time sync across all staff devices"
+              description="Changes to the seating map — new objects, moved tables, updated assignments — are broadcast to every connected session via seating_map_updated and seating_assignments_updated socket events. A staff member at a second entrance sees the same live layout as the organizer editing it at the registration desk. There is no polling, no manual refresh required."
+            />
+            <div className="border border-neutral-200 rounded-2xl overflow-hidden my-6">
+              <TechDetail label="Editor mode" value="Organizers see the full drag-and-drop editor with table palette, guest assignment panel, and save controls. Saving dispatches a PUT to /events/:id/seating with the full canvas state." />
+              <TechDetail label="Display mode" value="Staff (non-organizer) sessions see a read-only display of the seating map with real-time fill indicators per table. No editing controls are shown." />
+              <TechDetail label="Focus API" value="Internal seatingFocusId state allows any part of the check-in system to request the map to open and center on a specific table — used by the 'Show on Map' button on the admit success screen and the 'Show table' shortcut on checked-in guests in the guest list." />
+              <TechDetail label="Persistence" value="The seating layout (canvas objects) and all guest assignments are stored in the database and survive server restarts. The seating map is non-blocking at load time — if no map has been created yet, the Seating button is hidden and no error is shown." />
+            </div>
+            <Callout accent>
+              The seating map is optional — it only activates once an organizer creates and saves a layout. Events where seating is not a concern are completely unaffected. The Seating button only appears in the check-in header when a seating map is enabled for that event.
+            </Callout>
           </Section>
 
           {/* ─── SECURITY ────────────────────────────────────────────── */}
