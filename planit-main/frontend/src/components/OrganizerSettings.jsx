@@ -3,7 +3,7 @@ import {
  Settings, X, Users, MessageSquare, BarChart3, FileText,
  Calendar, Save, Lock, Globe, Clock, CheckCircle, AlertTriangle,
  ChevronDown, ChevronUp, Info, Webhook, Copy, Trash2, Plus, RefreshCw,
- Image, Palette, Tag, Upload
+ Image, Palette, Tag, Upload, Bell, UserCheck, UserX
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { eventAPI, fileAPI } from '../services/api';
@@ -60,9 +60,9 @@ function Section({ title, icon: Icon, children, defaultOpen = true }) {
 }
 
 // ─── Main component ───────────────────────────────────────────────────────────
-export default function OrganizerSettings({ eventId, event, onClose, onUpdated }) {
+export default function OrganizerSettings({ eventId, event, onClose, onUpdated, initialTab, pendingCount = 0 }) {
  const [saving, setSaving] = useState(false);
- const [activeTab, setActiveTab] = useState('general');
+ const [activeTab, setActiveTab] = useState(initialTab || 'general');
 
  // General fields
  const [title, setTitle] = useState(event?.title || '');
@@ -107,6 +107,11 @@ export default function OrganizerSettings({ eventId, event, onClose, onUpdated }
  const [tagInput, setTagInput] = useState('');
  const [uploadingCover, setUploadingCover] = useState(false);
  const coverInputRef = useRef(null);
+
+ // ── Approval queue state ────────────────────────────────────────────────────
+ const [approvalQueue,   setApprovalQueue]   = useState([]);
+ const [queueLoading,    setQueueLoading]    = useState(false);
+ const [queueActionId,   setQueueActionId]   = useState(null); // username being actioned
 
  const THEME_COLORS = [
  '#6366f1', '#8b5cf6', '#ec4899', '#ef4444',
@@ -201,6 +206,39 @@ export default function OrganizerSettings({ eventId, event, onClose, onUpdated }
  }
  }, [activeTab, eventId]);
 
+ // ── Approval queue functions ──────────────────────────────────────────────
+ const loadApprovalQueue = async () => {
+   setQueueLoading(true);
+   try {
+     const res = await eventAPI.getApprovalQueue(eventId);
+     setApprovalQueue(res.data.queue || []);
+   } catch {
+     toast.error('Failed to load approval queue');
+   } finally { setQueueLoading(false); }
+ };
+
+ const handleApprove = async (username) => {
+   setQueueActionId(username);
+   try {
+     await eventAPI.approveParticipant(eventId, username);
+     setApprovalQueue(prev => prev.filter(r => r.username !== username));
+     toast.success(`${username} approved and can now join.`);
+   } catch {
+     toast.error('Failed to approve participant');
+   } finally { setQueueActionId(null); }
+ };
+
+ const handleReject = async (username) => {
+   setQueueActionId(username);
+   try {
+     await eventAPI.rejectParticipant(eventId, username);
+     setApprovalQueue(prev => prev.filter(r => r.username !== username));
+     toast.success(`${username}'s request rejected.`);
+   } catch {
+     toast.error('Failed to reject request');
+   } finally { setQueueActionId(null); }
+ };
+
  const handleSave = async () => {
  setSaving(true);
  try {
@@ -268,6 +306,7 @@ export default function OrganizerSettings({ eventId, event, onClose, onUpdated }
  {[
  { id: 'general', label: 'General' },
  { id: 'features', label: 'Features' },
+     { id: 'approvals', label: 'Approvals', badge: pendingCount },
  { id: 'rsvp', label: 'RSVP' },
  { id: 'theme', label: 'Theme' },
  { id: 'integrations', label: 'Integrations' },
@@ -281,7 +320,14 @@ export default function OrganizerSettings({ eventId, event, onClose, onUpdated }
  : 'text-neutral-500 border-transparent hover:text-neutral-700'
  }`}
  >
- {tab.label}
+     <span className="relative inline-flex items-center gap-1.5">
+       {tab.label}
+       {tab.badge > 0 && (
+         <span className="inline-flex items-center justify-center min-w-[16px] h-4 px-1 text-[10px] font-black bg-red-500 text-white rounded-full">
+           {tab.badge > 9 ? '9+' : tab.badge}
+         </span>
+       )}
+     </span>
  </button>
  ))}
  </div>
@@ -932,7 +978,7 @@ export default function OrganizerSettings({ eventId, event, onClose, onUpdated }
  <button onClick={onClose} className="btn btn-secondary text-sm">
  Cancel
  </button>
- {activeTab !== 'integrations' && (
+ {activeTab !== 'integrations' && activeTab !== 'approvals' && (
  <button
  onClick={handleSave}
  disabled={saving}
