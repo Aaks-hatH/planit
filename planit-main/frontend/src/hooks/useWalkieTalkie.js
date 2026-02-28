@@ -42,7 +42,14 @@ const ICE_CONFIG = {
   iceServers: [
     { urls: 'stun:stun.l.google.com:19302' },
     { urls: 'stun:stun1.l.google.com:19302' },
+    // Public TURN relay — used only when STUN / direct P2P fails (e.g. symmetric NAT).
+    // These are the Metered open TURN servers (no-cost, rate-limited).
+    { urls: 'turn:openrelay.metered.ca:80',  username: 'openrelayproject', credential: 'openrelayproject' },
+    { urls: 'turn:openrelay.metered.ca:443', username: 'openrelayproject', credential: 'openrelayproject' },
+    { urls: 'turn:openrelay.metered.ca:443?transport=tcp', username: 'openrelayproject', credential: 'openrelayproject' },
   ],
+  // iceCandidatePoolSize: 2 pre-gathers candidates before PTT, reducing first-transmission lag
+  iceCandidatePoolSize: 2,
 };
 
 // ---------------------------------------------------------------------------
@@ -308,22 +315,68 @@ export function useWalkieTalkie(socket, eventId, token, username) {
       }
     };
 
-    // Play incoming audio by attaching to a hidden <audio> element
+    // Play incoming audio by attaching to a hidden <audio> element.
+    // We must call audio.play() explicitly — browsers (especially Chrome/Safari)
+    // block the autoplay attribute on dynamically-created elements unless the
+    // page has already received a user gesture.  The PTT button press counts as
+    // a gesture, so play() reliably succeeds here.
     pc.ontrack = (evt) => {
       const existing = document.querySelector(`[data-walkie="${peerId}"]`);
       if (existing) {
         existing.srcObject = evt.streams[0];
+        existing.play().catch(() => {});
         return;
       }
       const audio = document.createElement('audio');
       audio.autoplay   = true;
+      audio.muted      = false;
       audio.setAttribute('data-walkie', peerId);
       audio.srcObject  = evt.streams[0];
       document.body.appendChild(audio);
+      // Explicitly call play() to satisfy browser autoplay policies
+      audio.play().catch((err) => {
+        console.warn('[walkie] audio autoplay blocked, retrying on next user gesture:', err.message);
+        // Queue a retry on the next click/touch anywhere on the page
+        const retry = () => {
+          audio.play().catch(() => {});
+          document.removeEventListener('click',     retry);
+          document.removeEventListener('touchstart', retry);
+          document.removeEventListener('keydown',    retry);
+        };
+        document.addEventListener('click',      retry, { once: true });
+        document.addEventListener('touchstart', retry, { once: true });
+        document.addEventListener('keydown',    retry, { once: true });
+      });
     };
 
     pc.onconnectionstatechange = () => {
-      if (pc.connectionState === 'failed' || pc.connectionState === 'closed') {
+      console.log(`[walkie] peer ${peerId} connectionState → ${pc.connectionState}`);
+      if (pc.connectionState === 'failed') {
+        console.warn(`[walkie] connection to ${peerId} failed, attempting ICE restart`);
+        // Attempt an ICE restart before giving up entirely
+        if (pc.signalingState === 'stable') {
+          pc.restartIce();
+          // Re-offer with ICE restart flag so the remote side renegotiates
+          const key    = keyRef.current;
+          const socket = socketRef.current;
+          if (key && socket) {
+            pc.createOffer({ iceRestart: true, offerToReceiveAudio: true })
+              .then(offer => pc.setLocalDescription(offer))
+              .then(async () => {
+                const encryptedPayload = await encrypt(keyRef.current, { sdp: pc.localDescription.sdp });
+                socketRef.current?.emit('walkie:offer', { eventId: eventIdRef.current, to: peerId, encryptedPayload });
+              })
+              .catch(e => {
+                console.warn('[walkie] ICE restart offer failed:', e.message);
+                closePeer(peerId);
+              });
+          } else {
+            closePeer(peerId);
+          }
+        } else {
+          closePeer(peerId);
+        }
+      } else if (pc.connectionState === 'closed') {
         closePeer(peerId);
       }
     };
