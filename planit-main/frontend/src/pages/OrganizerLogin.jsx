@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Lock, ArrowRight, AlertCircle, Eye, EyeOff } from 'lucide-react';
+import { Lock, ArrowRight, AlertCircle, Eye, EyeOff, Clock } from 'lucide-react';
 import { eventAPI } from '../services/api';
 import toast from 'react-hot-toast';
 
@@ -25,6 +25,7 @@ export default function OrganizerLogin() {
   const [showAccountPass, setShowAccountPass] = useState(false);
   const [needsAccountPassword, setNeedsAccountPassword] = useState(false);
   const [fieldErrors, setFieldErrors] = useState({});
+  const [pendingApproval, setPendingApproval] = useState(false);
 
   useEffect(() => {
     const loadEvent = async () => {
@@ -58,6 +59,31 @@ export default function OrganizerLogin() {
     };
     loadEvent();
   }, [eventIdParam, subdomain]);
+
+  // Poll for approval status while waiting
+  useEffect(() => {
+    if (!pendingApproval || !resolvedEventId) return;
+    const username = localStorage.getItem('username') || formData.username.trim();
+    if (!username) return;
+    let cancelled = false;
+
+    const poll = async () => {
+      try {
+        const res = await eventAPI.checkApprovalStatus(resolvedEventId, username);
+        if (cancelled) return;
+        if (res.data?.approved && res.data?.token) {
+          localStorage.setItem('eventToken', res.data.token);
+          localStorage.setItem('username', username);
+          toast.success('Your join request was approved!');
+          navigate(`/event/${resolvedEventId}`);
+        }
+      } catch { /* silently retry */ }
+    };
+
+    poll();
+    const interval = setInterval(poll, 4000);
+    return () => { cancelled = true; clearInterval(interval); };
+  }, [pendingApproval, resolvedEventId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleChange = (field) => (e) =>
     setFormData(prev => ({ ...prev, [field]: e.target.value }));
@@ -120,6 +146,14 @@ export default function OrganizerLogin() {
       const data = err.response?.data;
       const errorMsg = data?.error || 'Login failed. Please check your credentials.';
 
+      // Organizer tried to log in but this event requires approval first
+      if (data?.requiresApproval) {
+        setPendingApproval(true);
+        localStorage.setItem('username', trimmedUsername);
+        setLoading(false);
+        return;
+      }
+
       if (data?.requiresAccountPassword && !needsAccountPassword) {
         setNeedsAccountPassword(true);
         setFieldErrors({ accountPassword: 'This username has an account — enter your account password.' });
@@ -141,6 +175,35 @@ export default function OrganizerLogin() {
       setLoading(false);
     }
   };
+
+  if (pendingApproval) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-neutral-50 to-neutral-100 flex items-center justify-center p-6">
+        <div className="w-full max-w-md text-center">
+          <div className="card p-10">
+            <div className="w-16 h-16 mx-auto rounded-full bg-amber-50 border-2 border-amber-200 flex items-center justify-center mb-5">
+              <Clock className="w-7 h-7 text-amber-500" />
+            </div>
+            <h2 className="text-xl font-bold text-neutral-900 mb-2">Awaiting Organizer Approval</h2>
+            <p className="text-sm text-neutral-500 leading-relaxed mb-5">
+              Your request to join as <strong className="text-neutral-700">{formData.username || localStorage.getItem('username')}</strong> has been sent.
+              This page will automatically redirect once the organizer approves your request.
+            </p>
+            <div className="flex items-center justify-center gap-2 py-3 px-4 bg-amber-50 border border-amber-200 rounded-xl mb-5">
+              <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
+              <span className="text-xs font-semibold text-amber-700">Checking every few seconds…</span>
+            </div>
+            <button
+              onClick={() => { setPendingApproval(false); setError(''); }}
+              className="text-xs text-neutral-400 hover:text-neutral-700 transition-colors underline underline-offset-2"
+            >
+              ← Try a different name
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (loadingEvent) {
     return (
