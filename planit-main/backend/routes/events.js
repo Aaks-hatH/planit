@@ -144,6 +144,30 @@ router.post('/verify-password/:eventId', authLimiter,
         return res.status(403).json({ error: 'This event has ended and is no longer accepting new participants.' });
       }
 
+      // ── Require approval (must be checked even for password-protected events) ──────
+      if (event.settings?.requireApproval) {
+        const trimmedUsername = (req.body.username || '').trim();
+        if (trimmedUsername) {
+          const alreadyParticipant = event.participants?.some(p => p.username === trimmedUsername);
+          if (!alreadyParticipant) {
+            const alreadyQueued = event.approvalQueue?.some(q => q.username === trimmedUsername);
+            if (!alreadyQueued) {
+              await Event.findByIdAndUpdate(req.params.eventId, {
+                $push: { approvalQueue: { username: trimmedUsername, requestedAt: new Date() } }
+              });
+              const io = req.app.get('io');
+              if (io) io.to(`event_${req.params.eventId}`).emit('approval_request', { username: trimmedUsername });
+            }
+            return res.status(403).json({
+              requiresApproval: true,
+              pending: true,
+              message: 'Your request has been sent to the organizer. You will be able to join once approved.',
+            });
+          }
+          // Already approved — fall through to verify password and issue token.
+        }
+      }
+
       const isMatch = await bcrypt.compare(req.body.password, event.password);
       if (!isMatch) return res.status(401).json({ error: 'Incorrect event password.' });
 
@@ -214,23 +238,31 @@ router.post('/join/:eventId',
         if (!trimmedUsername) {
           return res.status(400).json({ error: 'Please provide your name to request access.' });
         }
-        // Don't add duplicates
-        const alreadyQueued = event.approvalQueue?.some(q => q.username === trimmedUsername);
-        if (!alreadyQueued) {
-          await Event.findByIdAndUpdate(req.params.eventId, {
-            $push: { approvalQueue: { username: trimmedUsername, message: (reqMessage || '').trim().slice(0, 300), requestedAt: new Date() } }
-          });
-          // Notify organizer via socket
-          const io = req.app.get('io');
-          if (io) {
-            io.to(`event_${req.params.eventId}`).emit('approval_request', { username: trimmedUsername });
+
+        // If already an approved participant, skip the queue and issue a token normally
+        const alreadyParticipant = event.participants?.some(p => p.username === trimmedUsername);
+        if (!alreadyParticipant) {
+          // Don't add duplicates to the queue
+          const alreadyQueued = event.approvalQueue?.some(q => q.username === trimmedUsername);
+          if (!alreadyQueued) {
+            await Event.findByIdAndUpdate(req.params.eventId, {
+              $push: { approvalQueue: { username: trimmedUsername, message: (reqMessage || '').trim().slice(0, 300), requestedAt: new Date() } }
+            });
+            const io = req.app.get('io');
+            if (io) {
+              io.to(`event_${req.params.eventId}`).emit('approval_request', { username: trimmedUsername });
+            }
           }
+          // Return 403 (NOT 202) so Axios treats it as an error and the frontend
+          // catch block reliably intercepts it. HTTP 202 is 2xx — Axios resolves it
+          // as success and the token-save + onJoined() call would run, bypassing the gate.
+          return res.status(403).json({
+            requiresApproval: true,
+            pending: true,
+            message: 'Your request has been sent to the organizer. You will be able to join once approved.',
+          });
         }
-        return res.status(202).json({
-          requiresApproval: true,
-          pending: true,
-          message: 'Your request has been sent to the organizer. You will be able to join once approved.',
-        });
+        // alreadyParticipant == true: they were approved — fall through to issue token.
       }
 
       // ── Status checks ──────────────────────────────────────────────────────
@@ -2350,6 +2382,46 @@ router.delete('/:eventId/webhooks/:webhookId', verifyOrganizer, async (req, res,
 // ═══════════════════════════════════════════════════════════════════════════
 // APPROVAL QUEUE — organizer approve/reject pending join requests
 // ═══════════════════════════════════════════════════════════════════════════
+
+// GET  /:eventId/approval-status — unauthenticated polling endpoint for pending users
+// A user waiting for approval polls this to learn when the organizer approves them.
+// Returns { pending: true } while in the queue, or { approved: true, token } once approved.
+// Rate-limited by the standard API limiter; username is required in query string.
+router.get('/:eventId/approval-status', async (req, res, next) => {
+  try {
+    const { eventId } = req.params;
+    const username = (req.query.username || '').trim();
+    if (!username) return res.status(400).json({ error: 'username query param required' });
+
+    const event = await Event.findById(eventId).select('approvalQueue participants settings title');
+    if (!event) return res.status(404).json({ error: 'Event not found.' });
+    if (!event.settings?.requireApproval) return res.status(400).json({ error: 'This event does not require approval.' });
+
+    const inQueue      = event.approvalQueue?.some(q => q.username === username);
+    const isParticipant = event.participants?.some(p => p.username === username);
+
+    if (isParticipant) {
+      // They've been approved — ensure their participant record exists and issue a token
+      await EventParticipant.findOneAndUpdate(
+        { eventId, username },
+        { role: 'participant', lastSeenAt: new Date() },
+        { upsert: true, new: true }
+      );
+      const token = jwt.sign(
+        { eventId: eventId.toString(), username, role: 'participant' },
+        secrets.jwt, { expiresIn: '30d' }
+      );
+      return res.json({ approved: true, token, event: { id: event._id, title: event.title } });
+    }
+
+    if (inQueue) {
+      return res.json({ pending: true, message: 'Your request is still pending organizer approval.' });
+    }
+
+    // Not in queue and not a participant — they haven't requested yet or were rejected
+    return res.json({ notRequested: true });
+  } catch (err) { next(err); }
+});
 
 // GET  /:eventId/approval-queue  — list pending requests (organizer only)
 router.get('/:eventId/approval-queue', verifyOrganizer, async (req, res, next) => {
