@@ -1546,6 +1546,8 @@ export default function Home() {
                         <textarea className="dark-input resize-none" rows="3" placeholder="What's this event about?" value={formData.description} onChange={update('description')} />
                       </div>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm font-bold text-neutral-300 mb-2">Date and time <span className="text-red-400">*</span></label>
                           <input type="datetime-local" required
                             className={`dark-input ${fieldErrors.date ? 'border-red-500 focus:border-red-400' : ''}`}
                             value={formData.date}
