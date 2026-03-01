@@ -439,7 +439,7 @@ function SectionHeader({ eyebrow, title, subtitle }) {
   return (
     <Reveal className="text-center mb-16">
       {eyebrow && <p className="text-xs font-semibold text-neutral-500 uppercase tracking-widest mb-3">{eyebrow}</p>}
-      <h2 className="text-5xl md:text-7xl font-black text-white mb-5 leading-tight">{title}</h2>
+      <h2 className="text-3xl sm:text-5xl md:text-7xl font-black text-white mb-5 leading-tight">{title}</h2>
       {subtitle && <p className="text-xl text-neutral-400 max-w-2xl mx-auto leading-relaxed">{subtitle}</p>}
     </Reveal>
   );
@@ -448,7 +448,7 @@ function SectionHeader({ eyebrow, title, subtitle }) {
 function FeatureCard({ icon: Icon, title, description, delay = 0 }) {
   return (
     <Reveal delay={delay}>
-      <div className="group relative p-10 rounded-3xl border border-neutral-800/80 bg-neutral-900/40 hover:border-neutral-600 hover:bg-neutral-800/50 transition-all duration-500 h-full">
+      <div className="group relative p-6 sm:p-10 rounded-3xl border border-neutral-800/80 bg-neutral-900/40 hover:border-neutral-600 hover:bg-neutral-800/50 transition-all duration-500 h-full">
         <div className="mb-5">
           <div className="w-14 h-14 rounded-2xl bg-neutral-800 flex items-center justify-center group-hover:bg-white transition-all duration-500 group-hover:scale-110">
             <Icon className="w-7 h-7 text-neutral-400 group-hover:text-neutral-900 transition-colors duration-500" />
@@ -714,7 +714,7 @@ function EnterpriseDemo() {
 
       {/* GUESTS TAB */}
       {tab === 'guests' && (
-        <div className="p-3" style={{ height: 360, overflowY: 'auto' }}>
+        <div className="p-3" style={{ minHeight: 280, maxHeight: 360, overflowY: 'auto' }}>
           <div className="space-y-2">
             {guests.map(guest => {
               const isBlocked = guest.status === 'blocked' && !guest.checkedIn;
@@ -812,7 +812,7 @@ function EnterpriseDemo() {
 
       {/* SECURITY TAB */}
       {tab === 'security' && (
-        <div className="p-4" style={{ height: 360, overflowY: 'auto' }}>
+        <div className="p-4" style={{ minHeight: 280, maxHeight: 360, overflowY: 'auto' }}>
           {/* Security overview badges */}
           <div className="grid grid-cols-3 gap-2 mb-4">
             {[
@@ -872,7 +872,7 @@ function EnterpriseDemo() {
 
       {/* ANALYTICS TAB */}
       {tab === 'analytics' && (
-        <div className="p-4" style={{ height: 360, overflowY: 'auto' }}>
+        <div className="p-4" style={{ minHeight: 280, maxHeight: 360, overflowY: 'auto' }}>
           <div className="grid grid-cols-3 gap-2 mb-4">
             {[
               { label: 'Arrived',  value: checkedInPeople, color: 'text-emerald-400' },
@@ -934,6 +934,7 @@ function EnterpriseDemo() {
 
 export default function Home() {
   const navigate = useNavigate();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [mode, setMode] = useState('standard');
   const [formData, setFormData] = useState({
     subdomain: '', title: '', description: '', date: '', timezone: getUserTimezone(), location: '',
@@ -1088,7 +1089,7 @@ export default function Home() {
         className="sticky top-0 z-50 border-b border-neutral-800/60"
         style={{ background: 'rgba(6,6,12,0.96)' }}
       >
-        <div className="max-w-screen-xl mx-auto px-8 h-16 flex items-center justify-between">
+        <div className="max-w-screen-xl mx-auto px-4 sm:px-8 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="relative">
               <div className="w-9 h-9 rounded-2xl bg-neutral-800 border border-neutral-700 flex items-center justify-center">
@@ -1114,11 +1115,48 @@ export default function Home() {
               const [label, href] = s.split('|');
               return <a key={label} href={href} className="hidden lg:block px-3 py-2 text-sm text-neutral-500 hover:text-neutral-200 hover:bg-neutral-800/50 rounded-xl transition-all duration-200">{label}</a>;
             })}
-            <a href="/support" className="ml-2 px-3 sm:px-5 py-2.5 text-sm font-medium text-white bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 rounded-xl transition-all duration-200">
+            <a href="/support" className="hidden sm:inline-flex ml-2 px-3 sm:px-5 py-2.5 text-sm font-medium text-white bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 rounded-xl transition-all duration-200">
               Support Us
             </a>
+            {/* Hamburger — mobile only */}
+            <button
+              className="md:hidden ml-2 w-9 h-9 flex items-center justify-center rounded-xl bg-neutral-800 border border-neutral-700 text-neutral-300 hover:text-white hover:bg-neutral-700 transition-all"
+              onClick={() => setMobileMenuOpen(o => !o)}
+              aria-label="Toggle menu"
+            >
+              {mobileMenuOpen ? (
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+              ) : (
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" /></svg>
+              )}
+            </button>
           </nav>
         </div>
+        {/* Mobile dropdown menu */}
+        {mobileMenuOpen && (
+          <div className="md:hidden border-t border-neutral-800/60 px-4 py-3 space-y-1" style={{ background: 'rgba(6,6,12,0.98)' }}>
+            <a href="/discover" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-2.5 px-3 py-2.5 text-sm text-neutral-300 hover:text-white hover:bg-neutral-800/60 rounded-xl transition-all">
+              <Zap className="w-4 h-4 text-neutral-500" />Discover
+            </a>
+            <a href="/status" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-2.5 px-3 py-2.5 text-sm text-neutral-300 hover:text-white hover:bg-neutral-800/60 rounded-xl transition-all">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block ml-0.5 mr-0.5" />Status
+            </a>
+            <a href="/help" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-2.5 px-3 py-2.5 text-sm text-neutral-300 hover:text-white hover:bg-neutral-800/60 rounded-xl transition-all">
+              <svg className="w-4 h-4 text-neutral-500" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3M12 17h.01"/></svg>Help
+            </a>
+            <a href="/terms" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-2.5 px-3 py-2.5 text-sm text-neutral-400 hover:text-white hover:bg-neutral-800/60 rounded-xl transition-all">
+              Terms
+            </a>
+            <a href="/privacy" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-2.5 px-3 py-2.5 text-sm text-neutral-400 hover:text-white hover:bg-neutral-800/60 rounded-xl transition-all">
+              Privacy
+            </a>
+            <div className="pt-1 border-t border-neutral-800">
+              <a href="/support" onClick={() => setMobileMenuOpen(false)} className="flex items-center justify-center gap-2 mt-2 w-full px-4 py-3 text-sm font-semibold text-white bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 rounded-xl transition-all">
+                Support Us
+              </a>
+            </div>
+          </div>
+        )}
       </header>
 
       <main className="relative" style={{ zIndex: 2, overflowX: 'hidden', maxWidth: '100vw' }}>
@@ -1127,7 +1165,7 @@ export default function Home() {
           {/* Subtle top gradient */}
           <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse 80% 50% at 50% 0%, rgba(40,40,70,0.25) 0%, transparent 65%)', pointerEvents: 'none' }} />
           <div className="w-full">
-            <div className="max-w-6xl mx-auto px-8 lg:px-12 py-36 text-center">
+            <div className="max-w-6xl mx-auto px-4 sm:px-8 lg:px-12 py-20 sm:py-28 lg:py-36 text-center">
 
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
@@ -1144,7 +1182,7 @@ export default function Home() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.9, delay: 0.28, ease: [0.22, 1, 0.36, 1] }}
                 className="font-black leading-[0.92] tracking-tight mb-8"
-                style={{ fontSize: 'clamp(3.5rem, 8.5vw, 7rem)' }}
+                style={{ fontSize: 'clamp(2.5rem, 8.5vw, 7rem)' }}
               >
                 Make it{' '}
                 <span className="shimmer-slate">Effortless</span>
@@ -1182,7 +1220,7 @@ export default function Home() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.7, delay: 0.68 }}
-                className="grid grid-cols-3 gap-6 max-w-xl mx-auto"
+                className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6 max-w-xl mx-auto w-full"
               >
                 {[
                   { value: 50000, suffix: '+', label: 'Events planned' },
@@ -1205,7 +1243,7 @@ export default function Home() {
 
         {/* HOW IT WORKS */}
         <section className="py-28 border-t border-neutral-800/40">
-          <div className="max-w-screen-xl mx-auto px-8">
+          <div className="max-w-screen-xl mx-auto px-4 sm:px-8">
             <SectionHeader eyebrow="How teams use it" title="Your event, every step" subtitle="Built for the full arc. Months of prep to the final goodbye." />
             <div className="grid md:grid-cols-3 gap-6">
               {[
@@ -1233,7 +1271,7 @@ export default function Home() {
 
         {/* FEATURES */}
         <section id="features" className="py-32 border-t border-neutral-800/40">
-          <div className="max-w-screen-xl mx-auto px-8">
+          <div className="max-w-screen-xl mx-auto px-4 sm:px-8">
             <SectionHeader eyebrow="Features" title="Everything you need" subtitle="Powerful tools for seamless event planning and coordination" />
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
               <FeatureCard icon={MessageSquare} title="Real-time team chat"       description="Instant messaging with typing indicators, reactions, and threaded conversations. Keep your planning team connected and aligned." delay={0} />
@@ -1248,7 +1286,7 @@ export default function Home() {
 
         {/* ENTERPRISE */}
         <section className="py-32 border-t border-neutral-800/40">
-          <div className="max-w-screen-xl mx-auto px-8">
+          <div className="max-w-screen-xl mx-auto px-4 sm:px-8">
             <div className="grid lg:grid-cols-2 gap-16 items-center">
               <Reveal>
                 <div className="inline-flex items-center gap-2 px-4 py-2 bg-neutral-800 border border-neutral-700 rounded-full text-xs font-bold text-neutral-300 mb-8">
@@ -1288,7 +1326,7 @@ export default function Home() {
 
         {/* TESTIMONIALS */}
         <section className="py-32 border-t border-neutral-800/40">
-          <div className="max-w-screen-xl mx-auto px-8">
+          <div className="max-w-screen-xl mx-auto px-4 sm:px-8">
             <SectionHeader eyebrow="Testimonials" title="Trusted by event planners" subtitle="See how teams are using PlanIt to execute flawless events" />
             <div className="grid md:grid-cols-3 gap-6">
               <TestimonialCard quote="PlanIt transformed how we coordinated our annual company conference. The task management kept our 15-person planning team organized for 6 months of prep. The QR check-in on event day was seamless for 300 attendees." author="Michael Chen" role="Senior Event Coordinator" event="Tech Summit 2025" delay={0} />
@@ -1300,7 +1338,7 @@ export default function Home() {
 
         {/* DISCOVER + STATUS CARDS */}
         <section className="py-28 border-t border-neutral-800/40">
-          <div className="max-w-screen-xl mx-auto px-8">
+          <div className="max-w-screen-xl mx-auto px-4 sm:px-8">
             <Reveal className="text-center mb-12">
               <p className="text-xs font-semibold text-neutral-500 uppercase tracking-widest mb-3">Explore more</p>
               <h2 className="text-4xl md:text-5xl font-black text-white mb-4">Everything you need</h2>
@@ -1356,8 +1394,8 @@ export default function Home() {
 
         {/* CREATE EVENT */}
         <section id="create" className="py-28 border-t border-neutral-800/40">
-          <div className="max-w-8xl mx-auto px-6">
-            <div className="grid lg:grid-cols-2 gap-20 items-start">
+          <div className="max-w-8xl mx-auto px-4 sm:px-6">
+            <div className="grid lg:grid-cols-2 gap-10 lg:gap-20 items-start">
 
               <div className="lg:sticky lg:top-24">
                 <Reveal>
@@ -1375,7 +1413,7 @@ export default function Home() {
 
                 {!created && (
                   <Reveal delay={100}>
-                    <div className="grid grid-cols-3 gap-4 mb-10">
+                    <div className="grid grid-cols-3 gap-2 sm:gap-4 mb-10">
                       {[{ icon: Clock, label: '60 seconds' }, { icon: Shield, label: 'Secure' }, { icon: CheckCircle2, label: 'Free forever' }].map((item, i) => (
                         <div key={i} className="text-center p-5 bg-neutral-900/50 rounded-2xl border border-neutral-800 hover:border-neutral-700 hover:bg-neutral-800/50 transition-all duration-300 hover:scale-105">
                           <item.icon className="w-6 h-6 text-neutral-400 mx-auto mb-2" />
@@ -1383,7 +1421,7 @@ export default function Home() {
                         </div>
                       ))}
                     </div>
-                    <div className="space-y-3 p-8 bg-neutral-900/50 rounded-3xl border border-neutral-800">
+                    <div className="space-y-3 p-5 sm:p-8 bg-neutral-900/50 rounded-3xl border border-neutral-800">
                       <p className="text-base font-bold text-white mb-4">Everything included:</p>
                       {['Private event space with custom branded URL', 'Unlimited team members, no caps', 'Real-time chat with file sharing', 'Task lists and deadline tracking', 'Polls, voting, and decision tools', 'RSVP management and tracking', 'Expense splitting and budgets', 'QR check-in for large events', 'Timeline and scheduling tools'].map((item, i) => (
                         <div key={i} className="flex items-start gap-3 text-sm text-neutral-400">
@@ -1443,7 +1481,7 @@ export default function Home() {
 
               {!created && (
                 <Reveal delay={80}>
-                  <div className="bg-neutral-900/60 rounded-3xl border border-neutral-800 p-10 hover:border-neutral-700 transition-all duration-500 sticky top-24">
+                  <div className="bg-neutral-900/60 rounded-3xl border border-neutral-800 p-5 sm:p-10 hover:border-neutral-700 transition-all duration-500 sticky top-24">
                     <div className="mb-8 p-5 bg-neutral-950/80 rounded-2xl border border-neutral-800">
                       <label className="block text-xs font-bold text-neutral-500 uppercase tracking-wider mb-4">Event Type</label>
                       <div className="grid grid-cols-2 gap-3">
@@ -1507,9 +1545,7 @@ export default function Home() {
                         <label className="block text-sm font-bold text-neutral-300 mb-2">Description</label>
                         <textarea className="dark-input resize-none" rows="3" placeholder="What's this event about?" value={formData.description} onChange={update('description')} />
                       </div>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <label className="block text-sm font-bold text-neutral-300 mb-2">Date and time <span className="text-red-400">*</span></label>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                           <input type="datetime-local" required
                             className={`dark-input ${fieldErrors.date ? 'border-red-500 focus:border-red-400' : ''}`}
                             value={formData.date}
@@ -1530,7 +1566,7 @@ export default function Home() {
                         <label className="block text-sm font-bold text-neutral-300 mb-2">Location</label>
                         <input type="text" className="dark-input" placeholder="Central Park, NYC" value={formData.location} onChange={update('location')} />
                       </div>
-                      <div className="grid grid-cols-2 gap-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
                           <label className="block text-sm font-bold text-neutral-300 mb-2">Your name <span className="text-red-400">*</span></label>
                           <input type="text" required
@@ -1598,8 +1634,8 @@ export default function Home() {
 
         {/* FOOTER */}
         <footer className="border-t border-neutral-800/50" style={{ background: 'rgba(6,6,12,0.95)' }}>
-          <div className="max-w-screen-xl mx-auto px-8 py-20">
-            <div className="grid md:grid-cols-4 gap-12 mb-12">
+          <div className="max-w-screen-xl mx-auto px-4 sm:px-8 py-14 sm:py-20">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-8 sm:gap-12 mb-12">
               <div>
                 <div className="flex items-center gap-3 mb-5">
                   <div className="w-10 h-10 rounded-2xl bg-neutral-800 border border-neutral-700 flex items-center justify-center"><Calendar className="w-5 h-5 text-neutral-300" /></div>
