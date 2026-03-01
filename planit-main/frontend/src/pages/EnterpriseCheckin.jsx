@@ -1462,11 +1462,13 @@ export default function EnterpriseCheckin() {
 
   // ── Socket ref (needed by walkie-talkie hook) ────────────────────────────
   const socketRef = useRef(null);
+  // State mirror so walkie hook re-renders when socket connects (fixes timing race)
+  const [socketObj, setSocketObj] = useState(null);
 
   // ── Walkie-talkie ────────────────────────────────────────────────────────
   const token = authState.ready ? (localStorage.getItem('eventToken') || '') : '';
   const walkie = useWalkieTalkie(
-    socketRef.current,
+    socketObj,
     eventId,
     token,
     authState.username || ''
@@ -1486,6 +1488,7 @@ export default function EnterpriseCheckin() {
 
     const socket = socketService.connect(storedToken);
     socketRef.current = socket;
+    setSocketObj(socket); // trigger walkie hook with real socket
 
     if (socket) {
       socket.emit('join_event', eventId);
