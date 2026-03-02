@@ -231,9 +231,49 @@ function statsRow(items) {
   return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top:20px;"><tr>${cells}</tr></table>`;
 }
 
+// ─── Personalisation helpers ──────────────────────────────────────────────────
+
+function firstName(fullName) {
+  if (!fullName) return '';
+  return fullName.trim().split(/\s+/)[0];
+}
+
+function greetingLine(recipient) {
+  const fn = firstName(recipient.name);
+  if (fn) return `Hi ${h(fn)},`;
+  return 'Hi there,';
+}
+
+function companyLine(recipient) {
+  if (recipient.company) return ` at <strong>${h(recipient.company)}</strong>`;
+  return '';
+}
+
+function personalizedOpener(recipient, templateContext) {
+  const fn = firstName(recipient.name);
+  const company = recipient.company ? `${h(recipient.company)}` : null;
+  const role = recipient.role ? `${h(recipient.role)}` : null;
+
+  let lines = [];
+  if (fn && company) {
+    lines.push(`<p style="margin:0 0 20px 0;font-size:16px;color:${DARK};line-height:1.7;font-family:${FONT};">Hi <strong>${h(fn)}</strong>,</p>`);
+    lines.push(`<p style="margin:0 0 20px 0;font-size:14px;color:${MID};line-height:1.75;font-family:${FONT};">I came across <strong>${company}</strong>${role ? ` and noticed you work in <em>${role}</em>` : ''} — I wanted to reach out because I think PlanIt could genuinely help with how you manage ${templateContext}.</p>`);
+  } else if (fn) {
+    lines.push(`<p style="margin:0 0 20px 0;font-size:16px;color:${DARK};line-height:1.7;font-family:${FONT};">Hi <strong>${h(fn)}</strong>,</p>`);
+    lines.push(`<p style="margin:0 0 20px 0;font-size:14px;color:${MID};line-height:1.75;font-family:${FONT};">I wanted to reach out directly because I think PlanIt could genuinely help with how you manage ${templateContext}.</p>`);
+  } else if (company) {
+    lines.push(`<p style="margin:0 0 20px 0;font-size:16px;color:${DARK};line-height:1.7;font-family:${FONT};">Hi,</p>`);
+    lines.push(`<p style="margin:0 0 20px 0;font-size:14px;color:${MID};line-height:1.75;font-family:${FONT};">I came across <strong>${company}</strong> and wanted to reach out because I think PlanIt could genuinely help with how you manage ${templateContext}.</p>`);
+  } else {
+    lines.push(`<p style="margin:0 0 20px 0;font-size:16px;color:${DARK};line-height:1.7;font-family:${FONT};">Hi,</p>`);
+    lines.push(`<p style="margin:0 0 20px 0;font-size:14px;color:${MID};line-height:1.75;font-family:${FONT};">I wanted to reach out because I think PlanIt could genuinely help with how you manage ${templateContext}.</p>`);
+  }
+  return lines.join('\n');
+}
+
 // ─── Template builders ────────────────────────────────────────────────────────
 
-function buildPlanners(ctaUrl) {
+function buildPlanners(ctaUrl, recipient = {}) {
   const url = ctaUrl || process.env.FRONTEND_URL || 'https://planitapp.onrender.com';
 
   const headerRow = `
@@ -246,6 +286,7 @@ function buildPlanners(ctaUrl) {
     </tr>`;
 
   const body = `
+    ${personalizedOpener(recipient, 'events')}
     ${sectionCap('What Changes When You Use PlanIt')}
     ${featGrid([
       { t: 'Branded Event Links',      d: 'Every event gets its own clean URL. Share with clients and attendees without exposing your internal tooling.' },
@@ -270,11 +311,11 @@ function buildPlanners(ctaUrl) {
     headerRow,
     body,
     'I built PlanIt because I watched skilled coordinators lose time to tools that were not designed for this work. You deserve a platform that keeps pace with you.',
-    'You are receiving this because you were identified as an event management professional.'
+    `You are receiving this because ${recipient.company ? `${h(recipient.company)} was identified` : 'you were identified'} as an event management professional.`
   );
 }
 
-function buildSchools(ctaUrl) {
+function buildSchools(ctaUrl, recipient = {}) {
   const url = ctaUrl || process.env.FRONTEND_URL || 'https://planitapp.onrender.com';
 
   const headerRow = `
@@ -287,6 +328,7 @@ function buildSchools(ctaUrl) {
     </tr>`;
 
   const body = `
+    ${personalizedOpener(recipient, 'campus and institutional events')}
     ${sectionCap('Designed for Institutional Events')}
     ${featGrid([
       { t: 'Attendance Records',    d: 'Real-time check-in produces a full attendance log for welfare, access control, and institutional compliance.' },
@@ -312,11 +354,11 @@ function buildSchools(ctaUrl) {
     headerRow,
     body,
     'Schools and universities should not have to pay enterprise prices to run a well-organised event. PlanIt is free to use, and that is not a trial period.',
-    'You are receiving this because your institution was identified as a potential PlanIt user.'
+    `You are receiving this because ${recipient.company || 'your institution'} was identified as a potential PlanIt user.`
   );
 }
 
-function buildTemples(ctaUrl) {
+function buildTemples(ctaUrl, recipient = {}) {
   const url = ctaUrl || process.env.FRONTEND_URL || 'https://planitapp.onrender.com';
 
   const headerRow = `
@@ -329,6 +371,7 @@ function buildTemples(ctaUrl) {
     </tr>`;
 
   const body = `
+    ${personalizedOpener(recipient, 'community and religious gatherings')}
     ${sectionCap('How PlanIt Serves Religious Congregations')}
     ${featGrid([
       { t: 'Respectful Check-in',    d: 'QR-based arrival eliminates paper lists and door queues. Dignified, orderly, and manageable by any volunteer with a smartphone.' },
@@ -354,11 +397,11 @@ function buildTemples(ctaUrl) {
     headerRow,
     body,
     'Community gatherings have always required careful organisation. I built PlanIt so that those doing the organising can give their energy to the occasion rather than the administration.',
-    'You are receiving this because your organisation was recommended as a potential PlanIt user.'
+    `You are receiving this because ${recipient.company || 'your organisation'} was recommended as a potential PlanIt user.`
   );
 }
 
-function buildCorporate(ctaUrl) {
+function buildCorporate(ctaUrl, recipient = {}) {
   const url = ctaUrl || process.env.FRONTEND_URL || 'https://planitapp.onrender.com';
 
   const headerRow = `
@@ -371,6 +414,7 @@ function buildCorporate(ctaUrl) {
     </tr>`;
 
   const body = `
+    ${personalizedOpener(recipient, 'corporate events and conferences')}
     ${sectionCap('Enterprise Capabilities')}
     ${featGrid([
       { t: 'Custom Subdomain per Event',  d: 'Every event lives at its own branded URL. Consistent, professional, and distinct from every other event.' },
@@ -401,11 +445,11 @@ function buildCorporate(ctaUrl) {
     headerRow,
     body,
     'Large-scale events have too many moving parts to manage with spreadsheets and email threads. PlanIt was built specifically to handle the complexity so your team can focus on what the event is actually for.',
-    'You are receiving this because your company was identified as a potential PlanIt enterprise client.'
+    `You are receiving this because ${recipient.company || 'your company'} was identified as a potential PlanIt enterprise client.`
   );
 }
 
-function buildCommunity(ctaUrl) {
+function buildCommunity(ctaUrl, recipient = {}) {
   const url = ctaUrl || process.env.FRONTEND_URL || 'https://planitapp.onrender.com';
 
   const headerRow = `
@@ -418,6 +462,7 @@ function buildCommunity(ctaUrl) {
     </tr>`;
 
   const body = `
+    ${personalizedOpener(recipient, 'community events and activities')}
     ${sectionCap('What You Get at No Cost')}
     ${featGrid([
       { t: 'No Attendee Accounts',         d: 'Participants join with just a name. Nothing to sign up for, nothing to download. No barrier to entry for any age group.' },
@@ -452,7 +497,7 @@ function buildCommunity(ctaUrl) {
   );
 }
 
-function buildWeddings(ctaUrl) {
+function buildWeddings(ctaUrl, recipient = {}) {
   const url = ctaUrl || process.env.FRONTEND_URL || 'https://planitapp.onrender.com';
 
   const headerRow = `
@@ -465,6 +510,7 @@ function buildWeddings(ctaUrl) {
     </tr>`;
 
   const body = `
+    ${personalizedOpener(recipient, 'weddings and special occasions')}
     ${sectionCap('Guest Experience From Invitation to Arrival')}
     ${featGrid([
       { t: 'Individual Guest Invitations',  d: 'Each guest receives their own personal invite with a unique QR code, not a generic link forwarded around a group chat.' },
@@ -499,7 +545,7 @@ function buildWeddings(ctaUrl) {
   );
 }
 
-function buildPersonalized(ctaUrl) {
+function buildPersonalized(ctaUrl, recipient = {}) {
   const url = ctaUrl || process.env.FRONTEND_URL || 'https://planitapp.onrender.com';
 
   const headerRow = `
@@ -512,6 +558,7 @@ function buildPersonalized(ctaUrl) {
     </tr>`;
 
   const body = `
+    ${personalizedOpener(recipient, 'your events')}
     ${sectionCap('What Organisers Actually Told Us They Needed')
     }
     <p style="margin:0 0 20px 0;font-size:14px;color:${MID};line-height:1.8;font-family:${FONT};">We spoke to coordinators, venue managers, charity leads, university student unions, and wedding planners before writing a single line of PlanIt. These are the five things they said every time, in almost the same words.</p>
@@ -611,14 +658,15 @@ function listTemplates() {
   );
 }
 
-function previewTemplate(templateId, ctaUrl) {
+function previewTemplate(templateId, ctaUrl, recipient) {
   const tpl = TEMPLATES[templateId];
   if (!tpl) return null;
-  return tpl.build(ctaUrl || process.env.FRONTEND_URL || 'https://planitapp.onrender.com');
+  return tpl.build(ctaUrl || process.env.FRONTEND_URL || 'https://planitapp.onrender.com', recipient || {});
 }
 
 /**
  * sendCampaign({ templateId, recipients, subject, ctaUrl })
+ * recipients: Array of { email, name?, company?, role?, website? } OR plain email strings
  * Returns: { sent, skipped, failed, total }
  */
 async function sendCampaign({ templateId, recipients, subject, ctaUrl }) {
@@ -629,13 +677,18 @@ async function sendCampaign({ templateId, recipients, subject, ctaUrl }) {
   if (!routerUrl) throw new Error('ROUTER_URL not set');
 
   const resolvedCtaUrl = ctaUrl || process.env.FRONTEND_URL || 'https://planitapp.onrender.com';
-  const html           = tpl.build(resolvedCtaUrl);
   const finalSubj      = subject || tpl.defaultSubject;
 
   const results = { sent: 0, skipped: 0, failed: 0, total: recipients.length };
 
   for (let i = 0; i < recipients.length; i++) {
-    const to = (recipients[i] || '').trim().toLowerCase();
+    // Normalise recipient — accept plain string or object
+    const raw = recipients[i];
+    const recipient = typeof raw === 'string'
+      ? { email: raw.trim().toLowerCase(), name: '', company: '', role: '' }
+      : { email: (raw.email || '').trim().toLowerCase(), name: raw.name || '', company: raw.company || '', role: raw.role || '', website: raw.website || '' };
+
+    const to = recipient.email;
 
     if (!to || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to)) {
       results.skipped++;
@@ -649,10 +702,19 @@ async function sendCampaign({ templateId, recipients, subject, ctaUrl }) {
       continue;
     }
 
+    // Build a personalised HTML email for this recipient
+    const html = tpl.build(resolvedCtaUrl, recipient);
+
+    // Personalise subject line with first name if we have it
+    const fn = recipient.name ? recipient.name.trim().split(/\s+/)[0] : '';
+    const personalSubj = fn
+      ? finalSubj.replace(/^(Hi|Hello)?/i, '').trim() // subject stays clean
+      : finalSubj;
+
     const r = await meshPost(
       CALLER,
       `${routerUrl}/mesh/email`,
-      { to, subject: finalSubj, html },
+      { to, subject: personalSubj, html },
       { timeout: 15000 }
     );
 
