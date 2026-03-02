@@ -249,7 +249,16 @@ export const adminAPI = {
     const qs = params.toString();
     return `${API_URL}/admin/marketing/preview/${templateId}${qs ? `?${qs}` : ''}`;
   },
-  sendMarketingCampaign: (data) => api.post('/admin/marketing/send', data),
+  sendMarketingCampaign:      (data)   => api.post('/admin/marketing/send', data),
+  scheduleMarketingCampaign:  (data)   => api.post('/admin/marketing/schedule', data),
+  getScheduledCampaigns:      ()       => api.get('/admin/marketing/scheduled'),
+  cancelScheduledCampaign:    (id)     => api.delete(`/admin/marketing/schedule/${id}`),
+
+  // Command Center
+  ccGetFleet:     ()                      => api.get('/admin/cc/fleet'),
+  ccGetEmailPool: ()                      => api.get('/admin/cc/email-pool'),
+  ccGetDb:        ()                      => api.get('/admin/cc/db'),
+  ccCommand:      (target, command, params) => api.post('/admin/cc/command', { target, command, params: params || {} }),
 };
 
 // ─── Task API ─────────────────────────────────────────────────────────────────
@@ -381,6 +390,14 @@ export const routerAPI = {
   testEmail: (to) => {
     if (!routerAxios) return Promise.resolve(null);
     return routerAxios.post('/mesh/email/test', { to });
+  },
+  getEmailPool: () => {
+    if (!routerAxios) return Promise.resolve(null);
+    return routerAxios.get('/mesh/email/pool');
+  },
+  execCommand: (command, params) => {
+    if (!routerAxios) return Promise.resolve(null);
+    return routerAxios.post('/mesh/exec', { command, params: params || {} });
   },
 };
 
