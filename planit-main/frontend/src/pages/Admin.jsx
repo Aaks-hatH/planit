@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Calendar, Users, Activity, TrendingUp, Database, HardDrive,
@@ -15,6 +15,7 @@ import {
   Scroll, Gauge, HardDriveDownload, Fingerprint, Building2,
   WifiOff, AlertOctagon, TrendingDown, GitBranch, Boxes,
   Rocket, Timer, Wifi as WifiOn, Cpu as CpuIcon,
+  Command, Key, Play, Crosshair,
 } from 'lucide-react';
 import api, { adminAPI, uptimeAPI, watchdogAPI, routerAPI, bugReportAPI } from '../services/api';
 import { SERVICE_CATEGORIES, ALL_SERVICES_FLAT } from '../utils/serviceCategories';
@@ -1905,21 +1906,471 @@ function BugReportsPanel() {
 }
 
 
+// ─── Command Center ───────────────────────────────────────────────────────────
+function CommandCenterPanel() {
+  const [fleet, setFleet]         = useState(null);
+  const [fleetLoading, setFleetLoading] = useState(true);
+  const [emailPool, setEmailPool] = useState(null);
+  const [db, setDb]               = useState(null);
+  const [cmdLog, setCmdLog]       = useState([]);
+  const [selectedTarget, setSelectedTarget] = useState('backend');
+  const [selectedCmd, setSelectedCmd]       = useState('ping');
+  const [cmdParams, setCmdParams]           = useState('');
+  const [cmdRunning, setCmdRunning]         = useState(false);
+  const [activeTab, setActiveTab]           = useState('overview');
+  const logRef = useRef(null);
+
+  const addLog = (entry) => setCmdLog(prev => [{ ts: new Date().toISOString(), ...entry }, ...prev].slice(0, 100));
+
+  const refresh = async () => {
+    setFleetLoading(true);
+    try {
+      const r = await adminAPI.ccGetFleet();
+      setFleet(r.data);
+    } catch { toast.error('Fleet fetch failed'); }
+    finally { setFleetLoading(false); }
+  };
+
+  const refreshPool = async () => {
+    try { const r = await adminAPI.ccGetEmailPool(); setEmailPool(r.data.pool); }
+    catch { setEmailPool(null); }
+  };
+
+  const refreshDb = async () => {
+    try { const r = await adminAPI.ccGetDb(); setDb(r.data); }
+    catch { setDb(null); }
+  };
+
+  useEffect(() => {
+    refresh();
+    refreshPool();
+    refreshDb();
+    const t = setInterval(refresh, 20000);
+    return () => clearInterval(t);
+  }, []);
+
+  const COMMANDS = {
+    backend: [
+      { id: 'ping',        label: 'Ping',          desc: 'Liveness check — measure round-trip to this backend' },
+      { id: 'stats',       label: 'Stats Snapshot', desc: 'Full process, memory, and log metrics' },
+      { id: 'flush-logs',  label: 'Flush Log Buffer', desc: 'Clear the in-memory log ring-buffer (logs remain in console)' },
+      { id: 'gc',          label: 'Force GC',       desc: 'Trigger V8 garbage collection (requires --expose-gc)' },
+      { id: 'cache-clear', label: 'Clear Cache',    desc: 'Send Redis cache flush signal to backend' },
+    ],
+    router: [
+      { id: 'ping',                label: 'Ping',             desc: 'Liveness check on the router' },
+      { id: 'stats',               label: 'Stats Snapshot',   desc: 'Router process metrics, memory, and email pool summary' },
+      { id: 'flush-logs',          label: 'Flush Log Buffer', desc: 'Clear the router log ring-buffer' },
+      { id: 'gc',                  label: 'Force GC',         desc: 'Trigger V8 GC on the router process' },
+      { id: 'clear-key-suspension',label: 'Clear Key Suspensions', desc: 'Unsuspend rate-limited email keys. Params: { "provider": "brevo" }' },
+      { id: 'list-backends',       label: 'List Backends',    desc: 'Get all registered backend URLs from router mesh' },
+    ],
+    watchdog: [
+      { id: 'ping',   label: 'Ping',         desc: 'Liveness check on the watchdog' },
+      { id: 'status', label: 'Full Status',  desc: 'All monitored services and their current health' },
+      { id: 'stats',  label: 'Stats',        desc: 'Watchdog process info via mesh status' },
+    ],
+  };
+
+  const execCommand = async () => {
+    setCmdRunning(true);
+    let parsedParams = {};
+    if (cmdParams.trim()) {
+      try { parsedParams = JSON.parse(cmdParams); }
+      catch { toast.error('Params must be valid JSON'); setCmdRunning(false); return; }
+    }
+    const ts = Date.now();
+    try {
+      const r = await adminAPI.ccCommand(selectedTarget, selectedCmd, parsedParams);
+      const elapsed = Date.now() - ts;
+      addLog({ target: selectedTarget, command: selectedCmd, ok: true, result: r.data.result, elapsed });
+      toast.success(`${selectedCmd} on ${selectedTarget} succeeded (${elapsed}ms)`);
+    } catch (err) {
+      const elapsed = Date.now() - ts;
+      addLog({ target: selectedTarget, command: selectedCmd, ok: false, error: err.response?.data?.error || err.message, elapsed });
+      toast.error(err.response?.data?.error || 'Command failed');
+    }
+    setCmdRunning(false);
+  };
+
+  const ServiceCard = ({ svc }) => {
+    const online = svc.ok;
+    const memPct = svc.memMB ? Math.round((svc.memMB.heapUsed / svc.memMB.heapTotal) * 100) : 0;
+    return (
+      <div className={`rounded-2xl border-2 p-5 ${online ? 'border-emerald-200 bg-emerald-50/30' : 'border-red-200 bg-red-50/30'}`}>
+        <div className="flex items-start justify-between mb-3">
+          <div>
+            <div className="flex items-center gap-2 mb-0.5">
+              <div className={`w-2 h-2 rounded-full ${online ? 'bg-emerald-500 animate-pulse' : 'bg-red-500'}`} />
+              <span className="text-sm font-bold text-neutral-900">{svc.service}</span>
+              <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${online ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>
+                {svc.type}
+              </span>
+            </div>
+            {!online && <p className="text-xs text-red-500 mt-1">{svc.error || 'unreachable'}</p>}
+          </div>
+          {online && svc.uptime != null && (
+            <span className="text-xs text-neutral-400 font-mono">{fmtUptime(svc.uptime)}</span>
+          )}
+        </div>
+        {online && (
+          <div className="grid grid-cols-2 gap-2 text-xs">
+            {svc.pid    != null && <div className="bg-white/60 rounded-lg p-2"><p className="text-neutral-400">PID</p><p className="font-bold text-neutral-800 font-mono">{svc.pid}</p></div>}
+            {svc.node             && <div className="bg-white/60 rounded-lg p-2"><p className="text-neutral-400">Node</p><p className="font-bold text-neutral-800 font-mono">{svc.node}</p></div>}
+            {svc.memMB            && <div className="bg-white/60 rounded-lg p-2 col-span-2">
+              <p className="text-neutral-400 mb-1">Heap {svc.memMB.heapUsed} / {svc.memMB.heapTotal} MB ({memPct}%)</p>
+              <div className="w-full bg-neutral-200 rounded-full h-1.5">
+                <div className={`h-1.5 rounded-full transition-all ${memPct > 85 ? 'bg-red-500' : memPct > 65 ? 'bg-amber-500' : 'bg-emerald-500'}`} style={{ width: `${Math.min(100, memPct)}%` }} />
+              </div>
+            </div>}
+            {svc.logEntries != null && <div className="bg-white/60 rounded-lg p-2"><p className="text-neutral-400">Log Buffer</p><p className="font-bold text-neutral-800">{svc.logEntries}</p></div>}
+            {svc.liveClients != null && <div className="bg-white/60 rounded-lg p-2"><p className="text-neutral-400">SSE Clients</p><p className="font-bold text-neutral-800">{svc.liveClients}</p></div>}
+            {svc.errors24h != null && <div className="bg-white/60 rounded-lg p-2"><p className="text-neutral-400">Errors (24h)</p><p className={`font-bold ${svc.errors24h > 0 ? 'text-red-600' : 'text-emerald-600'}`}>{svc.errors24h}</p></div>}
+            {svc.warns24h  != null && <div className="bg-white/60 rounded-lg p-2"><p className="text-neutral-400">Warnings (24h)</p><p className={`font-bold ${svc.warns24h > 5 ? 'text-amber-600' : 'text-neutral-700'}`}>{svc.warns24h}</p></div>}
+            {svc.backends  != null && <div className="bg-white/60 rounded-lg p-2"><p className="text-neutral-400">Backends</p><p className="font-bold text-neutral-800">{svc.backends}</p></div>}
+            {svc.monitoredServices != null && <div className="bg-white/60 rounded-lg p-2"><p className="text-neutral-400">Monitored</p><p className="font-bold text-neutral-800">{svc.monitoredServices}</p></div>}
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  const TABS = [
+    { id: 'overview', label: 'Fleet Overview', icon: Monitor },
+    { id: 'dispatch', label: 'Command Dispatch', icon: Terminal },
+    { id: 'email',    label: 'Email Key Pool', icon: Mail },
+    { id: 'database', label: 'Database Inspector', icon: Database },
+    { id: 'log',      label: 'Command Log', icon: Scroll },
+  ];
+
+  return (
+    <div className="min-h-screen bg-neutral-950 text-white">
+      {/* Header */}
+      <div className="border-b border-white/10 bg-neutral-900/80 backdrop-blur-sm sticky top-0 z-10">
+        <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+          <div>
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center">
+                <Crosshair className="w-4 h-4 text-white" />
+              </div>
+              <div>
+                <h1 className="text-base font-bold tracking-tight">Command Center</h1>
+                <p className="text-xs text-neutral-500">Super Admin — Direct Infrastructure Control</p>
+              </div>
+            </div>
+          </div>
+          <div className="flex items-center gap-3">
+            {fleet && (
+              <span className="text-xs text-neutral-500 font-mono">
+                Last refresh: {new Date(fleet.fetchedAt).toLocaleTimeString()}
+              </span>
+            )}
+            <button onClick={refresh} disabled={fleetLoading} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/15 text-xs font-medium transition-colors disabled:opacity-50">
+              <RefreshCw className={`w-3.5 h-3.5 ${fleetLoading ? 'animate-spin' : ''}`} /> Refresh
+            </button>
+          </div>
+        </div>
+
+        {/* Tabs */}
+        <div className="max-w-7xl mx-auto px-6 flex gap-1 pb-0">
+          {TABS.map(({ id, label, icon: I }) => (
+            <button key={id} onClick={() => setActiveTab(id)}
+              className={`flex items-center gap-1.5 px-4 py-2.5 text-xs font-semibold border-b-2 transition-colors whitespace-nowrap ${activeTab === id ? 'border-violet-500 text-violet-300' : 'border-transparent text-neutral-500 hover:text-neutral-300'}`}>
+              <I className="w-3.5 h-3.5" />{label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="max-w-7xl mx-auto px-6 py-6">
+
+        {/* FLEET OVERVIEW */}
+        {activeTab === 'overview' && (
+          <div className="space-y-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+              {fleetLoading ? (
+                [0,1,2].map(i => <div key={i} className="h-48 rounded-2xl bg-white/5 animate-pulse" />)
+              ) : fleet?.services?.length ? (
+                fleet.services.map(svc => <ServiceCard key={svc.service} svc={svc} />)
+              ) : (
+                <div className="col-span-3 text-center py-12 text-neutral-600">No fleet data available</div>
+              )}
+            </div>
+            {fleet?.note && (
+              <div className="rounded-xl bg-amber-900/20 border border-amber-500/20 px-4 py-3 text-xs text-amber-400">{fleet.note}</div>
+            )}
+          </div>
+        )}
+
+        {/* COMMAND DISPATCH */}
+        {activeTab === 'dispatch' && (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="space-y-4">
+              <div className="rounded-2xl bg-white/5 border border-white/10 p-5 space-y-4">
+                <h3 className="text-sm font-bold text-neutral-300 flex items-center gap-2"><Terminal className="w-4 h-4 text-violet-400" /> Dispatch Command</h3>
+
+                <div>
+                  <label className="block text-xs text-neutral-500 mb-1.5 font-semibold uppercase tracking-wider">Target Service</label>
+                  <div className="grid grid-cols-3 gap-2">
+                    {['backend', 'router', 'watchdog'].map(t => (
+                      <button key={t} onClick={() => { setSelectedTarget(t); setSelectedCmd(COMMANDS[t][0].id); }}
+                        className={`py-2 rounded-xl text-xs font-bold uppercase tracking-wide transition-colors ${selectedTarget === t ? 'bg-violet-600 text-white' : 'bg-white/5 text-neutral-400 hover:bg-white/10'}`}>
+                        {t}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs text-neutral-500 mb-1.5 font-semibold uppercase tracking-wider">Command</label>
+                  <div className="space-y-1.5">
+                    {COMMANDS[selectedTarget].map(cmd => (
+                      <button key={cmd.id} onClick={() => setSelectedCmd(cmd.id)}
+                        className={`w-full text-left p-3 rounded-xl transition-colors ${selectedCmd === cmd.id ? 'bg-violet-900/50 border border-violet-500/40' : 'bg-white/5 hover:bg-white/10 border border-transparent'}`}>
+                        <p className="text-xs font-bold text-neutral-200">{cmd.label}</p>
+                        <p className="text-xs text-neutral-500 mt-0.5">{cmd.desc}</p>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs text-neutral-500 mb-1.5 font-semibold uppercase tracking-wider">
+                    Params <span className="text-neutral-600 normal-case font-normal">(optional JSON)</span>
+                  </label>
+                  <textarea
+                    value={cmdParams}
+                    onChange={e => setCmdParams(e.target.value)}
+                    rows={3}
+                    placeholder={'{ "provider": "brevo" }'}
+                    className="w-full bg-neutral-900 border border-white/10 rounded-xl px-3 py-2.5 text-xs font-mono text-neutral-200 resize-none focus:outline-none focus:border-violet-500 placeholder-neutral-700"
+                  />
+                </div>
+
+                <button onClick={execCommand} disabled={cmdRunning}
+                  className="w-full py-3 rounded-xl bg-violet-600 hover:bg-violet-500 text-sm font-bold flex items-center justify-center gap-2 transition-colors disabled:opacity-50">
+                  {cmdRunning
+                    ? <><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Executing...</>
+                    : <><Play className="w-4 h-4" /> Execute on {selectedTarget}</>}
+                </button>
+              </div>
+            </div>
+
+            {/* Live result */}
+            <div className="rounded-2xl bg-black border border-white/10 p-5">
+              <h3 className="text-xs font-bold text-neutral-500 uppercase tracking-wider mb-3">Last Result</h3>
+              {cmdLog.length === 0 ? (
+                <p className="text-xs text-neutral-700 font-mono">No commands dispatched yet.</p>
+              ) : (
+                <div className="space-y-3">
+                  {cmdLog.slice(0, 1).map((entry, i) => (
+                    <div key={i}>
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className={`text-xs px-2 py-0.5 rounded font-bold ${entry.ok ? 'bg-emerald-900 text-emerald-300' : 'bg-red-900 text-red-300'}`}>
+                          {entry.ok ? 'OK' : 'FAIL'}
+                        </span>
+                        <span className="text-xs font-mono text-neutral-400">{entry.target} / {entry.command}</span>
+                        <span className="text-xs text-neutral-600 ml-auto">{entry.elapsed}ms</span>
+                      </div>
+                      <pre className="text-xs font-mono text-neutral-300 bg-neutral-900 rounded-lg p-3 overflow-auto max-h-80 whitespace-pre-wrap">
+                        {entry.ok
+                          ? JSON.stringify(entry.result, null, 2)
+                          : entry.error}
+                      </pre>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* EMAIL KEY POOL */}
+        {activeTab === 'email' && (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-sm font-bold text-neutral-300">Email Key Pool</h2>
+                <p className="text-xs text-neutral-600 mt-0.5">Brevo and Mailjet key rotation state. Add BREVO_API_KEY_2, _3, etc. to the router env to expand.</p>
+              </div>
+              <button onClick={refreshPool} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/15 text-xs font-medium transition-colors">
+                <RefreshCw className="w-3.5 h-3.5" /> Refresh
+              </button>
+            </div>
+
+            {!emailPool ? (
+              <div className="rounded-2xl bg-white/5 p-8 text-center text-neutral-600 text-sm">
+                {fleetLoading ? 'Loading...' : 'Email pool unavailable — ensure ROUTER_URL is set'}
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                {Object.entries(emailPool).filter(([k]) => k !== '_summary').map(([name, pool]) => (
+                  <div key={name} className="rounded-2xl bg-white/5 border border-white/10 p-5">
+                    <div className="flex items-center justify-between mb-4">
+                      <div>
+                        <h3 className="text-sm font-bold text-neutral-300">{pool.provider}</h3>
+                        <p className="text-xs text-neutral-500">{pool.totalKeys} key(s) — {(pool.monthlyFree || 0).toLocaleString()} / month free</p>
+                      </div>
+                      <div className={`text-xs px-2 py-1 rounded-lg font-bold ${pool.activeKeys > 0 ? 'bg-emerald-900 text-emerald-300' : 'bg-red-900 text-red-300'}`}>
+                        {pool.activeKeys} active
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      {pool.keys?.length ? pool.keys.map(key => (
+                        <div key={key.index} className={`flex items-center justify-between rounded-xl p-3 ${key.status === 'active' ? 'bg-emerald-900/20' : 'bg-red-900/20'}`}>
+                          <div className="flex items-center gap-2">
+                            <Key className={`w-3 h-3 ${key.status === 'active' ? 'text-emerald-400' : 'text-red-400'}`} />
+                            <span className="text-xs font-mono text-neutral-400">{key.keySuffix}</span>
+                          </div>
+                          <div className="text-right">
+                            <p className={`text-xs font-bold ${key.status === 'active' ? 'text-emerald-400' : 'text-red-400'}`}>{key.status}</p>
+                            {key.resumesAt && <p className="text-xs text-neutral-600">resumes {new Date(key.resumesAt).toLocaleTimeString()}</p>}
+                            <p className="text-xs text-neutral-600">{key.useCount} sends</p>
+                          </div>
+                        </div>
+                      )) : (
+                        <p className="text-xs text-neutral-600 text-center py-4">No keys configured for {pool.provider}</p>
+                      )}
+                    </div>
+                    {pool.keys?.some(k => k.status === 'suspended') && (
+                      <button
+                        onClick={async () => {
+                          try {
+                            await adminAPI.ccCommand('router', 'clear-key-suspension', { provider: name });
+                            toast.success(`Cleared suspended ${name} keys`);
+                            setTimeout(refreshPool, 1000);
+                          } catch { toast.error('Failed to clear suspensions'); }
+                        }}
+                        className="mt-3 w-full py-2 rounded-xl bg-amber-900/30 hover:bg-amber-900/50 text-xs font-bold text-amber-400 transition-colors">
+                        Clear Suspensions for {pool.provider}
+                      </button>
+                    )}
+                  </div>
+                ))}
+                {emailPool._summary && (
+                  <div className="lg:col-span-2 rounded-2xl bg-violet-900/20 border border-violet-500/20 p-4 flex items-center justify-between">
+                    <p className="text-xs text-violet-400 font-semibold">Total monthly free capacity across all keys</p>
+                    <p className="text-lg font-bold text-violet-300">{(emailPool._summary.totalMonthlyFree || 0).toLocaleString()} emails / month</p>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* DATABASE INSPECTOR */}
+        {activeTab === 'database' && (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-sm font-bold text-neutral-300">Database Inspector</h2>
+                <p className="text-xs text-neutral-600 mt-0.5">Live collection sizes, document counts, and index data.</p>
+              </div>
+              <button onClick={refreshDb} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/15 text-xs font-medium transition-colors">
+                <RefreshCw className="w-3.5 h-3.5" /> Refresh
+              </button>
+            </div>
+            {!db ? (
+              <div className="rounded-2xl bg-white/5 p-8 text-center text-neutral-600 text-sm">Loading database info...</div>
+            ) : (
+              <>
+                <div className="grid grid-cols-3 gap-4">
+                  <div className="rounded-2xl bg-white/5 border border-white/10 p-4 text-center">
+                    <p className="text-2xl font-bold text-neutral-200">{db.collections?.length || 0}</p>
+                    <p className="text-xs text-neutral-500 mt-1">Collections</p>
+                  </div>
+                  <div className="rounded-2xl bg-white/5 border border-white/10 p-4 text-center">
+                    <p className={`text-sm font-bold mt-1 ${db.state === 'connected' ? 'text-emerald-400' : 'text-red-400'}`}>{db.state}</p>
+                    <p className="text-xs text-neutral-500">DB State</p>
+                  </div>
+                  <div className="rounded-2xl bg-white/5 border border-white/10 p-4 text-center">
+                    <p className="text-sm font-bold text-neutral-200 font-mono">{db.dbName}</p>
+                    <p className="text-xs text-neutral-500 mt-1">Database</p>
+                  </div>
+                </div>
+                <div className="rounded-2xl bg-white/5 border border-white/10 overflow-hidden">
+                  <table className="w-full text-xs">
+                    <thead>
+                      <tr className="border-b border-white/10 bg-white/5">
+                        <th className="text-left px-4 py-3 text-neutral-500 font-semibold">Collection</th>
+                        <th className="text-right px-4 py-3 text-neutral-500 font-semibold">Documents</th>
+                        <th className="text-right px-4 py-3 text-neutral-500 font-semibold">Data Size</th>
+                        <th className="text-right px-4 py-3 text-neutral-500 font-semibold">Index Size</th>
+                        <th className="text-right px-4 py-3 text-neutral-500 font-semibold">Avg Doc</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {db.collections?.map(col => (
+                        <tr key={col.name} className="border-b border-white/5 hover:bg-white/5 transition-colors">
+                          <td className="px-4 py-2.5 font-mono text-neutral-300">{col.name}</td>
+                          <td className="px-4 py-2.5 text-right text-neutral-400">{(col.count || 0).toLocaleString()}</td>
+                          <td className="px-4 py-2.5 text-right text-neutral-400">{col.sizeMB} MB</td>
+                          <td className="px-4 py-2.5 text-right text-neutral-400">{col.indexSizeMB} MB</td>
+                          <td className="px-4 py-2.5 text-right text-neutral-500">{col.avgObjSize ? `${col.avgObjSize}B` : '—'}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </>
+            )}
+          </div>
+        )}
+
+        {/* COMMAND LOG */}
+        {activeTab === 'log' && (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h2 className="text-sm font-bold text-neutral-300">Command Execution Log</h2>
+              {cmdLog.length > 0 && (
+                <button onClick={() => setCmdLog([])} className="text-xs text-neutral-500 hover:text-red-400 transition-colors">Clear</button>
+              )}
+            </div>
+            {cmdLog.length === 0 ? (
+              <div className="rounded-2xl bg-white/5 p-12 text-center text-neutral-600 text-sm">
+                No commands executed in this session.
+              </div>
+            ) : (
+              <div className="space-y-2" ref={logRef}>
+                {cmdLog.map((entry, i) => (
+                  <div key={i} className={`rounded-xl border p-4 ${entry.ok ? 'bg-emerald-900/10 border-emerald-800/30' : 'bg-red-900/10 border-red-800/30'}`}>
+                    <div className="flex items-center gap-3 mb-2 text-xs">
+                      <span className={`px-2 py-0.5 rounded font-bold ${entry.ok ? 'bg-emerald-900 text-emerald-300' : 'bg-red-900 text-red-300'}`}>{entry.ok ? 'OK' : 'FAIL'}</span>
+                      <span className="font-mono text-neutral-400">{entry.target} / {entry.command}</span>
+                      <span className="text-neutral-600">{entry.elapsed}ms</span>
+                      <span className="ml-auto text-neutral-600">{new Date(entry.ts).toLocaleTimeString()}</span>
+                    </div>
+                    <pre className="text-xs font-mono text-neutral-400 whitespace-pre-wrap overflow-auto max-h-48">
+                      {entry.ok ? JSON.stringify(entry.result, null, 2) : entry.error}
+                    </pre>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+
 const NAV_ITEMS = [
-  { id: 'dashboard',   label: 'Dashboard',    icon: Monitor },
-  { id: 'events',      label: 'Events',       icon: Calendar },
-  { id: 'users',       label: 'Users',        icon: Users },
-  { id: 'organizers',  label: 'Organizers',   icon: Building2 },
-  { id: 'staff',       label: 'Staff',        icon: UserCheck },
-  { id: 'employees',   label: 'Team',         icon: Briefcase },
-  { id: 'analytics',   label: 'Analytics',    icon: BarChart3 },
-  { id: 'fleet',       label: 'Fleet',        icon: Rocket },
-  { id: 'security',    label: 'Security',     icon: Shield },
-  { id: 'marketing',   label: 'Marketing',    icon: Send },
-  { id: 'system',      label: 'System',       icon: Server },
-  { id: 'logs',        label: 'Logs',         icon: Terminal },
-  { id: 'uptime',      label: 'Uptime',       icon: Radio },
-  { id: 'reports',     label: 'Reports',      icon: Inbox },
+  { id: 'dashboard',      label: 'Dashboard',      icon: Monitor },
+  { id: 'events',         label: 'Events',         icon: Calendar },
+  { id: 'users',          label: 'Users',          icon: Users },
+  { id: 'organizers',     label: 'Organizers',     icon: Building2 },
+  { id: 'staff',          label: 'Staff',          icon: UserCheck },
+  { id: 'employees',      label: 'Team',           icon: Briefcase },
+  { id: 'analytics',      label: 'Analytics',      icon: BarChart3 },
+  { id: 'fleet',          label: 'Fleet',          icon: Rocket },
+  { id: 'security',       label: 'Security',       icon: Shield },
+  { id: 'marketing',      label: 'Marketing',      icon: Send },
+  { id: 'system',         label: 'System',         icon: Server },
+  { id: 'logs',           label: 'Logs',           icon: Terminal },
+  { id: 'uptime',         label: 'Uptime',         icon: Radio },
+  { id: 'reports',        label: 'Reports',        icon: Inbox },
+  { id: 'command-center', label: 'Command Center', icon: Crosshair },
 ];
 
 // ─── Security Panel ───────────────────────────────────────────────────────────
@@ -2084,6 +2535,12 @@ function MarketingPanel() {
   const [result, setResult]             = useState(null);
   const [previewHtml, setPreviewHtml]   = useState('');
   const [previewLoading, setPreviewLoading] = useState(false);
+  const [mode, setMode]                 = useState('send'); // 'send' | 'schedule' | 'scheduled'
+  const [sendAt, setSendAt]             = useState('');
+  const [campaignLabel, setCampaignLabel] = useState('');
+  const [scheduled, setScheduled]       = useState([]);
+  const [scheduledLoading, setScheduledLoading] = useState(false);
+  const [scheduling, setScheduling]     = useState(false);
 
   useEffect(() => {
     adminAPI.getMarketingTemplates()
@@ -2098,7 +2555,6 @@ function MarketingPanel() {
       .catch(() => toast.error('Could not load marketing templates'));
   }, []);
 
-  // Fetch preview HTML via API (handles auth via interceptor, avoids X-Frame-Options)
   useEffect(() => {
     if (!selected) { setPreviewHtml(''); return; }
     setPreviewLoading(true);
@@ -2108,6 +2564,15 @@ function MarketingPanel() {
       .catch(() => toast.error('Could not load preview'))
       .finally(() => setPreviewLoading(false));
   }, [selected, ctaUrl]);
+
+  const loadScheduled = async () => {
+    setScheduledLoading(true);
+    try { const r = await adminAPI.getScheduledCampaigns(); setScheduled(r.data.scheduled || []); }
+    catch { toast.error('Could not load scheduled campaigns'); }
+    finally { setScheduledLoading(false); }
+  };
+
+  useEffect(() => { if (mode === 'scheduled') loadScheduled(); }, [mode]);
 
   const handleTemplateChange = (id) => {
     setSelected(id);
@@ -2150,169 +2615,241 @@ function MarketingPanel() {
     setSending(false);
   };
 
+  const handleSchedule = async () => {
+    const recipients = parseRecipients();
+    if (!selected)            return toast.error('Select a template first');
+    if (recipients.length === 0) return toast.error('Enter at least one valid email address');
+    if (!sendAt)              return toast.error('Select a send date and time');
+    if (new Date(sendAt) <= new Date()) return toast.error('Schedule time must be in the future');
+
+    setScheduling(true);
+    try {
+      await adminAPI.scheduleMarketingCampaign({
+        templateId: selected,
+        recipients,
+        subject:    subject || undefined,
+        ctaUrl:     ctaUrl  || undefined,
+        sendAt:     new Date(sendAt).toISOString(),
+        label:      campaignLabel || undefined,
+      });
+      toast.success(`Campaign scheduled for ${new Date(sendAt).toLocaleString()}`);
+      setMode('scheduled');
+    } catch (err) {
+      toast.error(err.response?.data?.error || 'Schedule failed');
+    }
+    setScheduling(false);
+  };
+
+  const cancelScheduled = async (id) => {
+    if (!confirm('Cancel this scheduled campaign?')) return;
+    try {
+      await adminAPI.cancelScheduledCampaign(id);
+      toast.success('Campaign cancelled');
+      loadScheduled();
+    } catch { toast.error('Cancel failed'); }
+  };
+
   const recipientCount = parseRecipients().length;
 
   return (
-    <div className="p-6 space-y-6 max-w-6xl">
-      <div>
-        <h2 className="text-xl font-bold text-neutral-900 flex items-center gap-2">
-          <Send className="w-5 h-5 text-violet-600" /> Marketing Emails
-        </h2>
-        <p className="text-sm text-neutral-500 mt-0.5">Send targeted marketing campaigns to prospective PlanIt users. One email per address per day, batched to avoid rate limits.</p>
+    <div className="p-6 space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-xl font-bold text-neutral-900 flex items-center gap-2">
+            <Send className="w-5 h-5 text-violet-600" /> Marketing
+          </h2>
+          <p className="text-sm text-neutral-500 mt-0.5">Personalized outreach campaigns. One email per address per day, batched to avoid rate limits.</p>
+        </div>
+        <div className="flex bg-neutral-100 rounded-xl p-1 gap-1">
+          {[['send','Send Now'], ['schedule','Schedule'], ['scheduled','Scheduled']].map(([id, label]) => (
+            <button key={id} onClick={() => setMode(id)}
+              className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-all ${mode === id ? 'bg-white shadow-sm text-neutral-900' : 'text-neutral-500 hover:text-neutral-700'}`}>
+              {label}
+            </button>
+          ))}
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-        {/* Left: compose */}
+      {mode === 'scheduled' ? (
         <div className="space-y-4">
-
-          {/* Template selector */}
-          <div className="card p-5">
-            <h3 className="text-sm font-bold text-neutral-700 mb-3">Template</h3>
-            <div className="space-y-2">
-              {templates.map(tpl => (
-                <label
-                  key={tpl.id}
-                  className={`flex items-start gap-3 p-3 rounded-xl border-2 cursor-pointer transition-colors ${
-                    selected === tpl.id
-                      ? 'border-violet-500 bg-violet-50'
-                      : 'border-neutral-100 hover:border-neutral-200'
-                  }`}
-                >
-                  <input
-                    type="radio"
-                    name="template"
-                    value={tpl.id}
-                    checked={selected === tpl.id}
-                    onChange={() => handleTemplateChange(tpl.id)}
-                    className="mt-0.5 accent-violet-600"
-                  />
-                  <div>
-                    <p className="text-sm font-semibold text-neutral-900">{tpl.name}</p>
-                    <p className="text-xs text-neutral-500 mt-0.5">{tpl.description}</p>
-                  </div>
-                </label>
-              ))}
-              {templates.length === 0 && (
-                <div className="flex justify-center py-6">
-                  <span className="spinner w-5 h-5 border-2 border-neutral-200 border-t-neutral-600" />
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Subject and CTA */}
-          <div className="card p-5 space-y-3">
-            <h3 className="text-sm font-bold text-neutral-700 mb-1">Customise</h3>
-            <div>
-              <label className="block text-xs font-semibold text-neutral-500 mb-1">Subject line</label>
-              <input
-                type="text"
-                value={subject}
-                onChange={e => setSubject(e.target.value)}
-                className="input text-sm w-full"
-                placeholder="Default from template"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-neutral-500 mb-1">CTA button URL</label>
-              <input
-                type="url"
-                value={ctaUrl}
-                onChange={e => setCtaUrl(e.target.value)}
-                className="input text-sm w-full font-mono"
-                placeholder="https://planit.app"
-              />
-              <p className="text-xs text-neutral-400 mt-1">This is the URL the main button in the email points to.</p>
-            </div>
-          </div>
-
-          {/* Recipient list */}
-          <div className="card p-5">
-            <div className="flex items-center justify-between mb-2">
-              <h3 className="text-sm font-bold text-neutral-700">Recipients</h3>
-              {recipientCount > 0 && (
-                <span className="text-xs font-semibold text-violet-600 bg-violet-50 px-2 py-0.5 rounded-full">
-                  {recipientCount} valid {recipientCount === 1 ? 'address' : 'addresses'}
-                </span>
-              )}
-            </div>
-            <textarea
-              value={recipientText}
-              onChange={e => setRecipientText(e.target.value)}
-              rows={6}
-              className="input text-sm w-full font-mono resize-y"
-              placeholder={"Paste email addresses here.\nOne per line, or comma/semicolon separated.\n\nExample:\njohn@example.com\njane@example.com, alex@example.com"}
-            />
-            <p className="text-xs text-neutral-400 mt-1">Maximum 1,000 recipients per send. Invalid addresses are skipped automatically.</p>
-          </div>
-
-          {/* Send button + result */}
-          <div className="card p-5">
-            <button
-              onClick={handleSend}
-              disabled={sending || !selected || recipientCount === 0}
-              className="btn bg-violet-600 hover:bg-violet-700 text-white w-full gap-2 disabled:opacity-50 justify-center"
-            >
-              {sending
-                ? <><span className="spinner w-4 h-4 border-2 border-white/30 border-t-white" /> Sending campaign...</>
-                : <><Send className="w-4 h-4" /> Send to {recipientCount || 0} {recipientCount === 1 ? 'recipient' : 'recipients'}</>}
+          <div className="flex items-center justify-between">
+            <p className="text-sm text-neutral-600">{scheduled.length} scheduled campaign{scheduled.length !== 1 ? 's' : ''}</p>
+            <button onClick={loadScheduled} disabled={scheduledLoading} className="btn btn-secondary text-xs py-1.5 gap-1.5">
+              <RefreshCw className={`w-3.5 h-3.5 ${scheduledLoading ? 'animate-spin' : ''}`} /> Refresh
             </button>
-
-            {result && (
-              <div className="mt-4 grid grid-cols-3 gap-3">
-                <div className="bg-emerald-50 rounded-xl p-3 text-center">
-                  <p className="text-xl font-bold text-emerald-700">{result.sent}</p>
-                  <p className="text-xs text-emerald-600 mt-0.5">Delivered</p>
-                </div>
-                <div className="bg-neutral-50 rounded-xl p-3 text-center">
-                  <p className="text-xl font-bold text-neutral-600">{result.skipped}</p>
-                  <p className="text-xs text-neutral-400 mt-0.5">Skipped</p>
-                </div>
-                <div className="bg-red-50 rounded-xl p-3 text-center">
-                  <p className="text-xl font-bold text-red-600">{result.failed}</p>
-                  <p className="text-xs text-red-400 mt-0.5">Failed</p>
-                </div>
-              </div>
-            )}
-
-            {result && (
-              <p className="text-xs text-neutral-400 mt-3">
-                Skipped addresses either already received marketing today or had an invalid format.
-                Failed addresses encountered a delivery error. Check backend logs for details.
-              </p>
-            )}
           </div>
-        </div>
-
-        {/* Right: live preview */}
-        <div className="space-y-2">
-          <h3 className="text-sm font-bold text-neutral-700">Live Preview</h3>
-          <p className="text-xs text-neutral-400">Updates when you change template or CTA URL.</p>
-          {selected ? (
-            <div className="rounded-xl border border-neutral-200 overflow-hidden relative" style={{ height: '700px' }}>
-              {previewLoading && (
-                <div className="absolute inset-0 flex items-center justify-center bg-neutral-50 z-10">
-                  <span className="spinner w-5 h-5 border-2 border-neutral-200 border-t-violet-500" />
-                </div>
-              )}
-              <iframe
-                key={selected}
-                srcDoc={previewHtml}
-                title="Email preview"
-                className="w-full h-full"
-                sandbox="allow-same-origin"
-              />
+          {scheduled.length === 0 ? (
+            <div className="card p-12 text-center">
+              <p className="text-neutral-400 text-sm">No scheduled campaigns. Use the Schedule tab to queue a campaign.</p>
             </div>
           ) : (
-            <div className="rounded-xl border border-neutral-100 bg-neutral-50 flex items-center justify-center" style={{ height: '700px' }}>
-              <p className="text-sm text-neutral-400">Select a template to see a preview</p>
+            <div className="space-y-3">
+              {scheduled.map(job => (
+                <div key={job.id} className={`card p-5 ${job.status === 'done' ? 'opacity-70' : ''}`}>
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap mb-1">
+                        <span className={`text-xs px-2 py-0.5 rounded-full font-bold ${
+                          job.status === 'pending' ? 'bg-blue-100 text-blue-700'
+                          : job.status === 'running' ? 'bg-amber-100 text-amber-700'
+                          : job.status === 'done' ? 'bg-emerald-100 text-emerald-700'
+                          : 'bg-red-100 text-red-700'
+                        }`}>{job.status}</span>
+                        <p className="text-sm font-semibold text-neutral-900 truncate">{job.label || job.templateId}</p>
+                      </div>
+                      <p className="text-xs text-neutral-500">
+                        {job.recipients.length} recipients &middot; Send at {new Date(job.sendAt).toLocaleString()}
+                      </p>
+                      {job.results && (
+                        <p className="text-xs text-emerald-600 mt-1">
+                          Delivered: {job.results.sent} &middot; Skipped: {job.results.skipped} &middot; Failed: {job.results.failed}
+                        </p>
+                      )}
+                      {job.error && <p className="text-xs text-red-500 mt-1">{job.error}</p>}
+                    </div>
+                    {job.status === 'pending' && (
+                      <button onClick={() => cancelScheduled(job.id)} className="flex-shrink-0 text-xs text-red-500 hover:text-red-700 transition-colors font-medium">Cancel</button>
+                    )}
+                  </div>
+                </div>
+              ))}
             </div>
           )}
         </div>
-      </div>
+      ) : (
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+          {/* Left: compose */}
+          <div className="space-y-4">
+            <div className="card p-5">
+              <h3 className="text-sm font-bold text-neutral-700 mb-3">Template</h3>
+              <div className="space-y-2">
+                {templates.map(tpl => (
+                  <label key={tpl.id}
+                    className={`flex items-start gap-3 p-3 rounded-xl border-2 cursor-pointer transition-colors ${
+                      selected === tpl.id ? 'border-violet-500 bg-violet-50' : 'border-neutral-100 hover:border-neutral-200'
+                    }`}>
+                    <input type="radio" name="template" value={tpl.id} checked={selected === tpl.id}
+                      onChange={() => handleTemplateChange(tpl.id)} className="mt-0.5 accent-violet-600" />
+                    <div>
+                      <p className="text-sm font-semibold text-neutral-900">{tpl.name}</p>
+                      <p className="text-xs text-neutral-500 mt-0.5">{tpl.description}</p>
+                    </div>
+                  </label>
+                ))}
+                {templates.length === 0 && (
+                  <div className="flex justify-center py-6">
+                    <span className="spinner w-5 h-5 border-2 border-neutral-200 border-t-neutral-600" />
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="card p-5 space-y-3">
+              <h3 className="text-sm font-bold text-neutral-700 mb-1">Campaign Settings</h3>
+              <div>
+                <label className="block text-xs font-semibold text-neutral-500 mb-1">Subject line</label>
+                <input type="text" value={subject} onChange={e => setSubject(e.target.value)}
+                  className="input text-sm w-full" placeholder="Default from template" />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-neutral-500 mb-1">CTA button URL</label>
+                <input type="url" value={ctaUrl} onChange={e => setCtaUrl(e.target.value)}
+                  className="input text-sm w-full font-mono" placeholder="https://planit.app" />
+              </div>
+              {mode === 'schedule' && (
+                <>
+                  <div>
+                    <label className="block text-xs font-semibold text-neutral-500 mb-1">Send at (your local time)</label>
+                    <input type="datetime-local" value={sendAt} onChange={e => setSendAt(e.target.value)}
+                      className="input text-sm w-full" min={new Date().toISOString().slice(0, 16)} />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-neutral-500 mb-1">Campaign label <span className="font-normal text-neutral-400">(optional)</span></label>
+                    <input type="text" value={campaignLabel} onChange={e => setCampaignLabel(e.target.value)}
+                      className="input text-sm w-full" placeholder="e.g. Q3 Planner Outreach" />
+                  </div>
+                </>
+              )}
+            </div>
+
+            <div className="card p-5">
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="text-sm font-bold text-neutral-700">Recipients</h3>
+                {recipientCount > 0 && (
+                  <span className="text-xs font-semibold text-violet-600 bg-violet-50 px-2 py-0.5 rounded-full">
+                    {recipientCount.toLocaleString()} valid {recipientCount === 1 ? 'address' : 'addresses'}
+                  </span>
+                )}
+              </div>
+              <textarea value={recipientText} onChange={e => setRecipientText(e.target.value)} rows={6}
+                className="input text-sm w-full font-mono resize-y"
+                placeholder={"Paste email addresses here.\nOne per line, or comma/semicolon separated.\n\nExample:\njohn@example.com\njane@example.com, alex@example.com"} />
+              <p className="text-xs text-neutral-400 mt-1">Maximum 1,000 recipients. Invalid addresses skipped automatically.</p>
+            </div>
+
+            <div className="card p-5">
+              {mode === 'send' ? (
+                <>
+                  <button onClick={handleSend} disabled={sending || !selected || recipientCount === 0}
+                    className="btn bg-violet-600 hover:bg-violet-700 text-white w-full gap-2 disabled:opacity-50 justify-center">
+                    {sending
+                      ? <><span className="spinner w-4 h-4 border-2 border-white/30 border-t-white" /> Sending campaign...</>
+                      : <><Send className="w-4 h-4" /> Send to {recipientCount || 0} {recipientCount === 1 ? 'recipient' : 'recipients'}</>}
+                  </button>
+                  {result && (
+                    <div className="mt-4 grid grid-cols-3 gap-3">
+                      <div className="bg-emerald-50 rounded-xl p-3 text-center">
+                        <p className="text-xl font-bold text-emerald-700">{result.sent}</p>
+                        <p className="text-xs text-emerald-600 mt-0.5">Delivered</p>
+                      </div>
+                      <div className="bg-neutral-50 rounded-xl p-3 text-center">
+                        <p className="text-xl font-bold text-neutral-600">{result.skipped}</p>
+                        <p className="text-xs text-neutral-400 mt-0.5">Skipped</p>
+                      </div>
+                      <div className="bg-red-50 rounded-xl p-3 text-center">
+                        <p className="text-xl font-bold text-red-600">{result.failed}</p>
+                        <p className="text-xs text-red-400 mt-0.5">Failed</p>
+                      </div>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <button onClick={handleSchedule} disabled={scheduling || !selected || recipientCount === 0 || !sendAt}
+                  className="btn bg-indigo-600 hover:bg-indigo-700 text-white w-full gap-2 disabled:opacity-50 justify-center">
+                  {scheduling
+                    ? <><span className="spinner w-4 h-4 border-2 border-white/30 border-t-white" /> Scheduling...</>
+                    : <><Clock className="w-4 h-4" /> Schedule for {sendAt ? new Date(sendAt).toLocaleString() : '...'}</>}
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Right: live preview */}
+          <div className="space-y-2">
+            <h3 className="text-sm font-bold text-neutral-700">Live Preview</h3>
+            <p className="text-xs text-neutral-400">Updates on template or CTA URL change. This is the exact email your recipients will receive.</p>
+            {selected ? (
+              <div className="rounded-xl border border-neutral-200 overflow-hidden relative" style={{ height: '700px' }}>
+                {previewLoading && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-neutral-50 z-10">
+                    <span className="spinner w-5 h-5 border-2 border-neutral-200 border-t-violet-500" />
+                  </div>
+                )}
+                <iframe key={selected} srcDoc={previewHtml} title="Email preview" className="w-full h-full" sandbox="allow-same-origin" />
+              </div>
+            ) : (
+              <div className="rounded-xl border border-neutral-100 bg-neutral-50 flex items-center justify-center" style={{ height: '700px' }}>
+                <p className="text-sm text-neutral-400">Select a template to see a preview</p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
+
+
 
 // ─── Fleet Control Panel ──────────────────────────────────────────────────────
 function FleetControl() {
@@ -2695,14 +3232,24 @@ export default function Admin() {
 
         {/* Nav */}
         <nav className="flex-1 py-3 px-2 space-y-0.5">
-          {NAV_ITEMS.map(({ id, label, icon: I }) => (
-            <button key={id} onClick={() => { setActiveSection(id); setSelectedEvent(null); }}
-              className={`w-full flex items-center gap-3 px-2.5 py-2.5 rounded-xl text-sm font-medium transition-all group ${activeSection === id ? 'bg-white/10 text-white' : 'text-neutral-400 hover:bg-white/5 hover:text-white'}`}
-              title={!sidebarOpen ? label : undefined}>
-              <I className="w-4 h-4 flex-shrink-0" />
-              {sidebarOpen && <span>{label}</span>}
-            </button>
-          ))}
+          {NAV_ITEMS.map(({ id, label, icon: I }) => {
+            const isCc = id === 'command-center';
+            return (
+              <React.Fragment key={id}>
+                {isCc && <div className="mx-2 my-2 border-t border-white/10" />}
+                <button onClick={() => { setActiveSection(id); setSelectedEvent(null); }}
+                  className={`w-full flex items-center gap-3 px-2.5 py-2.5 rounded-xl text-sm font-medium transition-all group ${
+                    activeSection === id
+                      ? isCc ? 'bg-violet-900/60 text-violet-300' : 'bg-white/10 text-white'
+                      : isCc ? 'text-violet-500 hover:bg-violet-900/30 hover:text-violet-300' : 'text-neutral-400 hover:bg-white/5 hover:text-white'
+                  }`}
+                  title={!sidebarOpen ? label : undefined}>
+                  <I className="w-4 h-4 flex-shrink-0" />
+                  {sidebarOpen && <span>{label}</span>}
+                </button>
+              </React.Fragment>
+            );
+          })}
         </nav>
 
         {/* Bottom actions */}
@@ -2895,18 +3442,19 @@ export default function Admin() {
             </div>
           )}
 
-          {activeSection === 'users'      && !selectedEvent && <div className="max-w-7xl mx-auto"><AllUsersPanel /></div>}
-          {activeSection === 'organizers' && !selectedEvent && <div className="max-w-7xl mx-auto"><OrganizersPanel /></div>}
-          {activeSection === 'staff'      && !selectedEvent && <div className="max-w-7xl mx-auto"><StaffPanel /></div>}
-          {activeSection === 'employees'  && !selectedEvent && <div className="max-w-5xl mx-auto"><EmployeesPanel /></div>}
-          {activeSection === 'analytics'  && !selectedEvent && <div className="max-w-5xl mx-auto"><AnalyticsPanel stats={stats} /></div>}
-          {activeSection === 'fleet'      && !selectedEvent && <FleetControl />}
-          {activeSection === 'security'   && !selectedEvent && <SecurityPanel />}
-          {activeSection === 'marketing'  && !selectedEvent && <MarketingPanel />}
-          {activeSection === 'system'     && !selectedEvent && <div className="max-w-5xl mx-auto"><SystemPanel /></div>}
-          {activeSection === 'logs'       && !selectedEvent && <div className="max-w-6xl mx-auto"><LogsPanel /></div>}
-          {activeSection === 'uptime'     && !selectedEvent && <div className="max-w-4xl mx-auto"><UptimePanel /></div>}
-          {activeSection === 'reports'    && !selectedEvent && <div className="max-w-5xl mx-auto"><BugReportsPanel /></div>}
+          {activeSection === 'users'          && !selectedEvent && <div className="max-w-7xl mx-auto"><AllUsersPanel /></div>}
+          {activeSection === 'organizers'     && !selectedEvent && <div className="max-w-7xl mx-auto"><OrganizersPanel /></div>}
+          {activeSection === 'staff'          && !selectedEvent && <div className="max-w-7xl mx-auto"><StaffPanel /></div>}
+          {activeSection === 'employees'      && !selectedEvent && <div className="max-w-5xl mx-auto"><EmployeesPanel /></div>}
+          {activeSection === 'analytics'      && !selectedEvent && <div className="max-w-5xl mx-auto"><AnalyticsPanel stats={stats} /></div>}
+          {activeSection === 'fleet'          && !selectedEvent && <FleetControl />}
+          {activeSection === 'security'       && !selectedEvent && <SecurityPanel />}
+          {activeSection === 'marketing'      && !selectedEvent && <div className="max-w-6xl mx-auto"><MarketingPanel /></div>}
+          {activeSection === 'system'         && !selectedEvent && <div className="max-w-5xl mx-auto"><SystemPanel /></div>}
+          {activeSection === 'logs'           && !selectedEvent && <div className="max-w-6xl mx-auto"><LogsPanel /></div>}
+          {activeSection === 'uptime'         && !selectedEvent && <div className="max-w-4xl mx-auto"><UptimePanel /></div>}
+          {activeSection === 'reports'        && !selectedEvent && <div className="max-w-5xl mx-auto"><BugReportsPanel /></div>}
+          {activeSection === 'command-center' && !selectedEvent && <CommandCenterPanel />}
         </main>
       </div>
 
