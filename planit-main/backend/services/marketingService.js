@@ -499,6 +499,56 @@ function buildWeddings(ctaUrl) {
   );
 }
 
+function buildPersonalized(ctaUrl) {
+  const url = ctaUrl || process.env.FRONTEND_URL || 'https://planitapp.onrender.com';
+
+  const headerRow = `
+    <tr>
+      <td class="ep" style="padding:36px 40px 30px 40px;border-bottom:1px solid ${RULE};">
+        <span style="display:inline-block;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#0F172A;background:#F1F5F9;padding:5px 12px;border-radius:5px;margin-bottom:16px;font-family:${FONT};">Built for What You Actually Run</span>
+        <h1 style="margin:0 0 12px 0;font-size:24px;font-weight:800;color:${DARK};letter-spacing:-0.5px;line-height:1.2;font-family:${FONT};">Most event platforms were built for the people who built them, not for you.</h1>
+        <p style="margin:0;font-size:15px;color:${MUTED};line-height:1.65;font-family:${FONT};">PlanIt started from a different place: watching real organisers work. The result is a platform shaped around how events actually run, not around a product roadmap designed to justify a subscription price.</p>
+      </td>
+    </tr>`;
+
+  const body = `
+    ${sectionCap('What Organisers Actually Told Us They Needed')
+    }
+    <p style="margin:0 0 20px 0;font-size:14px;color:${MID};line-height:1.8;font-family:${FONT};">We spoke to coordinators, venue managers, charity leads, university student unions, and wedding planners before writing a single line of PlanIt. These are the five things they said every time, in almost the same words.</p>
+    ${featGrid([
+      { t: 'Check-in that does not require a specialist', d: 'Any volunteer with a smartphone, no prior training, should be able to clear 200 guests in the first 20 minutes. PlanIt QR check-in is exactly that.' },
+      { t: 'Guest communication without a third app',     d: 'Announcements, emergency updates, schedule changes. Pushed directly to every attendee, inside the event space, no download required.' },
+      { t: 'A single source of truth for the team',      d: 'Chat, tasks, files, expenses, seating, and schedule in one place. Not six tools open in six browser tabs across three people.' },
+      { t: 'Something that looks professional to clients', d: 'A branded event URL, clean guest invitation emails with QR codes, and a polished experience from first contact to check-in.' },
+      { t: 'No per-attendee pricing surprises',           d: 'A 300-person event and an 800-person event should not cost different amounts to run. PlanIt does not charge per head.' },
+      { t: 'Data that belongs to the organiser',          d: 'Guest lists, attendance records, message history. Yours. Not sold, not profiled, not used to train anything.' },
+    ])}
+    ${pullQuote(
+      'I stopped evaluating alternatives after the first event. Nothing else comes close for the price, and the price is free.',
+      'Independent event coordinator, 14 years experience, Edinburgh',
+      '#0F172A'
+    )}
+    ${sectionCap('The Technical Reality')}
+    <p style="margin:0 0 16px 0;font-size:14px;color:${MID};line-height:1.8;font-family:${FONT};">PlanIt runs on a distributed architecture with real-time socket communication, automated uptime monitoring, a mesh-networked fleet of services, and a 99.9% uptime SLA. It handles 50 or 5,000 attendees without configuration changes. The backend does the heavy lifting so the event team can focus on the event.</p>
+    ${statsRow([
+      { n: 'Real-time', l: 'Guest Tracking' },
+      { n: 'Any Scale', l: 'No Caps' },
+      { n: 'Free',      l: 'Always' },
+    ])}
+    ${darkStrip('No credit card. No trial period. No catch.', 'PlanIt is free because good tools should be accessible.', 'Upgrade plans available for high-volume organisations', '#94A3B8', 'Get Started Free', '#0F172A', url)}`;
+
+  return emailShell(
+    'The event platform built around how events actually run',
+    'PlanIt is free, professional, and built around the real needs of event organisers.',
+    'For Every Organiser',
+    `color:rgba(148,163,184,0.85);border:1px solid rgba(15,23,42,0.25)`,
+    headerRow,
+    body,
+    'Every feature in PlanIt exists because an organiser said they needed it. That philosophy does not change.',
+    'You are receiving this because you were identified as someone who organises events professionally or regularly.'
+  );
+}
+
 // ─── Template registry ────────────────────────────────────────────────────────
 
 const TEMPLATES = {
@@ -543,6 +593,13 @@ const TEMPLATES = {
     description: 'For couples, wedding planners, and milestone events.',
     defaultSubject: 'For the events that have to be perfect',
     build: buildWeddings,
+  },
+  personalized: {
+    id: 'personalized',
+    name: 'Universal Outreach — Personalized',
+    description: 'Direct, persuasive outreach for any event organiser. Built around real organiser feedback. Highest conversion messaging.',
+    defaultSubject: 'The event platform built around how events actually run',
+    build: buildPersonalized,
   },
 };
 
@@ -615,4 +672,57 @@ async function sendCampaign({ templateId, recipients, subject, ctaUrl }) {
   return results;
 }
 
-module.exports = { listTemplates, previewTemplate, sendCampaign };
+// ─── Scheduled campaign runner ────────────────────────────────────────────────
+// Call this from a cron job or setInterval to dispatch due campaigns.
+
+async function runScheduled() {
+  let dispatched = 0;
+  try {
+    const listRaw = await redis.get('mktschedlist').catch(() => null);
+    if (!listRaw) return dispatched;
+    const ids  = JSON.parse(listRaw);
+    const now  = Date.now();
+    const keep = [];
+
+    for (const id of ids) {
+      const raw = await redis.get(id).catch(() => null);
+      if (!raw) continue;
+      const job = JSON.parse(raw);
+      if (job.status !== 'pending' || new Date(job.sendAt).getTime() > now) {
+        keep.push(id);
+        continue;
+      }
+      job.status = 'running';
+      await redis.set(id, JSON.stringify(job), 3600).catch(() => {});
+      console.log(`[marketing] Running scheduled campaign ${id} (${job.recipients.length} recipients)`);
+      try {
+        const results = await sendCampaign({ templateId: job.templateId, recipients: job.recipients, subject: job.subject || undefined, ctaUrl: job.ctaUrl || undefined });
+        job.status    = 'done';
+        job.results   = results;
+        job.finishedAt = new Date().toISOString();
+        await redis.set(id, JSON.stringify(job), 86400).catch(() => {});
+        dispatched++;
+        console.log(`[marketing] Scheduled campaign ${id} done: sent=${results.sent} skipped=${results.skipped} failed=${results.failed}`);
+      } catch (err) {
+        job.status = 'error';
+        job.error  = err.message;
+        await redis.set(id, JSON.stringify(job), 86400).catch(() => {});
+        console.error(`[marketing] Scheduled campaign ${id} error:`, err.message);
+        keep.push(id);
+      }
+    }
+
+    await redis.set('mktschedlist', JSON.stringify(keep), 7 * 86400).catch(() => {});
+  } catch (err) {
+    console.error('[marketing] runScheduled error:', err.message);
+  }
+  return dispatched;
+}
+
+// Boot the scheduler — checks every 60 seconds
+if (process.env.MARKETING_SCHEDULER !== 'off') {
+  setInterval(runScheduled, 60000);
+  runScheduled().catch(() => {});
+}
+
+module.exports = { listTemplates, previewTemplate, sendCampaign, runScheduled };
