@@ -1911,47 +1911,44 @@ function BugReportsPanel() {
 // ─────────────────────────────────────────────────────────────────────────────
 
 const CC_STYLES = `
-  @keyframes cc-scan    { 0%{transform:translateY(-100%)} 100%{transform:translateY(200vh)} }
-  @keyframes cc-pulse-r { 0%{transform:scale(1);opacity:.7} 100%{transform:scale(2.4);opacity:0} }
-  @keyframes cc-blink   { 0%,100%{opacity:1} 50%{opacity:.15} }
-  .cc-scanline  { position:fixed;top:0;left:0;right:0;height:2px;background:linear-gradient(transparent,rgba(139,92,246,.12),transparent);animation:cc-scan 8s linear infinite;pointer-events:none;z-index:1 }
-  .cc-grid-bg   { background-image:linear-gradient(rgba(139,92,246,.03) 1px,transparent 1px),linear-gradient(90deg,rgba(139,92,246,.03) 1px,transparent 1px);background-size:40px 40px }
-  .cc-blink     { animation:cc-blink 1.2s step-end infinite }
   .cc-mono      { font-variant-numeric:tabular-nums;font-feature-settings:"tnum" }
-  .cc-glow-v    { box-shadow:0 0 0 1px rgba(139,92,246,.25),0 0 24px rgba(139,92,246,.07),inset 0 0 16px rgba(139,92,246,.02) }
-  .cc-glow-r    { box-shadow:0 0 0 1px rgba(239,68,68,.35),0 0 24px rgba(239,68,68,.1) }
-  .cc-glow-g    { box-shadow:0 0 0 1px rgba(34,197,94,.25),0 0 20px rgba(34,197,94,.06) }
-  .cc-glow-a    { box-shadow:0 0 0 1px rgba(245,158,11,.3),0 0 20px rgba(245,158,11,.08) }
-  .cc-bar       { height:3px;background:rgba(255,255,255,.05);border-radius:2px;overflow:hidden }
-  .cc-bar-fill  { height:100%;border-radius:2px;transition:width .9s cubic-bezier(.4,0,.2,1) }
-  .cc-tag       { display:inline-flex;align-items:center;padding:1px 7px;border-radius:3px;font-size:9px;font-weight:800;letter-spacing:.1em;text-transform:uppercase }
-  .cc-tr:hover  { background:rgba(255,255,255,.022) }
+  .cc-glow-v    { border-left:3px solid #7c3aed }
+  .cc-glow-r    { border-left:3px solid #dc2626 }
+  .cc-glow-g    { border-left:3px solid #16a34a }
+  .cc-glow-a    { border-left:3px solid #d97706 }
+  .cc-bar       { height:6px;background:#e5e7eb;border-radius:3px;overflow:hidden }
+  .cc-bar-fill  { height:100%;border-radius:3px;transition:width .9s cubic-bezier(.4,0,.2,1) }
+  .cc-tag       { display:inline-flex;align-items:center;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600;letter-spacing:.02em;text-transform:capitalize }
+  .cc-tr:hover  { background:#f9fafb }
   .cc-spark     { display:flex;align-items:flex-end;gap:1px }
   .cc-spark span{ flex:1;min-width:2px;border-radius:1px 1px 0 0;transition:height .3s }
+  .cc-blink     { animation:none }
+  .cc-scanline  { display:none }
 `;
 
-function CCStat({ label, value, sub, color = 'text-white', glow, onClick }) {
+function CCStat({ label, value, sub, color = 'text-neutral-900', glow, onClick }) {
   return (
     <div onClick={onClick}
-      className={`rounded-xl border border-white/8 bg-white/[.025] p-3.5 transition-all ${onClick ? 'cursor-pointer hover:bg-white/[.04]' : ''} ${glow || ''}`}>
-      <p className="text-[10px] text-neutral-600 uppercase tracking-[.15em] font-bold mb-1.5">{label}</p>
-      <p className={`text-2xl font-black cc-mono leading-none ${color}`}>{value ?? '—'}</p>
-      {sub && <p className="text-[10px] text-neutral-700 mt-1.5 leading-tight">{sub}</p>}
+      className={`rounded-xl border border-neutral-200 bg-white p-4 shadow-sm transition-all ${onClick ? 'cursor-pointer hover:shadow-md hover:border-violet-300' : ''} ${glow || ''}`}>
+      <p className="text-xs font-semibold text-neutral-500 uppercase tracking-wide mb-2">{label}</p>
+      <p className={`text-2xl font-bold cc-mono leading-none ${color}`}>{value ?? '—'}</p>
+      {sub && <p className="text-xs text-neutral-400 mt-1.5 leading-tight">{sub}</p>}
     </div>
   );
 }
 
 function CCThreat({ score }) {
-  const lvl   = score < 25 ? 'NOMINAL' : score < 50 ? 'ELEVATED' : score < 75 ? 'HIGH' : 'CRITICAL';
-  const color = score < 25 ? '#22c55e' : score < 50 ? '#f59e0b' : score < 75 ? '#ef4444' : '#dc2626';
+  const lvl   = score < 25 ? 'Nominal' : score < 50 ? 'Elevated' : score < 75 ? 'High' : 'Critical';
+  const color = score < 25 ? '#16a34a' : score < 50 ? '#d97706' : score < 75 ? '#dc2626' : '#991b1b';
+  const bg    = score < 25 ? '#dcfce7' : score < 50 ? '#fef3c7' : score < 75 ? '#fee2e2' : '#fecaca';
   return (
-    <div className="flex items-center gap-2.5">
+    <div className="flex items-center gap-2">
       <div className="flex gap-0.5">
         {[...Array(5)].map((_, i) => (
-          <div key={i} style={{ width:5, height:14, borderRadius:2, background: i < Math.ceil((score/100)*5) ? color : 'rgba(255,255,255,.08)', transition:'background .5s' }} />
+          <div key={i} style={{ width:5, height:14, borderRadius:2, background: i < Math.ceil((score/100)*5) ? color : '#e5e7eb', transition:'background .5s' }} />
         ))}
       </div>
-      <span className="text-[11px] font-black tracking-widest" style={{ color }}>{lvl}</span>
+      <span className="text-xs font-semibold px-2 py-0.5 rounded-full" style={{ color, background:bg }}>{lvl}</span>
     </div>
   );
 }
@@ -1960,9 +1957,9 @@ function CCFunnel({ label, v, total, color }) {
   const pct = total > 0 ? Math.round((v / total) * 100) : 0;
   return (
     <div>
-      <div className="flex justify-between text-[11px] mb-1">
-        <span className="text-neutral-500">{label}</span>
-        <span className="font-bold cc-mono text-neutral-300">{(v||0).toLocaleString()} <span className="text-neutral-700">({pct}%)</span></span>
+      <div className="flex justify-between text-sm mb-1.5">
+        <span className="text-neutral-600 font-medium">{label}</span>
+        <span className="font-semibold cc-mono text-neutral-800">{(v||0).toLocaleString()} <span className="text-neutral-400 font-normal">({pct}%)</span></span>
       </div>
       <div className="cc-bar"><div className="cc-bar-fill" style={{ width:`${pct}%`, background:color }} /></div>
     </div>
@@ -2102,160 +2099,163 @@ function CommandCenterPanel() {
   ) : 0;
 
   const TABS = [
-    { id:'grid',     ico:'◈', lbl:'GRID'       },
-    { id:'intel',    ico:'◉', lbl:'INTEL'      },
-    { id:'threat',   ico:'⚠', lbl:'THREAT'     },
-    { id:'asset',    ico:'⟁', lbl:'ASSET OPS'  },
-    { id:'dispatch', ico:'▶', lbl:'DISPATCH'   },
-    { id:'signal',   ico:'◎', lbl:'SIGNAL'     },
-    { id:'storage',  ico:'▦', lbl:'STORAGE'    },
-    { id:'runtime',  ico:'◌', lbl:'RUNTIME'    },
-    { id:'audit',    ico:'≡', lbl:'AUDIT'      },
+    { id:'grid',     ico: Monitor,   lbl:'Overview'     },
+    { id:'intel',    ico: BarChart3, lbl:'Analytics'    },
+    { id:'threat',   ico: Shield,    lbl:'Security'     },
+    { id:'asset',    ico: Calendar,  lbl:'Events'       },
+    { id:'dispatch', ico: Terminal,  lbl:'Dispatch'     },
+    { id:'signal',   ico: Mail,      lbl:'Email Pool'   },
+    { id:'storage',  ico: Database,  lbl:'Database'     },
+    { id:'runtime',  ico: Cpu,       lbl:'Runtime'      },
+    { id:'audit',    ico: FileText,  lbl:'Audit Log'    },
   ];
 
   // ─── helpers ────────────────────────────────────────────────────────────────
   const Divider = ({ label }) => (
-    <div className="flex items-center gap-3 my-1">
-      <span className="text-[10px] font-black tracking-[.2em] text-neutral-700">{label}</span>
-      <div className="flex-1 h-px bg-white/[.04]" />
+    <div className="flex items-center gap-3 my-4">
+      <span className="text-xs font-semibold text-neutral-500 uppercase tracking-wider whitespace-nowrap">{label}</span>
+      <div className="flex-1 h-px bg-neutral-200" />
     </div>
   );
 
   const Panel = ({ children, className = '' }) => (
-    <div className={`rounded-xl border border-white/[.07] bg-white/[.022] ${className}`}>{children}</div>
+    <div className={`rounded-xl border border-neutral-200 bg-white shadow-sm ${className}`}>{children}</div>
   );
 
   const PanelHead = ({ children }) => (
-    <div className="px-4 py-3 border-b border-white/[.06] flex items-center justify-between">{children}</div>
+    <div className="px-5 py-3.5 border-b border-neutral-100 flex items-center justify-between bg-neutral-50 rounded-t-xl">{children}</div>
   );
 
   const Tag = ({ children, color = 'neutral' }) => {
     const cls = {
-      neutral: 'bg-neutral-800 text-neutral-500',
-      green:   'bg-emerald-900/50 text-emerald-400 border border-emerald-800/40',
-      red:     'bg-red-900/50 text-red-400 border border-red-800/40',
-      amber:   'bg-amber-900/40 text-amber-400 border border-amber-800/30',
-      violet:  'bg-violet-900/40 text-violet-400 border border-violet-800/30',
-    }[color] || 'bg-neutral-800 text-neutral-500';
+      neutral: 'bg-neutral-100 text-neutral-600',
+      green:   'bg-emerald-50 text-emerald-700 border border-emerald-200',
+      red:     'bg-red-50 text-red-700 border border-red-200',
+      amber:   'bg-amber-50 text-amber-700 border border-amber-200',
+      violet:  'bg-violet-50 text-violet-700 border border-violet-200',
+    }[color] || 'bg-neutral-100 text-neutral-600';
     return <span className={`cc-tag ${cls}`}>{children}</span>;
   };
 
   return (
-    <div className="min-h-screen bg-neutral-950 text-white cc-grid-bg" style={{ fontFamily:"'Fira Code','SF Mono','Cascadia Code',monospace" }}>
+    <div className="min-h-screen bg-neutral-50" style={{ fontFamily:"Inter,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" }}>
       <style>{CC_STYLES}</style>
-      <div className="cc-scanline" />
 
       {/* ══ TOP BAR ══ */}
-      <div className="border-b border-violet-500/[.12] bg-black/70 backdrop-blur-lg sticky top-0 z-20">
-        <div className="max-w-screen-2xl mx-auto px-5 py-2.5 flex items-center justify-between gap-6">
+      <div className="border-b border-neutral-200 bg-white sticky top-0 z-20 shadow-sm">
+        <div className="max-w-screen-2xl mx-auto px-6 py-3 flex items-center justify-between gap-6">
           {/* Brand */}
           <div className="flex items-center gap-3 shrink-0">
-            <div className="w-7 h-7 rounded-lg border border-violet-500/40 bg-violet-600/15 flex items-center justify-center cc-glow-v">
-              <Crosshair className="w-3.5 h-3.5 text-violet-400" />
+            <div className="w-8 h-8 rounded-lg bg-violet-600 flex items-center justify-center">
+              <Command className="w-4 h-4 text-white" />
             </div>
-            <div className="flex items-center gap-2">
-              <span className="text-[11px] font-black tracking-[.2em] text-violet-300">PLANIT</span>
-              <span className="text-[11px] text-neutral-700 tracking-widest">COMMAND</span>
-              <Tag color="red">CLASSIFIED</Tag>
+            <div>
+              <span className="text-sm font-bold text-neutral-900">Command Center</span>
+              <span className="ml-2 text-xs text-neutral-400">Planit Platform</span>
             </div>
           </div>
 
           {/* Status strip */}
-          <div className="flex items-center gap-6 text-[11px]">
+          <div className="flex items-center gap-6 text-sm">
             <div className="flex items-center gap-2">
-              <div className={`w-1.5 h-1.5 rounded-full ${online===total && total>0?'bg-emerald-400 animate-pulse':'bg-red-500 cc-blink'}`} />
-              <span className="text-neutral-600">FLEET</span>
-              <span className={`font-black cc-mono ${online===total?'text-emerald-400':'text-red-400'}`}>{online}/{total}</span>
+              <div className={`w-2 h-2 rounded-full ${online===total && total>0 ? 'bg-emerald-500' : 'bg-red-500'}`} />
+              <span className="text-neutral-500">Fleet</span>
+              <span className={`font-semibold cc-mono ${online===total ? 'text-emerald-600' : 'text-red-600'}`}>{online}/{total}</span>
             </div>
             <div className="flex items-center gap-2">
-              <span className="text-neutral-700">THREAT</span>
+              <span className="text-neutral-400">Threat Level</span>
               <CCThreat score={threat} />
             </div>
             <div className="flex items-center gap-2">
-              <span className="text-neutral-700">SOCKETS</span>
-              <span className="font-black text-cyan-400 cc-mono">{runtime?.wsStats?.connected ?? '—'}</span>
+              <span className="text-neutral-400">Live Sockets</span>
+              <span className="font-semibold text-violet-600 cc-mono">{runtime?.wsStats?.connected ?? '—'}</span>
             </div>
             <div className="flex items-center gap-2">
-              <span className="text-neutral-700">MAO</span>
-              <span className="font-black text-violet-400 cc-mono">{platform?.maoCount ?? '—'}</span>
+              <span className="text-neutral-400">Organizers</span>
+              <span className="font-semibold text-neutral-400 cc-mono">{platform?.maoCount ?? '—'}</span>
             </div>
-            {refreshAt && <span className="text-neutral-800 cc-mono text-[10px]">{refreshAt.toLocaleTimeString()}</span>}
+            {refreshAt && <span className="text-neutral-700 cc-mono text-xs">Updated {refreshAt.toLocaleTimeString()}</span>}
           </div>
 
           {/* Controls */}
           <div className="flex items-center gap-2 shrink-0">
             <button onClick={() => setLive(v=>!v)}
-              className={`px-2.5 py-1 rounded-lg text-[11px] font-black border transition-all ${live?'bg-emerald-900/25 border-emerald-700/40 text-emerald-400':'bg-white/[.04] border-white/10 text-neutral-600'}`}>
-              {live?'● LIVE':'○ PAUSED'}
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all ${live ? 'bg-emerald-50 border-emerald-300 text-emerald-700' : 'bg-neutral-100 border-neutral-300 text-neutral-500'}`}>
+              {live ? '● Live' : '○ Paused'}
             </button>
             <button onClick={() => fetchAll()} disabled={loading}
-              className="px-2.5 py-1 rounded-lg border border-white/10 bg-white/[.04] hover:bg-white/[.07] text-[11px] transition-colors disabled:opacity-40 flex items-center gap-1.5 text-neutral-400">
-              <RefreshCw className={`w-3 h-3 ${loading?'animate-spin':''}`} /> SYNC
+              className="px-3 py-1.5 rounded-lg border border-neutral-300 bg-white hover:bg-neutral-50 text-xs font-medium transition-colors disabled:opacity-40 flex items-center gap-1.5 text-neutral-600">
+              <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} /> Refresh
             </button>
           </div>
         </div>
 
         {/* Tab rail */}
-        <div className="max-w-screen-2xl mx-auto px-5 flex gap-0 overflow-x-auto">
-          {TABS.map(t => (
-            <button key={t.id} onClick={() => setTab(t.id)}
-              className={`px-3.5 py-2.5 text-[10px] font-black tracking-[.15em] border-b-2 transition-all whitespace-nowrap flex items-center gap-1.5 shrink-0
-                ${tab===t.id?'border-violet-500 text-violet-300 bg-violet-500/[.04]':'border-transparent text-neutral-700 hover:text-neutral-400 hover:bg-white/[.015]'}`}>
-              <span className="text-sm leading-none">{t.ico}</span>{t.lbl}
-            </button>
-          ))}
+        <div className="max-w-screen-2xl mx-auto px-6 flex gap-0 overflow-x-auto border-t border-neutral-100">
+          {TABS.map(t => {
+            const Icon = t.ico;
+            return (
+              <button key={t.id} onClick={() => setTab(t.id)}
+                className={`px-5 py-3 text-sm font-medium border-b-2 transition-all whitespace-nowrap flex items-center gap-2 shrink-0
+                  ${tab===t.id ? 'border-violet-600 text-violet-700 bg-violet-50/50' : 'border-transparent text-neutral-500 hover:text-neutral-700 hover:bg-neutral-50'}`}>
+                <Icon className="w-3.5 h-3.5" />{t.lbl}
+              </button>
+            );
+          })}
         </div>
       </div>
 
-      <div className="max-w-screen-2xl mx-auto px-5 py-6 space-y-5">
+      <div className="max-w-screen-2xl mx-auto px-6 py-6 space-y-6">
 
         {/* ═══════════════ GRID ═══════════════ */}
         {tab === 'grid' && (
           <div className="space-y-5">
             {/* Tier-1 stats */}
             <div className="grid grid-cols-2 sm:grid-cols-4 xl:grid-cols-8 gap-3">
-              <CCStat label="Fleet" value={`${online}/${total}`} color={online===total?'text-emerald-400':'text-red-400'} glow={online<total?'cc-glow-r':'cc-glow-g'} sub="services online" />
-              <CCStat label="WS Live" value={runtime?.wsStats?.connected??'—'} color="text-cyan-400" sub="socket connections" />
-              <CCStat label="Errors 1h" value={security?.errLast1h??'—'} color={security?.errSpike?'text-red-400':'text-neutral-300'} glow={security?.errSpike?'cc-glow-r':undefined} sub={security?.errSpike?'⚠ SPIKE':'nominal'} />
-              <CCStat label="MAO 30d" value={platform?.maoCount??'—'} color="text-violet-400" sub={`+${platform?.newOrgsThisWeek??0} this week`} />
-              <CCStat label="Events Today" value={events?.todayCount??'—'} color="text-amber-400" sub={`${events?.ystdCount??0} yesterday`} />
-              <CCStat label="Abandoned" value={events?.abandonedEvents?.length??'—'} color={events?.abandonedEvents?.length>5?'text-red-400':'text-neutral-500'} sub="no check-ins" />
-              <CCStat label="Config" value={runtime?`${runtime.configScore}%`:'—'} color={runtime?.configScore>=80?'text-emerald-400':'text-amber-400'} sub="env vars set" />
-              <CCStat label="Flagged" value={security?.suspiciousParticipants?.length??'—'} color={security?.suspiciousParticipants?.length>0?'text-amber-400':'text-neutral-600'} sub="suspicious users" />
+              <CCStat label="Fleet Status" value={`${online}/${total}`} color={online===total?'text-emerald-600':'text-red-600'} glow={online<total?'cc-glow-r':'cc-glow-g'} sub="services online" />
+              <CCStat label="Live Sockets" value={runtime?.wsStats?.connected??'—'} color="text-violet-700" sub="connections" />
+              <CCStat label="Errors / 1h" value={security?.errLast1h??'—'} color={security?.errSpike?'text-red-600':'text-neutral-700'} glow={security?.errSpike?'cc-glow-r':undefined} sub={security?.errSpike?'⚠ Spike detected':'Nominal'} />
+              <CCStat label="Organizers" value={platform?.maoCount??'—'} color="text-violet-700" sub={`+${platform?.newOrgsThisWeek??0} this week`} />
+              <CCStat label="Events Today" value={events?.todayCount??'—'} color="text-amber-700" sub={`${events?.ystdCount??0} yesterday`} />
+              <CCStat label="Abandoned" value={events?.abandonedEvents?.length??'—'} color={events?.abandonedEvents?.length>5?'text-red-600':'text-neutral-500'} sub="no check-ins" />
+              <CCStat label="Config Score" value={runtime?`${runtime.configScore}%`:'—'} color={runtime?.configScore>=80?'text-emerald-600':'text-amber-600'} sub="env vars set" />
+              <CCStat label="Flagged Users" value={security?.suspiciousParticipants?.length??'—'} color={security?.suspiciousParticipants?.length>0?'text-amber-600':'text-neutral-400'} sub="suspicious" />
             </div>
 
             {/* Fleet cards */}
-            <Divider label="NODE STATUS" />
+            <Divider label="Service Health" />
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
               {loading && !fleet ? (
-                [0,1,2].map(i => <div key={i} className="h-44 rounded-xl bg-white/[.03] animate-pulse" />)
+                [0,1,2].map(i => <div key={i} className="h-44 rounded-xl bg-neutral-100 animate-pulse" />)
               ) : fleet?.services?.map(svc => {
                 const ok  = svc.ok;
                 const mem = svc.memMB ? Math.round((svc.memMB.heapUsed/(svc.memMB.heapTotal||1))*100) : 0;
                 return (
-                  <Panel key={svc.service} className={ok?'cc-glow-g border-emerald-900/40':'cc-glow-r border-red-900/40'}>
-                    <div className="p-4">
-                      <div className="flex items-start justify-between mb-3">
-                        <div className="flex items-center gap-2">
-                          <div className={`w-2 h-2 rounded-full ${ok?'bg-emerald-400 animate-pulse':'bg-red-500 cc-blink'}`} />
-                          <span className="text-sm font-black tracking-wider">{svc.service?.toUpperCase()}</span>
-                          <Tag>{svc.type}</Tag>
+                  <Panel key={svc.service} className={ok?'cc-glow-g':'cc-glow-r'}>
+                    <div className="p-5">
+                      <div className="flex items-start justify-between mb-4">
+                        <div className="flex items-center gap-3">
+                          <div className={`w-2.5 h-2.5 rounded-full ${ok?'bg-emerald-500':'bg-red-500'}`} />
+                          <div>
+                            <span className="text-sm font-bold text-neutral-900">{svc.service?.charAt(0).toUpperCase()+svc.service?.slice(1)}</span>
+                            <span className="ml-2 text-xs text-neutral-400">{svc.type}</span>
+                          </div>
                         </div>
-                        <span className={`text-[11px] font-black tracking-widest ${ok?'text-emerald-400':'text-red-400'}`}>{ok?'ONLINE':'OFFLINE'}</span>
+                        <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${ok?'bg-emerald-50 text-emerald-700':'bg-red-50 text-red-700'}`}>{ok?'Online':'Offline'}</span>
                       </div>
-                      {!ok && <p className="text-xs text-red-500/70 mb-2">{svc.error||'unreachable'}</p>}
+                      {!ok && <p className="text-sm text-red-600 mb-3 bg-red-50 rounded-lg p-2">{svc.error||'Service unreachable'}</p>}
                       {ok && (
-                        <div className="grid grid-cols-3 gap-1.5 text-[11px]">
-                          {svc.uptime   != null && <div className="bg-white/[.03] rounded-lg p-2"><p className="text-neutral-700 mb-0.5">UPTIME</p><p className="font-bold text-neutral-300 cc-mono">{fmtUptime(svc.uptime)}</p></div>}
-                          {svc.pid      != null && <div className="bg-white/[.03] rounded-lg p-2"><p className="text-neutral-700 mb-0.5">PID</p><p className="font-bold text-neutral-300 cc-mono">{svc.pid}</p></div>}
-                          {svc.node              && <div className="bg-white/[.03] rounded-lg p-2"><p className="text-neutral-700 mb-0.5">NODE</p><p className="font-bold text-neutral-300 cc-mono">{svc.node}</p></div>}
-                          {svc.errors24h!= null  && <div className="bg-white/[.03] rounded-lg p-2"><p className="text-neutral-700 mb-0.5">ERR/24H</p><p className={`font-black cc-mono ${svc.errors24h>0?'text-red-400':'text-emerald-400'}`}>{svc.errors24h}</p></div>}
-                          {svc.liveClients!=null && <div className="bg-white/[.03] rounded-lg p-2"><p className="text-neutral-700 mb-0.5">SSE</p><p className="font-bold text-neutral-300 cc-mono">{svc.liveClients}</p></div>}
-                          {svc.backends  !=null  && <div className="bg-white/[.03] rounded-lg p-2"><p className="text-neutral-700 mb-0.5">NODES</p><p className="font-bold text-neutral-300 cc-mono">{svc.backends}</p></div>}
+                        <div className="grid grid-cols-3 gap-2 text-sm">
+                          {svc.uptime   != null && <div className="bg-neutral-50 rounded-lg p-2.5"><p className="text-neutral-400 text-xs mb-0.5">Uptime</p><p className="font-semibold text-neutral-400 cc-mono">{fmtUptime(svc.uptime)}</p></div>}
+                          {svc.pid      != null && <div className="bg-neutral-50 rounded-lg p-2.5"><p className="text-neutral-400 text-xs mb-0.5">PID</p><p className="font-semibold text-neutral-400 cc-mono">{svc.pid}</p></div>}
+                          {svc.node              && <div className="bg-neutral-50 rounded-lg p-2.5"><p className="text-neutral-400 text-xs mb-0.5">Node</p><p className="font-semibold text-neutral-400 cc-mono">{svc.node}</p></div>}
+                          {svc.errors24h!= null  && <div className="bg-neutral-50 rounded-lg p-2.5"><p className="text-neutral-400 text-xs mb-0.5">Err/24h</p><p className={`font-semibold cc-mono ${svc.errors24h>0?'text-red-600':'text-emerald-600'}`}>{svc.errors24h}</p></div>}
+                          {svc.liveClients!=null && <div className="bg-neutral-50 rounded-lg p-2.5"><p className="text-neutral-400 text-xs mb-0.5">SSE</p><p className="font-semibold text-neutral-400 cc-mono">{svc.liveClients}</p></div>}
+                          {svc.backends  !=null  && <div className="bg-neutral-50 rounded-lg p-2.5"><p className="text-neutral-400 text-xs mb-0.5">Nodes</p><p className="font-semibold text-neutral-400 cc-mono">{svc.backends}</p></div>}
                           {svc.memMB && (
-                            <div className="col-span-3 bg-white/[.03] rounded-lg p-2">
-                              <div className="flex justify-between mb-1.5"><span className="text-neutral-700">HEAP</span><span className="text-neutral-400 cc-mono">{svc.memMB.heapUsed}/{svc.memMB.heapTotal} MB ({mem}%)</span></div>
-                              <CCBar v={mem} max={100} color={mem>85?'#ef4444':mem>65?'#f59e0b':'#22c55e'} />
+                            <div className="col-span-3 bg-neutral-50 rounded-lg p-2.5">
+                              <div className="flex justify-between mb-1.5"><span className="text-neutral-500 text-xs">Heap Usage</span><span className="text-neutral-600 text-xs cc-mono">{svc.memMB.heapUsed}/{svc.memMB.heapTotal} MB ({mem}%)</span></div>
+                              <CCBar v={mem} max={100} color={mem>85?'#dc2626':mem>65?'#d97706':'#16a34a'} />
                             </div>
                           )}
                         </div>
@@ -2269,14 +2269,14 @@ function CommandCenterPanel() {
             {/* Config matrix */}
             {runtime?.config && (
               <>
-                <Divider label="CONFIG MATRIX" />
+                <Divider label="Environment Configuration" />
                 <Panel>
-                  <div className="p-4">
-                    <div className="flex items-center justify-between mb-3">
-                      <span className="text-[10px] text-neutral-600 tracking-widest font-bold">ENVIRONMENT COVERAGE</span>
-                      <span className={`text-sm font-black cc-mono ${runtime.configScore>=80?'text-emerald-400':runtime.configScore>=50?'text-amber-400':'text-red-400'}`}>{runtime.configScore}%</span>
+                  <div className="p-5">
+                    <div className="flex items-center justify-between mb-4">
+                      <span className="text-sm font-semibold text-neutral-700">Environment Coverage</span>
+                      <span className={`text-sm font-bold cc-mono px-3 py-1 rounded-lg ${runtime.configScore>=80?'bg-emerald-50 text-emerald-700':runtime.configScore>=50?'bg-amber-50 text-amber-700':'bg-red-50 text-red-700'}`}>{runtime.configScore}%</span>
                     </div>
-                    <div className="flex flex-wrap gap-1.5">
+                    <div className="flex flex-wrap gap-2">
                       {runtime.config.map(c => (
                         <Tag key={c.key} color={c.set?'green':'red'}>{c.set?'✓':'✗'} {c.label}</Tag>
                       ))}
@@ -2291,35 +2291,35 @@ function CommandCenterPanel() {
         {/* ═══════════════ INTEL ═══════════════ */}
         {tab === 'intel' && (
           <div className="space-y-5">
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              <CCStat label="MAO 30d" value={platform?.maoCount} color="text-violet-400" sub={`+${platform?.newOrgsThisWeek??0} this week`} />
-              <CCStat label="Total Events" value={platform?.conversionFunnel?.created?.toLocaleString()} color="text-neutral-200" />
-              <CCStat label="Completion" value={platform?.conversionFunnel?.created ? `${Math.round((platform.conversionFunnel.completed/platform.conversionFunnel.created)*100)}%` : '—'} color="text-cyan-400" />
-              <CCStat label="WoW Growth"
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+              <CCStat label="Organizers (30d)" value={platform?.maoCount} color="text-violet-700" sub={`+${platform?.newOrgsThisWeek??0} this week`} />
+              <CCStat label="Total Events" value={platform?.conversionFunnel?.created?.toLocaleString()} color="text-neutral-700" />
+              <CCStat label="Completion Rate" value={platform?.conversionFunnel?.created ? `${Math.round((platform.conversionFunnel.completed/platform.conversionFunnel.created)*100)}%` : '—'} color="text-blue-700" />
+              <CCStat label="WoW Org Growth"
                 value={platform?.newOrgsLastWeek>0 ? `${Math.round(((platform.newOrgsThisWeek-platform.newOrgsLastWeek)/platform.newOrgsLastWeek)*100)}%` : `+${platform?.newOrgsThisWeek??0}`}
-                color={platform?.newOrgsThisWeek>=platform?.newOrgsLastWeek?'text-emerald-400':'text-red-400'} sub="organiser growth" />
+                color={platform?.newOrgsThisWeek>=platform?.newOrgsLastWeek?'text-emerald-600':'text-red-600'} sub="organiser growth" />
             </div>
 
             <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
               {/* Events per day chart */}
               <Panel>
-                <PanelHead><span className="text-[10px] font-black tracking-[.15em] text-neutral-600">EVENTS CREATED — 30D</span></PanelHead>
-                <div className="p-4">
+                <PanelHead><span className="text-sm font-semibold text-neutral-700">Events Created — Last 30 Days</span></PanelHead>
+                <div className="p-5">
                   {platform?.eventsPerDay?.length ? (() => {
                     const max = Math.max(...platform.eventsPerDay.map(d=>d.count), 1);
                     return (
-                      <div className="flex items-end gap-px h-24 w-full group">
+                      <div className="flex items-end gap-px h-28 w-full">
                         {platform.eventsPerDay.map((d,i) => (
                           <div key={i} className="flex-1 flex flex-col items-center relative" style={{ height:'100%' }}>
-                            <div className="absolute bottom-0 w-full hover:bg-violet-400 transition-colors rounded-t"
-                              style={{ height:`${Math.max(4,Math.round((d.count/max)*96))}px`, background:'rgba(139,92,246,.55)' }}
-                              title={`${d._id}: ${d.count}`} />
+                            <div className="absolute bottom-0 w-full hover:bg-violet-500 transition-colors rounded-t cursor-pointer"
+                              style={{ height:`${Math.max(4,Math.round((d.count/max)*112))}px`, background:'#7c3aed' }}
+                              title={`${d._id}: ${d.count} events`} />
                           </div>
                         ))}
                       </div>
                     );
-                  })() : <div className="h-24 flex items-center justify-center text-neutral-700 text-xs">No data</div>}
-                  <div className="flex justify-between text-[10px] text-neutral-700 mt-2">
+                  })() : <div className="h-28 flex items-center justify-center text-neutral-400 text-sm">No data available</div>}
+                  <div className="flex justify-between text-xs text-neutral-400 mt-2">
                     <span>{platform?.eventsPerDay?.[0]?._id?.slice(5)}</span>
                     <span>{platform?.eventsPerDay?.at(-1)?._id?.slice(5)}</span>
                   </div>
@@ -2328,15 +2328,15 @@ function CommandCenterPanel() {
 
               {/* Conversion funnel */}
               <Panel>
-                <PanelHead><span className="text-[10px] font-black tracking-[.15em] text-neutral-600">CONVERSION FUNNEL</span></PanelHead>
-                <div className="p-4 space-y-3.5">
+                <PanelHead><span className="text-sm font-semibold text-neutral-700">Event Conversion Funnel</span></PanelHead>
+                <div className="p-5 space-y-4">
                   {platform?.conversionFunnel && (() => {
                     const { created, hasParticipants, hadCheckin, completed } = platform.conversionFunnel;
                     return [
-                      { label:'Events Created',  v:created,        color:'#8b5cf6' },
-                      { label:'Got Participants', v:hasParticipants,color:'#6366f1' },
-                      { label:'Used Check-in',   v:hadCheckin,     color:'#06b6d4' },
-                      { label:'Completed',       v:completed,      color:'#22c55e' },
+                      { label:'Events Created',    v:created,         color:'#7c3aed' },
+                      { label:'Got Participants',  v:hasParticipants, color:'#4f46e5' },
+                      { label:'Used Check-in',     v:hadCheckin,      color:'#0891b2' },
+                      { label:'Completed',         v:completed,       color:'#16a34a' },
                     ].map(r => <CCFunnel key={r.label} {...r} total={created} />);
                   })()}
                 </div>
@@ -2345,14 +2345,14 @@ function CommandCenterPanel() {
 
             {/* Feature adoption */}
             <Panel>
-              <PanelHead><span className="text-[10px] font-black tracking-[.15em] text-neutral-600">FEATURE ADOPTION MATRIX</span></PanelHead>
-              <div className="p-4 grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-5 gap-3">
+              <PanelHead><span className="text-sm font-semibold text-neutral-700">Feature Adoption</span></PanelHead>
+              <div className="p-5 grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-5 gap-3">
                 {platform?.featureAdoption && Object.entries(platform.featureAdoption).map(([feat, { pct, count }]) => (
-                  <div key={feat} className="bg-white/[.025] rounded-lg p-3 border border-white/[.05]">
-                    <p className="text-[10px] text-neutral-600 uppercase tracking-widest mb-2">{feat}</p>
-                    <p className="text-xl font-black cc-mono text-violet-400">{pct}%</p>
-                    <p className="text-[10px] text-neutral-700 mb-2">{count} events</p>
-                    <CCBar v={pct} max={100} color="#8b5cf6" />
+                  <div key={feat} className="bg-neutral-50 rounded-xl p-4 border border-neutral-100">
+                    <p className="text-xs text-neutral-500 font-medium capitalize mb-2">{feat}</p>
+                    <p className="text-2xl font-bold cc-mono text-violet-700">{pct}%</p>
+                    <p className="text-xs text-neutral-400 mb-2">{count} events</p>
+                    <CCBar v={pct} max={100} color="#7c3aed" />
                   </div>
                 ))}
               </div>
@@ -2360,24 +2360,24 @@ function CommandCenterPanel() {
 
             {/* Power users */}
             <Panel>
-              <PanelHead><span className="text-[10px] font-black tracking-[.15em] text-neutral-600">POWER USER REGISTRY</span></PanelHead>
-              <table className="w-full text-[11px]">
-                <thead><tr className="border-b border-white/[.05] bg-white/[.02]">
-                  <th className="text-left px-4 py-2.5 text-neutral-600 font-semibold uppercase tracking-wider">Organiser</th>
-                  <th className="text-right px-4 py-2.5 text-neutral-600 font-semibold uppercase tracking-wider">Events</th>
-                  <th className="text-right px-4 py-2.5 text-neutral-600 font-semibold uppercase tracking-wider">Last Active</th>
+              <PanelHead><span className="text-sm font-semibold text-neutral-700">Top Organizers</span></PanelHead>
+              <table className="w-full text-sm">
+                <thead><tr className="border-b border-neutral-100 bg-neutral-50">
+                  <th className="text-left px-5 py-3 text-neutral-500 font-medium">Organiser</th>
+                  <th className="text-right px-5 py-3 text-neutral-500 font-medium">Events</th>
+                  <th className="text-right px-5 py-3 text-neutral-500 font-medium">Last Active</th>
                 </tr></thead>
                 <tbody>
                   {platform?.powerUsers?.map((u,i) => (
-                    <tr key={u._id} className="border-b border-white/[.03] cc-tr">
-                      <td className="px-4 py-2.5">
+                    <tr key={u._id} className="border-b border-neutral-100 cc-tr">
+                      <td className="px-5 py-3">
                         <div className="flex items-center gap-2">
                           <span className="text-neutral-700 w-4 cc-mono">{i+1}</span>
-                          <div><p className="font-bold text-neutral-300">{u.name||'—'}</p><p className="text-neutral-700 cc-mono">{u._id}</p></div>
+                          <div><p className="font-bold text-neutral-800">{u.name||'—'}</p><p className="text-neutral-400 cc-mono">{u._id}</p></div>
                         </div>
                       </td>
-                      <td className="px-4 py-2.5 text-right font-black text-violet-400 cc-mono">{u.events}</td>
-                      <td className="px-4 py-2.5 text-right text-neutral-700 cc-mono">{u.lastActive?new Date(u.lastActive).toLocaleDateString():'—'}</td>
+                      <td className="px-5 py-3 text-right font-semibold text-violet-700 cc-mono">{u.events}</td>
+                      <td className="px-5 py-3 text-right text-neutral-400 cc-mono">{u.lastActive?new Date(u.lastActive).toLocaleDateString():'—'}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -2387,14 +2387,14 @@ function CommandCenterPanel() {
             {/* Status distribution */}
             {platform?.eventsByStatus && (
               <Panel>
-                <PanelHead><span className="text-[10px] font-black tracking-[.15em] text-neutral-600">EVENT STATUS DISTRIBUTION</span></PanelHead>
+                <PanelHead><span className="text-sm font-semibold text-neutral-700">Event Status Distribution</span></PanelHead>
                 <div className="p-4 flex flex-wrap gap-3">
                   {platform.eventsByStatus.map(s => {
-                    const clr = {active:'text-emerald-400',completed:'text-blue-400',draft:'text-neutral-500',cancelled:'text-red-500'}[s._id]||'text-neutral-400';
+                    const clr = {active:'text-emerald-600',completed:'text-blue-600',draft:'text-neutral-500',cancelled:'text-red-500'}[s._id]||'text-neutral-400';
                     return (
-                      <div key={s._id} className="bg-white/[.025] rounded-lg px-4 py-2.5 border border-white/[.05]">
-                        <p className={`text-xl font-black cc-mono ${clr}`}>{s.count}</p>
-                        <p className="text-[10px] text-neutral-600 uppercase tracking-wider mt-1">{s._id}</p>
+                      <div key={s._id} className="bg-neutral-50 rounded-lg px-5 py-3 border border-neutral-100">
+                        <p className={`text-xl font-semibold cc-mono ${clr}`}>{s.count}</p>
+                        <p className="text-xs text-neutral-500 mt-1">{s._id}</p>
                       </div>
                     );
                   })}
@@ -2409,61 +2409,61 @@ function CommandCenterPanel() {
           <div className="space-y-5">
             {/* Threat header */}
             <div className={`rounded-xl border p-4 flex items-center justify-between
-              ${threat>=75?'border-red-700/40 bg-red-950/15 cc-glow-r':threat>=50?'border-amber-700/30 bg-amber-950/10 cc-glow-a':'border-emerald-800/25 bg-emerald-950/8 cc-glow-g'}`}>
+              ${threat>=75?'border-red-300 bg-red-50 cc-glow-r':threat>=50?'border-amber-200 bg-amber-50 cc-glow-a':'border-emerald-200 bg-emerald-50 cc-glow-g'}`}>
               <div>
-                <p className="text-[10px] text-neutral-600 tracking-[.15em] font-black mb-2">CURRENT THREAT ASSESSMENT</p>
+                <p className="text-xs text-neutral-500 tracking-wide font-semibold mb-2">Current Threat Assessment</p>
                 <CCThreat score={threat} />
-                <p className="text-[10px] text-neutral-700 mt-1.5">Score: {threat}/100 · Updated: {refreshAt?.toLocaleTimeString()??'—'}</p>
+                <p className="text-xs text-neutral-400 mt-1.5">Score: {threat}/100 · Updated: {refreshAt?.toLocaleTimeString()??'—'}</p>
               </div>
-              <button onClick={() => fetchAll(['security'])} className="px-3 py-1.5 border border-white/10 rounded-lg text-[11px] text-neutral-500 hover:text-neutral-300 transition-colors font-bold tracking-wider">RESCAN</button>
+              <button onClick={() => fetchAll(['security'])} className="px-3 py-1.5 border border-neutral-200 rounded-lg text-sm text-neutral-500 hover:text-neutral-700 transition-colors font-medium">Re-scan</button>
             </div>
 
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              <CCStat label="Errors 1h" value={security?.errLast1h} color={security?.errSpike?'text-red-400':'text-neutral-300'} glow={security?.errSpike?'cc-glow-r':undefined} sub={security?.errSpike?'⚠ SPIKE DETECTED':'nominal'} />
+              <CCStat label="Errors 1h" value={security?.errLast1h} color={security?.errSpike?'text-red-600':'text-neutral-700'} glow={security?.errSpike?'cc-glow-r':undefined} sub={security?.errSpike?'⚠ SPIKE DETECTED':'nominal'} />
               <CCStat label="Errors 24h" value={security?.errLast24h} color="text-neutral-500" />
-              <CCStat label="Auth Failures" value={security?.failedLogins?.length} color={security?.failedLogins?.length>5?'text-red-400':'text-neutral-400'} sub="in log buffer" />
-              <CCStat label="Flagged Users" value={security?.suspiciousParticipants?.length} color={security?.suspiciousParticipants?.length>0?'text-amber-400':'text-neutral-600'} sub="5+ events/24h" />
+              <CCStat label="Auth Failures" value={security?.failedLogins?.length} color={security?.failedLogins?.length>5?'text-red-600':'text-neutral-400'} sub="in log buffer" />
+              <CCStat label="Flagged Users" value={security?.suspiciousParticipants?.length} color={security?.suspiciousParticipants?.length>0?'text-amber-600':'text-neutral-600'} sub="5+ events/24h" />
             </div>
 
             <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
               <Panel>
-                <PanelHead><span className="text-[10px] font-black tracking-[.15em] text-neutral-600">TOP ERROR PATTERNS</span></PanelHead>
-                <div className="divide-y divide-white/[.03]">
+                <PanelHead><span className="text-sm font-semibold text-neutral-700">Top Error Patterns</span></PanelHead>
+                <div className="divide-y divide-neutral-100">
                   {security?.topErrors?.length ? security.topErrors.map((e,i) => (
-                    <div key={i} className="px-4 py-2.5 flex items-center justify-between gap-3 cc-tr">
-                      <p className="text-[11px] text-neutral-500 cc-mono flex-1 truncate">{e.msg}</p>
+                    <div key={i} className="px-5 py-3 flex items-center justify-between gap-3 cc-tr">
+                      <p className="text-sm text-neutral-500 cc-mono flex-1 truncate">{e.msg}</p>
                       <Tag color={e.count>10?'red':'neutral'}>{e.count}×</Tag>
                     </div>
-                  )) : <p className="px-4 py-4 text-[11px] text-neutral-700">No error patterns</p>}
+                  )) : <p className="px-4 py-4 text-sm text-neutral-400">No error patterns</p>}
                 </div>
               </Panel>
 
               <Panel>
-                <PanelHead><span className="text-[10px] font-black tracking-[.15em] text-neutral-600">AUTH FAILURE LOG</span></PanelHead>
-                <div className="divide-y divide-white/[.03] max-h-48 overflow-y-auto">
+                <PanelHead><span className="text-sm font-semibold text-neutral-700">Auth Failure Log</span></PanelHead>
+                <div className="divide-y divide-neutral-100 max-h-48 overflow-y-auto">
                   {security?.failedLogins?.length ? security.failedLogins.slice(0,15).map((e,i) => (
                     <div key={i} className="px-4 py-2 flex items-center justify-between gap-2 cc-tr">
-                      <p className="text-[11px] text-red-400/70 cc-mono flex-1 truncate">{e.msg}</p>
-                      <span className="text-[10px] text-neutral-700 cc-mono shrink-0">{new Date(e.ts).toLocaleTimeString()}</span>
+                      <p className="text-sm text-red-600/70 cc-mono flex-1 truncate">{e.msg}</p>
+                      <span className="text-xs text-neutral-500 cc-mono shrink-0">{new Date(e.ts).toLocaleTimeString()}</span>
                     </div>
-                  )) : <p className="px-4 py-4 text-[11px] text-neutral-700">No auth failures</p>}
+                  )) : <p className="px-4 py-4 text-sm text-neutral-400">No auth failures</p>}
                 </div>
               </Panel>
             </div>
 
             {security?.suspiciousParticipants?.length > 0 && (
-              <Panel className="border-amber-800/25 cc-glow-a">
-                <PanelHead><span className="text-[10px] font-black tracking-[.15em] text-amber-500">⚠ SUSPICIOUS PARTICIPANT ACTIVITY</span></PanelHead>
-                <table className="w-full text-[11px]">
-                  <thead><tr className="border-b border-white/[.04] bg-white/[.02]">
+              <Panel className="border-amber-200 cc-glow-a">
+                <PanelHead><span className="text-xs font-black tracking-wide text-amber-700">⚠ Suspicious Participant Activity</span></PanelHead>
+                <table className="w-full text-sm">
+                  <thead><tr className="border-b border-neutral-100 bg-neutral-50">
                     <th className="text-left px-4 py-2 text-neutral-600 font-semibold uppercase tracking-wider">Username</th>
                     <th className="text-right px-4 py-2 text-neutral-600 font-semibold uppercase tracking-wider">Events (24h)</th>
                   </tr></thead>
                   <tbody>
                     {security.suspiciousParticipants.map((u,i) => (
-                      <tr key={i} className="border-b border-white/[.03] cc-tr">
-                        <td className="px-4 py-2 cc-mono text-amber-400">{u._id}</td>
-                        <td className="px-4 py-2 text-right font-black text-amber-400 cc-mono">{u.count}</td>
+                      <tr key={i} className="border-b border-neutral-100 cc-tr">
+                        <td className="px-4 py-2 cc-mono text-amber-600">{u._id}</td>
+                        <td className="px-4 py-2 text-right font-semibold text-amber-600 cc-mono">{u.count}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -2473,19 +2473,19 @@ function CommandCenterPanel() {
 
             {security?.largeFiles?.length > 0 && (
               <Panel>
-                <PanelHead><span className="text-[10px] font-black tracking-[.15em] text-neutral-600">LARGE FILE UPLOADS — TOP 10</span></PanelHead>
-                <table className="w-full text-[11px]">
-                  <thead><tr className="border-b border-white/[.04] bg-white/[.02]">
+                <PanelHead><span className="text-sm font-semibold text-neutral-700">Large File Uploads — Top 10</span></PanelHead>
+                <table className="w-full text-sm">
+                  <thead><tr className="border-b border-neutral-100 bg-neutral-50">
                     <th className="text-left px-4 py-2 text-neutral-600 font-semibold uppercase tracking-wider">File</th>
                     <th className="text-right px-4 py-2 text-neutral-600 font-semibold uppercase tracking-wider">Size</th>
                     <th className="text-right px-4 py-2 text-neutral-600 font-semibold uppercase tracking-wider">Uploaded</th>
                   </tr></thead>
                   <tbody>
                     {security.largeFiles.map((f,i) => (
-                      <tr key={i} className="border-b border-white/[.03] cc-tr">
+                      <tr key={i} className="border-b border-neutral-100 cc-tr">
                         <td className="px-4 py-2 text-neutral-400 truncate max-w-xs">{f.name||'unnamed'}</td>
-                        <td className="px-4 py-2 text-right cc-mono text-neutral-300">{f.size?`${(f.size/1048576).toFixed(1)} MB`:'—'}</td>
-                        <td className="px-4 py-2 text-right text-neutral-700 cc-mono">{f.uploadedAt?new Date(f.uploadedAt).toLocaleDateString():'—'}</td>
+                        <td className="px-4 py-2 text-right cc-mono text-neutral-800">{f.size?`${(f.size/1048576).toFixed(1)} MB`:'—'}</td>
+                        <td className="px-4 py-2 text-right text-neutral-400 cc-mono">{f.uploadedAt?new Date(f.uploadedAt).toLocaleDateString():'—'}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -2495,21 +2495,21 @@ function CommandCenterPanel() {
 
             {security?.busyEvents?.length > 0 && (
               <Panel>
-                <PanelHead><span className="text-[10px] font-black tracking-[.15em] text-neutral-600">HIGH-PARTICIPANT EVENTS</span></PanelHead>
-                <table className="w-full text-[11px]">
-                  <thead><tr className="border-b border-white/[.04] bg-white/[.02]">
+                <PanelHead><span className="text-sm font-semibold text-neutral-700">High-Participant Events</span></PanelHead>
+                <table className="w-full text-sm">
+                  <thead><tr className="border-b border-neutral-100 bg-neutral-50">
                     <th className="text-left px-4 py-2 text-neutral-600 font-semibold uppercase tracking-wider">Event</th>
                     <th className="text-right px-4 py-2 text-neutral-600 font-semibold uppercase tracking-wider">Guests</th>
                     <th className="text-right px-4 py-2 text-neutral-600 font-semibold uppercase tracking-wider">Status</th>
                   </tr></thead>
                   <tbody>
                     {security.busyEvents.map((e,i) => (
-                      <tr key={i} className="border-b border-white/[.03] cc-tr">
+                      <tr key={i} className="border-b border-neutral-100 cc-tr">
                         <td className="px-4 py-2">
-                          <p className="font-bold text-neutral-300 truncate max-w-xs">{e.title}</p>
-                          <p className="text-neutral-700 cc-mono">{e.subdomain}</p>
+                          <p className="font-bold text-neutral-700 truncate max-w-xs">{e.title}</p>
+                          <p className="text-neutral-400 cc-mono">{e.subdomain}</p>
                         </td>
-                        <td className="px-4 py-2 text-right font-black text-neutral-200 cc-mono">{e.participantCount}</td>
+                        <td className="px-4 py-2 text-right font-semibold text-neutral-600 cc-mono">{e.participantCount}</td>
                         <td className="px-4 py-2 text-right"><Tag color={e.status==='active'?'green':e.status==='completed'?'violet':'neutral'}>{e.status}</Tag></td>
                       </tr>
                     ))}
@@ -2525,33 +2525,33 @@ function CommandCenterPanel() {
           <div className="space-y-5">
             {/* Global search */}
             <Panel>
-              <PanelHead><span className="text-[10px] font-black tracking-[.15em] text-neutral-600">GLOBAL ASSET SEARCH</span></PanelHead>
+              <PanelHead><span className="text-sm font-semibold text-neutral-700">GLOBAL ASSET Search</span></PanelHead>
               <div className="p-4">
                 <div className="flex gap-2 mb-4">
                   <input value={sq} onChange={e=>setSq(e.target.value)} onKeyDown={e=>e.key==='Enter'&&globalSearch()}
                     placeholder="Search participants, events, organisers across all data…"
-                    className="flex-1 bg-black border border-white/10 rounded-lg px-3 py-2 text-[11px] text-neutral-200 focus:outline-none focus:border-violet-500 placeholder-neutral-800 cc-mono" />
+                    className="flex-1 bg-neutral-50 border border-neutral-200 rounded-lg px-3 py-2 text-sm text-neutral-800 focus:outline-none focus:border-violet-500 placeholder-neutral-300 cc-mono" />
                   <button onClick={globalSearch} disabled={sLoading||sq.length<2}
-                    className="px-4 py-2 bg-violet-600 hover:bg-violet-500 rounded-lg text-[11px] font-black tracking-widest disabled:opacity-40 transition-colors flex items-center gap-2">
-                    {sLoading?<><span className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin"/>SCANNING</> :<><Search className="w-3 h-3"/>SEARCH</>}
+                    className="px-4 py-2 bg-violet-600 hover:bg-violet-700 text-white rounded-lg text-sm font-medium disabled:opacity-40 transition-colors flex items-center gap-2">
+                    {sLoading?<><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin inline-block mr-1"/>Scanning</> :<><Search className="w-3 h-3"/>Search</>}
                   </button>
                 </div>
                 {sr && (
                   <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
                     {[
-                      { title:`PARTICIPANTS (${sr.participants?.length})`, items:sr.participants?.map(p=>({ h:p.username, s:`${p.eventTitle} · ${p.checkedIn?'✓ checked in':'not checked in'}` })) },
-                      { title:`EVENTS (${sr.events?.length})`, items:sr.events?.map(e=>({ h:e.title, s:`${e.subdomain} · ${e.status} · ${e.participantCount} guests` })) },
-                      { title:`ORGANISERS (${sr.organizers?.length})`, items:sr.organizers?.map(o=>({ h:o.name||'—', s:`${o._id} · ${o.events} events` })) },
+                      { title:`Participants (${sr.participants?.length})`, items:sr.participants?.map(p=>({ h:p.username, s:`${p.eventTitle} · ${p.checkedIn?'✓ checked in':'not checked in'}` })) },
+                      { title:`Events (${sr.events?.length})`, items:sr.events?.map(e=>({ h:e.title, s:`${e.subdomain} · ${e.status} · ${e.participantCount} guests` })) },
+                      { title:`Organizers (${sr.organizers?.length})`, items:sr.organizers?.map(o=>({ h:o.name||'—', s:`${o._id} · ${o.events} events` })) },
                     ].map(({ title, items }) => (
                       <div key={title}>
-                        <p className="text-[10px] font-black tracking-[.15em] text-neutral-700 mb-2">{title}</p>
+                        <p className="text-xs font-black tracking-wide text-neutral-700 mb-2">{title}</p>
                         <div className="space-y-1 max-h-48 overflow-y-auto">
                           {items?.length ? items.map((it,i) => (
-                            <div key={i} className="bg-white/[.025] rounded-lg px-3 py-2 text-[11px]">
-                              <p className="font-bold text-neutral-300">{it.h}</p>
-                              <p className="text-neutral-700 cc-mono">{it.s}</p>
+                            <div key={i} className="bg-neutral-50 rounded-lg px-3 py-2 text-sm">
+                              <p className="font-bold text-neutral-800">{it.h}</p>
+                              <p className="text-neutral-400 cc-mono">{it.s}</p>
                             </div>
-                          )) : <p className="text-neutral-700 text-[11px]">No results</p>}
+                          )) : <p className="text-neutral-700 text-sm">No results</p>}
                         </div>
                       </div>
                     ))}
@@ -2563,21 +2563,21 @@ function CommandCenterPanel() {
             {/* Check-in velocity */}
             {events?.activeVelocity?.length > 0 && (
               <Panel>
-                <PanelHead><span className="text-[10px] font-black tracking-[.15em] text-neutral-600">LIVE CHECK-IN VELOCITY</span></PanelHead>
-                <div className="divide-y divide-white/[.03]">
+                <PanelHead><span className="text-sm font-semibold text-neutral-700">LIVE CHECK-IN VELOCITY</span></PanelHead>
+                <div className="divide-y divide-neutral-100">
                   {events.activeVelocity.map((e,i) => (
-                    <div key={i} className="px-4 py-3 flex items-center gap-4 cc-tr">
+                    <div key={i} className="px-5 py-4 flex items-center gap-4 cc-tr">
                       <div className="flex-1 min-w-0">
-                        <p className="text-[11px] font-bold text-neutral-300 truncate">{e.title}</p>
-                        <p className="text-[10px] text-neutral-700 cc-mono">{e.subdomain}</p>
+                        <p className="text-sm font-medium text-neutral-700 truncate">{e.title}</p>
+                        <p className="text-xs text-neutral-500 cc-mono">{e.subdomain}</p>
                       </div>
                       <div className="text-right shrink-0">
-                        <p className="text-[11px] font-black text-emerald-400 cc-mono">{e.checkedIn}/{e.total}</p>
-                        <p className="text-[10px] text-neutral-700">{e.pct}%</p>
+                        <p className="text-sm font-semibold text-emerald-600 cc-mono">{e.checkedIn}/{e.total}</p>
+                        <p className="text-xs text-neutral-400">{e.pct}%</p>
                       </div>
                       <div className="w-20 shrink-0">
                         <CCBar v={e.pct} max={100} color="#22c55e" />
-                        {e.last5min>0 && <p className="text-[10px] text-emerald-400 cc-mono mt-1">{e.last5min}/5min ↑</p>}
+                        {e.last5min>0 && <p className="text-xs text-emerald-600 cc-mono mt-1">{e.last5min}/5min ↑</p>}
                       </div>
                     </div>
                   ))}
@@ -2589,22 +2589,22 @@ function CommandCenterPanel() {
             {events?.abandonedEvents?.length > 0 && (
               <Panel className="border-amber-800/20 cc-glow-a">
                 <PanelHead>
-                  <span className="text-[10px] font-black tracking-[.15em] text-amber-500">ABANDONED EVENTS ({events.abandonedEvents.length})</span>
+                  <span className="text-xs font-black tracking-wide text-amber-700">ABANDONED Events ({events.abandonedEvents.length})</span>
                   <button onClick={() => bulkOp('cancel-abandoned',{},'Cancel all abandoned events?')} disabled={bulk}
-                    className="text-[11px] px-3 py-1 border border-amber-700/40 rounded-lg text-amber-500 hover:bg-amber-900/20 transition-colors font-black disabled:opacity-40">
+                    className="text-sm px-3 py-1 border border-amber-300 rounded-lg text-amber-700 hover:bg-amber-50 transition-colors font-black disabled:opacity-40">
                     BULK CANCEL
                   </button>
                 </PanelHead>
-                <div className="divide-y divide-white/[.03] max-h-52 overflow-y-auto">
+                <div className="divide-y divide-neutral-100 max-h-52 overflow-y-auto">
                   {events.abandonedEvents.slice(0,20).map((e,i) => (
-                    <div key={i} className="px-4 py-2.5 flex items-center justify-between gap-3 cc-tr">
+                    <div key={i} className="px-5 py-3 flex items-center justify-between gap-3 cc-tr">
                       <div className="flex-1 min-w-0">
-                        <p className="text-[11px] font-bold text-neutral-400 truncate">{e.title}</p>
-                        <p className="text-[10px] text-neutral-700 cc-mono">{e.organizerEmail}</p>
+                        <p className="text-sm font-medium text-neutral-400 truncate">{e.title}</p>
+                        <p className="text-xs text-neutral-500 cc-mono">{e.organizerEmail}</p>
                       </div>
                       <div className="text-right shrink-0">
-                        <p className="text-[10px] text-neutral-600 cc-mono">{e.date?new Date(e.date).toLocaleDateString():'—'}</p>
-                        <p className="text-[10px] text-neutral-800">{e.participantCount} guests</p>
+                        <p className="text-xs text-neutral-500 cc-mono">{e.date?new Date(e.date).toLocaleDateString():'—'}</p>
+                        <p className="text-xs text-neutral-700">{e.participantCount} guests</p>
                       </div>
                     </div>
                   ))}
@@ -2614,19 +2614,19 @@ function CommandCenterPanel() {
 
             {/* Bulk ops */}
             <Panel>
-              <PanelHead><span className="text-[10px] font-black tracking-[.15em] text-neutral-600">BULK OPERATION CONSOLE</span></PanelHead>
+              <PanelHead><span className="text-sm font-semibold text-neutral-700">Bulk Operations</span></PanelHead>
               <div className="p-4 grid grid-cols-1 sm:grid-cols-3 gap-3">
                 {[
-                  { action:'force-complete-old',  label:'FORCE-COMPLETE OLD',   desc:'Mark active/draft events >7 days past as completed', filter:{days:7}, color:'border-blue-700/40 text-blue-400',  confirm:'Force-complete all stale active events?' },
-                  { action:'delete-empty-drafts', label:'DELETE EMPTY DRAFTS',  desc:'Delete draft events >3 days old with zero guests',   filter:{days:3}, color:'border-red-700/40 text-red-400',    confirm:'Delete all empty draft events? Cannot be undone.' },
-                  { action:'cancel-abandoned',    label:'CANCEL ABANDONED',     desc:'Cancel active events past their date, no check-ins', filter:{},       color:'border-amber-700/40 text-amber-400', confirm:'Cancel all abandoned events?' },
+                  { action:'force-complete-old',  label:'FORCE-COMPLETE OLD',   desc:'Mark active/draft events >7 days past as completed', filter:{days:7}, color:'border-blue-300 text-blue-600',  confirm:'Force-complete all stale active events?' },
+                  { action:'delete-empty-drafts', label:'DELETE EMPTY DRAFTS',  desc:'Delete draft events >3 days old with zero guests',   filter:{days:3}, color:'border-red-300 text-red-600',    confirm:'Delete all empty draft events? Cannot be undone.' },
+                  { action:'cancel-abandoned',    label:'CANCEL ABANDONED',     desc:'Cancel active events past their date, no check-ins', filter:{},       color:'border-amber-300 text-amber-600', confirm:'Cancel all abandoned events?' },
                 ].map(op => (
-                  <div key={op.action} className={`rounded-xl border ${op.color} bg-white/[.02] p-3.5`}>
-                    <p className="text-[11px] font-black tracking-wider mb-1">{op.label}</p>
-                    <p className="text-[10px] text-neutral-600 mb-3 leading-relaxed">{op.desc}</p>
+                  <div key={op.action} className={`rounded-xl border ${op.color} bg-neutral-50 p-3.5`}>
+                    <p className="text-xs font-semibold mb-1">{op.label}</p>
+                    <p className="text-xs text-neutral-500 mb-3 leading-relaxed">{op.desc}</p>
                     <button onClick={() => bulkOp(op.action, op.filter, op.confirm)} disabled={bulk}
-                      className="w-full py-1.5 border border-current rounded-lg text-[11px] font-black tracking-wider disabled:opacity-40 hover:bg-white/[.04] transition-colors">
-                      {bulk?'EXECUTING…':'EXECUTE'}
+                      className="w-full py-1.5 border border-current rounded-lg text-xs font-semibold disabled:opacity-40 hover:bg-neutral-100 transition-colors">
+                      {bulk?'Executing…':'Execute'}
                     </button>
                   </div>
                 ))}
@@ -2636,12 +2636,12 @@ function CommandCenterPanel() {
             {/* Cleanup preview */}
             {events?.cleanupCandidates?.length > 0 && (
               <Panel>
-                <PanelHead><span className="text-[10px] font-black tracking-[.15em] text-neutral-600">CLEANUP PREVIEW — {events.cleanupCandidates.length} CANDIDATES</span></PanelHead>
-                <div className="divide-y divide-white/[.03] max-h-40 overflow-y-auto">
+                <PanelHead><span className="text-sm font-semibold text-neutral-700">Cleanup Candidates — {events.cleanupCandidates.length} CANDIDATES</span></PanelHead>
+                <div className="divide-y divide-neutral-100 max-h-40 overflow-y-auto">
                   {events.cleanupCandidates.map((e,i) => (
                     <div key={i} className="px-4 py-2 flex items-center justify-between cc-tr">
-                      <p className="text-[11px] text-neutral-600 truncate">{e.title}</p>
-                      <span className="text-[10px] text-neutral-700 cc-mono shrink-0">{new Date(e.updatedAt).toLocaleDateString()}</span>
+                      <p className="text-sm text-neutral-500 truncate">{e.title}</p>
+                      <span className="text-xs text-neutral-500 cc-mono shrink-0">{new Date(e.updatedAt).toLocaleDateString()}</span>
                     </div>
                   ))}
                 </div>
@@ -2655,61 +2655,61 @@ function CommandCenterPanel() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
             <Panel>
               <PanelHead>
-                <span className="text-[10px] font-black tracking-[.15em] text-neutral-500 flex items-center gap-2"><Terminal className="w-3.5 h-3.5 text-violet-400"/>COMMAND DISPATCH</span>
+                <span className="text-xs font-black tracking-wide text-neutral-500 flex items-center gap-2"><Terminal className="w-3.5 h-3.5 text-violet-700"/>Command Dispatch</span>
               </PanelHead>
-              <div className="p-4 space-y-4">
+              <div className="p-5 space-y-4">
                 <div>
-                  <p className="text-[10px] text-neutral-700 tracking-widest uppercase mb-2 font-bold">Target Node</p>
+                  <p className="text-xs text-neutral-400 tracking-wide uppercase mb-2 font-bold">Target Node</p>
                   <div className="grid grid-cols-3 gap-2">
                     {['backend','router','watchdog'].map(t => (
                       <button key={t} onClick={()=>{setDTarget(t);setDCmd(CMDS[t][0].id);}}
-                        className={`py-2 rounded-lg text-[11px] font-black uppercase tracking-widest transition-all ${dTarget===t?'bg-violet-600 text-white':'bg-white/[.04] text-neutral-600 hover:bg-white/[.07] border border-white/[.07]'}`}>
+                        className={`py-2 rounded-lg text-sm font-semibold uppercase tracking-wide transition-all ${dTarget===t?'bg-violet-600 text-white':'bg-neutral-100 text-neutral-600 hover:bg-neutral-100 border border-neutral-200'}`}>
                         {t}
                       </button>
                     ))}
                   </div>
                 </div>
                 <div>
-                  <p className="text-[10px] text-neutral-700 tracking-widest uppercase mb-2 font-bold">Command</p>
+                  <p className="text-xs text-neutral-400 tracking-wide uppercase mb-2 font-bold">Command</p>
                   <div className="space-y-1.5">
                     {CMDS[dTarget].map(cmd => (
                       <button key={cmd.id} onClick={()=>setDCmd(cmd.id)}
-                        className={`w-full text-left p-3 rounded-xl transition-colors ${dCmd===cmd.id?'bg-violet-900/40 border border-violet-500/30':'bg-white/[.025] hover:bg-white/[.05] border border-transparent'}`}>
-                        <p className="text-[11px] font-black text-neutral-200 tracking-wider">{cmd.label}</p>
-                        <p className="text-[10px] text-neutral-600 mt-0.5">{cmd.desc}</p>
+                        className={`w-full text-left p-3 rounded-xl transition-colors ${dCmd===cmd.id?'bg-violet-50 border border-violet-300':'bg-neutral-50 hover:bg-neutral-100 border border-transparent'}`}>
+                        <p className="text-sm font-semibold text-neutral-800 tracking-wider">{cmd.label}</p>
+                        <p className="text-xs text-neutral-500 mt-0.5">{cmd.desc}</p>
                       </button>
                     ))}
                   </div>
                 </div>
                 <div>
-                  <p className="text-[10px] text-neutral-700 tracking-widest uppercase mb-2 font-bold">Params <span className="normal-case font-normal text-neutral-800">(optional JSON)</span></p>
+                  <p className="text-xs text-neutral-400 tracking-wide uppercase mb-2 font-bold">Params <span className="normal-case font-normal text-neutral-800">(optional JSON)</span></p>
                   <textarea value={dParams} onChange={e=>setDParams(e.target.value)} rows={3}
                     placeholder='{ "provider": "brevo" }'
-                    className="w-full bg-black border border-white/[.08] rounded-xl px-3 py-2.5 text-[11px] cc-mono text-neutral-300 resize-none focus:outline-none focus:border-violet-500 placeholder-neutral-800" />
+                    className="w-full bg-neutral-50 border border-neutral-200 rounded-xl px-3 py-2.5 text-sm cc-mono text-neutral-700 resize-none focus:outline-none focus:border-violet-500 placeholder-neutral-300" />
                 </div>
                 <button onClick={dispatch} disabled={dRunning}
-                  className="w-full py-3 rounded-xl bg-violet-600 hover:bg-violet-500 text-sm font-black tracking-widest flex items-center justify-center gap-2 transition-colors disabled:opacity-40">
-                  {dRunning?<><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"/>EXECUTING</>:<><Play className="w-4 h-4"/>EXECUTE</>}
+                  className="w-full py-3 rounded-xl bg-violet-600 hover:bg-violet-700 text-white text-sm font-semibold flex items-center justify-center gap-2 transition-colors disabled:opacity-40">
+                  {dRunning?<><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"/>Executing…</>:<><Play className="w-4 h-4"/>Execute Command</>}
                 </button>
               </div>
             </Panel>
 
             <div className="space-y-4">
               {/* Last result */}
-              <div className="rounded-xl bg-black border border-white/[.06] p-4 flex-1">
+              <div className="rounded-xl bg-neutral-50 border border-neutral-200 p-5 flex-1">
                 <div className="flex items-center justify-between mb-3">
-                  <p className="text-[10px] font-black tracking-widest text-neutral-700">OUTPUT</p>
-                  {cmdLog[0] && <span className="text-[10px] text-neutral-700 cc-mono">{cmdLog[0].ms}ms</span>}
+                  <p className="text-sm font-semibold text-neutral-700">Command Output</p>
+                  {cmdLog[0] && <span className="text-xs text-neutral-500 cc-mono bg-neutral-100 px-2 py-0.5 rounded-full">{cmdLog[0].ms}ms</span>}
                 </div>
                 {!cmdLog.length
-                  ? <p className="text-[11px] text-neutral-800 cc-mono">AWAITING COMMAND…</p>
+                  ? <p className="text-sm text-neutral-400 cc-mono italic">Awaiting command…</p>
                   : <>
                     <div className="flex items-center gap-2 mb-3">
-                      <Tag color={cmdLog[0].ok?'green':'red'}>{cmdLog[0].ok?'OK':'FAIL'}</Tag>
-                      <span className="text-[11px] text-neutral-600 cc-mono">{cmdLog[0].target} / {cmdLog[0].cmd}</span>
-                      <span className="text-[10px] text-neutral-700 cc-mono ml-auto">{new Date(cmdLog[0].ts).toLocaleTimeString()}</span>
+                      <Tag color={cmdLog[0].ok?'green':'red'}>{cmdLog[0].ok?'Success':'Failed'}</Tag>
+                      <span className="text-sm text-neutral-600 cc-mono">{cmdLog[0].target} / {cmdLog[0].cmd}</span>
+                      <span className="text-xs text-neutral-400 cc-mono ml-auto">{new Date(cmdLog[0].ts).toLocaleTimeString()}</span>
                     </div>
-                    <pre className="text-[11px] cc-mono text-neutral-300 whitespace-pre-wrap overflow-auto max-h-64">
+                    <pre className="text-sm cc-mono text-neutral-700 whitespace-pre-wrap overflow-auto max-h-64 bg-white border border-neutral-200 rounded-lg p-3 mt-2">
                       {cmdLog[0].ok ? JSON.stringify(cmdLog[0].result,null,2) : cmdLog[0].error}
                     </pre>
                   </>}
@@ -2722,14 +2722,14 @@ function CommandCenterPanel() {
         {tab === 'signal' && (
           <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <span className="text-[10px] font-black tracking-[.15em] text-neutral-600">EMAIL SIGNAL POOL</span>
+              <span className="text-sm font-semibold text-neutral-700">Email Signal Pool</span>
               <button onClick={() => adminAPI.ccGetEmailPool().then(r=>setPool(r.data.pool)).catch(()=>{})}
-                className="px-2.5 py-1.5 border border-white/10 rounded-lg text-[11px] text-neutral-500 hover:text-neutral-300 transition-colors flex items-center gap-1.5">
+                className="px-2.5 py-1.5 border border-neutral-200 rounded-lg text-sm text-neutral-500 hover:text-neutral-700 transition-colors flex items-center gap-1.5">
                 <RefreshCw className="w-3 h-3"/> REFRESH
               </button>
             </div>
             {!pool
-              ? <div className="rounded-xl bg-white/[.025] p-10 text-center text-neutral-700 text-[11px]">Email pool unavailable — ensure ROUTER_URL is configured</div>
+              ? <div className="rounded-xl bg-neutral-50 p-10 text-center text-neutral-700 text-sm">Email pool unavailable — ensure ROUTER_URL is configured</div>
               : (
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                   {Object.entries(pool).filter(([k])=>k!=='_summary').map(([name,p]) => (
@@ -2737,29 +2737,29 @@ function CommandCenterPanel() {
                       <div className="p-4">
                         <div className="flex items-center justify-between mb-4">
                           <div>
-                            <p className="text-sm font-black tracking-widest text-neutral-200">{p.provider?.toUpperCase()}</p>
-                            <p className="text-[10px] text-neutral-700">{p.totalKeys} key(s) · {(p.monthlyFree||0).toLocaleString()}/mo free</p>
+                            <p className="text-sm font-black tracking-wide text-neutral-800">{p.provider?.toUpperCase()}</p>
+                            <p className="text-xs text-neutral-400">{p.totalKeys} key(s) · {(p.monthlyFree||0).toLocaleString()}/mo free</p>
                           </div>
                           <Tag color={p.activeKeys>0?'green':'red'}>{p.activeKeys} ACTIVE</Tag>
                         </div>
                         <div className="space-y-2">
                           {p.keys?.map(k => (
-                            <div key={k.index} className={`flex items-center justify-between rounded-lg p-3 ${k.status==='active'?'bg-emerald-900/10 border border-emerald-800/20':'bg-red-900/10 border border-red-800/20'}`}>
+                            <div key={k.index} className={`flex items-center justify-between rounded-lg p-3 ${k.status==='active'?'bg-emerald-50 border border-emerald-200':'bg-red-50 border border-red-200'}`}>
                               <div className="flex items-center gap-2">
-                                <Key className={`w-3 h-3 ${k.status==='active'?'text-emerald-400':'text-red-400'}`}/>
-                                <span className="text-[11px] cc-mono text-neutral-500">{k.keySuffix}</span>
+                                <Key className={`w-3 h-3 ${k.status==='active'?'text-emerald-600':'text-red-600'}`}/>
+                                <span className="text-sm cc-mono text-neutral-500">{k.keySuffix}</span>
                               </div>
-                              <div className="text-right text-[11px]">
-                                <p className={`font-black tracking-wider ${k.status==='active'?'text-emerald-400':'text-red-400'}`}>{k.status?.toUpperCase()}</p>
-                                {k.resumesAt && <p className="text-neutral-700 cc-mono">{new Date(k.resumesAt).toLocaleTimeString()}</p>}
-                                <p className="text-neutral-700 cc-mono">{k.useCount} sends</p>
+                              <div className="text-right text-sm">
+                                <p className={`font-black tracking-wider ${k.status==='active'?'text-emerald-600':'text-red-600'}`}>{k.status?.toUpperCase()}</p>
+                                {k.resumesAt && <p className="text-neutral-400 cc-mono">{new Date(k.resumesAt).toLocaleTimeString()}</p>}
+                                <p className="text-neutral-400 cc-mono">{k.useCount} sends</p>
                               </div>
                             </div>
                           ))}
                         </div>
                         {p.keys?.some(k=>k.status==='suspended') && (
                           <button onClick={async()=>{try{await adminAPI.ccCommand('router','clear-key-suspension',{provider:name});toast.success('Cleared');setTimeout(()=>adminAPI.ccGetEmailPool().then(r=>setPool(r.data.pool)),800);}catch{toast.error('Failed');}}}
-                            className="mt-3 w-full py-2 rounded-lg border border-amber-700/40 text-[11px] font-black text-amber-400 hover:bg-amber-900/20 tracking-widest transition-colors">
+                            className="mt-3 w-full py-2 rounded-lg border border-amber-300 text-sm font-semibold text-amber-600 hover:bg-amber-50 tracking-wide transition-colors">
                             UNSUSPEND {name.toUpperCase()} KEYS
                           </button>
                         )}
@@ -2768,8 +2768,8 @@ function CommandCenterPanel() {
                   ))}
                   {pool._summary && (
                     <div className="lg:col-span-2 rounded-xl border border-violet-500/20 bg-violet-900/10 p-4 flex items-center justify-between">
-                      <p className="text-[11px] text-violet-500 font-black tracking-widest">TOTAL MONTHLY FREE CAPACITY</p>
-                      <p className="text-2xl font-black text-violet-300 cc-mono">{(pool._summary.totalMonthlyFree||0).toLocaleString()} emails/mo</p>
+                      <p className="text-sm text-violet-700 font-black tracking-wide">Total Monthly Free Capacity</p>
+                      <p className="text-2xl font-semibold text-violet-700 cc-mono">{(pool._summary.totalMonthlyFree||0).toLocaleString()} emails/mo</p>
                     </div>
                   )}
                 </div>
@@ -2781,35 +2781,35 @@ function CommandCenterPanel() {
         {tab === 'storage' && (
           <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <span className="text-[10px] font-black tracking-[.15em] text-neutral-600">DATABASE STORAGE MATRIX</span>
+              <span className="text-sm font-semibold text-neutral-700">Database Storage</span>
               <button onClick={()=>adminAPI.ccGetDb().then(r=>setDb(r.data)).catch(()=>{})}
-                className="px-2.5 py-1.5 border border-white/10 rounded-lg text-[11px] text-neutral-500 hover:text-neutral-300 transition-colors flex items-center gap-1.5">
+                className="px-2.5 py-1.5 border border-neutral-200 rounded-lg text-sm text-neutral-500 hover:text-neutral-700 transition-colors flex items-center gap-1.5">
                 <RefreshCw className="w-3 h-3"/> REFRESH
               </button>
             </div>
             {!db
-              ? <div className="rounded-xl bg-white/[.025] p-10 text-center text-neutral-700 text-[11px]">Loading database…</div>
+              ? <div className="rounded-xl bg-neutral-50 p-10 text-center text-neutral-700 text-sm">Loading database…</div>
               : <>
                 <div className="grid grid-cols-3 gap-3">
                   <CCStat label="Collections" value={db.collections?.length} />
-                  <CCStat label="DB State" value={db.state?.toUpperCase()} color={db.state==='connected'?'text-emerald-400':'text-red-400'} />
-                  <CCStat label="Database" value={db.dbName} color="text-violet-300" />
+                  <CCStat label="DB State" value={db.state?.toUpperCase()} color={db.state==='connected'?'text-emerald-600':'text-red-600'} />
+                  <CCStat label="Database" value={db.dbName} color="text-violet-700" />
                 </div>
                 <Panel>
-                  <table className="w-full text-[11px]">
-                    <thead><tr className="border-b border-white/[.06] bg-white/[.025]">
+                  <table className="w-full text-sm">
+                    <thead><tr className="border-b border-neutral-200 bg-neutral-50">
                       {['Collection','Docs','Data','Indexes','Avg Doc'].map(h=>(
-                        <th key={h} className={`${h==='Collection'?'text-left':'text-right'} px-4 py-3 text-neutral-600 font-semibold uppercase tracking-wider`}>{h}</th>
+                        <th key={h} className={`${h==='Collection'?'text-left':'text-right'} px-5 py-4 text-neutral-600 font-semibold uppercase tracking-wider`}>{h}</th>
                       ))}
                     </tr></thead>
                     <tbody>
                       {db.collections?.map(c => (
-                        <tr key={c.name} className="border-b border-white/[.03] cc-tr">
-                          <td className="px-4 py-2.5 cc-mono text-neutral-300">{c.name}</td>
-                          <td className="px-4 py-2.5 text-right text-neutral-400 cc-mono">{(c.count||0).toLocaleString()}</td>
-                          <td className="px-4 py-2.5 text-right text-neutral-400 cc-mono">{c.sizeMB} MB</td>
-                          <td className="px-4 py-2.5 text-right text-neutral-600 cc-mono">{c.indexSizeMB} MB</td>
-                          <td className="px-4 py-2.5 text-right text-neutral-700 cc-mono">{c.avgObjSize?`${c.avgObjSize}B`:'—'}</td>
+                        <tr key={c.name} className="border-b border-neutral-100 cc-tr">
+                          <td className="px-5 py-3 cc-mono text-neutral-800">{c.name}</td>
+                          <td className="px-5 py-3 text-right text-neutral-500 cc-mono">{(c.count||0).toLocaleString()}</td>
+                          <td className="px-5 py-3 text-right text-neutral-500 cc-mono">{c.sizeMB} MB</td>
+                          <td className="px-5 py-3 text-right text-neutral-500 cc-mono">{c.indexSizeMB} MB</td>
+                          <td className="px-5 py-3 text-right text-neutral-400 cc-mono">{c.avgObjSize?`${c.avgObjSize}B`:'—'}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -2823,51 +2823,51 @@ function CommandCenterPanel() {
         {tab === 'runtime' && (
           <div className="space-y-5">
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              <CCStat label="WS Connections" value={runtime?.wsStats?.connected??'—'} color="text-cyan-400" sub={runtime?.wsStats?.note} />
-              <CCStat label="WS Rooms" value={runtime?.wsStats?.rooms??'—'} color="text-cyan-300" />
-              <CCStat label="Redis Mode" value={runtime?.redisHealth?.mode?.toUpperCase()??'—'} color={runtime?.redisHealth?.connected?'text-emerald-400':'text-amber-400'} sub={runtime?.redisHealth?.pingOk?`${runtime.redisHealth.pingMs}ms`:'in-memory'} />
-              <CCStat label="Config Score" value={runtime?`${runtime.configScore}%`:'—'} color={runtime?.configScore>=80?'text-emerald-400':runtime?.configScore>=50?'text-amber-400':'text-red-400'} />
+              <CCStat label="WS Connections" value={runtime?.wsStats?.connected??'—'} color="text-blue-600" sub={runtime?.wsStats?.note} />
+              <CCStat label="WS Rooms" value={runtime?.wsStats?.rooms??'—'} color="text-blue-500" />
+              <CCStat label="Redis Mode" value={runtime?.redisHealth?.mode?.toUpperCase()??'—'} color={runtime?.redisHealth?.connected?'text-emerald-600':'text-amber-600'} sub={runtime?.redisHealth?.pingOk?`${runtime.redisHealth.pingMs}ms`:'in-memory'} />
+              <CCStat label="Config Score" value={runtime?`${runtime.configScore}%`:'—'} color={runtime?.configScore>=80?'text-emerald-600':runtime?.configScore>=50?'text-amber-600':'text-red-600'} />
             </div>
 
             {runtime?.process && (
               <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
                 <Panel>
-                  <PanelHead><span className="text-[10px] font-black tracking-[.15em] text-neutral-600">PROCESS VITALS</span></PanelHead>
+                  <PanelHead><span className="text-sm font-semibold text-neutral-700">Process Vitals</span></PanelHead>
                   <div className="p-4 space-y-3">
-                    <div className="grid grid-cols-3 gap-2 text-[11px]">
+                    <div className="grid grid-cols-3 gap-2 text-sm">
                       {[['PID',runtime.process.pid],['NODE',runtime.process.node],['UPTIME',fmtUptime(runtime.process.uptime)],
                         ['CPU CORES',runtime.process.cpuCount],['LOAD 1m',runtime.process.loadAvg?.[0]],['LOAD 5m',runtime.process.loadAvg?.[1]]
                       ].map(([l,v]) => (
-                        <div key={l} className="bg-white/[.025] rounded-lg p-2">
-                          <p className="text-neutral-700 text-[10px] uppercase tracking-wider mb-0.5">{l}</p>
-                          <p className="font-black text-neutral-300 cc-mono">{v??'—'}</p>
+                        <div key={l} className="bg-neutral-50 rounded-lg p-2">
+                          <p className="text-neutral-500 text-xs uppercase tracking-wider mb-0.5">{l}</p>
+                          <p className="font-semibold text-neutral-700 cc-mono">{v??'—'}</p>
                         </div>
                       ))}
                     </div>
-                    <div className="bg-white/[.025] rounded-lg p-3">
-                      <div className="flex justify-between text-[11px] mb-1.5">
-                        <span className="text-neutral-700">HEAP</span>
-                        <span className="text-neutral-400 cc-mono">{runtime.process.memMB.heapUsed}/{runtime.process.memMB.heapTotal} MB</span>
+                    <div className="bg-neutral-50 rounded-lg p-3">
+                      <div className="flex justify-between text-sm mb-1.5">
+                        <span className="text-neutral-600 font-medium">Heap Memory</span>
+                        <span className="text-neutral-500 cc-mono">{runtime.process.memMB.heapUsed}/{runtime.process.memMB.heapTotal} MB</span>
                       </div>
-                      <CCBar v={runtime.process.memMB.heapUsed} max={runtime.process.memMB.heapTotal} color="#8b5cf6" />
+                      <CCBar v={runtime.process.memMB.heapUsed} max={runtime.process.memMB.heapTotal} color="#7c3aed" />
                     </div>
-                    <div className="bg-white/[.025] rounded-lg p-3">
-                      <div className="flex justify-between text-[11px] mb-1.5">
-                        <span className="text-neutral-700">SYS MEM</span>
-                        <span className="text-neutral-400 cc-mono">{runtime.process.totalMemMB-runtime.process.freeMemMB}/{runtime.process.totalMemMB} MB</span>
+                    <div className="bg-neutral-50 rounded-lg p-3">
+                      <div className="flex justify-between text-sm mb-1.5">
+                        <span className="text-neutral-600 font-medium">System Memory</span>
+                        <span className="text-neutral-500 cc-mono">{runtime.process.totalMemMB-runtime.process.freeMemMB}/{runtime.process.totalMemMB} MB</span>
                       </div>
-                      <CCBar v={runtime.process.totalMemMB-runtime.process.freeMemMB} max={runtime.process.totalMemMB} color="#06b6d4" />
+                      <CCBar v={runtime.process.totalMemMB-runtime.process.freeMemMB} max={runtime.process.totalMemMB} color="#0891b2" />
                     </div>
                   </div>
                 </Panel>
 
                 {runtime.config && (
                   <Panel>
-                    <PanelHead><span className="text-[10px] font-black tracking-[.15em] text-neutral-600">ENVIRONMENT CONFIG</span></PanelHead>
+                    <PanelHead><span className="text-sm font-semibold text-neutral-700">Environment Configuration</span></PanelHead>
                     <div className="p-4 space-y-1.5">
                       {runtime.config.map(c => (
-                        <div key={c.key} className={`flex items-center justify-between px-3 py-2 rounded-lg ${c.set?'bg-emerald-900/10 border border-emerald-800/20':'bg-red-900/8 border border-red-800/20'}`}>
-                          <span className="text-[11px] text-neutral-400">{c.label}</span>
+                        <div key={c.key} className={`flex items-center justify-between px-3 py-2 rounded-lg ${c.set?'bg-emerald-50 border border-emerald-200':'bg-red-50 border border-red-200'}`}>
+                          <span className="text-sm text-neutral-500">{c.label}</span>
                           <Tag color={c.set?'green':'red'}>{c.set?'✓ SET':'✗ MISSING'}</Tag>
                         </div>
                       ))}
@@ -2876,8 +2876,8 @@ function CommandCenterPanel() {
                 )}
               </div>
             )}
-            <button onClick={()=>fetchAll(['runtime'])} className="px-3 py-2 border border-white/10 rounded-lg text-[11px] text-neutral-600 hover:text-neutral-300 transition-colors flex items-center gap-1.5">
-              <RefreshCw className="w-3 h-3"/> REFRESH RUNTIME
+            <button onClick={()=>fetchAll(['runtime'])} className="px-3 py-2 border border-neutral-200 rounded-lg text-sm text-neutral-500 hover:text-neutral-700 transition-colors flex items-center gap-1.5">
+              <RefreshCw className="w-3 h-3"/> Refresh Runtime
             </button>
           </div>
         )}
@@ -2886,21 +2886,21 @@ function CommandCenterPanel() {
         {tab === 'audit' && (
           <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <span className="text-[10px] font-black tracking-[.15em] text-neutral-600">COMMAND AUDIT LOG ({cmdLog.length})</span>
-              {cmdLog.length>0 && <button onClick={()=>setCmdLog([])} className="text-[11px] text-neutral-700 hover:text-red-400 transition-colors">CLEAR</button>}
+              <span className="text-sm font-semibold text-neutral-700">Command Audit Log ({cmdLog.length})</span>
+              {cmdLog.length>0 && <button onClick={()=>setCmdLog([])} className="text-sm text-neutral-400 hover:text-red-600 transition-colors">CLEAR</button>}
             </div>
             {!cmdLog.length
-              ? <div className="rounded-xl bg-white/[.02] border border-white/[.04] p-14 text-center text-neutral-800 text-[11px] tracking-widest">NO COMMANDS EXECUTED THIS SESSION</div>
+              ? <div className="rounded-xl bg-neutral-50 border border-neutral-100 p-14 text-center text-neutral-800 text-sm tracking-wide">No commands executed this session</div>
               : <div className="space-y-2">
                 {cmdLog.map((e,i) => (
-                  <div key={i} className={`rounded-xl border p-4 ${e.ok?'bg-emerald-950/8 border-emerald-800/15':'bg-red-950/8 border-red-800/15'}`}>
-                    <div className="flex items-center gap-3 mb-2 text-[11px]">
+                  <div key={i} className={`rounded-xl border p-4 ${e.ok?'bg-emerald-50 border-emerald-200':'bg-red-50 border-red-200'}`}>
+                    <div className="flex items-center gap-3 mb-2 text-sm">
                       <Tag color={e.ok?'green':'red'}>{e.ok?'OK':'FAIL'}</Tag>
                       <span className="cc-mono text-neutral-500">{e.target} / {e.cmd}</span>
-                      <span className="text-neutral-700 cc-mono">{e.ms}ms</span>
-                      <span className="ml-auto text-neutral-700 cc-mono">{new Date(e.ts).toLocaleTimeString()}</span>
+                      <span className="text-neutral-400 cc-mono">{e.ms}ms</span>
+                      <span className="ml-auto text-neutral-400 cc-mono">{new Date(e.ts).toLocaleTimeString()}</span>
                     </div>
-                    <pre className="text-[11px] cc-mono text-neutral-600 whitespace-pre-wrap overflow-auto max-h-36">
+                    <pre className="text-sm cc-mono text-neutral-600 whitespace-pre-wrap overflow-auto max-h-36 bg-white border border-neutral-200 rounded-lg p-3 mt-2">
                       {e.ok ? JSON.stringify(e.result,null,2) : e.error}
                     </pre>
                   </div>
@@ -3104,6 +3104,42 @@ function MarketingPanel() {
   const [scheduledLoading, setScheduledLoading] = useState(false);
   const [scheduling, setScheduling]     = useState(false);
 
+  // Web search for recipients
+  const [searchQuery, setSearchQuery]   = useState('');
+  const [searchResults, setSearchResults] = useState([]);
+  const [searching, setSearching]       = useState(false);
+  const [showSearch, setShowSearch]     = useState(false);
+
+  // Personalization
+  const [personalization, setPersonalization] = useState({ firstName: '', lastName: '', company: '', eventName: '' });
+  const [showPersonalization, setShowPersonalization] = useState(false);
+
+  const handleWebSearch = async () => {
+    if (!searchQuery.trim()) return;
+    setSearching(true);
+    setSearchResults([]);
+    try {
+      // Search organizers/users by name or domain via admin API
+      const r = await adminAPI.ccGlobalSearch(searchQuery);
+      const emails = [];
+      if (r.data?.organizers) emails.push(...r.data.organizers.map(o => ({ email: o.email, name: o.name || o.orgName, source: 'Organizer' })));
+      if (r.data?.participants) emails.push(...r.data.participants.map(p => ({ email: p.email, name: p.name, source: 'Participant' })));
+      if (r.data?.users) emails.push(...r.data.users.map(u => ({ email: u.email, name: u.name, source: 'User' })));
+      // Deduplicate
+      const seen = new Set();
+      const unique = emails.filter(e => e.email && !seen.has(e.email) && seen.add(e.email));
+      setSearchResults(unique);
+      if (!unique.length) toast('No email addresses found for that search');
+    } catch { toast.error('Search failed'); }
+    setSearching(false);
+  };
+
+  const addSearchResultsToRecipients = (items) => {
+    const newEmails = items.map(i => i.email).join('\n');
+    setRecipientText(prev => prev ? prev + '\n' + newEmails : newEmails);
+    toast.success(`Added ${items.length} address${items.length === 1 ? '' : 'es'}`);
+  };
+
   useEffect(() => {
     adminAPI.getMarketingTemplates()
       .then(r => {
@@ -3168,6 +3204,7 @@ function MarketingPanel() {
         recipients,
         subject:    subject || undefined,
         ctaUrl:     ctaUrl  || undefined,
+        personalization: Object.values(personalization).some(v => v) ? personalization : undefined,
       });
       setResult(r.data.results);
       toast.success(`Campaign sent: ${r.data.results.sent} delivered`);
@@ -3193,6 +3230,7 @@ function MarketingPanel() {
         ctaUrl:     ctaUrl  || undefined,
         sendAt:     new Date(sendAt).toISOString(),
         label:      campaignLabel || undefined,
+        personalization: Object.values(personalization).some(v => v) ? personalization : undefined,
       });
       toast.success(`Campaign scheduled for ${new Date(sendAt).toLocaleString()}`);
       setMode('scheduled');
@@ -3335,6 +3373,106 @@ function MarketingPanel() {
             </div>
 
             <div className="card p-5">
+              <div className="flex items-center justify-between mb-3">
+                <div>
+                  <h3 className="text-sm font-bold text-neutral-700">Find Recipients</h3>
+                  <p className="text-xs text-neutral-400 mt-0.5">Search your platform database for email addresses by name, organization, or domain.</p>
+                </div>
+                <button onClick={() => setShowSearch(v => !v)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all flex items-center gap-1.5 ${showSearch ? 'bg-violet-50 border-violet-300 text-violet-700' : 'bg-neutral-50 border-neutral-300 text-neutral-600 hover:border-violet-300'}`}>
+                  <Globe className="w-3.5 h-3.5" /> {showSearch ? 'Hide Search' : 'Search Database'}
+                </button>
+              </div>
+              {showSearch && (
+                <div className="space-y-3">
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={searchQuery}
+                      onChange={e => setSearchQuery(e.target.value)}
+                      onKeyDown={e => e.key === 'Enter' && handleWebSearch()}
+                      className="input text-sm flex-1"
+                      placeholder="Search by name, company, email domain, or event name…"
+                    />
+                    <button onClick={handleWebSearch} disabled={searching || !searchQuery.trim()}
+                      className="btn bg-violet-600 hover:bg-violet-700 text-white text-sm px-4 gap-2 disabled:opacity-50">
+                      {searching ? <span className="spinner w-4 h-4 border-2 border-white/30 border-t-white" /> : <Search className="w-4 h-4" />}
+                      Search
+                    </button>
+                  </div>
+                  {searchResults.length > 0 && (
+                    <div className="rounded-xl border border-neutral-200 overflow-hidden">
+                      <div className="flex items-center justify-between px-4 py-2.5 bg-neutral-50 border-b border-neutral-200">
+                        <span className="text-xs font-semibold text-neutral-600">{searchResults.length} result{searchResults.length !== 1 ? 's' : ''} found</span>
+                        <button onClick={() => addSearchResultsToRecipients(searchResults)}
+                          className="text-xs font-semibold text-violet-600 hover:text-violet-800 flex items-center gap-1">
+                          <Plus className="w-3.5 h-3.5" /> Add all to recipients
+                        </button>
+                      </div>
+                      <div className="divide-y divide-neutral-100 max-h-52 overflow-y-auto">
+                        {searchResults.map((r, i) => (
+                          <div key={i} className="flex items-center justify-between px-4 py-2.5 hover:bg-neutral-50 group">
+                            <div className="min-w-0 flex-1">
+                              <p className="text-sm font-medium text-neutral-800 truncate">{r.name || r.email}</p>
+                              <p className="text-xs text-neutral-400 truncate">{r.email}</p>
+                            </div>
+                            <div className="flex items-center gap-2 shrink-0">
+                              <span className="text-xs bg-neutral-100 text-neutral-500 px-2 py-0.5 rounded-full">{r.source}</span>
+                              <button onClick={() => addSearchResultsToRecipients([r])}
+                                className="text-xs text-violet-600 hover:text-violet-800 font-medium opacity-0 group-hover:opacity-100 transition-opacity">
+                                Add
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            <div className="card p-5">
+              <div className="flex items-center justify-between mb-3">
+                <div>
+                  <h3 className="text-sm font-bold text-neutral-700">Personalization</h3>
+                  <p className="text-xs text-neutral-400 mt-0.5">Customize merge tags used in the email template.</p>
+                </div>
+                <button onClick={() => setShowPersonalization(v => !v)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all ${showPersonalization ? 'bg-indigo-50 border-indigo-300 text-indigo-700' : 'bg-neutral-50 border-neutral-300 text-neutral-600 hover:border-indigo-300'}`}>
+                  <User className="w-3.5 h-3.5 inline mr-1" /> {showPersonalization ? 'Hide' : 'Edit Tokens'}
+                </button>
+              </div>
+              {showPersonalization && (
+                <div className="space-y-3">
+                  <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 text-xs text-blue-700">
+                    <p className="font-semibold mb-1">Available merge tags for your template:</p>
+                    <div className="flex flex-wrap gap-1.5 mt-1">
+                      {['{{first_name}}', '{{last_name}}', '{{company}}', '{{event_name}}', '{{cta_url}}'].map(tag => (
+                        <code key={tag} className="bg-white border border-blue-200 px-1.5 py-0.5 rounded text-blue-800 font-mono">{tag}</code>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    {[
+                      { key: 'firstName', label: 'Default First Name', placeholder: 'e.g. there' },
+                      { key: 'lastName',  label: 'Default Last Name',  placeholder: 'e.g. (leave blank)' },
+                      { key: 'company',   label: 'Default Company',    placeholder: 'e.g. your team' },
+                      { key: 'eventName', label: 'Default Event Name', placeholder: 'e.g. your event' },
+                    ].map(({ key, label, placeholder }) => (
+                      <div key={key}>
+                        <label className="block text-xs font-semibold text-neutral-500 mb-1">{label}</label>
+                        <input type="text" value={personalization[key]} onChange={e => setPersonalization(p => ({ ...p, [key]: e.target.value }))}
+                          className="input text-sm w-full" placeholder={placeholder} />
+                      </div>
+                    ))}
+                  </div>
+                  <p className="text-xs text-neutral-400">These defaults are used when a recipient record doesn't have a specific value. They're passed along with your campaign send.</p>
+                </div>
+              )}
+            </div>
+
+            <div className="card p-5">
               <div className="flex items-center justify-between mb-2">
                 <h3 className="text-sm font-bold text-neutral-700">Recipients</h3>
                 {recipientCount > 0 && (
@@ -3345,7 +3483,7 @@ function MarketingPanel() {
               </div>
               <textarea value={recipientText} onChange={e => setRecipientText(e.target.value)} rows={6}
                 className="input text-sm w-full font-mono resize-y"
-                placeholder={"Paste email addresses here.\nOne per line, or comma/semicolon separated.\n\nExample:\njohn@example.com\njane@example.com, alex@example.com"} />
+                placeholder={"Paste email addresses here, or use Search Database above.\nOne per line, or comma/semicolon separated.\n\nExample:\njohn@example.com\njane@example.com, alex@example.com"} />
               <p className="text-xs text-neutral-400 mt-1">Maximum 1,000 recipients. Invalid addresses skipped automatically.</p>
             </div>
 
