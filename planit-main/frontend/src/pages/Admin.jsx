@@ -1907,452 +1907,1014 @@ function BugReportsPanel() {
 
 
 // ─── Command Center ───────────────────────────────────────────────────────────
+// CLASSIFIED INFRASTRUCTURE INTERFACE — PALANTIR-CLASS
+// ─────────────────────────────────────────────────────────────────────────────
+
+const CC_STYLES = `
+  @keyframes cc-scan    { 0%{transform:translateY(-100%)} 100%{transform:translateY(200vh)} }
+  @keyframes cc-pulse-r { 0%{transform:scale(1);opacity:.7} 100%{transform:scale(2.4);opacity:0} }
+  @keyframes cc-blink   { 0%,100%{opacity:1} 50%{opacity:.15} }
+  .cc-scanline  { position:fixed;top:0;left:0;right:0;height:2px;background:linear-gradient(transparent,rgba(139,92,246,.12),transparent);animation:cc-scan 8s linear infinite;pointer-events:none;z-index:1 }
+  .cc-grid-bg   { background-image:linear-gradient(rgba(139,92,246,.03) 1px,transparent 1px),linear-gradient(90deg,rgba(139,92,246,.03) 1px,transparent 1px);background-size:40px 40px }
+  .cc-blink     { animation:cc-blink 1.2s step-end infinite }
+  .cc-mono      { font-variant-numeric:tabular-nums;font-feature-settings:"tnum" }
+  .cc-glow-v    { box-shadow:0 0 0 1px rgba(139,92,246,.25),0 0 24px rgba(139,92,246,.07),inset 0 0 16px rgba(139,92,246,.02) }
+  .cc-glow-r    { box-shadow:0 0 0 1px rgba(239,68,68,.35),0 0 24px rgba(239,68,68,.1) }
+  .cc-glow-g    { box-shadow:0 0 0 1px rgba(34,197,94,.25),0 0 20px rgba(34,197,94,.06) }
+  .cc-glow-a    { box-shadow:0 0 0 1px rgba(245,158,11,.3),0 0 20px rgba(245,158,11,.08) }
+  .cc-bar       { height:3px;background:rgba(255,255,255,.05);border-radius:2px;overflow:hidden }
+  .cc-bar-fill  { height:100%;border-radius:2px;transition:width .9s cubic-bezier(.4,0,.2,1) }
+  .cc-tag       { display:inline-flex;align-items:center;padding:1px 7px;border-radius:3px;font-size:9px;font-weight:800;letter-spacing:.1em;text-transform:uppercase }
+  .cc-tr:hover  { background:rgba(255,255,255,.022) }
+  .cc-spark     { display:flex;align-items:flex-end;gap:1px }
+  .cc-spark span{ flex:1;min-width:2px;border-radius:1px 1px 0 0;transition:height .3s }
+`;
+
+function CCStat({ label, value, sub, color = 'text-white', glow, onClick }) {
+  return (
+    <div onClick={onClick}
+      className={`rounded-xl border border-white/8 bg-white/[.025] p-3.5 transition-all ${onClick ? 'cursor-pointer hover:bg-white/[.04]' : ''} ${glow || ''}`}>
+      <p className="text-[10px] text-neutral-600 uppercase tracking-[.15em] font-bold mb-1.5">{label}</p>
+      <p className={`text-2xl font-black cc-mono leading-none ${color}`}>{value ?? '—'}</p>
+      {sub && <p className="text-[10px] text-neutral-700 mt-1.5 leading-tight">{sub}</p>}
+    </div>
+  );
+}
+
+function CCThreat({ score }) {
+  const lvl   = score < 25 ? 'NOMINAL' : score < 50 ? 'ELEVATED' : score < 75 ? 'HIGH' : 'CRITICAL';
+  const color = score < 25 ? '#22c55e' : score < 50 ? '#f59e0b' : score < 75 ? '#ef4444' : '#dc2626';
+  return (
+    <div className="flex items-center gap-2.5">
+      <div className="flex gap-0.5">
+        {[...Array(5)].map((_, i) => (
+          <div key={i} style={{ width:5, height:14, borderRadius:2, background: i < Math.ceil((score/100)*5) ? color : 'rgba(255,255,255,.08)', transition:'background .5s' }} />
+        ))}
+      </div>
+      <span className="text-[11px] font-black tracking-widest" style={{ color }}>{lvl}</span>
+    </div>
+  );
+}
+
+function CCFunnel({ label, v, total, color }) {
+  const pct = total > 0 ? Math.round((v / total) * 100) : 0;
+  return (
+    <div>
+      <div className="flex justify-between text-[11px] mb-1">
+        <span className="text-neutral-500">{label}</span>
+        <span className="font-bold cc-mono text-neutral-300">{(v||0).toLocaleString()} <span className="text-neutral-700">({pct}%)</span></span>
+      </div>
+      <div className="cc-bar"><div className="cc-bar-fill" style={{ width:`${pct}%`, background:color }} /></div>
+    </div>
+  );
+}
+
+function CCBar({ v, max, color }) {
+  const pct = max > 0 ? Math.min(100, Math.round((v/max)*100)) : 0;
+  return <div className="cc-bar"><div className="cc-bar-fill" style={{ width:`${pct}%`, background:color }} /></div>;
+}
+
 function CommandCenterPanel() {
-  const [fleet, setFleet]         = useState(null);
-  const [fleetLoading, setFleetLoading] = useState(true);
-  const [emailPool, setEmailPool] = useState(null);
-  const [db, setDb]               = useState(null);
-  const [cmdLog, setCmdLog]       = useState([]);
-  const [selectedTarget, setSelectedTarget] = useState('backend');
-  const [selectedCmd, setSelectedCmd]       = useState('ping');
-  const [cmdParams, setCmdParams]           = useState('');
-  const [cmdRunning, setCmdRunning]         = useState(false);
-  const [activeTab, setActiveTab]           = useState('overview');
-  const logRef = useRef(null);
+  const [tab, setTab]           = useState('grid');
+  const [live, setLive]         = useState(true);
+  const [loading, setLoading]   = useState(true);
+  const [refreshAt, setRefreshAt] = useState(null);
 
-  const addLog = (entry) => setCmdLog(prev => [{ ts: new Date().toISOString(), ...entry }, ...prev].slice(0, 100));
+  // data
+  const [fleet,    setFleet]    = useState(null);
+  const [pool,     setPool]     = useState(null);
+  const [db,       setDb]       = useState(null);
+  const [platform, setPlatform] = useState(null);
+  const [security, setSecurity] = useState(null);
+  const [runtime,  setRuntime]  = useState(null);
+  const [events,   setEvents]   = useState(null);
 
-  const refresh = async () => {
-    setFleetLoading(true);
-    try {
-      const r = await adminAPI.ccGetFleet();
-      setFleet(r.data);
-    } catch { toast.error('Fleet fetch failed'); }
-    finally { setFleetLoading(false); }
-  };
+  // dispatch
+  const [dTarget, setDTarget]   = useState('backend');
+  const [dCmd,    setDCmd]      = useState('ping');
+  const [dParams, setDParams]   = useState('');
+  const [dRunning,setDRunning]  = useState(false);
+  const [cmdLog,  setCmdLog]    = useState([]);
 
-  const refreshPool = async () => {
-    try { const r = await adminAPI.ccGetEmailPool(); setEmailPool(r.data.pool); }
-    catch { setEmailPool(null); }
-  };
+  // search
+  const [sq,  setSq]   = useState('');
+  const [sr,  setSr]   = useState(null);
+  const [sLoading,setSLoading] = useState(false);
 
-  const refreshDb = async () => {
-    try { const r = await adminAPI.ccGetDb(); setDb(r.data); }
-    catch { setDb(null); }
-  };
+  // bulk
+  const [bulk, setBulk] = useState(false);
 
-  useEffect(() => {
-    refresh();
-    refreshPool();
-    refreshDb();
-    const t = setInterval(refresh, 20000);
-    return () => clearInterval(t);
+  const addLog = e => setCmdLog(p => [{ ts: new Date().toISOString(), ...e }, ...p].slice(0, 300));
+
+  const fetchAll = useCallback(async (which = ['fleet','pool','db','platform','security','runtime','events']) => {
+    setLoading(true);
+    const p = [];
+    if (which.includes('fleet'))    p.push(adminAPI.ccGetFleet().then(r => setFleet(r.data)).catch(() => {}));
+    if (which.includes('pool'))     p.push(adminAPI.ccGetEmailPool().then(r => setPool(r.data.pool)).catch(() => {}));
+    if (which.includes('db'))       p.push(adminAPI.ccGetDb().then(r => setDb(r.data)).catch(() => {}));
+    if (which.includes('platform')) p.push(adminAPI.ccGetPlatformMetrics().then(r => setPlatform(r.data)).catch(() => {}));
+    if (which.includes('security')) p.push(adminAPI.ccGetSecurityIntel().then(r => setSecurity(r.data)).catch(() => {}));
+    if (which.includes('runtime'))  p.push(adminAPI.ccGetWsStats().then(r => setRuntime(r.data)).catch(() => {}));
+    if (which.includes('events'))   p.push(adminAPI.ccGetEventIntel().then(r => setEvents(r.data)).catch(() => {}));
+    await Promise.allSettled(p);
+    setLoading(false);
+    setRefreshAt(new Date());
   }, []);
 
-  const COMMANDS = {
+  useEffect(() => {
+    fetchAll();
+    let t;
+    if (live) t = setInterval(() => fetchAll(['fleet','security','runtime']), 30000);
+    return () => clearInterval(t);
+  }, [fetchAll, live]);
+
+  const CMDS = {
     backend: [
-      { id: 'ping',        label: 'Ping',          desc: 'Liveness check — measure round-trip to this backend' },
-      { id: 'stats',       label: 'Stats Snapshot', desc: 'Full process, memory, and log metrics' },
-      { id: 'flush-logs',  label: 'Flush Log Buffer', desc: 'Clear the in-memory log ring-buffer (logs remain in console)' },
-      { id: 'gc',          label: 'Force GC',       desc: 'Trigger V8 garbage collection (requires --expose-gc)' },
-      { id: 'cache-clear', label: 'Clear Cache',    desc: 'Send Redis cache flush signal to backend' },
+      { id:'ping',        label:'PING',            desc:'Round-trip liveness check' },
+      { id:'stats',       label:'STATS SNAPSHOT',  desc:'Full process + memory metrics' },
+      { id:'flush-logs',  label:'FLUSH LOGS',      desc:'Clear in-memory log ring-buffer' },
+      { id:'gc',          label:'FORCE GC',        desc:'Trigger V8 garbage collection' },
+      { id:'cache-clear', label:'CACHE CLEAR',     desc:'Redis cache flush signal' },
     ],
     router: [
-      { id: 'ping',                label: 'Ping',             desc: 'Liveness check on the router' },
-      { id: 'stats',               label: 'Stats Snapshot',   desc: 'Router process metrics, memory, and email pool summary' },
-      { id: 'flush-logs',          label: 'Flush Log Buffer', desc: 'Clear the router log ring-buffer' },
-      { id: 'gc',                  label: 'Force GC',         desc: 'Trigger V8 GC on the router process' },
-      { id: 'clear-key-suspension',label: 'Clear Key Suspensions', desc: 'Unsuspend rate-limited email keys. Params: { "provider": "brevo" }' },
-      { id: 'list-backends',       label: 'List Backends',    desc: 'Get all registered backend URLs from router mesh' },
+      { id:'ping',                 label:'PING',            desc:'Router liveness check' },
+      { id:'stats',                label:'STATS',           desc:'Router metrics + email pool' },
+      { id:'flush-logs',           label:'FLUSH LOGS',      desc:'Clear router log buffer' },
+      { id:'gc',                   label:'FORCE GC',        desc:'GC on router process' },
+      { id:'clear-key-suspension', label:'UNSUSPEND KEYS',  desc:'Unsuspend rate-limited email keys' },
+      { id:'list-backends',        label:'LIST BACKENDS',   desc:'All registered backend URLs' },
     ],
     watchdog: [
-      { id: 'ping',   label: 'Ping',         desc: 'Liveness check on the watchdog' },
-      { id: 'status', label: 'Full Status',  desc: 'All monitored services and their current health' },
-      { id: 'stats',  label: 'Stats',        desc: 'Watchdog process info via mesh status' },
+      { id:'ping',   label:'PING',        desc:'Watchdog liveness' },
+      { id:'status', label:'FULL STATUS', desc:'All monitored services' },
+      { id:'stats',  label:'STATS',       desc:'Watchdog process info' },
     ],
   };
 
-  const execCommand = async () => {
-    setCmdRunning(true);
-    let parsedParams = {};
-    if (cmdParams.trim()) {
-      try { parsedParams = JSON.parse(cmdParams); }
-      catch { toast.error('Params must be valid JSON'); setCmdRunning(false); return; }
+  const dispatch = async () => {
+    setDRunning(true);
+    let params = {};
+    if (dParams.trim()) {
+      try { params = JSON.parse(dParams); }
+      catch { toast.error('Params must be valid JSON'); setDRunning(false); return; }
     }
-    const ts = Date.now();
+    const t0 = Date.now();
     try {
-      const r = await adminAPI.ccCommand(selectedTarget, selectedCmd, parsedParams);
-      const elapsed = Date.now() - ts;
-      addLog({ target: selectedTarget, command: selectedCmd, ok: true, result: r.data.result, elapsed });
-      toast.success(`${selectedCmd} on ${selectedTarget} succeeded (${elapsed}ms)`);
+      const r = await adminAPI.ccCommand(dTarget, dCmd, params);
+      const ms = Date.now() - t0;
+      addLog({ target:dTarget, cmd:dCmd, ok:true,  result:r.data.result, ms });
+      toast.success(`${dCmd} ← ${ms}ms`);
     } catch (err) {
-      const elapsed = Date.now() - ts;
-      addLog({ target: selectedTarget, command: selectedCmd, ok: false, error: err.response?.data?.error || err.message, elapsed });
+      const ms = Date.now() - t0;
+      addLog({ target:dTarget, cmd:dCmd, ok:false, error:err.response?.data?.error || err.message, ms });
       toast.error(err.response?.data?.error || 'Command failed');
     }
-    setCmdRunning(false);
+    setDRunning(false);
   };
 
-  const ServiceCard = ({ svc }) => {
-    const online = svc.ok;
-    const memPct = svc.memMB ? Math.round((svc.memMB.heapUsed / svc.memMB.heapTotal) * 100) : 0;
-    return (
-      <div className={`rounded-2xl border-2 p-5 ${online ? 'border-emerald-200 bg-emerald-50/30' : 'border-red-200 bg-red-50/30'}`}>
-        <div className="flex items-start justify-between mb-3">
-          <div>
-            <div className="flex items-center gap-2 mb-0.5">
-              <div className={`w-2 h-2 rounded-full ${online ? 'bg-emerald-500 animate-pulse' : 'bg-red-500'}`} />
-              <span className="text-sm font-bold text-neutral-900">{svc.service}</span>
-              <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${online ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>
-                {svc.type}
-              </span>
-            </div>
-            {!online && <p className="text-xs text-red-500 mt-1">{svc.error || 'unreachable'}</p>}
-          </div>
-          {online && svc.uptime != null && (
-            <span className="text-xs text-neutral-400 font-mono">{fmtUptime(svc.uptime)}</span>
-          )}
-        </div>
-        {online && (
-          <div className="grid grid-cols-2 gap-2 text-xs">
-            {svc.pid    != null && <div className="bg-white/60 rounded-lg p-2"><p className="text-neutral-400">PID</p><p className="font-bold text-neutral-800 font-mono">{svc.pid}</p></div>}
-            {svc.node             && <div className="bg-white/60 rounded-lg p-2"><p className="text-neutral-400">Node</p><p className="font-bold text-neutral-800 font-mono">{svc.node}</p></div>}
-            {svc.memMB            && <div className="bg-white/60 rounded-lg p-2 col-span-2">
-              <p className="text-neutral-400 mb-1">Heap {svc.memMB.heapUsed} / {svc.memMB.heapTotal} MB ({memPct}%)</p>
-              <div className="w-full bg-neutral-200 rounded-full h-1.5">
-                <div className={`h-1.5 rounded-full transition-all ${memPct > 85 ? 'bg-red-500' : memPct > 65 ? 'bg-amber-500' : 'bg-emerald-500'}`} style={{ width: `${Math.min(100, memPct)}%` }} />
-              </div>
-            </div>}
-            {svc.logEntries != null && <div className="bg-white/60 rounded-lg p-2"><p className="text-neutral-400">Log Buffer</p><p className="font-bold text-neutral-800">{svc.logEntries}</p></div>}
-            {svc.liveClients != null && <div className="bg-white/60 rounded-lg p-2"><p className="text-neutral-400">SSE Clients</p><p className="font-bold text-neutral-800">{svc.liveClients}</p></div>}
-            {svc.errors24h != null && <div className="bg-white/60 rounded-lg p-2"><p className="text-neutral-400">Errors (24h)</p><p className={`font-bold ${svc.errors24h > 0 ? 'text-red-600' : 'text-emerald-600'}`}>{svc.errors24h}</p></div>}
-            {svc.warns24h  != null && <div className="bg-white/60 rounded-lg p-2"><p className="text-neutral-400">Warnings (24h)</p><p className={`font-bold ${svc.warns24h > 5 ? 'text-amber-600' : 'text-neutral-700'}`}>{svc.warns24h}</p></div>}
-            {svc.backends  != null && <div className="bg-white/60 rounded-lg p-2"><p className="text-neutral-400">Backends</p><p className="font-bold text-neutral-800">{svc.backends}</p></div>}
-            {svc.monitoredServices != null && <div className="bg-white/60 rounded-lg p-2"><p className="text-neutral-400">Monitored</p><p className="font-bold text-neutral-800">{svc.monitoredServices}</p></div>}
-          </div>
-        )}
-      </div>
-    );
+  const globalSearch = async () => {
+    if (sq.length < 2) return;
+    setSLoading(true);
+    try { const r = await adminAPI.ccGlobalSearch(sq); setSr(r.data); }
+    catch { toast.error('Search failed'); }
+    setSLoading(false);
   };
+
+  const bulkOp = async (action, filter, msg) => {
+    if (!confirm(msg)) return;
+    setBulk(true);
+    try {
+      const r = await adminAPI.ccBulkEvents(action, filter);
+      toast.success(`Done: ${JSON.stringify(r.data.result)}`);
+      fetchAll(['events']);
+    } catch (err) { toast.error(err.response?.data?.error || 'Failed'); }
+    setBulk(false);
+  };
+
+  // derived
+  const online    = fleet?.services?.filter(s => s.ok).length ?? 0;
+  const total     = fleet?.services?.length ?? 0;
+  const threat    = security ? Math.min(100,
+    (security.errLast1h > 10 ? 40 : security.errLast1h * 3) +
+    (security.errSpike   ? 25 : 0) +
+    ((security.failedLogins?.length || 0) > 5 ? 20 : (security.failedLogins?.length || 0) * 3) +
+    (security.suspiciousParticipants?.length > 0 ? 15 : 0)
+  ) : 0;
 
   const TABS = [
-    { id: 'overview', label: 'Fleet Overview', icon: Monitor },
-    { id: 'dispatch', label: 'Command Dispatch', icon: Terminal },
-    { id: 'email',    label: 'Email Key Pool', icon: Mail },
-    { id: 'database', label: 'Database Inspector', icon: Database },
-    { id: 'log',      label: 'Command Log', icon: Scroll },
+    { id:'grid',     ico:'◈', lbl:'GRID'       },
+    { id:'intel',    ico:'◉', lbl:'INTEL'      },
+    { id:'threat',   ico:'⚠', lbl:'THREAT'     },
+    { id:'asset',    ico:'⟁', lbl:'ASSET OPS'  },
+    { id:'dispatch', ico:'▶', lbl:'DISPATCH'   },
+    { id:'signal',   ico:'◎', lbl:'SIGNAL'     },
+    { id:'storage',  ico:'▦', lbl:'STORAGE'    },
+    { id:'runtime',  ico:'◌', lbl:'RUNTIME'    },
+    { id:'audit',    ico:'≡', lbl:'AUDIT'      },
   ];
 
+  // ─── helpers ────────────────────────────────────────────────────────────────
+  const Divider = ({ label }) => (
+    <div className="flex items-center gap-3 my-1">
+      <span className="text-[10px] font-black tracking-[.2em] text-neutral-700">{label}</span>
+      <div className="flex-1 h-px bg-white/[.04]" />
+    </div>
+  );
+
+  const Panel = ({ children, className = '' }) => (
+    <div className={`rounded-xl border border-white/[.07] bg-white/[.022] ${className}`}>{children}</div>
+  );
+
+  const PanelHead = ({ children }) => (
+    <div className="px-4 py-3 border-b border-white/[.06] flex items-center justify-between">{children}</div>
+  );
+
+  const Tag = ({ children, color = 'neutral' }) => {
+    const cls = {
+      neutral: 'bg-neutral-800 text-neutral-500',
+      green:   'bg-emerald-900/50 text-emerald-400 border border-emerald-800/40',
+      red:     'bg-red-900/50 text-red-400 border border-red-800/40',
+      amber:   'bg-amber-900/40 text-amber-400 border border-amber-800/30',
+      violet:  'bg-violet-900/40 text-violet-400 border border-violet-800/30',
+    }[color] || 'bg-neutral-800 text-neutral-500';
+    return <span className={`cc-tag ${cls}`}>{children}</span>;
+  };
+
   return (
-    <div className="min-h-screen bg-neutral-950 text-white">
-      {/* Header */}
-      <div className="border-b border-white/10 bg-neutral-900/80 backdrop-blur-sm sticky top-0 z-10">
-        <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-          <div>
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center">
-                <Crosshair className="w-4 h-4 text-white" />
-              </div>
-              <div>
-                <h1 className="text-base font-bold tracking-tight">Command Center</h1>
-                <p className="text-xs text-neutral-500">Super Admin — Direct Infrastructure Control</p>
-              </div>
+    <div className="min-h-screen bg-neutral-950 text-white cc-grid-bg" style={{ fontFamily:"'Fira Code','SF Mono','Cascadia Code',monospace" }}>
+      <style>{CC_STYLES}</style>
+      <div className="cc-scanline" />
+
+      {/* ══ TOP BAR ══ */}
+      <div className="border-b border-violet-500/[.12] bg-black/70 backdrop-blur-lg sticky top-0 z-20">
+        <div className="max-w-screen-2xl mx-auto px-5 py-2.5 flex items-center justify-between gap-6">
+          {/* Brand */}
+          <div className="flex items-center gap-3 shrink-0">
+            <div className="w-7 h-7 rounded-lg border border-violet-500/40 bg-violet-600/15 flex items-center justify-center cc-glow-v">
+              <Crosshair className="w-3.5 h-3.5 text-violet-400" />
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-[11px] font-black tracking-[.2em] text-violet-300">PLANIT</span>
+              <span className="text-[11px] text-neutral-700 tracking-widest">COMMAND</span>
+              <Tag color="red">CLASSIFIED</Tag>
             </div>
           </div>
-          <div className="flex items-center gap-3">
-            {fleet && (
-              <span className="text-xs text-neutral-500 font-mono">
-                Last refresh: {new Date(fleet.fetchedAt).toLocaleTimeString()}
-              </span>
-            )}
-            <button onClick={refresh} disabled={fleetLoading} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/15 text-xs font-medium transition-colors disabled:opacity-50">
-              <RefreshCw className={`w-3.5 h-3.5 ${fleetLoading ? 'animate-spin' : ''}`} /> Refresh
+
+          {/* Status strip */}
+          <div className="flex items-center gap-6 text-[11px]">
+            <div className="flex items-center gap-2">
+              <div className={`w-1.5 h-1.5 rounded-full ${online===total && total>0?'bg-emerald-400 animate-pulse':'bg-red-500 cc-blink'}`} />
+              <span className="text-neutral-600">FLEET</span>
+              <span className={`font-black cc-mono ${online===total?'text-emerald-400':'text-red-400'}`}>{online}/{total}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-neutral-700">THREAT</span>
+              <CCThreat score={threat} />
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-neutral-700">SOCKETS</span>
+              <span className="font-black text-cyan-400 cc-mono">{runtime?.wsStats?.connected ?? '—'}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-neutral-700">MAO</span>
+              <span className="font-black text-violet-400 cc-mono">{platform?.maoCount ?? '—'}</span>
+            </div>
+            {refreshAt && <span className="text-neutral-800 cc-mono text-[10px]">{refreshAt.toLocaleTimeString()}</span>}
+          </div>
+
+          {/* Controls */}
+          <div className="flex items-center gap-2 shrink-0">
+            <button onClick={() => setLive(v=>!v)}
+              className={`px-2.5 py-1 rounded-lg text-[11px] font-black border transition-all ${live?'bg-emerald-900/25 border-emerald-700/40 text-emerald-400':'bg-white/[.04] border-white/10 text-neutral-600'}`}>
+              {live?'● LIVE':'○ PAUSED'}
+            </button>
+            <button onClick={() => fetchAll()} disabled={loading}
+              className="px-2.5 py-1 rounded-lg border border-white/10 bg-white/[.04] hover:bg-white/[.07] text-[11px] transition-colors disabled:opacity-40 flex items-center gap-1.5 text-neutral-400">
+              <RefreshCw className={`w-3 h-3 ${loading?'animate-spin':''}`} /> SYNC
             </button>
           </div>
         </div>
 
-        {/* Tabs */}
-        <div className="max-w-7xl mx-auto px-6 flex gap-1 pb-0">
-          {TABS.map(({ id, label, icon: I }) => (
-            <button key={id} onClick={() => setActiveTab(id)}
-              className={`flex items-center gap-1.5 px-4 py-2.5 text-xs font-semibold border-b-2 transition-colors whitespace-nowrap ${activeTab === id ? 'border-violet-500 text-violet-300' : 'border-transparent text-neutral-500 hover:text-neutral-300'}`}>
-              <I className="w-3.5 h-3.5" />{label}
+        {/* Tab rail */}
+        <div className="max-w-screen-2xl mx-auto px-5 flex gap-0 overflow-x-auto">
+          {TABS.map(t => (
+            <button key={t.id} onClick={() => setTab(t.id)}
+              className={`px-3.5 py-2.5 text-[10px] font-black tracking-[.15em] border-b-2 transition-all whitespace-nowrap flex items-center gap-1.5 shrink-0
+                ${tab===t.id?'border-violet-500 text-violet-300 bg-violet-500/[.04]':'border-transparent text-neutral-700 hover:text-neutral-400 hover:bg-white/[.015]'}`}>
+              <span className="text-sm leading-none">{t.ico}</span>{t.lbl}
             </button>
           ))}
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-6 py-6">
+      <div className="max-w-screen-2xl mx-auto px-5 py-6 space-y-5">
 
-        {/* FLEET OVERVIEW */}
-        {activeTab === 'overview' && (
-          <div className="space-y-6">
-            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
-              {fleetLoading ? (
-                [0,1,2].map(i => <div key={i} className="h-48 rounded-2xl bg-white/5 animate-pulse" />)
-              ) : fleet?.services?.length ? (
-                fleet.services.map(svc => <ServiceCard key={svc.service} svc={svc} />)
-              ) : (
-                <div className="col-span-3 text-center py-12 text-neutral-600">No fleet data available</div>
-              )}
-            </div>
-            {fleet?.note && (
-              <div className="rounded-xl bg-amber-900/20 border border-amber-500/20 px-4 py-3 text-xs text-amber-400">{fleet.note}</div>
-            )}
-          </div>
-        )}
-
-        {/* COMMAND DISPATCH */}
-        {activeTab === 'dispatch' && (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div className="space-y-4">
-              <div className="rounded-2xl bg-white/5 border border-white/10 p-5 space-y-4">
-                <h3 className="text-sm font-bold text-neutral-300 flex items-center gap-2"><Terminal className="w-4 h-4 text-violet-400" /> Dispatch Command</h3>
-
-                <div>
-                  <label className="block text-xs text-neutral-500 mb-1.5 font-semibold uppercase tracking-wider">Target Service</label>
-                  <div className="grid grid-cols-3 gap-2">
-                    {['backend', 'router', 'watchdog'].map(t => (
-                      <button key={t} onClick={() => { setSelectedTarget(t); setSelectedCmd(COMMANDS[t][0].id); }}
-                        className={`py-2 rounded-xl text-xs font-bold uppercase tracking-wide transition-colors ${selectedTarget === t ? 'bg-violet-600 text-white' : 'bg-white/5 text-neutral-400 hover:bg-white/10'}`}>
-                        {t}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-xs text-neutral-500 mb-1.5 font-semibold uppercase tracking-wider">Command</label>
-                  <div className="space-y-1.5">
-                    {COMMANDS[selectedTarget].map(cmd => (
-                      <button key={cmd.id} onClick={() => setSelectedCmd(cmd.id)}
-                        className={`w-full text-left p-3 rounded-xl transition-colors ${selectedCmd === cmd.id ? 'bg-violet-900/50 border border-violet-500/40' : 'bg-white/5 hover:bg-white/10 border border-transparent'}`}>
-                        <p className="text-xs font-bold text-neutral-200">{cmd.label}</p>
-                        <p className="text-xs text-neutral-500 mt-0.5">{cmd.desc}</p>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-xs text-neutral-500 mb-1.5 font-semibold uppercase tracking-wider">
-                    Params <span className="text-neutral-600 normal-case font-normal">(optional JSON)</span>
-                  </label>
-                  <textarea
-                    value={cmdParams}
-                    onChange={e => setCmdParams(e.target.value)}
-                    rows={3}
-                    placeholder={'{ "provider": "brevo" }'}
-                    className="w-full bg-neutral-900 border border-white/10 rounded-xl px-3 py-2.5 text-xs font-mono text-neutral-200 resize-none focus:outline-none focus:border-violet-500 placeholder-neutral-700"
-                  />
-                </div>
-
-                <button onClick={execCommand} disabled={cmdRunning}
-                  className="w-full py-3 rounded-xl bg-violet-600 hover:bg-violet-500 text-sm font-bold flex items-center justify-center gap-2 transition-colors disabled:opacity-50">
-                  {cmdRunning
-                    ? <><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Executing...</>
-                    : <><Play className="w-4 h-4" /> Execute on {selectedTarget}</>}
-                </button>
-              </div>
+        {/* ═══════════════ GRID ═══════════════ */}
+        {tab === 'grid' && (
+          <div className="space-y-5">
+            {/* Tier-1 stats */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 xl:grid-cols-8 gap-3">
+              <CCStat label="Fleet" value={`${online}/${total}`} color={online===total?'text-emerald-400':'text-red-400'} glow={online<total?'cc-glow-r':'cc-glow-g'} sub="services online" />
+              <CCStat label="WS Live" value={runtime?.wsStats?.connected??'—'} color="text-cyan-400" sub="socket connections" />
+              <CCStat label="Errors 1h" value={security?.errLast1h??'—'} color={security?.errSpike?'text-red-400':'text-neutral-300'} glow={security?.errSpike?'cc-glow-r':undefined} sub={security?.errSpike?'⚠ SPIKE':'nominal'} />
+              <CCStat label="MAO 30d" value={platform?.maoCount??'—'} color="text-violet-400" sub={`+${platform?.newOrgsThisWeek??0} this week`} />
+              <CCStat label="Events Today" value={events?.todayCount??'—'} color="text-amber-400" sub={`${events?.ystdCount??0} yesterday`} />
+              <CCStat label="Abandoned" value={events?.abandonedEvents?.length??'—'} color={events?.abandonedEvents?.length>5?'text-red-400':'text-neutral-500'} sub="no check-ins" />
+              <CCStat label="Config" value={runtime?`${runtime.configScore}%`:'—'} color={runtime?.configScore>=80?'text-emerald-400':'text-amber-400'} sub="env vars set" />
+              <CCStat label="Flagged" value={security?.suspiciousParticipants?.length??'—'} color={security?.suspiciousParticipants?.length>0?'text-amber-400':'text-neutral-600'} sub="suspicious users" />
             </div>
 
-            {/* Live result */}
-            <div className="rounded-2xl bg-black border border-white/10 p-5">
-              <h3 className="text-xs font-bold text-neutral-500 uppercase tracking-wider mb-3">Last Result</h3>
-              {cmdLog.length === 0 ? (
-                <p className="text-xs text-neutral-700 font-mono">No commands dispatched yet.</p>
-              ) : (
-                <div className="space-y-3">
-                  {cmdLog.slice(0, 1).map((entry, i) => (
-                    <div key={i}>
-                      <div className="flex items-center gap-2 mb-2">
-                        <span className={`text-xs px-2 py-0.5 rounded font-bold ${entry.ok ? 'bg-emerald-900 text-emerald-300' : 'bg-red-900 text-red-300'}`}>
-                          {entry.ok ? 'OK' : 'FAIL'}
-                        </span>
-                        <span className="text-xs font-mono text-neutral-400">{entry.target} / {entry.command}</span>
-                        <span className="text-xs text-neutral-600 ml-auto">{entry.elapsed}ms</span>
-                      </div>
-                      <pre className="text-xs font-mono text-neutral-300 bg-neutral-900 rounded-lg p-3 overflow-auto max-h-80 whitespace-pre-wrap">
-                        {entry.ok
-                          ? JSON.stringify(entry.result, null, 2)
-                          : entry.error}
-                      </pre>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* EMAIL KEY POOL */}
-        {activeTab === 'email' && (
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <h2 className="text-sm font-bold text-neutral-300">Email Key Pool</h2>
-                <p className="text-xs text-neutral-600 mt-0.5">Brevo and Mailjet key rotation state. Add BREVO_API_KEY_2, _3, etc. to the router env to expand.</p>
-              </div>
-              <button onClick={refreshPool} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/15 text-xs font-medium transition-colors">
-                <RefreshCw className="w-3.5 h-3.5" /> Refresh
-              </button>
-            </div>
-
-            {!emailPool ? (
-              <div className="rounded-2xl bg-white/5 p-8 text-center text-neutral-600 text-sm">
-                {fleetLoading ? 'Loading...' : 'Email pool unavailable — ensure ROUTER_URL is set'}
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                {Object.entries(emailPool).filter(([k]) => k !== '_summary').map(([name, pool]) => (
-                  <div key={name} className="rounded-2xl bg-white/5 border border-white/10 p-5">
-                    <div className="flex items-center justify-between mb-4">
-                      <div>
-                        <h3 className="text-sm font-bold text-neutral-300">{pool.provider}</h3>
-                        <p className="text-xs text-neutral-500">{pool.totalKeys} key(s) — {(pool.monthlyFree || 0).toLocaleString()} / month free</p>
-                      </div>
-                      <div className={`text-xs px-2 py-1 rounded-lg font-bold ${pool.activeKeys > 0 ? 'bg-emerald-900 text-emerald-300' : 'bg-red-900 text-red-300'}`}>
-                        {pool.activeKeys} active
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      {pool.keys?.length ? pool.keys.map(key => (
-                        <div key={key.index} className={`flex items-center justify-between rounded-xl p-3 ${key.status === 'active' ? 'bg-emerald-900/20' : 'bg-red-900/20'}`}>
-                          <div className="flex items-center gap-2">
-                            <Key className={`w-3 h-3 ${key.status === 'active' ? 'text-emerald-400' : 'text-red-400'}`} />
-                            <span className="text-xs font-mono text-neutral-400">{key.keySuffix}</span>
-                          </div>
-                          <div className="text-right">
-                            <p className={`text-xs font-bold ${key.status === 'active' ? 'text-emerald-400' : 'text-red-400'}`}>{key.status}</p>
-                            {key.resumesAt && <p className="text-xs text-neutral-600">resumes {new Date(key.resumesAt).toLocaleTimeString()}</p>}
-                            <p className="text-xs text-neutral-600">{key.useCount} sends</p>
-                          </div>
+            {/* Fleet cards */}
+            <Divider label="NODE STATUS" />
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+              {loading && !fleet ? (
+                [0,1,2].map(i => <div key={i} className="h-44 rounded-xl bg-white/[.03] animate-pulse" />)
+              ) : fleet?.services?.map(svc => {
+                const ok  = svc.ok;
+                const mem = svc.memMB ? Math.round((svc.memMB.heapUsed/(svc.memMB.heapTotal||1))*100) : 0;
+                return (
+                  <Panel key={svc.service} className={ok?'cc-glow-g border-emerald-900/40':'cc-glow-r border-red-900/40'}>
+                    <div className="p-4">
+                      <div className="flex items-start justify-between mb-3">
+                        <div className="flex items-center gap-2">
+                          <div className={`w-2 h-2 rounded-full ${ok?'bg-emerald-400 animate-pulse':'bg-red-500 cc-blink'}`} />
+                          <span className="text-sm font-black tracking-wider">{svc.service?.toUpperCase()}</span>
+                          <Tag>{svc.type}</Tag>
                         </div>
-                      )) : (
-                        <p className="text-xs text-neutral-600 text-center py-4">No keys configured for {pool.provider}</p>
+                        <span className={`text-[11px] font-black tracking-widest ${ok?'text-emerald-400':'text-red-400'}`}>{ok?'ONLINE':'OFFLINE'}</span>
+                      </div>
+                      {!ok && <p className="text-xs text-red-500/70 mb-2">{svc.error||'unreachable'}</p>}
+                      {ok && (
+                        <div className="grid grid-cols-3 gap-1.5 text-[11px]">
+                          {svc.uptime   != null && <div className="bg-white/[.03] rounded-lg p-2"><p className="text-neutral-700 mb-0.5">UPTIME</p><p className="font-bold text-neutral-300 cc-mono">{fmtUptime(svc.uptime)}</p></div>}
+                          {svc.pid      != null && <div className="bg-white/[.03] rounded-lg p-2"><p className="text-neutral-700 mb-0.5">PID</p><p className="font-bold text-neutral-300 cc-mono">{svc.pid}</p></div>}
+                          {svc.node              && <div className="bg-white/[.03] rounded-lg p-2"><p className="text-neutral-700 mb-0.5">NODE</p><p className="font-bold text-neutral-300 cc-mono">{svc.node}</p></div>}
+                          {svc.errors24h!= null  && <div className="bg-white/[.03] rounded-lg p-2"><p className="text-neutral-700 mb-0.5">ERR/24H</p><p className={`font-black cc-mono ${svc.errors24h>0?'text-red-400':'text-emerald-400'}`}>{svc.errors24h}</p></div>}
+                          {svc.liveClients!=null && <div className="bg-white/[.03] rounded-lg p-2"><p className="text-neutral-700 mb-0.5">SSE</p><p className="font-bold text-neutral-300 cc-mono">{svc.liveClients}</p></div>}
+                          {svc.backends  !=null  && <div className="bg-white/[.03] rounded-lg p-2"><p className="text-neutral-700 mb-0.5">NODES</p><p className="font-bold text-neutral-300 cc-mono">{svc.backends}</p></div>}
+                          {svc.memMB && (
+                            <div className="col-span-3 bg-white/[.03] rounded-lg p-2">
+                              <div className="flex justify-between mb-1.5"><span className="text-neutral-700">HEAP</span><span className="text-neutral-400 cc-mono">{svc.memMB.heapUsed}/{svc.memMB.heapTotal} MB ({mem}%)</span></div>
+                              <CCBar v={mem} max={100} color={mem>85?'#ef4444':mem>65?'#f59e0b':'#22c55e'} />
+                            </div>
+                          )}
+                        </div>
                       )}
                     </div>
-                    {pool.keys?.some(k => k.status === 'suspended') && (
-                      <button
-                        onClick={async () => {
-                          try {
-                            await adminAPI.ccCommand('router', 'clear-key-suspension', { provider: name });
-                            toast.success(`Cleared suspended ${name} keys`);
-                            setTimeout(refreshPool, 1000);
-                          } catch { toast.error('Failed to clear suspensions'); }
-                        }}
-                        className="mt-3 w-full py-2 rounded-xl bg-amber-900/30 hover:bg-amber-900/50 text-xs font-bold text-amber-400 transition-colors">
-                        Clear Suspensions for {pool.provider}
-                      </button>
-                    )}
-                  </div>
-                ))}
-                {emailPool._summary && (
-                  <div className="lg:col-span-2 rounded-2xl bg-violet-900/20 border border-violet-500/20 p-4 flex items-center justify-between">
-                    <p className="text-xs text-violet-400 font-semibold">Total monthly free capacity across all keys</p>
-                    <p className="text-lg font-bold text-violet-300">{(emailPool._summary.totalMonthlyFree || 0).toLocaleString()} emails / month</p>
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* DATABASE INSPECTOR */}
-        {activeTab === 'database' && (
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <h2 className="text-sm font-bold text-neutral-300">Database Inspector</h2>
-                <p className="text-xs text-neutral-600 mt-0.5">Live collection sizes, document counts, and index data.</p>
-              </div>
-              <button onClick={refreshDb} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/15 text-xs font-medium transition-colors">
-                <RefreshCw className="w-3.5 h-3.5" /> Refresh
-              </button>
+                  </Panel>
+                );
+              })}
             </div>
-            {!db ? (
-              <div className="rounded-2xl bg-white/5 p-8 text-center text-neutral-600 text-sm">Loading database info...</div>
-            ) : (
+
+            {/* Config matrix */}
+            {runtime?.config && (
               <>
-                <div className="grid grid-cols-3 gap-4">
-                  <div className="rounded-2xl bg-white/5 border border-white/10 p-4 text-center">
-                    <p className="text-2xl font-bold text-neutral-200">{db.collections?.length || 0}</p>
-                    <p className="text-xs text-neutral-500 mt-1">Collections</p>
-                  </div>
-                  <div className="rounded-2xl bg-white/5 border border-white/10 p-4 text-center">
-                    <p className={`text-sm font-bold mt-1 ${db.state === 'connected' ? 'text-emerald-400' : 'text-red-400'}`}>{db.state}</p>
-                    <p className="text-xs text-neutral-500">DB State</p>
-                  </div>
-                  <div className="rounded-2xl bg-white/5 border border-white/10 p-4 text-center">
-                    <p className="text-sm font-bold text-neutral-200 font-mono">{db.dbName}</p>
-                    <p className="text-xs text-neutral-500 mt-1">Database</p>
-                  </div>
-                </div>
-                <div className="rounded-2xl bg-white/5 border border-white/10 overflow-hidden">
-                  <table className="w-full text-xs">
-                    <thead>
-                      <tr className="border-b border-white/10 bg-white/5">
-                        <th className="text-left px-4 py-3 text-neutral-500 font-semibold">Collection</th>
-                        <th className="text-right px-4 py-3 text-neutral-500 font-semibold">Documents</th>
-                        <th className="text-right px-4 py-3 text-neutral-500 font-semibold">Data Size</th>
-                        <th className="text-right px-4 py-3 text-neutral-500 font-semibold">Index Size</th>
-                        <th className="text-right px-4 py-3 text-neutral-500 font-semibold">Avg Doc</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {db.collections?.map(col => (
-                        <tr key={col.name} className="border-b border-white/5 hover:bg-white/5 transition-colors">
-                          <td className="px-4 py-2.5 font-mono text-neutral-300">{col.name}</td>
-                          <td className="px-4 py-2.5 text-right text-neutral-400">{(col.count || 0).toLocaleString()}</td>
-                          <td className="px-4 py-2.5 text-right text-neutral-400">{col.sizeMB} MB</td>
-                          <td className="px-4 py-2.5 text-right text-neutral-400">{col.indexSizeMB} MB</td>
-                          <td className="px-4 py-2.5 text-right text-neutral-500">{col.avgObjSize ? `${col.avgObjSize}B` : '—'}</td>
-                        </tr>
+                <Divider label="CONFIG MATRIX" />
+                <Panel>
+                  <div className="p-4">
+                    <div className="flex items-center justify-between mb-3">
+                      <span className="text-[10px] text-neutral-600 tracking-widest font-bold">ENVIRONMENT COVERAGE</span>
+                      <span className={`text-sm font-black cc-mono ${runtime.configScore>=80?'text-emerald-400':runtime.configScore>=50?'text-amber-400':'text-red-400'}`}>{runtime.configScore}%</span>
+                    </div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {runtime.config.map(c => (
+                        <Tag key={c.key} color={c.set?'green':'red'}>{c.set?'✓':'✗'} {c.label}</Tag>
                       ))}
-                    </tbody>
-                  </table>
-                </div>
+                    </div>
+                  </div>
+                </Panel>
               </>
             )}
           </div>
         )}
 
-        {/* COMMAND LOG */}
-        {activeTab === 'log' && (
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <h2 className="text-sm font-bold text-neutral-300">Command Execution Log</h2>
-              {cmdLog.length > 0 && (
-                <button onClick={() => setCmdLog([])} className="text-xs text-neutral-500 hover:text-red-400 transition-colors">Clear</button>
-              )}
+        {/* ═══════════════ INTEL ═══════════════ */}
+        {tab === 'intel' && (
+          <div className="space-y-5">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <CCStat label="MAO 30d" value={platform?.maoCount} color="text-violet-400" sub={`+${platform?.newOrgsThisWeek??0} this week`} />
+              <CCStat label="Total Events" value={platform?.conversionFunnel?.created?.toLocaleString()} color="text-neutral-200" />
+              <CCStat label="Completion" value={platform?.conversionFunnel?.created ? `${Math.round((platform.conversionFunnel.completed/platform.conversionFunnel.created)*100)}%` : '—'} color="text-cyan-400" />
+              <CCStat label="WoW Growth"
+                value={platform?.newOrgsLastWeek>0 ? `${Math.round(((platform.newOrgsThisWeek-platform.newOrgsLastWeek)/platform.newOrgsLastWeek)*100)}%` : `+${platform?.newOrgsThisWeek??0}`}
+                color={platform?.newOrgsThisWeek>=platform?.newOrgsLastWeek?'text-emerald-400':'text-red-400'} sub="organiser growth" />
             </div>
-            {cmdLog.length === 0 ? (
-              <div className="rounded-2xl bg-white/5 p-12 text-center text-neutral-600 text-sm">
-                No commands executed in this session.
-              </div>
-            ) : (
-              <div className="space-y-2" ref={logRef}>
-                {cmdLog.map((entry, i) => (
-                  <div key={i} className={`rounded-xl border p-4 ${entry.ok ? 'bg-emerald-900/10 border-emerald-800/30' : 'bg-red-900/10 border-red-800/30'}`}>
-                    <div className="flex items-center gap-3 mb-2 text-xs">
-                      <span className={`px-2 py-0.5 rounded font-bold ${entry.ok ? 'bg-emerald-900 text-emerald-300' : 'bg-red-900 text-red-300'}`}>{entry.ok ? 'OK' : 'FAIL'}</span>
-                      <span className="font-mono text-neutral-400">{entry.target} / {entry.command}</span>
-                      <span className="text-neutral-600">{entry.elapsed}ms</span>
-                      <span className="ml-auto text-neutral-600">{new Date(entry.ts).toLocaleTimeString()}</span>
-                    </div>
-                    <pre className="text-xs font-mono text-neutral-400 whitespace-pre-wrap overflow-auto max-h-48">
-                      {entry.ok ? JSON.stringify(entry.result, null, 2) : entry.error}
-                    </pre>
+
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
+              {/* Events per day chart */}
+              <Panel>
+                <PanelHead><span className="text-[10px] font-black tracking-[.15em] text-neutral-600">EVENTS CREATED — 30D</span></PanelHead>
+                <div className="p-4">
+                  {platform?.eventsPerDay?.length ? (() => {
+                    const max = Math.max(...platform.eventsPerDay.map(d=>d.count), 1);
+                    return (
+                      <div className="flex items-end gap-px h-24 w-full group">
+                        {platform.eventsPerDay.map((d,i) => (
+                          <div key={i} className="flex-1 flex flex-col items-center relative" style={{ height:'100%' }}>
+                            <div className="absolute bottom-0 w-full hover:bg-violet-400 transition-colors rounded-t"
+                              style={{ height:`${Math.max(4,Math.round((d.count/max)*96))}px`, background:'rgba(139,92,246,.55)' }}
+                              title={`${d._id}: ${d.count}`} />
+                          </div>
+                        ))}
+                      </div>
+                    );
+                  })() : <div className="h-24 flex items-center justify-center text-neutral-700 text-xs">No data</div>}
+                  <div className="flex justify-between text-[10px] text-neutral-700 mt-2">
+                    <span>{platform?.eventsPerDay?.[0]?._id?.slice(5)}</span>
+                    <span>{platform?.eventsPerDay?.at(-1)?._id?.slice(5)}</span>
+                  </div>
+                </div>
+              </Panel>
+
+              {/* Conversion funnel */}
+              <Panel>
+                <PanelHead><span className="text-[10px] font-black tracking-[.15em] text-neutral-600">CONVERSION FUNNEL</span></PanelHead>
+                <div className="p-4 space-y-3.5">
+                  {platform?.conversionFunnel && (() => {
+                    const { created, hasParticipants, hadCheckin, completed } = platform.conversionFunnel;
+                    return [
+                      { label:'Events Created',  v:created,        color:'#8b5cf6' },
+                      { label:'Got Participants', v:hasParticipants,color:'#6366f1' },
+                      { label:'Used Check-in',   v:hadCheckin,     color:'#06b6d4' },
+                      { label:'Completed',       v:completed,      color:'#22c55e' },
+                    ].map(r => <CCFunnel key={r.label} {...r} total={created} />);
+                  })()}
+                </div>
+              </Panel>
+            </div>
+
+            {/* Feature adoption */}
+            <Panel>
+              <PanelHead><span className="text-[10px] font-black tracking-[.15em] text-neutral-600">FEATURE ADOPTION MATRIX</span></PanelHead>
+              <div className="p-4 grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-5 gap-3">
+                {platform?.featureAdoption && Object.entries(platform.featureAdoption).map(([feat, { pct, count }]) => (
+                  <div key={feat} className="bg-white/[.025] rounded-lg p-3 border border-white/[.05]">
+                    <p className="text-[10px] text-neutral-600 uppercase tracking-widest mb-2">{feat}</p>
+                    <p className="text-xl font-black cc-mono text-violet-400">{pct}%</p>
+                    <p className="text-[10px] text-neutral-700 mb-2">{count} events</p>
+                    <CCBar v={pct} max={100} color="#8b5cf6" />
                   </div>
                 ))}
               </div>
+            </Panel>
+
+            {/* Power users */}
+            <Panel>
+              <PanelHead><span className="text-[10px] font-black tracking-[.15em] text-neutral-600">POWER USER REGISTRY</span></PanelHead>
+              <table className="w-full text-[11px]">
+                <thead><tr className="border-b border-white/[.05] bg-white/[.02]">
+                  <th className="text-left px-4 py-2.5 text-neutral-600 font-semibold uppercase tracking-wider">Organiser</th>
+                  <th className="text-right px-4 py-2.5 text-neutral-600 font-semibold uppercase tracking-wider">Events</th>
+                  <th className="text-right px-4 py-2.5 text-neutral-600 font-semibold uppercase tracking-wider">Last Active</th>
+                </tr></thead>
+                <tbody>
+                  {platform?.powerUsers?.map((u,i) => (
+                    <tr key={u._id} className="border-b border-white/[.03] cc-tr">
+                      <td className="px-4 py-2.5">
+                        <div className="flex items-center gap-2">
+                          <span className="text-neutral-700 w-4 cc-mono">{i+1}</span>
+                          <div><p className="font-bold text-neutral-300">{u.name||'—'}</p><p className="text-neutral-700 cc-mono">{u._id}</p></div>
+                        </div>
+                      </td>
+                      <td className="px-4 py-2.5 text-right font-black text-violet-400 cc-mono">{u.events}</td>
+                      <td className="px-4 py-2.5 text-right text-neutral-700 cc-mono">{u.lastActive?new Date(u.lastActive).toLocaleDateString():'—'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </Panel>
+
+            {/* Status distribution */}
+            {platform?.eventsByStatus && (
+              <Panel>
+                <PanelHead><span className="text-[10px] font-black tracking-[.15em] text-neutral-600">EVENT STATUS DISTRIBUTION</span></PanelHead>
+                <div className="p-4 flex flex-wrap gap-3">
+                  {platform.eventsByStatus.map(s => {
+                    const clr = {active:'text-emerald-400',completed:'text-blue-400',draft:'text-neutral-500',cancelled:'text-red-500'}[s._id]||'text-neutral-400';
+                    return (
+                      <div key={s._id} className="bg-white/[.025] rounded-lg px-4 py-2.5 border border-white/[.05]">
+                        <p className={`text-xl font-black cc-mono ${clr}`}>{s.count}</p>
+                        <p className="text-[10px] text-neutral-600 uppercase tracking-wider mt-1">{s._id}</p>
+                      </div>
+                    );
+                  })}
+                </div>
+              </Panel>
             )}
           </div>
         )}
+
+        {/* ═══════════════ THREAT ═══════════════ */}
+        {tab === 'threat' && (
+          <div className="space-y-5">
+            {/* Threat header */}
+            <div className={`rounded-xl border p-4 flex items-center justify-between
+              ${threat>=75?'border-red-700/40 bg-red-950/15 cc-glow-r':threat>=50?'border-amber-700/30 bg-amber-950/10 cc-glow-a':'border-emerald-800/25 bg-emerald-950/8 cc-glow-g'}`}>
+              <div>
+                <p className="text-[10px] text-neutral-600 tracking-[.15em] font-black mb-2">CURRENT THREAT ASSESSMENT</p>
+                <CCThreat score={threat} />
+                <p className="text-[10px] text-neutral-700 mt-1.5">Score: {threat}/100 · Updated: {refreshAt?.toLocaleTimeString()??'—'}</p>
+              </div>
+              <button onClick={() => fetchAll(['security'])} className="px-3 py-1.5 border border-white/10 rounded-lg text-[11px] text-neutral-500 hover:text-neutral-300 transition-colors font-bold tracking-wider">RESCAN</button>
+            </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <CCStat label="Errors 1h" value={security?.errLast1h} color={security?.errSpike?'text-red-400':'text-neutral-300'} glow={security?.errSpike?'cc-glow-r':undefined} sub={security?.errSpike?'⚠ SPIKE DETECTED':'nominal'} />
+              <CCStat label="Errors 24h" value={security?.errLast24h} color="text-neutral-500" />
+              <CCStat label="Auth Failures" value={security?.failedLogins?.length} color={security?.failedLogins?.length>5?'text-red-400':'text-neutral-400'} sub="in log buffer" />
+              <CCStat label="Flagged Users" value={security?.suspiciousParticipants?.length} color={security?.suspiciousParticipants?.length>0?'text-amber-400':'text-neutral-600'} sub="5+ events/24h" />
+            </div>
+
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
+              <Panel>
+                <PanelHead><span className="text-[10px] font-black tracking-[.15em] text-neutral-600">TOP ERROR PATTERNS</span></PanelHead>
+                <div className="divide-y divide-white/[.03]">
+                  {security?.topErrors?.length ? security.topErrors.map((e,i) => (
+                    <div key={i} className="px-4 py-2.5 flex items-center justify-between gap-3 cc-tr">
+                      <p className="text-[11px] text-neutral-500 cc-mono flex-1 truncate">{e.msg}</p>
+                      <Tag color={e.count>10?'red':'neutral'}>{e.count}×</Tag>
+                    </div>
+                  )) : <p className="px-4 py-4 text-[11px] text-neutral-700">No error patterns</p>}
+                </div>
+              </Panel>
+
+              <Panel>
+                <PanelHead><span className="text-[10px] font-black tracking-[.15em] text-neutral-600">AUTH FAILURE LOG</span></PanelHead>
+                <div className="divide-y divide-white/[.03] max-h-48 overflow-y-auto">
+                  {security?.failedLogins?.length ? security.failedLogins.slice(0,15).map((e,i) => (
+                    <div key={i} className="px-4 py-2 flex items-center justify-between gap-2 cc-tr">
+                      <p className="text-[11px] text-red-400/70 cc-mono flex-1 truncate">{e.msg}</p>
+                      <span className="text-[10px] text-neutral-700 cc-mono shrink-0">{new Date(e.ts).toLocaleTimeString()}</span>
+                    </div>
+                  )) : <p className="px-4 py-4 text-[11px] text-neutral-700">No auth failures</p>}
+                </div>
+              </Panel>
+            </div>
+
+            {security?.suspiciousParticipants?.length > 0 && (
+              <Panel className="border-amber-800/25 cc-glow-a">
+                <PanelHead><span className="text-[10px] font-black tracking-[.15em] text-amber-500">⚠ SUSPICIOUS PARTICIPANT ACTIVITY</span></PanelHead>
+                <table className="w-full text-[11px]">
+                  <thead><tr className="border-b border-white/[.04] bg-white/[.02]">
+                    <th className="text-left px-4 py-2 text-neutral-600 font-semibold uppercase tracking-wider">Username</th>
+                    <th className="text-right px-4 py-2 text-neutral-600 font-semibold uppercase tracking-wider">Events (24h)</th>
+                  </tr></thead>
+                  <tbody>
+                    {security.suspiciousParticipants.map((u,i) => (
+                      <tr key={i} className="border-b border-white/[.03] cc-tr">
+                        <td className="px-4 py-2 cc-mono text-amber-400">{u._id}</td>
+                        <td className="px-4 py-2 text-right font-black text-amber-400 cc-mono">{u.count}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </Panel>
+            )}
+
+            {security?.largeFiles?.length > 0 && (
+              <Panel>
+                <PanelHead><span className="text-[10px] font-black tracking-[.15em] text-neutral-600">LARGE FILE UPLOADS — TOP 10</span></PanelHead>
+                <table className="w-full text-[11px]">
+                  <thead><tr className="border-b border-white/[.04] bg-white/[.02]">
+                    <th className="text-left px-4 py-2 text-neutral-600 font-semibold uppercase tracking-wider">File</th>
+                    <th className="text-right px-4 py-2 text-neutral-600 font-semibold uppercase tracking-wider">Size</th>
+                    <th className="text-right px-4 py-2 text-neutral-600 font-semibold uppercase tracking-wider">Uploaded</th>
+                  </tr></thead>
+                  <tbody>
+                    {security.largeFiles.map((f,i) => (
+                      <tr key={i} className="border-b border-white/[.03] cc-tr">
+                        <td className="px-4 py-2 text-neutral-400 truncate max-w-xs">{f.name||'unnamed'}</td>
+                        <td className="px-4 py-2 text-right cc-mono text-neutral-300">{f.size?`${(f.size/1048576).toFixed(1)} MB`:'—'}</td>
+                        <td className="px-4 py-2 text-right text-neutral-700 cc-mono">{f.uploadedAt?new Date(f.uploadedAt).toLocaleDateString():'—'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </Panel>
+            )}
+
+            {security?.busyEvents?.length > 0 && (
+              <Panel>
+                <PanelHead><span className="text-[10px] font-black tracking-[.15em] text-neutral-600">HIGH-PARTICIPANT EVENTS</span></PanelHead>
+                <table className="w-full text-[11px]">
+                  <thead><tr className="border-b border-white/[.04] bg-white/[.02]">
+                    <th className="text-left px-4 py-2 text-neutral-600 font-semibold uppercase tracking-wider">Event</th>
+                    <th className="text-right px-4 py-2 text-neutral-600 font-semibold uppercase tracking-wider">Guests</th>
+                    <th className="text-right px-4 py-2 text-neutral-600 font-semibold uppercase tracking-wider">Status</th>
+                  </tr></thead>
+                  <tbody>
+                    {security.busyEvents.map((e,i) => (
+                      <tr key={i} className="border-b border-white/[.03] cc-tr">
+                        <td className="px-4 py-2">
+                          <p className="font-bold text-neutral-300 truncate max-w-xs">{e.title}</p>
+                          <p className="text-neutral-700 cc-mono">{e.subdomain}</p>
+                        </td>
+                        <td className="px-4 py-2 text-right font-black text-neutral-200 cc-mono">{e.participantCount}</td>
+                        <td className="px-4 py-2 text-right"><Tag color={e.status==='active'?'green':e.status==='completed'?'violet':'neutral'}>{e.status}</Tag></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </Panel>
+            )}
+          </div>
+        )}
+
+        {/* ═══════════════ ASSET OPS ═══════════════ */}
+        {tab === 'asset' && (
+          <div className="space-y-5">
+            {/* Global search */}
+            <Panel>
+              <PanelHead><span className="text-[10px] font-black tracking-[.15em] text-neutral-600">GLOBAL ASSET SEARCH</span></PanelHead>
+              <div className="p-4">
+                <div className="flex gap-2 mb-4">
+                  <input value={sq} onChange={e=>setSq(e.target.value)} onKeyDown={e=>e.key==='Enter'&&globalSearch()}
+                    placeholder="Search participants, events, organisers across all data…"
+                    className="flex-1 bg-black border border-white/10 rounded-lg px-3 py-2 text-[11px] text-neutral-200 focus:outline-none focus:border-violet-500 placeholder-neutral-800 cc-mono" />
+                  <button onClick={globalSearch} disabled={sLoading||sq.length<2}
+                    className="px-4 py-2 bg-violet-600 hover:bg-violet-500 rounded-lg text-[11px] font-black tracking-widest disabled:opacity-40 transition-colors flex items-center gap-2">
+                    {sLoading?<><span className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin"/>SCANNING</> :<><Search className="w-3 h-3"/>SEARCH</>}
+                  </button>
+                </div>
+                {sr && (
+                  <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
+                    {[
+                      { title:`PARTICIPANTS (${sr.participants?.length})`, items:sr.participants?.map(p=>({ h:p.username, s:`${p.eventTitle} · ${p.checkedIn?'✓ checked in':'not checked in'}` })) },
+                      { title:`EVENTS (${sr.events?.length})`, items:sr.events?.map(e=>({ h:e.title, s:`${e.subdomain} · ${e.status} · ${e.participantCount} guests` })) },
+                      { title:`ORGANISERS (${sr.organizers?.length})`, items:sr.organizers?.map(o=>({ h:o.name||'—', s:`${o._id} · ${o.events} events` })) },
+                    ].map(({ title, items }) => (
+                      <div key={title}>
+                        <p className="text-[10px] font-black tracking-[.15em] text-neutral-700 mb-2">{title}</p>
+                        <div className="space-y-1 max-h-48 overflow-y-auto">
+                          {items?.length ? items.map((it,i) => (
+                            <div key={i} className="bg-white/[.025] rounded-lg px-3 py-2 text-[11px]">
+                              <p className="font-bold text-neutral-300">{it.h}</p>
+                              <p className="text-neutral-700 cc-mono">{it.s}</p>
+                            </div>
+                          )) : <p className="text-neutral-700 text-[11px]">No results</p>}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </Panel>
+
+            {/* Check-in velocity */}
+            {events?.activeVelocity?.length > 0 && (
+              <Panel>
+                <PanelHead><span className="text-[10px] font-black tracking-[.15em] text-neutral-600">LIVE CHECK-IN VELOCITY</span></PanelHead>
+                <div className="divide-y divide-white/[.03]">
+                  {events.activeVelocity.map((e,i) => (
+                    <div key={i} className="px-4 py-3 flex items-center gap-4 cc-tr">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[11px] font-bold text-neutral-300 truncate">{e.title}</p>
+                        <p className="text-[10px] text-neutral-700 cc-mono">{e.subdomain}</p>
+                      </div>
+                      <div className="text-right shrink-0">
+                        <p className="text-[11px] font-black text-emerald-400 cc-mono">{e.checkedIn}/{e.total}</p>
+                        <p className="text-[10px] text-neutral-700">{e.pct}%</p>
+                      </div>
+                      <div className="w-20 shrink-0">
+                        <CCBar v={e.pct} max={100} color="#22c55e" />
+                        {e.last5min>0 && <p className="text-[10px] text-emerald-400 cc-mono mt-1">{e.last5min}/5min ↑</p>}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </Panel>
+            )}
+
+            {/* Abandoned events */}
+            {events?.abandonedEvents?.length > 0 && (
+              <Panel className="border-amber-800/20 cc-glow-a">
+                <PanelHead>
+                  <span className="text-[10px] font-black tracking-[.15em] text-amber-500">ABANDONED EVENTS ({events.abandonedEvents.length})</span>
+                  <button onClick={() => bulkOp('cancel-abandoned',{},'Cancel all abandoned events?')} disabled={bulk}
+                    className="text-[11px] px-3 py-1 border border-amber-700/40 rounded-lg text-amber-500 hover:bg-amber-900/20 transition-colors font-black disabled:opacity-40">
+                    BULK CANCEL
+                  </button>
+                </PanelHead>
+                <div className="divide-y divide-white/[.03] max-h-52 overflow-y-auto">
+                  {events.abandonedEvents.slice(0,20).map((e,i) => (
+                    <div key={i} className="px-4 py-2.5 flex items-center justify-between gap-3 cc-tr">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[11px] font-bold text-neutral-400 truncate">{e.title}</p>
+                        <p className="text-[10px] text-neutral-700 cc-mono">{e.organizerEmail}</p>
+                      </div>
+                      <div className="text-right shrink-0">
+                        <p className="text-[10px] text-neutral-600 cc-mono">{e.date?new Date(e.date).toLocaleDateString():'—'}</p>
+                        <p className="text-[10px] text-neutral-800">{e.participantCount} guests</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </Panel>
+            )}
+
+            {/* Bulk ops */}
+            <Panel>
+              <PanelHead><span className="text-[10px] font-black tracking-[.15em] text-neutral-600">BULK OPERATION CONSOLE</span></PanelHead>
+              <div className="p-4 grid grid-cols-1 sm:grid-cols-3 gap-3">
+                {[
+                  { action:'force-complete-old',  label:'FORCE-COMPLETE OLD',   desc:'Mark active/draft events >7 days past as completed', filter:{days:7}, color:'border-blue-700/40 text-blue-400',  confirm:'Force-complete all stale active events?' },
+                  { action:'delete-empty-drafts', label:'DELETE EMPTY DRAFTS',  desc:'Delete draft events >3 days old with zero guests',   filter:{days:3}, color:'border-red-700/40 text-red-400',    confirm:'Delete all empty draft events? Cannot be undone.' },
+                  { action:'cancel-abandoned',    label:'CANCEL ABANDONED',     desc:'Cancel active events past their date, no check-ins', filter:{},       color:'border-amber-700/40 text-amber-400', confirm:'Cancel all abandoned events?' },
+                ].map(op => (
+                  <div key={op.action} className={`rounded-xl border ${op.color} bg-white/[.02] p-3.5`}>
+                    <p className="text-[11px] font-black tracking-wider mb-1">{op.label}</p>
+                    <p className="text-[10px] text-neutral-600 mb-3 leading-relaxed">{op.desc}</p>
+                    <button onClick={() => bulkOp(op.action, op.filter, op.confirm)} disabled={bulk}
+                      className="w-full py-1.5 border border-current rounded-lg text-[11px] font-black tracking-wider disabled:opacity-40 hover:bg-white/[.04] transition-colors">
+                      {bulk?'EXECUTING…':'EXECUTE'}
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </Panel>
+
+            {/* Cleanup preview */}
+            {events?.cleanupCandidates?.length > 0 && (
+              <Panel>
+                <PanelHead><span className="text-[10px] font-black tracking-[.15em] text-neutral-600">CLEANUP PREVIEW — {events.cleanupCandidates.length} CANDIDATES</span></PanelHead>
+                <div className="divide-y divide-white/[.03] max-h-40 overflow-y-auto">
+                  {events.cleanupCandidates.map((e,i) => (
+                    <div key={i} className="px-4 py-2 flex items-center justify-between cc-tr">
+                      <p className="text-[11px] text-neutral-600 truncate">{e.title}</p>
+                      <span className="text-[10px] text-neutral-700 cc-mono shrink-0">{new Date(e.updatedAt).toLocaleDateString()}</span>
+                    </div>
+                  ))}
+                </div>
+              </Panel>
+            )}
+          </div>
+        )}
+
+        {/* ═══════════════ DISPATCH ═══════════════ */}
+        {tab === 'dispatch' && (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+            <Panel>
+              <PanelHead>
+                <span className="text-[10px] font-black tracking-[.15em] text-neutral-500 flex items-center gap-2"><Terminal className="w-3.5 h-3.5 text-violet-400"/>COMMAND DISPATCH</span>
+              </PanelHead>
+              <div className="p-4 space-y-4">
+                <div>
+                  <p className="text-[10px] text-neutral-700 tracking-widest uppercase mb-2 font-bold">Target Node</p>
+                  <div className="grid grid-cols-3 gap-2">
+                    {['backend','router','watchdog'].map(t => (
+                      <button key={t} onClick={()=>{setDTarget(t);setDCmd(CMDS[t][0].id);}}
+                        className={`py-2 rounded-lg text-[11px] font-black uppercase tracking-widest transition-all ${dTarget===t?'bg-violet-600 text-white':'bg-white/[.04] text-neutral-600 hover:bg-white/[.07] border border-white/[.07]'}`}>
+                        {t}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <p className="text-[10px] text-neutral-700 tracking-widest uppercase mb-2 font-bold">Command</p>
+                  <div className="space-y-1.5">
+                    {CMDS[dTarget].map(cmd => (
+                      <button key={cmd.id} onClick={()=>setDCmd(cmd.id)}
+                        className={`w-full text-left p-3 rounded-xl transition-colors ${dCmd===cmd.id?'bg-violet-900/40 border border-violet-500/30':'bg-white/[.025] hover:bg-white/[.05] border border-transparent'}`}>
+                        <p className="text-[11px] font-black text-neutral-200 tracking-wider">{cmd.label}</p>
+                        <p className="text-[10px] text-neutral-600 mt-0.5">{cmd.desc}</p>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <p className="text-[10px] text-neutral-700 tracking-widest uppercase mb-2 font-bold">Params <span className="normal-case font-normal text-neutral-800">(optional JSON)</span></p>
+                  <textarea value={dParams} onChange={e=>setDParams(e.target.value)} rows={3}
+                    placeholder='{ "provider": "brevo" }'
+                    className="w-full bg-black border border-white/[.08] rounded-xl px-3 py-2.5 text-[11px] cc-mono text-neutral-300 resize-none focus:outline-none focus:border-violet-500 placeholder-neutral-800" />
+                </div>
+                <button onClick={dispatch} disabled={dRunning}
+                  className="w-full py-3 rounded-xl bg-violet-600 hover:bg-violet-500 text-sm font-black tracking-widest flex items-center justify-center gap-2 transition-colors disabled:opacity-40">
+                  {dRunning?<><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"/>EXECUTING</>:<><Play className="w-4 h-4"/>EXECUTE</>}
+                </button>
+              </div>
+            </Panel>
+
+            <div className="space-y-4">
+              {/* Last result */}
+              <div className="rounded-xl bg-black border border-white/[.06] p-4 flex-1">
+                <div className="flex items-center justify-between mb-3">
+                  <p className="text-[10px] font-black tracking-widest text-neutral-700">OUTPUT</p>
+                  {cmdLog[0] && <span className="text-[10px] text-neutral-700 cc-mono">{cmdLog[0].ms}ms</span>}
+                </div>
+                {!cmdLog.length
+                  ? <p className="text-[11px] text-neutral-800 cc-mono">AWAITING COMMAND…</p>
+                  : <>
+                    <div className="flex items-center gap-2 mb-3">
+                      <Tag color={cmdLog[0].ok?'green':'red'}>{cmdLog[0].ok?'OK':'FAIL'}</Tag>
+                      <span className="text-[11px] text-neutral-600 cc-mono">{cmdLog[0].target} / {cmdLog[0].cmd}</span>
+                      <span className="text-[10px] text-neutral-700 cc-mono ml-auto">{new Date(cmdLog[0].ts).toLocaleTimeString()}</span>
+                    </div>
+                    <pre className="text-[11px] cc-mono text-neutral-300 whitespace-pre-wrap overflow-auto max-h-64">
+                      {cmdLog[0].ok ? JSON.stringify(cmdLog[0].result,null,2) : cmdLog[0].error}
+                    </pre>
+                  </>}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ═══════════════ SIGNAL (Email Pool) ═══════════════ */}
+        {tab === 'signal' && (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-black tracking-[.15em] text-neutral-600">EMAIL SIGNAL POOL</span>
+              <button onClick={() => adminAPI.ccGetEmailPool().then(r=>setPool(r.data.pool)).catch(()=>{})}
+                className="px-2.5 py-1.5 border border-white/10 rounded-lg text-[11px] text-neutral-500 hover:text-neutral-300 transition-colors flex items-center gap-1.5">
+                <RefreshCw className="w-3 h-3"/> REFRESH
+              </button>
+            </div>
+            {!pool
+              ? <div className="rounded-xl bg-white/[.025] p-10 text-center text-neutral-700 text-[11px]">Email pool unavailable — ensure ROUTER_URL is configured</div>
+              : (
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                  {Object.entries(pool).filter(([k])=>k!=='_summary').map(([name,p]) => (
+                    <Panel key={name}>
+                      <div className="p-4">
+                        <div className="flex items-center justify-between mb-4">
+                          <div>
+                            <p className="text-sm font-black tracking-widest text-neutral-200">{p.provider?.toUpperCase()}</p>
+                            <p className="text-[10px] text-neutral-700">{p.totalKeys} key(s) · {(p.monthlyFree||0).toLocaleString()}/mo free</p>
+                          </div>
+                          <Tag color={p.activeKeys>0?'green':'red'}>{p.activeKeys} ACTIVE</Tag>
+                        </div>
+                        <div className="space-y-2">
+                          {p.keys?.map(k => (
+                            <div key={k.index} className={`flex items-center justify-between rounded-lg p-3 ${k.status==='active'?'bg-emerald-900/10 border border-emerald-800/20':'bg-red-900/10 border border-red-800/20'}`}>
+                              <div className="flex items-center gap-2">
+                                <Key className={`w-3 h-3 ${k.status==='active'?'text-emerald-400':'text-red-400'}`}/>
+                                <span className="text-[11px] cc-mono text-neutral-500">{k.keySuffix}</span>
+                              </div>
+                              <div className="text-right text-[11px]">
+                                <p className={`font-black tracking-wider ${k.status==='active'?'text-emerald-400':'text-red-400'}`}>{k.status?.toUpperCase()}</p>
+                                {k.resumesAt && <p className="text-neutral-700 cc-mono">{new Date(k.resumesAt).toLocaleTimeString()}</p>}
+                                <p className="text-neutral-700 cc-mono">{k.useCount} sends</p>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                        {p.keys?.some(k=>k.status==='suspended') && (
+                          <button onClick={async()=>{try{await adminAPI.ccCommand('router','clear-key-suspension',{provider:name});toast.success('Cleared');setTimeout(()=>adminAPI.ccGetEmailPool().then(r=>setPool(r.data.pool)),800);}catch{toast.error('Failed');}}}
+                            className="mt-3 w-full py-2 rounded-lg border border-amber-700/40 text-[11px] font-black text-amber-400 hover:bg-amber-900/20 tracking-widest transition-colors">
+                            UNSUSPEND {name.toUpperCase()} KEYS
+                          </button>
+                        )}
+                      </div>
+                    </Panel>
+                  ))}
+                  {pool._summary && (
+                    <div className="lg:col-span-2 rounded-xl border border-violet-500/20 bg-violet-900/10 p-4 flex items-center justify-between">
+                      <p className="text-[11px] text-violet-500 font-black tracking-widest">TOTAL MONTHLY FREE CAPACITY</p>
+                      <p className="text-2xl font-black text-violet-300 cc-mono">{(pool._summary.totalMonthlyFree||0).toLocaleString()} emails/mo</p>
+                    </div>
+                  )}
+                </div>
+              )}
+          </div>
+        )}
+
+        {/* ═══════════════ STORAGE (DB Inspector) ═══════════════ */}
+        {tab === 'storage' && (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-black tracking-[.15em] text-neutral-600">DATABASE STORAGE MATRIX</span>
+              <button onClick={()=>adminAPI.ccGetDb().then(r=>setDb(r.data)).catch(()=>{})}
+                className="px-2.5 py-1.5 border border-white/10 rounded-lg text-[11px] text-neutral-500 hover:text-neutral-300 transition-colors flex items-center gap-1.5">
+                <RefreshCw className="w-3 h-3"/> REFRESH
+              </button>
+            </div>
+            {!db
+              ? <div className="rounded-xl bg-white/[.025] p-10 text-center text-neutral-700 text-[11px]">Loading database…</div>
+              : <>
+                <div className="grid grid-cols-3 gap-3">
+                  <CCStat label="Collections" value={db.collections?.length} />
+                  <CCStat label="DB State" value={db.state?.toUpperCase()} color={db.state==='connected'?'text-emerald-400':'text-red-400'} />
+                  <CCStat label="Database" value={db.dbName} color="text-violet-300" />
+                </div>
+                <Panel>
+                  <table className="w-full text-[11px]">
+                    <thead><tr className="border-b border-white/[.06] bg-white/[.025]">
+                      {['Collection','Docs','Data','Indexes','Avg Doc'].map(h=>(
+                        <th key={h} className={`${h==='Collection'?'text-left':'text-right'} px-4 py-3 text-neutral-600 font-semibold uppercase tracking-wider`}>{h}</th>
+                      ))}
+                    </tr></thead>
+                    <tbody>
+                      {db.collections?.map(c => (
+                        <tr key={c.name} className="border-b border-white/[.03] cc-tr">
+                          <td className="px-4 py-2.5 cc-mono text-neutral-300">{c.name}</td>
+                          <td className="px-4 py-2.5 text-right text-neutral-400 cc-mono">{(c.count||0).toLocaleString()}</td>
+                          <td className="px-4 py-2.5 text-right text-neutral-400 cc-mono">{c.sizeMB} MB</td>
+                          <td className="px-4 py-2.5 text-right text-neutral-600 cc-mono">{c.indexSizeMB} MB</td>
+                          <td className="px-4 py-2.5 text-right text-neutral-700 cc-mono">{c.avgObjSize?`${c.avgObjSize}B`:'—'}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </Panel>
+              </>}
+          </div>
+        )}
+
+        {/* ═══════════════ RUNTIME ═══════════════ */}
+        {tab === 'runtime' && (
+          <div className="space-y-5">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <CCStat label="WS Connections" value={runtime?.wsStats?.connected??'—'} color="text-cyan-400" sub={runtime?.wsStats?.note} />
+              <CCStat label="WS Rooms" value={runtime?.wsStats?.rooms??'—'} color="text-cyan-300" />
+              <CCStat label="Redis Mode" value={runtime?.redisHealth?.mode?.toUpperCase()??'—'} color={runtime?.redisHealth?.connected?'text-emerald-400':'text-amber-400'} sub={runtime?.redisHealth?.pingOk?`${runtime.redisHealth.pingMs}ms`:'in-memory'} />
+              <CCStat label="Config Score" value={runtime?`${runtime.configScore}%`:'—'} color={runtime?.configScore>=80?'text-emerald-400':runtime?.configScore>=50?'text-amber-400':'text-red-400'} />
+            </div>
+
+            {runtime?.process && (
+              <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
+                <Panel>
+                  <PanelHead><span className="text-[10px] font-black tracking-[.15em] text-neutral-600">PROCESS VITALS</span></PanelHead>
+                  <div className="p-4 space-y-3">
+                    <div className="grid grid-cols-3 gap-2 text-[11px]">
+                      {[['PID',runtime.process.pid],['NODE',runtime.process.node],['UPTIME',fmtUptime(runtime.process.uptime)],
+                        ['CPU CORES',runtime.process.cpuCount],['LOAD 1m',runtime.process.loadAvg?.[0]],['LOAD 5m',runtime.process.loadAvg?.[1]]
+                      ].map(([l,v]) => (
+                        <div key={l} className="bg-white/[.025] rounded-lg p-2">
+                          <p className="text-neutral-700 text-[10px] uppercase tracking-wider mb-0.5">{l}</p>
+                          <p className="font-black text-neutral-300 cc-mono">{v??'—'}</p>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="bg-white/[.025] rounded-lg p-3">
+                      <div className="flex justify-between text-[11px] mb-1.5">
+                        <span className="text-neutral-700">HEAP</span>
+                        <span className="text-neutral-400 cc-mono">{runtime.process.memMB.heapUsed}/{runtime.process.memMB.heapTotal} MB</span>
+                      </div>
+                      <CCBar v={runtime.process.memMB.heapUsed} max={runtime.process.memMB.heapTotal} color="#8b5cf6" />
+                    </div>
+                    <div className="bg-white/[.025] rounded-lg p-3">
+                      <div className="flex justify-between text-[11px] mb-1.5">
+                        <span className="text-neutral-700">SYS MEM</span>
+                        <span className="text-neutral-400 cc-mono">{runtime.process.totalMemMB-runtime.process.freeMemMB}/{runtime.process.totalMemMB} MB</span>
+                      </div>
+                      <CCBar v={runtime.process.totalMemMB-runtime.process.freeMemMB} max={runtime.process.totalMemMB} color="#06b6d4" />
+                    </div>
+                  </div>
+                </Panel>
+
+                {runtime.config && (
+                  <Panel>
+                    <PanelHead><span className="text-[10px] font-black tracking-[.15em] text-neutral-600">ENVIRONMENT CONFIG</span></PanelHead>
+                    <div className="p-4 space-y-1.5">
+                      {runtime.config.map(c => (
+                        <div key={c.key} className={`flex items-center justify-between px-3 py-2 rounded-lg ${c.set?'bg-emerald-900/10 border border-emerald-800/20':'bg-red-900/8 border border-red-800/20'}`}>
+                          <span className="text-[11px] text-neutral-400">{c.label}</span>
+                          <Tag color={c.set?'green':'red'}>{c.set?'✓ SET':'✗ MISSING'}</Tag>
+                        </div>
+                      ))}
+                    </div>
+                  </Panel>
+                )}
+              </div>
+            )}
+            <button onClick={()=>fetchAll(['runtime'])} className="px-3 py-2 border border-white/10 rounded-lg text-[11px] text-neutral-600 hover:text-neutral-300 transition-colors flex items-center gap-1.5">
+              <RefreshCw className="w-3 h-3"/> REFRESH RUNTIME
+            </button>
+          </div>
+        )}
+
+        {/* ═══════════════ AUDIT ═══════════════ */}
+        {tab === 'audit' && (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-black tracking-[.15em] text-neutral-600">COMMAND AUDIT LOG ({cmdLog.length})</span>
+              {cmdLog.length>0 && <button onClick={()=>setCmdLog([])} className="text-[11px] text-neutral-700 hover:text-red-400 transition-colors">CLEAR</button>}
+            </div>
+            {!cmdLog.length
+              ? <div className="rounded-xl bg-white/[.02] border border-white/[.04] p-14 text-center text-neutral-800 text-[11px] tracking-widest">NO COMMANDS EXECUTED THIS SESSION</div>
+              : <div className="space-y-2">
+                {cmdLog.map((e,i) => (
+                  <div key={i} className={`rounded-xl border p-4 ${e.ok?'bg-emerald-950/8 border-emerald-800/15':'bg-red-950/8 border-red-800/15'}`}>
+                    <div className="flex items-center gap-3 mb-2 text-[11px]">
+                      <Tag color={e.ok?'green':'red'}>{e.ok?'OK':'FAIL'}</Tag>
+                      <span className="cc-mono text-neutral-500">{e.target} / {e.cmd}</span>
+                      <span className="text-neutral-700 cc-mono">{e.ms}ms</span>
+                      <span className="ml-auto text-neutral-700 cc-mono">{new Date(e.ts).toLocaleTimeString()}</span>
+                    </div>
+                    <pre className="text-[11px] cc-mono text-neutral-600 whitespace-pre-wrap overflow-auto max-h-36">
+                      {e.ok ? JSON.stringify(e.result,null,2) : e.error}
+                    </pre>
+                  </div>
+                ))}
+              </div>}
+          </div>
+        )}
+
       </div>
     </div>
   );
 }
+
+
 
 
 const NAV_ITEMS = [
