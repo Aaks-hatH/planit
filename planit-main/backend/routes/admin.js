@@ -1131,4 +1131,219 @@ router.post('/marketing/send', verifyAdmin, async (req, res, next) => {
   }
 });
 
+// ═══════════════════════════════════════════════════════════════════════════════
+// COMMAND CENTER  —  super_admin only
+// ═══════════════════════════════════════════════════════════════════════════════
+
+function requireSuperAdmin(req, res, next) {
+  if (req.user?.role !== 'super_admin' && !(!req.user?.isEmployee && req.user?.isAdmin)) {
+    return res.status(403).json({ error: 'Command Center is restricted to super_admin.' });
+  }
+  next();
+}
+
+// GET /admin/cc/fleet — full fleet metrics from all services
+router.get('/cc/fleet', verifyAdmin, requireSuperAdmin, async (req, res) => {
+  const { meshGet, meshPost } = require('../middleware/mesh');
+  const CALLER    = process.env.BACKEND_LABEL || 'Backend';
+  const routerUrl = process.env.ROUTER_URL    || '';
+
+  const localMem  = process.memoryUsage();
+  const localSnap = {
+    service:  CALLER,
+    type:     'backend',
+    pid:      process.pid,
+    uptime:   Math.floor(process.uptime()),
+    node:     process.version,
+    memMB: {
+      rss:       +(localMem.rss       / 1048576).toFixed(1),
+      heapUsed:  +(localMem.heapUsed  / 1048576).toFixed(1),
+      heapTotal: +(localMem.heapTotal / 1048576).toFixed(1),
+    },
+    logEntries:   global.__adminLogBuffer?.length || 0,
+    liveClients:  global.__adminLogClients?.length || 0,
+    errors24h:    (global.__adminLogBuffer || []).filter(e => e.level === 'error' && new Date(e.ts) > new Date(Date.now() - 86400000)).length,
+    warns24h:     (global.__adminLogBuffer || []).filter(e => e.level === 'warn'  && new Date(e.ts) > new Date(Date.now() - 86400000)).length,
+    ok: true,
+  };
+
+  if (!routerUrl) {
+    return res.json({ services: [localSnap], fetchedAt: new Date().toISOString(), note: 'ROUTER_URL not set' });
+  }
+
+  const [routerR, watchdogR] = await Promise.all([
+    meshPost(CALLER, `${routerUrl}/mesh/exec`, { command: 'stats' }, { timeout: 8000 })
+      .catch(() => ({ ok: false })),
+    meshGet(CALLER, `${(process.env.WATCHDOG_URL || '').replace(/\/$/, '')}/mesh/status`, { timeout: 8000 })
+      .catch(() => ({ ok: false })),
+  ]);
+
+  const services = [localSnap];
+
+  if (routerR.ok && routerR.data?.result) {
+    const r = routerR.data.result;
+    services.push({ service: 'Router', type: 'router', pid: r.pid, uptime: r.uptime, node: r.nodeVersion, memMB: r.memMB, logEntries: r.logBufferLen, backends: r.backends, emailPool: r.emailPool, ok: true });
+  } else {
+    services.push({ service: 'Router', type: 'router', ok: false, error: 'unreachable' });
+  }
+
+  if (watchdogR.ok && watchdogR.data) {
+    const d = watchdogR.data;
+    services.push({ service: 'Watchdog', type: 'watchdog', pid: d.pid, uptime: d.uptime, node: d.nodeVersion || d.version, ok: true, monitoredServices: d.services?.length || 0 });
+  } else {
+    services.push({ service: 'Watchdog', type: 'watchdog', ok: false, error: 'unreachable' });
+  }
+
+  res.json({ services, fetchedAt: new Date().toISOString() });
+});
+
+// POST /admin/cc/command — dispatch a command to a specific service
+router.post('/cc/command', verifyAdmin, requireSuperAdmin, async (req, res) => {
+  const { target, command, params = {} } = req.body || {};
+  if (!target || !command) return res.status(400).json({ error: 'target and command required' });
+
+  const { meshPost, meshGet } = require('../middleware/mesh');
+  const CALLER    = process.env.BACKEND_LABEL || 'Backend';
+  const routerUrl = (process.env.ROUTER_URL || '').replace(/\/$/, '');
+  const watchdogUrl = (process.env.WATCHDOG_URL || '').replace(/\/$/, '');
+
+  const BACKEND_COMMANDS = ['flush-logs', 'gc', 'ping', 'stats', 'cache-clear'];
+  const ROUTER_COMMANDS  = ['flush-logs', 'gc', 'ping', 'stats', 'clear-key-suspension', 'list-backends'];
+
+  if (target === 'backend') {
+    switch (command) {
+      case 'ping':
+        return res.json({ ok: true, result: { pong: true, ts: new Date().toISOString(), pid: process.pid } });
+      case 'stats': {
+        const m = process.memoryUsage();
+        return res.json({ ok: true, result: { pid: process.pid, uptime: Math.floor(process.uptime()), memMB: { rss: +(m.rss/1048576).toFixed(1), heapUsed: +(m.heapUsed/1048576).toFixed(1), heapTotal: +(m.heapTotal/1048576).toFixed(1) }, logBuffer: global.__adminLogBuffer?.length || 0, node: process.version } });
+      }
+      case 'flush-logs': {
+        const count = global.__adminLogBuffer?.length || 0;
+        if (global.__adminLogBuffer) global.__adminLogBuffer.length = 0;
+        console.log(`[cc] Backend log buffer flushed (${count} entries)`);
+        return res.json({ ok: true, result: { flushed: count } });
+      }
+      case 'gc': {
+        let ran = false;
+        if (global.gc) { global.gc(); ran = true; }
+        return res.json({ ok: true, result: { gcRan: ran } });
+      }
+      case 'cache-clear': {
+        console.log('[cc] Cache clear requested via command center — use flush-logs for log buffer or clear-key-suspension for email keys');
+        return res.json({ ok: true, result: { note: 'Cache clear acknowledged. Use clear-key-suspension on the router to unsuspend rate-limited email keys.' } });
+      }
+      default:
+        if (!BACKEND_COMMANDS.includes(command)) return res.status(400).json({ error: `Unknown backend command: ${command}` });
+    }
+  }
+
+  if (target === 'router') {
+    if (!routerUrl) return res.status(503).json({ error: 'ROUTER_URL not set' });
+    if (!ROUTER_COMMANDS.includes(command)) return res.status(400).json({ error: `Unknown router command: ${command}` });
+    const r = await meshPost(CALLER, `${routerUrl}/mesh/exec`, { command, params }, { timeout: 10000 });
+    if (r.ok) return res.json({ ok: true, result: r.data?.result });
+    return res.status(502).json({ ok: false, error: r.error || 'Router unreachable' });
+  }
+
+  if (target === 'watchdog') {
+    if (!watchdogUrl) return res.status(503).json({ error: 'WATCHDOG_URL not set' });
+    if (command === 'ping') {
+      const r = await meshGet(CALLER, `${watchdogUrl}/watchdog/ping`, { timeout: 8000 });
+      return res.json({ ok: r.ok, result: r.data || { error: r.error } });
+    }
+    if (command === 'status') {
+      const r = await meshGet(CALLER, `${watchdogUrl}/watchdog/status`, { timeout: 8000 });
+      return res.json({ ok: r.ok, result: r.data || { error: r.error } });
+    }
+    if (command === 'stats') {
+      const r = await meshGet(CALLER, `${watchdogUrl}/mesh/status`, { timeout: 8000 });
+      return res.json({ ok: r.ok, result: r.data || { error: r.error } });
+    }
+    return res.status(400).json({ error: `Unknown watchdog command: ${command}` });
+  }
+
+  res.status(400).json({ error: `Unknown target: ${target}. Must be backend, router, or watchdog.` });
+});
+
+// GET /admin/cc/email-pool — Brevo and Mailjet key pool from router
+router.get('/cc/email-pool', verifyAdmin, requireSuperAdmin, async (req, res) => {
+  const { meshGet } = require('../middleware/mesh');
+  const CALLER    = process.env.BACKEND_LABEL || 'Backend';
+  const routerUrl = (process.env.ROUTER_URL || '').replace(/\/$/, '');
+  if (!routerUrl) return res.status(503).json({ error: 'ROUTER_URL not set' });
+  const r = await meshGet(CALLER, `${routerUrl}/mesh/email/pool`, { timeout: 8000 });
+  if (r.ok) return res.json(r.data);
+  res.status(502).json({ ok: false, error: r.error || 'Router unreachable' });
+});
+
+// GET /admin/cc/db — live database collection sizes and index info
+router.get('/cc/db', verifyAdmin, requireSuperAdmin, async (req, res, next) => {
+  try {
+    const db = mongoose.connection.db;
+    if (!db) return res.status(503).json({ error: 'Database not connected' });
+    const collections = await db.listCollections().toArray();
+    const stats = await Promise.all(
+      collections.map(async (col) => {
+        try {
+          const s = await db.collection(col.name).stats();
+          return { name: col.name, count: s.count, sizeMB: +(s.size / 1048576).toFixed(3), indexSizeMB: +(s.totalIndexSize / 1048576).toFixed(3), avgObjSize: s.avgObjSize || 0 };
+        } catch { return { name: col.name, count: 0, sizeMB: 0, error: true }; }
+      })
+    );
+    res.json({ collections: stats.sort((a, b) => b.sizeMB - a.sizeMB), dbName: mongoose.connection.name, state: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected', fetchedAt: new Date().toISOString() });
+  } catch (err) { next(err); }
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// MARKETING — SCHEDULING
+// ═══════════════════════════════════════════════════════════════════════════════
+
+router.post('/marketing/schedule', verifyAdmin, async (req, res, next) => {
+  try {
+    const redis = require('../services/redisClient');
+    const { templateId, recipients, subject, ctaUrl, sendAt, label } = req.body || {};
+    if (!templateId || !Array.isArray(recipients) || recipients.length === 0 || !sendAt)
+      return res.status(400).json({ error: 'templateId, recipients, and sendAt required' });
+
+    const id  = `sched:${Date.now()}:${Math.random().toString(36).slice(2, 8)}`;
+    const job = { id, templateId, recipients, subject: subject || '', ctaUrl: ctaUrl || '', sendAt, label: label || templateId, createdAt: new Date().toISOString(), status: 'pending' };
+    const ttl = Math.max(86400, Math.ceil((new Date(sendAt) - Date.now()) / 1000) + 3600);
+    await redis.set(id, JSON.stringify(job), ttl);
+
+    const listRaw = await redis.get('mktschedlist').catch(() => null);
+    const list    = listRaw ? JSON.parse(listRaw) : [];
+    list.push(id);
+    await redis.set('mktschedlist', JSON.stringify(list), 7 * 86400);
+
+    console.log(`[marketing] Scheduled campaign "${id}" (${recipients.length} recipients) for ${sendAt}`);
+    res.status(201).json({ ok: true, id, job });
+  } catch (err) { next(err); }
+});
+
+router.get('/marketing/scheduled', verifyAdmin, async (req, res, next) => {
+  try {
+    const redis = require('../services/redisClient');
+    const listRaw = await redis.get('mktschedlist').catch(() => null);
+    const ids     = listRaw ? JSON.parse(listRaw) : [];
+    const jobs    = (await Promise.all(ids.map(id => redis.get(id).then(r => r ? JSON.parse(r) : null).catch(() => null)))).filter(Boolean);
+    res.json({ scheduled: jobs, total: jobs.length });
+  } catch (err) { next(err); }
+});
+
+router.delete('/marketing/schedule/:id', verifyAdmin, async (req, res, next) => {
+  try {
+    const redis = require('../services/redisClient');
+    const id    = req.params.id;
+    await redis.del(id).catch(() => {});
+    const listRaw = await redis.get('mktschedlist').catch(() => null);
+    if (listRaw) {
+      const list = JSON.parse(listRaw).filter(x => x !== id);
+      await redis.set('mktschedlist', JSON.stringify(list), 7 * 86400);
+    }
+    console.log(`[marketing] Cancelled scheduled campaign ${id}`);
+    res.json({ ok: true, cancelled: id });
+  } catch (err) { next(err); }
+});
+
 module.exports = router;
