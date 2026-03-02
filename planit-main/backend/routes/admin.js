@@ -1092,53 +1092,31 @@ router.get('/marketing/templates', verifyAdmin, (_req, res) => {
 // Returns the rendered HTML of a template for previewing in an iframe.
 router.get('/marketing/preview/:templateId', verifyAdmin, (req, res) => {
   const { previewTemplate } = require('../services/marketingService');
-  const { ctaUrl } = req.query;
-  const html = previewTemplate(req.params.templateId, ctaUrl);
+  const { ctaUrl, recipientName, recipientCompany, recipientRole } = req.query;
+  const recipient = {
+    name:    recipientName    || '',
+    company: recipientCompany || '',
+    role:    recipientRole    || '',
+  };
+  const html = previewTemplate(req.params.templateId, ctaUrl, recipient);
   if (!html) return res.status(404).json({ error: 'Template not found' });
   res.setHeader('Content-Type', 'text/html');
   res.send(html);
 });
 
-// POST /admin/marketing/send
-// Body: { templateId, recipients: string[], subject?, ctaUrl? }
-// Sends a marketing campaign. Batched, rate-limited per address.
-router.post('/marketing/send', verifyAdmin, async (req, res, next) => {
-  try {
-    const { templateId, recipients, subject, ctaUrl } = req.body || {};
-
-    if (!templateId) {
-      return res.status(400).json({ error: 'templateId is required' });
-    }
-    if (!Array.isArray(recipients) || recipients.length === 0) {
-      return res.status(400).json({ error: 'recipients must be a non-empty array' });
-    }
-    if (recipients.length > 1000) {
-      return res.status(400).json({ error: 'Maximum 1,000 recipients per send. Split into batches for larger lists.' });
-    }
-
-    const { sendCampaign } = require('../services/marketingService');
-    const results = await sendCampaign({ templateId, recipients, subject, ctaUrl });
-    res.json({ ok: true, results });
-  } catch (err) {
-    // Known, user-facing errors — return a descriptive status instead of a raw 500
-    if (err.message && err.message.startsWith('Unknown template')) {
-      return res.status(400).json({ error: err.message });
-    }
-    if (err.message && err.message.includes('ROUTER_URL not set')) {
-      return res.status(503).json({ error: 'Email delivery is not configured on this server. Please set ROUTER_URL.' });
-    }
-    next(err);
-  }
-});
+// POST /admin/marketing/send is defined after the discovery routes below.
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // COMMAND CENTER  —  super_admin only
 // ═══════════════════════════════════════════════════════════════════════════════
 
 function requireSuperAdmin(req, res, next) {
-  if (req.user?.role !== 'super_admin' && !(!req.user?.isEmployee && req.user?.isAdmin)) {
-    return res.status(403).json({ error: 'Command Center is restricted to super_admin.' });
-  }
+  // verifyAdmin sets req.admin — never req.user
+  const admin = req.admin;
+  if (!admin) return res.status(403).json({ error: 'Command Center is restricted to super_admin.' });
+  // Allow super_admin JWT role, or non-employee admins (the root admin login)
+  const ok = admin.role === 'super_admin' || (!admin.isEmployee && admin.isAdmin === true);
+  if (!ok) return res.status(403).json({ error: 'Command Center is restricted to super_admin.' });
   next();
 }
 
@@ -1344,6 +1322,368 @@ router.delete('/marketing/schedule/:id', verifyAdmin, async (req, res, next) => 
     console.log(`[marketing] Cancelled scheduled campaign ${id}`);
     res.json({ ok: true, cancelled: id });
   } catch (err) { next(err); }
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// MARKETING — CONTACT DISCOVERY  (live, SSE-streamed)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+// POST /admin/marketing/discover  — start a discovery run, streams results via SSE
+router.get('/marketing/discover', verifyAdmin, async (req, res) => {
+  const { query, industry, location, limit } = req.query;
+  if (!query && !industry) return res.status(400).json({ error: 'query or industry required' });
+
+  const { discoverLeads } = require('../services/discoveryService');
+
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  res.flushHeaders();
+
+  const send = (type, data) => {
+    try { res.write(`data: ${JSON.stringify({ type, ...data })}\n\n`); } catch {}
+  };
+
+  const redis = require('../services/redisClient');
+  const contactedRaw = await redis.get('mkt:contacted').catch(() => null);
+  const contacted = new Set(contactedRaw ? JSON.parse(contactedRaw) : []);
+
+  let stopped = false;
+  req.on('close', () => { stopped = true; });
+
+  try {
+    await discoverLeads({
+      query: query || '',
+      industry: industry || '',
+      location: location || '',
+      limit: Math.min(parseInt(limit) || 30, 100),
+      contacted,
+      onProgress: (msg) => { if (!stopped) send('progress', { msg }); },
+      onLead: (lead) => {
+        if (!stopped) {
+          const alreadyContacted = contacted.has((lead.email || '').toLowerCase());
+          send('lead', { lead: { ...lead, alreadyContacted } });
+        }
+      },
+      isStopped: () => stopped,
+    });
+  } catch (err) {
+    send('error', { msg: err.message });
+  }
+
+  send('done', { msg: 'Discovery complete' });
+  res.end();
+});
+
+// GET /admin/marketing/contacted  — list of already-emailed addresses
+router.get('/marketing/contacted', verifyAdmin, async (req, res, next) => {
+  try {
+    const redis = require('../services/redisClient');
+    const raw = await redis.get('mkt:contacted').catch(() => null);
+    const list = raw ? JSON.parse(raw) : [];
+    res.json({ contacted: list, total: list.length });
+  } catch (err) { next(err); }
+});
+
+// POST /admin/marketing/contacted/add  — manually mark emails as contacted
+router.post('/marketing/contacted/add', verifyAdmin, async (req, res, next) => {
+  try {
+    const redis = require('../services/redisClient');
+    const { emails } = req.body;
+    if (!Array.isArray(emails)) return res.status(400).json({ error: 'emails array required' });
+    const raw = await redis.get('mkt:contacted').catch(() => null);
+    const set = new Set(raw ? JSON.parse(raw) : []);
+    emails.forEach(e => { if (e) set.add(e.toLowerCase().trim()); });
+    await redis.set('mkt:contacted', JSON.stringify([...set]), 365 * 86400);
+    res.json({ ok: true, total: set.size });
+  } catch (err) { next(err); }
+});
+
+// DELETE /admin/marketing/contacted/:email  — remove from contacted list
+router.delete('/marketing/contacted/:email', verifyAdmin, async (req, res, next) => {
+  try {
+    const redis = require('../services/redisClient');
+    const email = decodeURIComponent(req.params.email).toLowerCase();
+    const raw = await redis.get('mkt:contacted').catch(() => null);
+    const arr = (raw ? JSON.parse(raw) : []).filter(e => e !== email);
+    await redis.set('mkt:contacted', JSON.stringify(arr), 365 * 86400);
+    res.json({ ok: true, total: arr.length });
+  } catch (err) { next(err); }
+});
+
+// Override sendCampaign to auto-track sent emails
+const _origSend = router.stack; // just a reference; we patch via middleware below
+router.post('/marketing/send', verifyAdmin, async (req, res, next) => {
+  try {
+    const { templateId, recipients, subject, ctaUrl } = req.body || {};
+
+    if (!templateId) return res.status(400).json({ error: 'templateId is required' });
+    if (!Array.isArray(recipients) || recipients.length === 0)
+      return res.status(400).json({ error: 'recipients must be a non-empty array' });
+    if (recipients.length > 1000)
+      return res.status(400).json({ error: 'Maximum 1,000 recipients per send.' });
+
+    const { sendCampaign } = require('../services/marketingService');
+
+    // Normalise: accept both plain strings and {email,name,company,role} objects
+    const normalised = recipients.map(r =>
+      typeof r === 'string' ? { email: r.trim().toLowerCase(), name: '', company: '', role: '' } :
+      { email: (r.email || '').trim().toLowerCase(), name: r.name || '', company: r.company || '', role: r.role || '', website: r.website || '' }
+    );
+
+    const results = await sendCampaign({ templateId, recipients: normalised, subject, ctaUrl });
+
+    // Track every successfully sent address
+    try {
+      const redis = require('../services/redisClient');
+      const raw = await redis.get('mkt:contacted').catch(() => null);
+      const set = new Set(raw ? JSON.parse(raw) : []);
+      normalised.forEach(r => { if (r.email) set.add(r.email); });
+      await redis.set('mkt:contacted', JSON.stringify([...set]), 365 * 86400);
+    } catch {}
+
+    res.json({ ok: true, results });
+  } catch (err) {
+    if (err.message?.startsWith('Unknown template')) return res.status(400).json({ error: err.message });
+    if (err.message?.includes('ROUTER_URL not set')) return res.status(503).json({ error: 'Email delivery not configured. Set ROUTER_URL.' });
+    next(err);
+  }
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// COMMAND CENTER — PLATFORM INTELLIGENCE
+// ═══════════════════════════════════════════════════════════════════════════════
+router.get('/cc/platform-metrics', verifyAdmin, requireSuperAdmin, async (req, res, next) => {
+  try {
+    const now = new Date(), d30 = new Date(now - 30*86400000), d7 = new Date(now - 7*86400000);
+
+    const [eventsPerDay, messagesPerDay, eventsByStatus, withPolls, withFiles, withEnterprise, withSeating] = await Promise.all([
+      Event.aggregate([{ $match:{ createdAt:{ $gte:d30 } } },{ $group:{ _id:{ $dateToString:{ format:'%Y-%m-%d', date:'$createdAt' } }, count:{ $sum:1 } } },{ $sort:{ _id:1 } }]),
+      Message.aggregate([{ $match:{ createdAt:{ $gte:d7 }, isDeleted:false } },{ $group:{ _id:{ $dateToString:{ format:'%Y-%m-%d', date:'$createdAt' } }, count:{ $sum:1 } } },{ $sort:{ _id:1 } }]),
+      Event.aggregate([{ $group:{ _id:'$status', count:{ $sum:1 } } }]),
+      Poll.distinct('eventId').then(ids => ids.length).catch(() => 0),
+      File.distinct('eventId').then(ids => ids.length).catch(() => 0),
+      Event.countDocuments({ isEnterpriseMode:true }),
+      Event.countDocuments({ 'settings.seatingEnabled':true }),
+    ]);
+
+    const totalEvents = await Event.countDocuments();
+    const mao         = await Event.distinct('organizerEmail', { createdAt:{ $gte:d30 } });
+    const newOrgsThisWeek = await Event.distinct('organizerEmail', { createdAt:{ $gte:d7 } });
+    const newOrgsLastWeek = await Event.distinct('organizerEmail', { createdAt:{ $gte:new Date(now-14*86400000), $lt:d7 } });
+
+    const eventsWithParticipants = await Event.countDocuments({ 'participants.0':{ $exists:true } });
+    const checkedInEvents = await EventParticipant.distinct('eventId', { checkedIn:true }).then(ids => ids.length).catch(() => 0);
+    const completedEvents = await Event.countDocuments({ status:'completed' });
+
+    const powerUsers = await Event.aggregate([
+      { $group:{ _id:'$organizerEmail', name:{ $last:'$organizerName' }, events:{ $sum:1 }, lastActive:{ $max:'$createdAt' } } },
+      { $sort:{ events:-1 } },{ $limit:10 },
+    ]);
+
+    const adopt = n => totalEvents > 0 ? Math.round((n/totalEvents)*100) : 0;
+    res.json({
+      eventsPerDay, messagesPerDay, eventsByStatus,
+      maoCount: mao.length,
+      newOrgsThisWeek: newOrgsThisWeek.length,
+      newOrgsLastWeek: newOrgsLastWeek.length,
+      featureAdoption: {
+        polls:      { count:withPolls,      pct:adopt(withPolls) },
+        files:      { count:withFiles,      pct:adopt(withFiles) },
+        enterprise: { count:withEnterprise, pct:adopt(withEnterprise) },
+        seating:    { count:withSeating,    pct:adopt(withSeating) },
+      },
+      conversionFunnel: { created:totalEvents, hasParticipants:eventsWithParticipants, hadCheckin:checkedInEvents, completed:completedEvents },
+      powerUsers,
+      generatedAt: new Date().toISOString(),
+    });
+  } catch(err) { next(err); }
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// COMMAND CENTER — SECURITY INTELLIGENCE
+// ═══════════════════════════════════════════════════════════════════════════════
+router.get('/cc/security-intel', verifyAdmin, requireSuperAdmin, async (req, res, next) => {
+  try {
+    const logs = global.__adminLogBuffer || [];
+    const now  = Date.now();
+
+    const failedLogins = logs.filter(e => e.level==='error' && (e.msg.includes('Invalid credentials')||e.msg.includes('401'))).slice(-50).map(e => ({ ts:e.ts, msg:e.msg.slice(0,120) }));
+    const rateLimitHits = logs.filter(e => e.msg.toLowerCase().includes('rate')||e.msg.includes('429')).slice(-30).map(e => ({ ts:e.ts, msg:e.msg.slice(0,120) }));
+    const errLast1h  = logs.filter(e => e.level==='error' && new Date(e.ts) > new Date(now-3600000)).length;
+    const errLast24h = logs.filter(e => e.level==='error' && new Date(e.ts) > new Date(now-86400000)).length;
+    const errSpike   = errLast1h > (errLast24h/24)*3;
+
+    const suspiciousParticipants = await EventParticipant.aggregate([
+      { $match:{ joinedAt:{ $gte:new Date(now-86400000) }, role:{ $ne:'staff' } } },
+      { $group:{ _id:'$username', count:{ $sum:1 } } },
+      { $match:{ count:{ $gte:5 } } },
+      { $sort:{ count:-1 } },{ $limit:20 },
+    ]);
+
+    const largeFiles = await File.find({ isDeleted:false }).sort({ size:-1 }).limit(10).select('name size eventId uploadedAt').lean();
+
+    const busyEvents = await Event.find({ 'participants.10':{ $exists:true } })
+      .select('title subdomain participants status createdAt organizerEmail').sort({ createdAt:-1 }).limit(10).lean()
+      .then(evs => evs.map(e => ({ ...e, participantCount:e.participants?.length||0, participants:undefined })));
+
+    const errorPatterns = {};
+    logs.filter(e => e.level==='error').slice(-300).forEach(e => {
+      const k = e.msg.slice(0,60); errorPatterns[k] = (errorPatterns[k]||0)+1;
+    });
+    const topErrors = Object.entries(errorPatterns).map(([msg,count]) => ({ msg,count })).sort((a,b) => b.count-a.count).slice(0,10);
+
+    res.json({ failedLogins, rateLimitHits, errLast1h, errLast24h, errSpike, suspiciousParticipants, largeFiles, busyEvents, topErrors, generatedAt:new Date().toISOString() });
+  } catch(err) { next(err); }
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// COMMAND CENTER — RUNTIME / WS / REDIS / CONFIG
+// ═══════════════════════════════════════════════════════════════════════════════
+router.get('/cc/ws-stats', verifyAdmin, requireSuperAdmin, async (req, res, next) => {
+  try {
+    let wsStats = { connected:0, rooms:0, note:'socket not accessible' };
+    try {
+      const { io } = require('../server');
+      if (io) {
+        const sockets = await io.fetchSockets();
+        const rooms   = io.sockets.adapter.rooms;
+        wsStats = { connected:sockets.length, rooms:rooms?rooms.size:0, note:'live' };
+      }
+    } catch {}
+
+    const redis = require('../services/redisClient');
+    let redisHealth = { mode:redis.isRedis?'upstash':'in-memory', connected:redis.isRedis };
+    if (redis.isRedis) {
+      const t0 = Date.now();
+      try { await redis.set('cc:ping','1',10); redisHealth.pingMs = Date.now()-t0; redisHealth.pingOk = (await redis.get('cc:ping'))==='1'; }
+      catch { redisHealth.pingOk = false; }
+    }
+
+    const config = [
+      { label:'MongoDB URI',          set:!!(process.env.MONGO_URI||process.env.MONGODB_URI) },
+      { label:'JWT / License Key',    set:!!(process.env.JWT_SECRET||process.env.PLANIT_LICENSE_KEY) },
+      { label:'Router URL',           set:!!process.env.ROUTER_URL },
+      { label:'Cloudinary',           set:!!process.env.CLOUDINARY_CLOUD_NAME },
+      { label:'Upstash Redis',        set:!!(process.env.UPSTASH_REDIS_URL&&process.env.UPSTASH_REDIS_TOKEN) },
+      { label:'Admin Credentials',    set:!!process.env.ADMIN_USERNAME },
+      { label:'CORS Origin',          set:!!process.env.CORS_ORIGIN },
+      { label:'Frontend URL',         set:!!process.env.FRONTEND_URL },
+      { label:'Hunter.io',            set:!!process.env.HUNTER_API_KEY },
+      { label:'Google CSE',           set:!!(process.env.GOOGLE_CSE_KEY&&process.env.GOOGLE_CSE_CX) },
+      { label:'Watchdog URL',         set:!!process.env.WATCHDOG_URL },
+    ];
+    const configScore = Math.round((config.filter(c=>c.set).length/config.length)*100);
+
+    const mem = process.memoryUsage();
+    res.json({
+      wsStats, redisHealth, config, configScore,
+      process: {
+        uptime:   Math.floor(process.uptime()), pid:process.pid, node:process.version,
+        memMB:    { rss:+(mem.rss/1048576).toFixed(1), heapUsed:+(mem.heapUsed/1048576).toFixed(1), heapTotal:+(mem.heapTotal/1048576).toFixed(1) },
+        cpuCount: os.cpus().length, loadAvg:os.loadavg().map(l=>+l.toFixed(2)),
+        freeMemMB:+(os.freemem()/1048576).toFixed(0), totalMemMB:+(os.totalmem()/1048576).toFixed(0),
+      },
+      generatedAt: new Date().toISOString(),
+    });
+  } catch(err) { next(err); }
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// COMMAND CENTER — EVENT INTELLIGENCE
+// ═══════════════════════════════════════════════════════════════════════════════
+router.get('/cc/event-intel', verifyAdmin, requireSuperAdmin, async (req, res, next) => {
+  try {
+    const now = new Date();
+    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+    const pastEvents = await Event.find({ date:{ $lt:now }, status:{ $nin:['completed','cancelled'] } })
+      .select('title subdomain organizerEmail date participants status createdAt').limit(50).lean();
+    const pastIds = pastEvents.map(e => e._id);
+    const checkedInIds = await EventParticipant.distinct('eventId', { eventId:{ $in:pastIds }, checkedIn:true }).catch(() => []);
+    const checkedSet   = new Set(checkedInIds.map(String));
+    const abandonedEvents = pastEvents.filter(e => !checkedSet.has(String(e._id)))
+      .map(e => ({ ...e, participantCount:e.participants?.length||0, participants:undefined }));
+
+    const activeEvents = await Event.find({ status:'active' }).select('title subdomain date participants').limit(20).lean();
+    const activeVelocity = await Promise.all(activeEvents.map(async evt => {
+      const last5  = new Date(now-5*60000);
+      const [total, recent] = await Promise.all([
+        EventParticipant.countDocuments({ eventId:evt._id, checkedIn:true }).catch(() => 0),
+        EventParticipant.countDocuments({ eventId:evt._id, checkedIn:true, checkedInAt:{ $gte:last5 } }).catch(() => 0),
+      ]);
+      return { id:evt._id, title:evt.title, subdomain:evt.subdomain, total:evt.participants?.length||0, checkedIn:total, last5min:recent, pct:evt.participants?.length>0?Math.round((total/evt.participants.length)*100):0 };
+    }));
+
+    const cleanupTarget = new Date(now-7*86400000);
+    const cleanupCandidates = await Event.find({ status:'completed', updatedAt:{ $lt:cleanupTarget } })
+      .select('title subdomain date organizerEmail updatedAt').limit(30).lean();
+
+    const [todayCount, ystdCount] = await Promise.all([
+      Event.countDocuments({ createdAt:{ $gte:todayStart } }),
+      Event.countDocuments({ createdAt:{ $gte:new Date(todayStart-86400000), $lt:todayStart } }),
+    ]);
+
+    res.json({ abandonedEvents, activeVelocity, cleanupCandidates, todayCount, ystdCount, generatedAt:new Date().toISOString() });
+  } catch(err) { next(err); }
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// COMMAND CENTER — GLOBAL SEARCH
+// ═══════════════════════════════════════════════════════════════════════════════
+router.get('/cc/global-search', verifyAdmin, requireSuperAdmin, async (req, res, next) => {
+  try {
+    const { q } = req.query;
+    if (!q || q.length < 2) return res.status(400).json({ error: 'Query must be at least 2 characters' });
+    const rx = { $regex:q, $options:'i' };
+    const [participants, events, organizers] = await Promise.all([
+      EventParticipant.find({ $or:[{ username:rx }] }).select('-password').sort({ joinedAt:-1 }).limit(30).lean(),
+      Event.find({ $or:[{ title:rx },{ subdomain:rx },{ organizerEmail:rx },{ organizerName:rx }] })
+        .select('title subdomain organizerName organizerEmail status date participants').limit(20).lean(),
+      Event.aggregate([{ $match:{ organizerEmail:rx } },{ $group:{ _id:'$organizerEmail', name:{ $last:'$organizerName' }, events:{ $sum:1 } } },{ $limit:10 }]),
+    ]);
+    const eIds = [...new Set(participants.map(p => p.eventId?.toString()))];
+    const eMap = await Event.find({ _id:{ $in:eIds } }).select('title subdomain').lean()
+      .then(evs => Object.fromEntries(evs.map(e => [e._id.toString(), e])));
+    const enriched = participants.map(p => ({ ...p, eventTitle:eMap[p.eventId?.toString()]?.title||'', eventSubdomain:eMap[p.eventId?.toString()]?.subdomain||'' }));
+    res.json({
+      participants: enriched,
+      events: events.map(e => ({ ...e, participantCount:e.participants?.length||0, participants:undefined })),
+      organizers,
+      total: enriched.length+events.length+organizers.length,
+    });
+  } catch(err) { next(err); }
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// COMMAND CENTER — BULK EVENT OPS
+// ═══════════════════════════════════════════════════════════════════════════════
+router.post('/cc/bulk-events', verifyAdmin, requireSuperAdmin, async (req, res, next) => {
+  try {
+    const { action, filter = {} } = req.body;
+    if (!action) return res.status(400).json({ error: 'action required' });
+    let result = {};
+    if (action === 'force-complete-old') {
+      const cutoff = new Date(Date.now()-(parseInt(filter.days)||7)*86400000);
+      const r = await Event.updateMany({ date:{ $lt:cutoff }, status:{ $in:['active','draft'] } }, { $set:{ status:'completed' } });
+      result = { modified:r.modifiedCount };
+    } else if (action === 'delete-empty-drafts') {
+      const cutoff = new Date(Date.now()-(parseInt(filter.days)||3)*86400000);
+      const targets = await Event.find({ status:'draft', createdAt:{ $lt:cutoff }, 'participants.0':{ $exists:false } }).select('_id').lean();
+      const ids = targets.map(e => e._id);
+      if (ids.length) await Promise.all([Event.deleteMany({ _id:{ $in:ids } }), Message.deleteMany({ eventId:{ $in:ids } }), Poll.deleteMany({ eventId:{ $in:ids } }), EventParticipant.deleteMany({ eventId:{ $in:ids } })]);
+      result = { deleted:ids.length };
+    } else if (action === 'cancel-abandoned') {
+      const cutoff = new Date(Date.now()-86400000);
+      const past   = await Event.find({ date:{ $lt:cutoff }, status:'active' }).select('_id').lean();
+      const ids    = past.map(e => e._id);
+      const withCI = await EventParticipant.distinct('eventId', { eventId:{ $in:ids }, checkedIn:true });
+      const toCancel = ids.filter(id => !withCI.map(String).includes(String(id)));
+      if (toCancel.length) await Event.updateMany({ _id:{ $in:toCancel } }, { $set:{ status:'cancelled' } });
+      result = { cancelled:toCancel.length };
+    } else { return res.status(400).json({ error:`Unknown action: ${action}` }); }
+    res.json({ ok:true, result:{ ...result, action } });
+  } catch(err) { next(err); }
 });
 
 module.exports = router;
