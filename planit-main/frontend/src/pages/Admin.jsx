@@ -3088,58 +3088,41 @@ function SecurityPanel() {
 
 // ─── Marketing Panel ──────────────────────────────────────────────────────────
 function MarketingPanel() {
-  const [templates, setTemplates]       = useState([]);
-  const [selected, setSelected]         = useState('');
-  const [subject, setSubject]           = useState('');
-  const [ctaUrl, setCtaUrl]             = useState('https://planit.app');
-  const [recipientText, setRecipientText] = useState('');
-  const [sending, setSending]           = useState(false);
-  const [result, setResult]             = useState(null);
+  // ── Template & campaign settings ──
+  const [templates, setTemplates]     = useState([]);
+  const [selected, setSelected]       = useState('');
+  const [subject, setSubject]         = useState('');
+  const [ctaUrl, setCtaUrl]           = useState('https://planit.app');
+  const [campaignLabel, setCampaignLabel] = useState('');
+  const [sendAt, setSendAt]           = useState('');
+  const [mode, setMode]               = useState('send'); // 'send' | 'schedule' | 'scheduled'
+
+  // ── Recipients: structured rows with per-person data ──
+  // Each row: { id, email, firstName, lastName, company, source, selected }
+  const [rows, setRows]               = useState([]);
+  const [rowFilter, setRowFilter]     = useState('');
+
+  // ── Search / import ──
+  const [importing, setImporting]     = useState(false);
+  const [importDone, setImportDone]   = useState(false);
+
+  // ── Manual add ──
+  const [manualEmail, setManualEmail] = useState('');
+
+  // ── Send state ──
+  const [sending, setSending]         = useState(false);
+  const [scheduling, setScheduling]   = useState(false);
+  const [result, setResult]           = useState(null);
+
+  // ── Preview ──
   const [previewHtml, setPreviewHtml]   = useState('');
   const [previewLoading, setPreviewLoading] = useState(false);
-  const [mode, setMode]                 = useState('send'); // 'send' | 'schedule' | 'scheduled'
-  const [sendAt, setSendAt]             = useState('');
-  const [campaignLabel, setCampaignLabel] = useState('');
-  const [scheduled, setScheduled]       = useState([]);
+
+  // ── Scheduled campaigns ──
+  const [scheduled, setScheduled]         = useState([]);
   const [scheduledLoading, setScheduledLoading] = useState(false);
-  const [scheduling, setScheduling]     = useState(false);
 
-  // Web search for recipients
-  const [searchQuery, setSearchQuery]   = useState('');
-  const [searchResults, setSearchResults] = useState([]);
-  const [searching, setSearching]       = useState(false);
-  const [showSearch, setShowSearch]     = useState(false);
-
-  // Personalization
-  const [personalization, setPersonalization] = useState({ firstName: '', lastName: '', company: '', eventName: '' });
-  const [showPersonalization, setShowPersonalization] = useState(false);
-
-  const handleWebSearch = async () => {
-    if (!searchQuery.trim()) return;
-    setSearching(true);
-    setSearchResults([]);
-    try {
-      // Search organizers/users by name or domain via admin API
-      const r = await adminAPI.ccGlobalSearch(searchQuery);
-      const emails = [];
-      if (r.data?.organizers) emails.push(...r.data.organizers.map(o => ({ email: o.email, name: o.name || o.orgName, source: 'Organizer' })));
-      if (r.data?.participants) emails.push(...r.data.participants.map(p => ({ email: p.email, name: p.name, source: 'Participant' })));
-      if (r.data?.users) emails.push(...r.data.users.map(u => ({ email: u.email, name: u.name, source: 'User' })));
-      // Deduplicate
-      const seen = new Set();
-      const unique = emails.filter(e => e.email && !seen.has(e.email) && seen.add(e.email));
-      setSearchResults(unique);
-      if (!unique.length) toast('No email addresses found for that search');
-    } catch { toast.error('Search failed'); }
-    setSearching(false);
-  };
-
-  const addSearchResultsToRecipients = (items) => {
-    const newEmails = items.map(i => i.email).join('\n');
-    setRecipientText(prev => prev ? prev + '\n' + newEmails : newEmails);
-    toast.success(`Added ${items.length} address${items.length === 1 ? '' : 'es'}`);
-  };
-
+  // ── Load templates on mount ──
   useEffect(() => {
     adminAPI.getMarketingTemplates()
       .then(r => {
@@ -3153,6 +3136,7 @@ function MarketingPanel() {
       .catch(() => toast.error('Could not load marketing templates'));
   }, []);
 
+  // ── Refresh preview when template or CTA changes ──
   useEffect(() => {
     if (!selected) { setPreviewHtml(''); return; }
     setPreviewLoading(true);
@@ -3163,15 +3147,16 @@ function MarketingPanel() {
       .finally(() => setPreviewLoading(false));
   }, [selected, ctaUrl]);
 
+  // ── Load scheduled campaigns ──
   const loadScheduled = async () => {
     setScheduledLoading(true);
     try { const r = await adminAPI.getScheduledCampaigns(); setScheduled(r.data.scheduled || []); }
     catch { toast.error('Could not load scheduled campaigns'); }
     finally { setScheduledLoading(false); }
   };
-
   useEffect(() => { if (mode === 'scheduled') loadScheduled(); }, [mode]);
 
+  // ── Template change ──
   const handleTemplateChange = (id) => {
     setSelected(id);
     const tpl = templates.find(t => t.id === id);
@@ -3179,86 +3164,188 @@ function MarketingPanel() {
     setResult(null);
   };
 
-  const parseRecipients = () =>
-    recipientText
-      .split(/[\n,;]+/)
-      .map(e => e.trim().toLowerCase())
-      .filter(e => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e));
+  // ── Import ALL contacts from platform ──
+  // Searches with empty string to get everything, then merges with existing rows
+  const handleImport = async () => {
+    setImporting(true);
+    try {
+      // Use a broad search to pull all organizers, participants, and users
+      const [r1, r2, r3] = await Promise.allSettled([
+        adminAPI.ccGlobalSearch(''),
+        adminAPI.ccGlobalSearch('a'),
+        adminAPI.ccGlobalSearch('e'),
+      ]);
 
+      const all = [];
+      const addFrom = (result, sourceKey, nameKey, idKey) => {
+        if (result.status === 'fulfilled' && result.value.data?.[sourceKey]) {
+          result.value.data[sourceKey].forEach(item => {
+            if (item.email) all.push({
+              email: item.email.trim().toLowerCase(),
+              name: item[nameKey] || item.name || item.orgName || '',
+              source: sourceKey === 'organizers' ? 'Organizer' : sourceKey === 'participants' ? 'Participant' : 'User',
+            });
+          });
+        }
+      };
+
+      [r1, r2, r3].forEach(r => {
+        addFrom(r, 'organizers',   'name',     '_id');
+        addFrom(r, 'participants', 'username', '_id');
+        addFrom(r, 'users',        'name',     '_id');
+      });
+
+      // Deduplicate by email
+      const seen = new Set();
+      const unique = all.filter(p => p.email && !seen.has(p.email) && seen.add(p.email));
+
+      if (unique.length === 0) {
+        toast('No contacts found in the platform database.');
+        setImporting(false);
+        return;
+      }
+
+      // Merge with existing rows (don't duplicate)
+      setRows(prev => {
+        const existingEmails = new Set(prev.map(r => r.email));
+        const newRows = unique
+          .filter(p => !existingEmails.has(p.email))
+          .map(p => {
+            const parts = (p.name || '').trim().split(/\s+/);
+            return {
+              id: Math.random().toString(36).slice(2),
+              email: p.email,
+              firstName: parts[0] || '',
+              lastName: parts.slice(1).join(' ') || '',
+              company: '',
+              source: p.source,
+              selected: true,
+            };
+          });
+        return [...prev, ...newRows];
+      });
+
+      toast.success(`Imported ${unique.length} contacts from your platform`);
+      setImportDone(true);
+    } catch (err) {
+      toast.error('Import failed — check your connection');
+    }
+    setImporting(false);
+  };
+
+  // ── Add a single row manually ──
+  const addManualRow = () => {
+    const email = manualEmail.trim().toLowerCase();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return toast.error('Enter a valid email address');
+    if (rows.find(r => r.email === email)) return toast.error('That email is already in the list');
+    setRows(prev => [...prev, { id: Math.random().toString(36).slice(2), email, firstName: '', lastName: '', company: '', source: 'Manual', selected: true }]);
+    setManualEmail('');
+  };
+
+  // ── Paste multiple emails into the table ──
+  const handlePaste = (e) => {
+    const text = e.clipboardData.getData('text');
+    const emails = text.split(/[\n,;]+/).map(s => s.trim().toLowerCase()).filter(s => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s));
+    if (emails.length < 2) return; // single email — let normal paste handle it
+    e.preventDefault();
+    setRows(prev => {
+      const existing = new Set(prev.map(r => r.email));
+      const newRows = emails.filter(e => !existing.has(e)).map(email => ({
+        id: Math.random().toString(36).slice(2), email, firstName: '', lastName: '', company: '', source: 'Manual', selected: true,
+      }));
+      if (newRows.length) toast.success(`Added ${newRows.length} email${newRows.length === 1 ? '' : 's'}`);
+      return [...prev, ...newRows];
+    });
+  };
+
+  // ── Row edit helpers ──
+  const updateRow = (id, field, value) => setRows(prev => prev.map(r => r.id === id ? { ...r, [field]: value } : r));
+  const removeRow = (id) => setRows(prev => prev.filter(r => r.id !== id));
+  const toggleRow = (id) => updateRow(id, 'selected', !rows.find(r => r.id === id)?.selected);
+  const toggleAll = () => {
+    const allSelected = filteredRows.every(r => r.selected);
+    const filteredIds = new Set(filteredRows.map(r => r.id));
+    setRows(prev => prev.map(r => filteredIds.has(r.id) ? { ...r, selected: !allSelected } : r));
+  };
+  const clearAll = () => { if (confirm('Remove all recipients?')) setRows([]); setImportDone(false); };
+
+  // ── Filtered rows ──
+  const filteredRows = rows.filter(r => {
+    if (!rowFilter) return true;
+    const q = rowFilter.toLowerCase();
+    return r.email.includes(q) || r.firstName.toLowerCase().includes(q) || r.lastName.toLowerCase().includes(q) || r.company.toLowerCase().includes(q);
+  });
+
+  const selectedRows = rows.filter(r => r.selected);
+
+  // ── Validate & build recipients payload ──
+  const buildPayload = () => selectedRows.map(r => ({
+    email: r.email,
+    ...(r.firstName && { firstName: r.firstName }),
+    ...(r.lastName  && { lastName:  r.lastName  }),
+    ...(r.company   && { company:   r.company   }),
+  }));
+
+  // ── Send campaign ──
   const handleSend = async () => {
-    const recipients = parseRecipients();
-    if (!selected) return toast.error('Select a template first');
-    if (recipients.length === 0) return toast.error('Enter at least one valid email address');
-    if (recipients.length > 1000) return toast.error('Maximum 1,000 recipients per send');
-
-    const confirmed = window.confirm(
-      `Send "${templates.find(t => t.id === selected)?.name}" to ${recipients.length} recipient${recipients.length === 1 ? '' : 's'}?`
-    );
+    if (!selected)              return toast.error('Choose a template first');
+    if (selectedRows.length === 0) return toast.error('Select at least one recipient');
+    if (selectedRows.length > 1000) return toast.error('Maximum 1,000 recipients per send');
+    const confirmed = window.confirm(`Send "${templates.find(t => t.id === selected)?.name}" to ${selectedRows.length} recipient${selectedRows.length === 1 ? '' : 's'}?`);
     if (!confirmed) return;
-
-    setSending(true);
-    setResult(null);
+    setSending(true); setResult(null);
     try {
       const r = await adminAPI.sendMarketingCampaign({
         templateId: selected,
-        recipients,
-        subject:    subject || undefined,
-        ctaUrl:     ctaUrl  || undefined,
-        personalization: Object.values(personalization).some(v => v) ? personalization : undefined,
+        recipients: buildPayload(),
+        subject:    subject   || undefined,
+        ctaUrl:     ctaUrl    || undefined,
       });
       setResult(r.data.results);
-      toast.success(`Campaign sent: ${r.data.results.sent} delivered`);
-    } catch (err) {
-      toast.error(err.response?.data?.error || 'Send failed');
-    }
+      toast.success(`Campaign sent! ${r.data.results.sent} delivered`);
+    } catch (err) { toast.error(err.response?.data?.error || 'Send failed'); }
     setSending(false);
   };
 
+  // ── Schedule campaign ──
   const handleSchedule = async () => {
-    const recipients = parseRecipients();
-    if (!selected)            return toast.error('Select a template first');
-    if (recipients.length === 0) return toast.error('Enter at least one valid email address');
-    if (!sendAt)              return toast.error('Select a send date and time');
-    if (new Date(sendAt) <= new Date()) return toast.error('Schedule time must be in the future');
-
+    if (!selected)              return toast.error('Choose a template first');
+    if (selectedRows.length === 0) return toast.error('Select at least one recipient');
+    if (!sendAt)                return toast.error('Set a send date and time');
+    if (new Date(sendAt) <= new Date()) return toast.error('Send time must be in the future');
     setScheduling(true);
     try {
       await adminAPI.scheduleMarketingCampaign({
         templateId: selected,
-        recipients,
-        subject:    subject || undefined,
-        ctaUrl:     ctaUrl  || undefined,
+        recipients: buildPayload(),
+        subject:    subject   || undefined,
+        ctaUrl:     ctaUrl    || undefined,
         sendAt:     new Date(sendAt).toISOString(),
         label:      campaignLabel || undefined,
-        personalization: Object.values(personalization).some(v => v) ? personalization : undefined,
       });
       toast.success(`Campaign scheduled for ${new Date(sendAt).toLocaleString()}`);
       setMode('scheduled');
-    } catch (err) {
-      toast.error(err.response?.data?.error || 'Schedule failed');
-    }
+    } catch (err) { toast.error(err.response?.data?.error || 'Schedule failed'); }
     setScheduling(false);
   };
 
   const cancelScheduled = async (id) => {
     if (!confirm('Cancel this scheduled campaign?')) return;
-    try {
-      await adminAPI.cancelScheduledCampaign(id);
-      toast.success('Campaign cancelled');
-      loadScheduled();
-    } catch { toast.error('Cancel failed'); }
+    try { await adminAPI.cancelScheduledCampaign(id); toast.success('Cancelled'); loadScheduled(); }
+    catch { toast.error('Cancel failed'); }
   };
 
-  const recipientCount = parseRecipients().length;
-
+  // ─────────────────── RENDER ───────────────────
   return (
     <div className="p-6 space-y-6">
+
+      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-xl font-bold text-neutral-900 flex items-center gap-2">
-            <Send className="w-5 h-5 text-violet-600" /> Marketing
+            <Send className="w-5 h-5 text-violet-600" /> Email Campaigns
           </h2>
-          <p className="text-sm text-neutral-500 mt-0.5">Personalized outreach campaigns. One email per address per day, batched to avoid rate limits.</p>
+          <p className="text-sm text-neutral-500 mt-0.5">Build your recipient list, customize the email, and send or schedule your campaign.</p>
         </div>
         <div className="flex bg-neutral-100 rounded-xl p-1 gap-1">
           {[['send','Send Now'], ['schedule','Schedule'], ['scheduled','Scheduled']].map(([id, label]) => (
@@ -3270,6 +3357,7 @@ function MarketingPanel() {
         </div>
       </div>
 
+      {/* ══ SCHEDULED VIEW ══ */}
       {mode === 'scheduled' ? (
         <div className="space-y-4">
           <div className="flex items-center justify-between">
@@ -3280,35 +3368,33 @@ function MarketingPanel() {
           </div>
           {scheduled.length === 0 ? (
             <div className="card p-12 text-center">
-              <p className="text-neutral-400 text-sm">No scheduled campaigns. Use the Schedule tab to queue a campaign.</p>
+              <Clock className="w-10 h-10 text-neutral-200 mx-auto mb-3" />
+              <p className="text-neutral-500 font-medium">No scheduled campaigns</p>
+              <p className="text-sm text-neutral-400 mt-1">Switch to "Schedule" to queue a campaign for a future date.</p>
             </div>
           ) : (
             <div className="space-y-3">
               {scheduled.map(job => (
-                <div key={job.id} className={`card p-5 ${job.status === 'done' ? 'opacity-70' : ''}`}>
+                <div key={job.id} className={`card p-5 ${job.status === 'done' ? 'opacity-60' : ''}`}>
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap mb-1">
-                        <span className={`text-xs px-2 py-0.5 rounded-full font-bold ${
-                          job.status === 'pending' ? 'bg-blue-100 text-blue-700'
-                          : job.status === 'running' ? 'bg-amber-100 text-amber-700'
-                          : job.status === 'done' ? 'bg-emerald-100 text-emerald-700'
-                          : 'bg-red-100 text-red-700'
-                        }`}>{job.status}</span>
-                        <p className="text-sm font-semibold text-neutral-900 truncate">{job.label || job.templateId}</p>
+                      <div className="flex items-center gap-2 mb-1">
+                        <p className="font-semibold text-neutral-900">{job.label || job.templateId}</p>
+                        <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                          job.status === 'done'    ? 'bg-emerald-50 text-emerald-700' :
+                          job.status === 'failed'  ? 'bg-red-50 text-red-700' :
+                          job.status === 'sending' ? 'bg-blue-50 text-blue-700' :
+                          'bg-amber-50 text-amber-700'}`}>{job.status}</span>
                       </div>
-                      <p className="text-xs text-neutral-500">
-                        {job.recipients.length} recipients &middot; Send at {new Date(job.sendAt).toLocaleString()}
+                      <p className="text-sm text-neutral-500">
+                        {job.recipientCount ?? job.recipients?.length ?? '?'} recipients ·
+                        Scheduled for {new Date(job.sendAt).toLocaleString()}
                       </p>
-                      {job.results && (
-                        <p className="text-xs text-emerald-600 mt-1">
-                          Delivered: {job.results.sent} &middot; Skipped: {job.results.skipped} &middot; Failed: {job.results.failed}
-                        </p>
-                      )}
-                      {job.error && <p className="text-xs text-red-500 mt-1">{job.error}</p>}
                     </div>
                     {job.status === 'pending' && (
-                      <button onClick={() => cancelScheduled(job.id)} className="flex-shrink-0 text-xs text-red-500 hover:text-red-700 transition-colors font-medium">Cancel</button>
+                      <button onClick={() => cancelScheduled(job.id)} className="btn btn-secondary text-xs py-1.5 text-red-600 hover:bg-red-50 border-red-200 gap-1.5 shrink-0">
+                        <X className="w-3.5 h-3.5" /> Cancel
+                      </button>
                     )}
                   </div>
                 </div>
@@ -3316,18 +3402,25 @@ function MarketingPanel() {
             </div>
           )}
         </div>
+
       ) : (
+        /* ══ SEND / SCHEDULE VIEW ══ */
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-          {/* Left: compose */}
-          <div className="space-y-4">
+
+          {/* ── LEFT COLUMN ── */}
+          <div className="space-y-5">
+
+            {/* STEP 1 – Template */}
             <div className="card p-5">
-              <h3 className="text-sm font-bold text-neutral-700 mb-3">Template</h3>
+              <div className="flex items-center gap-2 mb-4">
+                <span className="w-6 h-6 rounded-full bg-violet-600 text-white text-xs font-bold flex items-center justify-center shrink-0">1</span>
+                <h3 className="font-semibold text-neutral-800">Choose a Template</h3>
+              </div>
               <div className="space-y-2">
                 {templates.map(tpl => (
                   <label key={tpl.id}
                     className={`flex items-start gap-3 p-3 rounded-xl border-2 cursor-pointer transition-colors ${
-                      selected === tpl.id ? 'border-violet-500 bg-violet-50' : 'border-neutral-100 hover:border-neutral-200'
-                    }`}>
+                      selected === tpl.id ? 'border-violet-500 bg-violet-50' : 'border-neutral-100 hover:border-neutral-200 bg-white'}`}>
                     <input type="radio" name="template" value={tpl.id} checked={selected === tpl.id}
                       onChange={() => handleTemplateChange(tpl.id)} className="mt-0.5 accent-violet-600" />
                     <div>
@@ -3344,204 +3437,288 @@ function MarketingPanel() {
               </div>
             </div>
 
-            <div className="card p-5 space-y-3">
-              <h3 className="text-sm font-bold text-neutral-700 mb-1">Campaign Settings</h3>
-              <div>
-                <label className="block text-xs font-semibold text-neutral-500 mb-1">Subject line</label>
-                <input type="text" value={subject} onChange={e => setSubject(e.target.value)}
-                  className="input text-sm w-full" placeholder="Default from template" />
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-neutral-500 mb-1">CTA button URL</label>
-                <input type="url" value={ctaUrl} onChange={e => setCtaUrl(e.target.value)}
-                  className="input text-sm w-full font-mono" placeholder="https://planit.app" />
-              </div>
-              {mode === 'schedule' && (
-                <>
-                  <div>
-                    <label className="block text-xs font-semibold text-neutral-500 mb-1">Send at (your local time)</label>
-                    <input type="datetime-local" value={sendAt} onChange={e => setSendAt(e.target.value)}
-                      className="input text-sm w-full" min={new Date().toISOString().slice(0, 16)} />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-semibold text-neutral-500 mb-1">Campaign label <span className="font-normal text-neutral-400">(optional)</span></label>
-                    <input type="text" value={campaignLabel} onChange={e => setCampaignLabel(e.target.value)}
-                      className="input text-sm w-full" placeholder="e.g. Q3 Planner Outreach" />
-                  </div>
-                </>
-              )}
-            </div>
-
+            {/* STEP 2 – Campaign Settings */}
             <div className="card p-5">
-              <div className="flex items-center justify-between mb-3">
-                <div>
-                  <h3 className="text-sm font-bold text-neutral-700">Find Recipients</h3>
-                  <p className="text-xs text-neutral-400 mt-0.5">Search your platform database for email addresses by name, organization, or domain.</p>
-                </div>
-                <button onClick={() => setShowSearch(v => !v)}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all flex items-center gap-1.5 ${showSearch ? 'bg-violet-50 border-violet-300 text-violet-700' : 'bg-neutral-50 border-neutral-300 text-neutral-600 hover:border-violet-300'}`}>
-                  <Globe className="w-3.5 h-3.5" /> {showSearch ? 'Hide Search' : 'Search Database'}
-                </button>
+              <div className="flex items-center gap-2 mb-4">
+                <span className="w-6 h-6 rounded-full bg-violet-600 text-white text-xs font-bold flex items-center justify-center shrink-0">2</span>
+                <h3 className="font-semibold text-neutral-800">Customize Campaign</h3>
               </div>
-              {showSearch && (
-                <div className="space-y-3">
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      value={searchQuery}
-                      onChange={e => setSearchQuery(e.target.value)}
-                      onKeyDown={e => e.key === 'Enter' && handleWebSearch()}
-                      className="input text-sm flex-1"
-                      placeholder="Search by name, company, email domain, or event name…"
-                    />
-                    <button onClick={handleWebSearch} disabled={searching || !searchQuery.trim()}
-                      className="btn bg-violet-600 hover:bg-violet-700 text-white text-sm px-4 gap-2 disabled:opacity-50">
-                      {searching ? <span className="spinner w-4 h-4 border-2 border-white/30 border-t-white" /> : <Search className="w-4 h-4" />}
-                      Search
-                    </button>
-                  </div>
-                  {searchResults.length > 0 && (
-                    <div className="rounded-xl border border-neutral-200 overflow-hidden">
-                      <div className="flex items-center justify-between px-4 py-2.5 bg-neutral-50 border-b border-neutral-200">
-                        <span className="text-xs font-semibold text-neutral-600">{searchResults.length} result{searchResults.length !== 1 ? 's' : ''} found</span>
-                        <button onClick={() => addSearchResultsToRecipients(searchResults)}
-                          className="text-xs font-semibold text-violet-600 hover:text-violet-800 flex items-center gap-1">
-                          <Plus className="w-3.5 h-3.5" /> Add all to recipients
-                        </button>
-                      </div>
-                      <div className="divide-y divide-neutral-100 max-h-52 overflow-y-auto">
-                        {searchResults.map((r, i) => (
-                          <div key={i} className="flex items-center justify-between px-4 py-2.5 hover:bg-neutral-50 group">
-                            <div className="min-w-0 flex-1">
-                              <p className="text-sm font-medium text-neutral-800 truncate">{r.name || r.email}</p>
-                              <p className="text-xs text-neutral-400 truncate">{r.email}</p>
-                            </div>
-                            <div className="flex items-center gap-2 shrink-0">
-                              <span className="text-xs bg-neutral-100 text-neutral-500 px-2 py-0.5 rounded-full">{r.source}</span>
-                              <button onClick={() => addSearchResultsToRecipients([r])}
-                                className="text-xs text-violet-600 hover:text-violet-800 font-medium opacity-0 group-hover:opacity-100 transition-opacity">
-                                Add
-                              </button>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-
-            <div className="card p-5">
-              <div className="flex items-center justify-between mb-3">
+              <div className="space-y-3">
                 <div>
-                  <h3 className="text-sm font-bold text-neutral-700">Personalization</h3>
-                  <p className="text-xs text-neutral-400 mt-0.5">Customize merge tags used in the email template.</p>
+                  <label className="block text-xs font-semibold text-neutral-500 mb-1">Email subject line</label>
+                  <input type="text" value={subject} onChange={e => setSubject(e.target.value)}
+                    className="input text-sm w-full" placeholder="Leave blank to use template default" />
                 </div>
-                <button onClick={() => setShowPersonalization(v => !v)}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all ${showPersonalization ? 'bg-indigo-50 border-indigo-300 text-indigo-700' : 'bg-neutral-50 border-neutral-300 text-neutral-600 hover:border-indigo-300'}`}>
-                  <User className="w-3.5 h-3.5 inline mr-1" /> {showPersonalization ? 'Hide' : 'Edit Tokens'}
-                </button>
-              </div>
-              {showPersonalization && (
-                <div className="space-y-3">
-                  <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 text-xs text-blue-700">
-                    <p className="font-semibold mb-1">Available merge tags for your template:</p>
-                    <div className="flex flex-wrap gap-1.5 mt-1">
-                      {['{{first_name}}', '{{last_name}}', '{{company}}', '{{event_name}}', '{{cta_url}}'].map(tag => (
-                        <code key={tag} className="bg-white border border-blue-200 px-1.5 py-0.5 rounded text-blue-800 font-mono">{tag}</code>
-                      ))}
+                <div>
+                  <label className="block text-xs font-semibold text-neutral-500 mb-1">Button / CTA link</label>
+                  <input type="url" value={ctaUrl} onChange={e => setCtaUrl(e.target.value)}
+                    className="input text-sm w-full font-mono" placeholder="https://planit.app" />
+                </div>
+                {mode === 'schedule' && (
+                  <>
+                    <div>
+                      <label className="block text-xs font-semibold text-neutral-500 mb-1">Send at (your local time)</label>
+                      <input type="datetime-local" value={sendAt} onChange={e => setSendAt(e.target.value)}
+                        className="input text-sm w-full" min={new Date().toISOString().slice(0, 16)} />
                     </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    {[
-                      { key: 'firstName', label: 'Default First Name', placeholder: 'e.g. there' },
-                      { key: 'lastName',  label: 'Default Last Name',  placeholder: 'e.g. (leave blank)' },
-                      { key: 'company',   label: 'Default Company',    placeholder: 'e.g. your team' },
-                      { key: 'eventName', label: 'Default Event Name', placeholder: 'e.g. your event' },
-                    ].map(({ key, label, placeholder }) => (
-                      <div key={key}>
-                        <label className="block text-xs font-semibold text-neutral-500 mb-1">{label}</label>
-                        <input type="text" value={personalization[key]} onChange={e => setPersonalization(p => ({ ...p, [key]: e.target.value }))}
-                          className="input text-sm w-full" placeholder={placeholder} />
-                      </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-neutral-500 mb-1">Campaign name <span className="font-normal text-neutral-400">(optional)</span></label>
+                      <input type="text" value={campaignLabel} onChange={e => setCampaignLabel(e.target.value)}
+                        className="input text-sm w-full" placeholder="e.g. Q3 Outreach" />
+                    </div>
+                  </>
+                )}
+                {/* Personalization tokens info */}
+                <div className="bg-blue-50 border border-blue-100 rounded-xl p-3">
+                  <p className="text-xs font-semibold text-blue-800 mb-1.5">Personalization tokens available in your template:</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {['{{first_name}}', '{{last_name}}', '{{company}}', '{{cta_url}}'].map(tag => (
+                      <code key={tag} className="bg-white border border-blue-200 px-1.5 py-0.5 rounded text-xs text-blue-700 font-mono">{tag}</code>
                     ))}
                   </div>
-                  <p className="text-xs text-neutral-400">These defaults are used when a recipient record doesn't have a specific value. They're passed along with your campaign send.</p>
+                  <p className="text-xs text-blue-600 mt-2">Set these per-recipient in the table on the right. Any row left blank will use a generic fallback.</p>
                 </div>
-              )}
+              </div>
             </div>
 
+            {/* STEP 3 – Send button */}
             <div className="card p-5">
-              <div className="flex items-center justify-between mb-2">
-                <h3 className="text-sm font-bold text-neutral-700">Recipients</h3>
-                {recipientCount > 0 && (
-                  <span className="text-xs font-semibold text-violet-600 bg-violet-50 px-2 py-0.5 rounded-full">
-                    {recipientCount.toLocaleString()} valid {recipientCount === 1 ? 'address' : 'addresses'}
+              <div className="flex items-center gap-2 mb-4">
+                <span className="w-6 h-6 rounded-full bg-violet-600 text-white text-xs font-bold flex items-center justify-center shrink-0">3</span>
+                <h3 className="font-semibold text-neutral-800">Send Campaign</h3>
+              </div>
+
+              {/* Summary */}
+              <div className="bg-neutral-50 rounded-xl p-4 mb-4 space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-neutral-500">Template</span>
+                  <span className="font-medium text-neutral-800">{templates.find(t => t.id === selected)?.name || '—'}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-neutral-500">Recipients selected</span>
+                  <span className={`font-semibold ${selectedRows.length > 0 ? 'text-violet-700' : 'text-neutral-400'}`}>
+                    {selectedRows.length} / {rows.length}
                   </span>
+                </div>
+                {mode === 'schedule' && sendAt && (
+                  <div className="flex justify-between">
+                    <span className="text-neutral-500">Sends at</span>
+                    <span className="font-medium text-neutral-800">{new Date(sendAt).toLocaleString()}</span>
+                  </div>
                 )}
               </div>
-              <textarea value={recipientText} onChange={e => setRecipientText(e.target.value)} rows={6}
-                className="input text-sm w-full font-mono resize-y"
-                placeholder={"Paste email addresses here, or use Search Database above.\nOne per line, or comma/semicolon separated.\n\nExample:\njohn@example.com\njane@example.com, alex@example.com"} />
-              <p className="text-xs text-neutral-400 mt-1">Maximum 1,000 recipients. Invalid addresses skipped automatically.</p>
-            </div>
 
-            <div className="card p-5">
               {mode === 'send' ? (
                 <>
-                  <button onClick={handleSend} disabled={sending || !selected || recipientCount === 0}
-                    className="btn bg-violet-600 hover:bg-violet-700 text-white w-full gap-2 disabled:opacity-50 justify-center">
+                  <button onClick={handleSend} disabled={sending || !selected || selectedRows.length === 0}
+                    className="btn bg-violet-600 hover:bg-violet-700 text-white w-full gap-2 justify-center disabled:opacity-50 py-3 text-base font-semibold">
                     {sending
-                      ? <><span className="spinner w-4 h-4 border-2 border-white/30 border-t-white" /> Sending campaign...</>
-                      : <><Send className="w-4 h-4" /> Send to {recipientCount || 0} {recipientCount === 1 ? 'recipient' : 'recipients'}</>}
+                      ? <><span className="spinner w-4 h-4 border-2 border-white/30 border-t-white" /> Sending…</>
+                      : <><Send className="w-4 h-4" /> Send to {selectedRows.length} {selectedRows.length === 1 ? 'recipient' : 'recipients'}</>}
                   </button>
                   {result && (
                     <div className="mt-4 grid grid-cols-3 gap-3">
-                      <div className="bg-emerald-50 rounded-xl p-3 text-center">
-                        <p className="text-xl font-bold text-emerald-700">{result.sent}</p>
-                        <p className="text-xs text-emerald-600 mt-0.5">Delivered</p>
+                      <div className="bg-emerald-50 rounded-xl p-3 text-center border border-emerald-100">
+                        <p className="text-2xl font-bold text-emerald-700">{result.sent}</p>
+                        <p className="text-xs text-emerald-600 mt-0.5 font-medium">Delivered</p>
                       </div>
-                      <div className="bg-neutral-50 rounded-xl p-3 text-center">
-                        <p className="text-xl font-bold text-neutral-600">{result.skipped}</p>
-                        <p className="text-xs text-neutral-400 mt-0.5">Skipped</p>
+                      <div className="bg-neutral-50 rounded-xl p-3 text-center border border-neutral-200">
+                        <p className="text-2xl font-bold text-neutral-500">{result.skipped}</p>
+                        <p className="text-xs text-neutral-400 mt-0.5 font-medium">Skipped</p>
                       </div>
-                      <div className="bg-red-50 rounded-xl p-3 text-center">
-                        <p className="text-xl font-bold text-red-600">{result.failed}</p>
-                        <p className="text-xs text-red-400 mt-0.5">Failed</p>
+                      <div className="bg-red-50 rounded-xl p-3 text-center border border-red-100">
+                        <p className="text-2xl font-bold text-red-600">{result.failed}</p>
+                        <p className="text-xs text-red-400 mt-0.5 font-medium">Failed</p>
                       </div>
                     </div>
                   )}
                 </>
               ) : (
-                <button onClick={handleSchedule} disabled={scheduling || !selected || recipientCount === 0 || !sendAt}
-                  className="btn bg-indigo-600 hover:bg-indigo-700 text-white w-full gap-2 disabled:opacity-50 justify-center">
+                <button onClick={handleSchedule} disabled={scheduling || !selected || selectedRows.length === 0 || !sendAt}
+                  className="btn bg-indigo-600 hover:bg-indigo-700 text-white w-full gap-2 justify-center disabled:opacity-50 py-3 text-base font-semibold">
                   {scheduling
-                    ? <><span className="spinner w-4 h-4 border-2 border-white/30 border-t-white" /> Scheduling...</>
-                    : <><Clock className="w-4 h-4" /> Schedule for {sendAt ? new Date(sendAt).toLocaleString() : '...'}</>}
+                    ? <><span className="spinner w-4 h-4 border-2 border-white/30 border-t-white" /> Scheduling…</>
+                    : <><Clock className="w-4 h-4" /> Schedule Campaign</>}
                 </button>
               )}
             </div>
           </div>
 
-          {/* Right: live preview */}
-          <div className="space-y-2">
-            <h3 className="text-sm font-bold text-neutral-700">Live Preview</h3>
-            <p className="text-xs text-neutral-400">Updates on template or CTA URL change. This is the exact email your recipients will receive.</p>
-            {selected ? (
-              <div className="rounded-xl border border-neutral-200 overflow-hidden relative" style={{ height: '700px' }}>
-                {previewLoading && (
-                  <div className="absolute inset-0 flex items-center justify-center bg-neutral-50 z-10">
-                    <span className="spinner w-5 h-5 border-2 border-neutral-200 border-t-violet-500" />
+          {/* ── RIGHT COLUMN: Recipients table ── */}
+          <div className="card flex flex-col" style={{ minHeight: '600px' }}>
+            {/* Table header */}
+            <div className="p-5 border-b border-neutral-100">
+              <div className="flex items-center justify-between mb-3">
+                <div>
+                  <h3 className="font-semibold text-neutral-800">Recipients</h3>
+                  <p className="text-xs text-neutral-400 mt-0.5">
+                    {rows.length === 0
+                      ? 'Import from your platform or add manually below.'
+                      : `${selectedRows.length} of ${rows.length} selected · Set first name, last name, and company per row for personalization.`}
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  {rows.length > 0 && (
+                    <button onClick={clearAll} className="text-xs text-red-500 hover:text-red-700 font-medium px-2 py-1 rounded hover:bg-red-50 transition-colors">
+                      Clear all
+                    </button>
+                  )}
+                  {/* THE import button */}
+                  <button onClick={handleImport} disabled={importing}
+                    className="btn bg-violet-600 hover:bg-violet-700 text-white text-sm gap-2 disabled:opacity-60 px-4 py-2">
+                    {importing
+                      ? <><span className="spinner w-4 h-4 border-2 border-white/30 border-t-white" /> Importing…</>
+                      : <><Users className="w-4 h-4" /> Import from Platform</>}
+                  </button>
+                </div>
+              </div>
+
+              {/* Search/filter */}
+              {rows.length > 0 && (
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-300" />
+                  <input
+                    type="text"
+                    value={rowFilter}
+                    onChange={e => setRowFilter(e.target.value)}
+                    placeholder="Filter by email, name, or company…"
+                    className="input text-sm w-full pl-9"
+                  />
+                </div>
+              )}
+            </div>
+
+            {/* Table body */}
+            <div className="flex-1 overflow-y-auto">
+              {rows.length === 0 ? (
+                <div className="flex flex-col items-center justify-center h-full py-16 text-center px-6">
+                  <Users className="w-12 h-12 text-neutral-200 mb-3" />
+                  <p className="font-medium text-neutral-500">No recipients yet</p>
+                  <p className="text-sm text-neutral-400 mt-1 max-w-xs">Click <strong>Import from Platform</strong> to automatically pull all organizers, users, and participants from your database — or add emails manually below.</p>
+                </div>
+              ) : filteredRows.length === 0 ? (
+                <div className="flex items-center justify-center py-10 text-sm text-neutral-400">No matches for "{rowFilter}"</div>
+              ) : (
+                <table className="w-full text-sm">
+                  <thead className="sticky top-0 z-10 bg-neutral-50 border-b border-neutral-200">
+                    <tr>
+                      <th className="px-4 py-3 w-8">
+                        <input type="checkbox"
+                          checked={filteredRows.length > 0 && filteredRows.every(r => r.selected)}
+                          onChange={toggleAll}
+                          className="accent-violet-600 cursor-pointer" />
+                      </th>
+                      <th className="px-2 py-3 text-left text-xs font-semibold text-neutral-500 w-44">Email</th>
+                      <th className="px-2 py-3 text-left text-xs font-semibold text-neutral-500 w-24">First Name</th>
+                      <th className="px-2 py-3 text-left text-xs font-semibold text-neutral-500 w-24">Last Name</th>
+                      <th className="px-2 py-3 text-left text-xs font-semibold text-neutral-500">Company</th>
+                      <th className="px-2 py-3 text-left text-xs font-semibold text-neutral-500 w-20">Source</th>
+                      <th className="px-2 py-3 w-8" />
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-neutral-50">
+                    {filteredRows.map(row => (
+                      <tr key={row.id} className={`group transition-colors ${row.selected ? 'bg-white' : 'bg-neutral-50 opacity-60'}`}>
+                        <td className="px-4 py-2">
+                          <input type="checkbox" checked={row.selected} onChange={() => toggleRow(row.id)} className="accent-violet-600 cursor-pointer" />
+                        </td>
+                        <td className="px-2 py-1.5">
+                          <span className="text-xs text-neutral-600 font-mono truncate block max-w-[160px]" title={row.email}>{row.email}</span>
+                        </td>
+                        <td className="px-2 py-1.5">
+                          <input
+                            type="text"
+                            value={row.firstName}
+                            onChange={e => updateRow(row.id, 'firstName', e.target.value)}
+                            placeholder="First"
+                            className="w-full text-xs border border-transparent hover:border-neutral-200 focus:border-violet-400 rounded-lg px-2 py-1.5 bg-transparent focus:bg-white outline-none transition-colors"
+                          />
+                        </td>
+                        <td className="px-2 py-1.5">
+                          <input
+                            type="text"
+                            value={row.lastName}
+                            onChange={e => updateRow(row.id, 'lastName', e.target.value)}
+                            placeholder="Last"
+                            className="w-full text-xs border border-transparent hover:border-neutral-200 focus:border-violet-400 rounded-lg px-2 py-1.5 bg-transparent focus:bg-white outline-none transition-colors"
+                          />
+                        </td>
+                        <td className="px-2 py-1.5">
+                          <input
+                            type="text"
+                            value={row.company}
+                            onChange={e => updateRow(row.id, 'company', e.target.value)}
+                            placeholder="Company"
+                            className="w-full text-xs border border-transparent hover:border-neutral-200 focus:border-violet-400 rounded-lg px-2 py-1.5 bg-transparent focus:bg-white outline-none transition-colors"
+                          />
+                        </td>
+                        <td className="px-2 py-1.5">
+                          <span className={`text-xs px-1.5 py-0.5 rounded-full font-medium ${
+                            row.source === 'Organizer'   ? 'bg-violet-50 text-violet-700' :
+                            row.source === 'Participant' ? 'bg-blue-50 text-blue-700' :
+                            'bg-neutral-100 text-neutral-500'}`}>{row.source}</span>
+                        </td>
+                        <td className="px-2 py-1.5">
+                          <button onClick={() => removeRow(row.id)}
+                            className="opacity-0 group-hover:opacity-100 transition-opacity text-neutral-300 hover:text-red-500 p-1 rounded">
+                            <X className="w-3.5 h-3.5" />
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
+
+            {/* Manual add row */}
+            <div className="p-4 border-t border-neutral-100 bg-neutral-50 rounded-b-xl">
+              <div className="flex gap-2">
+                <input
+                  type="email"
+                  value={manualEmail}
+                  onChange={e => setManualEmail(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && addManualRow()}
+                  onPaste={handlePaste}
+                  placeholder="Add email manually, or paste a list here…"
+                  className="input text-sm flex-1"
+                />
+                <button onClick={addManualRow} disabled={!manualEmail.trim()}
+                  className="btn btn-secondary text-sm gap-1.5 px-3 disabled:opacity-40 shrink-0">
+                  <Plus className="w-4 h-4" /> Add
+                </button>
+              </div>
+              <p className="text-xs text-neutral-400 mt-1.5">Tip: paste multiple emails (separated by commas, semicolons, or new lines) and they'll all be added at once.</p>
+            </div>
+          </div>
+
+          {/* ── Preview panel (full width, below both columns) ── */}
+          <div className="xl:col-span-2">
+            <div className="card p-5">
+              <div className="flex items-center justify-between mb-3">
+                <div>
+                  <h3 className="font-semibold text-neutral-800">Email Preview</h3>
+                  <p className="text-xs text-neutral-400 mt-0.5">Live preview of your selected template. Updates when you change the template or CTA link.</p>
+                </div>
+              </div>
+              {selected ? (
+                <div className="rounded-xl border border-neutral-200 overflow-hidden relative" style={{ height: '600px' }}>
+                  {previewLoading && (
+                    <div className="absolute inset-0 flex items-center justify-center bg-neutral-50 z-10">
+                      <span className="spinner w-5 h-5 border-2 border-neutral-200 border-t-violet-500" />
+                    </div>
+                  )}
+                  <iframe key={selected} srcDoc={previewHtml} title="Email preview" className="w-full h-full" sandbox="allow-same-origin" />
+                </div>
+              ) : (
+                <div className="rounded-xl border border-dashed border-neutral-200 bg-neutral-50 flex items-center justify-center" style={{ height: '300px' }}>
+                  <div className="text-center">
+                    <Mail className="w-8 h-8 text-neutral-300 mx-auto mb-2" />
+                    <p className="text-sm text-neutral-400">Select a template above to see a preview</p>
                   </div>
-                )}
-                <iframe key={selected} srcDoc={previewHtml} title="Email preview" className="w-full h-full" sandbox="allow-same-origin" />
-              </div>
-            ) : (
-              <div className="rounded-xl border border-neutral-100 bg-neutral-50 flex items-center justify-center" style={{ height: '700px' }}>
-                <p className="text-sm text-neutral-400">Select a template to see a preview</p>
-              </div>
-            )}
+                </div>
+              )}
+            </div>
           </div>
         </div>
       )}
