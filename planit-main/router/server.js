@@ -930,6 +930,69 @@ app.get('/mesh/email/status', meshAuth(SERVICE_NAME), (_req, res) => {
   res.json(_keyPoolStats());
 });
 
+// GET /mesh/email/pool — detailed key pool for command center (same data, aliased)
+app.get('/mesh/email/pool', meshAuth(SERVICE_NAME), (_req, res) => {
+  res.json({ ok: true, pool: _keyPoolStats(), fetchedAt: new Date().toISOString() });
+});
+
+// POST /mesh/exec — execute a named command on the router itself
+// Supported commands: flush-logs, ping, stats, gc, clear-key-suspension
+app.post('/mesh/exec', meshAuth(SERVICE_NAME), express.json(), (req, res) => {
+  const { command, params = {} } = req.body || {};
+  if (!command) return res.status(400).json({ error: 'command required' });
+
+  switch (command) {
+    case 'ping':
+      return res.json({ ok: true, result: { pong: true, ts: new Date().toISOString(), pid: process.pid, uptime: Math.floor(process.uptime()) } });
+
+    case 'stats': {
+      const mem = process.memoryUsage();
+      return res.json({ ok: true, result: {
+        pid:      process.pid,
+        uptime:   Math.floor(process.uptime()),
+        memMB: {
+          rss:       +(mem.rss       / 1048576).toFixed(1),
+          heapUsed:  +(mem.heapUsed  / 1048576).toFixed(1),
+          heapTotal: +(mem.heapTotal / 1048576).toFixed(1),
+        },
+        backends:     BACKENDS.length,
+        logBufferLen: ROUTER_LOG_BUFFER.length,
+        emailPool:    _keyPoolStats()._summary,
+        nodeVersion:  process.version,
+      }});
+    }
+
+    case 'flush-logs': {
+      const count = ROUTER_LOG_BUFFER.length;
+      ROUTER_LOG_BUFFER.length = 0;
+      console.log(`[cc] Router log buffer flushed by command center (${count} entries cleared)`);
+      return res.json({ ok: true, result: { flushed: count } });
+    }
+
+    case 'gc': {
+      let ran = false;
+      if (global.gc) { global.gc(); ran = true; }
+      return res.json({ ok: true, result: { gcRan: ran, note: ran ? 'GC triggered' : 'gc() not exposed — start node with --expose-gc to enable' } });
+    }
+
+    case 'clear-key-suspension': {
+      const provider = params.provider || 'brevo';
+      const pool = _pools[provider];
+      if (!pool) return res.status(400).json({ error: `Unknown provider: ${provider}` });
+      let cleared = 0;
+      pool.keys.forEach(k => { if (k.suspendedUntil) { k.suspendedUntil = null; cleared++; } });
+      console.log(`[cc] Cleared ${cleared} suspended ${provider} key(s) via command center`);
+      return res.json({ ok: true, result: { provider, cleared } });
+    }
+
+    case 'list-backends':
+      return res.json({ ok: true, result: { backends: BACKENDS, count: BACKENDS.length } });
+
+    default:
+      return res.status(400).json({ error: `Unknown command: ${command}` });
+  }
+});
+
 // ─── Mesh config relay ───────────────────────────────────────────────────────
 // GET /mesh/config
 // Backends call this once on startup to pull shared env vars so you only need
