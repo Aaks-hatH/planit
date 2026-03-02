@@ -40,11 +40,12 @@ export default function SecuritySettingsPanel({ eventId, onClose, onSettingsUpda
   useEffect(() => {
     loadSettings();
     if (isOrganizer) loadStaff();
-  }, [eventId]);
+  }, [eventId, isOrganizer]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (activeTab === 'audit' && isOrganizer) loadOverrideHistory();
-  }, [activeTab]);
+    if (activeTab === 'staff' && isOrganizer) loadStaff();
+  }, [activeTab]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const loadSettings = async () => {
     try {
@@ -123,7 +124,7 @@ export default function SecuritySettingsPanel({ eventId, onClose, onSettingsUpda
       toast.success(`Staff account "${newStaffUsername}" created`);
       setNewStaffUsername('');
       setNewStaffPin('');
-      loadStaff();
+      await loadStaff();
     } catch (error) {
       toast.error(error.response?.data?.error || 'Failed to create staff account');
     } finally {
