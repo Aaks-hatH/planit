@@ -1790,9 +1790,9 @@ router.post('/:eventId/staff', verifyOrganizer, async (req, res, next) => {
     }
 
     // Prevent duplicate username within this event (any role)
-    const existing = await EventParticipant.findOne({ eventId, username: username.trim() });
+    const existing = await EventParticipant.findOne({ eventId, username: username.trim(), role: 'staff' });
     if (existing) {
-      return res.status(409).json({ error: 'Username already taken for this event' });
+      return res.status(409).json({ error: 'A staff account with that username already exists for this event' });
     }
 
     const hashed = await bcrypt.hash(String(pin), 10);
