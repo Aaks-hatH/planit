@@ -254,11 +254,28 @@ export const adminAPI = {
   getScheduledCampaigns:      ()       => api.get('/admin/marketing/scheduled'),
   cancelScheduledCampaign:    (id)     => api.delete(`/admin/marketing/schedule/${id}`),
 
+  // Discovery
+  getMarketingDiscoverUrl: (params) => {
+    const adminToken = localStorage.getItem('adminToken');
+    const p = new URLSearchParams({ ...params });
+    if (adminToken) p.set('token', adminToken);
+    return `${API_URL}/admin/marketing/discover?${p.toString()}`;
+  },
+  getContactedEmails:   ()             => api.get('/admin/marketing/contacted'),
+  addContactedEmails:   (emails)       => api.post('/admin/marketing/contacted/add', { emails }),
+  removeContactedEmail: (email)        => api.delete(`/admin/marketing/contacted/${encodeURIComponent(email)}`),
+
   // Command Center
-  ccGetFleet:     ()                      => api.get('/admin/cc/fleet'),
-  ccGetEmailPool: ()                      => api.get('/admin/cc/email-pool'),
-  ccGetDb:        ()                      => api.get('/admin/cc/db'),
-  ccCommand:      (target, command, params) => api.post('/admin/cc/command', { target, command, params: params || {} }),
+  ccGetFleet:           ()                    => api.get('/admin/cc/fleet'),
+  ccGetEmailPool:       ()                    => api.get('/admin/cc/email-pool'),
+  ccGetDb:              ()                    => api.get('/admin/cc/db'),
+  ccCommand:            (target, command, params) => api.post('/admin/cc/command', { target, command, params: params || {} }),
+  ccGetPlatformMetrics: ()                    => api.get('/admin/cc/platform-metrics'),
+  ccGetSecurityIntel:   ()                    => api.get('/admin/cc/security-intel'),
+  ccGetWsStats:         ()                    => api.get('/admin/cc/ws-stats'),
+  ccGetEventIntel:      ()                    => api.get('/admin/cc/event-intel'),
+  ccGlobalSearch:       (q)                   => api.get('/admin/cc/global-search', { params: { q } }),
+  ccBulkEvents:         (action, filter)      => api.post('/admin/cc/bulk-events', { action, filter }),
 };
 
 // ─── Task API ─────────────────────────────────────────────────────────────────
