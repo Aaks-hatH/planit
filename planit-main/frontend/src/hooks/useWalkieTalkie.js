@@ -17,21 +17,38 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 
+// ICE config: prefer env-var TURN servers (set VITE_TURN_URL, VITE_TURN_USERNAME,
+// VITE_TURN_CREDENTIAL in .env for a reliable paid TURN service).
+// Falls back to free openrelay servers — fine for demos, unreliable for production.
+const TURN_URL        = import.meta.env.VITE_TURN_URL;
+const TURN_USERNAME   = import.meta.env.VITE_TURN_USERNAME;
+const TURN_CREDENTIAL = import.meta.env.VITE_TURN_CREDENTIAL;
+
 const ICE_CONFIG = {
   iceServers: [
     { urls: 'stun:stun.l.google.com:19302' },
     { urls: 'stun:stun1.l.google.com:19302' },
-    { urls: 'turn:openrelay.metered.ca:80',  username: 'openrelayproject', credential: 'openrelayproject' },
-    { urls: 'turn:openrelay.metered.ca:443', username: 'openrelayproject', credential: 'openrelayproject' },
-    { urls: 'turn:openrelay.metered.ca:443?transport=tcp', username: 'openrelayproject', credential: 'openrelayproject' },
+    { urls: 'stun:stun2.l.google.com:19302' },
+    ...(TURN_URL ? [
+      { urls: TURN_URL, username: TURN_USERNAME, credential: TURN_CREDENTIAL },
+    ] : [
+      // Free fallback — works for same-network; may fail across carrier-grade NAT
+      { urls: 'turn:openrelay.metered.ca:80',              username: 'openrelayproject', credential: 'openrelayproject' },
+      { urls: 'turn:openrelay.metered.ca:443',             username: 'openrelayproject', credential: 'openrelayproject' },
+      { urls: 'turn:openrelay.metered.ca:443?transport=tcp', username: 'openrelayproject', credential: 'openrelayproject' },
+    ]),
   ],
-  iceCandidatePoolSize: 2,
+  iceCandidatePoolSize: 4,
 };
 
-async function deriveSignalingKey(token) {
+// Key is derived from the eventId (shared by all peers in the same event room)
+// so that every participant can encrypt/decrypt each other's signaling payloads.
+// Using the per-user JWT token here would give every user a different key, making
+// cross-peer decryption impossible and silently breaking the WebRTC handshake.
+async function deriveSignalingKey(eventId) {
   const enc         = new TextEncoder();
   const keyMaterial = await crypto.subtle.importKey(
-    'raw', enc.encode(token), { name: 'PBKDF2' }, false, ['deriveKey']
+    'raw', enc.encode(String(eventId)), { name: 'PBKDF2' }, false, ['deriveKey']
   );
   return crypto.subtle.deriveKey(
     { name: 'PBKDF2', salt: enc.encode('planit-walkie-v1'), iterations: 200_000, hash: 'SHA-256' },
@@ -112,9 +129,9 @@ export function useWalkieTalkie(socket, eventId, token, username) {
 
   // ── Crypto key derivation ─────────────────────────────────────────────
   useEffect(() => {
-    if (!token) return;
+    if (!eventId) return;
     let cancelled = false;
-    deriveSignalingKey(token)
+    deriveSignalingKey(eventId)
       .then(k => {
         if (cancelled) return;
         keyRef.current = k;
@@ -124,7 +141,22 @@ export function useWalkieTalkie(socket, eventId, token, username) {
       })
       .catch(e => setError(`Crypto init failed: ${e.message}`));
     return () => { cancelled = true; };
-  }, [token]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [eventId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Re-join walkie room after socket reconnect ────────────────────────
+  // Socket.IO fires 'connect' on every successful connection — including
+  // reconnects. Without this the walkie room is lost after any network blip
+  // because the server drops room membership on disconnect.
+  useEffect(() => {
+    if (!socket) return;
+    const onReconnect = () => {
+      if (eventIdRef.current) {
+        socket.emit('walkie:join', { eventId: eventIdRef.current });
+      }
+    };
+    socket.on('connect', onReconnect);
+    return () => socket.off('connect', onReconnect);
+  }, [socket]);
 
   // ── Join / leave walkie room ──────────────────────────────────────────
   useEffect(() => {
