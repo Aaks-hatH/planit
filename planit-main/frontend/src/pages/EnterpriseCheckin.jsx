@@ -927,7 +927,7 @@ function InviteDialog({ invite, eventId, event, onClose, onSave }) {
   const getQRCodeUrl = () => {
     if (!createdInvite) return '';
     const apiBase = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
-    return `${apiBase}/invite/${createdInvite.inviteCode}/qr.svg`;
+    return `${apiBase}/events/invite/${createdInvite.inviteCode}/qr.svg`;
   };
 
   if (showSuccess && createdInvite) {
