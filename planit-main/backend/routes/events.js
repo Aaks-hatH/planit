@@ -2480,6 +2480,133 @@ router.post('/:eventId/approval-queue/:username/reject', verifyOrganizer, async 
   } catch (err) { next(err); }
 });
 
+// ─── GET /invite/:inviteCode/qr.svg ──────────────────────────────────────────
+// Returns a branded PlanIt QR card for a specific guest invite.
+// No auth required — the invite code IS the credential (same as the invite page).
+// Matches the dark-card aesthetic of the event QR already used in EventSpace.
+router.get('/invite/:inviteCode/qr.svg', async (req, res, next) => {
+  try {
+    const QRCode = require('qrcode');
+    const Invite = require('../models/Invite');
+    const invite = await Invite.findOne({ inviteCode: req.params.inviteCode.toUpperCase() }).lean();
+    if (!invite) return res.status(404).send('Invite not found');
+
+    const event = await Event.findById(invite.eventId).select('title').lean();
+    if (!event) return res.status(404).send('Event not found');
+
+    const protocol = process.env.NODE_ENV === 'production' ? 'https' : req.protocol;
+    const host     = process.env.BASE_DOMAIN || req.get('host');
+    const inviteUrl = `${protocol}://${host}/invite/${invite.inviteCode}`;
+
+    // Error correction H (30%) so centre logo doesn't break scannability
+    const dataUrl = await QRCode.toDataURL(inviteUrl, {
+      width: 260,
+      margin: 1,
+      color: { dark: '#ffffff', light: '#000000' },
+      errorCorrectionLevel: 'H',
+    });
+
+    const safeTitle    = event.title.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').slice(0, 30);
+    const safeName     = (invite.guestName || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').slice(0, 28);
+    const safeCode     = invite.inviteCode.replace(/[^A-Z0-9]/g, '');
+
+    const W = 300, H = 390;
+    const QX = 20, QY = 20, QS = 260;
+    const cx = QX + QS / 2;
+    const cy = QY + QS / 2;
+    const lblW = 110, lblH = 34;
+    const lblX = cx - lblW / 2;
+    const lblY = cy - lblH / 2;
+
+    const svg = `<svg width="${W}" height="${H}" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+  <defs>
+    <filter id="glow" x="-5%" y="-5%" width="110%" height="110%">
+      <feDropShadow dx="0" dy="4" stdDeviation="10" flood-color="#000" flood-opacity="0.55"/>
+    </filter>
+    <clipPath id="card"><rect width="${W}" height="${H}" rx="20"/></clipPath>
+    <clipPath id="qrclip"><rect x="${QX}" y="${QY}" width="${QS}" height="${QS}" rx="12"/></clipPath>
+  </defs>
+
+  <!-- Card background -->
+  <rect width="${W}" height="${H}" rx="20" fill="#0a0a0a" filter="url(#glow)"/>
+
+  <!-- QR code -->
+  <image x="${QX}" y="${QY}" width="${QS}" height="${QS}" href="${dataUrl}" clip-path="url(#qrclip)"/>
+
+  <!-- Centre PLANIT logo overlay -->
+  <rect x="${lblX}" y="${lblY}" width="${lblW}" height="${lblH}" rx="7" fill="#000"/>
+  <rect x="${lblX}" y="${lblY}" width="${lblW}" height="${lblH}" rx="7" fill="none" stroke="#fff" stroke-width="1.5"/>
+  <text x="${cx}" y="${cy + 5}" text-anchor="middle" dominant-baseline="middle"
+        fill="#fff" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif"
+        font-size="15" font-weight="800" letter-spacing="4">PLANIT</text>
+
+  <!-- Separator line -->
+  <line x1="20" y1="${QY + QS + 16}" x2="${W - 20}" y2="${QY + QS + 16}" stroke="#1f1f1f" stroke-width="1"/>
+
+  <!-- Event title -->
+  <text x="${W / 2}" y="${QY + QS + 36}" text-anchor="middle"
+        fill="#e5e5e5" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif"
+        font-size="12" font-weight="600">${safeTitle}</text>
+
+  <!-- Guest name -->
+  <text x="${W / 2}" y="${QY + QS + 54}" text-anchor="middle"
+        fill="#888" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif"
+        font-size="10">${safeName}</text>
+
+  <!-- Invite code -->
+  <text x="${W / 2}" y="${QY + QS + 74}" text-anchor="middle"
+        fill="#444" font-family="'Courier New',Courier,monospace"
+        font-size="11" font-weight="700" letter-spacing="3">${safeCode}</text>
+</svg>`;
+
+    res.setHeader('Content-Type', 'image/svg+xml');
+    res.setHeader('Cache-Control', 'public, max-age=86400');
+    res.send(svg);
+  } catch (err) { next(err); }
+});
+
+// ─── GET /:eventId/checkin-cache ─────────────────────────────────────────────
+// Returns a lightweight snapshot of all invites for offline PWA check-in.
+// Staff/organizer devices call this on page load and store it in IndexedDB.
+// When offline, the device checks invites against this cache and queues scans.
+// Excludes sensitive fields (actual PIN value is never sent — only hasPin flag).
+router.get('/:eventId/checkin-cache', verifyCheckinAccess, async (req, res, next) => {
+  try {
+    const { eventId } = req.params;
+
+    const event = await Event.findById(eventId).select('title checkinSettings').lean();
+    if (!event) return res.status(404).json({ error: 'Event not found' });
+
+    const Invite = require('../models/Invite');
+    const invites = await Invite.find({ eventId })
+      .select('inviteCode guestName guestEmail groupSize adults children checkedIn securityPin isBlocked status notes tableId tableLabel')
+      .lean();
+
+    const snapshot = invites.map(inv => ({
+      code:       inv.inviteCode,
+      name:       inv.guestName,
+      email:      inv.guestEmail       || '',
+      groupSize:  inv.groupSize        || 1,
+      adults:     inv.adults           || 1,
+      children:   inv.children         || 0,
+      checkedIn:  !!inv.checkedIn,
+      hasPin:     !!(inv.securityPin),
+      isBlocked:  !!(inv.isBlocked),
+      status:     inv.status           || 'active',
+      notes:      inv.notes            || '',
+      tableId:    inv.tableId          || null,
+      tableLabel: inv.tableLabel       || null,
+    }));
+
+    res.json({
+      snapshot,
+      total:    snapshot.length,
+      builtAt:  new Date().toISOString(),
+      event:    { title: event.title },
+    });
+  } catch (err) { next(err); }
+});
+
 module.exports = router;
 module.exports.fireWebhooks = fireWebhooks;
 
