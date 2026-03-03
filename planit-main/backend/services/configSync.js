@@ -41,13 +41,15 @@ async function syncConfigFromRouter() {
       const config  = result.data.config;
       const applied = [];
 
+      // These keys are always overwritten from the router — backends should NOT
+      // set them in their own Render env vars (set them only on the router).
+      const FORCE_FROM_ROUTER = new Set(['UPSTASH_REDIS_URL','UPSTASH_REDIS_TOKEN','FRONTEND_URL']);
+
       for (const [key, value] of Object.entries(config)) {
-        // Only apply if the backend hasn't already set its own override locally
-        if (!process.env[key]) {
+        if (FORCE_FROM_ROUTER.has(key) || !process.env[key]) {
           process.env[key] = value;
           applied.push(key);
         } else {
-          // Local override wins — log so it's visible
           console.log(`[configSync] ${key} — kept local override`);
         }
       }
