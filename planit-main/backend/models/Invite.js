@@ -48,6 +48,7 @@ const inviteSchema = new mongoose.Schema({
   // --------------------------------------------------------------------------
   tableId:    { type: String, default: null },
   tableLabel: { type: String, default: null },
+  seatNumber: { type: String, default: null },   // e.g. "A3", "Row 2 Seat 5", "14"
 
   // --------------------------------------------------------------------------
   // Anti-fraud and security
