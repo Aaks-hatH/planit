@@ -251,7 +251,7 @@ function PropsPanel({ obj, onChange, onDelete, guestsByTable, allGuests, onAssig
               {/* Seated */}
               {seated.length > 0 && (
                 <div className="space-y-1">
-                  {seated.map(g => (
+                  {seated.filter(Boolean).map(g => (
                     <div key={g.id} className="flex items-center justify-between py-1 text-xs">
                       <span className="text-neutral-700 font-medium truncate">{g.guestName}</span>
                       <button
@@ -276,7 +276,7 @@ function PropsPanel({ obj, onChange, onDelete, guestsByTable, allGuests, onAssig
                 {unseated.length === 0 ? (
                   <p className="text-xs text-neutral-400 text-center py-3">No unassigned guests</p>
                 ) : (
-                  unseated.map(g => (
+                  unseated.filter(Boolean).map(g => (
                     <button
                       key={g._id}
                       onClick={() => onAssignGuest?.(g._id, obj.id, obj.label || TYPE_META[obj.type]?.label)}
@@ -326,7 +326,7 @@ export default function SeatingMap({
   const [pan,    setPan]    = useState({ x: 0, y: 0 });
 
   // Editor state
-  const [objs,       setObjs]       = useState(objects);
+  const [objs,       setObjs]       = useState(() => (objects || []).filter(Boolean));
   const [selected,   setSelected]   = useState(null);   // table id
   const [pulsing,    setPulsing]     = useState(null);   // table id
   const [showGrid,   setShowGrid]    = useState(true);
@@ -340,7 +340,7 @@ export default function SeatingMap({
 
   // Sync external objects into local state
   useEffect(() => {
-    setObjs(objects);
+    setObjs((objects || []).filter(Boolean));
   }, [objects]);
 
   // Auto-focus on focusTableId
@@ -480,7 +480,7 @@ export default function SeatingMap({
   };
 
   const handleSave = () => {
-    onSave?.(objs);
+    onSave?.(objs.filter(Boolean));
     setIsDirty(false);
   };
 
@@ -648,7 +648,7 @@ export default function SeatingMap({
               </text>
 
               {/* Tables */}
-              {objs.map(obj => (
+              {objs.filter(Boolean).map(obj => (
                 <TableShape
                   key={obj.id}
                   obj={obj}
@@ -735,7 +735,7 @@ export default function SeatingMap({
               {(guestsByTable[selected] || []).length === 0 ? (
                 <p className="text-xs text-neutral-500 text-center py-6">No guests assigned to this table</p>
               ) : (
-                (guestsByTable[selected] || []).map(g => (
+                (guestsByTable[selected] || []).filter(Boolean).map(g => (
                   <div key={g.id} className="flex items-center gap-2 py-2 border-b border-neutral-800">
                     <div className={`w-2 h-2 rounded-full shrink-0 ${g.checkedIn ? 'bg-emerald-400' : 'bg-neutral-600'}`} />
                     <div className="flex-1 min-w-0">
