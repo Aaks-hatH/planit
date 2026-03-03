@@ -82,7 +82,7 @@ router.put(
     body('objects.*.id').isString().trim().notEmpty(),
     body('objects.*.x').isFloat({ min: 0 }).withMessage('x must be a non-negative number'),
     body('objects.*.y').isFloat({ min: 0 }).withMessage('y must be a non-negative number'),
-    body('objects.*.type').isIn(['round', 'rect', 'stage', 'bar', 'sofa', 'vip', 'zone']),
+    body('objects.*.type').isIn(['round', 'rect', 'stage', 'bar', 'sofa', 'vip', 'zone', 'auditorium']),
     body('objects.*.label').optional().isString().trim().isLength({ max: 50 }),
     body('objects.*.rotation').optional().isFloat({ min: 0, max: 359 }),
     body('objects.*.capacity').optional().isInt({ min: 1, max: 999 }),
