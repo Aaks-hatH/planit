@@ -96,7 +96,7 @@ export default function GuestInvite() {
 
   const handleDownloadQR = () => {
     const inviteUrl = `${window.location.origin}/invite/${inviteCode}`;
-    const qrUrl = `${API}/invite/${inviteCode}/qr.svg`;
+    const qrUrl = `${API}/events/invite/${inviteCode}/qr.svg`;
     const link = document.createElement('a');
     link.href = qrUrl;
     link.download = `${event.title}-${invite.guestName}-QR.png`;
@@ -153,7 +153,7 @@ export default function GuestInvite() {
   if (!invite || !event) return null;
 
   const inviteUrl = `${window.location.origin}/invite/${inviteCode}`;
-  const qrUrl = `${API}/invite/${inviteCode}/qr.svg`;
+  const qrUrl = `${API}/events/invite/${inviteCode}/qr.svg`;
 
   return (
     <div className="min-h-screen relative overflow-hidden" style={{ background: '#040407' }}>
@@ -469,7 +469,7 @@ export default function GuestInvite() {
               <p className="text-neutral-400 text-lg">{invite.guestName}</p>
             </div>
             <div className="bg-white p-12 rounded-3xl shadow-2xl">
-              <img src={`${API}/invite/${inviteCode}/qr.svg`} alt="QR Code Fullscreen" className="w-full max-w-lg mx-auto" />
+              <img src={`${API}/events/invite/${inviteCode}/qr.svg`} alt="QR Code Fullscreen" className="w-full max-w-lg mx-auto" />
               <p className="text-4xl font-mono font-black text-neutral-900 text-center mt-8 tracking-[0.3em]">{inviteCode}</p>
             </div>
             <p className="text-center text-neutral-400 text-sm mt-8 flex items-center justify-center gap-2">
