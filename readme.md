@@ -55,7 +55,7 @@ The following are **not permitted**:
 
 The software is free to use through the official hosted service at [planitapp.onrender.com](https://planitapp.onrender.com). No fee is charged for use of the hosted service.
 
-For the full licence terms, see [LICENSE](./LICENSE).
+For the full licence terms, see [LICENSE](./planit-main/LICENSE).
 
 ---
 
@@ -75,7 +75,7 @@ This information is provided for transparency. It does not constitute permission
 
 ## Reporting issues
 
-Use the support form at [planitapp.onrender.com/support](https://planitapp.onrender.com/support) to report bugs or request help.
+Use the support form at [planitapp.onrender.com/help](https://planitapp.onrender.com/help) to report bugs or request help.
 
 Do not open GitHub issues for support requests. Issues in this repository are for tracking acknowledged defects only.
 
