@@ -1643,12 +1643,14 @@ router.put('/:eventId/invites/:inviteId', verifyOrganizer,
     body('guestName').optional().trim().isLength({ min: 1, max: 100 }),
     body('guestEmail').optional().isEmail(),
     body('guestPhone').optional().trim(),
+    body('guestRole').optional().isIn(['GUEST', 'VIP', 'SPEAKER']),
     body('adults').optional().isInt({ min: 0 }),
     body('children').optional().isInt({ min: 0 }),
     body('groupSize').optional().isInt({ min: 1 }),
     body('plusOnes').optional().isInt({ min: 0 }),
     body('securityPin').optional().trim().isLength({ max: 6 }),
     body('notes').optional().trim(),
+    body('seatNumber').optional({ nullable: true }).isString().isLength({ max: 20 }),
     validate
   ],
   async (req, res, next) => {
@@ -1671,8 +1673,8 @@ router.put('/:eventId/invites/:inviteId', verifyOrganizer,
         return res.status(400).json({ error: 'Cannot update checked-in invite' });
       }
       
-      // Update fields
-      const allowedFields = ['guestName', 'guestEmail', 'guestPhone', 'adults', 'children', 'groupSize', 'plusOnes', 'securityPin', 'notes'];
+      // Update fields — guestRole IS included so VIP/SPEAKER assignments save correctly
+      const allowedFields = ['guestName', 'guestEmail', 'guestPhone', 'guestRole', 'adults', 'children', 'groupSize', 'plusOnes', 'securityPin', 'notes', 'seatNumber'];
       const updates = {};
       
       for (const field of allowedFields) {
