@@ -15,53 +15,63 @@ router.get('/invite/:inviteCode/qr.svg', async (req, res, next) => {
     const event = await Event.findById(invite.eventId).select('title').lean();
     if (!event) return res.status(404).send('Event not found');
 
-    const protocol  = process.env.NODE_ENV === 'production' ? 'https' : req.protocol;
-    const host      = process.env.BASE_DOMAIN || req.get('host');
-    const inviteUrl = `${protocol}://${host}/invite/${invite.inviteCode}`;
+    // Always use FRONTEND_URL for the invite link.
+    // req.get('host') behind Render's reverse proxy returns the backend's internal
+    // hostname (e.g. planit-backend-1.onrender.com), NOT the frontend domain the
+    // guest's browser visits (planitapp.onrender.com). If we embed the wrong host
+    // the scanned QR opens a dead URL.
+    const frontendBase = (process.env.FRONTEND_URL || process.env.BASE_DOMAIN || '').replace(/\/$/, '');
+    const inviteUrl = frontendBase
+      ? `${frontendBase}/invite/${invite.inviteCode}`
+      : `${req.protocol}://${req.get('host')}/invite/${invite.inviteCode}`;
 
-    // Error correction H so the centre logo doesn't break scannability
+    // Clean dark-on-white QR with NO overlay in the data area.
+    // The center PLANIT badge was blocking the timing patterns; BarcodeDetector
+    // (used by html5-qrcode) is strict and rejects QRs with anything overlaid.
+    // Brand info goes BELOW the QR image instead.
     const dataUrl = await QRCode.toDataURL(inviteUrl, {
       width: 260,
-      margin: 1,
-      color: { dark: '#ffffff', light: '#000000' },
-      errorCorrectionLevel: 'H',
+      margin: 2,
+      color: { dark: '#000000', light: '#ffffff' },
+      errorCorrectionLevel: 'M',
     });
 
     const safeTitle = (event.title    || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').slice(0, 30);
     const safeName  = (invite.guestName || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').slice(0, 28);
     const safeCode  = invite.inviteCode.replace(/[^A-Z0-9]/g, '');
 
-    const W = 300, H = 390;
+    const W = 300, H = 430;
     const QX = 20, QY = 20, QS = 260;
-    const cx = QX + QS / 2;  // 150
-    const cy = QY + QS / 2;  // 150
-    const lblW = 110, lblH = 34;
-    const lblX = cx - lblW / 2;
-    const lblY = cy - lblH / 2;
 
     const svg = `<svg width="${W}" height="${H}" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
   <defs>
     <filter id="glow" x="-5%" y="-5%" width="110%" height="110%">
       <feDropShadow dx="0" dy="4" stdDeviation="10" flood-color="#000" flood-opacity="0.55"/>
     </filter>
-    <clipPath id="card"><rect width="${W}" height="${H}" rx="20"/></clipPath>
-    <clipPath id="qrclip"><rect x="${QX}" y="${QY}" width="${QS}" height="${QS}" rx="12"/></clipPath>
+    <clipPath id="qrclip"><rect x="${QX}" y="${QY}" width="${QS}" height="${QS}" rx="10"/></clipPath>
   </defs>
+  <!-- Dark card -->
   <rect width="${W}" height="${H}" rx="20" fill="#0a0a0a" filter="url(#glow)"/>
+  <!-- White backing for QR (no overlay on top of QR modules) -->
+  <rect x="${QX - 4}" y="${QY - 4}" width="${QS + 8}" height="${QS + 8}" rx="14" fill="#ffffff"/>
+  <!-- Clean QR — no badge on top -->
   <image x="${QX}" y="${QY}" width="${QS}" height="${QS}" href="${dataUrl}" clip-path="url(#qrclip)"/>
-  <rect x="${lblX}" y="${lblY}" width="${lblW}" height="${lblH}" rx="7" fill="#000"/>
-  <rect x="${lblX}" y="${lblY}" width="${lblW}" height="${lblH}" rx="7" fill="none" stroke="#fff" stroke-width="1.5"/>
-  <text x="${cx}" y="${cy + 5}" text-anchor="middle" dominant-baseline="middle"
-        fill="#fff" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif"
-        font-size="15" font-weight="800" letter-spacing="4">PLANIT</text>
-  <line x1="20" y1="${QY + QS + 16}" x2="${W - 20}" y2="${QY + QS + 16}" stroke="#1f1f1f" stroke-width="1"/>
-  <text x="${W / 2}" y="${QY + QS + 36}" text-anchor="middle"
+  <!-- Divider -->
+  <line x1="20" y1="${QY + QS + 18}" x2="${W - 20}" y2="${QY + QS + 18}" stroke="#1f1f1f" stroke-width="1"/>
+  <!-- PLANIT brand -->
+  <text x="${W / 2}" y="${QY + QS + 40}" text-anchor="middle"
+        fill="#ffffff" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif"
+        font-size="13" font-weight="800" letter-spacing="5">PLANIT</text>
+  <!-- Event title -->
+  <text x="${W / 2}" y="${QY + QS + 62}" text-anchor="middle"
         fill="#e5e5e5" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif"
         font-size="12" font-weight="600">${safeTitle}</text>
-  <text x="${W / 2}" y="${QY + QS + 54}" text-anchor="middle"
+  <!-- Guest name -->
+  <text x="${W / 2}" y="${QY + QS + 80}" text-anchor="middle"
         fill="#888" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif"
-        font-size="10">${safeName}</text>
-  <text x="${W / 2}" y="${QY + QS + 74}" text-anchor="middle"
+        font-size="11">${safeName}</text>
+  <!-- Invite code -->
+  <text x="${W / 2}" y="${QY + QS + 100}" text-anchor="middle"
         fill="#444" font-family="'Courier New',Courier,monospace"
         font-size="11" font-weight="700" letter-spacing="3">${safeCode}</text>
 </svg>`;
