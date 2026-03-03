@@ -25,15 +25,23 @@ const seatingObjectSchema = new mongoose.Schema(
     y:        { type: Number, required: true, min: 0 },
     type:     {
       type:    String,
-      enum:    ['round', 'rect', 'stage', 'bar'],
+      enum:    ['round', 'rect', 'stage', 'bar', 'sofa', 'vip', 'zone', 'auditorium'],
       default: 'round',
     },
     label:    { type: String, trim: true, maxlength: 50, default: '' },
     rotation: { type: Number, default: 0 },
-    capacity: { type: Number, default: 8, min: 1, max: 999 },
+    capacity: { type: Number, default: 0, min: 0, max: 9999 },
     color:    { type: String, default: null },
     width:    { type: Number, default: 80 },
     height:   { type: Number, default: 80 },
+    // Auditorium: rows × seatsPerRow layout config
+    rowConfig: {
+      rows:          { type: Number, default: 5 },
+      seatsPerRow:   { type: Number, default: 10 },
+      rowSpacing:    { type: Number, default: 36 },
+      seatSpacing:   { type: Number, default: 28 },
+      rowLabelStyle: { type: String, enum: ['alpha', 'numeric'], default: 'alpha' },
+    },
   },
   { _id: false }
 );
