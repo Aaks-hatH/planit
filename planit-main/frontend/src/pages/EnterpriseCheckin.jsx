@@ -926,8 +926,8 @@ function InviteDialog({ invite, eventId, event, onClose, onSave }) {
 
   const getQRCodeUrl = () => {
     if (!createdInvite) return '';
-    const link = getInviteLink();
-    return `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(link)}`;
+    const apiBase = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+    return `${apiBase}/invite/${createdInvite.inviteCode}/qr.svg`;
   };
 
   if (showSuccess && createdInvite) {
@@ -1728,35 +1728,92 @@ export default function EnterpriseCheckin() {
 
     let inviteCode = code.trim();
 
-    // 🔥 Extract invite code from URL if it's a full URL
-    // Handles: 
+    // Extract invite code from full URL or bare code:
     // - https://planitapp.onrender.com/invite/ABC123
-    // - /invite/ABC123?ref=email
-    // - /invite/ABC123#section
+    // - /invite/ABC123?ref=email  or  /invite/ABC123#section
+    // - ABC123 (bare code, from manual entry or direct click)
     const match = inviteCode.match(/\/invite\/([A-Z0-9]+)(?:[?#]|$)/i);
     if (match) {
       inviteCode = match[1];
       console.log('✅ Extracted invite code from URL:', inviteCode);
     } else {
-      // If no /invite/ pattern, remove any protocol and domain
-      inviteCode = inviteCode.replace(/^https?:\/\/[^\/]+\/?/i, '');
+      inviteCode = inviteCode.replace(/^https?:\/\/[^/]+\/?/i, '');
       console.log('ℹ️ Using cleaned input as invite code:', inviteCode);
     }
 
     inviteCode = inviteCode.toUpperCase().trim();
-    
+
     setScanMode(false);
     setShowManual(false);
     setManualCode('');
-    
+
+    // ── OFFLINE PATH ────────────────────────────────────────────────────
+    if (isOffline || !navigator.onLine) {
+      const cached = offlineCheckin.lookupGuest(inviteCode);
+      if (!cached) {
+        hapticError();
+        setDenyDetails({
+          reason: 'not_found',
+          severity: 'critical',
+          message: cacheReady
+            ? 'QR code not found in offline guest list. Deny entry.'
+            : 'No offline guest list cached. Go online and reload to enable offline scanning.',
+          displayMessage: cacheReady ? 'NOT FOUND (OFFLINE)' : 'NO CACHE',
+        });
+        setShowDenyScreen(true);
+        return;
+      }
+      if (cached.isBlocked) {
+        hapticError();
+        setDenyDetails({
+          reason: 'blocked', severity: 'critical',
+          message: 'This guest is blocked.', displayMessage: 'BLOCKED',
+          guestName: cached.name, inviteCode,
+        });
+        setShowDenyScreen(true);
+        return;
+      }
+      if (cached.checkedIn) {
+        hapticError();
+        setDenyDetails({
+          reason: 'already_checked_in', severity: 'high',
+          message: 'This ticket has already been used.', displayMessage: 'TICKET ALREADY USED',
+          guestName: cached.name, inviteCode, requiresOverride: false,
+        });
+        setShowDenyScreen(true);
+        return;
+      }
+      // Valid — optimistically admit offline
+      hapticSuccess();
+      offlineCheckin.markCheckedInLocally(inviteCode, cached.groupSize, authState.username);
+      offlineCheckin.queueCheckin(eventId, inviteCode, cached.groupSize);
+      offlineCheckin.pendingCount(eventId).then(n => setPendingSync(n));
+      setCurrentGuest({
+        id: inviteCode, inviteCode,
+        guestName:  cached.name,
+        guestEmail: cached.email    || '',
+        groupSize:  cached.groupSize || 1,
+        adults:     cached.adults    || 1,
+        children:   cached.children  || 0,
+        notes:      cached.notes     || '',
+        hasPin:     cached.hasPin,
+        tableId:    cached.tableId   || null,
+        tableLabel: cached.tableLabel || null,
+        _offlineAdmit: true,
+      });
+      setCurrentSecurity({ trustScore: 100, warnings: [], flags: [] });
+      setRequiresPin(cached.hasPin && settings?.requirePin);
+      setPinVerified(false);
+      return;
+    }
+
+    // ── ONLINE PATH ─────────────────────────────────────────────────────
     try {
       const response = await eventAPI.verifyScan(eventId, inviteCode);
       const data = response.data;
-      
+
       if (!data.valid) {
-        // Trigger error haptic for invalid scan
         hapticError();
-        
         setDenyDetails({
           reason: data.reason,
           severity: data.severity || 'critical',
@@ -1773,19 +1830,22 @@ export default function EnterpriseCheckin() {
         setShowDenyScreen(true);
         return;
       }
-      
-      // Trigger success haptic for valid scan
+
       hapticSuccess();
-      
       setCurrentGuest(data.guest);
       setCurrentSecurity(data.security);
       setRequiresPin(data.requiresPin);
       setPinVerified(false);
-      
-    } catch (error) {
-      hapticError();
 
-      // 400 responses from verify-scan contain structured deny data (already_checked_in, blocked, etc)
+    } catch (error) {
+      // If connectivity just dropped mid-scan, switch to offline path
+      if (!navigator.onLine) {
+        setIsOffline(true);
+        handleScan(inviteCode);
+        return;
+      }
+
+      hapticError();
       const errData = error.response?.data;
       if (errData && errData.valid === false) {
         setDenyDetails({
@@ -1803,8 +1863,7 @@ export default function EnterpriseCheckin() {
         });
       } else {
         setDenyDetails({
-          reason: 'error',
-          severity: 'critical',
+          reason: 'error', severity: 'critical',
           message: errData?.message || error.message || 'Scan failed',
         });
       }
@@ -1833,6 +1892,13 @@ export default function EnterpriseCheckin() {
   };
   
   const handleAdmit = async () => {
+    // Offline guests were already queued in handleScan — just advance the UI
+    if (currentGuest?._offlineAdmit) {
+      setAdmittedGuest({ ...currentGuest, checkedIn: true });
+      setCurrentGuest(null);
+      setShowAdmitSuccess(true);
+      return;
+    }
     try {
       const response = await eventAPI.checkIn(eventId, currentGuest.inviteCode, {
         actualAttendees: currentGuest.groupSize,
@@ -2142,14 +2208,32 @@ export default function EnterpriseCheckin() {
               <span className="hidden sm:inline">Settings</span>
             </button>
 
-            {/* Seating map button — only shown when map is enabled */}
-            {seatingEnabled && (
+            {/* Seating map button:
+                - If map is enabled: show for everyone (organizer gets editor, staff gets display)
+                - If map is NOT enabled: show a "Set Up Seating" button ONLY for organizers
+                  so they can create the first layout (fixes the chicken-and-egg where the button
+                  was only visible after enabling, but enabling required clicking the button) */}
+            {seatingEnabled ? (
               <button
                 onClick={() => { setSeatingFocusId(null); setShowSeatingMap(true); }}
                 className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-violet-700 bg-violet-50 border border-violet-200 rounded-xl hover:bg-violet-100 transition-all"
               >
                 <MapPin className="w-3.5 h-3.5" />
                 <span className="hidden sm:inline">Seating</span>
+              </button>
+            ) : authState.role === 'organizer' && (
+              <button
+                onClick={() => {
+                  // Ensure seatingData is initialised so the modal renders
+                  if (!seatingData) setSeatingData({ seatingMap: { enabled: false, objects: [] }, guestsByTable: {} });
+                  setSeatingFocusId(null);
+                  setShowSeatingMap(true);
+                }}
+                title="Create a seating chart for this event"
+                className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-neutral-500 border border-dashed border-neutral-300 rounded-xl hover:border-violet-400 hover:text-violet-600 hover:bg-violet-50 transition-all"
+              >
+                <MapPin className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Set Up Seating</span>
               </button>
             )}
 
