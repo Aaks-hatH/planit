@@ -8,7 +8,7 @@ const axios = require('axios');
 const Event = require('../models/Event');
 const EventParticipant = require('../models/EventParticipant');
 const { verifyEventAccess, verifyOrganizer, verifyCheckinAccess } = require('../middleware/auth');
-const { createEventLimiter, authLimiter } = require('../middleware/rateLimiter');
+const { createEventLimiter, authLimiter, reservationLimiter, availabilityLimiter } = require('../middleware/rateLimiter');
 const { secrets } = require('../keys');
 
 const validate = (req, res, next) => {
@@ -23,8 +23,7 @@ router.post('/',
   [
     body('subdomain').trim().isLength({ min: 3, max: 50 }).matches(/^[a-z0-9-]+$/).withMessage('Invalid subdomain format'),
     body('title').trim().isLength({ min: 1, max: 200 }).withMessage('Title is required'),
-    // Date is required for standard/enterprise events but NOT for table-service (restaurants have no single event date)
-    body('date').if((value, { req }) => !req.body.isTableServiceMode).isISO8601().withMessage('Valid date is required'),
+    body('date').isISO8601().withMessage('Valid date is required'),
     body('organizerName').trim().isLength({ min: 1, max: 100 }).withMessage('Organizer name is required'),
     body('organizerEmail').isEmail().normalizeEmail().withMessage('Valid email is required'),
     body('password').optional({ values: 'falsy' }).isLength({ min: 6 }).withMessage('Password must be at least 6 characters'),
@@ -32,7 +31,7 @@ router.post('/',
   ],
   async (req, res, next) => {
     try {
-      const { subdomain, title, description, date, location, organizerName, organizerEmail, password, accountPassword, isEnterpriseMode, isTableServiceMode, settings, maxParticipants } = req.body;
+      const { subdomain, title, description, date, location, organizerName, organizerEmail, password, accountPassword, isEnterpriseMode, settings, maxParticipants } = req.body;
 
       const existing = await Event.findOne({ subdomain });
       if (existing) return res.status(409).json({ error: 'This event link is already taken.' });
@@ -45,12 +44,9 @@ router.post('/',
       }
 
       const event = new Event({
-        subdomain, title, description,
-        date: isTableServiceMode ? undefined : date,
-        location, organizerName, organizerEmail,
+        subdomain, title, description, date, location, organizerName, organizerEmail,
         password: hashedPassword, isPasswordProtected,
         isEnterpriseMode: isEnterpriseMode || false,
-        isTableServiceMode: isTableServiceMode || false,
         settings: settings || {}, maxParticipants: maxParticipants || 100,
         participants: [{ username: organizerName, role: 'organizer' }]
       });
@@ -784,7 +780,486 @@ router.get('/:eventId/analytics', verifyEventAccess, async (req, res, next) => {
     );
     if (!isOrg) return res.status(403).json({ error: 'Only organizers can view analytics' });
 
-    const Message = require('../models/Message');
+    
+// ═══════════════════════════════════════════════════════════════════════════
+// PUBLIC RESERVATION API  (/api/events/public/reserve/...)
+// No auth required. Aggressively rate-limited.
+// ═══════════════════════════════════════════════════════════════════════════
+
+const crypto = require('crypto');
+
+// ── Availability helper ──────────────────────────────────────────────────────
+function buildSlots(dateStr, openTime, closeTime, intervalMin, lastBookingBuffer) {
+  const slots = [];
+  const [oh, om] = openTime.split(':').map(Number);
+  const [ch, cm] = closeTime.split(':').map(Number);
+  const base = new Date(`${dateStr}T00:00:00`);
+
+  let cur = oh * 60 + om;
+  const end = ch * 60 + cm - (lastBookingBuffer || 0);
+
+  while (cur <= end) {
+    const h = Math.floor(cur / 60);
+    const m = cur % 60;
+    const dt = new Date(base);
+    dt.setHours(h, m, 0, 0);
+    slots.push({
+      time: `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`,
+      datetime: dt,
+    });
+    cur += intervalMin;
+  }
+  return slots;
+}
+
+function getDayKey(date) {
+  const days = ['sun','mon','tue','wed','thu','fri','sat'];
+  return days[new Date(date).getDay()];
+}
+
+function computeAvailability(dateStr, partySize, event) {
+  const rps = event.reservationPageSettings || {};
+  const tss = event.tableServiceSettings || {};
+
+  // Check if this day is open
+  const dayKey = getDayKey(dateStr + 'T12:00:00');
+  const dayConfig = rps.operatingDays?.[dayKey];
+  if (dayConfig && dayConfig.open === false) return [];
+
+  // Blackout check
+  if ((rps.blackoutDates || []).some(b => b.date === dateStr)) return [];
+
+  const openTime  = dayConfig?.openTime  || tss.operatingHoursOpen  || '11:00';
+  const closeTime = dayConfig?.closeTime || tss.operatingHoursClose || '22:00';
+  const interval  = rps.slotIntervalMinutes || 30;
+  const duration  = tss.reservationDurationMinutes || 90;
+  const buffer    = rps.lastBookingBeforeCloseMinutes || 30;
+  const maxPerSlot = rps.maxReservationsPerSlot || 0;
+
+  const slots = buildSlots(dateStr, openTime, closeTime, interval, buffer);
+
+  // Tables that can seat this party
+  const tables = (event.seatingMap?.objects || []).filter(t =>
+    t.type !== 'zone' && t.capacity >= partySize
+  );
+
+  // Reservations for this day
+  const dayStart = new Date(dateStr + 'T00:00:00');
+  const dayEnd   = new Date(dateStr + 'T23:59:59');
+  const dayRes   = (event.restaurantReservations || []).filter(r =>
+    (r.status === 'confirmed' || r.status === 'pending') &&
+    new Date(r.dateTime) >= dayStart &&
+    new Date(r.dateTime) <= dayEnd
+  );
+
+  // Min advance enforcement
+  const minAdvanceMs = (rps.minAdvanceHours || 1) * 3600000;
+  const now = Date.now();
+
+  return slots.map(slot => {
+    // Past or too soon?
+    if (slot.datetime.getTime() - now < minAdvanceMs) {
+      return { time: slot.time, status: 'unavailable', reason: 'past' };
+    }
+
+    const slotEnd = new Date(slot.datetime.getTime() + duration * 60000);
+
+    // Which of our suitable tables already have a reservation overlapping this window?
+    const bookedTableIds = new Set();
+    dayRes.forEach(res => {
+      if (!res.tableId) return;
+      const rStart = new Date(res.dateTime);
+      const rEnd   = new Date(rStart.getTime() + duration * 60000);
+      if (rStart < slotEnd && rEnd > slot.datetime) {
+        bookedTableIds.add(res.tableId);
+      }
+    });
+    const freeTables = tables.filter(t => !bookedTableIds.has(t.id));
+
+    // Per-slot cap check (counts all reservations starting within ±interval/2)
+    let slotCount = 0;
+    if (maxPerSlot > 0) {
+      slotCount = dayRes.filter(r => {
+        const diff = Math.abs(new Date(r.dateTime).getTime() - slot.datetime.getTime());
+        return diff < (interval * 60000) / 2;
+      }).length;
+    }
+
+    let status = 'available';
+    if (tables.length > 0) {
+      if (freeTables.length === 0) status = 'full';
+      else if (freeTables.length === 1) status = 'limited';
+    } else {
+      // No floor map yet — fall back to slot cap only
+      if (maxPerSlot > 0 && slotCount >= maxPerSlot) status = 'full';
+      else if (maxPerSlot > 0 && slotCount >= maxPerSlot * 0.7) status = 'limited';
+    }
+
+    if (maxPerSlot > 0 && slotCount >= maxPerSlot) status = 'full';
+
+    return {
+      time: slot.time,
+      status,
+      freeCount: freeTables.length,
+    };
+  });
+}
+
+// ── GET /public/reserve/:subdomain ────────────────────────────────────────────
+// Returns public restaurant info and reservation config.
+router.get('/public/reserve/:subdomain', availabilityLimiter, async (req, res, next) => {
+  try {
+    const event = await Event.findOne({ subdomain: req.params.subdomain })
+      .select('title isTableServiceMode tableServiceSettings reservationPageSettings seatingMap tableStates tableServiceWaitlist')
+      .lean();
+    if (!event) return res.status(404).json({ error: 'Not found' });
+    if (!event.isTableServiceMode) return res.status(404).json({ error: 'Not found' });
+
+    const rps = event.reservationPageSettings || {};
+    const tss = event.tableServiceSettings   || {};
+
+    // Live wait times per common party sizes (1-2, 3-4, 5-8)
+    let waitTimes = null;
+    if (rps.showLiveWaitTime !== false) {
+      const objects = event.seatingMap?.objects || [];
+      const states  = event.tableStates || [];
+      const activeWait = (event.tableServiceWaitlist || []).filter(w => w.status === 'waiting' || w.status === 'notified');
+
+      const avgDining = tss.avgDiningMinutes || 75;
+      const buffer    = tss.cleaningBufferMinutes || 10;
+
+      const calcWait = (sz) => {
+        const tables = objects.filter(o => o.type !== 'zone' && o.capacity >= sz);
+        if (!tables.length) return null;
+        const avail = tables.some(t => {
+          const s = states.find(st => st.tableId === t.id);
+          return !s || s.status === 'available';
+        });
+        if (avail) return 0;
+        const times = tables.map(t => {
+          const s = states.find(st => st.tableId === t.id);
+          if (!s || s.status !== 'occupied' || !s.occupiedAt) return null;
+          const seatedMs = Date.now() - new Date(s.occupiedAt).getTime();
+          return Math.max(0, Math.round((avgDining * 60000 - seatedMs) / 60000));
+        }).filter(t => t !== null);
+        if (!times.length) return null;
+        return Math.min(...times) + buffer;
+      };
+
+      waitTimes = { forTwo: calcWait(2), forFour: calcWait(4), forEight: calcWait(8) };
+    }
+
+    res.json({
+      name:             tss.restaurantName || event.title,
+      tagline:          rps.headerTagline || '',
+      description:      rps.publicDescription || '',
+      cuisine:          rps.cuisine || '',
+      priceRange:       rps.priceRange || '',
+      dressCode:        rps.dressCode || '',
+      parkingInfo:      rps.parkingInfo || '',
+      accessibilityInfo:rps.accessibilityInfo || '',
+      address:          rps.address || '',
+      phone:            rps.phone || '',
+      websiteUrl:       rps.websiteUrl || '',
+      instagramHandle:  rps.instagramHandle || '',
+      facebookUrl:      rps.facebookUrl || '',
+      googleMapsUrl:    rps.googleMapsUrl || '',
+      heroImageUrl:     rps.heroImageUrl || '',
+      logoUrl:          rps.logoUrl || '',
+      accentColor:      rps.accentColor || '#f97316',
+      backgroundStyle:  rps.backgroundStyle || 'dark',
+      fontStyle:        rps.fontStyle || 'modern',
+      announcementBanner:        rps.announcementBannerEnabled ? rps.announcementBanner : '',
+      announcementBannerColor:   rps.announcementBannerColor || '#f59e0b',
+      operatingHoursOpen:  tss.operatingHoursOpen  || '11:00',
+      operatingHoursClose: tss.operatingHoursClose || '22:00',
+      operatingDays:    rps.operatingDays || {},
+      blackoutDates:    (rps.blackoutDates || []).map(b => b.date),
+      acceptingReservations: rps.acceptingReservations || false,
+      confirmationMode:      rps.confirmationMode || 'auto_confirm',
+      slotIntervalMinutes:   rps.slotIntervalMinutes || 30,
+      maxAdvanceDays:        rps.maxAdvanceDays || 30,
+      minAdvanceHours:       rps.minAdvanceHours || 1,
+      maxPartySizePublic:    rps.maxPartySizePublic || 12,
+      minPartySizePublic:    rps.minPartySizePublic || 1,
+      requirePhone:          rps.requirePhone !== false,
+      requireEmail:          rps.requireEmail || false,
+      allowSpecialRequests:  rps.allowSpecialRequests !== false,
+      allowDietaryNeeds:     rps.allowDietaryNeeds !== false,
+      allowOccasionSelect:   rps.allowOccasionSelect !== false,
+      occasionOptions:       rps.occasionOptions?.length ? rps.occasionOptions : ['Birthday','Anniversary','Business Dinner','Date Night','Family Gathering','Other'],
+      showLiveWaitTime:      rps.showLiveWaitTime !== false,
+      showAvailabilityStatus:rps.showAvailabilityStatus !== false,
+      showTableCount:        rps.showTableCount || false,
+      availabilityDisplayMode: rps.availabilityDisplayMode || 'slots',
+      confirmationMessage:   rps.confirmationMessage || '',
+      depositRequired:       rps.depositRequired || false,
+      depositAmount:         rps.depositAmount || 0,
+      depositNote:           rps.depositNote || '',
+      cancellationPolicy:    rps.cancellationPolicy || '',
+      cancelCutoffHours:     rps.cancelCutoffHours || 2,
+      faqItems:              rps.faqItems || [],
+      termsUrl:              rps.termsUrl || '',
+      privacyUrl:            rps.privacyUrl || '',
+      showPoweredBy:         rps.showPoweredBy !== false,
+      metaTitle:             rps.metaTitle || '',
+      metaDescription:       rps.metaDescription || '',
+      waitTimes,
+    });
+  } catch (err) { next(err); }
+});
+
+// ── GET /public/reserve/:subdomain/availability ────────────────────────────────
+// ?date=YYYY-MM-DD&partySize=N
+router.get('/public/reserve/:subdomain/availability', availabilityLimiter, async (req, res, next) => {
+  try {
+    const { date, partySize } = req.query;
+    if (!date || !partySize) return res.status(400).json({ error: 'date and partySize required' });
+
+    const sz = parseInt(partySize);
+    if (isNaN(sz) || sz < 1 || sz > 100) return res.status(400).json({ error: 'Invalid party size' });
+
+    const event = await Event.findOne({ subdomain: req.params.subdomain })
+      .select('isTableServiceMode tableServiceSettings reservationPageSettings seatingMap restaurantReservations')
+      .lean();
+    if (!event || !event.isTableServiceMode) return res.status(404).json({ error: 'Not found' });
+
+    const rps = event.reservationPageSettings || {};
+    if (!rps.acceptingReservations) return res.json({ slots: [], closed: true });
+
+    // Blackout / day closed
+    const dayKey = getDayKey(date + 'T12:00:00');
+    const dayConfig = rps.operatingDays?.[dayKey];
+    if (dayConfig && dayConfig.open === false) return res.json({ slots: [], closed: true });
+    if ((rps.blackoutDates || []).some(b => b.date === date)) {
+      return res.json({ slots: [], closed: true, reason: 'Closed this date' });
+    }
+
+    // Max per day cap
+    const maxPerDay = rps.maxReservationsPerDay || 0;
+    if (maxPerDay > 0) {
+      const dayStart = new Date(date + 'T00:00:00');
+      const dayEnd   = new Date(date + 'T23:59:59');
+      const dayCount = (event.restaurantReservations || []).filter(r =>
+        (r.status === 'confirmed' || r.status === 'pending') &&
+        new Date(r.dateTime) >= dayStart && new Date(r.dateTime) <= dayEnd
+      ).length;
+      if (dayCount >= maxPerDay) return res.json({ slots: [], closed: true, reason: 'Fully booked for this day' });
+    }
+
+    const slots = computeAvailability(date, sz, event);
+    res.json({ slots });
+  } catch (err) { next(err); }
+});
+
+// ── POST /public/reserve/:subdomain ───────────────────────────────────────────
+// Create a public reservation. Rate limited.
+router.post('/public/reserve/:subdomain', reservationLimiter, async (req, res, next) => {
+  try {
+    const { partyName, partySize, phone, email, date, timeSlot, occasion, specialRequests, dietaryNeeds } = req.body;
+
+    if (!partyName?.trim()) return res.status(400).json({ error: 'Name is required' });
+    if (!partySize || partySize < 1) return res.status(400).json({ error: 'Party size is required' });
+    if (!date || !timeSlot) return res.status(400).json({ error: 'Date and time are required' });
+
+    const event = await Event.findOne({ subdomain: req.params.subdomain })
+      .select('+restaurantReservations tableServiceSettings reservationPageSettings seatingMap isTableServiceMode');
+    if (!event || !event.isTableServiceMode) return res.status(404).json({ error: 'Not found' });
+
+    const rps = event.reservationPageSettings || {};
+    if (!rps.acceptingReservations) return res.status(403).json({ error: 'Online reservations are not currently being accepted.' });
+
+    if (rps.requirePhone && !phone?.trim()) return res.status(400).json({ error: 'Phone number is required' });
+    if (rps.requireEmail && !email?.trim()) return res.status(400).json({ error: 'Email address is required' });
+
+    const sz = parseInt(partySize);
+    if (sz < (rps.minPartySizePublic || 1)) return res.status(400).json({ error: `Minimum party size is ${rps.minPartySizePublic || 1}` });
+    if (sz > (rps.maxPartySizePublic || 12)) return res.status(400).json({ error: `Maximum party size for online bookings is ${rps.maxPartySizePublic || 12}` });
+
+    // Build datetime
+    const dateTime = new Date(`${date}T${timeSlot}:00`);
+    if (isNaN(dateTime.getTime())) return res.status(400).json({ error: 'Invalid date/time' });
+
+    // Min advance check
+    const minAdvanceMs = (rps.minAdvanceHours || 1) * 3600000;
+    if (dateTime.getTime() - Date.now() < minAdvanceMs) {
+      return res.status(400).json({ error: `Reservations must be made at least ${rps.minAdvanceHours || 1} hour(s) in advance` });
+    }
+
+    // Max advance check
+    const maxAdvanceMs = (rps.maxAdvanceDays || 30) * 86400000;
+    if (dateTime.getTime() - Date.now() > maxAdvanceMs) {
+      return res.status(400).json({ error: `Reservations can only be made up to ${rps.maxAdvanceDays || 30} days in advance` });
+    }
+
+    // Re-check availability
+    const slots = computeAvailability(date, sz, event);
+    const targetSlot = slots.find(s => s.time === timeSlot);
+    if (!targetSlot || targetSlot.status === 'full') {
+      return res.status(409).json({ error: 'This time slot is no longer available. Please choose another time.' });
+    }
+
+    // Per-day cap re-check
+    const maxPerDay = rps.maxReservationsPerDay || 0;
+    if (maxPerDay > 0) {
+      const dayStart = new Date(date + 'T00:00:00');
+      const dayEnd   = new Date(date + 'T23:59:59');
+      const dayCount = event.restaurantReservations.filter(r =>
+        (r.status === 'confirmed' || r.status === 'pending') &&
+        new Date(r.dateTime) >= dayStart && new Date(r.dateTime) <= dayEnd
+      ).length;
+      if (dayCount >= maxPerDay) return res.status(409).json({ error: 'Sorry, this day is now fully booked.' });
+    }
+
+    // Generate tokens
+    const resId      = `res_${Date.now().toString(36)}_${crypto.randomBytes(4).toString('hex')}`;
+    const qrToken    = crypto.randomBytes(24).toString('hex');
+    const cancelToken= crypto.randomBytes(24).toString('hex');
+
+    const tss = event.tableServiceSettings || {};
+    const qrExpiryMin = tss.reservationQrExpiryMinutes || 45;
+    const qrExpiresAt = new Date(dateTime.getTime() + qrExpiryMin * 60000);
+
+    const status = (rps.confirmationMode === 'manual') ? 'pending' : 'confirmed';
+
+    const reservation = {
+      id:              resId,
+      partyName:       partyName.trim(),
+      partySize:       sz,
+      phone:           phone?.trim() || '',
+      email:           email?.trim() || '',
+      dateTime,
+      tableId:         null,
+      qrToken,
+      qrExpiresAt,
+      cancelToken,
+      status,
+      source:          'public',
+      occasion:        occasion || '',
+      specialRequests: specialRequests?.trim() || '',
+      dietaryNeeds:    dietaryNeeds?.trim() || '',
+      notes:           '',
+      createdAt:       new Date(),
+    };
+
+    event.restaurantReservations.push(reservation);
+    event.keepForever = true;
+    await event.save();
+
+    // Fire confirmation email non-blocking
+    if (rps.sendConfirmationEmail !== false && email?.trim()) {
+      try {
+        const { sendReservationConfirmation } = require('../services/emailService');
+        sendReservationConfirmation(event, reservation).catch(() => {});
+      } catch (_) {}
+    }
+
+    const cancelUrl = `${process.env.FRONTEND_URL || 'https://planit.events'}/reserve/cancel/${cancelToken}`;
+
+    res.status(201).json({
+      reservationId: resId,
+      status,
+      partyName:     reservation.partyName,
+      partySize:     reservation.partySize,
+      dateTime:      reservation.dateTime,
+      qrToken,
+      qrExpiresAt,
+      cancelUrl,
+      confirmationMessage: rps.confirmationMessage || '',
+      depositRequired:     rps.depositRequired || false,
+      depositAmount:       rps.depositAmount || 0,
+      depositNote:         rps.depositNote || '',
+      isPending: status === 'pending',
+    });
+  } catch (err) { next(err); }
+});
+
+// ── DELETE /public/reserve/cancel/:cancelToken ────────────────────────────────
+// Self-service cancellation via the token in the confirmation email.
+router.delete('/public/reserve/cancel/:cancelToken', reservationLimiter, async (req, res, next) => {
+  try {
+    const { cancelToken } = req.params;
+    if (!cancelToken || cancelToken.length < 10) return res.status(400).json({ error: 'Invalid cancel token' });
+
+    // Search across all table-service events for this token
+    const event = await Event.findOne({
+      isTableServiceMode: true,
+      'restaurantReservations.cancelToken': cancelToken,
+    });
+    if (!event) return res.status(404).json({ error: 'Reservation not found or already cancelled.' });
+
+    const res_ = event.restaurantReservations.find(r => r.cancelToken === cancelToken);
+    if (!res_) return res.status(404).json({ error: 'Reservation not found.' });
+    if (res_.status === 'cancelled') return res.status(400).json({ error: 'This reservation is already cancelled.' });
+    if (res_.status === 'seated') return res.status(400).json({ error: 'This reservation cannot be cancelled — the party is already seated.' });
+
+    const rps = event.reservationPageSettings || {};
+    const cutoffMs = (rps.cancelCutoffHours || 2) * 3600000;
+    if (new Date(res_.dateTime).getTime() - Date.now() < cutoffMs) {
+      return res.status(403).json({
+        error: `Reservations can only be cancelled at least ${rps.cancelCutoffHours || 2} hour(s) before the booking time. Please call us directly.`,
+        phone: rps.phone || '',
+      });
+    }
+
+    res_.status = 'cancelled';
+    await event.save();
+
+    // Notify organizer
+    if (rps.notifyOrganizerOnCancel && rps.notifyOrganizerEmail) {
+      try {
+        const { sendReservationCancellation } = require('../services/emailService');
+        sendReservationCancellation(event, res_).catch(() => {});
+      } catch (_) {}
+    }
+
+    res.json({ success: true, message: 'Your reservation has been cancelled.' });
+  } catch (err) { next(err); }
+});
+
+// ── PATCH /:eventId/table-service/reservation-page-settings ──────────────────
+// Organizer updates the full reservation page config.
+router.patch('/:eventId/table-service/reservation-page-settings', verifyOrganizer, async (req, res, next) => {
+  try {
+    const event = await Event.findById(req.params.eventId);
+    if (!event) return res.status(404).json({ error: 'Event not found' });
+    if (!event.isTableServiceMode) return res.status(403).json({ error: 'Not a table service event' });
+
+    const ALLOWED_KEYS = [
+      'acceptingReservations','confirmationMode','heroImageUrl','logoUrl','accentColor',
+      'backgroundStyle','fontStyle','headerTagline','showPoweredBy','hidePlanitBranding',
+      'announcementBanner','announcementBannerColor','announcementBannerEnabled',
+      'publicDescription','cuisine','priceRange','dressCode','parkingInfo','accessibilityInfo',
+      'address','phone','websiteUrl','instagramHandle','facebookUrl','googleMapsUrl',
+      'operatingDays','blackoutDates',
+      'slotIntervalMinutes','maxAdvanceDays','minAdvanceHours','cancelCutoffHours',
+      'maxPartySizePublic','minPartySizePublic','maxReservationsPerDay','maxReservationsPerSlot',
+      'lastBookingBeforeCloseMinutes',
+      'requirePhone','requireEmail','allowSpecialRequests','allowDietaryNeeds',
+      'allowOccasionSelect','occasionOptions',
+      'showLiveWaitTime','showAvailabilityStatus','showTableCount','showPartySizeWaitTimes',
+      'availabilityDisplayMode',
+      'confirmationMessage','confirmationEmailSubject','sendConfirmationEmail',
+      'sendReminderEmail','reminderHoursBefore','sendCancellationEmail',
+      'notifyOrganizerOnBooking','notifyOrganizerOnCancel','notifyOrganizerEmail',
+      'cancellationPolicy','depositRequired','depositAmount','depositNote',
+      'termsUrl','privacyUrl','faqItems',
+      'metaTitle','metaDescription',
+    ];
+
+    if (!event.reservationPageSettings) event.reservationPageSettings = {};
+    ALLOWED_KEYS.forEach(k => {
+      if (req.body[k] !== undefined) event.reservationPageSettings[k] = req.body[k];
+    });
+    event.keepForever = true;
+    event.markModified('reservationPageSettings');
+    await event.save();
+
+    res.json({ success: true, settings: event.reservationPageSettings });
+  } catch (err) { next(err); }
+});
+
+const Message = require('../models/Message');
     const Poll = require('../models/Poll');
     const File = require('../models/File');
     const Invite = require('../models/Invite');
@@ -2591,7 +3066,7 @@ module.exports.fireWebhooks = fireWebhooks;
 router.get('/:eventId/table-service/floor', verifyCheckinAccess, async (req, res, next) => {
   try {
     const event = await Event.findById(req.params.eventId)
-      .select('title tableServiceSettings tableStates restaurantReservations tableServiceWaitlist seatingMap isTableServiceMode')
+      .select('title tableServiceSettings reservationPageSettings tableStates restaurantReservations tableServiceWaitlist seatingMap isTableServiceMode')
       .lean();
     if (!event) return res.status(404).json({ error: 'Event not found' });
     res.json({
@@ -2601,6 +3076,7 @@ router.get('/:eventId/table-service/floor', verifyCheckinAccess, async (req, res
       reservations:   (event.restaurantReservations || []).filter(r => r.status !== 'cancelled'),
       waitlist:       (event.tableServiceWaitlist || []).filter(w => w.status === 'waiting' || w.status === 'notified'),
       restaurantName: event.tableServiceSettings?.restaurantName || event.title,
+      reservationPageSettings: event.reservationPageSettings || {},
     });
   } catch (err) { next(err); }
 });
@@ -2760,6 +3236,485 @@ router.patch('/:eventId/table-service/settings', verifyOrganizer, async (req, re
   } catch (err) { next(err); }
 });
 // ═══════════════════════════════════════════════════════════════════════════
+
+
+// ═══════════════════════════════════════════════════════════════════════════
+// PUBLIC RESERVATION API  (/api/events/public/reserve/...)
+// No auth required. Aggressively rate-limited.
+// ═══════════════════════════════════════════════════════════════════════════
+
+const crypto = require('crypto');
+
+// ── Availability helper ──────────────────────────────────────────────────────
+function buildSlots(dateStr, openTime, closeTime, intervalMin, lastBookingBuffer) {
+  const slots = [];
+  const [oh, om] = openTime.split(':').map(Number);
+  const [ch, cm] = closeTime.split(':').map(Number);
+  const base = new Date(`${dateStr}T00:00:00`);
+
+  let cur = oh * 60 + om;
+  const end = ch * 60 + cm - (lastBookingBuffer || 0);
+
+  while (cur <= end) {
+    const h = Math.floor(cur / 60);
+    const m = cur % 60;
+    const dt = new Date(base);
+    dt.setHours(h, m, 0, 0);
+    slots.push({
+      time: `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`,
+      datetime: dt,
+    });
+    cur += intervalMin;
+  }
+  return slots;
+}
+
+function getDayKey(date) {
+  const days = ['sun','mon','tue','wed','thu','fri','sat'];
+  return days[new Date(date).getDay()];
+}
+
+function computeAvailability(dateStr, partySize, event) {
+  const rps = event.reservationPageSettings || {};
+  const tss = event.tableServiceSettings || {};
+
+  // Check if this day is open
+  const dayKey = getDayKey(dateStr + 'T12:00:00');
+  const dayConfig = rps.operatingDays?.[dayKey];
+  if (dayConfig && dayConfig.open === false) return [];
+
+  // Blackout check
+  if ((rps.blackoutDates || []).some(b => b.date === dateStr)) return [];
+
+  const openTime  = dayConfig?.openTime  || tss.operatingHoursOpen  || '11:00';
+  const closeTime = dayConfig?.closeTime || tss.operatingHoursClose || '22:00';
+  const interval  = rps.slotIntervalMinutes || 30;
+  const duration  = tss.reservationDurationMinutes || 90;
+  const buffer    = rps.lastBookingBeforeCloseMinutes || 30;
+  const maxPerSlot = rps.maxReservationsPerSlot || 0;
+
+  const slots = buildSlots(dateStr, openTime, closeTime, interval, buffer);
+
+  // Tables that can seat this party
+  const tables = (event.seatingMap?.objects || []).filter(t =>
+    t.type !== 'zone' && t.capacity >= partySize
+  );
+
+  // Reservations for this day
+  const dayStart = new Date(dateStr + 'T00:00:00');
+  const dayEnd   = new Date(dateStr + 'T23:59:59');
+  const dayRes   = (event.restaurantReservations || []).filter(r =>
+    (r.status === 'confirmed' || r.status === 'pending') &&
+    new Date(r.dateTime) >= dayStart &&
+    new Date(r.dateTime) <= dayEnd
+  );
+
+  // Min advance enforcement
+  const minAdvanceMs = (rps.minAdvanceHours || 1) * 3600000;
+  const now = Date.now();
+
+  return slots.map(slot => {
+    // Past or too soon?
+    if (slot.datetime.getTime() - now < minAdvanceMs) {
+      return { time: slot.time, status: 'unavailable', reason: 'past' };
+    }
+
+    const slotEnd = new Date(slot.datetime.getTime() + duration * 60000);
+
+    // Which of our suitable tables already have a reservation overlapping this window?
+    const bookedTableIds = new Set();
+    dayRes.forEach(res => {
+      if (!res.tableId) return;
+      const rStart = new Date(res.dateTime);
+      const rEnd   = new Date(rStart.getTime() + duration * 60000);
+      if (rStart < slotEnd && rEnd > slot.datetime) {
+        bookedTableIds.add(res.tableId);
+      }
+    });
+    const freeTables = tables.filter(t => !bookedTableIds.has(t.id));
+
+    // Per-slot cap check (counts all reservations starting within ±interval/2)
+    let slotCount = 0;
+    if (maxPerSlot > 0) {
+      slotCount = dayRes.filter(r => {
+        const diff = Math.abs(new Date(r.dateTime).getTime() - slot.datetime.getTime());
+        return diff < (interval * 60000) / 2;
+      }).length;
+    }
+
+    let status = 'available';
+    if (tables.length > 0) {
+      if (freeTables.length === 0) status = 'full';
+      else if (freeTables.length === 1) status = 'limited';
+    } else {
+      // No floor map yet — fall back to slot cap only
+      if (maxPerSlot > 0 && slotCount >= maxPerSlot) status = 'full';
+      else if (maxPerSlot > 0 && slotCount >= maxPerSlot * 0.7) status = 'limited';
+    }
+
+    if (maxPerSlot > 0 && slotCount >= maxPerSlot) status = 'full';
+
+    return {
+      time: slot.time,
+      status,
+      freeCount: freeTables.length,
+    };
+  });
+}
+
+// ── GET /public/reserve/:subdomain ────────────────────────────────────────────
+// Returns public restaurant info and reservation config.
+router.get('/public/reserve/:subdomain', availabilityLimiter, async (req, res, next) => {
+  try {
+    const event = await Event.findOne({ subdomain: req.params.subdomain })
+      .select('title isTableServiceMode tableServiceSettings reservationPageSettings seatingMap tableStates tableServiceWaitlist')
+      .lean();
+    if (!event) return res.status(404).json({ error: 'Not found' });
+    if (!event.isTableServiceMode) return res.status(404).json({ error: 'Not found' });
+
+    const rps = event.reservationPageSettings || {};
+    const tss = event.tableServiceSettings   || {};
+
+    // Live wait times per common party sizes (1-2, 3-4, 5-8)
+    let waitTimes = null;
+    if (rps.showLiveWaitTime !== false) {
+      const objects = event.seatingMap?.objects || [];
+      const states  = event.tableStates || [];
+      const activeWait = (event.tableServiceWaitlist || []).filter(w => w.status === 'waiting' || w.status === 'notified');
+
+      const avgDining = tss.avgDiningMinutes || 75;
+      const buffer    = tss.cleaningBufferMinutes || 10;
+
+      const calcWait = (sz) => {
+        const tables = objects.filter(o => o.type !== 'zone' && o.capacity >= sz);
+        if (!tables.length) return null;
+        const avail = tables.some(t => {
+          const s = states.find(st => st.tableId === t.id);
+          return !s || s.status === 'available';
+        });
+        if (avail) return 0;
+        const times = tables.map(t => {
+          const s = states.find(st => st.tableId === t.id);
+          if (!s || s.status !== 'occupied' || !s.occupiedAt) return null;
+          const seatedMs = Date.now() - new Date(s.occupiedAt).getTime();
+          return Math.max(0, Math.round((avgDining * 60000 - seatedMs) / 60000));
+        }).filter(t => t !== null);
+        if (!times.length) return null;
+        return Math.min(...times) + buffer;
+      };
+
+      waitTimes = { forTwo: calcWait(2), forFour: calcWait(4), forEight: calcWait(8) };
+    }
+
+    res.json({
+      name:             tss.restaurantName || event.title,
+      tagline:          rps.headerTagline || '',
+      description:      rps.publicDescription || '',
+      cuisine:          rps.cuisine || '',
+      priceRange:       rps.priceRange || '',
+      dressCode:        rps.dressCode || '',
+      parkingInfo:      rps.parkingInfo || '',
+      accessibilityInfo:rps.accessibilityInfo || '',
+      address:          rps.address || '',
+      phone:            rps.phone || '',
+      websiteUrl:       rps.websiteUrl || '',
+      instagramHandle:  rps.instagramHandle || '',
+      facebookUrl:      rps.facebookUrl || '',
+      googleMapsUrl:    rps.googleMapsUrl || '',
+      heroImageUrl:     rps.heroImageUrl || '',
+      logoUrl:          rps.logoUrl || '',
+      accentColor:      rps.accentColor || '#f97316',
+      backgroundStyle:  rps.backgroundStyle || 'dark',
+      fontStyle:        rps.fontStyle || 'modern',
+      announcementBanner:        rps.announcementBannerEnabled ? rps.announcementBanner : '',
+      announcementBannerColor:   rps.announcementBannerColor || '#f59e0b',
+      operatingHoursOpen:  tss.operatingHoursOpen  || '11:00',
+      operatingHoursClose: tss.operatingHoursClose || '22:00',
+      operatingDays:    rps.operatingDays || {},
+      blackoutDates:    (rps.blackoutDates || []).map(b => b.date),
+      acceptingReservations: rps.acceptingReservations || false,
+      confirmationMode:      rps.confirmationMode || 'auto_confirm',
+      slotIntervalMinutes:   rps.slotIntervalMinutes || 30,
+      maxAdvanceDays:        rps.maxAdvanceDays || 30,
+      minAdvanceHours:       rps.minAdvanceHours || 1,
+      maxPartySizePublic:    rps.maxPartySizePublic || 12,
+      minPartySizePublic:    rps.minPartySizePublic || 1,
+      requirePhone:          rps.requirePhone !== false,
+      requireEmail:          rps.requireEmail || false,
+      allowSpecialRequests:  rps.allowSpecialRequests !== false,
+      allowDietaryNeeds:     rps.allowDietaryNeeds !== false,
+      allowOccasionSelect:   rps.allowOccasionSelect !== false,
+      occasionOptions:       rps.occasionOptions?.length ? rps.occasionOptions : ['Birthday','Anniversary','Business Dinner','Date Night','Family Gathering','Other'],
+      showLiveWaitTime:      rps.showLiveWaitTime !== false,
+      showAvailabilityStatus:rps.showAvailabilityStatus !== false,
+      showTableCount:        rps.showTableCount || false,
+      availabilityDisplayMode: rps.availabilityDisplayMode || 'slots',
+      confirmationMessage:   rps.confirmationMessage || '',
+      depositRequired:       rps.depositRequired || false,
+      depositAmount:         rps.depositAmount || 0,
+      depositNote:           rps.depositNote || '',
+      cancellationPolicy:    rps.cancellationPolicy || '',
+      cancelCutoffHours:     rps.cancelCutoffHours || 2,
+      faqItems:              rps.faqItems || [],
+      termsUrl:              rps.termsUrl || '',
+      privacyUrl:            rps.privacyUrl || '',
+      showPoweredBy:         rps.showPoweredBy !== false,
+      metaTitle:             rps.metaTitle || '',
+      metaDescription:       rps.metaDescription || '',
+      waitTimes,
+    });
+  } catch (err) { next(err); }
+});
+
+// ── GET /public/reserve/:subdomain/availability ────────────────────────────────
+// ?date=YYYY-MM-DD&partySize=N
+router.get('/public/reserve/:subdomain/availability', availabilityLimiter, async (req, res, next) => {
+  try {
+    const { date, partySize } = req.query;
+    if (!date || !partySize) return res.status(400).json({ error: 'date and partySize required' });
+
+    const sz = parseInt(partySize);
+    if (isNaN(sz) || sz < 1 || sz > 100) return res.status(400).json({ error: 'Invalid party size' });
+
+    const event = await Event.findOne({ subdomain: req.params.subdomain })
+      .select('isTableServiceMode tableServiceSettings reservationPageSettings seatingMap restaurantReservations')
+      .lean();
+    if (!event || !event.isTableServiceMode) return res.status(404).json({ error: 'Not found' });
+
+    const rps = event.reservationPageSettings || {};
+    if (!rps.acceptingReservations) return res.json({ slots: [], closed: true });
+
+    // Blackout / day closed
+    const dayKey = getDayKey(date + 'T12:00:00');
+    const dayConfig = rps.operatingDays?.[dayKey];
+    if (dayConfig && dayConfig.open === false) return res.json({ slots: [], closed: true });
+    if ((rps.blackoutDates || []).some(b => b.date === date)) {
+      return res.json({ slots: [], closed: true, reason: 'Closed this date' });
+    }
+
+    // Max per day cap
+    const maxPerDay = rps.maxReservationsPerDay || 0;
+    if (maxPerDay > 0) {
+      const dayStart = new Date(date + 'T00:00:00');
+      const dayEnd   = new Date(date + 'T23:59:59');
+      const dayCount = (event.restaurantReservations || []).filter(r =>
+        (r.status === 'confirmed' || r.status === 'pending') &&
+        new Date(r.dateTime) >= dayStart && new Date(r.dateTime) <= dayEnd
+      ).length;
+      if (dayCount >= maxPerDay) return res.json({ slots: [], closed: true, reason: 'Fully booked for this day' });
+    }
+
+    const slots = computeAvailability(date, sz, event);
+    res.json({ slots });
+  } catch (err) { next(err); }
+});
+
+// ── POST /public/reserve/:subdomain ───────────────────────────────────────────
+// Create a public reservation. Rate limited.
+router.post('/public/reserve/:subdomain', reservationLimiter, async (req, res, next) => {
+  try {
+    const { partyName, partySize, phone, email, date, timeSlot, occasion, specialRequests, dietaryNeeds } = req.body;
+
+    if (!partyName?.trim()) return res.status(400).json({ error: 'Name is required' });
+    if (!partySize || partySize < 1) return res.status(400).json({ error: 'Party size is required' });
+    if (!date || !timeSlot) return res.status(400).json({ error: 'Date and time are required' });
+
+    const event = await Event.findOne({ subdomain: req.params.subdomain })
+      .select('+restaurantReservations tableServiceSettings reservationPageSettings seatingMap isTableServiceMode');
+    if (!event || !event.isTableServiceMode) return res.status(404).json({ error: 'Not found' });
+
+    const rps = event.reservationPageSettings || {};
+    if (!rps.acceptingReservations) return res.status(403).json({ error: 'Online reservations are not currently being accepted.' });
+
+    if (rps.requirePhone && !phone?.trim()) return res.status(400).json({ error: 'Phone number is required' });
+    if (rps.requireEmail && !email?.trim()) return res.status(400).json({ error: 'Email address is required' });
+
+    const sz = parseInt(partySize);
+    if (sz < (rps.minPartySizePublic || 1)) return res.status(400).json({ error: `Minimum party size is ${rps.minPartySizePublic || 1}` });
+    if (sz > (rps.maxPartySizePublic || 12)) return res.status(400).json({ error: `Maximum party size for online bookings is ${rps.maxPartySizePublic || 12}` });
+
+    // Build datetime
+    const dateTime = new Date(`${date}T${timeSlot}:00`);
+    if (isNaN(dateTime.getTime())) return res.status(400).json({ error: 'Invalid date/time' });
+
+    // Min advance check
+    const minAdvanceMs = (rps.minAdvanceHours || 1) * 3600000;
+    if (dateTime.getTime() - Date.now() < minAdvanceMs) {
+      return res.status(400).json({ error: `Reservations must be made at least ${rps.minAdvanceHours || 1} hour(s) in advance` });
+    }
+
+    // Max advance check
+    const maxAdvanceMs = (rps.maxAdvanceDays || 30) * 86400000;
+    if (dateTime.getTime() - Date.now() > maxAdvanceMs) {
+      return res.status(400).json({ error: `Reservations can only be made up to ${rps.maxAdvanceDays || 30} days in advance` });
+    }
+
+    // Re-check availability
+    const slots = computeAvailability(date, sz, event);
+    const targetSlot = slots.find(s => s.time === timeSlot);
+    if (!targetSlot || targetSlot.status === 'full') {
+      return res.status(409).json({ error: 'This time slot is no longer available. Please choose another time.' });
+    }
+
+    // Per-day cap re-check
+    const maxPerDay = rps.maxReservationsPerDay || 0;
+    if (maxPerDay > 0) {
+      const dayStart = new Date(date + 'T00:00:00');
+      const dayEnd   = new Date(date + 'T23:59:59');
+      const dayCount = event.restaurantReservations.filter(r =>
+        (r.status === 'confirmed' || r.status === 'pending') &&
+        new Date(r.dateTime) >= dayStart && new Date(r.dateTime) <= dayEnd
+      ).length;
+      if (dayCount >= maxPerDay) return res.status(409).json({ error: 'Sorry, this day is now fully booked.' });
+    }
+
+    // Generate tokens
+    const resId      = `res_${Date.now().toString(36)}_${crypto.randomBytes(4).toString('hex')}`;
+    const qrToken    = crypto.randomBytes(24).toString('hex');
+    const cancelToken= crypto.randomBytes(24).toString('hex');
+
+    const tss = event.tableServiceSettings || {};
+    const qrExpiryMin = tss.reservationQrExpiryMinutes || 45;
+    const qrExpiresAt = new Date(dateTime.getTime() + qrExpiryMin * 60000);
+
+    const status = (rps.confirmationMode === 'manual') ? 'pending' : 'confirmed';
+
+    const reservation = {
+      id:              resId,
+      partyName:       partyName.trim(),
+      partySize:       sz,
+      phone:           phone?.trim() || '',
+      email:           email?.trim() || '',
+      dateTime,
+      tableId:         null,
+      qrToken,
+      qrExpiresAt,
+      cancelToken,
+      status,
+      source:          'public',
+      occasion:        occasion || '',
+      specialRequests: specialRequests?.trim() || '',
+      dietaryNeeds:    dietaryNeeds?.trim() || '',
+      notes:           '',
+      createdAt:       new Date(),
+    };
+
+    event.restaurantReservations.push(reservation);
+    event.keepForever = true;
+    await event.save();
+
+    // Fire confirmation email non-blocking
+    if (rps.sendConfirmationEmail !== false && email?.trim()) {
+      try {
+        const { sendReservationConfirmation } = require('../services/emailService');
+        sendReservationConfirmation(event, reservation).catch(() => {});
+      } catch (_) {}
+    }
+
+    const cancelUrl = `${process.env.FRONTEND_URL || 'https://planit.events'}/reserve/cancel/${cancelToken}`;
+
+    res.status(201).json({
+      reservationId: resId,
+      status,
+      partyName:     reservation.partyName,
+      partySize:     reservation.partySize,
+      dateTime:      reservation.dateTime,
+      qrToken,
+      qrExpiresAt,
+      cancelUrl,
+      confirmationMessage: rps.confirmationMessage || '',
+      depositRequired:     rps.depositRequired || false,
+      depositAmount:       rps.depositAmount || 0,
+      depositNote:         rps.depositNote || '',
+      isPending: status === 'pending',
+    });
+  } catch (err) { next(err); }
+});
+
+// ── DELETE /public/reserve/cancel/:cancelToken ────────────────────────────────
+// Self-service cancellation via the token in the confirmation email.
+router.delete('/public/reserve/cancel/:cancelToken', reservationLimiter, async (req, res, next) => {
+  try {
+    const { cancelToken } = req.params;
+    if (!cancelToken || cancelToken.length < 10) return res.status(400).json({ error: 'Invalid cancel token' });
+
+    // Search across all table-service events for this token
+    const event = await Event.findOne({
+      isTableServiceMode: true,
+      'restaurantReservations.cancelToken': cancelToken,
+    });
+    if (!event) return res.status(404).json({ error: 'Reservation not found or already cancelled.' });
+
+    const res_ = event.restaurantReservations.find(r => r.cancelToken === cancelToken);
+    if (!res_) return res.status(404).json({ error: 'Reservation not found.' });
+    if (res_.status === 'cancelled') return res.status(400).json({ error: 'This reservation is already cancelled.' });
+    if (res_.status === 'seated') return res.status(400).json({ error: 'This reservation cannot be cancelled — the party is already seated.' });
+
+    const rps = event.reservationPageSettings || {};
+    const cutoffMs = (rps.cancelCutoffHours || 2) * 3600000;
+    if (new Date(res_.dateTime).getTime() - Date.now() < cutoffMs) {
+      return res.status(403).json({
+        error: `Reservations can only be cancelled at least ${rps.cancelCutoffHours || 2} hour(s) before the booking time. Please call us directly.`,
+        phone: rps.phone || '',
+      });
+    }
+
+    res_.status = 'cancelled';
+    await event.save();
+
+    // Notify organizer
+    if (rps.notifyOrganizerOnCancel && rps.notifyOrganizerEmail) {
+      try {
+        const { sendReservationCancellation } = require('../services/emailService');
+        sendReservationCancellation(event, res_).catch(() => {});
+      } catch (_) {}
+    }
+
+    res.json({ success: true, message: 'Your reservation has been cancelled.' });
+  } catch (err) { next(err); }
+});
+
+// ── PATCH /:eventId/table-service/reservation-page-settings ──────────────────
+// Organizer updates the full reservation page config.
+router.patch('/:eventId/table-service/reservation-page-settings', verifyOrganizer, async (req, res, next) => {
+  try {
+    const event = await Event.findById(req.params.eventId);
+    if (!event) return res.status(404).json({ error: 'Event not found' });
+    if (!event.isTableServiceMode) return res.status(403).json({ error: 'Not a table service event' });
+
+    const ALLOWED_KEYS = [
+      'acceptingReservations','confirmationMode','heroImageUrl','logoUrl','accentColor',
+      'backgroundStyle','fontStyle','headerTagline','showPoweredBy','hidePlanitBranding',
+      'announcementBanner','announcementBannerColor','announcementBannerEnabled',
+      'publicDescription','cuisine','priceRange','dressCode','parkingInfo','accessibilityInfo',
+      'address','phone','websiteUrl','instagramHandle','facebookUrl','googleMapsUrl',
+      'operatingDays','blackoutDates',
+      'slotIntervalMinutes','maxAdvanceDays','minAdvanceHours','cancelCutoffHours',
+      'maxPartySizePublic','minPartySizePublic','maxReservationsPerDay','maxReservationsPerSlot',
+      'lastBookingBeforeCloseMinutes',
+      'requirePhone','requireEmail','allowSpecialRequests','allowDietaryNeeds',
+      'allowOccasionSelect','occasionOptions',
+      'showLiveWaitTime','showAvailabilityStatus','showTableCount','showPartySizeWaitTimes',
+      'availabilityDisplayMode',
+      'confirmationMessage','confirmationEmailSubject','sendConfirmationEmail',
+      'sendReminderEmail','reminderHoursBefore','sendCancellationEmail',
+      'notifyOrganizerOnBooking','notifyOrganizerOnCancel','notifyOrganizerEmail',
+      'cancellationPolicy','depositRequired','depositAmount','depositNote',
+      'termsUrl','privacyUrl','faqItems',
+      'metaTitle','metaDescription',
+    ];
+
+    if (!event.reservationPageSettings) event.reservationPageSettings = {};
+    ALLOWED_KEYS.forEach(k => {
+      if (req.body[k] !== undefined) event.reservationPageSettings[k] = req.body[k];
+    });
+    event.keepForever = true;
+    event.markModified('reservationPageSettings');
+    await event.save();
+
+    res.json({ success: true, settings: event.reservationPageSettings });
+  } catch (err) { next(err); }
+});
 
 const Message = require('../models/Message');
 const Poll = require('../models/Poll');
