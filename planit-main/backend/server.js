@@ -178,6 +178,14 @@ app.use('/api/events',    seatingRoutes);     // NEW: seating map CRUD
 const frontendUrls = (process.env.FRONTEND_URL || '')
   .split(',').map(u => u.trim()).filter(Boolean);
 
+// /qr/:inviteCode — direct image URL shorthand for invite QR codes
+// Works as a plain <img src="..."> in emails, PDFs, and external pages
+app.get('/qr/:inviteCode', (req, res) => {
+  const code = req.params.inviteCode.toUpperCase().replace(/[^A-Z0-9]/g, '');
+  if (!code) return res.status(400).send('Invalid code');
+  res.redirect(301, `/api/events/invite/${code}/qr.svg`);
+});
+
 app.get('*', (req, res) => {
   if (req.path.startsWith('/api')) return res.status(404).json({ error: 'Not found' });
   const requestHost = req.hostname;
