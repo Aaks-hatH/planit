@@ -1879,24 +1879,55 @@ export default function EnterpriseCheckin() {
 
       hapticError();
       const errData = error.response?.data;
+      const status  = error.response?.status;
+
+      // ── Structured denial from antifraud/checkin middleware ──
       if (errData && errData.valid === false) {
         setDenyDetails({
-          reason: errData.reason,
-          severity: errData.severity || 'critical',
-          message: errData.message,
-          displayMessage: errData.displayMessage,
-          checkedInAt: errData.checkedInAt,
-          checkedInBy: errData.checkedInBy,
-          blockedReason: errData.blockedReason,
-          requiresOverride: errData.requiresOverride,
-          inviteCode: errData.inviteCode,
-          guestName: errData.guestName,
-          groupSize: errData.groupSize,
+          reason:          errData.reason,
+          severity:        errData.severity || 'critical',
+          message:         errData.message,
+          displayMessage:  errData.displayMessage,
+          checkedInAt:     errData.checkedInAt,
+          checkedInBy:     errData.checkedInBy,
+          blockedReason:   errData.blockedReason,
+          requiresOverride:errData.requiresOverride,
+          inviteCode:      errData.inviteCode,
+          guestName:       errData.guestName,
+          groupSize:       errData.groupSize,
+          currentCapacity: errData.currentCapacity,
+          maxCapacity:     errData.maxCapacity,
+          trustScore:      errData.trustScore,
+          lockedUntil:     errData.lockedUntil,
+          lockdownReason:  errData.lockdownReason,
+        });
+
+      // ── Auth / access errors ──
+      } else if (status === 403 && errData?.requiresApproval) {
+        setDenyDetails({
+          reason: 'auth_error', severity: 'critical',
+          message: 'Your staff session is not authorised for this event. Please log out and log back in with your staff PIN.',
+        });
+      } else if (status === 401) {
+        setDenyDetails({
+          reason: 'auth_error', severity: 'critical',
+          message: 'Your session has expired. Please log out and log back in.',
+        });
+      } else if (status === 403) {
+        setDenyDetails({
+          reason: 'auth_error', severity: 'critical',
+          message: errData?.error || 'Access denied. You do not have permission to scan for this event.',
+        });
+      } else if (status === 404) {
+        setDenyDetails({
+          reason: 'not_found', severity: 'critical',
+          message: 'This QR code was not found. The ticket may have been deleted or belongs to a different event.',
         });
       } else {
+        // Network / server error
         setDenyDetails({
           reason: 'error', severity: 'critical',
-          message: errData?.message || error.message || 'Scan failed',
+          message: errData?.error || errData?.message || 'Could not verify this ticket. Please check your connection and try again.',
         });
       }
       setShowDenyScreen(true);
@@ -1907,19 +1938,31 @@ export default function EnterpriseCheckin() {
     try {
       const response = await eventAPI.verifyPin(eventId, currentGuest.inviteCode, pin);
       if (response.data.valid) {
-        // Trigger success haptic for correct PIN
         hapticSuccess();
-        
         setPinVerified(true);
         toast.success('PIN verified');
       } else {
-        throw new Error(response.data.message || 'Invalid PIN');
+        throw new Error(response.data.message || 'Incorrect PIN. Please try again.');
       }
     } catch (error) {
-      // Trigger error haptic for wrong PIN
       hapticError();
-      
-      throw new Error(error.response?.data?.message || error.message);
+      const errData = error.response?.data;
+      const status  = error.response?.status;
+
+      if (status === 401 && errData?.locked) {
+        // Too many wrong PINs — escalate to deny screen
+        setCurrentGuest(null);
+        setDenyDetails({
+          reason: 'pin_locked', severity: 'high',
+          message: 'Too many incorrect PIN attempts. This ticket is temporarily locked.',
+          requiresOverride: settings?.allowManualOverride,
+        });
+        setShowDenyScreen(true);
+        return;
+      }
+
+      const msg = errData?.message || error.message || 'Incorrect PIN. Please try again.';
+      throw new Error(msg);
     }
   };
   
@@ -1952,8 +1995,27 @@ export default function EnterpriseCheckin() {
       loadStats();
     } catch (error) {
       console.error('Check-in error:', error);
-      toast.error(error.response?.data?.error || 'Check-in failed');
+      const errData = error.response?.data;
+      const status  = error.response?.status;
       setCurrentGuest(null);
+
+      // Structured block from antifraud middleware — show DenyScreen, not a toast
+      if (errData?.valid === false || status === 403) {
+        setDenyDetails({
+          reason:          errData?.reason || 'check_in_failed',
+          severity:        errData?.severity || 'critical',
+          message:         errData?.message || errData?.error || 'Check-in was blocked by the security system.',
+          blockedReason:   errData?.blockedReason,
+          currentCapacity: errData?.currentCapacity,
+          maxCapacity:     errData?.maxCapacity,
+          requiresOverride:errData?.requiresOverride,
+          lockdownReason:  errData?.lockdownReason,
+        });
+        setShowDenyScreen(true);
+      } else {
+        // Network / server error — toast is fine here
+        toast.error(errData?.error || errData?.message || 'Check-in failed. Please try again.');
+      }
     }
   };
 
