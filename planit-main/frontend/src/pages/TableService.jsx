@@ -453,6 +453,177 @@ function WaitlistPanel({ waitlist, tableStates, objects, settings, onAdd, onUpda
 
 // ── Reservations Panel ────────────────────────────────────────────────────────
 
+// ---------------------------------------------------------------------------
+// QR Scanner — uses native BarcodeDetector API (Chrome/Edge/Android)
+// Staff tap the camera icon, point at a guest's QR code, result auto-confirms
+// ---------------------------------------------------------------------------
+function QRScannerModal({ eventId, onClose, onResult }) {
+  const videoRef  = useRef(null);
+  const streamRef = useRef(null);
+  const rafRef    = useRef(null);
+  const [status, setStatus]   = useState('starting'); // starting | scanning | result | error
+  const [result, setResult]   = useState(null);
+  const [errMsg, setErrMsg]   = useState('');
+
+  useEffect(() => {
+    let detector;
+    const start = async () => {
+      try {
+        if (!('BarcodeDetector' in window)) {
+          setErrMsg('QR scanning requires Chrome, Edge, or Android browser. On iOS, use the native camera app to scan.');
+          setStatus('error');
+          return;
+        }
+        detector = new window.BarcodeDetector({ formats: ['qr_code'] });
+        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+        streamRef.current = stream;
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+          await videoRef.current.play();
+        }
+        setStatus('scanning');
+        const scan = async () => {
+          if (!videoRef.current || videoRef.current.readyState < 2) { rafRef.current = requestAnimationFrame(scan); return; }
+          try {
+            const codes = await detector.detect(videoRef.current);
+            if (codes.length > 0) {
+              const raw = codes[0].rawValue;
+              stopStream();
+              setStatus('result');
+              // Verify against backend
+              try {
+                const res = await eventAPI.verifyReservationQR(eventId, raw);
+                setResult({ ok: true, reservation: res.data.reservation });
+              } catch (e) {
+                setResult({ ok: false, message: e?.response?.data?.error || 'Invalid or expired QR code.' });
+              }
+              return;
+            }
+          } catch (_) {}
+          rafRef.current = requestAnimationFrame(scan);
+        };
+        rafRef.current = requestAnimationFrame(scan);
+      } catch (e) {
+        setErrMsg(e.name === 'NotAllowedError' ? 'Camera permission denied. Please allow camera access and try again.' : `Camera error: ${e.message}`);
+        setStatus('error');
+      }
+    };
+    start();
+    return () => { stopStream(); cancelAnimationFrame(rafRef.current); };
+  }, [eventId]);
+
+  const stopStream = () => {
+    streamRef.current?.getTracks().forEach(t => t.stop());
+    cancelAnimationFrame(rafRef.current);
+  };
+
+  const handleSeat = async () => {
+    if (!result?.reservation) return;
+    try {
+      await eventAPI.updateTableReservation(eventId, result.reservation.id, { status: 'seated' });
+      toast.success(`${result.reservation.partyName} seated!`);
+      onResult?.();
+      onClose();
+    } catch { toast.error('Failed to update reservation'); }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/90 z-50 flex flex-col items-center justify-center p-4" onClick={onClose}>
+      <div className="bg-neutral-900 border border-neutral-700 rounded-2xl w-full max-w-sm overflow-hidden" onClick={e => e.stopPropagation()}>
+        {/* Header */}
+        <div className="flex items-center justify-between px-4 py-3 border-b border-neutral-800">
+          <div className="flex items-center gap-2">
+            <ScanLine className="w-4 h-4 text-orange-400" />
+            <span className="text-sm font-bold text-white">Scan Guest QR</span>
+          </div>
+          <button onClick={onClose} className="p-1.5 hover:bg-neutral-800 rounded-lg text-neutral-500 hover:text-white"><X className="w-4 h-4" /></button>
+        </div>
+
+        {/* Camera / states */}
+        {status === 'starting' && (
+          <div className="h-64 flex items-center justify-center">
+            <Loader2 className="w-8 h-8 animate-spin text-neutral-500" />
+          </div>
+        )}
+
+        {status === 'scanning' && (
+          <div className="relative">
+            <video ref={videoRef} className="w-full h-64 object-cover bg-black" playsInline muted />
+            {/* Viewfinder overlay */}
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+              <div className="w-44 h-44 border-2 border-orange-400 rounded-xl opacity-80" style={{ boxShadow: '0 0 0 9999px rgba(0,0,0,0.45)' }} />
+            </div>
+            <p className="text-center text-xs text-neutral-400 py-3">Point camera at guest's QR code</p>
+          </div>
+        )}
+
+        {status === 'error' && (
+          <div className="p-6 text-center">
+            <AlertTriangle className="w-8 h-8 text-amber-400 mx-auto mb-3" />
+            <p className="text-sm text-neutral-300 mb-4">{errMsg}</p>
+            <button onClick={onClose} className="px-4 py-2 bg-neutral-800 text-neutral-300 rounded-lg text-sm font-semibold hover:bg-neutral-700">Close</button>
+          </div>
+        )}
+
+        {status === 'result' && result && (
+          <div className="p-5">
+            {result.ok ? (
+              <>
+                <div className="flex items-center gap-2 mb-4">
+                  <div className="w-8 h-8 bg-emerald-500/20 rounded-full flex items-center justify-center flex-shrink-0">
+                    <CheckCircle className="w-4 h-4 text-emerald-400" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-bold text-white">Valid Reservation</p>
+                    <p className="text-xs text-emerald-400">QR code verified ✓</p>
+                  </div>
+                </div>
+                <div className="bg-neutral-800 rounded-xl p-4 mb-4 space-y-1.5">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-neutral-400">Name</span>
+                    <span className="text-white font-semibold">{result.reservation.partyName}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-neutral-400">Party size</span>
+                    <span className="text-white font-semibold">{result.reservation.partySize}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-neutral-400">Time</span>
+                    <span className="text-white font-semibold">{fmtDateTime(result.reservation.dateTime)}</span>
+                  </div>
+                  {result.reservation.notes && (
+                    <div className="flex justify-between text-sm">
+                      <span className="text-neutral-400">Notes</span>
+                      <span className="text-white text-right max-w-[60%]">{result.reservation.notes}</span>
+                    </div>
+                  )}
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <button onClick={handleSeat} className="py-2.5 bg-emerald-600 text-white rounded-xl text-sm font-bold hover:bg-emerald-700">Seat Party</button>
+                  <button onClick={onClose} className="py-2.5 bg-neutral-800 text-neutral-300 rounded-xl text-sm font-semibold hover:bg-neutral-700">Close</button>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="flex items-center gap-2 mb-4">
+                  <div className="w-8 h-8 bg-rose-500/20 rounded-full flex items-center justify-center flex-shrink-0">
+                    <XCircle className="w-4 h-4 text-rose-400" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-bold text-white">Invalid QR Code</p>
+                    <p className="text-xs text-rose-400">{result.message}</p>
+                  </div>
+                </div>
+                <button onClick={onClose} className="w-full py-2.5 bg-neutral-800 text-neutral-300 rounded-xl text-sm font-semibold hover:bg-neutral-700">Close</button>
+              </>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function ReservationsPanel({ reservations, onAdd, onUpdate, eventId }) {
   const [showAdd, setShowAdd]   = useState(false);
   const [form, setForm]         = useState({ partyName: '', partySize: 2, phone: '', email: '', dateTime: '', notes: '' });
@@ -1129,6 +1300,7 @@ export default function TableService() {
   const [selectedTableId, setSelectedTableId] = useState(null);
   const [sideTab, setSideTab]           = useState('waitlist');
   const [showSettings, setShowSettings] = useState(false);
+  const [showQRScanner, setShowQRScanner] = useState(false);
   const [reservationSettings, setReservationSettings] = useState({});
   const [showFloorEditor, setShowFloorEditor] = useState(false);
   const [seatingData, setSeatingData]   = useState(null);
@@ -1174,7 +1346,13 @@ export default function TableService() {
       setFloorData(res.data);
     } catch (err) {
       if (err?.response?.status === 403) {
-        setFloorData(prev => ({ ...prev, _forbidden: true }));
+        const errData = err?.response?.data || {};
+        setFloorData(prev => ({
+          ...prev,
+          _forbidden: true,
+          _forbiddenIsEnterprise: !!errData.isEnterpriseMode,
+          _forbiddenTitle: errData.eventTitle || '',
+        }));
       } else {
         toast.error('Could not load floor data');
       }
@@ -1305,14 +1483,47 @@ export default function TableService() {
   }
 
   if (floorData._forbidden) {
+    const isEnterprise = floorData._forbiddenIsEnterprise;
+    const title        = floorData._forbiddenTitle;
     return (
-      <div className="h-screen bg-neutral-950 flex items-center justify-center">
-        <div className="text-center max-w-sm">
-          <div className="w-12 h-12 bg-neutral-800 rounded-xl flex items-center justify-center mx-auto mb-4">
-            <Lock className="w-6 h-6 text-neutral-500" />
+      <div className="h-screen bg-neutral-950 flex items-center justify-center p-6">
+        <div className="text-center max-w-md w-full">
+          <div className="w-16 h-16 bg-neutral-900 border border-neutral-800 rounded-2xl flex items-center justify-center mx-auto mb-5">
+            <Lock className="w-7 h-7 text-neutral-500" />
           </div>
-          <h2 className="text-white font-bold text-lg mb-2">Floor plan not available</h2>
-          <p className="text-neutral-500 text-sm">This event doesn't have the floor plan feature enabled.</p>
+          <h2 className="text-white font-bold text-xl mb-2">
+            {isEnterprise ? 'Enterprise Event' : 'Floor Plan Unavailable'}
+          </h2>
+          {title && <p className="text-neutral-400 text-sm mb-1 font-medium">{title}</p>}
+          <p className="text-neutral-500 text-sm mb-6 leading-relaxed">
+            {isEnterprise
+              ? 'This is an enterprise event. The floor plan and seating map are managed through the Check-In dashboard, not the Table Service floor.'
+              : 'This event does not have Table Service mode enabled. The /floor route is only available for Table Service venues.'}
+          </p>
+          <div className="space-y-2">
+            {isEnterprise && (eid || subdomain) && (
+              <button
+                onClick={() => navigate(eid ? `/event/${eid}/checkin` : `/e/${subdomain}/checkin`)}
+                className="w-full py-2.5 bg-white text-neutral-900 rounded-xl text-sm font-bold hover:bg-neutral-100 transition-colors"
+              >
+                Go to Check-In Dashboard →
+              </button>
+            )}
+            <button
+              onClick={() => navigate(-1)}
+              className="w-full py-2.5 bg-neutral-800 text-neutral-300 rounded-xl text-sm font-semibold hover:bg-neutral-700 transition-colors"
+            >
+              Go Back
+            </button>
+          </div>
+          <div className="mt-6 p-3 bg-neutral-900 border border-neutral-800 rounded-xl text-left">
+            <p className="text-xs text-neutral-500 font-semibold uppercase tracking-wide mb-2">Access Requirements</p>
+            <ul className="text-xs text-neutral-500 space-y-1">
+              <li>• Event must have Table Service mode enabled</li>
+              <li>• Valid organizer or staff token required</li>
+              <li>• Enterprise events → use <code className="text-neutral-400">/checkin</code> instead</li>
+            </ul>
+          </div>
         </div>
       </div>
     );
@@ -1352,6 +1563,9 @@ export default function TableService() {
         {/* Actions */}
         <div className="flex items-center gap-2 flex-shrink-0">
           <button onClick={loadFloor} title="Refresh" className="p-2 hover:bg-neutral-800 rounded-lg text-neutral-500 hover:text-white transition-colors"><RefreshCw className="w-4 h-4" /></button>
+          <button onClick={() => setShowQRScanner(true)} title="Scan Guest QR" className="flex items-center gap-1.5 px-3 py-1.5 bg-orange-500/20 border border-orange-500/40 text-orange-400 rounded-lg text-xs font-semibold hover:bg-orange-500/30 transition-colors">
+            <ScanLine className="w-3.5 h-3.5" />Scan QR
+          </button>
           <button onClick={() => setShowFloorEditor(true)} className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 bg-neutral-800 border border-neutral-700 text-neutral-300 rounded-lg text-xs font-semibold hover:bg-neutral-700 transition-colors">
             <LayoutGrid className="w-3.5 h-3.5" />Edit Layout
           </button>
@@ -1507,6 +1721,14 @@ export default function TableService() {
       </div>
 
       {/* ── Settings Modal ── */}
+      {showQRScanner && (
+        <QRScannerModal
+          eventId={eid}
+          onClose={() => setShowQRScanner(false)}
+          onResult={loadFloor}
+        />
+      )}
+
       {showSettings && (
         <SettingsModal
           settings={settings}
