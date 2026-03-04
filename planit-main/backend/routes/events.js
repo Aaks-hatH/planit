@@ -3053,26 +3053,30 @@ module.exports.fireWebhooks = fireWebhooks;
 // ═══════════════════════════════════════════════════════════════════════════
 
 // GET  /:eventId/table-service/floor  — full floor state
+// Strictly table-service events only. Enterprise events use /checkin for seating.
 router.get('/:eventId/table-service/floor', verifyCheckinAccess, async (req, res, next) => {
   try {
     const event = await Event.findById(req.params.eventId)
       .select('title tableServiceSettings reservationPageSettings tableStates restaurantReservations tableServiceWaitlist seatingMap isTableServiceMode isEnterpriseMode')
       .lean();
     if (!event) return res.status(404).json({ error: 'Event not found' });
-    // Only table-service events and enterprise events may access the floor
-    if (!event.isTableServiceMode && !event.isEnterpriseMode) {
-      return res.status(403).json({ error: 'Floor plan is not enabled for this event.' });
+    if (!event.isTableServiceMode) {
+      return res.status(403).json({
+        error: 'Floor plan is not available for this event.',
+        isEnterpriseMode: !!event.isEnterpriseMode,
+        eventTitle: event.title,
+      });
     }
     res.json({
-      seatingMap:     event.seatingMap || { enabled: false, objects: [] },
-      tableStates:    event.isTableServiceMode ? (event.tableStates || []) : [],
-      settings:       event.isTableServiceMode ? (event.tableServiceSettings || {}) : {},
-      reservations:   event.isTableServiceMode ? (event.restaurantReservations || []).filter(r => r.status !== 'cancelled') : [],
-      waitlist:       event.isTableServiceMode ? (event.tableServiceWaitlist || []).filter(w => w.status === 'waiting' || w.status === 'notified') : [],
-      restaurantName: event.tableServiceSettings?.restaurantName || event.title,
-      reservationPageSettings: event.isTableServiceMode ? (event.reservationPageSettings || {}) : {},
-      isTableServiceMode: !!event.isTableServiceMode,
-      isEnterpriseMode:   !!event.isEnterpriseMode,
+      seatingMap:              event.seatingMap || { enabled: false, objects: [] },
+      tableStates:             event.tableStates || [],
+      settings:                event.tableServiceSettings || {},
+      reservations:            (event.restaurantReservations || []).filter(r => r.status !== 'cancelled'),
+      waitlist:                (event.tableServiceWaitlist || []).filter(w => w.status === 'waiting' || w.status === 'notified'),
+      restaurantName:          event.tableServiceSettings?.restaurantName || event.title,
+      reservationPageSettings: event.reservationPageSettings || {},
+      isTableServiceMode:      true,
+      isEnterpriseMode:        false,
     });
   } catch (err) { next(err); }
 });
