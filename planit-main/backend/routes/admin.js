@@ -526,12 +526,31 @@ router.delete('/events/:eventId', verifyAdmin, async (req, res, next) => {
     const event = await Event.findById(req.params.eventId);
     if (!event) return res.status(404).json({ error: 'Event not found' });
 
+    // Delete all File attachments from Cloudinary before wiping DB records
+    const files = await File.find({ eventId: event._id });
+    for (const file of files) {
+      try { await file.deleteFromCloudinary(); } catch (_) {}
+    }
+
+    // Delete cover image from Cloudinary (stored as planit-covers/cover-{eventId})
+    if (event.coverImage) {
+      try {
+        const cloudinary = require('cloudinary').v2;
+        cloudinary.config({
+          cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+          api_key:    process.env.CLOUDINARY_API_KEY,
+          api_secret: process.env.CLOUDINARY_API_SECRET,
+        });
+        await cloudinary.uploader.destroy(`planit-covers/cover-${event._id}`, { resource_type: 'image' });
+      } catch (_) {}
+    }
+
     await Promise.all([
       Message.deleteMany({ eventId: event._id }),
       Poll.deleteMany({ eventId: event._id }),
       EventParticipant.deleteMany({ eventId: event._id }),
       Invite ? Invite.deleteMany({ eventId: event._id }) : Promise.resolve(),
-      File.updateMany({ eventId: event._id }, { isDeleted: true, deletedAt: new Date() }),
+      File.deleteMany({ eventId: event._id }),
       Event.findByIdAndDelete(event._id),
     ]);
 
@@ -1047,7 +1066,7 @@ router.post('/events/:eventId/access', verifyAdmin, async (req, res, next) => {
 
 router.post('/cleanup', verifyAdmin, async (req, res, next) => {
   try {
-    const { manualCleanup } = require('../jobs/cleanupJob');
+    const { manualCleanup, cleanupOrphanedCloudinaryAssets } = require('../jobs/cleanupJob');
 
     const logs        = [];
     const originalLog  = console.log;
@@ -1066,10 +1085,14 @@ router.post('/cleanup', verifyAdmin, async (req, res, next) => {
     const successCount = successLine ? parseInt(successLine.message.match(/\d+/)?.[0] || '0') : 0;
     const failCount    = failLine    ? parseInt(failLine.message.match(/\d+/)?.[0]    || '0') : 0;
 
+    // Run Cloudinary orphan sweep
+    const cloudinaryResult = await cleanupOrphanedCloudinaryAssets();
+
     res.json({
       success: true,
       message: 'Manual cleanup completed',
       results: { deleted: successCount, failed: failCount, total: successCount + failCount },
+      cloudinary: cloudinaryResult,
       logs: logs.map(l => l.message).filter(m => !m.includes('===')),
     });
   } catch (error) {
