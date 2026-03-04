@@ -1322,8 +1322,8 @@ router.get('/:eventId/verify-scan/:inviteCode',
       });
     }
 
-    // Get event checkin settings
-    const event = await Event.findById(eventId).select('checkinSettings title').lean();
+    // Get event checkin settings + seating map (for table type / zone lookup)
+    const event = await Event.findById(eventId).select('checkinSettings title seatingMap').lean();
     const settings = event?.checkinSettings || {};
 
     // ── Collect security warnings from middleware ──
@@ -1332,6 +1332,13 @@ router.get('/:eventId/verify-scan/:inviteCode',
     
     // Calculate trust score
     const trustScore = invite.calculateTrustScore();
+
+    // ── Look up table type from seating map for zone display ──
+    let tableType = null;
+    if (invite.tableId && event?.seatingMap?.objects?.length) {
+      const tableObj = event.seatingMap.objects.find(o => o.id === invite.tableId);
+      if (tableObj) tableType = tableObj.type || null;
+    }
 
     // ── Return the full guest profile for staff to review ──
     res.json({
@@ -1343,12 +1350,17 @@ router.get('/:eventId/verify-scan/:inviteCode',
         guestName:   invite.guestName,
         guestEmail:  invite.guestEmail,
         guestPhone:  invite.guestPhone,
+        guestRole:   invite.guestRole  || 'GUEST',
         adults:      invite.adults,
         children:    invite.children,
         groupSize:   invite.groupSize,
         plusOnes:    invite.plusOnes,
         status:      invite.status,
         notes:       invite.notes,
+        tableId:     invite.tableId    || null,
+        tableLabel:  invite.tableLabel || null,
+        tableType:   tableType,
+        seatNumber:  invite.seatNumber || null,
         // Only expose PIN hint — never the actual PIN value over the wire
         hasPin:      !!(invite.securityPin),
       },
@@ -2547,13 +2559,14 @@ router.get('/:eventId/checkin-cache', verifyCheckinAccess, async (req, res, next
 
     const Invite = require('../models/Invite');
     const invites = await Invite.find({ eventId })
-      .select('inviteCode guestName guestEmail groupSize adults children checkedIn securityPin isBlocked status notes tableId tableLabel')
+      .select('inviteCode guestName guestEmail guestRole groupSize adults children checkedIn securityPin isBlocked status notes tableId tableLabel seatNumber')
       .lean();
 
     const snapshot = invites.map(inv => ({
       code:       inv.inviteCode,
       name:       inv.guestName,
       email:      inv.guestEmail       || '',
+      guestRole:  inv.guestRole        || 'GUEST',
       groupSize:  inv.groupSize        || 1,
       adults:     inv.adults           || 1,
       children:   inv.children         || 0,
@@ -2564,6 +2577,7 @@ router.get('/:eventId/checkin-cache', verifyCheckinAccess, async (req, res, next
       notes:      inv.notes            || '',
       tableId:    inv.tableId          || null,
       tableLabel: inv.tableLabel       || null,
+      seatNumber: inv.seatNumber       || null,
     }));
 
     res.json({
