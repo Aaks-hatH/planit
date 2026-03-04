@@ -271,6 +271,73 @@ const eventSchema = new mongoose.Schema({
     details:   { type: String },
     timestamp: { type: Date, default: Date.now },
   }],
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // TABLE SERVICE MODE — Restaurant & Venue Floor Management
+  // Data in this section is NEVER auto-wiped (keepForever enforced in routes).
+  // ─────────────────────────────────────────────────────────────────────────
+  isTableServiceMode: { type: Boolean, default: false },
+
+  tableServiceSettings: {
+    restaurantName:              { type: String, default: '' },
+    avgDiningMinutes:            { type: Number, default: 75 },
+    cleaningBufferMinutes:       { type: Number, default: 10 },
+    reservationDurationMinutes:  { type: Number, default: 90 },
+    reservationQrExpiryMinutes:  { type: Number, default: 45 },
+    maxPartySizeWalkIn:          { type: Number, default: 20 },
+    operatingHoursOpen:          { type: String, default: '11:00' },
+    operatingHoursClose:         { type: String, default: '22:00' },
+    currency:                    { type: String, default: 'USD' },
+    welcomeMessage:              { type: String, default: '' },
+    // Per-party-size average dining overrides (optional; falls back to avgDiningMinutes)
+    sizeOverrides: [{
+      minParty: { type: Number },
+      maxParty: { type: Number },
+      avgMinutes: { type: Number },
+    }],
+  },
+
+  // Live table occupancy state — one entry per seatingMap object id
+  tableStates: [{
+    tableId:       { type: String, required: true },
+    status:        { type: String, enum: ['available', 'occupied', 'reserved', 'cleaning', 'unavailable'], default: 'available' },
+    partyName:     { type: String, default: '' },
+    partySize:     { type: Number, default: 0 },
+    serverName:    { type: String, default: '' },
+    notes:         { type: String, default: '' },
+    occupiedAt:    { type: Date,   default: null },
+    reservationId: { type: String, default: null },
+    updatedAt:     { type: Date,   default: Date.now },
+  }],
+
+  // Reservation queue — QR-based time-slotted bookings
+  restaurantReservations: [{
+    id:          { type: String, required: true },
+    partyName:   { type: String, required: true, trim: true, maxlength: 100 },
+    partySize:   { type: Number, required: true, min: 1 },
+    phone:       { type: String, default: '', trim: true, maxlength: 30 },
+    email:       { type: String, default: '', trim: true, maxlength: 200 },
+    dateTime:    { type: Date,   required: true },
+    tableId:     { type: String, default: null },
+    qrToken:     { type: String, default: null },
+    qrExpiresAt: { type: Date,   default: null },
+    status:      { type: String, enum: ['confirmed', 'seated', 'cancelled', 'no_show'], default: 'confirmed' },
+    notes:       { type: String, default: '', maxlength: 500 },
+    createdAt:   { type: Date,   default: Date.now },
+  }],
+
+  // Walk-in waitlist (separate from the event waitlist)
+  tableServiceWaitlist: [{
+    id:        { type: String, required: true },
+    partyName: { type: String, required: true, trim: true, maxlength: 100 },
+    partySize: { type: Number, required: true, min: 1 },
+    phone:     { type: String, default: '', trim: true, maxlength: 30 },
+    notes:     { type: String, default: '', maxlength: 300 },
+    addedAt:   { type: Date,   default: Date.now },
+    notifiedAt:{ type: Date,   default: null },
+    status:    { type: String, enum: ['waiting', 'notified', 'seated', 'left'], default: 'waiting' },
+  }],
+
 }, { timestamps: true });
 
 eventSchema.index({ subdomain: 1 });
