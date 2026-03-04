@@ -1154,6 +1154,15 @@ router.get('/invite/:inviteCode', async (req, res, next) => {
     const Invite = require('../models/Invite');
     const invite = await Invite.findOne({ inviteCode: req.params.inviteCode });
     if (!invite) return res.status(404).json({ error: 'Invite not found' });
+
+    // ── Expiry check ──────────────────────────────────────────────────────
+    if (invite.expiresAt && new Date() > new Date(invite.expiresAt)) {
+      return res.status(410).json({
+        error: 'This invite has expired.',
+        expired: true,
+        expiresAt: invite.expiresAt,
+      });
+    }
     
     const event = await Event.findById(invite.eventId);
     if (!event) return res.status(404).json({ error: 'Event not found' });
@@ -1173,7 +1182,8 @@ router.get('/invite/:inviteCode', async (req, res, next) => {
         checkedInAt: invite.checkedInAt,
         status: invite.status,
         notes: invite.notes,
-        email: invite.guestEmail
+        email: invite.guestEmail,
+        expiresAt: invite.expiresAt || null,
       },
       event: {
         id: event._id,
@@ -1182,7 +1192,8 @@ router.get('/invite/:inviteCode', async (req, res, next) => {
         location: event.location,
         description: event.description,
         organizerName: event.organizerName,
-        timezone: event.timezone || 'UTC'
+        timezone: event.timezone || 'UTC',
+        isTableServiceMode: event.isTableServiceMode || false,
       }
     });
   } catch (error) { next(error); }
