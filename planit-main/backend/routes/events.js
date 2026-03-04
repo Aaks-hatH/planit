@@ -1582,6 +1582,7 @@ router.patch('/:eventId/checkin-settings', verifyOrganizer, async (req, res, nex
       'lockoutMinutes',
       'allowManualOverride',
       'staffNote',
+      'securityInstructions',
       
       // Duplicate Prevention - ✅ CORRECT NAMES
       'enableDuplicateDetection',
@@ -2586,6 +2587,27 @@ router.get('/:eventId/checkin-cache', verifyCheckinAccess, async (req, res, next
       builtAt:  new Date().toISOString(),
       event:    { title: event.title },
     });
+  } catch (err) { next(err); }
+});
+
+// ─── GET /:eventId/activity-log ───────────────────────────────────────────
+// Returns the event's embedded activityLog array, newest entries first.
+// Accessible to organizer and check-in staff.
+router.get('/:eventId/activity-log', verifyCheckinAccess, async (req, res, next) => {
+  try {
+    const { eventId } = req.params;
+    const event = await Event.findById(eventId)
+      .select('activityLog')
+      .lean();
+    if (!event) return res.status(404).json({ error: 'Event not found' });
+
+    // Sort newest first and cap at 500 entries for the UI
+    const log = (event.activityLog || [])
+      .slice()
+      .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
+      .slice(0, 500);
+
+    res.json({ log, total: log.length });
   } catch (err) { next(err); }
 });
 
