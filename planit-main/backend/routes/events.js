@@ -23,7 +23,8 @@ router.post('/',
   [
     body('subdomain').trim().isLength({ min: 3, max: 50 }).matches(/^[a-z0-9-]+$/).withMessage('Invalid subdomain format'),
     body('title').trim().isLength({ min: 1, max: 200 }).withMessage('Title is required'),
-    body('date').isISO8601().withMessage('Valid date is required'),
+    // Date is required for standard/enterprise events but NOT for table-service (restaurants have no single event date)
+    body('date').if((value, { req }) => !req.body.isTableServiceMode).isISO8601().withMessage('Valid date is required'),
     body('organizerName').trim().isLength({ min: 1, max: 100 }).withMessage('Organizer name is required'),
     body('organizerEmail').isEmail().normalizeEmail().withMessage('Valid email is required'),
     body('password').optional({ values: 'falsy' }).isLength({ min: 6 }).withMessage('Password must be at least 6 characters'),
@@ -31,7 +32,7 @@ router.post('/',
   ],
   async (req, res, next) => {
     try {
-      const { subdomain, title, description, date, location, organizerName, organizerEmail, password, accountPassword, isEnterpriseMode, settings, maxParticipants } = req.body;
+      const { subdomain, title, description, date, location, organizerName, organizerEmail, password, accountPassword, isEnterpriseMode, isTableServiceMode, settings, maxParticipants } = req.body;
 
       const existing = await Event.findOne({ subdomain });
       if (existing) return res.status(409).json({ error: 'This event link is already taken.' });
@@ -44,9 +45,12 @@ router.post('/',
       }
 
       const event = new Event({
-        subdomain, title, description, date, location, organizerName, organizerEmail,
+        subdomain, title, description,
+        date: isTableServiceMode ? undefined : date,
+        location, organizerName, organizerEmail,
         password: hashedPassword, isPasswordProtected,
         isEnterpriseMode: isEnterpriseMode || false,
+        isTableServiceMode: isTableServiceMode || false,
         settings: settings || {}, maxParticipants: maxParticipants || 100,
         participants: [{ username: organizerName, role: 'organizer' }]
       });
@@ -1154,15 +1158,6 @@ router.get('/invite/:inviteCode', async (req, res, next) => {
     const Invite = require('../models/Invite');
     const invite = await Invite.findOne({ inviteCode: req.params.inviteCode });
     if (!invite) return res.status(404).json({ error: 'Invite not found' });
-
-    // ── Expiry check ──────────────────────────────────────────────────────
-    if (invite.expiresAt && new Date() > new Date(invite.expiresAt)) {
-      return res.status(410).json({
-        error: 'This invite has expired.',
-        expired: true,
-        expiresAt: invite.expiresAt,
-      });
-    }
     
     const event = await Event.findById(invite.eventId);
     if (!event) return res.status(404).json({ error: 'Event not found' });
@@ -1182,8 +1177,7 @@ router.get('/invite/:inviteCode', async (req, res, next) => {
         checkedInAt: invite.checkedInAt,
         status: invite.status,
         notes: invite.notes,
-        email: invite.guestEmail,
-        expiresAt: invite.expiresAt || null,
+        email: invite.guestEmail
       },
       event: {
         id: event._id,
@@ -1192,8 +1186,7 @@ router.get('/invite/:inviteCode', async (req, res, next) => {
         location: event.location,
         description: event.description,
         organizerName: event.organizerName,
-        timezone: event.timezone || 'UTC',
-        isTableServiceMode: event.isTableServiceMode || false,
+        timezone: event.timezone || 'UTC'
       }
     });
   } catch (error) { next(error); }
