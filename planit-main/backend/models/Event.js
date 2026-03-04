@@ -53,9 +53,8 @@ const eventSchema = new mongoose.Schema({
   },
   title:         { type: String, required: true, trim: true, maxlength: 200 },
   description:   { type: String, trim: true, maxlength: 2000 },
-  // date is optional at schema level — required constraint enforced by express-validator for non-table-service events
-  date:          { type: Date, required: false, default: null },
-  timezone:      { type: String, required: false, default: 'UTC' },
+  date:          { type: Date, required: true },
+  timezone:      { type: String, required: true, default: 'UTC' },
   location:      { type: String, trim: true, maxlength: 500 },
   organizerName: { type: String, required: true, trim: true, maxlength: 100 },
   organizerEmail: {
@@ -313,19 +312,140 @@ const eventSchema = new mongoose.Schema({
 
   // Reservation queue — QR-based time-slotted bookings
   restaurantReservations: [{
-    id:          { type: String, required: true },
-    partyName:   { type: String, required: true, trim: true, maxlength: 100 },
-    partySize:   { type: Number, required: true, min: 1 },
-    phone:       { type: String, default: '', trim: true, maxlength: 30 },
-    email:       { type: String, default: '', trim: true, maxlength: 200 },
-    dateTime:    { type: Date,   required: true },
-    tableId:     { type: String, default: null },
-    qrToken:     { type: String, default: null },
-    qrExpiresAt: { type: Date,   default: null },
-    status:      { type: String, enum: ['confirmed', 'seated', 'cancelled', 'no_show'], default: 'confirmed' },
-    notes:       { type: String, default: '', maxlength: 500 },
-    createdAt:   { type: Date,   default: Date.now },
+    id:              { type: String, required: true },
+    partyName:       { type: String, required: true, trim: true, maxlength: 100 },
+    partySize:       { type: Number, required: true, min: 1 },
+    phone:           { type: String, default: '', trim: true, maxlength: 30 },
+    email:           { type: String, default: '', trim: true, maxlength: 200 },
+    dateTime:        { type: Date,   required: true },
+    tableId:         { type: String, default: null },
+    qrToken:         { type: String, default: null },
+    qrExpiresAt:     { type: Date,   default: null },
+    cancelToken:     { type: String, default: null },   // for self-service cancellation link
+    status:          { type: String, enum: ['confirmed', 'pending', 'seated', 'cancelled', 'no_show'], default: 'confirmed' },
+    source:          { type: String, enum: ['staff', 'public'], default: 'staff' },
+    occasion:        { type: String, default: '', maxlength: 50 },
+    specialRequests: { type: String, default: '', maxlength: 1000 },
+    dietaryNeeds:    { type: String, default: '', maxlength: 500 },
+    notes:           { type: String, default: '', maxlength: 500 },
+    createdAt:       { type: Date,   default: Date.now },
   }],
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // PUBLIC RESERVATION PAGE SETTINGS
+  // Full config for the /e/:subdomain/reserve public-facing booking page.
+  // ─────────────────────────────────────────────────────────────────────────
+  reservationPageSettings: {
+
+    // ── Master toggle ───────────────────────────────────────────────────────
+    acceptingReservations:    { type: Boolean, default: false },
+    // 'auto_confirm' = instant booking; 'manual' = staff must approve first
+    confirmationMode:         { type: String, enum: ['auto_confirm', 'manual'], default: 'auto_confirm' },
+
+    // ── Branding & appearance ───────────────────────────────────────────────
+    heroImageUrl:             { type: String, default: '' },
+    logoUrl:                  { type: String, default: '' },
+    accentColor:              { type: String, default: '#f97316' },   // brand colour (hex)
+    backgroundStyle:          { type: String, enum: ['dark', 'light', 'auto'], default: 'dark' },
+    fontStyle:                { type: String, enum: ['modern', 'classic', 'playful'], default: 'modern' },
+    headerTagline:            { type: String, default: '', maxlength: 120 },
+    showPoweredBy:            { type: Boolean, default: true },
+    hidePlanitBranding:       { type: Boolean, default: false },
+    announcementBanner:       { type: String, default: '', maxlength: 200 },
+    announcementBannerColor:  { type: String, default: '#f59e0b' },
+    announcementBannerEnabled:{ type: Boolean, default: false },
+
+    // ── Restaurant info shown on the page ───────────────────────────────────
+    publicDescription:        { type: String, default: '', maxlength: 1000 },
+    cuisine:                  { type: String, default: '', maxlength: 100 },
+    priceRange:               { type: String, enum: ['$', '$$', '$$$', '$$$$', ''], default: '' },
+    dressCode:                { type: String, default: '', maxlength: 200 },
+    parkingInfo:              { type: String, default: '', maxlength: 300 },
+    accessibilityInfo:        { type: String, default: '', maxlength: 300 },
+    address:                  { type: String, default: '', maxlength: 300 },
+    phone:                    { type: String, default: '', maxlength: 30 },
+    websiteUrl:               { type: String, default: '' },
+    instagramHandle:          { type: String, default: '' },
+    facebookUrl:              { type: String, default: '' },
+    googleMapsUrl:            { type: String, default: '' },
+
+    // ── Operating schedule ──────────────────────────────────────────────────
+    // Per-day open/close overrides. If a day has no override the global
+    // tableServiceSettings hours are used. Setting a day to closed hides it.
+    operatingDays: {
+      mon: { open: { type: Boolean, default: true }, openTime: { type: String, default: '' }, closeTime: { type: String, default: '' } },
+      tue: { open: { type: Boolean, default: true }, openTime: { type: String, default: '' }, closeTime: { type: String, default: '' } },
+      wed: { open: { type: Boolean, default: true }, openTime: { type: String, default: '' }, closeTime: { type: String, default: '' } },
+      thu: { open: { type: Boolean, default: true }, openTime: { type: String, default: '' }, closeTime: { type: String, default: '' } },
+      fri: { open: { type: Boolean, default: true }, openTime: { type: String, default: '' }, closeTime: { type: String, default: '' } },
+      sat: { open: { type: Boolean, default: true }, openTime: { type: String, default: '' }, closeTime: { type: String, default: '' } },
+      sun: { open: { type: Boolean, default: true }, openTime: { type: String, default: '' }, closeTime: { type: String, default: '' } },
+    },
+    // Blackout dates — specific days completely closed
+    blackoutDates: [{
+      date:   { type: String },   // 'YYYY-MM-DD'
+      reason: { type: String, default: '', maxlength: 100 },
+    }],
+
+    // ── Booking window rules ────────────────────────────────────────────────
+    slotIntervalMinutes:      { type: Number, default: 30, min: 15, max: 120 },
+    maxAdvanceDays:           { type: Number, default: 30, min: 1, max: 365 },
+    minAdvanceHours:          { type: Number, default: 1,  min: 0, max: 72  },
+    cancelCutoffHours:        { type: Number, default: 2,  min: 0, max: 168 },
+    maxPartySizePublic:       { type: Number, default: 12, min: 1, max: 100 },
+    minPartySizePublic:       { type: Number, default: 1,  min: 1, max: 20  },
+    maxReservationsPerDay:    { type: Number, default: 0   },  // 0 = unlimited
+    maxReservationsPerSlot:   { type: Number, default: 0   },  // 0 = unlimited
+    // Block the last N minutes of service from being bookable (kitchen closes early)
+    lastBookingBeforeCloseMinutes: { type: Number, default: 30, min: 0, max: 120 },
+
+    // ── Required guest fields ───────────────────────────────────────────────
+    requirePhone:             { type: Boolean, default: true  },
+    requireEmail:             { type: Boolean, default: false },
+    allowSpecialRequests:     { type: Boolean, default: true  },
+    allowDietaryNeeds:        { type: Boolean, default: true  },
+    allowOccasionSelect:      { type: Boolean, default: true  },
+    // Custom occasions list shown in the dropdown
+    occasionOptions:          [{ type: String, maxlength: 50 }],
+
+    // ── Availability display ────────────────────────────────────────────────
+    showLiveWaitTime:         { type: Boolean, default: true  },
+    showAvailabilityStatus:   { type: Boolean, default: true  },  // 'Available / Limited / Full' labels
+    showTableCount:           { type: Boolean, default: false },  // show exact free table count
+    showPartySizeWaitTimes:   { type: Boolean, default: true  },  // "For 2: ~15 min, for 4: ~30 min"
+    availabilityDisplayMode:  { type: String, enum: ['slots', 'calendar', 'both'], default: 'slots' },
+
+    // ── Post-booking settings ───────────────────────────────────────────────
+    confirmationMessage:      { type: String, default: '', maxlength: 500 },
+    confirmationEmailSubject: { type: String, default: '', maxlength: 100 },
+    sendConfirmationEmail:    { type: Boolean, default: true  },
+    sendReminderEmail:        { type: Boolean, default: false },
+    reminderHoursBefore:      { type: Number, default: 24, enum: [2, 4, 12, 24, 48, 72] },
+    sendCancellationEmail:    { type: Boolean, default: true  },
+
+    // ── Organizer notifications ─────────────────────────────────────────────
+    notifyOrganizerOnBooking:   { type: Boolean, default: true  },
+    notifyOrganizerOnCancel:    { type: Boolean, default: true  },
+    notifyOrganizerEmail:       { type: String,  default: ''    },  // if blank, uses organizerEmail
+
+    // ── Legal / policies ────────────────────────────────────────────────────
+    cancellationPolicy:       { type: String, default: '', maxlength: 1000 },
+    depositRequired:          { type: Boolean, default: false },
+    depositAmount:            { type: Number,  default: 0     },
+    depositNote:              { type: String,  default: '', maxlength: 200 },
+    termsUrl:                 { type: String,  default: ''    },
+    privacyUrl:               { type: String,  default: ''    },
+
+    // ── Custom FAQ ──────────────────────────────────────────────────────────
+    faqItems: [{
+      question: { type: String, maxlength: 200 },
+      answer:   { type: String, maxlength: 1000 },
+    }],
+
+    // ── SEO / meta ──────────────────────────────────────────────────────────
+    metaTitle:       { type: String, default: '', maxlength: 100 },
+    metaDescription: { type: String, default: '', maxlength: 300 },
+  },
 
   // Walk-in waitlist (separate from the event waitlist)
   tableServiceWaitlist: [{
