@@ -477,7 +477,7 @@ const ROLE_ACCENT = {
   GUEST:   { bar: '#171717', bg: '#171717', textColor: '#ffffff', label: 'GUEST'   },
 };
 
-function BoardingPass({ guest, security, requiresPin, onAdmit, onDeny, onPinVerify }) {
+function BoardingPass({ guest, security, requiresPin, staffNote, onAdmit, onDeny, onPinVerify }) {
   const [pin, setPin] = useState('');
   const [pinError, setPinError] = useState('');
   const [verifyingPin, setVerifyingPin] = useState(false);
@@ -650,6 +650,19 @@ function BoardingPass({ guest, security, requiresPin, onAdmit, onDeny, onPinVeri
                   PIN Verified — proceed to admit.
                 </p>
               )}
+            </div>
+          </div>
+        )}
+
+        {/* ── STAFF INSTRUCTIONS ────────────────────────────────────── */}
+        {staffNote && (
+          <div className="border-b-2 border-neutral-900 bg-neutral-900">
+            <div className="px-8 py-3 flex items-center justify-between border-b border-neutral-700">
+              <p className="text-xs font-black uppercase tracking-[0.2em] text-neutral-300">Staff Instructions</p>
+              <Info className="w-3.5 h-3.5 text-neutral-400" />
+            </div>
+            <div className="px-8 py-4">
+              <p className="text-base text-white leading-relaxed font-medium">{staffNote}</p>
             </div>
           </div>
         )}
@@ -1436,6 +1449,7 @@ export default function EnterpriseCheckin() {
   const [manualCode, setManualCode] = useState('');
   const [currentGuest, setCurrentGuest] = useState(null);
   const [currentSecurity, setCurrentSecurity] = useState(null);
+  const [currentStaffNote, setCurrentStaffNote] = useState('');
   const [requiresPin, setRequiresPin] = useState(false);
   const [pinVerified, setPinVerified] = useState(false);
   
@@ -1851,6 +1865,7 @@ export default function EnterpriseCheckin() {
       hapticSuccess();
       setCurrentGuest(data.guest);
       setCurrentSecurity(data.security);
+      setCurrentStaffNote(data.staffNote || '');
       setRequiresPin(data.requiresPin);
       setPinVerified(false);
 
@@ -1987,6 +2002,7 @@ export default function EnterpriseCheckin() {
     setDenyDetails(null);
     setPinVerified(false);
     setSeatingFocusId(null);
+    setCurrentStaffNote('');
   };
 
   const handleSaveSeatingMap = async (newObjects) => {
@@ -2115,6 +2131,7 @@ export default function EnterpriseCheckin() {
           guest={currentGuest}
           security={currentSecurity}
           requiresPin={requiresPin}
+          staffNote={currentStaffNote}
           onAdmit={handleAdmit}
           onDeny={handleDenyFromBoarding}
           onPinVerify={handlePinVerify}
