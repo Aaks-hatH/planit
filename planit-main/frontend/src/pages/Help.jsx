@@ -12,7 +12,7 @@ import {
   TrendingUp, Ban, Phone, CheckSquare, List, Hash,
   LifeBuoy, Cpu, Globe, Filter, ChevronUp, ArrowRight,
   LogOut, Copy, Navigation, Timer, PieChart, ClipboardList, Send, CheckCircle, Loader,
-  MapPin, Volume2, Radio, Mic
+  MapPin, Volume2, Radio, Mic, UtensilsCrossed, LayoutGrid
 } from 'lucide-react';
 
 /* ─── DATA ─────────────────────────────────────────────────────────────────── */
@@ -86,13 +86,13 @@ const ARTICLES = [
   {
     id: 'gs-modes',
     category: 'Getting Started',
-    title: 'Standard mode vs Enterprise mode',
+    title: 'Standard vs Enterprise vs Table Service mode',
     icon: Zap,
-    tags: ['standard', 'enterprise', 'mode', 'difference', 'guest', 'checkin', 'qr'],
+    tags: ['standard', 'enterprise', 'table service', 'mode', 'difference', 'guest', 'checkin', 'qr', 'restaurant', 'floor'],
     content: [
       {
         type: 'intro',
-        text: 'PlanIt has two event modes. The mode is chosen at creation and cannot be changed afterward.'
+        text: 'PlanIt has three modes. The mode is chosen at creation and cannot be changed afterward.'
       },
       {
         type: 'compare',
@@ -124,13 +124,27 @@ const ARTICLES = [
               'Attendance analytics and arrival timeline',
             ],
             best: 'Weddings, galas, corporate dinners, conferences, award ceremonies'
+          },
+          {
+            label: 'Table Service Mode',
+            color: 'orange',
+            desc: 'A live floor management system for restaurants and venues. No planning workspace — just the floor.',
+            features: [
+              'Visual floor plan with live table status colours',
+              'Walk-in waitlist with estimated wait times',
+              'QR code reservations with configurable expiry',
+              'Per-table party details, server assignment, notes',
+              'Occupancy overview and turn time estimation',
+              'Data never auto-deleted — persists indefinitely',
+            ],
+            best: 'Restaurants, private dining rooms, bars, hospitality venues'
           }
         ]
       },
       {
         type: 'callout',
         variant: 'warning',
-        text: 'You cannot switch modes after the event is created. If you chose Standard and realise you need the guest management system, you\'ll need to create a new event in Enterprise mode.'
+        text: 'You cannot switch modes after creation. Table Service mode opens a completely different interface at /e/your-venue/floor — there is no planning workspace. If you need both event planning and floor management for the same occasion, create two separate venues.'
       }
     ]
   },
@@ -630,11 +644,11 @@ const ARTICLES = [
     category: 'Data & Privacy',
     title: 'Data retention: the 7-day deletion policy',
     icon: Trash2,
-    tags: ['delete', 'deletion', 'data', 'retention', '7 days', 'export', 'backup', 'cleanup'],
+    tags: ['delete', 'deletion', 'data', 'retention', '7 days', 'export', 'backup', 'cleanup', 'table service'],
     content: [
       {
         type: 'intro',
-        text: 'All event data is permanently deleted 7 days after the event\'s scheduled date. This policy applies to every event, without exception.'
+        text: 'All event data is permanently deleted 7 days after the event\'s scheduled date. This policy applies to Standard and Enterprise events. Table Service venues are permanently exempt.'
       },
       {
         type: 'steps',
@@ -642,13 +656,14 @@ const ARTICLES = [
           { title: 'What gets deleted', body: 'The event record, all messages, tasks, polls, notes, announcements, expenses, files, participant records, guest invitation records, check-in logs, and analytics data. Everything. Permanently.' },
           { title: 'When the deletion warning appears', body: 'As your event approaches the 7-day deletion window, a persistent amber warning banner appears at the top of every workspace page showing days remaining.' },
           { title: 'How to export before deletion', body: 'Use the Share tab: download the .ics calendar file, export the participant list, save any files from the Files tab. For analytics, take screenshots or note the key numbers before they\'re gone.' },
-          { title: 'Early deletion', body: 'If you want your event data deleted before 7 days, email planit.userhelp@gmail.com with your event link. We\'ll process it manually.' }
+          { title: 'Early deletion', body: 'If you want your event data deleted before 7 days, email planit.userhelp@gmail.com with your event link. We\'ll process it manually.' },
+          { title: 'Table Service mode exception', body: 'Venues created in Table Service mode are never auto-deleted. The cleanup job skips them entirely. Your floor layout, reservation history, table states, and settings persist until you choose to delete the venue yourself. This is intentional — a restaurant cannot have its floor plan wiped on a schedule.' }
         ]
       },
       {
         type: 'callout',
         variant: 'warning',
-        text: 'There is NO recovery after deletion. The data is gone permanently. If you need records beyond 7 days, download or export them before the deletion date.'
+        text: 'There is NO recovery after deletion. The data is gone permanently. If you need records beyond 7 days, download or export them before the deletion date. This does NOT apply to Table Service venues, which are never automatically deleted.'
       }
     ]
   },
@@ -1012,16 +1027,17 @@ const ARTICLES = [
 ];
 
 const CATEGORIES = [
-  { label: 'All Articles',          icon: BookOpen,     id: 'all' },
-  { label: 'Getting Started',       icon: Star,         id: 'Getting Started' },
-  { label: 'Planning Tools',        icon: Calendar,     id: 'Planning Tools' },
-  { label: 'Enterprise & Check-in', icon: UserCheck,    id: 'Enterprise & Check-in' },
-  { label: 'Security & Passwords',  icon: Shield,       id: 'Security & Passwords' },
-  { label: 'Data & Privacy',        icon: Database,     id: 'Data & Privacy' },
+  { label: 'All Articles',          icon: BookOpen,        id: 'all' },
+  { label: 'Getting Started',       icon: Star,            id: 'Getting Started' },
+  { label: 'Planning Tools',        icon: Calendar,        id: 'Planning Tools' },
+  { label: 'Enterprise & Check-in', icon: UserCheck,       id: 'Enterprise & Check-in' },
+  { label: 'Table Service',         icon: UtensilsCrossed, id: 'Table Service' },
+  { label: 'Security & Passwords',  icon: Shield,          id: 'Security & Passwords' },
+  { label: 'Data & Privacy',        icon: Database,        id: 'Data & Privacy' },
   { label: 'Errors & Troubleshooting', icon: AlertTriangle, id: 'Errors & Troubleshooting' },
-  { label: 'Status & Monitoring',   icon: Activity,     id: 'Status & Monitoring' },
-  { label: 'Settings & Customisation', icon: Settings,  id: 'Settings & Customisation' },
-  { label: 'Contact & Support',     icon: LifeBuoy,     id: 'Contact & Support' },
+  { label: 'Status & Monitoring',   icon: Activity,        id: 'Status & Monitoring' },
+  { label: 'Settings & Customisation', icon: Settings,     id: 'Settings & Customisation' },
+  { label: 'Contact & Support',     icon: LifeBuoy,        id: 'Contact & Support' },
 ];
 
 
@@ -1475,10 +1491,108 @@ const ARTICLES_EXTRA = [
       ]},
     ],
   },
+
+  // ── TABLE SERVICE MODE ────────────────────────────────────────────────────
+  {
+    id: 'ts-overview',
+    category: 'Table Service',
+    title: 'Getting started with Table Service mode',
+    icon: UtensilsCrossed,
+    tags: ['table service', 'restaurant', 'floor', 'venue', 'setup', 'getting started', 'create'],
+    content: [
+      { type: 'intro', text: 'Table Service mode is a dedicated floor management system for restaurants and venues. It creates a completely different interface from the standard event workspace — focused entirely on your live floor plan.' },
+      { type: 'steps', items: [
+        { title: 'Create a Table Service venue', body: 'On the home page, open the event creation form and select "Table Service" as the mode. Give your venue a name — this appears in the dashboard header. Fill in your email and a password as normal. The date field is not required.' },
+        { title: 'Open the floor dashboard', body: 'After creation you are redirected to /e/your-venue/floor. This is your main working screen. Bookmark it — this is the URL your staff will use every service.' },
+        { title: 'Set up your floor layout', body: 'Click "Edit Layout" in the header. The seating map editor opens. Drag tables from the palette onto the canvas to match your physical layout. Set each table\'s label and capacity. Save when done.' },
+        { title: 'Configure settings', body: 'Click the gear icon to open Settings. Set your average dining duration, cleaning buffer, operating hours, and QR expiry window. These values drive the wait time estimates shown to staff.' },
+        { title: 'Start managing tables', body: 'Click any table on the floor map to open its management panel. Use the status buttons to mark it occupied, cleaning, or available. Add party name and size when seating a group.' },
+      ]},
+      { type: 'callout', variant: 'info', text: 'Table Service data is never auto-deleted. Your floor layout and settings persist indefinitely — set up the layout once and it will be there every service.' },
+    ],
+  },
+  {
+    id: 'ts-floor',
+    category: 'Table Service',
+    title: 'Managing your live floor plan',
+    icon: LayoutGrid,
+    tags: ['floor plan', 'table status', 'occupied', 'available', 'cleaning', 'reserved', 'table management'],
+    content: [
+      { type: 'intro', text: 'The floor map is the central screen of Table Service mode. Every table shows its live status colour, party details, and estimated time remaining.' },
+      { type: 'steps', items: [
+        { title: 'Read the status colours', body: 'Green = available. Red = occupied. Amber = reserved. Violet = cleaning. Grey = unavailable. Each table shows its label, current party size vs. capacity, and — when occupied — a countdown badge showing estimated time remaining.' },
+        { title: 'Select a table', body: 'Click any table on the floor map to open its management panel below the map. The selected table gets a white ring so you can see which one you are editing.' },
+        { title: 'Seat a party', body: 'In the table panel, enter the party name and size, then click "Seat Party". The table turns red immediately on every connected device. The seating timestamp is recorded for time tracking.' },
+        { title: 'Release a table', body: 'Click "Mark Cleaning" to enter the cleaning queue (violet). Click "Mark Available" once clean. This clears the party details and resets the occupancy timer.' },
+        { title: 'Pan and zoom', body: 'Drag the empty canvas to pan. Use the +/− buttons at the bottom-right to zoom, or scroll with the mouse wheel. The percentage button resets to 100%.' },
+      ]},
+      { type: 'faq', items: [
+        { q: 'Do table changes sync to other devices instantly?', a: 'Yes. Every status change emits a Socket.IO event to all connected sessions. A second device on the floor sees the update within under a second — no refresh needed.' },
+        { q: 'What is the time remaining countdown?', a: 'When a table is marked occupied, the system records the timestamp. The countdown is: avgDiningMinutes − minutes elapsed. When it hits zero the badge turns red and shows OVER. This is an estimate — you control when the table is actually released.' },
+        { q: 'Can I mark a table unavailable?', a: 'Yes. Use it for tables that are closed, broken, or reserved for private use.' },
+      ]},
+    ],
+  },
+  {
+    id: 'ts-waitlist',
+    category: 'Table Service',
+    title: 'Walk-in waitlist and estimated wait times',
+    icon: Clock,
+    tags: ['waitlist', 'wait time', 'walk-in', 'queue', 'estimate', 'party', 'notify'],
+    content: [
+      { type: 'intro', text: 'The waitlist panel queues walk-in parties and shows an estimated wait time based on your floor\'s current occupancy and your configured dining duration.' },
+      { type: 'steps', items: [
+        { title: 'Add a party', body: 'In the right sidebar, click the Waitlist tab then "Add party". Enter party name and size. Phone is optional. Click "Add to list".' },
+        { title: 'Read the wait estimate', body: 'Below each entry you\'ll see: "Table available now" (green), "Est. wait ~12 min" (amber), or "No suitable table" if no table with enough capacity exists. Estimates update live as tables turn.' },
+        { title: 'Notify the party', body: 'Click the bell icon to mark them notified. Their entry gains a "Notified" badge — useful when calling them verbally or by phone.' },
+        { title: 'Seat or remove', body: 'Click the checkmark to mark them seated and remove them from the active list. Click X to remove a party that left or no longer needs a table.' },
+      ]},
+      { type: 'callout', variant: 'info', text: 'The wait estimate finds tables with capacity ≥ party size, calculates remaining time on each occupied one, and shows the minimum plus your cleaning buffer. It is an average-based estimate — actual turn times will vary.' },
+    ],
+  },
+  {
+    id: 'ts-reservations',
+    category: 'Table Service',
+    title: 'Reservations and QR codes',
+    icon: QrCode,
+    tags: ['reservation', 'booking', 'qr code', 'scan', 'token', 'expiry', 'check in'],
+    content: [
+      { type: 'intro', text: 'Each reservation generates a signed QR token with a configurable expiry window. Staff scan the QR at the door to confirm and seat the party.' },
+      { type: 'steps', items: [
+        { title: 'Create a reservation', body: 'In the Reservations tab, click "New". Enter party name, size, date and time, and optional phone/email. Click "Create + QR". A reservation record and a signed QR token are generated immediately.' },
+        { title: 'Show the QR to the guest', body: 'Click the QR icon on any reservation row to open the QR modal. Show the screen to the guest to photograph, or note the reservation for a printed QR workflow.' },
+        { title: 'Seat at arrival', body: 'When the guest arrives, open the QR modal and click "Seat Now". The reservation is marked seated and removed from the active list.' },
+        { title: 'Handle no-shows', body: 'Click the X on a reservation to cancel it, or use the QR modal\'s "No Show" button.' },
+        { title: 'Understanding QR expiry', body: 'Each token expires a configurable number of minutes after the reservation time (default 45). A guest presenting an expired QR sees "QR code has expired". Adjust the expiry window in Settings to match your workflow.' },
+      ]},
+      { type: 'faq', items: [
+        { q: 'Can the same QR be used twice?', a: 'No. Once a reservation is marked seated, any further scan returns "This party is already seated." The server checks reservation status on every scan.' },
+        { q: 'Can I assign a reservation to a specific table?', a: 'Yes — specify a table ID when creating or editing a reservation. This is informational and does not automatically change the table\'s live status.' },
+      ]},
+    ],
+  },
+  {
+    id: 'ts-settings',
+    category: 'Table Service',
+    title: 'Configuring Table Service settings',
+    icon: Settings,
+    tags: ['settings', 'config', 'dining time', 'buffer', 'hours', 'qr expiry', 'restaurant settings'],
+    content: [
+      { type: 'intro', text: 'The settings panel controls the timing parameters that drive wait time estimates and QR expiry. Accurate settings make the wait time estimator significantly more useful for your staff.' },
+      { type: 'steps', items: [
+        { title: 'Average dining time (minutes)', body: 'The most important setting. Typical time a party occupies a table from seating to leaving. Default 75. Adjust to match your actual service — a casual café might be 45 minutes, fine dining might be 120. This directly drives the countdown on occupied tables and the waitlist estimates.' },
+        { title: 'Cleaning buffer (minutes)', body: 'Time to clean and reset a table after guests leave. Added on top of remaining time when calculating waitlist estimates. Default 10.' },
+        { title: 'Reservation duration (minutes)', body: 'How long a reservation slot holds the table. Default 90.' },
+        { title: 'QR code expiry (minutes after reservation time)', body: 'How long a reservation QR remains valid after the scheduled time. For example, 45 means a 7:00 PM reservation QR is valid until 7:45 PM. Default 45.' },
+        { title: 'Operating hours', body: 'Sets your open and close times, displayed in the Overview panel.' },
+        { title: 'Welcome message', body: 'Optional staff note displayed in the Overview tab — useful for tonight\'s specials or shift reminders.' },
+      ]},
+    ],
+  },
 ];
 ARTICLES.push(...ARTICLES_EXTRA);
 
-const POPULAR = ['gs-create', 'err-service-crash', 'err-loading', 'err-password', 'ent-checkin', 'data-retention', 'ent-walkie', 'ent-seating'];
+const POPULAR = ['gs-create', 'err-service-crash', 'err-loading', 'err-password', 'ent-checkin', 'data-retention', 'ts-overview', 'ts-waitlist'];
 
 /* ─── SUB-COMPONENTS ────────────────────────────────────────────────────────── */
 
