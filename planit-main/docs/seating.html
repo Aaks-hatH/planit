@@ -5,36 +5,29 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Seating Maps — PlanIt Docs</title>
   <link rel="stylesheet" href="style.css" />
+  <link rel="icon" type="image/svg+xml" href="favicon.svg" />
   <script>window.CURRENT_PAGE = 'seating';</script>
 </head>
 <body>
   <div class="sidebar-overlay"></div>
   <div class="layout">
-    <aside class="sidebar">
-      <div class="sidebar-logo">
-        <a href="index.html">
-          <div class="logo-mark">P</div>
-          <div><div class="logo-text">PLANIT</div><div class="logo-sub">Docs</div></div>
-        </a>
-      </div>
+        <aside class="sidebar">
+      <div class="sidebar-logo"><a href="index.html"><div class="logo-mark">P</div><div><div class="logo-text">PLANIT</div><div class="logo-sub">Docs</div></div></a></div>
+      <div class="sidebar-search"><div class="sidebar-search-wrap"><svg class="sidebar-search-icon" width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="7" cy="7" r="5"/><path d="M11 11l3 3"/></svg><input class="sidebar-search-input" type="text" placeholder="Search docs..." autocomplete="off" /><span class="search-kbd">/</span></div></div>
       <nav class="sidebar-nav"></nav>
-      <div class="sidebar-footer">
-        <a href="https://planitapp.onrender.com" class="sidebar-footer-link" target="_blank">Open PlanIt App &rarr;</a>
-      </div>
+      <div class="sidebar-status"><div class="status-dot"></div>All systems operational</div>
+      <div class="sidebar-footer"><a href="https://planitapp.onrender.com" class="sidebar-footer-link" target="_blank"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M8 3H4a1 1 0 00-1 1v8a1 1 0 001 1h8a1 1 0 001-1v-4"/><path d="M11 2h3v3M14 2l-6 6"/></svg>Open PlanIt App</a></div>
     </aside>
     <div class="main">
-      <div class="topbar">
-        <div style="display:flex;align-items:center;gap:12px;">
-          <button class="menu-toggle" aria-label="Toggle menu">
-            <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><line x1="2" y1="5" x2="16" y2="5"/><line x1="2" y1="9" x2="16" y2="9"/><line x1="2" y1="13" x2="16" y2="13"/></svg>
-          </button>
-          <div class="topbar-breadcrumb">Docs <span>Seating Maps</span></div>
+            <div class="topbar">
+        <div class="topbar-left">
+          <button class="menu-toggle" aria-label="Toggle menu"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><line x1="2" y1="5" x2="16" y2="5"/><line x1="2" y1="9" x2="16" y2="9"/><line x1="2" y1="13" x2="16" y2="13"/></svg></button>
+          <div class="topbar-breadcrumb">Docs <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M4 2l4 4-4 4"/></svg> <span>Seating Maps</span></div>
         </div>
-        <div class="topbar-right">
-          <a href="https://planitapp.onrender.com" class="topbar-btn" target="_blank">Open App</a>
-        </div>
+        <div class="topbar-right"><a href="https://planitapp.onrender.com" class="topbar-btn" target="_blank">Open App →</a></div>
       </div>
-      <div class="content">
+      <div class="inner-layout">
+        <div class="content">
 
         <div class="page-header">
           <div class="page-tag">Seating Maps</div>
@@ -57,10 +50,57 @@
         <p>Once a map exists, the button changes to <strong>Seating</strong> and is visible to all logged-in users (staff see a read-only version, organisers get the full editor).</p>
 
         <h2 id="building-layout">Building your layout</h2>
-        <p>The seating map editor is a canvas-based tool. Objects snap to a grid and can be freely positioned and resized.</p>
+        <p>The seating map editor is a canvas-based tool. Objects snap to a grid and can be freely positioned and resized. Below is a simplified representation of what the canvas looks like — click a table to select it.</p>
+
+        <div class="demo-panel">
+          <div class="demo-panel-header">
+            <div class="demo-dot demo-dot-red"></div>
+            <div class="demo-dot demo-dot-yellow"></div>
+            <div class="demo-dot demo-dot-green"></div>
+            <span class="demo-panel-title">Seating map editor — demo</span>
+          </div>
+          <div class="demo-panel-body">
+            <div style="display:grid;grid-template-columns:1fr 180px;gap:16px;">
+              <div>
+                <div style="background:var(--bg-3);border-radius:8px;padding:16px;min-height:200px;position:relative;">
+                  <div style="position:absolute;top:8px;left:8px;font-size:10px;color:var(--text-3);font-family:var(--font-head);letter-spacing:1px;">STAGE</div>
+                  <div style="background:var(--bg-4);border:1px solid var(--border);border-radius:4px;height:28px;margin-bottom:20px;display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--text-3);font-family:var(--font-head);">STAGE</div>
+                  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;">
+                    <div onclick="document.querySelectorAll('.tbl-demo').forEach(t=>t.style.borderColor='');this.style.borderColor='var(--accent)';document.getElementById('tbl-info').textContent='Table 1 — 4 guests assigned (Max 8)';" class="tbl-demo" style="aspect-ratio:1;background:rgba(16,185,129,0.08);border:1.5px solid rgba(16,185,129,0.3);border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;transition:border-color 0.15s;">
+                      <div style="font-family:var(--font-head);font-size:11px;font-weight:700;color:var(--success);">T1</div>
+                      <div style="font-size:9px;color:var(--text-3);">4/8</div>
+                    </div>
+                    <div onclick="document.querySelectorAll('.tbl-demo').forEach(t=>t.style.borderColor='');this.style.borderColor='var(--accent)';document.getElementById('tbl-info').textContent='Table 2 — 8 guests assigned (Max 8) — Full';" class="tbl-demo" style="aspect-ratio:1;background:rgba(139,92,246,0.08);border:1.5px solid rgba(139,92,246,0.3);border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;transition:border-color 0.15s;">
+                      <div style="font-family:var(--font-head);font-size:11px;font-weight:700;color:var(--accent-3);">T2</div>
+                      <div style="font-size:9px;color:var(--text-3);">8/8</div>
+                    </div>
+                    <div onclick="document.querySelectorAll('.tbl-demo').forEach(t=>t.style.borderColor='');this.style.borderColor='var(--accent)';document.getElementById('tbl-info').textContent='VIP A — 2 guests assigned (Max 6) — VIP Area';" class="tbl-demo" style="aspect-ratio:1;background:rgba(245,158,11,0.08);border:1.5px solid rgba(245,158,11,0.3);border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;transition:border-color 0.15s;">
+                      <div style="font-family:var(--font-head);font-size:11px;font-weight:700;color:var(--gold);">VIP</div>
+                      <div style="font-size:9px;color:var(--text-3);">2/6</div>
+                    </div>
+                    <div onclick="document.querySelectorAll('.tbl-demo').forEach(t=>t.style.borderColor='');this.style.borderColor='var(--accent)';document.getElementById('tbl-info').textContent='Table 3 — Empty (Max 10)';" class="tbl-demo" style="aspect-ratio:1;background:var(--bg-4);border:1.5px solid var(--border);border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;transition:border-color 0.15s;">
+                      <div style="font-family:var(--font-head);font-size:11px;font-weight:700;color:var(--text-3);">T3</div>
+                      <div style="font-size:9px;color:var(--text-3);">0/10</div>
+                    </div>
+                  </div>
+                  <div id="tbl-info" style="margin-top:12px;font-size:11.5px;color:var(--text-3);text-align:center;">Click a table to inspect it</div>
+                </div>
+              </div>
+              <div style="background:var(--bg-3);border-radius:8px;padding:12px;">
+                <div style="font-family:var(--font-head);font-size:10px;font-weight:600;color:var(--text-3);letter-spacing:1px;text-transform:uppercase;margin-bottom:10px;">Unassigned</div>
+                <div style="display:flex;flex-direction:column;gap:6px;">
+                  <div style="background:var(--bg-4);border:1px solid var(--border);border-radius:5px;padding:6px 8px;font-size:12px;color:var(--text-2);cursor:grab;">Jamie D.</div>
+                  <div style="background:var(--bg-4);border:1px solid var(--border);border-radius:5px;padding:6px 8px;font-size:12px;color:var(--text-2);cursor:grab;">Alex T.</div>
+                  <div style="background:var(--bg-4);border:1px solid var(--border);border-radius:5px;padding:6px 8px;font-size:12px;color:var(--text-2);cursor:grab;">Riley M.</div>
+                </div>
+                <div style="margin-top:8px;font-size:10px;color:var(--text-3);">Drag onto a table to assign</div>
+              </div>
+            </div>
+          </div>
+        </div>
 
         <h3>Available objects</h3>
-        <table>
+        <div class="table-wrap"><table>
           <thead><tr><th>Object</th><th>Description</th></tr></thead>
           <tbody>
             <tr><td><strong>Round table</strong></td><td>Circular table with a configurable label</td></tr>
@@ -72,6 +112,7 @@
             <tr><td><strong>Text label</strong></td><td>Free-form annotation for zones or areas</td></tr>
           </tbody>
         </table>
+          </div>
 
         <h3>Editing objects</h3>
         <ul>
@@ -112,8 +153,20 @@
         <h2 id="real-time">Real-time sync</h2>
         <p>The seating map syncs in real-time across all devices on the same event. When the organiser saves a new layout or reassigns a guest, every connected device receives the update immediately via WebSocket. No page refresh is needed.</p>
 
-      </div>
-    </div>
+        <div class="page-nav">
+          <a href="check-in.html" class="page-nav-link">
+            <span class="page-nav-label">← Previous</span>
+            <span class="page-nav-title">Check-in System</span>
+          </a>
+          <a href="walkie-talkie.html" class="page-nav-link page-nav-next">
+            <span class="page-nav-label">Next →</span>
+            <span class="page-nav-title">Walkie-Talkie</span>
+          </a>
+        </div>
+        </div>
+        <div class="toc-right"></div>
+      </div><!-- inner-layout -->
+    </div><!-- main -->
   </div>
   <script src="nav.js"></script>
 </body>
