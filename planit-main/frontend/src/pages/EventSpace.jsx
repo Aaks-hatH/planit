@@ -852,7 +852,16 @@ export default function EventSpace() {
     else if (subdomain) {
       setResolving(true);
       eventAPI.getBySubdomain(subdomain)
-        .then(res => { setEventId(res.data.event.id); setResolving(false); })
+        .then(res => {
+          const ev = res.data.event;
+          // Table service venues: skip the event space entirely
+          if (ev.isTableServiceMode) {
+            navigate(`/e/${subdomain}/floor`, { replace: true });
+            return;
+          }
+          setEventId(ev.id);
+          setResolving(false);
+        })
         .catch(() => { toast.error('Event not found'); navigate('/'); });
     } else { navigate('/'); }
   }, [paramEventId, subdomain]);
@@ -1019,6 +1028,13 @@ export default function EventSpace() {
     try {
       const res = await eventAPI.getById(eventId);
       const ev  = res.data.event;
+
+      // Table service venues have no event space — redirect straight to floor
+      if (ev.isTableServiceMode) {
+        navigate(ev.subdomain ? `/e/${ev.subdomain}/floor` : `/event/${eventId}/floor`, { replace: true });
+        return;
+      }
+
       setEvent(ev);
       setParticipants(ev.participants || []);
       setRsvps(ev.rsvps || []);
