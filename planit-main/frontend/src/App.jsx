@@ -2,6 +2,7 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Home from './pages/Home';
 import EventSpace from './pages/EventSpace';
 import EnterpriseCheckin from './pages/EnterpriseCheckin';
+import TableService from './pages/TableService';
 import GuestInvite from './pages/GuestInvite';
 import OrganizerLogin from './pages/OrganizerLogin';
 import Admin from './pages/Admin';
@@ -29,6 +30,8 @@ function App() {
         <Route path="/event/:eventId"            element={<EventSpace />} />
         <Route path="/event/:eventId/checkin"    element={<EnterpriseCheckin />} />
         <Route path="/e/:subdomain/checkin"      element={<EnterpriseCheckin />} />
+        <Route path="/event/:eventId/floor"      element={<TableService />} />
+        <Route path="/e/:subdomain/floor"        element={<TableService />} />
         <Route path="/event/:eventId/login"      element={<OrganizerLogin />} />
         <Route path="/e/:subdomain/login"        element={<OrganizerLogin />} />
         <Route path="/event/:eventId/waitlist"   element={<Waitlist />} />
