@@ -85,7 +85,7 @@ router.put(
     body('objects.*.type').isIn(['round', 'rect', 'stage', 'bar', 'sofa', 'vip', 'zone', 'auditorium']),
     body('objects.*.label').optional().isString().trim().isLength({ max: 50 }),
     body('objects.*.rotation').optional().isFloat({ min: 0, max: 359 }),
-    body('objects.*.capacity').optional().isInt({ min: 1, max: 999 }),
+    body('objects.*.capacity').optional().isInt({ min: 0, max: 999 }),
     body('objects.*.color').optional({ nullable: true }).isString(),
     body('objects.*.width').optional().isFloat({ min: 20 }),
     body('objects.*.height').optional().isFloat({ min: 20 }),
