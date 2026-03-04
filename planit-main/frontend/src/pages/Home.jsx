@@ -938,7 +938,7 @@ export default function Home() {
   const [mode, setMode] = useState('standard');
   const [formData, setFormData] = useState({
     subdomain: '', title: '', description: '', date: '', timezone: getUserTimezone(), location: '',
-    organizerName: '', organizerEmail: '', accountPassword: '', password: '',
+    organizerName: '', organizerEmail: '', accountPassword: '', password: '', staffPassword: '',
     isEnterpriseMode: false, maxParticipants: 10000,
   });
   const [loading, setLoading] = useState(false);
@@ -962,16 +962,19 @@ export default function Home() {
 
     // ── Client-side field validation ──────────────────────────────────────
     const errs = {};
-    if (!formData.title.trim())            errs.title          = 'Event title is required.';
-    if (!formData.date)                    errs.date           = 'Date and time is required.';
-    if (!formData.timezone)                errs.timezone       = 'Timezone is required.';
-    if (!formData.organizerName.trim())    errs.organizerName  = 'Your name is required.';
-    if (!formData.organizerEmail.trim())   errs.organizerEmail = 'Your email is required.';
+    const isTS = mode === 'table-service';
+    if (!formData.title.trim())            errs.title          = isTS ? 'Restaurant name is required.' : 'Event title is required.';
+    if (!isTS && !formData.date)           errs.date           = 'Date and time is required.';
+    if (!isTS && !formData.timezone)       errs.timezone       = 'Timezone is required.';
+    if (!formData.organizerName.trim())    errs.organizerName  = isTS ? 'Manager name is required.' : 'Your name is required.';
+    if (!formData.organizerEmail.trim())   errs.organizerEmail = isTS ? 'Manager email is required.' : 'Your email is required.';
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.organizerEmail.trim()))
                                            errs.organizerEmail = 'Please enter a valid email address.';
     if (!formData.accountPassword)         errs.accountPassword = 'Account password is required.';
     else if (formData.accountPassword.length < 4)
                                            errs.accountPassword = 'Password must be at least 4 characters.';
+    if (isTS && formData.staffPassword && formData.staffPassword.length < 4)
+                                           errs.staffPassword  = 'Staff PIN must be at least 4 characters.';
 
     if (Object.keys(errs).length > 0) {
       setFieldErrors(errs);
@@ -983,20 +986,20 @@ export default function Home() {
     setFieldErrors({});
     setLoading(true);
 
-    const dateValue = formData.date ? localDateTimeToUTC(formData.date, formData.timezone) : formData.date;
+    const dateValue = (!isTS && formData.date) ? localDateTimeToUTC(formData.date, formData.timezone) : undefined;
     const payload = {
       title:          sanitize(formData.title),
       description:    sanitize(formData.description),
-      date:           dateValue,
-      timezone:       formData.timezone,
+      ...(dateValue ? { date: dateValue, timezone: formData.timezone } : {}),
       location:       sanitize(formData.location),
       organizerName:  sanitize(formData.organizerName),
       organizerEmail: sanitize(formData.organizerEmail),
       accountPassword:formData.accountPassword,
       password:       formData.password || undefined,
+      staffPassword:  (isTS && formData.staffPassword) ? formData.staffPassword : undefined,
       subdomain:      formData.subdomain || makeSubdomain(formData.title) || `event-${Date.now()}`,
       isEnterpriseMode: mode === 'enterprise',
-      isTableServiceMode: mode === 'table-service',
+      isTableServiceMode: isTS,
       maxParticipants: formData.maxParticipants,
     };
     try {
@@ -1598,14 +1601,28 @@ export default function Home() {
                         <div className="p-8 bg-neutral-900/50 border border-neutral-800 rounded-3xl">
                           <div className="flex items-start gap-4">
                             <UtensilsCrossed className="w-6 h-6 text-orange-400 flex-shrink-0 mt-1" />
-                            <div>
-                              <p className="text-base font-bold text-white mb-4">Next steps for Table Service:</p>
+                            <div className="w-full">
+                              <p className="text-base font-bold text-white mb-4">Your venue is live!</p>
+                              {formData.staffPassword && (
+                                <div className="mb-4 p-3 bg-neutral-800 border border-neutral-700 rounded-xl">
+                                  <p className="text-xs font-semibold text-neutral-400 uppercase tracking-wide mb-2">Default staff login</p>
+                                  <div className="flex justify-between text-sm">
+                                    <span className="text-neutral-400">Username</span>
+                                    <span className="text-white font-mono font-bold">staff</span>
+                                  </div>
+                                  <div className="flex justify-between text-sm mt-1">
+                                    <span className="text-neutral-400">Password</span>
+                                    <span className="text-white font-mono font-bold">{formData.staffPassword}</span>
+                                  </div>
+                                  <p className="text-xs text-neutral-600 mt-2">Share this with your team — they log in at <code className="text-neutral-500">/login</code></p>
+                                </div>
+                              )}
                               <ol className="text-sm text-neutral-400 space-y-3 list-decimal ml-5">
                                 <li>Open your floor dashboard and click "Edit Layout"</li>
                                 <li>Drag and drop tables to match your restaurant's floor plan</li>
                                 <li>Set each table's capacity and label</li>
-                                <li>Open Settings to configure your avg. dining time and hours</li>
-                                <li>Staff can now manage tables, waitlists, and reservations live</li>
+                                <li>Open Settings to configure dining time and operating hours</li>
+                                <li>Staff log in at <code className="text-neutral-500">/login</code> and go straight to the floor</li>
                               </ol>
                             </div>
                           </div>
@@ -1677,7 +1694,7 @@ export default function Home() {
 
                     <form onSubmit={handleSubmit} className="space-y-6">
                       <div>
-                        <label className="block text-sm font-bold text-neutral-300 mb-2">Event title <span className="text-red-400">*</span></label>
+                        <label className="block text-sm font-bold text-neutral-300 mb-2">{mode === 'table-service' ? 'Restaurant name' : 'Event title'} <span className="text-red-400">*</span></label>
                         <input type="text" required
                           className={`dark-input ${fieldErrors.title ? 'border-red-500 focus:border-red-400' : ''}`}
                           placeholder={mode === 'table-service' ? 'Taverna Roma, The Oak Room...' : 'Summer Company Retreat 2025'}
@@ -1723,8 +1740,9 @@ export default function Home() {
                       </div>
                       <div>
                         <label className="block text-sm font-bold text-neutral-300 mb-2">Description</label>
-                        <textarea className="dark-input resize-none" rows="3" placeholder="What's this event about?" value={formData.description} onChange={update('description')} />
+                        <textarea className="dark-input resize-none" rows="3" placeholder={mode === 'table-service' ? 'A short description of your venue (optional)' : "What's this event about?"} value={formData.description} onChange={update('description')} />
                       </div>
+                      {mode !== 'table-service' && (
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
                           <label className="block text-sm font-bold text-neutral-300 mb-2">Date and time <span className="text-red-400">*</span></label>
@@ -1744,26 +1762,29 @@ export default function Home() {
                           </select>
                         </div>
                       </div>
+                      )}
+                      {mode !== 'table-service' && (
                       <div>
                         <label className="block text-sm font-bold text-neutral-300 mb-2">Location</label>
                         <input type="text" className="dark-input" placeholder="Central Park, NYC" value={formData.location} onChange={update('location')} />
                       </div>
+                      )}
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
-                          <label className="block text-sm font-bold text-neutral-300 mb-2">Your name <span className="text-red-400">*</span></label>
+                          <label className="block text-sm font-bold text-neutral-300 mb-2">{mode === 'table-service' ? 'Manager name' : 'Your name'} <span className="text-red-400">*</span></label>
                           <input type="text" required
                             className={`dark-input ${fieldErrors.organizerName ? 'border-red-500 focus:border-red-400' : ''}`}
-                            placeholder="Alex Smith"
+                            placeholder={mode === 'table-service' ? 'Head Manager' : 'Alex Smith'}
                             value={formData.organizerName}
                             onChange={(e) => { update('organizerName')(e); setFieldErrors(p => ({...p, organizerName: ''})); }}
                           />
                           {fieldErrors.organizerName && <p className="field-error text-xs text-red-400 mt-1">{fieldErrors.organizerName}</p>}
                         </div>
                         <div>
-                          <label className="block text-sm font-bold text-neutral-300 mb-2">Your email <span className="text-red-400">*</span></label>
+                          <label className="block text-sm font-bold text-neutral-300 mb-2">{mode === 'table-service' ? 'Manager email' : 'Your email'} <span className="text-red-400">*</span></label>
                           <input type="email" required
                             className={`dark-input ${fieldErrors.organizerEmail ? 'border-red-500 focus:border-red-400' : ''}`}
-                            placeholder="alex@company.com"
+                            placeholder={mode === 'table-service' ? 'manager@restaurant.com' : 'alex@company.com'}
                             value={formData.organizerEmail}
                             onChange={(e) => { update('organizerEmail')(e); setFieldErrors(p => ({...p, organizerEmail: ''})); }}
                           />
@@ -1772,7 +1793,7 @@ export default function Home() {
                       </div>
                       <div>
                         <label className="block text-sm font-bold text-neutral-300 mb-2">
-                          <span className="flex items-center gap-2"><Lock className="w-4 h-4 text-neutral-500" />Account Password <span className="text-red-400">*</span></span>
+                          <span className="flex items-center gap-2"><Lock className="w-4 h-4 text-neutral-500" />{mode === 'table-service' ? 'Organizer Password' : 'Account Password'} <span className="text-red-400">*</span></span>
                         </label>
                         <div className="relative">
                           <input type={showAccountPassword ? 'text' : 'password'} required
@@ -1788,9 +1809,31 @@ export default function Home() {
                         </div>
                         {fieldErrors.accountPassword
                           ? <p className="field-error text-xs text-red-400 mt-2 flex items-center gap-1"><AlertCircle className="w-3 h-3" />{fieldErrors.accountPassword}</p>
-                          : <p className="text-xs text-neutral-600 mt-2">Required to access this event from other devices or browsers</p>
+                          : <p className="text-xs text-neutral-600 mt-2">{mode === 'table-service' ? 'Your personal password to manage the venue settings' : 'Required to access this event from other devices or browsers'}</p>
                         }
                       </div>
+                      {mode === 'table-service' && (
+                      <div>
+                        <label className="block text-sm font-bold text-neutral-300 mb-2">
+                          <span className="flex items-center gap-2"><Shield className="w-4 h-4 text-neutral-500" />Staff Password <span className="text-neutral-600 font-normal text-xs">(optional — shared with floor staff)</span></span>
+                        </label>
+                        <div className="relative">
+                          <input type={showPassword ? 'text' : 'password'} className={`dark-input pr-12 ${fieldErrors.staffPassword ? 'border-red-500 focus:border-red-400' : ''}`}
+                            placeholder="PIN or password staff use to log in to the floor"
+                            value={formData.staffPassword}
+                            onChange={(e) => { update('staffPassword')(e); setFieldErrors(p => ({...p, staffPassword: ''})); }}
+                          />
+                          <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-4 top-1/2 -translate-y-1/2 text-neutral-500 hover:text-neutral-300 transition-colors">
+                            {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                          </button>
+                        </div>
+                        {fieldErrors.staffPassword
+                          ? <p className="field-error text-xs text-red-400 mt-2 flex items-center gap-1"><AlertCircle className="w-3 h-3" />{fieldErrors.staffPassword}</p>
+                          : <p className="text-xs text-neutral-600 mt-2">Leave empty if you'll create individual staff accounts from the floor settings</p>
+                        }
+                      </div>
+                      )}
+                      {mode !== 'table-service' && (
                       <div>
                         <label className="block text-sm font-bold text-neutral-300 mb-2">
                           <span className="flex items-center gap-2"><Shield className="w-4 h-4 text-neutral-500" />Event Password <span className="text-neutral-600 font-normal text-xs">(optional)</span></span>
@@ -1802,6 +1845,7 @@ export default function Home() {
                           </button>
                         </div>
                       </div>
+                      )}
                       <button type="submit" disabled={loading}
                         className="w-full px-8 py-5 bg-white text-neutral-900 rounded-2xl font-bold hover:scale-105 hover:bg-neutral-100 transition-all duration-300 shadow-xl disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 flex items-center justify-center gap-3 text-lg">
                         {loading
