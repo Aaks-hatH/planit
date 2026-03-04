@@ -276,8 +276,127 @@ async function manualCleanup() {
   await cleanupOldEvents();
 }
 
+// ─── Cloudinary orphan sweep ──────────────────────────────────────────────────
+// Lists every asset in planit-covers and planit-files on Cloudinary, cross-
+// references against live event IDs and File records in MongoDB, and destroys
+// anything that has no matching DB record.
+async function cleanupOrphanedCloudinaryAssets() {
+  if (!process.env.CLOUDINARY_CLOUD_NAME) {
+    return { skipped: true, reason: 'Cloudinary not configured', deleted: 0, failed: 0 };
+  }
+
+  const cloudinary = require('cloudinary').v2;
+  cloudinary.config({
+    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+    api_key:    process.env.CLOUDINARY_API_KEY,
+    api_secret: process.env.CLOUDINARY_API_SECRET,
+  });
+
+  console.log('[cloudinary-sweep] Starting orphan sweep...');
+
+  // ── 1. Build known-good sets from MongoDB ───────────────────────────────
+  // All live event IDs (for cover images: public_id = planit-covers/cover-{eventId})
+  const allEventIds = new Set(
+    (await Event.find({}, '_id').lean()).map(e => e._id.toString())
+  );
+
+  // All tracked Cloudinary public IDs from File records
+  const knownFilePublicIds = new Set(
+    (await File.find({}, 'cloudinaryPublicId').lean())
+      .map(f => f.cloudinaryPublicId)
+      .filter(Boolean)
+  );
+
+  console.log(`[cloudinary-sweep] ${allEventIds.size} live events, ${knownFilePublicIds.size} tracked file assets`);
+
+  let deleted = 0;
+  let failed  = 0;
+  let scanned = 0;
+
+  // ── Helper: paginate through a Cloudinary folder ────────────────────────
+  async function sweepFolder(folder, isOrphan) {
+    let nextCursor = null;
+    do {
+      const opts = { type: 'upload', prefix: folder + '/', max_results: 500, resource_type: 'image' };
+      if (nextCursor) opts.next_cursor = nextCursor;
+
+      let result;
+      try {
+        result = await cloudinary.api.resources(opts);
+      } catch (err) {
+        // Folder doesn't exist yet — nothing to sweep
+        if (err?.error?.http_code === 404) break;
+        throw err;
+      }
+
+      for (const asset of result.resources || []) {
+        scanned++;
+        if (isOrphan(asset.public_id)) {
+          try {
+            await cloudinary.uploader.destroy(asset.public_id, { resource_type: asset.resource_type || 'image' });
+            console.log(`[cloudinary-sweep] Deleted orphan: ${asset.public_id}`);
+            deleted++;
+          } catch (err) {
+            console.error(`[cloudinary-sweep] Failed to delete ${asset.public_id}:`, err.message);
+            failed++;
+          }
+        }
+      }
+
+      nextCursor = result.next_cursor || null;
+    } while (nextCursor);
+  }
+
+  // ── 2. Sweep planit-covers ───────────────────────────────────────────────
+  // public_id format: planit-covers/cover-{eventId}
+  await sweepFolder('planit-covers', (publicId) => {
+    const match = publicId.match(/cover-([a-f0-9]{24})$/i);
+    if (!match) return true; // unexpected format → orphan
+    return !allEventIds.has(match[1]); // no matching event → orphan
+  });
+
+  // ── 3. Sweep planit-files (and any other image resource folders) ─────────
+  // Cross-reference against known File public IDs
+  await sweepFolder('planit-files', (publicId) => !knownFilePublicIds.has(publicId));
+
+  // Also sweep raw and video resource types for planit-files
+  async function sweepFolderRaw(folder) {
+    for (const resourceType of ['raw', 'video']) {
+      let nextCursor = null;
+      do {
+        const opts = { type: 'upload', prefix: folder + '/', max_results: 500, resource_type: resourceType };
+        if (nextCursor) opts.next_cursor = nextCursor;
+        let result;
+        try { result = await cloudinary.api.resources(opts); }
+        catch (err) { if (err?.error?.http_code === 404) break; throw err; }
+
+        for (const asset of result.resources || []) {
+          scanned++;
+          if (!knownFilePublicIds.has(asset.public_id)) {
+            try {
+              await cloudinary.uploader.destroy(asset.public_id, { resource_type: resourceType });
+              console.log(`[cloudinary-sweep] Deleted orphan (${resourceType}): ${asset.public_id}`);
+              deleted++;
+            } catch (err) {
+              console.error(`[cloudinary-sweep] Failed to delete ${asset.public_id}:`, err.message);
+              failed++;
+            }
+          }
+        }
+        nextCursor = result.next_cursor || null;
+      } while (nextCursor);
+    }
+  }
+
+  await sweepFolderRaw('planit-files');
+
+  console.log(`[cloudinary-sweep] Done. Scanned: ${scanned}, Deleted: ${deleted}, Failed: ${failed}`);
+  return { scanned, deleted, failed };
+}
+
 module.exports = {
   startCleanupScheduler,
   manualCleanup,
-  cleanupOldEvents
+  cleanupOldEvents,
+  cleanupOrphanedCloudinaryAssets,
 };
