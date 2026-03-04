@@ -1262,7 +1262,7 @@ const {
 } = require('../middleware/antifraud');
 
 router.get('/:eventId/verify-scan/:inviteCode', 
-  verifyCheckinAccess,     // ✅ Staff/organizer only — bypasses requireApproval gate
+  verifyEventAccess,
   enforceBlocks,           // ✅ Check emergency lockdown, blocks, trust scores
   detectDuplicates,        // ✅ Check for duplicate guests
   detectSuspiciousPatterns, // ✅ Check for rapid scans, multiple devices
@@ -1322,8 +1322,8 @@ router.get('/:eventId/verify-scan/:inviteCode',
       });
     }
 
-    // Get event checkin settings + seating map (for table type / zone lookup)
-    const event = await Event.findById(eventId).select('checkinSettings title seatingMap').lean();
+    // Get event checkin settings
+    const event = await Event.findById(eventId).select('checkinSettings title').lean();
     const settings = event?.checkinSettings || {};
 
     // ── Collect security warnings from middleware ──
@@ -1332,13 +1332,6 @@ router.get('/:eventId/verify-scan/:inviteCode',
     
     // Calculate trust score
     const trustScore = invite.calculateTrustScore();
-
-    // ── Look up table type from seating map for zone display ──
-    let tableType = null;
-    if (invite.tableId && event?.seatingMap?.objects?.length) {
-      const tableObj = event.seatingMap.objects.find(o => o.id === invite.tableId);
-      if (tableObj) tableType = tableObj.type || null;
-    }
 
     // ── Return the full guest profile for staff to review ──
     res.json({
@@ -1350,17 +1343,12 @@ router.get('/:eventId/verify-scan/:inviteCode',
         guestName:   invite.guestName,
         guestEmail:  invite.guestEmail,
         guestPhone:  invite.guestPhone,
-        guestRole:   invite.guestRole  || 'GUEST',
         adults:      invite.adults,
         children:    invite.children,
         groupSize:   invite.groupSize,
         plusOnes:    invite.plusOnes,
         status:      invite.status,
         notes:       invite.notes,
-        tableId:     invite.tableId    || null,
-        tableLabel:  invite.tableLabel || null,
-        tableType:   tableType,
-        seatNumber:  invite.seatNumber || null,
         // Only expose PIN hint — never the actual PIN value over the wire
         hasPin:      !!(invite.securityPin),
       },
@@ -1376,7 +1364,7 @@ router.get('/:eventId/verify-scan/:inviteCode',
 });
 
 // STEP 2: Verify PIN (called if requiresPin === true, before committing admission)
-router.post('/:eventId/verify-pin/:inviteCode', verifyCheckinAccess, async (req, res, next) => {
+router.post('/:eventId/verify-pin/:inviteCode', verifyEventAccess, async (req, res, next) => {
   try {
     const Invite = require('../models/Invite');
     const { eventId, inviteCode } = req.params;
@@ -1415,7 +1403,7 @@ router.post('/:eventId/verify-pin/:inviteCode', verifyCheckinAccess, async (req,
 
 // STEP 3: Commit check-in — only called after staff reviews profile (and PIN if required)
 router.post('/:eventId/checkin/:inviteCode', 
-  verifyCheckinAccess,     // ✅ Staff/organizer only — bypasses requireApproval gate
+  verifyEventAccess,
   preventReentrancy,  // ✅ Prevent simultaneous check-ins
   async (req, res, next) => {
   try {
@@ -1582,7 +1570,6 @@ router.patch('/:eventId/checkin-settings', verifyOrganizer, async (req, res, nex
       'lockoutMinutes',
       'allowManualOverride',
       'staffNote',
-      'securityInstructions',
       
       // Duplicate Prevention - ✅ CORRECT NAMES
       'enableDuplicateDetection',
@@ -2560,14 +2547,13 @@ router.get('/:eventId/checkin-cache', verifyCheckinAccess, async (req, res, next
 
     const Invite = require('../models/Invite');
     const invites = await Invite.find({ eventId })
-      .select('inviteCode guestName guestEmail guestRole groupSize adults children checkedIn securityPin isBlocked status notes tableId tableLabel seatNumber')
+      .select('inviteCode guestName guestEmail groupSize adults children checkedIn securityPin isBlocked status notes tableId tableLabel')
       .lean();
 
     const snapshot = invites.map(inv => ({
       code:       inv.inviteCode,
       name:       inv.guestName,
       email:      inv.guestEmail       || '',
-      guestRole:  inv.guestRole        || 'GUEST',
       groupSize:  inv.groupSize        || 1,
       adults:     inv.adults           || 1,
       children:   inv.children         || 0,
@@ -2578,7 +2564,6 @@ router.get('/:eventId/checkin-cache', verifyCheckinAccess, async (req, res, next
       notes:      inv.notes            || '',
       tableId:    inv.tableId          || null,
       tableLabel: inv.tableLabel       || null,
-      seatNumber: inv.seatNumber       || null,
     }));
 
     res.json({
@@ -2590,32 +2575,186 @@ router.get('/:eventId/checkin-cache', verifyCheckinAccess, async (req, res, next
   } catch (err) { next(err); }
 });
 
-// ─── GET /:eventId/activity-log ───────────────────────────────────────────
-// Returns the event's embedded activityLog array, newest entries first.
-// Accessible to organizer and check-in staff.
-router.get('/:eventId/activity-log', verifyCheckinAccess, async (req, res, next) => {
-  try {
-    const { eventId } = req.params;
-    const event = await Event.findById(eventId)
-      .select('activityLog')
-      .lean();
-    if (!event) return res.status(404).json({ error: 'Event not found' });
-
-    // Sort newest first and cap at 500 entries for the UI
-    const log = (event.activityLog || [])
-      .slice()
-      .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
-      .slice(0, 500);
-
-    res.json({ log, total: log.length });
-  } catch (err) { next(err); }
-});
-
 module.exports = router;
 module.exports.fireWebhooks = fireWebhooks;
 
 // ═══════════════════════════════════════════════════════════════════════════
-// BACKUP & DATA EXPORT ROUTES
+// TABLE SERVICE MODE — Restaurant & Venue Floor Management Routes
+// Data is NEVER auto-wiped (keepForever enforced in settings PATCH).
+// ═══════════════════════════════════════════════════════════════════════════
+
+// GET  /:eventId/table-service/floor  — full floor state
+router.get('/:eventId/table-service/floor', verifyCheckinAccess, async (req, res, next) => {
+  try {
+    const event = await Event.findById(req.params.eventId)
+      .select('title tableServiceSettings tableStates restaurantReservations tableServiceWaitlist seatingMap isTableServiceMode')
+      .lean();
+    if (!event) return res.status(404).json({ error: 'Event not found' });
+    res.json({
+      seatingMap:     event.seatingMap || { enabled: false, objects: [] },
+      tableStates:    event.tableStates || [],
+      settings:       event.tableServiceSettings || {},
+      reservations:   (event.restaurantReservations || []).filter(r => r.status !== 'cancelled'),
+      waitlist:       (event.tableServiceWaitlist || []).filter(w => w.status === 'waiting' || w.status === 'notified'),
+      restaurantName: event.tableServiceSettings?.restaurantName || event.title,
+    });
+  } catch (err) { next(err); }
+});
+
+// PATCH /:eventId/table-service/table/:tableId  — update a single table state
+router.patch('/:eventId/table-service/table/:tableId', verifyCheckinAccess, async (req, res, next) => {
+  try {
+    const { eventId, tableId } = req.params;
+    const { status, partyName, partySize, serverName, notes, reservationId } = req.body;
+    const ALLOWED_STATUSES = ['available', 'occupied', 'reserved', 'cleaning', 'unavailable'];
+    if (status && !ALLOWED_STATUSES.includes(status)) {
+      return res.status(400).json({ error: `Invalid status. Must be: ${ALLOWED_STATUSES.join(', ')}` });
+    }
+    const event = await Event.findById(eventId);
+    if (!event) return res.status(404).json({ error: 'Event not found' });
+
+    let existing = event.tableStates.find(s => s.tableId === tableId);
+    if (!existing) { event.tableStates.push({ tableId, status: 'available' }); existing = event.tableStates[event.tableStates.length - 1]; }
+
+    const prevStatus = existing.status;
+    if (status !== undefined)        existing.status        = status;
+    if (partyName !== undefined)     existing.partyName     = partyName;
+    if (partySize !== undefined)     existing.partySize     = partySize;
+    if (serverName !== undefined)    existing.serverName    = serverName;
+    if (notes !== undefined)         existing.notes         = notes;
+    if (reservationId !== undefined) existing.reservationId = reservationId;
+    if (status === 'occupied' && prevStatus !== 'occupied') existing.occupiedAt = new Date();
+    if (status === 'available' || status === 'cleaning') {
+      existing.occupiedAt = null; existing.partyName = partyName || ''; existing.partySize = partySize || 0; existing.reservationId = null;
+    }
+    existing.updatedAt = new Date();
+    await event.save();
+
+    const io = req.app.get('io');
+    if (io) io.to(`event_${eventId}`).emit('table_state_update', { tableId, ...existing.toObject() });
+    res.json({ success: true, tableState: existing });
+  } catch (err) { next(err); }
+});
+
+// POST /:eventId/table-service/waitlist
+router.post('/:eventId/table-service/waitlist', verifyCheckinAccess, async (req, res, next) => {
+  try {
+    const { partyName, partySize, phone, notes } = req.body;
+    if (!partyName?.trim()) return res.status(400).json({ error: 'Party name is required' });
+    if (!partySize || partySize < 1) return res.status(400).json({ error: 'Party size must be at least 1' });
+    const event = await Event.findById(req.params.eventId);
+    if (!event) return res.status(404).json({ error: 'Event not found' });
+    const entry = { id: require('crypto').randomUUID(), partyName: partyName.trim(), partySize: parseInt(partySize), phone: phone?.trim() || '', notes: notes?.trim() || '', addedAt: new Date(), status: 'waiting' };
+    event.tableServiceWaitlist.push(entry);
+    await event.save();
+    const io = req.app.get('io');
+    if (io) io.to(`event_${req.params.eventId}`).emit('waitlist_update', { action: 'add', entry });
+    res.status(201).json({ success: true, entry });
+  } catch (err) { next(err); }
+});
+
+// PATCH /:eventId/table-service/waitlist/:partyId
+router.patch('/:eventId/table-service/waitlist/:partyId', verifyCheckinAccess, async (req, res, next) => {
+  try {
+    const { status } = req.body;
+    if (!['waiting','notified','seated','left'].includes(status)) return res.status(400).json({ error: 'Invalid status' });
+    const event = await Event.findById(req.params.eventId);
+    if (!event) return res.status(404).json({ error: 'Event not found' });
+    const entry = event.tableServiceWaitlist.find(w => w.id === req.params.partyId);
+    if (!entry) return res.status(404).json({ error: 'Not found' });
+    entry.status = status;
+    if (status === 'notified') entry.notifiedAt = new Date();
+    await event.save();
+    const io = req.app.get('io');
+    if (io) io.to(`event_${req.params.eventId}`).emit('waitlist_update', { action: 'update', entry });
+    res.json({ success: true, entry });
+  } catch (err) { next(err); }
+});
+
+// DELETE /:eventId/table-service/waitlist/:partyId
+router.delete('/:eventId/table-service/waitlist/:partyId', verifyCheckinAccess, async (req, res, next) => {
+  try {
+    const event = await Event.findById(req.params.eventId);
+    if (!event) return res.status(404).json({ error: 'Event not found' });
+    event.tableServiceWaitlist = event.tableServiceWaitlist.filter(w => w.id !== req.params.partyId);
+    await event.save();
+    res.json({ success: true });
+  } catch (err) { next(err); }
+});
+
+// POST /:eventId/table-service/reservations
+router.post('/:eventId/table-service/reservations', verifyCheckinAccess, async (req, res, next) => {
+  try {
+    const { partyName, partySize, phone, email, dateTime, tableId, notes } = req.body;
+    if (!partyName?.trim()) return res.status(400).json({ error: 'Party name is required' });
+    if (!partySize || partySize < 1) return res.status(400).json({ error: 'Party size must be at least 1' });
+    if (!dateTime) return res.status(400).json({ error: 'Date/time is required' });
+    const event = await Event.findById(req.params.eventId).select('restaurantReservations tableServiceSettings title');
+    if (!event) return res.status(404).json({ error: 'Event not found' });
+    const id = require('crypto').randomUUID();
+    const expiryMins = event.tableServiceSettings?.reservationQrExpiryMinutes || 45;
+    const resDateTime = new Date(dateTime);
+    const qrExpiresAt = new Date(resDateTime.getTime() + expiryMins * 60000);
+    const secsUntilExpiry = Math.max(3600, Math.ceil((qrExpiresAt.getTime() - Date.now()) / 1000));
+    const qrToken = jwt.sign(
+      { type: 'table_reservation', reservationId: id, eventId: req.params.eventId, partyName: partyName.trim(), partySize: parseInt(partySize) },
+      secrets.jwt, { expiresIn: `${secsUntilExpiry}s` }
+    );
+    const reservation = { id, partyName: partyName.trim(), partySize: parseInt(partySize), phone: phone?.trim() || '', email: email?.trim() || '', dateTime: resDateTime, tableId: tableId || null, qrToken, qrExpiresAt, status: 'confirmed', notes: notes?.trim() || '', createdAt: new Date() };
+    event.restaurantReservations.push(reservation);
+    await event.save();
+    res.status(201).json({ success: true, reservation });
+  } catch (err) { next(err); }
+});
+
+// PATCH /:eventId/table-service/reservations/:reservationId
+router.patch('/:eventId/table-service/reservations/:reservationId', verifyCheckinAccess, async (req, res, next) => {
+  try {
+    const { status, tableId, notes } = req.body;
+    if (status && !['confirmed','seated','cancelled','no_show'].includes(status)) return res.status(400).json({ error: 'Invalid status' });
+    const event = await Event.findById(req.params.eventId);
+    if (!event) return res.status(404).json({ error: 'Event not found' });
+    const r = event.restaurantReservations.find(r => r.id === req.params.reservationId);
+    if (!r) return res.status(404).json({ error: 'Reservation not found' });
+    if (status !== undefined)  r.status  = status;
+    if (tableId !== undefined) r.tableId = tableId;
+    if (notes !== undefined)   r.notes   = notes;
+    await event.save();
+    res.json({ success: true, reservation: r });
+  } catch (err) { next(err); }
+});
+
+// GET /:eventId/table-service/reservations/verify/:token  — QR scan verification
+router.get('/:eventId/table-service/reservations/verify/:token', verifyCheckinAccess, async (req, res, next) => {
+  try {
+    let decoded;
+    try { decoded = jwt.verify(req.params.token, secrets.jwt); } catch (e) {
+      return res.status(401).json({ valid: false, error: e.name === 'TokenExpiredError' ? 'This QR code has expired.' : 'Invalid QR code.' });
+    }
+    if (decoded.type !== 'table_reservation' || decoded.eventId !== req.params.eventId) {
+      return res.status(400).json({ valid: false, error: 'QR code is not for this venue.' });
+    }
+    const event = await Event.findById(req.params.eventId).select('restaurantReservations');
+    const reservation = event?.restaurantReservations?.find(r => r.id === decoded.reservationId);
+    if (!reservation) return res.status(404).json({ valid: false, error: 'Reservation not found.' });
+    if (reservation.status === 'cancelled') return res.status(400).json({ valid: false, error: 'This reservation was cancelled.' });
+    if (reservation.status === 'seated')    return res.status(400).json({ valid: false, error: 'This party is already seated.' });
+    res.json({ valid: true, reservation });
+  } catch (err) { next(err); }
+});
+
+// PATCH /:eventId/table-service/settings
+router.patch('/:eventId/table-service/settings', verifyOrganizer, async (req, res, next) => {
+  try {
+    const ALLOWED = ['restaurantName','avgDiningMinutes','cleaningBufferMinutes','reservationDurationMinutes','reservationQrExpiryMinutes','maxPartySizeWalkIn','operatingHoursOpen','operatingHoursClose','currency','welcomeMessage','sizeOverrides'];
+    const event = await Event.findById(req.params.eventId);
+    if (!event) return res.status(404).json({ error: 'Event not found' });
+    ALLOWED.forEach(k => { if (req.body[k] !== undefined) event.tableServiceSettings[k] = req.body[k]; });
+    event.keepForever = true; // Table Service data is never auto-wiped
+    await event.save();
+    res.json({ success: true, settings: event.tableServiceSettings });
+  } catch (err) { next(err); }
+});
 // ═══════════════════════════════════════════════════════════════════════════
 
 const Message = require('../models/Message');
