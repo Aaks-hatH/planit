@@ -1119,10 +1119,11 @@ function SettingsModal({ settings, reservationSettings, onSave, onSaveReserve, o
 // ── Main Page ─────────────────────────────────────────────────────────────────
 
 export default function TableService() {
-  const { eventId, subdomain } = useParams();
+  const { eventId: eventIdParam, subdomain } = useParams();
   const navigate = useNavigate();
 
   const [loading, setLoading]           = useState(true);
+  const [resolvedEventId, setResolvedEventId] = useState(eventIdParam || null);
   const [floorData, setFloorData]       = useState({ seatingMap: { objects: [] }, tableStates: [], settings: {}, reservations: [], waitlist: [], restaurantName: '' });
   const [selectedTableId, setSelectedTableId] = useState(null);
   const [sideTab, setSideTab]           = useState('waitlist');
@@ -1135,8 +1136,17 @@ export default function TableService() {
   const [zoom, setZoom] = useState(1);
   const [pan,  setPan]  = useState({ x: 0, y: 0 });
 
+  // Resolve subdomain → eventId when routed via /e/:subdomain/floor
+  useEffect(() => {
+    if (!eventIdParam && subdomain) {
+      eventAPI.getBySubdomain(subdomain)
+        .then(res => setResolvedEventId(res.data._id || res.data.id))
+        .catch(() => toast.error('Event not found'));
+    }
+  }, [eventIdParam, subdomain]);
+
   // Derived
-  const eid = eventId; // for API calls
+  const eid = resolvedEventId; // for API calls
   const objects    = floorData.seatingMap?.objects || [];
   const tables     = objects.filter(o => o.type !== 'zone');
   const tableStates = floorData.tableStates || [];
@@ -1153,6 +1163,7 @@ export default function TableService() {
   const selectedState = tableStates.find(s => s.tableId === selectedTableId) || null;
 
   const loadFloor = useCallback(async () => {
+    if (!eid) return;
     try {
       const res = await eventAPI.getTableServiceFloor(eid);
       setFloorData(res.data);
@@ -1164,11 +1175,12 @@ export default function TableService() {
   }, [eid]);
 
   useEffect(() => {
+    if (!eid) return;
     loadFloor();
     // Auto-refresh every 30 seconds
     const interval = setInterval(loadFloor, 30000);
     return () => clearInterval(interval);
-  }, [loadFloor]);
+  }, [loadFloor, eid]);
 
   // Centre the floor on load when objects available
   useEffect(() => {
@@ -1237,6 +1249,16 @@ export default function TableService() {
     const res = await eventAPI.updateTableServiceSettings(eid, form);
     setFloorData(prev => ({ ...prev, settings: res.data.settings, restaurantName: res.data.settings.restaurantName || prev.restaurantName }));
     toast.success('Settings saved');
+  };
+
+  const handleSaveReservationSettings = async (form) => {
+    try {
+      const res = await eventAPI.updateReservationPageSettings(eid, form);
+      setReservationSettings(res.data.reservationSettings || form);
+      toast.success('Reservation settings saved');
+    } catch {
+      toast.error('Failed to save reservation settings');
+    }
   };
 
   const handleSaveSeatingMap = async (newObjects) => {
