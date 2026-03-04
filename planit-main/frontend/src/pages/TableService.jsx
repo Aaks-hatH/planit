@@ -782,6 +782,12 @@ function Toggle({ checked, onChange }) {
 function SettingsModal({ settings, reservationSettings, onSave, onSaveReserve, onClose, eventId, subdomain, isTableService = true }) {
   const [tab, setTab]       = useState('general');
   const [form, setForm]     = useState({ ...settings });
+  const [staffList, setStaffList]       = useState([]);
+  const [staffLoading, setStaffLoading] = useState(false);
+  const [staffForm, setStaffForm]       = useState({ username: '', pin: '', confirmPin: '' });
+  const [staffFormErr, setStaffFormErr] = useState('');
+  const [staffAdding, setStaffAdding]   = useState(false);
+  const [staffDeleting, setStaffDeleting] = useState(null);
   const [rForm, setRForm]   = useState({
     acceptingReservations:      reservationSettings?.acceptingReservations    ?? false,
     confirmationMode:           reservationSettings?.confirmationMode          || 'auto_confirm',
@@ -873,10 +879,11 @@ function SettingsModal({ settings, reservationSettings, onSave, onSaveReserve, o
 
   const ALL_TABS = [
     { id: 'general',   label: 'Floor' },
-    { id: 'reserve',   label: 'Reserve Page',  tsOnly: true },
-    { id: 'content',   label: 'Content',       tsOnly: true },
-    { id: 'booking',   label: 'Booking Rules', tsOnly: true },
-    { id: 'notify',    label: 'Notifications', tsOnly: true },
+    { id: 'staff',     label: 'Staff',          tsOnly: true },
+    { id: 'reserve',   label: 'Reserve Page',   tsOnly: true },
+    { id: 'content',   label: 'Content',        tsOnly: true },
+    { id: 'booking',   label: 'Booking Rules',  tsOnly: true },
+    { id: 'notify',    label: 'Notifications',  tsOnly: true },
   ];
   const TABS = ALL_TABS.filter(t => !t.tsOnly || isTableService);
 
@@ -886,6 +893,54 @@ function SettingsModal({ settings, reservationSettings, onSave, onSaveReserve, o
       {desc && <p className="text-xs text-neutral-500 mt-0.5">{desc}</p>}
     </div>
   );
+
+  // ── Staff management ────────────────────────────────────────────────────
+  useEffect(() => {
+    if (tab !== 'staff' || !eventId) return;
+    setStaffLoading(true);
+    eventAPI.getStaff(eventId)
+      .then(r => setStaffList(r.data.staff || []))
+      .catch(() => toast.error('Failed to load staff'))
+      .finally(() => setStaffLoading(false));
+  }, [tab, eventId]);
+
+  const handleAddStaff = async () => {
+    setStaffFormErr('');
+    const { username, pin, confirmPin } = staffForm;
+    if (!username.trim()) { setStaffFormErr('Username is required'); return; }
+    if (!pin)             { setStaffFormErr('PIN is required'); return; }
+    if (!/^\d{4,8}$/.test(pin)) { setStaffFormErr('PIN must be 4–8 digits (numbers only)'); return; }
+    if (pin !== confirmPin)     { setStaffFormErr('PINs do not match'); return; }
+    setStaffAdding(true);
+    try {
+      await eventAPI.createStaff(eventId, { username: username.trim(), pin });
+      const r = await eventAPI.getStaff(eventId);
+      setStaffList(r.data.staff || []);
+      setStaffForm({ username: '', pin: '', confirmPin: '' });
+      toast.success(`Staff account "${username.trim()}" created`);
+    } catch (err) {
+      setStaffFormErr(err?.response?.data?.error || 'Failed to create staff account');
+    } finally {
+      setStaffAdding(false);
+    }
+  };
+
+  const handleDeleteStaff = async (username) => {
+    setStaffDeleting(username);
+    try {
+      await eventAPI.deleteStaff(eventId, username);
+      setStaffList(p => p.filter(s => s.username !== username));
+      toast.success(`Removed "${username}"`);
+    } catch {
+      toast.error('Failed to remove staff account');
+    } finally {
+      setStaffDeleting(null);
+    }
+  };
+
+  const loginUrl = subdomain
+    ? `${window.location.origin}/e/${subdomain}/login`
+    : (eventId ? `${window.location.origin}/event/${eventId}/login` : '');
 
   const reserveUrl = subdomain ? `${window.location.origin}/e/${subdomain}/reserve` : '';
 
@@ -1272,6 +1327,84 @@ function SettingsModal({ settings, reservationSettings, onSave, onSaveReserve, o
               <textarea value={rForm.confirmationMessage} onChange={setR('confirmationMessage')} rows={3}
                 placeholder="We look forward to seeing you! Please arrive 5 minutes early. Call us if you need to make any changes."
                 className={inputCls + ' resize-none'} />
+            </div>
+          </>)}
+
+          {tab === 'staff' && (<>
+            {/* Staff login URL */}
+            <div className="p-3 bg-neutral-800/60 border border-neutral-700 rounded-xl mb-2">
+              <p className="text-xs font-semibold text-neutral-400 uppercase tracking-wide mb-1">Staff Login URL</p>
+              <div className="flex items-center gap-2">
+                <code className="text-xs text-orange-300 flex-1 truncate">{loginUrl}</code>
+                <button onClick={() => { navigator.clipboard.writeText(loginUrl); toast.success('Copied!'); }}
+                  className="text-xs px-2 py-1 bg-neutral-700 hover:bg-neutral-600 text-neutral-300 rounded-lg font-semibold flex-shrink-0">Copy</button>
+              </div>
+              <p className="text-xs text-neutral-600 mt-1.5">Share this link with staff. They log in with their username and PIN.</p>
+            </div>
+
+            {/* Existing staff list */}
+            <SectionHead title="Staff Accounts" desc="Staff can log in to the floor dashboard using their username and PIN." />
+            {staffLoading ? (
+              <div className="flex justify-center py-6"><Loader2 className="w-5 h-5 animate-spin text-neutral-500" /></div>
+            ) : staffList.length === 0 ? (
+              <p className="text-sm text-neutral-600 text-center py-4">No staff accounts yet</p>
+            ) : (
+              <div className="space-y-1.5 mb-4">
+                {staffList.map(s => (
+                  <div key={s.username} className="flex items-center justify-between p-3 bg-neutral-800/40 border border-neutral-700 rounded-xl">
+                    <div>
+                      <p className="text-sm font-semibold text-white">{s.username}</p>
+                      <p className="text-xs text-neutral-500">
+                        {s.lastSeenAt ? `Last seen ${new Date(s.lastSeenAt).toLocaleDateString()}` : 'Never logged in'}
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => handleDeleteStaff(s.username)}
+                      disabled={staffDeleting === s.username}
+                      className="p-1.5 hover:bg-rose-500/20 text-neutral-500 hover:text-rose-400 rounded-lg transition-colors disabled:opacity-50"
+                    >
+                      {staffDeleting === s.username
+                        ? <Loader2 className="w-4 h-4 animate-spin" />
+                        : <Trash2 className="w-4 h-4" />}
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Add new staff */}
+            <div className="border-t border-neutral-800 pt-4">
+              <SectionHead title="Add Staff Account" />
+              <div className="space-y-3">
+                <div>
+                  <label className={labelCls}>Username</label>
+                  <input value={staffForm.username} onChange={e => setStaffForm(p => ({ ...p, username: e.target.value }))}
+                    placeholder="e.g. john, server1" className={inputCls} />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className={labelCls}>PIN (4–8 digits)</label>
+                    <input type="password" inputMode="numeric" value={staffForm.pin}
+                      onChange={e => setStaffForm(p => ({ ...p, pin: e.target.value }))}
+                      placeholder="••••" className={inputCls} />
+                  </div>
+                  <div>
+                    <label className={labelCls}>Confirm PIN</label>
+                    <input type="password" inputMode="numeric" value={staffForm.confirmPin}
+                      onChange={e => setStaffForm(p => ({ ...p, confirmPin: e.target.value }))}
+                      placeholder="••••" className={inputCls} />
+                  </div>
+                </div>
+                {staffFormErr && (
+                  <p className="text-xs text-rose-400 flex items-center gap-1.5">
+                    <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0" />{staffFormErr}
+                  </p>
+                )}
+                <button onClick={handleAddStaff} disabled={staffAdding}
+                  className="w-full py-2.5 bg-white text-neutral-900 rounded-xl text-sm font-bold hover:bg-neutral-100 disabled:opacity-50 flex items-center justify-center gap-2">
+                  {staffAdding ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Plus className="w-4 h-4" />Add Staff Account</>}
+                </button>
+              </div>
             </div>
           </>)}
         </div>
