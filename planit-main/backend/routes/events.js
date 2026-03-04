@@ -23,7 +23,7 @@ router.post('/',
   [
     body('subdomain').trim().isLength({ min: 3, max: 50 }).matches(/^[a-z0-9-]+$/).withMessage('Invalid subdomain format'),
     body('title').trim().isLength({ min: 1, max: 200 }).withMessage('Title is required'),
-    body('date').isISO8601().withMessage('Valid date is required'),
+    body('date').if(body('isTableServiceMode').not().equals('true')).if(body('isTableServiceMode').not().equals(true)).isISO8601().withMessage('Valid date is required'),
     body('organizerName').trim().isLength({ min: 1, max: 100 }).withMessage('Organizer name is required'),
     body('organizerEmail').isEmail().normalizeEmail().withMessage('Valid email is required'),
     body('password').optional({ values: 'falsy' }).isLength({ min: 6 }).withMessage('Password must be at least 6 characters'),
@@ -102,7 +102,9 @@ router.get('/public/:eventId', async (req, res, next) => {
         description: event.description, date: event.date, location: event.location,
         organizerName: event.organizerName, isPasswordProtected: event.isPasswordProtected,
         maxParticipants: event.maxParticipants, participantCount: event.participants.length,
-        status: event.status, rsvpSummary: event.getRsvpSummary()
+        status: event.status, rsvpSummary: event.getRsvpSummary(),
+        isTableServiceMode: !!event.isTableServiceMode,
+        isEnterpriseMode: !!event.isEnterpriseMode,
       }
     });
   } catch (error) { next(error); }
@@ -121,7 +123,9 @@ router.get('/subdomain/:subdomain', async (req, res, next) => {
         requiresPassword: event.isPasswordProtected,
         description: event.isPasswordProtected ? undefined : event.description,
         location: event.isPasswordProtected ? undefined : event.location,
-        maxParticipants: event.maxParticipants, participantCount: event.participants.length
+        maxParticipants: event.maxParticipants, participantCount: event.participants.length,
+        isTableServiceMode: !!event.isTableServiceMode,
+        isEnterpriseMode: !!event.isEnterpriseMode,
       }
     });
   } catch (error) { next(error); }
@@ -178,8 +182,7 @@ router.post('/verify-password/:eventId', authLimiter,
         if (!accountPassword) return res.status(400).json({ error: 'This name has an account — enter your account password.', requiresAccountPassword: true });
         const accountMatch = await bcrypt.compare(accountPassword, existing.password);
         if (!accountMatch) return res.status(401).json({ error: 'Incorrect account password.' });
-        existing.lastSeenAt = new Date();
-        await existing.save();
+        await EventParticipant.updateOne({ _id: existing._id }, { $set: { lastSeenAt: new Date() } });
       } else {
         const updateData = { role: 'participant', lastSeenAt: new Date() };
         if (accountPassword) {
@@ -280,8 +283,7 @@ router.post('/join/:eventId',
         if (!accountPassword) return res.status(400).json({ error: 'This name has an account — enter your account password.', requiresAccountPassword: true });
         const accountMatch = await bcrypt.compare(accountPassword, existing.password);
         if (!accountMatch) return res.status(401).json({ error: 'Incorrect account password.' });
-        existing.lastSeenAt = new Date();
-        await existing.save();
+        await EventParticipant.updateOne({ _id: existing._id }, { $set: { lastSeenAt: new Date() } });
       } else {
         const updateData = { role: 'participant', lastSeenAt: new Date() };
         if (accountPassword) {
@@ -2215,8 +2217,7 @@ router.post('/:eventId/staff-login', authLimiter, async (req, res, next) => {
       return res.status(401).json({ error: 'Invalid username or PIN' });
     }
 
-    staff.lastSeenAt = new Date();
-    await staff.save();
+    await EventParticipant.updateOne({ _id: staff._id }, { $set: { lastSeenAt: new Date() } });
 
     const token = jwt.sign(
       { eventId: eventId.toString(), username: staff.username, role: 'staff' },
