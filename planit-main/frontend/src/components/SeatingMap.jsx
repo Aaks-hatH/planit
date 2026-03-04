@@ -498,21 +498,21 @@ export default function SeatingMap({
   }, [isEditor]); // eslint-disable-line
 
   const pushUndo = (snapshot) => {
-    undoStack.current.push(snapshot);
+    undoStack.current.push(snapshot.filter(Boolean));
     if (undoStack.current.length > MAX_UNDO) undoStack.current.shift();
     redoStack.current = [];
   };
   const doUndo = () => {
     if (!undoStack.current.length) return;
-    redoStack.current.push(objs.map(o => ({ ...o })));
+    redoStack.current.push(objs.filter(Boolean).map(o => ({ ...o })));
     const prev = undoStack.current.pop();
-    setObjs(prev); setIsDirty(true);
+    setObjs((prev || []).filter(Boolean)); setIsDirty(true);
   };
   const doRedo = () => {
     if (!redoStack.current.length) return;
-    undoStack.current.push(objs.map(o => ({ ...o })));
+    undoStack.current.push(objs.filter(Boolean).map(o => ({ ...o })));
     const next = redoStack.current.pop();
-    setObjs(next); setIsDirty(true);
+    setObjs((next || []).filter(Boolean)); setIsDirty(true);
   };
 
   const svgPoint = useCallback((clientX, clientY) => {
@@ -553,21 +553,30 @@ export default function SeatingMap({
     if (isPanningRef.current && panRef.current) {
       setPan({ x: panRef.current.origPanX + e.clientX - panRef.current.startX, y: panRef.current.origPanY + e.clientY - panRef.current.startY });
     }
-    if (dragRef.current && isEditor) {
-      const pt = svgPoint(e.clientX, e.clientY);
-      const nx = snap(clamp(pt.x, 0, CANVAS_W)), ny = snap(clamp(pt.y, 0, CANVAS_H));
-      setObjs(prev => prev.map(o => o.id === dragRef.current.id ? { ...o, x: nx, y: ny } : o));
+    // Snapshot the ref value NOW — before any async setState work —
+    // so it can't be nulled by onSvgPointerUp while the updater is queued.
+    const drag = dragRef.current;
+    if (drag && isEditor) {
+      const dragId = drag.id;
+      if (dragId) {
+        const pt = svgPoint(e.clientX, e.clientY);
+        const nx = snap(clamp(pt.x, 0, CANVAS_W)), ny = snap(clamp(pt.y, 0, CANVAS_H));
+        setObjs(prev => prev.filter(Boolean).map(o => o.id === dragId ? { ...o, x: nx, y: ny } : o));
+      }
     }
-    if (resizeRef.current && isEditor) {
-      const { id, dir, origW, origH, startPt } = resizeRef.current;
-      const pt = svgPoint(e.clientX, e.clientY);
-      const dx = pt.x - startPt.x, dy = pt.y - startPt.y;
-      let newW = origW, newH = origH;
-      if (dir.includes('e')) newW = Math.max(30, snap(origW + dx));
-      if (dir.includes('w')) newW = Math.max(30, snap(origW - dx));
-      if (dir.includes('s')) newH = Math.max(30, snap(origH + dy));
-      if (dir.includes('n')) newH = Math.max(30, snap(origH - dy));
-      setObjs(prev => prev.map(o => o.id === id ? { ...o, width: newW, height: newH } : o));
+    const resize = resizeRef.current;
+    if (resize && isEditor) {
+      const { id, dir, origW, origH, startPt } = resize;
+      if (id) {
+        const pt = svgPoint(e.clientX, e.clientY);
+        const dx = pt.x - startPt.x, dy = pt.y - startPt.y;
+        let newW = origW, newH = origH;
+        if (dir.includes('e')) newW = Math.max(30, snap(origW + dx));
+        if (dir.includes('w')) newW = Math.max(30, snap(origW - dx));
+        if (dir.includes('s')) newH = Math.max(30, snap(origH + dy));
+        if (dir.includes('n')) newH = Math.max(30, snap(origH - dy));
+        setObjs(prev => prev.filter(Boolean).map(o => o.id === id ? { ...o, width: newW, height: newH } : o));
+      }
     }
   };
 
@@ -579,26 +588,26 @@ export default function SeatingMap({
   };
 
   const startDrag = useCallback((e, id) => {
-    if (!isEditor) return;
-    pushUndo(objs.map(o => ({ ...o })));
+    if (!isEditor || !id) return;
+    pushUndo(objs.filter(Boolean).map(o => ({ ...o })));
     dragRef.current = { id };
     setSelected(id);
     svgRef.current?.setPointerCapture(e.pointerId);
   }, [isEditor, objs]); // eslint-disable-line
 
   const startResize = useCallback((e, id, dir) => {
-    if (!isEditor) return;
-    pushUndo(objs.map(o => ({ ...o })));
-    const obj = objs.find(o => o.id === id);
+    if (!isEditor || !id) return;
+    pushUndo(objs.filter(Boolean).map(o => ({ ...o })));
+    const obj = objs.find(o => o && o.id === id);
     const m = TYPE_META[obj?.type] || TYPE_META.round;
     resizeRef.current = { id, dir, origW: obj?.width || m.w, origH: obj?.height || m.h, startPt: svgPoint(e.clientX, e.clientY) };
     svgRef.current?.setPointerCapture(e.pointerId);
   }, [isEditor, objs, svgPoint]);
 
-  const addTable    = (type)  => { pushUndo(objs.map(o => ({ ...o }))); const obj = defaultObj(type); setObjs(p => [...p, obj]); setSelected(obj.id); setIsDirty(true); };
-  const updateObj   = (upd)   => { setObjs(p => p.map(o => o.id === upd.id ? upd : o)); setIsDirty(true); };
-  const deleteObj   = (id)    => { pushUndo(objs.map(o => ({ ...o }))); setObjs(p => p.filter(o => o.id !== id)); if (selected === id) setSelected(null); setIsDirty(true); };
-  const duplicateObj = (id)   => { pushUndo(objs.map(o => ({ ...o }))); const src = objs.find(o => o.id === id); if (!src) return; const c = { ...src, id: uid(), x: snap(src.x + 40), y: snap(src.y + 40), label: src.label ? src.label + ' (2)' : '' }; setObjs(p => [...p, c]); setSelected(c.id); setIsDirty(true); };
+  const addTable    = (type)  => { pushUndo(objs.filter(Boolean).map(o => ({ ...o }))); const obj = defaultObj(type); setObjs(p => [...p.filter(Boolean), obj]); setSelected(obj.id); setIsDirty(true); };
+  const updateObj   = (upd)   => { setObjs(p => p.filter(Boolean).map(o => o.id === upd.id ? upd : o)); setIsDirty(true); };
+  const deleteObj   = (id)    => { pushUndo(objs.filter(Boolean).map(o => ({ ...o }))); setObjs(p => p.filter(Boolean).filter(o => o.id !== id)); if (selected === id) setSelected(null); setIsDirty(true); };
+  const duplicateObj = (id)   => { pushUndo(objs.filter(Boolean).map(o => ({ ...o }))); const src = objs.find(o => o && o.id === id); if (!src) return; const c = { ...src, id: uid(), x: snap(src.x + 40), y: snap(src.y + 40), label: src.label ? src.label + ' (2)' : '' }; setObjs(p => [...p.filter(Boolean), c]); setSelected(c.id); setIsDirty(true); };
   const handleSave  = ()      => { onSave?.(objs.filter(Boolean), { silent: false }); setIsDirty(false); };
   const resetView   = ()      => { setZoom(1); setPan({ x: 0, y: 0 }); };
 
