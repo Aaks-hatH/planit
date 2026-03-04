@@ -89,7 +89,7 @@ function StaffLoginScreen({ eventId, eventTitle, onLogin }) {
       if (existingToken) {
         const existingDecoded = decodeJWT(existingToken);
         if (existingDecoded?.role === 'organizer') {
-          localStorage.setItem(\`_orgToken_\${eventId}\`, existingToken);
+          localStorage.setItem(`_orgToken_${eventId}`, existingToken);
         }
       }
       localStorage.setItem('eventToken', token);
