@@ -23,6 +23,8 @@ export default function GuestInvite() {
   const [rsvpLoading, setRsvpLoading] = useState(false);
   const [copied, setCopied] = useState(false);
   const [showQRFullscreen, setShowQRFullscreen] = useState(false);
+  const [expired, setExpired] = useState(false);
+  const [expiredAt, setExpiredAt] = useState(null);
 
   useEffect(() => { loadInvite(); }, [inviteCode]);
 
@@ -30,6 +32,12 @@ export default function GuestInvite() {
     try {
       const response = await fetch(`${API}/events/invite/${inviteCode}`);
       const data = await response.json();
+      if (response.status === 410 || data.expired) {
+        setExpired(true);
+        setExpiredAt(data.expiresAt || null);
+        setLoading(false);
+        return;
+      }
       if (!response.ok) {
         toast.error(data.error || 'Invite not found');
         navigate('/');
@@ -142,10 +150,49 @@ export default function GuestInvite() {
   const statusToDisplay = { confirmed: 'yes', declined: 'no', maybe: 'maybe', yes: 'yes', no: 'no' };
   const currentRsvpStatus = statusToDisplay[invite?.status] || null;
 
+  // Format invite expiry info
+  const getExpiryText = () => {
+    if (!invite?.expiresAt) return null;
+    const exp = new Date(invite.expiresAt);
+    const now = new Date();
+    if (now > exp) return { text: 'This invite has expired', urgent: true, expired: true };
+    const diffMs = exp - now;
+    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+    const diffMins  = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+    if (diffHours === 0) return { text: `Expires in ${diffMins}m`, urgent: true, expired: false };
+    if (diffHours < 3)  return { text: `Expires in ${diffHours}h ${diffMins}m`, urgent: true, expired: false };
+    return { text: `Expires ${exp.toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}`, urgent: false, expired: false };
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-neutral-950 flex items-center justify-center">
         <div className="w-8 h-8 border-4 border-neutral-700 border-t-neutral-400 rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  // Expired invite — show a dedicated expired screen
+  if (expired) {
+    return (
+      <div className="min-h-screen relative overflow-hidden flex items-center justify-center" style={{ background: '#040407' }}>
+        <StarBackground />
+        <div className="relative z-10 max-w-md w-full mx-auto px-4 text-center">
+          <div className="w-20 h-20 rounded-full bg-red-500/10 border border-red-500/20 flex items-center justify-center mx-auto mb-6">
+            <Clock className="w-10 h-10 text-red-400" />
+          </div>
+          <h1 className="text-3xl font-black text-white mb-3">Invite Expired</h1>
+          <p className="text-neutral-400 mb-2">This reservation link is no longer valid.</p>
+          {expiredAt && (
+            <p className="text-sm text-neutral-600 mb-8">
+              Expired on {new Date(expiredAt).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
+            </p>
+          )}
+          <p className="text-sm text-neutral-500 mb-8">Please contact the restaurant or event organizer to receive a new invite link.</p>
+          <a href="/" className="inline-flex items-center gap-2 px-6 py-3 bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 rounded-xl text-sm font-semibold text-neutral-200 transition-all">
+            <Sparkles className="w-4 h-4" /> Back to PlanIt
+          </a>
+        </div>
       </div>
     );
   }
@@ -205,21 +252,29 @@ export default function GuestInvite() {
                   <div className="flex items-start justify-between mb-4">
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-3">
-                        <Ticket className="w-5 h-5 text-neutral-400" />
-                        <span className="text-xs font-semibold text-neutral-500 uppercase tracking-widest">Exclusive Invitation</span>
+                        {event.isTableServiceMode
+                          ? <><span className="text-lg">🍽</span><span className="text-xs font-semibold text-orange-400 uppercase tracking-widest">Restaurant Reservation</span></>
+                          : <><Ticket className="w-5 h-5 text-neutral-400" /><span className="text-xs font-semibold text-neutral-500 uppercase tracking-widest">Exclusive Invitation</span></>
+                        }
                       </div>
                       <h1 className="text-4xl font-black text-neutral-100 mb-2">{invite.guestName}</h1>
-                      <p className="text-neutral-400 text-lg">You're invited to attend</p>
+                      <p className="text-neutral-400 text-lg">{event.isTableServiceMode ? 'Your reservation is confirmed' : "You're invited to attend"}</p>
                     </div>
                     {invite.checkedIn && (
                       <div className="flex-shrink-0 px-4 py-2 bg-emerald-500/10 border border-emerald-500/30 rounded-xl">
                         <div className="flex items-center gap-2">
                           <CheckCircle className="w-4 h-4 text-emerald-400" />
-                          <span className="text-sm font-bold text-emerald-400">ADMITTED</span>
+                          <span className="text-sm font-bold text-emerald-400">{event.isTableServiceMode ? 'SEATED' : 'ADMITTED'}</span>
                         </div>
                       </div>
                     )}
                   </div>
+                  {/* Expiry badge */}
+                  {(() => { const ei = getExpiryText(); return ei ? (
+                    <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font-semibold ${ei.expired ? 'bg-red-500/10 border-red-500/30 text-red-400' : ei.urgent ? 'bg-amber-500/10 border-amber-500/30 text-amber-400' : 'bg-neutral-800 border-neutral-700 text-neutral-400'}`}>
+                      <Clock className="w-3.5 h-3.5" />{ei.text}
+                    </div>
+                  ) : null; })()}
                 </div>
               </div>
 
@@ -251,7 +306,7 @@ export default function GuestInvite() {
                         <MapPin className="w-6 h-6 text-neutral-400" />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-xs font-semibold text-neutral-500 uppercase tracking-wider mb-1">Location</p>
+                        <p className="text-xs font-semibold text-neutral-500 uppercase tracking-wider mb-1">{event.isTableServiceMode ? 'Restaurant Address' : 'Location'}</p>
                         <p className="text-neutral-200 font-medium">{event.location}</p>
                         <button onClick={getDirections} className="text-xs text-blue-400 hover:text-blue-300 font-medium mt-1 flex items-center gap-1">
                           <Navigation className="w-3 h-3" /> Get Directions
@@ -314,7 +369,8 @@ export default function GuestInvite() {
                   </div>
                 )}
 
-                {/* ── RSVP Section ─────────────────────────────────────────────── */}
+                {/* ── RSVP Section — only for events, not restaurant reservations ── */}
+                {!event.isTableServiceMode && (
                 <div className="mb-8 p-6 bg-neutral-800/30 rounded-2xl border border-neutral-700/50">
                   <div className="flex items-center justify-between mb-4">
                     <h3 className="text-lg font-bold text-neutral-100 flex items-center gap-2">
@@ -378,6 +434,7 @@ export default function GuestInvite() {
                     </>
                   )}
                 </div>
+                )}
                 {/* ─────────────────────────────────────────────────────────────── */}
 
                 {/* QR Code */}
@@ -386,7 +443,7 @@ export default function GuestInvite() {
                     <div className="flex items-center justify-between mb-4">
                       <h3 className="text-lg font-bold text-neutral-100 flex items-center gap-2">
                         <QrCode className="w-5 h-5" />
-                        Your Entry Pass
+                        {event.isTableServiceMode ? 'Your Reservation Pass' : 'Your Entry Pass'}
                       </h3>
                       <button onClick={handleDownloadQR} className="text-sm text-neutral-400 hover:text-neutral-200 font-medium flex items-center gap-2 transition-colors">
                         <Download className="w-4 h-4" /> Download
@@ -400,7 +457,7 @@ export default function GuestInvite() {
                       <div className="flex flex-col items-center">
                         <img src={qrUrl} alt="Entry QR Code" className="w-72 h-auto group-hover:scale-105 transition-transform duration-300" />
                         <div className="mt-6 text-center">
-                          <p className="text-sm text-neutral-600 mb-2">Present this code at the entrance</p>
+                          <p className="text-sm text-neutral-600 mb-2">{event.isTableServiceMode ? 'Show this to your server when you arrive' : 'Present this code at the entrance'}</p>
                           <p className="text-xs text-blue-600 font-medium flex items-center justify-center gap-1.5 group-hover:text-blue-700">
                             <ExternalLink className="w-3.5 h-3.5" /> Tap for fullscreen view
                           </p>
@@ -421,7 +478,7 @@ export default function GuestInvite() {
 
                 {/* Action Buttons */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {event.date && (
+                  {event.date && !event.isTableServiceMode && (
                     <button onClick={addToCalendar} className="flex items-center justify-center gap-2 px-6 py-4 bg-neutral-800/50 hover:bg-neutral-700/50 border border-neutral-700 rounded-xl font-semibold text-neutral-200 transition-all">
                       <CalendarPlus className="w-5 h-5" /> Add to Calendar
                     </button>
