@@ -5,152 +5,284 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Getting Started — PlanIt Docs</title>
   <link rel="stylesheet" href="style.css" />
+  <link rel="icon" type="image/svg+xml" href="favicon.svg" />
   <script>window.CURRENT_PAGE = 'getting-started';</script>
 </head>
 <body>
   <div class="sidebar-overlay"></div>
   <div class="layout">
     <aside class="sidebar">
-      <div class="sidebar-logo">
-        <a href="index.html">
-          <div class="logo-mark">P</div>
-          <div><div class="logo-text">PLANIT</div><div class="logo-sub">Docs</div></div>
-        </a>
-      </div>
+      <div class="sidebar-logo"><a href="index.html"><div class="logo-mark">P</div><div><div class="logo-text">PLANIT</div><div class="logo-sub">Docs</div></div></a></div>
+      <div class="sidebar-search"><div class="sidebar-search-wrap"><svg class="sidebar-search-icon" width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="7" cy="7" r="5"/><path d="M11 11l3 3"/></svg><input class="sidebar-search-input" type="text" placeholder="Search docs..." autocomplete="off" /><span class="search-kbd">/</span></div></div>
       <nav class="sidebar-nav"></nav>
-      <div class="sidebar-footer">
-        <a href="https://planitapp.onrender.com" class="sidebar-footer-link" target="_blank">Open PlanIt App &rarr;</a>
-      </div>
+      <div class="sidebar-status"><div class="status-dot"></div>All systems operational</div>
+      <div class="sidebar-footer"><a href="https://planitapp.onrender.com" class="sidebar-footer-link" target="_blank"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M8 3H4a1 1 0 00-1 1v8a1 1 0 001 1h8a1 1 0 001-1v-4"/><path d="M11 2h3v3M14 2l-6 6"/></svg>Open PlanIt App</a></div>
     </aside>
     <div class="main">
       <div class="topbar">
-        <div style="display:flex;align-items:center;gap:12px;">
-          <button class="menu-toggle" aria-label="Toggle menu">
-            <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><line x1="2" y1="5" x2="16" y2="5"/><line x1="2" y1="9" x2="16" y2="9"/><line x1="2" y1="13" x2="16" y2="13"/></svg>
-          </button>
-          <div class="topbar-breadcrumb">Docs <span>Getting Started</span></div>
+        <div class="topbar-left">
+          <button class="menu-toggle" aria-label="Toggle menu"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><line x1="2" y1="5" x2="16" y2="5"/><line x1="2" y1="9" x2="16" y2="9"/><line x1="2" y1="13" x2="16" y2="13"/></svg></button>
+          <div class="topbar-breadcrumb">Docs <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M4 2l4 4-4 4"/></svg> <span>Getting Started</span></div>
         </div>
-        <div class="topbar-right">
-          <a href="https://planitapp.onrender.com" class="topbar-btn" target="_blank">Open App</a>
-        </div>
+        <div class="topbar-right"><a href="https://planitapp.onrender.com" class="topbar-btn" target="_blank">Open App →</a></div>
       </div>
-      <div class="content">
+      <div class="inner-layout">
+        <div class="content">
 
-        <div class="page-header">
-          <div class="page-tag">Getting Started</div>
-          <h1 class="page-title">Your first event in five minutes</h1>
-          <p class="page-desc">From creating an event to admitting your first guest — this guide walks through the complete setup flow.</p>
-        </div>
-
-        <div class="toc">
-          <div class="toc-title">On this page</div>
-          <a href="#create-account">Create an organiser account</a>
-          <a href="#create-event">Create your first event</a>
-          <a href="#add-guests">Add guests</a>
-          <a href="#share-invites">Share invites</a>
-          <a href="#before-event">Before your event</a>
-          <a href="#on-the-day">On the day</a>
-        </div>
-
-        <h2 id="create-account">Create an organiser account</h2>
-        <p>Navigate to <a href="https://planitapp.onrender.com" target="_blank">planitapp.onrender.com</a> and click <strong>Get Started</strong>. You will be asked to provide a name and choose a password. This creates your organiser account.</p>
-        <div class="callout info">
-          <div class="callout-icon"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#60a5fa" stroke-width="1.5" stroke-linecap="round"><circle cx="8" cy="8" r="6"/><line x1="8" y1="6" x2="8" y2="8.5"/><circle cx="8" cy="11" r=".6" fill="#60a5fa" stroke="none"/></svg></div>
-          <div class="callout-body">
-            <div class="callout-title">Guests do not need accounts</div>
-            <p>Guests receive a personalised invite link. They never sign up or log in. Only organisers and staff have credentials.</p>
+          <div class="page-header">
+            <div class="page-tag">Getting Started</div>
+            <h1 class="page-title">Your first event in five minutes</h1>
+            <p class="page-desc">From creating an organiser account through to admitting your first guest — this guide covers the complete setup flow.</p>
           </div>
-        </div>
 
-        <h2 id="create-event">Create your first event</h2>
-        <ol class="steps">
-          <li>
-            <div class="step-num">1</div>
-            <div class="step-content">
-              <strong>Open your dashboard</strong>
-              <p>After logging in you land on your event dashboard. Click <strong>New Event</strong> in the top right.</p>
-            </div>
-          </li>
-          <li>
-            <div class="step-num">2</div>
-            <div class="step-content">
-              <strong>Fill in event details</strong>
-              <p>Enter the event name, date, time, and location. These appear on every guest invite, so make them accurate. You can edit them later.</p>
-            </div>
-          </li>
-          <li>
-            <div class="step-num">3</div>
-            <div class="step-content">
-              <strong>Choose a subdomain (optional)</strong>
-              <p>If you want a clean URL like <code>myevent.planitapp.onrender.com</code>, set a subdomain. Leave it blank to use the default event ID URL.</p>
-            </div>
-          </li>
-          <li>
-            <div class="step-num">4</div>
-            <div class="step-content">
-              <strong>Save and enter your event space</strong>
-              <p>Hit <strong>Create Event</strong>. You will be taken directly into the event space where you can manage everything.</p>
-            </div>
-          </li>
-        </ol>
-
-        <h2 id="add-guests">Add guests</h2>
-        <p>There are three ways to add guests to your event.</p>
-
-        <h3>Manually — one at a time</h3>
-        <p>Open the <strong>Check-in</strong> page for your event, then click <strong>Add Guest</strong> in the top toolbar. Fill in the guest's name, email, role (Guest / VIP / Speaker), and group size. An invite code is generated automatically.</p>
-
-        <h3>CSV bulk import</h3>
-        <p>If you have a guest list ready, use <strong>Import CSV</strong> to upload a spreadsheet. Download the template first to ensure the format is correct. Required fields are <code>guestName</code> and <code>guestEmail</code>. All other fields are optional.</p>
-
-        <div class="callout tip">
-          <div class="callout-icon"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#10b981" stroke-width="1.5" stroke-linecap="round"><path d="M8 2l5 2.5V9c0 2.5-2 4.5-5 5-3-1-5-2.5-5-5V4.5L8 2z"/></svg></div>
-          <div class="callout-body">
-            <div class="callout-title">Email is required for duplicate detection</div>
-            <p>PlanIt uses email addresses to flag potential duplicates at check-in. PlanIt does not auto-send any emails — the email field is used for deduplication and optional manual sharing.</p>
+          <div class="toc">
+            <div class="toc-title">On this page</div>
+            <a href="#create-account">Create an organiser account</a>
+            <a href="#create-event">Create your first event</a>
+            <a href="#add-guests">Add guests</a>
+            <a href="#share-invites">Share invites</a>
+            <a href="#setup-staff">Set up your check-in team</a>
+            <a href="#before-event">Pre-event checklist</a>
+            <a href="#on-the-day">On the day</a>
+            <a href="#after-event">After your event</a>
           </div>
-        </div>
 
-        <h3>CSV template format</h3>
-        <pre><code>guestName,guestEmail,guestRole,adults,children,securityPin,notes
-Jane Smith,jane@example.com,VIP,1,0,,VIP seating reserved
-Bob Jones,bob@example.com,SPEAKER,1,0,,Keynote at 7pm
-Alice Brown,alice@example.com,GUEST,2,1,,Nut allergy</code></pre>
+          <div class="callout success">
+            <div class="callout-icon"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#10b981" stroke-width="1.5" stroke-linecap="round"><circle cx="8" cy="8" r="6"/><polyline points="5 8 7 10 11 6"/></svg></div>
+            <div class="callout-body">
+              <div class="callout-title">No credit card. No sign-up fees. Free forever.</div>
+              <p>PlanIt is completely free to use. There are no paid tiers, no per-event charges, and no feature paywalls. Create your organiser account in under a minute.</p>
+            </div>
+          </div>
 
-        <table>
-          <thead><tr><th>Column</th><th>Required</th><th>Notes</th></tr></thead>
-          <tbody>
-            <tr><td><code>guestName</code></td><td>Yes</td><td>Full name as shown on badge and boarding pass</td></tr>
-            <tr><td><code>guestEmail</code></td><td>Yes</td><td>Used for duplicate detection. Not displayed to guests.</td></tr>
-            <tr><td><code>guestRole</code></td><td>No</td><td><code>GUEST</code>, <code>VIP</code>, or <code>SPEAKER</code>. Defaults to <code>GUEST</code>.</td></tr>
-            <tr><td><code>adults</code></td><td>No</td><td>Number of adults in the group. Defaults to 1.</td></tr>
-            <tr><td><code>children</code></td><td>No</td><td>Number of children. Defaults to 0.</td></tr>
-            <tr><td><code>securityPin</code></td><td>No</td><td>Up to 6 characters. Requires PIN at check-in if set.</td></tr>
-            <tr><td><code>notes</code></td><td>No</td><td>Shown to staff on the boarding pass review screen.</td></tr>
-          </tbody>
-        </table>
+          <h2 id="create-account">Step 1 — Create an organiser account</h2>
+          <p>Navigate to <a href="https://planitapp.onrender.com" target="_blank">planitapp.onrender.com</a> and click <strong>Get Started</strong>. You will be asked to provide a display name and choose a password for your organiser account.</p>
 
-        <h2 id="share-invites">Share invites</h2>
-        <p>Every guest has a unique invite link in the format <code>/invite/ABC123</code>. When you create or import a guest, you can share their invite from the create dialog or the guest list.</p>
-        <p>The invite page shows the guest their event details, QR code, and a wallet-card view. They do not need to install anything — it is a standard web page.</p>
-        <p>See <a href="invites.html">Guest Invites</a> for the full breakdown of what guests see and how to use the QR media endpoints.</p>
+          <div class="callout info">
+            <div class="callout-icon"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#60a5fa" stroke-width="1.5" stroke-linecap="round"><circle cx="8" cy="8" r="6"/><line x1="8" y1="6" x2="8" y2="8.5"/><circle cx="8" cy="11" r=".6" fill="#60a5fa" stroke="none"/></svg></div>
+            <div class="callout-body">
+              <div class="callout-title">Guests never need accounts</div>
+              <p>Only organisers and staff have credentials. Guests receive a unique invite link and present their QR code at the door — no sign-up, no app download required.</p>
+            </div>
+          </div>
 
-        <h2 id="before-event">Before your event</h2>
-        <ul>
-          <li>Add any <strong>staff accounts</strong> under Settings &rarr; Staff so your check-in team can log in.</li>
-          <li>If you have assigned seating, set up your <strong>seating map</strong> and assign guests to tables. See <a href="seating.html">Seating Maps</a>.</li>
-          <li>Review <strong>Security Settings</strong> to choose your anti-fraud level (Relaxed / Standard / Strict).</li>
-          <li>Print or download guest <strong>badges</strong> if needed via the <code>/badge/CODE</code> endpoint.</li>
-        </ul>
+          <p>Once you have an account you will land on your event dashboard. This is where all your events live. You can manage multiple events simultaneously from the same account.</p>
 
-        <h2 id="on-the-day">On the day</h2>
-        <p>Open the <strong>Check-in</strong> page on the device you are using at the entrance. Staff log in with their username and PIN. Guests present their QR code. Staff tap <strong>Admit</strong> or <strong>Deny</strong> from the boarding-pass review screen.</p>
-        <p>The walkie-talkie button is always visible at the bottom of the check-in screen for instant voice communication between logged-in staff.</p>
-        <p>For more detail on the check-in flow, see <a href="check-in.html">Check-in System</a>.</p>
+          <h2 id="create-event">Step 2 — Create your first event</h2>
+          <ol class="steps">
+            <li>
+              <div class="step-num">1</div>
+              <div class="step-content">
+                <strong>Click "New Event"</strong>
+                <p>From your dashboard, click the <strong>New Event</strong> button in the top-right corner. This opens the event creation form.</p>
+              </div>
+            </li>
+            <li>
+              <div class="step-num">2</div>
+              <div class="step-content">
+                <strong>Fill in the event details</strong>
+                <p>Enter your event name, date, time, timezone, and location. These details appear on every guest invite card and wallet pass, so make sure they are accurate. You can edit them later.</p>
+              </div>
+            </li>
+            <li>
+              <div class="step-num">3</div>
+              <div class="step-content">
+                <strong>Choose your event subdomain</strong>
+                <p>Set a custom subdomain (e.g. <code>summer-gala</code>) for a clean URL like <code>summer-gala.planitapp.onrender.com</code>. Subdomains must be 3–50 characters, lowercase letters, numbers, and hyphens only. Leave blank to use the default event ID URL.</p>
+              </div>
+            </li>
+            <li>
+              <div class="step-num">4</div>
+              <div class="step-content">
+                <strong>Set a guest capacity (optional)</strong>
+                <p>Enter the maximum number of guests if you want PlanIt to track against a capacity limit. Default is 100 if not specified. This is informational only — PlanIt will not automatically block check-ins at capacity.</p>
+              </div>
+            </li>
+            <li>
+              <div class="step-num">5</div>
+              <div class="step-content">
+                <strong>Password-protect your event (optional)</strong>
+                <p>Add an event password if you want an extra layer of access control. Staff will need to enter this password when logging in to the check-in page.</p>
+              </div>
+            </li>
+            <li>
+              <div class="step-num">6</div>
+              <div class="step-content">
+                <strong>Hit "Create Event"</strong>
+                <p>You are taken directly into the <strong>Event Space</strong> — the hub from which you control everything: guests, check-in, seating, tasks, and analytics.</p>
+              </div>
+            </li>
+          </ol>
 
-      </div>
-    </div>
-  </div>
-  <script src="nav.js"></script>
-</body>
-</html>
+          <h2 id="add-guests">Step 3 — Add guests</h2>
+          <p>There are three ways to add guests to your event. Choose the method that fits your workflow.</p>
+
+          <div class="tabs">
+            <div class="tab-list">
+              <button class="tab-btn">Manual (one at a time)</button>
+              <button class="tab-btn">CSV bulk import</button>
+              <button class="tab-btn">Invite link sharing</button>
+            </div>
+            <div class="tab-panel">
+              <p>Open the <strong>Check-in</strong> page for your event and click <strong>Add Guest</strong> in the toolbar. A dialog opens where you enter:</p>
+              <ul>
+                <li><strong>Guest name</strong> (required) — appears on their invite, badge, and boarding pass</li>
+                <li><strong>Guest email</strong> (required) — used for duplicate detection, never shown to the guest</li>
+                <li><strong>Role</strong> — GUEST (default), VIP, or SPEAKER</li>
+                <li><strong>Group size</strong> — number of adults and children in the group</li>
+                <li><strong>Security PIN</strong> (optional) — staff must verify this at check-in</li>
+                <li><strong>Notes</strong> (optional) — shown to staff on the boarding pass (e.g. dietary needs, accessibility)</li>
+              </ul>
+              <p>An invite code is generated automatically. You can copy the invite link directly from the dialog or use the email share button to open a pre-filled email draft.</p>
+            </div>
+            <div class="tab-panel">
+              <p>For large guest lists, use <strong>Import CSV</strong> from the check-in toolbar. Download the template first to ensure correct column headers.</p>
+              <div class="code-block-wrap">
+                <div class="code-header"><span class="code-lang">CSV template</span></div>
+                <pre><code>guestName,guestEmail,guestRole,adults,children,securityPin,notes
+Jane Smith,<a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="f59f949b90b5908d9498859990db969a98">[email&#160;protected]</a>,VIP,1,0,,VIP seating reserved
+Bob Jones,<a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="52303d3012372a333f223e377c313d3f">[email&#160;protected]</a>,SPEAKER,1,0,,Keynote at 7pm
+Alice Brown,<a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="b2d3dedbd1d7f2d7cad3dfc2ded79cd1dddf">[email&#160;protected]</a>,GUEST,2,1,,Nut allergy</code></pre>
+              </div>
+              <div class="table-wrap">
+                <table>
+                  <thead><tr><th>Column</th><th>Required</th><th>Notes</th></tr></thead>
+                  <tbody>
+                    <tr><td><code>guestName</code></td><td><span class="t-yes">Yes</span></td><td>Full name shown on invite, badge, boarding pass</td></tr>
+                    <tr><td><code>guestEmail</code></td><td><span class="t-yes">Yes</span></td><td>Used for duplicate fingerprinting. Not shown to guests.</td></tr>
+                    <tr><td><code>guestRole</code></td><td><span class="t-no">No</span></td><td><code>GUEST</code>, <code>VIP</code>, or <code>SPEAKER</code>. Defaults to <code>GUEST</code>.</td></tr>
+                    <tr><td><code>adults</code></td><td><span class="t-no">No</span></td><td>Number of adults in the group. Defaults to 1.</td></tr>
+                    <tr><td><code>children</code></td><td><span class="t-no">No</span></td><td>Number of children. Defaults to 0.</td></tr>
+                    <tr><td><code>securityPin</code></td><td><span class="t-no">No</span></td><td>Up to 6 characters. Requires PIN at check-in if set.</td></tr>
+                    <tr><td><code>notes</code></td><td><span class="t-no">No</span></td><td>Shown to staff on boarding pass. Not shown to guests.</td></tr>
+                  </tbody>
+                </table>
+              </div>
+              <div class="callout tip">
+                <div class="callout-icon"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#a78bfa" stroke-width="1.5" stroke-linecap="round"><path d="M8 2l5 2.5V9c0 2.5-2 4.5-5 5-3-1-5-2.5-5-5V4.5L8 2z"/></svg></div>
+                <div class="callout-body">
+                  <div class="callout-title">Email is required for duplicate detection</div>
+                  <p>The duplicate-detection engine fingerprints guests by email. Without an email address, PlanIt cannot warn staff if the same person tries to check in twice using different invite codes. Always include the email column even if guests will not be emailed directly.</p>
+                </div>
+              </div>
+            </div>
+            <div class="tab-panel">
+              <p>If you prefer, you can share the event's public invite page and let guests request entry. From the event space, copy the event's public URL and share it on social media, email, or your website. Guests who click the link can view the event details and submit an RSVP — though you still need to create their invite record for them to receive a QR code.</p>
+              <p>For formal events with a curated guest list, the manual or CSV method is recommended. The public invite link approach is better suited to open events or meetups.</p>
+            </div>
+          </div>
+
+          <h2 id="share-invites">Step 4 — Share invites</h2>
+          <p>Every guest has a unique invite link in the format <code>/invite/AB12CD34</code>. The invite page shows the guest their event details, QR code, table assignment (if set), and options to save a wallet card or download their badge.</p>
+
+          <div class="boarding-pass">
+            <div class="bp-header">
+              <div>
+                <div class="bp-guest">Sophie Anderson</div>
+                <div class="bp-role-tag">VIP · Summer Gala 2025</div>
+              </div>
+              <span class="badge badge-gold">VIP</span>
+            </div>
+            <div class="bp-body">
+              <div class="bp-field"><label>Date</label><div class="val">14 Jun 2025</div></div>
+              <div class="bp-field"><label>Table</label><div class="val">Table 1</div></div>
+              <div class="bp-field"><label>Group</label><div class="val">2 adults</div></div>
+              <div class="bp-field"><label>Invite code</label><div class="val" style="font-family:var(--font-mono);font-size:12px;letter-spacing:2px;">AB12CD34</div></div>
+            </div>
+          </div>
+
+          <p>Share the invite link by:</p>
+          <ul>
+            <li><strong>Copying it</strong> from the guest create dialog or guest list</li>
+            <li><strong>Opening a pre-filled email</strong> using the email share button (you review and send it yourself — PlanIt does not auto-send emails)</li>
+            <li><strong>Embedding the QR code</strong> in your own email template using the <code>/qr/CODE</code> image URL — see <a href="integrations.html">Integrations & QR</a></li>
+          </ul>
+
+          <h2 id="setup-staff">Step 5 — Set up your check-in team</h2>
+          <p>Staff accounts let your entry team log in to the check-in page without having organiser access. Each staff member gets a username and a numeric PIN (4–8 digits).</p>
+          <ol class="steps">
+            <li>
+              <div class="step-num">1</div>
+              <div class="step-content">
+                <strong>Open the check-in page as organiser</strong>
+                <p>Navigate to your event check-in URL. You are automatically admitted as organiser.</p>
+              </div>
+            </li>
+            <li>
+              <div class="step-num">2</div>
+              <div class="step-content">
+                <strong>Go to Settings → Staff tab</strong>
+                <p>Click <strong>Settings</strong> in the toolbar. Open the <strong>Staff</strong> tab. Enter a username and PIN for each team member, then click <strong>Create</strong>.</p>
+              </div>
+            </li>
+            <li>
+              <div class="step-num">3</div>
+              <div class="step-content">
+                <strong>Share credentials with your team</strong>
+                <p>Give each person their username and PIN. They visit the check-in URL on their own device, enter their credentials, and are in. Sessions persist for the duration of the event.</p>
+              </div>
+            </li>
+          </ol>
+
+          <h2 id="before-event">Pre-event checklist</h2>
+          <p>Run through these steps before your event day to make sure everything is ready:</p>
+          <ul>
+            <li>✓ All guests added (manually or via CSV)</li>
+            <li>✓ Invite links shared with guests</li>
+            <li>✓ Staff accounts created and credentials distributed</li>
+            <li>✓ Seating map built and guests assigned to tables (if using assigned seating)</li>
+            <li>✓ Security settings reviewed — choose Relaxed, Standard, or Strict</li>
+            <li>✓ Check-in page loaded on event devices to seed the offline cache</li>
+            <li>✓ Test a scan with a real guest invite on your check-in device</li>
+            <li>✓ Confirm walkie-talkie works between staff devices (microphone permission granted)</li>
+          </ul>
+
+          <div class="callout warn">
+            <div class="callout-icon"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#f59e0b" stroke-width="1.5" stroke-linecap="round"><path d="M8 2L2 13h12L8 2z"/><line x1="8" y1="7" x2="8" y2="10"/><circle cx="8" cy="12" r=".6" fill="#f59e0b" stroke="none"/></svg></div>
+            <div class="callout-body">
+              <div class="callout-title">Load the check-in page before you lose connectivity</div>
+              <p>PlanIt's offline mode caches the guest list when the check-in page is first loaded with an internet connection. If you open the check-in page for the first time at the venue without connectivity, the cache will be empty and QR lookups will fail. Always load the page at a location with internet before arriving at the venue.</p>
+            </div>
+          </div>
+
+          <h2 id="on-the-day">On the day</h2>
+          <p>When guests arrive, the check-in flow is:</p>
+          <ol class="steps">
+            <li>
+              <div class="step-num">1</div>
+              <div class="step-content">
+                <strong>Staff tap "Scan QR" (or press S)</strong>
+                <p>The camera opens. Point it at the guest's QR code. Detection is automatic — no tap needed when a valid code is found.</p>
+              </div>
+            </li>
+            <li>
+              <div class="step-num">2</div>
+              <div class="step-content">
+                <strong>Boarding-pass review screen appears</strong>
+                <p>Staff see the guest's full profile: name, role, group size, trust score, table, any flags, and any notes. They take a moment to verify identity if needed.</p>
+              </div>
+            </li>
+            <li>
+              <div class="step-num">3</div>
+              <div class="step-content">
+                <strong>Tap "Admit Attendee" or "Deny Entry"</strong>
+                <p>On admit: a green confirmation screen shows the guest's name, group count, and table. It auto-closes after 5 seconds. On deny: a red screen shows the reason, with an option for manager override.</p>
+              </div>
+            </li>
+          </ol>
+          <p>Live stats update in real-time at the top of the check-in screen: total groups, checked in, total admitted headcount, adults expected, and children expected.</p>
+
+          <h2 id="after-event">After your event</h2>
+          <p>All event data is automatically deleted <strong>seven days after the event date</strong>. If you need to retain any records, export them before the deletion window closes:</p>
+          <ul>
+            <li>Guest list — download from the check-in page guest list view</li>
+            <li>Check-in activity log — download from the organiser settings panel</li>
+            <li>Analytics data — screenshot or record stats from the analytics dashboard</li>
+          </ul>
+          <p>After deletion, the event's subdomain and all associated data are permanently removed. There is no recovery option after deletion.</p>
+
+          <div class="page-nav">
+            <a href="index.html" class="page-nav-link">
+              <span class="page-nav-label">← Previous</span>
+              <span class="page-nav-title">Introduction</span>
+            </a>
