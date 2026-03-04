@@ -153,6 +153,7 @@ export const eventAPI = {
   updateTableReservation:   (eventId, resId, data)     => api.patch(`/events/${eventId}/table-service/reservations/${resId}`, data),
   verifyReservationQR:      (eventId, token)           => api.get(`/events/${eventId}/table-service/reservations/verify/${token}`),
   updateTableServiceSettings:(eventId, data)           => api.patch(`/events/${eventId}/table-service/settings`, data),
+  updateReservationPageSettings: (eventId, data)       => api.patch(`/events/${eventId}/table-service/reservation-page-settings`, data),
 };
 
 // ─── Chat API ─────────────────────────────────────────────────────────────────
