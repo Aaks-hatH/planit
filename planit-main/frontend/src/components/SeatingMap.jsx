@@ -30,7 +30,7 @@
  *   isSaving      bool
  */
 
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import {
   X, Plus, Trash2, Save, ZoomIn, ZoomOut, RotateCcw,
   ChevronDown, Grid3x3, Copy, Undo2, Redo2, Search,
@@ -450,7 +450,25 @@ export default function SeatingMap({
   const undoStack     = useRef([]);
   const redoStack     = useRef([]);
 
-  useEffect(() => { setObjs((objects || []).filter(Boolean)); }, [objects]);
+  useEffect(() => {
+    // Only sync from parent prop when we have no unsaved local changes.
+    // This prevents a background re-fetch from wiping the user's in-progress edits.
+    if (!isDirty) setObjs((objects || []).filter(Boolean));
+  }, [objects]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Debounced auto-save ──────────────────────────────────────────────────
+  // Saves 2 s after the last edit so changes are never lost if the editor
+  // is closed or the page is navigated away from without hitting Save.
+  const autoSaveTimer = useRef(null);
+  useEffect(() => {
+    if (!isDirty || !isEditor) return;
+    clearTimeout(autoSaveTimer.current);
+    autoSaveTimer.current = setTimeout(() => {
+      onSave?.(objs.filter(Boolean), { silent: true });
+      setIsDirty(false);
+    }, 2000);
+    return () => clearTimeout(autoSaveTimer.current);
+  }, [objs, isDirty, isEditor]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Focus table
   useEffect(() => {
@@ -581,20 +599,21 @@ export default function SeatingMap({
   const updateObj   = (upd)   => { setObjs(p => p.map(o => o.id === upd.id ? upd : o)); setIsDirty(true); };
   const deleteObj   = (id)    => { pushUndo(objs.map(o => ({ ...o }))); setObjs(p => p.filter(o => o.id !== id)); if (selected === id) setSelected(null); setIsDirty(true); };
   const duplicateObj = (id)   => { pushUndo(objs.map(o => ({ ...o }))); const src = objs.find(o => o.id === id); if (!src) return; const c = { ...src, id: uid(), x: snap(src.x + 40), y: snap(src.y + 40), label: src.label ? src.label + ' (2)' : '' }; setObjs(p => [...p, c]); setSelected(c.id); setIsDirty(true); };
-  const handleSave  = ()      => { onSave?.(objs.filter(Boolean)); setIsDirty(false); };
+  const handleSave  = ()      => { onSave?.(objs.filter(Boolean), { silent: false }); setIsDirty(false); };
   const resetView   = ()      => { setZoom(1); setPan({ x: 0, y: 0 }); };
 
   // Auto-save before assigning so backend tableId validation doesn't 400
   const onAssignGuest = async (inv, tbl, lbl) => {
     if (isDirty) {
       setIsSavingForAssign(true);
-      onSave?.(objs.filter(Boolean));
+      onSave?.(objs.filter(Boolean), { silent: true });
       setIsDirty(false);
       // Brief delay so parent's async save can complete before the assign API call
       await new Promise(r => setTimeout(r, 600));
       setIsSavingForAssign(false);
     }
     window.dispatchEvent(new CustomEvent('seating:assignGuest', { detail: { inviteId: inv, tableId: tbl, tableLabel: lbl } }));
+  };
   };
   const onUnassignGuest = (inv) => window.dispatchEvent(new CustomEvent('seating:unassignGuest', { detail: { inviteId: inv } }));
 
@@ -661,7 +680,8 @@ export default function SeatingMap({
         <div className="flex items-center gap-3 shrink-0">
           <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-neutral-800 text-neutral-400 hover:text-white transition-colors"><X className="w-4 h-4" /></button>
           <h2 className="text-sm font-bold text-white whitespace-nowrap">{isEditor ? 'Seating Editor' : 'Seating Map'}</h2>
-          {isEditor && isDirty && <span className="text-xs text-amber-400 font-medium">● Unsaved</span>}
+          {isEditor && isDirty && <span className="text-xs text-amber-400 font-medium animate-pulse">● Auto-saving…</span>}
+          {isEditor && !isDirty && isSaving && <span className="text-xs text-green-400 font-medium">✓ Saved</span>}
         </div>
 
         <div className="flex items-center gap-1.5 flex-wrap justify-end">
