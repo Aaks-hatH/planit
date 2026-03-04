@@ -142,6 +142,17 @@ export const eventAPI = {
   saveSeatingMap:   (eventId, payload)                    => api.put(`/events/${eventId}/seating`, payload),
   bulkAssignSeats:  (eventId, assignments)                => api.patch(`/events/${eventId}/seating/guests`, { assignments }),
   assignGuestTable: (eventId, inviteId, tableId, tableLabel) => api.patch(`/events/${eventId}/invites/${inviteId}/table`, { tableId, tableLabel }),
+
+  // ── Table Service (Restaurant Mode) ───────────────────────────────────────
+  getTableServiceFloor:     (eventId)                  => api.get(`/events/${eventId}/table-service/floor`),
+  updateTableState:         (eventId, tableId, data)   => api.patch(`/events/${eventId}/table-service/table/${tableId}`, data),
+  addToTableWaitlist:       (eventId, data)            => api.post(`/events/${eventId}/table-service/waitlist`, data),
+  updateTableWaitlist:      (eventId, partyId, status) => api.patch(`/events/${eventId}/table-service/waitlist/${partyId}`, { status }),
+  removeFromTableWaitlist:  (eventId, partyId)         => api.delete(`/events/${eventId}/table-service/waitlist/${partyId}`),
+  createTableReservation:   (eventId, data)            => api.post(`/events/${eventId}/table-service/reservations`, data),
+  updateTableReservation:   (eventId, resId, data)     => api.patch(`/events/${eventId}/table-service/reservations/${resId}`, data),
+  verifyReservationQR:      (eventId, token)           => api.get(`/events/${eventId}/table-service/reservations/verify/${token}`),
+  updateTableServiceSettings:(eventId, data)           => api.patch(`/events/${eventId}/table-service/settings`, data),
 };
 
 // ─── Chat API ─────────────────────────────────────────────────────────────────
