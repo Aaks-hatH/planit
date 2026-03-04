@@ -10,7 +10,7 @@ import {
   UserX, Cpu, ChevronRight, Hash, Trash2, Key, Server, Gauge,
   ClipboardList, DollarSign, PieChart, UserCheck, Search, Filter,
   ToggleLeft, ShieldAlert, ShieldCheck, Radio, Landmark, Map, UploadCloud, Edit2,
-  MapPin, Volume2, Mic2
+  MapPin, Volume2, Mic2, UtensilsCrossed, LayoutGrid
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 
@@ -128,7 +128,7 @@ export default function About() {
       items: [
         { href: '#creating',       label: 'Creating an event'              },
         { href: '#event-link',     label: 'Custom event links'             },
-        { href: '#event-modes',    label: 'Standard vs Enterprise mode'    },
+        { href: '#event-modes',    label: 'Standard vs Enterprise vs Table Service' },
       ]
     },
     {
@@ -156,6 +156,7 @@ export default function About() {
         { href: '#manager-override', label: 'Manager override'             },
         { href: '#walkie-talkie',  label: 'Walkie-talkie PTT'              },
         { href: '#seating-map',    label: 'Seating map'                    },
+        { href: '#table-service',  label: 'Table Service mode'             },
       ]
     },
     {
@@ -503,11 +504,11 @@ export default function About() {
           <Section id="event-modes">
             <SectionTitle
               icon={ToggleLeft}
-              title="Standard vs Enterprise mode"
-              subtitle="PlanIt offers two event modes that serve different kinds of events. The mode is chosen at creation time and determines which features are available inside the workspace."
+              title="Standard vs Enterprise vs Table Service"
+              subtitle="PlanIt offers three event modes, each serving a fundamentally different purpose. The mode is chosen at creation time and cannot be changed afterward."
             />
             <p className="text-neutral-500 leading-relaxed mb-6">
-              The mode distinction exists because not every event needs a guest list and a check-in system, and including those features for events that do not need them would clutter the workspace and complicate the experience. By choosing at creation time, you get a workspace tailored exactly to what your event requires.
+              The mode distinction exists because not every event needs a guest list and a check-in system, and a restaurant has completely different operational needs from either. By choosing at creation time, you get a workspace tailored exactly to what your event or venue requires.
             </p>
             <FeatureRow
               icon={Users}
@@ -519,8 +520,13 @@ export default function About() {
               title="Enterprise mode"
               description="Enterprise mode adds the complete guest management and check-in system on top of everything in Standard mode. You can build a guest list with individual invite links and QR codes, manage RSVPs, run a real-time check-in dashboard on event day, and review post-event attendance analytics. Enterprise mode is appropriate for weddings, galas, corporate dinners, conferences with ticketed attendance, award ceremonies, and any occasion where the guest experience and entry management are central concerns."
             />
+            <FeatureRow
+              icon={UtensilsCrossed}
+              title="Table Service mode"
+              description="Table Service mode is a purpose-built floor management system for restaurants, bars, and hospitality venues. Instead of a planning workspace, you get a live visual floor plan showing every table's real-time status, a walk-in waitlist with estimated wait time calculations, and a QR code reservation system with configurable expiry windows. The floor layout is persistent — unlike event data, Table Service data is never auto-deleted. This mode is appropriate for restaurants, private dining rooms, event venues, and anywhere that needs live table turn management."
+            />
             <Callout>
-              The mode cannot be changed after the event is created. If you choose Standard mode and later realize you need the guest management features, you would need to create a new event in Enterprise mode. This is a deliberate limitation that keeps the data model clean — adding a guest list to an event that was created without one would require migrating or discarding existing workspace data.
+              The mode cannot be changed after the event is created. Table Service mode produces a fundamentally different interface at a different URL (<code className="text-xs font-mono bg-neutral-200 px-1 py-0.5 rounded">/e/your-venue/floor</code>) with no planning workspace. If you need both a planning workspace and a floor management tool, create two separate events — one in Enterprise mode for event planning, one in Table Service mode for the venue on the night.
             </Callout>
           </Section>
 
@@ -1091,6 +1097,54 @@ export default function About() {
             </Callout>
           </Section>
 
+          {/* ─── TABLE SERVICE MODE ──────────────────────────────────── */}
+          <Section id="table-service">
+            <SectionTitle
+              icon={UtensilsCrossed}
+              title="Table Service mode"
+              subtitle="A dedicated real-time floor management system for restaurants and hospitality venues. Built on the same infrastructure as PlanIt's event platform, but purpose-designed for live table turn operations."
+            />
+            <p className="text-neutral-500 leading-relaxed mb-4">
+              Table Service mode exists because restaurants and venues have a fundamentally different operational problem from event organisers. The question isn't "is this guest on the list?" — it's "which tables are free right now, how long until the next one turns, and where do I put the six-top who just walked in?" Table Service mode answers all three in a single screen.
+            </p>
+            <FeatureRow
+              icon={LayoutGrid}
+              title="Visual floor plan"
+              description="The floor dashboard renders your venue as an interactive SVG canvas. Tables are colour-coded by live status: green (available), red (occupied), amber (reserved), violet (cleaning), grey (unavailable). Each table shows its label, current party size versus capacity, and — when occupied — a live countdown of estimated time remaining based on your configured average dining duration. Click any table to open its management panel without leaving the floor view."
+            />
+            <FeatureRow
+              icon={Users}
+              title="Walk-in waitlist with live wait estimates"
+              description="Staff add walk-in parties with a name, party size, and optional phone number. The system immediately calculates an estimated wait time by finding tables with sufficient capacity, looking up how long they've been occupied, and subtracting from the configured average dining time. If a table is available now, the estimate shows zero. Parties can be marked notified, seated, or removed. All changes broadcast instantly to every connected device via Socket.IO."
+            />
+            <FeatureRow
+              icon={QrCode}
+              title="QR code reservations with time-limited tokens"
+              description="Reservations are created with a party name, size, date and time, and optional phone/email. The system generates a JWT-signed QR code that becomes valid 30 minutes before the reservation and expires a configurable number of minutes after it (default 45). Staff scan the QR at the door — the token is verified server-side and the reservation is marked seated. An expired or already-used QR shows a clear denial reason."
+            />
+            <FeatureRow
+              icon={RefreshCw}
+              title="Live table state management"
+              description="Every table state change — seating a party, marking a table for cleaning, releasing it as available — is a single tap from the table panel. Party name, party size, server assignment, and notes are all editable in-place. Each change writes to the database and emits a table_state_update socket event so every connected staff device sees the floor plan update in real time without refreshing."
+            />
+            <FeatureRow
+              icon={Database}
+              title="Data persistence — never auto-deleted"
+              description="Unlike event-mode data which is deleted seven days after the event date, all Table Service data persists indefinitely. The floor layout, table states, reservation history, and settings are exempt from the automatic cleanup job. This is enforced at the API layer — saving Table Service settings sets keepForever: true on the venue record. Your seating map and configuration will still be there the next morning, next week, and next year."
+            />
+            <div className="border border-neutral-200 rounded-2xl overflow-hidden my-6">
+              <TechDetail label="URL" value="/e/your-venue/floor or /event/:id/floor" />
+              <TechDetail label="Floor layout" value="Reuses the same SeatingMap SVG editor from Enterprise mode. Tables, zones, stage, bar, sofa, and VIP object types all work. Layouts are shared with the seating map on the event record." />
+              <TechDetail label="Wait time calculation" value="Finds all tables with capacity ≥ party size, checks their occupiedAt timestamp against avgDiningMinutes, returns the minimum remaining time plus cleaningBufferMinutes." />
+              <TechDetail label="QR token signing" value="HMAC-signed JWT with type: 'table_reservation', reservationId, eventId, partyName, partySize. Expiry is calculated from reservation dateTime + reservationQrExpiryMinutes." />
+              <TechDetail label="Socket events" value="table_state_update and waitlist_update are emitted to all clients in the event Socket.IO room on every change." />
+              <TechDetail label="Settings" value="avgDiningMinutes, cleaningBufferMinutes, reservationDurationMinutes, reservationQrExpiryMinutes, operatingHoursOpen/Close, welcomeMessage, and per-party-size dining overrides." />
+            </div>
+            <Callout accent>
+              Table Service mode produces a completely different interface from the standard event workspace. There is no chat, no tasks, no polls — those tools don't belong in a restaurant context. The entire screen is the floor plan, with a right sidebar for the waitlist, reservations, and an occupancy overview.
+            </Callout>
+          </Section>
+
           {/* ─── SECURITY ────────────────────────────────────────────── */}
           <Section id="security">
             <SectionTitle
@@ -1274,6 +1328,11 @@ export default function About() {
               icon={RefreshCw}
               title="Automated cleanup job"
               description="The deletion is executed by a scheduled background job running on the server. The job queries for events whose date is more than seven days in the past and deletes their associated data in a specific order that respects database relationships: messages, then polls, then files, then participants, then invites, then the event record itself."
+            />
+            <FeatureRow
+              icon={UtensilsCrossed}
+              title="Table Service mode exception"
+              description="Events created in Table Service mode are exempt from the automatic deletion policy. The keepForever flag is set to true whenever Table Service settings are saved, which signals the cleanup job to skip that venue entirely. A restaurant's floor layout, reservation history, waitlist records, and configuration persist indefinitely until the owner explicitly deletes the venue. This is intentional — a restaurant cannot lose its floor plan configuration seven days after the first service."
             />
             <Callout accent>
               There is no way to recover deleted event data once the cleanup job has run. If you need to keep records of your event — files, guest lists, chat logs, expense reports — download or export them before the deletion date. The workspace provides download options in the utilities panel for exactly this purpose.
