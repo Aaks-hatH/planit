@@ -1600,17 +1600,7 @@ router.post('/:eventId/invites', verifyOrganizer,
         });
         invites.push(invite);
 
-        // Send guest invite confirmation email non-blocking
-        if (invite.guestEmail) {
-          try {
-            const inviteEvent = await Event.findById(req.params.eventId).select('title date location organizerName subdomain _id').lean();
-            const { sendGuestInviteConfirmation } = require('../services/emailService');
-            sendGuestInviteConfirmation(inviteEvent, invite.guestName, invite.guestEmail, invite.inviteCode).catch(() => {});
-          } catch (emailErr) {
-            // Never let email errors kill the invite creation
-            console.error('[invites] Email send error (non-fatal):', emailErr.message);
-          }
-        }
+        // Guest invite confirmation emails disabled (free email tier)
       }
       
       res.status(201).json({ message: 'Invites created', invites });
@@ -3066,17 +3056,23 @@ module.exports.fireWebhooks = fireWebhooks;
 router.get('/:eventId/table-service/floor', verifyCheckinAccess, async (req, res, next) => {
   try {
     const event = await Event.findById(req.params.eventId)
-      .select('title tableServiceSettings reservationPageSettings tableStates restaurantReservations tableServiceWaitlist seatingMap isTableServiceMode')
+      .select('title tableServiceSettings reservationPageSettings tableStates restaurantReservations tableServiceWaitlist seatingMap isTableServiceMode isEnterpriseMode')
       .lean();
     if (!event) return res.status(404).json({ error: 'Event not found' });
+    // Only table-service events and enterprise events may access the floor
+    if (!event.isTableServiceMode && !event.isEnterpriseMode) {
+      return res.status(403).json({ error: 'Floor plan is not enabled for this event.' });
+    }
     res.json({
       seatingMap:     event.seatingMap || { enabled: false, objects: [] },
-      tableStates:    event.tableStates || [],
-      settings:       event.tableServiceSettings || {},
-      reservations:   (event.restaurantReservations || []).filter(r => r.status !== 'cancelled'),
-      waitlist:       (event.tableServiceWaitlist || []).filter(w => w.status === 'waiting' || w.status === 'notified'),
+      tableStates:    event.isTableServiceMode ? (event.tableStates || []) : [],
+      settings:       event.isTableServiceMode ? (event.tableServiceSettings || {}) : {},
+      reservations:   event.isTableServiceMode ? (event.restaurantReservations || []).filter(r => r.status !== 'cancelled') : [],
+      waitlist:       event.isTableServiceMode ? (event.tableServiceWaitlist || []).filter(w => w.status === 'waiting' || w.status === 'notified') : [],
       restaurantName: event.tableServiceSettings?.restaurantName || event.title,
-      reservationPageSettings: event.reservationPageSettings || {},
+      reservationPageSettings: event.isTableServiceMode ? (event.reservationPageSettings || {}) : {},
+      isTableServiceMode: !!event.isTableServiceMode,
+      isEnterpriseMode:   !!event.isEnterpriseMode,
     });
   } catch (err) { next(err); }
 });
