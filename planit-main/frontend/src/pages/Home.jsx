@@ -5,7 +5,7 @@ import {
   Calendar, Users, MessageSquare, BarChart3, FileText, Shield, Copy, Check, Lock,
   ArrowRight, Link, Eye, EyeOff, ChevronRight, Zap, Clock,
   CheckCircle2, TrendingUp, ListChecks, Timer,
-  Brain, ArrowUpRight, AlertCircle
+  Brain, ArrowUpRight, AlertCircle, UtensilsCrossed, MapPin, QrCode, Layers
 } from 'lucide-react';
 import { eventAPI } from '../services/api';
 import toast from 'react-hot-toast';
@@ -996,6 +996,7 @@ export default function Home() {
       password:       formData.password || undefined,
       subdomain:      formData.subdomain || makeSubdomain(formData.title) || `event-${Date.now()}`,
       isEnterpriseMode: mode === 'enterprise',
+      isTableServiceMode: mode === 'table-service',
       maxParticipants: formData.maxParticipants,
     };
     try {
@@ -1324,6 +1325,107 @@ export default function Home() {
           </div>
         </section>
 
+        {/* TABLE SERVICE MODE */}
+        <section className="py-32 border-t border-neutral-800/40">
+          <div className="max-w-screen-xl mx-auto px-4 sm:px-8">
+            <div className="grid lg:grid-cols-2 gap-16 items-center">
+              {/* Left: demo floor map mockup */}
+              <Reveal delay={140}>
+                <div className="relative order-2 lg:order-1">
+                  <div className="bg-neutral-900/60 rounded-3xl border border-neutral-800 overflow-hidden p-1">
+                    {/* Mini floor map demo */}
+                    <div className="bg-neutral-950 rounded-2xl p-4" style={{ minHeight: 340 }}>
+                      {/* Header bar */}
+                      <div className="flex items-center justify-between mb-4 pb-3 border-b border-neutral-800">
+                        <div className="flex items-center gap-2">
+                          <div className="w-5 h-5 bg-white rounded flex items-center justify-center"><UtensilsCrossed className="w-3 h-3 text-neutral-900" /></div>
+                          <span className="text-sm font-bold text-white">Taverna Roma</span>
+                          <span className="text-xs text-neutral-600">Table Service</span>
+                        </div>
+                        <div className="flex gap-1.5">
+                          {[['#22c55e','4 Available'],['#ef4444','3 Occupied'],['#8b5cf6','1 Cleaning']].map(([c,l]) => (
+                            <span key={l} className="flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-neutral-800 text-neutral-400">
+                              <span className="w-1.5 h-1.5 rounded-full" style={{ background: c }} />{l}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                      {/* SVG floor plan */}
+                      <svg viewBox="0 0 500 240" className="w-full" style={{ height: 220 }}>
+                        <defs><pattern id="g" width="25" height="25" patternUnits="userSpaceOnUse"><path d="M 25 0 L 0 0 0 25" fill="none" stroke="rgba(255,255,255,0.03)" strokeWidth="1" /></pattern></defs>
+                        <rect width="500" height="240" fill="url(#g)" />
+                        {/* Zone label */}
+                        <rect x="20" y="10" width="140" height="80" rx="6" fill="rgba(255,255,255,0.02)" stroke="rgba(255,255,255,0.07)" strokeDasharray="5 3" />
+                        <text x="90" y="55" textAnchor="middle" fill="rgba(255,255,255,0.2)" fontSize="11" fontWeight="600">Dining Room</text>
+                        {/* Tables */}
+                        {[
+                          {x:60, y:150, r:24, status:'available', label:'T1', cap:'4', party:''},
+                          {x:130, y:150, r:24, status:'occupied',  label:'T2', cap:'2/4', party:'Smith', time:'42m'},
+                          {x:200, y:130, r:28, status:'occupied',  label:'T3', cap:'5/6', party:'Chen',  time:'18m'},
+                          {x:280, y:150, r:24, status:'cleaning',  label:'T4', cap:'4', party:''},
+                          {x:350, y:130, r:28, status:'available', label:'T5', cap:'6', party:''},
+                          {x:430, y:150, r:24, status:'reserved',  label:'T6', cap:'4', party:'Jones'},
+                        ].map(t => {
+                          const c = t.status === 'available' ? '#22c55e' : t.status === 'occupied' ? '#ef4444' : t.status === 'cleaning' ? '#8b5cf6' : '#f59e0b';
+                          return (
+                            <g key={t.label}>
+                              <circle cx={t.x} cy={t.y} r={t.r + 3} fill="none" stroke={c} strokeWidth="2" opacity="0.7" />
+                              <circle cx={t.x} cy={t.y} r={t.r} fill={`${c}22`} />
+                              <text x={t.x} y={t.y - 4} textAnchor="middle" dominantBaseline="middle" fill="white" fontSize="10" fontWeight="700">{t.label}</text>
+                              <text x={t.x} y={t.y + 8} textAnchor="middle" dominantBaseline="middle" fill={c} fontSize="9">{t.cap}</text>
+                              {t.time && <text x={t.x + t.r - 2} y={t.y - t.r + 2} textAnchor="middle" fill="white" fontSize="8" fontWeight="700">{t.time}</text>}
+                            </g>
+                          );
+                        })}
+                        {/* Waitlist panel */}
+                        <rect x="20" y="170" width="120" height="55" rx="6" fill="rgba(245,158,11,0.08)" stroke="rgba(245,158,11,0.2)" />
+                        <text x="30" y="185" fill="#f59e0b" fontSize="9" fontWeight="700">WAITLIST — 2 parties</text>
+                        <text x="30" y="200" fill="rgba(255,255,255,0.5)" fontSize="9">Martinez · 4 guests · ~12m</text>
+                        <text x="30" y="213" fill="rgba(255,255,255,0.5)" fontSize="9">Taylor · 2 guests · ~8m</text>
+                      </svg>
+                    </div>
+                  </div>
+                </div>
+              </Reveal>
+
+              {/* Right: copy */}
+              <Reveal className="order-1 lg:order-2">
+                <div className="inline-flex items-center gap-2 px-4 py-2 bg-orange-500/10 border border-orange-500/20 rounded-full text-xs font-bold text-orange-400 mb-8">
+                  <UtensilsCrossed className="w-4 h-4" />Table Service Mode
+                </div>
+                <h2 className="text-5xl font-black text-white mb-6 leading-tight">Built for restaurants & venues</h2>
+                <p className="text-xl text-neutral-400 mb-10 leading-relaxed">
+                  A dedicated floor management system for hospitality teams. Real-time table states, walk-in waitlists with live wait time estimates, and QR code reservations — all on one screen.
+                </p>
+                <div className="space-y-4">
+                  {[
+                    { icon: Layers,            text: 'Visual floor plan editor — drag tables to match your layout exactly' },
+                    { icon: Users,             text: 'Walk-in waitlist with estimated wait times based on your timing config' },
+                    { icon: QrCode,            text: 'Time-limited QR code reservations guests scan at the door' },
+                    { icon: MapPin,            text: 'Live table states sync instantly across every staff device' },
+                    { icon: CheckCircle2,      text: 'Your floor plan data persists forever — never auto-wiped' },
+                  ].map((item, i) => (
+                    <Reveal key={i} delay={i * 80}>
+                      <div className="flex items-center gap-4 p-4 bg-neutral-900/50 rounded-2xl border border-neutral-800 hover:border-orange-500/20 hover:bg-orange-500/5 transition-all duration-300">
+                        <div className="w-10 h-10 rounded-xl bg-orange-500/10 border border-orange-500/20 flex items-center justify-center flex-shrink-0">
+                          <item.icon className="w-5 h-5 text-orange-400" />
+                        </div>
+                        <span className="text-neutral-300 font-medium">{item.text}</span>
+                      </div>
+                    </Reveal>
+                  ))}
+                </div>
+                <div className="mt-8">
+                  <a href="#create" onClick={() => setTimeout(() => document.querySelector('[data-mode="table-service"]')?.click(), 100)}
+                    className="inline-flex items-center gap-2 px-6 py-3 bg-orange-500 text-white rounded-xl font-bold hover:bg-orange-400 transition-colors text-sm">
+                    Set up your venue <ArrowRight className="w-4 h-4" />
+                  </a>
+                </div>
+              </Reveal>
+            </div>
+          </div>
+        </section>
+
         {/* TESTIMONIALS */}
         <section className="py-32 border-t border-neutral-800/40">
           <div className="max-w-screen-xl mx-auto px-4 sm:px-8">
@@ -1401,12 +1503,18 @@ export default function Home() {
                 <Reveal>
                   <div className="mb-10">
                     <h2 className="text-5xl font-black text-white mb-6 tracking-tight leading-tight">
-                      {created ? 'Event created!' : 'Start planning your event'}
+                      {created
+                        ? mode === 'table-service' ? 'Venue created!' : 'Event created!'
+                        : mode === 'table-service' ? 'Set up your venue' : 'Start planning your event'}
                     </h2>
                     <p className="text-xl text-neutral-400 leading-relaxed">
                       {created
-                        ? 'Your planning hub is ready. Share the link with your team and get started.'
-                        : 'Create your event workspace in 60 seconds. No credit card, no hassle, just start planning.'}
+                        ? mode === 'table-service'
+                          ? 'Your floor management system is live. Set up your seating layout and go.'
+                          : 'Your planning hub is ready. Share the link with your team and get started.'
+                        : mode === 'table-service'
+                          ? 'Create your restaurant workspace in 60 seconds. Your data never expires.'
+                          : 'Create your event workspace in 60 seconds. No credit card, no hassle, just start planning.'}
                     </p>
                   </div>
                 </Reveal>
@@ -1421,15 +1529,27 @@ export default function Home() {
                         </div>
                       ))}
                     </div>
-                    <div className="space-y-3 p-5 sm:p-8 bg-neutral-900/50 rounded-3xl border border-neutral-800">
-                      <p className="text-base font-bold text-white mb-4">Everything included:</p>
-                      {['Private event space with custom branded URL', 'Unlimited team members, no caps', 'Real-time chat with file sharing', 'Task lists and deadline tracking', 'Polls, voting, and decision tools', 'RSVP management and tracking', 'Expense splitting and budgets', 'QR check-in for large events', 'Timeline and scheduling tools'].map((item, i) => (
-                        <div key={i} className="flex items-start gap-3 text-sm text-neutral-400">
-                          <CheckCircle2 className="w-5 h-5 text-emerald-500 flex-shrink-0 mt-0.5" />
-                          <span className="leading-relaxed">{item}</span>
-                        </div>
-                      ))}
-                    </div>
+                    {mode === 'table-service' ? (
+                      <div className="space-y-3 p-5 sm:p-8 bg-neutral-900/50 rounded-3xl border border-neutral-800">
+                        <p className="text-base font-bold text-white mb-4">Everything included in Table Service:</p>
+                        {['Visual floor plan editor — drag & drop tables anywhere', 'Live table states: available, occupied, cleaning, reserved', 'Walk-in waitlist with real-time estimated wait times', 'QR code reservations with configurable expiry windows', 'Per-restaurant timing config: dining duration, buffer, hours', 'Instant sync across all staff devices via live socket', 'Data never auto-deleted — your floor plan persists forever', 'Party size tracking and server assignment per table', 'Occupancy overview and turn time estimates at a glance'].map((item, i) => (
+                          <div key={i} className="flex items-start gap-3 text-sm text-neutral-400">
+                            <CheckCircle2 className="w-5 h-5 text-orange-500 flex-shrink-0 mt-0.5" />
+                            <span className="leading-relaxed">{item}</span>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="space-y-3 p-5 sm:p-8 bg-neutral-900/50 rounded-3xl border border-neutral-800">
+                        <p className="text-base font-bold text-white mb-4">Everything included:</p>
+                        {['Private event space with custom branded URL', 'Unlimited team members, no caps', 'Real-time chat with file sharing', 'Task lists and deadline tracking', 'Polls, voting, and decision tools', 'RSVP management and tracking', 'Expense splitting and budgets', 'QR check-in for large events', 'Timeline and scheduling tools'].map((item, i) => (
+                          <div key={i} className="flex items-start gap-3 text-sm text-neutral-400">
+                            <CheckCircle2 className="w-5 h-5 text-emerald-500 flex-shrink-0 mt-0.5" />
+                            <span className="leading-relaxed">{item}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </Reveal>
                 )}
 
@@ -1441,10 +1561,28 @@ export default function Home() {
                           <div className="w-20 h-20 mx-auto mb-5 rounded-full bg-emerald-500 flex items-center justify-center animate-bounce shadow-lg">
                             <Check className="w-10 h-10 text-white" />
                           </div>
-                          <p className="text-lg font-bold text-emerald-400">{mode === 'enterprise' ? 'Enterprise event created!' : 'Your planning hub is live!'}</p>
+                          <p className="text-lg font-bold text-emerald-400">
+                            {mode === 'table-service' ? 'Venue created!' : mode === 'enterprise' ? 'Enterprise event created!' : 'Your planning hub is live!'}
+                          </p>
                         </div>
                       </div>
-                      {mode === 'enterprise' ? (
+                      {mode === 'table-service' ? (
+                        <div className="p-8 bg-neutral-900/50 border border-neutral-800 rounded-3xl">
+                          <div className="flex items-start gap-4">
+                            <UtensilsCrossed className="w-6 h-6 text-orange-400 flex-shrink-0 mt-1" />
+                            <div>
+                              <p className="text-base font-bold text-white mb-4">Next steps for Table Service:</p>
+                              <ol className="text-sm text-neutral-400 space-y-3 list-decimal ml-5">
+                                <li>Open your floor dashboard and click "Edit Layout"</li>
+                                <li>Drag and drop tables to match your restaurant's floor plan</li>
+                                <li>Set each table's capacity and label</li>
+                                <li>Open Settings to configure your avg. dining time and hours</li>
+                                <li>Staff can now manage tables, waitlists, and reservations live</li>
+                              </ol>
+                            </div>
+                          </div>
+                        </div>
+                      ) : mode === 'enterprise' ? (
                         <div className="p-8 bg-neutral-900/50 border border-neutral-800 rounded-3xl">
                           <div className="flex items-start gap-4">
                             <Zap className="w-6 h-6 text-neutral-400 flex-shrink-0 mt-1" />
@@ -1468,10 +1606,13 @@ export default function Home() {
                         </div>
                       )}
                       <button
-                        onClick={() => navigate((created.subdomain ? `/e/${created.subdomain}` : `/event/${created.id}`) + '?new=1')}
+                        onClick={() => {
+                          const base = created.subdomain ? `/e/${created.subdomain}` : `/event/${created.id}`;
+                          navigate(mode === 'table-service' ? `${base}/floor` : `${base}?new=1`);
+                        }}
                         className="w-full px-8 py-5 bg-white text-neutral-900 rounded-2xl font-bold hover:scale-105 hover:bg-neutral-100 transition-all duration-300 shadow-xl flex items-center justify-center gap-3 text-lg"
                       >
-                        {mode === 'enterprise' ? 'Set Up Guest Invites' : 'Enter your planning hub'}
+                        {mode === 'table-service' ? 'Open Floor Dashboard' : mode === 'enterprise' ? 'Set Up Guest Invites' : 'Enter your planning hub'}
                         <ArrowUpRight className="w-5 h-5" />
                       </button>
                     </div>
@@ -1483,16 +1624,27 @@ export default function Home() {
                 <Reveal delay={80}>
                   <div className="bg-neutral-900/60 rounded-3xl border border-neutral-800 p-5 sm:p-10 hover:border-neutral-700 transition-all duration-500 sticky top-24">
                     <div className="mb-8 p-5 bg-neutral-950/80 rounded-2xl border border-neutral-800">
-                      <label className="block text-xs font-bold text-neutral-500 uppercase tracking-wider mb-4">Event Type</label>
-                      <div className="grid grid-cols-2 gap-3">
-                        {[{ val: 'standard', label: 'Standard', sub: 'Team planning' }, { val: 'enterprise', label: 'Enterprise', sub: 'Full Execution' }].map(({ val, label, sub }) => (
+                      <label className="block text-xs font-bold text-neutral-500 uppercase tracking-wider mb-4">Mode</label>
+                      <div className="grid grid-cols-3 gap-2">
+                        {[
+                          { val: 'standard',      label: 'Standard',      sub: 'Team planning' },
+                          { val: 'enterprise',    label: 'Enterprise',    sub: 'Full Execution' },
+                          { val: 'table-service', label: 'Table Service', sub: 'Restaurant Floor' },
+                        ].map(({ val, label, sub }) => (
                           <button key={val} type="button" onClick={() => setMode(val)}
-                            className={`px-5 py-4 text-sm font-bold rounded-2xl border-2 transition-all duration-300 ${mode === val ? 'bg-white text-neutral-900 border-white shadow-lg scale-[1.03]' : 'bg-neutral-900 text-neutral-400 border-neutral-700 hover:border-neutral-500 hover:scale-[1.02]'}`}>
-                            <div className="font-bold mb-1">{label}</div>
-                            <div className="text-xs opacity-70">{sub}</div>
+                            data-mode={val}
+                            className={`px-3 py-4 text-sm font-bold rounded-2xl border-2 transition-all duration-300 ${mode === val ? 'bg-white text-neutral-900 border-white shadow-lg scale-[1.03]' : 'bg-neutral-900 text-neutral-400 border-neutral-700 hover:border-neutral-500 hover:scale-[1.02]'}`}>
+                            <div className="font-bold mb-1 text-xs sm:text-sm">{label}</div>
+                            <div className="text-xs opacity-70 hidden sm:block">{sub}</div>
                           </button>
                         ))}
                       </div>
+                      {mode === 'table-service' && (
+                        <div className="mt-3 flex items-start gap-2 p-3 bg-orange-500/10 border border-orange-500/20 rounded-xl">
+                          <UtensilsCrossed className="w-4 h-4 text-orange-400 flex-shrink-0 mt-0.5" />
+                          <p className="text-xs text-orange-300/80 leading-relaxed">Restaurant & venue mode. Your floor plan and data are <strong className="text-orange-300">never auto-deleted</strong> — they persist until you choose to clear them.</p>
+                        </div>
+                      )}
                     </div>
 
                     <form onSubmit={handleSubmit} className="space-y-6">
@@ -1500,7 +1652,7 @@ export default function Home() {
                         <label className="block text-sm font-bold text-neutral-300 mb-2">Event title <span className="text-red-400">*</span></label>
                         <input type="text" required
                           className={`dark-input ${fieldErrors.title ? 'border-red-500 focus:border-red-400' : ''}`}
-                          placeholder="Summer Company Retreat 2025"
+                          placeholder={mode === 'table-service' ? 'Taverna Roma, The Oak Room...' : 'Summer Company Retreat 2025'}
                           value={formData.title}
                           onChange={(e) => { handleTitleChange(e); if (fieldErrors.title) setFieldErrors(p => ({...p, title: ''})); }}
                         />
@@ -1624,7 +1776,12 @@ export default function Home() {
                       </div>
                       <button type="submit" disabled={loading}
                         className="w-full px-8 py-5 bg-white text-neutral-900 rounded-2xl font-bold hover:scale-105 hover:bg-neutral-100 transition-all duration-300 shadow-xl disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 flex items-center justify-center gap-3 text-lg">
-                        {loading ? <><div className="w-5 h-5 border-2 border-neutral-400 border-t-neutral-900 rounded-full animate-spin" />Creating your hub...</> : <>Create event<ArrowRight className="w-5 h-5" /></>}
+                        {loading
+                          ? <><div className="w-5 h-5 border-2 border-neutral-400 border-t-neutral-900 rounded-full animate-spin" />Creating...</>
+                          : mode === 'table-service'
+                            ? <>Create venue <UtensilsCrossed className="w-5 h-5" /></>
+                            : <>Create event <ArrowRight className="w-5 h-5" /></>
+                        }
                       </button>
                     </form>
                   </div>
