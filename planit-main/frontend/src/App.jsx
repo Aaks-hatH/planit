@@ -19,6 +19,7 @@ import Waitlist from './pages/Waitlist';
 import Help from './pages/Help';
 import InviteBadge from './pages/InviteBadge';
 import InviteCard from './pages/InviteCard';
+import ReservePage, { ReserveCancelPage } from './pages/ReservePage';
 
 function App() {
   return (
@@ -36,6 +37,8 @@ function App() {
         <Route path="/e/:subdomain/login"        element={<OrganizerLogin />} />
         <Route path="/event/:eventId/waitlist"   element={<Waitlist />} />
         <Route path="/e/:subdomain/waitlist"     element={<Waitlist />} />
+        <Route path="/e/:subdomain/reserve"      element={<ReservePage />} />
+        <Route path="/reserve/cancel/:cancelToken" element={<ReserveCancelPage />} />
         <Route path="/invite/:inviteCode"        element={<GuestInvite />} />
         <Route path="/badge/:inviteCode"         element={<InviteBadge />} />
         <Route path="/card/:inviteCode"          element={<InviteCard />} />
