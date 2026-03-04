@@ -1262,7 +1262,7 @@ const {
 } = require('../middleware/antifraud');
 
 router.get('/:eventId/verify-scan/:inviteCode', 
-  verifyEventAccess,
+  verifyCheckinAccess,     // ✅ Staff/organizer only — bypasses requireApproval gate
   enforceBlocks,           // ✅ Check emergency lockdown, blocks, trust scores
   detectDuplicates,        // ✅ Check for duplicate guests
   detectSuspiciousPatterns, // ✅ Check for rapid scans, multiple devices
@@ -1376,7 +1376,7 @@ router.get('/:eventId/verify-scan/:inviteCode',
 });
 
 // STEP 2: Verify PIN (called if requiresPin === true, before committing admission)
-router.post('/:eventId/verify-pin/:inviteCode', verifyEventAccess, async (req, res, next) => {
+router.post('/:eventId/verify-pin/:inviteCode', verifyCheckinAccess, async (req, res, next) => {
   try {
     const Invite = require('../models/Invite');
     const { eventId, inviteCode } = req.params;
@@ -1415,7 +1415,7 @@ router.post('/:eventId/verify-pin/:inviteCode', verifyEventAccess, async (req, r
 
 // STEP 3: Commit check-in — only called after staff reviews profile (and PIN if required)
 router.post('/:eventId/checkin/:inviteCode', 
-  verifyEventAccess,
+  verifyCheckinAccess,     // ✅ Staff/organizer only — bypasses requireApproval gate
   preventReentrancy,  // ✅ Prevent simultaneous check-ins
   async (req, res, next) => {
   try {
