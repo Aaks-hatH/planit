@@ -468,13 +468,39 @@ function DenyScreen({ reason, message, details, onDone, canOverride, onOverride 
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// BOARDING PASS REVIEW - Polished ticket-style with role, table & zone
+// BOARDING PASS — Brutalist / professional
 // ═══════════════════════════════════════════════════════════════════════════
-const ROLE_THEME = {
-  VIP:     { headerBg: 'bg-amber-500',   headerText: 'text-white', accentBg: 'bg-amber-50',  accentBorder: 'border-amber-300', accentText: 'text-amber-800',  stripBg: 'bg-amber-500'  },
-  SPEAKER: { headerBg: 'bg-violet-600',  headerText: 'text-white', accentBg: 'bg-violet-50', accentBorder: 'border-violet-300', accentText: 'text-violet-800', stripBg: 'bg-violet-600' },
-  GUEST:   { headerBg: 'bg-neutral-800', headerText: 'text-white', accentBg: 'bg-neutral-50', accentBorder: 'border-neutral-300', accentText: 'text-neutral-700', stripBg: 'bg-neutral-800' },
+
+// Role accent: a single thick left-border stripe. No colour washes.
+const ROLE_ACCENT = {
+  VIP:     { bar: '#B8860B', label: 'VIP'     },
+  SPEAKER: { bar: '#1a1a1a', label: 'SPEAKER' },
+  GUEST:   { bar: '#1a1a1a', label: 'GUEST'   },
 };
+
+// Thin horizontal rule that mimics a perforated ticket tear-line
+function TearLine() {
+  return (
+    <div className="relative my-0 mx-0 h-px overflow-visible">
+      <div className="border-t-2 border-dashed border-neutral-300 w-full" />
+      {/* Notch circles at each edge */}
+      <div className="absolute -left-4 -top-2 w-4 h-4 rounded-full bg-neutral-900" />
+      <div className="absolute -right-4 -top-2 w-4 h-4 rounded-full bg-neutral-900" />
+    </div>
+  );
+}
+
+// A single data cell used in the stats row
+function DataCell({ label, value, dim }) {
+  return (
+    <div className="border-r border-neutral-200 last:border-r-0 px-5 py-4 min-w-0">
+      <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-neutral-400 mb-1 whitespace-nowrap">{label}</p>
+      <p className={`text-2xl font-black leading-none tracking-tight ${dim ? 'text-neutral-300' : 'text-neutral-900'}`}>
+        {value}
+      </p>
+    </div>
+  );
+}
 
 function BoardingPass({ guest, security, requiresPin, onAdmit, onDeny, onPinVerify }) {
   const [pin, setPin] = useState('');
@@ -485,11 +511,12 @@ function BoardingPass({ guest, security, requiresPin, onAdmit, onDeny, onPinVeri
   const hasWarnings = security?.warnings?.length > 0 || security?.flags?.length > 0;
   const trustScore  = security?.trustScore ?? 100;
   const role        = guest.guestRole || 'GUEST';
-  const theme       = ROLE_THEME[role] || ROLE_THEME.GUEST;
-  const RoleIcon    = ROLE_CONFIG[role]?.icon || Shield;
+  const accent      = ROLE_ACCENT[role] || ROLE_ACCENT.GUEST;
+
+  const trustColor  = trustScore >= 80 ? '#16a34a' : trustScore >= 50 ? '#d97706' : '#dc2626';
 
   const handlePinSubmit = async () => {
-    if (!pin.trim()) { setPinError('Please enter PIN'); return; }
+    if (!pin.trim()) { setPinError('PIN is required'); return; }
     setVerifyingPin(true);
     setPinError('');
     try {
@@ -504,205 +531,153 @@ function BoardingPass({ guest, security, requiresPin, onAdmit, onDeny, onPinVeri
   };
 
   return (
-    <div className="fixed inset-0 bg-black/75 z-50 flex items-center justify-center p-4 overflow-y-auto">
-      <div className="bg-white rounded-2xl w-full max-w-2xl shadow-2xl overflow-hidden my-auto">
+    <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4 overflow-y-auto">
+      {/* Card — sharp corners, heavy border, left accent bar */}
+      <div className="bg-white w-full max-w-2xl my-auto shadow-2xl border border-neutral-300 flex overflow-hidden">
 
-        {/* ── Role-coloured header band ────────────────────────────── */}
-        <div className={`${theme.headerBg} px-7 py-5 flex items-center justify-between`}>
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center">
-              <RoleIcon className="w-5 h-5 text-white" />
-            </div>
-            <div>
-              <p className="text-white/70 text-xs font-bold uppercase tracking-widest leading-none mb-0.5">Pass Review</p>
-              <p className={`${theme.headerText} text-sm font-black uppercase tracking-widest`}>{role}</p>
-            </div>
-          </div>
-          <div className="text-right">
-            <p className="text-white/60 text-xs font-semibold uppercase tracking-widest mb-0.5">Code</p>
-            <p className="text-white font-mono font-black text-xl tracking-widest">{guest.inviteCode}</p>
-          </div>
-        </div>
+        {/* Left accent stripe */}
+        <div className="w-1.5 flex-shrink-0" style={{ backgroundColor: accent.bar }} />
 
-        {/* ── Guest name ───────────────────────────────────────────── */}
-        <div className="px-7 pt-6 pb-4 border-b border-dashed border-neutral-200">
-          <p className="text-xs font-bold text-neutral-400 uppercase tracking-widest mb-1">Attendee</p>
-          <h2 className="text-4xl font-black text-neutral-900 leading-tight">{guest.guestName}</h2>
-          {(guest.guestEmail || guest.guestPhone) && (
-            <div className="flex flex-wrap gap-4 mt-2">
-              {guest.guestEmail && (
-                <span className="flex items-center gap-1.5 text-sm text-neutral-500">
-                  <Mail className="w-3.5 h-3.5" />{guest.guestEmail}
-                </span>
-              )}
-              {guest.guestPhone && (
-                <span className="flex items-center gap-1.5 text-sm text-neutral-500">
-                  <Phone className="w-3.5 h-3.5" />{guest.guestPhone}
-                </span>
-              )}
-            </div>
-          )}
-        </div>
+        <div className="flex-1 min-w-0">
 
-        {/* ── Ticket details grid ──────────────────────────────────── */}
-        <div className="px-7 py-5">
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-            {/* Adults */}
-            <div className="bg-neutral-50 rounded-xl p-3 border border-neutral-100">
-              <p className="text-xs font-bold text-neutral-400 uppercase tracking-wide mb-1 flex items-center gap-1">
-                <User className="w-3 h-3" /> Adults
-              </p>
-              <p className="text-3xl font-black text-neutral-900">{guest.adults ?? 1}</p>
-            </div>
-
-            {/* Children */}
-            <div className="bg-neutral-50 rounded-xl p-3 border border-neutral-100">
-              <p className="text-xs font-bold text-neutral-400 uppercase tracking-wide mb-1 flex items-center gap-1">
-                <Baby className="w-3 h-3" /> Children
-              </p>
-              <p className="text-3xl font-black text-neutral-900">{guest.children ?? 0}</p>
-            </div>
-
-            {/* Table */}
-            <div className={`rounded-xl p-3 border col-span-1 ${
-              guest.tableLabel
-                ? 'bg-emerald-50 border-emerald-200'
-                : 'bg-neutral-50 border-neutral-100'
-            }`}>
-              <p className={`text-xs font-bold uppercase tracking-wide mb-1 flex items-center gap-1 ${
-                guest.tableLabel ? 'text-emerald-600' : 'text-neutral-400'
-              }`}>
-                <MapPin className="w-3 h-3" /> Table
-              </p>
-              <p className={`text-xl font-black truncate ${
-                guest.tableLabel ? 'text-emerald-900' : 'text-neutral-400'
-              }`}>{guest.tableLabel || '—'}</p>
-            </div>
-
-            {/* Zone / seat */}
-            <div className={`rounded-xl p-3 border col-span-1 ${
-              guest.tableType || guest.seatNumber
-                ? 'bg-sky-50 border-sky-200'
-                : 'bg-neutral-50 border-neutral-100'
-            }`}>
-              <p className={`text-xs font-bold uppercase tracking-wide mb-1 flex items-center gap-1 ${
-                guest.tableType || guest.seatNumber ? 'text-sky-600' : 'text-neutral-400'
-              }`}>
-                <Flag className="w-3 h-3" /> Seat
-              </p>
-              <p className={`text-xl font-black truncate ${
-                guest.tableType || guest.seatNumber ? 'text-sky-900' : 'text-neutral-400'
-              }`}>{guest.seatNumber || (guest.tableType ? guest.tableType.toUpperCase() : '—')}</p>
-            </div>
-          </div>
-
-          {/* Trust score bar */}
-          <div className="mt-4">
-            <div className="flex items-center justify-between mb-1.5">
-              <p className="text-xs font-bold text-neutral-400 uppercase tracking-wide flex items-center gap-1">
-                <Shield className="w-3 h-3" /> Trust Score
-              </p>
-              <span className={`text-sm font-black ${
-                trustScore >= 80 ? 'text-emerald-600' :
-                trustScore >= 50 ? 'text-amber-500' : 'text-red-600'
-              }`}>{trustScore}/100</span>
-            </div>
-            <div className="h-2 bg-neutral-100 rounded-full overflow-hidden">
-              <div
-                className={`h-full rounded-full transition-all ${
-                  trustScore >= 80 ? 'bg-emerald-500' :
-                  trustScore >= 50 ? 'bg-amber-400' : 'bg-red-500'
-                }`}
-                style={{ width: `${Math.max(trustScore, 2)}%` }}
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* ── Notes ───────────────────────────────────────────────── */}
-        {guest.notes && (
-          <div className="mx-7 mb-4 px-4 py-3 bg-sky-50 border border-sky-200 rounded-xl">
-            <p className="text-xs font-black text-sky-700 uppercase tracking-wide mb-1">Special Notes</p>
-            <p className="text-sm text-neutral-700">{guest.notes}</p>
-          </div>
-        )}
-
-        {/* ── Security warnings ────────────────────────────────────── */}
-        {hasWarnings && (
-          <div className="mx-7 mb-4 bg-amber-50 border-2 border-amber-400 rounded-xl overflow-hidden">
-            <div className="bg-amber-400 px-4 py-2.5 flex items-center gap-2">
-              <AlertTriangle className="w-4 h-4 text-white" />
-              <p className="text-white text-xs font-black uppercase tracking-wider">Security Alert — Review Before Admitting</p>
-            </div>
-            <div className="p-4 space-y-2">
-              {security?.warnings?.map((w, i) => (
-                <div key={i} className="bg-white rounded-lg px-3 py-2.5 border border-amber-200">
-                  <p className="font-black text-sm text-neutral-900">{w.type?.replace(/_/g, ' ').toUpperCase()}</p>
-                  <p className="text-sm text-neutral-600 mt-0.5">{w.message}</p>
-                </div>
-              ))}
-              {security?.flags?.map((f, i) => (
-                <div key={i} className="bg-white rounded-lg px-3 py-2.5 border border-amber-200">
-                  <p className="font-black text-sm text-neutral-900">{f.flag?.replace(/_/g, ' ').toUpperCase()}</p>
-                  {f.notes && <p className="text-sm text-neutral-600 mt-0.5">{f.notes}</p>}
-                  <p className="text-xs text-neutral-400 mt-1">Flagged: {new Date(f.flaggedAt).toLocaleString()}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* ── PIN verification ─────────────────────────────────────── */}
-        {requiresPin && guest.hasPin && (
-          <div className="mx-7 mb-4 bg-red-50 border-2 border-red-400 rounded-xl overflow-hidden">
-            <div className="bg-red-500 px-4 py-2.5 flex items-center gap-2">
-              <Lock className="w-4 h-4 text-white" />
-              <p className="text-white text-xs font-black uppercase tracking-wider">PIN Verification Required</p>
-            </div>
-            <div className="p-4">
-              <p className="text-sm text-red-700 mb-3">This attendee must provide their security PIN before entry.</p>
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  value={pin}
-                  onChange={e => { setPin(e.target.value.toUpperCase()); setPinError(''); }}
-                  placeholder="Enter PIN"
-                  className="flex-1 border-2 border-red-300 rounded-lg px-4 py-2.5 text-lg font-mono font-bold focus:outline-none focus:border-red-500 bg-white"
-                  maxLength={6}
-                />
-                <button
-                  onClick={handlePinSubmit}
-                  disabled={verifyingPin}
-                  className="px-6 py-2.5 bg-red-600 text-white font-black rounded-lg hover:bg-red-700 transition-all disabled:opacity-50 text-sm"
-                >
-                  {verifyingPin ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Verify'}
-                </button>
-              </div>
-              {pinError && <p className="text-sm text-red-700 font-semibold mt-2">{pinError}</p>}
-              {pinVerified && (
-                <p className="text-sm text-emerald-700 font-semibold mt-2 flex items-center gap-1.5">
-                  <CheckCircle className="w-4 h-4" /> PIN Verified
+          {/* ── TOP HEADER ─────────────────────────────────────────── */}
+          <div className="bg-neutral-900 px-7 py-5 flex items-start justify-between gap-6">
+            <div className="min-w-0">
+              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-neutral-500 mb-1.5">Attendee</p>
+              <h2 className="text-3xl font-black text-white leading-none tracking-tight truncate">
+                {guest.guestName}
+              </h2>
+              {(guest.guestEmail || guest.guestPhone) && (
+                <p className="text-neutral-400 text-xs mt-2 font-mono">
+                  {guest.guestEmail}{guest.guestEmail && guest.guestPhone ? '  ·  ' : ''}{guest.guestPhone}
                 </p>
               )}
             </div>
+            <div className="text-right flex-shrink-0">
+              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-neutral-500 mb-1.5">Confirmation</p>
+              <p className="text-white font-mono font-black text-2xl tracking-widest">{guest.inviteCode}</p>
+              <div
+                className="mt-2 inline-block px-2 py-0.5 text-[10px] font-black uppercase tracking-widest"
+                style={{ backgroundColor: accent.bar, color: '#fff' }}
+              >
+                {accent.label}
+              </div>
+            </div>
           </div>
-        )}
 
-        {/* ── Action buttons ───────────────────────────────────────── */}
-        <div className="px-7 pb-6 pt-2 flex gap-3">
-          <button
-            onClick={onDeny}
-            className="flex-1 py-4 bg-red-50 text-red-700 text-lg font-black rounded-xl hover:bg-red-100 active:bg-red-200 transition-all border-2 border-red-200"
-          >
-            DENY ENTRY
-          </button>
-          <button
-            onClick={onAdmit}
-            disabled={requiresPin && guest.hasPin && !pinVerified}
-            className={`flex-1 py-4 text-white text-lg font-black rounded-xl transition-all shadow-lg disabled:opacity-40 disabled:cursor-not-allowed ${theme.headerBg} hover:opacity-90 active:opacity-80`}
-          >
-            ADMIT
-          </button>
+          {/* ── STATS ROW ──────────────────────────────────────────── */}
+          <div className="flex divide-x divide-neutral-200 border-b border-neutral-200">
+            <DataCell label="Adults"    value={guest.adults   ?? 1} />
+            <DataCell label="Children"  value={guest.children ?? 0} />
+            <DataCell label="Table"     value={guest.tableLabel || '—'} dim={!guest.tableLabel} />
+            <DataCell label="Seat"      value={guest.seatNumber || (guest.tableType ? guest.tableType.toUpperCase() : '—')} dim={!guest.seatNumber && !guest.tableType} />
+            <div className="px-5 py-4 min-w-0">
+              <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-neutral-400 mb-1 whitespace-nowrap">Trust</p>
+              <p className="text-2xl font-black leading-none" style={{ color: trustColor }}>{trustScore}</p>
+            </div>
+          </div>
+
+          {/* ── TEAR LINE ──────────────────────────────────────────── */}
+          <div className="px-4">
+            <TearLine />
+          </div>
+
+          {/* ── NOTES ──────────────────────────────────────────────── */}
+          {guest.notes && (
+            <div className="px-7 py-4 border-b border-neutral-200">
+              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-neutral-400 mb-1.5">Notes</p>
+              <p className="text-sm text-neutral-700 leading-relaxed">{guest.notes}</p>
+            </div>
+          )}
+
+          {/* ── SECURITY WARNINGS ──────────────────────────────────── */}
+          {hasWarnings && (
+            <div className="border-b border-neutral-200">
+              <div className="bg-neutral-900 px-7 py-2.5 flex items-center justify-between">
+                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-white">Security Alert</p>
+                <AlertTriangle className="w-3.5 h-3.5 text-yellow-400" />
+              </div>
+              <div className="divide-y divide-neutral-100">
+                {security?.warnings?.map((w, i) => (
+                  <div key={i} className="px-7 py-3 border-l-4 border-yellow-400">
+                    <p className="text-xs font-black uppercase tracking-wide text-neutral-900">
+                      {w.type?.replace(/_/g, ' ')}
+                    </p>
+                    <p className="text-sm text-neutral-600 mt-0.5">{w.message}</p>
+                  </div>
+                ))}
+                {security?.flags?.map((f, i) => (
+                  <div key={i} className="px-7 py-3 border-l-4 border-yellow-400">
+                    <p className="text-xs font-black uppercase tracking-wide text-neutral-900">
+                      {f.flag?.replace(/_/g, ' ')}
+                    </p>
+                    {f.notes && <p className="text-sm text-neutral-600 mt-0.5">{f.notes}</p>}
+                    <p className="text-[11px] text-neutral-400 font-mono mt-1">
+                      {new Date(f.flaggedAt).toLocaleString()}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* ── PIN VERIFICATION ───────────────────────────────────── */}
+          {requiresPin && guest.hasPin && (
+            <div className="border-b border-neutral-200">
+              <div className="bg-neutral-900 px-7 py-2.5 flex items-center justify-between">
+                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-white">PIN Verification Required</p>
+                <Lock className="w-3.5 h-3.5 text-neutral-400" />
+              </div>
+              <div className="px-7 py-5">
+                <p className="text-xs text-neutral-500 mb-3 uppercase tracking-wide font-semibold">
+                  Attendee must provide security PIN before entry
+                </p>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={pin}
+                    onChange={e => { setPin(e.target.value.toUpperCase()); setPinError(''); }}
+                    placeholder="ENTER PIN"
+                    className="flex-1 border-2 border-neutral-900 px-4 py-2.5 text-lg font-mono font-black uppercase focus:outline-none focus:border-neutral-600 bg-white tracking-widest placeholder-neutral-300"
+                    maxLength={6}
+                  />
+                  <button
+                    onClick={handlePinSubmit}
+                    disabled={verifyingPin}
+                    className="px-6 py-2.5 bg-neutral-900 text-white font-black text-xs uppercase tracking-widest hover:bg-neutral-700 transition-colors disabled:opacity-40"
+                  >
+                    {verifyingPin ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Verify'}
+                  </button>
+                </div>
+                {pinError && (
+                  <p className="text-xs text-red-600 font-bold uppercase tracking-wide mt-2">{pinError}</p>
+                )}
+                {pinVerified && (
+                  <p className="text-xs text-green-700 font-bold uppercase tracking-wide mt-2">
+                    — PIN Verified
+                  </p>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* ── ACTION BUTTONS ─────────────────────────────────────── */}
+          <div className="flex">
+            <button
+              onClick={onDeny}
+              className="flex-1 py-5 bg-white text-neutral-900 text-sm font-black uppercase tracking-widest border-r border-neutral-200 hover:bg-neutral-100 active:bg-neutral-200 transition-colors"
+            >
+              Deny Entry
+            </button>
+            <button
+              onClick={onAdmit}
+              disabled={requiresPin && guest.hasPin && !pinVerified}
+              className="flex-1 py-5 bg-neutral-900 text-white text-sm font-black uppercase tracking-widest hover:bg-neutral-700 active:bg-black transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+            >
+              Admit
+            </button>
+          </div>
+
         </div>
       </div>
     </div>
