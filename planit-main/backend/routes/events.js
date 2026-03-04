@@ -1867,77 +1867,61 @@ router.get('/:eventId/qr.svg', async (req, res, next) => {
     const host = process.env.BASE_DOMAIN || req.get('host');
     const joinUrl = `${protocol}://${host}/event/${req.params.eventId}`;
 
-    // Use error correction level H (30%) so the centre logo doesn't break scannability
+    // Clean QR — NO overlay on the QR modules. BarcodeDetector (used by
+    // html5-qrcode) rejects any QR with pixels painted over it, including
+    // the previously used centre logo. PLANIT branding goes BELOW the QR.
+    // Using level M (15%) is sufficient; H was only needed for the overlay.
     const dataUrl = await QRCode.toDataURL(joinUrl, {
       width: 260,
-      margin: 1,
+      margin: 2,
       color: { dark: '#000000', light: '#ffffff' },
-      errorCorrectionLevel: 'H',
+      errorCorrectionLevel: 'M',
     });
 
     const safeTitle = event.title.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').slice(0, 32);
 
-    // Card dimensions
-    const W = 300, H = 360;
-    // QR sits at (20, 20) and is 260×260
+    // Card dimensions — same proportions as the invite QR card
+    const W = 300, H = 400;
     const QX = 20, QY = 20, QS = 260;
-    const cx = QX + QS / 2; // horizontal centre of QR = 150
-    const cy = QY + QS / 2; // vertical centre of QR  = 150
-
-    // Centre label box — sits over the QR, covering ~22% of area (within H budget)
-    const lblW = 104, lblH = 34;
-    const lblX = cx - lblW / 2;
-    const lblY = cy - lblH / 2;
 
     const svg = `<svg width="${W}" height="${H}" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
   <defs>
-    <!-- Subtle outer glow on card -->
     <filter id="glow" x="-5%" y="-5%" width="110%" height="110%">
-      <feDropShadow dx="0" dy="4" stdDeviation="10" flood-color="#000000" flood-opacity="0.55"/>
+      <feDropShadow dx="0" dy="4" stdDeviation="10" flood-color="#000" flood-opacity="0.55"/>
     </filter>
-    <!-- Clip card corners -->
-    <clipPath id="card">
-      <rect width="${W}" height="${H}" rx="20"/>
-    </clipPath>
-    <!-- Clip QR to its own box -->
     <clipPath id="qrclip">
-      <rect x="${QX}" y="${QY}" width="${QS}" height="${QS}" rx="12"/>
+      <rect x="${QX}" y="${QY}" width="${QS}" height="${QS}" rx="10"/>
     </clipPath>
   </defs>
 
-  <!-- ── Card background ─────────────────────────────────────────────── -->
+  <!-- Dark card -->
   <rect width="${W}" height="${H}" rx="20" fill="#0a0a0a" filter="url(#glow)"/>
 
-  <!-- ── QR code (white-on-black, rounded clip) ─────────────────────── -->
+  <!-- White QR backing (no overlay on top of QR modules) -->
+  <rect x="${QX - 4}" y="${QY - 4}" width="${QS + 8}" height="${QS + 8}" rx="14" fill="#ffffff"/>
+
+  <!-- Clean QR — nothing painted on top -->
   <image x="${QX}" y="${QY}" width="${QS}" height="${QS}"
          href="${dataUrl}" clip-path="url(#qrclip)"/>
 
-  <!-- ── Centre logo overlay ────────────────────────────────────────── -->
-  <!-- Black backing rect so QR modules behind text are hidden -->
-  <rect x="${lblX}" y="${lblY}" width="${lblW}" height="${lblH}" rx="7" fill="#000000"/>
-  <!-- Thin white border -->
-  <rect x="${lblX}" y="${lblY}" width="${lblW}" height="${lblH}" rx="7"
-        fill="none" stroke="#ffffff" stroke-width="1.5"/>
-  <!-- PLANIT wordmark -->
-  <text x="${cx}" y="${cy + 5}"
-        text-anchor="middle" dominant-baseline="middle"
+  <!-- Divider -->
+  <line x1="20" y1="${QY + QS + 18}" x2="${W - 20}" y2="${QY + QS + 18}"
+        stroke="#1f1f1f" stroke-width="1"/>
+
+  <!-- PLANIT brand -->
+  <text x="${W / 2}" y="${QY + QS + 40}" text-anchor="middle"
         fill="#ffffff"
         font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif"
-        font-size="15" font-weight="800" letter-spacing="4">PLANIT</text>
+        font-size="13" font-weight="800" letter-spacing="5">PLANIT</text>
 
-  <!-- ── Bottom info strip ──────────────────────────────────────────── -->
-  <!-- Thin separator -->
-  <line x1="20" y1="${QY + QS + 16}" x2="${W - 20}" y2="${QY + QS + 16}"
-        stroke="#1f1f1f" stroke-width="1"/>
   <!-- Event title -->
-  <text x="${W / 2}" y="${QY + QS + 36}"
-        text-anchor="middle"
+  <text x="${W / 2}" y="${QY + QS + 62}" text-anchor="middle"
         fill="#e5e5e5"
         font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif"
         font-size="12" font-weight="600">${safeTitle}</text>
+
   <!-- Sub-label -->
-  <text x="${W / 2}" y="${QY + QS + 54}"
-        text-anchor="middle"
+  <text x="${W / 2}" y="${QY + QS + 82}" text-anchor="middle"
         fill="#555555"
         font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif"
         font-size="10" letter-spacing="1.5">SCAN TO JOIN</text>
