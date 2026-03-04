@@ -53,8 +53,9 @@ const eventSchema = new mongoose.Schema({
   },
   title:         { type: String, required: true, trim: true, maxlength: 200 },
   description:   { type: String, trim: true, maxlength: 2000 },
-  date:          { type: Date, required: true },
-  timezone:      { type: String, required: true, default: 'UTC' },
+  // date is optional at schema level — required constraint enforced by express-validator for non-table-service events
+  date:          { type: Date, required: false, default: null },
+  timezone:      { type: String, required: false, default: 'UTC' },
   location:      { type: String, trim: true, maxlength: 500 },
   organizerName: { type: String, required: true, trim: true, maxlength: 100 },
   organizerEmail: {
