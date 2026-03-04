@@ -398,7 +398,7 @@ export default function GuestInvite() {
                       className="group relative bg-white p-8 rounded-2xl cursor-pointer hover:shadow-2xl hover:shadow-neutral-900/50 transition-all"
                     >
                       <div className="flex flex-col items-center">
-                        <img src={qrUrl} alt="Entry QR Code" className="w-72 h-72 group-hover:scale-105 transition-transform duration-300" />
+                        <img src={qrUrl} alt="Entry QR Code" className="w-72 h-auto group-hover:scale-105 transition-transform duration-300" />
                         <div className="mt-6 text-center">
                           <p className="text-sm text-neutral-600 mb-2">Present this code at the entrance</p>
                           <p className="text-xs text-blue-600 font-medium flex items-center justify-center gap-1.5 group-hover:text-blue-700">
