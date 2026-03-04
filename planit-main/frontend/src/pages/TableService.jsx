@@ -1345,13 +1345,14 @@ export default function TableService() {
       const res = await eventAPI.getTableServiceFloor(eid);
       setFloorData(res.data);
     } catch (err) {
-      if (err?.response?.status === 403) {
+      if (err?.response?.status === 403 || err?.response?.status === 404) {
         const errData = err?.response?.data || {};
         setFloorData(prev => ({
           ...prev,
           _forbidden: true,
           _forbiddenIsEnterprise: !!errData.isEnterpriseMode,
           _forbiddenTitle: errData.eventTitle || '',
+          _notFound: err?.response?.status === 404,
         }));
       } else {
         toast.error('Could not load floor data');
@@ -1484,6 +1485,7 @@ export default function TableService() {
 
   if (floorData._forbidden) {
     const isEnterprise = floorData._forbiddenIsEnterprise;
+    const isNotFound   = floorData._notFound;
     const title        = floorData._forbiddenTitle;
     return (
       <div className="h-screen bg-neutral-950 flex items-center justify-center p-6">
@@ -1492,12 +1494,14 @@ export default function TableService() {
             <Lock className="w-7 h-7 text-neutral-500" />
           </div>
           <h2 className="text-white font-bold text-xl mb-2">
-            {isEnterprise ? 'Enterprise Event' : 'Floor Plan Unavailable'}
+            {isNotFound ? 'Event Not Found' : isEnterprise ? 'Enterprise Event' : 'Floor Plan Unavailable'}
           </h2>
           {title && <p className="text-neutral-400 text-sm mb-1 font-medium">{title}</p>}
           <p className="text-neutral-500 text-sm mb-6 leading-relaxed">
-            {isEnterprise
-              ? 'This is an enterprise event. The floor plan and seating map are managed through the Check-In dashboard, not the Table Service floor.'
+            {isNotFound
+              ? 'No event was found with this ID. Check the URL or contact your manager.'
+              : isEnterprise
+              ? 'This is an enterprise event. The seating map is managed through the Check-In dashboard, not the Table Service floor.'
               : 'This event does not have Table Service mode enabled. The /floor route is only available for Table Service venues.'}
           </p>
           <div className="space-y-2">
@@ -1510,10 +1514,10 @@ export default function TableService() {
               </button>
             )}
             <button
-              onClick={() => navigate(-1)}
+              onClick={() => navigate('/')}
               className="w-full py-2.5 bg-neutral-800 text-neutral-300 rounded-xl text-sm font-semibold hover:bg-neutral-700 transition-colors"
             >
-              Go Back
+              Return Home
             </button>
           </div>
           <div className="mt-6 p-3 bg-neutral-900 border border-neutral-800 rounded-xl text-left">
@@ -1527,9 +1531,7 @@ export default function TableService() {
         </div>
       </div>
     );
-  }
-
-  return (
+  }  return (
     <div className="h-screen flex flex-col bg-neutral-950 text-white overflow-hidden">
       {/* ── Header ── */}
       <header className="flex-shrink-0 h-14 border-b border-neutral-800 bg-neutral-900/80 flex items-center px-4 gap-4">
