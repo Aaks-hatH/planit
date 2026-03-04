@@ -53,7 +53,7 @@ const eventSchema = new mongoose.Schema({
   },
   title:         { type: String, required: true, trim: true, maxlength: 200 },
   description:   { type: String, trim: true, maxlength: 2000 },
-  date:          { type: Date, required: true },
+  date:          { type: Date, required: false },
   timezone:      { type: String, required: true, default: 'UTC' },
   location:      { type: String, trim: true, maxlength: 500 },
   organizerName: { type: String, required: true, trim: true, maxlength: 100 },
@@ -484,27 +484,38 @@ eventSchema.methods.addParticipant = function (username, role = 'participant') {
       err.statusCode = 400;
       throw err;
     }
-    this.participants.push({ username, role });
-    this.metadata.lastActivity = new Date();
   }
-  return this.save();
+  return this.constructor.updateOne(
+    { _id: this._id },
+    {
+      $addToSet: { participants: { username, role } },
+      $set: { 'metadata.lastActivity': new Date() },
+    }
+  );
 };
 
 eventSchema.methods.removeParticipant = function (username) {
-  this.participants = this.participants.filter(p => p.username !== username);
-  this.metadata.lastActivity = new Date();
-  return this.save();
+  return this.constructor.updateOne(
+    { _id: this._id },
+    {
+      $pull: { participants: { username } },
+      $set: { 'metadata.lastActivity': new Date() },
+    }
+  );
 };
 
 eventSchema.methods.setRsvp = function (username, status) {
   const existing = this.rsvps.find(r => r.username === username);
   if (existing) {
-    existing.status    = status;
-    existing.updatedAt = new Date();
-  } else {
-    this.rsvps.push({ username, status });
+    return this.constructor.updateOne(
+      { _id: this._id, 'rsvps.username': username },
+      { $set: { 'rsvps.$.status': status, 'rsvps.$.updatedAt': new Date() } }
+    );
   }
-  return this.save();
+  return this.constructor.updateOne(
+    { _id: this._id },
+    { $push: { rsvps: { username, status } } }
+  );
 };
 
 eventSchema.methods.getRsvpSummary = function () {
