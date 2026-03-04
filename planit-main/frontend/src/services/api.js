@@ -44,9 +44,17 @@ api.interceptors.response.use(
         delete api.defaults.headers.common['Authorization'];
         window.dispatchEvent(new CustomEvent('planit:admin-logout'));
       } else if (!isAdminRequest) {
-        localStorage.removeItem('eventToken');
-        localStorage.removeItem('username');
-        window.dispatchEvent(new CustomEvent('planit:event-logout'));
+        // Only clear token and force re-login for non-check-in routes.
+        // Check-in routes (verify-scan, verify-pin, checkin) handle 401s
+        // themselves and show the DenyScreen — we must NOT clear the staff
+        // token here or subsequent scans will break.
+        const checkinPaths = ['/verify-scan/', '/verify-pin/', '/checkin/'];
+        const isCheckinRoute = checkinPaths.some(p => url.includes(p));
+        if (!isCheckinRoute) {
+          localStorage.removeItem('eventToken');
+          localStorage.removeItem('username');
+          window.dispatchEvent(new CustomEvent('planit:event-logout'));
+        }
       }
     }
     return Promise.reject(error);
