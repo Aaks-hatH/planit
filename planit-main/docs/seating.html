@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Seating Maps — PlanIt Docs</title>
+  <link rel="stylesheet" href="style.css" />
+  <script>window.CURRENT_PAGE = 'seating';</script>
+</head>
+<body>
+  <div class="sidebar-overlay"></div>
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="sidebar-logo">
+        <a href="index.html">
+          <div class="logo-mark">P</div>
+          <div><div class="logo-text">PLANIT</div><div class="logo-sub">Docs</div></div>
+        </a>
+      </div>
+      <nav class="sidebar-nav"></nav>
+      <div class="sidebar-footer">
+        <a href="https://planitapp.onrender.com" class="sidebar-footer-link" target="_blank">Open PlanIt App &rarr;</a>
+      </div>
+    </aside>
+    <div class="main">
+      <div class="topbar">
+        <div style="display:flex;align-items:center;gap:12px;">
+          <button class="menu-toggle" aria-label="Toggle menu">
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><line x1="2" y1="5" x2="16" y2="5"/><line x1="2" y1="9" x2="16" y2="9"/><line x1="2" y1="13" x2="16" y2="13"/></svg>
+          </button>
+          <div class="topbar-breadcrumb">Docs <span>Seating Maps</span></div>
+        </div>
+        <div class="topbar-right">
+          <a href="https://planitapp.onrender.com" class="topbar-btn" target="_blank">Open App</a>
+        </div>
+      </div>
+      <div class="content">
+
+        <div class="page-header">
+          <div class="page-tag">Seating Maps</div>
+          <h1 class="page-title">Visual seating layouts</h1>
+          <p class="page-desc">Build a drag-and-drop floor plan, assign guests to tables, and show staff exactly where to direct each guest at check-in.</p>
+        </div>
+
+        <div class="toc">
+          <div class="toc-title">On this page</div>
+          <a href="#enabling">Enabling the seating map</a>
+          <a href="#building-layout">Building your layout</a>
+          <a href="#assigning-guests">Assigning guests to tables</a>
+          <a href="#checkin-integration">Check-in integration</a>
+          <a href="#staff-view">Staff view</a>
+          <a href="#real-time">Real-time sync</a>
+        </div>
+
+        <h2 id="enabling">Enabling the seating map</h2>
+        <p>The seating map is available from the check-in page. As organiser, click the <strong>Set Up Seating</strong> button in the top toolbar. This opens the seating map editor for the first time. The button only appears for organisers when no map has been created yet.</p>
+        <p>Once a map exists, the button changes to <strong>Seating</strong> and is visible to all logged-in users (staff see a read-only version, organisers get the full editor).</p>
+
+        <h2 id="building-layout">Building your layout</h2>
+        <p>The seating map editor is a canvas-based tool. Objects snap to a grid and can be freely positioned and resized.</p>
+
+        <h3>Available objects</h3>
+        <table>
+          <thead><tr><th>Object</th><th>Description</th></tr></thead>
+          <tbody>
+            <tr><td><strong>Round table</strong></td><td>Circular table with a configurable label</td></tr>
+            <tr><td><strong>Rectangular table</strong></td><td>Long banquet or boardroom table</td></tr>
+            <tr><td><strong>Stage</strong></td><td>Fixed stage/platform element</td></tr>
+            <tr><td><strong>Dance floor</strong></td><td>Open area marker</td></tr>
+            <tr><td><strong>Bar / counter</strong></td><td>Service area</td></tr>
+            <tr><td><strong>Wall / divider</strong></td><td>Room partition or boundary</td></tr>
+            <tr><td><strong>Text label</strong></td><td>Free-form annotation for zones or areas</td></tr>
+          </tbody>
+        </table>
+
+        <h3>Editing objects</h3>
+        <ul>
+          <li><strong>Add:</strong> Select an object type from the toolbar and click on the canvas to place it.</li>
+          <li><strong>Move:</strong> Drag any object to reposition it.</li>
+          <li><strong>Resize:</strong> Drag the corner or edge handles.</li>
+          <li><strong>Label:</strong> Click a table to edit its label (e.g. "Table 1", "VIP A").</li>
+          <li><strong>Delete:</strong> Select an object and press Backspace or use the delete button in the properties panel.</li>
+        </ul>
+
+        <h3>Saving</h3>
+        <p>Click <strong>Save Map</strong> to persist your layout. Changes are not auto-saved while editing. Other logged-in users (staff and organiser on other devices) receive the updated map in real-time after you save.</p>
+
+        <h2 id="assigning-guests">Assigning guests to tables</h2>
+        <p>With the seating map open in editor mode, the right panel lists all unassigned guests. Drag a guest's name from the panel onto a table object to assign them. Alternatively, open the guest's details in the guest list and use the table assignment dropdown.</p>
+        <p>Once assigned:</p>
+        <ul>
+          <li>The table object shows the guest count</li>
+          <li>The guest's invite page shows their table label</li>
+          <li>The wallet card and print badge show the table assignment</li>
+          <li>The boarding-pass review at check-in shows the table with a "Show on Map" shortcut</li>
+        </ul>
+
+        <h3>Unassigning</h3>
+        <p>To remove a table assignment, drag the guest back to the unassigned list, or click the assignment and select <strong>Remove</strong>.</p>
+
+        <h2 id="checkin-integration">Check-in integration</h2>
+        <p>Table assignments surface in two places during check-in:</p>
+        <ul>
+          <li>The <strong>boarding-pass review</strong> screen shows the assigned table prominently with a "Show on Map" button</li>
+          <li>The <strong>Admitted</strong> success screen shows the table label and a "Show on Map" button that opens the seating map zoomed to that table</li>
+        </ul>
+        <p>This removes the need for staff to memorise seating charts — they can direct each guest to their exact table in one tap.</p>
+
+        <h2 id="staff-view">Staff view</h2>
+        <p>Staff (non-organiser logins) see the seating map in read-only display mode. They can zoom and pan to find tables, and they see which guests are assigned where, but they cannot edit the layout or move guests between tables. Only organisers can modify the map.</p>
+
+        <h2 id="real-time">Real-time sync</h2>
+        <p>The seating map syncs in real-time across all devices on the same event. When the organiser saves a new layout or reassigns a guest, every connected device receives the update immediately via WebSocket. No page refresh is needed.</p>
+
+      </div>
+    </div>
+  </div>
+  <script src="nav.js"></script>
+</body>
+</html>

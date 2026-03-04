@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Guest Invites — PlanIt Docs</title>
+  <link rel="stylesheet" href="style.css" />
+  <script>window.CURRENT_PAGE = 'invites';</script>
+</head>
+<body>
+  <div class="sidebar-overlay"></div>
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="sidebar-logo">
+        <a href="index.html">
+          <div class="logo-mark">P</div>
+          <div><div class="logo-text">PLANIT</div><div class="logo-sub">Docs</div></div>
+        </a>
+      </div>
+      <nav class="sidebar-nav"></nav>
+      <div class="sidebar-footer">
+        <a href="https://planitapp.onrender.com" class="sidebar-footer-link" target="_blank">Open PlanIt App &rarr;</a>
+      </div>
+    </aside>
+    <div class="main">
+      <div class="topbar">
+        <div style="display:flex;align-items:center;gap:12px;">
+          <button class="menu-toggle" aria-label="Toggle menu">
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><line x1="2" y1="5" x2="16" y2="5"/><line x1="2" y1="9" x2="16" y2="9"/><line x1="2" y1="13" x2="16" y2="13"/></svg>
+          </button>
+          <div class="topbar-breadcrumb">Docs <span>Guest Invites</span></div>
+        </div>
+        <div class="topbar-right">
+          <a href="https://planitapp.onrender.com" class="topbar-btn" target="_blank">Open App</a>
+        </div>
+      </div>
+      <div class="content">
+
+        <div class="page-header">
+          <div class="page-tag">Guest Invites</div>
+          <h1 class="page-title">Inviting guests &amp; the QR system</h1>
+          <p class="page-desc">Every guest gets a unique invite link, QR code, and optional print-ready badge. No accounts, no apps, no friction.</p>
+        </div>
+
+        <div class="toc">
+          <div class="toc-title">On this page</div>
+          <a href="#how-invites-work">How invites work</a>
+          <a href="#invite-page">The guest invite page</a>
+          <a href="#qr-code">QR code</a>
+          <a href="#wallet-card">Wallet card</a>
+          <a href="#print-badge">Print badge</a>
+          <a href="#roles">Guest roles</a>
+          <a href="#security-pin">Security PIN</a>
+          <a href="#rsvp">RSVP</a>
+        </div>
+
+        <h2 id="how-invites-work">How invites work</h2>
+        <p>When you add a guest, PlanIt generates a unique invite code (e.g. <code>AB12CD34</code>). This code is the guest's credential — it is how they are identified at check-in. There is no password, account, or app required.</p>
+        <p>The invite link takes the form <code>/invite/AB12CD34</code>. Share this link by copying it from the create dialog, or by clicking the email share button to open a pre-filled draft in your mail client.</p>
+
+        <div class="callout tip">
+          <div class="callout-icon"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#10b981" stroke-width="1.5" stroke-linecap="round"><path d="M8 2l5 2.5V9c0 2.5-2 4.5-5 5-3-1-5-2.5-5-5V4.5L8 2z"/></svg></div>
+          <div class="callout-body">
+            <div class="callout-title">Treat the link like a ticket</div>
+            <p>Anyone with the invite link can present it at check-in. Advise guests to keep their link private. If a code is compromised, delete the invite and recreate it for the guest.</p>
+          </div>
+        </div>
+
+        <h2 id="invite-page">The guest invite page</h2>
+        <p>When a guest opens their invite link they see:</p>
+        <ul>
+          <li>Event name, date, time, and location</li>
+          <li>Their name and role badge (Guest / VIP / Speaker)</li>
+          <li>Group size (adults and children)</li>
+          <li>Their QR code for check-in</li>
+          <li>Table assignment, if one has been set</li>
+          <li>Any public notes the organiser has added</li>
+        </ul>
+        <p>The page works on any device and in any browser. No app installation is required.</p>
+
+        <h2 id="qr-code">QR code</h2>
+        <p>Each invite has a unique, branded QR code. The QR encodes the guest's invite URL. When scanned at check-in, the scanner extracts the invite code and looks up the guest record.</p>
+
+        <h3>Direct QR image URL</h3>
+        <p>You can embed a guest's QR code as a plain image anywhere — in an email, PDF, printed material, or a third-party page:</p>
+        <pre><code>https://planitapp.onrender.com/qr/AB12CD34</code></pre>
+        <p>This returns the branded QR SVG directly as an image. It works as a standard <code>&lt;img&gt;</code> tag with no wrapper or authentication required.</p>
+
+        <div class="callout info">
+          <div class="callout-icon"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#60a5fa" stroke-width="1.5" stroke-linecap="round"><circle cx="8" cy="8" r="6"/><line x1="8" y1="6" x2="8" y2="8.5"/><circle cx="8" cy="11" r=".6" fill="#60a5fa" stroke="none"/></svg></div>
+          <div class="callout-body">
+            <div class="callout-title">QR design</div>
+            <p>PlanIt QR codes use no overlay or centre logo. Overlays reduce scan reliability. The PLANIT branding appears below the QR area, not on top of it.</p>
+          </div>
+        </div>
+
+        <h2 id="wallet-card">Wallet card — <code>/card/CODE</code></h2>
+        <p>The wallet card is a mobile-optimised, full-screen page styled like a boarding pass. It shows the QR code, guest name, event details, role, and table assignment in a dark, high-contrast design.</p>
+        <p>Guests can screenshot the card and save it to their camera roll so they have it available offline at the venue entrance.</p>
+        <pre><code>https://planitapp.onrender.com/card/AB12CD34</code></pre>
+        <p>The card also includes a share button that copies the card URL to the clipboard.</p>
+
+        <h2 id="print-badge">Print badge — <code>/badge/CODE</code></h2>
+        <p>The badge endpoint serves a print-optimised HTML page designed for A6 paper (148 &times; 105 mm) or Avery label sheets.</p>
+        <pre><code>https://planitapp.onrender.com/badge/AB12CD34</code></pre>
+        <p>Opening this URL and pressing <strong>Ctrl+P</strong> (or the Print Badge button on screen) prints a clean badge showing:</p>
+        <ul>
+          <li>Guest name (large, prominent)</li>
+          <li>Role badge (Guest / VIP / Speaker with colour coding)</li>
+          <li>Group size</li>
+          <li>Table assignment (if set)</li>
+          <li>QR code</li>
+          <li>Invite code in monospace</li>
+        </ul>
+        <p>Print CSS removes all browser chrome and on-screen controls. The result is a clean single card per page.</p>
+
+        <h2 id="roles">Guest roles</h2>
+        <p>Every guest has one of three roles. Role is displayed on the invite page, the wallet card, the print badge, and the boarding-pass review screen shown to staff at check-in.</p>
+        <table>
+          <thead><tr><th>Role</th><th>Badge colour</th><th>Typical use</th></tr></thead>
+          <tbody>
+            <tr><td><strong>GUEST</strong></td><td>Grey</td><td>Standard attendees</td></tr>
+            <tr><td><strong>VIP</strong></td><td>Amber / gold</td><td>Priority guests who may need different treatment</td></tr>
+            <tr><td><strong>SPEAKER</strong></td><td>Purple</td><td>Presenters, performers, featured guests</td></tr>
+          </tbody>
+        </table>
+        <p>Role has no automated effect — it is purely informational for staff at check-in. Use it to prompt staff to give VIPs directed seating or Speakers a separate entry lane.</p>
+
+        <h2 id="security-pin">Security PIN</h2>
+        <p>You can set an optional security PIN on any invite. If set, staff are required to verify the PIN before admitting the guest at check-in. The guest provides the PIN verbally or in writing — it is not shown on their invite page.</p>
+        <p>Use PINs for high-value events where additional identity verification is required, or for guests who need restricted access.</p>
+
+        <h2 id="rsvp">RSVP</h2>
+        <p>Guests can RSVP from their invite page by confirming or declining attendance. Organisers see RSVP status on the guest list in the check-in dashboard. RSVP does not affect check-in — a guest who RSVPs "no" can still be manually admitted by staff if appropriate.</p>
+
+      </div>
+    </div>
+  </div>
+  <script src="nav.js"></script>
+</body>
+</html>

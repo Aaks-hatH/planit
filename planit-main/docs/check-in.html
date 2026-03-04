@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Check-in System — PlanIt Docs</title>
+  <link rel="stylesheet" href="style.css" />
+  <script>window.CURRENT_PAGE = 'check-in';</script>
+</head>
+<body>
+  <div class="sidebar-overlay"></div>
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="sidebar-logo">
+        <a href="index.html">
+          <div class="logo-mark">P</div>
+          <div><div class="logo-text">PLANIT</div><div class="logo-sub">Docs</div></div>
+        </a>
+      </div>
+      <nav class="sidebar-nav"></nav>
+      <div class="sidebar-footer">
+        <a href="https://planitapp.onrender.com" class="sidebar-footer-link" target="_blank">Open PlanIt App &rarr;</a>
+      </div>
+    </aside>
+    <div class="main">
+      <div class="topbar">
+        <div style="display:flex;align-items:center;gap:12px;">
+          <button class="menu-toggle" aria-label="Toggle menu">
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><line x1="2" y1="5" x2="16" y2="5"/><line x1="2" y1="9" x2="16" y2="9"/><line x1="2" y1="13" x2="16" y2="13"/></svg>
+          </button>
+          <div class="topbar-breadcrumb">Docs <span>Check-in System</span></div>
+        </div>
+        <div class="topbar-right">
+          <a href="https://planitapp.onrender.com" class="topbar-btn" target="_blank">Open App</a>
+        </div>
+      </div>
+      <div class="content">
+
+        <div class="page-header">
+          <div class="page-tag">Check-in System</div>
+          <h1 class="page-title">Running check-in on the day</h1>
+          <p class="page-desc">QR scanning, boarding-pass review, staff accounts, anti-fraud tools, and offline mode — everything your entry team needs.</p>
+        </div>
+
+        <div class="toc">
+          <div class="toc-title">On this page</div>
+          <a href="#opening-checkin">Opening the check-in page</a>
+          <a href="#staff-login">Staff login</a>
+          <a href="#scanning">Scanning QR codes</a>
+          <a href="#boarding-pass">Boarding-pass review</a>
+          <a href="#admit-deny">Admitting and denying</a>
+          <a href="#manual-entry">Manual code entry</a>
+          <a href="#offline-mode">Offline mode</a>
+          <a href="#anti-fraud">Anti-fraud and security</a>
+          <a href="#manager-override">Manager override</a>
+          <a href="#stats">Live statistics</a>
+          <a href="#activity-log">Activity log</a>
+        </div>
+
+        <h2 id="opening-checkin">Opening the check-in page</h2>
+        <p>The check-in page lives at <code>/event/EVENT_ID/checkin</code> or <code>/e/SUBDOMAIN/checkin</code>. Open this URL on the device(s) you are using at the entrance. It is optimised for both desktop and mobile.</p>
+        <p>Organisers are automatically logged in when they open the check-in page. Staff see a login screen first.</p>
+
+        <h2 id="staff-login">Staff accounts</h2>
+        <p>Staff accounts let your entry team log in to the check-in page without having organiser access. Each staff account has a username and a numeric PIN (4–8 digits).</p>
+
+        <h3>Creating staff accounts</h3>
+        <ol class="steps">
+          <li>
+            <div class="step-num">1</div>
+            <div class="step-content">
+              <strong>Open the check-in page as organiser</strong>
+              <p>Go to <code>/event/EVENT_ID/checkin</code>. You are automatically admitted as organiser.</p>
+            </div>
+          </li>
+          <li>
+            <div class="step-num">2</div>
+            <div class="step-content">
+              <strong>Open Settings</strong>
+              <p>Click the <strong>Settings</strong> button in the top toolbar.</p>
+            </div>
+          </li>
+          <li>
+            <div class="step-num">3</div>
+            <div class="step-content">
+              <strong>Go to the Staff tab</strong>
+              <p>Enter a username and PIN for the staff member, then click <strong>Create</strong>. Repeat for each member of your check-in team.</p>
+            </div>
+          </li>
+          <li>
+            <div class="step-num">4</div>
+            <div class="step-content">
+              <strong>Share credentials with your team</strong>
+              <p>Give each person their username and PIN. They use these to log in at the check-in page on their own device.</p>
+            </div>
+          </li>
+        </ol>
+
+        <div class="callout warn">
+          <div class="callout-icon"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#f59e0b" stroke-width="1.5" stroke-linecap="round"><path d="M8 2L2 13h12L8 2z"/><line x1="8" y1="7" x2="8" y2="10"/><circle cx="8" cy="12" r=".6" fill="#f59e0b" stroke="none"/></svg></div>
+          <div class="callout-body">
+            <div class="callout-title">Staff sessions and the organiser token</div>
+            <p>If you test a staff login from the same browser as your organiser session, PlanIt saves your organiser session and restores it automatically when the staff account logs out. You will not lose organiser access.</p>
+          </div>
+        </div>
+
+        <h3>Staff vs organiser access</h3>
+        <table>
+          <thead><tr><th>Feature</th><th>Staff</th><th>Organiser</th></tr></thead>
+          <tbody>
+            <tr><td>Scan QR codes</td><td>Yes</td><td>Yes</td></tr>
+            <tr><td>Admit / deny guests</td><td>Yes</td><td>Yes</td></tr>
+            <tr><td>Manual code entry</td><td>Yes</td><td>Yes</td></tr>
+            <tr><td>View guest list</td><td>Yes</td><td>Yes</td></tr>
+            <tr><td>View seating map</td><td>Read-only</td><td>Full editor</td></tr>
+            <tr><td>Add / edit guests</td><td>No</td><td>Yes</td></tr>
+            <tr><td>Change security settings</td><td>No</td><td>Yes</td></tr>
+            <tr><td>Create staff accounts</td><td>No</td><td>Yes</td></tr>
+            <tr><td>View activity log</td><td>No</td><td>Yes</td></tr>
+          </tbody>
+        </table>
+
+        <h2 id="scanning">Scanning QR codes</h2>
+        <p>Tap the <strong>Scan QR</strong> button (or press <kbd>S</kbd> on a keyboard) to open the camera scanner. Point the camera at the guest's QR code. Scanning is automatic — no button press needed when a valid code is detected.</p>
+        <p>PlanIt uses the device's rear (environment) camera by default. If that is unavailable, it falls back to the front camera. Camera permission must be granted in the browser.</p>
+
+        <div class="callout info">
+          <div class="callout-icon"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#60a5fa" stroke-width="1.5" stroke-linecap="round"><circle cx="8" cy="8" r="6"/><line x1="8" y1="6" x2="8" y2="8.5"/><circle cx="8" cy="11" r=".6" fill="#60a5fa" stroke="none"/></svg></div>
+          <div class="callout-body">
+            <div class="callout-title">What the scanner reads</div>
+            <p>The scanner reads both full invite URLs (e.g. <code>https://planitapp.onrender.com/invite/AB12CD34</code>) and bare invite codes (<code>AB12CD34</code>). The code is extracted automatically regardless of format.</p>
+          </div>
+        </div>
+
+        <h2 id="boarding-pass">Boarding-pass review</h2>
+        <p>After a successful scan, a boarding-pass overlay appears showing the full guest profile for staff to review before admitting:</p>
+        <ul>
+          <li>Guest name and role badge</li>
+          <li>Group size (adults and children)</li>
+          <li>Trust score</li>
+          <li>Contact information (if stored)</li>
+          <li>Special notes</li>
+          <li>Table assignment (if set)</li>
+          <li>Security warnings or flags (shown prominently in amber)</li>
+        </ul>
+        <p>Staff tap <strong>Admit Attendee</strong> or <strong>Deny Entry</strong>. There is no time pressure — the screen stays open until action is taken.</p>
+
+        <h2 id="admit-deny">Admitting and denying</h2>
+        <p>On <strong>Admit</strong>, the guest is marked as checked in. A full-screen green confirmation screen appears showing the guest name, group size, and table assignment. It auto-closes after five seconds, or staff can keep it open.</p>
+        <p>On <strong>Deny</strong>, a red denial screen appears with the reason. Both actions are logged in the activity log with a timestamp and the acting staff member's username.</p>
+
+        <h2 id="manual-entry">Manual code entry</h2>
+        <p>If a guest's QR code cannot be scanned — phone screen cracked, no data, low brightness — use the <strong>Manual</strong> button in the top toolbar to type the invite code directly. The same boarding-pass review flow applies.</p>
+        <p>You can also check in a guest directly from the guest list by clicking the <strong>Check In</strong> button next to their name, bypassing the scan step entirely.</p>
+
+        <h2 id="offline-mode">Offline mode</h2>
+        <p>PlanIt check-in works without an internet connection. When offline mode activates:</p>
+        <ul>
+          <li>A cached copy of the guest list is used for lookup</li>
+          <li>Check-ins are queued locally</li>
+          <li>The offline indicator appears at the bottom of the screen with a count of pending sync items</li>
+        </ul>
+        <p>When connectivity returns, the queued check-ins are automatically synced to the server. Any conflicts (e.g. a guest checked in on two devices) are surfaced as security alerts for review.</p>
+        <div class="callout warn">
+          <div class="callout-icon"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#f59e0b" stroke-width="1.5" stroke-linecap="round"><path d="M8 2L2 13h12L8 2z"/><line x1="8" y1="7" x2="8" y2="10"/><circle cx="8" cy="12" r=".6" fill="#f59e0b" stroke="none"/></svg></div>
+          <div class="callout-body">
+            <div class="callout-title">Cache must be seeded before going offline</div>
+            <p>The offline guest cache is populated when you first load the check-in page with connectivity. If you open the page for the first time offline, no cache will be available and lookups will fail. Load the page at the venue before losing connectivity.</p>
+          </div>
+        </div>
+
+        <h2 id="anti-fraud">Anti-fraud and security settings</h2>
+        <p>PlanIt includes several layers of duplicate and fraud detection. Configure these from <strong>Settings &rarr; Security</strong> on the check-in page (organiser only).</p>
+
+        <h3>Security presets</h3>
+        <table>
+          <thead><tr><th>Preset</th><th>Use case</th><th>Behaviour</th></tr></thead>
+          <tbody>
+            <tr><td><strong>Relaxed</strong></td><td>Casual events, open sessions</td><td>Warns on duplicates but allows entry. Minimal friction.</td></tr>
+            <tr><td><strong>Standard</strong></td><td>Most events</td><td>Blocks already-checked-in codes. Allows manager override.</td></tr>
+            <tr><td><strong>Strict</strong></td><td>High-security, paid events</td><td>Hard blocks on duplicates, trust score minimums enforced, PIN required.</td></tr>
+          </tbody>
+        </table>
+
+        <h3>Trust score</h3>
+        <p>Each guest has a trust score from 0–100. The score decreases when suspicious behaviour is detected (e.g. multiple failed scan attempts from different locations). In Strict mode, guests below the minimum score are blocked. In Standard mode, they receive a warning on the boarding pass.</p>
+
+        <h3>Guest flags</h3>
+        <p>Organisers can flag specific guests from the guest list. Flagged guests trigger a security alert on the boarding pass when scanned, prompting staff to verify more carefully before admitting.</p>
+
+        <h2 id="manager-override">Manager override</h2>
+        <p>If a guest is denied (e.g. already checked in, blocked), a manager with organiser credentials can approve entry via the <strong>Manager Override</strong> button on the deny screen. The override is logged in the activity log with the reason and authorising manager's username.</p>
+
+        <h2 id="stats">Live statistics</h2>
+        <p>The top of the check-in page shows five real-time counters:</p>
+        <ul>
+          <li><strong>Total Groups</strong> — number of invite records</li>
+          <li><strong>Checked In</strong> — number of groups admitted</li>
+          <li><strong>Total Admitted</strong> — actual headcount (sum of adults + children across admitted groups)</li>
+          <li><strong>Adults Expected</strong> — total adults across all invites</li>
+          <li><strong>Children</strong> — total children across all invites</li>
+        </ul>
+        <p>A progress bar below the stats shows the percentage of groups checked in.</p>
+
+        <h2 id="activity-log">Activity log</h2>
+        <p>The activity log (accessible from the <strong>Log</strong> button, organiser only) records every action taken in the check-in system: guest additions, edits, deletions, CSV imports, check-ins, overrides, and settings changes. Each entry shows the actor, their role, the target, and a timestamp.</p>
+
+      </div>
+    </div>
+  </div>
+  <script src="nav.js"></script>
+</body>
+</html>

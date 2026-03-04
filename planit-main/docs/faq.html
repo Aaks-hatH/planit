@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FAQ — PlanIt Docs</title>
+  <link rel="stylesheet" href="style.css" />
+  <script>window.CURRENT_PAGE = 'faq';</script>
+  <style>
+    .faq-item { border-bottom: 1px solid var(--border); padding: 0; }
+    .faq-item:last-child { border-bottom: none; }
+    .faq-q {
+      font-family: var(--font-head);
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--text);
+      padding: 20px 0 4px;
+      cursor: pointer;
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+      list-style: none;
+      user-select: none;
+    }
+    .faq-q::marker, .faq-q::-webkit-details-marker { display: none; }
+    .faq-q svg { flex-shrink: 0; margin-top: 2px; transition: transform 0.2s; color: var(--text-3); }
+    details[open] .faq-q svg { transform: rotate(180deg); }
+    .faq-a { padding: 0 0 20px; }
+    .faq-a p { font-size: 14px; margin-bottom: 10px; }
+    .faq-a p:last-child { margin-bottom: 0; }
+    .faq-a ul { font-size: 14px; }
+    .faq-section-title { font-family: var(--font-head); font-size: 11px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: var(--text-3); margin: 36px 0 4px; }
+    .faq-section-title:first-child { margin-top: 0; }
+  </style>
+</head>
+<body>
+  <div class="sidebar-overlay"></div>
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="sidebar-logo">
+        <a href="index.html">
+          <div class="logo-mark">P</div>
+          <div><div class="logo-text">PLANIT</div><div class="logo-sub">Docs</div></div>
+        </a>
+      </div>
+      <nav class="sidebar-nav"></nav>
+      <div class="sidebar-footer">
+        <a href="https://planitapp.onrender.com" class="sidebar-footer-link" target="_blank">Open PlanIt App &rarr;</a>
+      </div>
+    </aside>
+    <div class="main">
+      <div class="topbar">
+        <div style="display:flex;align-items:center;gap:12px;">
+          <button class="menu-toggle" aria-label="Toggle menu">
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><line x1="2" y1="5" x2="16" y2="5"/><line x1="2" y1="9" x2="16" y2="9"/><line x1="2" y1="13" x2="16" y2="13"/></svg>
+          </button>
+          <div class="topbar-breadcrumb">Docs <span>FAQ</span></div>
+        </div>
+        <div class="topbar-right">
+          <a href="https://planitapp.onrender.com" class="topbar-btn" target="_blank">Open App</a>
+        </div>
+      </div>
+      <div class="content">
+
+        <div class="page-header">
+          <div class="page-tag">FAQ</div>
+          <h1 class="page-title">Frequently asked questions</h1>
+          <p class="page-desc">Common questions from organisers, staff, and guests.</p>
+        </div>
+
+        <!-- General -->
+        <div class="faq-section-title">General</div>
+
+        <details class="faq-item">
+          <summary class="faq-q">Is PlanIt free to use?
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M3 5l4 4 4-4"/></svg>
+          </summary>
+          <div class="faq-a"><p>Yes. PlanIt is completely free to use. There are no paid tiers, per-event fees, or feature paywalls. It is proprietary freeware — free to use through the official hosted service.</p></div>
+        </details>
+
+        <details class="faq-item">
+          <summary class="faq-q">Do guests need to create an account or download an app?
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M3 5l4 4 4-4"/></svg>
+          </summary>
+          <div class="faq-a"><p>No. Guests open their invite link in any web browser. There is no account creation, no password, and no app to download. Everything works through the invite URL.</p></div>
+        </details>
+
+        <details class="faq-item">
+          <summary class="faq-q">Can I self-host PlanIt or run my own instance?
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M3 5l4 4 4-4"/></svg>
+          </summary>
+          <div class="faq-a"><p>No. PlanIt is proprietary software. The source code is published for transparency, but self-hosting, forking, and redistribution are not permitted under the licence. All events run on the official PlanIt infrastructure.</p></div>
+        </details>
+
+        <details class="faq-item">
+          <summary class="faq-q">How long is event data kept?
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M3 5l4 4 4-4"/></svg>
+          </summary>
+          <div class="faq-a"><p>Event data is automatically deleted seven days after the event date. This includes all messages, files, guest records, check-in history, and the event itself. Organisers see a countdown warning banner as the deletion date approaches. Export any records you need before the window closes — deletion is permanent.</p></div>
+        </details>
+
+        <!-- Check-in -->
+        <div class="faq-section-title">Check-in</div>
+
+        <details class="faq-item">
+          <summary class="faq-q">A guest's QR code won't scan. What do I do?
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M3 5l4 4 4-4"/></svg>
+          </summary>
+          <div class="faq-a">
+            <p>Use the <strong>Manual</strong> option in the check-in toolbar to type the invite code directly. Common reasons a QR might not scan:</p>
+            <ul>
+              <li>Phone screen brightness too low — ask the guest to turn up brightness</li>
+              <li>Screen glare from overhead lighting — angle the phone slightly</li>
+              <li>The QR image has been cropped or scaled disproportionately</li>
+              <li>Camera permission not granted on the scanning device — check browser settings</li>
+            </ul>
+          </div>
+        </details>
+
+        <details class="faq-item">
+          <summary class="faq-q">The check-in page says "already checked in" but it was a mistake. Can we re-admit the guest?
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M3 5l4 4 4-4"/></svg>
+          </summary>
+          <div class="faq-a"><p>Yes. On the denial screen, tap <strong>Manager Override</strong>. An organiser enters their credentials to approve entry. The override is logged in the activity log with the reason and the approving organiser's name.</p></div>
+        </details>
+
+        <details class="faq-item">
+          <summary class="faq-q">Can we use multiple devices for check-in at the same event?
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M3 5l4 4 4-4"/></svg>
+          </summary>
+          <div class="faq-a"><p>Yes. Open the check-in page on as many devices as you need. Each device requires a staff login (or organiser session). Check-ins sync in real-time across all devices — if a guest is checked in on one device, they will be flagged as already admitted on any other device that scans their code.</p></div>
+        </details>
+
+        <details class="faq-item">
+          <summary class="faq-q">The internet dropped at our venue. Will check-in still work?
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M3 5l4 4 4-4"/></svg>
+          </summary>
+          <div class="faq-a"><p>Yes, if the page was loaded with connectivity beforehand. PlanIt caches the guest list when you first load the check-in page. Scans in offline mode are queued and synced when connectivity returns. Load the check-in page before you lose connectivity to seed the cache.</p></div>
+        </details>
+
+        <details class="faq-item">
+          <summary class="faq-q">My staff accounts are not showing up in the Settings panel. Why?
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M3 5l4 4 4-4"/></svg>
+          </summary>
+          <div class="faq-a"><p>Staff accounts are only visible when you are logged in as an organiser. If you tested a staff login from the same browser, the organiser session is automatically restored when the staff account logs out. Check that you are currently logged in as an organiser (your name appears in the header with a green badge) before opening Settings.</p></div>
+        </details>
+
+        <!-- Guests / Invites -->
+        <div class="faq-section-title">Guests &amp; Invites</div>
+
+        <details class="faq-item">
+          <summary class="faq-q">A guest lost their invite link. Can I resend it?
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M3 5l4 4 4-4"/></svg>
+          </summary>
+          <div class="faq-a"><p>Yes. Find the guest in the check-in page guest list, click the edit button, and use the share option to copy or email their invite link again. The link does not change unless you delete the invite and recreate it.</p></div>
+        </details>
+
+        <details class="faq-item">
+          <summary class="faq-q">Can a guest bring additional people not on the invite?
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M3 5l4 4 4-4"/></svg>
+          </summary>
+          <div class="faq-a"><p>The invite records the expected group size (adults and children). At check-in, staff see this information on the boarding pass. If a guest arrives with a different group size, the organiser can edit the invite to update the count, or the staff can note the actual headcount during admission. The actual attendance count is tracked separately from the expected count.</p></div>
+        </details>
+
+        <details class="faq-item">
+          <summary class="faq-q">How do I print badges for all my guests?
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M3 5l4 4 4-4"/></svg>
+          </summary>
+          <div class="faq-a"><p>Open <code>/badge/CODE</code> for each guest and print from there. For large guest lists, consider opening tabs in bulk (one per guest code) and printing them in sequence. Badges are formatted for A6 paper and standard Avery label sheets.</p></div>
+        </details>
+
+        <!-- Seating -->
+        <div class="faq-section-title">Seating</div>
+
+        <details class="faq-item">
+          <summary class="faq-q">Can guests see their table assignment before the event?
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M3 5l4 4 4-4"/></svg>
+          </summary>
+          <div class="faq-a"><p>Yes. Once you assign a guest to a table, the table label appears on their invite page and wallet card. If you prefer to keep seating a surprise until arrival, simply do not assign tables until the event day.</p></div>
+        </details>
+
+        <details class="faq-item">
+          <summary class="faq-q">Can I export the seating chart?
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M3 5l4 4 4-4"/></svg>
+          </summary>
+          <div class="faq-a"><p>There is currently no one-click export for the seating layout. You can screenshot the seating map from the check-in page, or compile a table-by-table list from the guest list by filtering by table assignment.</p></div>
+        </details>
+
+        <!-- Technical -->
+        <div class="faq-section-title">Technical</div>
+
+        <details class="faq-item">
+          <summary class="faq-q">Which browsers does PlanIt support?
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M3 5l4 4 4-4"/></svg>
+          </summary>
+          <div class="faq-a">
+            <p>PlanIt works in all modern browsers. For check-in with QR scanning, the following are recommended:</p>
+            <ul>
+              <li><strong>Chrome</strong> (Android and desktop) — best scanner performance</li>
+              <li><strong>Safari</strong> (iOS/iPhone) — full support</li>
+              <li><strong>Edge</strong> (desktop) — full support</li>
+              <li><strong>Firefox</strong> — supported, scanner may be slower</li>
+            </ul>
+            <p>Internet Explorer is not supported.</p>
+          </div>
+        </details>
+
+        <details class="faq-item">
+          <summary class="faq-q">The camera scanner won't start. What should I check?
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M3 5l4 4 4-4"/></svg>
+          </summary>
+          <div class="faq-a">
+            <p>Camera access requires explicit permission. Check these in order:</p>
+            <ul>
+              <li>Look for a camera or lock icon in the browser address bar and ensure access is set to <strong>Allow</strong></li>
+              <li>On iOS, go to Settings &rarr; Safari (or Chrome) &rarr; Camera and set it to Allow</li>
+              <li>Make sure no other app (FaceTime, video call, etc.) is using the camera at the same time</li>
+              <li>Reload the page and try again — the scanner initialises on page load</li>
+            </ul>
+          </div>
+        </details>
+
+        <details class="faq-item">
+          <summary class="faq-q">I found a bug or something is not working. How do I report it?
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M3 5l4 4 4-4"/></svg>
+          </summary>
+          <div class="faq-a"><p>Use the <a href="https://planitapp.onrender.com/support">support form</a> at <code>/support</code>. Describe what you were doing, what happened, and what you expected to happen. Include your browser and device type if possible. Reports are reviewed by the PlanIt team.</p></div>
+        </details>
+
+      </div>
+    </div>
+  </div>
+  <script src="nav.js"></script>
+</body>
+</html>

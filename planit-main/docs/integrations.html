@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Integrations &amp; QR — PlanIt Docs</title>
+  <link rel="stylesheet" href="style.css" />
+  <script>window.CURRENT_PAGE = 'integrations';</script>
+</head>
+<body>
+  <div class="sidebar-overlay"></div>
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="sidebar-logo">
+        <a href="index.html">
+          <div class="logo-mark">P</div>
+          <div><div class="logo-text">PLANIT</div><div class="logo-sub">Docs</div></div>
+        </a>
+      </div>
+      <nav class="sidebar-nav"></nav>
+      <div class="sidebar-footer">
+        <a href="https://planitapp.onrender.com" class="sidebar-footer-link" target="_blank">Open PlanIt App &rarr;</a>
+      </div>
+    </aside>
+    <div class="main">
+      <div class="topbar">
+        <div style="display:flex;align-items:center;gap:12px;">
+          <button class="menu-toggle" aria-label="Toggle menu">
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><line x1="2" y1="5" x2="16" y2="5"/><line x1="2" y1="9" x2="16" y2="9"/><line x1="2" y1="13" x2="16" y2="13"/></svg>
+          </button>
+          <div class="topbar-breadcrumb">Docs <span>Integrations &amp; QR</span></div>
+        </div>
+        <div class="topbar-right">
+          <a href="https://planitapp.onrender.com" class="topbar-btn" target="_blank">Open App</a>
+        </div>
+      </div>
+      <div class="content">
+
+        <div class="page-header">
+          <div class="page-tag">Integrations &amp; QR</div>
+          <h1 class="page-title">Using PlanIt with external tools</h1>
+          <p class="page-desc">Embed QR codes, use media endpoints in emails and PDFs, and understand how email delivery works.</p>
+        </div>
+
+        <div class="toc">
+          <div class="toc-title">On this page</div>
+          <a href="#qr-endpoints">QR media endpoints</a>
+          <a href="#invite-card">Invite card endpoint</a>
+          <a href="#badge-endpoint">Print badge endpoint</a>
+          <a href="#embed">Embedding in external pages</a>
+          <a href="#email">Email sharing</a>
+        </div>
+
+        <div class="callout warn">
+          <div class="callout-icon"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#f59e0b" stroke-width="1.5" stroke-linecap="round"><path d="M8 2L2 13h12L8 2z"/><line x1="8" y1="7" x2="8" y2="10"/><circle cx="8" cy="12" r=".6" fill="#f59e0b" stroke="none"/></svg></div>
+          <div class="callout-body">
+            <div class="callout-title">These are user-facing media URLs, not a developer API</div>
+            <p>The endpoints described here are for organisers to use when sharing or printing invites — not for building third-party integrations or programmatic workflows. There is no public API key system.</p>
+          </div>
+        </div>
+
+        <h2 id="qr-endpoints">QR media endpoints</h2>
+        <p>Every invite has three media endpoints, each serving a different format of the invite's QR code and details. All endpoints are unauthenticated — the invite code itself is the access credential, the same as the invite page.</p>
+
+        <table>
+          <thead><tr><th>Endpoint</th><th>Returns</th><th>Best for</th></tr></thead>
+          <tbody>
+            <tr>
+              <td><code>/qr/CODE</code></td>
+              <td>SVG image (direct, no HTML wrapper)</td>
+              <td>Embedding in emails, PDFs, other websites as a plain <code>&lt;img&gt;</code></td>
+            </tr>
+            <tr>
+              <td><code>/card/CODE</code></td>
+              <td>HTML page — mobile wallet card</td>
+              <td>Sending to guests to screenshot and save</td>
+            </tr>
+            <tr>
+              <td><code>/badge/CODE</code></td>
+              <td>HTML page — print-ready A6 badge</td>
+              <td>Printing name badges before an event</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <p>Replace <code>CODE</code> with the invite code in all uppercase, e.g. <code>AB12CD34</code>.</p>
+
+        <h2 id="qr-direct">Direct QR image — <code>/qr/CODE</code></h2>
+        <p>This endpoint serves the raw branded QR code as an SVG image, with no HTML page around it. It is a 301 redirect to the full SVG endpoint.</p>
+        <p>Use it anywhere you need to display the QR as an image:</p>
+        <pre><code>&lt;!-- In an HTML email --&gt;
+&lt;img src="https://planitapp.onrender.com/qr/AB12CD34"
+     width="200" height="200" alt="Entry QR Code" /&gt;</code></pre>
+        <pre><code>&lt;!-- In an HTML page --&gt;
+&lt;img src="https://planitapp.onrender.com/qr/AB12CD34"
+     style="width:200px;height:auto" alt="QR" /&gt;</code></pre>
+        <div class="callout tip">
+          <div class="callout-icon"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#10b981" stroke-width="1.5" stroke-linecap="round"><path d="M8 2l5 2.5V9c0 2.5-2 4.5-5 5-3-1-5-2.5-5-5V4.5L8 2z"/></svg></div>
+          <div class="callout-body">
+            <div class="callout-title">Always use <code>height:auto</code></div>
+            <p>The QR SVG has a portrait aspect ratio (300 &times; 430). Forcing it into a square by setting both width and height will squash the QR modules and make it unreadable. Always set width only and let height scale automatically.</p>
+          </div>
+        </div>
+
+        <h2 id="invite-card">Invite card — <code>/card/CODE</code></h2>
+        <p>A full-screen mobile page styled like a boarding pass. Shows the QR code, guest name, event details, role, and table assignment against a dark background.</p>
+        <p>Share this URL with the guest directly — they open it on their phone, screenshot it, and present it at check-in. The card includes a share button that copies the URL.</p>
+        <p>The card is colour-coded by role: amber for VIP, purple for Speaker, neutral grey for standard guests.</p>
+
+        <h2 id="badge-endpoint">Print badge — <code>/badge/CODE</code></h2>
+        <p>A print-optimised page sized for A6 paper (148 &times; 105 mm) and common label sheets. Open the URL in a browser, click <strong>Print Badge</strong>, and choose your paper size.</p>
+        <p>Print CSS automatically removes the on-screen button and instructions. The output is a clean badge with no browser chrome.</p>
+        <p>For bulk printing, open multiple badge URLs in separate tabs and print them in sequence. Each prints as a single page.</p>
+
+        <h2 id="embed">Embedding in external pages</h2>
+        <p>You can embed a guest's QR code on any external page — a ticketing confirmation email, an event listing site, a printed PDF — by using the <code>/qr/CODE</code> image URL:</p>
+        <pre><code>&lt;!-- PDF-generating tool or custom confirmation email --&gt;
+&lt;img src="https://planitapp.onrender.com/qr/AB12CD34"
+     width="180" alt="Event entry QR code" /&gt;
+&lt;p&gt;Present this at the entrance. Code: AB12CD34&lt;/p&gt;</code></pre>
+        <p>The image is served with a 24-hour cache header so it loads quickly on repeat views.</p>
+
+        <h2 id="email">Email sharing</h2>
+        <p>PlanIt does not send emails automatically. Email delivery is an optional action you take manually after creating an invite.</p>
+        <p>From the invite create dialog, click <strong>Send Invite Email</strong>. This opens a pre-filled draft in your default mail client with the guest's name, event name, and invite link in the body. You review and send it yourself.</p>
+        <p>For automated email delivery at scale, copy the invite links from your guest list and use your own email tool (Mailchimp, Brevo, etc.) to distribute them. The <code>/qr/CODE</code> image URL can be embedded directly in email templates for an inline QR code.</p>
+
+      </div>
+    </div>
+  </div>
+  <script src="nav.js"></script>
+</body>
+</html>

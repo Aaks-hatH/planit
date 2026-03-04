@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Walkie-Talkie — PlanIt Docs</title>
+  <link rel="stylesheet" href="style.css" />
+  <script>window.CURRENT_PAGE = 'walkie-talkie';</script>
+</head>
+<body>
+  <div class="sidebar-overlay"></div>
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="sidebar-logo">
+        <a href="index.html">
+          <div class="logo-mark">P</div>
+          <div><div class="logo-text">PLANIT</div><div class="logo-sub">Docs</div></div>
+        </a>
+      </div>
+      <nav class="sidebar-nav"></nav>
+      <div class="sidebar-footer">
+        <a href="https://planitapp.onrender.com" class="sidebar-footer-link" target="_blank">Open PlanIt App &rarr;</a>
+      </div>
+    </aside>
+    <div class="main">
+      <div class="topbar">
+        <div style="display:flex;align-items:center;gap:12px;">
+          <button class="menu-toggle" aria-label="Toggle menu">
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><line x1="2" y1="5" x2="16" y2="5"/><line x1="2" y1="9" x2="16" y2="9"/><line x1="2" y1="13" x2="16" y2="13"/></svg>
+          </button>
+          <div class="topbar-breadcrumb">Docs <span>Walkie-Talkie</span></div>
+        </div>
+        <div class="topbar-right">
+          <a href="https://planitapp.onrender.com" class="topbar-btn" target="_blank">Open App</a>
+        </div>
+      </div>
+      <div class="content">
+
+        <div class="page-header">
+          <div class="page-tag">Walkie-Talkie</div>
+          <h1 class="page-title">Push-to-talk for your team</h1>
+          <p class="page-desc">Instant voice communication between every logged-in staff member. No separate app, no phone numbers — just hold and talk.</p>
+        </div>
+
+        <div class="toc">
+          <div class="toc-title">On this page</div>
+          <a href="#what-it-is">What the walkie-talkie is</a>
+          <a href="#how-to-use">How to use it</a>
+          <a href="#who-can-hear">Who can hear</a>
+          <a href="#requirements">Requirements</a>
+          <a href="#tips">Tips for use</a>
+        </div>
+
+        <h2 id="what-it-is">What the walkie-talkie is</h2>
+        <p>The walkie-talkie is a WebRTC push-to-talk voice channel built into the check-in page. It connects all logged-in staff and organiser sessions in the same event, allowing instant verbal communication without leaving the check-in interface.</p>
+        <p>It works like a traditional walkie-talkie: hold the button to transmit, release to stop. Only one person can transmit at a time.</p>
+        <p>There is nothing to install or configure. The feature is always available on the check-in page for any logged-in user.</p>
+
+        <h2 id="how-to-use">How to use it</h2>
+        <p>The walkie-talkie button appears as a fixed circle button at the bottom of the check-in screen. It is visible to all logged-in users — both staff and organisers.</p>
+
+        <ol class="steps">
+          <li>
+            <div class="step-num">1</div>
+            <div class="step-content">
+              <strong>Grant microphone permission</strong>
+              <p>The first time you tap the button, your browser will request microphone access. Tap <strong>Allow</strong>. Without microphone permission, you can still hear others but cannot transmit.</p>
+            </div>
+          </li>
+          <li>
+            <div class="step-num">2</div>
+            <div class="step-content">
+              <strong>Hold to talk</strong>
+              <p>Press and hold the button. While held, your microphone is active and all other connected users hear you. The button pulses to indicate you are transmitting.</p>
+            </div>
+          </li>
+          <li>
+            <div class="step-num">3</div>
+            <div class="step-content">
+              <strong>Release to listen</strong>
+              <p>Release the button to stop transmitting. You return to receive mode and will hear anyone else who transmits.</p>
+            </div>
+          </li>
+        </ol>
+
+        <h2 id="who-can-hear">Who can hear</h2>
+        <p>All users currently logged in to the check-in page for the same event hear every transmission, regardless of their role. This includes the organiser and all staff accounts. Users who are not logged in, or who are on a different event, do not hear anything.</p>
+        <p>There is no private channel or direct messaging — the walkie-talkie is a single shared channel per event.</p>
+
+        <h2 id="requirements">Requirements</h2>
+        <ul>
+          <li>A modern browser with WebRTC support (Chrome, Edge, Safari, Firefox)</li>
+          <li>Microphone permission granted for the site</li>
+          <li>An active internet connection (walkie-talkie does not function in offline mode)</li>
+          <li>The check-in page must be open and the user logged in</li>
+        </ul>
+
+        <div class="callout info">
+          <div class="callout-icon"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#60a5fa" stroke-width="1.5" stroke-linecap="round"><circle cx="8" cy="8" r="6"/><line x1="8" y1="6" x2="8" y2="8.5"/><circle cx="8" cy="11" r=".6" fill="#60a5fa" stroke="none"/></svg></div>
+          <div class="callout-body">
+            <div class="callout-title">Browser tab must stay open</div>
+            <p>The walkie-talkie requires the check-in tab to remain open and active. If a staff member switches to another app on mobile, the connection may drop. Keep the screen on and the tab in the foreground during the event.</p>
+          </div>
+        </div>
+
+        <h2 id="tips">Tips for use at events</h2>
+        <ul>
+          <li><strong>Use headphones</strong> — on a busy venue floor, headphones or an earpiece make transmissions much clearer than phone speakers.</li>
+          <li><strong>Keep transmissions short</strong> — state your name and message briefly, then release. Long transmissions block others from responding.</li>
+          <li><strong>Test before doors open</strong> — have each staff member test their mic before guests arrive so any permission issues are resolved with time to spare.</li>
+          <li><strong>Combine with seating map</strong> — staff at the door can confirm a guest's table over the walkie-talkie to a colleague managing seating, without either of them needing to change screens.</li>
+        </ul>
+
+      </div>
+    </div>
+  </div>
+  <script src="nav.js"></script>
+</body>
+</html>

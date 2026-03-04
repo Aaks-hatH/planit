@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PlanIt Documentation</title>
+  <link rel="stylesheet" href="style.css" />
+  <script>window.CURRENT_PAGE = 'index';</script>
+  <style>
+    .hero {
+      background: linear-gradient(135deg, rgba(16,185,129,0.06) 0%, transparent 60%);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 40px 44px;
+      margin-bottom: 48px;
+      position: relative;
+      overflow: hidden;
+    }
+    .hero::before {
+      content: '';
+      position: absolute;
+      top: -60px; right: -60px;
+      width: 200px; height: 200px;
+      background: radial-gradient(circle, rgba(16,185,129,0.08) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    .hero-tag { font-family: var(--font-head); font-size: 11px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: var(--accent); margin-bottom: 14px; }
+    .hero-title { font-family: var(--font-head); font-size: 42px; font-weight: 800; line-height: 1.1; letter-spacing: -1px; color: var(--text); margin-bottom: 16px; }
+    .hero-title span { color: var(--accent); }
+    .hero-desc { font-size: 16px; color: var(--text-2); max-width: 520px; line-height: 1.65; margin-bottom: 28px; }
+    .hero-btns { display: flex; gap: 12px; flex-wrap: wrap; }
+    .btn-primary { display: inline-flex; align-items: center; gap: 7px; padding: 10px 22px; background: var(--accent); color: #000; font-weight: 700; font-size: 14px; border-radius: 8px; text-decoration: none; transition: background 0.15s; }
+    .btn-primary:hover { background: var(--accent-2); text-decoration: none; }
+    .btn-secondary { display: inline-flex; align-items: center; gap: 7px; padding: 10px 22px; background: var(--bg-3); color: var(--text); font-weight: 600; font-size: 14px; border-radius: 8px; border: 1px solid var(--border-2); text-decoration: none; transition: all 0.15s; }
+    .btn-secondary:hover { border-color: var(--text-3); text-decoration: none; }
+    .pill { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 999px; border: 1px solid rgba(16,185,129,0.3); background: rgba(16,185,129,0.08); font-size: 11px; font-weight: 600; color: var(--accent); letter-spacing: 0.5px; margin-bottom: 14px; }
+    .pill-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); }
+    .feature-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; background: var(--border); border-radius: var(--radius); overflow: hidden; margin: 20px 0; }
+    .feature-cell { background: var(--bg-2); padding: 20px 22px; }
+    .feature-cell-icon { width: 32px; height: 32px; border-radius: 7px; background: var(--bg-3); display: flex; align-items: center; justify-content: center; margin-bottom: 10px; color: var(--accent); }
+    .feature-cell-title { font-family: var(--font-head); font-size: 13.5px; font-weight: 700; color: var(--text); margin-bottom: 4px; }
+    .feature-cell-desc { font-size: 12.5px; color: var(--text-3); line-height: 1.5; }
+    @media (max-width: 700px) { .feature-row { grid-template-columns: 1fr; } .hero { padding: 28px 24px; } .hero-title { font-size: 30px; } }
+  </style>
+</head>
+<body>
+  <div class="sidebar-overlay"></div>
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="sidebar-logo">
+        <a href="index.html">
+          <div class="logo-mark">P</div>
+          <div><div class="logo-text">PLANIT</div><div class="logo-sub">Docs</div></div>
+        </a>
+      </div>
+      <nav class="sidebar-nav"></nav>
+      <div class="sidebar-footer">
+        <a href="https://planitapp.onrender.com" class="sidebar-footer-link" target="_blank">Open PlanIt App &rarr;</a>
+      </div>
+    </aside>
+    <div class="main">
+      <div class="topbar">
+        <div style="display:flex;align-items:center;gap:12px;">
+          <button class="menu-toggle" aria-label="Toggle menu">
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><line x1="2" y1="5" x2="16" y2="5"/><line x1="2" y1="9" x2="16" y2="9"/><line x1="2" y1="13" x2="16" y2="13"/></svg>
+          </button>
+          <div class="topbar-breadcrumb">Docs <span>Overview</span></div>
+        </div>
+        <div class="topbar-right">
+          <a href="https://planitapp.onrender.com" class="topbar-btn" target="_blank">Open App</a>
+        </div>
+      </div>
+      <div class="content">
+
+        <!-- Hero -->
+        <div class="hero">
+          <div class="pill"><span class="pill-dot"></span> Freeware &middot; No account required for guests</div>
+          <div class="hero-title">Event management,<br><span>without the overhead.</span></div>
+          <p class="hero-desc">PlanIt is a freeware event management platform for organisers who need professional check-in, guest management, seating, and real-time staff tools — without paying enterprise software prices.</p>
+          <div class="hero-btns">
+            <a href="getting-started.html" class="btn-primary">Get started &rarr;</a>
+            <a href="https://planitapp.onrender.com" class="btn-secondary" target="_blank">Open the app</a>
+          </div>
+        </div>
+
+        <!-- Quick nav cards -->
+        <h2>What do you want to do?</h2>
+        <div class="card-grid">
+          <a href="getting-started.html" class="card">
+            <div class="card-icon"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2s3 1.5 3 5.5c0 2-1.5 4-3 4.5-1.5-.5-3-2.5-3-4.5C5 3.5 8 2 8 2z"/></svg></div>
+            <div class="card-title">Create my first event</div>
+            <div class="card-desc">Get set up in under five minutes.</div>
+          </a>
+          <a href="invites.html" class="card">
+            <div class="card-icon"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4.5" width="12" height="7" rx="1.5"/><path d="M10 4.5v7"/></svg></div>
+            <div class="card-title">Invite guests</div>
+            <div class="card-desc">QR codes, links, and bulk CSV import.</div>
+          </a>
+          <a href="check-in.html" class="card">
+            <div class="card-icon"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="5" height="5" rx="1"/><rect x="9" y="2" width="5" height="5" rx="1"/><rect x="2" y="9" width="5" height="5" rx="1"/></svg></div>
+            <div class="card-title">Set up check-in</div>
+            <div class="card-desc">QR scanning, staff accounts, and offline mode.</div>
+          </a>
+          <a href="seating.html" class="card">
+            <div class="card-icon"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><rect x="2" y="2" width="5" height="5" rx="1"/><rect x="9" y="2" width="5" height="5" rx="1"/><rect x="2" y="9" width="5" height="5" rx="1"/><rect x="9" y="9" width="5" height="5" rx="1"/></svg></div>
+            <div class="card-title">Build a seating map</div>
+            <div class="card-desc">Drag-and-drop layouts and guest assignment.</div>
+          </a>
+          <a href="admin.html" class="card">
+            <div class="card-icon"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M8 2l5 2.5V9c0 2.5-2 4.5-5 5-3-1-5-2.5-5-5V4.5L8 2z"/></svg></div>
+            <div class="card-title">Use the admin panel</div>
+            <div class="card-desc">Analytics, marketing tools, and global oversight.</div>
+          </a>
+          <a href="faq.html" class="card">
+            <div class="card-icon"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="8" cy="8" r="6"/><path d="M6.5 6a1.7 1.7 0 013.3.6c0 1.5-1.8 1.8-1.8 3"/><circle cx="8" cy="12" r=".6" fill="currentColor" stroke="none"/></svg></div>
+            <div class="card-title">FAQ</div>
+            <div class="card-desc">Common questions answered.</div>
+          </a>
+        </div>
+
+        <hr>
+
+        <!-- What is PlanIt -->
+        <h2>What is PlanIt?</h2>
+        <p>PlanIt is a proprietary freeware event management platform. It is free to use and publicly accessible, but it is not open-source software. The source code is published for transparency, not for redistribution or self-hosting.</p>
+        <p>PlanIt is built for <strong>event organisers</strong> who need a complete, professional-grade toolset for managing in-person events — from initial invitation through to real-time check-in and post-event analytics.</p>
+
+        <div class="feature-row">
+          <div class="feature-cell">
+            <div class="feature-cell-icon">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><rect x="2" y="4.5" width="12" height="7" rx="1.5"/></svg>
+            </div>
+            <div class="feature-cell-title">Guest Invites</div>
+            <div class="feature-cell-desc">Personal QR codes, wallet cards, printable badges, and RSVP tracking.</div>
+          </div>
+          <div class="feature-cell">
+            <div class="feature-cell-icon">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><rect x="2" y="2" width="5" height="5" rx="1"/><rect x="9" y="2" width="5" height="5" rx="1"/><rect x="2" y="9" width="5" height="5" rx="1"/></svg>
+            </div>
+            <div class="feature-cell-title">QR Check-in</div>
+            <div class="feature-cell-desc">Camera scanning, boarding-pass review, anti-fraud protection, and offline mode.</div>
+          </div>
+          <div class="feature-cell">
+            <div class="feature-cell-icon">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><rect x="2" y="2" width="5" height="5" rx="1"/><rect x="9" y="2" width="5" height="5" rx="1"/><rect x="2" y="9" width="5" height="5" rx="1"/><rect x="9" y="9" width="5" height="5" rx="1"/></svg>
+            </div>
+            <div class="feature-cell-title">Seating Maps</div>
+            <div class="feature-cell-desc">Visual drag-and-drop floor plans with per-guest table assignment.</div>
+          </div>
+          <div class="feature-cell">
+            <div class="feature-cell-icon">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><rect x="5.5" y="1.5" width="5" height="7" rx="2.5"/><path d="M3 8a5 5 0 0010 0"/></svg>
+            </div>
+            <div class="feature-cell-title">Walkie-Talkie</div>
+            <div class="feature-cell-desc">WebRTC push-to-talk voice communication between all logged-in staff.</div>
+          </div>
+          <div class="feature-cell">
+            <div class="feature-cell-icon">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M8 2l5 2.5V9c0 2.5-2 4.5-5 5-3-1-5-2.5-5-5V4.5L8 2z"/></svg>
+            </div>
+            <div class="feature-cell-title">Anti-Fraud</div>
+            <div class="feature-cell-desc">Trust scores, duplicate detection, flagging, manager override, and audit logs.</div>
+          </div>
+          <div class="feature-cell">
+            <div class="feature-cell-icon">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><polyline points="2 10 5 6 8 8 11 4 14 7"/></svg>
+            </div>
+            <div class="feature-cell-title">Analytics</div>
+            <div class="feature-cell-desc">Real-time attendance stats, check-in progress, and event reporting.</div>
+          </div>
+        </div>
+
+        <hr>
+
+        <!-- Who is it for -->
+        <h2>Who is PlanIt for?</h2>
+        <p>PlanIt is designed for <strong>event organisers</strong> who create and manage events. Organisers have accounts and access the full dashboard. Guests do not need accounts — they receive a unique invite link and QR code.</p>
+
+        <table>
+          <thead>
+            <tr><th>Role</th><th>What they do</th><th>Needs an account?</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><strong>Organiser</strong></td><td>Creates events, manages guest lists, configures check-in, views analytics</td><td>Yes</td></tr>
+            <tr><td><strong>Staff / Check-in</strong></td><td>Scans QR codes, admits guests, uses walkie-talkie</td><td>PIN-based staff login (no separate account)</td></tr>
+            <tr><td><strong>Guest</strong></td><td>Views their invite, presents QR code at entry</td><td>No</td></tr>
+          </tbody>
+        </table>
+
+        <hr>
+
+        <!-- Licensing -->
+        <h2>Licensing &amp; usage</h2>
+        <div class="callout warn">
+          <div class="callout-icon">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#f59e0b" stroke-width="1.5" stroke-linecap="round"><path d="M8 2L2 13h12L8 2z"/><line x1="8" y1="7" x2="8" y2="10"/><circle cx="8" cy="12" r=".6" fill="#f59e0b" stroke="none"/></svg>
+          </div>
+          <div class="callout-body">
+            <div class="callout-title">Proprietary Software</div>
+            <p>PlanIt is proprietary freeware. It is free to use through the official application at <a href="https://planitapp.onrender.com">planitapp.onrender.com</a>. You may not redistribute, fork, modify, or self-host PlanIt. The public repository is provided for transparency only.</p>
+          </div>
+        </div>
+        <p>PlanIt is free to use. There are no paid tiers, subscription fees, or per-event charges. It is operated as a hosted service; all events are run on the official PlanIt infrastructure.</p>
+
+      </div><!-- /content -->
+    </div><!-- /main -->
+  </div>
+  <script src="nav.js"></script>
+</body>
+</html>

@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin Panel — PlanIt Docs</title>
+  <link rel="stylesheet" href="style.css" />
+  <script>window.CURRENT_PAGE = 'admin';</script>
+</head>
+<body>
+  <div class="sidebar-overlay"></div>
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="sidebar-logo">
+        <a href="index.html">
+          <div class="logo-mark">P</div>
+          <div><div class="logo-text">PLANIT</div><div class="logo-sub">Docs</div></div>
+        </a>
+      </div>
+      <nav class="sidebar-nav"></nav>
+      <div class="sidebar-footer">
+        <a href="https://planitapp.onrender.com" class="sidebar-footer-link" target="_blank">Open PlanIt App &rarr;</a>
+      </div>
+    </aside>
+    <div class="main">
+      <div class="topbar">
+        <div style="display:flex;align-items:center;gap:12px;">
+          <button class="menu-toggle" aria-label="Toggle menu">
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><line x1="2" y1="5" x2="16" y2="5"/><line x1="2" y1="9" x2="16" y2="9"/><line x1="2" y1="13" x2="16" y2="13"/></svg>
+          </button>
+          <div class="topbar-breadcrumb">Docs <span>Admin Panel</span></div>
+        </div>
+        <div class="topbar-right">
+          <a href="https://planitapp.onrender.com" class="topbar-btn" target="_blank">Open App</a>
+        </div>
+      </div>
+      <div class="content">
+
+        <div class="page-header">
+          <div class="page-tag">Admin Panel</div>
+          <h1 class="page-title">The command centre</h1>
+          <p class="page-desc">System-wide oversight, analytics, marketing tools, and platform health — available to PlanIt platform administrators.</p>
+        </div>
+
+        <div class="callout danger">
+          <div class="callout-icon"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#ef4444" stroke-width="1.5" stroke-linecap="round"><path d="M8 2l5 2.5V9c0 2.5-2 4.5-5 5-3-1-5-2.5-5-5V4.5L8 2z"/></svg></div>
+          <div class="callout-body">
+            <div class="callout-title">Platform administrators only</div>
+            <p>The admin panel at <code>/admin</code> is for PlanIt platform administrators — not for event organisers. Event organisers do not have access to the admin panel. If you are an organiser, you do not need this section.</p>
+          </div>
+        </div>
+
+        <div class="toc">
+          <div class="toc-title">On this page</div>
+          <a href="#overview">Overview</a>
+          <a href="#events">Events management</a>
+          <a href="#analytics">Analytics</a>
+          <a href="#marketing">Marketing tools</a>
+          <a href="#system-health">System health</a>
+          <a href="#bug-reports">Bug reports</a>
+          <a href="#data-retention">Data retention</a>
+        </div>
+
+        <h2 id="overview">Overview</h2>
+        <p>The admin panel provides a global view of all events running on the PlanIt platform. It is accessed at <code>/admin</code> and requires a separate admin credential distinct from organiser accounts.</p>
+
+        <h2 id="events">Events management</h2>
+        <p>The events table shows all active and recent events across the platform with their organiser, participant count, invite count, check-in rate, and status. Administrators can:</p>
+        <ul>
+          <li>View full event details and guest lists</li>
+          <li>Search and filter events by organiser, date, or status</li>
+          <li>Force-close or delete events in exceptional circumstances</li>
+          <li>Export event data for compliance purposes</li>
+        </ul>
+
+        <h2 id="analytics">Analytics</h2>
+        <p>Platform-wide analytics aggregate data across all events and provide visibility into:</p>
+        <ul>
+          <li>Total events created and active this period</li>
+          <li>Total guests invited and admitted across all events</li>
+          <li>Check-in rate trends over time</li>
+          <li>Most active organisers</li>
+          <li>Peak usage times</li>
+        </ul>
+        <p>Analytics data is anonymised at the event level and does not expose individual guest information outside of its own event context.</p>
+
+        <h2 id="marketing">Marketing tools</h2>
+        <p>The marketing section provides tools for communicating with organisers and guests at scale. These tools comply with applicable anti-spam laws and operate only on contacts who have used PlanIt.</p>
+        <ul>
+          <li><strong>Announcements</strong> — publish platform-wide notices visible to all organisers</li>
+          <li><strong>Email campaigns</strong> — send targeted emails to organiser segments via the configured email provider (Brevo or Mailjet)</li>
+          <li><strong>Waitlist management</strong> — view and action the platform waitlist</li>
+        </ul>
+
+        <h2 id="system-health">System health</h2>
+        <p>The status view shows real-time health for all platform components:</p>
+        <ul>
+          <li>API server response times and error rates</li>
+          <li>Database connection status</li>
+          <li>Redis cache status</li>
+          <li>WebSocket server (mesh) connectivity</li>
+          <li>Uptime history with incident log</li>
+        </ul>
+        <p>The public status page is available at <code>/status</code> and does not require admin credentials.</p>
+
+        <h2 id="bug-reports">Bug reports</h2>
+        <p>User-submitted bug reports from the <code>/support</code> page are routed to the admin panel for review. Each report includes the user's description, their browser and OS information, and a timestamp. Administrators can mark reports as resolved or escalate them.</p>
+
+        <h2 id="data-retention">Data retention</h2>
+        <p>PlanIt automatically deletes all event data seven days after the event date. This includes messages, files, guest lists, check-in records, and the event itself. Organisers see a warning banner when their event is within seven days of deletion.</p>
+        <p>The retention policy runs automatically at 2 AM daily. Administrators can view upcoming deletions and, in exceptional cases, manually trigger or defer deletion from the admin panel.</p>
+
+        <div class="callout warn">
+          <div class="callout-icon"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#f59e0b" stroke-width="1.5" stroke-linecap="round"><path d="M8 2L2 13h12L8 2z"/><line x1="8" y1="7" x2="8" y2="10"/><circle cx="8" cy="12" r=".6" fill="#f59e0b" stroke="none"/></svg></div>
+          <div class="callout-body">
+            <div class="callout-title">Data deletion is permanent</div>
+            <p>Once event data is deleted by the retention policy it cannot be recovered. Organisers should export any records they need before the seven-day window closes.</p>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+  <script src="nav.js"></script>
+</body>
+</html>
