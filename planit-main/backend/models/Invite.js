@@ -51,6 +51,11 @@ const inviteSchema = new mongoose.Schema({
   seatNumber: { type: String, default: null },   // e.g. "A3", "Row 2 Seat 5", "14"
 
   // --------------------------------------------------------------------------
+  // Invite expiry — for table service reservation QR codes and time-limited invites
+  // --------------------------------------------------------------------------
+  expiresAt:  { type: Date, default: null },   // null = never expires
+
+  // --------------------------------------------------------------------------
   // Anti-fraud and security
   // --------------------------------------------------------------------------
   duplicateCheckFingerprint: { type: String, index: true },
