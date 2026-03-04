@@ -106,18 +106,6 @@ function honeypotCheck(req, res, next) {
   next();
 }
 
-module.exports = {
-  apiLimiter,
-  authLimiter,
-  uploadLimiter,
-  createEventLimiter,
-  chatLimiter,
-  joinLimiter,
-  honeypotCheck,
-  reservationLimiter,
-  availabilityLimiter,
-};
-
 // ── Public reservation limiter ────────────────────────────────────────────
 // Keyed on IP: 10 reservation attempts per IP per hour.
 const reservationLimiter = rateLimit({
@@ -148,3 +136,16 @@ const availabilityLimiter = rateLimit({
   keyGenerator: (req) => req.ip || req.socket?.remoteAddress || 'unknown',
   message: { error: 'Too many availability requests, please slow down.' },
 });
+
+// ── Exports ───────────────────────────────────────────────────────────────
+module.exports = {
+  apiLimiter,
+  authLimiter,
+  uploadLimiter,
+  createEventLimiter,
+  chatLimiter,
+  joinLimiter,
+  honeypotCheck,
+  reservationLimiter,
+  availabilityLimiter,
+};
