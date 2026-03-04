@@ -1180,10 +1180,13 @@ export default function TableService() {
   useEffect(() => {
     if (!eid) return;
     loadFloor();
-    // Auto-refresh every 30 seconds
-    const interval = setInterval(loadFloor, 30000);
+    // Auto-refresh every 30 seconds — paused while floor editor is open
+    // to prevent unsaved layout changes from being wiped by a re-fetch
+    const interval = setInterval(() => {
+      if (!showFloorEditor) loadFloor();
+    }, 30000);
     return () => clearInterval(interval);
-  }, [loadFloor, eid]);
+  }, [loadFloor, eid, showFloorEditor]);
 
   // Centre the floor on load when objects available
   useEffect(() => {
@@ -1264,15 +1267,21 @@ export default function TableService() {
     }
   };
 
-  const handleSaveSeatingMap = async (newObjects) => {
+  const handleSaveSeatingMap = async (newObjects, { silent = false } = {}) => {
     setSeatingIsSaving(true);
     try {
-      await eventAPI.saveSeatingMap(eid, { objects: newObjects });
-      setFloorData(prev => ({ ...prev, seatingMap: { ...prev.seatingMap, objects: newObjects } }));
-      setShowFloorEditor(false);
-      toast.success('Floor layout saved');
+      const enabled = newObjects.length > 0;
+      await eventAPI.saveSeatingMap(eid, { enabled, objects: newObjects });
+      setFloorData(prev => ({
+        ...prev,
+        seatingMap: { ...prev.seatingMap, enabled, objects: newObjects },
+      }));
+      if (!silent) {
+        setShowFloorEditor(false);
+        toast.success('Floor layout saved');
+      }
     } catch {
-      toast.error('Failed to save layout');
+      if (!silent) toast.error('Failed to save layout');
     } finally {
       setSeatingIsSaving(false);
     }
