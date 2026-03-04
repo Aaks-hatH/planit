@@ -467,9 +467,13 @@ eventSchema.index({ createdAt: -1 });
 
 // Instance methods (unchanged from original)
 eventSchema.methods.incrementViews = function () {
-  this.metadata.views += 1;
-  this.metadata.lastActivity = new Date();
-  return this.save();
+  return this.constructor.updateOne(
+    { _id: this._id },
+    {
+      $inc: { 'metadata.views': 1 },
+      $set: { 'metadata.lastActivity': new Date() },
+    }
+  );
 };
 
 eventSchema.methods.addParticipant = function (username, role = 'participant') {
