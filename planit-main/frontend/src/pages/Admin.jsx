@@ -267,7 +267,7 @@ function EventDetail({ event: initialEvent, onBack, onDelete, onUpdate }) {
               <input type="datetime-local" className="input text-sm" value={utcToLocal(editForm.date)} onChange={e => setEditForm({ ...editForm, date: localToUtc(e.target.value) })} />
             </div>
             <div className="flex items-center gap-6">
-              {[['isPasswordProtected', 'Password Protected'], ['isEnterpriseMode', 'Enterprise Mode']].map(([k, l]) => (
+              {[['isPasswordProtected', 'Password Protected'], ['isEnterpriseMode', 'Enterprise Mode'], ['isTableServiceMode', 'Table Service Mode'], ['keepForever', 'Keep Forever (no auto-delete)']].map(([k, l]) => (
                 <label key={k} className="flex items-center gap-2 text-sm cursor-pointer">
                   <input type="checkbox" checked={editForm[k] || false} onChange={e => setEditForm({ ...editForm, [k]: e.target.checked })} />
                   {l}
@@ -351,6 +351,8 @@ function EventDetail({ event: initialEvent, onBack, onDelete, onUpdate }) {
                       ['Status', event.status],
                       ['Password', event.isPasswordProtected ? '✓ Protected' : '✗ None'],
                       ['Enterprise', event.isEnterpriseMode ? '✓ Enabled' : '✗ Disabled'],
+                      ['Table Service', event.isTableServiceMode ? '✓ Enabled' : '✗ Disabled'],
+                      ['Keep Forever', event.keepForever ? '✓ Yes' : '✗ No'],
                       ['Public Listing', event.settings?.isPublic ? '✓ Public' : '✗ Private'],
                       ['Chat', event.settings?.allowChat !== false ? '✓ On' : '✗ Off'],
                       ['Polls', event.settings?.allowPolls !== false ? '✓ On' : '✗ Off'],
@@ -4254,13 +4256,7 @@ export default function Admin() {
                           <td className="px-5 py-3"><p className="text-sm text-neutral-900">{ev.organizerName}</p><p className="text-xs text-neutral-400">{ev.organizerEmail}</p></td>
                           <td className="px-5 py-3 text-xs text-neutral-500">{ev.date ? fmt(ev.date) : '—'}</td>
                           <td className="px-5 py-3"><div className="flex items-center gap-1.5"><Users className="w-3.5 h-3.5 text-neutral-400" /><span className="text-sm font-medium">{ev.participants?.length || 0}</span></div></td>
-                          <td className="px-5 py-3">{ev.isEnterpriseMode ? <span className="text-xs font-semibold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full flex items-center gap-1 w-fit"><Zap className="w-3 h-3" /> Enterprise</span> : <span className="text-xs text-neutral-400">Standard</span>}</td>
-                          <td className="px-5 py-3"><StatusBadge status={ev.status} /></td>
-                          <td className="px-5 py-3 text-right"><ChevronRight className="w-4 h-4 text-neutral-400 ml-auto" /></td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                          <td className="px-5 py-3">{ev.isTableServiceMode ? <span className="text-xs font-semibold text-orange-600 bg-orange-50 px-2 py-0.5 rounded-full flex items-center gap-1 w-fit">🍽 Table Service</span> : ev.isEnterpriseMode ? <span className="text-xs font-semibold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full flex items-center gap-1 w-fit"><Zap className="w-3 h-3" /> Enterprise</span> : <span className="text-xs text-neutral-400">Standard</span>}</td>
                 </div>
                 {totalPages > 1 && (
                   <div className="px-5 py-3 border-t bg-neutral-50 flex items-center justify-between">
@@ -4307,7 +4303,7 @@ export default function Admin() {
                           <td className="px-5 py-3"><p className="text-sm">{ev.organizerName}</p><p className="text-xs text-neutral-400">{ev.organizerEmail}</p></td>
                           <td className="px-5 py-3 text-xs text-neutral-500">{ev.date ? fmt(ev.date) : '—'}</td>
                           <td className="px-5 py-3 text-sm">{ev.participants?.length || 0}</td>
-                          <td className="px-5 py-3">{ev.isEnterpriseMode ? <span className="text-xs text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full font-semibold">Enterprise</span> : <span className="text-xs text-neutral-400">Standard</span>}</td>
+                          <td className="px-5 py-3">{ev.isTableServiceMode ? <span className="text-xs text-orange-600 bg-orange-50 px-2 py-0.5 rounded-full font-semibold">Table Service</span> : ev.isEnterpriseMode ? <span className="text-xs text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full font-semibold">Enterprise</span> : <span className="text-xs text-neutral-400">Standard</span>}</td>
                           <td className="px-5 py-3"><StatusBadge status={ev.status} /></td>
                           <td className="px-5 py-3 text-right"><ChevronRight className="w-4 h-4 text-neutral-400 ml-auto" /></td>
                         </tr>
