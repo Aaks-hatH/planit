@@ -114,4 +114,37 @@ module.exports = {
   chatLimiter,
   joinLimiter,
   honeypotCheck,
+  reservationLimiter,
+  availabilityLimiter,
 };
+
+// ── Public reservation limiter ────────────────────────────────────────────
+// Keyed on IP: 10 reservation attempts per IP per hour.
+const reservationLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req) => {
+    const ip = req.ip || req.socket?.remoteAddress || 'unknown';
+    const subdomain = req.params.subdomain || 'none';
+    return `reserve:${ip}:${subdomain}`;
+  },
+  handler: (req, res) => {
+    res.status(429).json({
+      error: 'Too many reservation attempts from this connection. Please try again in an hour.',
+      retryAfter: res.getHeader('Retry-After'),
+    });
+  },
+});
+
+// ── Reservation availability check limiter ────────────────────────────────
+// More permissive — guests browse slots multiple times.
+const availabilityLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 60,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req) => req.ip || req.socket?.remoteAddress || 'unknown',
+  message: { error: 'Too many availability requests, please slow down.' },
+});
