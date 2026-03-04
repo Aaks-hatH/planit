@@ -162,7 +162,7 @@ function ConfirmationScreen({ booking, config, subdomain, onReset }) {
 
         {config.showPoweredBy !== false && (
           <div className="text-center text-xs mt-6" style={{ color: config.backgroundStyle === 'light' ? '#ccc' : '#333' }}>
-            Powered by <a href="https://planit.events" className="hover:opacity-80" style={{ color: accent }}>PlanIt</a>
+            Powered by <a href="https://planitapp.onrender.com" className="hover:opacity-80" style={{ color: accent }}>PlanIt</a>
           </div>
         )}
       </div>
@@ -823,7 +823,7 @@ export default function ReservePage() {
       {/* Footer */}
       {config.showPoweredBy !== false && (
         <div className="text-center py-8 text-xs" style={{ color: isDark ? '#333' : '#ccc' }}>
-          Powered by <a href="https://planit.events" className="hover:opacity-70" style={{ color: accent }}>PlanIt</a>
+          Powered by <a href="https://planitapp.onrender.com" className="hover:opacity-70" style={{ color: accent }}>PlanIt</a>
         </div>
       )}
     </div>
