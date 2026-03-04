@@ -4256,7 +4256,7 @@ export default function Admin() {
                           <td className="px-5 py-3"><p className="text-sm text-neutral-900">{ev.organizerName}</p><p className="text-xs text-neutral-400">{ev.organizerEmail}</p></td>
                           <td className="px-5 py-3 text-xs text-neutral-500">{ev.date ? fmt(ev.date) : '—'}</td>
                           <td className="px-5 py-3"><div className="flex items-center gap-1.5"><Users className="w-3.5 h-3.5 text-neutral-400" /><span className="text-sm font-medium">{ev.participants?.length || 0}</span></div></td>
-                          <td className="px-5 py-3">{ev.isTableServiceMode ? <span className="text-xs font-semibold text-orange-600 bg-orange-50 px-2 py-0.5 rounded-full flex items-center gap-1 w-fit"> Table Service</span> : ev.isEnterpriseMode ? <span className="text-xs font-semibold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full flex items-center gap-1 w-fit"><Zap className="w-3 h-3" /> Enterprise</span> : <span className="text-xs text-neutral-400">Standard</span>}</td>
+                          <td className="px-5 py-3">{ev.isTableServiceMode ? <span className="text-xs font-semibold text-orange-600 bg-orange-50 px-2 py-0.5 rounded-full flex items-center gap-1 w-fit">🍽 Table Service</span> : ev.isEnterpriseMode ? <span className="text-xs font-semibold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full flex items-center gap-1 w-fit"><Zap className="w-3 h-3" /> Enterprise</span> : <span className="text-xs text-neutral-400">Standard</span>}</td>
                           <td className="px-5 py-3"><StatusBadge status={ev.status} /></td>
                           <td className="px-5 py-3 text-right"><ChevronRight className="w-4 h-4 text-neutral-400 ml-auto" /></td>
                         </tr>
@@ -4441,7 +4441,11 @@ export default function Admin() {
                 <>
                   <div className="flex items-start gap-3 p-4 bg-amber-50 border border-amber-200 rounded-xl mb-5">
                     <AlertTriangle className="w-5 h-5 text-amber-600 mt-0.5 flex-shrink-0" />
-                    <p className="text-sm text-amber-800">This will permanently delete all events (including cancelled) whose date was <strong>7+ days ago</strong> along with all their data. This cannot be undone.</p>
+                    <div className="text-sm text-amber-800">
+                      <p>This will permanently delete all events (including cancelled) whose date was <strong>7+ days ago</strong> along with all their data.</p>
+                      <p className="mt-1">It will also scan Cloudinary for <strong>orphaned images</strong> (cover photos and file uploads with no matching event) and delete them.</p>
+                      <p className="mt-1 font-semibold">This cannot be undone.</p>
+                    </div>
                   </div>
                   <div className="flex gap-3">
                     <button onClick={() => setShowCleanup(false)} className="flex-1 btn btn-secondary">Cancel</button>
@@ -4455,8 +4459,28 @@ export default function Admin() {
                   <div className={`p-4 rounded-xl mb-4 ${cleanupResult.success ? 'bg-emerald-50 border border-emerald-200' : 'bg-red-50 border border-red-200'}`}>
                     {cleanupResult.success ? <CheckCircle className="w-5 h-5 text-emerald-600 mb-2" /> : <AlertTriangle className="w-5 h-5 text-red-600 mb-2" />}
                     <p className={`text-sm font-semibold ${cleanupResult.success ? 'text-emerald-800' : 'text-red-800'}`}>{cleanupResult.success ? 'Cleanup complete' : 'Cleanup failed'}</p>
-                    {cleanupResult.results && <p className="text-sm text-emerald-700 mt-1">Deleted: {cleanupResult.results.deleted} event(s)</p>}
+                    {cleanupResult.results && (
+                      <p className="text-sm text-emerald-700 mt-1">
+                        Events deleted: <strong>{cleanupResult.results.deleted}</strong>
+                        {cleanupResult.results.failed > 0 && <span className="text-red-600 ml-2">({cleanupResult.results.failed} failed)</span>}
+                      </p>
+                    )}
                   </div>
+                  {cleanupResult.cloudinary && !cleanupResult.cloudinary.skipped && (
+                    <div className="p-4 bg-blue-50 border border-blue-200 rounded-xl mb-4">
+                      <p className="text-sm font-semibold text-blue-800 mb-1">☁ Cloudinary Orphan Sweep</p>
+                      <p className="text-sm text-blue-700">Scanned: <strong>{cleanupResult.cloudinary.scanned}</strong> assets</p>
+                      <p className="text-sm text-blue-700">Orphans deleted: <strong>{cleanupResult.cloudinary.deleted}</strong></p>
+                      {cleanupResult.cloudinary.failed > 0 && (
+                        <p className="text-sm text-red-600">Failed to delete: {cleanupResult.cloudinary.failed}</p>
+                      )}
+                    </div>
+                  )}
+                  {cleanupResult.cloudinary?.skipped && (
+                    <div className="p-3 bg-neutral-50 border border-neutral-200 rounded-xl mb-4">
+                      <p className="text-xs text-neutral-500">☁ Cloudinary sweep skipped — not configured</p>
+                    </div>
+                  )}
                   <button onClick={() => setShowCleanup(false)} className="btn btn-secondary w-full">Close</button>
                 </>
               )}
