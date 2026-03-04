@@ -614,7 +614,6 @@ export default function SeatingMap({
     }
     window.dispatchEvent(new CustomEvent('seating:assignGuest', { detail: { inviteId: inv, tableId: tbl, tableLabel: lbl } }));
   };
-  };
   const onUnassignGuest = (inv) => window.dispatchEvent(new CustomEvent('seating:unassignGuest', { detail: { inviteId: inv } }));
 
   // Guest search → jump to table
