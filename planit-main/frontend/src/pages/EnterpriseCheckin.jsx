@@ -84,6 +84,14 @@ function StaffLoginScreen({ eventId, eventTitle, onLogin }) {
     try {
       const response = await eventAPI.staffLogin(eventId, username.trim(), pin);
       const { token, role } = response.data;
+      // Preserve organiser token before staff login overwrites it — allows restoring on logout
+      const existingToken = localStorage.getItem('eventToken');
+      if (existingToken) {
+        const existingDecoded = decodeJWT(existingToken);
+        if (existingDecoded?.role === 'organizer') {
+          localStorage.setItem(\`_orgToken_\${eventId}\`, existingToken);
+        }
+      }
       localStorage.setItem('eventToken', token);
       onLogin({ token, role, username: response.data.username });
     } catch (err) {
@@ -734,10 +742,21 @@ function QRScanner({ onScan, onClose }) {
       html5QrCodeRef.current = html5QrCode;
 
       const config = {
-        fps: 10,
-        qrbox: { width: 250, height: 250 },
-        aspectRatio: 1.0,
-        experimentalFeatures: { useBarCodeDetectorIfSupported: true }
+        fps: 15,
+        // Scale the scan box to 75% of whichever dimension is smaller.
+        // Avoids overflowing small phone screens and keeps the box centred.
+        qrbox: (viewW, viewH) => {
+          const side = Math.floor(Math.min(viewW, viewH) * 0.75);
+          return { width: side, height: side };
+        },
+        // Do NOT set aspectRatio — it causes OverconstrainedError on most
+        // phone cameras that only support 4:3 or 16:9 streams.
+        experimentalFeatures: {
+          // BarcodeDetector is faster but very strict about QR quality.
+          // Disable it so we fall back to the more lenient ZXing decoder,
+          // which handles real-world glare/angle/brightness better.
+          useBarCodeDetectorIfSupported: false,
+        },
       };
 
       const onSuccess = (decodedText) => {
@@ -942,7 +961,7 @@ function InviteDialog({ invite, eventId, event, onClose, onSave }) {
 
           {/* QR Code */}
           <div className="bg-neutral-50 rounded-xl p-6 mb-4">
-            <img src={getQRCodeUrl()} alt="QR Code" className="w-48 h-48 mx-auto mb-4" />
+            <img src={getQRCodeUrl()} alt="QR Code" className="w-48 h-auto mx-auto mb-4" />
             <p className="text-center font-mono font-bold text-lg">{createdInvite.inviteCode}</p>
           </div>
 
@@ -1630,7 +1649,18 @@ export default function EnterpriseCheckin() {
   };
 
   const handleStaffLogout = () => {
+    // Restore organiser token if it was preserved before a staff test-login
+    const savedOrgToken = localStorage.getItem(`_orgToken_${eventId}`);
     localStorage.removeItem('eventToken');
+    localStorage.removeItem(`_orgToken_${eventId}`);
+    if (savedOrgToken) {
+      const decoded = decodeJWT(savedOrgToken);
+      if (decoded && decoded.exp * 1000 > Date.now()) {
+        localStorage.setItem('eventToken', savedOrgToken);
+        setAuthState({ ready: true, role: 'organizer', username: decoded.username });
+        return;
+      }
+    }
     setAuthState({ ready: false, role: null });
   };
 
