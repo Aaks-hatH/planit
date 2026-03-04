@@ -14,7 +14,7 @@ import {
   Users, Clock, CheckCircle, XCircle, AlertTriangle, Settings, Plus,
   RefreshCw, QrCode, Trash2, Edit2, ChevronRight, Bell, MapPin,
   Coffee, Utensils, Star, LayoutGrid, List, X, Save, Check,
-  ArrowRight, Phone, ScanLine, Calendar, Timer, Loader2,
+  ArrowRight, Phone, ScanLine, Calendar, Timer, Loader2, Lock,
 } from 'lucide-react';
 import { eventAPI } from '../services/api';
 import toast from 'react-hot-toast';
@@ -608,7 +608,7 @@ function Toggle({ checked, onChange }) {
   );
 }
 
-function SettingsModal({ settings, reservationSettings, onSave, onSaveReserve, onClose, eventId, subdomain }) {
+function SettingsModal({ settings, reservationSettings, onSave, onSaveReserve, onClose, eventId, subdomain, isTableService = true }) {
   const [tab, setTab]       = useState('general');
   const [form, setForm]     = useState({ ...settings });
   const [rForm, setRForm]   = useState({
@@ -700,13 +700,14 @@ function SettingsModal({ settings, reservationSettings, onSave, onSaveReserve, o
     } finally { setSaving(false); }
   };
 
-  const TABS = [
+  const ALL_TABS = [
     { id: 'general',   label: 'Floor' },
-    { id: 'reserve',   label: 'Reserve Page' },
-    { id: 'content',   label: 'Content' },
-    { id: 'booking',   label: 'Booking Rules' },
-    { id: 'notify',    label: 'Notifications' },
+    { id: 'reserve',   label: 'Reserve Page',  tsOnly: true },
+    { id: 'content',   label: 'Content',       tsOnly: true },
+    { id: 'booking',   label: 'Booking Rules', tsOnly: true },
+    { id: 'notify',    label: 'Notifications', tsOnly: true },
   ];
+  const TABS = ALL_TABS.filter(t => !t.tsOnly || isTableService);
 
   const SectionHead = ({ title, desc }) => (
     <div className="mb-4">
@@ -1124,7 +1125,7 @@ export default function TableService() {
 
   const [loading, setLoading]           = useState(true);
   const [resolvedEventId, setResolvedEventId] = useState(eventIdParam || null);
-  const [floorData, setFloorData]       = useState({ seatingMap: { objects: [] }, tableStates: [], settings: {}, reservations: [], waitlist: [], restaurantName: '' });
+  const [floorData, setFloorData]       = useState({ seatingMap: { objects: [] }, tableStates: [], settings: {}, reservations: [], waitlist: [], restaurantName: '', isTableServiceMode: false, isEnterpriseMode: false });
   const [selectedTableId, setSelectedTableId] = useState(null);
   const [sideTab, setSideTab]           = useState('waitlist');
   const [showSettings, setShowSettings] = useState(false);
@@ -1132,7 +1133,6 @@ export default function TableService() {
   const [showFloorEditor, setShowFloorEditor] = useState(false);
   const [seatingData, setSeatingData]   = useState(null);
   const [seatingIsSaving, setSeatingIsSaving] = useState(false);
-
   const [zoom, setZoom] = useState(1);
   const [pan,  setPan]  = useState({ x: 0, y: 0 });
 
@@ -1154,6 +1154,8 @@ export default function TableService() {
   const tables     = objects.filter(o => o.type !== 'zone');
   const tableStates = floorData.tableStates || [];
   const settings   = floorData.settings || {};
+  const isTableService = !!floorData.isTableServiceMode;
+  const isEnterprise   = !!floorData.isEnterpriseMode;
 
   const tableCounts = {
     available: tables.filter(t => { const s = tableStates.find(x => x.tableId === t.id); return !s || s.status === 'available'; }).length,
@@ -1171,7 +1173,11 @@ export default function TableService() {
       const res = await eventAPI.getTableServiceFloor(eid);
       setFloorData(res.data);
     } catch (err) {
-      toast.error('Could not load floor data');
+      if (err?.response?.status === 403) {
+        setFloorData(prev => ({ ...prev, _forbidden: true }));
+      } else {
+        toast.error('Could not load floor data');
+      }
     } finally {
       setLoading(false);
     }
@@ -1298,6 +1304,20 @@ export default function TableService() {
     );
   }
 
+  if (floorData._forbidden) {
+    return (
+      <div className="h-screen bg-neutral-950 flex items-center justify-center">
+        <div className="text-center max-w-sm">
+          <div className="w-12 h-12 bg-neutral-800 rounded-xl flex items-center justify-center mx-auto mb-4">
+            <Lock className="w-6 h-6 text-neutral-500" />
+          </div>
+          <h2 className="text-white font-bold text-lg mb-2">Floor plan not available</h2>
+          <p className="text-neutral-500 text-sm">This event doesn't have the floor plan feature enabled.</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="h-screen flex flex-col bg-neutral-950 text-white overflow-hidden">
       {/* ── Header ── */}
@@ -1386,11 +1406,13 @@ export default function TableService() {
 
         {/* Right sidebar */}
         <div className="w-80 xl:w-96 flex-shrink-0 border-l border-neutral-800 flex flex-col bg-neutral-900/50">
-          {/* Tabs */}
+          {/* Tabs — table-service only */}
           <div className="flex border-b border-neutral-800 flex-shrink-0">
             {[
-              { id: 'waitlist',     label: 'Waitlist',      badge: floorData.waitlist?.length },
-              { id: 'reservations', label: 'Reservations',  badge: floorData.reservations?.filter(r => { const d = new Date(r.dateTime); return d.toDateString() === new Date().toDateString(); }).length },
+              ...(isTableService ? [
+                { id: 'waitlist',     label: 'Waitlist',      badge: floorData.waitlist?.length },
+                { id: 'reservations', label: 'Reservations',  badge: floorData.reservations?.filter(r => { const d = new Date(r.dateTime); return d.toDateString() === new Date().toDateString(); }).length },
+              ] : []),
               { id: 'summary',      label: 'Overview',      badge: null },
             ].map(({ id, label, badge }) => (
               <button
@@ -1405,7 +1427,7 @@ export default function TableService() {
           </div>
 
           <div className="flex-1 overflow-hidden">
-            {sideTab === 'waitlist' && (
+            {isTableService && sideTab === 'waitlist' && (
               <WaitlistPanel
                 waitlist={floorData.waitlist || []}
                 tableStates={tableStates}
@@ -1416,7 +1438,7 @@ export default function TableService() {
                 onRemove={handleRemoveWaitlist}
               />
             )}
-            {sideTab === 'reservations' && (
+            {isTableService && sideTab === 'reservations' && (
               <ReservationsPanel
                 reservations={floorData.reservations || []}
                 onAdd={handleAddReservation}
@@ -1494,6 +1516,7 @@ export default function TableService() {
           onClose={() => setShowSettings(false)}
           eventId={eid}
           subdomain={subdomain}
+          isTableService={isTableService}
         />
       )}
 
