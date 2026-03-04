@@ -31,7 +31,7 @@ router.post('/',
   ],
   async (req, res, next) => {
     try {
-      const { subdomain, title, description, date, location, organizerName, organizerEmail, password, accountPassword, isEnterpriseMode, settings, maxParticipants } = req.body;
+      const { subdomain, title, description, date, location, organizerName, organizerEmail, password, accountPassword, staffPassword, isEnterpriseMode, isTableServiceMode, settings, maxParticipants } = req.body;
 
       const existing = await Event.findOne({ subdomain });
       if (existing) return res.status(409).json({ error: 'This event link is already taken.' });
@@ -47,6 +47,7 @@ router.post('/',
         subdomain, title, description, date, location, organizerName, organizerEmail,
         password: hashedPassword, isPasswordProtected,
         isEnterpriseMode: isEnterpriseMode || false,
+        isTableServiceMode: isTableServiceMode || false,
         settings: settings || {}, maxParticipants: maxParticipants || 100,
         participants: [{ username: organizerName, role: 'organizer' }]
       });
@@ -59,6 +60,18 @@ router.post('/',
         participantData.hasPassword = true;
       }
       await EventParticipant.create(participantData);
+
+      // For table service: create a default "staff" account using the staffPassword if provided
+      if (isTableServiceMode && staffPassword && String(staffPassword).length >= 4) {
+        const hashed = await bcrypt.hash(String(staffPassword), 10);
+        await EventParticipant.create({
+          eventId: event._id,
+          username: 'staff',
+          role: 'staff',
+          password: hashed,
+          hasPassword: true,
+        });
+      }
 
       const token = jwt.sign(
         { eventId: event._id.toString(), username: organizerName, role: 'organizer' },
@@ -373,6 +386,7 @@ router.get('/:eventId', verifyEventAccess, async (req, res, next) => {
         participants: event.participants, maxParticipants: event.maxParticipants,
         status: event.status, isPasswordProtected: event.isPasswordProtected,
         isEnterpriseMode: event.isEnterpriseMode,
+        isTableServiceMode: !!event.isTableServiceMode,
         rsvps: event.rsvps, rsvpSummary: event.getRsvpSummary(),
         agenda: event.agenda ? [...event.agenda].sort((a, b) => a.order - b.order) : [],
         createdAt: event.createdAt
