@@ -962,9 +962,9 @@ export default function Home() {
 
     // ── Client-side field validation ──────────────────────────────────────
     const errs = {};
-    if (!formData.title.trim())            errs.title          = 'Event title is required.';
-    if (!formData.date)                    errs.date           = 'Date and time is required.';
-    if (!formData.timezone)                errs.timezone       = 'Timezone is required.';
+    if (!formData.title.trim())            errs.title          = mode === 'table-service' ? 'Restaurant name is required.' : 'Event title is required.';
+    if (mode !== 'table-service' && !formData.date)     errs.date           = 'Date and time is required.';
+    if (mode !== 'table-service' && !formData.timezone) errs.timezone       = 'Timezone is required.';
     if (!formData.organizerName.trim())    errs.organizerName  = 'Your name is required.';
     if (!formData.organizerEmail.trim())   errs.organizerEmail = 'Your email is required.';
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.organizerEmail.trim()))
@@ -983,12 +983,12 @@ export default function Home() {
     setFieldErrors({});
     setLoading(true);
 
-    const dateValue = formData.date ? localDateTimeToUTC(formData.date, formData.timezone) : formData.date;
+    const dateValue = (mode !== 'table-service' && formData.date) ? localDateTimeToUTC(formData.date, formData.timezone) : undefined;
     const payload = {
       title:          sanitize(formData.title),
       description:    sanitize(formData.description),
-      date:           dateValue,
-      timezone:       formData.timezone,
+      ...(dateValue ? { date: dateValue } : {}),
+      ...(mode !== 'table-service' ? { timezone: formData.timezone } : {}),
       location:       sanitize(formData.location),
       organizerName:  sanitize(formData.organizerName),
       organizerEmail: sanitize(formData.organizerEmail),
@@ -1649,7 +1649,7 @@ export default function Home() {
 
                     <form onSubmit={handleSubmit} className="space-y-6">
                       <div>
-                        <label className="block text-sm font-bold text-neutral-300 mb-2">Event title <span className="text-red-400">*</span></label>
+                        <label className="block text-sm font-bold text-neutral-300 mb-2">{mode === 'table-service' ? 'Restaurant name' : 'Event title'} <span className="text-red-400">*</span></label>
                         <input type="text" required
                           className={`dark-input ${fieldErrors.title ? 'border-red-500 focus:border-red-400' : ''}`}
                           placeholder={mode === 'table-service' ? 'Taverna Roma, The Oak Room...' : 'Summer Company Retreat 2025'}
@@ -1660,7 +1660,7 @@ export default function Home() {
                         {formData.title && formData.subdomain && (
                           <div className="mt-3 space-y-1.5">
                             <label className="block text-xs font-semibold text-neutral-500 uppercase tracking-widest">
-                              Event URL
+                              {mode === 'table-service' ? 'Restaurant URL' : 'Event URL'}
                               {formData._subdomainTouched && (
                                 <span className="ml-2 text-neutral-600 normal-case tracking-normal font-normal">custom</span>
                               )}
@@ -1695,8 +1695,9 @@ export default function Home() {
                       </div>
                       <div>
                         <label className="block text-sm font-bold text-neutral-300 mb-2">Description</label>
-                        <textarea className="dark-input resize-none" rows="3" placeholder="What's this event about?" value={formData.description} onChange={update('description')} />
+                        <textarea className="dark-input resize-none" rows="3" placeholder={mode === 'table-service' ? 'Describe your restaurant or venue...' : "What's this event about?"} value={formData.description} onChange={update('description')} />
                       </div>
+                      {mode !== 'table-service' && (
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
                           <label className="block text-sm font-bold text-neutral-300 mb-2">Date and time <span className="text-red-400">*</span></label>
@@ -1716,26 +1717,27 @@ export default function Home() {
                           </select>
                         </div>
                       </div>
+                      )}
                       <div>
-                        <label className="block text-sm font-bold text-neutral-300 mb-2">Location</label>
-                        <input type="text" className="dark-input" placeholder="Central Park, NYC" value={formData.location} onChange={update('location')} />
+                        <label className="block text-sm font-bold text-neutral-300 mb-2">{mode === 'table-service' ? 'Restaurant address' : 'Location'}</label>
+                        <input type="text" className="dark-input" placeholder={mode === 'table-service' ? '123 Main St, New York, NY' : 'Central Park, NYC'} value={formData.location} onChange={update('location')} />
                       </div>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
-                          <label className="block text-sm font-bold text-neutral-300 mb-2">Your name <span className="text-red-400">*</span></label>
+                          <label className="block text-sm font-bold text-neutral-300 mb-2">{mode === 'table-service' ? 'Manager name' : 'Your name'} <span className="text-red-400">*</span></label>
                           <input type="text" required
                             className={`dark-input ${fieldErrors.organizerName ? 'border-red-500 focus:border-red-400' : ''}`}
-                            placeholder="Alex Smith"
+                            placeholder={mode === 'table-service' ? 'Jane Smith' : 'Alex Smith'}
                             value={formData.organizerName}
                             onChange={(e) => { update('organizerName')(e); setFieldErrors(p => ({...p, organizerName: ''})); }}
                           />
                           {fieldErrors.organizerName && <p className="field-error text-xs text-red-400 mt-1">{fieldErrors.organizerName}</p>}
                         </div>
                         <div>
-                          <label className="block text-sm font-bold text-neutral-300 mb-2">Your email <span className="text-red-400">*</span></label>
+                          <label className="block text-sm font-bold text-neutral-300 mb-2">{mode === 'table-service' ? 'Manager email' : 'Your email'} <span className="text-red-400">*</span></label>
                           <input type="email" required
                             className={`dark-input ${fieldErrors.organizerEmail ? 'border-red-500 focus:border-red-400' : ''}`}
-                            placeholder="alex@company.com"
+                            placeholder={mode === 'table-service' ? 'manager@restaurant.com' : 'alex@company.com'}
                             value={formData.organizerEmail}
                             onChange={(e) => { update('organizerEmail')(e); setFieldErrors(p => ({...p, organizerEmail: ''})); }}
                           />
@@ -1760,15 +1762,15 @@ export default function Home() {
                         </div>
                         {fieldErrors.accountPassword
                           ? <p className="field-error text-xs text-red-400 mt-2 flex items-center gap-1"><AlertCircle className="w-3 h-3" />{fieldErrors.accountPassword}</p>
-                          : <p className="text-xs text-neutral-600 mt-2">Required to access this event from other devices or browsers</p>
+                          : <p className="text-xs text-neutral-600 mt-2">{mode === 'table-service' ? 'Required to access your restaurant dashboard from other devices' : 'Required to access this event from other devices or browsers'}</p>
                         }
                       </div>
                       <div>
                         <label className="block text-sm font-bold text-neutral-300 mb-2">
-                          <span className="flex items-center gap-2"><Shield className="w-4 h-4 text-neutral-500" />Event Password <span className="text-neutral-600 font-normal text-xs">(optional)</span></span>
+                          <span className="flex items-center gap-2"><Shield className="w-4 h-4 text-neutral-500" />{mode === 'table-service' ? 'Staff PIN' : 'Event Password'} <span className="text-neutral-600 font-normal text-xs">(optional)</span></span>
                         </label>
                         <div className="relative">
-                          <input type={showPassword ? 'text' : 'password'} className="dark-input pr-12" placeholder={mode === 'enterprise' ? 'Add layer of security' : 'Leave empty for open access'} value={formData.password} onChange={update('password')} />
+                          <input type={showPassword ? 'text' : 'password'} className="dark-input pr-12" placeholder={mode === 'table-service' ? 'Add staff access PIN' : mode === 'enterprise' ? 'Add layer of security' : 'Leave empty for open access'} value={formData.password} onChange={update('password')} />
                           <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-4 top-1/2 -translate-y-1/2 text-neutral-500 hover:text-neutral-300 transition-colors">
                             {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                           </button>
