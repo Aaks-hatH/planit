@@ -1140,7 +1140,10 @@ export default function TableService() {
   useEffect(() => {
     if (!eventIdParam && subdomain) {
       eventAPI.getBySubdomain(subdomain)
-        .then(res => setResolvedEventId(res.data._id || res.data.id))
+        .then(res => {
+          const ev = res.data.event || res.data;
+          setResolvedEventId(ev._id || ev.id);
+        })
         .catch(() => toast.error('Event not found'));
     }
   }, [eventIdParam, subdomain]);
