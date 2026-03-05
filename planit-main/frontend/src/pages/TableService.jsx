@@ -15,6 +15,7 @@ import {
   RefreshCw, QrCode, Trash2, Edit2, ChevronRight, Bell, MapPin,
   Coffee, Utensils, Star, LayoutGrid, List, X, Save, Check,
   ArrowRight, Phone, ScanLine, Calendar, Timer, Loader2, Lock,
+  ExternalLink, UtensilsCrossed,
 } from 'lucide-react';
 import { eventAPI } from '../services/api';
 import toast from 'react-hot-toast';
@@ -833,12 +834,6 @@ function SettingsModal({ settings, reservationSettings, onSave, onSaveReserve, o
     showTableCount:             reservationSettings?.showTableCount            ?? false,
     availabilityDisplayMode:    reservationSettings?.availabilityDisplayMode   || 'slots',
     confirmationMessage:        reservationSettings?.confirmationMessage       || '',
-    sendConfirmationEmail:      reservationSettings?.sendConfirmationEmail     ?? true,
-    sendReminderEmail:          reservationSettings?.sendReminderEmail         ?? false,
-    reminderHoursBefore:        reservationSettings?.reminderHoursBefore       || 24,
-    notifyOrganizerOnBooking:   reservationSettings?.notifyOrganizerOnBooking  ?? true,
-    notifyOrganizerOnCancel:    reservationSettings?.notifyOrganizerOnCancel   ?? true,
-    notifyOrganizerEmail:       reservationSettings?.notifyOrganizerEmail      || '',
     cancellationPolicy:         reservationSettings?.cancellationPolicy        || '',
     depositRequired:            reservationSettings?.depositRequired           ?? false,
     depositAmount:              reservationSettings?.depositAmount             || 0,
@@ -883,7 +878,6 @@ function SettingsModal({ settings, reservationSettings, onSave, onSaveReserve, o
     { id: 'reserve',   label: 'Reserve Page',   tsOnly: true },
     { id: 'content',   label: 'Content',        tsOnly: true },
     { id: 'booking',   label: 'Booking Rules',  tsOnly: true },
-    { id: 'notify',    label: 'Notifications',  tsOnly: true },
   ];
   const TABS = ALL_TABS.filter(t => !t.tsOnly || isTableService);
 
@@ -1194,7 +1188,14 @@ function SettingsModal({ settings, reservationSettings, onSave, onSaveReserve, o
             </div>
 
             <div className="border-t border-neutral-800 pt-5">
-              <SectionHead title="FAQ" desc='JSON array: [{"question":"Q?","answer":"A."}]. Leave empty for none.' />
+              <SectionHead title="Confirmation Message" desc="Shown on the booking confirmation screen after a guest books." />
+              <textarea value={rForm.confirmationMessage} onChange={setR('confirmationMessage')} rows={3}
+                placeholder="We look forward to seeing you! Please arrive 5 minutes early."
+                className={inputCls + ' resize-none'} />
+            </div>
+
+            <div className="border-t border-neutral-800 pt-5">
+              <SectionHead title='FAQ' desc='JSON array: [{"question":"Q?","answer":"A."}]. Leave empty for none.' />
               <textarea value={rForm.faqItemsRaw} onChange={setR('faqItemsRaw')} rows={6}
                 placeholder={JSON.stringify([{ question: "Can I bring my own cake?", answer: "Yes, a plating fee of $5 applies." }], null, 2)}
                 className={inputCls + ' resize-y font-mono text-xs'} />
@@ -1281,52 +1282,6 @@ function SettingsModal({ settings, reservationSettings, onSave, onSaveReserve, o
                   <Toggle checked={rForm[key]} onChange={e => setRB(key, e.target.checked)} />
                 </div>
               ))}
-            </div>
-          </>)}
-
-          {/* ── NOTIFICATIONS TAB ── */}
-          {tab === 'notify' && (<>
-            <SectionHead title="Guest Emails" />
-            <div className="space-y-2">
-              {[
-                { key: 'sendConfirmationEmail', label: 'Send Confirmation Email to Guest' },
-                { key: 'sendReminderEmail',     label: 'Send Reminder Email to Guest' },
-                { key: 'sendCancellationEmail', label: 'Send Cancellation Confirmation to Guest' },
-              ].map(({ key, label }) => (
-                <div key={key} className="flex items-center justify-between p-3 bg-neutral-800/40 rounded-xl border border-neutral-700">
-                  <span className="text-sm font-semibold text-white">{label}</span>
-                  <Toggle checked={rForm[key]} onChange={e => setRB(key, e.target.checked)} />
-                </div>
-              ))}
-            </div>
-            {rForm.sendReminderEmail && (
-              <div><label className={labelCls}>Reminder Timing</label>
-                <select value={rForm.reminderHoursBefore} onChange={setR('reminderHoursBefore')} className={inputCls}>
-                  {[2,4,12,24,48,72].map(h => <option key={h} value={h}>{h} hours before</option>)}
-                </select>
-              </div>
-            )}
-            <div className="border-t border-neutral-800 pt-5">
-              <SectionHead title="Organizer Alerts" />
-              <div className="space-y-2 mb-4">
-                {[
-                  { key: 'notifyOrganizerOnBooking', label: 'Alert me when a new reservation is made' },
-                  { key: 'notifyOrganizerOnCancel',  label: 'Alert me when a reservation is cancelled' },
-                ].map(({ key, label }) => (
-                  <div key={key} className="flex items-center justify-between p-3 bg-neutral-800/40 rounded-xl border border-neutral-700">
-                    <span className="text-sm font-semibold text-white">{label}</span>
-                    <Toggle checked={rForm[key]} onChange={e => setRB(key, e.target.checked)} />
-                  </div>
-                ))}
-              </div>
-              <div><label className={labelCls}>Notification Email (leave blank to use account email)</label>
-                <input type="email" value={rForm.notifyOrganizerEmail} onChange={setR('notifyOrganizerEmail')} placeholder="manager@restaurant.com" className={inputCls} /></div>
-            </div>
-            <div className="border-t border-neutral-800 pt-5">
-              <SectionHead title="Post-Booking Message" desc="Shown on the confirmation screen and in the confirmation email." />
-              <textarea value={rForm.confirmationMessage} onChange={setR('confirmationMessage')} rows={3}
-                placeholder="We look forward to seeing you! Please arrive 5 minutes early. Call us if you need to make any changes."
-                className={inputCls + ' resize-none'} />
             </div>
           </>)}
 
