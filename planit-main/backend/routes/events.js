@@ -154,7 +154,7 @@ router.post('/verify-password/:eventId', authLimiter,
       if (!event) return res.status(404).json({ error: 'Event not found.' });
       if (!event.isPasswordProtected) return res.status(400).json({ error: 'Event is not password protected.' });
 
-      //  Status checks 
+      // ── Status checks ──────────────────────────────────────────────────────
       if (event.status === 'cancelled') {
         return res.status(403).json({ error: 'This event has been cancelled and is no longer accepting participants.' });
       }
@@ -162,7 +162,7 @@ router.post('/verify-password/:eventId', authLimiter,
         return res.status(403).json({ error: 'This event has ended and is no longer accepting new participants.' });
       }
 
-      //  Require approval (must be checked even for password-protected events) 
+      // ── Require approval (must be checked even for password-protected events) ──────
       if (event.settings?.requireApproval) {
         const trimmedUsername = (req.body.username || '').trim();
         if (trimmedUsername) {
@@ -248,7 +248,7 @@ router.post('/join/:eventId',
       if (!event) return res.status(404).json({ error: 'Event not found.' });
       if (event.isPasswordProtected) return res.status(403).json({ error: 'This event requires a password.' });
 
-      //  Require approval 
+      // ── Require approval ───────────────────────────────────────────────────
       if (event.settings?.requireApproval) {
         const { username: reqUsername, message: reqMessage } = req.body;
         const trimmedUsername = (reqUsername || '').trim();
@@ -282,7 +282,7 @@ router.post('/join/:eventId',
         // alreadyParticipant == true: they were approved — fall through to issue token.
       }
 
-      //  Status checks 
+      // ── Status checks ──────────────────────────────────────────────────────
       if (event.status === 'cancelled') {
         return res.status(403).json({ error: 'This event has been cancelled and is no longer accepting participants.' });
       }
@@ -340,7 +340,7 @@ router.post('/join/:eventId',
   }
 );
 
-//  PUBLIC EVENTS LISTING 
+// ── PUBLIC EVENTS LISTING ──────────────────────────────────────────────────
 // IMPORTANT: This MUST appear before router.get('/:eventId', ...) otherwise
 // Express matches "public" as an eventId and verifyEventAccess throws an error.
 router.get('/public', async (req, res, next) => {
@@ -396,7 +396,7 @@ router.get('/:eventId', verifyEventAccess, async (req, res, next) => {
   } catch (error) { next(error); }
 });
 
-//  RSVP 
+// ── RSVP ──────────────────────────────────────────────────────────────────
 router.post('/:eventId/rsvp',
   verifyEventAccess,
   [
@@ -408,7 +408,7 @@ router.post('/:eventId/rsvp',
     try {
       const event = req.event;
 
-      //  RSVP deadline enforcement 
+      // ── RSVP deadline enforcement ──────────────────────────────────────────
       if (event.settings?.rsvpEnabled === false) {
         return res.status(403).json({ error: 'RSVPs are not enabled for this event.' });
       }
@@ -421,7 +421,7 @@ router.post('/:eventId/rsvp',
       if (req.body.status === 'maybe' && event.settings?.rsvpAllowMaybe === false) {
         return res.status(400).json({ error: 'Maybe responses are not allowed for this event.' });
       }
-      // 
+      // ──────────────────────────────────────────────────────────────────────
 
       await event.setRsvp(req.body.username, req.body.status);
 
@@ -443,7 +443,7 @@ router.post('/:eventId/rsvp',
   }
 );
 
-//  RSVP settings (organizer only) 
+// ── RSVP settings (organizer only) ────────────────────────────────────────
 router.patch('/:eventId/rsvp-settings',
   verifyOrganizer,
   async (req, res, next) => {
@@ -471,7 +471,7 @@ router.patch('/:eventId/rsvp-settings',
   }
 );
 
-//  RSVP summary — public, no auth needed 
+// ── RSVP summary — public, no auth needed ─────────────────────────────────
 // Used by the guest invite page to show counts without requiring login
 router.get('/:eventId/rsvp-summary', async (req, res, next) => {
   try {
@@ -493,7 +493,7 @@ router.get('/:eventId/rsvp-summary', async (req, res, next) => {
   } catch (error) { next(error); }
 });
 
-//  TASKS 
+// ── TASKS ─────────────────────────────────────────────────────────────────
 // Get tasks
 router.get('/:eventId/tasks', verifyEventAccess, async (req, res, next) => {
   try {
@@ -569,7 +569,7 @@ router.delete('/:eventId/tasks/:taskId', verifyEventAccess, async (req, res, nex
   } catch (error) { next(error); }
 });
 
-//  ANNOUNCEMENTS 
+// ── ANNOUNCEMENTS ─────────────────────────────────────────────────────────
 // Get announcements
 router.get('/:eventId/announcements', verifyEventAccess, async (req, res, next) => {
   try {
@@ -632,7 +632,7 @@ router.delete('/:eventId/announcements/:announcementId', verifyEventAccess, asyn
   } catch (error) { next(error); }
 });
 
-//  EXPENSES 
+// ── EXPENSES ──────────────────────────────────────────────────────────────
 // Get expenses
 router.get('/:eventId/expenses', verifyEventAccess, async (req, res, next) => {
   try {
@@ -708,7 +708,7 @@ router.delete('/:eventId/expenses/:expenseId', verifyEventAccess, async (req, re
   } catch (error) { next(error); }
 });
 
-//  NOTES 
+// ── NOTES ─────────────────────────────────────────────────────────────────
 // Get notes
 router.get('/:eventId/notes', verifyEventAccess, async (req, res, next) => {
   try {
@@ -788,7 +788,7 @@ router.delete('/:eventId/notes/:noteId', verifyEventAccess, async (req, res, nex
   } catch (error) { next(error); }
 });
 
-//  ANALYTICS 
+// ── ANALYTICS ─────────────────────────────────────────────────────────────
 // Get analytics (organizer only) - UPDATED WITH CHECK-IN STATS
 router.get('/:eventId/analytics', verifyEventAccess, async (req, res, next) => {
   try {
@@ -798,13 +798,14 @@ router.get('/:eventId/analytics', verifyEventAccess, async (req, res, next) => {
     if (!isOrg) return res.status(403).json({ error: 'Only organizers can view analytics' });
 
     
-// 
+// ═══════════════════════════════════════════════════════════════════════════
 // PUBLIC RESERVATION API  (/api/events/public/reserve/...)
 // No auth required. Aggressively rate-limited.
-// 
+// ═══════════════════════════════════════════════════════════════════════════
 
+const crypto = require('crypto');
 
-//  Availability helper 
+// ── Availability helper ──────────────────────────────────────────────────────
 
 // Convert a wall-clock date+time string in a given IANA timezone to a UTC Date.
 // e.g. wallClockToUTC('2026-03-04', '09:30', 'America/New_York') => Date(2026-03-04T14:30:00Z)
@@ -959,7 +960,7 @@ function computeAvailability(dateStr, partySize, event, tz) {
   });
 }
 
-//  GET /public/reserve/:subdomain 
+// ── GET /public/reserve/:subdomain ────────────────────────────────────────────
 // Returns public restaurant info and reservation config.
 router.get('/public/reserve/:subdomain', availabilityLimiter, async (req, res, next) => {
   try {
@@ -1063,7 +1064,7 @@ router.get('/public/reserve/:subdomain', availabilityLimiter, async (req, res, n
   } catch (err) { next(err); }
 });
 
-//  GET /public/reserve/:subdomain/availability 
+// ── GET /public/reserve/:subdomain/availability ────────────────────────────────
 // ?date=YYYY-MM-DD&partySize=N
 router.get('/public/reserve/:subdomain/availability', availabilityLimiter, async (req, res, next) => {
   try {
@@ -1106,7 +1107,7 @@ router.get('/public/reserve/:subdomain/availability', availabilityLimiter, async
   } catch (err) { next(err); }
 });
 
-//  POST /public/reserve/:subdomain 
+// ── POST /public/reserve/:subdomain ───────────────────────────────────────────
 // Create a public reservation. Rate limited.
 router.post('/public/reserve/:subdomain', reservationLimiter, async (req, res, next) => {
   try {
@@ -1233,7 +1234,7 @@ router.post('/public/reserve/:subdomain', reservationLimiter, async (req, res, n
   } catch (err) { next(err); }
 });
 
-//  DELETE /public/reserve/cancel/:cancelToken 
+// ── DELETE /public/reserve/cancel/:cancelToken ────────────────────────────────
 // Self-service cancellation via the token in the confirmation email.
 router.delete('/public/reserve/cancel/:cancelToken', reservationLimiter, async (req, res, next) => {
   try {
@@ -1276,7 +1277,7 @@ router.delete('/public/reserve/cancel/:cancelToken', reservationLimiter, async (
   } catch (err) { next(err); }
 });
 
-//  PATCH /:eventId/table-service/reservation-page-settings 
+// ── PATCH /:eventId/table-service/reservation-page-settings ──────────────────
 // Organizer updates the full reservation page config.
 router.patch('/:eventId/table-service/reservation-page-settings', verifyOrganizer, async (req, res, next) => {
   try {
@@ -1384,7 +1385,7 @@ const Message = require('../models/Message');
   }
 });
 
-//  UTILITIES 
+// ── UTILITIES ─────────────────────────────────────────────────────────────
 // Generate ICS calendar file
 router.get('/:eventId/calendar.ics', verifyEventAccess, async (req, res, next) => {
   try {
@@ -1441,7 +1442,7 @@ router.get('/:eventId/participants.csv', verifyEventAccess, async (req, res, nex
   } catch (error) { next(error); }
 });
 
-//  Agenda 
+// ── Agenda ────────────────────────────────────────────────────────────────
 // Get agenda
 router.get('/:eventId/agenda', verifyEventAccess, async (req, res, next) => {
   try {
@@ -1721,7 +1722,7 @@ router.post('/:eventId/invites/:inviteCode/rsvp', async (req, res, next) => {
     const Invite = require('../models/Invite');
     const { status } = req.body;
 
-    //  Normalise and validate the incoming status 
+    // ── Normalise and validate the incoming status ─────────────────────────
     // GuestInvite.jsx sends 'yes'/'maybe'/'no'; the model stores
     // 'confirmed'/'maybe'/'declined'.  Accept both conventions.
     const normalise = { yes: 'confirmed', confirmed: 'confirmed',
@@ -1732,24 +1733,24 @@ router.post('/:eventId/invites/:inviteCode/rsvp', async (req, res, next) => {
       return res.status(400).json({ error: 'Invalid RSVP response. Choose "Going", "Maybe", or "Can\'t make it".' });
     }
 
-    //  Load invite 
+    // ── Load invite ────────────────────────────────────────────────────────
     const invite = await Invite.findOne({
       eventId:    req.params.eventId,
       inviteCode: req.params.inviteCode,
     });
     if (!invite) return res.status(404).json({ error: 'Invite not found' });
 
-    //  Load event settings 
+    // ── Load event settings ────────────────────────────────────────────────
     const event = await Event.findById(req.params.eventId).select('settings').lean();
     if (!event) return res.status(404).json({ error: 'Event not found' });
     const settings = event.settings || {};
 
-    //  Enforce rsvpEnabled 
+    // ── Enforce rsvpEnabled ────────────────────────────────────────────────
     if (settings.rsvpEnabled === false) {
       return res.status(403).json({ error: 'RSVPs are not enabled for this event.' });
     }
 
-    //  Enforce rsvpDeadline 
+    // ── Enforce rsvpDeadline ───────────────────────────────────────────────
     if (settings.rsvpDeadline && new Date() > new Date(settings.rsvpDeadline)) {
       const fmt = new Date(settings.rsvpDeadline).toLocaleDateString('en-US', {
         month: 'long', day: 'numeric', year: 'numeric',
@@ -1761,7 +1762,7 @@ router.post('/:eventId/invites/:inviteCode/rsvp', async (req, res, next) => {
       });
     }
 
-    //  Enforce rsvpAllowMaybe 
+    // ── Enforce rsvpAllowMaybe ─────────────────────────────────────────────
     if (normalisedStatus === 'maybe' && settings.rsvpAllowMaybe === false) {
       return res.status(400).json({ error: '"Maybe" responses are not allowed for this event. Please choose Going or Can\'t make it.' });
     }
@@ -1773,9 +1774,9 @@ router.post('/:eventId/invites/:inviteCode/rsvp', async (req, res, next) => {
   } catch (error) { next(error); }
 });
 
-// 
+// ═══════════════════════════════════════════════════════════════════════════
 // SECURE CHECK-IN SYSTEM
-// 
+// ═══════════════════════════════════════════════════════════════════════════
 
 // STEP 1: Scan / lookup — returns full guest profile WITHOUT committing check-in
 // Used by scanner UI to show the "boarding pass" before staff taps Admit
@@ -1791,12 +1792,12 @@ const {
 
 router.get('/:eventId/verify-scan/:inviteCode', 
   verifyEventAccess,
-  enforceBlocks,           //  Check emergency lockdown, blocks, trust scores
-  detectDuplicates,        //  Check for duplicate guests
-  detectSuspiciousPatterns, //  Check for rapid scans, multiple devices
-  enforceCapacity,         //  Check max attendees limit
-  enforceTimeWindow,       //  Check time restrictions
-  auditLog,                //  Log all scan attempts
+  enforceBlocks,           // ✅ Check emergency lockdown, blocks, trust scores
+  detectDuplicates,        // ✅ Check for duplicate guests
+  detectSuspiciousPatterns, // ✅ Check for rapid scans, multiple devices
+  enforceCapacity,         // ✅ Check max attendees limit
+  enforceTimeWindow,       // ✅ Check time restrictions
+  auditLog,                // ✅ Log all scan attempts
   async (req, res, next) => {
   try {
     const Invite = require('../models/Invite');
@@ -1804,7 +1805,7 @@ router.get('/:eventId/verify-scan/:inviteCode',
     const ip = req.ip || req.connection.remoteAddress || '';
     const staffUser = req.eventAccess?.username || 'staff';
 
-    //  Cross-event security: invite must belong to THIS event 
+    // ── Cross-event security: invite must belong to THIS event ──
     const invite = await Invite.findOne({ inviteCode: inviteCode.toUpperCase().trim() });
 
     if (!invite) {
@@ -1854,14 +1855,14 @@ router.get('/:eventId/verify-scan/:inviteCode',
     const event = await Event.findById(eventId).select('checkinSettings title').lean();
     const settings = event?.checkinSettings || {};
 
-    //  Collect security warnings from middleware 
+    // ── Collect security warnings from middleware ──
     const warnings = req.securityWarnings || [];
     const flags = invite.securityFlags || [];
     
     // Calculate trust score
     const trustScore = invite.calculateTrustScore();
 
-    //  Return the full guest profile for staff to review 
+    // ── Return the full guest profile for staff to review ──
     res.json({
       valid: true,
       requiresPin: settings.requirePin && !!invite.securityPin,
@@ -1932,7 +1933,7 @@ router.post('/:eventId/verify-pin/:inviteCode', verifyEventAccess, async (req, r
 // STEP 3: Commit check-in — only called after staff reviews profile (and PIN if required)
 router.post('/:eventId/checkin/:inviteCode', 
   verifyEventAccess,
-  preventReentrancy,  //  Prevent simultaneous check-ins
+  preventReentrancy,  // ✅ Prevent simultaneous check-ins
   async (req, res, next) => {
   try {
     const Invite = require('../models/Invite');
@@ -1967,7 +1968,7 @@ router.post('/:eventId/checkin/:inviteCode',
       return res.status(403).json({ error: 'PIN verification required before check-in.' });
     }
 
-    //  FINAL CAPACITY CHECK before committing
+    // ✅ FINAL CAPACITY CHECK before committing
     if (settings.enableCapacityLimits && settings.maxTotalAttendees) {
       const checkedInInvites = await Invite.find({ eventId, checkedIn: true });
       const currentAttendees = checkedInInvites.reduce((sum, inv) => sum + (inv.actualAttendees || 0), 0);
@@ -2086,9 +2087,9 @@ router.get('/:eventId/checkin-settings', verifyCheckinAccess, async (req, res, n
 
 router.patch('/:eventId/checkin-settings', verifyOrganizer, async (req, res, next) => {
   try {
-    // 
+    // ══════════════════════════════════════════════════════════════════
     // COMPREHENSIVE SECURITY SETTINGS - CORRECT MIDDLEWARE NAMES
-    // 
+    // ══════════════════════════════════════════════════════════════════
     const allowed = [
       // General Security
       'requirePin',
@@ -2099,19 +2100,19 @@ router.patch('/:eventId/checkin-settings', verifyOrganizer, async (req, res, nex
       'allowManualOverride',
       'staffNote',
       
-      // Duplicate Prevention -  CORRECT NAMES
+      // Duplicate Prevention - ✅ CORRECT NAMES
       'enableDuplicateDetection',
       'duplicateDetectionMode',
       'autoBlockDuplicates',
       'allowMultipleTickets',
       
-      // Pattern Detection -  CORRECT NAMES
+      // Pattern Detection - ✅ CORRECT NAMES
       'enablePatternDetection',
       'rapidScanThreshold',
       'rapidScanWindowSeconds',
       'multiDeviceThreshold',
       
-      // Trust Scoring -  CORRECT NAMES
+      // Trust Scoring - ✅ CORRECT NAMES
       'enableTrustScore',
       'minimumTrustScore',
       'autoBlockLowTrust',
@@ -2244,11 +2245,11 @@ router.delete('/:eventId/invites/:inviteId', verifyOrganizer, async (req, res, n
   } catch (error) { next(error); }
 });
 
-// 
+// ═══════════════════════════════════════════════════════════════════════════
 // STAFF CHECK-IN ACCOUNTS
 // Organizers create staff accounts with PINs; staff use them to log into
 // the check-in page without getting full organizer privileges.
-// 
+// ═══════════════════════════════════════════════════════════════════════════
 
 // POST /:eventId/staff-login  — public, no auth, used on check-in login screen
 router.post('/:eventId/staff-login', authLimiter, async (req, res, next) => {
@@ -2379,9 +2380,9 @@ router.patch('/:eventId/staff/:staffUsername/pin', verifyOrganizer, async (req, 
   } catch (error) { next(error); }
 });
 
-// 
+// ═══════════════════════════════════════════════════════════════════════════
 // BRANDED QR CODE
-// 
+// ═══════════════════════════════════════════════════════════════════════════
 
 // GET /:eventId/qr.svg — no auth required, encodes the public join URL
 router.get('/:eventId/qr.svg', async (req, res, next) => {
@@ -2460,9 +2461,9 @@ router.get('/:eventId/qr.svg', async (req, res, next) => {
   } catch (error) { next(error); }
 });
 
-// 
+// ═══════════════════════════════════════════════════════════════════════════
 // WAITLIST
-// 
+// ═══════════════════════════════════════════════════════════════════════════
 
 // POST /:eventId/waitlist — join the waitlist when event is full
 router.post('/:eventId/waitlist',
@@ -2515,9 +2516,9 @@ router.delete('/:eventId/waitlist/:username', async (req, res, next) => {
   } catch (error) { next(error); }
 });
 
-// 
+// ═══════════════════════════════════════════════════════════════════════════
 // RECURRING EVENTS — clone with a new date
-// 
+// ═══════════════════════════════════════════════════════════════════════════
 
 router.post('/:eventId/clone', verifyOrganizer,
   [body('date').isISO8601().withMessage('Valid date required'), validate],
@@ -2575,9 +2576,9 @@ router.post('/:eventId/clone', verifyOrganizer,
   }
 );
 
-// 
+// ═══════════════════════════════════════════════════════════════════════════
 // WEBHOOKS
-// 
+// ═══════════════════════════════════════════════════════════════════════════
 
 // Utility: fire all active webhooks for a given event + event type
 async function fireWebhooks(eventId, eventType, payload) {
@@ -2892,9 +2893,9 @@ router.delete('/:eventId/webhooks/:webhookId', verifyOrganizer, async (req, res,
   } catch (error) { next(error); }
 });
 
-// 
+// ═══════════════════════════════════════════════════════════════════════════
 // APPROVAL QUEUE — organizer approve/reject pending join requests
-// 
+// ═══════════════════════════════════════════════════════════════════════════
 
 // GET  /:eventId/approval-status — unauthenticated polling endpoint for pending users
 // A user waiting for approval polls this to learn when the organizer approves them.
@@ -2993,7 +2994,7 @@ router.post('/:eventId/approval-queue/:username/reject', verifyOrganizer, async 
   } catch (err) { next(err); }
 });
 
-//  GET /invite/:inviteCode/qr.svg 
+// ─── GET /invite/:inviteCode/qr.svg ──────────────────────────────────────────
 // Returns a branded PlanIt QR card for a specific guest invite.
 // No auth required — the invite code IS the credential (same as the invite page).
 // Matches the dark-card aesthetic of the event QR already used in EventSpace.
@@ -3060,7 +3061,7 @@ router.get('/invite/:inviteCode/qr.svg', async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
-//  GET /:eventId/checkin-cache 
+// ─── GET /:eventId/checkin-cache ─────────────────────────────────────────────
 // Returns a lightweight snapshot of all invites for offline PWA check-in.
 // Staff/organizer devices call this on page load and store it in IndexedDB.
 // When offline, the device checks invites against this cache and queues scans.
@@ -3105,10 +3106,10 @@ router.get('/:eventId/checkin-cache', verifyCheckinAccess, async (req, res, next
 module.exports = router;
 module.exports.fireWebhooks = fireWebhooks;
 
-// 
+// ═══════════════════════════════════════════════════════════════════════════
 // TABLE SERVICE MODE — Restaurant & Venue Floor Management Routes
 // Data is NEVER auto-wiped (keepForever enforced in settings PATCH).
-// 
+// ═══════════════════════════════════════════════════════════════════════════
 
 // GET  /:eventId/table-service/floor  — full floor state
 // Strictly table-service events only. Enterprise events use /checkin for seating.
@@ -3293,9 +3294,163 @@ router.patch('/:eventId/table-service/settings', verifyOrganizer, async (req, re
     res.json({ success: true, settings: event.tableServiceSettings });
   } catch (err) { next(err); }
 });
-// 
+// ═══════════════════════════════════════════════════════════════════════════
 
 
+// ═══════════════════════════════════════════════════════════════════════════
+// PUBLIC RESERVATION API  (/api/events/public/reserve/...)
+// No auth required. Aggressively rate-limited.
+// ═══════════════════════════════════════════════════════════════════════════
+
+// ── Availability helpers (module-scope) ──────────────────────────────────────
+// These were previously only defined inside the analytics handler scope.
+// Hoisted here so computeAvailability and all public-reserve route handlers
+// can reference them regardless of call order.
+
+function wallClockToUTC(dateStr, timeStr, tz) {
+  if (!tz) return new Date(`${dateStr}T${timeStr}:00`);
+  try {
+    const [Y, M, D] = dateStr.split('-').map(Number);
+    const [h, m]    = timeStr.split(':').map(Number);
+    const target = Date.UTC(Y, M - 1, D, h, m, 0);
+    const fmt = new Intl.DateTimeFormat('en-CA', {
+      timeZone: tz,
+      year: 'numeric', month: '2-digit', day: '2-digit',
+      hour: '2-digit', minute: '2-digit', second: '2-digit',
+      hour12: false,
+    });
+    let utcMs = target;
+    for (let i = 0; i < 3; i++) {
+      const parts = Object.fromEntries(
+        fmt.formatToParts(new Date(utcMs)).map(p => [p.type, p.value])
+      );
+      const localMs = Date.UTC(
+        +parts.year, +parts.month - 1, +parts.day,
+        +parts.hour === 24 ? 0 : +parts.hour,
+        +parts.minute, +parts.second
+      );
+      const diff = target - localMs;
+      if (diff === 0) break;
+      utcMs += diff;
+    }
+    return new Date(utcMs);
+  } catch (_) {
+    return new Date(`${dateStr}T${timeStr}:00`);
+  }
+}
+
+function buildSlots(dateStr, openTime, closeTime, intervalMin, lastBookingBuffer, tz) {
+  const slots = [];
+  const [oh, om] = openTime.split(':').map(Number);
+  const [ch, cm] = closeTime.split(':').map(Number);
+  let cur = oh * 60 + om;
+  const end = ch * 60 + cm - (lastBookingBuffer || 0);
+  while (cur <= end) {
+    const h = Math.floor(cur / 60);
+    const m = cur % 60;
+    const timeStr = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+    const dt = wallClockToUTC(dateStr, timeStr, tz);
+    slots.push({ time: timeStr, datetime: dt });
+    cur += intervalMin;
+  }
+  return slots;
+}
+
+function getDayKey(date) {
+  const days = ['sun','mon','tue','wed','thu','fri','sat'];
+  return days[new Date(date).getDay()];
+}
+
+function computeAvailability(dateStr, partySize, event, tz) {
+  const rps = event.reservationPageSettings || {};
+  const tss = event.tableServiceSettings || {};
+
+  // Check if this day is open
+  const dayKey = getDayKey(dateStr + 'T12:00:00');
+  const dayConfig = rps.operatingDays?.[dayKey];
+  if (dayConfig && dayConfig.open === false) return [];
+
+  // Blackout check
+  if ((rps.blackoutDates || []).some(b => b.date === dateStr)) return [];
+
+  const openTime  = dayConfig?.openTime  || tss.operatingHoursOpen  || '11:00';
+  const closeTime = dayConfig?.closeTime || tss.operatingHoursClose || '22:00';
+  const interval  = rps.slotIntervalMinutes || 30;
+  const duration  = tss.reservationDurationMinutes || 90;
+  const buffer    = rps.lastBookingBeforeCloseMinutes || 30;
+  const maxPerSlot = rps.maxReservationsPerSlot || 0;
+
+  const slots = buildSlots(dateStr, openTime, closeTime, interval, buffer, tz);
+
+  // Tables that can seat this party
+  const tables = (event.seatingMap?.objects || []).filter(t =>
+    t.type !== 'zone' && t.capacity >= partySize
+  );
+
+  // Reservations for this day — use UTC day window covering the full local day
+  const dayStart = tz ? wallClockToUTC(dateStr, '00:00', tz) : new Date(dateStr + 'T00:00:00');
+  const dayEnd   = tz ? wallClockToUTC(dateStr, '23:59', tz) : new Date(dateStr + 'T23:59:59');
+  const dayRes   = (event.restaurantReservations || []).filter(r =>
+    (r.status === 'confirmed' || r.status === 'pending') &&
+    new Date(r.dateTime) >= dayStart &&
+    new Date(r.dateTime) <= dayEnd
+  );
+
+  // Min advance enforcement
+  const minAdvanceMs = (rps.minAdvanceHours ?? 1) * 3600000;
+  const now = Date.now();
+
+  return slots.map(slot => {
+    // Past or too soon?
+    if (slot.datetime.getTime() - now < minAdvanceMs) {
+      return { time: slot.time, status: 'unavailable', reason: 'past' };
+    }
+
+    const slotEnd = new Date(slot.datetime.getTime() + duration * 60000);
+
+    // Which of our suitable tables already have a reservation overlapping this window?
+    const bookedTableIds = new Set();
+    dayRes.forEach(res => {
+      if (!res.tableId) return;
+      const rStart = new Date(res.dateTime);
+      const rEnd   = new Date(rStart.getTime() + duration * 60000);
+      if (rStart < slotEnd && rEnd > slot.datetime) {
+        bookedTableIds.add(res.tableId);
+      }
+    });
+    const freeTables = tables.filter(t => !bookedTableIds.has(t.id));
+
+    // Per-slot cap check (counts all reservations starting within ±interval/2)
+    let slotCount = 0;
+    if (maxPerSlot > 0) {
+      slotCount = dayRes.filter(r => {
+        const diff = Math.abs(new Date(r.dateTime).getTime() - slot.datetime.getTime());
+        return diff < (interval * 60000) / 2;
+      }).length;
+    }
+
+    let status = 'available';
+    if (tables.length > 0) {
+      if (freeTables.length === 0) status = 'full';
+      else if (freeTables.length === 1) status = 'limited';
+    } else {
+      // No floor map yet — fall back to slot cap only
+      if (maxPerSlot > 0 && slotCount >= maxPerSlot) status = 'full';
+      else if (maxPerSlot > 0 && slotCount >= maxPerSlot * 0.7) status = 'limited';
+    }
+
+    if (maxPerSlot > 0 && slotCount >= maxPerSlot) status = 'full';
+
+    return {
+      time: slot.time,
+      status,
+      freeCount: freeTables.length,
+    };
+  });
+}
+
+// ── GET /public/reserve/:subdomain ────────────────────────────────────────────
+// Returns public restaurant info and reservation config.
 router.get('/public/reserve/:subdomain', availabilityLimiter, async (req, res, next) => {
   try {
     const event = await Event.findOne({ subdomain: req.params.subdomain })
@@ -3398,7 +3553,7 @@ router.get('/public/reserve/:subdomain', availabilityLimiter, async (req, res, n
   } catch (err) { next(err); }
 });
 
-//  GET /public/reserve/:subdomain/availability 
+// ── GET /public/reserve/:subdomain/availability ────────────────────────────────
 // ?date=YYYY-MM-DD&partySize=N
 router.get('/public/reserve/:subdomain/availability', availabilityLimiter, async (req, res, next) => {
   try {
@@ -3441,7 +3596,7 @@ router.get('/public/reserve/:subdomain/availability', availabilityLimiter, async
   } catch (err) { next(err); }
 });
 
-//  POST /public/reserve/:subdomain 
+// ── POST /public/reserve/:subdomain ───────────────────────────────────────────
 // Create a public reservation. Rate limited.
 router.post('/public/reserve/:subdomain', reservationLimiter, async (req, res, next) => {
   try {
@@ -3570,7 +3725,7 @@ router.post('/public/reserve/:subdomain', reservationLimiter, async (req, res, n
 });
 
 
-//  GET /public/reserve/confirmation/:cancelToken 
+// ── GET /public/reserve/confirmation/:cancelToken ────────────────────────────
 // Returns reservation details for the guest confirmation/ticket page.
 // Uses cancelToken (sent in POST response) — safe to expose publicly.
 router.get('/public/reserve/confirmation/:cancelToken', availabilityLimiter, async (req, res, next) => {
@@ -3616,7 +3771,7 @@ router.get('/public/reserve/confirmation/:cancelToken', availabilityLimiter, asy
   } catch (err) { next(err); }
 });
 
-//  DELETE /public/reserve/cancel/:cancelToken 
+// ── DELETE /public/reserve/cancel/:cancelToken ────────────────────────────────
 // Self-service cancellation via the token in the confirmation email.
 router.delete('/public/reserve/cancel/:cancelToken', reservationLimiter, async (req, res, next) => {
   try {
@@ -3659,7 +3814,7 @@ router.delete('/public/reserve/cancel/:cancelToken', reservationLimiter, async (
   } catch (err) { next(err); }
 });
 
-//  PATCH /:eventId/table-service/reservation-page-settings 
+// ── PATCH /:eventId/table-service/reservation-page-settings ──────────────────
 // Organizer updates the full reservation page config.
 router.patch('/:eventId/table-service/reservation-page-settings', verifyOrganizer, async (req, res, next) => {
   try {
