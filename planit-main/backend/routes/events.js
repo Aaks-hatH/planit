@@ -805,11 +805,25 @@ router.get('/:eventId/analytics', verifyEventAccess, async (req, res, next) => {
 const crypto = require('crypto');
 
 // ── Availability helper ──────────────────────────────────────────────────────
-function buildSlots(dateStr, openTime, closeTime, intervalMin, lastBookingBuffer) {
+
+// Convert a wall-clock date+time string in a given IANA timezone to a UTC Date.
+// e.g. wallClockToUTC('2026-03-04', '09:30', 'America/New_York') => Date(2026-03-04T14:30:00Z)
+function wallClockToUTC(dateStr, timeStr, tz) {
+  if (!tz) return new Date(`${dateStr}T${timeStr}:00`);
+  try {
+    const naiveUTC = new Date(`${dateStr}T${timeStr}:00Z`);
+    const localAtNaive = new Date(naiveUTC.toLocaleString('en-US', { timeZone: tz }));
+    const offsetMs = localAtNaive.getTime() - naiveUTC.getTime();
+    return new Date(naiveUTC.getTime() - offsetMs);
+  } catch (_) {
+    return new Date(`${dateStr}T${timeStr}:00`);
+  }
+}
+
+function buildSlots(dateStr, openTime, closeTime, intervalMin, lastBookingBuffer, tz) {
   const slots = [];
   const [oh, om] = openTime.split(':').map(Number);
   const [ch, cm] = closeTime.split(':').map(Number);
-  const base = new Date(`${dateStr}T00:00:00`);
 
   let cur = oh * 60 + om;
   const end = ch * 60 + cm - (lastBookingBuffer || 0);
@@ -817,12 +831,9 @@ function buildSlots(dateStr, openTime, closeTime, intervalMin, lastBookingBuffer
   while (cur <= end) {
     const h = Math.floor(cur / 60);
     const m = cur % 60;
-    const dt = new Date(base);
-    dt.setHours(h, m, 0, 0);
-    slots.push({
-      time: `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`,
-      datetime: dt,
-    });
+    const timeStr = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+    const dt = wallClockToUTC(dateStr, timeStr, tz);
+    slots.push({ time: timeStr, datetime: dt });
     cur += intervalMin;
   }
   return slots;
@@ -833,7 +844,7 @@ function getDayKey(date) {
   return days[new Date(date).getDay()];
 }
 
-function computeAvailability(dateStr, partySize, event) {
+function computeAvailability(dateStr, partySize, event, tz) {
   const rps = event.reservationPageSettings || {};
   const tss = event.tableServiceSettings || {};
 
@@ -852,16 +863,16 @@ function computeAvailability(dateStr, partySize, event) {
   const buffer    = rps.lastBookingBeforeCloseMinutes || 30;
   const maxPerSlot = rps.maxReservationsPerSlot || 0;
 
-  const slots = buildSlots(dateStr, openTime, closeTime, interval, buffer);
+  const slots = buildSlots(dateStr, openTime, closeTime, interval, buffer, tz);
 
   // Tables that can seat this party
   const tables = (event.seatingMap?.objects || []).filter(t =>
     t.type !== 'zone' && t.capacity >= partySize
   );
 
-  // Reservations for this day
-  const dayStart = new Date(dateStr + 'T00:00:00');
-  const dayEnd   = new Date(dateStr + 'T23:59:59');
+  // Reservations for this day — use UTC day window covering the full local day
+  const dayStart = tz ? wallClockToUTC(dateStr, '00:00', tz) : new Date(dateStr + 'T00:00:00');
+  const dayEnd   = tz ? wallClockToUTC(dateStr, '23:59', tz) : new Date(dateStr + 'T23:59:59');
   const dayRes   = (event.restaurantReservations || []).filter(r =>
     (r.status === 'confirmed' || r.status === 'pending') &&
     new Date(r.dateTime) >= dayStart &&
@@ -1029,7 +1040,7 @@ router.get('/public/reserve/:subdomain', availabilityLimiter, async (req, res, n
 // ?date=YYYY-MM-DD&partySize=N
 router.get('/public/reserve/:subdomain/availability', availabilityLimiter, async (req, res, next) => {
   try {
-    const { date, partySize } = req.query;
+    const { date, partySize, tz } = req.query;
     if (!date || !partySize) return res.status(400).json({ error: 'date and partySize required' });
 
     const sz = parseInt(partySize);
@@ -1054,8 +1065,8 @@ router.get('/public/reserve/:subdomain/availability', availabilityLimiter, async
     // Max per day cap
     const maxPerDay = rps.maxReservationsPerDay || 0;
     if (maxPerDay > 0) {
-      const dayStart = new Date(date + 'T00:00:00');
-      const dayEnd   = new Date(date + 'T23:59:59');
+      const dayStart = tz ? wallClockToUTC(date, '00:00', tz) : new Date(date + 'T00:00:00');
+      const dayEnd   = tz ? wallClockToUTC(date, '23:59', tz) : new Date(date + 'T23:59:59');
       const dayCount = (event.restaurantReservations || []).filter(r =>
         (r.status === 'confirmed' || r.status === 'pending') &&
         new Date(r.dateTime) >= dayStart && new Date(r.dateTime) <= dayEnd
@@ -1063,7 +1074,7 @@ router.get('/public/reserve/:subdomain/availability', availabilityLimiter, async
       if (dayCount >= maxPerDay) return res.json({ slots: [], closed: true, reason: 'Fully booked for this day' });
     }
 
-    const slots = computeAvailability(date, sz, event);
+    const slots = computeAvailability(date, sz, event, tz);
     res.json({ slots });
   } catch (err) { next(err); }
 });
@@ -1072,7 +1083,7 @@ router.get('/public/reserve/:subdomain/availability', availabilityLimiter, async
 // Create a public reservation. Rate limited.
 router.post('/public/reserve/:subdomain', reservationLimiter, async (req, res, next) => {
   try {
-    const { partyName, partySize, phone, email, date, timeSlot, occasion, specialRequests, dietaryNeeds } = req.body;
+    const { partyName, partySize, phone, email, date, timeSlot, occasion, specialRequests, dietaryNeeds, tz } = req.body;
 
     if (!partyName?.trim()) return res.status(400).json({ error: 'Name is required' });
     if (!partySize || partySize < 1) return res.status(400).json({ error: 'Party size is required' });
@@ -1092,8 +1103,8 @@ router.post('/public/reserve/:subdomain', reservationLimiter, async (req, res, n
     if (sz < (rps.minPartySizePublic || 1)) return res.status(400).json({ error: `Minimum party size is ${rps.minPartySizePublic || 1}` });
     if (sz > (rps.maxPartySizePublic || 12)) return res.status(400).json({ error: `Maximum party size for online bookings is ${rps.maxPartySizePublic || 12}` });
 
-    // Build datetime
-    const dateTime = new Date(`${date}T${timeSlot}:00`);
+    // Build datetime in guest's local timezone → store as correct UTC
+    const dateTime = tz ? wallClockToUTC(date, timeSlot, tz) : new Date(`${date}T${timeSlot}:00`);
     if (isNaN(dateTime.getTime())) return res.status(400).json({ error: 'Invalid date/time' });
 
     // Min advance check
@@ -1109,7 +1120,7 @@ router.post('/public/reserve/:subdomain', reservationLimiter, async (req, res, n
     }
 
     // Re-check availability
-    const slots = computeAvailability(date, sz, event);
+    const slots = computeAvailability(date, sz, event, tz);
     const targetSlot = slots.find(s => s.time === timeSlot);
     if (!targetSlot || targetSlot.status === 'full') {
       return res.status(409).json({ error: 'This time slot is no longer available. Please choose another time.' });
@@ -1118,8 +1129,8 @@ router.post('/public/reserve/:subdomain', reservationLimiter, async (req, res, n
     // Per-day cap re-check
     const maxPerDay = rps.maxReservationsPerDay || 0;
     if (maxPerDay > 0) {
-      const dayStart = new Date(date + 'T00:00:00');
-      const dayEnd   = new Date(date + 'T23:59:59');
+      const dayStart = tz ? wallClockToUTC(date, '00:00', tz) : new Date(date + 'T00:00:00');
+      const dayEnd   = tz ? wallClockToUTC(date, '23:59', tz) : new Date(date + 'T23:59:59');
       const dayCount = event.restaurantReservations.filter(r =>
         (r.status === 'confirmed' || r.status === 'pending') &&
         new Date(r.dateTime) >= dayStart && new Date(r.dateTime) <= dayEnd
@@ -3261,35 +3272,8 @@ router.patch('/:eventId/table-service/settings', verifyOrganizer, async (req, re
 const crypto = require('crypto');
 
 // ── Availability helper ──────────────────────────────────────────────────────
-function buildSlots(dateStr, openTime, closeTime, intervalMin, lastBookingBuffer) {
-  const slots = [];
-  const [oh, om] = openTime.split(':').map(Number);
-  const [ch, cm] = closeTime.split(':').map(Number);
-  const base = new Date(`${dateStr}T00:00:00`);
-
-  let cur = oh * 60 + om;
-  const end = ch * 60 + cm - (lastBookingBuffer || 0);
-
-  while (cur <= end) {
-    const h = Math.floor(cur / 60);
-    const m = cur % 60;
-    const dt = new Date(base);
-    dt.setHours(h, m, 0, 0);
-    slots.push({
-      time: `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`,
-      datetime: dt,
-    });
-    cur += intervalMin;
-  }
-  return slots;
-}
-
-function getDayKey(date) {
-  const days = ['sun','mon','tue','wed','thu','fri','sat'];
-  return days[new Date(date).getDay()];
-}
-
-function computeAvailability(dateStr, partySize, event) {
+// (buildSlots, getDayKey, wallClockToUTC and computeAvailability defined above — not duplicated)
+function computeAvailability(dateStr, partySize, event, tz) {
   const rps = event.reservationPageSettings || {};
   const tss = event.tableServiceSettings || {};
 
@@ -3308,16 +3292,16 @@ function computeAvailability(dateStr, partySize, event) {
   const buffer    = rps.lastBookingBeforeCloseMinutes || 30;
   const maxPerSlot = rps.maxReservationsPerSlot || 0;
 
-  const slots = buildSlots(dateStr, openTime, closeTime, interval, buffer);
+  const slots = buildSlots(dateStr, openTime, closeTime, interval, buffer, tz);
 
   // Tables that can seat this party
   const tables = (event.seatingMap?.objects || []).filter(t =>
     t.type !== 'zone' && t.capacity >= partySize
   );
 
-  // Reservations for this day
-  const dayStart = new Date(dateStr + 'T00:00:00');
-  const dayEnd   = new Date(dateStr + 'T23:59:59');
+  // Reservations for this day — use UTC day window covering the full local day
+  const dayStart = tz ? wallClockToUTC(dateStr, '00:00', tz) : new Date(dateStr + 'T00:00:00');
+  const dayEnd   = tz ? wallClockToUTC(dateStr, '23:59', tz) : new Date(dateStr + 'T23:59:59');
   const dayRes   = (event.restaurantReservations || []).filter(r =>
     (r.status === 'confirmed' || r.status === 'pending') &&
     new Date(r.dateTime) >= dayStart &&
@@ -3485,7 +3469,7 @@ router.get('/public/reserve/:subdomain', availabilityLimiter, async (req, res, n
 // ?date=YYYY-MM-DD&partySize=N
 router.get('/public/reserve/:subdomain/availability', availabilityLimiter, async (req, res, next) => {
   try {
-    const { date, partySize } = req.query;
+    const { date, partySize, tz } = req.query;
     if (!date || !partySize) return res.status(400).json({ error: 'date and partySize required' });
 
     const sz = parseInt(partySize);
@@ -3510,8 +3494,8 @@ router.get('/public/reserve/:subdomain/availability', availabilityLimiter, async
     // Max per day cap
     const maxPerDay = rps.maxReservationsPerDay || 0;
     if (maxPerDay > 0) {
-      const dayStart = new Date(date + 'T00:00:00');
-      const dayEnd   = new Date(date + 'T23:59:59');
+      const dayStart = tz ? wallClockToUTC(date, '00:00', tz) : new Date(date + 'T00:00:00');
+      const dayEnd   = tz ? wallClockToUTC(date, '23:59', tz) : new Date(date + 'T23:59:59');
       const dayCount = (event.restaurantReservations || []).filter(r =>
         (r.status === 'confirmed' || r.status === 'pending') &&
         new Date(r.dateTime) >= dayStart && new Date(r.dateTime) <= dayEnd
@@ -3519,7 +3503,7 @@ router.get('/public/reserve/:subdomain/availability', availabilityLimiter, async
       if (dayCount >= maxPerDay) return res.json({ slots: [], closed: true, reason: 'Fully booked for this day' });
     }
 
-    const slots = computeAvailability(date, sz, event);
+    const slots = computeAvailability(date, sz, event, tz);
     res.json({ slots });
   } catch (err) { next(err); }
 });
@@ -3528,7 +3512,7 @@ router.get('/public/reserve/:subdomain/availability', availabilityLimiter, async
 // Create a public reservation. Rate limited.
 router.post('/public/reserve/:subdomain', reservationLimiter, async (req, res, next) => {
   try {
-    const { partyName, partySize, phone, email, date, timeSlot, occasion, specialRequests, dietaryNeeds } = req.body;
+    const { partyName, partySize, phone, email, date, timeSlot, occasion, specialRequests, dietaryNeeds, tz } = req.body;
 
     if (!partyName?.trim()) return res.status(400).json({ error: 'Name is required' });
     if (!partySize || partySize < 1) return res.status(400).json({ error: 'Party size is required' });
@@ -3548,8 +3532,8 @@ router.post('/public/reserve/:subdomain', reservationLimiter, async (req, res, n
     if (sz < (rps.minPartySizePublic || 1)) return res.status(400).json({ error: `Minimum party size is ${rps.minPartySizePublic || 1}` });
     if (sz > (rps.maxPartySizePublic || 12)) return res.status(400).json({ error: `Maximum party size for online bookings is ${rps.maxPartySizePublic || 12}` });
 
-    // Build datetime
-    const dateTime = new Date(`${date}T${timeSlot}:00`);
+    // Build datetime in guest's local timezone → store as correct UTC
+    const dateTime = tz ? wallClockToUTC(date, timeSlot, tz) : new Date(`${date}T${timeSlot}:00`);
     if (isNaN(dateTime.getTime())) return res.status(400).json({ error: 'Invalid date/time' });
 
     // Min advance check
@@ -3565,7 +3549,7 @@ router.post('/public/reserve/:subdomain', reservationLimiter, async (req, res, n
     }
 
     // Re-check availability
-    const slots = computeAvailability(date, sz, event);
+    const slots = computeAvailability(date, sz, event, tz);
     const targetSlot = slots.find(s => s.time === timeSlot);
     if (!targetSlot || targetSlot.status === 'full') {
       return res.status(409).json({ error: 'This time slot is no longer available. Please choose another time.' });
@@ -3574,8 +3558,8 @@ router.post('/public/reserve/:subdomain', reservationLimiter, async (req, res, n
     // Per-day cap re-check
     const maxPerDay = rps.maxReservationsPerDay || 0;
     if (maxPerDay > 0) {
-      const dayStart = new Date(date + 'T00:00:00');
-      const dayEnd   = new Date(date + 'T23:59:59');
+      const dayStart = tz ? wallClockToUTC(date, '00:00', tz) : new Date(date + 'T00:00:00');
+      const dayEnd   = tz ? wallClockToUTC(date, '23:59', tz) : new Date(date + 'T23:59:59');
       const dayCount = event.restaurantReservations.filter(r =>
         (r.status === 'confirmed' || r.status === 'pending') &&
         new Date(r.dateTime) >= dayStart && new Date(r.dateTime) <= dayEnd
