@@ -350,9 +350,9 @@ SECTION 12 -- GENERAL PROVISIONS
 Copyright (c) 2026 Aakshat Hariharan. All rights reserved.
 */
 
-// ─────────────────────────────────────────────
+// 
 // UTILITIES
-// ─────────────────────────────────────────────
+// 
 
 function slugify(text) {
   return text.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').substring(0, 40);
@@ -483,13 +483,13 @@ function TestimonialCard({ quote, author, role, event, delay = 0 }) {
 }
 
 
-// ─────────────────────────────────────────────
+// 
 // ENTERPRISE INTERACTIVE DEMO
-// ─────────────────────────────────────────────
+// 
 
-// ─────────────────────────────────────────────
+// 
 // ENTERPRISE INTERACTIVE DEMO
-// ─────────────────────────────────────────────
+// 
 
 const DEMO_GUESTS = [
   { id: 1, name: 'Sarah Johnson',   group: 4, table: 12, code: 'SJ4A-X9', role: 'VIP',      status: 'normal' },
@@ -928,9 +928,9 @@ function EnterpriseDemo() {
   );
 }
 
-// ─────────────────────────────────────────────
+// 
 // MAIN
-// ─────────────────────────────────────────────
+// 
 
 export default function Home() {
   const navigate = useNavigate();
@@ -960,7 +960,7 @@ export default function Home() {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    // ── Client-side field validation ──────────────────────────────────────
+    //  Client-side field validation 
     const errs = {};
     const isTS = mode === 'table-service';
     if (!formData.title.trim())            errs.title          = isTS ? 'Restaurant name is required.' : 'Event title is required.';
@@ -1060,7 +1060,7 @@ export default function Home() {
   return (
     <div className="min-h-screen text-white relative" style={{ background: '#07070e', overflowX: 'clip', maxWidth: '100vw', isolation: 'isolate' }}>
       <style>{`
-        /* ── Shimmer text ──────────────────────────────────────── */
+        /*  Shimmer text  */
         @keyframes shimmer-slide {
           0%   { background-position: -200% center; }
           100% { background-position:  200% center; }
@@ -1079,7 +1079,7 @@ export default function Home() {
           -webkit-text-fill-color: transparent;
           animation: shimmer-slide 5s ease-in-out infinite;
         }
-        /* ── Scan-line sweep on stat cards ──────────────────────── */
+        /*  Scan-line sweep on stat cards  */
         @keyframes scan-sweep {
           0%   { transform: translateX(-120%); }
           100% { transform: translateX(220%);  }
@@ -1095,7 +1095,7 @@ export default function Home() {
         }
         .stat-card:nth-child(2)::after { animation-delay: 1.6s; }
         .stat-card:nth-child(3)::after { animation-delay: 3.2s; }
-        /* ── Input styles ────────────────────────────────────────── */
+        /*  Input styles  */
         .dark-input {
           width: 100%;
           padding: 0.75rem 1rem;
@@ -1110,7 +1110,7 @@ export default function Home() {
         .dark-input:focus { border-color: #64748b; }
         .dark-input::placeholder { color: #475569; }
         .dark-input option { background: #0f172a; color: white; }
-        /* ── Respect reduced motion ──────────────────────────────── */
+        /*  Respect reduced motion  */
         @media (prefers-reduced-motion: reduce) {
           .stat-card::after, .shimmer-white, .shimmer-slate { animation: none !important; }
         }
@@ -1255,17 +1255,15 @@ export default function Home() {
                 className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6 max-w-xl mx-auto w-full"
               >
                 {[
-                  { value: 50000, suffix: '+', label: 'Events planned' },
-                  { value: 500,   suffix: 'k+', label: 'Teams organized' },
-                  { value: 100,   suffix: '%',  label: 'Success rate' },
-                ].map((stat, i) => (
+                  { tag: 'Beta',                desc: 'Early access, free while we grow'       },
+                  { tag: 'Growing fast',        desc: 'New features shipping every week'         },
+                  { tag: 'Student developed',   desc: 'Built solo, from the ground up'           },
+                ].map((item, i) => (
                   <div key={i}
                     className="stat-card text-center p-6 rounded-2xl border border-neutral-800/70 hover:border-neutral-600 transition-all duration-400 cursor-default hover:scale-105"
                     style={{ background: 'rgba(255,255,255,0.03)' }}>
-                    <div className="text-3xl font-black text-white mb-1">
-                      <AnimatedCounter end={stat.value} suffix={stat.suffix} />
-                    </div>
-                    <div className="text-xs font-medium text-neutral-500">{stat.label}</div>
+                    <div className="text-sm font-black text-white mb-1 tracking-wide uppercase">{item.tag}</div>
+                    <div className="text-xs font-medium text-neutral-500">{item.desc}</div>
                   </div>
                 ))}
               </motion.div>
