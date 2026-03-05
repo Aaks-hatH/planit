@@ -21,7 +21,7 @@ import { eventAPI } from '../services/api';
 import toast from 'react-hot-toast';
 import SeatingMap from '../components/SeatingMap';
 
-//  Utilities 
+// ── Utilities ────────────────────────────────────────────────────────────────
 
 const uid = () => `${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`;
 
@@ -74,7 +74,7 @@ function estimateWaitMinutes(partySize, tableStates, objects, settings) {
   return Math.min(...occupiedTimes) + (settings?.cleaningBufferMinutes || 10);
 }
 
-//  Floor Map (SVG canvas) 
+// ── Floor Map (SVG canvas) ────────────────────────────────────────────────────
 
 function FloorMap({ objects, tableStates, selectedId, onSelect, zoom, onZoomChange, pan, onPanChange }) {
   const svgRef     = useRef(null);
@@ -84,13 +84,13 @@ function FloorMap({ objects, tableStates, selectedId, onSelect, zoom, onZoomChan
 
   const getState = (id) => tableStates?.find(s => s.tableId === id) || { status: 'available' };
 
-  /*  zoom  */
+  /* ── zoom ──────────────────────────────────────────────────────────────── */
   const onWheel = (e) => {
     e.preventDefault();
     onZoomChange(z => Math.max(0.3, Math.min(3, z + (e.deltaY > 0 ? -0.1 : 0.1))));
   };
 
-  /*  pan  */
+  /* ── pan ───────────────────────────────────────────────────────────────── */
   const onDown = (e) => {
     e.currentTarget.setPointerCapture(e.pointerId);
     dragging.current   = true;
@@ -110,7 +110,7 @@ function FloorMap({ objects, tableStates, selectedId, onSelect, zoom, onZoomChan
     moved.current    = false;
     if (wasDrag) return; // was a pan, not a tap
 
-    //  coordinate hit-test: find which table the user tapped 
+    // ── coordinate hit-test: find which table the user tapped ──────────────
     // Convert screen coords → SVG local coords (undo pan+zoom)
     const rect = svgRef.current?.getBoundingClientRect();
     if (!rect) return;
@@ -138,7 +138,7 @@ function FloorMap({ objects, tableStates, selectedId, onSelect, zoom, onZoomChan
     }
   };
 
-  /*  table rendering (pure visuals — no event handlers needed)  */
+  /* ── table rendering (pure visuals — no event handlers needed) ─────────── */
   const renderTable = (obj) => {
     if (obj.type === 'zone') {
       const zw = obj.width || 200, zh = obj.height || 120;
@@ -236,9 +236,9 @@ function FloorMap({ objects, tableStates, selectedId, onSelect, zoom, onZoomChan
   );
 }
 
-//  Table Management Panel 
+// ── Table Management Panel ─────────────────────────────────────────────────
 
-function TablePanel({ obj, state, settings, onUpdate, onClose }) {
+function TablePanel({ obj, state, settings, servers, onUpdate, onClose }) {
   const [localState, setLocalState] = useState({ partyName: state?.partyName || '', partySize: state?.partySize || 1, serverName: state?.serverName || '', notes: state?.notes || '' });
   const [saving, setSaving] = useState(false);
 
@@ -313,13 +313,24 @@ function TablePanel({ obj, state, settings, onUpdate, onClose }) {
             </div>
             <div>
               <label className="block text-xs font-semibold text-neutral-400 mb-1.5 uppercase tracking-wider">Server</label>
-              <input
-                type="text"
-                value={localState.serverName}
-                onChange={e => setLocalState(p => ({ ...p, serverName: e.target.value }))}
-                placeholder="Server name"
-                className="w-full bg-neutral-800 border border-neutral-700 text-white text-sm rounded-lg px-3 py-2.5 outline-none focus:border-neutral-500 transition-colors"
-              />
+              {servers && servers.length > 0 ? (
+                <select
+                  value={localState.serverName}
+                  onChange={e => setLocalState(p => ({ ...p, serverName: e.target.value }))}
+                  className="w-full bg-neutral-800 border border-neutral-700 text-white text-sm rounded-lg px-3 py-2.5 outline-none focus:border-neutral-500 transition-colors"
+                >
+                  <option value="">-- Unassigned --</option>
+                  {servers.map(s => <option key={s.id} value={s.name}>{s.name}</option>)}
+                </select>
+              ) : (
+                <input
+                  type="text"
+                  value={localState.serverName}
+                  onChange={e => setLocalState(p => ({ ...p, serverName: e.target.value }))}
+                  placeholder="Server name"
+                  className="w-full bg-neutral-800 border border-neutral-700 text-white text-sm rounded-lg px-3 py-2.5 outline-none focus:border-neutral-500 transition-colors"
+                />
+              )}
             </div>
           </div>
           <div>
@@ -374,7 +385,7 @@ function TablePanel({ obj, state, settings, onUpdate, onClose }) {
   );
 }
 
-//  Waitlist Panel 
+// ── Waitlist Panel ────────────────────────────────────────────────────────────
 
 function WaitlistPanel({ waitlist, tableStates, objects, settings, onAdd, onUpdate, onRemove }) {
   const [showAdd, setShowAdd] = useState(false);
@@ -466,7 +477,7 @@ function WaitlistPanel({ waitlist, tableStates, objects, settings, onAdd, onUpda
                   </div>
                   {/* Est wait time */}
                   <div className={`mt-2 ml-10 text-xs font-semibold ${estWait === 0 ? 'text-emerald-400' : estWait === null ? 'text-neutral-600' : estWait <= 15 ? 'text-amber-400' : 'text-rose-400'}`}>
-                    {estWait === 0 ? ' Table available now' : estWait === null ? 'No suitable table' : `Est. wait ~${estWait} min`}
+                    {estWait === 0 ? '✓ Table available now' : estWait === null ? 'No suitable table' : `Est. wait ~${estWait} min`}
                   </div>
                 </div>
               );
@@ -478,13 +489,124 @@ function WaitlistPanel({ waitlist, tableStates, objects, settings, onAdd, onUpda
   );
 }
 
-//  Reservations Panel 
+// ── Reservations Panel ────────────────────────────────────────────────────────
+
+
+// ── Seat Table Modal — shown after QR scan succeeds ──────────────────────────
+// Lets the host pick the best available table for the scanned reservation.
+function SeatTableModal({ reservation, objects, tableStates, settings, onConfirm, onClose }) {
+  const [selectedTableId, setSelectedTableId] = useState(null);
+
+  // Tables that fit the party, sorted by tightest fit first
+  const suitableTables = (objects || [])
+    .filter(o => o.type !== 'zone' && o.capacity >= reservation.partySize)
+    .map(o => {
+      const state = tableStates.find(s => s.tableId === o.id) || { status: 'available' };
+      return { ...o, state };
+    })
+    .filter(t => t.state.status === 'available' || t.state.status === 'reserved')
+    .sort((a, b) => a.capacity - b.capacity);
+
+  const occupied = (objects || [])
+    .filter(o => o.type !== 'zone' && o.capacity >= reservation.partySize)
+    .map(o => ({ ...o, state: tableStates.find(s => s.tableId === o.id) || { status: 'available' } }))
+    .filter(t => t.state.status !== 'available' && t.state.status !== 'reserved');
+
+  // Auto-select the best fit
+  useEffect(() => {
+    if (suitableTables.length > 0 && !selectedTableId) {
+      setSelectedTableId(suitableTables[0].id);
+    }
+  }, []);
+
+  const selected = suitableTables.find(t => t.id === selectedTableId) ||
+                   occupied.find(t => t.id === selectedTableId);
+
+  return (
+    <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4" onClick={onClose}>
+      <div className="bg-neutral-900 border border-neutral-700 rounded-2xl w-full max-w-md flex flex-col max-h-[90vh]" onClick={e => e.stopPropagation()}>
+        {/* Header */}
+        <div className="flex items-center justify-between px-5 py-4 border-b border-neutral-800 flex-shrink-0">
+          <div>
+            <div className="font-bold text-white">Seat Party</div>
+            <div className="text-xs text-neutral-500 mt-0.5">{reservation.partyName} · Party of {reservation.partySize}</div>
+          </div>
+          <button onClick={onClose} className="p-1.5 hover:bg-neutral-800 rounded-lg text-neutral-500 hover:text-white"><X className="w-4 h-4" /></button>
+        </div>
+
+        {/* Reservation summary */}
+        <div className="px-5 pt-4 pb-2 flex-shrink-0">
+          <div className="bg-neutral-800/60 border border-neutral-700 rounded-xl p-3 grid grid-cols-2 gap-2 text-xs">
+            {[
+              ['Name', reservation.partyName],
+              ['Party', `${reservation.partySize} guests`],
+              ['Time', fmtDateTime(reservation.dateTime)],
+              ...(reservation.phone ? [['Phone', reservation.phone]] : []),
+              ...(reservation.specialRequests ? [['Requests', reservation.specialRequests]] : []),
+            ].map(([l, v]) => (
+              <div key={l}><span className="text-neutral-500">{l}: </span><span className="text-white font-semibold">{v}</span></div>
+            ))}
+          </div>
+        </div>
+
+        {/* Table picker */}
+        <div className="flex-1 overflow-y-auto px-5 pb-3">
+          {suitableTables.length === 0 ? (
+            <div className="text-center py-8 text-neutral-500 text-sm">
+              No available tables fit a party of {reservation.partySize}.
+            </div>
+          ) : (
+            <>
+              <div className="text-xs font-bold text-neutral-500 uppercase tracking-wider mb-2 mt-2">Available tables</div>
+              <div className="space-y-2">
+                {suitableTables.map(t => {
+                  const isSelected = selectedTableId === t.id;
+                  const fit = t.capacity - reservation.partySize;
+                  return (
+                    <button
+                      key={t.id}
+                      onClick={() => setSelectedTableId(t.id)}
+                      className={`w-full flex items-center justify-between px-4 py-3 rounded-xl border text-left transition-all ${isSelected ? 'bg-emerald-950/40 border-emerald-500/60' : 'bg-neutral-800/40 border-neutral-700 hover:border-neutral-500'}`}
+                    >
+                      <div>
+                        <div className="font-bold text-white text-sm">{t.label || `Table ${t.id.slice(-3)}`}</div>
+                        <div className="text-xs text-neutral-400 mt-0.5">Seats {t.capacity} · {t.type}</div>
+                      </div>
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        {fit === 0 && <span className="text-xs font-bold text-emerald-400 bg-emerald-950/60 border border-emerald-500/30 px-2 py-0.5 rounded-full">Perfect fit</span>}
+                        {fit > 0  && <span className="text-xs font-semibold text-neutral-400">{fit} extra seat{fit > 1 ? 's' : ''}</span>}
+                        {isSelected && <Check className="w-4 h-4 text-emerald-400" />}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="px-5 py-4 border-t border-neutral-800 flex gap-3 flex-shrink-0">
+          <button onClick={onClose} className="flex-1 py-2.5 bg-neutral-800 text-neutral-400 rounded-xl text-sm font-semibold hover:bg-neutral-700">Cancel</button>
+          <button
+            onClick={() => selectedTableId && onConfirm(selectedTableId, selected)}
+            disabled={!selectedTableId}
+            className="flex-1 py-2.5 bg-emerald-600 text-white rounded-xl text-sm font-bold hover:bg-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+          >
+            <Users className="w-4 h-4" />
+            Seat at {selected ? (selected.label || `Table ${selected.id.slice(-3)}`) : '—'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 // ---------------------------------------------------------------------------
 // QR Scanner Modal — fullscreen pattern, same as EnterpriseCheckin (proven working)
 // Scans guest reservation QR, verifies with backend, offers Seat Party action.
 // ---------------------------------------------------------------------------
-function QRScannerModal({ eventId, onClose, onResult }) {
+function QRScannerModal({ eventId, objects, tableStates, settings, onClose, onResult, onSeatAtTable }) {
   const [scanResult, setScanResult]   = useState(null); // null | { ok, reservation?, message? }
   const [verifying, setVerifying]     = useState(false);
   const html5QrCodeRef  = useRef(null);
@@ -579,14 +701,26 @@ function QRScannerModal({ eventId, onClose, onResult }) {
     setTimeout(() => { if (isMountedRef.current) startScanner(); }, 800);
   };
 
-  const handleSeat = async () => {
+  const [showSeatModal, setShowSeatModal] = useState(false);
+
+  const handleSeatConfirm = async (tableId, tableObj) => {
     if (!scanResult?.reservation) return;
     try {
+      // Mark reservation as seated
       await eventAPI.updateTableReservation(eventId, scanResult.reservation.id, { status: 'seated' });
-      toast.success(`${scanResult.reservation.partyName} seated!`);
+      // Update table state with party info
+      await eventAPI.updateTableState(eventId, tableId, {
+        status: 'occupied',
+        partyName:  scanResult.reservation.partyName,
+        partySize:  scanResult.reservation.partySize,
+        notes:      scanResult.reservation.specialRequests || scanResult.reservation.notes || '',
+        reservationId: scanResult.reservation.id,
+      });
+      toast.success(`${scanResult.reservation.partyName} seated at ${tableObj?.label || 'table'}`);
       onResult?.();
+      onSeatAtTable?.();
       onClose();
-    } catch { toast.error('Failed to update reservation'); }
+    } catch { toast.error('Failed to seat party'); }
   };
 
   const res = scanResult;
@@ -624,7 +758,7 @@ function QRScannerModal({ eventId, onClose, onResult }) {
                   <CheckCircle className="w-8 h-8 text-emerald-400" />
                 </div>
                 <p className="text-xl font-black mb-1">Valid Reservation</p>
-                <p className="text-xs text-emerald-400 mb-6">QR code verified </p>
+                <p className="text-xs text-emerald-400 mb-6">QR code verified ✓</p>
                 <div className="bg-neutral-900 border border-neutral-700 rounded-2xl p-4 mb-6 text-left space-y-2">
                   {[
                     ['Name',       res.reservation.partyName],
@@ -639,9 +773,19 @@ function QRScannerModal({ eventId, onClose, onResult }) {
                   ))}
                 </div>
                 <div className="grid grid-cols-2 gap-3">
-                  <button onClick={handleSeat} className="py-3 bg-emerald-600 text-white rounded-xl font-bold hover:bg-emerald-700">Seat Party</button>
+                  <button onClick={() => setShowSeatModal(true)} className="py-3 bg-emerald-600 text-white rounded-xl font-bold hover:bg-emerald-700">Choose Table</button>
                   <button onClick={onClose} className="py-3 bg-neutral-800 text-white rounded-xl font-semibold hover:bg-neutral-700">Close</button>
                 </div>
+                {showSeatModal && (
+                  <SeatTableModal
+                    reservation={res.reservation}
+                    objects={objects}
+                    tableStates={tableStates}
+                    settings={settings}
+                    onConfirm={handleSeatConfirm}
+                    onClose={() => setShowSeatModal(false)}
+                  />
+                )}
               </>
             ) : (
               <>
@@ -820,7 +964,7 @@ function ReservationsPanel({ reservations, onAdd, onUpdate, eventId }) {
   );
 }
 
-//  Settings Modal (full) 
+// ── Settings Modal (full) ──────────────────────────────────────────────────────
 
 const DAY_LABELS = { mon:'Monday', tue:'Tuesday', wed:'Wednesday', thu:'Thursday', fri:'Friday', sat:'Saturday', sun:'Sunday' };
 const DAY_KEYS_ORDERED = ['mon','tue','wed','thu','fri','sat','sun'];
@@ -901,6 +1045,18 @@ function SettingsModal({ settings, reservationSettings, onSave, onSaveReserve, o
     blackoutDatesRaw:           (reservationSettings?.blackoutDates || []).map(b => b.date).join(', '),
   });
   const [saving, setSaving] = useState(false);
+  const [serverList, setServerList] = useState(() => (settings?.servers || []));
+  const [newServerName, setNewServerName] = useState('');
+
+  const handleAddServer = () => {
+    const name = newServerName.trim();
+    if (!name) return;
+    const id = Math.random().toString(36).slice(2, 10);
+    setServerList(prev => [...prev, { id, name }]);
+    setNewServerName('');
+  };
+  const handleRemoveServer = (id) => setServerList(prev => prev.filter(s => s.id !== id));
+
 
   const setF  = (k) => (e) => setForm(p => ({ ...p, [k]: e.target.type === 'number' ? parseFloat(e.target.value) || 0 : e.target.value }));
   const setR  = (k) => (e) => setRForm(p => ({ ...p, [k]: e.target.type === 'checkbox' ? e.target.checked : e.target.type === 'number' ? parseFloat(e.target.value) || 0 : e.target.value }));
@@ -913,7 +1069,7 @@ function SettingsModal({ settings, reservationSettings, onSave, onSaveReserve, o
   const handleSave = async () => {
     setSaving(true);
     try {
-      await onSave({ ...form });
+      await onSave({ ...form, servers: serverList });
 
       // Parse occasional options & blackout dates & FAQ
       const occasionOptions = rForm.occasionOptionsRaw.split(',').map(s => s.trim()).filter(Boolean);
@@ -928,6 +1084,7 @@ function SettingsModal({ settings, reservationSettings, onSave, onSaveReserve, o
 
   const ALL_TABS = [
     { id: 'general',   label: 'Floor' },
+    { id: 'servers',   label: 'Servers',        tsOnly: true },
     { id: 'staff',     label: 'Staff',          tsOnly: true },
     { id: 'reserve',   label: 'Reserve Page',   tsOnly: true },
     { id: 'content',   label: 'Content',        tsOnly: true },
@@ -942,7 +1099,7 @@ function SettingsModal({ settings, reservationSettings, onSave, onSaveReserve, o
     </div>
   );
 
-  //  Staff management 
+  // ── Staff management ────────────────────────────────────────────────────
   useEffect(() => {
     if (tab !== 'staff' || !eventId) return;
     setStaffLoading(true);
@@ -1018,7 +1175,7 @@ function SettingsModal({ settings, reservationSettings, onSave, onSaveReserve, o
         {/* Body */}
         <div className="flex-1 overflow-y-auto p-5 space-y-5">
 
-          {/*  FLOOR TAB  */}
+          {/* ── FLOOR TAB ── */}
           {tab === 'general' && (<>
             <div>
               <label className={labelCls}>Restaurant Name</label>
@@ -1044,7 +1201,41 @@ function SettingsModal({ settings, reservationSettings, onSave, onSaveReserve, o
               <textarea value={form.welcomeMessage || ''} onChange={setF('welcomeMessage')} placeholder="Good evening — enjoy tonight's service." rows={2} className={inputCls + ' resize-none'} /></div>
           </>)}
 
-          {/*  RESERVE PAGE TAB  */}
+
+          {/* ── SERVERS TAB ── */}
+          {tab === 'servers' && (<>
+            <SectionHead title="On-shift Servers" desc="Add the servers working today. Assign them to tables from the table panel." />
+            <div className="space-y-2">
+              {serverList.length === 0 ? (
+                <div className="text-center py-8 text-neutral-600 text-sm">No servers added yet.</div>
+              ) : serverList.map(s => (
+                <div key={s.id} className="flex items-center justify-between bg-neutral-800/60 border border-neutral-700 rounded-xl px-4 py-2.5">
+                  <span className="text-white text-sm font-semibold">{s.name}</span>
+                  <button onClick={() => handleRemoveServer(s.id)} className="p-1.5 hover:bg-rose-500/20 text-neutral-500 hover:text-rose-400 rounded-lg transition-colors"><X className="w-3.5 h-3.5" /></button>
+                </div>
+              ))}
+            </div>
+            <div className="flex gap-2 mt-2">
+              <input
+                type="text"
+                value={newServerName}
+                onChange={e => setNewServerName(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && handleAddServer()}
+                placeholder="Server name"
+                className={inputCls + ' flex-1'}
+              />
+              <button onClick={handleAddServer} className="px-4 py-2.5 bg-white text-neutral-900 rounded-xl text-sm font-bold hover:bg-neutral-100 flex items-center gap-1.5 flex-shrink-0">
+                <Plus className="w-4 h-4" />Add
+              </button>
+            </div>
+            {serverList.length > 0 && (
+              <div className="mt-3 p-3 bg-neutral-800/40 border border-neutral-700 rounded-xl text-xs text-neutral-500">
+                Share the server view with your team: <span className="text-neutral-300 font-mono">{subdomain ? `${window.location.origin}/e/${subdomain}/server` : (eventId ? `${window.location.origin}/event/${eventId}/server` : '')}</span>
+              </div>
+            )}
+          </>)}
+
+          {/* ── RESERVE PAGE TAB ── */}
           {tab === 'reserve' && (<>
             {/* Master toggle + link */}
             <div className="bg-neutral-800/60 border border-neutral-700 rounded-xl p-4">
@@ -1169,7 +1360,7 @@ function SettingsModal({ settings, reservationSettings, onSave, onSaveReserve, o
             </div>
           </>)}
 
-          {/*  CONTENT TAB  */}
+          {/* ── CONTENT TAB ── */}
           {tab === 'content' && (<>
             <SectionHead title="Restaurant Information" desc="Shown on the public reservation page." />
             <div><label className={labelCls}>Public Description</label>
@@ -1256,7 +1447,7 @@ function SettingsModal({ settings, reservationSettings, onSave, onSaveReserve, o
             </div>
           </>)}
 
-          {/*  BOOKING RULES TAB  */}
+          {/* ── BOOKING RULES TAB ── */}
           {tab === 'booking' && (<>
             <SectionHead title="Party Size" />
             <div className="grid grid-cols-2 gap-4">
@@ -1430,7 +1621,7 @@ function SettingsModal({ settings, reservationSettings, onSave, onSaveReserve, o
   );
 }
 
-//  Main Page 
+// ── Main Page ─────────────────────────────────────────────────────────────────
 
 export default function TableService() {
   const { eventId: eventIdParam, subdomain } = useParams();
@@ -1676,7 +1867,7 @@ export default function TableService() {
     );
   }  return (
     <div className="h-screen flex flex-col bg-neutral-950 text-white overflow-hidden">
-      {/*  Header  */}
+      {/* ── Header ── */}
       <header className="flex-shrink-0 h-14 border-b border-neutral-800 bg-neutral-900/80 flex items-center px-4 gap-4">
         {/* Logo + name */}
         <div className="flex items-center gap-3 min-w-0">
@@ -1708,6 +1899,16 @@ export default function TableService() {
         {/* Actions */}
         <div className="flex items-center gap-2 flex-shrink-0">
           <button onClick={loadFloor} title="Refresh" className="p-2 hover:bg-neutral-800 rounded-lg text-neutral-500 hover:text-white transition-colors"><RefreshCw className="w-4 h-4" /></button>
+          {isTableService && (subdomain || eid) && (
+            <a
+              href={subdomain ? `/e/${subdomain}/server` : `/event/${eid}/server`}
+              target="_blank" rel="noopener noreferrer"
+              title="Server View"
+              className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 bg-neutral-800 border border-neutral-700 text-neutral-300 rounded-lg text-xs font-semibold hover:bg-neutral-700 transition-colors"
+            >
+              <Users className="w-3.5 h-3.5" />Servers
+            </a>
+          )}
           <button onClick={() => setShowQRScanner(true)} title="Scan Guest QR" className="flex items-center gap-1.5 px-3 py-1.5 bg-orange-500/20 border border-orange-500/40 text-orange-400 rounded-lg text-xs font-semibold hover:bg-orange-500/30 transition-colors">
             <ScanLine className="w-3.5 h-3.5" />Scan QR
           </button>
@@ -1718,7 +1919,7 @@ export default function TableService() {
         </div>
       </header>
 
-      {/*  Main content  */}
+      {/* ── Main content ── */}
       <div className="flex-1 flex overflow-hidden">
         {/* Floor area */}
         <div className="flex-1 flex flex-col overflow-hidden min-w-0">
@@ -1756,6 +1957,7 @@ export default function TableService() {
                 obj={selectedObj}
                 state={selectedState}
                 settings={settings}
+                servers={settings?.servers || []}
                 onUpdate={handleTableUpdate}
                 onClose={() => setSelectedTableId(null)}
               />
@@ -1865,12 +2067,16 @@ export default function TableService() {
         </div>
       </div>
 
-      {/*  Settings Modal  */}
+      {/* ── Settings Modal ── */}
       {showQRScanner && (
         <QRScannerModal
           eventId={eid}
+          objects={objects}
+          tableStates={tableStates}
+          settings={settings}
           onClose={() => setShowQRScanner(false)}
           onResult={loadFloor}
+          onSeatAtTable={loadFloor}
         />
       )}
 
@@ -1887,7 +2093,7 @@ export default function TableService() {
         />
       )}
 
-      {/*  Floor Layout Editor  */}
+      {/* ── Floor Layout Editor ── */}
       {showFloorEditor && (
         <SeatingMap
           mode="editor"
