@@ -21,7 +21,7 @@ import { eventAPI } from '../services/api';
 import toast from 'react-hot-toast';
 import SeatingMap from '../components/SeatingMap';
 
-// ── Utilities ────────────────────────────────────────────────────────────────
+//  Utilities 
 
 const uid = () => `${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`;
 
@@ -74,7 +74,7 @@ function estimateWaitMinutes(partySize, tableStates, objects, settings) {
   return Math.min(...occupiedTimes) + (settings?.cleaningBufferMinutes || 10);
 }
 
-// ── Floor Map (SVG canvas) ────────────────────────────────────────────────────
+//  Floor Map (SVG canvas) 
 
 function FloorMap({ objects, tableStates, selectedId, onSelect, zoom, onZoomChange, pan, onPanChange }) {
   const svgRef     = useRef(null);
@@ -84,14 +84,15 @@ function FloorMap({ objects, tableStates, selectedId, onSelect, zoom, onZoomChan
 
   const getState = (id) => tableStates?.find(s => s.tableId === id) || { status: 'available' };
 
-  /* ── zoom ──────────────────────────────────────────────────────────────── */
+  /*  zoom  */
   const onWheel = (e) => {
     e.preventDefault();
     onZoomChange(z => Math.max(0.3, Math.min(3, z + (e.deltaY > 0 ? -0.1 : 0.1))));
   };
 
-  /* ── pan ───────────────────────────────────────────────────────────────── */
+  /*  pan  */
   const onDown = (e) => {
+    e.currentTarget.setPointerCapture(e.pointerId);
     dragging.current   = true;
     moved.current      = false;
     dragOrigin.current = { x: e.clientX, y: e.clientY, px: pan.x, py: pan.y };
@@ -100,7 +101,7 @@ function FloorMap({ objects, tableStates, selectedId, onSelect, zoom, onZoomChan
     if (!dragging.current) return;
     const dx = e.clientX - dragOrigin.current.x;
     const dy = e.clientY - dragOrigin.current.y;
-    if (Math.abs(dx) > 5 || Math.abs(dy) > 5) moved.current = true;
+    if (Math.abs(dx) > 8 || Math.abs(dy) > 8) moved.current = true;
     onPanChange({ x: dragOrigin.current.px + dx, y: dragOrigin.current.py + dy });
   };
   const onUp = (e) => {
@@ -109,7 +110,7 @@ function FloorMap({ objects, tableStates, selectedId, onSelect, zoom, onZoomChan
     moved.current    = false;
     if (wasDrag) return; // was a pan, not a tap
 
-    // ── coordinate hit-test: find which table the user tapped ──────────────
+    //  coordinate hit-test: find which table the user tapped 
     // Convert screen coords → SVG local coords (undo pan+zoom)
     const rect = svgRef.current?.getBoundingClientRect();
     if (!rect) return;
@@ -137,7 +138,7 @@ function FloorMap({ objects, tableStates, selectedId, onSelect, zoom, onZoomChan
     }
   };
 
-  /* ── table rendering (pure visuals — no event handlers needed) ─────────── */
+  /*  table rendering (pure visuals — no event handlers needed)  */
   const renderTable = (obj) => {
     if (obj.type === 'zone') {
       const zw = obj.width || 200, zh = obj.height || 120;
@@ -202,10 +203,6 @@ function FloorMap({ objects, tableStates, selectedId, onSelect, zoom, onZoomChan
         onPointerMove={onMove}
         onPointerUp={onUp}
         onPointerLeave={() => { dragging.current = false; moved.current = false; }}
-        onMouseDown={onDown}
-        onMouseMove={onMove}
-        onMouseUp={onUp}
-        onMouseLeave={() => { dragging.current = false; moved.current = false; }}
         style={{ cursor: dragging.current ? 'grabbing' : 'grab', display: 'block' }}
       >
         <defs>
@@ -239,7 +236,7 @@ function FloorMap({ objects, tableStates, selectedId, onSelect, zoom, onZoomChan
   );
 }
 
-// ── Table Management Panel ─────────────────────────────────────────────────
+//  Table Management Panel 
 
 function TablePanel({ obj, state, settings, onUpdate, onClose }) {
   const [localState, setLocalState] = useState({ partyName: state?.partyName || '', partySize: state?.partySize || 1, serverName: state?.serverName || '', notes: state?.notes || '' });
@@ -377,7 +374,7 @@ function TablePanel({ obj, state, settings, onUpdate, onClose }) {
   );
 }
 
-// ── Waitlist Panel ────────────────────────────────────────────────────────────
+//  Waitlist Panel 
 
 function WaitlistPanel({ waitlist, tableStates, objects, settings, onAdd, onUpdate, onRemove }) {
   const [showAdd, setShowAdd] = useState(false);
@@ -469,7 +466,7 @@ function WaitlistPanel({ waitlist, tableStates, objects, settings, onAdd, onUpda
                   </div>
                   {/* Est wait time */}
                   <div className={`mt-2 ml-10 text-xs font-semibold ${estWait === 0 ? 'text-emerald-400' : estWait === null ? 'text-neutral-600' : estWait <= 15 ? 'text-amber-400' : 'text-rose-400'}`}>
-                    {estWait === 0 ? '✓ Table available now' : estWait === null ? 'No suitable table' : `Est. wait ~${estWait} min`}
+                    {estWait === 0 ? ' Table available now' : estWait === null ? 'No suitable table' : `Est. wait ~${estWait} min`}
                   </div>
                 </div>
               );
@@ -481,7 +478,7 @@ function WaitlistPanel({ waitlist, tableStates, objects, settings, onAdd, onUpda
   );
 }
 
-// ── Reservations Panel ────────────────────────────────────────────────────────
+//  Reservations Panel 
 
 // ---------------------------------------------------------------------------
 // QR Scanner Modal — fullscreen pattern, same as EnterpriseCheckin (proven working)
@@ -627,7 +624,7 @@ function QRScannerModal({ eventId, onClose, onResult }) {
                   <CheckCircle className="w-8 h-8 text-emerald-400" />
                 </div>
                 <p className="text-xl font-black mb-1">Valid Reservation</p>
-                <p className="text-xs text-emerald-400 mb-6">QR code verified ✓</p>
+                <p className="text-xs text-emerald-400 mb-6">QR code verified </p>
                 <div className="bg-neutral-900 border border-neutral-700 rounded-2xl p-4 mb-6 text-left space-y-2">
                   {[
                     ['Name',       res.reservation.partyName],
@@ -823,7 +820,7 @@ function ReservationsPanel({ reservations, onAdd, onUpdate, eventId }) {
   );
 }
 
-// ── Settings Modal (full) ──────────────────────────────────────────────────────
+//  Settings Modal (full) 
 
 const DAY_LABELS = { mon:'Monday', tue:'Tuesday', wed:'Wednesday', thu:'Thursday', fri:'Friday', sat:'Saturday', sun:'Sunday' };
 const DAY_KEYS_ORDERED = ['mon','tue','wed','thu','fri','sat','sun'];
@@ -945,7 +942,7 @@ function SettingsModal({ settings, reservationSettings, onSave, onSaveReserve, o
     </div>
   );
 
-  // ── Staff management ────────────────────────────────────────────────────
+  //  Staff management 
   useEffect(() => {
     if (tab !== 'staff' || !eventId) return;
     setStaffLoading(true);
@@ -1021,7 +1018,7 @@ function SettingsModal({ settings, reservationSettings, onSave, onSaveReserve, o
         {/* Body */}
         <div className="flex-1 overflow-y-auto p-5 space-y-5">
 
-          {/* ── FLOOR TAB ── */}
+          {/*  FLOOR TAB  */}
           {tab === 'general' && (<>
             <div>
               <label className={labelCls}>Restaurant Name</label>
@@ -1047,7 +1044,7 @@ function SettingsModal({ settings, reservationSettings, onSave, onSaveReserve, o
               <textarea value={form.welcomeMessage || ''} onChange={setF('welcomeMessage')} placeholder="Good evening — enjoy tonight's service." rows={2} className={inputCls + ' resize-none'} /></div>
           </>)}
 
-          {/* ── RESERVE PAGE TAB ── */}
+          {/*  RESERVE PAGE TAB  */}
           {tab === 'reserve' && (<>
             {/* Master toggle + link */}
             <div className="bg-neutral-800/60 border border-neutral-700 rounded-xl p-4">
@@ -1172,7 +1169,7 @@ function SettingsModal({ settings, reservationSettings, onSave, onSaveReserve, o
             </div>
           </>)}
 
-          {/* ── CONTENT TAB ── */}
+          {/*  CONTENT TAB  */}
           {tab === 'content' && (<>
             <SectionHead title="Restaurant Information" desc="Shown on the public reservation page." />
             <div><label className={labelCls}>Public Description</label>
@@ -1259,7 +1256,7 @@ function SettingsModal({ settings, reservationSettings, onSave, onSaveReserve, o
             </div>
           </>)}
 
-          {/* ── BOOKING RULES TAB ── */}
+          {/*  BOOKING RULES TAB  */}
           {tab === 'booking' && (<>
             <SectionHead title="Party Size" />
             <div className="grid grid-cols-2 gap-4">
@@ -1433,7 +1430,7 @@ function SettingsModal({ settings, reservationSettings, onSave, onSaveReserve, o
   );
 }
 
-// ── Main Page ─────────────────────────────────────────────────────────────────
+//  Main Page 
 
 export default function TableService() {
   const { eventId: eventIdParam, subdomain } = useParams();
@@ -1679,7 +1676,7 @@ export default function TableService() {
     );
   }  return (
     <div className="h-screen flex flex-col bg-neutral-950 text-white overflow-hidden">
-      {/* ── Header ── */}
+      {/*  Header  */}
       <header className="flex-shrink-0 h-14 border-b border-neutral-800 bg-neutral-900/80 flex items-center px-4 gap-4">
         {/* Logo + name */}
         <div className="flex items-center gap-3 min-w-0">
@@ -1721,7 +1718,7 @@ export default function TableService() {
         </div>
       </header>
 
-      {/* ── Main content ── */}
+      {/*  Main content  */}
       <div className="flex-1 flex overflow-hidden">
         {/* Floor area */}
         <div className="flex-1 flex flex-col overflow-hidden min-w-0">
@@ -1868,7 +1865,7 @@ export default function TableService() {
         </div>
       </div>
 
-      {/* ── Settings Modal ── */}
+      {/*  Settings Modal  */}
       {showQRScanner && (
         <QRScannerModal
           eventId={eid}
@@ -1890,7 +1887,7 @@ export default function TableService() {
         />
       )}
 
-      {/* ── Floor Layout Editor ── */}
+      {/*  Floor Layout Editor  */}
       {showFloorEditor && (
         <SeatingMap
           mode="editor"
