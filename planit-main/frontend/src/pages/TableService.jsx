@@ -836,16 +836,21 @@ function ReservationsPanel({ reservations, onAdd, onUpdate, eventId }) {
     finally { setAdding(false); }
   };
 
-  const upcomingToday = reservations.filter(r => {
+  // Active = anything not yet done — includes 'confirmed', 'pending', and any other non-terminal status
+  const INACTIVE = new Set(['cancelled', 'seated', 'no_show']);
+  const active = reservations.filter(r => !INACTIVE.has(r.status));
+
+  const pending = active.filter(r => r.status === 'pending')
+    .sort((a, b) => new Date(a.dateTime) - new Date(b.dateTime));
+
+  const upcomingToday = active.filter(r => {
     const d = new Date(r.dateTime);
-    const now = new Date();
-    return d.toDateString() === now.toDateString() && r.status === 'confirmed';
+    return d.toDateString() === new Date().toDateString() && r.status !== 'pending';
   }).sort((a, b) => new Date(a.dateTime) - new Date(b.dateTime));
 
-  const future = reservations.filter(r => {
+  const future = active.filter(r => {
     const d = new Date(r.dateTime);
-    const now = new Date();
-    return d.toDateString() !== now.toDateString() && r.status === 'confirmed' && d > now;
+    return d.toDateString() !== new Date().toDateString() && d > new Date() && r.status !== 'pending';
   }).sort((a, b) => new Date(a.dateTime) - new Date(b.dateTime));
 
   const QRModal = () => {
@@ -874,10 +879,13 @@ function ReservationsPanel({ reservations, onAdd, onUpdate, eventId }) {
     );
   };
 
-  const ReservationRow = ({ r }) => (
-    <div className="flex items-center justify-between p-3 hover:bg-neutral-800/40 rounded-xl transition-colors gap-3">
+  const ReservationRow = ({ r, isPending = false }) => (
+    <div className={`flex items-center justify-between p-3 hover:bg-neutral-800/40 rounded-xl transition-colors gap-3 ${isPending ? 'border border-amber-500/20 bg-amber-950/10 mb-1' : ''}`}>
       <div className="min-w-0">
-        <div className="font-semibold text-white text-sm truncate">{r.partyName}</div>
+        <div className="flex items-center gap-2">
+          <div className="font-semibold text-white text-sm truncate">{r.partyName}</div>
+          {isPending && <span className="text-[10px] font-bold px-1.5 py-0.5 bg-amber-500/20 border border-amber-500/30 text-amber-400 rounded-full flex-shrink-0">PENDING</span>}
+        </div>
         <div className="text-xs text-neutral-500 flex items-center gap-2 mt-0.5">
           <span><Clock className="w-3 h-3 inline mr-0.5" />{fmtTime(r.dateTime)}</span>
           <span><Users className="w-3 h-3 inline mr-0.5" />{r.partySize}</span>
@@ -885,9 +893,18 @@ function ReservationsPanel({ reservations, onAdd, onUpdate, eventId }) {
         </div>
       </div>
       <div className="flex items-center gap-1 flex-shrink-0">
-        <button onClick={() => setShowQR(r)} title="Show QR" className="p-1.5 hover:bg-neutral-700 text-neutral-500 hover:text-white rounded-lg transition-colors"><QrCode className="w-3.5 h-3.5" /></button>
-        <button onClick={() => onUpdate(r.id, 'seated')} title="Seat" className="p-1.5 hover:bg-emerald-500/20 text-neutral-500 hover:text-emerald-400 rounded-lg transition-colors"><CheckCircle className="w-3.5 h-3.5" /></button>
-        <button onClick={() => onUpdate(r.id, 'cancelled')} title="Cancel" className="p-1.5 hover:bg-rose-500/20 text-neutral-500 hover:text-rose-400 rounded-lg transition-colors"><X className="w-3.5 h-3.5" /></button>
+        {isPending ? (
+          <>
+            <button onClick={() => onUpdate(r.id, 'confirmed')} title="Approve" className="p-1.5 hover:bg-emerald-500/20 text-neutral-500 hover:text-emerald-400 rounded-lg transition-colors"><CheckCircle className="w-3.5 h-3.5" /></button>
+            <button onClick={() => onUpdate(r.id, 'cancelled')} title="Decline" className="p-1.5 hover:bg-rose-500/20 text-neutral-500 hover:text-rose-400 rounded-lg transition-colors"><X className="w-3.5 h-3.5" /></button>
+          </>
+        ) : (
+          <>
+            <button onClick={() => setShowQR(r)} title="Show QR" className="p-1.5 hover:bg-neutral-700 text-neutral-500 hover:text-white rounded-lg transition-colors"><QrCode className="w-3.5 h-3.5" /></button>
+            <button onClick={() => onUpdate(r.id, 'seated')} title="Seat" className="p-1.5 hover:bg-emerald-500/20 text-neutral-500 hover:text-emerald-400 rounded-lg transition-colors"><CheckCircle className="w-3.5 h-3.5" /></button>
+            <button onClick={() => onUpdate(r.id, 'cancelled')} title="Cancel" className="p-1.5 hover:bg-rose-500/20 text-neutral-500 hover:text-rose-400 rounded-lg transition-colors"><X className="w-3.5 h-3.5" /></button>
+          </>
+        )}
       </div>
     </div>
   );
@@ -941,6 +958,15 @@ function ReservationsPanel({ reservations, onAdd, onUpdate, eventId }) {
       )}
 
       <div className="flex-1 overflow-y-auto p-3">
+        {pending.length > 0 && (
+          <div className="mb-4">
+            <div className="flex items-center gap-2 mb-2 px-1">
+              <div className="text-xs font-bold text-amber-400 uppercase tracking-wider">Pending Approval</div>
+              <span className="px-1.5 py-0.5 bg-amber-500/20 border border-amber-500/30 text-amber-400 text-[10px] font-bold rounded-full">{pending.length}</span>
+            </div>
+            {pending.map(r => <ReservationRow key={r.id} r={r} isPending />)}
+          </div>
+        )}
         {upcomingToday.length > 0 && (
           <div className="mb-4">
             <div className="text-xs font-bold text-neutral-500 uppercase tracking-wider mb-2 px-1">Today</div>
@@ -953,7 +979,7 @@ function ReservationsPanel({ reservations, onAdd, onUpdate, eventId }) {
             {future.slice(0, 10).map(r => <ReservationRow key={r.id} r={r} />)}
           </div>
         )}
-        {upcomingToday.length === 0 && future.length === 0 && (
+        {pending.length === 0 && upcomingToday.length === 0 && future.length === 0 && (
           <div className="text-center py-16 text-neutral-600">
             <Calendar className="w-8 h-8 mx-auto mb-3 opacity-40" />
             <p className="text-sm">No reservations</p>
@@ -1679,14 +1705,19 @@ export default function TableService() {
       setFloorData(res.data);
       setReservationSettings(res.data.reservationPageSettings || {});
     } catch (err) {
-      if (err?.response?.status === 403 || err?.response?.status === 404) {
+      const status = err?.response?.status;
+      if (status === 401 || status === 403) {
+        localStorage.removeItem('eventToken');
+        localStorage.removeItem('username');
+        navigate(subdomain ? `/e/${subdomain}/login` : `/event/${eid}/login`);
+      } else if (status === 404) {
         const errData = err?.response?.data || {};
         setFloorData(prev => ({
           ...prev,
           _forbidden: true,
           _forbiddenIsEnterprise: !!errData.isEnterpriseMode,
           _forbiddenTitle: errData.eventTitle || '',
-          _notFound: err?.response?.status === 404,
+          _notFound: true,
         }));
       } else {
         toast.error('Could not load floor data');
@@ -1694,7 +1725,7 @@ export default function TableService() {
     } finally {
       setLoading(false);
     }
-  }, [eid]);
+  }, [eid, navigate, subdomain]);
 
   useEffect(() => {
     if (!eid) return;
@@ -1972,7 +2003,7 @@ export default function TableService() {
             {[
               ...(isTableService ? [
                 { id: 'waitlist',     label: 'Waitlist',      badge: floorData.waitlist?.length },
-                { id: 'reservations', label: 'Reservations',  badge: floorData.reservations?.filter(r => { const d = new Date(r.dateTime); return d.toDateString() === new Date().toDateString(); }).length },
+                { id: 'reservations', label: 'Reservations',  badge: floorData.reservations?.filter(r => !['cancelled','seated','no_show'].includes(r.status)).length },
               ] : []),
               { id: 'summary',      label: 'Overview',      badge: null },
             ].map(({ id, label, badge }) => (
