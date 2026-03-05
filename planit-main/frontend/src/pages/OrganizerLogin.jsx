@@ -1,94 +1,252 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Lock, ArrowRight, AlertCircle, Eye, EyeOff, Clock, Utensils, Hash } from 'lucide-react';
+import { Lock, ArrowRight, AlertCircle, Eye, EyeOff, Clock, Utensils, Hash, Users, ShieldCheck } from 'lucide-react';
 import { eventAPI } from '../services/api';
 import toast from 'react-hot-toast';
 
-function TableServiceLogin({ eventId, eventTitle, subdomain }) {
-  const navigate = useNavigate();
-  const [username, setUsername] = useState('');
-  const [pin, setPin]           = useState('');
-  const [showPin, setShowPin]   = useState(false);
-  const [loading, setLoading]   = useState(false);
-  const [error, setError]       = useState('');
+function TableServiceLogin({ eventId, eventTitle, subdomain, isPasswordProtected }) {
+  const navigate  = useNavigate();
+  const floorPath = eventId ? `/event/${eventId}/floor` : `/e/${subdomain}/floor`;
 
-  const handleSubmit = async (e) => {
+  // 'staff' | 'organizer'
+  const [tab, setTab] = useState('staff');
+
+  // ── Staff login state ──────────────────────────────────────────────────
+  const [staffUser, setStaffUser] = useState('');
+  const [staffPin,  setStaffPin]  = useState('');
+  const [showPin,   setShowPin]   = useState(false);
+  const [staffErr,  setStaffErr]  = useState('');
+  const [staffLoading, setStaffLoading] = useState(false);
+
+  const handleStaffSubmit = async (e) => {
     e.preventDefault();
-    setError('');
-    if (!username.trim()) { setError('Username is required'); return; }
-    if (!pin)             { setError('PIN is required');      return; }
-    setLoading(true);
+    setStaffErr('');
+    if (!staffUser.trim()) { setStaffErr('Username is required'); return; }
+    if (!staffPin)         { setStaffErr('PIN is required');      return; }
+    setStaffLoading(true);
     try {
-      const res = await eventAPI.staffLogin(eventId, username.trim(), pin);
+      const res = await eventAPI.staffLogin(eventId, staffUser.trim(), staffPin);
       localStorage.setItem('eventToken', res.data.token);
       localStorage.setItem('username',   res.data.username);
       toast.success('Welcome back!');
-      navigate(eventId ? `/event/${eventId}/floor` : `/e/${subdomain}/floor`);
+      navigate(floorPath);
     } catch (err) {
-      setError(err?.response?.data?.error || 'Invalid username or PIN');
+      setStaffErr(err?.response?.data?.error || 'Invalid username or PIN');
     } finally {
-      setLoading(false);
+      setStaffLoading(false);
     }
   };
+
+  // ── Organizer login state ──────────────────────────────────────────────
+  const [orgName,    setOrgName]    = useState('');
+  const [orgEvtPass, setOrgEvtPass] = useState('');
+  const [orgAccPass, setOrgAccPass] = useState('');
+  const [showEvtPass,  setShowEvtPass]  = useState(false);
+  const [showAccPass,  setShowAccPass]  = useState(false);
+  const [orgErr,       setOrgErr]       = useState('');
+  const [orgFieldErrs, setOrgFieldErrs] = useState({});
+  const [orgLoading,   setOrgLoading]   = useState(false);
+  const [needsAccPass, setNeedsAccPass] = useState(false);
+
+  const handleOrgSubmit = async (e) => {
+    e.preventDefault();
+    setOrgErr('');
+    const errs = {};
+    const name = orgName.trim();
+    if (!name) errs.name = 'Please enter your organizer name.';
+    if (isPasswordProtected && !orgEvtPass) errs.evtPass = 'Please enter the event password.';
+    if (needsAccPass && !orgAccPass) errs.accPass = 'Account password required.';
+    if (Object.keys(errs).length) { setOrgFieldErrs(errs); return; }
+    setOrgFieldErrs({});
+    setOrgLoading(true);
+    try {
+      let res;
+      if (isPasswordProtected) {
+        res = await eventAPI.verifyPassword(eventId, {
+          username: name, password: orgEvtPass,
+          accountPassword: orgAccPass || undefined,
+        });
+      } else {
+        res = await eventAPI.join(eventId, {
+          username: name, accountPassword: orgAccPass || undefined,
+        });
+      }
+      localStorage.setItem('eventToken', res.data.token);
+      localStorage.setItem('username', name);
+      toast.success('Logged in successfully!');
+      navigate(floorPath);
+    } catch (err) {
+      const data = err.response?.data;
+      const msg  = data?.error || 'Login failed. Please check your credentials.';
+      if (data?.requiresAccountPassword && !needsAccPass) {
+        setNeedsAccPass(true);
+        setOrgFieldErrs({ accPass: 'This username has an account — enter your account password.' });
+        setOrgLoading(false);
+        return;
+      }
+      if (msg.toLowerCase().includes('password') && isPasswordProtected) setOrgFieldErrs({ evtPass: msg });
+      else if (msg.toLowerCase().includes('account password')) setOrgFieldErrs({ accPass: msg });
+      else setOrgErr(msg);
+    } finally {
+      setOrgLoading(false);
+    }
+  };
+
+  const inputCls = "w-full px-3.5 py-2.5 bg-neutral-800 border border-neutral-700 rounded-xl text-white placeholder-neutral-600 text-sm focus:outline-none focus:border-neutral-500 transition-colors";
+  const labelCls = "block text-xs font-semibold text-neutral-400 mb-1.5 uppercase tracking-wide";
+  const errBox   = (msg) => msg ? (
+    <div className="flex items-center gap-2 p-3 bg-rose-950/60 border border-rose-500/30 rounded-xl mt-1">
+      <AlertCircle className="w-4 h-4 text-rose-400 flex-shrink-0" />
+      <p className="text-sm text-rose-300">{msg}</p>
+    </div>
+  ) : null;
 
   return (
     <div className="min-h-screen bg-neutral-950 flex items-center justify-center p-6">
       <div className="w-full max-w-sm">
+
+        {/* Header */}
         <div className="text-center mb-8">
           <div className="w-14 h-14 mx-auto rounded-2xl bg-neutral-900 border border-neutral-800 flex items-center justify-center mb-4">
             <Utensils className="w-7 h-7 text-white" />
           </div>
-          <h1 className="text-xl font-bold text-white mb-1">Staff Login</h1>
+          <h1 className="text-xl font-bold text-white mb-1">
+            {tab === 'staff' ? 'Staff Login' : 'Organizer Login'}
+          </h1>
           {eventTitle && <p className="text-sm text-neutral-400 font-medium">{eventTitle}</p>}
-          <p className="text-xs text-neutral-600 mt-1">Use your staff username and PIN</p>
         </div>
 
-        <div className="bg-neutral-900 border border-neutral-800 rounded-2xl p-6">
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label className="block text-xs font-semibold text-neutral-400 mb-1.5 uppercase tracking-wide">Username</label>
-              <input type="text" autoFocus autoComplete="username"
-                placeholder="Your staff username"
-                value={username}
-                onChange={e => { setUsername(e.target.value); setError(''); }}
-                className="w-full px-3.5 py-2.5 bg-neutral-800 border border-neutral-700 rounded-xl text-white placeholder-neutral-600 text-sm focus:outline-none focus:border-neutral-500 transition-colors"
-              />
-            </div>
+        {/* Tab switcher */}
+        <div className="flex bg-neutral-900 border border-neutral-800 rounded-xl p-1 mb-4">
+          <button
+            onClick={() => setTab('staff')}
+            className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-xs font-bold transition-all ${
+              tab === 'staff'
+                ? 'bg-white text-neutral-900'
+                : 'text-neutral-500 hover:text-neutral-300'
+            }`}
+          >
+            <Users className="w-3.5 h-3.5" />Staff
+          </button>
+          <button
+            onClick={() => setTab('organizer')}
+            className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-xs font-bold transition-all ${
+              tab === 'organizer'
+                ? 'bg-white text-neutral-900'
+                : 'text-neutral-500 hover:text-neutral-300'
+            }`}
+          >
+            <ShieldCheck className="w-3.5 h-3.5" />Organizer
+          </button>
+        </div>
 
-            <div>
-              <label className="block text-xs font-semibold text-neutral-400 mb-1.5 uppercase tracking-wide">
-                <Hash className="w-3 h-3 inline mr-1" />PIN
-              </label>
-              <div className="relative">
-                <input type={showPin ? 'text' : 'password'} inputMode="numeric" autoComplete="current-password"
-                  placeholder="4–8 digit PIN"
-                  value={pin}
-                  onChange={e => { setPin(e.target.value); setError(''); }}
-                  className="w-full px-3.5 py-2.5 pr-10 bg-neutral-800 border border-neutral-700 rounded-xl text-white placeholder-neutral-600 text-sm focus:outline-none focus:border-neutral-500 transition-colors"
+        {/* ── Staff form ── */}
+        {tab === 'staff' && (
+          <div className="bg-neutral-900 border border-neutral-800 rounded-2xl p-6">
+            <form onSubmit={handleStaffSubmit} className="space-y-4">
+              <div>
+                <label className={labelCls}>Username</label>
+                <input type="text" autoFocus autoComplete="username"
+                  placeholder="Your staff username"
+                  value={staffUser}
+                  onChange={e => { setStaffUser(e.target.value); setStaffErr(''); }}
+                  className={inputCls}
                 />
-                <button type="button" tabIndex={-1} onClick={() => setShowPin(v => !v)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-500 hover:text-neutral-300">
-                  {showPin ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                </button>
               </div>
-            </div>
-
-            {error && (
-              <div className="flex items-center gap-2 p-3 bg-rose-950/60 border border-rose-500/30 rounded-xl">
-                <AlertCircle className="w-4 h-4 text-rose-400 flex-shrink-0" />
-                <p className="text-sm text-rose-300">{error}</p>
+              <div>
+                <label className={labelCls}><Hash className="w-3 h-3 inline mr-1" />PIN</label>
+                <div className="relative">
+                  <input type={showPin ? 'text' : 'password'} inputMode="numeric" autoComplete="current-password"
+                    placeholder="4–8 digit PIN"
+                    value={staffPin}
+                    onChange={e => { setStaffPin(e.target.value); setStaffErr(''); }}
+                    className={inputCls + ' pr-10'}
+                  />
+                  <button type="button" tabIndex={-1} onClick={() => setShowPin(v => !v)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-500 hover:text-neutral-300">
+                    {showPin ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
               </div>
-            )}
+              {errBox(staffErr)}
+              <button type="submit" disabled={staffLoading}
+                className="w-full py-2.5 bg-white text-neutral-900 rounded-xl text-sm font-bold hover:bg-neutral-100 transition-colors flex items-center justify-center gap-2 disabled:opacity-50">
+                {staffLoading
+                  ? <span className="w-4 h-4 border-2 border-neutral-400 border-t-neutral-900 rounded-full animate-spin" />
+                  : <>Sign In <ArrowRight className="w-4 h-4" /></>}
+              </button>
+            </form>
+          </div>
+        )}
 
-            <button type="submit" disabled={loading}
-              className="w-full py-2.5 bg-white text-neutral-900 rounded-xl text-sm font-bold hover:bg-neutral-100 transition-colors flex items-center justify-center gap-2 disabled:opacity-50">
-              {loading
-                ? <span className="w-4 h-4 border-2 border-neutral-400 border-t-neutral-900 rounded-full animate-spin" />
-                : <>Sign In <ArrowRight className="w-4 h-4" /></>}
-            </button>
-          </form>
-        </div>
-        <p className="text-center text-xs text-neutral-600 mt-4">Staff accounts are created by the venue manager</p>
+        {/* ── Organizer form ── */}
+        {tab === 'organizer' && (
+          <div className="bg-neutral-900 border border-neutral-800 rounded-2xl p-6">
+            <form onSubmit={handleOrgSubmit} className="space-y-4">
+              <div>
+                <label className={labelCls}>Organizer Name</label>
+                <input type="text" autoFocus autoComplete="username"
+                  placeholder="Your organizer name"
+                  value={orgName}
+                  onChange={e => { setOrgName(e.target.value); setOrgFieldErrs(p => ({ ...p, name: '' })); }}
+                  className={inputCls}
+                />
+                {errBox(orgFieldErrs.name)}
+              </div>
+
+              {isPasswordProtected && (
+                <div>
+                  <label className={labelCls}>Event Password</label>
+                  <div className="relative">
+                    <input type={showEvtPass ? 'text' : 'password'}
+                      placeholder="The shared event password"
+                      value={orgEvtPass}
+                      onChange={e => { setOrgEvtPass(e.target.value); setOrgFieldErrs(p => ({ ...p, evtPass: '' })); }}
+                      className={inputCls + ' pr-10'}
+                    />
+                    <button type="button" tabIndex={-1} onClick={() => setShowEvtPass(v => !v)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-500 hover:text-neutral-300">
+                      {showEvtPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                  {errBox(orgFieldErrs.evtPass)}
+                </div>
+              )}
+
+              <div>
+                <label className={labelCls}>
+                  Account Password{needsAccPass ? ' *' : ' (optional)'}
+                </label>
+                <div className="relative">
+                  <input type={showAccPass ? 'text' : 'password'}
+                    placeholder={needsAccPass ? 'Your personal account password' : 'Leave blank if not set'}
+                    value={orgAccPass}
+                    onChange={e => { setOrgAccPass(e.target.value); setOrgFieldErrs(p => ({ ...p, accPass: '' })); }}
+                    className={inputCls + ' pr-10'}
+                  />
+                  <button type="button" tabIndex={-1} onClick={() => setShowAccPass(v => !v)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-500 hover:text-neutral-300">
+                    {showAccPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+                {errBox(orgFieldErrs.accPass)}
+              </div>
+
+              {errBox(orgErr)}
+
+              <button type="submit" disabled={orgLoading}
+                className="w-full py-2.5 bg-white text-neutral-900 rounded-xl text-sm font-bold hover:bg-neutral-100 transition-colors flex items-center justify-center gap-2 disabled:opacity-50">
+                {orgLoading
+                  ? <span className="w-4 h-4 border-2 border-neutral-400 border-t-neutral-900 rounded-full animate-spin" />
+                  : <>Sign In <ArrowRight className="w-4 h-4" /></>}
+              </button>
+            </form>
+          </div>
+        )}
+
+        <p className="text-center text-xs text-neutral-600 mt-4">
+          {tab === 'staff' ? 'Staff accounts are created by the venue manager' : 'Use the name and password you set when creating this event'}
+        </p>
       </div>
     </div>
   );
@@ -228,7 +386,7 @@ export default function OrganizerLogin() {
   }
 
   if (isTableService) {
-    return <TableServiceLogin eventId={resolvedEventId} eventTitle={eventTitle} subdomain={subdomain} />;
+    return <TableServiceLogin eventId={resolvedEventId} eventTitle={eventTitle} subdomain={subdomain} isPasswordProtected={isPasswordProtected} />;
   }
 
   if (pendingApproval) {
