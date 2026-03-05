@@ -349,7 +349,7 @@ export default function ReservePage() {
   if (error === 'not_found') return (
     <div className="min-h-screen bg-neutral-950 flex items-center justify-center p-6 text-center">
       <div>
-        <div className="text-4xl mb-4">🍽️</div>
+        <UtensilsCrossed className="w-10 h-10 text-neutral-500 mx-auto mb-4" />
         <h1 className="text-2xl font-black text-white mb-2">Restaurant not found</h1>
         <p className="text-neutral-500 text-sm">This reservation page doesn't exist or has been removed.</p>
       </div>
@@ -376,7 +376,7 @@ export default function ReservePage() {
   const inputBlur  = (e) => { e.target.style.borderColor = c.inputBdr; };
 
   return (
-    <div className="min-h-screen font-sans" style={{ background: c.bg, color: c.text }}>
+    <div className="min-h-screen font-sans leading-relaxed" style={{ background: c.bg, color: c.text }}>
 
       {/* ── Announcement banner ── */}
       {config.announcementBanner && (
@@ -396,11 +396,11 @@ export default function ReservePage() {
         <div className="relative z-10 max-w-4xl mx-auto px-6 py-12 flex flex-col items-center text-center">
           {config.logoUrl && <img src={config.logoUrl} alt={config.name} className="w-20 h-20 object-contain rounded-2xl mb-5 shadow-xl" />}
           <h1 className="text-4xl md:text-5xl font-black text-white mb-2 drop-shadow-lg">{config.name}</h1>
-          {config.tagline && <p className="text-white/80 text-lg mt-1 drop-shadow">{config.tagline}</p>}
+          {config.tagline && <p className="text-white/75 text-base mt-2 drop-shadow font-medium max-w-md">{config.tagline}</p>}
           <div className="flex flex-wrap items-center justify-center gap-3 mt-4">
             {config.cuisine && <span className="px-3 py-1 rounded-full text-sm font-semibold text-white/90" style={{ background: accent + '44', border: `1px solid ${accent}66` }}>{config.cuisine}</span>}
             {config.priceRange && <span className="px-3 py-1 rounded-full text-sm font-semibold text-white/90" style={{ background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)' }}>{config.priceRange}</span>}
-            {config.dressCode && <span className="px-3 py-1 rounded-full text-sm font-semibold text-white/90" style={{ background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)' }}>👔 {config.dressCode}</span>}
+            {config.dressCode && <span className="px-3 py-1 rounded-full text-sm font-semibold text-white/90" style={{ background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)' }}>{config.dressCode}</span>}
           </div>
         </div>
       </div>
@@ -422,7 +422,7 @@ export default function ReservePage() {
           <div className="rounded-2xl p-5" style={{ background: c.card, border: `1px solid ${c.border}` }}>
             <div className="flex items-center gap-2 mb-3">
               <Clock className="w-4 h-4" style={{ color: accent }} />
-              <span className="text-sm font-bold">Hours</span>
+            <span className="text-sm font-black uppercase tracking-wider">Hours</span>
             </div>
             {config.operatingDays && Object.entries(config.operatingDays).length > 0 ? (
               <div className="space-y-1">
@@ -451,7 +451,7 @@ export default function ReservePage() {
             <div className="rounded-2xl p-5" style={{ background: c.card, border: `1px solid ${c.border}` }}>
               <div className="flex items-center gap-2 mb-3">
                 <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                <span className="text-sm font-bold">Current Walk-in Wait</span>
+                <span className="text-sm font-black uppercase tracking-wider">Current Walk-in Wait</span>
               </div>
               <div className="space-y-2">
                 {[
@@ -546,7 +546,22 @@ export default function ReservePage() {
 
             {/* Card header */}
             <div className="px-6 py-5" style={{ background: accent + (isDark ? '18' : '10'), borderBottom: `1px solid ${c.border}` }}>
-              <h2 className="text-lg font-black" style={{ color: c.text }}>Reserve a Table</h2>
+              <h2 className="text-lg font-black mb-3" style={{ color: c.text }}>Reserve a Table</h2>
+              {config.acceptingReservations && (
+                <div className="flex items-center gap-1 text-xs font-semibold">
+                  <span className="flex items-center gap-1.5" style={{ color: step === 'pick' ? accent : c.muted }}>
+                    <span className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-black"
+                      style={{ background: step === 'pick' ? accent : (step === 'form' ? accent + '33' : c.subtle), color: step === 'pick' ? '#fff' : c.muted }}>1</span>
+                    Choose a time
+                  </span>
+                  <ChevronRight className="w-3 h-3 mx-1" style={{ color: c.muted }} />
+                  <span className="flex items-center gap-1.5" style={{ color: step === 'form' ? accent : c.muted }}>
+                    <span className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-black"
+                      style={{ background: step === 'form' ? accent : c.subtle, color: step === 'form' ? '#fff' : c.muted }}>2</span>
+                    Your details
+                  </span>
+                </div>
+              )}
               {!config.acceptingReservations && (
                 <div className="flex items-center gap-2 mt-2">
                   <AlertCircle className="w-4 h-4 text-rose-400" />
@@ -664,11 +679,16 @@ export default function ReservePage() {
                     Continue — {fmtTime(selectedSlot)} for {partySize} <ChevronRight className="w-4 h-4" />
                   </button>
                 )}
+                {!selectedSlot && step === 'pick' && slots.length > 0 && (
+                  <p className="text-xs text-center py-2" style={{ color: c.muted }}>
+                    Select a time above to continue
+                  </p>
+                )}
 
                 {/* Booking form */}
                 {step === 'form' && selectedSlot && (
-                  <div className="space-y-4 pt-2 border-t" style={{ borderColor: c.border }}>
-                    <div className="flex items-center gap-3">
+                  <div className="space-y-4 pt-4 border-t" style={{ borderColor: c.border }}>
+                    <div className="flex items-center gap-3 mb-2">
                       <button onClick={() => setStep('pick')} className="p-2 rounded-xl hover:opacity-70 transition-opacity" style={{ background: c.subtle, color: c.muted }}>
                         <ArrowLeft className="w-4 h-4" />
                       </button>
@@ -679,6 +699,7 @@ export default function ReservePage() {
                         <button onClick={() => setStep('pick')} className="text-xs hover:underline" style={{ color: accent }}>Change</button>
                       </div>
                     </div>
+                    <h3 className="text-sm font-black uppercase tracking-wider" style={{ color: c.text }}>Your Details</h3>
 
                     {formErrors._submit && (
                       <div className="flex items-center gap-2 p-3 rounded-xl text-sm" style={{ background: '#fee2e2', color: '#dc2626' }}>
@@ -771,9 +792,9 @@ export default function ReservePage() {
                     )}
 
                     <button onClick={handleSubmit} disabled={submitting}
-                      className="w-full py-3.5 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all hover:opacity-90 disabled:opacity-60"
-                      style={{ background: accent, color: '#fff' }}>
-                      {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+                      className="w-full py-4 rounded-xl font-black text-base flex items-center justify-center gap-2 transition-all hover:opacity-90 disabled:opacity-60 mt-2"
+                      style={{ background: accent, color: '#fff', boxShadow: `0 4px 24px ${accent}44` }}>
+                      {submitting ? <Loader2 className="w-5 h-5 animate-spin" /> : <Check className="w-5 h-5" />}
                       {config.confirmationMode === 'manual' ? 'Request Reservation' : 'Confirm Reservation'}
                     </button>
                   </div>
