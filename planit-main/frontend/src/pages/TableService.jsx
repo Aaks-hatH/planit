@@ -147,8 +147,8 @@ function FloorMap({ objects, tableStates, selectedId, onSelect, zoom, onZoomChan
         transform={`translate(${obj.x}, ${obj.y}) rotate(${obj.rotation || 0})`}
         className="table-hit"
         style={{ cursor: 'pointer', touchAction: 'none' }}
-        onClick={() => { if (!didDrag.current) onSelect(obj.id); }}
-        onTouchEnd={(e) => { e.preventDefault(); if (!didDrag.current) onSelect(obj.id); }}
+        onClick={() => onSelect(obj.id)}
+        onTouchEnd={(e) => { e.preventDefault(); onSelect(obj.id); }}
       >
         {/* Selection ring */}
         {isSelected && (isRound
@@ -558,10 +558,31 @@ function QRScannerModal({ eventId, onClose, onResult }) {
 
   return (
     <div className="fixed inset-0 bg-black/90 z-50 flex flex-col items-center justify-center p-4" onClick={onClose}>
-      <div className="bg-neutral-900 border border-neutral-700 rounded-2xl w-full max-w-sm overflow-hidden" onClick={e => e.stopPropagation()}>
+      {/* Inject CSS to tame html5-qrcode's injected elements */}
+      <style>{`
+        #planit-qr-reader { background: transparent !important; border: none !important; }
+        #planit-qr-reader__scan_region { background: transparent !important; }
+        #planit-qr-reader__scan_region video {
+          width: 100% !important;
+          max-width: 100% !important;
+          height: 280px !important;
+          object-fit: cover !important;
+          display: block !important;
+        }
+        #planit-qr-reader__dashboard { display: none !important; }
+        #qr-shaded-region {
+          border: 3px solid #f97316 !important;
+          border-radius: 12px !important;
+          box-shadow: 0 0 0 9999px rgba(0,0,0,0.5) !important;
+        }
+        #qr-shaded-region div { border-color: #f97316 !important; }
+      `}</style>
+
+      {/* No overflow-hidden here — it clips the qr-shaded-region scan box */}
+      <div className="bg-neutral-900 border border-neutral-700 rounded-2xl w-full max-w-sm" onClick={e => e.stopPropagation()}>
 
         {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-neutral-800">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-neutral-800 rounded-t-2xl">
           <div className="flex items-center gap-2">
             <ScanLine className="w-4 h-4 text-orange-400" />
             <span className="text-sm font-bold text-white">Scan Guest QR</span>
@@ -572,8 +593,8 @@ function QRScannerModal({ eventId, onClose, onResult }) {
         {/* html5-qrcode mounts its own video inside this div — always in DOM */}
         <div
           id="planit-qr-reader"
-          className="w-full"
-          style={{ display: status === 'scanning' ? 'block' : 'none', minHeight: 280 }}
+          className="w-full overflow-hidden"
+          style={{ display: status === 'scanning' ? 'block' : 'none' }}
         />
 
         {/* Scanning hint shown below the live viewfinder */}
