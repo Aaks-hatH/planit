@@ -295,6 +295,11 @@ const eventSchema = new mongoose.Schema({
       maxParty: { type: Number },
       avgMinutes: { type: Number },
     }],
+    // Servers on shift — assigned to tables by name
+    servers: [{
+      id:   { type: String },
+      name: { type: String, trim: true, maxlength: 60 },
+    }],
   },
 
   // Live table occupancy state — one entry per seatingMap object id
