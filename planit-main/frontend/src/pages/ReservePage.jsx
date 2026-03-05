@@ -284,7 +284,8 @@ export default function ReservePage() {
     setSlotsLoading(true);
     setSelectedSlot(null);
     try {
-      const r = await axios.get(`${API}/events/public/reserve/${subdomain}/availability`, { params: { date, partySize: size } });
+      const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      const r = await axios.get(`${API}/events/public/reserve/${subdomain}/availability`, { params: { date, partySize: size, tz } });
       setSlots(r.data.slots || []);
     } catch { setSlots([]); }
     finally { setSlotsLoading(false); }
@@ -328,6 +329,7 @@ export default function ReservePage() {
         occasion:        form.occasion,
         specialRequests: form.specialRequests.trim(),
         dietaryNeeds:    form.dietaryNeeds.trim(),
+        tz:              Intl.DateTimeFormat().resolvedOptions().timeZone,
       });
       setBooking(r.data);
       setStep('done');
