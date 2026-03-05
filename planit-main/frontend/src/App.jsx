@@ -3,6 +3,7 @@ import Home from './pages/Home';
 import EventSpace from './pages/EventSpace';
 import EnterpriseCheckin from './pages/EnterpriseCheckin';
 import TableService from './pages/TableService';
+import ServerView from './pages/ServerView';
 import GuestInvite from './pages/GuestInvite';
 import OrganizerLogin from './pages/OrganizerLogin';
 import Admin from './pages/Admin';
@@ -34,6 +35,8 @@ function App() {
         <Route path="/e/:subdomain/checkin"      element={<EnterpriseCheckin />} />
         <Route path="/event/:eventId/floor"      element={<TableService />} />
         <Route path="/e/:subdomain/floor"        element={<TableService />} />
+        <Route path="/event/:eventId/server"     element={<ServerView />} />
+        <Route path="/e/:subdomain/server"       element={<ServerView />} />
         <Route path="/event/:eventId/login"      element={<OrganizerLogin />} />
         <Route path="/e/:subdomain/login"        element={<OrganizerLogin />} />
         <Route path="/event/:eventId/waitlist"   element={<Waitlist />} />
