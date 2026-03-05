@@ -280,10 +280,14 @@ export default function ServerView() {
     } catch (err) {
       const status = err?.response?.status;
       const errData = err?.response?.data || {};
-      if (status === 403 || status === 404) {
+      if (status === 401 || status === 403) {
+        localStorage.removeItem('eventToken');
+        localStorage.removeItem('username');
+        navigate(subdomain ? `/e/${subdomain}/login` : `/event/${eid}/login`);
+      } else if (status === 404) {
         setForbidden({
-          message: errData.error || 'Access denied.',
-          isEnterprise: !!errData.isEnterpriseMode,
+          message: errData.error || 'Event not found.',
+          isEnterprise: false,
         });
       } else {
         toast.error('Could not load floor data');
@@ -291,7 +295,7 @@ export default function ServerView() {
     } finally {
       setLoading(false);
     }
-  }, [eid]);
+  }, [eid, navigate, subdomain]);
 
   useEffect(() => {
     if (eid) loadFloor();
