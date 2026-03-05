@@ -142,7 +142,7 @@ export default function ReservationTicket() {
               {/* Status + restaurant */}
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-2">
-                  <span className="text-lg">🍽</span>
+                  <span className="text-lg"></span>
                   <span className="text-xs font-bold uppercase tracking-widest" style={{ color: accent }}>
                     Restaurant Reservation
                   </span>
@@ -255,7 +255,7 @@ export default function ReservationTicket() {
               <div className="text-center py-4">
                 <CheckCircle className="w-10 h-10 text-emerald-400 mx-auto mb-2" />
                 <p className="text-white font-bold mb-1">You're seated!</p>
-                <p className="text-neutral-400 text-sm">Enjoy your meal 🍽</p>
+                <p className="text-neutral-400 text-sm">Enjoy your meal </p>
               </div>
             ) : qrUrl ? (
               <div className="text-center">
