@@ -20,6 +20,7 @@ import Help from './pages/Help';
 import InviteBadge from './pages/InviteBadge';
 import InviteCard from './pages/InviteCard';
 import ReservePage, { ReserveCancelPage } from './pages/ReservePage';
+import ReservationTicket from './pages/ReservationTicket';
 
 function App() {
   return (
@@ -39,6 +40,7 @@ function App() {
         <Route path="/e/:subdomain/waitlist"     element={<Waitlist />} />
         <Route path="/e/:subdomain/reserve"      element={<ReservePage />} />
         <Route path="/reserve/cancel/:cancelToken" element={<ReserveCancelPage />} />
+        <Route path="/reservation/:cancelToken"  element={<ReservationTicket />} />
         <Route path="/invite/:inviteCode"        element={<GuestInvite />} />
         <Route path="/badge/:inviteCode"         element={<InviteBadge />} />
         <Route path="/card/:inviteCode"          element={<InviteCard />} />
