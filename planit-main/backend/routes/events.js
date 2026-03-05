@@ -3264,21 +3264,42 @@ router.patch('/:eventId/table-service/reservations/:reservationId', verifyChecki
 });
 
 // GET /:eventId/table-service/reservations/verify/:token  — QR scan verification
+// Handles two token formats:
+//   1. JWT  — staff-created reservations (signed with secrets.jwt)
+//   2. Hex  — public online bookings (crypto.randomBytes(24).toString('hex') stored on reservation)
 router.get('/:eventId/table-service/reservations/verify/:token', verifyCheckinAccess, async (req, res, next) => {
   try {
-    let decoded;
-    try { decoded = jwt.verify(req.params.token, secrets.jwt); } catch (e) {
-      return res.status(401).json({ valid: false, error: e.name === 'TokenExpiredError' ? 'This QR code has expired.' : 'Invalid QR code.' });
+    const token = req.params.token;
+    const event = await Event.findById(req.params.eventId).select('restaurantReservations tableServiceSettings');
+    if (!event) return res.status(404).json({ valid: false, error: 'Event not found.' });
+
+    // ── Path A: JWT token (staff-created reservation) ─────────────────────
+    const isHex48 = /^[0-9a-f]{48}$/i.test(token);
+    if (!isHex48) {
+      let decoded;
+      try { decoded = jwt.verify(token, secrets.jwt); } catch (e) {
+        return res.status(401).json({ valid: false, error: e.name === 'TokenExpiredError' ? 'This QR code has expired.' : 'Invalid QR code.' });
+      }
+      if (decoded.type !== 'table_reservation' || decoded.eventId !== req.params.eventId) {
+        return res.status(400).json({ valid: false, error: 'QR code is not for this venue.' });
+      }
+      const reservation = event.restaurantReservations?.find(r => r.id === decoded.reservationId);
+      if (!reservation) return res.status(404).json({ valid: false, error: 'Reservation not found.' });
+      if (reservation.status === 'cancelled') return res.status(400).json({ valid: false, error: 'This reservation was cancelled.' });
+      if (reservation.status === 'seated')    return res.status(400).json({ valid: false, error: 'This party is already seated.' });
+      return res.json({ valid: true, reservation });
     }
-    if (decoded.type !== 'table_reservation' || decoded.eventId !== req.params.eventId) {
-      return res.status(400).json({ valid: false, error: 'QR code is not for this venue.' });
-    }
-    const event = await Event.findById(req.params.eventId).select('restaurantReservations');
-    const reservation = event?.restaurantReservations?.find(r => r.id === decoded.reservationId);
+
+    // ── Path B: Hex token (public online reservation) ─────────────────────
+    const reservation = event.restaurantReservations?.find(r => r.qrToken === token);
     if (!reservation) return res.status(404).json({ valid: false, error: 'Reservation not found.' });
     if (reservation.status === 'cancelled') return res.status(400).json({ valid: false, error: 'This reservation was cancelled.' });
     if (reservation.status === 'seated')    return res.status(400).json({ valid: false, error: 'This party is already seated.' });
-    res.json({ valid: true, reservation });
+    // Check expiry for public reservations
+    if (reservation.qrExpiresAt && new Date() > new Date(reservation.qrExpiresAt)) {
+      return res.status(401).json({ valid: false, error: 'This QR code has expired.' });
+    }
+    return res.json({ valid: true, reservation });
   } catch (err) { next(err); }
 });
 
