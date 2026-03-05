@@ -908,7 +908,7 @@ function computeAvailability(dateStr, partySize, event, tz) {
   );
 
   // Min advance enforcement
-  const minAdvanceMs = (rps.minAdvanceHours || 1) * 3600000;
+  const minAdvanceMs = (rps.minAdvanceHours ?? 1) * 3600000;
   const now = Date.now();
 
   return slots.map(slot => {
@@ -1034,7 +1034,7 @@ router.get('/public/reserve/:subdomain', availabilityLimiter, async (req, res, n
       confirmationMode:      rps.confirmationMode || 'auto_confirm',
       slotIntervalMinutes:   rps.slotIntervalMinutes || 30,
       maxAdvanceDays:        rps.maxAdvanceDays || 30,
-      minAdvanceHours:       rps.minAdvanceHours || 1,
+      minAdvanceHours:       rps.minAdvanceHours ?? 1,
       maxPartySizePublic:    rps.maxPartySizePublic || 12,
       minPartySizePublic:    rps.minPartySizePublic || 1,
       requirePhone:          rps.requirePhone !== false,
@@ -1136,9 +1136,9 @@ router.post('/public/reserve/:subdomain', reservationLimiter, async (req, res, n
     if (isNaN(dateTime.getTime())) return res.status(400).json({ error: 'Invalid date/time' });
 
     // Min advance check
-    const minAdvanceMs = (rps.minAdvanceHours || 1) * 3600000;
+    const minAdvanceMs = (rps.minAdvanceHours ?? 1) * 3600000;
     if (dateTime.getTime() - Date.now() < minAdvanceMs) {
-      return res.status(400).json({ error: `Reservations must be made at least ${rps.minAdvanceHours || 1} hour(s) in advance` });
+      return res.status(400).json({ error: `Reservations must be made at least ${rps.minAdvanceHours ?? 1} hour(s) in advance` });
     }
 
     // Max advance check
@@ -3392,7 +3392,7 @@ function computeAvailability(dateStr, partySize, event, tz) {
   );
 
   // Min advance enforcement
-  const minAdvanceMs = (rps.minAdvanceHours || 1) * 3600000;
+  const minAdvanceMs = (rps.minAdvanceHours ?? 1) * 3600000;
   const now = Date.now();
 
   return slots.map(slot => {
@@ -3518,7 +3518,7 @@ router.get('/public/reserve/:subdomain', availabilityLimiter, async (req, res, n
       confirmationMode:      rps.confirmationMode || 'auto_confirm',
       slotIntervalMinutes:   rps.slotIntervalMinutes || 30,
       maxAdvanceDays:        rps.maxAdvanceDays || 30,
-      minAdvanceHours:       rps.minAdvanceHours || 1,
+      minAdvanceHours:       rps.minAdvanceHours ?? 1,
       maxPartySizePublic:    rps.maxPartySizePublic || 12,
       minPartySizePublic:    rps.minPartySizePublic || 1,
       requirePhone:          rps.requirePhone !== false,
@@ -3620,9 +3620,9 @@ router.post('/public/reserve/:subdomain', reservationLimiter, async (req, res, n
     if (isNaN(dateTime.getTime())) return res.status(400).json({ error: 'Invalid date/time' });
 
     // Min advance check
-    const minAdvanceMs = (rps.minAdvanceHours || 1) * 3600000;
+    const minAdvanceMs = (rps.minAdvanceHours ?? 1) * 3600000;
     if (dateTime.getTime() - Date.now() < minAdvanceMs) {
-      return res.status(400).json({ error: `Reservations must be made at least ${rps.minAdvanceHours || 1} hour(s) in advance` });
+      return res.status(400).json({ error: `Reservations must be made at least ${rps.minAdvanceHours ?? 1} hour(s) in advance` });
     }
 
     // Max advance check
