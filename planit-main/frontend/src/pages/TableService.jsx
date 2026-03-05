@@ -1432,6 +1432,7 @@ export default function TableService() {
     try {
       const res = await eventAPI.getTableServiceFloor(eid);
       setFloorData(res.data);
+      setReservationSettings(res.data.reservationPageSettings || {});
     } catch (err) {
       if (err?.response?.status === 403 || err?.response?.status === 404) {
         const errData = err?.response?.data || {};
@@ -1533,7 +1534,7 @@ export default function TableService() {
   const handleSaveReservationSettings = async (form) => {
     try {
       const res = await eventAPI.updateReservationPageSettings(eid, form);
-      setReservationSettings(res.data.reservationSettings || form);
+      setReservationSettings(res.data.settings || res.data.reservationPageSettings || form);
       toast.success('Reservation settings saved');
     } catch {
       toast.error('Failed to save reservation settings');
