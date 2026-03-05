@@ -316,7 +316,11 @@ export default function ReservePage() {
   };
 
   const handleSubmit = async () => {
-    if (!validateForm()) return;
+    if (!validateForm()) {
+      // Scroll to first error
+      document.querySelector('[data-field-error]')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      return;
+    }
     setSubmitting(true);
     try {
       const r = await axios.post(`${API}/events/public/reserve/${subdomain}`, {
@@ -331,8 +335,13 @@ export default function ReservePage() {
         dietaryNeeds:    form.dietaryNeeds.trim(),
         tz:              Intl.DateTimeFormat().resolvedOptions().timeZone,
       });
-      setBooking(r.data);
-      setStep('done');
+      // Redirect to the ticket page — bookmarkable, no "invited" language
+      if (r.data.cancelToken) {
+        window.location.href = `/reservation/${r.data.cancelToken}`;
+      } else {
+        setBooking(r.data);
+        setStep('done');
+      }
     } catch (err) {
       const msg = err.response?.data?.error || 'Could not complete your reservation. Please try again.';
       setFormErrors({ _submit: msg });
