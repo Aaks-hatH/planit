@@ -661,7 +661,10 @@ const responseCache = new Map();
 const CACHE_RULES = [
   { pattern: /^\/api\/uptime\/status$/,        ttl: 30_000 },
   { pattern: /^\/api\/uptime\/ping$/,          ttl: 10_000 },
-  { pattern: /^\/api\/events\/public\//,       ttl: 60_000 },
+  // Availability and reserve config are time-sensitive — never cache them.
+  // The broader /public/ pattern below intentionally excludes these paths.
+  { pattern: /^\/api\/events\/public\/reserve\//,  ttl: 0 },
+  { pattern: /^\/api\/events\/public\/(?!reserve)/, ttl: 60_000 },
   { pattern: /^\/api\/events\/subdomain\//,    ttl: 60_000 },
   { pattern: /^\/api\/events\/participants\//, ttl: 30_000 },
 ];
@@ -678,7 +681,7 @@ function getCacheRule(path) {
 function cacheMiddleware(req, res, next) {
   if (req.method !== 'GET') return next();
   const rule = getCacheRule(req.path);
-  if (!rule) return next();
+  if (!rule || rule.ttl === 0) return next(); // ttl:0 means explicitly bypass cache
   const key = req.method + ':' + req.url;
   const now = Date.now();
   const cached = responseCache.get(key);
