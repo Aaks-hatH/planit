@@ -1687,6 +1687,13 @@ export default function EnterpriseCheckin() {
       console.log('✅ All data loaded successfully');
     } catch (error) {
       console.error('❌ Failed to load data:', error);
+      const status = error?.response?.status;
+      if (status === 401 || status === 403) {
+        localStorage.removeItem('eventToken');
+        localStorage.removeItem('username');
+        navigate(`/event/${eventId}/login`);
+        return;
+      }
       const errorMsg = error.response?.data?.error || error.message || 'Failed to load check-in data';
       setLoadError(errorMsg);
       toast.error(errorMsg);
