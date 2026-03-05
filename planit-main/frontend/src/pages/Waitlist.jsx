@@ -32,7 +32,9 @@ export default function Waitlist() {
       if (evRes?.data?.event?.title) setEventTitle(evRes.data.event.title);
     } catch (err) {
       if (err.response?.status === 401 || err.response?.status === 403) {
-        setUnauthorized(true);
+        localStorage.removeItem('eventToken');
+        localStorage.removeItem('username');
+        navigate(`/event/${eventId}/login`);
       } else {
         toast.error('Failed to load waitlist');
       }
@@ -45,7 +47,11 @@ export default function Waitlist() {
   useEffect(() => {
     // Verify organizer token exists
     const token = localStorage.getItem('eventToken');
-    if (!token) { setUnauthorized(true); setLoading(false); return; }
+    if (!token) {
+      navigate(`/event/${eventId}/login`);
+      setLoading(false);
+      return;
+    }
     load();
   }, [load]);
 
