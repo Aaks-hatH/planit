@@ -808,13 +808,40 @@ const crypto = require('crypto');
 
 // Convert a wall-clock date+time string in a given IANA timezone to a UTC Date.
 // e.g. wallClockToUTC('2026-03-04', '09:30', 'America/New_York') => Date(2026-03-04T14:30:00Z)
+// Uses only Date.UTC + Intl.DateTimeFormat — never new Date(localeString), which is
+// server-timezone-dependent and throws on some Node builds.
 function wallClockToUTC(dateStr, timeStr, tz) {
   if (!tz) return new Date(`${dateStr}T${timeStr}:00`);
   try {
-    const naiveUTC = new Date(`${dateStr}T${timeStr}:00Z`);
-    const localAtNaive = new Date(naiveUTC.toLocaleString('en-US', { timeZone: tz }));
-    const offsetMs = localAtNaive.getTime() - naiveUTC.getTime();
-    return new Date(naiveUTC.getTime() - offsetMs);
+    const [Y, M, D] = dateStr.split('-').map(Number);
+    const [h, m]    = timeStr.split(':').map(Number);
+    const target = Date.UTC(Y, M - 1, D, h, m, 0);
+
+    const fmt = new Intl.DateTimeFormat('en-CA', {
+      timeZone: tz,
+      year: 'numeric', month: '2-digit', day: '2-digit',
+      hour: '2-digit', minute: '2-digit', second: '2-digit',
+      hour12: false,
+    });
+
+    // Iteratively converge: start with the naive UTC value and adjust by the
+    // difference between what that UTC time *looks like* in tz vs what we want.
+    // Two iterations are always enough (DST transition edge cases need 3 max).
+    let utcMs = target;
+    for (let i = 0; i < 3; i++) {
+      const parts = Object.fromEntries(
+        fmt.formatToParts(new Date(utcMs)).map(p => [p.type, p.value])
+      );
+      const localMs = Date.UTC(
+        +parts.year, +parts.month - 1, +parts.day,
+        +parts.hour === 24 ? 0 : +parts.hour,
+        +parts.minute, +parts.second
+      );
+      const diff = target - localMs;
+      if (diff === 0) break;
+      utcMs += diff;
+    }
+    return new Date(utcMs);
   } catch (_) {
     return new Date(`${dateStr}T${timeStr}:00`);
   }
