@@ -154,6 +154,8 @@ export const eventAPI = {
   verifyReservationQR:      (eventId, token)           => api.get(`/events/${eventId}/table-service/reservations/verify/${token}`),
   updateTableServiceSettings:(eventId, data)           => api.patch(`/events/${eventId}/table-service/settings`, data),
   updateReservationPageSettings: (eventId, data)       => api.patch(`/events/${eventId}/table-service/reservation-page-settings`, data),
+  updateServers:                (eventId, servers)      => api.patch(`/events/${eventId}/table-service/settings`, { servers }),
+  getFloorPublic:               (eventId)               => api.get(`/events/${eventId}/table-service/floor`),
 };
 
 // ─── Chat API ─────────────────────────────────────────────────────────────────
