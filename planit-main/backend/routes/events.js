@@ -10,6 +10,7 @@ const EventParticipant = require('../models/EventParticipant');
 const { verifyEventAccess, verifyOrganizer, verifyCheckinAccess } = require('../middleware/auth');
 const { createEventLimiter, authLimiter, reservationLimiter, availabilityLimiter } = require('../middleware/rateLimiter');
 const { secrets } = require('../keys');
+const crypto = require('crypto');
 
 const validate = (req, res, next) => {
   const errors = validationResult(req);
@@ -3296,8 +3297,65 @@ router.patch('/:eventId/table-service/settings', verifyOrganizer, async (req, re
 // No auth required. Aggressively rate-limited.
 // ═══════════════════════════════════════════════════════════════════════════
 
-// ── Availability helper ──────────────────────────────────────────────────────
-// (buildSlots, getDayKey, wallClockToUTC and computeAvailability defined above — not duplicated)
+// ── Availability helpers (module-scope) ──────────────────────────────────────
+// These were previously only defined inside the analytics handler scope.
+// Hoisted here so computeAvailability and all public-reserve route handlers
+// can reference them regardless of call order.
+
+function wallClockToUTC(dateStr, timeStr, tz) {
+  if (!tz) return new Date(`${dateStr}T${timeStr}:00`);
+  try {
+    const [Y, M, D] = dateStr.split('-').map(Number);
+    const [h, m]    = timeStr.split(':').map(Number);
+    const target = Date.UTC(Y, M - 1, D, h, m, 0);
+    const fmt = new Intl.DateTimeFormat('en-CA', {
+      timeZone: tz,
+      year: 'numeric', month: '2-digit', day: '2-digit',
+      hour: '2-digit', minute: '2-digit', second: '2-digit',
+      hour12: false,
+    });
+    let utcMs = target;
+    for (let i = 0; i < 3; i++) {
+      const parts = Object.fromEntries(
+        fmt.formatToParts(new Date(utcMs)).map(p => [p.type, p.value])
+      );
+      const localMs = Date.UTC(
+        +parts.year, +parts.month - 1, +parts.day,
+        +parts.hour === 24 ? 0 : +parts.hour,
+        +parts.minute, +parts.second
+      );
+      const diff = target - localMs;
+      if (diff === 0) break;
+      utcMs += diff;
+    }
+    return new Date(utcMs);
+  } catch (_) {
+    return new Date(`${dateStr}T${timeStr}:00`);
+  }
+}
+
+function buildSlots(dateStr, openTime, closeTime, intervalMin, lastBookingBuffer, tz) {
+  const slots = [];
+  const [oh, om] = openTime.split(':').map(Number);
+  const [ch, cm] = closeTime.split(':').map(Number);
+  let cur = oh * 60 + om;
+  const end = ch * 60 + cm - (lastBookingBuffer || 0);
+  while (cur <= end) {
+    const h = Math.floor(cur / 60);
+    const m = cur % 60;
+    const timeStr = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+    const dt = wallClockToUTC(dateStr, timeStr, tz);
+    slots.push({ time: timeStr, datetime: dt });
+    cur += intervalMin;
+  }
+  return slots;
+}
+
+function getDayKey(date) {
+  const days = ['sun','mon','tue','wed','thu','fri','sat'];
+  return days[new Date(date).getDay()];
+}
+
 function computeAvailability(dateStr, partySize, event, tz) {
   const rps = event.reservationPageSettings || {};
   const tss = event.tableServiceSettings || {};
