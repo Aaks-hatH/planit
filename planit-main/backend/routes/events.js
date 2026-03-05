@@ -3296,8 +3296,6 @@ router.patch('/:eventId/table-service/settings', verifyOrganizer, async (req, re
 // No auth required. Aggressively rate-limited.
 // ═══════════════════════════════════════════════════════════════════════════
 
-const crypto = require('crypto');
-
 // ── Availability helper ──────────────────────────────────────────────────────
 // (buildSlots, getDayKey, wallClockToUTC and computeAvailability defined above — not duplicated)
 function computeAvailability(dateStr, partySize, event, tz) {
