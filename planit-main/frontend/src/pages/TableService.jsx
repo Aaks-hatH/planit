@@ -14,8 +14,8 @@ import {
   Users, Clock, CheckCircle, XCircle, AlertTriangle, Settings, Plus,
   RefreshCw, QrCode, Trash2, Edit2, ChevronRight, Bell, MapPin,
   Coffee, Utensils, Star, LayoutGrid, List, X, Save, Check,
-  ArrowRight, Phone, ScanLine, Calendar, Timer, Loader2, Lock,
-  ExternalLink, UtensilsCrossed,
+  ArrowRight, ArrowLeft, Phone, ScanLine, Calendar, Timer, Loader2, Lock,
+  ExternalLink, UtensilsCrossed, CameraOff,
 } from 'lucide-react';
 import { eventAPI } from '../services/api';
 import toast from 'react-hot-toast';
@@ -92,7 +92,7 @@ function FloorMap({ objects, tableStates, selectedId, onSelect, zoom, onZoomChan
 
   // ── Unified pointer handlers (mouse + touch + stylus) ──────────────────────
   const onPointerDown = (e) => {
-    if (e.target.closest('.table-hit')) return; // let table's own handler fire
+    if (e.target.closest('[data-tid]')) return; // table handles its own tap
     isDragging.current = true;
     didDrag.current    = false;
     dragStart.current  = { x: e.clientX, y: e.clientY, px: pan.x, py: pan.y };
@@ -109,7 +109,7 @@ function FloorMap({ objects, tableStates, selectedId, onSelect, zoom, onZoomChan
 
   // Keep legacy mouse handlers as fallback for browsers without pointer events
   const onMouseDown = (e) => {
-    if (e.target.closest('.table-hit')) return;
+    if (e.target.closest('[data-tid]')) return;
     isDragging.current = true;
     didDrag.current    = false;
     dragStart.current  = { x: e.clientX, y: e.clientY, px: pan.x, py: pan.y };
@@ -144,11 +144,11 @@ function FloorMap({ objects, tableStates, selectedId, onSelect, zoom, onZoomChan
     return (
       <g
         key={obj.id}
+        data-tid={obj.id}
         transform={`translate(${obj.x}, ${obj.y}) rotate(${obj.rotation || 0})`}
-        className="table-hit"
-        style={{ cursor: 'pointer', touchAction: 'none' }}
-        onClick={() => onSelect(obj.id)}
-        onTouchEnd={(e) => { e.preventDefault(); onSelect(obj.id); }}
+        style={{ cursor: 'pointer', touchAction: 'manipulation' }}
+        onPointerUp={(e) => { e.stopPropagation(); onSelect(obj.id); }}
+        onTouchEnd={(e) => { e.preventDefault(); e.stopPropagation(); onSelect(obj.id); }}
       >
         {/* Selection ring */}
         {isSelected && (isRound
@@ -483,194 +483,195 @@ function WaitlistPanel({ waitlist, tableStates, objects, settings, onAdd, onUpda
 // ── Reservations Panel ────────────────────────────────────────────────────────
 
 // ---------------------------------------------------------------------------
-// QR Scanner — uses html5-qrcode library (cross-browser, including iOS Safari)
-// Staff tap the camera icon, point at a guest's QR code, result auto-confirms
+// QR Scanner Modal — fullscreen pattern, same as EnterpriseCheckin (proven working)
+// Scans guest reservation QR, verifies with backend, offers Seat Party action.
 // ---------------------------------------------------------------------------
 function QRScannerModal({ eventId, onClose, onResult }) {
-  const scannerRef = useRef(null); // Html5Qrcode instance
-  const [status, setStatus] = useState('starting'); // starting | scanning | result | error
-  const [result, setResult] = useState(null);
-  const [errMsg, setErrMsg] = useState('');
+  const [scanResult, setScanResult]   = useState(null); // null | { ok, reservation?, message? }
+  const [verifying, setVerifying]     = useState(false);
+  const html5QrCodeRef  = useRef(null);
+  const isMountedRef    = useRef(true);
+  const isStoppingRef   = useRef(false);
 
   useEffect(() => {
-    let stopped = false;
-
-    const start = async () => {
-      try {
-        const { Html5Qrcode } = await import('html5-qrcode');
-        if (stopped) return;
-
-        const scanner = new Html5Qrcode('planit-qr-reader');
-        scannerRef.current = scanner;
-
-        await scanner.start(
-          { facingMode: 'environment' },
-          { fps: 10, qrbox: { width: 220, height: 220 }, aspectRatio: 1.0 },
-          async (rawValue) => {
-            // QR detected — stop scanner then verify
-            try { await scanner.stop(); } catch (_) {}
-            if (stopped) return;
-            setStatus('result');
-            try {
-              const res = await eventAPI.verifyReservationQR(eventId, rawValue);
-              setResult({ ok: true, reservation: res.data.reservation });
-            } catch (e) {
-              setResult({ ok: false, message: e?.response?.data?.error || 'Invalid or expired QR code.' });
-            }
-          },
-          () => {} // per-frame not-found errors — ignore
-        );
-
-        if (!stopped) setStatus('scanning');
-      } catch (e) {
-        if (stopped) return;
-        const msg =
-          e.name === 'NotAllowedError' || (typeof e === 'string' && e.includes('permission'))
-            ? 'Camera permission denied. Please allow camera access and try again.'
-            : typeof e === 'string'
-            ? e
-            : `Camera error: ${e.message || 'unknown'}`;
-        setErrMsg(msg);
-        setStatus('error');
-      }
-    };
-
-    start();
-
+    isMountedRef.current = true;
+    startScanner();
     return () => {
-      stopped = true;
-      if (scannerRef.current) {
-        scannerRef.current.stop().catch(() => {});
-        scannerRef.current = null;
-      }
+      isMountedRef.current = false;
+      stopScanner();
     };
-  }, [eventId]);
+  }, []);
+
+  const stopScanner = async () => {
+    const scanner = html5QrCodeRef.current;
+    if (!scanner || isStoppingRef.current) return;
+    isStoppingRef.current = true;
+    html5QrCodeRef.current = null;
+    try {
+      if (scanner.getState() === 2) await scanner.stop();
+    } catch (_) {}
+    finally { isStoppingRef.current = false; }
+  };
+
+  const startScanner = async () => {
+    if (!isMountedRef.current) return;
+    setScanResult(null);
+    try {
+      const { Html5Qrcode } = await import('html5-qrcode');
+      if (!isMountedRef.current) return;
+
+      const config = {
+        fps: 15,
+        qrbox: (viewW, viewH) => {
+          const side = Math.floor(Math.min(viewW, viewH) * 0.75);
+          return { width: side, height: side };
+        },
+        experimentalFeatures: { useBarCodeDetectorIfSupported: false },
+      };
+
+      const onDetected = async (raw) => {
+        await stopScanner();
+        if (!isMountedRef.current) return;
+        setVerifying(true);
+        try {
+          const res = await eventAPI.verifyReservationQR(eventId, raw);
+          setScanResult({ ok: true, reservation: res.data.reservation });
+        } catch (e) {
+          setScanResult({ ok: false, message: e?.response?.data?.error || 'Invalid or expired QR code.' });
+        } finally {
+          if (isMountedRef.current) setVerifying(false);
+        }
+      };
+
+      // Try back camera first, fall back to front
+      try {
+        const scanner = new Html5Qrcode('ts-qr-reader');
+        html5QrCodeRef.current = scanner;
+        await scanner.start({ facingMode: { exact: 'environment' } }, config, onDetected, () => {});
+      } catch (_) {
+        if (!isMountedRef.current) return;
+        try {
+          const s2 = html5QrCodeRef.current;
+          if (s2) { try { if (s2.getState() === 2) await s2.stop(); } catch (_) {} }
+        } catch (_) {}
+        const fallback = new Html5Qrcode('ts-qr-reader');
+        html5QrCodeRef.current = fallback;
+        await fallback.start({ facingMode: 'user' }, config, onDetected, () => {});
+      }
+
+    } catch (err) {
+      if (!isMountedRef.current) return;
+      let msg;
+      if (err.name === 'NotAllowedError' || err.message?.includes('Permission'))
+        msg = 'Camera permission denied. Allow camera access in your browser and try again.';
+      else if (err.name === 'NotFoundError')
+        msg = 'No camera found on this device.';
+      else if (err.name === 'NotReadableError' || err.message?.includes('in use'))
+        msg = 'Camera is in use by another app. Close it and retry.';
+      else if (err.name === 'AbortError' || err.message?.includes('Timeout'))
+        msg = 'Camera took too long to start. Close other apps and retry.';
+      else
+        msg = `Could not start camera: ${err.message || 'unknown error'}`;
+      setScanResult({ ok: false, message: msg, isCameraError: true });
+    }
+  };
+
+  const handleRetry = async () => {
+    await stopScanner();
+    setTimeout(() => { if (isMountedRef.current) startScanner(); }, 800);
+  };
 
   const handleSeat = async () => {
-    if (!result?.reservation) return;
+    if (!scanResult?.reservation) return;
     try {
-      await eventAPI.updateTableReservation(eventId, result.reservation.id, { status: 'seated' });
-      toast.success(`${result.reservation.partyName} seated!`);
+      await eventAPI.updateTableReservation(eventId, scanResult.reservation.id, { status: 'seated' });
+      toast.success(`${scanResult.reservation.partyName} seated!`);
       onResult?.();
       onClose();
     } catch { toast.error('Failed to update reservation'); }
   };
 
+  const res = scanResult;
+
   return (
-    <div className="fixed inset-0 bg-black/90 z-50 flex flex-col items-center justify-center p-4" onClick={onClose}>
-      {/* Inject CSS to tame html5-qrcode's injected elements */}
-      <style>{`
-        #planit-qr-reader { background: transparent !important; border: none !important; }
-        #planit-qr-reader__scan_region { background: transparent !important; }
-        #planit-qr-reader__scan_region video {
-          width: 100% !important;
-          max-width: 100% !important;
-          height: 280px !important;
-          object-fit: cover !important;
-          display: block !important;
-        }
-        #planit-qr-reader__dashboard { display: none !important; }
-        #qr-shaded-region {
-          border: 3px solid #f97316 !important;
-          border-radius: 12px !important;
-          box-shadow: 0 0 0 9999px rgba(0,0,0,0.5) !important;
-        }
-        #qr-shaded-region div { border-color: #f97316 !important; }
-      `}</style>
+    <div className="fixed inset-0 bg-black z-50 flex flex-col">
+      {/* Header */}
+      <div className="flex items-center justify-between px-4 py-3 bg-black/80 backdrop-blur-sm border-b border-white/10 flex-shrink-0">
+        <button onClick={onClose} className="text-white flex items-center gap-2 hover:opacity-80 text-sm font-medium">
+          <ArrowLeft className="w-4 h-4" />Back
+        </button>
+        <span className="text-white text-sm font-semibold">SCAN GUEST QR</span>
+        <div className="w-16" />
+      </div>
 
-      {/* No overflow-hidden here — it clips the qr-shaded-region scan box */}
-      <div className="bg-neutral-900 border border-neutral-700 rounded-2xl w-full max-w-sm" onClick={e => e.stopPropagation()}>
+      {/* Body */}
+      <div className="flex-1 relative flex items-center justify-center bg-black overflow-auto">
 
-        {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-neutral-800 rounded-t-2xl">
-          <div className="flex items-center gap-2">
-            <ScanLine className="w-4 h-4 text-orange-400" />
-            <span className="text-sm font-bold text-white">Scan Guest QR</span>
-          </div>
-          <button onClick={onClose} className="p-1.5 hover:bg-neutral-800 rounded-lg text-neutral-500 hover:text-white"><X className="w-4 h-4" /></button>
-        </div>
-
-        {/* html5-qrcode mounts its own video inside this div — always in DOM */}
-        <div
-          id="planit-qr-reader"
-          className="w-full overflow-hidden"
-          style={{ display: status === 'scanning' ? 'block' : 'none' }}
-        />
-
-        {/* Scanning hint shown below the live viewfinder */}
-        {status === 'scanning' && (
-          <p className="text-center text-xs text-neutral-400 py-3 border-t border-neutral-800">
-            Point camera at guest's QR code
-          </p>
-        )}
-
-        {/* Starting spinner */}
-        {status === 'starting' && (
-          <div className="h-64 flex items-center justify-center">
-            <Loader2 className="w-8 h-8 animate-spin text-neutral-500" />
-          </div>
-        )}
-
-        {/* Error state */}
-        {status === 'error' && (
-          <div className="p-6 text-center">
-            <AlertTriangle className="w-8 h-8 text-amber-400 mx-auto mb-3" />
-            <p className="text-sm text-neutral-300 mb-4">{errMsg}</p>
-            <button onClick={onClose} className="px-4 py-2 bg-neutral-800 text-neutral-300 rounded-lg text-sm font-semibold hover:bg-neutral-700">Close</button>
-          </div>
-        )}
-
-        {/* Result state */}
-        {status === 'result' && result && (
-          <div className="p-5">
-            {result.ok ? (
+        {/* Camera error or result overlay */}
+        {res ? (
+          <div className="text-center text-white p-8 max-w-sm w-full mx-auto">
+            {res.isCameraError ? (
               <>
-                <div className="flex items-center gap-2 mb-4">
-                  <div className="w-8 h-8 bg-emerald-500/20 rounded-full flex items-center justify-center flex-shrink-0">
-                    <CheckCircle className="w-4 h-4 text-emerald-400" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-bold text-white">Valid Reservation</p>
-                    <p className="text-xs text-emerald-400">QR code verified ✓</p>
-                  </div>
+                <CameraOff className="w-16 h-16 mx-auto mb-4 text-rose-400" />
+                <p className="text-lg font-bold mb-2">Camera Error</p>
+                <p className="text-sm text-neutral-300 mb-8">{res.message}</p>
+                <div className="flex flex-col gap-3">
+                  <button onClick={handleRetry} className="px-6 py-3 bg-white text-black rounded-xl font-semibold hover:bg-neutral-200">Retry Camera</button>
+                  <button onClick={onClose} className="px-6 py-3 bg-neutral-700 text-white rounded-xl font-semibold hover:bg-neutral-600">Close</button>
                 </div>
-                <div className="bg-neutral-800 rounded-xl p-4 mb-4 space-y-1.5">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-neutral-400">Name</span>
-                    <span className="text-white font-semibold">{result.reservation.partyName}</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-neutral-400">Party size</span>
-                    <span className="text-white font-semibold">{result.reservation.partySize}</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-neutral-400">Time</span>
-                    <span className="text-white font-semibold">{fmtDateTime(result.reservation.dateTime)}</span>
-                  </div>
-                  {result.reservation.notes && (
-                    <div className="flex justify-between text-sm">
-                      <span className="text-neutral-400">Notes</span>
-                      <span className="text-white text-right max-w-[60%]">{result.reservation.notes}</span>
+              </>
+            ) : res.ok ? (
+              <>
+                <div className="w-16 h-16 bg-emerald-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <CheckCircle className="w-8 h-8 text-emerald-400" />
+                </div>
+                <p className="text-xl font-black mb-1">Valid Reservation</p>
+                <p className="text-xs text-emerald-400 mb-6">QR code verified ✓</p>
+                <div className="bg-neutral-900 border border-neutral-700 rounded-2xl p-4 mb-6 text-left space-y-2">
+                  {[
+                    ['Name',       res.reservation.partyName],
+                    ['Party size', res.reservation.partySize],
+                    ['Time',       fmtDateTime(res.reservation.dateTime)],
+                    ...(res.reservation.notes ? [['Notes', res.reservation.notes]] : []),
+                  ].map(([label, val]) => (
+                    <div key={label} className="flex justify-between text-sm">
+                      <span className="text-neutral-400">{label}</span>
+                      <span className="text-white font-semibold text-right max-w-[60%]">{val}</span>
                     </div>
-                  )}
+                  ))}
                 </div>
-                <div className="grid grid-cols-2 gap-2">
-                  <button onClick={handleSeat} className="py-2.5 bg-emerald-600 text-white rounded-xl text-sm font-bold hover:bg-emerald-700">Seat Party</button>
-                  <button onClick={onClose} className="py-2.5 bg-neutral-800 text-neutral-300 rounded-xl text-sm font-semibold hover:bg-neutral-700">Close</button>
+                <div className="grid grid-cols-2 gap-3">
+                  <button onClick={handleSeat} className="py-3 bg-emerald-600 text-white rounded-xl font-bold hover:bg-emerald-700">Seat Party</button>
+                  <button onClick={onClose} className="py-3 bg-neutral-800 text-white rounded-xl font-semibold hover:bg-neutral-700">Close</button>
                 </div>
               </>
             ) : (
               <>
-                <div className="flex items-center gap-2 mb-4">
-                  <div className="w-8 h-8 bg-rose-500/20 rounded-full flex items-center justify-center flex-shrink-0">
-                    <XCircle className="w-4 h-4 text-rose-400" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-bold text-white">Invalid QR Code</p>
-                    <p className="text-xs text-rose-400">{result.message}</p>
-                  </div>
+                <div className="w-16 h-16 bg-rose-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <XCircle className="w-8 h-8 text-rose-400" />
                 </div>
-                <button onClick={onClose} className="w-full py-2.5 bg-neutral-800 text-neutral-300 rounded-xl text-sm font-semibold hover:bg-neutral-700">Close</button>
+                <p className="text-xl font-black mb-1">Invalid QR Code</p>
+                <p className="text-sm text-rose-400 mb-8">{res.message}</p>
+                <div className="grid grid-cols-2 gap-3">
+                  <button onClick={handleRetry} className="py-3 bg-neutral-800 text-white rounded-xl font-semibold hover:bg-neutral-700">Scan Again</button>
+                  <button onClick={onClose} className="py-3 bg-neutral-700 text-white rounded-xl font-semibold hover:bg-neutral-600">Close</button>
+                </div>
+              </>
+            )}
+          </div>
+        ) : (
+          <div className="w-full max-w-md px-4">
+            {verifying ? (
+              <div className="text-center text-white py-12">
+                <Loader2 className="w-12 h-12 animate-spin mx-auto mb-4 text-orange-400" />
+                <p className="text-sm text-neutral-300">Verifying reservation…</p>
+              </div>
+            ) : (
+              <>
+                {/* QR reader div — html5-qrcode mounts video here. DO NOT REMOVE. */}
+                <div id="ts-qr-reader" className="rounded-2xl overflow-hidden shadow-2xl" />
+                <p className="text-white text-center mt-6 text-sm">Position QR code within the frame</p>
+                <p className="text-neutral-400 text-center mt-2 text-xs">Scanning automatically when detected</p>
               </>
             )}
           </div>
