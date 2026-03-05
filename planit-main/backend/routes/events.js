@@ -1282,7 +1282,7 @@ router.patch('/:eventId/table-service/reservation-page-settings', verifyOrganize
     event.markModified('reservationPageSettings');
     await event.save();
 
-    res.json({ success: true, settings: event.reservationPageSettings });
+    res.json({ success: true, settings: event.reservationPageSettings, reservationPageSettings: event.reservationPageSettings });
   } catch (err) { next(err); }
 });
 
@@ -3711,7 +3711,7 @@ router.patch('/:eventId/table-service/reservation-page-settings', verifyOrganize
     event.markModified('reservationPageSettings');
     await event.save();
 
-    res.json({ success: true, settings: event.reservationPageSettings });
+    res.json({ success: true, settings: event.reservationPageSettings, reservationPageSettings: event.reservationPageSettings });
   } catch (err) { next(err); }
 });
 
