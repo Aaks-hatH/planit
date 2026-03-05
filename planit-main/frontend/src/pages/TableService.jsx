@@ -77,135 +77,115 @@ function estimateWaitMinutes(partySize, tableStates, objects, settings) {
 // ── Floor Map (SVG canvas) ────────────────────────────────────────────────────
 
 function FloorMap({ objects, tableStates, selectedId, onSelect, zoom, onZoomChange, pan, onPanChange }) {
-  const svgRef = useRef(null);
-  const isDragging = useRef(false);
-  const didDrag    = useRef(false);  // true if pointer moved enough to count as pan, not tap
-  const dragStart  = useRef({ x: 0, y: 0, px: 0, py: 0 });
+  const svgRef     = useRef(null);
+  const dragging   = useRef(false);
+  const moved      = useRef(false);
+  const dragOrigin = useRef({ x: 0, y: 0, px: 0, py: 0 });
 
   const getState = (id) => tableStates?.find(s => s.tableId === id) || { status: 'available' };
 
+  /* ── zoom ──────────────────────────────────────────────────────────────── */
   const onWheel = (e) => {
     e.preventDefault();
-    const delta = e.deltaY > 0 ? -0.1 : 0.1;
-    onZoomChange(z => Math.max(0.3, Math.min(3, z + delta)));
+    onZoomChange(z => Math.max(0.3, Math.min(3, z + (e.deltaY > 0 ? -0.1 : 0.1))));
   };
 
-  // ── Unified pointer handlers (mouse + touch + stylus) ──────────────────────
-  const onPointerDown = (e) => {
-    if (e.target.closest('[data-tid]')) return; // table handles its own tap
-    isDragging.current = true;
-    didDrag.current    = false;
-    dragStart.current  = { x: e.clientX, y: e.clientY, px: pan.x, py: pan.y };
-    e.currentTarget.setPointerCapture(e.pointerId);
+  /* ── background pan (pointer events on the SVG background only) ────────── */
+  const bgDown = (e) => {
+    dragging.current   = true;
+    moved.current      = false;
+    dragOrigin.current = { x: e.clientX, y: e.clientY, px: pan.x, py: pan.y };
   };
-  const onPointerMove = (e) => {
-    if (!isDragging.current) return;
-    const dx = e.clientX - dragStart.current.x;
-    const dy = e.clientY - dragStart.current.y;
-    if (Math.abs(dx) > 4 || Math.abs(dy) > 4) didDrag.current = true;
-    onPanChange({ x: dragStart.current.px + dx, y: dragStart.current.py + dy });
+  const bgMove = (e) => {
+    if (!dragging.current) return;
+    const dx = e.clientX - dragOrigin.current.x;
+    const dy = e.clientY - dragOrigin.current.y;
+    if (Math.abs(dx) > 4 || Math.abs(dy) > 4) moved.current = true;
+    onPanChange({ x: dragOrigin.current.px + dx, y: dragOrigin.current.py + dy });
   };
-  const onPointerUp = () => { isDragging.current = false; };
+  const bgUp = () => { dragging.current = false; };
 
-  // Keep legacy mouse handlers as fallback for browsers without pointer events
-  const onMouseDown = (e) => {
-    if (e.target.closest('[data-tid]')) return;
-    isDragging.current = true;
-    didDrag.current    = false;
-    dragStart.current  = { x: e.clientX, y: e.clientY, px: pan.x, py: pan.y };
-  };
-  const onMouseMove = (e) => {
-    if (!isDragging.current) return;
-    const dx = e.clientX - dragStart.current.x;
-    const dy = e.clientY - dragStart.current.y;
-    if (Math.abs(dx) > 4 || Math.abs(dy) > 4) didDrag.current = true;
-    onPanChange({ x: dragStart.current.px + dx, y: dragStart.current.py + dy });
-  };
-  const onMouseUp = () => { isDragging.current = false; };
-
+  /* ── table rendering ────────────────────────────────────────────────────── */
   const renderTable = (obj) => {
     if (obj.type === 'zone') {
+      const zw = obj.width || 200, zh = obj.height || 120;
       return (
-        <g key={obj.id} transform={`translate(${obj.x - (obj.width || 200) / 2}, ${obj.y - (obj.height || 120) / 2})`}>
-          <rect width={obj.width || 200} height={obj.height || 120} rx={8} fill="rgba(255,255,255,0.02)" stroke="rgba(255,255,255,0.1)" strokeDasharray="6 4" />
-          <text x={(obj.width || 200) / 2} y={(obj.height || 120) / 2} textAnchor="middle" dominantBaseline="middle" fill="rgba(255,255,255,0.3)" fontSize="14" fontWeight="600">{obj.label || 'Zone'}</text>
+        <g key={obj.id} transform={`translate(${obj.x - zw/2}, ${obj.y - zh/2})`}>
+          <rect width={zw} height={zh} rx={8} fill="rgba(255,255,255,0.02)" stroke="rgba(255,255,255,0.1)" strokeDasharray="6 4" />
+          <text x={zw/2} y={zh/2} textAnchor="middle" dominantBaseline="middle" fill="rgba(255,255,255,0.3)" fontSize="14" fontWeight="600">{obj.label || 'Zone'}</text>
         </g>
       );
     }
 
-    const state   = getState(obj.id);
-    const sm      = STATUS_META[state.status] || STATUS_META.available;
-    const isRound = obj.type === 'round' || obj.type === 'vip';
-    const w = obj.width  || (isRound ? 80 : 120);
-    const h = obj.height || (isRound ? 80 : 60);
+    const state      = getState(obj.id);
+    const sm         = STATUS_META[state.status] || STATUS_META.available;
+    const isRound    = obj.type === 'round' || obj.type === 'vip';
+    const w          = obj.width  || (isRound ? 80 : 120);
+    const h          = obj.height || (isRound ? 80 : 60);
     const isSelected = selectedId === obj.id;
     const remaining  = state.status === 'occupied' ? estimateRemaining(state, {}) : null;
+    // hit area — slightly larger than the visual for easier tapping
+    const hw = w + 20, hh = h + 20;
 
     return (
-      <g
-        key={obj.id}
-        data-tid={obj.id}
-        transform={`translate(${obj.x}, ${obj.y}) rotate(${obj.rotation || 0})`}
-        style={{ cursor: 'pointer', touchAction: 'manipulation' }}
-        onPointerUp={(e) => { e.stopPropagation(); onSelect(obj.id); }}
-        onTouchEnd={(e) => { e.preventDefault(); e.stopPropagation(); onSelect(obj.id); }}
-      >
-        {/* Selection ring */}
+      <g key={obj.id} transform={`translate(${obj.x}, ${obj.y}) rotate(${obj.rotation || 0})`}>
+        {/* ── visuals ── */}
         {isSelected && (isRound
-          ? <circle cx={0} cy={0} r={w / 2 + 8} fill="none" stroke="white" strokeWidth={2} opacity={0.6} />
-          : <rect x={-w / 2 - 8} y={-h / 2 - 8} width={w + 16} height={h + 16} rx={10} fill="none" stroke="white" strokeWidth={2} opacity={0.6} />
+          ? <circle cx={0} cy={0} r={w/2+8}  fill="none" stroke="white" strokeWidth={2} opacity={0.6} />
+          : <rect x={-w/2-8} y={-h/2-8} width={w+16} height={h+16} rx={10} fill="none" stroke="white" strokeWidth={2} opacity={0.6} />
         )}
-        {/* Status glow */}
         {isRound
-          ? <circle cx={0} cy={0} r={w / 2 + 3} fill="none" stroke={sm.color} strokeWidth={2.5} opacity={isSelected ? 1 : 0.7} />
-          : <rect x={-w / 2 - 3} y={-h / 2 - 3} width={w + 6} height={h + 6} rx={9} fill="none" stroke={sm.color} strokeWidth={2.5} opacity={isSelected ? 1 : 0.7} />
+          ? <circle cx={0} cy={0} r={w/2+3}  fill="none" stroke={sm.color} strokeWidth={2.5} opacity={isSelected ? 1 : 0.7} />
+          : <rect x={-w/2-3} y={-h/2-3} width={w+6} height={h+6} rx={9} fill="none" stroke={sm.color} strokeWidth={2.5} opacity={isSelected ? 1 : 0.7} />
         }
-        {/* Table body */}
         {isRound
-          ? <circle cx={0} cy={0} r={w / 2} fill={`${sm.color}22`} />
-          : <rect x={-w / 2} y={-h / 2} width={w} height={h} rx={6} fill={`${sm.color}22`} />
+          ? <circle cx={0} cy={0} r={w/2} fill={`${sm.color}22`} />
+          : <rect x={-w/2} y={-h/2} width={w} height={h} rx={6} fill={`${sm.color}22`} />
         }
-        {/* Label */}
         <text x={0} y={-4} textAnchor="middle" dominantBaseline="middle" fill="white" fontSize="11" fontWeight="700">{obj.label || `T${obj.id.slice(-3)}`}</text>
-        {/* Party size / capacity */}
-        <text x={0} y={10} textAnchor="middle" dominantBaseline="middle" fill={sm.color} fontSize="10" fontWeight="500">
+        <text x={0} y={10}  textAnchor="middle" dominantBaseline="middle" fill={sm.color} fontSize="10" fontWeight="500">
           {state.status === 'occupied' ? `${state.partySize || '?'}/${obj.capacity}` : `cap ${obj.capacity}`}
         </text>
-        {/* Time remaining badge */}
         {state.status === 'occupied' && remaining !== null && (
-          <g transform={`translate(${w / 2 - 4}, ${-h / 2 + 4})`}>
+          <g transform={`translate(${w/2-4}, ${-h/2+4})`}>
             <rect x={-16} y={-8} width={32} height={16} rx={8} fill={remaining <= 10 ? '#ef4444' : '#1a1a1a'} />
             <text textAnchor="middle" dominantBaseline="middle" fill="white" fontSize="9" fontWeight="700">{remaining <= 0 ? 'OVER' : `${remaining}m`}</text>
           </g>
         )}
-        {/* Reserved badge */}
         {state.status === 'reserved' && (
-          <g transform={`translate(${w / 2 - 4}, ${-h / 2 + 4})`}>
+          <g transform={`translate(${w/2-4}, ${-h/2+4})`}>
             <rect x={-8} y={-8} width={16} height={16} rx={8} fill="#f59e0b" />
             <text textAnchor="middle" dominantBaseline="middle" fill="black" fontSize="10" fontWeight="800">R</text>
           </g>
         )}
+
+        {/* ── TRANSPARENT HIT RECT — always last so it's on top ── */}
+        {/* A concrete <rect> is the only 100% cross-browser reliable SVG click target */}
+        <rect
+          x={-hw/2} y={-hh/2} width={hw} height={hh} rx={isRound ? hw/2 : 10}
+          fill="transparent"
+          style={{ cursor: 'pointer' }}
+          onClick={(e) => { e.stopPropagation(); onSelect(obj.id); }}
+        />
       </g>
     );
   };
 
   return (
-    <div
-      className="relative w-full h-full overflow-hidden bg-neutral-950 select-none"
-      onPointerDown={onPointerDown}
-      onPointerMove={onPointerMove}
-      onPointerUp={onPointerUp}
-      onPointerLeave={onPointerUp}
-      onMouseDown={onMouseDown}
-      onMouseMove={onMouseMove}
-      onMouseUp={onMouseUp}
-      onMouseLeave={onMouseUp}
-    >
+    <div className="relative w-full h-full bg-neutral-950 select-none" style={{ touchAction: 'none' }}>
       <svg
         ref={svgRef}
         className="w-full h-full"
         onWheel={onWheel}
-        style={{ cursor: isDragging.current ? 'grabbing' : 'grab' }}
+        onMouseDown={bgDown}
+        onMouseMove={bgMove}
+        onMouseUp={bgUp}
+        onMouseLeave={bgUp}
+        onPointerDown={bgDown}
+        onPointerMove={bgMove}
+        onPointerUp={bgUp}
+        onPointerLeave={bgUp}
+        style={{ cursor: dragging.current ? 'grabbing' : 'grab', display: 'block' }}
       >
         <defs>
           <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
