@@ -79,6 +79,7 @@ function estimateWaitMinutes(partySize, tableStates, objects, settings) {
 function FloorMap({ objects, tableStates, selectedId, onSelect, zoom, onZoomChange, pan, onPanChange }) {
   const svgRef = useRef(null);
   const isDragging = useRef(false);
+  const didDrag    = useRef(false);  // true if pointer moved enough to count as pan, not tap
   const dragStart  = useRef({ x: 0, y: 0, px: 0, py: 0 });
 
   const getState = (id) => tableStates?.find(s => s.tableId === id) || { status: 'available' };
@@ -89,14 +90,36 @@ function FloorMap({ objects, tableStates, selectedId, onSelect, zoom, onZoomChan
     onZoomChange(z => Math.max(0.3, Math.min(3, z + delta)));
   };
 
+  // ── Unified pointer handlers (mouse + touch + stylus) ──────────────────────
+  const onPointerDown = (e) => {
+    if (e.target.closest('.table-hit')) return; // let table's own handler fire
+    isDragging.current = true;
+    didDrag.current    = false;
+    dragStart.current  = { x: e.clientX, y: e.clientY, px: pan.x, py: pan.y };
+    e.currentTarget.setPointerCapture(e.pointerId);
+  };
+  const onPointerMove = (e) => {
+    if (!isDragging.current) return;
+    const dx = e.clientX - dragStart.current.x;
+    const dy = e.clientY - dragStart.current.y;
+    if (Math.abs(dx) > 4 || Math.abs(dy) > 4) didDrag.current = true;
+    onPanChange({ x: dragStart.current.px + dx, y: dragStart.current.py + dy });
+  };
+  const onPointerUp = () => { isDragging.current = false; };
+
+  // Keep legacy mouse handlers as fallback for browsers without pointer events
   const onMouseDown = (e) => {
     if (e.target.closest('.table-hit')) return;
     isDragging.current = true;
-    dragStart.current = { x: e.clientX, y: e.clientY, px: pan.x, py: pan.y };
+    didDrag.current    = false;
+    dragStart.current  = { x: e.clientX, y: e.clientY, px: pan.x, py: pan.y };
   };
   const onMouseMove = (e) => {
     if (!isDragging.current) return;
-    onPanChange({ x: dragStart.current.px + (e.clientX - dragStart.current.x), y: dragStart.current.py + (e.clientY - dragStart.current.y) });
+    const dx = e.clientX - dragStart.current.x;
+    const dy = e.clientY - dragStart.current.y;
+    if (Math.abs(dx) > 4 || Math.abs(dy) > 4) didDrag.current = true;
+    onPanChange({ x: dragStart.current.px + dx, y: dragStart.current.py + dy });
   };
   const onMouseUp = () => { isDragging.current = false; };
 
@@ -123,8 +146,9 @@ function FloorMap({ objects, tableStates, selectedId, onSelect, zoom, onZoomChan
         key={obj.id}
         transform={`translate(${obj.x}, ${obj.y}) rotate(${obj.rotation || 0})`}
         className="table-hit"
-        style={{ cursor: 'pointer' }}
-        onClick={() => onSelect(obj.id)}
+        style={{ cursor: 'pointer', touchAction: 'none' }}
+        onClick={() => { if (!didDrag.current) onSelect(obj.id); }}
+        onTouchEnd={(e) => { e.preventDefault(); if (!didDrag.current) onSelect(obj.id); }}
       >
         {/* Selection ring */}
         {isSelected && (isRound
@@ -168,6 +192,10 @@ function FloorMap({ objects, tableStates, selectedId, onSelect, zoom, onZoomChan
   return (
     <div
       className="relative w-full h-full overflow-hidden bg-neutral-950 select-none"
+      onPointerDown={onPointerDown}
+      onPointerMove={onPointerMove}
+      onPointerUp={onPointerUp}
+      onPointerLeave={onPointerUp}
       onMouseDown={onMouseDown}
       onMouseMove={onMouseMove}
       onMouseUp={onMouseUp}
@@ -455,68 +483,68 @@ function WaitlistPanel({ waitlist, tableStates, objects, settings, onAdd, onUpda
 // ── Reservations Panel ────────────────────────────────────────────────────────
 
 // ---------------------------------------------------------------------------
-// QR Scanner — uses native BarcodeDetector API (Chrome/Edge/Android)
+// QR Scanner — uses html5-qrcode library (cross-browser, including iOS Safari)
 // Staff tap the camera icon, point at a guest's QR code, result auto-confirms
 // ---------------------------------------------------------------------------
 function QRScannerModal({ eventId, onClose, onResult }) {
-  const videoRef  = useRef(null);
-  const streamRef = useRef(null);
-  const rafRef    = useRef(null);
-  const [status, setStatus]   = useState('starting'); // starting | scanning | result | error
-  const [result, setResult]   = useState(null);
-  const [errMsg, setErrMsg]   = useState('');
+  const scannerRef = useRef(null); // Html5Qrcode instance
+  const [status, setStatus] = useState('starting'); // starting | scanning | result | error
+  const [result, setResult] = useState(null);
+  const [errMsg, setErrMsg] = useState('');
 
   useEffect(() => {
-    let detector;
+    let stopped = false;
+
     const start = async () => {
       try {
-        if (!('BarcodeDetector' in window)) {
-          setErrMsg('QR scanning requires Chrome, Edge, or Android browser. On iOS, use the native camera app to scan.');
-          setStatus('error');
-          return;
-        }
-        detector = new window.BarcodeDetector({ formats: ['qr_code'] });
-        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
-        streamRef.current = stream;
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
-          await videoRef.current.play();
-        }
-        setStatus('scanning');
-        const scan = async () => {
-          if (!videoRef.current || videoRef.current.readyState < 2) { rafRef.current = requestAnimationFrame(scan); return; }
-          try {
-            const codes = await detector.detect(videoRef.current);
-            if (codes.length > 0) {
-              const raw = codes[0].rawValue;
-              stopStream();
-              setStatus('result');
-              // Verify against backend
-              try {
-                const res = await eventAPI.verifyReservationQR(eventId, raw);
-                setResult({ ok: true, reservation: res.data.reservation });
-              } catch (e) {
-                setResult({ ok: false, message: e?.response?.data?.error || 'Invalid or expired QR code.' });
-              }
-              return;
+        const { Html5Qrcode } = await import('html5-qrcode');
+        if (stopped) return;
+
+        const scanner = new Html5Qrcode('planit-qr-reader');
+        scannerRef.current = scanner;
+
+        await scanner.start(
+          { facingMode: 'environment' },
+          { fps: 10, qrbox: { width: 220, height: 220 }, aspectRatio: 1.0 },
+          async (rawValue) => {
+            // QR detected — stop scanner then verify
+            try { await scanner.stop(); } catch (_) {}
+            if (stopped) return;
+            setStatus('result');
+            try {
+              const res = await eventAPI.verifyReservationQR(eventId, rawValue);
+              setResult({ ok: true, reservation: res.data.reservation });
+            } catch (e) {
+              setResult({ ok: false, message: e?.response?.data?.error || 'Invalid or expired QR code.' });
             }
-          } catch (_) {}
-          rafRef.current = requestAnimationFrame(scan);
-        };
-        rafRef.current = requestAnimationFrame(scan);
+          },
+          () => {} // per-frame not-found errors — ignore
+        );
+
+        if (!stopped) setStatus('scanning');
       } catch (e) {
-        setErrMsg(e.name === 'NotAllowedError' ? 'Camera permission denied. Please allow camera access and try again.' : `Camera error: ${e.message}`);
+        if (stopped) return;
+        const msg =
+          e.name === 'NotAllowedError' || (typeof e === 'string' && e.includes('permission'))
+            ? 'Camera permission denied. Please allow camera access and try again.'
+            : typeof e === 'string'
+            ? e
+            : `Camera error: ${e.message || 'unknown'}`;
+        setErrMsg(msg);
         setStatus('error');
       }
     };
-    start();
-    return () => { stopStream(); cancelAnimationFrame(rafRef.current); };
-  }, [eventId]);
 
-  const stopStream = () => {
-    streamRef.current?.getTracks().forEach(t => t.stop());
-    cancelAnimationFrame(rafRef.current);
-  };
+    start();
+
+    return () => {
+      stopped = true;
+      if (scannerRef.current) {
+        scannerRef.current.stop().catch(() => {});
+        scannerRef.current = null;
+      }
+    };
+  }, [eventId]);
 
   const handleSeat = async () => {
     if (!result?.reservation) return;
@@ -531,6 +559,7 @@ function QRScannerModal({ eventId, onClose, onResult }) {
   return (
     <div className="fixed inset-0 bg-black/90 z-50 flex flex-col items-center justify-center p-4" onClick={onClose}>
       <div className="bg-neutral-900 border border-neutral-700 rounded-2xl w-full max-w-sm overflow-hidden" onClick={e => e.stopPropagation()}>
+
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-neutral-800">
           <div className="flex items-center gap-2">
@@ -540,24 +569,28 @@ function QRScannerModal({ eventId, onClose, onResult }) {
           <button onClick={onClose} className="p-1.5 hover:bg-neutral-800 rounded-lg text-neutral-500 hover:text-white"><X className="w-4 h-4" /></button>
         </div>
 
-        {/* Camera / states */}
+        {/* html5-qrcode mounts its own video inside this div — always in DOM */}
+        <div
+          id="planit-qr-reader"
+          className="w-full"
+          style={{ display: status === 'scanning' ? 'block' : 'none', minHeight: 280 }}
+        />
+
+        {/* Scanning hint shown below the live viewfinder */}
+        {status === 'scanning' && (
+          <p className="text-center text-xs text-neutral-400 py-3 border-t border-neutral-800">
+            Point camera at guest's QR code
+          </p>
+        )}
+
+        {/* Starting spinner */}
         {status === 'starting' && (
           <div className="h-64 flex items-center justify-center">
             <Loader2 className="w-8 h-8 animate-spin text-neutral-500" />
           </div>
         )}
 
-        {status === 'scanning' && (
-          <div className="relative">
-            <video ref={videoRef} className="w-full h-64 object-cover bg-black" playsInline muted />
-            {/* Viewfinder overlay */}
-            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-              <div className="w-44 h-44 border-2 border-orange-400 rounded-xl opacity-80" style={{ boxShadow: '0 0 0 9999px rgba(0,0,0,0.45)' }} />
-            </div>
-            <p className="text-center text-xs text-neutral-400 py-3">Point camera at guest's QR code</p>
-          </div>
-        )}
-
+        {/* Error state */}
         {status === 'error' && (
           <div className="p-6 text-center">
             <AlertTriangle className="w-8 h-8 text-amber-400 mx-auto mb-3" />
@@ -566,6 +599,7 @@ function QRScannerModal({ eventId, onClose, onResult }) {
           </div>
         )}
 
+        {/* Result state */}
         {status === 'result' && result && (
           <div className="p-5">
             {result.ok ? (
