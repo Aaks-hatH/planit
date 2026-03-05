@@ -495,7 +495,11 @@ function WaitlistPanel({ waitlist, tableStates, objects, settings, onAdd, onUpda
 // ── Seat Table Modal — shown after QR scan succeeds ──────────────────────────
 // Lets the host pick the best available table for the scanned reservation.
 function SeatTableModal({ reservation, objects, tableStates, settings, onConfirm, onClose }) {
+  const [step, setStep]               = useState(1); // 1 = table, 2 = server
   const [selectedTableId, setSelectedTableId] = useState(null);
+  const [selectedServer, setSelectedServer]   = useState('');
+
+  const servers = settings?.servers || [];
 
   // Tables that fit the party, sorted by tightest fit first
   const suitableTables = (objects || [])
@@ -507,11 +511,6 @@ function SeatTableModal({ reservation, objects, tableStates, settings, onConfirm
     .filter(t => t.state.status === 'available' || t.state.status === 'reserved')
     .sort((a, b) => a.capacity - b.capacity);
 
-  const occupied = (objects || [])
-    .filter(o => o.type !== 'zone' && o.capacity >= reservation.partySize)
-    .map(o => ({ ...o, state: tableStates.find(s => s.tableId === o.id) || { status: 'available' } }))
-    .filter(t => t.state.status !== 'available' && t.state.status !== 'reserved');
-
   // Auto-select the best fit
   useEffect(() => {
     if (suitableTables.length > 0 && !selectedTableId) {
@@ -519,22 +518,35 @@ function SeatTableModal({ reservation, objects, tableStates, settings, onConfirm
     }
   }, []);
 
-  const selected = suitableTables.find(t => t.id === selectedTableId) ||
-                   occupied.find(t => t.id === selectedTableId);
+  const selected = suitableTables.find(t => t.id === selectedTableId);
+
+  const handleConfirm = () => {
+    if (!selectedTableId) return;
+    onConfirm(selectedTableId, selected, selectedServer || null);
+  };
 
   return (
     <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4" onClick={onClose}>
       <div className="bg-neutral-900 border border-neutral-700 rounded-2xl w-full max-w-md flex flex-col max-h-[90vh]" onClick={e => e.stopPropagation()}>
+
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-neutral-800 flex-shrink-0">
           <div>
             <div className="font-bold text-white">Seat Party</div>
             <div className="text-xs text-neutral-500 mt-0.5">{reservation.partyName} · Party of {reservation.partySize}</div>
           </div>
-          <button onClick={onClose} className="p-1.5 hover:bg-neutral-800 rounded-lg text-neutral-500 hover:text-white"><X className="w-4 h-4" /></button>
+          <div className="flex items-center gap-3">
+            {/* Step pills */}
+            <div className="flex items-center gap-1.5">
+              <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-bold transition-all ${step >= 1 ? 'bg-emerald-600 text-white' : 'bg-neutral-700 text-neutral-400'}`}>1</div>
+              <div className="w-4 h-px bg-neutral-700" />
+              <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-bold transition-all ${step >= 2 ? 'bg-emerald-600 text-white' : 'bg-neutral-700 text-neutral-400'}`}>2</div>
+            </div>
+            <button onClick={onClose} className="p-1.5 hover:bg-neutral-800 rounded-lg text-neutral-500 hover:text-white"><X className="w-4 h-4" /></button>
+          </div>
         </div>
 
-        {/* Reservation summary */}
+        {/* Reservation summary strip */}
         <div className="px-5 pt-4 pb-2 flex-shrink-0">
           <div className="bg-neutral-800/60 border border-neutral-700 rounded-xl p-3 grid grid-cols-2 gap-2 text-xs">
             {[
@@ -549,53 +561,115 @@ function SeatTableModal({ reservation, objects, tableStates, settings, onConfirm
           </div>
         </div>
 
-        {/* Table picker */}
-        <div className="flex-1 overflow-y-auto px-5 pb-3">
-          {suitableTables.length === 0 ? (
-            <div className="text-center py-8 text-neutral-500 text-sm">
-              No available tables fit a party of {reservation.partySize}.
-            </div>
-          ) : (
-            <>
-              <div className="text-xs font-bold text-neutral-500 uppercase tracking-wider mb-2 mt-2">Available tables</div>
-              <div className="space-y-2">
-                {suitableTables.map(t => {
-                  const isSelected = selectedTableId === t.id;
-                  const fit = t.capacity - reservation.partySize;
-                  return (
-                    <button
-                      key={t.id}
-                      onClick={() => setSelectedTableId(t.id)}
-                      className={`w-full flex items-center justify-between px-4 py-3 rounded-xl border text-left transition-all ${isSelected ? 'bg-emerald-950/40 border-emerald-500/60' : 'bg-neutral-800/40 border-neutral-700 hover:border-neutral-500'}`}
-                    >
-                      <div>
-                        <div className="font-bold text-white text-sm">{t.label || `Table ${t.id.slice(-3)}`}</div>
-                        <div className="text-xs text-neutral-400 mt-0.5">Seats {t.capacity} · {t.type}</div>
-                      </div>
-                      <div className="flex items-center gap-2 flex-shrink-0">
-                        {fit === 0 && <span className="text-xs font-bold text-emerald-400 bg-emerald-950/60 border border-emerald-500/30 px-2 py-0.5 rounded-full">Perfect fit</span>}
-                        {fit > 0  && <span className="text-xs font-semibold text-neutral-400">{fit} extra seat{fit > 1 ? 's' : ''}</span>}
-                        {isSelected && <Check className="w-4 h-4 text-emerald-400" />}
-                      </div>
-                    </button>
-                  );
-                })}
+        {/* ── STEP 1: Table picker ── */}
+        {step === 1 && (
+          <div className="flex-1 overflow-y-auto px-5 pb-3">
+            {suitableTables.length === 0 ? (
+              <div className="text-center py-8 text-neutral-500 text-sm">
+                No available tables fit a party of {reservation.partySize}.
               </div>
-            </>
-          )}
-        </div>
+            ) : (
+              <>
+                <div className="text-xs font-bold text-neutral-500 uppercase tracking-wider mb-2 mt-2">Choose a table</div>
+                <div className="space-y-2">
+                  {suitableTables.map(t => {
+                    const isSelected = selectedTableId === t.id;
+                    const fit = t.capacity - reservation.partySize;
+                    return (
+                      <button
+                        key={t.id}
+                        onClick={() => setSelectedTableId(t.id)}
+                        className={`w-full flex items-center justify-between px-4 py-3 rounded-xl border text-left transition-all ${isSelected ? 'bg-emerald-950/40 border-emerald-500/60' : 'bg-neutral-800/40 border-neutral-700 hover:border-neutral-500'}`}
+                      >
+                        <div>
+                          <div className="font-bold text-white text-sm">{t.label || `Table ${t.id.slice(-3)}`}</div>
+                          <div className="text-xs text-neutral-400 mt-0.5">Seats {t.capacity} · {t.type}</div>
+                        </div>
+                        <div className="flex items-center gap-2 flex-shrink-0">
+                          {fit === 0 && <span className="text-xs font-bold text-emerald-400 bg-emerald-950/60 border border-emerald-500/30 px-2 py-0.5 rounded-full">Perfect fit</span>}
+                          {fit > 0  && <span className="text-xs font-semibold text-neutral-400">{fit} extra seat{fit > 1 ? 's' : ''}</span>}
+                          {isSelected && <Check className="w-4 h-4 text-emerald-400" />}
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </>
+            )}
+          </div>
+        )}
+
+        {/* ── STEP 2: Server assignment ── */}
+        {step === 2 && (
+          <div className="flex-1 overflow-y-auto px-5 pb-3">
+            <div className="text-xs font-bold text-neutral-500 uppercase tracking-wider mb-3 mt-2">Assign a server <span className="font-normal text-neutral-600 normal-case">(optional)</span></div>
+
+            {/* Seating at summary */}
+            <div className="flex items-center gap-2 px-3 py-2 bg-emerald-950/30 border border-emerald-700/30 rounded-xl mb-4 text-xs">
+              <Check className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" />
+              <span className="text-emerald-300 font-semibold">Seating at {selected?.label || `Table ${selectedTableId?.slice(-3)}`}</span>
+            </div>
+
+            {servers.length > 0 ? (
+              <div className="space-y-2">
+                {/* None option */}
+                <button
+                  onClick={() => setSelectedServer('')}
+                  className={`w-full flex items-center justify-between px-4 py-3 rounded-xl border text-left transition-all ${selectedServer === '' ? 'bg-neutral-700/60 border-neutral-500' : 'bg-neutral-800/40 border-neutral-700 hover:border-neutral-500'}`}
+                >
+                  <span className="text-sm text-neutral-400 font-medium">No server assigned</span>
+                  {selectedServer === '' && <Check className="w-4 h-4 text-neutral-400" />}
+                </button>
+                {servers.map(s => (
+                  <button
+                    key={s.id}
+                    onClick={() => setSelectedServer(s.name)}
+                    className={`w-full flex items-center justify-between px-4 py-3 rounded-xl border text-left transition-all ${selectedServer === s.name ? 'bg-blue-950/40 border-blue-500/60' : 'bg-neutral-800/40 border-neutral-700 hover:border-neutral-500'}`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-7 h-7 rounded-full bg-neutral-700 border border-neutral-600 flex items-center justify-center text-xs font-bold text-white flex-shrink-0">
+                        {s.name.charAt(0).toUpperCase()}
+                      </div>
+                      <span className="font-semibold text-white text-sm">{s.name}</span>
+                    </div>
+                    {selectedServer === s.name && <Check className="w-4 h-4 text-blue-400" />}
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8 text-neutral-600 text-sm">
+                <div className="text-2xl mb-2">👤</div>
+                No servers on shift. Add servers in Settings → Servers.
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Footer */}
         <div className="px-5 py-4 border-t border-neutral-800 flex gap-3 flex-shrink-0">
-          <button onClick={onClose} className="flex-1 py-2.5 bg-neutral-800 text-neutral-400 rounded-xl text-sm font-semibold hover:bg-neutral-700">Cancel</button>
-          <button
-            onClick={() => selectedTableId && onConfirm(selectedTableId, selected)}
-            disabled={!selectedTableId}
-            className="flex-1 py-2.5 bg-emerald-600 text-white rounded-xl text-sm font-bold hover:bg-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-          >
-            <Users className="w-4 h-4" />
-            Seat at {selected ? (selected.label || `Table ${selected.id.slice(-3)}`) : '—'}
-          </button>
+          {step === 1 ? (
+            <>
+              <button onClick={onClose} className="flex-1 py-2.5 bg-neutral-800 text-neutral-400 rounded-xl text-sm font-semibold hover:bg-neutral-700">Cancel</button>
+              <button
+                onClick={() => setStep(2)}
+                disabled={!selectedTableId}
+                className="flex-1 py-2.5 bg-white text-neutral-900 rounded-xl text-sm font-bold hover:bg-neutral-100 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              >
+                Next: Assign Server →
+              </button>
+            </>
+          ) : (
+            <>
+              <button onClick={() => setStep(1)} className="flex-1 py-2.5 bg-neutral-800 text-neutral-400 rounded-xl text-sm font-semibold hover:bg-neutral-700">← Back</button>
+              <button
+                onClick={handleConfirm}
+                className="flex-1 py-2.5 bg-emerald-600 text-white rounded-xl text-sm font-bold hover:bg-emerald-700 flex items-center justify-center gap-2"
+              >
+                <Users className="w-4 h-4" />
+                Confirm Seating
+              </button>
+            </>
+          )}
         </div>
       </div>
     </div>
@@ -703,20 +777,20 @@ function QRScannerModal({ eventId, objects, tableStates, settings, onClose, onRe
 
   const [showSeatModal, setShowSeatModal] = useState(false);
 
-  const handleSeatConfirm = async (tableId, tableObj) => {
+  const handleSeatConfirm = async (tableId, tableObj, serverName) => {
     if (!scanResult?.reservation) return;
     try {
-      // Mark reservation as seated
       await eventAPI.updateTableReservation(eventId, scanResult.reservation.id, { status: 'seated' });
-      // Update table state with party info
       await eventAPI.updateTableState(eventId, tableId, {
         status: 'occupied',
         partyName:  scanResult.reservation.partyName,
         partySize:  scanResult.reservation.partySize,
         notes:      scanResult.reservation.specialRequests || scanResult.reservation.notes || '',
+        serverName: serverName || '',
         reservationId: scanResult.reservation.id,
       });
-      toast.success(`${scanResult.reservation.partyName} seated at ${tableObj?.label || 'table'}`);
+      const serverMsg = serverName ? ` · Server: ${serverName}` : '';
+      toast.success(`${scanResult.reservation.partyName} seated at ${tableObj?.label || 'table'}${serverMsg}`);
       onResult?.();
       onSeatAtTable?.();
       onClose();
@@ -823,11 +897,12 @@ function QRScannerModal({ eventId, objects, tableStates, settings, onClose, onRe
   );
 }
 
-function ReservationsPanel({ reservations, onAdd, onUpdate, eventId }) {
+function ReservationsPanel({ reservations, onAdd, onUpdate, onSeatManually, objects, tableStates, settings, eventId }) {
   const [showAdd, setShowAdd]   = useState(false);
   const [form, setForm]         = useState({ partyName: '', partySize: 2, phone: '', email: '', dateTime: '', notes: '' });
   const [adding, setAdding]     = useState(false);
-  const [showQR, setShowQR]     = useState(null); // reservation object
+  const [showQR, setShowQR]     = useState(null);   // reservation object
+  const [seatTarget, setSeatTarget] = useState(null); // reservation to manually seat
 
   const handleAdd = async () => {
     if (!form.partyName.trim() || !form.dateTime) { toast.error('Party name and date/time required'); return; }
@@ -836,11 +911,11 @@ function ReservationsPanel({ reservations, onAdd, onUpdate, eventId }) {
     finally { setAdding(false); }
   };
 
-  // Active = anything not yet done — includes 'confirmed', 'pending', and any other non-terminal status
   const INACTIVE = new Set(['cancelled', 'seated', 'no_show']);
   const active = reservations.filter(r => !INACTIVE.has(r.status));
 
-  const pending = active.filter(r => r.status === 'pending')
+  const pending = active
+    .filter(r => r.status === 'pending')
     .sort((a, b) => new Date(a.dateTime) - new Date(b.dateTime));
 
   const upcomingToday = active.filter(r => {
@@ -870,7 +945,7 @@ function ReservationsPanel({ reservations, onAdd, onUpdate, eventId }) {
             Valid until {fmtDateTime(showQR.qrExpiresAt)}
           </div>
           <div className="grid grid-cols-2 gap-2">
-            <button onClick={() => onUpdate(showQR.id, 'seated')} className="py-2 bg-emerald-600 text-white rounded-lg text-xs font-bold hover:bg-emerald-700">Seat Now</button>
+            <button onClick={() => { setSeatTarget(showQR); setShowQR(null); }} className="py-2 bg-emerald-600 text-white rounded-lg text-xs font-bold hover:bg-emerald-700">Choose Table</button>
             <button onClick={() => { onUpdate(showQR.id, 'no_show'); setShowQR(null); }} className="py-2 bg-neutral-800 text-neutral-400 rounded-lg text-xs font-semibold hover:bg-neutral-700">No Show</button>
           </div>
           <button onClick={() => setShowQR(null)} className="w-full mt-2 py-2 text-neutral-600 text-xs hover:text-neutral-400">Close</button>
@@ -901,7 +976,7 @@ function ReservationsPanel({ reservations, onAdd, onUpdate, eventId }) {
         ) : (
           <>
             <button onClick={() => setShowQR(r)} title="Show QR" className="p-1.5 hover:bg-neutral-700 text-neutral-500 hover:text-white rounded-lg transition-colors"><QrCode className="w-3.5 h-3.5" /></button>
-            <button onClick={() => onUpdate(r.id, 'seated')} title="Seat" className="p-1.5 hover:bg-emerald-500/20 text-neutral-500 hover:text-emerald-400 rounded-lg transition-colors"><CheckCircle className="w-3.5 h-3.5" /></button>
+            <button onClick={() => setSeatTarget(r)} title="Seat party" className="p-1.5 hover:bg-emerald-500/20 text-neutral-500 hover:text-emerald-400 rounded-lg transition-colors"><CheckCircle className="w-3.5 h-3.5" /></button>
             <button onClick={() => onUpdate(r.id, 'cancelled')} title="Cancel" className="p-1.5 hover:bg-rose-500/20 text-neutral-500 hover:text-rose-400 rounded-lg transition-colors"><X className="w-3.5 h-3.5" /></button>
           </>
         )}
@@ -912,6 +987,19 @@ function ReservationsPanel({ reservations, onAdd, onUpdate, eventId }) {
   return (
     <div className="flex flex-col h-full">
       <QRModal />
+      {seatTarget && (
+        <SeatTableModal
+          reservation={seatTarget}
+          objects={objects || []}
+          tableStates={tableStates || []}
+          settings={settings || {}}
+          onConfirm={(tableId, tableObj, serverName) => {
+            onSeatManually(seatTarget.id, tableId, tableObj, seatTarget, serverName);
+            setSeatTarget(null);
+          }}
+          onClose={() => setSeatTarget(null)}
+        />
+      )}
       <div className="flex items-center justify-between p-4 border-b border-neutral-800">
         <div className="flex items-center gap-2">
           <Calendar className="w-4 h-4 text-neutral-400" />
@@ -1797,8 +1885,31 @@ export default function TableService() {
         ? prev.reservations.filter(r => r.id !== id)
         : prev.reservations.map(r => r.id === id ? { ...r, status } : r)
     }));
-    if (status === 'seated') toast.success('Guest seated');
     if (status === 'cancelled') toast.success('Reservation cancelled');
+  };
+
+  // Compound seat: marks reservation as seated AND occupies the chosen table
+  const handleSeatManually = async (reservationId, tableId, tableObj, reservation, serverName) => {
+    try {
+      await eventAPI.updateTableReservation(eid, reservationId, { status: 'seated' });
+      await eventAPI.updateTableState(eid, tableId, {
+        status:    'occupied',
+        partyName: reservation.partyName,
+        partySize: reservation.partySize,
+        notes:     reservation.specialRequests || reservation.notes || '',
+        serverName: serverName || '',
+        reservationId,
+      });
+      setFloorData(prev => ({
+        ...prev,
+        reservations: prev.reservations.filter(r => r.id !== reservationId),
+      }));
+      const serverMsg = serverName ? ` · Server: ${serverName}` : '';
+      toast.success(`${reservation.partyName} seated at ${tableObj?.label || 'table'}${serverMsg}`);
+      loadFloor();
+    } catch {
+      toast.error('Failed to seat party');
+    }
   };
 
   const handleSaveSettings = async (form) => {
@@ -2035,6 +2146,10 @@ export default function TableService() {
                 reservations={floorData.reservations || []}
                 onAdd={handleAddReservation}
                 onUpdate={handleUpdateReservation}
+                onSeatManually={handleSeatManually}
+                objects={objects}
+                tableStates={floorData.tableStates || []}
+                settings={settings}
                 eventId={eid}
               />
             )}
