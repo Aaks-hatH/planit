@@ -1197,9 +1197,14 @@ router.post('/public/reserve/:subdomain', reservationLimiter, async (req, res, n
       createdAt:       new Date(),
     };
 
-    event.restaurantReservations.push(reservation);
-    event.keepForever = true;
-    await event.save();
+    // Use findOneAndUpdate + $push to avoid Mongoose 8 partial-select validation errors
+    // (event was fetched with .select() so required fields like title/subdomain are absent
+    //  from the in-memory doc — calling event.save() throws ValidationError on those paths)
+    await Event.findOneAndUpdate(
+      { subdomain: req.params.subdomain },
+      { $push: { restaurantReservations: reservation }, $set: { keepForever: true } },
+      { runValidators: false }
+    );
 
     // Fire confirmation email non-blocking
     if (rps.sendConfirmationEmail !== false && email?.trim()) {
@@ -3681,9 +3686,14 @@ router.post('/public/reserve/:subdomain', reservationLimiter, async (req, res, n
       createdAt:       new Date(),
     };
 
-    event.restaurantReservations.push(reservation);
-    event.keepForever = true;
-    await event.save();
+    // Use findOneAndUpdate + $push to avoid Mongoose 8 partial-select validation errors
+    // (event was fetched with .select() so required fields like title/subdomain are absent
+    //  from the in-memory doc — calling event.save() throws ValidationError on those paths)
+    await Event.findOneAndUpdate(
+      { subdomain: req.params.subdomain },
+      { $push: { restaurantReservations: reservation }, $set: { keepForever: true } },
+      { runValidators: false }
+    );
 
     // Fire confirmation email non-blocking
     if (rps.sendConfirmationEmail !== false && email?.trim()) {
@@ -3703,12 +3713,60 @@ router.post('/public/reserve/:subdomain', reservationLimiter, async (req, res, n
       dateTime:      reservation.dateTime,
       qrToken,
       qrExpiresAt,
+      cancelToken,   // frontend redirects to /reservation/:cancelToken ticket page
       cancelUrl,
       confirmationMessage: rps.confirmationMessage || '',
       depositRequired:     rps.depositRequired || false,
       depositAmount:       rps.depositAmount || 0,
       depositNote:         rps.depositNote || '',
       isPending: status === 'pending',
+    });
+  } catch (err) { next(err); }
+});
+
+
+// ── GET /public/reserve/confirmation/:cancelToken ────────────────────────────
+// Returns reservation details for the guest confirmation/ticket page.
+// Uses cancelToken (sent in POST response) — safe to expose publicly.
+router.get('/public/reserve/confirmation/:cancelToken', availabilityLimiter, async (req, res, next) => {
+  try {
+    const { cancelToken } = req.params;
+    if (!cancelToken || cancelToken.length < 10) return res.status(400).json({ error: 'Invalid token' });
+
+    const event = await Event.findOne({
+      isTableServiceMode: true,
+      'restaurantReservations.cancelToken': cancelToken,
+    }).select('title subdomain restaurantReservations reservationPageSettings');
+
+    if (!event) return res.status(404).json({ error: 'Reservation not found.' });
+
+    const r = event.restaurantReservations.find(x => x.cancelToken === cancelToken);
+    if (!r) return res.status(404).json({ error: 'Reservation not found.' });
+
+    const rps = event.reservationPageSettings || {};
+
+    res.json({
+      restaurantName: event.title,
+      subdomain: event.subdomain,
+      accentColor: rps.accentColor || '#f97316',
+      logoUrl: rps.logoUrl || '',
+      address: rps.address || '',
+      phone: rps.phone || '',
+      reservation: {
+        id: r.id,
+        partyName: r.partyName,
+        partySize: r.partySize,
+        dateTime: r.dateTime,
+        status: r.status,
+        qrToken: r.qrToken,
+        qrExpiresAt: r.qrExpiresAt,
+        occasion: r.occasion || '',
+        specialRequests: r.specialRequests || '',
+        dietaryNeeds: r.dietaryNeeds || '',
+      },
+      cancelUrl: `${process.env.FRONTEND_URL || 'https://planit.events'}/reservation/${cancelToken}`,
+      confirmationMessage: rps.confirmationMessage || '',
+      cancelCutoffHours: rps.cancelCutoffHours || 2,
     });
   } catch (err) { next(err); }
 });
