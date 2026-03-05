@@ -90,22 +90,54 @@ function FloorMap({ objects, tableStates, selectedId, onSelect, zoom, onZoomChan
     onZoomChange(z => Math.max(0.3, Math.min(3, z + (e.deltaY > 0 ? -0.1 : 0.1))));
   };
 
-  /* ── background pan (pointer events on the SVG background only) ────────── */
-  const bgDown = (e) => {
+  /* ── pan ───────────────────────────────────────────────────────────────── */
+  const onDown = (e) => {
     dragging.current   = true;
     moved.current      = false;
     dragOrigin.current = { x: e.clientX, y: e.clientY, px: pan.x, py: pan.y };
   };
-  const bgMove = (e) => {
+  const onMove = (e) => {
     if (!dragging.current) return;
     const dx = e.clientX - dragOrigin.current.x;
     const dy = e.clientY - dragOrigin.current.y;
-    if (Math.abs(dx) > 4 || Math.abs(dy) > 4) moved.current = true;
+    if (Math.abs(dx) > 5 || Math.abs(dy) > 5) moved.current = true;
     onPanChange({ x: dragOrigin.current.px + dx, y: dragOrigin.current.py + dy });
   };
-  const bgUp = () => { dragging.current = false; };
+  const onUp = (e) => {
+    const wasDrag = moved.current;
+    dragging.current = false;
+    moved.current    = false;
+    if (wasDrag) return; // was a pan, not a tap
 
-  /* ── table rendering ────────────────────────────────────────────────────── */
+    // ── coordinate hit-test: find which table the user tapped ──────────────
+    // Convert screen coords → SVG local coords (undo pan+zoom)
+    const rect = svgRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    const svgX = (e.clientX - rect.left - pan.x) / zoom;
+    const svgY = (e.clientY - rect.top  - pan.y) / zoom;
+
+    for (const obj of (objects || [])) {
+      if (obj.type === 'zone') continue;
+      const isRound = obj.type === 'round' || obj.type === 'vip';
+      const w = (obj.width  || (isRound ? 80 : 120)) / 2 + 12; // half-width + tap padding
+      const h = (obj.height || (isRound ? 80 : 60))  / 2 + 12;
+      // translate to table-local space, accounting for rotation
+      const dx = svgX - obj.x;
+      const dy = svgY - obj.y;
+      let lx = dx, ly = dy;
+      if (obj.rotation) {
+        const rad = -(obj.rotation * Math.PI) / 180;
+        lx = dx * Math.cos(rad) - dy * Math.sin(rad);
+        ly = dx * Math.sin(rad) + dy * Math.cos(rad);
+      }
+      const hit = isRound
+        ? lx * lx + ly * ly <= w * w         // circle
+        : Math.abs(lx) <= w && Math.abs(ly) <= h; // rect
+      if (hit) { onSelect(obj.id); return; }
+    }
+  };
+
+  /* ── table rendering (pure visuals — no event handlers needed) ─────────── */
   const renderTable = (obj) => {
     if (obj.type === 'zone') {
       const zw = obj.width || 200, zh = obj.height || 120;
@@ -124,12 +156,10 @@ function FloorMap({ objects, tableStates, selectedId, onSelect, zoom, onZoomChan
     const h          = obj.height || (isRound ? 80 : 60);
     const isSelected = selectedId === obj.id;
     const remaining  = state.status === 'occupied' ? estimateRemaining(state, {}) : null;
-    // hit area — slightly larger than the visual for easier tapping
-    const hw = w + 20, hh = h + 20;
 
     return (
-      <g key={obj.id} transform={`translate(${obj.x}, ${obj.y}) rotate(${obj.rotation || 0})`}>
-        {/* ── visuals ── */}
+      <g key={obj.id} transform={`translate(${obj.x}, ${obj.y}) rotate(${obj.rotation || 0})`}
+         style={{ cursor: 'pointer' }}>
         {isSelected && (isRound
           ? <circle cx={0} cy={0} r={w/2+8}  fill="none" stroke="white" strokeWidth={2} opacity={0.6} />
           : <rect x={-w/2-8} y={-h/2-8} width={w+16} height={h+16} rx={10} fill="none" stroke="white" strokeWidth={2} opacity={0.6} />
@@ -143,7 +173,7 @@ function FloorMap({ objects, tableStates, selectedId, onSelect, zoom, onZoomChan
           : <rect x={-w/2} y={-h/2} width={w} height={h} rx={6} fill={`${sm.color}22`} />
         }
         <text x={0} y={-4} textAnchor="middle" dominantBaseline="middle" fill="white" fontSize="11" fontWeight="700">{obj.label || `T${obj.id.slice(-3)}`}</text>
-        <text x={0} y={10}  textAnchor="middle" dominantBaseline="middle" fill={sm.color} fontSize="10" fontWeight="500">
+        <text x={0} y={10} textAnchor="middle" dominantBaseline="middle" fill={sm.color} fontSize="10" fontWeight="500">
           {state.status === 'occupied' ? `${state.partySize || '?'}/${obj.capacity}` : `cap ${obj.capacity}`}
         </text>
         {state.status === 'occupied' && remaining !== null && (
@@ -158,15 +188,6 @@ function FloorMap({ objects, tableStates, selectedId, onSelect, zoom, onZoomChan
             <text textAnchor="middle" dominantBaseline="middle" fill="black" fontSize="10" fontWeight="800">R</text>
           </g>
         )}
-
-        {/* ── TRANSPARENT HIT RECT — always last so it's on top ── */}
-        {/* A concrete <rect> is the only 100% cross-browser reliable SVG click target */}
-        <rect
-          x={-hw/2} y={-hh/2} width={hw} height={hh} rx={isRound ? hw/2 : 10}
-          fill="transparent"
-          style={{ cursor: 'pointer' }}
-          onClick={(e) => { e.stopPropagation(); onSelect(obj.id); }}
-        />
       </g>
     );
   };
@@ -177,14 +198,14 @@ function FloorMap({ objects, tableStates, selectedId, onSelect, zoom, onZoomChan
         ref={svgRef}
         className="w-full h-full"
         onWheel={onWheel}
-        onMouseDown={bgDown}
-        onMouseMove={bgMove}
-        onMouseUp={bgUp}
-        onMouseLeave={bgUp}
-        onPointerDown={bgDown}
-        onPointerMove={bgMove}
-        onPointerUp={bgUp}
-        onPointerLeave={bgUp}
+        onPointerDown={onDown}
+        onPointerMove={onMove}
+        onPointerUp={onUp}
+        onPointerLeave={() => { dragging.current = false; moved.current = false; }}
+        onMouseDown={onDown}
+        onMouseMove={onMove}
+        onMouseUp={onUp}
+        onMouseLeave={() => { dragging.current = false; moved.current = false; }}
         style={{ cursor: dragging.current ? 'grabbing' : 'grab', display: 'block' }}
       >
         <defs>
