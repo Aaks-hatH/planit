@@ -109,6 +109,7 @@ function AlertPopup({ alert, onGotIt, onDismiss }) {
 }
 
 
+function fmtDuration(ms) {
   const m = Math.floor(ms / 60000);
   if (m < 60) return `${m}m`;
   return `${Math.floor(m / 60)}h ${m % 60}m`;
