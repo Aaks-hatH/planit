@@ -1207,57 +1207,6 @@ export default function Home() {
           </div>
         )}
       </header>
-          <nav className="flex items-center gap-1">
-            <a href="/discover" className="hidden md:flex items-center gap-1.5 px-3 py-2 text-sm text-neutral-400 hover:text-neutral-200 hover:bg-neutral-800/50 rounded-xl transition-all duration-200">
-              <Zap className="w-3.5 h-3.5" />
-              Discover
-            </a>
-            <a href="/status" className="hidden md:flex items-center gap-1.5 px-3 py-2 text-sm text-neutral-400 hover:text-neutral-200 hover:bg-neutral-800/50 rounded-xl transition-all duration-200">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block" />
-              Status
-            </a>
-            <a href="/help" className="hidden md:flex items-center gap-1.5 px-3 py-2 text-sm text-neutral-400 hover:text-neutral-200 hover:bg-neutral-800/50 rounded-xl transition-all duration-200">
-              Help
-            </a>
-            {['Terms|/terms', 'Privacy|/privacy'].map(s => {
-              const [label, href] = s.split('|');
-              return <a key={label} href={href} className="hidden lg:block px-3 py-2 text-sm text-neutral-500 hover:text-neutral-200 hover:bg-neutral-800/50 rounded-xl transition-all duration-200">{label}</a>;
-            })}
-            <a href="/support" className="hidden sm:inline-flex ml-2 px-3 sm:px-5 py-2.5 text-sm font-medium text-white bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 rounded-xl transition-all duration-200">
-              Support Us
-            </a>
-            {/* Hamburger — mobile only */}
-            <button
-              className="md:hidden ml-2 w-9 h-9 flex items-center justify-center rounded-xl bg-neutral-800 border border-neutral-700 text-neutral-300 hover:text-white hover:bg-neutral-700 transition-all"
-              onClick={() => setMobileMenuOpen(o => !o)}
-              aria-label="Toggle menu"
-            >
-              {mobileMenuOpen ? (
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
-              ) : (
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" /></svg>
-              )}
-            </button>
-          </nav>
-        </div>
-        {/* Mobile dropdown menu */}
-        {mobileMenuOpen && (
-          <div className="md:hidden border-t border-neutral-800/60 px-4 py-3 space-y-1" style={{ background: 'rgba(6,6,12,0.98)' }}>
-            <a href="/discover" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-2.5 px-3 py-2.5 text-sm text-neutral-300 hover:text-white hover:bg-neutral-800/60 rounded-xl transition-all">
-              <Zap className="w-4 h-4 text-neutral-500" />Discover
-            </a>
-            <a href="/status" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-2.5 px-3 py-2.5 text-sm text-neutral-300 hover:text-white hover:bg-neutral-800/60 rounded-xl transition-all">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block ml-0.5 mr-0.5" />Status
-            </a>
-            <a href="/help" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-2.5 px-3 py-2.5 text-sm text-neutral-300 hover:text-white hover:bg-neutral-800/60 rounded-xl transition-all">
-              <svg className="w-4 h-4 text-neutral-500" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3M12 17h.01"/></svg>Help
-            </a>
-            <a href="/terms" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-2.5 px-3 py-2.5 text-sm text-neutral-400 hover:text-white hover:bg-neutral-800/60 rounded-xl transition-all">
-              Terms
-            </a>
-            <a href="/privacy" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-2.5 px-3 py-2.5 text-sm text-neutral-400 hover:text-white hover:bg-neutral-800/60 rounded-xl transition-all">
-              Privacy
-            </a>
             <div className="pt-1 border-t border-neutral-800">
               <a href="/support" onClick={() => setMobileMenuOpen(false)} className="flex items-center justify-center gap-2 mt-2 w-full px-4 py-3 text-sm font-semibold text-white bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 rounded-xl transition-all">
                 Support Us
