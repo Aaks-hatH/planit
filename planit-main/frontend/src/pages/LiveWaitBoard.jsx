@@ -158,12 +158,36 @@ export default function LiveWaitBoard() {
   }
 
   if (error && !liveData) {
+    const isDisabled = error === 'Wait board not active';
+    const isNotFound = error === 'Not found';
     return (
       <div className="min-h-screen flex items-center justify-center" style={{ background: '#0a0a0a' }}>
-        <div className="text-center p-8">
-          <AlertCircle className="w-12 h-12 text-rose-400 mx-auto mb-3" />
-          <p className="text-white font-bold text-lg mb-1">Unavailable</p>
-          <p className="text-neutral-500 text-sm">{error}</p>
+        <div className="text-center p-8 max-w-sm">
+          <div className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4"
+            style={{ background: '#1a1a1a', border: '1px solid #2a2a2a' }}>
+            <UtensilsCrossed className="w-8 h-8 text-neutral-600" />
+          </div>
+          {isDisabled ? (
+            <>
+              <p className="text-white font-bold text-lg mb-2">Wait board not active</p>
+              <p className="text-neutral-500 text-sm leading-relaxed">The live wait board isn't enabled for this venue right now. Check back later or ask staff for your wait time.</p>
+            </>
+          ) : isNotFound ? (
+            <>
+              <p className="text-white font-bold text-lg mb-2">Venue not found</p>
+              <p className="text-neutral-500 text-sm leading-relaxed">This wait board link doesn't match an active venue. Double-check the URL or ask staff for assistance.</p>
+            </>
+          ) : (
+            <>
+              <p className="text-white font-bold text-lg mb-2">Couldn't load wait board</p>
+              <p className="text-neutral-500 text-sm leading-relaxed mb-4">{error}</p>
+              <button onClick={() => { setError(null); setLoading(true); loadVenue(); loadLive(); }}
+                className="px-4 py-2 rounded-xl text-sm font-semibold text-white"
+                style={{ background: '#222', border: '1px solid #333' }}>
+                Try again
+              </button>
+            </>
+          )}
         </div>
       </div>
     );
