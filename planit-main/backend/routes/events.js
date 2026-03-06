@@ -3234,20 +3234,25 @@ router.get('/:eventId/table-service/guest/:tableId', availabilityLimiter, async 
 });
 
 // PATCH /:eventId/table-service/guest/:tableId — guest writes allowed fields only
-const GUEST_ALLOWED_DIETARY = ['Vegetarian','Vegan','Gluten-Free','Nut Allergy','Dairy-Free','Shellfish','Soy','Kosher','Halal','Low-Sodium'];
+const GUEST_ALLOWED_DIETARY = [
+  'Vegetarian','Vegan','Gluten-Free','Nut Allergy','Dairy-Free',
+  'Shellfish','Soy','Kosher','Halal','Low-Sodium',
+  'Pescatarian','Egg-Free','Diabetic-Friendly','Raw/Organic',
+];
+const GUEST_ALLOWED_ALERTS = ['call', 'order', 'quick:water', 'quick:napkins', 'quick:menu', 'quick:dessert', null];
 router.patch('/:eventId/table-service/guest/:tableId', availabilityLimiter, async (req, res, next) => {
   try {
     const { eventId, tableId } = req.params;
     if (!eventId || eventId.length > 64 || !tableId || tableId.length > 128) {
       return res.status(400).json({ error: 'Invalid request.' });
     }
-    const { guestAlert, guestDietary, guestDietaryNotes, tipPct, guestRating, guestScreen } = req.body;
+    const { guestAlert, guestDietary, guestDietaryNotes, tipPct, guestRating, guestScreen, partySize } = req.body;
 
-    if (guestAlert !== undefined && !['call', 'order', null].includes(guestAlert)) {
+    if (guestAlert !== undefined && !GUEST_ALLOWED_ALERTS.includes(guestAlert)) {
       return res.status(400).json({ error: 'Invalid alert type.' });
     }
     if (guestDietary !== undefined) {
-      if (!Array.isArray(guestDietary) || guestDietary.length > 10 ||
+      if (!Array.isArray(guestDietary) || guestDietary.length > GUEST_ALLOWED_DIETARY.length ||
           !guestDietary.every(d => GUEST_ALLOWED_DIETARY.includes(d))) {
         return res.status(400).json({ error: 'Invalid dietary data.' });
       }
@@ -3257,6 +3262,12 @@ router.patch('/:eventId/table-service/guest/:tableId', availabilityLimiter, asyn
     }
     if (tipPct !== undefined && (typeof tipPct !== 'number' || tipPct < 0 || tipPct > 100)) {
       return res.status(400).json({ error: 'Invalid tip.' });
+    }
+    if (partySize !== undefined) {
+      const ps = parseInt(partySize);
+      if (!Number.isInteger(ps) || ps < 1 || ps > 50) {
+        return res.status(400).json({ error: 'Invalid party size.' });
+      }
     }
     // Guests may only transition themselves to 'dining' (tap to begin)
     if (guestScreen !== undefined && guestScreen !== 'dining') {
@@ -3286,6 +3297,7 @@ router.patch('/:eventId/table-service/guest/:tableId', availabilityLimiter, asyn
     if (guestDietaryNotes !== undefined) existing.guestDietaryNotes = guestDietaryNotes.trim().slice(0, 300);
     if (tipPct !== undefined)            existing.tipPct            = tipPct;
     if (guestScreen !== undefined)       existing.guestScreen       = guestScreen;
+    if (partySize !== undefined)         existing.partySize         = parseInt(partySize);
     if (guestRating !== undefined) {
       existing.guestRating = {
         food:        guestRating.food,
