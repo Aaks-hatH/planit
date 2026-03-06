@@ -227,7 +227,7 @@ export default function LiveWaitBoard() {
             {myEntry.status === 'notified' && (
               <div className="mt-4 rounded-2xl p-4 text-center animate-pulse"
                 style={{ background: `${accent}20`, border: `1px solid ${accent}` }}>
-                <p className="font-black text-white text-base">🎉 Your table is ready!</p>
+                <p className="font-black text-white text-base">Your table is ready!</p>
                 <p className="text-sm mt-1" style={{ color: accent }}>Please check in with the host</p>
               </div>
             )}
