@@ -19,6 +19,109 @@ import {
 import { eventAPI } from '../services/api';
 import toast from 'react-hot-toast';
 
+// ── Alert helpers ─────────────────────────────────────────────────────────────
+
+const ALERT_LABELS = {
+  'call':            { label: 'Needs assistance',     color: '#f59e0b', border: '#f59e0b40', bg: '#2d1c0060' },
+  'order':           { label: 'Ready to order',       color: '#22c55e', border: '#22c55e40', bg: '#05231260' },
+  'quick:water':     { label: 'Water refill requested', color: '#38bdf8', border: '#38bdf840', bg: '#08233660' },
+  'quick:napkins':   { label: 'Napkins requested',    color: '#a78bfa', border: '#a78bfa40', bg: '#1e123660' },
+  'quick:menu':      { label: 'Requesting menu',      color: '#fb923c', border: '#fb923c40', bg: '#2d150060' },
+  'quick:dessert':   { label: 'Dessert menu requested', color: '#f472b6', border: '#f472b640', bg: '#2d103060' },
+};
+
+function AlertPopup({ alert, onGotIt, onDismiss }) {
+  if (!alert) return null;
+  const meta = ALERT_LABELS[alert.alertType] || ALERT_LABELS['call'];
+  const timeAgo = Math.round((Date.now() - alert.arrivedAt) / 1000);
+  const timeStr = timeAgo < 60 ? `${timeAgo}s ago` : `${Math.floor(timeAgo / 60)}m ago`;
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-6"
+      style={{ background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(4px)' }}
+    >
+      <div
+        className="w-full max-w-sm rounded-2xl border shadow-2xl overflow-hidden"
+        style={{ background: '#111', borderColor: meta.border, boxShadow: `0 0 60px ${meta.color}20` }}
+      >
+        {/* Top accent bar */}
+        <div style={{ height: 4, background: meta.color }} />
+
+        <div className="p-6">
+          {/* Alert type */}
+          <div className="flex items-center gap-3 mb-5">
+            <div
+              className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
+              style={{ background: meta.bg, border: `1px solid ${meta.border}` }}
+            >
+              <Bell className="w-5 h-5" style={{ color: meta.color }} />
+            </div>
+            <div>
+              <div className="text-xs font-bold uppercase tracking-widest" style={{ color: meta.color }}>
+                Table Alert
+              </div>
+              <div className="text-lg font-black text-white mt-0.5">{meta.label}</div>
+            </div>
+            <span className="ml-auto text-xs text-neutral-600 font-medium flex-shrink-0">{timeStr}</span>
+          </div>
+
+          {/* Details grid */}
+          <div className="rounded-xl border border-neutral-800 bg-neutral-900 divide-y divide-neutral-800 mb-5">
+            <div className="flex items-center justify-between px-4 py-3">
+              <span className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">Table</span>
+              <span className="font-black text-white text-base">{alert.tableLabel}</span>
+            </div>
+            {alert.partyName && (
+              <div className="flex items-center justify-between px-4 py-3">
+                <span className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">Party</span>
+                <span className="font-semibold text-white">{alert.partyName}</span>
+              </div>
+            )}
+            {alert.partySize > 0 && (
+              <div className="flex items-center justify-between px-4 py-3">
+                <span className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">Guests</span>
+                <span className="font-semibold text-white">{alert.partySize}</span>
+              </div>
+            )}
+            <div className="flex items-center justify-between px-4 py-3">
+              <span className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">Server</span>
+              <span className="font-semibold" style={{ color: alert.serverName ? '#f97316' : '#525252' }}>
+                {alert.serverName || 'Unassigned'}
+              </span>
+            </div>
+          </div>
+
+          {/* Actions */}
+          <div className="flex gap-3">
+            <button
+              onClick={onGotIt}
+              className="flex-1 py-3 rounded-xl font-bold text-sm transition-all"
+              style={{ background: meta.color, color: '#000' }}
+            >
+              Got it — On my way
+            </button>
+            <button
+              onClick={onDismiss}
+              className="px-4 py-3 rounded-xl font-bold text-sm bg-neutral-800 hover:bg-neutral-700 text-neutral-400 hover:text-white transition-all"
+            >
+              Snooze
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Keyframes for pulse ring on map */}
+      <style>{`
+        @keyframes alertPulse {
+          0%   { r: var(--r0); opacity: 0.8; }
+          100% { r: var(--r1); opacity: 0; }
+        }
+      `}</style>
+    </div>
+  );
+}
+
 // ── Shared constants ──────────────────────────────────────────────────────────
 
 const STATUS_META = {
@@ -116,12 +219,31 @@ function FloorMapReadOnly({ objects, tableStates, myServerName, selectedId, onSe
             </text>
           </g>
         )}
+        {/* Guest alert pulse ring */}
+        {state.guestAlert && (() => {
+          const alertMeta = ALERT_LABELS[state.guestAlert] || ALERT_LABELS['call'];
+          const r0 = isRound ? w / 2 + 8 : Math.max(w, h) / 2 + 8;
+          const r1 = r0 + 22;
+          return (
+            <circle
+              cx={0} cy={0}
+              fill="none"
+              stroke={alertMeta.color}
+              strokeWidth={3}
+              style={{
+                '--r0': `${r0}px`,
+                '--r1': `${r1}px`,
+                animation: 'alertPulse 1.2s ease-out infinite',
+              }}
+            />
+          );
+        })()}
         {/* Guest alert badge */}
         {state.guestAlert && (
           <g transform={`translate(${w / 2 - 4}, ${h / 2 - 4})`}>
-            <circle cx={0} cy={0} r={9} fill={state.guestAlert === 'order' ? '#22c55e' : '#f59e0b'} />
+            <circle cx={0} cy={0} r={9} fill={ALERT_LABELS[state.guestAlert]?.color || '#f59e0b'} />
             <text textAnchor="middle" dominantBaseline="middle" fill="white" fontSize="8" fontWeight="800">
-              {state.guestAlert === 'order' ? '!' : 'S'}
+              {state.guestAlert === 'order' ? '!' : state.guestAlert.startsWith('quick:') ? '+' : 'S'}
             </text>
           </g>
         )}
@@ -418,13 +540,15 @@ export default function ServerView() {
   const [loading, setLoading]         = useState(true);
   const [resolvedEid, setResolvedEid] = useState(eventIdParam || null);
   const [floorData, setFloorData]     = useState(null);
-  const [forbidden, setForbidden]     = useState(null); // { message, isEnterprise }
+  const [forbidden, setForbidden]     = useState(null);
   const [myServer, setMyServer]       = useState('');
   const [selectedId, setSelectedId]   = useState(null);
   const [pan]                         = useState({ x: 20, y: 20 });
   const [zoom]                        = useState(0.85);
   const [copiedUrl, setCopiedUrl]     = useState(null);
   const [urlPanelOpen, setUrlPanelOpen] = useState(false);
+  const [alertQueue, setAlertQueue]   = useState([]); // [{ tableId, tableLabel, partyName, partySize, serverName, alertType, arrivedAt }]
+  const seenAlerts                    = useRef(new Set()); // tracks "tableId::alertType" already queued
 
   // Resolve subdomain → eventId
   useEffect(() => {
@@ -446,7 +570,37 @@ export default function ServerView() {
         setForbidden({ message: 'This is not a Table Service event.', isEnterprise: !!data.isEnterpriseMode });
         return;
       }
-      setFloorData(data);
+      setFloorData(prev => {
+        // Diff incoming tableStates for new alerts
+        const objects = data.seatingMap?.objects || [];
+        const incoming = data.tableStates || [];
+        const newAlerts = [];
+        for (const s of incoming) {
+          if (!s.guestAlert) continue;
+          const key = `${s.tableId}::${s.guestAlert}`;
+          if (seenAlerts.current.has(key)) continue;
+          seenAlerts.current.add(key);
+          const tableObj = objects.find(o => o.id === s.tableId);
+          newAlerts.push({
+            tableId:    s.tableId,
+            tableLabel: tableObj?.label || s.tableId.slice(-4),
+            partyName:  s.partyName  || '',
+            partySize:  s.partySize  || 0,
+            serverName: s.serverName || '',
+            alertType:  s.guestAlert,
+            arrivedAt:  Date.now(),
+          });
+        }
+        // Prune seenAlerts for alerts that are now cleared (so they can re-fire if raised again)
+        const activeKeys = new Set(incoming.filter(s => s.guestAlert).map(s => `${s.tableId}::${s.guestAlert}`));
+        for (const k of seenAlerts.current) {
+          if (!activeKeys.has(k)) seenAlerts.current.delete(k);
+        }
+        if (newAlerts.length > 0) {
+          setAlertQueue(q => [...q, ...newAlerts]);
+        }
+        return data;
+      });
     } catch (err) {
       const status = err?.response?.status;
       const errData = err?.response?.data || {};
@@ -471,9 +625,9 @@ export default function ServerView() {
     if (eid) loadFloor();
   }, [loadFloor, eid]);
 
-  // Auto-refresh every 20s
+  // Auto-refresh every 5s for near-instant alert detection
   useEffect(() => {
-    const t = setInterval(loadFloor, 20000);
+    const t = setInterval(loadFloor, 5000);
     return () => clearInterval(t);
   }, [loadFloor]);
 
@@ -544,6 +698,19 @@ export default function ServerView() {
   return (
     <div className="h-screen flex flex-col bg-neutral-950 text-white overflow-hidden">
 
+      {/* Alert popup — shown for the front of the queue */}
+      <AlertPopup
+        alert={alertQueue[0] || null}
+        onGotIt={async () => {
+          const a = alertQueue[0];
+          if (!a) return;
+          // Clear on backend
+          try { await handleTableUpdate(a.tableId, { guestAlert: null }); } catch {}
+          setAlertQueue(q => q.slice(1));
+        }}
+        onDismiss={() => setAlertQueue(q => q.slice(1))}
+      />
+
       {/* Header */}
       <header className="flex-shrink-0 h-14 border-b border-neutral-800 bg-neutral-900/80 flex items-center px-4 gap-4">
         <div className="flex items-center gap-3 min-w-0">
@@ -576,6 +743,16 @@ export default function ServerView() {
         <button onClick={loadFloor} className="p-2 hover:bg-neutral-800 rounded-lg text-neutral-500 hover:text-white transition-colors flex-shrink-0">
           <RefreshCw className="w-4 h-4" />
         </button>
+
+        {/* Active alert count */}
+        {tableStates.filter(s => s.guestAlert).length > 0 && (
+          <div className="relative flex-shrink-0">
+            <Bell className="w-5 h-5 text-amber-400" />
+            <span className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-amber-500 text-black text-[10px] font-black flex items-center justify-center">
+              {tableStates.filter(s => s.guestAlert).length}
+            </span>
+          </div>
+        )}
       </header>
 
       {/* Main */}
