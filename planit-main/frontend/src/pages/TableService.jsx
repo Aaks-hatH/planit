@@ -33,7 +33,82 @@ const STATUS_META = {
   unavailable: { label: 'Unavailable', color: '#525252', bg: 'bg-neutral-900',    border: 'border-neutral-700',    text: 'text-neutral-500', ring: '#525252' },
 };
 
-function fmtDuration(ms) {
+const ALERT_LABELS = {
+  'call':            { label: 'Needs assistance',       color: '#f59e0b', border: '#f59e0b40', bg: '#2d1c0060' },
+  'order':           { label: 'Ready to order',         color: '#22c55e', border: '#22c55e40', bg: '#05231260' },
+  'quick:water':     { label: 'Water refill requested', color: '#38bdf8', border: '#38bdf840', bg: '#08233660' },
+  'quick:napkins':   { label: 'Napkins requested',      color: '#a78bfa', border: '#a78bfa40', bg: '#1e123660' },
+  'quick:menu':      { label: 'Requesting menu',        color: '#fb923c', border: '#fb923c40', bg: '#2d150060' },
+  'quick:dessert':   { label: 'Dessert menu requested', color: '#f472b6', border: '#f472b640', bg: '#2d103060' },
+};
+
+function AlertPopup({ alert, onGotIt, onDismiss }) {
+  if (!alert) return null;
+  const meta = ALERT_LABELS[alert.alertType] || ALERT_LABELS['call'];
+  const timeAgo = Math.round((Date.now() - alert.arrivedAt) / 1000);
+  const timeStr = timeAgo < 60 ? `${timeAgo}s ago` : `${Math.floor(timeAgo / 60)}m ago`;
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-6"
+      style={{ background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(4px)' }}>
+      <div className="w-full max-w-sm rounded-2xl border shadow-2xl overflow-hidden"
+        style={{ background: '#111', borderColor: meta.border, boxShadow: `0 0 60px ${meta.color}20` }}>
+        <div style={{ height: 4, background: meta.color }} />
+        <div className="p-6">
+          <div className="flex items-center gap-3 mb-5">
+            <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
+              style={{ background: meta.bg, border: `1px solid ${meta.border}` }}>
+              <Bell className="w-5 h-5" style={{ color: meta.color }} />
+            </div>
+            <div>
+              <div className="text-xs font-bold uppercase tracking-widest" style={{ color: meta.color }}>Table Alert</div>
+              <div className="text-lg font-black text-white mt-0.5">{meta.label}</div>
+            </div>
+            <span className="ml-auto text-xs text-neutral-600 font-medium flex-shrink-0">{timeStr}</span>
+          </div>
+          <div className="rounded-xl border border-neutral-800 bg-neutral-900 divide-y divide-neutral-800 mb-5">
+            <div className="flex items-center justify-between px-4 py-3">
+              <span className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">Table</span>
+              <span className="font-black text-white text-base">{alert.tableLabel}</span>
+            </div>
+            {alert.partyName && (
+              <div className="flex items-center justify-between px-4 py-3">
+                <span className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">Party</span>
+                <span className="font-semibold text-white">{alert.partyName}</span>
+              </div>
+            )}
+            {alert.partySize > 0 && (
+              <div className="flex items-center justify-between px-4 py-3">
+                <span className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">Guests</span>
+                <span className="font-semibold text-white">{alert.partySize}</span>
+              </div>
+            )}
+            <div className="flex items-center justify-between px-4 py-3">
+              <span className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">Server</span>
+              <span className="font-semibold" style={{ color: alert.serverName ? '#f97316' : '#525252' }}>
+                {alert.serverName || 'Unassigned'}
+              </span>
+            </div>
+          </div>
+          <div className="flex gap-3">
+            <button onClick={onGotIt} className="flex-1 py-3 rounded-xl font-bold text-sm transition-all"
+              style={{ background: meta.color, color: '#000' }}>
+              Got it — On my way
+            </button>
+            <button onClick={onDismiss}
+              className="px-4 py-3 rounded-xl font-bold text-sm bg-neutral-800 hover:bg-neutral-700 text-neutral-400 hover:text-white transition-all">
+              Snooze
+            </button>
+          </div>
+        </div>
+      </div>
+      <style>{`
+        @keyframes tsAlertPulse { 0% { r: var(--r0); opacity:0.8; } 100% { r: var(--r1); opacity:0; } }
+      `}</style>
+    </div>
+  );
+}
+
+
   const m = Math.floor(ms / 60000);
   if (m < 60) return `${m}m`;
   return `${Math.floor(m / 60)}h ${m % 60}m`;
@@ -189,6 +264,24 @@ function FloorMap({ objects, tableStates, selectedId, onSelect, zoom, onZoomChan
             <text textAnchor="middle" dominantBaseline="middle" fill="black" fontSize="10" fontWeight="800">R</text>
           </g>
         )}
+        {/* Guest alert pulse ring + badge */}
+        {state.guestAlert && (() => {
+          const am = ALERT_LABELS[state.guestAlert] || ALERT_LABELS['call'];
+          const r0 = isRound ? w/2 + 8 : Math.max(w, h)/2 + 8;
+          const r1 = r0 + 22;
+          return (
+            <>
+              <circle cx={0} cy={0} fill="none" stroke={am.color} strokeWidth={3}
+                style={{ '--r0': `${r0}px`, '--r1': `${r1}px`, animation: 'tsAlertPulse 1.2s ease-out infinite' }} />
+              <g transform={`translate(${w/2-4}, ${h/2-4})`}>
+                <circle cx={0} cy={0} r={9} fill={am.color} />
+                <text textAnchor="middle" dominantBaseline="middle" fill="white" fontSize="8" fontWeight="800">
+                  {state.guestAlert === 'order' ? '!' : state.guestAlert.startsWith('quick:') ? '+' : 'S'}
+                </text>
+              </g>
+            </>
+          );
+        })()}
       </g>
     );
   };
@@ -379,6 +472,93 @@ function TablePanel({ obj, state, settings, servers, onUpdate, onClose }) {
               );
             })}
           </div>
+        </div>
+
+        {/* Guest tablet section */}
+        <div className="border-t border-neutral-800 pt-4 space-y-3">
+          <div className="text-xs font-semibold text-neutral-400 uppercase tracking-wider">Guest Tablet</div>
+
+          {/* Active alert */}
+          {state?.guestAlert && (() => {
+            const am = ALERT_LABELS[state.guestAlert] || ALERT_LABELS['call'];
+            return (
+              <div className="flex items-center justify-between p-3 rounded-xl border"
+                style={{ background: am.bg, borderColor: am.border }}>
+                <div className="flex items-center gap-2">
+                  <Bell className="w-4 h-4 flex-shrink-0" style={{ color: am.color }} />
+                  <span className="text-sm font-bold text-white">{am.label}</span>
+                </div>
+                <button
+                  onClick={() => onUpdate(obj.id, { guestAlert: null })}
+                  disabled={saving}
+                  className="text-xs px-3 py-1.5 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-neutral-300 font-semibold border border-neutral-700 disabled:opacity-40"
+                >
+                  Clear
+                </button>
+              </div>
+            );
+          })()}
+
+          {/* Guest screen controls */}
+          <div>
+            <div className="text-xs text-neutral-600 mb-2">Screen control</div>
+            <div className="grid grid-cols-3 gap-2">
+              {[
+                { label: 'Show Dining', screen: 'dining' },
+                { label: 'Send Bill',   screen: 'bill'   },
+                { label: 'Rating',      screen: 'rating' },
+              ].map(({ label, screen }) => (
+                <button
+                  key={screen}
+                  onClick={() => onUpdate(obj.id, { guestScreen: screen })}
+                  disabled={saving || state?.guestScreen === screen}
+                  className={`px-2 py-2 rounded-lg text-xs font-semibold border transition-all ${state?.guestScreen === screen ? 'bg-neutral-700 border-neutral-500 text-white' : 'bg-neutral-800 border-neutral-700 text-neutral-400 hover:bg-neutral-700 hover:text-white disabled:opacity-40'}`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Dietary */}
+          {(state?.guestDietary?.length > 0 || state?.guestDietaryNotes) && (
+            <div className="p-3 rounded-xl bg-amber-950/20 border border-amber-800/30">
+              <div className="text-xs font-bold text-amber-400 uppercase tracking-wider mb-2">Guest Dietary</div>
+              {state.guestDietary?.length > 0 && (
+                <div className="flex flex-wrap gap-1.5 mb-1.5">
+                  {state.guestDietary.map(d => (
+                    <span key={d} className="text-xs px-2 py-0.5 rounded-md bg-amber-500/10 border border-amber-500/30 text-amber-300">{d}</span>
+                  ))}
+                </div>
+              )}
+              {state.guestDietaryNotes && <div className="text-xs text-neutral-400">{state.guestDietaryNotes}</div>}
+            </div>
+          )}
+
+          {/* Guest rating */}
+          {state?.guestRating?.food && (() => {
+            const r = state.guestRating;
+            const avg = ((r.food + r.service + r.atmosphere) / 3).toFixed(1);
+            return (
+              <div className="p-3 rounded-xl bg-neutral-800/60 border border-neutral-700">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="text-xs font-bold text-neutral-500 uppercase tracking-wider">Guest Rating</div>
+                  <div className="text-sm font-black text-amber-400">{avg} / 5</div>
+                </div>
+                {['food', 'service', 'atmosphere'].map(k => (
+                  <div key={k} className="flex justify-between items-center mb-1">
+                    <span className="text-xs text-neutral-400 capitalize">{k}</span>
+                    <div className="flex gap-0.5">
+                      {Array.from({ length: 5 }, (_, i) => (
+                        <Star key={i} className={`w-3 h-3 ${i < r[k] ? 'text-amber-400 fill-amber-400' : 'text-neutral-700'}`} />
+                      ))}
+                    </div>
+                  </div>
+                ))}
+                {r.comment && <div className="text-xs text-neutral-400 italic mt-2 pt-2 border-t border-neutral-700">"{r.comment}"</div>}
+              </div>
+            );
+          })()}
         </div>
       </div>
     </div>
@@ -1777,6 +1957,8 @@ export default function TableService() {
   const [seatingIsSaving, setSeatingIsSaving] = useState(false);
   const [zoom, setZoom] = useState(1);
   const [pan,  setPan]  = useState({ x: 0, y: 0 });
+  const [alertQueue, setAlertQueue]     = useState([]);
+  const seenAlerts                      = useRef(new Set());
 
   // Resolve subdomain → eventId when routed via /e/:subdomain/floor
   useEffect(() => {
@@ -1813,8 +1995,35 @@ export default function TableService() {
     if (!eid) return;
     try {
       const res = await eventAPI.getTableServiceFloor(eid);
-      setFloorData(res.data);
-      setReservationSettings(res.data.reservationPageSettings || {});
+      const data = res.data;
+      // Diff incoming tableStates for new alerts → push to popup queue
+      const objs = data.seatingMap?.objects || [];
+      const incoming = data.tableStates || [];
+      const newAlerts = [];
+      for (const s of incoming) {
+        if (!s.guestAlert) continue;
+        const key = `${s.tableId}::${s.guestAlert}`;
+        if (seenAlerts.current.has(key)) continue;
+        seenAlerts.current.add(key);
+        const tableObj = objs.find(o => o.id === s.tableId);
+        newAlerts.push({
+          tableId:    s.tableId,
+          tableLabel: tableObj?.label || s.tableId.slice(-4),
+          partyName:  s.partyName  || '',
+          partySize:  s.partySize  || 0,
+          serverName: s.serverName || '',
+          alertType:  s.guestAlert,
+          arrivedAt:  Date.now(),
+        });
+      }
+      // Prune cleared alerts from seenAlerts so they can re-fire if raised again
+      const activeKeys = new Set(incoming.filter(s => s.guestAlert).map(s => `${s.tableId}::${s.guestAlert}`));
+      for (const k of seenAlerts.current) {
+        if (!activeKeys.has(k)) seenAlerts.current.delete(k);
+      }
+      if (newAlerts.length > 0) setAlertQueue(q => [...q, ...newAlerts]);
+      setFloorData(data);
+      setReservationSettings(data.reservationPageSettings || {});
     } catch (err) {
       const status = err?.response?.status;
       if (status === 401 || status === 403) {
@@ -1841,11 +2050,10 @@ export default function TableService() {
   useEffect(() => {
     if (!eid) return;
     loadFloor();
-    // Auto-refresh every 30 seconds — paused while floor editor is open
-    // to prevent unsaved layout changes from being wiped by a re-fetch
+    // Auto-refresh every 5s — paused while floor editor is open
     const interval = setInterval(() => {
       if (!showFloorEditor) loadFloor();
-    }, 30000);
+    }, 5000);
     return () => clearInterval(interval);
   }, [loadFloor, eid, showFloorEditor]);
 
@@ -2032,6 +2240,19 @@ export default function TableService() {
     );
   }  return (
     <div className="h-screen flex flex-col bg-neutral-950 text-white overflow-hidden">
+
+      {/* Alert popup */}
+      <AlertPopup
+        alert={alertQueue[0] || null}
+        onGotIt={async () => {
+          const a = alertQueue[0];
+          if (!a) return;
+          try { await handleTableUpdate(a.tableId, { guestAlert: null }); } catch {}
+          setAlertQueue(q => q.slice(1));
+        }}
+        onDismiss={() => setAlertQueue(q => q.slice(1))}
+      />
+
       {/* ── Header ── */}
       <header className="flex-shrink-0 h-14 border-b border-neutral-800 bg-neutral-900/80 flex items-center px-4 gap-4">
         {/* Logo + name */}
@@ -2063,6 +2284,18 @@ export default function TableService() {
 
         {/* Actions */}
         <div className="flex items-center gap-2 flex-shrink-0">
+          {/* Live alert badge */}
+          {tableStates.filter(s => s.guestAlert).length > 0 && (
+            <button
+              onClick={() => setSideTab('alerts')}
+              className="relative p-2 hover:bg-neutral-800 rounded-lg transition-colors"
+            >
+              <Bell className="w-4 h-4 text-amber-400" />
+              <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-amber-500 text-black text-[10px] font-black flex items-center justify-center">
+                {tableStates.filter(s => s.guestAlert).length}
+              </span>
+            </button>
+          )}
           <button onClick={loadFloor} title="Refresh" className="p-2 hover:bg-neutral-800 rounded-lg text-neutral-500 hover:text-white transition-colors"><RefreshCw className="w-4 h-4" /></button>
           {isTableService && (subdomain || eid) && (
             <a
@@ -2194,28 +2427,32 @@ export default function TableService() {
                           <p className="text-xs text-neutral-600">No pending alerts.</p>
                         ) : alertedStates.map(s => {
                           const obj = objects.find(o => o.id === s.tableId);
+                          const am = ALERT_LABELS[s.guestAlert] || ALERT_LABELS['call'];
                           return (
                             <div
                               key={s.tableId}
                               onClick={() => setSelectedTableId(prev => prev === s.tableId ? null : s.tableId)}
-                              className="flex items-center justify-between px-3 py-2.5 mb-2 rounded-xl border border-amber-800/40 bg-amber-950/20 cursor-pointer hover:border-amber-600/50 transition-all"
+                              className="px-3 py-3 mb-2 rounded-xl border cursor-pointer hover:opacity-90 transition-all"
+                              style={{ background: am.bg, borderColor: am.border }}
                             >
-                              <div>
-                                <div className="text-sm font-bold text-white">{obj?.label || s.tableId}</div>
-                                <div className="text-xs text-amber-400 font-semibold mt-0.5">
-                                  {s.guestAlert === 'order' ? 'Ready to order' : 'Called server'}
+                              <div className="flex items-start justify-between gap-2">
+                                <div className="min-w-0">
+                                  <div className="text-sm font-black text-white">{obj?.label || s.tableId}</div>
+                                  <div className="text-xs font-semibold mt-0.5" style={{ color: am.color }}>{am.label}</div>
+                                  {s.partyName && <div className="text-xs text-neutral-400 mt-1">Party: {s.partyName}{s.partySize > 0 ? ` · ${s.partySize} guests` : ''}</div>}
+                                  {s.serverName && <div className="text-xs mt-0.5" style={{ color: '#f97316' }}>Server: {s.serverName}</div>}
                                 </div>
+                                <button
+                                  onClick={async (e) => {
+                                    e.stopPropagation();
+                                    try { await handleTableUpdate(s.tableId, { guestAlert: null }); }
+                                    catch (_) {}
+                                  }}
+                                  className="flex-shrink-0 text-xs px-2.5 py-1.5 rounded-lg bg-neutral-900/60 hover:bg-neutral-800 text-neutral-300 font-semibold border border-neutral-700"
+                                >
+                                  Clear
+                                </button>
                               </div>
-                              <button
-                                onClick={async (e) => {
-                                  e.stopPropagation();
-                                  try { await handleTableUpdate(s.tableId, { guestAlert: null }); }
-                                  catch (_) {}
-                                }}
-                                className="text-xs px-2.5 py-1 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-neutral-400 font-semibold border border-neutral-700"
-                              >
-                                Clear
-                              </button>
                             </div>
                           );
                         })}
