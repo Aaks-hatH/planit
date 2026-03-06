@@ -15,7 +15,7 @@ import {
   RefreshCw, QrCode, Trash2, Edit2, ChevronRight, Bell, MapPin,
   Coffee, Utensils, Star, LayoutGrid, List, X, Save, Check,
   ArrowRight, ArrowLeft, Phone, ScanLine, Calendar, Timer, Loader2, Lock,
-  ExternalLink, UtensilsCrossed, CameraOff,
+  ExternalLink, UtensilsCrossed, CameraOff, Copy,
 } from 'lucide-react';
 import { eventAPI } from '../services/api';
 import toast from 'react-hot-toast';
@@ -1269,23 +1269,42 @@ function QRScannerModal({ eventId, objects, tableStates, settings, onClose, onRe
 
 function TabletUrlRow({ label, url }) {
   const [copied, setCopied] = useState(false);
+  const [showQr, setShowQr]   = useState(false);
+  const qrSrc = `https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${encodeURIComponent(url)}&bgcolor=0a0a0a&color=ffffff&margin=2`;
   return (
-    <div className="px-3 py-2 rounded-lg bg-neutral-900 border border-neutral-800 flex items-start justify-between gap-2">
-      <div className="min-w-0 flex-1">
-        <div className="text-xs font-semibold text-neutral-400 mb-0.5">{label}</div>
-        <div className="text-[10px] text-neutral-600 font-mono truncate">{url}</div>
+    <div className="rounded-xl bg-neutral-900 border border-neutral-800 overflow-hidden">
+      <div className="px-3 py-2.5 flex items-start justify-between gap-2">
+        <div className="min-w-0 flex-1">
+          <div className="text-xs font-semibold text-neutral-400 mb-1">{label}</div>
+          <div className="text-[10px] text-neutral-500 font-mono break-all leading-relaxed">{url}</div>
+        </div>
+        <div className="flex-shrink-0 flex items-center gap-1.5 ml-1 mt-0.5">
+          <button
+            onClick={() => setShowQr(q => !q)}
+            title="Show QR code"
+            className={`flex items-center gap-1 text-xs font-semibold px-2 py-1 rounded-lg border transition-all ${showQr ? 'bg-orange-950/50 border-orange-500/40 text-orange-400' : 'bg-neutral-800 border-neutral-700 text-neutral-400 hover:text-white hover:border-neutral-500'}`}
+          >
+            <QrCode className="w-3 h-3" />
+          </button>
+          <button
+            onClick={() => {
+              navigator.clipboard.writeText(url).then(() => {
+                setCopied(true);
+                setTimeout(() => setCopied(false), 2000);
+              });
+            }}
+            className={`flex items-center gap-1 text-xs font-semibold px-2 py-1 rounded-lg border transition-all ${copied ? 'bg-emerald-950/60 border-emerald-500/40 text-emerald-400' : 'bg-neutral-800 border-neutral-700 text-neutral-400 hover:text-white hover:border-neutral-500'}`}
+          >
+            {copied ? 'Copied' : 'Copy'}
+          </button>
+        </div>
       </div>
-      <button
-        onClick={() => {
-          navigator.clipboard.writeText(url).then(() => {
-            setCopied(true);
-            setTimeout(() => setCopied(false), 2000);
-          });
-        }}
-        className={`flex-shrink-0 flex items-center gap-1 text-xs font-semibold px-2 py-1 rounded-lg border transition-all ${copied ? 'bg-emerald-950/60 border-emerald-500/40 text-emerald-400' : 'bg-neutral-800 border-neutral-700 text-neutral-400 hover:text-white hover:border-neutral-500'}`}
-      >
-        {copied ? 'Copied' : 'Copy'}
-      </button>
+      {showQr && (
+        <div className="px-3 pb-3 flex items-center gap-3 border-t border-neutral-800 pt-2.5">
+          <img src={qrSrc} alt={`QR for ${label}`} className="w-[72px] h-[72px] rounded-lg border border-neutral-700 flex-shrink-0" />
+          <p className="text-[10px] text-neutral-600 leading-relaxed">Scan to open the guest tablet for <span className="text-neutral-400 font-semibold">{label}</span>. Mount this at the table or print it for self-service.</p>
+        </div>
+      )}
     </div>
   );
 }
@@ -1741,11 +1760,37 @@ function SettingsModal({ settings, reservationSettings, onSave, onSaveReserve, o
                 <Plus className="w-4 h-4" />Add
               </button>
             </div>
-            {serverList.length > 0 && (
-              <div className="mt-3 p-3 bg-neutral-800/40 border border-neutral-700 rounded-xl text-xs text-neutral-500">
-                Share the server view with your team: <span className="text-neutral-300 font-mono">{subdomain ? `${window.location.origin}/e/${subdomain}/server` : (eventId ? `${window.location.origin}/event/${eventId}/server` : '')}</span>
-              </div>
-            )}
+            {serverList.length > 0 && (() => {
+              const serverUrl = subdomain
+                ? `${window.location.origin}/e/${subdomain}/server`
+                : (eventId ? `${window.location.origin}/event/${eventId}/server` : '');
+              const serverQr = serverUrl
+                ? `https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${encodeURIComponent(serverUrl)}&bgcolor=0a0a0a&color=ffffff&margin=2`
+                : null;
+              return (
+                <div className="mt-3 p-3 bg-neutral-800/40 border border-neutral-700 rounded-xl">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-neutral-600 mb-2">Server View URL</p>
+                  <div className="flex items-start gap-3">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs text-neutral-400 font-mono break-all leading-relaxed mb-2">{serverUrl}</p>
+                      <div className="flex items-center gap-2">
+                        <button onClick={() => { navigator.clipboard.writeText(serverUrl); toast.success('Copied!'); }}
+                          className="text-xs px-2.5 py-1 bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-neutral-400 hover:text-white rounded-lg font-semibold transition-all flex items-center gap-1">
+                          <Copy className="w-3 h-3" />Copy
+                        </button>
+                        <a href={serverUrl} target="_blank" rel="noopener noreferrer"
+                          className="text-xs px-2.5 py-1 bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-neutral-400 hover:text-white rounded-lg font-semibold transition-all flex items-center gap-1">
+                          <ExternalLink className="w-3 h-3" />Open
+                        </a>
+                      </div>
+                    </div>
+                    {serverQr && (
+                      <img src={serverQr} alt="Server view QR" className="w-[60px] h-[60px] rounded-lg border border-neutral-700 flex-shrink-0" />
+                    )}
+                  </div>
+                </div>
+              );
+            })()}
           </>)}
 
           {/* ── RESERVE PAGE TAB ── */}
@@ -1759,12 +1804,30 @@ function SettingsModal({ settings, reservationSettings, onSave, onSaveReserve, o
                 </div>
                 <Toggle checked={rForm.acceptingReservations} onChange={e => setRB('acceptingReservations', e.target.checked)} />
               </div>
-              {reserveUrl && (
-                <div className="mt-3 flex items-center gap-2 p-2 bg-neutral-900 rounded-lg">
-                  <span className="text-xs text-neutral-500 truncate flex-1">{reserveUrl}</span>
-                  <a href={reserveUrl} target="_blank" rel="noopener noreferrer" className="text-orange-400 hover:text-orange-300 flex-shrink-0"><ExternalLink className="w-3.5 h-3.5" /></a>
-                </div>
-              )}
+              {reserveUrl && (() => {
+                const reserveQr = `https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${encodeURIComponent(reserveUrl)}&bgcolor=0a0a0a&color=ffffff&margin=2`;
+                return (
+                  <div className="mt-3 p-3 bg-neutral-900 rounded-xl border border-neutral-700">
+                    <div className="flex items-start gap-3">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[10px] font-bold uppercase tracking-wider text-neutral-600 mb-1.5">Reservation Page URL</p>
+                        <p className="text-xs text-neutral-400 font-mono break-all leading-relaxed">{reserveUrl}</p>
+                        <div className="flex items-center gap-2 mt-2">
+                          <button onClick={() => { navigator.clipboard.writeText(reserveUrl); toast.success('Copied!'); }}
+                            className="text-xs px-2.5 py-1 bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-neutral-400 hover:text-white rounded-lg font-semibold transition-all flex items-center gap-1">
+                            <Copy className="w-3 h-3" />Copy
+                          </button>
+                          <a href={reserveUrl} target="_blank" rel="noopener noreferrer"
+                            className="text-xs px-2.5 py-1 bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-neutral-400 hover:text-white rounded-lg font-semibold transition-all flex items-center gap-1">
+                            <ExternalLink className="w-3 h-3" />Open
+                          </a>
+                        </div>
+                      </div>
+                      <img src={reserveQr} alt="Reserve page QR" className="w-[72px] h-[72px] rounded-xl border border-neutral-700 flex-shrink-0" />
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
 
             {/* Confirmation mode */}
@@ -2128,20 +2191,31 @@ function SettingsModal({ settings, reservationSettings, onSave, onSaveReserve, o
               const boardUrl = subdomain
                 ? `${window.location.origin}/e/${subdomain}/wait`
                 : `${window.location.origin}/event/${eventId}/wait`;
-              const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(boardUrl)}`;
+              const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(boardUrl)}&bgcolor=0a0a0a&color=ffffff&margin=2`;
               return (
                 <div className="bg-neutral-800/60 border border-neutral-700 rounded-xl p-4 mb-4">
                   <p className="text-xs font-bold text-neutral-400 uppercase tracking-wider mb-3">Wait Board URL</p>
-                  <div className="flex gap-3 items-start">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-2">
-                        <code className="text-xs text-orange-300 flex-1 truncate bg-neutral-900 px-2 py-1.5 rounded-lg border border-neutral-700">{boardUrl}</code>
-                        <button onClick={() => { navigator.clipboard.writeText(boardUrl); toast.success('Copied!'); }}
-                          className="text-xs px-2 py-1.5 bg-neutral-700 hover:bg-neutral-600 text-neutral-300 rounded-lg font-semibold flex-shrink-0">Copy</button>
+                  <div className="flex gap-4 items-start">
+                    <div className="flex-1 min-w-0">
+                      <div className="bg-neutral-900 border border-neutral-700 rounded-lg px-3 py-2 mb-2">
+                        <code className="text-xs text-orange-300 break-all leading-relaxed">{boardUrl}</code>
                       </div>
-                      <p className="text-xs text-neutral-600 leading-relaxed">Post this as a QR code at your entrance. Guests scan it to see live wait times and join the waitlist from their phone — no account needed.</p>
+                      <div className="flex items-center gap-2 mb-3">
+                        <button onClick={() => { navigator.clipboard.writeText(boardUrl); toast.success('Copied!'); }}
+                          className="text-xs px-2.5 py-1.5 bg-neutral-700 hover:bg-neutral-600 text-neutral-300 hover:text-white rounded-lg font-semibold transition-all flex items-center gap-1.5">
+                          <Copy className="w-3 h-3" />Copy URL
+                        </button>
+                        <a href={boardUrl} target="_blank" rel="noopener noreferrer"
+                          className="text-xs px-2.5 py-1.5 bg-neutral-700 hover:bg-neutral-600 text-neutral-300 hover:text-white rounded-lg font-semibold transition-all flex items-center gap-1.5">
+                          <ExternalLink className="w-3 h-3" />Open
+                        </a>
+                      </div>
+                      <p className="text-xs text-neutral-600 leading-relaxed">Post this QR at your entrance. Guests scan it to see live wait times and join the waitlist from their phone — no account needed.</p>
                     </div>
-                    <img src={qrUrl} alt="QR code" className="w-20 h-20 rounded-xl flex-shrink-0 border border-neutral-700" />
+                    <div className="flex-shrink-0 flex flex-col items-center gap-1.5">
+                      <img src={qrUrl} alt="QR code" className="w-[88px] h-[88px] rounded-xl border border-neutral-700" />
+                      <span className="text-[9px] text-neutral-600 font-semibold uppercase tracking-wider">Scan to join</span>
+                    </div>
                   </div>
                 </div>
               );
