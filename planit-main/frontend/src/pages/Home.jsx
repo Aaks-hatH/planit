@@ -1129,8 +1129,84 @@ export default function Home() {
               </div>
               <div className="absolute -top-1 -right-1 w-3 h-3 bg-emerald-500 rounded-full border-2 border-[#06060c] animate-pulse" />
             </div>
-            <span className="text-xl font-bold text-white">PlanIt</span>
+            <div className="flex items-center gap-2">
+              <span className="text-xl font-bold text-white">PlanIt</span>
+              {/* Product family pills */}
+              <div className="hidden sm:flex items-center gap-1 ml-1">
+                <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-neutral-800 border border-neutral-700 text-neutral-400 uppercase tracking-wider">Events</span>
+                <span className="text-neutral-700 text-xs">·</span>
+                <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-orange-500/10 border border-orange-500/25 text-orange-400 uppercase tracking-wider flex items-center gap-1">
+                  <UtensilsCrossed className="w-2.5 h-2.5" />Venue
+                </span>
+              </div>
+            </div>
           </div>
+          <nav className="flex items-center gap-1">
+            <a href="#venue" className="hidden md:flex items-center gap-1.5 px-3 py-2 text-sm text-orange-400/80 hover:text-orange-300 hover:bg-orange-500/8 rounded-xl transition-all duration-200">
+              <UtensilsCrossed className="w-3.5 h-3.5" />
+              PlanIt Venue
+            </a>
+            <a href="/discover" className="hidden md:flex items-center gap-1.5 px-3 py-2 text-sm text-neutral-400 hover:text-neutral-200 hover:bg-neutral-800/50 rounded-xl transition-all duration-200">
+              <Zap className="w-3.5 h-3.5" />
+              Discover
+            </a>
+            <a href="/status" className="hidden md:flex items-center gap-1.5 px-3 py-2 text-sm text-neutral-400 hover:text-neutral-200 hover:bg-neutral-800/50 rounded-xl transition-all duration-200">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block" />
+              Status
+            </a>
+            <a href="/help" className="hidden md:flex items-center gap-1.5 px-3 py-2 text-sm text-neutral-400 hover:text-neutral-200 hover:bg-neutral-800/50 rounded-xl transition-all duration-200">
+              Help
+            </a>
+            {['Terms|/terms', 'Privacy|/privacy'].map(s => {
+              const [label, href] = s.split('|');
+              return <a key={label} href={href} className="hidden lg:block px-3 py-2 text-sm text-neutral-500 hover:text-neutral-200 hover:bg-neutral-800/50 rounded-xl transition-all duration-200">{label}</a>;
+            })}
+            <a href="/support" className="hidden sm:inline-flex ml-2 px-3 sm:px-5 py-2.5 text-sm font-medium text-white bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 rounded-xl transition-all duration-200">
+              Support Us
+            </a>
+            {/* Hamburger — mobile only */}
+            <button
+              className="md:hidden ml-2 w-9 h-9 flex items-center justify-center rounded-xl bg-neutral-800 border border-neutral-700 text-neutral-300 hover:text-white hover:bg-neutral-700 transition-all"
+              onClick={() => setMobileMenuOpen(o => !o)}
+              aria-label="Toggle menu"
+            >
+              {mobileMenuOpen ? (
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+              ) : (
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" /></svg>
+              )}
+            </button>
+          </nav>
+        </div>
+        {/* Mobile dropdown menu */}
+        {mobileMenuOpen && (
+          <div className="md:hidden border-t border-neutral-800/60 px-4 py-3 space-y-1" style={{ background: 'rgba(6,6,12,0.98)' }}>
+            <a href="#venue" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-2.5 px-3 py-2.5 text-sm text-orange-400 hover:text-orange-300 hover:bg-orange-500/10 rounded-xl transition-all">
+              <UtensilsCrossed className="w-4 h-4" />PlanIt Venue
+            </a>
+            <a href="/discover" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-2.5 px-3 py-2.5 text-sm text-neutral-300 hover:text-white hover:bg-neutral-800/60 rounded-xl transition-all">
+              <Zap className="w-4 h-4 text-neutral-500" />Discover
+            </a>
+            <a href="/status" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-2.5 px-3 py-2.5 text-sm text-neutral-300 hover:text-white hover:bg-neutral-800/60 rounded-xl transition-all">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block ml-0.5 mr-0.5" />Status
+            </a>
+            <a href="/help" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-2.5 px-3 py-2.5 text-sm text-neutral-300 hover:text-white hover:bg-neutral-800/60 rounded-xl transition-all">
+              <svg className="w-4 h-4 text-neutral-500" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3M12 17h.01"/></svg>Help
+            </a>
+            <a href="/terms" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-2.5 px-3 py-2.5 text-sm text-neutral-400 hover:text-white hover:bg-neutral-800/60 rounded-xl transition-all">
+              Terms
+            </a>
+            <a href="/privacy" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-2.5 px-3 py-2.5 text-sm text-neutral-400 hover:text-white hover:bg-neutral-800/60 rounded-xl transition-all">
+              Privacy
+            </a>
+            <div className="pt-1 border-t border-neutral-800">
+              <a href="/support" onClick={() => setMobileMenuOpen(false)} className="flex items-center justify-center gap-2 mt-2 w-full px-4 py-3 text-sm font-semibold text-white bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 rounded-xl transition-all">
+                Support Us
+              </a>
+            </div>
+          </div>
+        )}
+      </header>
           <nav className="flex items-center gap-1">
             <a href="/discover" className="hidden md:flex items-center gap-1.5 px-3 py-2 text-sm text-neutral-400 hover:text-neutral-200 hover:bg-neutral-800/50 rounded-xl transition-all duration-200">
               <Zap className="w-3.5 h-3.5" />
@@ -1203,10 +1279,15 @@ export default function Home() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.6, delay: 0.15 }}
-                className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-semibold text-neutral-500 mb-12 border border-neutral-800/80 uppercase tracking-widest cursor-default"
-                style={{ background: 'rgba(255,255,255,0.02)' }}
+                className="inline-flex items-center gap-3 mb-12"
               >
-                Event Management Platform
+                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold border border-neutral-800/80 text-neutral-400 uppercase tracking-widest cursor-default" style={{ background: 'rgba(255,255,255,0.02)' }}>
+                  <Calendar className="w-3 h-3" />PlanIt Events
+                </span>
+                <span className="text-neutral-700 text-sm">·</span>
+                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold border border-orange-500/25 text-orange-400 uppercase tracking-widest cursor-default" style={{ background: 'rgba(249,115,22,0.06)' }}>
+                  <UtensilsCrossed className="w-3 h-3" />PlanIt Venue
+                </span>
               </motion.div>
 
               <motion.h1
@@ -1228,7 +1309,7 @@ export default function Home() {
                 transition={{ duration: 0.7, delay: 0.42 }}
                 className="text-xl md:text-2xl text-neutral-400 max-w-2xl mx-auto leading-relaxed font-light mb-14"
               >
-                The all-in-one workspace for event teams. From first idea to final wrap-up.
+                Two products, one platform. <span className="text-neutral-300 font-medium">PlanIt Events</span> for planning teams. <span className="text-orange-400 font-medium">PlanIt Venue</span> for restaurants and hospitality.
               </motion.p>
 
               <motion.div
@@ -1267,6 +1348,77 @@ export default function Home() {
                   </div>
                 ))}
               </motion.div>
+            </div>
+          </div>
+        </section>
+
+        {/* PRODUCT FAMILY SPLIT */}
+        <section className="py-16 border-t border-neutral-800/40">
+          <div className="max-w-screen-xl mx-auto px-4 sm:px-8">
+            <Reveal className="text-center mb-10">
+              <p className="text-xs font-bold text-neutral-600 uppercase tracking-widest mb-3">One company, two products</p>
+              <h2 className="text-3xl font-black text-white">Built for what you actually need</h2>
+            </Reveal>
+            <div className="grid md:grid-cols-2 gap-5">
+              {/* PlanIt Events */}
+              <Reveal delay={0}>
+                <div className="group relative rounded-3xl border border-neutral-800 p-7 hover:border-neutral-600 transition-all duration-500 overflow-hidden" style={{ background: 'rgba(255,255,255,0.025)' }}>
+                  <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500" style={{ background: 'radial-gradient(ellipse at top left, rgba(100,100,200,0.08) 0%, transparent 65%)' }} />
+                  <div className="relative">
+                    <div className="flex items-center gap-3 mb-5">
+                      <div className="w-11 h-11 rounded-2xl bg-neutral-800 border border-neutral-700 flex items-center justify-center">
+                        <Calendar className="w-5 h-5 text-neutral-300" />
+                      </div>
+                      <div>
+                        <div className="text-[10px] font-bold uppercase tracking-widest text-neutral-600 mb-0.5">PlanIt</div>
+                        <div className="text-lg font-black text-white leading-tight">Events</div>
+                      </div>
+                      <span className="ml-auto px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 uppercase tracking-wider">Free</span>
+                    </div>
+                    <p className="text-neutral-400 text-sm leading-relaxed mb-5">The full planning workspace for event teams — task management, real-time chat, RSVPs, QR check-in, expenses, and more. Built for corporate events, weddings, galas, anything with a plan.</p>
+                    <div className="flex flex-wrap gap-2">
+                      {['Team chat', 'Task tracking', 'QR check-in', 'RSVP', 'Polls', 'File sharing'].map(tag => (
+                        <span key={tag} className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-neutral-800 border border-neutral-700 text-neutral-400">{tag}</span>
+                      ))}
+                    </div>
+                    <div className="mt-5 pt-5 border-t border-neutral-800">
+                      <a href="#create" className="inline-flex items-center gap-2 text-sm font-bold text-white hover:text-neutral-300 transition-colors">
+                        Plan an event <ArrowRight className="w-3.5 h-3.5" />
+                      </a>
+                    </div>
+                  </div>
+                </div>
+              </Reveal>
+
+              {/* PlanIt Venue */}
+              <Reveal delay={120}>
+                <div className="group relative rounded-3xl border border-orange-500/20 p-7 hover:border-orange-500/40 transition-all duration-500 overflow-hidden" style={{ background: 'rgba(249,115,22,0.04)' }}>
+                  <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500" style={{ background: 'radial-gradient(ellipse at top right, rgba(249,115,22,0.10) 0%, transparent 65%)' }} />
+                  <div className="relative">
+                    <div className="flex items-center gap-3 mb-5">
+                      <div className="w-11 h-11 rounded-2xl bg-orange-500/15 border border-orange-500/30 flex items-center justify-center">
+                        <UtensilsCrossed className="w-5 h-5 text-orange-400" />
+                      </div>
+                      <div>
+                        <div className="text-[10px] font-bold uppercase tracking-widest text-orange-500/60 mb-0.5">PlanIt</div>
+                        <div className="text-lg font-black text-white leading-tight">Venue</div>
+                      </div>
+                      <span className="ml-auto px-2.5 py-1 rounded-full text-[10px] font-bold bg-orange-500/10 border border-orange-500/25 text-orange-400 uppercase tracking-wider">Restaurant OS</span>
+                    </div>
+                    <p className="text-neutral-400 text-sm leading-relaxed mb-5">A dedicated floor management system for restaurants and venues. Real-time table states, live wait board for walk-ins, QR reservations, server assignment — everything your front-of-house needs on one screen every night.</p>
+                    <div className="flex flex-wrap gap-2">
+                      {['Floor map', 'Live waitlist', 'Wait board', 'QR reservations', 'Server assign', 'Seat next'].map(tag => (
+                        <span key={tag} className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-orange-500/8 border border-orange-500/20 text-orange-400/80">{tag}</span>
+                      ))}
+                    </div>
+                    <div className="mt-5 pt-5 border-t border-orange-500/15">
+                      <a href="#venue" className="inline-flex items-center gap-2 text-sm font-bold text-orange-400 hover:text-orange-300 transition-colors">
+                        Set up your venue <ArrowRight className="w-3.5 h-3.5" />
+                      </a>
+                    </div>
+                  </div>
+                </div>
+              </Reveal>
             </div>
           </div>
         </section>
@@ -1354,22 +1506,36 @@ export default function Home() {
           </div>
         </section>
 
-        {/* TABLE SERVICE MODE */}
-        <section className="py-32 border-t border-neutral-800/40">
+        {/* PLANIT VENUE */}
+        <section id="venue" className="py-32 border-t border-orange-500/10" style={{ background: 'radial-gradient(ellipse 80% 40% at 50% 0%, rgba(249,115,22,0.04) 0%, transparent 60%)' }}>
           <div className="max-w-screen-xl mx-auto px-4 sm:px-8">
+            {/* Section header — clearly a separate product */}
+            <Reveal className="text-center mb-20">
+              <div className="inline-flex items-center gap-2.5 px-4 py-2 rounded-2xl border border-orange-500/25 mb-6" style={{ background: 'rgba(249,115,22,0.07)' }}>
+                <UtensilsCrossed className="w-4 h-4 text-orange-400" />
+                <span className="text-xs font-black uppercase tracking-widest text-orange-400">PlanIt Venue</span>
+                <span className="w-px h-3 bg-orange-500/30" />
+                <span className="text-xs font-semibold text-orange-400/60">by PlanIt</span>
+              </div>
+              <h2 className="text-5xl md:text-6xl font-black text-white mb-5 leading-tight">The restaurant OS<br /><span className="text-orange-400">built into PlanIt</span></h2>
+              <p className="text-xl text-neutral-400 max-w-2xl mx-auto leading-relaxed">
+                PlanIt Venue is a dedicated hospitality product under the PlanIt umbrella. Same platform, different tools — purpose-built for restaurants and venues that need a live floor every night.
+              </p>
+            </Reveal>
+
             <div className="grid lg:grid-cols-2 gap-16 items-center">
               {/* Left: demo floor map mockup */}
               <Reveal delay={140}>
                 <div className="relative order-2 lg:order-1">
-                  <div className="bg-neutral-900/60 rounded-3xl border border-neutral-800 overflow-hidden p-1">
+                  <div className="bg-neutral-900/60 rounded-3xl border border-orange-500/15 overflow-hidden p-1">
                     {/* Mini floor map demo */}
                     <div className="bg-neutral-950 rounded-2xl p-4" style={{ minHeight: 340 }}>
                       {/* Header bar */}
                       <div className="flex items-center justify-between mb-4 pb-3 border-b border-neutral-800">
                         <div className="flex items-center gap-2">
-                          <div className="w-5 h-5 bg-white rounded flex items-center justify-center"><UtensilsCrossed className="w-3 h-3 text-neutral-900" /></div>
+                          <div className="w-5 h-5 bg-orange-500/20 border border-orange-500/30 rounded flex items-center justify-center"><UtensilsCrossed className="w-3 h-3 text-orange-400" /></div>
                           <span className="text-sm font-bold text-white">Taverna Roma</span>
-                          <span className="text-xs text-neutral-600">Table Service</span>
+                          <span className="text-[10px] font-bold text-orange-400/60 uppercase tracking-wider">PlanIt Venue</span>
                         </div>
                         <div className="flex gap-1.5">
                           {[['#22c55e','4 Available'],['#ef4444','3 Occupied'],['#8b5cf6','1 Cleaning']].map(([c,l]) => (
@@ -1419,18 +1585,15 @@ export default function Home() {
 
               {/* Right: copy */}
               <Reveal className="order-1 lg:order-2">
-                <div className="inline-flex items-center gap-2 px-4 py-2 bg-orange-500/10 border border-orange-500/20 rounded-full text-xs font-bold text-orange-400 mb-8">
-                  <UtensilsCrossed className="w-4 h-4" />Table Service Mode
-                </div>
-                <h2 className="text-5xl font-black text-white mb-6 leading-tight">Built for restaurants & venues</h2>
-                <p className="text-xl text-neutral-400 mb-10 leading-relaxed">
-                  A dedicated floor management system for hospitality teams. Real-time table states, walk-in waitlists with live wait time estimates, and QR code reservations — all on one screen.
+                <h3 className="text-4xl font-black text-white mb-6 leading-tight">Everything your front-of-house needs</h3>
+                <p className="text-lg text-neutral-400 mb-10 leading-relaxed">
+                  Real-time table states, walk-in waitlists with a public live wait board, QR code reservations, one-tap seating — all on one screen. Your floor data never expires.
                 </p>
                 <div className="space-y-4">
                   {[
                     { icon: Layers,            text: 'Visual floor plan editor — drag tables to match your layout exactly' },
-                    { icon: Users,             text: 'Walk-in waitlist with estimated wait times based on your timing config' },
-                    { icon: QrCode,            text: 'Time-limited QR code reservations guests scan at the door' },
+                    { icon: Users,             text: 'Walk-in waitlist with one-tap Seat Next and estimated wait times' },
+                    { icon: QrCode,            text: 'Live public wait board guests can join from their phone at the door' },
                     { icon: MapPin,            text: 'Live table states sync instantly across every staff device' },
                     { icon: CheckCircle2,      text: 'Your floor plan data persists forever — never auto-wiped' },
                   ].map((item, i) => (
@@ -1444,11 +1607,12 @@ export default function Home() {
                     </Reveal>
                   ))}
                 </div>
-                <div className="mt-8">
+                <div className="mt-8 flex items-center gap-4">
                   <a href="#create" onClick={() => setTimeout(() => document.querySelector('[data-mode="table-service"]')?.click(), 100)}
                     className="inline-flex items-center gap-2 px-6 py-3 bg-orange-500 text-white rounded-xl font-bold hover:bg-orange-400 transition-colors text-sm">
-                    Set up your venue <ArrowRight className="w-4 h-4" />
+                    Set up PlanIt Venue <ArrowRight className="w-4 h-4" />
                   </a>
+                  <span className="text-xs text-neutral-600 font-medium">Free · Data never expires</span>
                 </div>
               </Reveal>
             </div>
@@ -1672,7 +1836,7 @@ export default function Home() {
                         {[
                           { val: 'standard',      label: 'Standard',      sub: 'Team planning' },
                           { val: 'enterprise',    label: 'Enterprise',    sub: 'Full Execution' },
-                          { val: 'table-service', label: 'Table Service', sub: 'Restaurant Floor' },
+                          { val: 'table-service', label: 'PlanIt Venue', sub: 'Restaurant Floor' },
                         ].map(({ val, label, sub }) => (
                           <button key={val} type="button" onClick={() => setMode(val)}
                             data-mode={val}
