@@ -22,6 +22,7 @@ import InviteBadge from './pages/InviteBadge';
 import InviteCard from './pages/InviteCard';
 import ReservePage, { ReserveCancelPage } from './pages/ReservePage';
 import ReservationTicket from './pages/ReservationTicket';
+import GuestTablet from './pages/GuestTablet';
 
 function App() {
   return (
@@ -37,6 +38,8 @@ function App() {
         <Route path="/e/:subdomain/floor"        element={<TableService />} />
         <Route path="/event/:eventId/server"     element={<ServerView />} />
         <Route path="/e/:subdomain/server"       element={<ServerView />} />
+        <Route path="/event/:eventId/table/:tableId" element={<GuestTablet />} />
+        <Route path="/e/:subdomain/table/:tableId"   element={<GuestTablet />} />
         <Route path="/event/:eventId/login"      element={<OrganizerLogin />} />
         <Route path="/e/:subdomain/login"        element={<OrganizerLogin />} />
         <Route path="/event/:eventId/waitlist"   element={<Waitlist />} />
