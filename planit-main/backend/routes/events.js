@@ -827,12 +827,23 @@ function calcWaitTimes(objects, states, tss) {
   return { forTwo: calc(2), forFour: calc(4), forEight: calc(8) };
 }
 
+// ── Helper: find event by subdomain OR eventId ─────────────────────────────
+const mongoose = require('mongoose');
+async function findWaitEvent(subdomainOrId, selectFields) {
+  const isObjectId = mongoose.Types.ObjectId.isValid(subdomainOrId);
+  const query = isObjectId
+    ? Event.findById(subdomainOrId)
+    : Event.findOne({ subdomain: subdomainOrId });
+  return query.select(selectFields).lean();
+}
+
 // GET /public/wait/:subdomain/info — static venue branding (infrequent)
 router.get('/public/wait/:subdomain/info', availabilityLimiter, async (req, res, next) => {
   try {
-    const event = await Event.findOne({ subdomain: req.params.subdomain })
-      .select('isTableServiceMode tableServiceSettings reservationPageSettings')
-      .lean();
+    const event = await findWaitEvent(
+      req.params.subdomain,
+      'isTableServiceMode tableServiceSettings reservationPageSettings'
+    );
     if (!event || !event.isTableServiceMode) return res.status(404).json({ error: 'Not found' });
     const tss = event.tableServiceSettings  || {};
     const rps = event.reservationPageSettings || {};
@@ -852,9 +863,10 @@ router.get('/public/wait/:subdomain/info', availabilityLimiter, async (req, res,
 // GET /public/wait/:subdomain/live — live data (polled every 20s)
 router.get('/public/wait/:subdomain/live', availabilityLimiter, async (req, res, next) => {
   try {
-    const event = await Event.findOne({ subdomain: req.params.subdomain })
-      .select('isTableServiceMode tableServiceSettings reservationPageSettings seatingMap tableStates tableServiceWaitlist')
-      .lean();
+    const event = await findWaitEvent(
+      req.params.subdomain,
+      'isTableServiceMode tableServiceSettings reservationPageSettings seatingMap tableStates tableServiceWaitlist'
+    );
     if (!event || !event.isTableServiceMode) return res.status(404).json({ error: 'Not found' });
 
     const tss     = event.tableServiceSettings    || {};
@@ -917,11 +929,13 @@ router.post('/public/wait/:subdomain/join', availabilityLimiter, async (req, res
     const sz = parseInt(partySize);
     if (!sz || sz < 1 || sz > 50) return res.status(400).json({ error: 'Invalid party size' });
 
-    const event = await Event.findOne({ subdomain: req.params.subdomain })
-      .select('isTableServiceMode tableServiceSettings reservationPageSettings tableServiceWaitlist');
-    if (!event || !event.isTableServiceMode) return res.status(404).json({ error: 'Not found' });
+    const isObjectId = mongoose.Types.ObjectId.isValid(req.params.subdomain);
+    const eventDoc = isObjectId
+      ? await Event.findById(req.params.subdomain).select('isTableServiceMode tableServiceSettings reservationPageSettings tableServiceWaitlist')
+      : await Event.findOne({ subdomain: req.params.subdomain }).select('isTableServiceMode tableServiceSettings reservationPageSettings tableServiceWaitlist');
+    if (!eventDoc || !eventDoc.isTableServiceMode) return res.status(404).json({ error: 'Not found' });
 
-    const rps = event.reservationPageSettings || {};
+    const rps = eventDoc.reservationPageSettings || {};
     if (rps.publicWaitBoardEnabled === false) return res.status(403).json({ error: 'Wait board not active' });
 
     const entry = {
@@ -934,9 +948,9 @@ router.post('/public/wait/:subdomain/join', availabilityLimiter, async (req, res
       status:    'waiting',
       source:    'public_board',
     };
-    if (!event.tableServiceWaitlist) event.tableServiceWaitlist = [];
-    event.tableServiceWaitlist.push(entry);
-    await event.save();
+    if (!eventDoc.tableServiceWaitlist) eventDoc.tableServiceWaitlist = [];
+    eventDoc.tableServiceWaitlist.push(entry);
+    await eventDoc.save();
 
     res.status(201).json({ success: true, entry });
   } catch (err) { next(err); }
