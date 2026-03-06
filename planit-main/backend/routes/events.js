@@ -3144,10 +3144,18 @@ router.get('/:eventId/table-service/floor', verifyCheckinAccess, async (req, res
 router.patch('/:eventId/table-service/table/:tableId', verifyCheckinAccess, async (req, res, next) => {
   try {
     const { eventId, tableId } = req.params;
-    const { status, partyName, partySize, serverName, notes, reservationId } = req.body;
+    const {
+      status, partyName, partySize, serverName, notes, reservationId,
+      // server-controlled guest tablet fields
+      guestScreen, billSubtotal, billTax, billPaid, guestAlert,
+    } = req.body;
     const ALLOWED_STATUSES = ['available', 'occupied', 'reserved', 'cleaning', 'unavailable'];
+    const ALLOWED_SCREENS  = ['idle', 'dining', 'bill', 'rating'];
     if (status && !ALLOWED_STATUSES.includes(status)) {
       return res.status(400).json({ error: `Invalid status. Must be: ${ALLOWED_STATUSES.join(', ')}` });
+    }
+    if (guestScreen !== undefined && !ALLOWED_SCREENS.includes(guestScreen)) {
+      return res.status(400).json({ error: `Invalid guestScreen. Must be: ${ALLOWED_SCREENS.join(', ')}` });
     }
     const event = await Event.findById(eventId);
     if (!event) return res.status(404).json({ error: 'Event not found' });
@@ -3166,12 +3174,146 @@ router.patch('/:eventId/table-service/table/:tableId', verifyCheckinAccess, asyn
     if (status === 'available' || status === 'cleaning') {
       existing.occupiedAt = null; existing.partyName = partyName || ''; existing.partySize = partySize || 0; existing.reservationId = null;
     }
+    // Server-controlled guest tablet fields
+    if (guestScreen !== undefined) existing.guestScreen = guestScreen;
+    if (guestAlert !== undefined)  existing.guestAlert  = guestAlert;
+    if (billSubtotal !== undefined) existing.billSubtotal = typeof billSubtotal === 'number' ? billSubtotal : null;
+    if (billTax !== undefined)      existing.billTax      = typeof billTax === 'number' ? billTax : null;
+    if (billPaid !== undefined)     existing.billPaid     = !!billPaid;
+    // When server resets to idle, clear guest-written fields
+    if (guestScreen === 'idle') {
+      existing.guestAlert = null;
+      existing.guestDietary = [];
+      existing.guestDietaryNotes = '';
+    }
     existing.updatedAt = new Date();
     await event.save();
 
     const io = req.app.get('io');
     if (io) io.to(`event_${eventId}`).emit('table_state_update', { tableId, ...existing.toObject() });
     res.json({ success: true, tableState: existing });
+  } catch (err) { next(err); }
+});
+
+// ── Public guest tablet routes (no auth required) ─────────────────────────────
+// Guests can only read their own table and write a strict whitelist of fields.
+
+// GET /:eventId/table-service/guest/:tableId — guest polls their table state
+router.get('/:eventId/table-service/guest/:tableId', availabilityLimiter, async (req, res, next) => {
+  try {
+    const { eventId, tableId } = req.params;
+    if (!eventId || eventId.length > 64 || !tableId || tableId.length > 128) {
+      return res.status(400).json({ error: 'Invalid request.' });
+    }
+    const event = await Event.findById(eventId)
+      .select('title tableServiceSettings seatingMap tableStates isTableServiceMode')
+      .lean();
+    if (!event || !event.isTableServiceMode) return res.status(404).json({ error: 'Not found.' });
+
+    const objects = event.seatingMap?.objects || [];
+    const tableObj = objects.find(o => o.id === tableId);
+    if (!tableObj) return res.status(404).json({ error: 'Table not found.' });
+
+    const state = (event.tableStates || []).find(s => s.tableId === tableId) || { tableId, guestScreen: 'idle' };
+
+    // Only return what the guest needs — never expose other tables or party data
+    res.json({
+      venueName:         event.tableServiceSettings?.restaurantName || event.title || '',
+      table:             { id: tableObj.id, label: tableObj.label, capacity: tableObj.capacity, type: tableObj.type },
+      guestScreen:       state.guestScreen || 'idle',
+      guestAlert:        state.guestAlert  || null,
+      guestDietary:      state.guestDietary || [],
+      guestDietaryNotes: state.guestDietaryNotes || '',
+      billSubtotal:      state.billSubtotal ?? null,
+      billTax:           state.billTax ?? null,
+      billPaid:          state.billPaid || false,
+      tipPct:            state.tipPct ?? null,
+      hasRating:         !!(state.guestRating?.food),
+    });
+  } catch (err) { next(err); }
+});
+
+// PATCH /:eventId/table-service/guest/:tableId — guest writes allowed fields only
+const GUEST_ALLOWED_DIETARY = ['Vegetarian','Vegan','Gluten-Free','Nut Allergy','Dairy-Free','Shellfish','Soy','Kosher','Halal','Low-Sodium'];
+router.patch('/:eventId/table-service/guest/:tableId', availabilityLimiter, async (req, res, next) => {
+  try {
+    const { eventId, tableId } = req.params;
+    if (!eventId || eventId.length > 64 || !tableId || tableId.length > 128) {
+      return res.status(400).json({ error: 'Invalid request.' });
+    }
+    const { guestAlert, guestDietary, guestDietaryNotes, tipPct, guestRating, guestScreen } = req.body;
+
+    if (guestAlert !== undefined && !['call', 'order', null].includes(guestAlert)) {
+      return res.status(400).json({ error: 'Invalid alert type.' });
+    }
+    if (guestDietary !== undefined) {
+      if (!Array.isArray(guestDietary) || guestDietary.length > 10 ||
+          !guestDietary.every(d => GUEST_ALLOWED_DIETARY.includes(d))) {
+        return res.status(400).json({ error: 'Invalid dietary data.' });
+      }
+    }
+    if (guestDietaryNotes !== undefined && (typeof guestDietaryNotes !== 'string' || guestDietaryNotes.length > 300)) {
+      return res.status(400).json({ error: 'Notes too long.' });
+    }
+    if (tipPct !== undefined && (typeof tipPct !== 'number' || tipPct < 0 || tipPct > 100)) {
+      return res.status(400).json({ error: 'Invalid tip.' });
+    }
+    // Guests may only transition themselves to 'dining' (tap to begin)
+    if (guestScreen !== undefined && guestScreen !== 'dining') {
+      return res.status(400).json({ error: 'Invalid screen.' });
+    }
+    if (guestRating !== undefined) {
+      const { food, service, atmosphere, comment } = guestRating;
+      if (![food, service, atmosphere].every(v => Number.isInteger(v) && v >= 1 && v <= 5)) {
+        return res.status(400).json({ error: 'Invalid rating values.' });
+      }
+      if (comment !== undefined && (typeof comment !== 'string' || comment.length > 300)) {
+        return res.status(400).json({ error: 'Comment too long.' });
+      }
+    }
+
+    const event = await Event.findById(eventId).select('isTableServiceMode seatingMap tableStates');
+    if (!event || !event.isTableServiceMode) return res.status(404).json({ error: 'Not found.' });
+
+    const tableExists = (event.seatingMap?.objects || []).some(o => o.id === tableId);
+    if (!tableExists) return res.status(404).json({ error: 'Table not found.' });
+
+    let existing = event.tableStates.find(s => s.tableId === tableId);
+    if (!existing) { event.tableStates.push({ tableId }); existing = event.tableStates[event.tableStates.length - 1]; }
+
+    if (guestAlert !== undefined)        existing.guestAlert        = guestAlert;
+    if (guestDietary !== undefined)      existing.guestDietary      = guestDietary;
+    if (guestDietaryNotes !== undefined) existing.guestDietaryNotes = guestDietaryNotes.trim().slice(0, 300);
+    if (tipPct !== undefined)            existing.tipPct            = tipPct;
+    if (guestScreen !== undefined)       existing.guestScreen       = guestScreen;
+    if (guestRating !== undefined) {
+      existing.guestRating = {
+        food:        guestRating.food,
+        service:     guestRating.service,
+        atmosphere:  guestRating.atmosphere,
+        comment:     (guestRating.comment || '').trim().slice(0, 300),
+        submittedAt: new Date(),
+      };
+      existing.guestScreen = 'idle'; // auto-reset after rating
+    }
+    existing.updatedAt = new Date();
+    await event.save();
+
+    const io = req.app.get('io');
+    if (io) io.to(`event_${eventId}`).emit('table_state_update', { tableId, ...existing.toObject() });
+
+    res.json({
+      success:           true,
+      guestScreen:       existing.guestScreen,
+      guestAlert:        existing.guestAlert,
+      guestDietary:      existing.guestDietary,
+      guestDietaryNotes: existing.guestDietaryNotes,
+      billSubtotal:      existing.billSubtotal,
+      billTax:           existing.billTax,
+      billPaid:          existing.billPaid,
+      tipPct:            existing.tipPct,
+      hasRating:         !!(existing.guestRating?.food),
+    });
   } catch (err) { next(err); }
 });
 
