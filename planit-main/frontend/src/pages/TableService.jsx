@@ -2115,6 +2115,7 @@ export default function TableService() {
               ...(isTableService ? [
                 { id: 'waitlist',     label: 'Waitlist',      badge: floorData.waitlist?.length },
                 { id: 'reservations', label: 'Reservations',  badge: floorData.reservations?.filter(r => !['cancelled','seated','no_show'].includes(r.status)).length },
+                { id: 'alerts',       label: 'Alerts',        badge: tableStates.filter(s => s.guestAlert).length || null },
               ] : []),
               { id: 'summary',      label: 'Overview',      badge: null },
             ].map(({ id, label, badge }) => (
@@ -2152,6 +2153,122 @@ export default function TableService() {
                 settings={settings}
                 eventId={eid}
               />
+            )}
+            {isTableService && sideTab === 'alerts' && (
+              <div className="flex-1 overflow-y-auto p-4 space-y-4">
+                {/* Active guest alerts */}
+                {(() => {
+                  const alertedStates = tableStates.filter(s => s.guestAlert);
+                  const dietaryStates = tableStates.filter(s => s.guestDietary?.length || s.guestDietaryNotes);
+                  const ratedStates   = tableStates.filter(s => s.guestRating?.food);
+                  return (
+                    <>
+                      <div>
+                        <div className="text-xs font-bold text-neutral-500 uppercase tracking-wider mb-2">
+                          Active Alerts ({alertedStates.length})
+                        </div>
+                        {alertedStates.length === 0 ? (
+                          <p className="text-xs text-neutral-600">No pending alerts.</p>
+                        ) : alertedStates.map(s => {
+                          const obj = objects.find(o => o.id === s.tableId);
+                          return (
+                            <div
+                              key={s.tableId}
+                              onClick={() => setSelectedTableId(prev => prev === s.tableId ? null : s.tableId)}
+                              className="flex items-center justify-between px-3 py-2.5 mb-2 rounded-xl border border-amber-800/40 bg-amber-950/20 cursor-pointer hover:border-amber-600/50 transition-all"
+                            >
+                              <div>
+                                <div className="text-sm font-bold text-white">{obj?.label || s.tableId}</div>
+                                <div className="text-xs text-amber-400 font-semibold mt-0.5">
+                                  {s.guestAlert === 'order' ? 'Ready to order' : 'Called server'}
+                                </div>
+                              </div>
+                              <button
+                                onClick={async (e) => {
+                                  e.stopPropagation();
+                                  try { await handleTableUpdate(s.tableId, { guestAlert: null }); }
+                                  catch (_) {}
+                                }}
+                                className="text-xs px-2.5 py-1 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-neutral-400 font-semibold border border-neutral-700"
+                              >
+                                Clear
+                              </button>
+                            </div>
+                          );
+                        })}
+                      </div>
+
+                      <div>
+                        <div className="text-xs font-bold text-neutral-500 uppercase tracking-wider mb-2">
+                          Dietary Restrictions ({dietaryStates.length} tables)
+                        </div>
+                        {dietaryStates.length === 0 ? (
+                          <p className="text-xs text-neutral-600">No dietary info submitted.</p>
+                        ) : dietaryStates.map(s => {
+                          const obj = objects.find(o => o.id === s.tableId);
+                          return (
+                            <div key={s.tableId} className="px-3 py-2.5 mb-2 rounded-xl border border-neutral-700 bg-neutral-800/40">
+                              <div className="text-sm font-bold text-white mb-1.5">{obj?.label || s.tableId}</div>
+                              {s.guestDietary?.length > 0 && (
+                                <div className="flex flex-wrap gap-1 mb-1">
+                                  {s.guestDietary.map(d => (
+                                    <span key={d} className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/10 border border-amber-500/30 text-amber-300 font-semibold">{d}</span>
+                                  ))}
+                                </div>
+                              )}
+                              {s.guestDietaryNotes && <div className="text-xs text-neutral-400">{s.guestDietaryNotes}</div>}
+                            </div>
+                          );
+                        })}
+                      </div>
+
+                      <div>
+                        <div className="text-xs font-bold text-neutral-500 uppercase tracking-wider mb-2">
+                          Ratings ({ratedStates.length})
+                        </div>
+                        {ratedStates.length === 0 ? (
+                          <p className="text-xs text-neutral-600">No ratings yet.</p>
+                        ) : ratedStates.map(s => {
+                          const obj = objects.find(o => o.id === s.tableId);
+                          const r = s.guestRating;
+                          const avg = ((r.food + r.service + r.atmosphere) / 3).toFixed(1);
+                          return (
+                            <div key={s.tableId} className="px-3 py-2.5 mb-2 rounded-xl border border-neutral-700 bg-neutral-800/40">
+                              <div className="flex justify-between items-center mb-1">
+                                <div className="text-sm font-bold text-white">{obj?.label || s.tableId}</div>
+                                <div className="text-sm font-black text-amber-400">{avg} / 5</div>
+                              </div>
+                              <div className="text-xs text-neutral-500 space-y-0.5">
+                                <div className="flex justify-between"><span>Food</span><span className="text-neutral-300">{r.food}/5</span></div>
+                                <div className="flex justify-between"><span>Service</span><span className="text-neutral-300">{r.service}/5</span></div>
+                                <div className="flex justify-between"><span>Atmosphere</span><span className="text-neutral-300">{r.atmosphere}/5</span></div>
+                              </div>
+                              {r.comment && <div className="text-xs text-neutral-400 italic mt-1.5 pt-1.5 border-t border-neutral-700">"{r.comment}"</div>}
+                            </div>
+                          );
+                        })}
+                      </div>
+
+                      <div>
+                        <div className="text-xs font-bold text-neutral-500 uppercase tracking-wider mb-2">Guest Tablet URLs</div>
+                        {tables.length === 0 ? (
+                          <p className="text-xs text-neutral-600">No tables configured.</p>
+                        ) : tables.map(t => {
+                          const url = subdomain
+                            ? `${window.location.origin}/e/${subdomain}/table/${t.id}`
+                            : `${window.location.origin}/event/${eid}/table/${t.id}`;
+                          return (
+                            <div key={t.id} className="px-3 py-2 mb-1.5 rounded-lg bg-neutral-900 border border-neutral-800">
+                              <div className="text-xs font-semibold text-neutral-400 mb-0.5">{t.label || t.id}</div>
+                              <div className="text-[10px] text-neutral-600 font-mono break-all">{url}</div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </>
+                  );
+                })()}
+              </div>
             )}
             {sideTab === 'summary' && (
               <div className="p-5 space-y-4">
