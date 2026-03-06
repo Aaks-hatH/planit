@@ -10,7 +10,7 @@
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import {
   Clock, Users, MapPin, Phone, Globe, Instagram, ChevronRight,
@@ -230,6 +230,7 @@ export function ReserveCancelPage() {
 
 export default function ReservePage() {
   const { subdomain } = useParams();
+  const navigate = useNavigate();
 
   const [config, setConfig]   = useState(null);
   const [loading, setLoading] = useState(true);
@@ -271,7 +272,14 @@ export default function ReservePage() {
   // Load config
   useEffect(() => {
     axios.get(`${API}/events/public/reserve/${subdomain}`)
-      .then(r => { setConfig(r.data); setLoading(false); })
+      .then(r => {
+        // If the venue is in walk-in only mode, redirect to the live wait board
+        if (r.data?.walkInOnlyMode) {
+          navigate(`/e/${subdomain}/wait`, { replace: true });
+          return;
+        }
+        setConfig(r.data); setLoading(false);
+      })
       .catch(err => {
         setError(err.response?.status === 404 ? 'not_found' : 'error');
         setLoading(false);
