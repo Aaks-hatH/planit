@@ -1,4 +1,5 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import LiveWaitBoard from './pages/LiveWaitBoard';
 import Home from './pages/Home';
 import EventSpace from './pages/EventSpace';
 import EnterpriseCheckin from './pages/EnterpriseCheckin';
@@ -44,6 +45,8 @@ function App() {
         <Route path="/e/:subdomain/login"        element={<OrganizerLogin />} />
         <Route path="/event/:eventId/waitlist"   element={<Waitlist />} />
         <Route path="/e/:subdomain/waitlist"     element={<Waitlist />} />
+        <Route path="/event/:eventId/wait"       element={<LiveWaitBoard />} />
+        <Route path="/e/:subdomain/wait"         element={<LiveWaitBoard />} />
         <Route path="/e/:subdomain/reserve"      element={<ReservePage />} />
         <Route path="/reserve/cancel/:cancelToken" element={<ReserveCancelPage />} />
         <Route path="/reservation/:cancelToken"  element={<ReservationTicket />} />
