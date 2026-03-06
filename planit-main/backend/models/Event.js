@@ -313,6 +313,29 @@ const eventSchema = new mongoose.Schema({
     occupiedAt:    { type: Date,   default: null },
     reservationId: { type: String, default: null },
     updatedAt:     { type: Date,   default: Date.now },
+
+    // ── Guest tablet fields ──────────────────────────────────────────────
+    // Controlled by server: which screen the guest tablet shows
+    guestScreen:        { type: String, enum: ['idle', 'dining', 'bill', 'rating'], default: 'idle' },
+    // Controlled by guest: alert type sent to server
+    guestAlert:         { type: String, enum: ['call', 'order', null], default: null },
+    // Controlled by guest: dietary restrictions
+    guestDietary:       [{ type: String, maxlength: 50 }],
+    guestDietaryNotes:  { type: String, default: '', maxlength: 300 },
+    // Controlled by server: bill amounts sent to guest tablet
+    billSubtotal:       { type: Number, default: null },
+    billTax:            { type: Number, default: null },
+    billPaid:           { type: Boolean, default: false },
+    // Controlled by guest: tip preference (informational only)
+    tipPct:             { type: Number, default: null },
+    // Controlled by guest: post-meal rating
+    guestRating: {
+      food:        { type: Number, min: 1, max: 5, default: null },
+      service:     { type: Number, min: 1, max: 5, default: null },
+      atmosphere:  { type: Number, min: 1, max: 5, default: null },
+      comment:     { type: String, default: '', maxlength: 300 },
+      submittedAt: { type: Date,   default: null },
+    },
   }],
 
   // Reservation queue — QR-based time-slotted bookings
