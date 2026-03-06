@@ -736,7 +736,7 @@ export default function GuestTablet() {
   const handleSaveDietary = (data) => patchState(data);
 
   const handleRating = async (rating) => {
-    await patchState({ guestRating: rating, guestScreen: 'idle' });
+    await patchState({ guestRating: rating });
   };
 
   // ── Error ──────────────────────────────────────────────────────────────────
