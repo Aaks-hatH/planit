@@ -156,6 +156,10 @@ export const eventAPI = {
   updateReservationPageSettings: (eventId, data)       => api.patch(`/events/${eventId}/table-service/reservation-page-settings`, data),
   updateServers:                (eventId, servers)      => api.patch(`/events/${eventId}/table-service/settings`, { servers }),
   getFloorPublic:               (eventId)               => api.get(`/events/${eventId}/table-service/floor`),
+
+  // ── Guest tablet (public — no auth token required) ─────────────────────
+  getGuestTableState:  (eventId, tableId)       => api.get(`/events/${eventId}/table-service/guest/${tableId}`),
+  updateGuestTable:    (eventId, tableId, data) => api.patch(`/events/${eventId}/table-service/guest/${tableId}`, data),
 };
 
 // ─── Chat API ─────────────────────────────────────────────────────────────────
