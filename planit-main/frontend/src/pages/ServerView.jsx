@@ -14,7 +14,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   Users, Clock, CheckCircle, XCircle, RefreshCw, Lock,
-  Utensils, Loader2, X, ChevronDown, Bell, DollarSign, Star,
+  Utensils, Loader2, X, ChevronDown, Bell, DollarSign, Star, Copy, Check, Tablet,
 } from 'lucide-react';
 import { eventAPI } from '../services/api';
 import toast from 'react-hot-toast';
@@ -423,6 +423,8 @@ export default function ServerView() {
   const [selectedId, setSelectedId]   = useState(null);
   const [pan]                         = useState({ x: 20, y: 20 });
   const [zoom]                        = useState(0.85);
+  const [copiedUrl, setCopiedUrl]     = useState(null);
+  const [urlPanelOpen, setUrlPanelOpen] = useState(false);
 
   // Resolve subdomain → eventId
   useEffect(() => {
@@ -613,7 +615,6 @@ export default function ServerView() {
               eventId={eid}
               subdomain={subdomain}
             />
-            />
           )}
         </div>
 
@@ -621,8 +622,8 @@ export default function ServerView() {
         <div className="w-72 xl:w-80 flex-shrink-0 border-l border-neutral-800 flex flex-col bg-neutral-900/50">
 
           {/* My tables */}
-          <div className="p-4 border-b border-neutral-800">
-            <div className="flex items-center gap-2 mb-3">
+          <div className="flex flex-col border-b border-neutral-800" style={{ maxHeight: '34%' }}>
+            <div className="flex items-center gap-2 px-4 pt-4 pb-2 flex-shrink-0">
               <Users className="w-4 h-4 text-orange-400" />
               <span className="font-bold text-white text-sm">
                 {myServer ? `${myServer}'s Tables` : 'My Tables'}
@@ -632,46 +633,48 @@ export default function ServerView() {
               )}
             </div>
 
-            {!myServer ? (
-              <p className="text-xs text-neutral-500">Select your name above to see your assigned tables.</p>
-            ) : myTables.length === 0 ? (
-              <p className="text-xs text-neutral-500">No tables assigned to you yet.</p>
-            ) : (
-              <div className="space-y-2">
-                {myTables.map(t => {
-                  const state = tableStates.find(s => s.tableId === t.id) || { status: 'available' };
-                  const sm = STATUS_META[state.status] || STATUS_META.available;
-                  const remaining = state.status === 'occupied' ? estimateRemaining(state, settings) : null;
-                  return (
-                    <button
-                      key={t.id}
-                      onClick={() => setSelectedId(prev => prev === t.id ? null : t.id)}
-                      className={`w-full text-left px-3 py-2.5 rounded-xl border transition-all ${selectedId === t.id ? 'bg-neutral-700 border-neutral-500' : 'bg-neutral-800/40 border-neutral-700 hover:border-neutral-500'}`}
-                    >
-                      <div className="flex items-center justify-between">
-                        <span className="font-bold text-white text-sm">{t.label || `Table ${t.id.slice(-3)}`}</span>
-                        <span className={`text-xs font-bold px-2 py-0.5 rounded-full border ${sm.bg} ${sm.border} ${sm.text}`}>{sm.label}</span>
-                      </div>
-                      {state.partyName && (
-                        <div className="text-xs text-neutral-400 mt-1 flex items-center gap-2">
-                          <span>{state.partyName}</span>
-                          {state.partySize > 0 && <span><Users className="w-3 h-3 inline" /> {state.partySize}</span>}
+            <div className="overflow-y-auto flex-1 px-4 pb-4" style={{ scrollbarWidth: 'thin', scrollbarColor: '#404040 transparent' }}>
+              {!myServer ? (
+                <p className="text-xs text-neutral-500">Select your name above to see your assigned tables.</p>
+              ) : myTables.length === 0 ? (
+                <p className="text-xs text-neutral-500">No tables assigned to you yet.</p>
+              ) : (
+                <div className="space-y-2">
+                  {myTables.map(t => {
+                    const state = tableStates.find(s => s.tableId === t.id) || { status: 'available' };
+                    const sm = STATUS_META[state.status] || STATUS_META.available;
+                    const remaining = state.status === 'occupied' ? estimateRemaining(state, settings) : null;
+                    return (
+                      <button
+                        key={t.id}
+                        onClick={() => setSelectedId(prev => prev === t.id ? null : t.id)}
+                        className={`w-full text-left px-3 py-2.5 rounded-xl border transition-all ${selectedId === t.id ? 'bg-neutral-700 border-neutral-500' : 'bg-neutral-800/40 border-neutral-700 hover:border-neutral-500'}`}
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className="font-bold text-white text-sm">{t.label || `Table ${t.id.slice(-3)}`}</span>
+                          <span className={`text-xs font-bold px-2 py-0.5 rounded-full border ${sm.bg} ${sm.border} ${sm.text}`}>{sm.label}</span>
                         </div>
-                      )}
-                      {remaining !== null && (
-                        <div className={`text-xs font-semibold mt-1 ${remaining <= 10 ? 'text-rose-400' : 'text-neutral-500'}`}>
-                          {remaining <= 0 ? 'Overdue' : `~${remaining}m remaining`}
-                        </div>
-                      )}
-                    </button>
-                  );
-                })}
-              </div>
-            )}
+                        {state.partyName && (
+                          <div className="text-xs text-neutral-400 mt-1 flex items-center gap-2">
+                            <span>{state.partyName}</span>
+                            {state.partySize > 0 && <span><Users className="w-3 h-3 inline" /> {state.partySize}</span>}
+                          </div>
+                        )}
+                        {remaining !== null && (
+                          <div className={`text-xs font-semibold mt-1 ${remaining <= 10 ? 'text-rose-400' : 'text-neutral-500'}`}>
+                            {remaining <= 0 ? 'Overdue' : `~${remaining}m remaining`}
+                          </div>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
           </div>
 
           {/* All occupied tables summary */}
-          <div className="flex-1 overflow-y-auto p-4">
+          <div className="flex-1 overflow-y-auto p-4" style={{ scrollbarWidth: 'thin', scrollbarColor: '#404040 transparent' }}>
             <div className="text-xs font-bold text-neutral-500 uppercase tracking-wider mb-3">
               All Occupied ({allOccupied.length})
             </div>
@@ -707,6 +710,54 @@ export default function ServerView() {
                           {state.partyName}{state.partySize ? ` · ${state.partySize} guests` : ''}
                         </div>
                       )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* Tablet URLs panel */}
+          <div className="border-t border-neutral-800 flex-shrink-0">
+            <button
+              onClick={() => setUrlPanelOpen(p => !p)}
+              className="w-full flex items-center justify-between px-4 py-3 hover:bg-neutral-800/40 transition-colors"
+            >
+              <div className="flex items-center gap-2">
+                <Tablet className="w-4 h-4 text-neutral-400" />
+                <span className="text-sm font-bold text-neutral-300">Tablet URLs</span>
+                <span className="text-xs text-neutral-600 font-medium">({tables.length})</span>
+              </div>
+              <ChevronDown className={`w-4 h-4 text-neutral-500 transition-transform duration-200 ${urlPanelOpen ? 'rotate-180' : ''}`} />
+            </button>
+            {urlPanelOpen && (
+              <div className="overflow-y-auto px-4 pb-3 space-y-2" style={{ maxHeight: 220, scrollbarWidth: 'thin', scrollbarColor: '#404040 transparent' }}>
+                {tables.length === 0 ? (
+                  <p className="text-xs text-neutral-600 pb-2">No tables configured.</p>
+                ) : tables.map(t => {
+                  const base = window.location.origin;
+                  const url = subdomain
+                    ? `${base}/e/${subdomain}/table/${t.id}`
+                    : `${base}/event/${eid}/table/${t.id}`;
+                  const isCopied = copiedUrl === t.id;
+                  return (
+                    <div key={t.id} className="bg-neutral-900 border border-neutral-800 rounded-xl p-2.5">
+                      <div className="flex items-center justify-between mb-1.5">
+                        <span className="text-xs font-bold text-white">{t.label || `Table ${t.id.slice(-3)}`}</span>
+                        <button
+                          onClick={() => {
+                            navigator.clipboard.writeText(url).then(() => {
+                              setCopiedUrl(t.id);
+                              setTimeout(() => setCopiedUrl(null), 2000);
+                            });
+                          }}
+                          className={`flex items-center gap-1 text-xs font-semibold px-2 py-1 rounded-lg border transition-all ${isCopied ? 'bg-emerald-950/60 border-emerald-500/40 text-emerald-400' : 'bg-neutral-800 border-neutral-700 text-neutral-400 hover:text-white hover:border-neutral-500'}`}
+                        >
+                          {isCopied ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
+                          {isCopied ? 'Copied' : 'Copy'}
+                        </button>
+                      </div>
+                      <p className="text-xs text-neutral-600 font-mono truncate">{url}</p>
                     </div>
                   );
                 })}
