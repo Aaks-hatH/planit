@@ -14,7 +14,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   Users, Clock, CheckCircle, XCircle, RefreshCw, Lock,
-  Utensils, Loader2, X, ChevronDown,
+  Utensils, Loader2, X, ChevronDown, Bell, DollarSign, Star,
 } from 'lucide-react';
 import { eventAPI } from '../services/api';
 import toast from 'react-hot-toast';
@@ -116,6 +116,15 @@ function FloorMapReadOnly({ objects, tableStates, myServerName, selectedId, onSe
             </text>
           </g>
         )}
+        {/* Guest alert badge */}
+        {state.guestAlert && (
+          <g transform={`translate(${w / 2 - 4}, ${h / 2 - 4})`}>
+            <circle cx={0} cy={0} r={9} fill={state.guestAlert === 'order' ? '#22c55e' : '#f59e0b'} />
+            <text textAnchor="middle" dominantBaseline="middle" fill="white" fontSize="8" fontWeight="800">
+              {state.guestAlert === 'order' ? '!' : 'S'}
+            </text>
+          </g>
+        )}
       </g>
     );
   };
@@ -155,11 +164,20 @@ function FloorMapReadOnly({ objects, tableStates, myServerName, selectedId, onSe
 
 // ── Table Detail Card (server's view — can update status) ─────────────────────
 
-function ServerTableCard({ obj, state, settings, onUpdate, onClose }) {
+function ServerTableCard({ obj, state, settings, onUpdate, onClose, eventId, subdomain }) {
   const [saving, setSaving] = useState(false);
+  const [billSub, setBillSub] = useState(state?.billSubtotal ?? '');
+  const [billTax, setBillTax] = useState(state?.billTax ?? '');
   const sm        = STATUS_META[state?.status || 'available'];
   const occupiedMs = state?.occupiedAt ? Date.now() - new Date(state.occupiedAt).getTime() : null;
   const remaining  = state?.status === 'occupied' ? estimateRemaining(state, settings) : null;
+
+  const guestUrl = (() => {
+    const base = window.location.origin;
+    if (subdomain) return `${base}/e/${subdomain}/table/${obj.id}`;
+    if (eventId) return `${base}/event/${eventId}/table/${obj.id}`;
+    return null;
+  })();
 
   const changeStatus = async (status) => {
     setSaving(true);
@@ -170,14 +188,38 @@ function ServerTableCard({ obj, state, settings, onUpdate, onClose }) {
     finally { setSaving(false); }
   };
 
+  const guestAction = async (updates, label) => {
+    setSaving(true);
+    try {
+      await onUpdate(obj.id, updates);
+      if (label) toast.success(label);
+    } catch { toast.error('Failed'); }
+    finally { setSaving(false); }
+  };
+
+  const sendBill = () => {
+    const sub = parseFloat(billSub);
+    const tax = parseFloat(billTax);
+    if (isNaN(sub) || sub < 0) { toast.error('Enter a valid subtotal'); return; }
+    guestAction({ guestScreen: 'bill', billSubtotal: sub, billTax: isNaN(tax) ? 0 : tax, billPaid: false }, 'Bill sent to table');
+  };
+
+  const alert = state?.guestAlert;
+  const dietary = state?.guestDietary || [];
+
   return (
-    <div className="bg-neutral-900 border-t border-neutral-800 flex-shrink-0" style={{ maxHeight: '50%', overflow: 'auto' }}>
+    <div className="bg-neutral-900 border-t border-neutral-800 flex-shrink-0" style={{ maxHeight: '60%', overflow: 'auto' }}>
       <div className="flex items-center justify-between px-4 py-3 border-b border-neutral-800">
         <div>
           <div className="font-bold text-white">{obj.label || `Table ${obj.id.slice(-3)}`}</div>
           <div className="text-xs text-neutral-500">Capacity {obj.capacity}</div>
         </div>
         <div className="flex items-center gap-2">
+          {alert && (
+            <span className={`text-xs font-bold px-2 py-1 rounded-full border ${alert === 'order' ? 'bg-emerald-950/60 border-emerald-500/40 text-emerald-400' : 'bg-amber-950/60 border-amber-500/40 text-amber-400'}`}>
+              {alert === 'order' ? 'Ready to Order' : 'Call Server'}
+            </span>
+          )}
           <span className={`text-xs font-bold px-2 py-1 rounded-full border ${sm.bg} ${sm.border} ${sm.text}`}>{sm.label}</span>
           <button onClick={onClose} className="p-1.5 hover:bg-neutral-800 rounded-lg text-neutral-500 hover:text-white"><X className="w-4 h-4" /></button>
         </div>
@@ -200,7 +242,7 @@ function ServerTableCard({ obj, state, settings, onUpdate, onClose }) {
           </div>
         )}
 
-        {/* Party info (read-only) */}
+        {/* Party info */}
         {(state?.partyName || state?.partySize > 0) && (
           <div className="space-y-1.5 text-sm">
             {state.partyName && <div className="flex justify-between"><span className="text-neutral-500">Party</span><span className="text-white font-semibold">{state.partyName}</span></div>}
@@ -209,6 +251,132 @@ function ServerTableCard({ obj, state, settings, onUpdate, onClose }) {
             {state.notes && <div className="flex justify-between gap-4"><span className="text-neutral-500 flex-shrink-0">Notes</span><span className="text-neutral-300 text-right">{state.notes}</span></div>}
           </div>
         )}
+
+        {/* Dietary restrictions from guest */}
+        {(dietary.length > 0 || state?.guestDietaryNotes) && (
+          <div className="p-3 rounded-xl bg-amber-950/20 border border-amber-800/30 space-y-1.5">
+            <div className="text-xs font-bold text-amber-400 uppercase tracking-wider">Guest Dietary</div>
+            {dietary.length > 0 && (
+              <div className="flex flex-wrap gap-1.5">
+                {dietary.map(d => (
+                  <span key={d} className="text-xs px-2 py-0.5 rounded-md bg-amber-500/10 border border-amber-500/30 text-amber-300">{d}</span>
+                ))}
+              </div>
+            )}
+            {state.guestDietaryNotes && <div className="text-xs text-neutral-400">{state.guestDietaryNotes}</div>}
+          </div>
+        )}
+
+        {/* Guest alert — clear button */}
+        {alert && (
+          <div className="flex items-center justify-between p-3 rounded-xl bg-neutral-800/60 border border-neutral-700">
+            <div className="flex items-center gap-2">
+              <Bell className="w-4 h-4 text-amber-400" />
+              <span className="text-sm text-white font-semibold">
+                {alert === 'order' ? 'Table is ready to order' : 'Table called for server'}
+              </span>
+            </div>
+            <button
+              onClick={() => guestAction({ guestAlert: null }, 'Alert cleared')}
+              disabled={saving}
+              className="text-xs px-3 py-1.5 rounded-lg bg-neutral-700 hover:bg-neutral-600 text-neutral-300 font-semibold disabled:opacity-40"
+            >
+              Clear
+            </button>
+          </div>
+        )}
+
+        {/* Guest screen controls */}
+        <div>
+          <div className="text-xs font-bold text-neutral-500 uppercase tracking-wider mb-2">Guest Tablet</div>
+          <div className="grid grid-cols-3 gap-2 mb-3">
+            {[
+              { label: 'Show Dining', screen: 'dining' },
+              { label: 'Send to Rating', screen: 'rating' },
+              { label: 'Reset Idle', screen: 'idle' },
+            ].map(({ label, screen }) => (
+              <button
+                key={screen}
+                onClick={() => guestAction({ guestScreen: screen }, `Guest screen: ${label}`)}
+                disabled={saving || state?.guestScreen === screen}
+                className={`px-2 py-2 rounded-lg text-xs font-semibold border transition-all ${state?.guestScreen === screen ? 'bg-neutral-700 border-neutral-500 text-white' : 'bg-neutral-800 border-neutral-700 text-neutral-400 hover:bg-neutral-700 hover:text-white disabled:opacity-40'}`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+
+          {/* Bill inputs */}
+          <div className="p-3 rounded-xl bg-neutral-800/60 border border-neutral-700 space-y-2">
+            <div className="text-xs font-bold text-neutral-500 uppercase tracking-wider mb-1">Send Bill to Table</div>
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <label className="text-xs text-neutral-500 block mb-1">Subtotal ($)</label>
+                <input
+                  type="number" min="0" step="0.01"
+                  value={billSub}
+                  onChange={e => setBillSub(e.target.value)}
+                  placeholder="0.00"
+                  className="w-full bg-neutral-900 border border-neutral-700 text-white text-sm rounded-lg px-2 py-1.5 outline-none focus:border-neutral-500"
+                />
+              </div>
+              <div>
+                <label className="text-xs text-neutral-500 block mb-1">Tax ($)</label>
+                <input
+                  type="number" min="0" step="0.01"
+                  value={billTax}
+                  onChange={e => setBillTax(e.target.value)}
+                  placeholder="0.00"
+                  className="w-full bg-neutral-900 border border-neutral-700 text-white text-sm rounded-lg px-2 py-1.5 outline-none focus:border-neutral-500"
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                onClick={sendBill}
+                disabled={saving}
+                className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold bg-white text-neutral-900 hover:bg-neutral-200 disabled:opacity-40 transition-all"
+              >
+                <DollarSign className="w-3.5 h-3.5" />
+                Send Bill
+              </button>
+              <button
+                onClick={() => guestAction({ billPaid: !state?.billPaid }, state?.billPaid ? 'Marked unpaid' : 'Marked paid')}
+                disabled={saving || state?.guestScreen !== 'bill'}
+                className={`flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold border transition-all disabled:opacity-40 ${state?.billPaid ? 'bg-emerald-950/60 border-emerald-500/40 text-emerald-400' : 'bg-neutral-800 border-neutral-700 text-neutral-400 hover:bg-neutral-700 hover:text-white'}`}
+              >
+                <CheckCircle className="w-3.5 h-3.5" />
+                {state?.billPaid ? 'Paid' : 'Mark Paid'}
+              </button>
+            </div>
+          </div>
+
+          {/* Guest rating (read-only) */}
+          {state?.guestRating && (
+            <div className="p-3 rounded-xl bg-neutral-800/60 border border-neutral-700 mt-2">
+              <div className="text-xs font-bold text-neutral-500 uppercase tracking-wider mb-2">Guest Rating</div>
+              {['food', 'service', 'atmosphere'].map(k => (
+                <div key={k} className="flex justify-between items-center mb-1">
+                  <span className="text-xs text-neutral-400 capitalize">{k}</span>
+                  <div className="flex gap-0.5">
+                    {Array.from({ length: 5 }, (_, i) => (
+                      <Star key={i} className={`w-3 h-3 ${i < state.guestRating[k] ? 'text-amber-400 fill-amber-400' : 'text-neutral-700'}`} />
+                    ))}
+                  </div>
+                </div>
+              ))}
+              {state.guestRating.comment && <div className="text-xs text-neutral-400 mt-2 pt-2 border-t border-neutral-700">{state.guestRating.comment}</div>}
+            </div>
+          )}
+
+          {/* Guest tablet link */}
+          {guestUrl && (
+            <div className="mt-2 p-2 rounded-lg bg-neutral-900 border border-neutral-800">
+              <div className="text-xs text-neutral-500 mb-1">Guest tablet URL</div>
+              <div className="text-xs text-neutral-400 break-all font-mono">{guestUrl}</div>
+            </div>
+          )}
+        </div>
 
         {/* Status buttons */}
         <div>
@@ -442,6 +610,9 @@ export default function ServerView() {
               settings={settings}
               onUpdate={handleTableUpdate}
               onClose={() => setSelectedId(null)}
+              eventId={eid}
+              subdomain={subdomain}
+            />
             />
           )}
         </div>
