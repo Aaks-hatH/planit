@@ -566,9 +566,170 @@ function TablePanel({ obj, state, settings, servers, onUpdate, onClose }) {
   );
 }
 
+// ── Seat Next Party Modal ─────────────────────────────────────────────────────
+// Triggered by the one-tap "Seat Next" button in the waitlist panel.
+// Finds the best available table for the first waiting party, lets the host
+// pick a server, then seats them in one confirm tap.
+
+function SeatNextModal({ party, objects, tableStates, settings, onConfirm, onClose }) {
+  const servers = settings?.servers || [];
+
+  // All tables that fit the party, sorted tightest-fit first, available only
+  const suitableTables = (objects || [])
+    .filter(o => o.type !== 'zone' && (o.capacity || 0) >= party.partySize)
+    .map(o => ({ ...o, state: tableStates.find(s => s.tableId === o.id) || { status: 'available' } }))
+    .filter(t => t.state.status === 'available')
+    .sort((a, b) => a.capacity - b.capacity);
+
+  const [selectedTableId, setSelectedTableId] = useState(suitableTables[0]?.id || null);
+  const [selectedServer, setSelectedServer]   = useState(servers[0]?.name || '');
+  const [confirming, setConfirming]           = useState(false);
+
+  const selectedTable = suitableTables.find(t => t.id === selectedTableId);
+
+  const handleConfirm = async () => {
+    if (!selectedTableId) return;
+    setConfirming(true);
+    try {
+      await onConfirm(party, selectedTableId, selectedTable, selectedServer);
+    } finally {
+      setConfirming(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      style={{ background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(6px)' }}>
+      <div className="w-full max-w-sm rounded-2xl border border-neutral-700 shadow-2xl overflow-hidden"
+        style={{ background: '#111' }}>
+        {/* Header bar */}
+        <div style={{ height: 3, background: '#22c55e' }} />
+        <div className="p-5">
+          <div className="flex items-center gap-3 mb-5">
+            <div className="w-10 h-10 rounded-xl bg-emerald-950/60 border border-emerald-500/30 flex items-center justify-center flex-shrink-0">
+              <ArrowRight className="w-5 h-5 text-emerald-400" />
+            </div>
+            <div>
+              <p className="text-xs font-bold uppercase tracking-widest text-emerald-400">Seat Next Party</p>
+              <p className="text-lg font-black text-white">{party.partyName}</p>
+            </div>
+            <button onClick={onClose} className="ml-auto p-1.5 hover:bg-neutral-800 rounded-lg text-neutral-600 hover:text-white transition-colors">
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+
+          {/* Party info */}
+          <div className="rounded-xl border border-neutral-800 bg-neutral-900 divide-y divide-neutral-800 mb-4">
+            <div className="flex items-center justify-between px-4 py-2.5">
+              <span className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">Party size</span>
+              <span className="font-bold text-white flex items-center gap-1.5">
+                <Users className="w-3.5 h-3.5 text-neutral-500" />{party.partySize} guests
+              </span>
+            </div>
+            {party.phone && (
+              <div className="flex items-center justify-between px-4 py-2.5">
+                <span className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">Phone</span>
+                <span className="font-semibold text-white text-sm">{party.phone}</span>
+              </div>
+            )}
+            <div className="flex items-center justify-between px-4 py-2.5">
+              <span className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">Waiting</span>
+              <span className="font-semibold text-neutral-300 text-sm">
+                {fmtDuration(Date.now() - new Date(party.addedAt).getTime())}
+              </span>
+            </div>
+          </div>
+
+          {/* Table picker */}
+          <div className="mb-4">
+            <p className="text-xs font-bold uppercase tracking-wider text-neutral-500 mb-2">
+              Available Tables ({suitableTables.length})
+            </p>
+            {suitableTables.length === 0 ? (
+              <div className="rounded-xl border border-rose-500/20 bg-rose-950/20 px-4 py-3 text-sm text-rose-300 text-center">
+                No available table fits {party.partySize} guests right now
+              </div>
+            ) : (
+              <div className="flex flex-wrap gap-2">
+                {suitableTables.slice(0, 8).map(t => (
+                  <button
+                    key={t.id}
+                    onClick={() => setSelectedTableId(t.id)}
+                    className="px-3 py-2 rounded-xl text-sm font-bold transition-all border"
+                    style={{
+                      background: selectedTableId === t.id ? '#22c55e20' : '#1a1a1a',
+                      borderColor: selectedTableId === t.id ? '#22c55e' : '#333',
+                      color: selectedTableId === t.id ? '#22c55e' : '#888',
+                    }}
+                  >
+                    {t.label || t.id}
+                    <span className="ml-1.5 text-xs opacity-70">({t.capacity})</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Server picker */}
+          {servers.length > 0 && (
+            <div className="mb-5">
+              <p className="text-xs font-bold uppercase tracking-wider text-neutral-500 mb-2">Assign Server</p>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  onClick={() => setSelectedServer('')}
+                  className="px-3 py-2 rounded-xl text-sm font-bold transition-all border"
+                  style={{
+                    background: selectedServer === '' ? '#f97316' + '20' : '#1a1a1a',
+                    borderColor: selectedServer === '' ? '#f97316' : '#333',
+                    color: selectedServer === '' ? '#f97316' : '#888',
+                  }}
+                >
+                  Unassigned
+                </button>
+                {servers.map(s => (
+                  <button
+                    key={s.id}
+                    onClick={() => setSelectedServer(s.name)}
+                    className="px-3 py-2 rounded-xl text-sm font-bold transition-all border"
+                    style={{
+                      background: selectedServer === s.name ? '#f97316' + '20' : '#1a1a1a',
+                      borderColor: selectedServer === s.name ? '#f97316' : '#333',
+                      color: selectedServer === s.name ? '#f97316' : '#888',
+                    }}
+                  >
+                    {s.name}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Confirm */}
+          <div className="flex gap-3">
+            <button onClick={onClose}
+              className="flex-1 py-3 rounded-xl text-sm font-semibold bg-neutral-800 hover:bg-neutral-700 text-neutral-400 hover:text-white transition-all">
+              Cancel
+            </button>
+            <button
+              onClick={handleConfirm}
+              disabled={!selectedTableId || confirming}
+              className="flex-1 py-3 rounded-xl text-sm font-black flex items-center justify-center gap-2 transition-all disabled:opacity-40"
+              style={{ background: '#22c55e', color: '#000' }}
+            >
+              {confirming
+                ? <Loader2 className="w-4 h-4 animate-spin" />
+                : <><CheckCircle className="w-4 h-4" />Seat Now</>}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Waitlist Panel ────────────────────────────────────────────────────────────
 
-function WaitlistPanel({ waitlist, tableStates, objects, settings, onAdd, onUpdate, onRemove }) {
+function WaitlistPanel({ waitlist, tableStates, objects, settings, onAdd, onUpdate, onRemove, onSeatNext }) {
   const [showAdd, setShowAdd] = useState(false);
   const [form, setForm]       = useState({ partyName: '', partySize: 2, phone: '', notes: '' });
   const [adding, setAdding]   = useState(false);
@@ -579,6 +740,16 @@ function WaitlistPanel({ waitlist, tableStates, objects, settings, onAdd, onUpda
     try { await onAdd(form); setForm({ partyName: '', partySize: 2, phone: '', notes: '' }); setShowAdd(false); }
     finally { setAdding(false); }
   };
+
+  // First waiting party + whether a table is available for them
+  const nextParty = waitlist.find(w => w.status === 'waiting' || w.status === 'notified');
+  const nextPartyHasTable = nextParty
+    ? (objects || []).some(o => {
+        if (o.type === 'zone' || (o.capacity || 0) < nextParty.partySize) return false;
+        const s = (tableStates || []).find(st => st.tableId === o.id);
+        return !s || s.status === 'available';
+      })
+    : false;
 
   return (
     <div className="flex flex-col h-full">
@@ -592,6 +763,24 @@ function WaitlistPanel({ waitlist, tableStates, objects, settings, onAdd, onUpda
           <Plus className="w-3.5 h-3.5" />Add party
         </button>
       </div>
+
+      {/* One-tap Seat Next Party button */}
+      {nextParty && (
+        <button
+          onClick={() => onSeatNext(nextParty)}
+          disabled={!nextPartyHasTable}
+          className="mx-3 mt-3 py-2.5 rounded-xl text-sm font-black flex items-center justify-center gap-2 transition-all disabled:opacity-40 disabled:cursor-not-allowed border"
+          style={{
+            background: nextPartyHasTable ? '#22c55e15' : 'transparent',
+            borderColor: nextPartyHasTable ? '#22c55e60' : '#333',
+            color: nextPartyHasTable ? '#22c55e' : '#555',
+          }}
+        >
+          <ArrowRight className="w-4 h-4" />
+          Seat Next — {nextParty.partyName}
+          {!nextPartyHasTable && <span className="text-xs font-medium opacity-70">(no table free)</span>}
+        </button>
+      )}
 
       {/* Add form */}
       {showAdd && (
@@ -658,7 +847,7 @@ function WaitlistPanel({ waitlist, tableStates, objects, settings, onAdd, onUpda
                   </div>
                   {/* Est wait time */}
                   <div className={`mt-2 ml-10 text-xs font-semibold ${estWait === 0 ? 'text-emerald-400' : estWait === null ? 'text-neutral-600' : estWait <= 15 ? 'text-amber-400' : 'text-rose-400'}`}>
-                    {estWait === 0 ? '✓ Table available now' : estWait === null ? 'No suitable table' : `Est. wait ~${estWait} min`}
+                    {estWait === 0 ? 'Table available now' : estWait === null ? 'No suitable table' : `Est. wait ~${estWait} min`}
                   </div>
                 </div>
               );
@@ -819,7 +1008,7 @@ function SeatTableModal({ reservation, objects, tableStates, settings, onConfirm
               </div>
             ) : (
               <div className="text-center py-8 text-neutral-600 text-sm">
-                <div className="text-2xl mb-2">👤</div>
+                <div className="text-2xl mb-2"><Users className="w-6 h-6 mx-auto text-neutral-600" /></div>
                 No servers on shift. Add servers in Settings → Servers.
               </div>
             )}
@@ -1013,7 +1202,7 @@ function QRScannerModal({ eventId, objects, tableStates, settings, onClose, onRe
                   <CheckCircle className="w-8 h-8 text-emerald-400" />
                 </div>
                 <p className="text-xl font-black mb-1">Valid Reservation</p>
-                <p className="text-xs text-emerald-400 mb-6">QR code verified ✓</p>
+                <p className="text-xs text-emerald-400 mb-6">QR code verified</p>
                 <div className="bg-neutral-900 border border-neutral-700 rounded-2xl p-4 mb-6 text-left space-y-2">
                   {[
                     ['Name',       res.reservation.partyName],
@@ -1361,6 +1550,11 @@ function SettingsModal({ settings, reservationSettings, onSave, onSaveReserve, o
     showPoweredBy:              reservationSettings?.showPoweredBy             ?? true,
     faqItemsRaw:                JSON.stringify(reservationSettings?.faqItems || [], null, 2),
     blackoutDatesRaw:           (reservationSettings?.blackoutDates || []).map(b => b.date).join(', '),
+    // Wait Board
+    publicWaitBoardEnabled:     reservationSettings?.publicWaitBoardEnabled    ?? true,
+    walkInOnlyMode:             reservationSettings?.walkInOnlyMode            ?? false,
+    waitBoardMessage:           reservationSettings?.waitBoardMessage          || '',
+    waitBoardTitle:             reservationSettings?.waitBoardTitle            || '',
   });
   const [saving, setSaving] = useState(false);
   const [serverList, setServerList] = useState(() => (settings?.servers || []));
@@ -1407,6 +1601,7 @@ function SettingsModal({ settings, reservationSettings, onSave, onSaveReserve, o
     { id: 'reserve',   label: 'Reserve Page',   tsOnly: true },
     { id: 'content',   label: 'Content',        tsOnly: true },
     { id: 'booking',   label: 'Booking Rules',  tsOnly: true },
+    { id: 'waitboard', label: 'Live Wait Board', tsOnly: true },
   ];
   const TABS = ALL_TABS.filter(t => !t.tsOnly || isTableService);
 
@@ -1925,6 +2120,81 @@ function SettingsModal({ settings, reservationSettings, onSave, onSaveReserve, o
               </div>
             </div>
           </>)}
+          {tab === 'waitboard' && (<>
+            <SectionHead title="Live Wait Board" desc="A public page guests can open at the door to see wait times and join the digital waitlist." />
+
+            {/* Board URL + QR */}
+            {(() => {
+              const boardUrl = subdomain
+                ? `${window.location.origin}/e/${subdomain}/wait`
+                : `${window.location.origin}/event/${eventId}/wait`;
+              const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(boardUrl)}`;
+              return (
+                <div className="bg-neutral-800/60 border border-neutral-700 rounded-xl p-4 mb-4">
+                  <p className="text-xs font-bold text-neutral-400 uppercase tracking-wider mb-3">Wait Board URL</p>
+                  <div className="flex gap-3 items-start">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-2">
+                        <code className="text-xs text-orange-300 flex-1 truncate bg-neutral-900 px-2 py-1.5 rounded-lg border border-neutral-700">{boardUrl}</code>
+                        <button onClick={() => { navigator.clipboard.writeText(boardUrl); toast.success('Copied!'); }}
+                          className="text-xs px-2 py-1.5 bg-neutral-700 hover:bg-neutral-600 text-neutral-300 rounded-lg font-semibold flex-shrink-0">Copy</button>
+                      </div>
+                      <p className="text-xs text-neutral-600 leading-relaxed">Post this as a QR code at your entrance. Guests scan it to see live wait times and join the waitlist from their phone — no account needed.</p>
+                    </div>
+                    <img src={qrUrl} alt="QR code" className="w-20 h-20 rounded-xl flex-shrink-0 border border-neutral-700" />
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* Toggle: Enable public board */}
+            <div className="flex items-start justify-between gap-3 mb-4 p-3 bg-neutral-800/60 border border-neutral-700 rounded-xl">
+              <div>
+                <p className="text-sm font-semibold text-white">Enable Public Wait Board</p>
+                <p className="text-xs text-neutral-500 mt-0.5">Guests can view live wait times and join the waitlist at the URL above.</p>
+              </div>
+              <button onClick={() => setRB('publicWaitBoardEnabled', !rForm.publicWaitBoardEnabled)}
+                className={`w-11 h-6 rounded-full transition-colors flex-shrink-0 relative mt-0.5 ${rForm.publicWaitBoardEnabled ? 'bg-orange-500' : 'bg-neutral-700'}`}>
+                <span className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform ${rForm.publicWaitBoardEnabled ? 'translate-x-5' : 'translate-x-0.5'}`} />
+              </button>
+            </div>
+
+            {/* Toggle: Walk-in Only Mode */}
+            <div className="flex items-start justify-between gap-3 mb-4 p-3 bg-neutral-800/60 border border-amber-500/20 rounded-xl">
+              <div>
+                <p className="text-sm font-semibold text-white">Walk-In Only Mode</p>
+                <p className="text-xs text-neutral-500 mt-0.5">Disables the online reservation system. The /reserve page will redirect guests to the wait board instead. Best for busy restaurants that don't take advance bookings.</p>
+              </div>
+              <button onClick={() => setRB('walkInOnlyMode', !rForm.walkInOnlyMode)}
+                className={`w-11 h-6 rounded-full transition-colors flex-shrink-0 relative mt-0.5 ${rForm.walkInOnlyMode ? 'bg-amber-500' : 'bg-neutral-700'}`}>
+                <span className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform ${rForm.walkInOnlyMode ? 'translate-x-5' : 'translate-x-0.5'}`} />
+              </button>
+            </div>
+
+            {/* Custom message on the wait board */}
+            <div className="space-y-3">
+              <div>
+                <label className={labelCls}>Welcome Message (shown at the top of the board)</label>
+                <textarea value={rForm.waitBoardMessage}
+                  onChange={e => setRForm(p => ({ ...p, waitBoardMessage: e.target.value }))}
+                  rows={3} placeholder="e.g. Welcome to Luigi's! We'll get you seated as soon as possible."
+                  className={`${inputCls} resize-none`} />
+              </div>
+              <div>
+                <label className={labelCls}>Board Title (optional override)</label>
+                <input value={rForm.waitBoardTitle}
+                  onChange={e => setRForm(p => ({ ...p, waitBoardTitle: e.target.value }))}
+                  placeholder="e.g. Tonight's Wait" className={inputCls} />
+                <p className="text-xs text-neutral-600 mt-1">Leave blank to use your restaurant name.</p>
+              </div>
+            </div>
+
+            {rForm.walkInOnlyMode && (
+              <div className="mt-4 p-3 rounded-xl border border-amber-500/30 bg-amber-900/20 text-xs text-amber-300 leading-relaxed">
+                Walk-In Only Mode is on. Guests who visit your reservation page will be redirected to the live wait board. Existing reservations are unaffected.
+              </div>
+            )}
+          </>)}
         </div>
 
         {/* Footer */}
@@ -1952,6 +2222,7 @@ export default function TableService() {
   const [sideTab, setSideTab]           = useState('waitlist');
   const [showSettings, setShowSettings] = useState(false);
   const [showQRScanner, setShowQRScanner] = useState(false);
+  const [seatNextParty, setSeatNextParty] = useState(null); // party being seated via one-tap
   const [reservationSettings, setReservationSettings] = useState({});
   const [showFloorEditor, setShowFloorEditor] = useState(false);
   const [seatingData, setSeatingData]   = useState(null);
@@ -2101,6 +2372,40 @@ export default function TableService() {
   const handleRemoveWaitlist = async (partyId) => {
     await eventAPI.removeFromTableWaitlist(eid, partyId);
     setFloorData(prev => ({ ...prev, waitlist: prev.waitlist.filter(w => w.id !== partyId) }));
+  };
+
+  // One-tap seat: mark the party as seated + occupy the chosen table in one action
+  const handleSeatNextConfirm = async (party, tableId, tableObj, serverName) => {
+    await eventAPI.updateTableState(eid, tableId, {
+      status:    'occupied',
+      partyName: party.partyName,
+      partySize: party.partySize,
+      notes:     party.notes || '',
+      serverName: serverName || '',
+    });
+    await eventAPI.updateTableWaitlist(eid, party.id, 'seated');
+    // Update local state immediately
+    setFloorData(prev => {
+      const states = prev.tableStates.filter(s => s.tableId !== tableId);
+      states.push({
+        tableId,
+        status:    'occupied',
+        partyName: party.partyName,
+        partySize: party.partySize,
+        notes:     party.notes || '',
+        serverName: serverName || '',
+        occupiedAt: new Date().toISOString(),
+      });
+      return {
+        ...prev,
+        tableStates: states,
+        waitlist: prev.waitlist.filter(w => w.id !== party.id),
+      };
+    });
+    setSeatNextParty(null);
+    const tableLabel = tableObj?.label || tableId;
+    const serverMsg  = serverName ? ` · ${serverName}` : '';
+    toast.success(`${party.partyName} seated at ${tableLabel}${serverMsg}`);
   };
 
   const handleAddReservation = async (form) => {
@@ -2397,6 +2702,7 @@ export default function TableService() {
                 onAdd={handleAddToWaitlist}
                 onUpdate={handleUpdateWaitlist}
                 onRemove={handleRemoveWaitlist}
+                onSeatNext={setSeatNextParty}
               />
             )}
             {isTableService && sideTab === 'reservations' && (
@@ -2591,6 +2897,18 @@ export default function TableService() {
           </div>
         </div>
       </div>
+
+      {/* ── Seat Next Party Modal ── */}
+      {seatNextParty && (
+        <SeatNextModal
+          party={seatNextParty}
+          objects={objects}
+          tableStates={tableStates}
+          settings={settings}
+          onConfirm={handleSeatNextConfirm}
+          onClose={() => setSeatNextParty(null)}
+        />
+      )}
 
       {/* ── Settings Modal ── */}
       {showQRScanner && (
