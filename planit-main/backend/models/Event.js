@@ -318,7 +318,7 @@ const eventSchema = new mongoose.Schema({
     // Controlled by server: which screen the guest tablet shows
     guestScreen:        { type: String, enum: ['idle', 'dining', 'bill', 'rating'], default: 'idle' },
     // Controlled by guest: alert type sent to server
-    guestAlert:         { type: String, enum: ['call', 'order', null], default: null },
+    guestAlert:         { type: String, enum: ['call', 'order', 'quick:water', 'quick:napkins', 'quick:menu', 'quick:dessert', null], default: null },
     // Controlled by guest: dietary restrictions
     guestDietary:       [{ type: String, maxlength: 50 }],
     guestDietaryNotes:  { type: String, default: '', maxlength: 300 },
