@@ -153,6 +153,10 @@ export const eventAPI = {
   updateTableReservation:   (eventId, resId, data)     => api.patch(`/events/${eventId}/table-service/reservations/${resId}`, data),
   verifyReservationQR:      (eventId, token)           => api.get(`/events/${eventId}/table-service/reservations/verify/${token}`),
   updateTableServiceSettings:(eventId, data)           => api.patch(`/events/${eventId}/table-service/settings`, data),
+  // Public wait board (no auth)
+  getPublicWaitBoardInfo:   (subdomain)                => api.get(`/events/public/wait/${subdomain}/info`),
+  getPublicWaitBoardLive:   (subdomain)                => api.get(`/events/public/wait/${subdomain}/live`),
+  joinPublicWaitlist:       (subdomain, data)          => api.post(`/events/public/wait/${subdomain}/join`, data),
   updateReservationPageSettings: (eventId, data)       => api.patch(`/events/${eventId}/table-service/reservation-page-settings`, data),
   updateServers:                (eventId, servers)      => api.patch(`/events/${eventId}/table-service/settings`, { servers }),
   getFloorPublic:               (eventId)               => api.get(`/events/${eventId}/table-service/floor`),
