@@ -130,7 +130,7 @@ export default function Privacy() {
             <p className="mt-3 font-medium text-neutral-800">We do not use your information for advertising, profiling, or sale to third parties under any circumstances.</p>
           </Section>
 
-          <Section number="3A" title="Legal Bases for Processing Personal Data (GDPR)">
+          <Section number="4" title="Legal Bases for Processing Personal Data (GDPR)">
             <p>
               If you are located in the European Economic Area (EEA), the United Kingdom, or Switzerland, we are required under applicable data protection law — including the General Data Protection Regulation (EU) 2016/679 ("GDPR") and the UK GDPR — to identify the legal basis upon which we process your personal data. We process personal data on the following legal bases, each of which is set out in Article 6 of the GDPR:
             </p>
@@ -153,7 +153,7 @@ export default function Privacy() {
             </p>
           </Section>
 
-          <Section number="4" title="How Your Information Is Shared">
+          <Section number="5" title="How Your Information Is Shared">
             <Sub title="4.1 Within an Event">
               <p>
                 Information you submit within an event — including your username, messages, poll votes, RSVP status,
@@ -187,7 +187,7 @@ export default function Privacy() {
             </Sub>
           </Section>
 
-          <Section number="5" title="Data Security">
+          <Section number="6" title="Data Security">
             <p>
               We implement the following security measures to protect your information:
             </p>
@@ -206,7 +206,7 @@ export default function Privacy() {
             </p>
           </Section>
 
-          <Section number="6" title="Data Retention and Deletion">
+          <Section number="7" title="Data Retention and Deletion">
             <Sub title="6.1 Automatic Event Deletion">
               <p>
                 PlanIt operates a strict seven-day data retention policy. All data associated with an event —
@@ -239,7 +239,7 @@ export default function Privacy() {
             </Sub>
           </Section>
 
-          <Section number="7" title="Cookies and Local Storage">
+          <Section number="8" title="Cookies and Local Storage">
             <p>
               PlanIt does not use third-party advertising or tracking cookies. We use the following browser storage
               mechanisms solely to operate the Service:
@@ -254,7 +254,7 @@ export default function Privacy() {
             </p>
           </Section>
 
-          <Section number="8" title="Camera Access">
+          <Section number="9" title="Camera Access">
             <p>
               Certain features of PlanIt, specifically the QR code scanning functionality used in Enterprise mode
               check-in, require access to your device's camera. Camera access is requested only when you navigate
@@ -264,7 +264,7 @@ export default function Privacy() {
             </p>
           </Section>
 
-          <Section number="9" title="Children's Privacy">
+          <Section number="10" title="Children's Privacy">
             <p>
               PlanIt is not directed to children under the age of 13 and we do not knowingly collect personal
               information from children under 13. If you are a parent or guardian and believe that your child has
@@ -276,7 +276,7 @@ export default function Privacy() {
             </p>
           </Section>
 
-          <Section number="10" title="International Users and Data Transfers">
+          <Section number="11" title="International Users and Data Transfers">
             <p>
               PlanIt is operated from infrastructure hosted by Render and MongoDB Atlas, which may be located in
               the United States or other jurisdictions. If you access the Service from outside the United States,
@@ -290,12 +290,12 @@ export default function Privacy() {
             </p>
           </Section>
 
-          <Section number="11" title="Your Rights Under Applicable Data Protection Law">
+          <Section number="12" title="Your Rights Under Applicable Data Protection Law">
             <p>
               Depending on your location and applicable law, you may have the following rights with respect to your personal information. Because all event data is automatically and permanently deleted within seven (7) days of the event date, many rights can be satisfied simply through the passage of time. However, we will respond to valid requests regardless.
             </p>
 
-            <Sub title="11.1 Rights Under GDPR (EEA, UK, and Switzerland Users)">
+            <Sub title="12.1 Rights Under GDPR (EEA, UK, and Switzerland Users)">
               <p>If you are located in the EEA, United Kingdom, or Switzerland, you have the following rights under the GDPR or equivalent legislation:</p>
               <ul className="list-disc list-inside space-y-2 ml-3 mt-2">
                 <li><strong>Right of access (Article 15):</strong> The right to obtain confirmation of whether we process your personal data and, if so, to receive a copy of that data together with supplementary information about the processing.</li>
@@ -312,7 +312,7 @@ export default function Privacy() {
               </p>
             </Sub>
 
-            <Sub title="11.2 Rights Under CCPA / CPRA (California Residents)">
+            <Sub title="12.2 Rights Under CCPA / CPRA (California Residents)">
               <p>
                 If you are a California resident, you have the following rights under the California Consumer Privacy Act of 2018 as amended by the California Privacy Rights Act of 2020 ("CCPA/CPRA"):
               </p>
@@ -332,14 +332,14 @@ export default function Privacy() {
               </p>
             </Sub>
 
-            <Sub title="11.3 Verification of Identity">
+            <Sub title="12.3 Verification of Identity">
               <p>
                 When you submit a request to exercise any data subject right, we may ask you to verify your identity before processing the request. Because PlanIt does not maintain a global persistent user account, verification may involve confirming your role in a specific event (by reference to the event name, organizer email, or other identifying details). We cannot process requests where identity cannot be reasonably verified.
               </p>
             </Sub>
           </Section>
 
-          <Section number="14" title="Data Processor Relationships and Third-Party Processor Disclosures">
+          <Section number="13" title="Data Processor Relationships and Third-Party Processor Disclosures">
             <p>
               PlanIt acts as a data controller with respect to personal data it collects and processes in connection with operating the Service. Where we engage third-party service providers to process personal data on our behalf, such providers act as data processors (within the meaning of the GDPR) or service providers (within the meaning of the CCPA/CPRA). The following describes our processor relationships:
             </p>
@@ -362,25 +362,25 @@ export default function Privacy() {
             </p>
           </Section>
 
-          <Section number="15" title="Logging, Monitoring, and Automated Processing">
-            <Sub title="15.1 Server and Application Logs">
+          <Section number="14" title="Logging, Monitoring, and Automated Processing">
+            <Sub title="14.1 Server and Application Logs">
               <p>
                 PlanIt and its infrastructure providers generate and retain application logs, server access logs, error logs, security event logs, and performance logs in the ordinary course of operating the Service. These logs may contain personal data including IP addresses, request URLs, user agents, timestamps, event identifiers, and error context. Logs are used exclusively for: diagnosing and resolving technical issues; detecting and investigating security incidents and abuse; monitoring system performance and availability; and compliance with legal obligations. Logs are not used for commercial profiling or marketing.
               </p>
             </Sub>
-            <Sub title="15.2 Anti-Fraud and Security Monitoring">
+            <Sub title="14.2 Anti-Fraud and Security Monitoring">
               <p>
                 The Service operates automated anti-fraud middleware and rate-limiting systems that process request metadata — including IP address, request frequency, behavioural patterns, and response signing data — to detect and prevent abuse, credential stuffing, automated scraping, and other malicious activity. This processing is carried out on the basis of our legitimate interests in securing the Service and is necessary for the performance of our contract with you. Automated decisions may result in rate-limiting, request blocking, or access suspension where thresholds indicative of abuse are exceeded. You may contact us to dispute any automated restriction applied to your access.
               </p>
             </Sub>
-            <Sub title="15.3 Automated Deletion">
+            <Sub title="14.3 Automated Deletion">
               <p>
                 A scheduled automated cleanup process runs daily and permanently and irreversibly deletes all event data — including all associated personal data — seven (7) days after the event's scheduled date. This automated process is a core architectural feature of the Service. The deletion process covers all database records, Cloudinary-hosted files, cached data, and all other data stores containing event-associated information. Deletion is confirmed and logged. No human intervention is required or involved in routine deletion cycles.
               </p>
             </Sub>
           </Section>
 
-          <Section number="16" title="Security Incident and Data Breach Response">
+          <Section number="15" title="Security Incident and Data Breach Response">
             <p>
               In the event of a personal data breach within the meaning of Article 4(12) GDPR or equivalent applicable law, PlanIt will:
             </p>
@@ -395,7 +395,7 @@ export default function Privacy() {
             </p>
           </Section>
 
-          <Section number="12" title="Changes to This Policy">
+          <Section number="16" title="Changes to This Policy">
             <p>
               We may update this Privacy Policy from time to time to reflect changes in our practices, the Service,
               or applicable law. When we make material changes, we will update the "Last updated" date at the top
@@ -404,7 +404,7 @@ export default function Privacy() {
             </p>
           </Section>
 
-          <Section number="13" title="Contact Us">
+          <Section number="17" title="Contact Us">
             <p>
               If you have any questions, concerns, or requests regarding this Privacy Policy or how we handle your
               personal information, please contact us:
