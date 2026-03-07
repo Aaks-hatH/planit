@@ -379,6 +379,12 @@ const eventSchema = new mongoose.Schema({
     headerTagline:            { type: String, default: '', maxlength: 120 },
     showPoweredBy:            { type: Boolean, default: true },
     hidePlanitBranding:       { type: Boolean, default: false },
+
+    // ── Live wait board (public /wait page) ─────────────────────────────────
+    publicWaitBoardEnabled:   { type: Boolean, default: true },
+    walkInOnlyMode:           { type: Boolean, default: false },
+    waitBoardMessage:         { type: String,  default: '', maxlength: 300 },
+    waitBoardTitle:           { type: String,  default: '', maxlength: 100 },
     announcementBanner:       { type: String, default: '', maxlength: 200 },
     announcementBannerColor:  { type: String, default: '#f59e0b' },
     announcementBannerEnabled:{ type: Boolean, default: false },
