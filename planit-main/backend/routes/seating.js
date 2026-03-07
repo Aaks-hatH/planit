@@ -263,4 +263,197 @@ router.patch(
   }
 );
 
+// ─────────────────────────────────────────────────────────────────────────────
+// PUBLIC WAIT BOARD ROUTES  (no auth required)
+// GET  /public/wait/:id/info   — venue branding info
+// GET  /public/wait/:id/live   — live waitlist + wait times + table stats
+// POST /public/wait/:id/join   — walk-in joins the waitlist
+// ─────────────────────────────────────────────────────────────────────────────
+
+function resolveVenue(id) {
+  // id can be a mongo ObjectId OR a subdomain string
+  const isObjectId = /^[a-f\d]{24}$/i.test(id);
+  return isObjectId
+    ? Event.findById(id)
+    : Event.findOne({ subdomain: id });
+}
+
+function isVenueOpen(event) {
+  const settings = event.tableServiceSettings || {};
+  const open  = settings.operatingHoursOpen  || '00:00';
+  const close = settings.operatingHoursClose || '23:59';
+  const now   = new Date();
+  const pad   = n => String(n).padStart(2, '0');
+  const cur   = `${pad(now.getHours())}:${pad(now.getMinutes())}`;
+  return cur >= open && cur <= close;
+}
+
+function calcWaitTimes(event) {
+  const settings  = event.tableServiceSettings || {};
+  const avg       = settings.avgDiningMinutes       || 75;
+  const buffer    = settings.cleaningBufferMinutes  || 10;
+  const objects   = (event.seatingMap && event.seatingMap.objects) || [];
+  const states    = event.tableStates || [];
+  const waitlist  = (event.tableServiceWaitlist || []).filter(w => w.status === 'waiting' || w.status === 'notified');
+
+  // Build table availability by capacity
+  const tables = objects
+    .filter(o => o.type === 'table' || !o.type)
+    .map(o => {
+      const state = states.find(s => s.tableId === String(o.id || o._id));
+      const status = state ? state.status : 'available';
+      const cap = o.capacity || o.seats || 2;
+      return { cap, status };
+    });
+
+  const available = tables.filter(t => t.status === 'available');
+  const occupied  = tables.filter(t => t.status === 'occupied');
+  const reserved  = tables.filter(t => t.status === 'reserved');
+
+  // For each party-size bucket check if a table can fit them
+  const canSeat = (size) => available.some(t => t.cap >= size);
+
+  // Rough wait estimate: parties ahead × avg turn time
+  const queueAhead = (size) => waitlist.filter(w => w.partySize <= size).length;
+
+  const estimate = (size) => {
+    if (canSeat(size)) return 0;
+    const ahead = queueAhead(size);
+    return Math.round((ahead + 1) * (avg + buffer));
+  };
+
+  return {
+    forTwo:   estimate(2),
+    forFour:  estimate(4),
+    forEight: estimate(8),
+    tableStats: {
+      total:     tables.length,
+      available: available.length,
+      occupied:  occupied.length,
+      reserved:  reserved.length,
+    },
+  };
+}
+
+// GET /public/wait/:id/info
+router.get('/public/wait/:id/info', async (req, res, next) => {
+  try {
+    const event = await resolveVenue(req.params.id)
+      .select('title isTableServiceMode reservationPageSettings tableServiceSettings subdomain')
+      .lean();
+
+    if (!event || !event.isTableServiceMode) {
+      return res.status(404).json({ error: 'Not found' });
+    }
+
+    const rps = event.reservationPageSettings || {};
+
+    if (rps.publicWaitBoardEnabled === false) {
+      return res.status(403).json({ error: 'Wait board not active' });
+    }
+
+    res.json({
+      name:            event.tableServiceSettings?.restaurantName || event.title,
+      logoUrl:         rps.logoUrl         || '',
+      accentColor:     rps.accentColor     || '#f97316',
+      tagline:         rps.headerTagline   || '',
+      waitBoardMessage:rps.waitBoardMessage|| '',
+      waitBoardTitle:  rps.waitBoardTitle  || '',
+      showPoweredBy:   rps.showPoweredBy   !== false,
+    });
+  } catch (err) { next(err); }
+});
+
+// GET /public/wait/:id/live
+router.get('/public/wait/:id/live', async (req, res, next) => {
+  try {
+    const event = await resolveVenue(req.params.id)
+      .select('title isTableServiceMode reservationPageSettings tableServiceSettings seatingMap tableStates tableServiceWaitlist')
+      .lean();
+
+    if (!event || !event.isTableServiceMode) {
+      return res.status(404).json({ error: 'Not found' });
+    }
+
+    const rps = event.reservationPageSettings || {};
+    if (rps.publicWaitBoardEnabled === false) {
+      return res.status(403).json({ error: 'Wait board not active' });
+    }
+
+    const { forTwo, forFour, forEight, tableStats } = calcWaitTimes(event);
+    const waitlist = (event.tableServiceWaitlist || [])
+      .filter(w => w.status === 'waiting' || w.status === 'notified')
+      .map(w => ({
+        id:        w.id,
+        partyName: w.partyName,
+        partySize: w.partySize,
+        addedAt:   w.addedAt,
+        status:    w.status,
+      }));
+
+    res.json({
+      isOpen:      isVenueOpen(event),
+      waitTimes:   { forTwo, forFour, forEight },
+      tableStats,
+      waitlist,
+      name:        event.tableServiceSettings?.restaurantName || event.title,
+      logoUrl:     rps.logoUrl      || '',
+      accentColor: rps.accentColor  || '#f97316',
+      tagline:     rps.headerTagline|| '',
+      waitBoardMessage: rps.waitBoardMessage || '',
+    });
+  } catch (err) { next(err); }
+});
+
+// POST /public/wait/:id/join
+router.post('/public/wait/:id/join', async (req, res, next) => {
+  try {
+    const { partyName, phone = '', partySize = 2 } = req.body;
+
+    if (!partyName || !partyName.trim()) {
+      return res.status(400).json({ error: 'partyName is required' });
+    }
+    if (!Number.isInteger(partySize) || partySize < 1 || partySize > 50) {
+      return res.status(400).json({ error: 'partySize must be between 1 and 50' });
+    }
+
+    const event = await resolveVenue(req.params.id)
+      .select('isTableServiceMode reservationPageSettings tableServiceSettings tableServiceWaitlist');
+
+    if (!event || !event.isTableServiceMode) {
+      return res.status(404).json({ error: 'Not found' });
+    }
+
+    const rps = event.reservationPageSettings || {};
+    if (rps.publicWaitBoardEnabled === false) {
+      return res.status(403).json({ error: 'Wait board not active' });
+    }
+
+    const maxParty = event.tableServiceSettings?.maxPartySizeWalkIn || 20;
+    if (partySize > maxParty) {
+      return res.status(400).json({ error: `Maximum party size is ${maxParty}` });
+    }
+
+    const entry = {
+      id:        require('crypto').randomBytes(8).toString('hex'),
+      partyName: partyName.trim(),
+      partySize,
+      phone:     phone.trim(),
+      addedAt:   new Date(),
+      status:    'waiting',
+    };
+
+    event.tableServiceWaitlist.push(entry);
+    await event.save();
+
+    // Notify connected floor staff via socket
+    const io = req.app.get('io');
+    if (io) {
+      io.to(`event_${event._id}`).emit('waitlist_updated', { action: 'joined', entry });
+    }
+
+    res.status(201).json({ entry });
+  } catch (err) { next(err); }
+});
+
 module.exports = router;
