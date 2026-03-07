@@ -278,14 +278,31 @@ function resolveVenue(id) {
     : Event.findOne({ subdomain: id });
 }
 
-function isVenueOpen(event) {
+function isVenueOpen(event, tz) {
   const settings = event.tableServiceSettings || {};
   const open  = settings.operatingHoursOpen  || '00:00';
   const close = settings.operatingHoursClose || '23:59';
-  const now   = new Date();
-  const pad   = n => String(n).padStart(2, '0');
-  const cur   = `${pad(now.getHours())}:${pad(now.getMinutes())}`;
-  return cur >= open && cur <= close;
+  try {
+    const now = new Date();
+    const localTimeStr = now.toLocaleTimeString('en-GB', {
+      timeZone: tz || event.timezone || 'UTC',
+      hour: '2-digit', minute: '2-digit', hour12: false,
+    });
+    const [lh, lm] = localTimeStr.split(':').map(Number);
+    const nowMin   = lh * 60 + lm;
+    const [oh, om] = open.split(':').map(Number);
+    const [ch, cm] = close.split(':').map(Number);
+    const openMin  = oh * 60 + om;
+    const closeMin = ch * 60 + cm;
+    // Handle overnight spans (e.g. open 22:00, close 02:00)
+    if (closeMin > openMin) {
+      return nowMin >= openMin && nowMin < closeMin;
+    } else {
+      return nowMin >= openMin || nowMin < closeMin;
+    }
+  } catch (_) {
+    return true; // default open on error
+  }
 }
 
 function calcWaitTimes(event) {
@@ -296,15 +313,29 @@ function calcWaitTimes(event) {
   const states    = event.tableStates || [];
   const waitlist  = (event.tableServiceWaitlist || []).filter(w => w.status === 'waiting' || w.status === 'notified');
 
-  // Build table availability by capacity
-  const tables = objects
-    .filter(o => o.type === 'table' || !o.type)
-    .map(o => {
-      const state = states.find(s => s.tableId === String(o.id || o._id));
-      const status = state ? state.status : 'available';
-      const cap = o.capacity || o.seats || 2;
-      return { cap, status };
-    });
+  let tables;
+
+  if (objects.length > 0) {
+    // Build table availability from seating map objects
+    tables = objects
+      .filter(o => o.type !== 'zone' && o.type !== 'stage')
+      .map(o => {
+        const state = states.find(s => s.tableId === String(o.id || o._id));
+        const status = state ? state.status : 'available';
+        const cap = o.capacity || o.seats || 4; // fallback capacity
+        return { cap, status };
+      });
+  } else if (states.length > 0) {
+    // No seating map — derive from tableStates directly
+    // Assume a reasonable capacity since we don't have the object details
+    tables = states.map(s => ({
+      cap: s.partySize > 0 ? Math.max(s.partySize, 4) : 4,
+      status: s.status || 'available',
+    }));
+  } else {
+    // No data at all — treat as open / no wait
+    tables = [];
+  }
 
   const available = tables.filter(t => t.status === 'available');
   const occupied  = tables.filter(t => t.status === 'occupied');
@@ -317,6 +348,7 @@ function calcWaitTimes(event) {
   const queueAhead = (size) => waitlist.filter(w => w.partySize <= size).length;
 
   const estimate = (size) => {
+    if (tables.length === 0) return 0; // no data → assume available
     if (canSeat(size)) return 0;
     const ahead = queueAhead(size);
     return Math.round((ahead + 1) * (avg + buffer));
@@ -380,6 +412,7 @@ router.get('/public/wait/:id/live', async (req, res, next) => {
       return res.status(403).json({ error: 'Wait board not active' });
     }
 
+    const tz = req.query.tz || event.timezone || 'UTC';
     const { forTwo, forFour, forEight, tableStats } = calcWaitTimes(event);
     const waitlist = (event.tableServiceWaitlist || [])
       .filter(w => w.status === 'waiting' || w.status === 'notified')
@@ -392,7 +425,7 @@ router.get('/public/wait/:id/live', async (req, res, next) => {
       }));
 
     res.json({
-      isOpen:      isVenueOpen(event),
+      isOpen:      isVenueOpen(event, tz),
       waitTimes:   { forTwo, forFour, forEight },
       tableStats,
       waitlist,
