@@ -253,6 +253,7 @@ export default function ReservePage() {
 
   // FAQ expand
   const [openFaq, setOpenFaq] = useState(null);
+  const [openMenu, setOpenMenu] = useState(null);
 
   const slotTimerRef = useRef(null);
   const accent = config?.accentColor || '#f97316';
@@ -834,6 +835,80 @@ export default function ReservePage() {
               </div>
             )}
           </div>
+
+          {/* Menus */}
+          {config.menus?.length > 0 && (() => {
+            const cats = [...new Set(config.menus.map(m => m.c || ''))];
+            return (
+              <div className="mt-6">
+                <h3 className="text-xs font-bold uppercase tracking-widest mb-3 px-1" style={{ color: c.muted }}>Our Menus</h3>
+                {cats.map(cat => {
+                  const items = config.menus.filter(m => (m.c || '') === cat);
+                  return (
+                    <div key={cat} className="mb-4">
+                      {cat && <p className="text-[10px] font-black uppercase tracking-widest mb-2 px-1" style={{ color: accent }}>{cat}</p>}
+                      <div className="space-y-2">
+                        {items.map((menu, idx) => {
+                          const gi = config.menus.indexOf(menu);
+                          const ma = menu.clr || accent;
+                          const open = openMenu === gi;
+                          return (
+                            <div key={idx} className="rounded-2xl border overflow-hidden transition-all"
+                              style={{ borderColor: open ? ma + '55' : c.border, background: c.card }}>
+                              <div className="flex items-center gap-3 px-4 py-3.5"
+                                style={{ background: open ? ma + '10' : undefined }}>
+                                <div className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0"
+                                  style={{ background: ma + '18', border: `1px solid ${ma}35` }}>
+                                  {menu.t === 'p'
+                                    ? <svg className="w-4 h-4" fill="none" stroke={ma} strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
+                                    : menu.t === 'l'
+                                    ? <ExternalLink className="w-4 h-4" style={{ color: ma }} />
+                                    : <svg className="w-4 h-4" fill="none" stroke={ma} strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 10h16M4 14h10"/></svg>
+                                  }
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-sm font-bold truncate" style={{ color: c.text }}>{menu.n}</p>
+                                  {menu.d && menu.t !== 'd' && <p className="text-xs truncate mt-0.5" style={{ color: c.muted }}>{menu.d}</p>}
+                                </div>
+                                {menu.t === 'l' && menu.u && (
+                                  <a href={menu.u} target="_blank" rel="noopener noreferrer"
+                                    className="flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all hover:opacity-80 active:scale-95"
+                                    style={{ background: ma, color: isDark ? '#000' : '#fff' }}>
+                                    View <ExternalLink className="w-3 h-3" />
+                                  </a>
+                                )}
+                                {menu.t === 'p' && menu.u && (
+                                  <a href={menu.u} target="_blank" rel="noopener noreferrer"
+                                    className="flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all hover:opacity-80 active:scale-95"
+                                    style={{ background: ma, color: isDark ? '#000' : '#fff' }}>
+                                    PDF <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+                                  </a>
+                                )}
+                                {menu.t === 'd' && (
+                                  <button onClick={() => setOpenMenu(open ? null : gi)}
+                                    className="flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold border transition-all"
+                                    style={{ borderColor: ma + '50', color: ma, background: open ? ma + '15' : 'transparent' }}>
+                                    {open ? 'Close' : 'View'}
+                                    <ChevronDown className={`w-3 h-3 transition-transform ${open ? 'rotate-180' : ''}`} />
+                                  </button>
+                                )}
+                              </div>
+                              {menu.t === 'd' && open && menu.d && (
+                                <div className="px-4 pb-4 pt-1 text-sm leading-relaxed border-t"
+                                  style={{ color: c.muted, borderColor: ma + '22', background: ma + '06' }}>
+                                  {menu.d.split('\n').map((ln, li) => <p key={li} className={li > 0 ? 'mt-1.5' : ''}>{ln}</p>)}
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            );
+          })()}
 
           {/* FAQ */}
           {config.faqItems?.length > 0 && (
