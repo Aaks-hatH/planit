@@ -1110,9 +1110,75 @@ export default function Home() {
         .dark-input:focus { border-color: #64748b; }
         .dark-input::placeholder { color: #475569; }
         .dark-input option { background: #0f172a; color: white; }
+
+        /* Product gateway split */
+        .gateway-events { transition: opacity 0.4s ease, transform 0.4s ease; }
+        .gateway-venue  { transition: opacity 0.4s ease, transform 0.4s ease; }
+        .gateway:hover .gateway-events:not(:hover) { opacity: 0.35; }
+        .gateway:hover .gateway-venue:not(:hover)  { opacity: 0.35; }
+
+        /* Typing indicator dots */
+        @keyframes typing-dot {
+          0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
+          30% { transform: translateY(-4px); opacity: 1; }
+        }
+        .typing-dot { animation: typing-dot 1.4s ease-in-out infinite; }
+        .typing-dot:nth-child(2) { animation-delay: 0.2s; }
+        .typing-dot:nth-child(3) { animation-delay: 0.4s; }
+
+        /* Task check animation */
+        @keyframes check-pop {
+          0%   { transform: scale(0.6); opacity: 0; }
+          70%  { transform: scale(1.2); }
+          100% { transform: scale(1);   opacity: 1; }
+        }
+        .check-pop { animation: check-pop 0.4s ease forwards; }
+
+        /* Table pulse animation for venue floor */
+        @keyframes table-available-pulse {
+          0%, 100% { fill: rgba(34,197,94,0.13); stroke: #22c55e; }
+          50%       { fill: rgba(34,197,94,0.28); stroke: #4ade80; }
+        }
+        @keyframes table-ring-pulse {
+          0%, 100% { opacity: 0.7; r: 27; }
+          50%       { opacity: 1;   r: 29; }
+        }
+        .table-pulse-fill  { animation: table-available-pulse 2.2s ease-in-out infinite; }
+        .table-pulse-ring  { animation: table-ring-pulse 2.2s ease-in-out infinite; }
+
+        /* Waitlist count tick */
+        @keyframes count-tick {
+          0%, 89%  { opacity: 1; transform: translateY(0); }
+          90%      { opacity: 0; transform: translateY(-8px); }
+          91%      { opacity: 0; transform: translateY(8px); }
+          100%     { opacity: 1; transform: translateY(0); }
+        }
+        .waitlist-tick { animation: count-tick 6s ease-in-out infinite; }
+
+        /* Section page divider glow line */
+        .product-divider {
+          height: 1px;
+          background: linear-gradient(90deg, transparent 0%, rgba(249,115,22,0.4) 30%, rgba(249,115,22,0.6) 50%, rgba(249,115,22,0.4) 70%, transparent 100%);
+        }
+        .product-divider-events {
+          height: 1px;
+          background: linear-gradient(90deg, transparent 0%, rgba(148,163,184,0.3) 30%, rgba(255,255,255,0.4) 50%, rgba(148,163,184,0.3) 70%, transparent 100%);
+        }
+
+        /* Chat message float in */
+        @keyframes msg-float {
+          from { opacity: 0; transform: translateY(10px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+        .msg-1 { animation: msg-float 0.5s ease forwards 0.3s; opacity: 0; }
+        .msg-2 { animation: msg-float 0.5s ease forwards 1.1s; opacity: 0; }
+        .msg-3 { animation: msg-float 0.5s ease forwards 2.0s; opacity: 0; }
+
         /*  Respect reduced motion  */
         @media (prefers-reduced-motion: reduce) {
-          .stat-card::after, .shimmer-white, .shimmer-slate { animation: none !important; }
+          .stat-card::after, .shimmer-white, .shimmer-slate,
+          .typing-dot, .table-pulse-fill, .table-pulse-ring,
+          .waitlist-tick, .msg-1, .msg-2, .msg-3 { animation: none !important; opacity: 1 !important; }
         }
       `}</style>
 
@@ -1142,7 +1208,7 @@ export default function Home() {
             </div>
           </div>
           <nav className="flex items-center gap-1">
-            <a href="#venue" className="hidden md:flex items-center gap-1.5 px-3 py-2 text-sm text-orange-400/80 hover:text-orange-300 hover:bg-orange-500/8 rounded-xl transition-all duration-200">
+            <a href="#planit-venue" className="hidden md:flex items-center gap-1.5 px-3 py-2 text-sm text-orange-400/80 hover:text-orange-300 hover:bg-orange-500/8 rounded-xl transition-all duration-200">
               <UtensilsCrossed className="w-3.5 h-3.5" />
               PlanIt Venue
             </a>
@@ -1181,7 +1247,7 @@ export default function Home() {
         {/* Mobile dropdown menu */}
         {mobileMenuOpen && (
           <div className="md:hidden border-t border-neutral-800/60 px-4 py-3 space-y-1" style={{ background: 'rgba(6,6,12,0.98)' }}>
-            <a href="#venue" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-2.5 px-3 py-2.5 text-sm text-orange-400 hover:text-orange-300 hover:bg-orange-500/10 rounded-xl transition-all">
+            <a href="#planit-venue" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-2.5 px-3 py-2.5 text-sm text-orange-400 hover:text-orange-300 hover:bg-orange-500/10 rounded-xl transition-all">
               <UtensilsCrossed className="w-4 h-4" />PlanIt Venue
             </a>
             <a href="/discover" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-2.5 px-3 py-2.5 text-sm text-neutral-300 hover:text-white hover:bg-neutral-800/60 rounded-xl transition-all">
@@ -1250,7 +1316,7 @@ export default function Home() {
                 transition={{ duration: 0.7, delay: 0.42 }}
                 className="text-xl md:text-2xl text-neutral-400 max-w-2xl mx-auto leading-relaxed font-light mb-14"
               >
-                Two products, one platform. <span className="text-neutral-300 font-medium">PlanIt Events</span> for planning teams. <span className="text-orange-400 font-medium">PlanIt Venue</span> for restaurants and hospitality.
+                One platform, two branches. <span className="text-neutral-300 font-medium">PlanIt Events</span> for planning teams. <span className="text-orange-400 font-medium">PlanIt Venue</span> for restaurants &amp; hospitality.
               </motion.p>
 
               <motion.div
@@ -1259,14 +1325,17 @@ export default function Home() {
                 transition={{ duration: 0.7, delay: 0.55 }}
                 className="flex flex-col sm:flex-row items-center justify-center gap-3 mb-16 w-full px-0 sm:px-0"
               >
-                <a href="#create" className="group inline-flex items-center justify-center gap-3 w-full sm:w-auto px-9 py-4 bg-white text-neutral-900 text-base font-bold rounded-2xl hover:bg-neutral-100 hover:scale-105 transition-all duration-300 shadow-2xl">
-                  Start planning
-                  <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform duration-300" />
+                <a href="#planit-events" className="group inline-flex items-center justify-center gap-3 w-full sm:w-auto px-7 py-4 bg-white text-neutral-900 text-sm font-bold rounded-2xl hover:bg-neutral-100 hover:scale-105 transition-all duration-300 shadow-2xl">
+                  <Calendar className="w-4 h-4" />
+                  PlanIt Events
+                  <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform duration-300" />
                 </a>
-                <a href="#features"
-                  className="inline-flex items-center justify-center gap-2 w-full sm:w-auto px-9 py-4 border border-neutral-700 text-neutral-300 text-base font-medium rounded-2xl hover:border-neutral-500 hover:text-white hover:scale-105 transition-all duration-300"
-                  style={{ background: 'rgba(255,255,255,0.04)' }}>
-                  See features <ChevronRight className="w-4 h-4" />
+                <a href="#planit-venue"
+                  className="group inline-flex items-center justify-center gap-3 w-full sm:w-auto px-7 py-4 border border-orange-500/30 text-orange-400 text-sm font-bold rounded-2xl hover:border-orange-400 hover:scale-105 transition-all duration-300"
+                  style={{ background: 'rgba(249,115,22,0.06)' }}>
+                  <UtensilsCrossed className="w-4 h-4" />
+                  PlanIt Venue
+                  <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform duration-300" />
                 </a>
               </motion.div>
 
@@ -1293,271 +1362,494 @@ export default function Home() {
           </div>
         </section>
 
-        {/* PRODUCT FAMILY SPLIT */}
-        <section className="py-16 border-t border-neutral-800/40">
-          <div className="max-w-screen-xl mx-auto px-4 sm:px-8">
-            <Reveal className="text-center mb-10">
-              <p className="text-xs font-bold text-neutral-600 uppercase tracking-widest mb-3">One company, two products</p>
-              <h2 className="text-3xl font-black text-white">Built for what you actually need</h2>
-            </Reveal>
-            <div className="grid md:grid-cols-2 gap-5">
-              {/* PlanIt Events */}
-              <Reveal delay={0}>
-                <div className="group relative rounded-3xl border border-neutral-800 p-7 hover:border-neutral-600 transition-all duration-500 overflow-hidden" style={{ background: 'rgba(255,255,255,0.025)' }}>
-                  <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500" style={{ background: 'radial-gradient(ellipse at top left, rgba(100,100,200,0.08) 0%, transparent 65%)' }} />
-                  <div className="relative">
-                    <div className="flex items-center gap-3 mb-5">
-                      <div className="w-11 h-11 rounded-2xl bg-neutral-800 border border-neutral-700 flex items-center justify-center">
-                        <Calendar className="w-5 h-5 text-neutral-300" />
-                      </div>
-                      <div>
-                        <div className="text-[10px] font-bold uppercase tracking-widest text-neutral-600 mb-0.5">PlanIt</div>
-                        <div className="text-lg font-black text-white leading-tight">Events</div>
-                      </div>
-                      <span className="ml-auto px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 uppercase tracking-wider">Free</span>
-                    </div>
-                    <p className="text-neutral-400 text-sm leading-relaxed mb-5">The full planning workspace for event teams — task management, real-time chat, RSVPs, QR check-in, expenses, and more. Built for corporate events, weddings, galas, anything with a plan.</p>
-                    <div className="flex flex-wrap gap-2">
-                      {['Team chat', 'Task tracking', 'QR check-in', 'RSVP', 'Polls', 'File sharing'].map(tag => (
-                        <span key={tag} className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-neutral-800 border border-neutral-700 text-neutral-400">{tag}</span>
-                      ))}
-                    </div>
-                    <div className="mt-5 pt-5 border-t border-neutral-800">
-                      <a href="#create" className="inline-flex items-center gap-2 text-sm font-bold text-white hover:text-neutral-300 transition-colors">
-                        Plan an event <ArrowRight className="w-3.5 h-3.5" />
-                      </a>
-                    </div>
-                  </div>
-                </div>
-              </Reveal>
 
-              {/* PlanIt Venue */}
-              <Reveal delay={120}>
-                <div className="group relative rounded-3xl border border-orange-500/20 p-7 hover:border-orange-500/40 transition-all duration-500 overflow-hidden" style={{ background: 'rgba(249,115,22,0.04)' }}>
-                  <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500" style={{ background: 'radial-gradient(ellipse at top right, rgba(249,115,22,0.10) 0%, transparent 65%)' }} />
-                  <div className="relative">
-                    <div className="flex items-center gap-3 mb-5">
-                      <div className="w-11 h-11 rounded-2xl bg-orange-500/15 border border-orange-500/30 flex items-center justify-center">
-                        <UtensilsCrossed className="w-5 h-5 text-orange-400" />
-                      </div>
-                      <div>
-                        <div className="text-[10px] font-bold uppercase tracking-widest text-orange-500/60 mb-0.5">PlanIt</div>
-                        <div className="text-lg font-black text-white leading-tight">Venue</div>
-                      </div>
-                      <span className="ml-auto px-2.5 py-1 rounded-full text-[10px] font-bold bg-orange-500/10 border border-orange-500/25 text-orange-400 uppercase tracking-wider">Restaurant OS</span>
-                    </div>
-                    <p className="text-neutral-400 text-sm leading-relaxed mb-5">A dedicated floor management system for restaurants and venues. Real-time table states, live wait board for walk-ins, QR reservations, server assignment — everything your front-of-house needs on one screen every night.</p>
-                    <div className="flex flex-wrap gap-2">
-                      {['Floor map', 'Live waitlist', 'Wait board', 'QR reservations', 'Server assign', 'Seat next'].map(tag => (
-                        <span key={tag} className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-orange-500/8 border border-orange-500/20 text-orange-400/80">{tag}</span>
-                      ))}
-                    </div>
-                    <div className="mt-5 pt-5 border-t border-orange-500/15">
-                      <a href="#venue" className="inline-flex items-center gap-2 text-sm font-bold text-orange-400 hover:text-orange-300 transition-colors">
-                        Set up your venue <ArrowRight className="w-3.5 h-3.5" />
-                      </a>
-                    </div>
-                  </div>
-                </div>
-              </Reveal>
-            </div>
-          </div>
-        </section>
-
-        {/* HOW IT WORKS */}
-        <section className="py-28 border-t border-neutral-800/40">
-          <div className="max-w-screen-xl mx-auto px-4 sm:px-8">
-            <SectionHeader eyebrow="How teams use it" title="Your event, every step" subtitle="Built for the full arc. Months of prep to the final goodbye." />
-            <div className="grid md:grid-cols-3 gap-6">
-              {[
-                { icon: Brain,        phase: 'Before', num: '01', title: 'Coordinate your team',  desc: 'Assign tasks, split expenses, finalize the guest list, share files, and get every detail locked in before the big day.' },
-                { icon: Zap,          phase: 'During', num: '02', title: 'Stay on top of it',     desc: 'Quick check-ins, QR guest arrivals, last-minute updates. Your team stays synced while the event runs itself.' },
-                { icon: CheckCircle2, phase: 'After',  num: '03', title: 'Wrap it up right',      desc: 'Close expenses, share memories, collect feedback. Every loose end, tied.' },
-              ].map((item, i) => (
-                <Reveal key={i} delay={i * 120}>
-                  <div className="group relative p-8 bg-neutral-900/50 rounded-3xl border border-neutral-800 hover:border-neutral-600 hover:bg-neutral-800/50 transition-all duration-500">
-                    <div className="flex items-start justify-between mb-6">
-                      <div className="w-12 h-12 rounded-2xl bg-neutral-800 group-hover:bg-white flex items-center justify-center transition-all duration-500">
-                        <item.icon className="w-6 h-6 text-neutral-400 group-hover:text-neutral-900 transition-colors duration-500" />
-                      </div>
-                      <span className="text-3xl font-black text-neutral-800 group-hover:text-neutral-700 transition-colors select-none">{item.num}</span>
-                    </div>
-                    <p className="text-xs font-bold text-neutral-600 uppercase tracking-widest mb-2">{item.phase}</p>
-                    <h3 className="text-lg font-bold text-white mb-3">{item.title}</h3>
-                    <p className="text-sm text-neutral-400 leading-relaxed">{item.desc}</p>
-                  </div>
-                </Reveal>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        {/* FEATURES */}
-        <section id="features" className="py-32 border-t border-neutral-800/40">
-          <div className="max-w-screen-xl mx-auto px-4 sm:px-8">
-            <SectionHeader eyebrow="Features" title="Everything you need" subtitle="Powerful tools for seamless event planning and coordination" />
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-              <FeatureCard icon={MessageSquare} title="Real-time team chat"       description="Instant messaging with typing indicators, reactions, and threaded conversations. Keep your planning team connected and aligned." delay={0} />
-              <FeatureCard icon={ListChecks}    title="Task management"           description="Create checklists, assign tasks, set deadlines, and track completion. Never miss a critical planning milestone." delay={80} />
-              <FeatureCard icon={BarChart3}     title="Quick polls and voting"    description="Make team decisions faster with live polls. Vote on venues, dates, menus, and more. See results instantly." delay={160} />
-              <FeatureCard icon={FileText}      title="Unlimited file sharing"    description="Share contracts, floor plans, schedules, and more. Everything your team needs in one organized space." delay={240} />
-              <FeatureCard icon={Clock}         title="Timeline and scheduling"   description="Build your event timeline, coordinate arrival times, and manage your run-of-show with precision." delay={320} />
-              <FeatureCard icon={Users}         title="Unlimited participants"    description="No limits on team size. Bring your entire planning committee, vendors, volunteers, everyone who needs to be involved." delay={400} />
-            </div>
-          </div>
-        </section>
-
-        {/* ENTERPRISE */}
-        <section className="py-32 border-t border-neutral-800/40">
-          <div className="max-w-screen-xl mx-auto px-4 sm:px-8">
-            <div className="grid lg:grid-cols-2 gap-16 items-center">
-              <Reveal>
-                <div className="inline-flex items-center gap-2 px-4 py-2 bg-neutral-800 border border-neutral-700 rounded-full text-xs font-bold text-neutral-300 mb-8">
-                  <Zap className="w-4 h-4" />Enterprise Mode
-                </div>
-                <h2 className="text-5xl font-black text-white mb-6 leading-tight">Built for large-scale events</h2>
-                <p className="text-xl text-neutral-400 mb-10 leading-relaxed">
-                  Hosting a wedding, conference, or corporate event? Enterprise Mode gives you professional-grade tools for managing hundreds of guests.
-                </p>
-                <div className="space-y-4">
-                  {[
-                    { icon: CheckCircle2, text: 'QR code-based guest check-in system' },
-                    { icon: Users,        text: 'Personalized digital invitations for each guest' },
-                    { icon: TrendingUp,   text: 'Real-time attendance analytics dashboard' },
-                    { icon: Timer,        text: 'Track check-in times and flow metrics' },
-                  ].map((item, i) => (
-                    <Reveal key={i} delay={i * 80}>
-                      <div className="flex items-center gap-4 p-4 bg-neutral-900/50 rounded-2xl border border-neutral-800 hover:border-neutral-700 hover:bg-neutral-800/50 transition-all duration-300">
-                        <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center flex-shrink-0">
-                          <item.icon className="w-5 h-5 text-neutral-900" />
-                        </div>
-                        <span className="text-neutral-300 font-medium">{item.text}</span>
-                      </div>
-                    </Reveal>
-                  ))}
-                </div>
-              </Reveal>
-
-              <Reveal delay={140}>
-                <div className="relative">
-                  <EnterpriseDemo />
-                </div>
-              </Reveal>
-            </div>
-          </div>
-        </section>
-
-        {/* PLANIT VENUE */}
-        <section id="venue" className="py-32 border-t border-orange-500/10" style={{ background: 'radial-gradient(ellipse 80% 40% at 50% 0%, rgba(249,115,22,0.04) 0%, transparent 60%)' }}>
-          <div className="max-w-screen-xl mx-auto px-4 sm:px-8">
-            {/* Section header — clearly a separate product */}
-            <Reveal className="text-center mb-20">
-              <div className="inline-flex items-center gap-2.5 px-4 py-2 rounded-2xl border border-orange-500/25 mb-6" style={{ background: 'rgba(249,115,22,0.07)' }}>
-                <UtensilsCrossed className="w-4 h-4 text-orange-400" />
-                <span className="text-xs font-black uppercase tracking-widest text-orange-400">PlanIt Venue</span>
-                <span className="w-px h-3 bg-orange-500/30" />
-                <span className="text-xs font-semibold text-orange-400/60">by PlanIt</span>
+        {/* ═══════════════════════════════════════════════════════════
+            BRANCH GATEWAY — two-panel split, one PlanIt family
+        ═══════════════════════════════════════════════════════════ */}
+        <section className="relative border-t border-neutral-800/40 overflow-hidden">
+          {/* Shared family label at top */}
+          <div className="text-center py-10 relative z-10">
+            <Reveal>
+              <div className="inline-flex items-center gap-3 px-5 py-2.5 rounded-full border border-neutral-800" style={{ background: 'rgba(255,255,255,0.025)' }}>
+                <span className="text-[10px] font-black uppercase tracking-[0.25em] text-neutral-600">The PlanIt Family</span>
+                <span className="w-px h-3 bg-neutral-700" />
+                <span className="text-[10px] font-bold text-neutral-500">Two branches, one platform</span>
               </div>
-              <h2 className="text-5xl md:text-6xl font-black text-white mb-5 leading-tight">The restaurant OS<br /><span className="text-orange-400">built into PlanIt</span></h2>
-              <p className="text-xl text-neutral-400 max-w-2xl mx-auto leading-relaxed">
-                PlanIt Venue is a dedicated hospitality product under the PlanIt umbrella. Same platform, different tools — purpose-built for restaurants and venues that need a live floor every night.
-              </p>
+            </Reveal>
+          </div>
+
+          {/* Split panel */}
+          <div className="grid md:grid-cols-2">
+
+            {/* ── Events branch ── */}
+            <Reveal>
+              <a href="#planit-events"
+                className="group relative flex flex-col p-10 sm:p-14 overflow-hidden border-r border-neutral-800/50 cursor-pointer block"
+                style={{ minHeight: '480px', background: 'rgba(15,15,20,0.8)' }}>
+                <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-700"
+                  style={{ background: 'radial-gradient(ellipse 70% 60% at 15% 50%, rgba(148,163,184,0.07) 0%, transparent 70%)' }} />
+                {/* Branch badge */}
+                <div className="relative mb-10">
+                  <div className="inline-flex items-center gap-2.5 px-3.5 py-2 rounded-2xl border border-neutral-700/60 bg-neutral-800/60">
+                    <Calendar className="w-3.5 h-3.5 text-neutral-400" />
+                    <span className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400">PlanIt Events</span>
+                  </div>
+                </div>
+                {/* Headline */}
+                <div className="relative flex-1">
+                  <div className="text-xs font-bold uppercase tracking-widest text-neutral-600 mb-3">Branch 01</div>
+                  <h3 className="text-4xl sm:text-5xl font-black text-white leading-[0.95] mb-5 tracking-tight">
+                    For anyone<br />
+                    who runs<br />
+                    <span className="text-neutral-500">events.</span>
+                  </h3>
+                  <p className="text-neutral-500 text-sm leading-relaxed max-w-xs mb-8">
+                    Weddings, corporate retreats, galas, conferences. The complete planning workspace — task management, team chat, RSVP, QR check-in, expenses. Built for the whole arc.
+                  </p>
+                  <div className="flex flex-wrap gap-2 mb-8">
+                    {['Chat', 'Tasks', 'RSVP', 'QR check-in', 'Polls', 'Files', 'Budget'].map(t => (
+                      <span key={t} className="px-2.5 py-1 text-[11px] font-semibold rounded-lg bg-neutral-800/80 border border-neutral-700/60 text-neutral-500">{t}</span>
+                    ))}
+                  </div>
+                  <div className="flex items-center gap-2 text-sm font-bold text-neutral-400 group-hover:text-white transition-colors duration-300">
+                    Explore Events <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform duration-300" />
+                  </div>
+                </div>
+                {/* Mini chat mockup bottom-right */}
+                <div className="absolute bottom-8 right-8 w-48 opacity-20 group-hover:opacity-40 transition-opacity duration-500 hidden lg:block">
+                  <div className="rounded-xl border border-neutral-700 overflow-hidden" style={{ background: '#0d0d14' }}>
+                    <div className="px-3 py-2 border-b border-neutral-800 flex items-center gap-2">
+                      <div className="w-2 h-2 rounded-full bg-emerald-500" />
+                      <span className="text-[9px] text-neutral-500 font-mono">team-chat</span>
+                    </div>
+                    <div className="p-2.5 space-y-2">
+                      {[['Alex','Venue confirmed!','#64748b'],['Sam','Floor plan attached','#94a3b8'],['You','All set 👍','#e2e8f0']].map(([n,m,c]) => (
+                        <div key={n} className="flex items-start gap-1.5">
+                          <div className="w-3.5 h-3.5 rounded-full bg-neutral-700 flex-shrink-0 mt-0.5" />
+                          <div>
+                            <span className="text-[8px] font-bold" style={{ color: c }}>{n}</span>
+                            <div className="text-[8px] text-neutral-500">{m}</div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </a>
             </Reveal>
 
-            <div className="grid lg:grid-cols-2 gap-16 items-center">
-              {/* Left: demo floor map mockup */}
-              <Reveal delay={140}>
-                <div className="relative order-2 lg:order-1">
-                  <div className="bg-neutral-900/60 rounded-3xl border border-orange-500/15 overflow-hidden p-1">
-                    {/* Mini floor map demo */}
-                    <div className="bg-neutral-950 rounded-2xl p-4" style={{ minHeight: 340 }}>
-                      {/* Header bar */}
-                      <div className="flex items-center justify-between mb-4 pb-3 border-b border-neutral-800">
-                        <div className="flex items-center gap-2">
-                          <div className="w-5 h-5 bg-orange-500/20 border border-orange-500/30 rounded flex items-center justify-center"><UtensilsCrossed className="w-3 h-3 text-orange-400" /></div>
-                          <span className="text-sm font-bold text-white">Taverna Roma</span>
-                          <span className="text-[10px] font-bold text-orange-400/60 uppercase tracking-wider">PlanIt Venue</span>
-                        </div>
-                        <div className="flex gap-1.5">
-                          {[['#22c55e','4 Available'],['#ef4444','3 Occupied'],['#8b5cf6','1 Cleaning']].map(([c,l]) => (
-                            <span key={l} className="flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-neutral-800 text-neutral-400">
-                              <span className="w-1.5 h-1.5 rounded-full" style={{ background: c }} />{l}
-                            </span>
-                          ))}
-                        </div>
+            {/* ── Venue branch ── */}
+            <Reveal delay={100}>
+              <a href="#planit-venue"
+                className="group relative flex flex-col p-10 sm:p-14 overflow-hidden cursor-pointer block"
+                style={{ minHeight: '480px', background: 'rgba(12,8,4,0.9)' }}>
+                <div className="absolute inset-0 opacity-40 group-hover:opacity-80 transition-opacity duration-700"
+                  style={{ background: 'radial-gradient(ellipse 70% 60% at 85% 50%, rgba(249,115,22,0.08) 0%, transparent 70%)' }} />
+                {/* Branch badge */}
+                <div className="relative mb-10">
+                  <div className="inline-flex items-center gap-2.5 px-3.5 py-2 rounded-2xl border border-orange-500/25 bg-orange-500/8">
+                    <UtensilsCrossed className="w-3.5 h-3.5 text-orange-400" />
+                    <span className="text-[10px] font-black uppercase tracking-[0.2em] text-orange-400">PlanIt Venue</span>
+                  </div>
+                </div>
+                {/* Headline */}
+                <div className="relative flex-1">
+                  <div className="text-xs font-bold uppercase tracking-widest text-orange-500/40 mb-3">Branch 02</div>
+                  <h3 className="text-4xl sm:text-5xl font-black text-white leading-[0.95] mb-5 tracking-tight">
+                    For every<br />
+                    busy Friday<br />
+                    <span className="text-orange-500/60">night floor.</span>
+                  </h3>
+                  <p className="text-neutral-500 text-sm leading-relaxed max-w-xs mb-8">
+                    Live floor map. Walk-in waitlist. Public wait board. QR reservations. One-tap seating. Everything your front-of-house needs, every night.
+                  </p>
+                  <div className="flex flex-wrap gap-2 mb-8">
+                    {['Floor map', 'Waitlist', 'Wait board', 'QR reserve', 'Seat next', 'Servers'].map(t => (
+                      <span key={t} className="px-2.5 py-1 text-[11px] font-semibold rounded-lg bg-orange-500/8 border border-orange-500/20 text-orange-500/70">{t}</span>
+                    ))}
+                  </div>
+                  <div className="flex items-center gap-2 text-sm font-bold text-orange-500/60 group-hover:text-orange-400 transition-colors duration-300">
+                    Explore Venue <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform duration-300" />
+                  </div>
+                </div>
+                {/* Mini floor mockup bottom-left */}
+                <div className="absolute bottom-8 right-8 w-48 opacity-20 group-hover:opacity-40 transition-opacity duration-500 hidden lg:block">
+                  <div className="rounded-xl border border-orange-500/20 overflow-hidden" style={{ background: '#0d0a06' }}>
+                    <div className="px-3 py-2 border-b border-orange-500/10 flex items-center justify-between">
+                      <span className="text-[9px] text-orange-400/60 font-mono">floor</span>
+                      <div className="flex gap-1">
+                        <div className="w-1.5 h-1.5 rounded-full bg-emerald-500/60" />
+                        <div className="w-1.5 h-1.5 rounded-full bg-red-500/60" />
+                        <div className="w-1.5 h-1.5 rounded-full bg-amber-500/60" />
                       </div>
-                      {/* SVG floor plan */}
-                      <svg viewBox="0 0 500 240" className="w-full" style={{ height: 220 }}>
-                        <defs><pattern id="g" width="25" height="25" patternUnits="userSpaceOnUse"><path d="M 25 0 L 0 0 0 25" fill="none" stroke="rgba(255,255,255,0.03)" strokeWidth="1" /></pattern></defs>
-                        <rect width="500" height="240" fill="url(#g)" />
-                        {/* Zone label */}
-                        <rect x="20" y="10" width="140" height="80" rx="6" fill="rgba(255,255,255,0.02)" stroke="rgba(255,255,255,0.07)" strokeDasharray="5 3" />
-                        <text x="90" y="55" textAnchor="middle" fill="rgba(255,255,255,0.2)" fontSize="11" fontWeight="600">Dining Room</text>
-                        {/* Tables */}
-                        {[
-                          {x:60, y:150, r:24, status:'available', label:'T1', cap:'4', party:''},
-                          {x:130, y:150, r:24, status:'occupied',  label:'T2', cap:'2/4', party:'Smith', time:'42m'},
-                          {x:200, y:130, r:28, status:'occupied',  label:'T3', cap:'5/6', party:'Chen',  time:'18m'},
-                          {x:280, y:150, r:24, status:'cleaning',  label:'T4', cap:'4', party:''},
-                          {x:350, y:130, r:28, status:'available', label:'T5', cap:'6', party:''},
-                          {x:430, y:150, r:24, status:'reserved',  label:'T6', cap:'4', party:'Jones'},
-                        ].map(t => {
-                          const c = t.status === 'available' ? '#22c55e' : t.status === 'occupied' ? '#ef4444' : t.status === 'cleaning' ? '#8b5cf6' : '#f59e0b';
-                          return (
-                            <g key={t.label}>
-                              <circle cx={t.x} cy={t.y} r={t.r + 3} fill="none" stroke={c} strokeWidth="2" opacity="0.7" />
-                              <circle cx={t.x} cy={t.y} r={t.r} fill={`${c}22`} />
-                              <text x={t.x} y={t.y - 4} textAnchor="middle" dominantBaseline="middle" fill="white" fontSize="10" fontWeight="700">{t.label}</text>
-                              <text x={t.x} y={t.y + 8} textAnchor="middle" dominantBaseline="middle" fill={c} fontSize="9">{t.cap}</text>
-                              {t.time && <text x={t.x + t.r - 2} y={t.y - t.r + 2} textAnchor="middle" fill="white" fontSize="8" fontWeight="700">{t.time}</text>}
-                            </g>
-                          );
-                        })}
-                        {/* Waitlist panel */}
-                        <rect x="20" y="170" width="120" height="55" rx="6" fill="rgba(245,158,11,0.08)" stroke="rgba(245,158,11,0.2)" />
-                        <text x="30" y="185" fill="#f59e0b" fontSize="9" fontWeight="700">WAITLIST — 2 parties</text>
-                        <text x="30" y="200" fill="rgba(255,255,255,0.5)" fontSize="9">Martinez · 4 guests · ~12m</text>
-                        <text x="30" y="213" fill="rgba(255,255,255,0.5)" fontSize="9">Taylor · 2 guests · ~8m</text>
+                    </div>
+                    <div className="p-3">
+                      <svg viewBox="0 0 120 70" className="w-full">
+                        {[[20,35,12,'#22c55e'],[50,25,14,'#ef4444'],[80,35,12,'#ef4444'],[100,50,10,'#f59e0b']].map(([cx,cy,r,c],i) => (
+                          <g key={i}>
+                            <circle cx={cx} cy={cy} r={r} fill={`${c}22`} stroke={c} strokeWidth="1.5" opacity="0.8" />
+                            <text x={cx} y={cy+3} textAnchor="middle" fill={c} fontSize="6" fontWeight="bold">T{i+1}</text>
+                          </g>
+                        ))}
                       </svg>
                     </div>
                   </div>
                 </div>
+              </a>
+            </Reveal>
+          </div>
+        </section>
+
+        {/* ═══════════════════════════════════════════════════════════
+            PLANIT EVENTS — its own "page" section
+        ═══════════════════════════════════════════════════════════ */}
+        <section id="planit-events" className="relative overflow-hidden" style={{ background: '#08080f' }}>
+          {/* Page-break top border with glow */}
+          <div style={{ height: '2px', background: 'linear-gradient(90deg, transparent, rgba(148,163,184,0.12) 20%, rgba(255,255,255,0.25) 50%, rgba(148,163,184,0.12) 80%, transparent)' }} />
+          {/* Background texture */}
+          <div className="absolute inset-0 pointer-events-none" style={{
+            backgroundImage: 'radial-gradient(circle at 15% 50%, rgba(100,116,139,0.06) 0%, transparent 50%), radial-gradient(circle at 85% 20%, rgba(148,163,184,0.04) 0%, transparent 40%)',
+          }} />
+
+          {/* Product "page header" */}
+          <div className="relative max-w-screen-xl mx-auto px-6 sm:px-10 pt-20 pb-4">
+            <Reveal>
+              <div className="flex items-center gap-4 mb-2">
+                <div className="w-10 h-10 rounded-2xl bg-neutral-800 border border-neutral-700 flex items-center justify-center">
+                  <Calendar className="w-5 h-5 text-neutral-300" />
+                </div>
+                <div>
+                  <div className="text-[10px] font-black uppercase tracking-[0.3em] text-neutral-600">PlanIt</div>
+                  <div className="text-lg font-black text-white tracking-tight leading-none">Events</div>
+                </div>
+                <div className="ml-2 h-px flex-1 bg-neutral-800" />
+                <span className="text-[10px] font-bold uppercase tracking-widest text-neutral-700">Branch 01</span>
+              </div>
+            </Reveal>
+          </div>
+
+          {/* Hero headline */}
+          <div className="relative max-w-screen-xl mx-auto px-6 sm:px-10 pt-10 pb-20">
+            <div className="grid lg:grid-cols-2 gap-16 items-center">
+              <Reveal>
+                <p className="text-xs font-bold text-neutral-600 uppercase tracking-[0.2em] mb-6">For event teams who actually have a lot going on</p>
+                <h2 className="font-black text-white leading-[0.9] tracking-tight mb-8" style={{ fontSize: 'clamp(2.2rem, 5vw, 4.5rem)' }}>
+                  Everything your<br />
+                  team needs.<br />
+                  <span style={{ color: '#64748b' }}>Nothing you don't.</span>
+                </h2>
+                <p className="text-neutral-500 text-lg leading-relaxed mb-10 max-w-lg">
+                  From 6 months out to the final wrap-up. PlanIt Events is the workspace for the whole team — organizers, vendors, volunteers, everyone.
+                </p>
+                <div className="flex items-center gap-4">
+                  <a href="#create" className="inline-flex items-center gap-2 px-6 py-3 bg-white text-neutral-900 rounded-xl font-bold hover:bg-neutral-100 transition-colors text-sm">
+                    Start planning free <ArrowRight className="w-4 h-4" />
+                  </a>
+                  <span className="text-xs text-neutral-700">No credit card · No account needed</span>
+                </div>
               </Reveal>
 
-              {/* Right: copy */}
-              <Reveal className="order-1 lg:order-2">
-                <h3 className="text-4xl font-black text-white mb-6 leading-tight">Everything your front-of-house needs</h3>
-                <p className="text-lg text-neutral-400 mb-10 leading-relaxed">
-                  Real-time table states, walk-in waitlists with a public live wait board, QR code reservations, one-tap seating — all on one screen. Your floor data never expires.
-                </p>
-                <div className="space-y-4">
-                  {[
-                    { icon: Layers,            text: 'Visual floor plan editor — drag tables to match your layout exactly' },
-                    { icon: Users,             text: 'Walk-in waitlist with one-tap Seat Next and estimated wait times' },
-                    { icon: QrCode,            text: 'Live public wait board guests can join from their phone at the door' },
-                    { icon: MapPin,            text: 'Live table states sync instantly across every staff device' },
-                    { icon: CheckCircle2,      text: 'Your floor plan data persists forever — never auto-wiped' },
-                  ].map((item, i) => (
-                    <Reveal key={i} delay={i * 80}>
-                      <div className="flex items-center gap-4 p-4 bg-neutral-900/50 rounded-2xl border border-neutral-800 hover:border-orange-500/20 hover:bg-orange-500/5 transition-all duration-300">
-                        <div className="w-10 h-10 rounded-xl bg-orange-500/10 border border-orange-500/20 flex items-center justify-center flex-shrink-0">
-                          <item.icon className="w-5 h-5 text-orange-400" />
-                        </div>
-                        <span className="text-neutral-300 font-medium">{item.text}</span>
+              {/* Animated workspace mockup */}
+              <Reveal delay={120}>
+                <div className="relative rounded-2xl border border-neutral-800 overflow-hidden" style={{ background: '#0d0d16' }}>
+                  {/* App chrome */}
+                  <div className="flex items-center gap-2 px-4 py-3 border-b border-neutral-800/60" style={{ background: '#0a0a12' }}>
+                    <div className="flex gap-1.5">
+                      <div className="w-2.5 h-2.5 rounded-full bg-neutral-700" />
+                      <div className="w-2.5 h-2.5 rounded-full bg-neutral-700" />
+                      <div className="w-2.5 h-2.5 rounded-full bg-neutral-700" />
+                    </div>
+                    <div className="flex-1 flex justify-center">
+                      <div className="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-neutral-800/60 border border-neutral-700/40">
+                        <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                        <span className="text-[9px] text-neutral-500 font-mono">Summer Gala 2026</span>
                       </div>
-                    </Reveal>
-                  ))}
-                </div>
-                <div className="mt-8 flex items-center gap-4">
-                  <a href="#create" onClick={() => setTimeout(() => document.querySelector('[data-mode="table-service"]')?.click(), 100)}
-                    className="inline-flex items-center gap-2 px-6 py-3 bg-orange-500 text-white rounded-xl font-bold hover:bg-orange-400 transition-colors text-sm">
-                    Set up PlanIt Venue <ArrowRight className="w-4 h-4" />
-                  </a>
-                  <span className="text-xs text-neutral-600 font-medium">Free · Data never expires</span>
+                    </div>
+                  </div>
+                  {/* Two-panel layout */}
+                  <div className="grid grid-cols-5 divide-x divide-neutral-800/60" style={{ minHeight: 320 }}>
+                    {/* Sidebar */}
+                    <div className="col-span-2 p-4 space-y-1">
+                      {[['💬','Chat','active'],['✓','Tasks',''],['👥','Guests',''],['📊','Polls',''],['💰','Budget','']].map(([icon,label,active]) => (
+                        <div key={label} className={`flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-xs font-semibold transition-colors ${active ? 'bg-white/6 text-white' : 'text-neutral-600 hover:text-neutral-400'}`}>
+                          <span className="text-[11px]">{icon}</span>{label}
+                        </div>
+                      ))}
+                    </div>
+                    {/* Chat panel */}
+                    <div className="col-span-3 flex flex-col">
+                      <div className="px-3 py-2 border-b border-neutral-800/40">
+                        <span className="text-[10px] font-bold text-neutral-500"># planning-team</span>
+                      </div>
+                      <div className="flex-1 p-3 space-y-2.5 overflow-hidden">
+                        <div className="msg-1 flex items-start gap-2">
+                          <div className="w-5 h-5 rounded-full bg-violet-600/40 flex-shrink-0 mt-0.5 flex items-center justify-center">
+                            <span className="text-[7px] font-bold text-violet-300">A</span>
+                          </div>
+                          <div>
+                            <div className="text-[9px] font-bold text-violet-400 mb-0.5">Alex</div>
+                            <div className="text-[10px] text-neutral-400 bg-neutral-800/60 px-2 py-1.5 rounded-lg rounded-tl-none">Venue deposit confirmed ✓</div>
+                          </div>
+                        </div>
+                        <div className="msg-2 flex items-start gap-2">
+                          <div className="w-5 h-5 rounded-full bg-sky-600/40 flex-shrink-0 mt-0.5 flex items-center justify-center">
+                            <span className="text-[7px] font-bold text-sky-300">S</span>
+                          </div>
+                          <div>
+                            <div className="text-[9px] font-bold text-sky-400 mb-0.5">Sam</div>
+                            <div className="text-[10px] text-neutral-400 bg-neutral-800/60 px-2 py-1.5 rounded-lg rounded-tl-none">Floor plan uploaded to files</div>
+                          </div>
+                        </div>
+                        <div className="msg-3 flex items-start gap-2 justify-end">
+                          <div>
+                            <div className="text-[10px] text-neutral-300 bg-neutral-700/80 px-2 py-1.5 rounded-lg rounded-tr-none">On it! Creating checklist now</div>
+                          </div>
+                        </div>
+                      </div>
+                      {/* typing */}
+                      <div className="px-3 pb-3">
+                        <div className="flex items-center gap-2 px-2.5 py-2 rounded-lg bg-neutral-800/40 border border-neutral-700/30">
+                          <span className="text-[9px] text-neutral-600">Alex is typing</span>
+                          <div className="flex items-end gap-0.5">
+                            <div className="typing-dot w-1 h-1 rounded-full bg-neutral-500" />
+                            <div className="typing-dot w-1 h-1 rounded-full bg-neutral-500" />
+                            <div className="typing-dot w-1 h-1 rounded-full bg-neutral-500" />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </Reveal>
             </div>
           </div>
+
+          {/* Features grid */}
+          <div className="relative border-t border-neutral-800/40">
+            <div className="max-w-screen-xl mx-auto px-6 sm:px-10 py-16">
+              <Reveal className="mb-10">
+                <p className="text-xs font-bold uppercase tracking-[0.2em] text-neutral-600 mb-2">What's included</p>
+                <h3 className="text-2xl font-black text-white">Every tool. One workspace.</h3>
+              </Reveal>
+              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {[
+                  { icon: MessageSquare, label: 'Real-time team chat',    desc: 'Typing indicators, reactions, threads. Your team stays in sync.' },
+                  { icon: ListChecks,    label: 'Task management',        desc: 'Assign tasks, set deadlines, track completion down to the wire.' },
+                  { icon: BarChart3,     label: 'Polls & voting',         desc: 'Vote on venues, dates, menus. Live results instantly.' },
+                  { icon: FileText,      label: 'File sharing',           desc: 'Contracts, floor plans, schedules — all in one place.' },
+                  { icon: Users,         label: 'Unlimited team',         desc: 'No caps. Every organizer, vendor, and volunteer included.' },
+                  { icon: QrCode,        label: 'QR check-in',           desc: 'Professional guest check-in with real-time attendance.' },
+                ].map((f, i) => (
+                  <Reveal key={f.label} delay={i * 60}>
+                    <div className="group p-5 rounded-2xl border border-neutral-800/60 hover:border-neutral-700 transition-all duration-300" style={{ background: 'rgba(255,255,255,0.02)' }}>
+                      <div className="w-9 h-9 rounded-xl bg-neutral-800 border border-neutral-700/50 flex items-center justify-center mb-3 group-hover:bg-neutral-700 transition-colors">
+                        <f.icon className="w-4 h-4 text-neutral-400" />
+                      </div>
+                      <div className="text-sm font-bold text-white mb-1">{f.label}</div>
+                      <div className="text-xs text-neutral-600 leading-relaxed">{f.desc}</div>
+                    </div>
+                  </Reveal>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Enterprise strip */}
+          <div className="border-t border-neutral-800/40">
+            <div className="max-w-screen-xl mx-auto px-6 sm:px-10 py-12">
+              <Reveal>
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 p-6 rounded-2xl border border-neutral-800" style={{ background: 'rgba(255,255,255,0.02)' }}>
+                  <div className="flex items-center gap-4">
+                    <div className="w-10 h-10 rounded-xl bg-neutral-800 border border-neutral-700 flex items-center justify-center flex-shrink-0">
+                      <Zap className="w-5 h-5 text-neutral-400" />
+                    </div>
+                    <div>
+                      <div className="text-sm font-black text-white mb-0.5">Enterprise Mode</div>
+                      <div className="text-xs text-neutral-600">Personalized QR invites, check-in dashboard, real-time attendance analytics. For 100+ guest events.</div>
+                    </div>
+                  </div>
+                  <a href="#create" className="flex-shrink-0 inline-flex items-center gap-2 px-5 py-2.5 border border-neutral-700 rounded-xl text-xs font-bold text-neutral-300 hover:border-neutral-500 hover:text-white transition-all">
+                    Set up Enterprise <ArrowRight className="w-3.5 h-3.5" />
+                  </a>
+                </div>
+              </Reveal>
+            </div>
+          </div>
+
+          {/* Bottom page-break */}
+          <div style={{ height: '2px', background: 'linear-gradient(90deg, transparent, rgba(148,163,184,0.08) 20%, rgba(255,255,255,0.15) 50%, rgba(148,163,184,0.08) 80%, transparent)' }} />
+        </section>
+
+        {/* ═══════════════════════════════════════════════════════════
+            BRANCH TRANSITION — visual page turn
+        ═══════════════════════════════════════════════════════════ */}
+        <div className="relative py-12 flex items-center justify-center overflow-hidden" style={{ background: '#06060a' }}>
+          <div className="absolute inset-0" style={{ backgroundImage: 'radial-gradient(circle at 50% 50%, rgba(249,115,22,0.04) 0%, transparent 60%)' }} />
+          <Reveal>
+            <div className="relative flex items-center gap-5 text-center">
+              <div className="h-px w-16 bg-neutral-800" />
+              <div className="flex items-center gap-3 px-5 py-2.5 rounded-full border border-neutral-800" style={{ background: 'rgba(255,255,255,0.02)' }}>
+                <div className="flex items-center gap-1.5 text-[10px] font-bold text-neutral-700 uppercase tracking-widest">
+                  <Calendar className="w-3 h-3 text-neutral-700" /> Events
+                </div>
+                <span className="text-neutral-800">·</span>
+                <div className="flex items-center gap-1.5 text-[10px] font-bold text-neutral-700 uppercase tracking-widest">
+                  <UtensilsCrossed className="w-3 h-3 text-neutral-700" /> Venue
+                </div>
+              </div>
+              <div className="h-px w-16 bg-neutral-800" />
+            </div>
+          </Reveal>
+        </div>
+
+        {/* ═══════════════════════════════════════════════════════════
+            PLANIT VENUE — its own "page" section
+        ═══════════════════════════════════════════════════════════ */}
+        <section id="planit-venue" className="relative overflow-hidden" style={{ background: '#0a0704' }}>
+          {/* Page-break top border with orange glow */}
+          <div style={{ height: '2px', background: 'linear-gradient(90deg, transparent, rgba(249,115,22,0.15) 20%, rgba(249,115,22,0.5) 50%, rgba(249,115,22,0.15) 80%, transparent)' }} />
+          {/* Background */}
+          <div className="absolute inset-0 pointer-events-none" style={{
+            backgroundImage: 'radial-gradient(circle at 85% 40%, rgba(249,115,22,0.06) 0%, transparent 50%), radial-gradient(circle at 15% 80%, rgba(234,88,12,0.03) 0%, transparent 40%)',
+          }} />
+
+          {/* Product "page header" */}
+          <div className="relative max-w-screen-xl mx-auto px-6 sm:px-10 pt-20 pb-4">
+            <Reveal>
+              <div className="flex items-center gap-4 mb-2">
+                <div className="w-10 h-10 rounded-2xl bg-orange-500/10 border border-orange-500/25 flex items-center justify-center">
+                  <UtensilsCrossed className="w-5 h-5 text-orange-400" />
+                </div>
+                <div>
+                  <div className="text-[10px] font-black uppercase tracking-[0.3em] text-orange-500/40">PlanIt</div>
+                  <div className="text-lg font-black text-white tracking-tight leading-none">Venue</div>
+                </div>
+                <div className="ml-2 h-px flex-1 bg-orange-500/10" />
+                <span className="text-[10px] font-bold uppercase tracking-widest text-orange-500/30">Branch 02</span>
+              </div>
+            </Reveal>
+          </div>
+
+          {/* Hero headline */}
+          <div className="relative max-w-screen-xl mx-auto px-6 sm:px-10 pt-10 pb-20">
+            <div className="grid lg:grid-cols-2 gap-16 items-center">
+              <Reveal>
+                <p className="text-xs font-bold uppercase tracking-[0.2em] text-orange-500/40 mb-6">For restaurants that run a real floor every night</p>
+                <h2 className="font-black text-white leading-[0.9] tracking-tight mb-8" style={{ fontSize: 'clamp(2.2rem, 5vw, 4.5rem)' }}>
+                  Run your floor.<br />
+                  Know your wait.<br />
+                  <span style={{ color: 'rgba(249,115,22,0.5)' }}>Seat every table.</span>
+                </h2>
+                <p className="text-neutral-600 text-lg leading-relaxed mb-10 max-w-lg">
+                  Live table states. Walk-in waitlist with a public wait board guests scan at the door. One-tap seating. Your floor data never expires.
+                </p>
+                <div className="flex items-center gap-4">
+                  <a href="#create" onClick={() => setTimeout(() => document.querySelector('[data-mode="table-service"]')?.click(), 100)}
+                    className="inline-flex items-center gap-2 px-6 py-3 bg-orange-500 text-white rounded-xl font-bold hover:bg-orange-400 transition-colors text-sm">
+                    Set up your venue <ArrowRight className="w-4 h-4" />
+                  </a>
+                  <span className="text-xs text-neutral-700">Free · Data never expires</span>
+                </div>
+              </Reveal>
+
+              {/* Animated floor map */}
+              <Reveal delay={120}>
+                <div className="relative rounded-2xl border border-orange-500/15 overflow-hidden" style={{ background: '#0d0a05' }}>
+                  {/* App chrome */}
+                  <div className="flex items-center justify-between px-4 py-3 border-b border-orange-500/10" style={{ background: '#0a0803' }}>
+                    <div className="flex items-center gap-2">
+                      <div className="w-5 h-5 rounded-lg bg-orange-500/15 border border-orange-500/20 flex items-center justify-center">
+                        <UtensilsCrossed className="w-2.5 h-2.5 text-orange-400" />
+                      </div>
+                      <span className="text-xs font-bold text-neutral-400">Taverna Roma</span>
+                      <span className="text-[9px] text-orange-400/40 font-bold uppercase tracking-wider">PlanIt Venue</span>
+                    </div>
+                    <div className="flex gap-2">
+                      {[['#22c55e','3 Free'],['#ef4444','4 Occ'],['#8b5cf6','1 Cln']].map(([c,l]) => (
+                        <span key={l} className="flex items-center gap-1 text-[9px] px-1.5 py-0.5 rounded-md bg-neutral-900 text-neutral-500">
+                          <span className="w-1.5 h-1.5 rounded-full" style={{ background: c }} />{l}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                  {/* Floor plan SVG */}
+                  <div className="p-4">
+                    <svg viewBox="0 0 520 260" className="w-full" style={{ height: 220 }}>
+                      <defs>
+                        <pattern id="vg" width="28" height="28" patternUnits="userSpaceOnUse">
+                          <path d="M 28 0 L 0 0 0 28" fill="none" stroke="rgba(249,115,22,0.04)" strokeWidth="0.5" />
+                        </pattern>
+                      </defs>
+                      <rect width="520" height="260" fill="url(#vg)" />
+                      {/* Zone */}
+                      <rect x="18" y="10" width="155" height="90" rx="8" fill="rgba(249,115,22,0.02)" stroke="rgba(249,115,22,0.08)" strokeDasharray="6 3" />
+                      <text x="95" y="58" textAnchor="middle" fill="rgba(249,115,22,0.2)" fontSize="11" fontWeight="700" letterSpacing="2">MAIN ROOM</text>
+                      {/* Tables */}
+                      {[
+                        {x:65,  y:155, r:26, status:'available', label:'T1', cap:'4'},
+                        {x:145, y:155, r:26, status:'occupied',  label:'T2', cap:'4', party:'Smith', time:'38m'},
+                        {x:215, y:135, r:30, status:'occupied',  label:'T3', cap:'6', party:'Chen',  time:'19m'},
+                        {x:300, y:155, r:26, status:'cleaning',  label:'T4', cap:'4'},
+                        {x:370, y:135, r:30, status:'available', label:'T5', cap:'6'},
+                        {x:455, y:155, r:26, status:'reserved',  label:'T6', cap:'4', party:'Jones'},
+                      ].map(t => {
+                        const c = t.status==='available'?'#22c55e':t.status==='occupied'?'#ef4444':t.status==='cleaning'?'#8b5cf6':'#f59e0b';
+                        const pulse = t.status === 'available';
+                        return (
+                          <g key={t.label}>
+                            <circle cx={t.x} cy={t.y} r={t.r+4} fill="none" stroke={c} strokeWidth="1.5" opacity={pulse ? undefined : "0.5"} className={pulse ? 'table-pulse-ring' : ''} />
+                            <circle cx={t.x} cy={t.y} r={t.r} fill={`${c}18`} stroke={c} strokeWidth="1" className={pulse ? 'table-pulse-fill' : ''} />
+                            <text x={t.x} y={t.y-3} textAnchor="middle" fill="rgba(255,255,255,0.9)" fontSize="9" fontWeight="800">{t.label}</text>
+                            <text x={t.x} y={t.y+8} textAnchor="middle" fill={c} fontSize="8">{t.cap}</text>
+                            {t.time && <text x={t.x+t.r-2} y={t.y-t.r+4} textAnchor="middle" fill="white" fontSize="7.5" fontWeight="700" opacity="0.8">{t.time}</text>}
+                          </g>
+                        );
+                      })}
+                      {/* Waitlist widget */}
+                      <rect x="18" y="178" width="130" height="60" rx="8" fill="rgba(245,158,11,0.06)" stroke="rgba(245,158,11,0.18)" />
+                      <text x="30" y="196" fill="#f59e0b" fontSize="8" fontWeight="800" letterSpacing="1">WAITLIST</text>
+                      <text x="90" y="196" fill="rgba(245,158,11,0.5)" fontSize="8" fontWeight="700" className="waitlist-tick">·3</text>
+                      <text x="30" y="212" fill="rgba(255,255,255,0.4)" fontSize="8">Martinez · 4 · ~14m</text>
+                      <text x="30" y="226" fill="rgba(255,255,255,0.4)" fontSize="8">Taylor · 2 · ~8m</text>
+                    </svg>
+                  </div>
+                </div>
+              </Reveal>
+            </div>
+          </div>
+
+          {/* Features grid */}
+          <div className="relative border-t border-orange-500/8">
+            <div className="max-w-screen-xl mx-auto px-6 sm:px-10 py-16">
+              <Reveal className="mb-10">
+                <p className="text-xs font-bold uppercase tracking-[0.2em] text-orange-500/40 mb-2">What's included</p>
+                <h3 className="text-2xl font-black text-white">Your whole floor, in one screen.</h3>
+              </Reveal>
+              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {[
+                  { icon: Layers,       label: 'Visual floor editor',    desc: 'Drag tables to match your exact layout. Zones, shapes, labels.' },
+                  { icon: Users,        label: 'Walk-in waitlist',       desc: 'Add parties instantly. Estimated wait times update as tables clear.' },
+                  { icon: QrCode,       label: 'Public wait board',      desc: 'Guests scan the door QR, see the queue, and join from their phone.' },
+                  { icon: MapPin,       label: 'Live sync',              desc: 'Every status update hits all staff screens in real time.' },
+                  { icon: CheckCircle2, label: 'One-tap seat next',      desc: 'Auto-picks the tightest-fit table and seats the next waiting party.' },
+                  { icon: Clock,        label: 'Data never expires',     desc: 'Your floor plan and history persist forever. No cleanup, no resets.' },
+                ].map((f, i) => (
+                  <Reveal key={f.label} delay={i * 60}>
+                    <div className="group p-5 rounded-2xl border border-orange-500/10 hover:border-orange-500/25 transition-all duration-300" style={{ background: 'rgba(249,115,22,0.025)' }}>
+                      <div className="w-9 h-9 rounded-xl bg-orange-500/10 border border-orange-500/20 flex items-center justify-center mb-3 group-hover:bg-orange-500/15 transition-colors">
+                        <f.icon className="w-4 h-4 text-orange-400" />
+                      </div>
+                      <div className="text-sm font-bold text-white mb-1">{f.label}</div>
+                      <div className="text-xs text-neutral-700 leading-relaxed">{f.desc}</div>
+                    </div>
+                  </Reveal>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Bottom page-break */}
+          <div style={{ height: '2px', background: 'linear-gradient(90deg, transparent, rgba(249,115,22,0.08) 20%, rgba(249,115,22,0.25) 50%, rgba(249,115,22,0.08) 80%, transparent)' }} />
         </section>
 
         {/* TESTIMONIALS */}
