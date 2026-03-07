@@ -489,33 +489,16 @@ export default function LiveWaitBoard() {
             )}
           </div>
 
-          {waitlist.length === 0 ? (() => {
-            // Check if any tables are actually occupied (wait times > 0)
-            const anyOccupied = Object.values(waitTimes).some(t => t !== null && t > 0);
-            if (anyOccupied) {
-              // Tables are full but nobody is in the digital queue yet
-              const shortestWait = Math.min(...Object.values(waitTimes).filter(t => t !== null && t > 0));
-              return (
-                <div className="rounded-2xl border border-dashed border-amber-800/40 p-6 text-center">
-                  <Clock className="w-8 h-8 text-amber-500 mx-auto mb-2" />
-                  <p className="text-white font-bold">Tables currently full</p>
-                  <p className="text-neutral-500 text-sm mt-1">Est. ~{shortestWait < 60 ? `${shortestWait} min` : `${Math.floor(shortestWait / 60)}h ${shortestWait % 60}m`} until next availability</p>
-                  <p className="text-neutral-700 text-xs mt-2">No one in queue ahead of you — join the list below</p>
-                </div>
-              );
-            }
-            return (
-              <div className="rounded-2xl border border-dashed border-neutral-800 p-6 text-center">
-                <CheckCircle className="w-8 h-8 text-emerald-500 mx-auto mb-2" />
-                <p className="text-white font-bold">No wait right now</p>
-                <p className="text-neutral-600 text-sm mt-1">Walk right in!</p>
-              </div>
-            );
-          })()
+          {(() => {
+            const numericWaits = Object.values(waitTimes)
+              .filter(v => typeof v === 'number' && v > 0);
+            const anyOccupied = numericWaits.length > 0;
+            const shortestWait = anyOccupied ? Math.min(...numericWaits) : 0;
 
-          ) : (
-            <div className="space-y-2">
-              {waitlist.map((party, idx) => (
+            if (waitlist.length > 0) {
+              return (
+                <div className="space-y-2">
+                  {waitlist.map((party, idx) => (
                 <div key={party.id} className="rounded-2xl border p-4 flex items-center gap-3"
                   style={{ background: '#111', borderColor: party.status === 'notified' ? `${accent}40` : '#222' }}>
                   <div className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 font-black text-sm"
@@ -547,7 +530,30 @@ export default function LiveWaitBoard() {
                 </div>
               ))}
             </div>
-          )}
+              );
+            }
+
+            if (anyOccupied) {
+              return (
+                <div className="rounded-2xl border border-dashed border-amber-800/40 p-6 text-center">
+                  <Clock className="w-8 h-8 text-amber-500 mx-auto mb-2" />
+                  <p className="text-white font-bold">Tables currently full</p>
+                  <p className="text-neutral-500 text-sm mt-1">
+                    Est. {shortestWait < 60 ? `~${shortestWait} min` : `~${Math.floor(shortestWait / 60)}h ${shortestWait % 60}m`} until next availability
+                  </p>
+                  <p className="text-neutral-700 text-xs mt-2">No one in the queue ahead of you — join the list below</p>
+                </div>
+              );
+            }
+
+            return (
+              <div className="rounded-2xl border border-dashed border-neutral-800 p-6 text-center">
+                <CheckCircle className="w-8 h-8 text-emerald-500 mx-auto mb-2" />
+                <p className="text-white font-bold">No wait right now</p>
+                <p className="text-neutral-600 text-sm mt-1">Walk right in!</p>
+              </div>
+            );
+          })()}
         </section>
 
         {/* Menus */}
