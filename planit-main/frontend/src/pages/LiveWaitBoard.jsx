@@ -40,16 +40,48 @@ function fmtWait(mins) {
   return `~${Math.floor(mins / 60)}h ${mins % 60}m`;
 }
 
+function getWaitColor(mins, accent) {
+  if (mins === null || mins === undefined) return '#555';
+  if (mins === 0) return '#22c55e';
+  if (mins <= 15) return '#22c55e';
+  if (mins <= 30) return accent || '#f59e0b';
+  if (mins <= 60) return '#f59e0b';
+  return '#ef4444';
+}
+
 function WaitBadge({ mins, accent }) {
   if (mins === null || mins === undefined) {
     return <span className="text-neutral-500 font-semibold text-lg">N/A</span>;
   }
-  const color = mins === 0 ? '#22c55e' : mins <= 20 ? '#f59e0b' : '#ef4444';
+  const color = getWaitColor(mins, accent);
   return (
     <span className="text-2xl font-black" style={{ color }}>
       {fmtWait(mins)}
     </span>
   );
+}
+
+function WaitDetail({ detail, queueDepth, accent }) {
+  if (!detail) return null;
+  const items = [];
+  if (queueDepth > 0) {
+    items.push(
+      <span key="q" className="flex items-center gap-1 text-xs" style={{ color: '#888' }}>
+        <Users className="w-3 h-3" />
+        {queueDepth} {queueDepth === 1 ? 'party' : 'parties'} ahead
+      </span>
+    );
+  }
+  const statusLabels = { occupied: 'table occupied', cleaning: 'being cleaned', reserved: 'reserved', available: 'table free' };
+  if (detail.fromStatus && detail.fromStatus !== 'available') {
+    items.push(
+      <span key="s" className="text-xs" style={{ color: '#666' }}>
+        {statusLabels[detail.fromStatus] || detail.fromStatus}
+      </span>
+    );
+  }
+  if (!items.length) return null;
+  return <div className="flex flex-col items-center gap-0.5 mt-1">{items}</div>;
 }
 
 // ── Main Component ────────────────────────────────────────────────────────────
@@ -196,6 +228,7 @@ export default function LiveWaitBoard() {
 
   const waitlist = liveData?.waitlist || [];
   const waitTimes = liveData?.waitTimes || {};
+  const queueDepth = waitTimes.queueDepth ?? (liveData?.queueLength ?? 0);
   const tableStats = liveData?.tableStats || {};
   const isOpen = liveData?.isOpen;
   const name = venue?.name || liveData?.name || 'Restaurant';
@@ -341,18 +374,18 @@ export default function LiveWaitBoard() {
           </h2>
           <div className="grid grid-cols-3 gap-3">
             {[
-              { label: '1–2 guests', key: 'forTwo', size: 2 },
-              { label: '3–4 guests', key: 'forFour', size: 4 },
-              { label: '5+ guests',  key: 'forEight', size: 8 },
-            ].map(({ label, key, size }) => {
+              { label: '1–2 guests', key: 'forTwo',   detailKey: 'forTwoDetail',   size: 2 },
+              { label: '3–4 guests', key: 'forFour',  detailKey: 'forFourDetail',  size: 4 },
+              { label: '5+ guests',  key: 'forEight', detailKey: 'forEightDetail', size: 8 },
+            ].map(({ label, key, detailKey, size }) => {
               const mins = waitTimes[key];
+              const detail = waitTimes[detailKey];
               const isAvail = mins === 0;
+              const borderColor = isAvail ? `${accent}50` : mins === null ? '#333' : getWaitColor(mins, accent) + '50';
+              const bgColor = isAvail ? `${accent}10` : '#111';
               return (
                 <div key={key} className="rounded-2xl p-4 text-center border"
-                  style={{
-                    background: isAvail ? `${accent}10` : '#111',
-                    borderColor: isAvail ? `${accent}50` : '#222',
-                  }}>
+                  style={{ background: bgColor, borderColor }}>
                   <div className="flex items-center justify-center mb-1">
                     <Users className="w-3.5 h-3.5 text-neutral-600 mr-1" />
                     <span className="text-xs text-neutral-600">{label}</span>
@@ -361,6 +394,7 @@ export default function LiveWaitBoard() {
                   {isAvail && (
                     <p className="text-xs font-bold mt-1" style={{ color: accent }}>Available!</p>
                   )}
+                  <WaitDetail detail={detail} queueDepth={isAvail ? 0 : (queueDepth || 0)} accent={accent} />
                 </div>
               );
             })}
@@ -395,7 +429,49 @@ export default function LiveWaitBoard() {
                   <span className="text-xs text-neutral-600">reserved</span>
                 </div>
               )}
+              {tableStats.cleaning > 0 && (
+                <div className="flex items-center gap-1.5">
+                  <div className="w-2.5 h-2.5 rounded-full bg-sky-500" />
+                  <span className="text-sm text-neutral-300 font-semibold">{tableStats.cleaning}</span>
+                  <span className="text-xs text-neutral-600">cleaning</span>
+                </div>
+              )}
             </div>
+
+            {/* Per-table breakdown from smart engine */}
+            {waitTimes.tableBreakdown && waitTimes.tableBreakdown.length > 0 && (
+              <div className="mt-3 pt-3 border-t border-neutral-800 space-y-1.5">
+                {waitTimes.tableBreakdown
+                  .filter(t => t.status !== 'available')
+                  .sort((a, b) => a.minsUntilFree - b.minsUntilFree)
+                  .slice(0, 5)
+                  .map(t => {
+                    const color = getWaitColor(t.minsUntilFree, accent);
+                    const statusLabel = { occupied: 'Occupied', cleaning: 'Cleaning', reserved: 'Reserved' }[t.status] || t.status;
+                    return (
+                      <div key={t.id} className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs text-neutral-600">{t.label || `Table (${t.capacity})`}</span>
+                          <span className="text-xs px-1.5 py-0.5 rounded-full" style={{ background: '#1a1a1a', color: '#666' }}>
+                            {statusLabel} · seats {t.capacity}
+                          </span>
+                        </div>
+                        <span className="text-xs font-bold" style={{ color }}>
+                          {t.minsUntilFree === 0 ? 'Free now' : `Free in ${fmtWait(t.minsUntilFree)}`}
+                        </span>
+                      </div>
+                    );
+                  })}
+                {waitTimes.tableBreakdown.filter(t => t.status === 'available').length > 0 && (
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-neutral-600">
+                      {waitTimes.tableBreakdown.filter(t => t.status === 'available').length} table(s) available now
+                    </span>
+                    <span className="text-xs font-bold text-emerald-500">Free now</span>
+                  </div>
+                )}
+              </div>
+            )}
           </section>
         )}
 
@@ -413,12 +489,30 @@ export default function LiveWaitBoard() {
             )}
           </div>
 
-          {waitlist.length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-neutral-800 p-6 text-center">
-              <CheckCircle className="w-8 h-8 text-emerald-500 mx-auto mb-2" />
-              <p className="text-white font-bold">No wait right now</p>
-              <p className="text-neutral-600 text-sm mt-1">Walk right in!</p>
-            </div>
+          {waitlist.length === 0 ? (() => {
+            // Check if any tables are actually occupied (wait times > 0)
+            const anyOccupied = Object.values(waitTimes).some(t => t !== null && t > 0);
+            if (anyOccupied) {
+              // Tables are full but nobody is in the digital queue yet
+              const shortestWait = Math.min(...Object.values(waitTimes).filter(t => t !== null && t > 0));
+              return (
+                <div className="rounded-2xl border border-dashed border-amber-800/40 p-6 text-center">
+                  <Clock className="w-8 h-8 text-amber-500 mx-auto mb-2" />
+                  <p className="text-white font-bold">Tables currently full</p>
+                  <p className="text-neutral-500 text-sm mt-1">Est. ~{shortestWait < 60 ? `${shortestWait} min` : `${Math.floor(shortestWait / 60)}h ${shortestWait % 60}m`} until next availability</p>
+                  <p className="text-neutral-700 text-xs mt-2">No one in queue ahead of you — join the list below</p>
+                </div>
+              );
+            }
+            return (
+              <div className="rounded-2xl border border-dashed border-neutral-800 p-6 text-center">
+                <CheckCircle className="w-8 h-8 text-emerald-500 mx-auto mb-2" />
+                <p className="text-white font-bold">No wait right now</p>
+                <p className="text-neutral-600 text-sm mt-1">Walk right in!</p>
+              </div>
+            );
+          })()
+
           ) : (
             <div className="space-y-2">
               {waitlist.map((party, idx) => (
