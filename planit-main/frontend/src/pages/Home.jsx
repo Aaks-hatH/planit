@@ -946,24 +946,16 @@ export default function Home() {
   const [showPassword, setShowPassword] = useState(false);
   const [showAccountPassword, setShowAccountPassword] = useState(false);
   const [fieldErrors, setFieldErrors] = useState({});
-  const [activeBranch, setActiveBranch] = useState(null);
+  const [selectedBranch, setSelectedBranch] = useState(null); // null | 'events' | 'venue'
 
-  useEffect(() => {
-    const eventsEl = document.getElementById('planit-events');
-    const venueEl  = document.getElementById('planit-venue');
-    if (!eventsEl || !venueEl) return;
-    const obs = new IntersectionObserver(
-      (entries) => {
-        entries.forEach(e => {
-          if (e.isIntersecting) setActiveBranch(e.target.id === 'planit-venue' ? 'venue' : 'events');
-        });
-      },
-      { threshold: 0.12 }
-    );
-    obs.observe(eventsEl);
-    obs.observe(venueEl);
-    return () => obs.disconnect();
-  }, []);
+  const selectBranch = (branch) => {
+    setSelectedBranch(branch);
+    setMode(branch === 'venue' ? 'table-service' : 'standard');
+    setTimeout(() => {
+      document.getElementById(branch === 'venue' ? 'planit-venue' : 'planit-events')
+        ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 50);
+  };
 
   const handleTitleChange = (e) => {
     const title = e.target.value;
@@ -1203,7 +1195,7 @@ export default function Home() {
       {/* Nav */}
       <header
         className="sticky top-0 z-50 border-b transition-colors duration-500"
-        style={activeBranch === 'venue'
+        style={selectedBranch === 'venue'
           ? { background: 'rgba(10,6,3,0.97)', borderColor: 'rgba(249,115,22,0.20)', backdropFilter: 'blur(24px)' }
           : { background: 'rgba(6,6,12,0.96)', borderColor: 'rgba(38,38,38,0.6)',    backdropFilter: 'blur(24px)' }
         }
@@ -1211,7 +1203,7 @@ export default function Home() {
         <div className="max-w-screen-xl mx-auto px-4 sm:px-8 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
             {/* ── Events brand: visible outside Venue section ── */}
-            <div style={{ display: activeBranch === 'venue' ? 'none' : 'flex' }} className="items-center gap-3 transition-opacity duration-300">
+            <div style={{ display: selectedBranch === 'venue' ? 'none' : 'flex' }} className="items-center gap-3 transition-opacity duration-300">
               <div className="relative">
                 <div className="w-9 h-9 rounded-2xl bg-neutral-800 border border-neutral-700 flex items-center justify-center">
                   <Calendar className="w-5 h-5 text-neutral-300" />
@@ -1224,7 +1216,7 @@ export default function Home() {
               </div>
             </div>
             {/* ── Venue brand: visible only in Venue section ── */}
-            <div style={{ display: activeBranch === 'venue' ? 'flex' : 'none' }} className="items-center gap-3 transition-opacity duration-300">
+            <div style={{ display: selectedBranch === 'venue' ? 'flex' : 'none' }} className="items-center gap-3 transition-opacity duration-300">
               <div className="w-9 h-9 rounded-2xl bg-orange-500/15 border border-orange-500/30 flex items-center justify-center">
                 <UtensilsCrossed className="w-5 h-5 text-orange-400" />
               </div>
@@ -1235,16 +1227,27 @@ export default function Home() {
             </div>
           </div>
           <nav className="flex items-center gap-1">
+            {/* ── Branch switcher: shown when a branch is selected ── */}
+            {selectedBranch && (
+              <button
+                onClick={() => setSelectedBranch(null)}
+                className="hidden md:flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-neutral-500 hover:text-neutral-200 hover:bg-neutral-800/50 rounded-xl transition-all duration-200 border border-neutral-800 mr-1"
+              >
+                <ChevronRight className="w-3 h-3 rotate-180" /> Change
+              </button>
+            )}
             {/* ── When NOT in Venue section: show Venue link ── */}
             <a href="#planit-venue"
-              style={{ display: activeBranch === 'venue' ? 'none' : undefined }}
+              onClick={(e) => { e.preventDefault(); selectBranch('venue'); }}
+              style={{ display: selectedBranch === 'venue' ? 'none' : undefined }}
               className="hidden md:flex items-center gap-1.5 px-3 py-2 text-sm text-orange-400/80 hover:text-orange-300 hover:bg-orange-500/8 rounded-xl transition-all duration-200">
               <UtensilsCrossed className="w-3.5 h-3.5" />
               PlanIt Venue
             </a>
             {/* ── When IN Venue section: show Events link ── */}
             <a href="#planit-events"
-              style={{ display: activeBranch === 'venue' ? 'flex' : 'none' }}
+              onClick={(e) => { e.preventDefault(); selectBranch('events'); }}
+              style={{ display: selectedBranch === 'venue' ? 'flex' : 'none' }}
               className="items-center gap-1.5 px-3 py-2 text-sm text-neutral-300 hover:text-white hover:bg-neutral-800/50 rounded-xl transition-all duration-200">
               <Calendar className="w-3.5 h-3.5" />
               PlanIt Events
@@ -1362,12 +1365,13 @@ export default function Home() {
                 transition={{ duration: 0.7, delay: 0.55 }}
                 className="flex flex-col sm:flex-row items-center justify-center gap-3 mb-16 w-full px-0 sm:px-0"
               >
-                <a href="#planit-events" className="group inline-flex items-center justify-center gap-3 w-full sm:w-auto px-7 py-4 bg-white text-neutral-900 text-sm font-bold rounded-2xl hover:bg-neutral-100 hover:scale-105 transition-all duration-300 shadow-2xl">
+                <a href="#planit-events" onClick={(e) => { e.preventDefault(); selectBranch('events'); }} className="group inline-flex items-center justify-center gap-3 w-full sm:w-auto px-7 py-4 bg-white text-neutral-900 text-sm font-bold rounded-2xl hover:bg-neutral-100 hover:scale-105 transition-all duration-300 shadow-2xl">
                   <Calendar className="w-4 h-4" />
                   PlanIt Events
                   <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform duration-300" />
                 </a>
                 <a href="#planit-venue"
+                  onClick={(e) => { e.preventDefault(); selectBranch('venue'); }}
                   className="group inline-flex items-center justify-center gap-3 w-full sm:w-auto px-7 py-4 border border-orange-500/30 text-orange-400 text-sm font-bold rounded-2xl hover:border-orange-400 hover:scale-105 transition-all duration-300"
                   style={{ background: 'rgba(249,115,22,0.06)' }}>
                   <UtensilsCrossed className="w-4 h-4" />
@@ -1403,7 +1407,7 @@ export default function Home() {
         {/* ═══════════════════════════════════════════════════════════
             BRANCH GATEWAY — two-panel split, one PlanIt family
         ═══════════════════════════════════════════════════════════ */}
-        <section className="relative border-t border-neutral-800/40 overflow-hidden">
+        <section className="relative border-t border-neutral-800/40 overflow-hidden" style={{ display: selectedBranch ? 'none' : 'block' }}>
           {/* Shared family label at top */}
           <div className="text-center py-10 relative z-10">
             <Reveal>
@@ -1421,6 +1425,7 @@ export default function Home() {
             {/* ── Events branch ── */}
             <Reveal>
               <a href="#planit-events"
+                onClick={(e) => { e.preventDefault(); selectBranch('events'); }}
                 className="group relative flex flex-col p-10 sm:p-14 overflow-hidden border-r border-neutral-800/50 cursor-pointer block"
                 style={{ minHeight: '480px', background: 'rgba(15,15,20,0.8)' }}>
                 <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-700"
@@ -1478,6 +1483,7 @@ export default function Home() {
             {/* ── Venue branch ── */}
             <Reveal delay={100}>
               <a href="#planit-venue"
+                onClick={(e) => { e.preventDefault(); selectBranch('venue'); }}
                 className="group relative flex flex-col p-10 sm:p-14 overflow-hidden cursor-pointer block"
                 style={{ minHeight: '480px', background: 'rgba(12,8,4,0.9)' }}>
                 <div className="absolute inset-0 opacity-40 group-hover:opacity-80 transition-opacity duration-700"
@@ -1540,7 +1546,7 @@ export default function Home() {
         {/* ═══════════════════════════════════════════════════════════
             PLANIT EVENTS — its own "page" section
         ═══════════════════════════════════════════════════════════ */}
-        <section id="planit-events" className="relative overflow-hidden" style={{ background: '#08080f' }}>
+        <section id="planit-events" className="relative overflow-hidden" style={{ background: '#08080f', display: selectedBranch === 'events' ? 'block' : 'none' }}>
           {/* Page-break top border with glow */}
           <div style={{ height: '2px', background: 'linear-gradient(90deg, transparent, rgba(148,163,184,0.12) 20%, rgba(255,255,255,0.25) 50%, rgba(148,163,184,0.12) 80%, transparent)' }} />
           {/* Background texture */}
@@ -1720,7 +1726,7 @@ export default function Home() {
         {/* ═══════════════════════════════════════════════════════════
             BRANCH TRANSITION — visual page turn
         ═══════════════════════════════════════════════════════════ */}
-        <div className="relative py-12 flex items-center justify-center overflow-hidden" style={{ background: '#06060a' }}>
+        <div className="relative py-12 flex items-center justify-center overflow-hidden" style={{ background: '#06060a', display: selectedBranch ? 'none' : 'flex' }}>
           <div className="absolute inset-0" style={{ backgroundImage: 'radial-gradient(circle at 50% 50%, rgba(249,115,22,0.04) 0%, transparent 60%)' }} />
           <Reveal>
             <div className="relative flex items-center gap-5 text-center">
@@ -1742,7 +1748,7 @@ export default function Home() {
         {/* ═══════════════════════════════════════════════════════════
             PLANIT VENUE — its own "page" section
         ═══════════════════════════════════════════════════════════ */}
-        <section id="planit-venue" className="relative overflow-hidden" style={{ background: '#0a0704' }}>
+        <section id="planit-venue" className="relative overflow-hidden" style={{ background: '#0a0704', display: selectedBranch === 'venue' ? 'block' : 'none' }}>
           {/* Page-break top border with orange glow */}
           <div style={{ height: '2px', background: 'linear-gradient(90deg, transparent, rgba(249,115,22,0.15) 20%, rgba(249,115,22,0.5) 50%, rgba(249,115,22,0.15) 80%, transparent)' }} />
           {/* Background */}
@@ -1890,7 +1896,7 @@ export default function Home() {
         </section>
 
         {/* TESTIMONIALS */}
-        <section className="py-32 border-t border-neutral-800/40">
+        <section className="py-32 border-t border-neutral-800/40" style={{ display: selectedBranch ? 'block' : 'none' }}>
           <div className="max-w-screen-xl mx-auto px-4 sm:px-8">
             <SectionHeader eyebrow="Testimonials" title="Trusted by event planners" subtitle="See how teams are using PlanIt to execute flawless events" />
             <div className="grid md:grid-cols-3 gap-6">
@@ -1902,7 +1908,7 @@ export default function Home() {
         </section>
 
         {/* DISCOVER + STATUS CARDS */}
-        <section className="py-28 border-t border-neutral-800/40">
+        <section className="py-28 border-t border-neutral-800/40" style={{ display: selectedBranch ? 'block' : 'none' }}>
           <div className="max-w-screen-xl mx-auto px-4 sm:px-8">
             <Reveal className="text-center mb-12">
               <p className="text-xs font-semibold text-neutral-500 uppercase tracking-widest mb-3">Explore more</p>
@@ -1958,7 +1964,7 @@ export default function Home() {
         </section>
 
         {/* CREATE EVENT */}
-        <section id="create" className="py-28 border-t border-neutral-800/40">
+        <section id="create" className="py-28 border-t border-neutral-800/40" style={{ display: selectedBranch ? 'block' : 'none' }}>
           <div className="max-w-8xl mx-auto px-4 sm:px-6">
             <div className="grid lg:grid-cols-2 gap-10 lg:gap-20 items-start">
 
