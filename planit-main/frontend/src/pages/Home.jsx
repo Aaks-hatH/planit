@@ -946,6 +946,24 @@ export default function Home() {
   const [showPassword, setShowPassword] = useState(false);
   const [showAccountPassword, setShowAccountPassword] = useState(false);
   const [fieldErrors, setFieldErrors] = useState({});
+  const [activeBranch, setActiveBranch] = useState(null);
+
+  useEffect(() => {
+    const eventsEl = document.getElementById('planit-events');
+    const venueEl  = document.getElementById('planit-venue');
+    if (!eventsEl || !venueEl) return;
+    const obs = new IntersectionObserver(
+      (entries) => {
+        entries.forEach(e => {
+          if (e.isIntersecting) setActiveBranch(e.target.id === 'planit-venue' ? 'venue' : 'events');
+        });
+      },
+      { threshold: 0.12 }
+    );
+    obs.observe(eventsEl);
+    obs.observe(venueEl);
+    return () => obs.disconnect();
+  }, []);
 
   const handleTitleChange = (e) => {
     const title = e.target.value;
@@ -1184,33 +1202,52 @@ export default function Home() {
 
       {/* Nav */}
       <header
-        className="sticky top-0 z-50 border-b border-neutral-800/60"
-        style={{ background: 'rgba(6,6,12,0.96)' }}
+        className="sticky top-0 z-50 border-b transition-colors duration-500"
+        style={activeBranch === 'venue'
+          ? { background: 'rgba(10,6,3,0.97)', borderColor: 'rgba(249,115,22,0.20)', backdropFilter: 'blur(24px)' }
+          : { background: 'rgba(6,6,12,0.96)', borderColor: 'rgba(38,38,38,0.6)',    backdropFilter: 'blur(24px)' }
+        }
       >
         <div className="max-w-screen-xl mx-auto px-4 sm:px-8 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="relative">
-              <div className="w-9 h-9 rounded-2xl bg-neutral-800 border border-neutral-700 flex items-center justify-center">
-                <Calendar className="w-5 h-5 text-neutral-300" />
+            {/* ── Events brand: visible outside Venue section ── */}
+            <div style={{ display: activeBranch === 'venue' ? 'none' : 'flex' }} className="items-center gap-3 transition-opacity duration-300">
+              <div className="relative">
+                <div className="w-9 h-9 rounded-2xl bg-neutral-800 border border-neutral-700 flex items-center justify-center">
+                  <Calendar className="w-5 h-5 text-neutral-300" />
+                </div>
+                <div className="absolute -top-1 -right-1 w-3 h-3 bg-emerald-500 rounded-full border-2 border-[#06060c] animate-pulse" />
               </div>
-              <div className="absolute -top-1 -right-1 w-3 h-3 bg-emerald-500 rounded-full border-2 border-[#06060c] animate-pulse" />
+              <div className="flex items-center gap-2">
+                <span className="text-xl font-bold text-white">PlanIt</span>
+                <span className="hidden sm:block px-2 py-0.5 rounded-md text-[10px] font-bold bg-neutral-800 border border-neutral-700 text-neutral-400 uppercase tracking-wider">Events</span>
+              </div>
             </div>
-            <div className="flex items-center gap-2">
-              <span className="text-xl font-bold text-white">PlanIt</span>
-              {/* Product family pills */}
-              <div className="hidden sm:flex items-center gap-1 ml-1">
-                <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-neutral-800 border border-neutral-700 text-neutral-400 uppercase tracking-wider">Events</span>
-                <span className="text-neutral-700 text-xs">·</span>
-                <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-orange-500/10 border border-orange-500/25 text-orange-400 uppercase tracking-wider flex items-center gap-1">
-                  <UtensilsCrossed className="w-2.5 h-2.5" />Venue
-                </span>
+            {/* ── Venue brand: visible only in Venue section ── */}
+            <div style={{ display: activeBranch === 'venue' ? 'flex' : 'none' }} className="items-center gap-3 transition-opacity duration-300">
+              <div className="w-9 h-9 rounded-2xl bg-orange-500/15 border border-orange-500/30 flex items-center justify-center">
+                <UtensilsCrossed className="w-5 h-5 text-orange-400" />
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-xl font-bold text-white">PlanIt</span>
+                <span className="hidden sm:block px-2 py-0.5 rounded-md text-[10px] font-bold bg-orange-500/10 border border-orange-500/25 text-orange-400 uppercase tracking-wider">Venue</span>
               </div>
             </div>
           </div>
           <nav className="flex items-center gap-1">
-            <a href="#planit-venue" className="hidden md:flex items-center gap-1.5 px-3 py-2 text-sm text-orange-400/80 hover:text-orange-300 hover:bg-orange-500/8 rounded-xl transition-all duration-200">
+            {/* ── When NOT in Venue section: show Venue link ── */}
+            <a href="#planit-venue"
+              style={{ display: activeBranch === 'venue' ? 'none' : undefined }}
+              className="hidden md:flex items-center gap-1.5 px-3 py-2 text-sm text-orange-400/80 hover:text-orange-300 hover:bg-orange-500/8 rounded-xl transition-all duration-200">
               <UtensilsCrossed className="w-3.5 h-3.5" />
               PlanIt Venue
+            </a>
+            {/* ── When IN Venue section: show Events link ── */}
+            <a href="#planit-events"
+              style={{ display: activeBranch === 'venue' ? 'flex' : 'none' }}
+              className="items-center gap-1.5 px-3 py-2 text-sm text-neutral-300 hover:text-white hover:bg-neutral-800/50 rounded-xl transition-all duration-200">
+              <Calendar className="w-3.5 h-3.5" />
+              PlanIt Events
             </a>
             <a href="/discover" className="hidden md:flex items-center gap-1.5 px-3 py-2 text-sm text-neutral-400 hover:text-neutral-200 hover:bg-neutral-800/50 rounded-xl transition-all duration-200">
               <Zap className="w-3.5 h-3.5" />
@@ -1423,7 +1460,7 @@ export default function Home() {
                       <span className="text-[9px] text-neutral-500 font-mono">team-chat</span>
                     </div>
                     <div className="p-2.5 space-y-2">
-                      {[['Alex','Venue confirmed!','#64748b'],['Sam','Floor plan attached','#94a3b8'],['You','All set 👍','#e2e8f0']].map(([n,m,c]) => (
+                      {[['Alex','Venue confirmed!','#64748b'],['Sam','Floor plan attached','#94a3b8'],['You','All set','#e2e8f0']].map(([n,m,c]) => (
                         <div key={n} className="flex items-start gap-1.5">
                           <div className="w-3.5 h-3.5 rounded-full bg-neutral-700 flex-shrink-0 mt-0.5" />
                           <div>
@@ -1570,9 +1607,9 @@ export default function Home() {
                   <div className="grid grid-cols-5 divide-x divide-neutral-800/60" style={{ minHeight: 320 }}>
                     {/* Sidebar */}
                     <div className="col-span-2 p-4 space-y-1">
-                      {[['💬','Chat','active'],['✓','Tasks',''],['👥','Guests',''],['📊','Polls',''],['💰','Budget','']].map(([icon,label,active]) => (
-                        <div key={label} className={`flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-xs font-semibold transition-colors ${active ? 'bg-white/6 text-white' : 'text-neutral-600 hover:text-neutral-400'}`}>
-                          <span className="text-[11px]">{icon}</span>{label}
+                      {[['Chat','active'],['Tasks',''],['Guests',''],['Polls',''],['Budget','']].map(([label,active]) => (
+                        <div key={label} className={`flex items-center gap-2 px-2.5 py-2 rounded-lg text-xs font-semibold transition-colors ${active ? 'bg-white/6 text-white' : 'text-neutral-600 hover:text-neutral-400'}`}>
+                          <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: active ? 'rgba(255,255,255,0.5)' : '#404040' }} />{label}
                         </div>
                       ))}
                     </div>
@@ -1588,7 +1625,7 @@ export default function Home() {
                           </div>
                           <div>
                             <div className="text-[9px] font-bold text-violet-400 mb-0.5">Alex</div>
-                            <div className="text-[10px] text-neutral-400 bg-neutral-800/60 px-2 py-1.5 rounded-lg rounded-tl-none">Venue deposit confirmed ✓</div>
+                            <div className="text-[10px] text-neutral-400 bg-neutral-800/60 px-2 py-1.5 rounded-lg rounded-tl-none">Venue deposit confirmed</div>
                           </div>
                         </div>
                         <div className="msg-2 flex items-start gap-2">
