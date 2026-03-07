@@ -842,16 +842,17 @@ router.get('/public/wait/:subdomain/info', availabilityLimiter, async (req, res,
   try {
     const event = await findWaitEvent(
       req.params.subdomain,
-      'isTableServiceMode tableServiceSettings reservationPageSettings'
+      'title isTableServiceMode tableServiceSettings reservationPageSettings'
     );
     if (!event || !event.isTableServiceMode) return res.status(404).json({ error: 'Not found' });
     const tss = event.tableServiceSettings  || {};
     const rps = event.reservationPageSettings || {};
     res.json({
-      name:             tss.restaurantName || '',
+      name:             tss.restaurantName || event.title || '',
       logoUrl:          rps.logoUrl || '',
       accentColor:      rps.accentColor || '#f97316',
       tagline:          rps.headerTagline || '',
+      waitBoardTitle:   rps.waitBoardTitle || '',
       waitBoardMessage: rps.waitBoardMessage || '',
       showPoweredBy:    rps.showPoweredBy !== false,
       walkInOnlyMode:   rps.walkInOnlyMode || false,
@@ -865,7 +866,7 @@ router.get('/public/wait/:subdomain/live', availabilityLimiter, async (req, res,
   try {
     const event = await findWaitEvent(
       req.params.subdomain,
-      'isTableServiceMode tableServiceSettings reservationPageSettings seatingMap tableStates tableServiceWaitlist'
+      'title isTableServiceMode tableServiceSettings reservationPageSettings seatingMap tableStates tableServiceWaitlist'
     );
     if (!event || !event.isTableServiceMode) return res.status(404).json({ error: 'Not found' });
 
@@ -886,15 +887,27 @@ router.get('/public/wait/:subdomain/live', availabilityLimiter, async (req, res,
     };
 
     // Is the venue currently open?
+    // Accept optional ?tz= (IANA timezone) from the client so the check uses the
+    // restaurant's local wall-clock time rather than the server's UTC clock.
     let isOpen = true;
     if (tss.operatingHoursOpen && tss.operatingHoursClose) {
-      const now  = new Date();
-      const [oh, om] = tss.operatingHoursOpen.split(':').map(Number);
-      const [ch, cm] = tss.operatingHoursClose.split(':').map(Number);
-      const nowMin   = now.getHours() * 60 + now.getMinutes();
-      const openMin  = oh * 60 + om;
-      const closeMin = ch * 60 + cm;
-      isOpen = nowMin >= openMin && nowMin < closeMin;
+      try {
+        const tz = req.query.tz || 'UTC';
+        const now = new Date();
+        const localTimeStr = now.toLocaleTimeString('en-GB', { timeZone: tz, hour: '2-digit', minute: '2-digit', hour12: false });
+        const [lh, lm]  = localTimeStr.split(':').map(Number);
+        const nowMin    = lh * 60 + lm;
+        const [oh, om]  = tss.operatingHoursOpen.split(':').map(Number);
+        const [ch, cm]  = tss.operatingHoursClose.split(':').map(Number);
+        const openMin   = oh * 60 + om;
+        const closeMin  = ch * 60 + cm;
+        // Handle overnight spans (e.g. open 22:00, close 02:00)
+        if (closeMin > openMin) {
+          isOpen = nowMin >= openMin && nowMin < closeMin;
+        } else {
+          isOpen = nowMin >= openMin || nowMin < closeMin;
+        }
+      } catch (_) { isOpen = true; }
     }
 
     // Strip phones from public waitlist
@@ -912,11 +925,13 @@ router.get('/public/wait/:subdomain/live', availabilityLimiter, async (req, res,
       waitlist:   publicWaitlist,
       isOpen,
       queueLength: waitlist.length,
-      name:        tss.restaurantName || '',
+      name:        tss.restaurantName || event.title || '',
       logoUrl:     rps.logoUrl || '',
       accentColor: rps.accentColor || '#f97316',
       tagline:     rps.headerTagline || '',
+      waitBoardTitle:   rps.waitBoardTitle || '',
       waitBoardMessage: rps.waitBoardMessage || '',
+      menus:            rps.menus || [],
     });
   } catch (err) { next(err); }
 });
@@ -1212,6 +1227,8 @@ router.get('/public/reserve/:subdomain', availabilityLimiter, async (req, res, n
       cancellationPolicy:    rps.cancellationPolicy || '',
       cancelCutoffHours:     rps.cancelCutoffHours || 2,
       faqItems:              rps.faqItems || [],
+      menus:                 rps.menus || [],
+      walkInOnlyMode:        rps.walkInOnlyMode || false,
       termsUrl:              rps.termsUrl || '',
       privacyUrl:            rps.privacyUrl || '',
       showPoweredBy:         rps.showPoweredBy !== false,
@@ -1461,7 +1478,7 @@ router.patch('/:eventId/table-service/reservation-page-settings', verifyOrganize
       'sendReminderEmail','reminderHoursBefore','sendCancellationEmail',
       'notifyOrganizerOnBooking','notifyOrganizerOnCancel','notifyOrganizerEmail',
       'cancellationPolicy','depositRequired','depositAmount','depositNote',
-      'termsUrl','privacyUrl','faqItems',
+      'termsUrl','privacyUrl','faqItems','menus',
       'metaTitle','metaDescription',
       'walkInOnlyMode','publicWaitBoardEnabled','waitBoardMessage','waitBoardTitle',
     ];
@@ -3365,7 +3382,7 @@ router.get('/:eventId/table-service/guest/:tableId', availabilityLimiter, async 
       return res.status(400).json({ error: 'Invalid request.' });
     }
     const event = await Event.findById(eventId)
-      .select('title tableServiceSettings seatingMap tableStates isTableServiceMode')
+      .select('title tableServiceSettings reservationPageSettings seatingMap tableStates isTableServiceMode')
       .lean();
     if (!event || !event.isTableServiceMode) return res.status(404).json({ error: 'Not found.' });
 
@@ -3374,6 +3391,7 @@ router.get('/:eventId/table-service/guest/:tableId', availabilityLimiter, async 
     if (!tableObj) return res.status(404).json({ error: 'Table not found.' });
 
     const state = (event.tableStates || []).find(s => s.tableId === tableId) || { tableId, guestScreen: 'idle' };
+    const rps   = event.reservationPageSettings || {};
 
     // Only return what the guest needs — never expose other tables or party data
     res.json({
@@ -3388,6 +3406,8 @@ router.get('/:eventId/table-service/guest/:tableId', availabilityLimiter, async 
       billPaid:          state.billPaid || false,
       tipPct:            state.tipPct ?? null,
       hasRating:         !!(state.guestRating?.food),
+      accentColor:       rps.accentColor || '#f97316',
+      menus:             rps.menus || [],
     });
   } catch (err) { next(err); }
 });
@@ -3875,6 +3895,8 @@ router.get('/public/reserve/:subdomain', availabilityLimiter, async (req, res, n
       cancellationPolicy:    rps.cancellationPolicy || '',
       cancelCutoffHours:     rps.cancelCutoffHours || 2,
       faqItems:              rps.faqItems || [],
+      menus:                 rps.menus || [],
+      walkInOnlyMode:        rps.walkInOnlyMode || false,
       termsUrl:              rps.termsUrl || '',
       privacyUrl:            rps.privacyUrl || '',
       showPoweredBy:         rps.showPoweredBy !== false,
@@ -4172,7 +4194,7 @@ router.patch('/:eventId/table-service/reservation-page-settings', verifyOrganize
       'sendReminderEmail','reminderHoursBefore','sendCancellationEmail',
       'notifyOrganizerOnBooking','notifyOrganizerOnCancel','notifyOrganizerEmail',
       'cancellationPolicy','depositRequired','depositAmount','depositNote',
-      'termsUrl','privacyUrl','faqItems',
+      'termsUrl','privacyUrl','faqItems','menus',
       'metaTitle','metaDescription',
       'walkInOnlyMode','publicWaitBoardEnabled','waitBoardMessage','waitBoardTitle',
     ];
