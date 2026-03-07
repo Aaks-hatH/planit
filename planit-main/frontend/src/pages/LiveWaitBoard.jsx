@@ -231,6 +231,8 @@ export default function LiveWaitBoard() {
   const queueDepth = waitTimes.queueDepth ?? (liveData?.queueLength ?? 0);
   const tableStats = liveData?.tableStats || {};
   const isOpen = liveData?.isOpen;
+  // When tableStats.total is 0, we have no floor map — treat null wait times as 0 (available)
+  const noFloorPlan = (tableStats.total || 0) === 0;
   const name = venue?.name || liveData?.name || 'Restaurant';
   const logoUrl = venue?.logoUrl || liveData?.logoUrl;
   const tagline = venue?.tagline || liveData?.tagline || '';
@@ -378,7 +380,9 @@ export default function LiveWaitBoard() {
               { label: '3–4 guests', key: 'forFour',  detailKey: 'forFourDetail',  size: 4 },
               { label: '5+ guests',  key: 'forEight', detailKey: 'forEightDetail', size: 8 },
             ].map(({ label, key, detailKey, size }) => {
-              const mins = waitTimes[key];
+              // If there's no floor map and wait is null, show as available (0)
+              const rawMins = waitTimes[key];
+              const mins = (rawMins === null || rawMins === undefined) && noFloorPlan ? 0 : rawMins;
               const detail = waitTimes[detailKey];
               const isAvail = mins === 0;
               const borderColor = isAvail ? `${accent}50` : mins === null ? '#333' : getWaitColor(mins, accent) + '50';
@@ -492,7 +496,11 @@ export default function LiveWaitBoard() {
           {(() => {
             const numericWaits = Object.values(waitTimes)
               .filter(v => typeof v === 'number' && v > 0);
-            const anyOccupied = numericWaits.length > 0;
+            // Only treat as "occupied/full" if we have real table data.
+            // When tableStats.total is 0 (no floor plan yet) or all wait times
+            // are null, we cannot infer fullness from wait-time numbers alone.
+            const hasRealTableData = tableStats.total > 0;
+            const anyOccupied = hasRealTableData && numericWaits.length > 0;
             const shortestWait = anyOccupied ? Math.min(...numericWaits) : 0;
 
             if (waitlist.length > 0) {
