@@ -546,384 +546,737 @@ function CinematicIntro({ onComplete }) {
 }
 
 // ─────────────────────────────────────────────────────────────────
-// SCROLL SHOWCASE — Apple-style product reveal driven by scroll
+// CANVAS DRAW HELPERS
+// ─────────────────────────────────────────────────────────────────
+function rrect(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.lineTo(x + w - r, y);
+  ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+  ctx.lineTo(x + w, y + h - r);
+  ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+  ctx.lineTo(x + r, y + h);
+  ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+  ctx.lineTo(x, y + r);
+  ctx.quadraticCurveTo(x, y, x + r, y);
+  ctx.closePath();
+}
+
+function drawScene0(ctx, W, H, t) {
+  // Scene 0: PlanIt dual-branch overview
+  const cx = W / 2, cy = H / 2;
+
+  // Background glow
+  const grd = ctx.createRadialGradient(cx, cy, 0, cx, cy, W * 0.6);
+  grd.addColorStop(0, 'rgba(100,116,139,0.08)');
+  grd.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = grd; ctx.fillRect(0, 0, W, H);
+
+  // PlanIt logo + wordmark centered above cards
+  const logoY = H * 0.15;
+  ctx.save();
+  rrect(ctx, cx - 28, logoY - 28, 56, 56, 16);
+  ctx.fillStyle = 'rgba(255,255,255,0.05)';
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(255,255,255,0.1)';
+  ctx.lineWidth = 1;
+  ctx.stroke();
+  // Calendar icon
+  ctx.strokeStyle = 'rgba(255,255,255,0.75)';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.rect(cx - 12, logoY - 12, 24, 22); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(cx - 6, logoY - 16); ctx.lineTo(cx - 6, logoY - 8); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(cx + 6, logoY - 16); ctx.lineTo(cx + 6, logoY - 8); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(cx - 12, logoY - 4); ctx.lineTo(cx + 12, logoY - 4); ctx.stroke();
+  ctx.restore();
+
+  ctx.font = `900 ${Math.round(W * 0.045)}px system-ui,-apple-system,sans-serif`;
+  ctx.fillStyle = 'rgba(255,255,255,0.92)';
+  ctx.textAlign = 'center';
+  ctx.letterSpacing = '-1px';
+  ctx.fillText('PlanIt', cx, logoY + 50);
+
+  ctx.font = `500 13px system-ui,-apple-system,sans-serif`;
+  ctx.fillStyle = 'rgba(255,255,255,0.22)';
+  ctx.letterSpacing = '0.3em';
+  ctx.fillText('ONE PLATFORM · TWO BRANCHES', cx, logoY + 72);
+  ctx.letterSpacing = '0px';
+
+  // Card dimensions
+  const cardW = Math.min(220, W * 0.27);
+  const cardH = Math.min(280, H * 0.5);
+  const gap = 22;
+  const cardsY = H * 0.35;
+
+  // Entrance animation: cards slide up from below
+  const slideIn = Math.min(1, t * 2);
+  const ease = 1 - Math.pow(1 - slideIn, 3);
+  const slideOffset = (1 - ease) * 60;
+
+  // ── Events card ──
+  const evX = cx - cardW - gap / 2;
+  ctx.save();
+  ctx.translate(0, slideOffset);
+  ctx.globalAlpha = ease;
+
+  rrect(ctx, evX, cardsY, cardW, cardH, 18);
+  const evGrd = ctx.createLinearGradient(evX, cardsY, evX, cardsY + cardH);
+  evGrd.addColorStop(0, 'rgba(255,255,255,0.06)');
+  evGrd.addColorStop(1, 'rgba(255,255,255,0.02)');
+  ctx.fillStyle = evGrd; ctx.fill();
+  ctx.strokeStyle = 'rgba(255,255,255,0.1)'; ctx.lineWidth = 1; ctx.stroke();
+
+  // Events header
+  ctx.fillStyle = 'rgba(255,255,255,0.9)';
+  ctx.font = `800 17px system-ui,-apple-system,sans-serif`;
+  ctx.textAlign = 'left';
+  ctx.fillText('Events', evX + 18, cardsY + 36);
+  ctx.fillStyle = 'rgba(255,255,255,0.28)';
+  ctx.font = `600 10px system-ui,-apple-system,sans-serif`;
+  ctx.fillText('PLANIT', evX + 18, cardsY + 20);
+
+  // Feature rows
+  const evFeatures = ['Team chat & messaging', 'Task management', 'QR check-in', 'Budget & expenses', 'File sharing', 'RSVP system'];
+  evFeatures.forEach((f, i) => {
+    const fy = cardsY + 64 + i * 30;
+    if (fy + 20 > cardsY + cardH - 30) return;
+    // Green check circle
+    ctx.beginPath();
+    ctx.arc(evX + 26, fy - 4, 8, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(34,197,94,0.12)'; ctx.fill();
+    ctx.strokeStyle = 'rgba(34,197,94,0.35)'; ctx.lineWidth = 1; ctx.stroke();
+    ctx.strokeStyle = '#22c55e'; ctx.lineWidth = 1.4;
+    ctx.beginPath();
+    ctx.moveTo(evX + 22, fy - 4); ctx.lineTo(evX + 25, fy - 1); ctx.lineTo(evX + 30, fy - 7);
+    ctx.stroke();
+    ctx.fillStyle = 'rgba(255,255,255,0.5)';
+    ctx.font = `500 12px system-ui,-apple-system,sans-serif`;
+    ctx.fillText(f, evX + 42, fy);
+  });
+
+  // CTA strip
+  rrect(ctx, evX + 12, cardsY + cardH - 44, cardW - 24, 32, 10);
+  ctx.fillStyle = 'rgba(255,255,255,0.07)'; ctx.fill();
+  ctx.strokeStyle = 'rgba(255,255,255,0.1)'; ctx.lineWidth = 1; ctx.stroke();
+  ctx.fillStyle = 'rgba(255,255,255,0.6)';
+  ctx.font = `700 11px system-ui,-apple-system,sans-serif`;
+  ctx.textAlign = 'center';
+  ctx.fillText('Free to start  →', evX + cardW / 2, cardsY + cardH - 24);
+  ctx.restore();
+
+  // ── Venue card ──
+  const veX = cx + gap / 2;
+  ctx.save();
+  ctx.translate(0, slideOffset * 1.15);
+  ctx.globalAlpha = ease;
+
+  rrect(ctx, veX, cardsY, cardW, cardH, 18);
+  const veGrd = ctx.createLinearGradient(veX, cardsY, veX, cardsY + cardH);
+  veGrd.addColorStop(0, 'rgba(249,115,22,0.1)');
+  veGrd.addColorStop(1, 'rgba(249,115,22,0.03)');
+  ctx.fillStyle = veGrd; ctx.fill();
+  ctx.strokeStyle = 'rgba(249,115,22,0.22)'; ctx.lineWidth = 1; ctx.stroke();
+
+  ctx.fillStyle = '#f97316';
+  ctx.font = `800 17px system-ui,-apple-system,sans-serif`;
+  ctx.textAlign = 'left';
+  ctx.fillText('Venue', veX + 18, cardsY + 36);
+  ctx.fillStyle = 'rgba(249,115,22,0.45)';
+  ctx.font = `600 10px system-ui,-apple-system,sans-serif`;
+  ctx.fillText('PLANIT', veX + 18, cardsY + 20);
+
+  const veFeatures = ['Visual floor editor', 'Walk-in waitlist', 'QR reservations', 'Live sync', 'Data never expires', 'Public wait board'];
+  veFeatures.forEach((f, i) => {
+    const fy = cardsY + 64 + i * 30;
+    if (fy + 20 > cardsY + cardH - 30) return;
+    ctx.beginPath();
+    ctx.arc(veX + 26, fy - 4, 8, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(249,115,22,0.1)'; ctx.fill();
+    ctx.strokeStyle = 'rgba(249,115,22,0.3)'; ctx.lineWidth = 1; ctx.stroke();
+    ctx.strokeStyle = '#f97316'; ctx.lineWidth = 1.4;
+    ctx.beginPath();
+    ctx.moveTo(veX + 22, fy - 4); ctx.lineTo(veX + 25, fy - 1); ctx.lineTo(veX + 30, fy - 7);
+    ctx.stroke();
+    ctx.fillStyle = 'rgba(249,115,22,0.6)';
+    ctx.font = `500 12px system-ui,-apple-system,sans-serif`;
+    ctx.fillText(f, veX + 42, fy);
+  });
+
+  rrect(ctx, veX + 12, cardsY + cardH - 44, cardW - 24, 32, 10);
+  ctx.fillStyle = 'rgba(249,115,22,0.08)'; ctx.fill();
+  ctx.strokeStyle = 'rgba(249,115,22,0.22)'; ctx.lineWidth = 1; ctx.stroke();
+  ctx.fillStyle = 'rgba(249,115,22,0.8)';
+  ctx.font = `700 11px system-ui,-apple-system,sans-serif`;
+  ctx.textAlign = 'center';
+  ctx.fillText('Free to start  →', veX + cardW / 2, cardsY + cardH - 24);
+  ctx.restore();
+}
+
+function drawScene1(ctx, W, H, t) {
+  // Scene 1: Real-time team chat workspace
+  const appW = Math.min(720, W * 0.88);
+  const appH = Math.min(420, H * 0.68);
+  const ax = (W - appW) / 2;
+  const ay = (H - appH) / 2;
+
+  // Window shadow
+  ctx.save();
+  ctx.shadowColor = 'rgba(0,0,0,0.7)';
+  ctx.shadowBlur = 60;
+  rrect(ctx, ax, ay, appW, appH, 14);
+  ctx.fillStyle = '#0d0d16'; ctx.fill();
+  ctx.restore();
+
+  // Window border
+  rrect(ctx, ax, ay, appW, appH, 14);
+  ctx.strokeStyle = 'rgba(255,255,255,0.07)'; ctx.lineWidth = 1; ctx.stroke();
+  ctx.save(); ctx.clip();
+
+  // Chrome bar
+  ctx.fillStyle = '#09090f';
+  ctx.fillRect(ax, ay, appW, 38);
+  ctx.strokeStyle = 'rgba(255,255,255,0.05)'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(ax, ay + 38); ctx.lineTo(ax + appW, ay + 38); ctx.stroke();
+  // Traffic lights
+  [['#ff5f57', 12], ['#febc2e', 26], ['#28c840', 40]].forEach(([c, ox]) => {
+    ctx.beginPath(); ctx.arc(ax + ox, ay + 19, 5, 0, Math.PI * 2);
+    ctx.fillStyle = c + 'cc'; ctx.fill();
+  });
+  // URL bar
+  rrect(ctx, ax + appW / 2 - 110, ay + 10, 220, 18, 5);
+  ctx.fillStyle = 'rgba(255,255,255,0.04)'; ctx.fill();
+  ctx.strokeStyle = 'rgba(255,255,255,0.05)'; ctx.lineWidth = 1; ctx.stroke();
+  ctx.beginPath(); ctx.arc(ax + appW / 2 - 104, ay + 19, 3, 0, Math.PI * 2);
+  ctx.fillStyle = '#22c55e'; ctx.fill();
+  ctx.fillStyle = 'rgba(255,255,255,0.28)';
+  ctx.font = '500 10px system-ui,-apple-system,sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('Summer Gala 2026 · PlanIt Events', ax + appW / 2 + 6, ay + 23);
+
+  // Sidebar
+  const sbW = Math.round(appW * 0.26);
+  ctx.fillStyle = 'rgba(0,0,0,0.3)';
+  ctx.fillRect(ax, ay + 38, sbW, appH - 38);
+  ctx.strokeStyle = 'rgba(255,255,255,0.04)'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(ax + sbW, ay + 38); ctx.lineTo(ax + sbW, ay + appH); ctx.stroke();
+
+  ctx.fillStyle = 'rgba(255,255,255,0.16)';
+  ctx.font = '700 9px system-ui,-apple-system,sans-serif';
+  ctx.textAlign = 'left';
+  ctx.fillText('CHANNELS', ax + 14, ay + 62);
+
+  const channels = [['# planning-team', true], ['# vendors', false], ['# logistics', false], ['# day-of', false]];
+  channels.forEach(([name, active], i) => {
+    const chy = ay + 78 + i * 28;
+    if (active) {
+      rrect(ctx, ax + 8, chy - 12, sbW - 16, 22, 6);
+      ctx.fillStyle = 'rgba(255,255,255,0.09)'; ctx.fill();
+    }
+    ctx.fillStyle = active ? 'rgba(255,255,255,0.88)' : 'rgba(255,255,255,0.3)';
+    ctx.font = `${active ? '600' : '400'} 12px system-ui,-apple-system,sans-serif`;
+    ctx.fillText(name, ax + 14, chy + 4);
+  });
+
+  ctx.fillStyle = 'rgba(255,255,255,0.16)';
+  ctx.font = '700 9px system-ui,-apple-system,sans-serif';
+  ctx.fillText('TOOLS', ax + 14, ay + 200);
+  [['Tasks', '14'], ['Polls', '2'], ['Files', '8'], ['Budget', '']].forEach(([name, badge], i) => {
+    const ty = ay + 216 + i * 26;
+    ctx.fillStyle = 'rgba(255,255,255,0.3)';
+    ctx.font = '400 12px system-ui,-apple-system,sans-serif';
+    ctx.fillText(name, ax + 14, ty);
+    if (badge) {
+      rrect(ctx, ax + sbW - 28, ty - 11, 22, 14, 4);
+      ctx.fillStyle = 'rgba(255,255,255,0.1)'; ctx.fill();
+      ctx.fillStyle = 'rgba(255,255,255,0.45)';
+      ctx.font = '600 10px system-ui,-apple-system,sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(badge, ax + sbW - 17, ty);
+      ctx.textAlign = 'left';
+    }
+  });
+
+  // Chat panel
+  const cpX = ax + sbW;
+  const cpW = appW - sbW;
+  // Header
+  ctx.fillStyle = 'rgba(255,255,255,0,0)';
+  ctx.strokeStyle = 'rgba(255,255,255,0.04)'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(cpX, ay + 68); ctx.lineTo(cpX + cpW, ay + 68); ctx.stroke();
+  ctx.fillStyle = 'rgba(255,255,255,0.65)';
+  ctx.font = '700 12px system-ui,-apple-system,sans-serif';
+  ctx.textAlign = 'left';
+  ctx.fillText('# planning-team', cpX + 14, ay + 58);
+  ctx.fillStyle = 'rgba(255,255,255,0.18)';
+  ctx.font = '400 10px system-ui,-apple-system,sans-serif';
+  ctx.textAlign = 'right';
+  ctx.fillText('12 members', cpX + cpW - 14, ay + 58);
+  ctx.textAlign = 'left';
+
+  // Messages (animate in based on t)
+  const msgs = [
+    { av: 'A', name: 'Alex', col: '#818cf8', msg: 'Venue deposit confirmed! Locked in July 15th 🎉', time: '2:14 PM' },
+    { av: 'S', name: 'Sam', col: '#38bdf8', msg: 'Floor plan uploaded to Files — 3 zones mapped out', time: '2:16 PM' },
+    { av: 'M', name: 'Maya', col: '#f472b6', msg: 'Added 12 tasks to catering checklist. We\'re on track', time: '2:19 PM' },
+  ];
+  msgs.forEach((m, i) => {
+    const msgT = Math.max(0, Math.min(1, (t - i * 0.22) / 0.25));
+    if (msgT <= 0) return;
+    const my = ay + 86 + i * 80;
+    ctx.globalAlpha = msgT;
+    ctx.save();
+    ctx.translate(0, (1 - msgT) * 14);
+    // Avatar
+    ctx.beginPath(); ctx.arc(cpX + 26, my + 14, 12, 0, Math.PI * 2);
+    ctx.fillStyle = m.col + '28'; ctx.fill();
+    ctx.fillStyle = m.col;
+    ctx.font = '700 11px system-ui,-apple-system,sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(m.av, cpX + 26, my + 18);
+    ctx.textAlign = 'left';
+    // Name + time
+    ctx.fillStyle = m.col;
+    ctx.font = '700 12px system-ui,-apple-system,sans-serif';
+    ctx.fillText(m.name, cpX + 46, my + 12);
+    ctx.fillStyle = 'rgba(255,255,255,0.18)';
+    ctx.font = '400 10px system-ui,-apple-system,sans-serif';
+    ctx.fillText(m.time, cpX + 46 + ctx.measureText(m.name).width + 8, my + 12);
+    // Bubble
+    const bubW = Math.min(cpW - 80, ctx.measureText(m.msg).width + 28);
+    rrect(ctx, cpX + 46, my + 20, bubW, 28, 4);
+    ctx.fillStyle = 'rgba(255,255,255,0.05)'; ctx.fill();
+    ctx.fillStyle = 'rgba(255,255,255,0.6)';
+    ctx.font = '400 12px system-ui,-apple-system,sans-serif';
+    ctx.fillText(m.msg, cpX + 60, my + 38);
+    ctx.restore();
+    ctx.globalAlpha = 1;
+  });
+
+  // Typing dots
+  if (t > 0.7) {
+    const dotAlpha = Math.min(1, (t - 0.7) / 0.2);
+    ctx.globalAlpha = dotAlpha;
+    const dtime = Date.now() / 400;
+    ctx.beginPath(); ctx.arc(cpX + 26, ay + 326, 12, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(148,163,184,0.18)'; ctx.fill();
+    ctx.fillStyle = 'rgba(148,163,184,0.7)'; ctx.font = '700 11px system-ui,-apple-system,sans-serif'; ctx.textAlign = 'center';
+    ctx.fillText('J', cpX + 26, ay + 330);
+    [0, 1, 2].forEach(di => {
+      const bounce = Math.sin(dtime + di * 0.7) * 0.5 + 0.5;
+      ctx.beginPath(); ctx.arc(cpX + 52 + di * 10, ay + 328 - bounce * 4, 3, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(255,255,255,${0.25 + bounce * 0.35})`; ctx.fill();
+    });
+    ctx.textAlign = 'left';
+    ctx.globalAlpha = 1;
+  }
+  ctx.restore();
+}
+
+function drawScene2(ctx, W, H, t) {
+  // Scene 2: Enterprise QR Check-in
+  const appW = Math.min(720, W * 0.88);
+  const appH = Math.min(420, H * 0.68);
+  const ax = (W - appW) / 2;
+  const ay = (H - appH) / 2;
+
+  ctx.save();
+  ctx.shadowColor = 'rgba(0,0,50,0.8)'; ctx.shadowBlur = 60;
+  rrect(ctx, ax, ay, appW, appH, 14);
+  ctx.fillStyle = '#090b12'; ctx.fill();
+  ctx.restore();
+  rrect(ctx, ax, ay, appW, appH, 14);
+  ctx.strokeStyle = 'rgba(96,165,250,0.12)'; ctx.lineWidth = 1; ctx.stroke();
+  ctx.save(); ctx.clip();
+
+  // Header
+  ctx.fillStyle = '#070810';
+  ctx.fillRect(ax, ay, appW, 46);
+  ctx.strokeStyle = 'rgba(96,165,250,0.07)'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(ax, ay + 46); ctx.lineTo(ax + appW, ay + 46); ctx.stroke();
+
+  ctx.beginPath(); ctx.arc(ax + 16, ay + 23, 4, 0, Math.PI * 2);
+  ctx.fillStyle = '#22c55e'; ctx.fill();
+  ctx.shadowColor = '#22c55e'; ctx.shadowBlur = 6;
+  ctx.fill(); ctx.shadowBlur = 0;
+
+  ctx.fillStyle = 'rgba(255,255,255,0.7)';
+  ctx.font = '700 12px system-ui,-apple-system,sans-serif';
+  ctx.textAlign = 'left';
+  ctx.fillText('Annual Tech Summit 2026 · Check-in', ax + 28, ay + 27);
+  ctx.fillStyle = 'rgba(96,165,250,0.5)';
+  ctx.font = '700 9px system-ui,-apple-system,sans-serif';
+  ctx.textAlign = 'right';
+  ctx.fillText('ENTERPRISE MODE', ax + appW - 14, ay + 27);
+  ctx.textAlign = 'left';
+
+  // Stats bar
+  const stats = [['24', 'Arrived', '#22c55e'], ['8', 'Pending', '#94a3b8'], ['2', 'Blocked', '#ef4444']];
+  stats.forEach(([n, l, c], i) => {
+    const sx = ax + appW - 140 + i * 48;
+    const sy = ay + 8;
+    rrect(ctx, sx - 4, sy, 44, 30, 6);
+    ctx.fillStyle = c + '0e'; ctx.fill();
+    ctx.strokeStyle = c + '22'; ctx.lineWidth = 1; ctx.stroke();
+    ctx.fillStyle = c; ctx.font = '900 15px system-ui,-apple-system,sans-serif'; ctx.textAlign = 'center';
+    ctx.fillText(n, sx + 18, sy + 16);
+    ctx.fillStyle = 'rgba(255,255,255,0.28)'; ctx.font = '400 8px system-ui,-apple-system,sans-serif';
+    ctx.fillText(l, sx + 18, sy + 26);
+    ctx.textAlign = 'left';
+  });
+
+  // Guest rows
+  const guests = [
+    { name: 'Sarah Johnson', role: 'VIP', roleC: '#fbbf24', status: 'in', info: 'Checked in · Table 12' },
+    { name: 'Marcus Rivera', role: 'Speaker', roleC: '#a78bfa', status: 'scan', info: 'Scanning…' },
+    { name: 'Priya Sharma', role: 'Attendee', roleC: '#60a5fa', status: 'wait', info: 'Table 8 · Awaiting' },
+    { name: 'Dev Patel', role: 'Attendee', roleC: '#60a5fa', status: 'blocked', info: 'Duplicate identity detected' },
+    { name: 'Amara Okafor', role: 'Attendee', roleC: '#60a5fa', status: 'flagged', info: 'Low trust score: 42/100' },
+  ];
+
+  guests.forEach((g, i) => {
+    const rowT = Math.max(0, Math.min(1, (t - i * 0.15) / 0.2));
+    if (rowT <= 0) return;
+    const ry = ay + 58 + i * 66;
+    ctx.globalAlpha = rowT;
+    ctx.save(); ctx.translate(0, (1 - rowT) * 16);
+
+    const sc = { in: '#22c55e', scan: '#60a5fa', wait: '#ffffff', blocked: '#ef4444', flagged: '#f59e0b' }[g.status];
+    rrect(ctx, ax + 12, ry, appW - 24, 54, 11);
+    ctx.fillStyle = sc + (g.status === 'blocked' ? '09' : g.status === 'flagged' ? '07' : g.status === 'in' ? '0b' : '04');
+    ctx.fill();
+    ctx.strokeStyle = sc + (g.status === 'in' ? '30' : '1a'); ctx.lineWidth = 1; ctx.stroke();
+
+    // Left avatar box
+    rrect(ctx, ax + 22, ry + 10, 34, 34, 9);
+    ctx.fillStyle = g.status === 'in' ? '#22c55e' : sc + '20'; ctx.fill();
+    ctx.fillStyle = g.status === 'in' ? 'white' : sc;
+    ctx.font = '700 13px system-ui,-apple-system,sans-serif'; ctx.textAlign = 'center';
+    ctx.fillText(g.status === 'in' ? '✓' : g.status === 'blocked' ? '✗' : g.name.slice(0, 2), ax + 39, ry + 31);
+    ctx.textAlign = 'left';
+
+    ctx.fillStyle = 'rgba(255,255,255,0.88)'; ctx.font = '600 13px system-ui,-apple-system,sans-serif';
+    ctx.fillText(g.name, ax + 64, ry + 23);
+    // Role badge
+    const mw = ctx.measureText(g.name).width;
+    rrect(ctx, ax + 64 + mw + 8, ry + 12, ctx.measureText(g.role).width + 12, 14, 3);
+    ctx.fillStyle = g.roleC + '18'; ctx.fill();
+    ctx.fillStyle = g.roleC; ctx.font = '700 9px system-ui,-apple-system,sans-serif';
+    ctx.fillText(g.role, ax + 64 + mw + 14, ry + 22);
+    // Status badge if blocked/flagged
+    if (g.status === 'blocked' || g.status === 'flagged') {
+      const badge = g.status === 'blocked' ? 'BLOCKED' : 'FLAGGED';
+      const bx = ax + 64 + mw + ctx.measureText(g.role).width + 30;
+      rrect(ctx, bx, ry + 12, ctx.measureText(badge).width + 12, 14, 3);
+      ctx.fillStyle = sc + '18'; ctx.fill();
+      ctx.fillStyle = sc; ctx.fillText(badge, bx + 6, ry + 22);
+    }
+    ctx.fillStyle = 'rgba(255,255,255,0.28)'; ctx.font = '400 11px system-ui,-apple-system,sans-serif';
+    ctx.fillText(g.info, ax + 64, ry + 39);
+
+    // Right action button
+    const btnLabel = { in: '✓ In', scan: 'Scanning', wait: 'Scan', blocked: 'Blocked', flagged: 'Review' }[g.status];
+    const btnW = ctx.measureText(btnLabel).width + 24;
+    rrect(ctx, ax + appW - btnW - 22, ry + 17, btnW, 22, 7);
+    ctx.fillStyle = sc + '18'; ctx.fill(); ctx.strokeStyle = sc + '28'; ctx.lineWidth = 1; ctx.stroke();
+    ctx.fillStyle = sc; ctx.font = '700 11px system-ui,-apple-system,sans-serif'; ctx.textAlign = 'center';
+    ctx.fillText(btnLabel, ax + appW - btnW / 2 - 22, ry + 32);
+    ctx.textAlign = 'left';
+    ctx.restore(); ctx.globalAlpha = 1;
+  });
+  ctx.restore();
+}
+
+function drawScene3(ctx, W, H, t) {
+  // Scene 3: Venue floor map
+  const appW = Math.min(720, W * 0.88);
+  const appH = Math.min(420, H * 0.68);
+  const ax = (W - appW) / 2;
+  const ay = (H - appH) / 2;
+
+  ctx.save();
+  ctx.shadowColor = 'rgba(249,115,22,0.15)'; ctx.shadowBlur = 60;
+  rrect(ctx, ax, ay, appW, appH, 14);
+  ctx.fillStyle = '#0d0a05'; ctx.fill();
+  ctx.restore();
+  rrect(ctx, ax, ay, appW, appH, 14);
+  ctx.strokeStyle = 'rgba(249,115,22,0.16)'; ctx.lineWidth = 1; ctx.stroke();
+  ctx.save(); ctx.clip();
+
+  // Header
+  ctx.fillStyle = '#0a0803';
+  ctx.fillRect(ax, ay, appW, 46);
+  ctx.strokeStyle = 'rgba(249,115,22,0.08)'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(ax, ay + 46); ctx.lineTo(ax + appW, ay + 46); ctx.stroke();
+
+  rrect(ctx, ax + 12, ay + 10, 26, 26, 8);
+  ctx.fillStyle = 'rgba(249,115,22,0.15)'; ctx.fill();
+  ctx.strokeStyle = 'rgba(249,115,22,0.25)'; ctx.lineWidth = 1; ctx.stroke();
+  ctx.fillStyle = '#f97316'; ctx.font = '700 12px system-ui,-apple-system,sans-serif';
+  ctx.textAlign = 'center'; ctx.fillText('🍽', ax + 25, ay + 27); ctx.textAlign = 'left';
+
+  ctx.fillStyle = 'rgba(255,255,255,0.8)'; ctx.font = '700 13px system-ui,-apple-system,sans-serif';
+  ctx.fillText('Taverna Roma', ax + 46, ay + 28);
+  ctx.fillStyle = 'rgba(249,115,22,0.5)'; ctx.font = '700 9px system-ui,-apple-system,sans-serif';
+  ctx.fillText('PLANIT VENUE', ax + 46 + ctx.measureText('Taverna Roma').width + 10, ay + 28);
+
+  const statuses = [['#22c55e', '3 Free'], ['#ef4444', '4 Occ'], ['#8b5cf6', '1 Cln'], ['#f59e0b', '1 Rsv']];
+  let sx = ax + appW - 14;
+  statuses.slice().reverse().forEach(([c, l]) => {
+    const w = ctx.measureText(l).width + 16;
+    sx -= w + 6;
+    rrect(ctx, sx, ay + 13, w, 20, 5);
+    ctx.fillStyle = c + '12'; ctx.fill(); ctx.strokeStyle = c + '28'; ctx.lineWidth = 1; ctx.stroke();
+    ctx.fillStyle = c; ctx.font = '700 10px system-ui,-apple-system,sans-serif';
+    ctx.textAlign = 'center'; ctx.fillText(l, sx + w / 2, ay + 27); ctx.textAlign = 'left';
+  });
+
+  // Floor grid
+  const fX = ax + 14, fY = ay + 56, fW = appW - 28, fH = appH - 70;
+  ctx.fillStyle = 'rgba(249,115,22,0.015)'; ctx.fillRect(fX, fY, fW, fH);
+  ctx.strokeStyle = 'rgba(249,115,22,0.05)'; ctx.lineWidth = 0.5;
+  const gs = 26;
+  for (let gx = fX; gx < fX + fW; gx += gs) { ctx.beginPath(); ctx.moveTo(gx, fY); ctx.lineTo(gx, fY + fH); ctx.stroke(); }
+  for (let gy = fY; gy < fY + fH; gy += gs) { ctx.beginPath(); ctx.moveTo(fX, gy); ctx.lineTo(fX + fW, gy); ctx.stroke(); }
+
+  // Zone outline
+  rrect(ctx, fX + 4, fY + 4, fW * 0.32, 60, 7);
+  ctx.strokeStyle = 'rgba(249,115,22,0.08)'; ctx.setLineDash([5, 3]); ctx.lineWidth = 1; ctx.stroke(); ctx.setLineDash([]);
+  ctx.fillStyle = 'rgba(249,115,22,0.18)'; ctx.font = '700 9px system-ui,-apple-system,sans-serif'; ctx.letterSpacing = '2px';
+  ctx.textAlign = 'center'; ctx.fillText('MAIN ROOM', fX + fW * 0.16, fY + 38); ctx.letterSpacing = '0px'; ctx.textAlign = 'left';
+
+  // Tables
+  const tables = [
+    { cx: fX + fW * 0.13, cy: fY + 130, r: 26, st: 'available', lb: 'T1', cap: 4 },
+    { cx: fX + fW * 0.28, cy: fY + 130, r: 26, st: 'occupied',  lb: 'T2', cap: 4, tm: '38m' },
+    { cx: fX + fW * 0.44, cy: fY + 120, r: 30, st: 'occupied',  lb: 'T3', cap: 6, tm: '19m' },
+    { cx: fX + fW * 0.59, cy: fY + 130, r: 26, st: 'cleaning',  lb: 'T4', cap: 4 },
+    { cx: fX + fW * 0.74, cy: fY + 120, r: 30, st: 'available', lb: 'T5', cap: 6 },
+    { cx: fX + fW * 0.89, cy: fY + 130, r: 26, st: 'reserved',  lb: 'T6', cap: 4 },
+  ];
+  const tc = { available: '#22c55e', occupied: '#ef4444', cleaning: '#8b5cf6', reserved: '#f59e0b' };
+  const now = Date.now() / 1000;
+  tables.forEach((tb, i) => {
+    const tableT = Math.max(0, Math.min(1, (t - i * 0.1) / 0.18));
+    ctx.globalAlpha = tableT;
+    const c = tc[tb.st];
+    const pulse = tb.st === 'available' ? Math.sin(now * 1.8 + i) * 0.25 + 0.75 : 1;
+    // Outer ring
+    ctx.beginPath(); ctx.arc(tb.cx, tb.cy, tb.r + 7, 0, Math.PI * 2);
+    ctx.strokeStyle = c; ctx.lineWidth = 1.5; ctx.globalAlpha = tableT * (tb.st === 'available' ? pulse * 0.6 : 0.3); ctx.stroke();
+    ctx.globalAlpha = tableT;
+    // Fill
+    ctx.beginPath(); ctx.arc(tb.cx, tb.cy, tb.r, 0, Math.PI * 2);
+    ctx.fillStyle = c + '28'; ctx.fill();
+    ctx.strokeStyle = c; ctx.lineWidth = 1.5; ctx.stroke();
+    ctx.fillStyle = 'rgba(255,255,255,0.9)'; ctx.font = '800 10px system-ui,-apple-system,sans-serif';
+    ctx.textAlign = 'center'; ctx.fillText(tb.lb, tb.cx, tb.cy - 2);
+    ctx.fillStyle = c; ctx.font = '400 9px system-ui,-apple-system,sans-serif';
+    ctx.fillText(tb.cap + ' seats', tb.cx, tb.cy + 12);
+    if (tb.tm) { ctx.fillStyle = 'rgba(255,255,255,0.65)'; ctx.font = '700 9px system-ui,-apple-system,sans-serif'; ctx.fillText(tb.tm, tb.cx, tb.cy - tb.r - 8); }
+    ctx.textAlign = 'left';
+    ctx.globalAlpha = 1;
+  });
+
+  // Waitlist panel
+  rrect(ctx, fX + 4, fY + fH - 72, fW * 0.3, 64, 8);
+  ctx.fillStyle = 'rgba(245,158,11,0.05)'; ctx.fill();
+  ctx.strokeStyle = 'rgba(245,158,11,0.2)'; ctx.lineWidth = 1; ctx.stroke();
+  ctx.fillStyle = '#f59e0b'; ctx.font = '800 9px system-ui,-apple-system,sans-serif'; ctx.letterSpacing = '1.5px';
+  ctx.fillText('WAITLIST', fX + 12, fY + fH - 54); ctx.letterSpacing = '0px';
+  ctx.fillStyle = '#f59e0b'; ctx.font = '900 12px system-ui,-apple-system,sans-serif';
+  ctx.textAlign = 'right'; ctx.fillText('3', fX + fW * 0.3 - 10, fY + fH - 54); ctx.textAlign = 'left';
+  ctx.fillStyle = 'rgba(255,255,255,0.38)'; ctx.font = '400 10px system-ui,-apple-system,sans-serif';
+  ctx.fillText('Martinez · 4 guests · ~14m', fX + 12, fY + fH - 36);
+  ctx.fillText('Taylor · 2 guests · ~8m', fX + 12, fY + fH - 20);
+  ctx.restore();
+}
+
+function drawScene4(ctx, W, H, t) {
+  // Scene 4: Final CTA
+  const cx = W / 2, cy = H / 2;
+  const ease = 1 - Math.pow(1 - Math.min(1, t * 1.4), 3);
+
+  // Radial ambient
+  const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, W * 0.55);
+  g.addColorStop(0, `rgba(100,116,139,${0.09 * ease})`);
+  g.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+
+  ctx.globalAlpha = ease;
+
+  // Decorative line left
+  ctx.strokeStyle = 'rgba(255,255,255,0.1)'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(cx - 140, cy - 90); ctx.lineTo(cx - 52, cy - 90); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(cx + 52, cy - 90); ctx.lineTo(cx + 140, cy - 90); ctx.stroke();
+
+  // Logo icon
+  rrect(ctx, cx - 26, cy - 108, 52, 52, 15);
+  ctx.fillStyle = 'rgba(255,255,255,0.05)'; ctx.fill();
+  ctx.strokeStyle = 'rgba(255,255,255,0.1)'; ctx.lineWidth = 1; ctx.stroke();
+  ctx.strokeStyle = 'rgba(255,255,255,0.8)'; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.rect(cx - 12, cx - 95, 24, 22); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(cx - 6, cy - 112); ctx.lineTo(cx - 6, cy - 104); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(cx + 6, cy - 112); ctx.lineTo(cx + 6, cy - 104); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(cx - 12, cy - 100); ctx.lineTo(cx + 12, cy - 100); ctx.stroke();
+
+  // Wordmark
+  ctx.fillStyle = 'rgba(255,255,255,0.9)';
+  ctx.font = `900 ${Math.round(W * 0.065)}px system-ui,-apple-system,sans-serif`;
+  ctx.textAlign = 'center'; ctx.letterSpacing = '-2px';
+  ctx.fillText('Plan smart.', cx, cy - 12);
+  ctx.fillText('Execute flawlessly.', cx, cy + 50);
+  ctx.letterSpacing = '0px';
+
+  ctx.fillStyle = 'rgba(255,255,255,0.28)';
+  ctx.font = '400 15px system-ui,-apple-system,sans-serif';
+  ctx.fillText('Events & Venue · One platform, two branches.', cx, cy + 86);
+
+  // CTA buttons
+  const btnY = cy + 118;
+  // Events button
+  rrect(ctx, cx - 150, btnY, 138, 44, 13);
+  ctx.fillStyle = 'white'; ctx.fill();
+  ctx.fillStyle = '#07070e'; ctx.font = '700 13px system-ui,-apple-system,sans-serif';
+  ctx.textAlign = 'center'; ctx.fillText('Explore Events ↓', cx - 81, btnY + 27);
+  // Venue button
+  rrect(ctx, cx + 12, btnY, 138, 44, 13);
+  ctx.fillStyle = 'rgba(249,115,22,0.1)'; ctx.fill();
+  ctx.strokeStyle = 'rgba(249,115,22,0.3)'; ctx.lineWidth = 1; ctx.stroke();
+  ctx.fillStyle = '#f97316'; ctx.font = '700 13px system-ui,-apple-system,sans-serif';
+  ctx.fillText('Explore Venue ↓', cx + 81, btnY + 27);
+  ctx.textAlign = 'left';
+  ctx.globalAlpha = 1;
+}
+
+// ─────────────────────────────────────────────────────────────────
+// SCROLL SHOWCASE — Apple-style canvas product reveal
 // ─────────────────────────────────────────────────────────────────
 function ScrollShowcase() {
   const outerRef = useRef(null);
+  const canvasRef = useRef(null);
+  const rafRef = useRef(null);
+  const progressRef = useRef(0);
   const [progress, setProgress] = useState(0);
+
+
+  const SCENES = 5;
+  const SCENE_LABELS = [
+    { eyebrow: 'Introducing PlanIt', accent: 'white' },
+    { eyebrow: 'Real-time collaboration', accent: '#94a3b8' },
+    { eyebrow: 'Enterprise check-in', accent: '#60a5fa' },
+    { eyebrow: 'PlanIt Venue', accent: '#f97316' },
+    { eyebrow: 'Now entering PlanIt', accent: 'white' },
+  ];
 
   useEffect(() => {
     const onScroll = () => {
       if (!outerRef.current) return;
       const rect = outerRef.current.getBoundingClientRect();
-      const totalScroll = outerRef.current.offsetHeight - window.innerHeight;
-      const scrolled = Math.max(0, -rect.top);
-      setProgress(Math.max(0, Math.min(1, scrolled / totalScroll)));
+      const total = outerRef.current.offsetHeight - window.innerHeight;
+      const p = Math.max(0, Math.min(1, -rect.top / Math.max(1, total)));
+      progressRef.current = p;
+      setProgress(p);
     };
     window.addEventListener('scroll', onScroll, { passive: true });
     onScroll();
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
-  // Each scene occupies 1/5 of total progress
-  const sp = (scene) => {
-    const band = 1 / 5;
-    const start = scene * band;
-    return Math.max(0, Math.min(1, (progress - start) / band));
-  };
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    let running = true;
+    const resize = () => {
+      const dpr = window.devicePixelRatio || 1;
+      canvas.width = canvas.offsetWidth * dpr;
+      canvas.height = canvas.offsetHeight * dpr;
+    };
+    resize();
+    window.addEventListener('resize', resize);
 
-  // Cinematic appear/disappear transform per scene
-  const sceneStyle = (p) => {
-    if (p <= 0) {
-      return { opacity: 0, transform: 'translateY(48px) scale(0.88)', pointerEvents: 'none', position: 'absolute', width: '100%', display: 'flex', justifyContent: 'center' };
-    }
-    if (p >= 1) {
-      return { opacity: 0, transform: 'translateY(-36px) scale(0.96)', pointerEvents: 'none', position: 'absolute', width: '100%', display: 'flex', justifyContent: 'center' };
-    }
-    const arrive = 0.18;
-    const depart = 0.80;
-    let opacity, ty, scale;
-    if (p < arrive) {
-      const t = p / arrive;
-      opacity = t; ty = 48 * (1 - t); scale = 0.88 + 0.12 * t;
-    } else if (p > depart) {
-      const t = (p - depart) / (1 - depart);
-      opacity = 1 - t; ty = -36 * t; scale = 1 - 0.04 * t;
-    } else {
-      opacity = 1; ty = 0; scale = 1;
-    }
-    return { opacity, transform: `translateY(${ty}px) scale(${scale})`, transition: 'none', position: 'absolute', width: '100%', display: 'flex', justifyContent: 'center' };
-  };
+    const render = () => {
+      if (!running) return;
+      const dpr = window.devicePixelRatio || 1;
+      const ctx = canvas.getContext('2d');
+      const Wd = canvas.offsetWidth;
+      const Hd = canvas.offsetHeight;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.clearRect(0, 0, Wd, Hd);
+      ctx.fillStyle = '#04040a';
+      ctx.fillRect(0, 0, Wd, Hd);
 
-  const activeScene = Math.min(4, Math.floor(progress * 5));
+      const p = progressRef.current;
+      const centers = [0, 0.25, 0.5, 0.75, 1.0];
+      const HALF = 0.27;
 
-  const sceneLabels = [
-    { top: 'Introducing PlanIt', main: 'One platform.\nTwo branches.', accent: 'white' },
-    { top: 'Real-time collaboration', main: 'Your whole team,\nin sync.', accent: '#94a3b8' },
-    { top: 'QR-powered attendance', main: 'Enterprise\ncheck-in.', accent: '#60a5fa' },
-    { top: 'PlanIt Venue', main: 'Live floor\nmanagement.', accent: '#f97316' },
-    { top: 'Now entering PlanIt', main: 'Plan smart.\nExecute flawlessly.', accent: 'white' },
-  ];
+      [0, 1, 2, 3, 4].forEach(si => {
+        const center = centers[si];
+        const dist = Math.abs(p - center);
+        let alpha = Math.max(0, 1 - dist / HALF);
+        if (si === 0 && p < 0.05) alpha = 1;
+        if (alpha < 0.005) return;
+        const sceneP = Math.max(0, Math.min(1, (p - (center - HALF)) / (HALF * 2)));
+        ctx.save();
+        ctx.globalAlpha = alpha;
+        const shift = (p - center) * Hd * 0.14;
+        ctx.translate(0, shift * (1 - alpha));
+        if (si === 0) drawScene0(ctx, Wd, Hd, sceneP);
+        else if (si === 1) drawScene1(ctx, Wd, Hd, sceneP);
+        else if (si === 2) drawScene2(ctx, Wd, Hd, sceneP);
+        else if (si === 3) drawScene3(ctx, Wd, Hd, sceneP);
+        else if (si === 4) drawScene4(ctx, Wd, Hd, sceneP);
+        ctx.restore();
+      });
 
-  // Subtle per-scene backgrounds
-  const bgMap = ['rgba(100,116,139,0.05)', 'rgba(148,163,184,0.04)', 'rgba(96,165,250,0.05)', 'rgba(249,115,22,0.07)', 'rgba(100,116,139,0.04)'];
+      rafRef.current = requestAnimationFrame(render);
+    };
+    render();
+    return () => {
+      running = false;
+      cancelAnimationFrame(rafRef.current);
+      window.removeEventListener('resize', resize);
+    };
+  }, []);
+
+  const activeScene = Math.round(progress * (SCENES - 1));
+  const sceneLabel = SCENE_LABELS[activeScene] || SCENE_LABELS[0];
 
   return (
-    <div ref={outerRef} style={{ height: '500vh', position: 'relative' }}>
+    <div ref={outerRef} style={{ height: '550vh', position: 'relative' }}>
       <div style={{ position: 'sticky', top: 0, height: '100vh', overflow: 'hidden', background: '#04040a' }}>
-
-        {/* Ambient background */}
+        <canvas
+          ref={canvasRef}
+          style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', display: 'block' }}
+        />
         <div style={{
-          position: 'absolute', inset: 0, transition: 'background 1.4s ease', pointerEvents: 'none',
-          background: `radial-gradient(ellipse 75% 60% at 50% 50%, ${bgMap[activeScene]}, transparent 68%)`,
-        }} />
-
-        {/* ── Top labels (one per scene, layered + animated) ── */}
-        <div style={{ position: 'absolute', top: '9%', left: '50%', transform: 'translateX(-50%)', zIndex: 20, width: '90%', maxWidth: 700, textAlign: 'center' }}>
-          {sceneLabels.map((s, i) => {
-            const p = sp(i);
-            const visible = p > 0 && p < 1;
-            const arrive = 0.22; const depart = 0.72;
-            let op = 0, ty = 16;
-            if (p > 0 && p < arrive) { op = p / arrive; ty = 16 * (1 - p / arrive); }
-            else if (p >= arrive && p <= depart) { op = 1; ty = 0; }
-            else if (p > depart && p < 1) { op = 1 - (p - depart) / (1 - depart); ty = -12 * ((p - depart) / (1 - depart)); }
-            return (
-              <div key={i} style={{ position: i === 0 ? 'relative' : 'absolute', top: 0, left: 0, right: 0, opacity: op, transform: `translateY(${ty}px)`, transition: 'none' }}>
-                <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.4em', color: 'rgba(255,255,255,0.22)', textTransform: 'uppercase', marginBottom: 10 }}>{s.top}</div>
-                <div style={{ fontSize: 'clamp(26px, 5vw, 46px)', fontWeight: 900, color: s.accent, letterSpacing: '-1.5px', lineHeight: 1.08, whiteSpace: 'pre-line' }}>{s.main}</div>
-              </div>
-            );
-          })}
+          position: 'absolute', top: '7%', left: '50%', transform: 'translateX(-50%)',
+          zIndex: 10, textAlign: 'center', pointerEvents: 'none',
+        }}>
+          <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.42em', color: 'rgba(255,255,255,0.22)', textTransform: 'uppercase' }}>
+            {sceneLabel.eyebrow}
+          </div>
         </div>
-
-        {/* ── Scene mockups ── */}
-        <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', paddingTop: '8vh', zIndex: 10 }}>
-
-          {/* SCENE 0 — Dual product intro cards */}
-          <div style={sceneStyle(sp(0))}>
-            <div style={{ display: 'flex', gap: 20, alignItems: 'stretch', flexWrap: 'wrap', justifyContent: 'center' }}>
-              {/* Events card */}
-              <div style={{ width: 'clamp(200px, 28vw, 280px)', padding: '28px 24px', borderRadius: 24, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', backdropFilter: 'blur(20px)' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 22 }}>
-                  <div style={{ width: 38, height: 38, borderRadius: 12, background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.8)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-                  </div>
-                  <div>
-                    <div style={{ fontSize: 8, fontWeight: 800, letterSpacing: '0.3em', color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase' }}>PlanIt</div>
-                    <div style={{ fontSize: 17, fontWeight: 900, color: 'white', letterSpacing: '-0.5px' }}>Events</div>
-                  </div>
-                </div>
-                {['Team chat & messaging', 'Task management', 'QR check-in', 'Budget & expenses', 'File sharing'].map((f, i) => (
-                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 9, marginBottom: 11 }}>
-                    <div style={{ width: 16, height: 16, borderRadius: '50%', background: 'rgba(34,197,94,0.14)', border: '1px solid rgba(34,197,94,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                      <svg width="8" height="8" viewBox="0 0 10 8"><polyline points="1,4 3.5,6.5 9,1" fill="none" stroke="#22c55e" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                    </div>
-                    <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)', fontWeight: 500 }}>{f}</span>
-                  </div>
-                ))}
-                <div style={{ marginTop: 18, padding: '8px 14px', borderRadius: 10, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.7)', display: 'flex', justifyContent: 'space-between' }}>
-                  <span>Free to start</span><span>→</span>
-                </div>
-              </div>
-              {/* Venue card */}
-              <div style={{ width: 'clamp(200px, 28vw, 280px)', padding: '28px 24px', borderRadius: 24, background: 'rgba(249,115,22,0.04)', border: '1px solid rgba(249,115,22,0.18)', backdropFilter: 'blur(20px)' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 22 }}>
-                  <div style={{ width: 38, height: 38, borderRadius: 12, background: 'rgba(249,115,22,0.12)', border: '1px solid rgba(249,115,22,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="rgba(249,115,22,0.9)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M3 11l19-9-9 19-2-8-8-2z"/></svg>
-                  </div>
-                  <div>
-                    <div style={{ fontSize: 8, fontWeight: 800, letterSpacing: '0.3em', color: 'rgba(249,115,22,0.45)', textTransform: 'uppercase' }}>PlanIt</div>
-                    <div style={{ fontSize: 17, fontWeight: 900, color: '#f97316', letterSpacing: '-0.5px' }}>Venue</div>
-                  </div>
-                </div>
-                {['Visual floor editor', 'Walk-in waitlist', 'QR reservations', 'Live sync across staff', 'Data never expires'].map((f, i) => (
-                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 9, marginBottom: 11 }}>
-                    <div style={{ width: 16, height: 16, borderRadius: '50%', background: 'rgba(249,115,22,0.1)', border: '1px solid rgba(249,115,22,0.28)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                      <svg width="8" height="8" viewBox="0 0 10 8"><polyline points="1,4 3.5,6.5 9,1" fill="none" stroke="#f97316" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                    </div>
-                    <span style={{ fontSize: 12, color: 'rgba(249,115,22,0.6)', fontWeight: 500 }}>{f}</span>
-                  </div>
-                ))}
-                <div style={{ marginTop: 18, padding: '8px 14px', borderRadius: 10, background: 'rgba(249,115,22,0.07)', border: '1px solid rgba(249,115,22,0.2)', fontSize: 11, fontWeight: 700, color: 'rgba(249,115,22,0.8)', display: 'flex', justifyContent: 'space-between' }}>
-                  <span>Free to start</span><span>→</span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* SCENE 1 — Chat workspace mockup */}
-          <div style={sceneStyle(sp(1))}>
-            <div style={{ width: 'clamp(320px, 72vw, 700px)', borderRadius: 20, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.07)', background: '#0d0d16', boxShadow: '0 48px 140px rgba(0,0,0,0.65), 0 0 0 1px rgba(255,255,255,0.03)' }}>
-              {/* Chrome bar */}
-              <div style={{ padding: '10px 16px', background: '#09090f', borderBottom: '1px solid rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', gap: 10 }}>
-                <div style={{ display: 'flex', gap: 5 }}>
-                  {['#ff5f57','#febc2e','#28c840'].map(c => <div key={c} style={{ width: 10, height: 10, borderRadius: '50%', background: c, opacity: 0.7 }} />)}
-                </div>
-                <div style={{ flex: 1, display: 'flex', justifyContent: 'center' }}>
-                  <div style={{ padding: '4px 14px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 8, fontSize: 11, color: 'rgba(255,255,255,0.3)', display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <div style={{ width: 5, height: 5, borderRadius: '50%', background: '#22c55e', boxShadow: '0 0 4px #22c55e' }} />
-                    Summer Gala 2026 · PlanIt Events
-                  </div>
-                </div>
-              </div>
-              {/* Two-panel layout */}
-              <div style={{ display: 'grid', gridTemplateColumns: '168px 1fr', minHeight: 300 }}>
-                {/* Sidebar */}
-                <div style={{ borderRight: '1px solid rgba(255,255,255,0.05)', padding: '14px 8px', background: 'rgba(0,0,0,0.2)' }}>
-                  <div style={{ fontSize: 9, fontWeight: 700, color: 'rgba(255,255,255,0.18)', letterSpacing: '0.3em', textTransform: 'uppercase', padding: '4px 10px', marginBottom: 6 }}>Channels</div>
-                  {[['# planning-team', true], ['# vendors', false], ['# logistics', false], ['# day-of', false]].map(([label, active]) => (
-                    <div key={label} style={{ padding: '7px 10px', borderRadius: 8, marginBottom: 2, background: active ? 'rgba(255,255,255,0.08)' : 'transparent', color: active ? 'rgba(255,255,255,0.85)' : 'rgba(255,255,255,0.3)', fontSize: 12, fontWeight: active ? 600 : 400 }}>{label}</div>
-                  ))}
-                  <div style={{ marginTop: 18, fontSize: 9, fontWeight: 700, color: 'rgba(255,255,255,0.18)', letterSpacing: '0.3em', textTransform: 'uppercase', padding: '4px 10px', marginBottom: 6 }}>Tools</div>
-                  {[['Tasks','14'], ['Polls','2'], ['Files','8'], ['Budget','']].map(([t, badge]) => (
-                    <div key={t} style={{ padding: '7px 10px', borderRadius: 8, marginBottom: 2, color: 'rgba(255,255,255,0.35)', fontSize: 12, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      {t}
-                      {badge && <span style={{ fontSize: 10, background: 'rgba(255,255,255,0.1)', padding: '1px 5px', borderRadius: 4, color: 'rgba(255,255,255,0.5)' }}>{badge}</span>}
-                    </div>
-                  ))}
-                </div>
-                {/* Chat panel */}
-                <div style={{ display: 'flex', flexDirection: 'column' }}>
-                  <div style={{ padding: '10px 16px', borderBottom: '1px solid rgba(255,255,255,0.04)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <span style={{ fontSize: 12, fontWeight: 700, color: 'rgba(255,255,255,0.65)' }}># planning-team</span>
-                    <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.2)' }}>12 members online</span>
-                  </div>
-                  <div style={{ flex: 1, padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 14 }}>
-                    {[
-                      { av: 'A', name: 'Alex', col: '#818cf8', msg: 'Venue deposit confirmed! Locked in for July 15th 🎉', t: '2:14 PM' },
-                      { av: 'S', name: 'Sam',  col: '#38bdf8', msg: 'Floor plan uploaded to Files — 3 zones mapped', t: '2:16 PM' },
-                      { av: 'M', name: 'Maya', col: '#f472b6', msg: 'Added 12 tasks to the catering checklist. We\'re on track', t: '2:19 PM' },
-                    ].map(({ av, name, col, msg, t }) => (
-                      <div key={name} style={{ display: 'flex', gap: 10 }}>
-                        <div style={{ width: 28, height: 28, borderRadius: '50%', background: `${col}28`, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                          <span style={{ fontSize: 11, fontWeight: 700, color: col }}>{av}</span>
-                        </div>
-                        <div>
-                          <div style={{ display: 'flex', alignItems: 'baseline', gap: 7, marginBottom: 5 }}>
-                            <span style={{ fontSize: 12, fontWeight: 700, color: col }}>{name}</span>
-                            <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.18)' }}>{t}</span>
-                          </div>
-                          <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)', lineHeight: 1.55, background: 'rgba(255,255,255,0.04)', padding: '8px 12px', borderRadius: '4px 12px 12px 12px', display: 'inline-block', maxWidth: 340 }}>{msg}</div>
-                        </div>
-                      </div>
-                    ))}
-                    {/* Typing dots */}
-                    <div style={{ display: 'flex', gap: 10 }}>
-                      <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'rgba(100,116,139,0.2)', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <span style={{ fontSize: 11, fontWeight: 700, color: '#94a3b8' }}>J</span>
-                      </div>
-                      <div style={{ padding: '10px 14px', background: 'rgba(255,255,255,0.04)', borderRadius: '4px 12px 12px 12px', display: 'flex', gap: 4, alignItems: 'center' }}>
-                        {[0,1,2].map(i => <div key={i} className="typing-dot" style={{ width: 5, height: 5, borderRadius: '50%', background: 'rgba(255,255,255,0.3)' }} />)}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* SCENE 2 — Enterprise Check-in */}
-          <div style={sceneStyle(sp(2))}>
-            <div style={{ width: 'clamp(320px, 72vw, 700px)', borderRadius: 20, overflow: 'hidden', border: '1px solid rgba(96,165,250,0.12)', background: '#090b12', boxShadow: '0 48px 140px rgba(0,0,0,0.65), 0 0 80px rgba(96,165,250,0.04)' }}>
-              {/* Header */}
-              <div style={{ padding: '12px 20px', background: '#070810', borderBottom: '1px solid rgba(96,165,250,0.07)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#22c55e', boxShadow: '0 0 7px #22c55e' }} />
-                  <span style={{ fontSize: 12, fontWeight: 700, color: 'rgba(255,255,255,0.7)' }}>Annual Tech Summit · Check-in</span>
-                  <span style={{ fontSize: 9, fontWeight: 700, color: 'rgba(96,165,250,0.5)', letterSpacing: '0.3em', textTransform: 'uppercase' }}>Enterprise Mode</span>
-                </div>
-                <div style={{ display: 'flex', gap: 8 }}>
-                  {[['24','Arrived','#22c55e'],['8','Pending','#94a3b8'],['2','Blocked','#ef4444']].map(([n,l,c]) => (
-                    <div key={l} style={{ textAlign: 'center', padding: '4px 10px', background: `${c}0e`, border: `1px solid ${c}22`, borderRadius: 8 }}>
-                      <div style={{ fontSize: 15, fontWeight: 900, color: c }}>{n}</div>
-                      <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.28)', marginTop: 1 }}>{l}</div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-              {/* Guest rows */}
-              <div style={{ padding: '14px 20px', display: 'flex', flexDirection: 'column', gap: 7 }}>
-                {[
-                  { name: 'Sarah Johnson',   role: 'VIP',      status: 'in',      table: 12, code: 'SJ4A' },
-                  { name: 'Marcus Rivera',   role: 'Speaker',  status: 'scan',    table: 5,  code: 'MR2B' },
-                  { name: 'Priya Sharma',    role: 'Attendee', status: 'wait',    table: 8,  code: 'PS1C' },
-                  { name: 'Dev Patel',       role: 'Attendee', status: 'blocked', table: null, code: 'DP6E' },
-                  { name: 'Amara Okafor',    role: 'Attendee', status: 'flagged', table: 7,  code: 'AO1F' },
-                ].map(({ name, role, status, table, code }) => {
-                  const roleCol = { VIP: '#fbbf24', Speaker: '#a78bfa', Attendee: '#60a5fa' }[role] || '#94a3b8';
-                  const s = {
-                    in:      { bg: 'rgba(34,197,94,0.07)',   br: 'rgba(34,197,94,0.18)',  label: '✓ In',    lc: '#22c55e' },
-                    scan:    { bg: 'rgba(96,165,250,0.05)',  br: 'rgba(96,165,250,0.15)', label: 'Scanning',lc: '#60a5fa' },
-                    wait:    { bg: 'rgba(255,255,255,0.02)', br: 'rgba(255,255,255,0.07)',label: 'Scan',    lc: '#ffffff' },
-                    blocked: { bg: 'rgba(239,68,68,0.06)',   br: 'rgba(239,68,68,0.18)',  label: 'Blocked', lc: '#ef4444' },
-                    flagged: { bg: 'rgba(245,158,11,0.05)',  br: 'rgba(245,158,11,0.18)', label: 'Review',  lc: '#f59e0b' },
-                  }[status];
-                  return (
-                    <div key={name} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 14px', borderRadius: 12, background: s.bg, border: `1px solid ${s.br}` }}>
-                      <div style={{ width: 34, height: 34, borderRadius: 10, background: status === 'in' ? '#22c55e' : status === 'blocked' ? 'rgba(239,68,68,0.18)' : status === 'flagged' ? 'rgba(245,158,11,0.12)' : 'rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                        <span style={{ fontSize: 11, fontWeight: 700, color: status === 'in' ? 'white' : status === 'blocked' ? '#ef4444' : status === 'flagged' ? '#f59e0b' : 'rgba(255,255,255,0.45)' }}>{status === 'in' ? '✓' : status === 'blocked' ? '✗' : code.slice(0,2)}</span>
-                      </div>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-                          <span style={{ fontSize: 13, fontWeight: 600, color: 'rgba(255,255,255,0.88)' }}>{name}</span>
-                          <span style={{ fontSize: 9, fontWeight: 700, color: roleCol, background: `${roleCol}15`, padding: '2px 6px', borderRadius: 5 }}>{role}</span>
-                          {status === 'blocked' && <span style={{ fontSize: 9, fontWeight: 700, color: '#ef4444', background: 'rgba(239,68,68,0.1)', padding: '2px 6px', borderRadius: 5 }}>BLOCKED</span>}
-                          {status === 'flagged' && <span style={{ fontSize: 9, fontWeight: 700, color: '#f59e0b', background: 'rgba(245,158,11,0.1)', padding: '2px 6px', borderRadius: 5 }}>FLAGGED</span>}
-                        </div>
-                        <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.28)', marginTop: 2 }}>
-                          {status === 'in' ? `Checked in · Table ${table}` : status === 'blocked' ? 'Duplicate identity detected' : status === 'flagged' ? 'Low trust score: 42/100' : table ? `Table ${table} · Awaiting` : 'Pending assignment'}
-                        </div>
-                      </div>
-                      <div style={{ fontSize: 11, fontWeight: 700, color: s.lc, padding: '5px 12px', borderRadius: 8, background: `${s.lc}14`, border: `1px solid ${s.lc}22`, flexShrink: 0 }}>{s.label}</div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          </div>
-
-          {/* SCENE 3 — Venue Floor Map */}
-          <div style={sceneStyle(sp(3))}>
-            <div style={{ width: 'clamp(320px, 72vw, 700px)', borderRadius: 20, overflow: 'hidden', border: '1px solid rgba(249,115,22,0.14)', background: '#0d0a05', boxShadow: '0 48px 140px rgba(0,0,0,0.65), 0 0 80px rgba(249,115,22,0.06)' }}>
-              {/* Header */}
-              <div style={{ padding: '12px 20px', background: '#0a0803', borderBottom: '1px solid rgba(249,115,22,0.07)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <div style={{ width: 30, height: 30, borderRadius: 10, background: 'rgba(249,115,22,0.14)', border: '1px solid rgba(249,115,22,0.24)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#f97316" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 11l19-9-9 19-2-8-8-2z"/></svg>
-                  </div>
-                  <span style={{ fontSize: 13, fontWeight: 700, color: 'rgba(255,255,255,0.8)' }}>Taverna Roma</span>
-                  <span style={{ fontSize: 9, fontWeight: 700, color: 'rgba(249,115,22,0.5)', letterSpacing: '0.3em', textTransform: 'uppercase' }}>PlanIt Venue</span>
-                </div>
-                <div style={{ display: 'flex', gap: 8 }}>
-                  {[['#22c55e','3 Free'],['#ef4444','4 Occ'],['#8b5cf6','1 Cln'],['#f59e0b','1 Rsv']].map(([c,l]) => (
-                    <span key={l} style={{ fontSize: 10, padding: '3px 8px', borderRadius: 6, background: `${c}12`, border: `1px solid ${c}28`, color: c, fontWeight: 700 }}>{l}</span>
-                  ))}
-                </div>
-              </div>
-              {/* Floor SVG */}
-              <div style={{ padding: '14px 20px' }}>
-                <svg viewBox="0 0 520 210" style={{ width: '100%', height: 188 }}>
-                  <defs>
-                    <pattern id="ss-vgrid" width="26" height="26" patternUnits="userSpaceOnUse">
-                      <path d="M 26 0 L 0 0 0 26" fill="none" stroke="rgba(249,115,22,0.04)" strokeWidth="0.5"/>
-                    </pattern>
-                  </defs>
-                  <rect width="520" height="210" fill="url(#ss-vgrid)"/>
-                  {/* Zone label */}
-                  <rect x="15" y="8" width="160" height="65" rx="7" fill="rgba(249,115,22,0.02)" stroke="rgba(249,115,22,0.07)" strokeDasharray="5 3"/>
-                  <text x="95" y="44" textAnchor="middle" fill="rgba(249,115,22,0.18)" fontSize="10" fontWeight="700" letterSpacing="2">MAIN ROOM</text>
-                  {/* Tables */}
-                  {[
-                    {x:68,  y:130, r:26, st:'available', lb:'T1', cp:'4'},
-                    {x:148, y:130, r:26, st:'occupied',  lb:'T2', cp:'4', tm:'38m'},
-                    {x:228, y:120, r:30, st:'occupied',  lb:'T3', cp:'6', tm:'19m'},
-                    {x:312, y:130, r:26, st:'cleaning',  lb:'T4', cp:'4'},
-                    {x:390, y:120, r:30, st:'available', lb:'T5', cp:'6'},
-                    {x:468, y:130, r:26, st:'reserved',  lb:'T6', cp:'4'},
-                  ].map(t => {
-                    const c = t.st==='available'?'#22c55e':t.st==='occupied'?'#ef4444':t.st==='cleaning'?'#8b5cf6':'#f59e0b';
-                    const pulse = t.st==='available';
-                    return (
-                      <g key={t.lb}>
-                        <circle cx={t.x} cy={t.y} r={t.r+5} fill="none" stroke={c} strokeWidth="1.5" opacity={pulse ? '0.5' : '0.3'} className={pulse ? 'table-pulse-ring' : ''}/>
-                        <circle cx={t.x} cy={t.y} r={t.r} fill={`${c}1e`} stroke={c} strokeWidth="1.5" className={pulse ? 'table-pulse-fill' : ''}/>
-                        <text x={t.x} y={t.y-3} textAnchor="middle" fill="rgba(255,255,255,0.9)" fontSize="10" fontWeight="800">{t.lb}</text>
-                        <text x={t.x} y={t.y+10} textAnchor="middle" fill={c} fontSize="9">{t.cp} seats</text>
-                        {t.tm && <text x={t.x} y={t.y-t.r-8} textAnchor="middle" fill="white" fontSize="8" fontWeight="700" opacity="0.65">{t.tm}</text>}
-                      </g>
-                    );
-                  })}
-                  {/* Waitlist */}
-                  <rect x="15" y="148" width="144" height="50" rx="8" fill="rgba(245,158,11,0.05)" stroke="rgba(245,158,11,0.2)"/>
-                  <text x="27" y="165" fill="#f59e0b" fontSize="9" fontWeight="800" letterSpacing="1.5">WAITLIST · 3 parties</text>
-                  <text x="27" y="181" fill="rgba(255,255,255,0.38)" fontSize="9">Martinez · 4 · ~14m</text>
-                  <text x="27" y="194" fill="rgba(255,255,255,0.38)" fontSize="9">Taylor · 2 · ~8m</text>
-                </svg>
-              </div>
-            </div>
-          </div>
-
-          {/* SCENE 4 — Final CTA */}
-          <div style={{ ...sceneStyle(sp(4)), flexDirection: 'column', alignItems: 'center' }}>
-            <div style={{ textAlign: 'center', maxWidth: 520 }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 14, marginBottom: 40 }}>
-                <div style={{ height: 1, width: 60, background: 'linear-gradient(to right, transparent, rgba(255,255,255,0.15))' }} />
-                <div style={{ width: 52, height: 52, borderRadius: 16, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.09)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.8)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-                </div>
-                <div style={{ height: 1, width: 60, background: 'linear-gradient(to left, transparent, rgba(255,255,255,0.15))' }} />
-              </div>
-              <div style={{ fontSize: 'clamp(34px, 6.5vw, 60px)', fontWeight: 900, color: 'white', letterSpacing: '-2px', lineHeight: 1.0, marginBottom: 18 }}>Plan smart.<br/>Execute flawlessly.</div>
-              <div style={{ fontSize: 15, color: 'rgba(255,255,255,0.32)', fontWeight: 400, marginBottom: 40, letterSpacing: '0.01em' }}>Events & Venue — one platform, two branches.</div>
-              <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
-                <div style={{ padding: '13px 30px', borderRadius: 14, background: 'white', color: '#07070e', fontWeight: 700, fontSize: 13, cursor: 'default' }}>Explore Events ↓</div>
-                <div style={{ padding: '13px 30px', borderRadius: 14, background: 'rgba(249,115,22,0.1)', border: '1px solid rgba(249,115,22,0.28)', color: '#f97316', fontWeight: 700, fontSize: 13, cursor: 'default' }}>Explore Venue ↓</div>
-              </div>
-            </div>
-          </div>
-
-        </div>
-
-        {/* ── Progress indicator (right side) ── */}
-        <div style={{ position: 'absolute', right: 28, top: '50%', transform: 'translateY(-50%)', display: 'flex', flexDirection: 'column', gap: 7, zIndex: 30 }}>
-          {[0,1,2,3,4].map(i => (
+        <div style={{ position: 'absolute', right: 24, top: '50%', transform: 'translateY(-50%)', display: 'flex', flexDirection: 'column', gap: 8, zIndex: 20 }}>
+          {SCENE_LABELS.map((s, i) => (
             <div key={i} style={{
               width: 3,
               height: activeScene === i ? 28 : 3,
               borderRadius: 99,
-              background: activeScene === i ? (i === 3 ? '#f97316' : 'rgba(255,255,255,0.8)') : 'rgba(255,255,255,0.18)',
+              background: activeScene === i ? s.accent : 'rgba(255,255,255,0.18)',
               transition: 'all 0.45s cubic-bezier(0.22, 1, 0.36, 1)',
+              boxShadow: activeScene === i && s.accent !== 'white' ? `0 0 8px ${s.accent}66` : 'none',
             }} />
           ))}
         </div>
-
-        {/* ── Scroll hint (fades out as you scroll) ── */}
-        <div style={{ position: 'absolute', bottom: '7%', left: '50%', transform: 'translateX(-50%)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 9, zIndex: 20, opacity: progress < 0.04 ? 1 : 0, transition: 'opacity 0.5s ease' }}>
-          <span style={{ fontSize: 9, letterSpacing: '0.4em', color: 'rgba(255,255,255,0.22)', textTransform: 'uppercase', fontWeight: 600 }}>Scroll to explore</span>
-          <div style={{ width: 1, height: 38, background: 'linear-gradient(to bottom, rgba(255,255,255,0.5), transparent)', animation: 'pi-scroll-line 1.8s ease-in-out infinite' }} />
+        <div style={{
+          position: 'absolute', bottom: '8%', left: '50%', transform: 'translateX(-50%)',
+          display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10,
+          zIndex: 20, opacity: progress < 0.03 ? 1 : 0, transition: 'opacity 0.6s ease',
+          pointerEvents: 'none',
+        }}>
+          <span style={{ fontSize: 9, letterSpacing: '0.42em', color: 'rgba(255,255,255,0.2)', textTransform: 'uppercase', fontWeight: 700 }}>Scroll to explore</span>
+          <div style={{ width: 1, height: 36, background: 'linear-gradient(to bottom, rgba(255,255,255,0.45), transparent)', animation: 'pi-scroll-line 1.8s ease-in-out infinite' }} />
         </div>
-
       </div>
     </div>
   );
