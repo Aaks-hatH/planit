@@ -803,28 +803,166 @@ router.get('/:eventId/analytics', verifyEventAccess, async (req, res, next) => {
 // No auth required. Rate-limited. For walk-in / waitlist-only restaurants.
 // ═══════════════════════════════════════════════════════════════════════════
 
-// Helper: compute wait times per party size bracket
-function calcWaitTimes(objects, states, tss) {
+// ─────────────────────────────────────────────────────────────────────────────
+// SMART WAIT TIME PREDICTION ENGINE
+//
+// Factors accounted for:
+//  1. Per-party-size dining duration overrides (tss.sizeOverrides)
+//  2. Table status: available (0 wait), cleaning (buffer only), occupied
+//     (remaining dining time + buffer), reserved (full reservation duration
+//     + buffer), unavailable (excluded entirely)
+//  3. Missing occupiedAt fallback (uses full avg dining time as conservative est.)
+//  4. Waitlist queue simulation — parties already in queue "consume" the
+//     soonest tables before a new arrival gets seated; each party is greedily
+//     assigned to their earliest valid table and that table's free-at time
+//     is advanced by their dining duration + buffer.
+//  5. Returns scalar minutes AND rich breakdown per party-size bracket so
+//     the frontend can display table-level detail and confidence context.
+// ─────────────────────────────────────────────────────────────────────────────
+function calcWaitTimes(objects, states, tss, waitlist = []) {
+  const now    = Date.now();
   const avgDining = tss.avgDiningMinutes || 75;
   const buffer    = tss.cleaningBufferMinutes || 10;
-  const calc = (sz) => {
-    const tables = (objects || []).filter(o => o.type !== 'zone' && (o.capacity || 0) >= sz);
-    if (!tables.length) return null;
-    const avail = tables.some(t => {
-      const s = (states || []).find(st => st.tableId === t.id);
-      return !s || s.status === 'available';
-    });
-    if (avail) return 0;
-    const times = tables.map(t => {
-      const s = (states || []).find(st => st.tableId === t.id);
-      if (!s || s.status !== 'occupied' || !s.occupiedAt) return null;
-      const seatedMs = Date.now() - new Date(s.occupiedAt).getTime();
-      return Math.max(0, Math.round((avgDining * 60000 - seatedMs) / 60000));
-    }).filter(t => t !== null);
-    if (!times.length) return null;
-    return Math.min(...times) + buffer;
+  const resvDuration = tss.reservationDurationMinutes || 90;
+
+  // ── 1. Per-party-size dining time lookup (respects sizeOverrides) ──────────
+  const getDiningMins = (partySize) => {
+    const overrides = tss.sizeOverrides || [];
+    const match = overrides.find(o =>
+      (!o.minParty || partySize >= o.minParty) &&
+      (!o.maxParty || partySize <= o.maxParty)
+    );
+    return (match && match.avgMinutes) ? match.avgMinutes : avgDining;
   };
-  return { forTwo: calc(2), forFour: calc(4), forEight: calc(8) };
+
+  // ── 2. Build per-table availability timeline ───────────────────────────────
+  // minsUntilFree = 0 → immediately available
+  //               = N → free in N minutes
+  //               = Infinity → permanently excluded (unavailable)
+  const tableTimeline = (objects || [])
+    .filter(o => o.type !== 'zone' && (o.capacity || 0) > 0)
+    .map(t => {
+      const s = (states || []).find(st => st.tableId === t.id);
+      const status = s ? s.status : 'available';
+      let minsUntilFree = 0;
+
+      switch (status) {
+        case 'available':
+          minsUntilFree = 0;
+          break;
+
+        case 'cleaning':
+          // Table is being turned; just needs the buffer time
+          minsUntilFree = buffer;
+          break;
+
+        case 'occupied': {
+          const diningMins = getDiningMins(s.partySize || 2);
+          if (s.occupiedAt) {
+            const seatedMs  = now - new Date(s.occupiedAt).getTime();
+            const remaining = Math.max(0, Math.round((diningMins * 60000 - seatedMs) / 60000));
+            minsUntilFree = remaining + buffer;
+          } else {
+            // No seat timestamp — conservatively assume table just sat down
+            minsUntilFree = diningMins + buffer;
+          }
+          break;
+        }
+
+        case 'reserved':
+          // Reserved tables won't be free until reservation + dining is done;
+          // treat as full cycle: reservation duration + buffer as a pessimistic bound.
+          // If a reservationId can be cross-referenced with a booking start time
+          // that would be more precise, but here we use the configured duration.
+          minsUntilFree = resvDuration + buffer;
+          break;
+
+        case 'unavailable':
+        default:
+          minsUntilFree = Infinity;
+          break;
+      }
+
+      return {
+        id:            t.id,
+        label:         t.label || '',
+        capacity:      t.capacity || 0,
+        status,
+        minsUntilFree,
+        partySize:     s ? (s.partySize || 0) : 0,
+      };
+    });
+
+  // ── 3. Active waitlist queue (waiting + notified), chronological ───────────
+  const activeQueue = (waitlist || [])
+    .filter(w => w.status === 'waiting' || w.status === 'notified')
+    .slice()
+    .sort((a, b) => new Date(a.addedAt || 0) - new Date(b.addedAt || 0));
+
+  // ── 4. Queue simulation for a target party size ────────────────────────────
+  // Greedy simulation: each party in the queue is assigned the soonest
+  // available table that fits them. The table's minsUntilFree is advanced by
+  // their dining duration + buffer. After all existing parties are placed,
+  // find the soonest table for the target party size.
+  const simulateForSize = (targetSz) => {
+    // Clone the timeline so simulations for different sizes are independent
+    const timeline = tableTimeline.map(t => ({ ...t }));
+
+    for (const party of activeQueue) {
+      const sz = party.partySize || 1;
+      const eligible = timeline
+        .filter(t => t.capacity >= sz && t.minsUntilFree !== Infinity)
+        .sort((a, b) => a.minsUntilFree - b.minsUntilFree);
+      if (!eligible.length) continue;
+      // Assign this queue party to the soonest eligible table
+      const tbl = eligible[0];
+      tbl.minsUntilFree += getDiningMins(sz) + buffer;
+    }
+
+    // Now pick the soonest table that fits the target party
+    const candidates = timeline
+      .filter(t => t.capacity >= targetSz && t.minsUntilFree !== Infinity)
+      .sort((a, b) => a.minsUntilFree - b.minsUntilFree);
+
+    if (!candidates.length) return null;
+    const best = candidates[0];
+    return {
+      minutes:    best.minsUntilFree,
+      tableId:    best.id,
+      tableLabel: best.label,
+      fromStatus: best.status,
+    };
+  };
+
+  // ── 5. Assemble results per bracket ───────────────────────────────────────
+  const brackets = [
+    { key: 'forTwo',   sz: 2  },
+    { key: 'forFour',  sz: 4  },
+    { key: 'forEight', sz: 8  },
+  ];
+
+  const result = {
+    queueDepth:     activeQueue.length,
+    tableBreakdown: tableTimeline
+      .filter(t => t.minsUntilFree !== Infinity)
+      .map(t => ({
+        id:           t.id,
+        label:        t.label,
+        capacity:     t.capacity,
+        status:       t.status,
+        minsUntilFree: t.minsUntilFree,
+      })),
+  };
+
+  for (const { key, sz } of brackets) {
+    const sim = simulateForSize(sz);
+    result[key] = sim ? sim.minutes : null;
+    result[`${key}Detail`] = sim
+      ? { tableId: sim.tableId, label: sim.tableLabel, fromStatus: sim.fromStatus, queueDepth: activeQueue.length }
+      : null;
+  }
+
+  return result;
 }
 
 // ── Helper: find event by subdomain OR eventId ─────────────────────────────
@@ -920,7 +1058,7 @@ router.get('/public/wait/:subdomain/live', availabilityLimiter, async (req, res,
     }));
 
     res.json({
-      waitTimes:  calcWaitTimes(objects, states, tss),
+      waitTimes:  calcWaitTimes(objects, states, tss, waitlist),
       tableStats,
       waitlist:   publicWaitlist,
       isOpen,
@@ -1153,28 +1291,7 @@ router.get('/public/reserve/:subdomain', availabilityLimiter, async (req, res, n
       const states  = event.tableStates || [];
       const activeWait = (event.tableServiceWaitlist || []).filter(w => w.status === 'waiting' || w.status === 'notified');
 
-      const avgDining = tss.avgDiningMinutes || 75;
-      const buffer    = tss.cleaningBufferMinutes || 10;
-
-      const calcWait = (sz) => {
-        const tables = objects.filter(o => o.type !== 'zone' && o.capacity >= sz);
-        if (!tables.length) return null;
-        const avail = tables.some(t => {
-          const s = states.find(st => st.tableId === t.id);
-          return !s || s.status === 'available';
-        });
-        if (avail) return 0;
-        const times = tables.map(t => {
-          const s = states.find(st => st.tableId === t.id);
-          if (!s || s.status !== 'occupied' || !s.occupiedAt) return null;
-          const seatedMs = Date.now() - new Date(s.occupiedAt).getTime();
-          return Math.max(0, Math.round((avgDining * 60000 - seatedMs) / 60000));
-        }).filter(t => t !== null);
-        if (!times.length) return null;
-        return Math.min(...times) + buffer;
-      };
-
-      waitTimes = { forTwo: calcWait(2), forFour: calcWait(4), forEight: calcWait(8) };
+      waitTimes = calcWaitTimes(objects, states, tss, activeWait);
     }
 
     res.json({
@@ -3821,28 +3938,7 @@ router.get('/public/reserve/:subdomain', availabilityLimiter, async (req, res, n
       const states  = event.tableStates || [];
       const activeWait = (event.tableServiceWaitlist || []).filter(w => w.status === 'waiting' || w.status === 'notified');
 
-      const avgDining = tss.avgDiningMinutes || 75;
-      const buffer    = tss.cleaningBufferMinutes || 10;
-
-      const calcWait = (sz) => {
-        const tables = objects.filter(o => o.type !== 'zone' && o.capacity >= sz);
-        if (!tables.length) return null;
-        const avail = tables.some(t => {
-          const s = states.find(st => st.tableId === t.id);
-          return !s || s.status === 'available';
-        });
-        if (avail) return 0;
-        const times = tables.map(t => {
-          const s = states.find(st => st.tableId === t.id);
-          if (!s || s.status !== 'occupied' || !s.occupiedAt) return null;
-          const seatedMs = Date.now() - new Date(s.occupiedAt).getTime();
-          return Math.max(0, Math.round((avgDining * 60000 - seatedMs) / 60000));
-        }).filter(t => t !== null);
-        if (!times.length) return null;
-        return Math.min(...times) + buffer;
-      };
-
-      waitTimes = { forTwo: calcWait(2), forFour: calcWait(4), forEight: calcWait(8) };
+      waitTimes = calcWaitTimes(objects, states, tss, activeWait);
     }
 
     res.json({
