@@ -836,12 +836,16 @@ function calcWaitTimes(objects, states, tss, waitlist = []) {
   };
 
   // ── 2. Build per-table availability timeline ───────────────────────────────
-  // minsUntilFree = 0 → immediately available
-  //               = N → free in N minutes
-  //               = Infinity → permanently excluded (unavailable)
-  const tableTimeline = (objects || [])
-    .filter(o => o.type !== 'zone' && (o.capacity || 0) > 0)
-    .map(t => {
+  // First try seating map objects (rich data: labels, capacity, type).
+  // If the floor plan hasn't been drawn yet, fall back to tableStates so the
+  // wait board still reflects reality even without a visual seating map.
+  let tableTimeline;
+
+  const mapObjects = (objects || []).filter(o => o.type !== 'zone' && (o.capacity || 0) > 0);
+
+  if (mapObjects.length > 0) {
+    // ─── Full floor-plan path ───────────────────────────────────────────────
+    tableTimeline = mapObjects.map(t => {
       const s = (states || []).find(st => st.tableId === t.id);
       const status = s ? s.status : 'available';
       let minsUntilFree = 0;
@@ -850,12 +854,9 @@ function calcWaitTimes(objects, states, tss, waitlist = []) {
         case 'available':
           minsUntilFree = 0;
           break;
-
         case 'cleaning':
-          // Table is being turned; just needs the buffer time
           minsUntilFree = buffer;
           break;
-
         case 'occupied': {
           const diningMins = getDiningMins(s.partySize || 2);
           if (s.occupiedAt) {
@@ -863,20 +864,13 @@ function calcWaitTimes(objects, states, tss, waitlist = []) {
             const remaining = Math.max(0, Math.round((diningMins * 60000 - seatedMs) / 60000));
             minsUntilFree = remaining + buffer;
           } else {
-            // No seat timestamp — conservatively assume table just sat down
             minsUntilFree = diningMins + buffer;
           }
           break;
         }
-
         case 'reserved':
-          // Reserved tables won't be free until reservation + dining is done;
-          // treat as full cycle: reservation duration + buffer as a pessimistic bound.
-          // If a reservationId can be cross-referenced with a booking start time
-          // that would be more precise, but here we use the configured duration.
           minsUntilFree = resvDuration + buffer;
           break;
-
         case 'unavailable':
         default:
           minsUntilFree = Infinity;
@@ -892,6 +886,56 @@ function calcWaitTimes(objects, states, tss, waitlist = []) {
         partySize:     s ? (s.partySize || 0) : 0,
       };
     });
+  } else if ((states || []).length > 0) {
+    // ─── tableStates-only fallback (no floor plan drawn yet) ───────────────
+    // Derive a synthetic timeline from the live table states.
+    // We don't have capacity from states alone, so assume 4 per table.
+    tableTimeline = (states || [])
+      .filter(s => s.status !== 'unavailable')
+      .map((s, idx) => {
+        const status = s.status || 'available';
+        const capacity = 4; // conservative default
+        let minsUntilFree = 0;
+
+        switch (status) {
+          case 'available':
+            minsUntilFree = 0;
+            break;
+          case 'cleaning':
+            minsUntilFree = buffer;
+            break;
+          case 'occupied': {
+            const diningMins = getDiningMins(s.partySize || 2);
+            if (s.occupiedAt) {
+              const seatedMs  = now - new Date(s.occupiedAt).getTime();
+              const remaining = Math.max(0, Math.round((diningMins * 60000 - seatedMs) / 60000));
+              minsUntilFree = remaining + buffer;
+            } else {
+              minsUntilFree = diningMins + buffer;
+            }
+            break;
+          }
+          case 'reserved':
+            minsUntilFree = resvDuration + buffer;
+            break;
+          default:
+            minsUntilFree = Infinity;
+            break;
+        }
+
+        return {
+          id:            s.tableId || `t${idx}`,
+          label:         s.tableId ? `Table ${idx + 1}` : `Table ${idx + 1}`,
+          capacity,
+          status,
+          minsUntilFree,
+          partySize:     s.partySize || 0,
+        };
+      });
+  } else {
+    // ─── No data at all — open / walk right in ─────────────────────────────
+    tableTimeline = [];
+  }
 
   // ── 3. Active waitlist queue (waiting + notified), chronological ───────────
   const activeQueue = (waitlist || [])
@@ -900,12 +944,7 @@ function calcWaitTimes(objects, states, tss, waitlist = []) {
     .sort((a, b) => new Date(a.addedAt || 0) - new Date(b.addedAt || 0));
 
   // ── 4. Queue simulation for a target party size ────────────────────────────
-  // Greedy simulation: each party in the queue is assigned the soonest
-  // available table that fits them. The table's minsUntilFree is advanced by
-  // their dining duration + buffer. After all existing parties are placed,
-  // find the soonest table for the target party size.
   const simulateForSize = (targetSz) => {
-    // Clone the timeline so simulations for different sizes are independent
     const timeline = tableTimeline.map(t => ({ ...t }));
 
     for (const party of activeQueue) {
@@ -914,17 +953,24 @@ function calcWaitTimes(objects, states, tss, waitlist = []) {
         .filter(t => t.capacity >= sz && t.minsUntilFree !== Infinity)
         .sort((a, b) => a.minsUntilFree - b.minsUntilFree);
       if (!eligible.length) continue;
-      // Assign this queue party to the soonest eligible table
       const tbl = eligible[0];
       tbl.minsUntilFree += getDiningMins(sz) + buffer;
     }
 
-    // Now pick the soonest table that fits the target party
     const candidates = timeline
       .filter(t => t.capacity >= targetSz && t.minsUntilFree !== Infinity)
       .sort((a, b) => a.minsUntilFree - b.minsUntilFree);
 
-    if (!candidates.length) return null;
+    if (!candidates.length) {
+      // If there are tables in the timeline but none fit this size, the restaurant
+      // is either full or doesn't have large-enough tables — return a reasonable wait
+      if (tableTimeline.length > 0) {
+        const anyFree = tableTimeline.some(t => t.minsUntilFree === 0 && t.minsUntilFree !== Infinity);
+        return anyFree ? { minutes: 0, tableId: null, tableLabel: '', fromStatus: 'available' } : null;
+      }
+      // No tables at all — assume available
+      return { minutes: 0, tableId: null, tableLabel: '', fromStatus: 'available' };
+    }
     const best = candidates[0];
     return {
       minutes:    best.minsUntilFree,
@@ -1014,15 +1060,31 @@ router.get('/public/wait/:subdomain/live', availabilityLimiter, async (req, res,
     const states  = event.tableStates || [];
     const waitlist = (event.tableServiceWaitlist || []).filter(w => w.status === 'waiting' || w.status === 'notified');
 
-    // Table stats
+    // Table stats — prefer seating map objects; fall back to tableStates if no
+    // floor plan has been drawn yet so the board shows real occupancy data.
     const tables = objects.filter(o => o.type !== 'zone');
-    const tableStats = {
-      total:     tables.length,
-      available: tables.filter(t => { const s = states.find(st => st.tableId === t.id); return !s || s.status === 'available'; }).length,
-      occupied:  tables.filter(t => { const s = states.find(st => st.tableId === t.id); return s?.status === 'occupied'; }).length,
-      reserved:  tables.filter(t => { const s = states.find(st => st.tableId === t.id); return s?.status === 'reserved'; }).length,
-      cleaning:  tables.filter(t => { const s = states.find(st => st.tableId === t.id); return s?.status === 'cleaning'; }).length,
-    };
+    let tableStats;
+    if (tables.length > 0) {
+      tableStats = {
+        total:     tables.length,
+        available: tables.filter(t => { const s = states.find(st => st.tableId === t.id); return !s || s.status === 'available'; }).length,
+        occupied:  tables.filter(t => { const s = states.find(st => st.tableId === t.id); return s?.status === 'occupied'; }).length,
+        reserved:  tables.filter(t => { const s = states.find(st => st.tableId === t.id); return s?.status === 'reserved'; }).length,
+        cleaning:  tables.filter(t => { const s = states.find(st => st.tableId === t.id); return s?.status === 'cleaning'; }).length,
+      };
+    } else if (states.length > 0) {
+      // No seating map yet — derive stats from tableStates
+      const activeStates = states.filter(s => s.status !== 'unavailable');
+      tableStats = {
+        total:     activeStates.length,
+        available: activeStates.filter(s => !s.status || s.status === 'available').length,
+        occupied:  activeStates.filter(s => s.status === 'occupied').length,
+        reserved:  activeStates.filter(s => s.status === 'reserved').length,
+        cleaning:  activeStates.filter(s => s.status === 'cleaning').length,
+      };
+    } else {
+      tableStats = { total: 0, available: 0, occupied: 0, reserved: 0, cleaning: 0 };
+    }
 
     // Is the venue currently open?
     // Accept optional ?tz= (IANA timezone) from the client so the check uses the
@@ -1319,7 +1381,7 @@ router.get('/public/reserve/:subdomain', availabilityLimiter, async (req, res, n
       operatingHoursOpen:  tss.operatingHoursOpen  || '11:00',
       operatingHoursClose: tss.operatingHoursClose || '22:00',
       operatingDays:    rps.operatingDays || {},
-      blackoutDates:    (rps.blackoutDates || []).map(b => b.date),
+      blackoutDates:    (rps.blackoutDates || []).filter(Boolean).map(b => b.date).filter(Boolean),
       acceptingReservations: rps.acceptingReservations || false,
       confirmationMode:      rps.confirmationMode || 'auto_confirm',
       slotIntervalMinutes:   rps.slotIntervalMinutes || 30,
@@ -1353,7 +1415,7 @@ router.get('/public/reserve/:subdomain', availabilityLimiter, async (req, res, n
       metaDescription:       rps.metaDescription || '',
       waitTimes,
     });
-  } catch (err) { next(err); }
+  } catch (err) { console.error("[reserve GET] subdomain=" + req.params.subdomain + " error:", err.message, err.stack); next(err); }
 });
 
 // ── GET /public/reserve/:subdomain/availability ────────────────────────────────
@@ -3966,7 +4028,7 @@ router.get('/public/reserve/:subdomain', availabilityLimiter, async (req, res, n
       operatingHoursOpen:  tss.operatingHoursOpen  || '11:00',
       operatingHoursClose: tss.operatingHoursClose || '22:00',
       operatingDays:    rps.operatingDays || {},
-      blackoutDates:    (rps.blackoutDates || []).map(b => b.date),
+      blackoutDates:    (rps.blackoutDates || []).filter(Boolean).map(b => b.date).filter(Boolean),
       acceptingReservations: rps.acceptingReservations || false,
       confirmationMode:      rps.confirmationMode || 'auto_confirm',
       slotIntervalMinutes:   rps.slotIntervalMinutes || 30,
