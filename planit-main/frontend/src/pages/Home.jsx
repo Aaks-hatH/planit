@@ -548,632 +548,53 @@ function CinematicIntro({ onComplete }) {
 // ─────────────────────────────────────────────────────────────────
 // CANVAS DRAW HELPERS
 // ─────────────────────────────────────────────────────────────────
-function rrect(ctx, x, y, w, h, r) {
-  ctx.beginPath();
-  ctx.moveTo(x + r, y);
-  ctx.lineTo(x + w - r, y);
-  ctx.quadraticCurveTo(x + w, y, x + w, y + r);
-  ctx.lineTo(x + w, y + h - r);
-  ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
-  ctx.lineTo(x + r, y + h);
-  ctx.quadraticCurveTo(x, y + h, x, y + h - r);
-  ctx.lineTo(x, y + r);
-  ctx.quadraticCurveTo(x, y, x + r, y);
-  ctx.closePath();
-}
-
-function drawScene0(ctx, W, H, t) {
-  // Scene 0: PlanIt dual-branch overview
-  const cx = W / 2, cy = H / 2;
-
-  // Background glow
-  const grd = ctx.createRadialGradient(cx, cy, 0, cx, cy, W * 0.6);
-  grd.addColorStop(0, 'rgba(100,116,139,0.08)');
-  grd.addColorStop(1, 'rgba(0,0,0,0)');
-  ctx.fillStyle = grd; ctx.fillRect(0, 0, W, H);
-
-  // PlanIt logo + wordmark centered above cards
-  const logoY = H * 0.15;
-  ctx.save();
-  rrect(ctx, cx - 28, logoY - 28, 56, 56, 16);
-  ctx.fillStyle = 'rgba(255,255,255,0.05)';
-  ctx.fill();
-  ctx.strokeStyle = 'rgba(255,255,255,0.1)';
-  ctx.lineWidth = 1;
-  ctx.stroke();
-  // Calendar icon
-  ctx.strokeStyle = 'rgba(255,255,255,0.75)';
-  ctx.lineWidth = 1.5;
-  ctx.beginPath(); ctx.rect(cx - 12, logoY - 12, 24, 22); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(cx - 6, logoY - 16); ctx.lineTo(cx - 6, logoY - 8); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(cx + 6, logoY - 16); ctx.lineTo(cx + 6, logoY - 8); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(cx - 12, logoY - 4); ctx.lineTo(cx + 12, logoY - 4); ctx.stroke();
-  ctx.restore();
-
-  ctx.font = `900 ${Math.round(W * 0.045)}px system-ui,-apple-system,sans-serif`;
-  ctx.fillStyle = 'rgba(255,255,255,0.92)';
-  ctx.textAlign = 'center';
-  ctx.letterSpacing = '-1px';
-  ctx.fillText('PlanIt', cx, logoY + 50);
-
-  ctx.font = `500 13px system-ui,-apple-system,sans-serif`;
-  ctx.fillStyle = 'rgba(255,255,255,0.22)';
-  ctx.letterSpacing = '0.3em';
-  ctx.fillText('ONE PLATFORM · TWO BRANCHES', cx, logoY + 72);
-  ctx.letterSpacing = '0px';
-
-  // Card dimensions
-  const cardW = Math.min(220, W * 0.27);
-  const cardH = Math.min(280, H * 0.5);
-  const gap = 22;
-  const cardsY = H * 0.35;
-
-  // Entrance animation: cards slide up from below
-  const slideIn = Math.min(1, t * 2);
-  const ease = 1 - Math.pow(1 - slideIn, 3);
-  const slideOffset = (1 - ease) * 60;
-
-  // ── Events card ──
-  const evX = cx - cardW - gap / 2;
-  ctx.save();
-  ctx.translate(0, slideOffset);
-  ctx.globalAlpha = ease;
-
-  rrect(ctx, evX, cardsY, cardW, cardH, 18);
-  const evGrd = ctx.createLinearGradient(evX, cardsY, evX, cardsY + cardH);
-  evGrd.addColorStop(0, 'rgba(255,255,255,0.06)');
-  evGrd.addColorStop(1, 'rgba(255,255,255,0.02)');
-  ctx.fillStyle = evGrd; ctx.fill();
-  ctx.strokeStyle = 'rgba(255,255,255,0.1)'; ctx.lineWidth = 1; ctx.stroke();
-
-  // Events header
-  ctx.fillStyle = 'rgba(255,255,255,0.9)';
-  ctx.font = `800 17px system-ui,-apple-system,sans-serif`;
-  ctx.textAlign = 'left';
-  ctx.fillText('Events', evX + 18, cardsY + 36);
-  ctx.fillStyle = 'rgba(255,255,255,0.28)';
-  ctx.font = `600 10px system-ui,-apple-system,sans-serif`;
-  ctx.fillText('PLANIT', evX + 18, cardsY + 20);
-
-  // Feature rows
-  const evFeatures = ['Team chat & messaging', 'Task management', 'QR check-in', 'Budget & expenses', 'File sharing', 'RSVP system'];
-  evFeatures.forEach((f, i) => {
-    const fy = cardsY + 64 + i * 30;
-    if (fy + 20 > cardsY + cardH - 30) return;
-    // Green check circle
-    ctx.beginPath();
-    ctx.arc(evX + 26, fy - 4, 8, 0, Math.PI * 2);
-    ctx.fillStyle = 'rgba(34,197,94,0.12)'; ctx.fill();
-    ctx.strokeStyle = 'rgba(34,197,94,0.35)'; ctx.lineWidth = 1; ctx.stroke();
-    ctx.strokeStyle = '#22c55e'; ctx.lineWidth = 1.4;
-    ctx.beginPath();
-    ctx.moveTo(evX + 22, fy - 4); ctx.lineTo(evX + 25, fy - 1); ctx.lineTo(evX + 30, fy - 7);
-    ctx.stroke();
-    ctx.fillStyle = 'rgba(255,255,255,0.5)';
-    ctx.font = `500 12px system-ui,-apple-system,sans-serif`;
-    ctx.fillText(f, evX + 42, fy);
-  });
-
-  // CTA strip
-  rrect(ctx, evX + 12, cardsY + cardH - 44, cardW - 24, 32, 10);
-  ctx.fillStyle = 'rgba(255,255,255,0.07)'; ctx.fill();
-  ctx.strokeStyle = 'rgba(255,255,255,0.1)'; ctx.lineWidth = 1; ctx.stroke();
-  ctx.fillStyle = 'rgba(255,255,255,0.6)';
-  ctx.font = `700 11px system-ui,-apple-system,sans-serif`;
-  ctx.textAlign = 'center';
-  ctx.fillText('Free to start  →', evX + cardW / 2, cardsY + cardH - 24);
-  ctx.restore();
-
-  // ── Venue card ──
-  const veX = cx + gap / 2;
-  ctx.save();
-  ctx.translate(0, slideOffset * 1.15);
-  ctx.globalAlpha = ease;
-
-  rrect(ctx, veX, cardsY, cardW, cardH, 18);
-  const veGrd = ctx.createLinearGradient(veX, cardsY, veX, cardsY + cardH);
-  veGrd.addColorStop(0, 'rgba(249,115,22,0.1)');
-  veGrd.addColorStop(1, 'rgba(249,115,22,0.03)');
-  ctx.fillStyle = veGrd; ctx.fill();
-  ctx.strokeStyle = 'rgba(249,115,22,0.22)'; ctx.lineWidth = 1; ctx.stroke();
-
-  ctx.fillStyle = '#f97316';
-  ctx.font = `800 17px system-ui,-apple-system,sans-serif`;
-  ctx.textAlign = 'left';
-  ctx.fillText('Venue', veX + 18, cardsY + 36);
-  ctx.fillStyle = 'rgba(249,115,22,0.45)';
-  ctx.font = `600 10px system-ui,-apple-system,sans-serif`;
-  ctx.fillText('PLANIT', veX + 18, cardsY + 20);
-
-  const veFeatures = ['Visual floor editor', 'Walk-in waitlist', 'QR reservations', 'Live sync', 'Data never expires', 'Public wait board'];
-  veFeatures.forEach((f, i) => {
-    const fy = cardsY + 64 + i * 30;
-    if (fy + 20 > cardsY + cardH - 30) return;
-    ctx.beginPath();
-    ctx.arc(veX + 26, fy - 4, 8, 0, Math.PI * 2);
-    ctx.fillStyle = 'rgba(249,115,22,0.1)'; ctx.fill();
-    ctx.strokeStyle = 'rgba(249,115,22,0.3)'; ctx.lineWidth = 1; ctx.stroke();
-    ctx.strokeStyle = '#f97316'; ctx.lineWidth = 1.4;
-    ctx.beginPath();
-    ctx.moveTo(veX + 22, fy - 4); ctx.lineTo(veX + 25, fy - 1); ctx.lineTo(veX + 30, fy - 7);
-    ctx.stroke();
-    ctx.fillStyle = 'rgba(249,115,22,0.6)';
-    ctx.font = `500 12px system-ui,-apple-system,sans-serif`;
-    ctx.fillText(f, veX + 42, fy);
-  });
-
-  rrect(ctx, veX + 12, cardsY + cardH - 44, cardW - 24, 32, 10);
-  ctx.fillStyle = 'rgba(249,115,22,0.08)'; ctx.fill();
-  ctx.strokeStyle = 'rgba(249,115,22,0.22)'; ctx.lineWidth = 1; ctx.stroke();
-  ctx.fillStyle = 'rgba(249,115,22,0.8)';
-  ctx.font = `700 11px system-ui,-apple-system,sans-serif`;
-  ctx.textAlign = 'center';
-  ctx.fillText('Free to start  →', veX + cardW / 2, cardsY + cardH - 24);
-  ctx.restore();
-}
-
-function drawScene1(ctx, W, H, t) {
-  // Scene 1: Real-time team chat workspace
-  const appW = Math.min(720, W * 0.88);
-  const appH = Math.min(420, H * 0.68);
-  const ax = (W - appW) / 2;
-  const ay = (H - appH) / 2;
-
-  // Window shadow
-  ctx.save();
-  ctx.shadowColor = 'rgba(0,0,0,0.7)';
-  ctx.shadowBlur = 60;
-  rrect(ctx, ax, ay, appW, appH, 14);
-  ctx.fillStyle = '#0d0d16'; ctx.fill();
-  ctx.restore();
-
-  // Window border
-  rrect(ctx, ax, ay, appW, appH, 14);
-  ctx.strokeStyle = 'rgba(255,255,255,0.07)'; ctx.lineWidth = 1; ctx.stroke();
-  ctx.save(); ctx.clip();
-
-  // Chrome bar
-  ctx.fillStyle = '#09090f';
-  ctx.fillRect(ax, ay, appW, 38);
-  ctx.strokeStyle = 'rgba(255,255,255,0.05)'; ctx.lineWidth = 1;
-  ctx.beginPath(); ctx.moveTo(ax, ay + 38); ctx.lineTo(ax + appW, ay + 38); ctx.stroke();
-  // Traffic lights
-  [['#ff5f57', 12], ['#febc2e', 26], ['#28c840', 40]].forEach(([c, ox]) => {
-    ctx.beginPath(); ctx.arc(ax + ox, ay + 19, 5, 0, Math.PI * 2);
-    ctx.fillStyle = c + 'cc'; ctx.fill();
-  });
-  // URL bar
-  rrect(ctx, ax + appW / 2 - 110, ay + 10, 220, 18, 5);
-  ctx.fillStyle = 'rgba(255,255,255,0.04)'; ctx.fill();
-  ctx.strokeStyle = 'rgba(255,255,255,0.05)'; ctx.lineWidth = 1; ctx.stroke();
-  ctx.beginPath(); ctx.arc(ax + appW / 2 - 104, ay + 19, 3, 0, Math.PI * 2);
-  ctx.fillStyle = '#22c55e'; ctx.fill();
-  ctx.fillStyle = 'rgba(255,255,255,0.28)';
-  ctx.font = '500 10px system-ui,-apple-system,sans-serif';
-  ctx.textAlign = 'center';
-  ctx.fillText('Summer Gala 2026 · PlanIt Events', ax + appW / 2 + 6, ay + 23);
-
-  // Sidebar
-  const sbW = Math.round(appW * 0.26);
-  ctx.fillStyle = 'rgba(0,0,0,0.3)';
-  ctx.fillRect(ax, ay + 38, sbW, appH - 38);
-  ctx.strokeStyle = 'rgba(255,255,255,0.04)'; ctx.lineWidth = 1;
-  ctx.beginPath(); ctx.moveTo(ax + sbW, ay + 38); ctx.lineTo(ax + sbW, ay + appH); ctx.stroke();
-
-  ctx.fillStyle = 'rgba(255,255,255,0.16)';
-  ctx.font = '700 9px system-ui,-apple-system,sans-serif';
-  ctx.textAlign = 'left';
-  ctx.fillText('CHANNELS', ax + 14, ay + 62);
-
-  const channels = [['# planning-team', true], ['# vendors', false], ['# logistics', false], ['# day-of', false]];
-  channels.forEach(([name, active], i) => {
-    const chy = ay + 78 + i * 28;
-    if (active) {
-      rrect(ctx, ax + 8, chy - 12, sbW - 16, 22, 6);
-      ctx.fillStyle = 'rgba(255,255,255,0.09)'; ctx.fill();
-    }
-    ctx.fillStyle = active ? 'rgba(255,255,255,0.88)' : 'rgba(255,255,255,0.3)';
-    ctx.font = `${active ? '600' : '400'} 12px system-ui,-apple-system,sans-serif`;
-    ctx.fillText(name, ax + 14, chy + 4);
-  });
-
-  ctx.fillStyle = 'rgba(255,255,255,0.16)';
-  ctx.font = '700 9px system-ui,-apple-system,sans-serif';
-  ctx.fillText('TOOLS', ax + 14, ay + 200);
-  [['Tasks', '14'], ['Polls', '2'], ['Files', '8'], ['Budget', '']].forEach(([name, badge], i) => {
-    const ty = ay + 216 + i * 26;
-    ctx.fillStyle = 'rgba(255,255,255,0.3)';
-    ctx.font = '400 12px system-ui,-apple-system,sans-serif';
-    ctx.fillText(name, ax + 14, ty);
-    if (badge) {
-      rrect(ctx, ax + sbW - 28, ty - 11, 22, 14, 4);
-      ctx.fillStyle = 'rgba(255,255,255,0.1)'; ctx.fill();
-      ctx.fillStyle = 'rgba(255,255,255,0.45)';
-      ctx.font = '600 10px system-ui,-apple-system,sans-serif';
-      ctx.textAlign = 'center';
-      ctx.fillText(badge, ax + sbW - 17, ty);
-      ctx.textAlign = 'left';
-    }
-  });
-
-  // Chat panel
-  const cpX = ax + sbW;
-  const cpW = appW - sbW;
-  // Header
-  ctx.fillStyle = 'rgba(255,255,255,0,0)';
-  ctx.strokeStyle = 'rgba(255,255,255,0.04)'; ctx.lineWidth = 1;
-  ctx.beginPath(); ctx.moveTo(cpX, ay + 68); ctx.lineTo(cpX + cpW, ay + 68); ctx.stroke();
-  ctx.fillStyle = 'rgba(255,255,255,0.65)';
-  ctx.font = '700 12px system-ui,-apple-system,sans-serif';
-  ctx.textAlign = 'left';
-  ctx.fillText('# planning-team', cpX + 14, ay + 58);
-  ctx.fillStyle = 'rgba(255,255,255,0.18)';
-  ctx.font = '400 10px system-ui,-apple-system,sans-serif';
-  ctx.textAlign = 'right';
-  ctx.fillText('12 members', cpX + cpW - 14, ay + 58);
-  ctx.textAlign = 'left';
-
-  // Messages (animate in based on t)
-  const msgs = [
-    { av: 'A', name: 'Alex', col: '#818cf8', msg: 'Venue deposit confirmed! Locked in July 15th 🎉', time: '2:14 PM' },
-    { av: 'S', name: 'Sam', col: '#38bdf8', msg: 'Floor plan uploaded to Files — 3 zones mapped out', time: '2:16 PM' },
-    { av: 'M', name: 'Maya', col: '#f472b6', msg: 'Added 12 tasks to catering checklist. We\'re on track', time: '2:19 PM' },
-  ];
-  msgs.forEach((m, i) => {
-    const msgT = Math.max(0, Math.min(1, (t - i * 0.22) / 0.25));
-    if (msgT <= 0) return;
-    const my = ay + 86 + i * 80;
-    ctx.globalAlpha = msgT;
-    ctx.save();
-    ctx.translate(0, (1 - msgT) * 14);
-    // Avatar
-    ctx.beginPath(); ctx.arc(cpX + 26, my + 14, 12, 0, Math.PI * 2);
-    ctx.fillStyle = m.col + '28'; ctx.fill();
-    ctx.fillStyle = m.col;
-    ctx.font = '700 11px system-ui,-apple-system,sans-serif';
-    ctx.textAlign = 'center';
-    ctx.fillText(m.av, cpX + 26, my + 18);
-    ctx.textAlign = 'left';
-    // Name + time
-    ctx.fillStyle = m.col;
-    ctx.font = '700 12px system-ui,-apple-system,sans-serif';
-    ctx.fillText(m.name, cpX + 46, my + 12);
-    ctx.fillStyle = 'rgba(255,255,255,0.18)';
-    ctx.font = '400 10px system-ui,-apple-system,sans-serif';
-    ctx.fillText(m.time, cpX + 46 + ctx.measureText(m.name).width + 8, my + 12);
-    // Bubble
-    const bubW = Math.min(cpW - 80, ctx.measureText(m.msg).width + 28);
-    rrect(ctx, cpX + 46, my + 20, bubW, 28, 4);
-    ctx.fillStyle = 'rgba(255,255,255,0.05)'; ctx.fill();
-    ctx.fillStyle = 'rgba(255,255,255,0.6)';
-    ctx.font = '400 12px system-ui,-apple-system,sans-serif';
-    ctx.fillText(m.msg, cpX + 60, my + 38);
-    ctx.restore();
-    ctx.globalAlpha = 1;
-  });
-
-  // Typing dots
-  if (t > 0.7) {
-    const dotAlpha = Math.min(1, (t - 0.7) / 0.2);
-    ctx.globalAlpha = dotAlpha;
-    const dtime = Date.now() / 400;
-    ctx.beginPath(); ctx.arc(cpX + 26, ay + 326, 12, 0, Math.PI * 2);
-    ctx.fillStyle = 'rgba(148,163,184,0.18)'; ctx.fill();
-    ctx.fillStyle = 'rgba(148,163,184,0.7)'; ctx.font = '700 11px system-ui,-apple-system,sans-serif'; ctx.textAlign = 'center';
-    ctx.fillText('J', cpX + 26, ay + 330);
-    [0, 1, 2].forEach(di => {
-      const bounce = Math.sin(dtime + di * 0.7) * 0.5 + 0.5;
-      ctx.beginPath(); ctx.arc(cpX + 52 + di * 10, ay + 328 - bounce * 4, 3, 0, Math.PI * 2);
-      ctx.fillStyle = `rgba(255,255,255,${0.25 + bounce * 0.35})`; ctx.fill();
-    });
-    ctx.textAlign = 'left';
-    ctx.globalAlpha = 1;
-  }
-  ctx.restore();
-}
-
-function drawScene2(ctx, W, H, t) {
-  // Scene 2: Enterprise QR Check-in
-  const appW = Math.min(720, W * 0.88);
-  const appH = Math.min(420, H * 0.68);
-  const ax = (W - appW) / 2;
-  const ay = (H - appH) / 2;
-
-  ctx.save();
-  ctx.shadowColor = 'rgba(0,0,50,0.8)'; ctx.shadowBlur = 60;
-  rrect(ctx, ax, ay, appW, appH, 14);
-  ctx.fillStyle = '#090b12'; ctx.fill();
-  ctx.restore();
-  rrect(ctx, ax, ay, appW, appH, 14);
-  ctx.strokeStyle = 'rgba(96,165,250,0.12)'; ctx.lineWidth = 1; ctx.stroke();
-  ctx.save(); ctx.clip();
-
-  // Header
-  ctx.fillStyle = '#070810';
-  ctx.fillRect(ax, ay, appW, 46);
-  ctx.strokeStyle = 'rgba(96,165,250,0.07)'; ctx.lineWidth = 1;
-  ctx.beginPath(); ctx.moveTo(ax, ay + 46); ctx.lineTo(ax + appW, ay + 46); ctx.stroke();
-
-  ctx.beginPath(); ctx.arc(ax + 16, ay + 23, 4, 0, Math.PI * 2);
-  ctx.fillStyle = '#22c55e'; ctx.fill();
-  ctx.shadowColor = '#22c55e'; ctx.shadowBlur = 6;
-  ctx.fill(); ctx.shadowBlur = 0;
-
-  ctx.fillStyle = 'rgba(255,255,255,0.7)';
-  ctx.font = '700 12px system-ui,-apple-system,sans-serif';
-  ctx.textAlign = 'left';
-  ctx.fillText('Annual Tech Summit 2026 · Check-in', ax + 28, ay + 27);
-  ctx.fillStyle = 'rgba(96,165,250,0.5)';
-  ctx.font = '700 9px system-ui,-apple-system,sans-serif';
-  ctx.textAlign = 'right';
-  ctx.fillText('ENTERPRISE MODE', ax + appW - 14, ay + 27);
-  ctx.textAlign = 'left';
-
-  // Stats bar
-  const stats = [['24', 'Arrived', '#22c55e'], ['8', 'Pending', '#94a3b8'], ['2', 'Blocked', '#ef4444']];
-  stats.forEach(([n, l, c], i) => {
-    const sx = ax + appW - 140 + i * 48;
-    const sy = ay + 8;
-    rrect(ctx, sx - 4, sy, 44, 30, 6);
-    ctx.fillStyle = c + '0e'; ctx.fill();
-    ctx.strokeStyle = c + '22'; ctx.lineWidth = 1; ctx.stroke();
-    ctx.fillStyle = c; ctx.font = '900 15px system-ui,-apple-system,sans-serif'; ctx.textAlign = 'center';
-    ctx.fillText(n, sx + 18, sy + 16);
-    ctx.fillStyle = 'rgba(255,255,255,0.28)'; ctx.font = '400 8px system-ui,-apple-system,sans-serif';
-    ctx.fillText(l, sx + 18, sy + 26);
-    ctx.textAlign = 'left';
-  });
-
-  // Guest rows
-  const guests = [
-    { name: 'Sarah Johnson', role: 'VIP', roleC: '#fbbf24', status: 'in', info: 'Checked in · Table 12' },
-    { name: 'Marcus Rivera', role: 'Speaker', roleC: '#a78bfa', status: 'scan', info: 'Scanning…' },
-    { name: 'Priya Sharma', role: 'Attendee', roleC: '#60a5fa', status: 'wait', info: 'Table 8 · Awaiting' },
-    { name: 'Dev Patel', role: 'Attendee', roleC: '#60a5fa', status: 'blocked', info: 'Duplicate identity detected' },
-    { name: 'Amara Okafor', role: 'Attendee', roleC: '#60a5fa', status: 'flagged', info: 'Low trust score: 42/100' },
-  ];
-
-  guests.forEach((g, i) => {
-    const rowT = Math.max(0, Math.min(1, (t - i * 0.15) / 0.2));
-    if (rowT <= 0) return;
-    const ry = ay + 58 + i * 66;
-    ctx.globalAlpha = rowT;
-    ctx.save(); ctx.translate(0, (1 - rowT) * 16);
-
-    const sc = { in: '#22c55e', scan: '#60a5fa', wait: '#ffffff', blocked: '#ef4444', flagged: '#f59e0b' }[g.status];
-    rrect(ctx, ax + 12, ry, appW - 24, 54, 11);
-    ctx.fillStyle = sc + (g.status === 'blocked' ? '09' : g.status === 'flagged' ? '07' : g.status === 'in' ? '0b' : '04');
-    ctx.fill();
-    ctx.strokeStyle = sc + (g.status === 'in' ? '30' : '1a'); ctx.lineWidth = 1; ctx.stroke();
-
-    // Left avatar box
-    rrect(ctx, ax + 22, ry + 10, 34, 34, 9);
-    ctx.fillStyle = g.status === 'in' ? '#22c55e' : sc + '20'; ctx.fill();
-    ctx.fillStyle = g.status === 'in' ? 'white' : sc;
-    ctx.font = '700 13px system-ui,-apple-system,sans-serif'; ctx.textAlign = 'center';
-    ctx.fillText(g.status === 'in' ? '✓' : g.status === 'blocked' ? '✗' : g.name.slice(0, 2), ax + 39, ry + 31);
-    ctx.textAlign = 'left';
-
-    ctx.fillStyle = 'rgba(255,255,255,0.88)'; ctx.font = '600 13px system-ui,-apple-system,sans-serif';
-    ctx.fillText(g.name, ax + 64, ry + 23);
-    // Role badge
-    const mw = ctx.measureText(g.name).width;
-    rrect(ctx, ax + 64 + mw + 8, ry + 12, ctx.measureText(g.role).width + 12, 14, 3);
-    ctx.fillStyle = g.roleC + '18'; ctx.fill();
-    ctx.fillStyle = g.roleC; ctx.font = '700 9px system-ui,-apple-system,sans-serif';
-    ctx.fillText(g.role, ax + 64 + mw + 14, ry + 22);
-    // Status badge if blocked/flagged
-    if (g.status === 'blocked' || g.status === 'flagged') {
-      const badge = g.status === 'blocked' ? 'BLOCKED' : 'FLAGGED';
-      const bx = ax + 64 + mw + ctx.measureText(g.role).width + 30;
-      rrect(ctx, bx, ry + 12, ctx.measureText(badge).width + 12, 14, 3);
-      ctx.fillStyle = sc + '18'; ctx.fill();
-      ctx.fillStyle = sc; ctx.fillText(badge, bx + 6, ry + 22);
-    }
-    ctx.fillStyle = 'rgba(255,255,255,0.28)'; ctx.font = '400 11px system-ui,-apple-system,sans-serif';
-    ctx.fillText(g.info, ax + 64, ry + 39);
-
-    // Right action button
-    const btnLabel = { in: '✓ In', scan: 'Scanning', wait: 'Scan', blocked: 'Blocked', flagged: 'Review' }[g.status];
-    const btnW = ctx.measureText(btnLabel).width + 24;
-    rrect(ctx, ax + appW - btnW - 22, ry + 17, btnW, 22, 7);
-    ctx.fillStyle = sc + '18'; ctx.fill(); ctx.strokeStyle = sc + '28'; ctx.lineWidth = 1; ctx.stroke();
-    ctx.fillStyle = sc; ctx.font = '700 11px system-ui,-apple-system,sans-serif'; ctx.textAlign = 'center';
-    ctx.fillText(btnLabel, ax + appW - btnW / 2 - 22, ry + 32);
-    ctx.textAlign = 'left';
-    ctx.restore(); ctx.globalAlpha = 1;
-  });
-  ctx.restore();
-}
-
-function drawScene3(ctx, W, H, t) {
-  // Scene 3: Venue floor map
-  const appW = Math.min(720, W * 0.88);
-  const appH = Math.min(420, H * 0.68);
-  const ax = (W - appW) / 2;
-  const ay = (H - appH) / 2;
-
-  ctx.save();
-  ctx.shadowColor = 'rgba(249,115,22,0.15)'; ctx.shadowBlur = 60;
-  rrect(ctx, ax, ay, appW, appH, 14);
-  ctx.fillStyle = '#0d0a05'; ctx.fill();
-  ctx.restore();
-  rrect(ctx, ax, ay, appW, appH, 14);
-  ctx.strokeStyle = 'rgba(249,115,22,0.16)'; ctx.lineWidth = 1; ctx.stroke();
-  ctx.save(); ctx.clip();
-
-  // Header
-  ctx.fillStyle = '#0a0803';
-  ctx.fillRect(ax, ay, appW, 46);
-  ctx.strokeStyle = 'rgba(249,115,22,0.08)'; ctx.lineWidth = 1;
-  ctx.beginPath(); ctx.moveTo(ax, ay + 46); ctx.lineTo(ax + appW, ay + 46); ctx.stroke();
-
-  rrect(ctx, ax + 12, ay + 10, 26, 26, 8);
-  ctx.fillStyle = 'rgba(249,115,22,0.15)'; ctx.fill();
-  ctx.strokeStyle = 'rgba(249,115,22,0.25)'; ctx.lineWidth = 1; ctx.stroke();
-  ctx.fillStyle = '#f97316'; ctx.font = '700 12px system-ui,-apple-system,sans-serif';
-  ctx.textAlign = 'center'; ctx.fillText('🍽', ax + 25, ay + 27); ctx.textAlign = 'left';
-
-  ctx.fillStyle = 'rgba(255,255,255,0.8)'; ctx.font = '700 13px system-ui,-apple-system,sans-serif';
-  ctx.fillText('Taverna Roma', ax + 46, ay + 28);
-  ctx.fillStyle = 'rgba(249,115,22,0.5)'; ctx.font = '700 9px system-ui,-apple-system,sans-serif';
-  ctx.fillText('PLANIT VENUE', ax + 46 + ctx.measureText('Taverna Roma').width + 10, ay + 28);
-
-  const statuses = [['#22c55e', '3 Free'], ['#ef4444', '4 Occ'], ['#8b5cf6', '1 Cln'], ['#f59e0b', '1 Rsv']];
-  let sx = ax + appW - 14;
-  statuses.slice().reverse().forEach(([c, l]) => {
-    const w = ctx.measureText(l).width + 16;
-    sx -= w + 6;
-    rrect(ctx, sx, ay + 13, w, 20, 5);
-    ctx.fillStyle = c + '12'; ctx.fill(); ctx.strokeStyle = c + '28'; ctx.lineWidth = 1; ctx.stroke();
-    ctx.fillStyle = c; ctx.font = '700 10px system-ui,-apple-system,sans-serif';
-    ctx.textAlign = 'center'; ctx.fillText(l, sx + w / 2, ay + 27); ctx.textAlign = 'left';
-  });
-
-  // Floor grid
-  const fX = ax + 14, fY = ay + 56, fW = appW - 28, fH = appH - 70;
-  ctx.fillStyle = 'rgba(249,115,22,0.015)'; ctx.fillRect(fX, fY, fW, fH);
-  ctx.strokeStyle = 'rgba(249,115,22,0.05)'; ctx.lineWidth = 0.5;
-  const gs = 26;
-  for (let gx = fX; gx < fX + fW; gx += gs) { ctx.beginPath(); ctx.moveTo(gx, fY); ctx.lineTo(gx, fY + fH); ctx.stroke(); }
-  for (let gy = fY; gy < fY + fH; gy += gs) { ctx.beginPath(); ctx.moveTo(fX, gy); ctx.lineTo(fX + fW, gy); ctx.stroke(); }
-
-  // Zone outline
-  rrect(ctx, fX + 4, fY + 4, fW * 0.32, 60, 7);
-  ctx.strokeStyle = 'rgba(249,115,22,0.08)'; ctx.setLineDash([5, 3]); ctx.lineWidth = 1; ctx.stroke(); ctx.setLineDash([]);
-  ctx.fillStyle = 'rgba(249,115,22,0.18)'; ctx.font = '700 9px system-ui,-apple-system,sans-serif'; ctx.letterSpacing = '2px';
-  ctx.textAlign = 'center'; ctx.fillText('MAIN ROOM', fX + fW * 0.16, fY + 38); ctx.letterSpacing = '0px'; ctx.textAlign = 'left';
-
-  // Tables
-  const tables = [
-    { cx: fX + fW * 0.13, cy: fY + 130, r: 26, st: 'available', lb: 'T1', cap: 4 },
-    { cx: fX + fW * 0.28, cy: fY + 130, r: 26, st: 'occupied',  lb: 'T2', cap: 4, tm: '38m' },
-    { cx: fX + fW * 0.44, cy: fY + 120, r: 30, st: 'occupied',  lb: 'T3', cap: 6, tm: '19m' },
-    { cx: fX + fW * 0.59, cy: fY + 130, r: 26, st: 'cleaning',  lb: 'T4', cap: 4 },
-    { cx: fX + fW * 0.74, cy: fY + 120, r: 30, st: 'available', lb: 'T5', cap: 6 },
-    { cx: fX + fW * 0.89, cy: fY + 130, r: 26, st: 'reserved',  lb: 'T6', cap: 4 },
-  ];
-  const tc = { available: '#22c55e', occupied: '#ef4444', cleaning: '#8b5cf6', reserved: '#f59e0b' };
-  const now = Date.now() / 1000;
-  tables.forEach((tb, i) => {
-    const tableT = Math.max(0, Math.min(1, (t - i * 0.1) / 0.18));
-    ctx.globalAlpha = tableT;
-    const c = tc[tb.st];
-    const pulse = tb.st === 'available' ? Math.sin(now * 1.8 + i) * 0.25 + 0.75 : 1;
-    // Outer ring
-    ctx.beginPath(); ctx.arc(tb.cx, tb.cy, tb.r + 7, 0, Math.PI * 2);
-    ctx.strokeStyle = c; ctx.lineWidth = 1.5; ctx.globalAlpha = tableT * (tb.st === 'available' ? pulse * 0.6 : 0.3); ctx.stroke();
-    ctx.globalAlpha = tableT;
-    // Fill
-    ctx.beginPath(); ctx.arc(tb.cx, tb.cy, tb.r, 0, Math.PI * 2);
-    ctx.fillStyle = c + '28'; ctx.fill();
-    ctx.strokeStyle = c; ctx.lineWidth = 1.5; ctx.stroke();
-    ctx.fillStyle = 'rgba(255,255,255,0.9)'; ctx.font = '800 10px system-ui,-apple-system,sans-serif';
-    ctx.textAlign = 'center'; ctx.fillText(tb.lb, tb.cx, tb.cy - 2);
-    ctx.fillStyle = c; ctx.font = '400 9px system-ui,-apple-system,sans-serif';
-    ctx.fillText(tb.cap + ' seats', tb.cx, tb.cy + 12);
-    if (tb.tm) { ctx.fillStyle = 'rgba(255,255,255,0.65)'; ctx.font = '700 9px system-ui,-apple-system,sans-serif'; ctx.fillText(tb.tm, tb.cx, tb.cy - tb.r - 8); }
-    ctx.textAlign = 'left';
-    ctx.globalAlpha = 1;
-  });
-
-  // Waitlist panel
-  rrect(ctx, fX + 4, fY + fH - 72, fW * 0.3, 64, 8);
-  ctx.fillStyle = 'rgba(245,158,11,0.05)'; ctx.fill();
-  ctx.strokeStyle = 'rgba(245,158,11,0.2)'; ctx.lineWidth = 1; ctx.stroke();
-  ctx.fillStyle = '#f59e0b'; ctx.font = '800 9px system-ui,-apple-system,sans-serif'; ctx.letterSpacing = '1.5px';
-  ctx.fillText('WAITLIST', fX + 12, fY + fH - 54); ctx.letterSpacing = '0px';
-  ctx.fillStyle = '#f59e0b'; ctx.font = '900 12px system-ui,-apple-system,sans-serif';
-  ctx.textAlign = 'right'; ctx.fillText('3', fX + fW * 0.3 - 10, fY + fH - 54); ctx.textAlign = 'left';
-  ctx.fillStyle = 'rgba(255,255,255,0.38)'; ctx.font = '400 10px system-ui,-apple-system,sans-serif';
-  ctx.fillText('Martinez · 4 guests · ~14m', fX + 12, fY + fH - 36);
-  ctx.fillText('Taylor · 2 guests · ~8m', fX + 12, fY + fH - 20);
-  ctx.restore();
-}
-
-function drawScene4(ctx, W, H, t) {
-  // Scene 4: Final CTA
-  const cx = W / 2, cy = H / 2;
-  const ease = 1 - Math.pow(1 - Math.min(1, t * 1.4), 3);
-
-  // Radial ambient
-  const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, W * 0.55);
-  g.addColorStop(0, `rgba(100,116,139,${0.09 * ease})`);
-  g.addColorStop(1, 'rgba(0,0,0,0)');
-  ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
-
-  ctx.globalAlpha = ease;
-
-  // Decorative line left
-  ctx.strokeStyle = 'rgba(255,255,255,0.1)'; ctx.lineWidth = 1;
-  ctx.beginPath(); ctx.moveTo(cx - 140, cy - 90); ctx.lineTo(cx - 52, cy - 90); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(cx + 52, cy - 90); ctx.lineTo(cx + 140, cy - 90); ctx.stroke();
-
-  // Logo icon
-  rrect(ctx, cx - 26, cy - 108, 52, 52, 15);
-  ctx.fillStyle = 'rgba(255,255,255,0.05)'; ctx.fill();
-  ctx.strokeStyle = 'rgba(255,255,255,0.1)'; ctx.lineWidth = 1; ctx.stroke();
-  ctx.strokeStyle = 'rgba(255,255,255,0.8)'; ctx.lineWidth = 1.5;
-  ctx.beginPath(); ctx.rect(cx - 12, cx - 95, 24, 22); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(cx - 6, cy - 112); ctx.lineTo(cx - 6, cy - 104); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(cx + 6, cy - 112); ctx.lineTo(cx + 6, cy - 104); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(cx - 12, cy - 100); ctx.lineTo(cx + 12, cy - 100); ctx.stroke();
-
-  // Wordmark
-  ctx.fillStyle = 'rgba(255,255,255,0.9)';
-  ctx.font = `900 ${Math.round(W * 0.065)}px system-ui,-apple-system,sans-serif`;
-  ctx.textAlign = 'center'; ctx.letterSpacing = '-2px';
-  ctx.fillText('Plan smart.', cx, cy - 12);
-  ctx.fillText('Execute flawlessly.', cx, cy + 50);
-  ctx.letterSpacing = '0px';
-
-  ctx.fillStyle = 'rgba(255,255,255,0.28)';
-  ctx.font = '400 15px system-ui,-apple-system,sans-serif';
-  ctx.fillText('Events & Venue · One platform, two branches.', cx, cy + 86);
-
-  // CTA buttons
-  const btnY = cy + 118;
-  // Events button
-  rrect(ctx, cx - 150, btnY, 138, 44, 13);
-  ctx.fillStyle = 'white'; ctx.fill();
-  ctx.fillStyle = '#07070e'; ctx.font = '700 13px system-ui,-apple-system,sans-serif';
-  ctx.textAlign = 'center'; ctx.fillText('Explore Events ↓', cx - 81, btnY + 27);
-  // Venue button
-  rrect(ctx, cx + 12, btnY, 138, 44, 13);
-  ctx.fillStyle = 'rgba(249,115,22,0.1)'; ctx.fill();
-  ctx.strokeStyle = 'rgba(249,115,22,0.3)'; ctx.lineWidth = 1; ctx.stroke();
-  ctx.fillStyle = '#f97316'; ctx.font = '700 13px system-ui,-apple-system,sans-serif';
-  ctx.fillText('Explore Venue ↓', cx + 81, btnY + 27);
-  ctx.textAlign = 'left';
-  ctx.globalAlpha = 1;
-}
-
 // ─────────────────────────────────────────────────────────────────
-// SCROLL SHOWCASE — Apple-style canvas product reveal
+// SCROLL SHOWCASE — Real screenshot Apple-style scroll experience
 // ─────────────────────────────────────────────────────────────────
+
 function ScrollShowcase() {
-  const outerRef = useRef(null);
-  const canvasRef = useRef(null);
-  const rafRef = useRef(null);
+  const outerRef    = useRef(null);
+  const canvasRef   = useRef(null);
+  const rafRef      = useRef(null);
   const progressRef = useRef(0);
-  const [progress, setProgress] = useState(0);
-
+  const imagesRef   = useRef([]);
+  const loadedRef   = useRef(0);
+  const [progress,  setProgress]  = useState(0);
+  const [imgReady,  setImgReady]  = useState(false);
 
   const SCENES = 5;
-  const SCENE_LABELS = [
-    { eyebrow: 'Introducing PlanIt', accent: 'white' },
-    { eyebrow: 'Real-time collaboration', accent: '#94a3b8' },
-    { eyebrow: 'Enterprise check-in', accent: '#60a5fa' },
-    { eyebrow: 'PlanIt Venue', accent: '#f97316' },
-    { eyebrow: 'Now entering PlanIt', accent: 'white' },
+  const SRCS   = ['/ss1.png', '/ss2.png', '/ss3.png', '/ss4.png', '/ss5.png'];
+  const META   = [
+    { eyebrow: 'Welcome to PlanIt',        headline: 'Make it Effortless,\nby design.',       sub: 'One platform. Two branches.',                        accent: '#ffffff' },
+    { eyebrow: 'Real-time team workspace', headline: 'Your whole team,\nalways in sync.',      sub: 'Chat, tasks, files — all inside your event.',        accent: '#818cf8' },
+    { eyebrow: 'Task management',          headline: 'Every task.\nEvery deadline.',           sub: 'Assign, track and complete with full visibility.',   accent: '#34d399' },
+    { eyebrow: 'PlanIt Venue',             headline: 'Your floor.\nLive.',                     sub: 'Visual floor maps, live table status, waitlists.',   accent: '#f97316' },
+    { eyebrow: 'Enterprise check-in',      headline: 'Guests in.\nInstantly.',                 sub: 'QR scanning, guest lists, Scan QR — all in one.',   accent: '#60a5fa' },
   ];
 
+  // Preload images
+  useEffect(() => {
+    imagesRef.current = [];
+    loadedRef.current = 0;
+    SRCS.forEach((src, i) => {
+      const img = new Image();
+      img.onload = () => {
+        loadedRef.current += 1;
+        if (loadedRef.current === SRCS.length) setImgReady(true);
+      };
+      img.onerror = () => { loadedRef.current += 1; };
+      img.src = src;
+      imagesRef.current[i] = img;
+    });
+  }, []);
+
+  // Scroll → progress 0..1
   useEffect(() => {
     const onScroll = () => {
       if (!outerRef.current) return;
-      const rect = outerRef.current.getBoundingClientRect();
+      const rect  = outerRef.current.getBoundingClientRect();
       const total = outerRef.current.offsetHeight - window.innerHeight;
-      const p = Math.max(0, Math.min(1, -rect.top / Math.max(1, total)));
+      const p     = Math.max(0, Math.min(1, -rect.top / Math.max(1, total)));
       progressRef.current = p;
       setProgress(p);
     };
@@ -1182,13 +603,15 @@ function ScrollShowcase() {
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
+  // Canvas RAF render loop
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     let running = true;
+
     const resize = () => {
-      const dpr = window.devicePixelRatio || 1;
-      canvas.width = canvas.offsetWidth * dpr;
+      const dpr     = window.devicePixelRatio || 1;
+      canvas.width  = canvas.offsetWidth  * dpr;
       canvas.height = canvas.offsetHeight * dpr;
     };
     resize();
@@ -1198,39 +621,83 @@ function ScrollShowcase() {
       if (!running) return;
       const dpr = window.devicePixelRatio || 1;
       const ctx = canvas.getContext('2d');
-      const Wd = canvas.offsetWidth;
-      const Hd = canvas.offsetHeight;
+      const W   = canvas.offsetWidth;
+      const H   = canvas.offsetHeight;
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      ctx.clearRect(0, 0, Wd, Hd);
+      ctx.clearRect(0, 0, W, H);
       ctx.fillStyle = '#04040a';
-      ctx.fillRect(0, 0, Wd, Hd);
+      ctx.fillRect(0, 0, W, H);
 
-      const p = progressRef.current;
-      const centers = [0, 0.25, 0.5, 0.75, 1.0];
-      const HALF = 0.27;
+      const p       = progressRef.current;
+      const imgs    = imagesRef.current;
+      // Scene centers evenly spaced 0..1
+      const centers = SRCS.map((_, i) => i / (SCENES - 1));
+      const HALF    = 0.14; // how wide each scene's visible window is
 
-      [0, 1, 2, 3, 4].forEach(si => {
-        const center = centers[si];
-        const dist = Math.abs(p - center);
-        let alpha = Math.max(0, 1 - dist / HALF);
-        if (si === 0 && p < 0.05) alpha = 1;
+      centers.forEach((center, si) => {
+        const img = imgs[si];
+        if (!img || !img.complete || img.naturalWidth === 0) return;
+
+        const dist  = Math.abs(p - center);
+        // Bell curve alpha — fully opaque near center, zero outside HALF*2
+        const alpha = Math.max(0, 1 - dist / (HALF * 1.4));
         if (alpha < 0.005) return;
-        const sceneP = Math.max(0, Math.min(1, (p - (center - HALF)) / (HALF * 2)));
+
+        // Local t: 0 = scene just arriving, 0.5 = peak, 1 = scene leaving
+        const localT = (p - (center - HALF * 1.4)) / (HALF * 2.8);
+        const clampT = Math.max(0, Math.min(1, localT));
+
+        // Apple zoom: image slightly bigger when arriving/leaving, sharp at peak
+        // scale goes 1.08 → 1.0 → 1.08 as t goes 0 → 0.5 → 1
+        const scaleWave = 1.0 + 0.07 * Math.abs(clampT * 2 - 1);
+
+        // Cover-fill the canvas (object-fit: cover)
+        const iW = img.naturalWidth;
+        const iH = img.naturalHeight;
+        const scaleToFill = Math.max(W / iW, H / iH) * scaleWave;
+        const dw = iW * scaleToFill;
+        const dh = iH * scaleToFill;
+
+        // Parallax: image drifts slightly vertically as scene transitions
+        const parallax = (p - center) * H * 0.22;
+        const dx = (W - dw) / 2;
+        const dy = (H - dh) / 2 + parallax;
+
         ctx.save();
         ctx.globalAlpha = alpha;
-        const shift = (p - center) * Hd * 0.14;
-        ctx.translate(0, shift * (1 - alpha));
-        if (si === 0) drawScene0(ctx, Wd, Hd, sceneP);
-        else if (si === 1) drawScene1(ctx, Wd, Hd, sceneP);
-        else if (si === 2) drawScene2(ctx, Wd, Hd, sceneP);
-        else if (si === 3) drawScene3(ctx, Wd, Hd, sceneP);
-        else if (si === 4) drawScene4(ctx, Wd, Hd, sceneP);
+
+        // Draw the screenshot
+        ctx.drawImage(img, dx, dy, dw, dh);
+
+        // Dark vignette overlay — heavier on edges, lighter at peak
+        const vigAmt = 0.35 + 0.3 * Math.abs(clampT * 2 - 1);
+        const vig = ctx.createRadialGradient(W / 2, H / 2, H * 0.15, W / 2, H / 2, W * 0.72);
+        vig.addColorStop(0,   `rgba(4,4,10,0)`);
+        vig.addColorStop(1,   `rgba(4,4,10,${vigAmt})`);
+        ctx.fillStyle = vig;
+        ctx.fillRect(0, 0, W, H);
+
+        // Bottom gradient so text below is readable
+        const bot = ctx.createLinearGradient(0, H * 0.55, 0, H);
+        bot.addColorStop(0, 'rgba(4,4,10,0)');
+        bot.addColorStop(1, 'rgba(4,4,10,0.82)');
+        ctx.fillStyle = bot;
+        ctx.fillRect(0, 0, W, H);
+
+        // Top gradient
+        const top = ctx.createLinearGradient(0, 0, 0, H * 0.22);
+        top.addColorStop(0, 'rgba(4,4,10,0.55)');
+        top.addColorStop(1, 'rgba(4,4,10,0)');
+        ctx.fillStyle = top;
+        ctx.fillRect(0, 0, W, H);
+
         ctx.restore();
       });
 
       rafRef.current = requestAnimationFrame(render);
     };
     render();
+
     return () => {
       running = false;
       cancelAnimationFrame(rafRef.current);
@@ -1238,45 +705,119 @@ function ScrollShowcase() {
     };
   }, []);
 
+  // Which scene is most visible
   const activeScene = Math.round(progress * (SCENES - 1));
-  const sceneLabel = SCENE_LABELS[activeScene] || SCENE_LABELS[0];
+  const meta        = META[activeScene];
+
+  // Per-scene text fade: how close are we to this scene's center?
+  const center   = activeScene / (SCENES - 1);
+  const textDist = Math.abs(progress - center);
+  const textAlpha = Math.max(0, 1 - textDist / 0.12);
 
   return (
-    <div ref={outerRef} style={{ height: '550vh', position: 'relative' }}>
-      <div style={{ position: 'sticky', top: 0, height: '100vh', overflow: 'hidden', background: '#04040a' }}>
+    <div ref={outerRef} style={{ height: '560vh', position: 'relative' }}>
+      <div style={{ position: 'sticky', top: 0, height: '100vh', overflow: 'hidden' }}>
+
+        {/* Canvas — fills entire viewport */}
         <canvas
           ref={canvasRef}
           style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', display: 'block' }}
         />
+
+        {/* Loading shimmer until images ready */}
+        {!imgReady && (
+          <div style={{
+            position: 'absolute', inset: 0, background: '#04040a',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            zIndex: 5,
+          }}>
+            <div style={{ textAlign: 'center' }}>
+              <div style={{ fontSize: 11, letterSpacing: '0.4em', color: 'rgba(255,255,255,0.2)', textTransform: 'uppercase', marginBottom: 18 }}>Loading PlanIt</div>
+              <div style={{ width: 160, height: 1.5, background: 'rgba(255,255,255,0.06)', borderRadius: 99, overflow: 'hidden' }}>
+                <div style={{ height: '100%', width: '60%', background: 'rgba(255,255,255,0.4)', borderRadius: 99, animation: 'shimmer-slide 1.4s ease-in-out infinite' }} />
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Text overlay — positioned at bottom third */}
         <div style={{
-          position: 'absolute', top: '7%', left: '50%', transform: 'translateX(-50%)',
-          zIndex: 10, textAlign: 'center', pointerEvents: 'none',
+          position: 'absolute', bottom: '14%', left: '50%', transform: 'translateX(-50%)',
+          width: '90%', maxWidth: 780, textAlign: 'center',
+          zIndex: 10, pointerEvents: 'none',
+          opacity: textAlpha,
+          transition: 'opacity 0.18s linear',
         }}>
-          <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.42em', color: 'rgba(255,255,255,0.22)', textTransform: 'uppercase' }}>
-            {sceneLabel.eyebrow}
+          {/* Eyebrow */}
+          <div style={{
+            fontSize: 11, fontWeight: 700, letterSpacing: '0.38em',
+            color: meta.accent, textTransform: 'uppercase', marginBottom: 14,
+            textShadow: `0 0 24px ${meta.accent}55`,
+          }}>
+            {meta.eyebrow}
+          </div>
+          {/* Headline */}
+          <div style={{
+            fontSize: 'clamp(28px, 4.5vw, 56px)', fontWeight: 900,
+            color: 'rgba(255,255,255,0.95)', letterSpacing: '-1.5px',
+            lineHeight: 1.06, whiteSpace: 'pre-line',
+            textShadow: '0 2px 40px rgba(0,0,0,0.6)',
+            marginBottom: 14,
+          }}>
+            {meta.headline}
+          </div>
+          {/* Sub */}
+          <div style={{
+            fontSize: 'clamp(13px, 1.6vw, 17px)', fontWeight: 400,
+            color: 'rgba(255,255,255,0.45)', letterSpacing: '0.01em',
+            textShadow: '0 1px 12px rgba(0,0,0,0.5)',
+          }}>
+            {meta.sub}
           </div>
         </div>
-        <div style={{ position: 'absolute', right: 24, top: '50%', transform: 'translateY(-50%)', display: 'flex', flexDirection: 'column', gap: 8, zIndex: 20 }}>
-          {SCENE_LABELS.map((s, i) => (
-            <div key={i} style={{
-              width: 3,
-              height: activeScene === i ? 28 : 3,
-              borderRadius: 99,
-              background: activeScene === i ? s.accent : 'rgba(255,255,255,0.18)',
-              transition: 'all 0.45s cubic-bezier(0.22, 1, 0.36, 1)',
-              boxShadow: activeScene === i && s.accent !== 'white' ? `0 0 8px ${s.accent}66` : 'none',
-            }} />
-          ))}
-        </div>
+
+        {/* Progress dots — right side */}
         <div style={{
-          position: 'absolute', bottom: '8%', left: '50%', transform: 'translateX(-50%)',
+          position: 'absolute', right: 28, top: '50%', transform: 'translateY(-50%)',
+          display: 'flex', flexDirection: 'column', gap: 9, zIndex: 20,
+        }}>
+          {META.map((m, i) => {
+            const active = activeScene === i;
+            return (
+              <div key={i} style={{
+                width:  active ? 3 : 3,
+                height: active ? 28 : 3,
+                borderRadius: 99,
+                background: active ? m.accent : 'rgba(255,255,255,0.2)',
+                transition: 'all 0.5s cubic-bezier(0.22,1,0.36,1)',
+                boxShadow: active ? `0 0 10px ${m.accent}77` : 'none',
+              }} />
+            );
+          })}
+        </div>
+
+        {/* Scroll hint */}
+        <div style={{
+          position: 'absolute', bottom: '5%', left: '50%', transform: 'translateX(-50%)',
           display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10,
-          zIndex: 20, opacity: progress < 0.03 ? 1 : 0, transition: 'opacity 0.6s ease',
+          zIndex: 20, opacity: progress < 0.04 ? 1 : 0, transition: 'opacity 0.7s ease',
           pointerEvents: 'none',
         }}>
-          <span style={{ fontSize: 9, letterSpacing: '0.42em', color: 'rgba(255,255,255,0.2)', textTransform: 'uppercase', fontWeight: 700 }}>Scroll to explore</span>
-          <div style={{ width: 1, height: 36, background: 'linear-gradient(to bottom, rgba(255,255,255,0.45), transparent)', animation: 'pi-scroll-line 1.8s ease-in-out infinite' }} />
+          <span style={{ fontSize: 9, letterSpacing: '0.45em', color: 'rgba(255,255,255,0.25)', textTransform: 'uppercase', fontWeight: 700 }}>Scroll to explore</span>
+          <div style={{ width: 1, height: 36, background: 'linear-gradient(to bottom, rgba(255,255,255,0.5), transparent)', animation: 'pi-scroll-line 1.8s ease-in-out infinite' }} />
         </div>
+
+        {/* Scene counter bottom-left */}
+        <div style={{
+          position: 'absolute', bottom: '5%', left: 28,
+          fontSize: 10, fontWeight: 700, letterSpacing: '0.25em',
+          color: 'rgba(255,255,255,0.2)', textTransform: 'uppercase',
+          zIndex: 20, pointerEvents: 'none',
+          fontFamily: 'monospace',
+        }}>
+          {String(activeScene + 1).padStart(2, '0')} / {String(SCENES).padStart(2, '0')}
+        </div>
+
       </div>
     </div>
   );
