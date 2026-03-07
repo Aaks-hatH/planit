@@ -416,6 +416,519 @@ function CopyLinkBox({ eventId, subdomain }) {
   );
 }
 
+// ─────────────────────────────────────────────────────────────────
+// CINEMATIC INTRO — branded split-curtain loading screen
+// ─────────────────────────────────────────────────────────────────
+function CinematicIntro({ onComplete }) {
+  const [phase, setPhase] = useState(0);
+  const [loadPct, setLoadPct] = useState(0);
+  const [textIdx, setTextIdx] = useState(0);
+  const texts = [
+    'Crafted for event teams.',
+    'Built for busy floors.',
+    'One platform. Two branches.',
+    'Plan smart. Execute flawlessly.',
+  ];
+
+  useEffect(() => {
+    let pct = 0;
+    const loadInterval = setInterval(() => {
+      pct += Math.random() * 20 + 5;
+      if (pct >= 100) { pct = 100; clearInterval(loadInterval); }
+      setLoadPct(Math.min(pct, 100));
+    }, 100);
+    const textInterval = setInterval(() => setTextIdx(i => (i + 1) % texts.length), 560);
+    const t1 = setTimeout(() => setPhase(1), 100);
+    const t2 = setTimeout(() => setPhase(2), 700);
+    const t3 = setTimeout(() => { clearInterval(textInterval); setPhase(3); }, 2700);
+    const t4 = setTimeout(() => onComplete(), 3600);
+    return () => {
+      clearInterval(loadInterval);
+      clearInterval(textInterval);
+      [t1, t2, t3, t4].forEach(clearTimeout);
+    };
+  }, []);
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, zIndex: 9999, pointerEvents: phase >= 3 ? 'none' : 'all', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
+      {/* ── Left curtain ── */}
+      <div style={{
+        position: 'absolute', top: 0, left: 0, width: '50%', height: '100%',
+        background: 'linear-gradient(160deg, #030308 0%, #06060e 100%)',
+        transform: phase >= 3 ? 'translateX(-100%)' : 'translateX(0)',
+        transition: 'transform 1s cubic-bezier(0.76, 0, 0.24, 1)',
+        zIndex: 2,
+      }}>
+        {/* Seam glow */}
+        <div style={{ position: 'absolute', top: 0, right: 0, width: 1, height: '100%', background: 'linear-gradient(to bottom, transparent 0%, rgba(255,255,255,0.05) 30%, rgba(255,255,255,0.12) 50%, rgba(255,255,255,0.05) 70%, transparent 100%)' }} />
+      </div>
+      {/* ── Right curtain ── */}
+      <div style={{
+        position: 'absolute', top: 0, right: 0, width: '50%', height: '100%',
+        background: 'linear-gradient(200deg, #06060e 0%, #030308 100%)',
+        transform: phase >= 3 ? 'translateX(100%)' : 'translateX(0)',
+        transition: 'transform 1s cubic-bezier(0.76, 0, 0.24, 1)',
+        zIndex: 2,
+      }}>
+        <div style={{ position: 'absolute', top: 0, left: 0, width: 1, height: '100%', background: 'linear-gradient(to bottom, transparent 0%, rgba(255,255,255,0.05) 30%, rgba(255,255,255,0.12) 50%, rgba(255,255,255,0.05) 70%, transparent 100%)' }} />
+      </div>
+
+      {/* ── Center content ── */}
+      <div style={{
+        position: 'absolute', inset: 0, zIndex: 3,
+        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+        opacity: phase >= 3 ? 0 : 1,
+        transition: 'opacity 0.55s ease',
+        pointerEvents: 'none',
+      }}>
+        {/* Ambient radial */}
+        <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse 55% 45% at 50% 50%, rgba(100,116,139,0.07) 0%, transparent 70%)', pointerEvents: 'none' }} />
+
+        {/* Logo block */}
+        <div style={{
+          opacity: phase >= 1 ? 1 : 0,
+          transform: phase >= 1 ? 'translateY(0) scale(1)' : 'translateY(28px) scale(0.9)',
+          transition: 'all 1.1s cubic-bezier(0.22, 1, 0.36, 1)',
+          textAlign: 'center', position: 'relative', zIndex: 1,
+        }}>
+          {/* Icon */}
+          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 26 }}>
+            <div style={{
+              width: 76, height: 76, borderRadius: 24,
+              background: 'rgba(255,255,255,0.04)',
+              border: '1px solid rgba(255,255,255,0.09)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              animation: phase >= 2 ? 'pi-logo-glow 3s ease-in-out infinite' : 'none',
+            }}>
+              <svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.85)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+                <line x1="16" y1="2" x2="16" y2="6"/>
+                <line x1="8" y1="2" x2="8" y2="6"/>
+                <line x1="3" y1="10" x2="21" y2="10"/>
+              </svg>
+            </div>
+          </div>
+          {/* Wordmark */}
+          <div style={{ fontSize: 'clamp(54px,9vw,82px)', fontWeight: 900, color: 'white', letterSpacing: '-3px', lineHeight: 1, marginBottom: 14 }}>
+            PlanIt
+          </div>
+          {/* Branch pills */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10 }}>
+            <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.35em', color: 'rgba(255,255,255,0.28)', textTransform: 'uppercase', padding: '5px 14px', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 99, background: 'rgba(255,255,255,0.02)' }}>Events</span>
+            <span style={{ width: 3, height: 3, borderRadius: '50%', background: 'rgba(255,255,255,0.12)' }} />
+            <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.35em', color: 'rgba(249,115,22,0.65)', textTransform: 'uppercase', padding: '5px 14px', border: '1px solid rgba(249,115,22,0.22)', borderRadius: 99, background: 'rgba(249,115,22,0.04)' }}>Venue</span>
+          </div>
+        </div>
+
+        {/* Cycling tagline */}
+        <div style={{ height: 26, marginTop: 44, overflow: 'hidden', opacity: phase >= 2 ? 1 : 0, transition: 'opacity 0.7s ease 0.25s', position: 'relative', zIndex: 1 }}>
+          <p key={textIdx} style={{ fontSize: 13, color: 'rgba(255,255,255,0.3)', fontWeight: 500, letterSpacing: '0.04em', textAlign: 'center', margin: 0, animation: 'pi-text-up 0.38s ease' }}>{texts[textIdx]}</p>
+        </div>
+
+        {/* Progress bar */}
+        <div style={{ width: 'min(260px, 58vw)', marginTop: 38, opacity: phase >= 2 ? 1 : 0, transition: 'opacity 0.7s ease 0.35s', position: 'relative', zIndex: 1 }}>
+          <div style={{ height: '1.5px', background: 'rgba(255,255,255,0.06)', borderRadius: 99, overflow: 'hidden' }}>
+            <div style={{ height: '100%', width: `${loadPct}%`, background: 'linear-gradient(90deg, rgba(148,163,184,0.5), white)', borderRadius: 99, transition: 'width 0.12s ease', boxShadow: '0 0 10px rgba(255,255,255,0.35)' }} />
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 10, fontSize: 9, color: 'rgba(255,255,255,0.14)', fontFamily: 'monospace', letterSpacing: '0.08em' }}>
+            <span>PLANIT · v2.0.0-beta</span>
+            <span>{Math.round(loadPct)}%</span>
+          </div>
+        </div>
+
+        {/* By-line */}
+        <div style={{ marginTop: 52, opacity: phase >= 2 ? 0.14 : 0, transition: 'opacity 0.9s ease 0.5s', fontSize: 9, letterSpacing: '0.45em', color: 'white', textTransform: 'uppercase', fontWeight: 600, position: 'relative', zIndex: 1 }}>
+          By Aakshat Hariharan
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────
+// SCROLL SHOWCASE — Apple-style product reveal driven by scroll
+// ─────────────────────────────────────────────────────────────────
+function ScrollShowcase() {
+  const outerRef = useRef(null);
+  const [progress, setProgress] = useState(0);
+
+  useEffect(() => {
+    const onScroll = () => {
+      if (!outerRef.current) return;
+      const rect = outerRef.current.getBoundingClientRect();
+      const totalScroll = outerRef.current.offsetHeight - window.innerHeight;
+      const scrolled = Math.max(0, -rect.top);
+      setProgress(Math.max(0, Math.min(1, scrolled / totalScroll)));
+    };
+    window.addEventListener('scroll', onScroll, { passive: true });
+    onScroll();
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
+
+  // Each scene occupies 1/5 of total progress
+  const sp = (scene) => {
+    const band = 1 / 5;
+    const start = scene * band;
+    return Math.max(0, Math.min(1, (progress - start) / band));
+  };
+
+  // Cinematic appear/disappear transform per scene
+  const sceneStyle = (p) => {
+    if (p <= 0) {
+      return { opacity: 0, transform: 'translateY(48px) scale(0.88)', pointerEvents: 'none', position: 'absolute', width: '100%', display: 'flex', justifyContent: 'center' };
+    }
+    if (p >= 1) {
+      return { opacity: 0, transform: 'translateY(-36px) scale(0.96)', pointerEvents: 'none', position: 'absolute', width: '100%', display: 'flex', justifyContent: 'center' };
+    }
+    const arrive = 0.18;
+    const depart = 0.80;
+    let opacity, ty, scale;
+    if (p < arrive) {
+      const t = p / arrive;
+      opacity = t; ty = 48 * (1 - t); scale = 0.88 + 0.12 * t;
+    } else if (p > depart) {
+      const t = (p - depart) / (1 - depart);
+      opacity = 1 - t; ty = -36 * t; scale = 1 - 0.04 * t;
+    } else {
+      opacity = 1; ty = 0; scale = 1;
+    }
+    return { opacity, transform: `translateY(${ty}px) scale(${scale})`, transition: 'none', position: 'absolute', width: '100%', display: 'flex', justifyContent: 'center' };
+  };
+
+  const activeScene = Math.min(4, Math.floor(progress * 5));
+
+  const sceneLabels = [
+    { top: 'Introducing PlanIt', main: 'One platform.\nTwo branches.', accent: 'white' },
+    { top: 'Real-time collaboration', main: 'Your whole team,\nin sync.', accent: '#94a3b8' },
+    { top: 'QR-powered attendance', main: 'Enterprise\ncheck-in.', accent: '#60a5fa' },
+    { top: 'PlanIt Venue', main: 'Live floor\nmanagement.', accent: '#f97316' },
+    { top: 'Now entering PlanIt', main: 'Plan smart.\nExecute flawlessly.', accent: 'white' },
+  ];
+
+  // Subtle per-scene backgrounds
+  const bgMap = ['rgba(100,116,139,0.05)', 'rgba(148,163,184,0.04)', 'rgba(96,165,250,0.05)', 'rgba(249,115,22,0.07)', 'rgba(100,116,139,0.04)'];
+
+  return (
+    <div ref={outerRef} style={{ height: '500vh', position: 'relative' }}>
+      <div style={{ position: 'sticky', top: 0, height: '100vh', overflow: 'hidden', background: '#04040a' }}>
+
+        {/* Ambient background */}
+        <div style={{
+          position: 'absolute', inset: 0, transition: 'background 1.4s ease', pointerEvents: 'none',
+          background: `radial-gradient(ellipse 75% 60% at 50% 50%, ${bgMap[activeScene]}, transparent 68%)`,
+        }} />
+
+        {/* ── Top labels (one per scene, layered + animated) ── */}
+        <div style={{ position: 'absolute', top: '9%', left: '50%', transform: 'translateX(-50%)', zIndex: 20, width: '90%', maxWidth: 700, textAlign: 'center' }}>
+          {sceneLabels.map((s, i) => {
+            const p = sp(i);
+            const visible = p > 0 && p < 1;
+            const arrive = 0.22; const depart = 0.72;
+            let op = 0, ty = 16;
+            if (p > 0 && p < arrive) { op = p / arrive; ty = 16 * (1 - p / arrive); }
+            else if (p >= arrive && p <= depart) { op = 1; ty = 0; }
+            else if (p > depart && p < 1) { op = 1 - (p - depart) / (1 - depart); ty = -12 * ((p - depart) / (1 - depart)); }
+            return (
+              <div key={i} style={{ position: i === 0 ? 'relative' : 'absolute', top: 0, left: 0, right: 0, opacity: op, transform: `translateY(${ty}px)`, transition: 'none' }}>
+                <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.4em', color: 'rgba(255,255,255,0.22)', textTransform: 'uppercase', marginBottom: 10 }}>{s.top}</div>
+                <div style={{ fontSize: 'clamp(26px, 5vw, 46px)', fontWeight: 900, color: s.accent, letterSpacing: '-1.5px', lineHeight: 1.08, whiteSpace: 'pre-line' }}>{s.main}</div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* ── Scene mockups ── */}
+        <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', paddingTop: '8vh', zIndex: 10 }}>
+
+          {/* SCENE 0 — Dual product intro cards */}
+          <div style={sceneStyle(sp(0))}>
+            <div style={{ display: 'flex', gap: 20, alignItems: 'stretch', flexWrap: 'wrap', justifyContent: 'center' }}>
+              {/* Events card */}
+              <div style={{ width: 'clamp(200px, 28vw, 280px)', padding: '28px 24px', borderRadius: 24, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', backdropFilter: 'blur(20px)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 22 }}>
+                  <div style={{ width: 38, height: 38, borderRadius: 12, background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.8)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 8, fontWeight: 800, letterSpacing: '0.3em', color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase' }}>PlanIt</div>
+                    <div style={{ fontSize: 17, fontWeight: 900, color: 'white', letterSpacing: '-0.5px' }}>Events</div>
+                  </div>
+                </div>
+                {['Team chat & messaging', 'Task management', 'QR check-in', 'Budget & expenses', 'File sharing'].map((f, i) => (
+                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 9, marginBottom: 11 }}>
+                    <div style={{ width: 16, height: 16, borderRadius: '50%', background: 'rgba(34,197,94,0.14)', border: '1px solid rgba(34,197,94,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                      <svg width="8" height="8" viewBox="0 0 10 8"><polyline points="1,4 3.5,6.5 9,1" fill="none" stroke="#22c55e" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                    </div>
+                    <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)', fontWeight: 500 }}>{f}</span>
+                  </div>
+                ))}
+                <div style={{ marginTop: 18, padding: '8px 14px', borderRadius: 10, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.7)', display: 'flex', justifyContent: 'space-between' }}>
+                  <span>Free to start</span><span>→</span>
+                </div>
+              </div>
+              {/* Venue card */}
+              <div style={{ width: 'clamp(200px, 28vw, 280px)', padding: '28px 24px', borderRadius: 24, background: 'rgba(249,115,22,0.04)', border: '1px solid rgba(249,115,22,0.18)', backdropFilter: 'blur(20px)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 22 }}>
+                  <div style={{ width: 38, height: 38, borderRadius: 12, background: 'rgba(249,115,22,0.12)', border: '1px solid rgba(249,115,22,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="rgba(249,115,22,0.9)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M3 11l19-9-9 19-2-8-8-2z"/></svg>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 8, fontWeight: 800, letterSpacing: '0.3em', color: 'rgba(249,115,22,0.45)', textTransform: 'uppercase' }}>PlanIt</div>
+                    <div style={{ fontSize: 17, fontWeight: 900, color: '#f97316', letterSpacing: '-0.5px' }}>Venue</div>
+                  </div>
+                </div>
+                {['Visual floor editor', 'Walk-in waitlist', 'QR reservations', 'Live sync across staff', 'Data never expires'].map((f, i) => (
+                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 9, marginBottom: 11 }}>
+                    <div style={{ width: 16, height: 16, borderRadius: '50%', background: 'rgba(249,115,22,0.1)', border: '1px solid rgba(249,115,22,0.28)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                      <svg width="8" height="8" viewBox="0 0 10 8"><polyline points="1,4 3.5,6.5 9,1" fill="none" stroke="#f97316" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                    </div>
+                    <span style={{ fontSize: 12, color: 'rgba(249,115,22,0.6)', fontWeight: 500 }}>{f}</span>
+                  </div>
+                ))}
+                <div style={{ marginTop: 18, padding: '8px 14px', borderRadius: 10, background: 'rgba(249,115,22,0.07)', border: '1px solid rgba(249,115,22,0.2)', fontSize: 11, fontWeight: 700, color: 'rgba(249,115,22,0.8)', display: 'flex', justifyContent: 'space-between' }}>
+                  <span>Free to start</span><span>→</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* SCENE 1 — Chat workspace mockup */}
+          <div style={sceneStyle(sp(1))}>
+            <div style={{ width: 'clamp(320px, 72vw, 700px)', borderRadius: 20, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.07)', background: '#0d0d16', boxShadow: '0 48px 140px rgba(0,0,0,0.65), 0 0 0 1px rgba(255,255,255,0.03)' }}>
+              {/* Chrome bar */}
+              <div style={{ padding: '10px 16px', background: '#09090f', borderBottom: '1px solid rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', gap: 10 }}>
+                <div style={{ display: 'flex', gap: 5 }}>
+                  {['#ff5f57','#febc2e','#28c840'].map(c => <div key={c} style={{ width: 10, height: 10, borderRadius: '50%', background: c, opacity: 0.7 }} />)}
+                </div>
+                <div style={{ flex: 1, display: 'flex', justifyContent: 'center' }}>
+                  <div style={{ padding: '4px 14px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 8, fontSize: 11, color: 'rgba(255,255,255,0.3)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <div style={{ width: 5, height: 5, borderRadius: '50%', background: '#22c55e', boxShadow: '0 0 4px #22c55e' }} />
+                    Summer Gala 2026 · PlanIt Events
+                  </div>
+                </div>
+              </div>
+              {/* Two-panel layout */}
+              <div style={{ display: 'grid', gridTemplateColumns: '168px 1fr', minHeight: 300 }}>
+                {/* Sidebar */}
+                <div style={{ borderRight: '1px solid rgba(255,255,255,0.05)', padding: '14px 8px', background: 'rgba(0,0,0,0.2)' }}>
+                  <div style={{ fontSize: 9, fontWeight: 700, color: 'rgba(255,255,255,0.18)', letterSpacing: '0.3em', textTransform: 'uppercase', padding: '4px 10px', marginBottom: 6 }}>Channels</div>
+                  {[['# planning-team', true], ['# vendors', false], ['# logistics', false], ['# day-of', false]].map(([label, active]) => (
+                    <div key={label} style={{ padding: '7px 10px', borderRadius: 8, marginBottom: 2, background: active ? 'rgba(255,255,255,0.08)' : 'transparent', color: active ? 'rgba(255,255,255,0.85)' : 'rgba(255,255,255,0.3)', fontSize: 12, fontWeight: active ? 600 : 400 }}>{label}</div>
+                  ))}
+                  <div style={{ marginTop: 18, fontSize: 9, fontWeight: 700, color: 'rgba(255,255,255,0.18)', letterSpacing: '0.3em', textTransform: 'uppercase', padding: '4px 10px', marginBottom: 6 }}>Tools</div>
+                  {[['Tasks','14'], ['Polls','2'], ['Files','8'], ['Budget','']].map(([t, badge]) => (
+                    <div key={t} style={{ padding: '7px 10px', borderRadius: 8, marginBottom: 2, color: 'rgba(255,255,255,0.35)', fontSize: 12, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      {t}
+                      {badge && <span style={{ fontSize: 10, background: 'rgba(255,255,255,0.1)', padding: '1px 5px', borderRadius: 4, color: 'rgba(255,255,255,0.5)' }}>{badge}</span>}
+                    </div>
+                  ))}
+                </div>
+                {/* Chat panel */}
+                <div style={{ display: 'flex', flexDirection: 'column' }}>
+                  <div style={{ padding: '10px 16px', borderBottom: '1px solid rgba(255,255,255,0.04)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <span style={{ fontSize: 12, fontWeight: 700, color: 'rgba(255,255,255,0.65)' }}># planning-team</span>
+                    <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.2)' }}>12 members online</span>
+                  </div>
+                  <div style={{ flex: 1, padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 14 }}>
+                    {[
+                      { av: 'A', name: 'Alex', col: '#818cf8', msg: 'Venue deposit confirmed! Locked in for July 15th 🎉', t: '2:14 PM' },
+                      { av: 'S', name: 'Sam',  col: '#38bdf8', msg: 'Floor plan uploaded to Files — 3 zones mapped', t: '2:16 PM' },
+                      { av: 'M', name: 'Maya', col: '#f472b6', msg: 'Added 12 tasks to the catering checklist. We\'re on track', t: '2:19 PM' },
+                    ].map(({ av, name, col, msg, t }) => (
+                      <div key={name} style={{ display: 'flex', gap: 10 }}>
+                        <div style={{ width: 28, height: 28, borderRadius: '50%', background: `${col}28`, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          <span style={{ fontSize: 11, fontWeight: 700, color: col }}>{av}</span>
+                        </div>
+                        <div>
+                          <div style={{ display: 'flex', alignItems: 'baseline', gap: 7, marginBottom: 5 }}>
+                            <span style={{ fontSize: 12, fontWeight: 700, color: col }}>{name}</span>
+                            <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.18)' }}>{t}</span>
+                          </div>
+                          <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)', lineHeight: 1.55, background: 'rgba(255,255,255,0.04)', padding: '8px 12px', borderRadius: '4px 12px 12px 12px', display: 'inline-block', maxWidth: 340 }}>{msg}</div>
+                        </div>
+                      </div>
+                    ))}
+                    {/* Typing dots */}
+                    <div style={{ display: 'flex', gap: 10 }}>
+                      <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'rgba(100,116,139,0.2)', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <span style={{ fontSize: 11, fontWeight: 700, color: '#94a3b8' }}>J</span>
+                      </div>
+                      <div style={{ padding: '10px 14px', background: 'rgba(255,255,255,0.04)', borderRadius: '4px 12px 12px 12px', display: 'flex', gap: 4, alignItems: 'center' }}>
+                        {[0,1,2].map(i => <div key={i} className="typing-dot" style={{ width: 5, height: 5, borderRadius: '50%', background: 'rgba(255,255,255,0.3)' }} />)}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* SCENE 2 — Enterprise Check-in */}
+          <div style={sceneStyle(sp(2))}>
+            <div style={{ width: 'clamp(320px, 72vw, 700px)', borderRadius: 20, overflow: 'hidden', border: '1px solid rgba(96,165,250,0.12)', background: '#090b12', boxShadow: '0 48px 140px rgba(0,0,0,0.65), 0 0 80px rgba(96,165,250,0.04)' }}>
+              {/* Header */}
+              <div style={{ padding: '12px 20px', background: '#070810', borderBottom: '1px solid rgba(96,165,250,0.07)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#22c55e', boxShadow: '0 0 7px #22c55e' }} />
+                  <span style={{ fontSize: 12, fontWeight: 700, color: 'rgba(255,255,255,0.7)' }}>Annual Tech Summit · Check-in</span>
+                  <span style={{ fontSize: 9, fontWeight: 700, color: 'rgba(96,165,250,0.5)', letterSpacing: '0.3em', textTransform: 'uppercase' }}>Enterprise Mode</span>
+                </div>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  {[['24','Arrived','#22c55e'],['8','Pending','#94a3b8'],['2','Blocked','#ef4444']].map(([n,l,c]) => (
+                    <div key={l} style={{ textAlign: 'center', padding: '4px 10px', background: `${c}0e`, border: `1px solid ${c}22`, borderRadius: 8 }}>
+                      <div style={{ fontSize: 15, fontWeight: 900, color: c }}>{n}</div>
+                      <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.28)', marginTop: 1 }}>{l}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              {/* Guest rows */}
+              <div style={{ padding: '14px 20px', display: 'flex', flexDirection: 'column', gap: 7 }}>
+                {[
+                  { name: 'Sarah Johnson',   role: 'VIP',      status: 'in',      table: 12, code: 'SJ4A' },
+                  { name: 'Marcus Rivera',   role: 'Speaker',  status: 'scan',    table: 5,  code: 'MR2B' },
+                  { name: 'Priya Sharma',    role: 'Attendee', status: 'wait',    table: 8,  code: 'PS1C' },
+                  { name: 'Dev Patel',       role: 'Attendee', status: 'blocked', table: null, code: 'DP6E' },
+                  { name: 'Amara Okafor',    role: 'Attendee', status: 'flagged', table: 7,  code: 'AO1F' },
+                ].map(({ name, role, status, table, code }) => {
+                  const roleCol = { VIP: '#fbbf24', Speaker: '#a78bfa', Attendee: '#60a5fa' }[role] || '#94a3b8';
+                  const s = {
+                    in:      { bg: 'rgba(34,197,94,0.07)',   br: 'rgba(34,197,94,0.18)',  label: '✓ In',    lc: '#22c55e' },
+                    scan:    { bg: 'rgba(96,165,250,0.05)',  br: 'rgba(96,165,250,0.15)', label: 'Scanning',lc: '#60a5fa' },
+                    wait:    { bg: 'rgba(255,255,255,0.02)', br: 'rgba(255,255,255,0.07)',label: 'Scan',    lc: '#ffffff' },
+                    blocked: { bg: 'rgba(239,68,68,0.06)',   br: 'rgba(239,68,68,0.18)',  label: 'Blocked', lc: '#ef4444' },
+                    flagged: { bg: 'rgba(245,158,11,0.05)',  br: 'rgba(245,158,11,0.18)', label: 'Review',  lc: '#f59e0b' },
+                  }[status];
+                  return (
+                    <div key={name} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 14px', borderRadius: 12, background: s.bg, border: `1px solid ${s.br}` }}>
+                      <div style={{ width: 34, height: 34, borderRadius: 10, background: status === 'in' ? '#22c55e' : status === 'blocked' ? 'rgba(239,68,68,0.18)' : status === 'flagged' ? 'rgba(245,158,11,0.12)' : 'rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                        <span style={{ fontSize: 11, fontWeight: 700, color: status === 'in' ? 'white' : status === 'blocked' ? '#ef4444' : status === 'flagged' ? '#f59e0b' : 'rgba(255,255,255,0.45)' }}>{status === 'in' ? '✓' : status === 'blocked' ? '✗' : code.slice(0,2)}</span>
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                          <span style={{ fontSize: 13, fontWeight: 600, color: 'rgba(255,255,255,0.88)' }}>{name}</span>
+                          <span style={{ fontSize: 9, fontWeight: 700, color: roleCol, background: `${roleCol}15`, padding: '2px 6px', borderRadius: 5 }}>{role}</span>
+                          {status === 'blocked' && <span style={{ fontSize: 9, fontWeight: 700, color: '#ef4444', background: 'rgba(239,68,68,0.1)', padding: '2px 6px', borderRadius: 5 }}>BLOCKED</span>}
+                          {status === 'flagged' && <span style={{ fontSize: 9, fontWeight: 700, color: '#f59e0b', background: 'rgba(245,158,11,0.1)', padding: '2px 6px', borderRadius: 5 }}>FLAGGED</span>}
+                        </div>
+                        <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.28)', marginTop: 2 }}>
+                          {status === 'in' ? `Checked in · Table ${table}` : status === 'blocked' ? 'Duplicate identity detected' : status === 'flagged' ? 'Low trust score: 42/100' : table ? `Table ${table} · Awaiting` : 'Pending assignment'}
+                        </div>
+                      </div>
+                      <div style={{ fontSize: 11, fontWeight: 700, color: s.lc, padding: '5px 12px', borderRadius: 8, background: `${s.lc}14`, border: `1px solid ${s.lc}22`, flexShrink: 0 }}>{s.label}</div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+
+          {/* SCENE 3 — Venue Floor Map */}
+          <div style={sceneStyle(sp(3))}>
+            <div style={{ width: 'clamp(320px, 72vw, 700px)', borderRadius: 20, overflow: 'hidden', border: '1px solid rgba(249,115,22,0.14)', background: '#0d0a05', boxShadow: '0 48px 140px rgba(0,0,0,0.65), 0 0 80px rgba(249,115,22,0.06)' }}>
+              {/* Header */}
+              <div style={{ padding: '12px 20px', background: '#0a0803', borderBottom: '1px solid rgba(249,115,22,0.07)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <div style={{ width: 30, height: 30, borderRadius: 10, background: 'rgba(249,115,22,0.14)', border: '1px solid rgba(249,115,22,0.24)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#f97316" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 11l19-9-9 19-2-8-8-2z"/></svg>
+                  </div>
+                  <span style={{ fontSize: 13, fontWeight: 700, color: 'rgba(255,255,255,0.8)' }}>Taverna Roma</span>
+                  <span style={{ fontSize: 9, fontWeight: 700, color: 'rgba(249,115,22,0.5)', letterSpacing: '0.3em', textTransform: 'uppercase' }}>PlanIt Venue</span>
+                </div>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  {[['#22c55e','3 Free'],['#ef4444','4 Occ'],['#8b5cf6','1 Cln'],['#f59e0b','1 Rsv']].map(([c,l]) => (
+                    <span key={l} style={{ fontSize: 10, padding: '3px 8px', borderRadius: 6, background: `${c}12`, border: `1px solid ${c}28`, color: c, fontWeight: 700 }}>{l}</span>
+                  ))}
+                </div>
+              </div>
+              {/* Floor SVG */}
+              <div style={{ padding: '14px 20px' }}>
+                <svg viewBox="0 0 520 210" style={{ width: '100%', height: 188 }}>
+                  <defs>
+                    <pattern id="ss-vgrid" width="26" height="26" patternUnits="userSpaceOnUse">
+                      <path d="M 26 0 L 0 0 0 26" fill="none" stroke="rgba(249,115,22,0.04)" strokeWidth="0.5"/>
+                    </pattern>
+                  </defs>
+                  <rect width="520" height="210" fill="url(#ss-vgrid)"/>
+                  {/* Zone label */}
+                  <rect x="15" y="8" width="160" height="65" rx="7" fill="rgba(249,115,22,0.02)" stroke="rgba(249,115,22,0.07)" strokeDasharray="5 3"/>
+                  <text x="95" y="44" textAnchor="middle" fill="rgba(249,115,22,0.18)" fontSize="10" fontWeight="700" letterSpacing="2">MAIN ROOM</text>
+                  {/* Tables */}
+                  {[
+                    {x:68,  y:130, r:26, st:'available', lb:'T1', cp:'4'},
+                    {x:148, y:130, r:26, st:'occupied',  lb:'T2', cp:'4', tm:'38m'},
+                    {x:228, y:120, r:30, st:'occupied',  lb:'T3', cp:'6', tm:'19m'},
+                    {x:312, y:130, r:26, st:'cleaning',  lb:'T4', cp:'4'},
+                    {x:390, y:120, r:30, st:'available', lb:'T5', cp:'6'},
+                    {x:468, y:130, r:26, st:'reserved',  lb:'T6', cp:'4'},
+                  ].map(t => {
+                    const c = t.st==='available'?'#22c55e':t.st==='occupied'?'#ef4444':t.st==='cleaning'?'#8b5cf6':'#f59e0b';
+                    const pulse = t.st==='available';
+                    return (
+                      <g key={t.lb}>
+                        <circle cx={t.x} cy={t.y} r={t.r+5} fill="none" stroke={c} strokeWidth="1.5" opacity={pulse ? '0.5' : '0.3'} className={pulse ? 'table-pulse-ring' : ''}/>
+                        <circle cx={t.x} cy={t.y} r={t.r} fill={`${c}1e`} stroke={c} strokeWidth="1.5" className={pulse ? 'table-pulse-fill' : ''}/>
+                        <text x={t.x} y={t.y-3} textAnchor="middle" fill="rgba(255,255,255,0.9)" fontSize="10" fontWeight="800">{t.lb}</text>
+                        <text x={t.x} y={t.y+10} textAnchor="middle" fill={c} fontSize="9">{t.cp} seats</text>
+                        {t.tm && <text x={t.x} y={t.y-t.r-8} textAnchor="middle" fill="white" fontSize="8" fontWeight="700" opacity="0.65">{t.tm}</text>}
+                      </g>
+                    );
+                  })}
+                  {/* Waitlist */}
+                  <rect x="15" y="148" width="144" height="50" rx="8" fill="rgba(245,158,11,0.05)" stroke="rgba(245,158,11,0.2)"/>
+                  <text x="27" y="165" fill="#f59e0b" fontSize="9" fontWeight="800" letterSpacing="1.5">WAITLIST · 3 parties</text>
+                  <text x="27" y="181" fill="rgba(255,255,255,0.38)" fontSize="9">Martinez · 4 · ~14m</text>
+                  <text x="27" y="194" fill="rgba(255,255,255,0.38)" fontSize="9">Taylor · 2 · ~8m</text>
+                </svg>
+              </div>
+            </div>
+          </div>
+
+          {/* SCENE 4 — Final CTA */}
+          <div style={{ ...sceneStyle(sp(4)), flexDirection: 'column', alignItems: 'center' }}>
+            <div style={{ textAlign: 'center', maxWidth: 520 }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 14, marginBottom: 40 }}>
+                <div style={{ height: 1, width: 60, background: 'linear-gradient(to right, transparent, rgba(255,255,255,0.15))' }} />
+                <div style={{ width: 52, height: 52, borderRadius: 16, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.09)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.8)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                </div>
+                <div style={{ height: 1, width: 60, background: 'linear-gradient(to left, transparent, rgba(255,255,255,0.15))' }} />
+              </div>
+              <div style={{ fontSize: 'clamp(34px, 6.5vw, 60px)', fontWeight: 900, color: 'white', letterSpacing: '-2px', lineHeight: 1.0, marginBottom: 18 }}>Plan smart.<br/>Execute flawlessly.</div>
+              <div style={{ fontSize: 15, color: 'rgba(255,255,255,0.32)', fontWeight: 400, marginBottom: 40, letterSpacing: '0.01em' }}>Events & Venue — one platform, two branches.</div>
+              <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
+                <div style={{ padding: '13px 30px', borderRadius: 14, background: 'white', color: '#07070e', fontWeight: 700, fontSize: 13, cursor: 'default' }}>Explore Events ↓</div>
+                <div style={{ padding: '13px 30px', borderRadius: 14, background: 'rgba(249,115,22,0.1)', border: '1px solid rgba(249,115,22,0.28)', color: '#f97316', fontWeight: 700, fontSize: 13, cursor: 'default' }}>Explore Venue ↓</div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        {/* ── Progress indicator (right side) ── */}
+        <div style={{ position: 'absolute', right: 28, top: '50%', transform: 'translateY(-50%)', display: 'flex', flexDirection: 'column', gap: 7, zIndex: 30 }}>
+          {[0,1,2,3,4].map(i => (
+            <div key={i} style={{
+              width: 3,
+              height: activeScene === i ? 28 : 3,
+              borderRadius: 99,
+              background: activeScene === i ? (i === 3 ? '#f97316' : 'rgba(255,255,255,0.8)') : 'rgba(255,255,255,0.18)',
+              transition: 'all 0.45s cubic-bezier(0.22, 1, 0.36, 1)',
+            }} />
+          ))}
+        </div>
+
+        {/* ── Scroll hint (fades out as you scroll) ── */}
+        <div style={{ position: 'absolute', bottom: '7%', left: '50%', transform: 'translateX(-50%)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 9, zIndex: 20, opacity: progress < 0.04 ? 1 : 0, transition: 'opacity 0.5s ease' }}>
+          <span style={{ fontSize: 9, letterSpacing: '0.4em', color: 'rgba(255,255,255,0.22)', textTransform: 'uppercase', fontWeight: 600 }}>Scroll to explore</span>
+          <div style={{ width: 1, height: 38, background: 'linear-gradient(to bottom, rgba(255,255,255,0.5), transparent)', animation: 'pi-scroll-line 1.8s ease-in-out infinite' }} />
+        </div>
+
+      </div>
+    </div>
+  );
+}
+
 function Reveal({ children, delay = 0, className = '' }) {
   const ref = useRef(null);
   const [visible, setVisible] = useState(false);
@@ -947,6 +1460,7 @@ export default function Home() {
   const [showAccountPassword, setShowAccountPassword] = useState(false);
   const [fieldErrors, setFieldErrors] = useState({});
   const [selectedBranch, setSelectedBranch] = useState(null); // null | 'events' | 'venue'
+  const [introComplete, setIntroComplete] = useState(false);
 
   const selectBranch = (branch) => {
     setSelectedBranch(branch);
@@ -1069,6 +1583,8 @@ export default function Home() {
 
   return (
     <div className="min-h-screen text-white relative" style={{ background: '#07070e', overflowX: 'clip', maxWidth: '100vw', isolation: 'isolate' }}>
+      {/* ── Cinematic branded intro ── */}
+      {!introComplete && <CinematicIntro onComplete={() => setIntroComplete(true)} />}
       <style>{`
         /*  Shimmer text  */
         @keyframes shimmer-slide {
@@ -1189,6 +1705,21 @@ export default function Home() {
           .stat-card::after, .shimmer-white, .shimmer-slate,
           .typing-dot, .table-pulse-fill, .table-pulse-ring,
           .waitlist-tick, .msg-1, .msg-2, .msg-3 { animation: none !important; opacity: 1 !important; }
+        }
+
+        /* ── Cinematic intro ── */
+        @keyframes pi-text-up {
+          from { opacity: 0; transform: translateY(12px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes pi-logo-glow {
+          0%, 100% { box-shadow: 0 0 30px rgba(255,255,255,0.03), 0 0 80px rgba(100,116,139,0.04); }
+          50%       { box-shadow: 0 0 50px rgba(255,255,255,0.07), 0 0 120px rgba(100,116,139,0.08); }
+        }
+        @keyframes pi-scroll-line {
+          0%   { opacity: 0.6; transform: scaleY(0); transform-origin: top; }
+          50%  { opacity: 1;   transform: scaleY(1);   transform-origin: top; }
+          100% { opacity: 0;   transform: scaleY(1);   transform-origin: bottom; }
         }
       `}</style>
 
@@ -1315,6 +1846,10 @@ export default function Home() {
       </header>
 
       <main className="relative" style={{ zIndex: 2, overflowX: 'hidden', maxWidth: '100vw' }}>
+
+        {/* ── Apple-style scroll showcase ── */}
+        <ScrollShowcase />
+
         {/* HERO */}
         <section className="relative min-h-screen flex items-center" style={{ overflow: 'hidden', maxWidth: '100vw' }}>
           {/* Subtle top gradient */}
