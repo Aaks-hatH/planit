@@ -379,12 +379,6 @@ const eventSchema = new mongoose.Schema({
     headerTagline:            { type: String, default: '', maxlength: 120 },
     showPoweredBy:            { type: Boolean, default: true },
     hidePlanitBranding:       { type: Boolean, default: false },
-
-    // ── Live wait board (public /wait page) ─────────────────────────────────
-    publicWaitBoardEnabled:   { type: Boolean, default: true },
-    walkInOnlyMode:           { type: Boolean, default: false },
-    waitBoardMessage:         { type: String,  default: '', maxlength: 300 },
-    waitBoardTitle:           { type: String,  default: '', maxlength: 100 },
     announcementBanner:       { type: String, default: '', maxlength: 200 },
     announcementBannerColor:  { type: String, default: '#f59e0b' },
     announcementBannerEnabled:{ type: Boolean, default: false },
@@ -474,6 +468,19 @@ const eventSchema = new mongoose.Schema({
     faqItems: [{
       question: { type: String, maxlength: 200 },
       answer:   { type: String, maxlength: 1000 },
+    }],
+
+    // ── Menus — compact keys to minimise stored document size ────────────────
+    // n = name, t = type (l=link, p=pdf, d=description-only)
+    // u = url, d = description, c = category, clr = accent colour, ord = sort order
+    menus: [{
+      n:   { type: String, required: true, trim: true, maxlength: 60 },
+      t:   { type: String, enum: ['l','p','d'], default: 'l' },
+      u:   { type: String, default: '', maxlength: 500 },
+      d:   { type: String, default: '', maxlength: 400 },
+      c:   { type: String, default: '', maxlength: 40  },
+      clr: { type: String, default: ''                 },
+      ord: { type: Number, default: 0                  },
     }],
 
     // ── SEO / meta ──────────────────────────────────────────────────────────
