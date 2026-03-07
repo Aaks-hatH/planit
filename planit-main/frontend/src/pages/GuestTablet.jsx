@@ -98,14 +98,16 @@ const QUICK_REQUESTS = [
   { id: 'dessert', label: 'Dessert Menu' },
 ];
 
-function DiningScreen({ tableState, tableObj, onSignal, onSaveDietary, saving, pendingAlertCount }) {
+function DiningScreen({ tableState, tableObj, onSignal, onSaveDietary, saving, pendingAlertCount, menus, accentColor }) {
   const [diet, setDiet]           = useState(tableState?.guestDietary || []);
   const [notes, setNotes]         = useState(tableState?.guestDietaryNotes || '');
   const [dietOpen, setDietOpen]   = useState(false);
   const [dietSaved, setDietSaved] = useState(false);
   const [partySize, setPartySize] = useState(tableState?.partySize || '');
   const [partySaved, setPartySaved] = useState(false);
+  const [openMenuIdx, setOpenMenuIdx] = useState(null);
   const alert = tableState?.guestAlert;
+  const accent = accentColor || '#d97706';
 
   const toggle = (opt) => setDiet(prev =>
     prev.includes(opt) ? prev.filter(x => x !== opt) : [...prev, opt]
@@ -284,6 +286,52 @@ function DiningScreen({ tableState, tableObj, onSignal, onSaveDietary, saving, p
           </div>
         )}
       </div>
+      {/* Menus */}
+      {menus && menus.length > 0 && (
+        <div style={S.card}>
+          <div style={{ fontSize: 11, fontWeight: 700, color: '#a8a29e', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 10 }}>Menus</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {menus.map((menu, i) => {
+              const ma = menu.clr || accent;
+              const isOpen = openMenuIdx === i;
+              return (
+                <div key={i} style={{ borderRadius: 12, border: `1px solid ${isOpen ? ma + '55' : '#e7e5e4'}`, overflow: 'hidden', background: '#fff' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '11px 14px', background: isOpen ? ma + '0d' : undefined }}>
+                    <div style={{ width: 32, height: 32, borderRadius: 8, background: ma + '18', border: `1px solid ${ma}30`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                      {menu.t === 'p'
+                        ? <svg width="16" height="16" fill="none" stroke={ma} strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
+                        : <svg width="16" height="16" fill="none" stroke={ma} strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 10h16M4 14h10"/></svg>
+                      }
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontWeight: 700, fontSize: 14, color: '#1c1917', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{menu.n}</div>
+                      {menu.c && <div style={{ fontSize: 10, fontWeight: 700, color: ma, textTransform: 'uppercase', letterSpacing: 0.5, marginTop: 1 }}>{menu.c}</div>}
+                    </div>
+                    {(menu.t === 'l' || menu.t === 'p') && menu.u
+                      ? <a href={menu.u} target="_blank" rel="noopener noreferrer"
+                          style={{ flexShrink: 0, padding: '6px 12px', borderRadius: 8, background: ma, color: '#fff', fontSize: 12, fontWeight: 700, textDecoration: 'none' }}>
+                          {menu.t === 'p' ? 'Open PDF' : 'View'}
+                        </a>
+                      : menu.t === 'd' && (
+                          <button
+                            onPointerDown={() => setOpenMenuIdx(isOpen ? null : i)}
+                            style={{ flexShrink: 0, padding: '6px 12px', borderRadius: 8, background: isOpen ? ma : 'transparent', color: isOpen ? '#fff' : ma, fontSize: 12, fontWeight: 700, border: `1px solid ${ma}55` }}>
+                            {isOpen ? 'Close' : 'Read'}
+                          </button>
+                        )
+                    }
+                  </div>
+                  {menu.t === 'd' && isOpen && menu.d && (
+                    <div style={{ padding: '10px 14px 14px', fontSize: 13, color: '#57534e', lineHeight: 1.6, borderTop: `1px solid ${ma}22`, background: ma + '06' }}>
+                      {menu.d.split('\n').map((ln, li) => <p key={li} style={{ margin: li > 0 ? '6px 0 0' : 0 }}>{ln}</p>)}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -650,6 +698,8 @@ export default function GuestTablet() {
   const [tableState, setTableState] = useState(null);
   const [tableObj, setTableObj]   = useState(null);
   const [venueName, setVenueName] = useState('');
+  const [menus, setMenus]         = useState([]);
+  const [accentColor, setAccentColor] = useState('#f97316');
   const [error, setError]         = useState(null);
   const [saving, setSaving]       = useState(false);
   const pollRef                   = useRef(null);
@@ -691,6 +741,8 @@ export default function GuestTablet() {
       if (!d.table) { setError('Table not found.'); return; }
       setVenueName(d.venueName || '');
       setTableObj(d.table);
+      if (d.menus)      setMenus(d.menus);
+      if (d.accentColor) setAccentColor(d.accentColor);
       // Map flat guest response back into the shape the screens expect
       setTableState({
         guestScreen:       d.guestScreen,
@@ -824,6 +876,8 @@ export default function GuestTablet() {
             onSaveDietary={handleSaveDietary}
             saving={saving}
             pendingAlertCount={pendingAlertCount}
+            menus={menus}
+            accentColor={accentColor}
           />
         )}
         {screen === 'bill' && (
