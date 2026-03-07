@@ -90,7 +90,8 @@ export default function LiveWaitBoard() {
     if (!quiet) setLoading(true);
     else setRefreshing(true);
     try {
-      const data = await apiFetch(`/events/public/wait/${id}/live`);
+      const tz = encodeURIComponent(Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC');
+      const data = await apiFetch(`/events/public/wait/${id}/live?tz=${tz}`);
       setLiveData(data);
       setLastUpdated(new Date());
       setError(null);
@@ -201,6 +202,9 @@ export default function LiveWaitBoard() {
   const logoUrl = venue?.logoUrl || liveData?.logoUrl;
   const tagline = venue?.tagline || liveData?.tagline || '';
   const waitBoardMessage = venue?.waitBoardMessage || liveData?.waitBoardMessage || '';
+  const waitBoardTitle = venue?.waitBoardTitle || liveData?.waitBoardTitle || '';
+  const displayName = waitBoardTitle || name;
+  const menus = liveData?.menus || [];
 
   // ── My position card (shown after joining) ──────────────────────────────────
   if (myEntry) {
@@ -214,7 +218,7 @@ export default function LiveWaitBoard() {
           {logoUrl && (
             <img src={logoUrl} alt={name} className="h-10 w-auto mx-auto mb-3 object-contain" />
           )}
-          <h1 className="text-white font-black text-2xl">{name}</h1>
+          <h1 className="text-white font-black text-2xl">{displayName}</h1>
         </header>
 
         <div className="flex-1 flex flex-col items-center justify-center px-6 pb-8 gap-6 max-w-md mx-auto w-full">
@@ -299,7 +303,7 @@ export default function LiveWaitBoard() {
             <UtensilsCrossed className="w-7 h-7" style={{ color: accent }} />
           </div>
         )}
-        <h1 className="text-white font-black text-3xl tracking-tight">{name}</h1>
+        <h1 className="text-white font-black text-3xl tracking-tight">{displayName}</h1>
         {tagline && <p className="text-neutral-500 text-sm mt-1">{tagline}</p>}
         {waitBoardMessage && (
           <p className="mt-3 text-neutral-300 text-sm max-w-sm mx-auto leading-relaxed">{waitBoardMessage}</p>
@@ -452,17 +456,61 @@ export default function LiveWaitBoard() {
           )}
         </section>
 
+        {/* Menus */}
+        {menus.length > 0 && !showJoinForm && (
+          <section>
+            <h2 className="text-xs font-bold uppercase tracking-widest text-neutral-600 mb-3 px-1">Our Menus</h2>
+            <div className="space-y-2">
+              {menus.map((menu, i) => {
+                const menuAccent = menu.clr || accent;
+                return (
+                  <div key={i} className="rounded-2xl border flex items-center gap-3 px-4 py-3.5 transition-all"
+                    style={{ background: '#111', borderColor: '#222' }}>
+                    <div className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0"
+                      style={{ background: menuAccent + '20', border: `1px solid ${menuAccent}40` }}>
+                      {menu.t === 'p'
+                        ? <svg className="w-4 h-4" fill="none" stroke={menuAccent} strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
+                        : <svg className="w-4 h-4" fill="none" stroke={menuAccent} strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 10h16M4 14h10"/></svg>
+                      }
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-white font-semibold text-sm truncate">{menu.n}</p>
+                      {menu.c && <p className="text-xs font-bold mt-0.5" style={{ color: menuAccent }}>{menu.c}</p>}
+                      {menu.d && menu.t === 'd' && <p className="text-xs text-neutral-500 mt-0.5 line-clamp-2">{menu.d}</p>}
+                    </div>
+                    {(menu.t === 'l' || menu.t === 'p') && menu.u && (
+                      <a href={menu.u} target="_blank" rel="noopener noreferrer"
+                        className="flex-shrink-0 px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all active:scale-95"
+                        style={{ background: menuAccent, color: '#000' }}>
+                        {menu.t === 'p' ? 'PDF' : 'View'}
+                        <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+                      </a>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+        )}
+
         {/* Join CTA / Form */}
-        {!showJoinForm && isOpen !== false && (
-          <button
-            onClick={() => setShowJoinForm(true)}
-            className="w-full py-4 rounded-2xl font-black text-base flex items-center justify-center gap-2 transition-all active:scale-95"
-            style={{ background: accent, color: '#000' }}
-          >
-            <Users className="w-5 h-5" />
-            Join the Waitlist
-            <ChevronRight className="w-4 h-4" />
-          </button>
+        {!showJoinForm && (
+          <>
+            {isOpen === false && (
+              <div className="rounded-xl border border-amber-500/20 bg-amber-900/10 px-4 py-2.5 text-xs text-amber-400 text-center">
+                Outside posted hours — the waitlist is still accepting entries
+              </div>
+            )}
+            <button
+              onClick={() => setShowJoinForm(true)}
+              className="w-full py-4 rounded-2xl font-black text-base flex items-center justify-center gap-2 transition-all active:scale-95"
+              style={{ background: accent, color: '#000' }}
+            >
+              <Users className="w-5 h-5" />
+              Join the Waitlist
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          </>
         )}
 
         {showJoinForm && (
