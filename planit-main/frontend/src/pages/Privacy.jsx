@@ -130,6 +130,29 @@ export default function Privacy() {
             <p className="mt-3 font-medium text-neutral-800">We do not use your information for advertising, profiling, or sale to third parties under any circumstances.</p>
           </Section>
 
+          <Section number="3A" title="Legal Bases for Processing Personal Data (GDPR)">
+            <p>
+              If you are located in the European Economic Area (EEA), the United Kingdom, or Switzerland, we are required under applicable data protection law — including the General Data Protection Regulation (EU) 2016/679 ("GDPR") and the UK GDPR — to identify the legal basis upon which we process your personal data. We process personal data on the following legal bases, each of which is set out in Article 6 of the GDPR:
+            </p>
+            <ul className="list-disc list-inside space-y-3 ml-3 mt-3">
+              <li>
+                <strong>Performance of a contract (Article 6(1)(b)):</strong> Processing your data to provide you with the Service, including creating and operating event workspaces, enabling real-time collaboration, authenticating your identity, transmitting messages, and delivering all features of the platform. This is the primary legal basis for the majority of processing activities.
+              </li>
+              <li>
+                <strong>Legitimate interests (Article 6(1)(f)):</strong> Where processing is necessary for our legitimate interests (or those of a third party), and where such interests are not overridden by your interests or fundamental rights. Our legitimate interests include: detecting and preventing fraud and abuse; securing and monitoring our infrastructure; improving the reliability, performance, and functionality of the Service; enforcing our Terms of Service; and protecting the rights of other Users. We have conducted and maintain legitimate interest assessments (LIAs) for processing under this basis.
+              </li>
+              <li>
+                <strong>Compliance with legal obligations (Article 6(1)(c)):</strong> Where processing is necessary to comply with applicable legal obligations, including responding to lawful requests from courts, regulators, and law enforcement authorities.
+              </li>
+              <li>
+                <strong>Consent (Article 6(1)(a)):</strong> Where you have given specific, freely given, informed, and unambiguous consent to processing for a particular purpose. You may withdraw consent at any time; withdrawal will not affect the lawfulness of processing carried out prior to withdrawal.
+              </li>
+            </ul>
+            <p className="mt-3">
+              Where we process special categories of personal data (Article 9 GDPR), we rely on the applicable condition under Article 9(2). PlanIt does not intentionally solicit or process special category data. If such data is included in User Content, it is processed on the basis of explicit consent by the individual or because the individual has manifestly made the data public.
+            </p>
+          </Section>
+
           <Section number="4" title="How Your Information Is Shared">
             <Sub title="4.1 Within an Event">
               <p>
@@ -267,24 +290,108 @@ export default function Privacy() {
             </p>
           </Section>
 
-          <Section number="11" title="Your Rights">
+          <Section number="11" title="Your Rights Under Applicable Data Protection Law">
             <p>
-              Depending on your location, you may have the following rights with respect to your personal information:
+              Depending on your location and applicable law, you may have the following rights with respect to your personal information. Because all event data is automatically and permanently deleted within seven (7) days of the event date, many rights can be satisfied simply through the passage of time. However, we will respond to valid requests regardless.
             </p>
-            <ul className="list-disc list-inside space-y-2 ml-3 mt-2">
-              <li><strong>Access:</strong> The right to request a copy of the personal information we hold about you.</li>
-              <li><strong>Correction:</strong> The right to request correction of inaccurate information.</li>
-              <li><strong>Deletion:</strong> The right to request deletion of your personal information. Note that all event data is deleted automatically within seven days, but you may request earlier deletion as described in Section 6.3.</li>
-              <li><strong>Object:</strong> The right to object to certain types of processing of your personal information.</li>
-              <li><strong>Portability:</strong> The right to request that we provide your data in a portable format where technically feasible.</li>
+
+            <Sub title="11.1 Rights Under GDPR (EEA, UK, and Switzerland Users)">
+              <p>If you are located in the EEA, United Kingdom, or Switzerland, you have the following rights under the GDPR or equivalent legislation:</p>
+              <ul className="list-disc list-inside space-y-2 ml-3 mt-2">
+                <li><strong>Right of access (Article 15):</strong> The right to obtain confirmation of whether we process your personal data and, if so, to receive a copy of that data together with supplementary information about the processing.</li>
+                <li><strong>Right to rectification (Article 16):</strong> The right to obtain rectification of inaccurate personal data and, taking into account the purposes of the processing, the right to have incomplete personal data completed.</li>
+                <li><strong>Right to erasure / "right to be forgotten" (Article 17):</strong> The right to obtain erasure of your personal data where: the data is no longer necessary for the purpose for which it was collected; you withdraw consent and there is no other legal basis for processing; you object to processing under Article 21 and there are no overriding legitimate grounds; or the data has been unlawfully processed. Note that our automatic seven-day deletion policy ordinarily satisfies this right without action on your part.</li>
+                <li><strong>Right to restriction of processing (Article 18):</strong> The right to obtain restriction of processing in certain circumstances, including where the accuracy of the data is contested or where processing is unlawful.</li>
+                <li><strong>Right to data portability (Article 20):</strong> Where processing is based on consent or contract and carried out by automated means, the right to receive your personal data in a structured, commonly used, machine-readable format, and to transmit that data to another controller.</li>
+                <li><strong>Right to object (Article 21):</strong> The right to object at any time to processing of your personal data where that processing is based on our legitimate interests, including profiling based on those interests. We shall cease processing unless we can demonstrate compelling legitimate grounds overriding your interests, or processing is necessary for the establishment, exercise, or defence of legal claims.</li>
+                <li><strong>Rights related to automated decision-making (Article 22):</strong> The right not to be subject to a decision based solely on automated processing that produces legal or similarly significant effects concerning you. PlanIt does not engage in automated decision-making of this nature.</li>
+                <li><strong>Right to withdraw consent:</strong> Where processing is based on consent, the right to withdraw that consent at any time without affecting the lawfulness of processing based on consent before withdrawal.</li>
+              </ul>
+              <p className="mt-3">
+                To exercise any of these rights, please contact us at <a href="mailto:planit.userhelp@gmail.com" className="text-neutral-900 font-medium underline underline-offset-2">planit.userhelp@gmail.com</a>. We will respond within 30 days. You also have the right to lodge a complaint with the supervisory authority in your Member State of habitual residence, place of work, or place of the alleged infringement.
+              </p>
+            </Sub>
+
+            <Sub title="11.2 Rights Under CCPA / CPRA (California Residents)">
+              <p>
+                If you are a California resident, you have the following rights under the California Consumer Privacy Act of 2018 as amended by the California Privacy Rights Act of 2020 ("CCPA/CPRA"):
+              </p>
+              <ul className="list-disc list-inside space-y-2 ml-3 mt-2">
+                <li><strong>Right to know:</strong> The right to request that we disclose the categories and specific pieces of personal information we have collected about you, the categories of sources from which we collected it, the business or commercial purposes for collecting it, the categories of third parties with whom we share it, and the categories shared for business purposes.</li>
+                <li><strong>Right to delete:</strong> The right to request deletion of personal information we have collected from you, subject to certain exceptions permitted by law.</li>
+                <li><strong>Right to correct:</strong> The right to request correction of inaccurate personal information we maintain about you.</li>
+                <li><strong>Right to opt out of sale or sharing:</strong> PlanIt does not sell, rent, or share your personal information with third parties for cross-context behavioural advertising. You therefore have no reason to opt out under this right, but you may submit such a request and we will confirm our non-sale status.</li>
+                <li><strong>Right to limit use of sensitive personal information:</strong> PlanIt does not use sensitive personal information beyond what is reasonably necessary to provide the Service.</li>
+                <li><strong>Right to non-discrimination:</strong> You have the right not to receive discriminatory treatment for exercising any of your CCPA/CPRA rights. PlanIt will not deny you the Service, charge you different prices, provide a different level of quality, or retaliate against you for exercising your privacy rights.</li>
+              </ul>
+              <p className="mt-3">
+                To submit a CCPA/CPRA request, contact us at <a href="mailto:planit.userhelp@gmail.com" className="text-neutral-900 font-medium underline underline-offset-2">planit.userhelp@gmail.com</a> with the subject line "California Privacy Request." We will verify your identity before responding. We aim to respond within 45 days. We may extend this period once by an additional 45 days where reasonably necessary.
+              </p>
+              <p className="mt-2">
+                <strong>Shine the Light:</strong> California Civil Code Section 1798.83 permits California residents to request information about how we share personal information with third parties for direct marketing purposes. PlanIt does not share personal information with third parties for direct marketing and has not done so in the preceding calendar year.
+              </p>
+            </Sub>
+
+            <Sub title="11.3 Verification of Identity">
+              <p>
+                When you submit a request to exercise any data subject right, we may ask you to verify your identity before processing the request. Because PlanIt does not maintain a global persistent user account, verification may involve confirming your role in a specific event (by reference to the event name, organizer email, or other identifying details). We cannot process requests where identity cannot be reasonably verified.
+              </p>
+            </Sub>
+          </Section>
+
+          <Section number="14" title="Data Processor Relationships and Third-Party Processor Disclosures">
+            <p>
+              PlanIt acts as a data controller with respect to personal data it collects and processes in connection with operating the Service. Where we engage third-party service providers to process personal data on our behalf, such providers act as data processors (within the meaning of the GDPR) or service providers (within the meaning of the CCPA/CPRA). The following describes our processor relationships:
+            </p>
+            <ul className="list-disc list-inside space-y-3 ml-3 mt-3">
+              <li>
+                <strong>MongoDB Atlas (MongoDB, Inc.):</strong> Processes personal data as our primary database. All event records, messages, participant data, guest lists, and associated content are stored in MongoDB Atlas. MongoDB Atlas is certified under ISO 27001 and SOC 2 Type II and may process data in data centres located in the United States and other jurisdictions. Data processing is governed by MongoDB's Data Processing Addendum.
+              </li>
+              <li>
+                <strong>Cloudinary (Cloudinary Ltd.):</strong> Processes uploaded media files (images, documents, and other files shared within event workspaces). Files are transferred to and stored on Cloudinary's infrastructure upon upload. Cloudinary maintains ISO 27001 certification. Data processing is governed by Cloudinary's Data Processing Agreement.
+              </li>
+              <li>
+                <strong>Render (Render Services, Inc.):</strong> Hosts the PlanIt backend and frontend application servers. Server logs, including request logs containing IP addresses, may be generated and retained by Render's infrastructure for operational purposes. Data processing is governed by Render's Data Processing Agreement.
+              </li>
+              <li>
+                <strong>Upstash, Inc.:</strong> Provides Redis-compatible caching and rate-limiting services. Rate-limiting counters keyed to IP addresses are transiently stored on Upstash's infrastructure. No personally identifiable information beyond IP address is stored in this layer.
+              </li>
             </ul>
             <p className="mt-3">
-              To exercise any of these rights, contact us at{' '}
-              <a href="mailto:planit.userhelp@gmail.com" className="text-neutral-900 font-medium underline underline-offset-2">
-                planit.userhelp@gmail.com
-              </a>. We will respond within 30 days. Some rights may be limited by applicable law or by the technical
-              constraints of the Service, particularly given the automatic deletion of data within seven days of the
-              event date.
+              We have entered into, or rely upon, data processing agreements or standard contractual clauses with each processor where required by applicable data protection law. We do not authorise any processor to use personal data except as necessary to perform services on our behalf.
+            </p>
+          </Section>
+
+          <Section number="15" title="Logging, Monitoring, and Automated Processing">
+            <Sub title="15.1 Server and Application Logs">
+              <p>
+                PlanIt and its infrastructure providers generate and retain application logs, server access logs, error logs, security event logs, and performance logs in the ordinary course of operating the Service. These logs may contain personal data including IP addresses, request URLs, user agents, timestamps, event identifiers, and error context. Logs are used exclusively for: diagnosing and resolving technical issues; detecting and investigating security incidents and abuse; monitoring system performance and availability; and compliance with legal obligations. Logs are not used for commercial profiling or marketing.
+              </p>
+            </Sub>
+            <Sub title="15.2 Anti-Fraud and Security Monitoring">
+              <p>
+                The Service operates automated anti-fraud middleware and rate-limiting systems that process request metadata — including IP address, request frequency, behavioural patterns, and response signing data — to detect and prevent abuse, credential stuffing, automated scraping, and other malicious activity. This processing is carried out on the basis of our legitimate interests in securing the Service and is necessary for the performance of our contract with you. Automated decisions may result in rate-limiting, request blocking, or access suspension where thresholds indicative of abuse are exceeded. You may contact us to dispute any automated restriction applied to your access.
+              </p>
+            </Sub>
+            <Sub title="15.3 Automated Deletion">
+              <p>
+                A scheduled automated cleanup process runs daily and permanently and irreversibly deletes all event data — including all associated personal data — seven (7) days after the event's scheduled date. This automated process is a core architectural feature of the Service. The deletion process covers all database records, Cloudinary-hosted files, cached data, and all other data stores containing event-associated information. Deletion is confirmed and logged. No human intervention is required or involved in routine deletion cycles.
+              </p>
+            </Sub>
+          </Section>
+
+          <Section number="16" title="Security Incident and Data Breach Response">
+            <p>
+              In the event of a personal data breach within the meaning of Article 4(12) GDPR or equivalent applicable law, PlanIt will:
+            </p>
+            <ul className="list-disc list-inside space-y-2 ml-3 mt-2">
+              <li>Assess the nature, scope, and likely consequences of the breach within the shortest feasible time following discovery;</li>
+              <li>Where required by applicable law, notify the competent supervisory authority without undue delay and, where feasible, within 72 hours of becoming aware of the breach, unless the breach is unlikely to result in a risk to the rights and freedoms of natural persons;</li>
+              <li>Where the breach is likely to result in a high risk to the rights and freedoms of natural persons, communicate the breach to affected data subjects without undue delay in accordance with Article 34 GDPR;</li>
+              <li>Document all breaches pursuant to Article 33(5) GDPR, including those not subject to mandatory reporting.</li>
+            </ul>
+            <p className="mt-3">
+              <strong>Important limitations:</strong> Given that the Service does not maintain a global persistent user account system and does not collect email addresses from Participants, PlanIt may not have the means to directly notify all affected individuals of a breach. Notification may be made via prominent notice on the Service. PlanIt expressly disclaims all liability for any secondary loss, consequential damage, or harm arising from a security incident or data breach except to the extent required by applicable mandatory law.
             </p>
           </Section>
 
