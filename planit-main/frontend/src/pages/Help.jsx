@@ -12,7 +12,7 @@ import {
   TrendingUp, Ban, Phone, CheckSquare, List, Hash,
   LifeBuoy, Cpu, Globe, Filter, ChevronUp, ArrowRight,
   LogOut, Copy, Navigation, Timer, PieChart, ClipboardList, Send, CheckCircle, Loader,
-  MapPin, Volume2, Radio, Mic, UtensilsCrossed, LayoutGrid
+  MapPin, Volume2, Radio, Mic, UtensilsCrossed, LayoutGrid, ShieldAlert
 } from 'lucide-react';
 
 /* ─── DATA ─────────────────────────────────────────────────────────────────── */
@@ -1588,6 +1588,905 @@ const ARTICLES_EXTRA = [
         { title: 'Welcome message', body: 'Optional staff note displayed in the Overview tab — useful for tonight\'s specials or shift reminders.' },
       ]},
     ],
+  },
+
+  // ── PLANNING TOOLS: NOTES ─────────────────────────────────────────────
+  {
+    id: 'tool-notes',
+    category: 'Planning Tools',
+    title: 'Using color-coded notes',
+    icon: StickyNote,
+    tags: ['notes', 'sticky notes', 'color', 'colour', 'pin', 'grid', 'brainstorm', 'ideas'],
+    content: [
+      {
+        type: 'intro',
+        text: 'The Notes tab gives your team a shared sticky-note board for capturing ideas, reminders, and reference information. Notes are color-coded, freely positioned in a grid, and synchronized live to every connected session.'
+      },
+      {
+        type: 'steps',
+        items: [
+          { title: 'Open the Notes tab', body: 'Click "Notes" in the workspace tab bar (sticky note icon). You\'ll see the shared note board, with any existing notes already displayed.' },
+          { title: 'Create a new note', body: 'Click the "+" button or "New Note" to open the note editor. Type a title (optional) and body text. Pick a color from the palette — six colors are available: yellow, pink, blue, green, purple, and orange.' },
+          { title: 'Save and publish', body: 'Click Save. Your note appears on the board immediately and is pushed to every other connected session in real time via the notes_updated socket event.' },
+          { title: 'Edit an existing note', body: 'Click the pencil icon on any note to open the editor with the existing content pre-filled. Save your changes — the update is broadcast live to all sessions.' },
+          { title: 'Delete a note', body: 'Click the trash icon on any note card. The note is removed from the database and from all connected sessions instantly. Deletion is permanent.' },
+          { title: 'Scroll and browse', body: 'Notes are arranged in a responsive grid. Scroll down to see all notes if there are many. The most recently created notes appear first.' },
+        ]
+      },
+      {
+        type: 'faq',
+        items: [
+          { q: 'Can only the organizer create notes?', a: 'No — any participant in the workspace can create, edit, and delete notes. There is no permission restriction on the Notes tab.' },
+          { q: 'Is there a character limit per note?', a: 'The body field accepts up to 1000 characters. The title field accepts up to 100.' },
+          { q: 'Do notes persist after I close the browser?', a: 'Yes — notes are saved to the database and load fresh every time the Notes tab is opened.' },
+          { q: 'Can I search notes?', a: 'There is no in-panel note search. Use your browser\'s Ctrl+F / Cmd+F to search visible text on the page.' },
+        ]
+      }
+    ]
+  },
+
+  // ── PLANNING TOOLS: ANNOUNCEMENTS ─────────────────────────────────────
+  {
+    id: 'tool-announcements',
+    category: 'Planning Tools',
+    title: 'Posting and managing announcements',
+    icon: Megaphone,
+    tags: ['announcements', 'bulletin', 'broadcast', 'important', 'notify', 'organizer message', 'team update'],
+    content: [
+      {
+        type: 'intro',
+        text: 'Announcements are a one-way broadcast channel from the organizer to the entire team. Unlike chat, they are not buried in conversation — they live in their own tab and trigger a toast notification on every connected device.'
+      },
+      {
+        type: 'steps',
+        items: [
+          { title: 'Open the Announcements tab', body: 'Click "Announcements" or "Bulletin" in the workspace tab bar (megaphone icon). This tab is visible to all participants but only organizers can post.' },
+          { title: 'Write an announcement', body: 'Click "New Announcement". Type your message. For time-sensitive information — a venue change, a schedule shift, an emergency update — toggle the "Mark as Important" flag.' },
+          { title: 'Post the announcement', body: 'Click Post. The announcement is saved to the database and a toast notification is pushed to every currently connected participant, even those on different tabs in the workspace.' },
+          { title: 'Important flag styling', body: 'Announcements marked Important display with a distinct red-bordered alert styling that makes them visually prominent in the panel. Use sparingly so the flag retains its impact.' },
+          { title: 'Delete an announcement', body: 'Organizers can delete any announcement from the panel. Deleted announcements are removed from all sessions immediately.' },
+        ]
+      },
+      {
+        type: 'callout',
+        variant: 'info',
+        text: 'The toast notification fires even if the participant is on the Chat or Tasks tab — they don\'t need to have Announcements open to be alerted. This makes announcements the most reliable way to guarantee your team sees critical information.'
+      },
+      {
+        type: 'faq',
+        items: [
+          { q: 'Can participants reply to announcements?', a: 'No — announcements are one-way. If you want a discussion, post in chat and reference the announcement.' },
+          { q: 'Do late-arriving team members see old announcements?', a: 'Yes — all announcements are stored and load when a new participant opens the tab. No one misses an announcement just because they joined late.' },
+          { q: 'Is there a character limit?', a: 'Announcements support up to 2000 characters.' },
+        ]
+      }
+    ]
+  },
+
+  // ── PLANNING TOOLS: EXPENSES ──────────────────────────────────────────
+  {
+    id: 'tool-expenses',
+    category: 'Planning Tools',
+    title: 'Tracking expenses and managing the budget',
+    icon: DollarSign,
+    tags: ['expenses', 'budget', 'cost', 'spending', 'money', 'ledger', 'finance', 'paid by', 'category'],
+    content: [
+      {
+        type: 'intro',
+        text: 'The expense panel is a shared real-time ledger for logging event costs as they are incurred. It tracks individual line items, assigns them to categories and payers, and compares total spending against a configurable budget — all in the same workspace as your planning.'
+      },
+      {
+        type: 'steps',
+        items: [
+          { title: 'Open the Expenses tab', body: 'Click the "$" or "Budget" tab in the workspace tab bar.' },
+          { title: 'Set a budget', body: 'If you\'re the organizer, click "Set Budget" and enter the total event budget. A running total appears at the top of the panel: total spent vs. budget, with a remaining amount that turns red when spending exceeds the budget.' },
+          { title: 'Log an expense', body: 'Click "Add Expense". Fill in: title (required), amount (required), category (e.g. venue, catering, AV, staffing, marketing), "paid by" (who covered the cost), and optional notes. Submit to add it to the shared ledger.' },
+          { title: 'See the category breakdown', body: 'Expenses are grouped by category automatically. The category breakdown view shows you at a glance where the money is going — no extra configuration needed.' },
+          { title: 'Delete an expense', body: 'Click the trash icon on any line item to remove it. The total updates instantly for all connected sessions.' },
+          { title: 'Live synchronization', body: 'Every expense addition, deletion, and budget update is broadcast to all connected sessions via the expenses_updated socket event. No refresh needed.' },
+        ]
+      },
+      {
+        type: 'callout',
+        variant: 'info',
+        text: 'The "paid by" field is free text — type anyone\'s name, including external vendors or people not in the workspace. This is useful for tracking reimbursements after the event.'
+      },
+      {
+        type: 'faq',
+        items: [
+          { q: 'Can I change the budget after setting it?', a: 'Yes — the organizer can update the budget amount at any time. The comparison updates immediately.' },
+          { q: 'Can participants add expenses, or only the organizer?', a: 'Any participant can log expenses. Only the organizer can set or change the overall budget.' },
+          { q: 'Is there a limit to the number of expense entries?', a: 'No hard limit per event.' },
+          { q: 'Can I export the expense list?', a: 'There is no one-click CSV export at present. Take a screenshot or manually copy the data before the 7-day deletion window. This is a requested feature — email planit.userhelp@gmail.com if it\'s important to your workflow.' },
+        ]
+      }
+    ]
+  },
+
+  // ── PLANNING TOOLS: FILES ─────────────────────────────────────────────
+  {
+    id: 'tool-files',
+    category: 'Planning Tools',
+    title: 'Uploading and sharing files',
+    icon: FileText,
+    tags: ['files', 'upload', 'share', 'documents', 'images', 'pdf', 'attach', 'cloudinary', 'download'],
+    content: [
+      {
+        type: 'intro',
+        text: 'The Files tab lets your team attach documents, images, PDFs, and other files directly inside the workspace. No external file sharing service required — everything lives alongside your chat, tasks, and notes.'
+      },
+      {
+        type: 'steps',
+        items: [
+          { title: 'Open the Files tab', body: 'Click "Files" in the workspace tab bar (document icon).' },
+          { title: 'Upload a file', body: 'Click "Upload" or drag a file into the upload area. Files are sent to Cloudinary (PlanIt\'s cloud storage provider) and associated with your event. Once uploaded, the file appears in the panel for all participants immediately.' },
+          { title: 'Download a file', body: 'Click any file in the panel to download it. Images show a preview inline. PDFs and other documents open or download depending on your browser settings.' },
+          { title: 'Delete a file', body: 'Click the trash icon on a file entry to remove it. Deletion removes the file from Cloudinary and from all connected sessions.' },
+          { title: 'Supported file types', body: 'Any file type can be uploaded — documents (PDF, DOCX, XLSX), images (JPG, PNG, GIF), spreadsheets, and more. File size limits depend on Cloudinary\'s plan limits.' },
+        ]
+      },
+      {
+        type: 'callout',
+        variant: 'warning',
+        text: 'All files are permanently deleted with the event, 7 days after the event date. Download everything you need to keep before the deletion window closes. The workspace shows a warning banner as the deadline approaches.'
+      },
+      {
+        type: 'callout',
+        variant: 'info',
+        text: 'File uploads are rate-limited at 20 per hour per IP. This is generous for any real planning scenario but prevents the system from being used as a general-purpose file host.'
+      },
+      {
+        type: 'faq',
+        items: [
+          { q: 'Can I upload multiple files at once?', a: 'Files must be uploaded one at a time through the standard upload interface.' },
+          { q: 'Is there a per-file size limit?', a: 'PlanIt uses Cloudinary for file storage. The practical limit per file is determined by Cloudinary\'s upload limits on the plan in use — typically up to 100MB per file.' },
+          { q: 'Can participants download all files at once?', a: 'There is no bulk download. Download files individually from the panel.' },
+        ]
+      }
+    ]
+  },
+
+  // ── PLANNING TOOLS: COUNTDOWN ─────────────────────────────────────────
+  {
+    id: 'tool-countdown',
+    category: 'Planning Tools',
+    title: 'The countdown timer',
+    icon: Clock,
+    tags: ['countdown', 'timer', 'days', 'hours', 'minutes', 'seconds', 'event date', 'live'],
+    content: [
+      {
+        type: 'intro',
+        text: 'The countdown timer is always visible in the workspace, counting down days, hours, minutes, and seconds to your event\'s scheduled start. When the clock hits zero, it switches to a live "Event is Running" state automatically.'
+      },
+      {
+        type: 'steps',
+        items: [
+          { title: 'Where to find it', body: 'The countdown is displayed as a prominent card in the workspace, visible from the main dashboard view. Days, hours, minutes, and seconds are shown in large monospaced digits that don\'t shift as numbers change.' },
+          { title: 'Timezone accuracy', body: 'The countdown uses the event\'s absolute UTC timestamp, not a local date string. A team member in a different timezone than the event location will still see the correct remaining time.' },
+          { title: 'When the event starts', body: 'Once the current time passes the event\'s start time, the countdown transitions to a green "Event is Live!" state displaying the event start date and time. This happens automatically on every connected session — no refresh needed.' },
+          { title: 'After the event', body: 'The workspace remains accessible for 7 days after the event date. The countdown panel no longer displays a future timer once the event has passed.' },
+        ]
+      },
+      {
+        type: 'callout',
+        variant: 'info',
+        text: 'The countdown runs on a 1-second JavaScript interval that is cleaned up when you navigate away, preventing memory leaks. It introduces no perceptible CPU overhead even on low-powered devices.'
+      }
+    ]
+  },
+
+  // ── PLANNING TOOLS: SHARE & UTILITIES ────────────────────────────────
+  {
+    id: 'tool-share',
+    category: 'Planning Tools',
+    title: 'The Share tab: export, calendar, and workspace QR',
+    icon: Share2,
+    tags: ['share', 'export', 'calendar', 'ics', 'qr code', 'utilities', 'download', 'add to calendar', 'participant list'],
+    content: [
+      {
+        type: 'intro',
+        text: 'The Share tab is your utility panel for distributing the event link, exporting data, and connecting your event to external calendars.'
+      },
+      {
+        type: 'steps',
+        items: [
+          { title: 'Copy the event URL', body: 'The event\'s shareable URL is shown in a read-only field with a dedicated Copy button. This is the link to send to your planning team.' },
+          { title: 'Workspace QR code', body: 'Click "Show QR Code" to display a QR code for your workspace URL. Good for projecting on a screen, printing on physical invitations, or sharing on a slide deck.' },
+          { title: 'Download the QR code', body: 'The QR modal includes a Download button that saves the code as an SVG file — high resolution, scalable to any print size.' },
+          { title: 'Download the .ics calendar file', body: 'Click "Download .ics" or "Add to Calendar". This generates a standard iCalendar file with your event title, date, time, timezone, and location. It imports into Google Calendar, Apple Calendar, Outlook, and any other calendar app that supports the .ics format.' },
+          { title: 'Export participant list', body: 'The Share tab (for organizers) includes a way to download the current participant list before deletion. Useful if you need a record of who was in the workspace.' },
+        ]
+      },
+      {
+        type: 'callout',
+        variant: 'info',
+        text: 'The .ics download is one of the most useful features for handoff between PlanIt and personal calendars. After sharing the workspace link with your team, also share the .ics so everyone can add the event to their personal calendar with one click.'
+      }
+    ]
+  },
+
+  // ── PLANNING TOOLS: AGENDA ────────────────────────────────────────────
+  {
+    id: 'tool-agenda',
+    category: 'Planning Tools',
+    title: 'Viewing the event agenda',
+    icon: List,
+    tags: ['agenda', 'schedule', 'timeline', 'itinerary', 'order', 'program'],
+    content: [
+      {
+        type: 'intro',
+        text: 'The Agenda tab shows an at-a-glance summary of key event details — the event name, date, time, timezone, location, and countdown. It serves as the reference view for the event\'s core information.'
+      },
+      {
+        type: 'steps',
+        items: [
+          { title: 'Open the Agenda tab', body: 'Click "Agenda" in the workspace tab bar (list or calendar icon).' },
+          { title: 'What is shown', body: 'The event title, scheduled date and time, timezone, location (with a "Get Directions" link that opens Google Maps if a location was set), and the live countdown.' },
+          { title: 'Get Directions', body: 'If the organizer entered a venue address or location name when creating the event, a "Get Directions" button appears that opens Google Maps with the venue pre-filled.' },
+          { title: 'Organizer visibility', body: 'For organizers, the Agenda tab may also surface quick-access links to key features like the check-in dashboard or analytics.' },
+        ]
+      }
+    ]
+  },
+
+  // ── ENTERPRISE: ANTI-FRAUD SYSTEM ─────────────────────────────────────
+  {
+    id: 'ent-antifraud',
+    category: 'Enterprise & Check-in',
+    title: 'How the anti-fraud check-in system works',
+    icon: Shield,
+    tags: ['anti-fraud', 'fraud', 'security', 'trust score', 'middleware', 'duplicate', 'block', 'replay', 'check-in security'],
+    content: [
+      {
+        type: 'intro',
+        text: 'Every QR scan in Enterprise mode passes through a multi-layer anti-fraud pipeline before admission is granted. This prevents duplicate admissions, ticket sharing, replayed tokens, and other check-in exploits.'
+      },
+      {
+        type: 'steps',
+        items: [
+          { title: 'Layer 1: Duplicate detection', body: 'The first check is whether the invite code has already been admitted. If the same QR is scanned a second time, admission is denied with an "Already checked in" response, regardless of who is presenting it.' },
+          { title: 'Layer 2: Time window enforcement', body: 'Each check-in has a configurable valid window (e.g. 2 hours before the event to 2 hours after). Scans outside this window are rejected. This prevents guests from scanning their invite the day before and arriving without scanning again.' },
+          { title: 'Layer 3: Trust score calculation', body: 'A trust score is computed for each scan based on a combination of signals: invite creation time relative to event date, RSVP status, whether the invite was generated normally or in bulk, and scan timing. Low trust scores flag the admission for review or auto-block depending on settings.' },
+          { title: 'Layer 4: Capacity enforcement', body: 'If a venue capacity limit is set and the admitted count has reached it, further admissions are blocked automatically, even for valid QR codes.' },
+          { title: 'Layer 5: Block list', body: 'Specific invite codes or guest records can be manually blocked by the organizer. Blocked invites are rejected at the scanner with a denial response.' },
+          { title: 'Configuring the layers', body: 'Each middleware layer can be toggled on or off in the check-in settings panel (organizer only). You can also set the minimum trust score threshold and the check-in time window to match your event\'s needs.' },
+        ]
+      },
+      {
+        type: 'callout',
+        variant: 'info',
+        text: 'All check-in decisions — admit, deny, and block — are recorded in the audit log with a timestamp, the staff member\'s attribution (QR scan vs. manual override), and the trust score at time of scan. This full audit trail is visible in the check-in dashboard.'
+      },
+      {
+        type: 'faq',
+        items: [
+          { q: 'Can guests share their QR code with someone else?', a: 'The first person to scan an invite code is admitted. Any subsequent scan of the same code is denied. This prevents ticket sharing — though it does not identify which person physically holds the device.' },
+          { q: 'What is the default trust score threshold?', a: 'The default threshold is 60 out of 100. Scans below this score are flagged for manual review unless auto-blocking is enabled, in which case they are denied automatically.' },
+          { q: 'Can I turn off the anti-fraud system?', a: 'You can disable individual layers in the settings panel. Disabling all layers means admissions rely solely on code validity — no duplicate or time window checks.' },
+        ]
+      }
+    ]
+  },
+
+  // ── ENTERPRISE: ADDING & MANAGING GUESTS ──────────────────────────────
+  {
+    id: 'ent-managing-guests',
+    category: 'Enterprise & Check-in',
+    title: 'Adding guests and managing the guest list',
+    icon: UserCheck,
+    tags: ['guest list', 'add guest', 'invite', 'manage', 'edit guest', 'rsvp', 'notes', 'bulk', 'table assignment'],
+    content: [
+      {
+        type: 'intro',
+        text: 'In Enterprise mode, the organizer manages a formal guest list. Each guest gets a unique invite link with a personal QR code. Here\'s how to build and manage the list.'
+      },
+      {
+        type: 'steps',
+        items: [
+          { title: 'Open the check-in dashboard', body: 'Log in as organizer. The check-in dashboard is accessible from the workspace header (shield or check-in icon). This is where the guest list lives.' },
+          { title: 'Add a guest manually', body: 'Click "Add Guest". Fill in the guest\'s name (required), party size (how many people this invite covers), table assignment (optional), RSVP status, and a personal organizer note (optional, shown on their invite page in amber).' },
+          { title: 'Each guest gets a unique invite link', body: 'Once created, each guest record generates a unique invite URL of the format /invite/[invite-code]. Share this directly with the guest — it is their personal check-in credential.' },
+          { title: 'Edit a guest record', body: 'Click the edit icon on any guest row to update their details — name, party size, table, RSVP status, or personal note. Changes are saved immediately.' },
+          { title: 'Block a guest', body: 'If a guest should not be admitted (cancelled RSVP, security issue), use the block toggle on their record. Their QR code will scan as denied at the door.' },
+          { title: 'Delete a guest', body: 'Deleting a guest record permanently removes it and invalidates their invite link. The QR code will show "Not found" if scanned.' },
+          { title: 'Search and filter the list', body: 'The guest list has a search bar (search by name) and filters for RSVP status, check-in status, and table assignment. Useful for large lists at events with 100+ guests.' },
+        ]
+      },
+      {
+        type: 'callout',
+        variant: 'info',
+        text: 'The personal organizer note you add to a guest record appears highlighted in amber on their invite page. Use it for information specific to that guest: their meal preference, VIP designation, parking instructions, or seating directions.'
+      },
+      {
+        type: 'faq',
+        items: [
+          { q: 'Can guests add themselves to the list?', a: 'No — only organizers can create guest records. The guest list is managed entirely by the organizer.' },
+          { q: 'Is there a bulk import option?', a: 'There is no CSV import at present. Guests must be added individually. Bulk import is a commonly requested feature — email planit.userhelp@gmail.com if this is important to your workflow.' },
+          { q: 'What does RSVP status do?', a: 'RSVP status (Confirmed, Pending, Declined) is informational — it is visible on the guest record and affects the trust score calculation, but does not automatically block or allow admission. Declining an RSVP does not invalidate the QR code unless you also toggle the block flag.' },
+        ]
+      }
+    ]
+  },
+
+  // ── SECURITY: RESPONSE SIGNING ────────────────────────────────────────
+  {
+    id: 'sec-response-signing',
+    category: 'Security & Passwords',
+    title: 'Cryptographic response signing and API security',
+    icon: Key,
+    tags: ['response signing', 'hmac', 'cryptographic', 'api security', 'signature', 'tamper', 'integrity', 'signed'],
+    content: [
+      {
+        type: 'intro',
+        text: 'Every API response from PlanIt\'s backend is cryptographically signed with an HMAC signature. This ensures that responses haven\'t been tampered with in transit and that they came from an authentic PlanIt backend.'
+      },
+      {
+        type: 'steps',
+        items: [
+          { title: 'What is response signing?', body: 'Each HTTP response includes a custom header containing an HMAC-SHA256 signature computed over the response body and a timestamp, using a secret key known only to PlanIt\'s servers. The frontend verifies this signature before trusting the data.' },
+          { title: 'Replay protection', body: 'The timestamp embedded in each signature has a validity window. A response that is replayed after this window expires fails signature verification, preventing replay attacks.' },
+          { title: 'Internal service authentication', body: 'Communication between PlanIt\'s internal services (the main backend, the load balancer, the watchdog) is also HMAC-authenticated. Services include a signed header on every inter-service request; requests without a valid signature are rejected before any processing occurs.' },
+          { title: 'What this means for you', body: 'You don\'t need to do anything differently. The signing and verification happens automatically in the background. What it guarantees: the data you see in the workspace came from PlanIt\'s authentic backend, not a man-in-the-middle.' },
+        ]
+      },
+      {
+        type: 'callout',
+        variant: 'info',
+        text: 'Response signing is not the same as TLS/HTTPS — that encrypts the connection. Response signing is an additional integrity check on top of HTTPS that verifies the authenticity of the data payload even if the connection itself were somehow compromised.'
+      }
+    ]
+  },
+
+  // ── SECURITY: HOW PASSWORDS ARE STORED ───────────────────────────────
+  {
+    id: 'sec-storage',
+    category: 'Security & Passwords',
+    title: 'How PlanIt stores and protects your passwords',
+    icon: Database,
+    tags: ['password storage', 'bcrypt', 'hash', 'security', 'stored', 'encrypted', 'hashed'],
+    content: [
+      {
+        type: 'intro',
+        text: 'PlanIt never stores passwords in readable form. Both the account (organizer) password and the event password are hashed using bcrypt before being written to the database.'
+      },
+      {
+        type: 'steps',
+        items: [
+          { title: 'bcrypt hashing', body: 'When you set a password, PlanIt runs it through bcrypt — a deliberately slow, salted hashing algorithm designed to make brute-force cracking computationally expensive. The hash (not the password) is stored in MongoDB.' },
+          { title: 'No plaintext, anywhere', body: 'Not in the database, not in logs, not in error messages. Even if someone obtained a full database dump, they would only have bcrypt hashes — not usable passwords.' },
+          { title: 'Verification without storage', body: 'When you enter your password, bcrypt re-runs the hash computation and compares the result to the stored hash. If they match, you\'re authenticated. The password itself never needs to be stored or decrypted.' },
+          { title: 'Why no password recovery?', body: 'The no-recovery design is a direct consequence of hashing. PlanIt cannot tell you your password because it doesn\'t know it — only you do. There is no "forgot password" flow because there is no email address on file and nothing to send.' },
+          { title: 'Separate hashes', body: 'The account password and event password are hashed and stored as completely separate fields. Knowing one does not help you derive the other.' },
+        ]
+      },
+      {
+        type: 'callout',
+        variant: 'warning',
+        text: 'The flip side of secure hashing: there is truly no recovery. If you lose your password, neither you nor PlanIt support can retrieve it. Use a password manager.'
+      }
+    ]
+  },
+
+  // ── DATA: INFRASTRUCTURE ──────────────────────────────────────────────
+  {
+    id: 'data-infrastructure',
+    category: 'Data & Privacy',
+    title: 'PlanIt\'s infrastructure: how it all fits together',
+    icon: Server,
+    tags: ['infrastructure', 'backend', 'architecture', 'load balancer', 'multi-backend', 'render', 'scaling', 'router'],
+    content: [
+      {
+        type: 'intro',
+        text: 'PlanIt runs as a distributed system across multiple services. Understanding the architecture helps explain why cold starts happen, how auto-scaling works, and why the status page covers several services separately.'
+      },
+      {
+        type: 'compare',
+        items: [
+          {
+            label: 'API Backend Fleet',
+            color: 'neutral',
+            desc: 'Multiple Node.js/Express backend instances, each running Socket.IO for real-time communication.',
+            features: [
+              'Handles all API requests, authentication, and WebSocket connections',
+              'Multiple instances run simultaneously to share load',
+              'Each instance connects to the same shared MongoDB database',
+              'Hosted on Render\'s cloud platform',
+              'May experience cold-start delays after 15 min of inactivity',
+            ],
+            best: ''
+          },
+          {
+            label: 'Load Balancer / Router',
+            color: 'neutral',
+            desc: 'A dedicated routing service that distributes incoming requests across the backend fleet.',
+            features: [
+              'Performs health checks on every backend instance',
+              'Routes requests away from unhealthy instances automatically',
+              'Enables zero-downtime deployments and backend restarts',
+              'Runs as a separate service — listed separately on the status page',
+              'Retries failed requests transparently before returning an error',
+            ],
+            best: ''
+          },
+          {
+            label: 'Watchdog Monitor',
+            color: 'neutral',
+            desc: 'An independent monitoring process that observes the entire fleet.',
+            features: [
+              'Pings every backend instance every 60 seconds',
+              'Three consecutive failures trigger an automatic incident',
+              'Fires urgent alerts to the operator via ntfy push notifications',
+              'Completely independent — continues monitoring even if a backend is down',
+              'Powers the automated incident creation on the status page',
+            ],
+            best: ''
+          }
+        ]
+      },
+      {
+        type: 'callout',
+        variant: 'info',
+        text: 'All services are hosted on Render\'s free or starter tier, which means cold-start delays are an expected characteristic of the platform. The system compensates with health checks and automatic rerouting, but the first request after a long idle period may be slow. Always warm the server before your event.'
+      }
+    ]
+  },
+
+  // ── DATA: WATCHDOG MONITORING ─────────────────────────────────────────
+  {
+    id: 'data-watchdog',
+    category: 'Data & Privacy',
+    title: 'How the watchdog monitors platform health',
+    icon: Activity,
+    tags: ['watchdog', 'monitoring', 'health', 'uptime', 'alerts', 'detection', 'automatic', 'ping'],
+    content: [
+      {
+        type: 'intro',
+        text: 'PlanIt runs a dedicated watchdog service that continuously monitors every backend instance. It detects outages faster than any user report and triggers incident creation automatically — even in the middle of the night.'
+      },
+      {
+        type: 'steps',
+        items: [
+          { title: 'Heartbeat pings every 60 seconds', body: 'The watchdog sends a health check request to every backend instance on a 60-second cycle. Each ping checks that the server responds with an expected status within a timeout window.' },
+          { title: 'Three strikes trigger an incident', body: 'If a backend fails three consecutive health checks (3 minutes of non-response), the watchdog creates an incident on the status page automatically and fires an urgent push notification to the operator via ntfy. This happens without any human intervention.' },
+          { title: 'Recovery detection', body: 'When a failed backend starts responding again, the watchdog detects the recovery and updates the incident status to "Monitoring" automatically. If the service stays healthy for a recovery window, the incident is resolved.' },
+          { title: 'Independent operation', body: 'The watchdog is a completely separate service from the backends it monitors. A backend being down does not affect the watchdog\'s ability to detect and report the outage.' },
+          { title: 'What this means for event day', body: 'If something goes wrong while you\'re running an event, the watchdog will detect it and create an incident on the status page within minutes — often before any user has time to notice and report it. Check the status page first whenever something feels wrong.' },
+        ]
+      }
+    ]
+  },
+
+  // ── DATA: REAL-TIME ARCHITECTURE ──────────────────────────────────────
+  {
+    id: 'data-realtime',
+    category: 'Data & Privacy',
+    title: 'How real-time updates work (Socket.IO)',
+    icon: Wifi,
+    tags: ['real-time', 'websocket', 'socket.io', 'live', 'broadcast', 'room', 'event-driven', 'sync'],
+    content: [
+      {
+        type: 'intro',
+        text: 'Every live update in PlanIt — chat messages, task completions, vote tallies, note changes, check-in admissions — is powered by Socket.IO WebSocket connections. Here\'s how the real-time layer works.'
+      },
+      {
+        type: 'steps',
+        items: [
+          { title: 'One persistent connection per session', body: 'When you open a workspace, your browser establishes a persistent WebSocket connection to a backend instance. This connection stays open for the duration of your session, allowing instant two-way communication without polling.' },
+          { title: 'Event rooms', body: 'Each event has its own Socket.IO room identified by the event ID. When something changes in your event, the backend emits an event to that room, and every connected session in the room receives it simultaneously.' },
+          { title: 'What triggers a broadcast', body: 'Any write operation — a new message, a task completion, a poll vote, a new note, an expense entry, a check-in admission — emits a corresponding socket event to the event room. Every connected browser receives the event and updates its local state.' },
+          { title: 'Reconnection handling', body: 'If the WebSocket connection drops (network blip, server restart), Socket.IO attempts to reconnect automatically. On successful reconnect, the workspace re-fetches current state from the database so any events missed during the disconnection are caught up.' },
+          { title: 'The connection indicator', body: 'The small dot in the workspace header shows your real-time connection status: green (connected), amber (disconnected or reconnecting). When amber, changes you make are still saved to the database — they just won\'t appear live on other devices until the connection restores.' },
+        ]
+      },
+      {
+        type: 'callout',
+        variant: 'info',
+        text: 'Socket.IO falls back to HTTP long-polling if WebSocket is blocked by a corporate firewall or network proxy. This means real-time features work even in restrictive network environments — they may just be slightly less immediate than a true WebSocket connection.'
+      }
+    ]
+  },
+
+  // ── DATA: RATE LIMITING OVERVIEW ──────────────────────────────────────
+  {
+    id: 'data-ratelimiting',
+    category: 'Data & Privacy',
+    title: 'Rate limiting: protecting the platform',
+    icon: Ban,
+    tags: ['rate limiting', 'throttle', '429', 'api limits', 'protection', 'abuse prevention', 'too many requests'],
+    content: [
+      {
+        type: 'intro',
+        text: 'PlanIt applies layered rate limits to protect the platform from abuse, automated attacks, and runaway clients. Here is a reference for every rate limit in the system.'
+      },
+      {
+        type: 'compare',
+        items: [
+          {
+            label: 'Authentication',
+            color: 'neutral',
+            desc: 'Limits on login and organizer auth attempts:',
+            features: [
+              '20 failed authentication attempts per IP per 15 minutes',
+              'After 20 failures, further attempts from that IP are blocked for 15 min',
+              'Successful authentications do not count toward the limit',
+              'Separate limits for event password entry vs organizer login',
+            ],
+            best: 'If locked out, wait 15 minutes before retrying.'
+          },
+          {
+            label: 'Chat & Content',
+            color: 'neutral',
+            desc: 'Limits on chat and content creation:',
+            features: [
+              '30 chat messages per user per minute',
+              '20 file uploads per IP per hour',
+              '50 task creates per IP per hour',
+              '50 poll creates per IP per hour',
+            ],
+            best: 'These limits are far above any normal usage pattern.'
+          },
+          {
+            label: 'Event Creation & API',
+            color: 'neutral',
+            desc: 'Limits on event and API usage:',
+            features: [
+              '10 new events per IP per hour',
+              '10,000 general API requests per IP per 15 minutes',
+              'Check-in scans: 100 per minute per event',
+            ],
+            best: 'The 10,000 general API limit is very hard to hit through normal browser usage.'
+          }
+        ]
+      },
+      {
+        type: 'callout',
+        variant: 'info',
+        text: 'All rate limits return a 429 status code when exceeded. The response includes a Retry-After value indicating when the limit resets. Rate limits reset on a rolling window — you don\'t need to wait until the top of the hour.'
+      }
+    ]
+  },
+
+  // ── DATA: LICENSE & PERMITTED USE ─────────────────────────────────────
+  {
+    id: 'data-license',
+    category: 'Data & Privacy',
+    title: 'License and permitted use',
+    icon: Eye,
+    tags: ['license', 'usage', 'permitted', 'allowed', 'terms', 'commercial', 'source code', 'open source'],
+    content: [
+      {
+        type: 'intro',
+        text: 'PlanIt is a proprietary application built and operated by Aakshat Hariharan. The source code is not open source. Here is what is and is not permitted when using PlanIt.'
+      },
+      {
+        type: 'compare',
+        items: [
+          {
+            label: 'Permitted',
+            color: 'neutral',
+            desc: 'You are free to:',
+            features: [
+              'Use PlanIt to plan personal and professional events',
+              'Use PlanIt for commercial events (conferences, galas, corporate dinners)',
+              'Use PlanIt in Table Service mode for your restaurant or venue',
+              'Share the workspace link with your team, guests, and vendors',
+              'Export and retain any data you generate',
+            ],
+            best: ''
+          },
+          {
+            label: 'Not Permitted',
+            color: 'neutral',
+            desc: 'The following are not permitted:',
+            features: [
+              'Reselling or white-labeling PlanIt as your own product',
+              'Reverse-engineering or scraping the application code',
+              'Automated bot usage or scraping workspace data',
+              'Using PlanIt for illegal purposes or storing illegal content',
+              'Attempting to circumvent rate limits or security controls',
+            ],
+            best: ''
+          }
+        ]
+      },
+      {
+        type: 'callout',
+        variant: 'info',
+        text: 'Questions about commercial use or enterprise licensing beyond what the platform currently offers? Email planit.userhelp@gmail.com.'
+      }
+    ]
+  },
+
+  // ── ABOUT PLANIT: WHY NO ACCOUNT ──────────────────────────────────────
+  {
+    id: 'about-philosophy',
+    category: 'Getting Started',
+    title: 'The PlanIt philosophy: why no account and no email',
+    icon: Star,
+    tags: ['philosophy', 'no account', 'why', 'design decision', 'privacy', 'anonymous', 'friction', 'fast setup'],
+    content: [
+      {
+        type: 'intro',
+        text: 'PlanIt was designed around a single constraint: zero setup friction. No account. No email. No registration flow. You should be planning in under two minutes. Here\'s the thinking behind that decision and what it means in practice.'
+      },
+      {
+        type: 'steps',
+        items: [
+          { title: 'The problem with accounts', body: 'Most event tools start by asking you to register — email, password, email verification, profile setup. For a tool you might only use twice a year, that barrier kills momentum. By the time you\'re verified, you\'ve already switched to a group chat.' },
+          { title: 'What "no account" actually means', body: 'PlanIt stores no email addresses, no personal profiles, and no persistent identity. Your organizer identity is your account password — a single credential that proves you created the event. That\'s the entire identity model.' },
+          { title: 'The link is the key', body: 'Your event workspace is accessed by URL. Whoever has the link can join (subject to the event password if set). The organizer proves their identity with the account password. Everyone else just needs a display name.' },
+          { title: 'The tradeoff', body: 'No account means no recovery. If you lose the organizer password, it\'s gone — there\'s no email to send a reset link to. If you lose the event link, you need to ask whoever shared it with you. These tradeoffs are intentional: they are the cost of the privacy and speed that the no-account model provides.' },
+          { title: 'Why this works for events', body: 'Events are time-bounded. You plan for a few weeks, run the event, and then it\'s over. The kind of persistent account management that makes sense for a year-round project tool is overkill for a 3-week planning sprint. PlanIt optimizes for exactly this lifecycle.' },
+        ]
+      },
+      {
+        type: 'callout',
+        variant: 'info',
+        text: 'PlanIt was originally built to solve a real problem: planning an event across group chats, email threads, shared spreadsheets, and scattered note apps is genuinely exhausting. A single shared workspace that requires no setup was the solution. That origin shapes every design decision.'
+      }
+    ]
+  },
+
+  // ── ABOUT PLANIT: THE CREATOR ─────────────────────────────────────────
+  {
+    id: 'about-creator',
+    category: 'Contact & Support',
+    title: 'About PlanIt and the person who built it',
+    icon: Info,
+    tags: ['about', 'creator', 'developer', 'who made this', 'built by', 'one person', 'self-taught', 'aakshat', 'background'],
+    content: [
+      {
+        type: 'intro',
+        text: 'PlanIt is built and operated by one person — Aakshat Hariharan, a self-taught developer based in New Jersey. This page has the full background on who built it and why.'
+      },
+      {
+        type: 'steps',
+        items: [
+          { title: 'Why it was built', body: 'PlanIt started as a solution to a specific frustration: organising an event across group chats, email threads, shared spreadsheets, and scattered note apps is genuinely exhausting. Every tool either did too little or required too much setup. PlanIt was the solution — a single workspace where the entire event lives, with no account required.' },
+          { title: 'What it became', body: 'What started as a simple planning tool grew into a full-stack distributed system: a multi-backend fleet with auto-scaling, a dedicated load-balancing router, a separate watchdog monitoring service, mesh authentication between services, a real-time check-in platform with multi-layer anti-fraud middleware, and a public status page that updates itself. None of that was in the original plan.' },
+          { title: 'The background', body: 'No computer science degree. No bootcamp. Self-taught, building through projects. The work extends into cybersecurity — pentesting, security analysis, and vulnerability research. That background informs how PlanIt is built: rate limiting is layered, passwords are hashed correctly, API responses are cryptographically signed, and internal service communication is HMAC-authenticated with replay protection.' },
+          { title: 'The tech stack', body: 'React + Vite + Tailwind CSS on the frontend. Node.js + Express + Socket.IO on the backend. MongoDB for the database. Redis for caching. Cloudinary for file storage. JWT for authentication. All hosted on Render.' },
+          { title: 'Contact and about page', body: 'The full About page is at planitapp.onrender.com/about — it covers every feature in depth along with technical details. GitHub: github.com/Aaks-hatH. Email: hariharanaakshat@gmail.com. Personal site: aaks-hath.pages.dev.' },
+        ]
+      },
+      {
+        type: 'callout',
+        variant: 'info',
+        text: 'Support is operated by the same person who built it. That means responses are thorough and genuinely engaged — but not instantaneous. Expect a reply within 48 business hours.'
+      }
+    ]
+  },
+
+  // ── ABOUT PLANIT: DESIGN ──────────────────────────────────────────────
+  {
+    id: 'about-design',
+    category: 'Getting Started',
+    title: 'PlanIt\'s design: dark backgrounds, stars, and the color system',
+    icon: Globe,
+    tags: ['design', 'dark background', 'stars', 'shooting stars', 'colors', 'ui', 'style', 'theme', 'aesthetic'],
+    content: [
+      {
+        type: 'intro',
+        text: 'PlanIt uses a deliberate visual language. The dark landing page, animated star background, and consistent color-per-page system are all intentional design decisions. Here\'s the reasoning behind each one.'
+      },
+      {
+        type: 'steps',
+        items: [
+          { title: 'Why the dark background on the landing page', body: 'The dark background communicates gravity and polish — it signals that this is a professional tool, not a lightweight prototype. The contrast between the dark hero and the bright white workspace creates a clear visual transition from "choosing a tool" to "actively using it". Dark also makes the star animation visible in a way that a light background never could.' },
+          { title: 'The star background', body: 'The landing page has a canvas-based animated star field: ~100 static stars, ~30 twinkling stars that pulse in opacity, and occasional shooting stars — bright streaks that drift across the canvas on a random schedule. The animation runs at a capped frame rate to minimise CPU and battery usage. Stars are recalculated on window resize so the canvas always fills the full viewport.' },
+          { title: 'The page color system', body: 'Different pages in PlanIt use different neutral background tones to help orient users. The landing page is near-black (#0a0a0a). The workspace uses a warm off-white (#f8f8f6). The About page uses the same off-white. The Help center uses a light gray. These subtle differences help users immediately recognise which "mode" of the product they are in.' },
+          { title: 'Workspace UI philosophy', body: 'Inside the workspace, the design is intentionally neutral — black, white, and grays. Color is reserved for meaning: red for high priority, amber for warnings, green for connected/live, blue for informational callouts. When color appears, it means something.' },
+        ]
+      },
+      {
+        type: 'callout',
+        variant: 'info',
+        text: 'The full design rationale is documented on the About page at planitapp.onrender.com/about — the "Why the dark background", "Stars and shooting stars", and "Page color system" sections cover this in complete depth.'
+      }
+    ]
+  },
+
+  // ── ERRORS: SOCKET DISCONNECT DURING CHECK-IN ─────────────────────────
+  {
+    id: 'err-checkin-disconnect',
+    category: 'Errors & Troubleshooting',
+    title: 'Check-in scanner disconnected during the event',
+    icon: WifiOff,
+    tags: ['check-in disconnected', 'scanner offline', 'offline checkin', 'no signal', 'venue wifi', 'lost connection', 'event day emergency'],
+    content: [
+      {
+        type: 'intro',
+        text: 'If the check-in scanner loses its connection during the event, PlanIt\'s offline mode activates automatically. No panic — scans continue working from the local cache. Here\'s exactly what to do.'
+      },
+      {
+        type: 'steps',
+        items: [
+          { title: 'Confirm offline mode has activated', body: 'The connection indicator in the check-in dashboard turns amber. A yellow "Offline mode — scans queued" banner may appear. The scanner continues to work — it\'s now reading from the locally cached guest list.' },
+          { title: 'Continue scanning normally', body: 'Keep scanning. Every admission is recorded locally and queued. The guest name, party size, table assignment, and organizer notes all display correctly from cache. Guests are admitted as normal.' },
+          { title: 'Watch the pending counter', body: 'A "Pending: N" badge shows how many admissions are queued. This number grows as you scan. Do not worry about it — it will sync when connectivity returns.' },
+          { title: 'For guests not in the cache', body: 'If a guest\'s QR code shows "not found" during offline mode, they may have been added to the guest list after the cache was built. Use manager override — enter their name manually. Override checks the server when it can, or queues the entry.' },
+          { title: 'When connectivity returns', body: 'The queue flushes automatically. The pending counter counts down to zero. The connection indicator turns green. Check the audit log for any conflict flags — these need manual review.' },
+          { title: 'If connectivity never returns', body: 'The sync queue persists until the device reconnects to the internet. Even if the device leaves the venue, it will flush the queue the next time it connects to any network. For immediate post-event records, ensure at least one device reconnects before going fully offline.' },
+        ]
+      },
+      {
+        type: 'callout',
+        variant: 'warning',
+        text: 'The offline cache is built when the check-in page first loads. If you open the check-in page for the first time while already offline, there is no cache and scanning will fail entirely. Always load the check-in dashboard while on WiFi before entering a low-signal area.'
+      }
+    ]
+  },
+
+  // ── ERRORS: ICS / CALENDAR EXPORT ISSUE ──────────────────────────────
+  {
+    id: 'err-ics',
+    category: 'Errors & Troubleshooting',
+    title: 'Calendar file (.ics) not importing correctly',
+    icon: Calendar,
+    tags: ['ics', 'calendar', 'import', 'google calendar', 'outlook', 'apple calendar', 'not working', 'export'],
+    content: [
+      {
+        type: 'intro',
+        text: 'If the downloaded .ics file isn\'t importing into your calendar app correctly, here\'s how to fix it.'
+      },
+      {
+        type: 'steps',
+        items: [
+          { title: 'Double-check the file downloaded completely', body: 'The file should be named something like planit-event.ics and be a few KB in size. If it\'s 0 bytes or the download seemed to fail, try downloading again.' },
+          { title: 'Google Calendar', body: 'Go to calendar.google.com. Click the gear → Settings → Import & Export → Import. Select the .ics file. Choose which calendar to add it to. Click Import.' },
+          { title: 'Apple Calendar (Mac)', body: 'Double-click the .ics file in Finder. Calendar opens and asks which calendar to add the event to. Click Add.' },
+          { title: 'Apple Calendar (iOS)', body: 'Open the .ics file from Files or your email. A prompt appears asking to add the event to your calendar. Tap Add All.' },
+          { title: 'Outlook', body: 'Open Outlook, go to File → Open & Export → Import/Export → Import an iCalendar (.ics) file. Browse to the downloaded file and confirm.' },
+          { title: 'Timezone appears wrong', body: 'The .ics file includes the event\'s timezone (set at event creation). If the event time appears offset in your calendar app, check that your calendar app\'s timezone settings match your local timezone.' },
+        ]
+      }
+    ]
+  },
+
+  // ── SETTINGS: ANTI-FRAUD CONFIGURATION ───────────────────────────────
+  {
+    id: 'acct-antifraud-config',
+    category: 'Settings & Customisation',
+    title: 'Configuring check-in security settings (Enterprise)',
+    icon: ShieldAlert,
+    tags: ['check-in settings', 'security settings', 'anti-fraud', 'trust score', 'auto block', 'capacity', 'time window', 'middleware'],
+    content: [
+      {
+        type: 'intro',
+        text: 'Enterprise mode\'s check-in security settings let you fine-tune how strict the anti-fraud system is. Here\'s a complete reference for every configurable parameter.'
+      },
+      {
+        type: 'steps',
+        items: [
+          { title: 'Open check-in settings', body: 'Log in as organizer. In the check-in dashboard, click the settings icon (gear). The security settings panel opens.' },
+          { title: 'Time window', body: 'Set how many hours before and after the event start time check-in QRs are valid. Default is 2 hours before to 2 hours after. Tighten this for high-security events. Widen it if guests may arrive very early or if you\'re running a multi-hour check-in window.' },
+          { title: 'Minimum trust score', body: 'Set the threshold below which admissions are flagged or auto-blocked. Default: 60. A score of 0–100 is calculated per scan. Setting this higher increases security; setting it lower or to 0 effectively disables score-based blocking.' },
+          { title: 'Auto-blocking', body: 'When enabled, scans below the minimum trust score are automatically denied without showing on a manual review queue. When disabled, low-score scans are flagged for the organizer to review but are not auto-denied.' },
+          { title: 'Venue capacity limit', body: 'Enter the maximum number of people the venue can hold. Once the admitted count reaches this number, further admissions are blocked. Leave blank for no capacity enforcement.' },
+          { title: 'Enable/disable individual middleware layers', body: 'Each layer (duplicate check, time window, trust score, capacity) can be toggled independently. For low-security events you may want to disable the trust score layer to avoid false positives. For high-security events, keep all layers active.' },
+        ]
+      },
+      {
+        type: 'callout',
+        variant: 'warning',
+        text: 'Changes to check-in settings take effect immediately for all active scanning sessions. If you change the time window or minimum trust score mid-event, ongoing check-in behavior changes instantly. Test your settings before doors open.'
+      }
+    ]
+  },
+
+  // ── PLANNING TOOLS: PEOPLE / PRESENCE ────────────────────────────────
+  {
+    id: 'tool-presence',
+    category: 'Planning Tools',
+    title: 'Real-time presence: who\'s currently online',
+    icon: Users,
+    tags: ['presence', 'online', 'connected', 'active', 'who\'s here', 'live count', 'header', 'status'],
+    content: [
+      {
+        type: 'intro',
+        text: 'PlanIt shows live presence information across the workspace — you can always see who is currently connected without opening the People tab.'
+      },
+      {
+        type: 'steps',
+        items: [
+          { title: 'The live count in the header', body: 'The workspace header shows a pulsing green dot and a number — the count of currently connected participants. It updates in real time as people join and leave. This count is visible from any tab in the workspace.' },
+          { title: 'People tab for the full list', body: 'Open the People tab for a complete list of every participant who has joined since the workspace was created. Green indicators mark those currently active.' },
+          { title: 'Offline participants', body: 'Participants who joined previously but closed their browser show as offline in the People list. Their messages, tasks, and contributions remain — only their live connection status has changed.' },
+          { title: 'Organizer identification', body: 'The organizer is visually distinct in the People list — marked with a shield or crown badge.' },
+          { title: 'Typing indicators', body: 'In the Chat tab, when someone is composing a message, a typing indicator appears below the chat showing their username. This disappears when they send or stop typing.' },
+        ]
+      }
+    ]
+  },
+
+  // ── CONTACT: WHAT TO INCLUDE IN A REPORT ─────────────────────────────
+  {
+    id: 'support-best-report',
+    category: 'Contact & Support',
+    title: 'Writing an effective bug report',
+    icon: ClipboardList,
+    tags: ['bug report', 'what to include', 'how to report', 'effective', 'useful', 'details', 'reproduce'],
+    content: [
+      {
+        type: 'intro',
+        text: 'A good bug report gets a fast, accurate fix. A vague one takes multiple back-and-forth emails before even understanding the problem. Here\'s exactly what to include.'
+      },
+      {
+        type: 'steps',
+        items: [
+          { title: 'Your event link', body: 'Include the full URL of your event workspace (e.g. planitapp.onrender.com/e/your-slug). This lets us look up the server-side logs for your specific event.' },
+          { title: 'Exact steps to reproduce', body: 'Describe every step: "I opened the Tasks tab, clicked Add Task, filled in the title, clicked Save, and then saw the spinner hang indefinitely." The more specific, the faster the diagnosis.' },
+          { title: 'What you expected', body: 'Tell us what should have happened. "The task should have appeared in the list."' },
+          { title: 'What actually happened', body: 'Tell us what did happen. "The spinner ran for 30 seconds, then I got a red toast saying \'Server error\', and the task didn\'t appear."' },
+          { title: 'Browser and device', body: 'Include: browser name and version (e.g. Chrome 124, Safari 17), device type (desktop, iOS phone, Android tablet), and OS version if relevant.' },
+          { title: 'Approximate time', body: 'Include the date and approximate time the issue occurred. This helps narrow down which log entries to look at.' },
+          { title: 'Screenshot or screen recording', body: 'Attach a screenshot of any error message. A 15-second screen recording of the issue saves more diagnosis time than a paragraph of description.' },
+        ]
+      },
+      {
+        type: 'callout',
+        variant: 'info',
+        text: 'Send to planit.userhelp@gmail.com with subject "Bug Report: [short description]". Screenshots and recordings go a long way. The more detail you include, the faster the turnaround.'
+      }
+    ]
+  },
+
+  // ── TABLE SERVICE: OVERVIEW PANEL ─────────────────────────────────────
+  {
+    id: 'ts-overview-panel',
+    category: 'Table Service',
+    title: 'The Table Service overview panel',
+    icon: LayoutGrid,
+    tags: ['overview', 'table service', 'summary', 'occupancy', 'statistics', 'dashboard'],
+    content: [
+      {
+        type: 'intro',
+        text: 'The Overview panel in Table Service mode gives a high-level summary of your venue\'s current state — occupancy stats, operating hours, and any notes for tonight\'s service.'
+      },
+      {
+        type: 'steps',
+        items: [
+          { title: 'Open the Overview tab', body: 'Click "Overview" in the right sidebar of the Table Service dashboard. It is the first tab in the sidebar.' },
+          { title: 'Occupancy breakdown', body: 'The panel shows counts for each table state: how many tables are available, occupied, reserved, cleaning, and unavailable. Total capacity (sum of all table capacities) and currently seated guests are shown.' },
+          { title: 'Operating hours', body: 'Your configured open and close times are displayed. If the current time is within operating hours, a green "Open" indicator shows. Outside hours, it shows "Closed".' },
+          { title: 'Welcome message', body: 'If you set a welcome message in Settings, it appears at the top of the Overview tab. Use it for tonight\'s specials, shift-specific notes, or reminders for staff.' },
+          { title: 'Turn time estimation', body: 'Based on current occupancy and your configured average dining duration, the panel shows an estimated number of tables expected to turn in the next 30 minutes. Useful for waitlist management and staffing decisions.' },
+        ]
+      }
+    ]
+  },
+
+  // ── ENTERPRISE: ANALYTICS DEEP DIVE ───────────────────────────────────
+  {
+    id: 'ent-analytics-deep',
+    category: 'Enterprise & Check-in',
+    title: 'Reading the analytics dashboard: every metric explained',
+    icon: BarChart3,
+    tags: ['analytics', 'metrics', 'attendance', 'admitted', 'denied', 'arrival time', 'table fill', 'override count'],
+    content: [
+      {
+        type: 'intro',
+        text: 'The Enterprise analytics dashboard updates live throughout check-in and gives a complete picture of attendance. Here is what every number and chart means.'
+      },
+      {
+        type: 'steps',
+        items: [
+          { title: 'Total invited', body: 'The total number of guest records on the list — everyone who was sent an invite, regardless of whether they RSVP\'d or checked in.' },
+          { title: 'Total admitted', body: 'The count of guests who successfully checked in through either QR scan or manager override. This is the "attendance" number.' },
+          { title: 'Total denied', body: 'Guests who attempted to check in but were rejected by the anti-fraud system (duplicate scan, outside time window, low trust score, capacity limit, or block list).' },
+          { title: 'Attendance percentage', body: 'Admitted ÷ Total invited × 100. Updates live.' },
+          { title: 'Arrival timeline', body: 'A chronological chart showing when guests were admitted over the event window. Each bar represents a 15-minute interval. This shows you when the peak arrival wave was, useful for planning staffing at future events.' },
+          { title: 'Table fill breakdown', body: 'For events with table assignments, a per-table bar shows checked-in guests vs. total assigned. Tables that are fully filled show in green; partially filled in amber; unfilled in gray.' },
+          { title: 'QR vs override split', body: 'A count of how many admissions came from QR scans versus manager overrides. A high override count suggests guests had trouble accessing their QR codes — useful feedback for future communication.' },
+          { title: 'Trust score distribution', body: 'A histogram of trust scores across all check-in attempts. Most admissions should cluster in the 80–100 range. A long tail toward 0 may indicate unusual scanning patterns worth investigating.' },
+        ]
+      },
+      {
+        type: 'callout',
+        variant: 'warning',
+        text: 'All analytics data is deleted permanently 7 days after the event date. Take screenshots or note the key figures before the deletion window. There is no export button — manual capture is the current method.'
+      }
+    ]
   },
 ];
 ARTICLES.push(...ARTICLES_EXTRA);
