@@ -574,12 +574,16 @@ function TablePanel({ obj, state, settings, servers, onUpdate, onClose }) {
 function SeatNextModal({ party, objects, tableStates, settings, onConfirm, onClose }) {
   const servers = settings?.servers || [];
 
-  // All tables that fit the party, sorted tightest-fit first, available only
+  // Tables that fit the party — available first, then cleaning (almost ready)
   const suitableTables = (objects || [])
     .filter(o => o.type !== 'zone' && (o.capacity || 0) >= party.partySize)
     .map(o => ({ ...o, state: tableStates.find(s => s.tableId === o.id) || { status: 'available' } }))
-    .filter(t => t.state.status === 'available')
-    .sort((a, b) => a.capacity - b.capacity);
+    .filter(t => t.state.status === 'available' || t.state.status === 'cleaning')
+    .sort((a, b) => {
+      // available before cleaning, then tightest fit
+      if (a.state.status !== b.state.status) return a.state.status === 'available' ? -1 : 1;
+      return a.capacity - b.capacity;
+    });
 
   const [selectedTableId, setSelectedTableId] = useState(suitableTables[0]?.id || null);
   const [selectedServer, setSelectedServer]   = useState(servers[0]?.name || '');
@@ -647,7 +651,7 @@ function SeatNextModal({ party, objects, tableStates, settings, onConfirm, onClo
             </p>
             {suitableTables.length === 0 ? (
               <div className="rounded-xl border border-rose-500/20 bg-rose-950/20 px-4 py-3 text-sm text-rose-300 text-center">
-                No available table fits {party.partySize} guests right now
+                No available or cleaning table fits {party.partySize} guests right now
               </div>
             ) : (
               <div className="flex flex-wrap gap-2">
@@ -655,15 +659,21 @@ function SeatNextModal({ party, objects, tableStates, settings, onConfirm, onClo
                   <button
                     key={t.id}
                     onClick={() => setSelectedTableId(t.id)}
-                    className="px-3 py-2 rounded-xl text-sm font-bold transition-all border"
+                    className="px-3 py-2 rounded-xl text-sm font-bold transition-all border text-left"
                     style={{
                       background: selectedTableId === t.id ? '#22c55e20' : '#1a1a1a',
-                      borderColor: selectedTableId === t.id ? '#22c55e' : '#333',
+                      borderColor: selectedTableId === t.id ? '#22c55e' : t.state.status === 'cleaning' ? '#f59e0b50' : '#333',
                       color: selectedTableId === t.id ? '#22c55e' : '#888',
                     }}
                   >
                     {t.label || t.id}
                     <span className="ml-1.5 text-xs opacity-70">({t.capacity})</span>
+                    {t.state.status === 'cleaning' && (
+                      <span className="ml-1.5 text-[10px] font-bold px-1.5 py-0.5 rounded-full"
+                        style={{ background: '#f59e0b20', color: '#f59e0b' }}>
+                        cleaning
+                      </span>
+                    )}
                   </button>
                 ))}
               </div>
@@ -841,7 +851,7 @@ function WaitlistPanel({ waitlist, tableStates, objects, settings, onAdd, onUpda
                       {party.status === 'notified' && (
                         <span className="text-xs text-amber-400 font-semibold px-2 py-0.5 bg-amber-500/10 rounded-full border border-amber-500/20">Notified</span>
                       )}
-                      <button onClick={() => onUpdate(party.id, 'seated')} title="Mark seated" className="p-1.5 hover:bg-emerald-500/20 text-neutral-500 hover:text-emerald-400 rounded-lg transition-colors"><CheckCircle className="w-3.5 h-3.5" /></button>
+                      <button onClick={() => onSeatNext(party)} title="Seat party — choose table" className="p-1.5 hover:bg-emerald-500/20 text-neutral-500 hover:text-emerald-400 rounded-lg transition-colors"><CheckCircle className="w-3.5 h-3.5" /></button>
                       <button onClick={() => onRemove(party.id)} title="Remove" className="p-1.5 hover:bg-rose-500/20 text-neutral-500 hover:text-rose-400 rounded-lg transition-colors"><X className="w-3.5 h-3.5" /></button>
                     </div>
                   </div>
@@ -2623,13 +2633,27 @@ export default function TableService() {
         serverName: serverName || '',
         reservationId,
       });
-      setFloorData(prev => ({
-        ...prev,
-        reservations: prev.reservations.filter(r => r.id !== reservationId),
-      }));
+      // Update both reservations list and table states immediately — no reload lag
+      setFloorData(prev => {
+        const existingStates = prev.tableStates.filter(s => s.tableId !== tableId);
+        existingStates.push({
+          tableId,
+          status:     'occupied',
+          partyName:  reservation.partyName,
+          partySize:  reservation.partySize,
+          notes:      reservation.specialRequests || reservation.notes || '',
+          serverName: serverName || '',
+          reservationId,
+          occupiedAt: new Date().toISOString(),
+        });
+        return {
+          ...prev,
+          tableStates:  existingStates,
+          reservations: prev.reservations.filter(r => r.id !== reservationId),
+        };
+      });
       const serverMsg = serverName ? ` · Server: ${serverName}` : '';
       toast.success(`${reservation.partyName} seated at ${tableObj?.label || 'table'}${serverMsg}`);
-      loadFloor();
     } catch {
       toast.error('Failed to seat party');
     }
