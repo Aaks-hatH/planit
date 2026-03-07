@@ -1207,14 +1207,6 @@ export default function Home() {
           </div>
         )}
       </header>
-            <div className="pt-1 border-t border-neutral-800">
-              <a href="/support" onClick={() => setMobileMenuOpen(false)} className="flex items-center justify-center gap-2 mt-2 w-full px-4 py-3 text-sm font-semibold text-white bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 rounded-xl transition-all">
-                Support Us
-              </a>
-            </div>
-          </div>
-        )}
-      </header>
 
       <main className="relative" style={{ zIndex: 2, overflowX: 'hidden', maxWidth: '100vw' }}>
         {/* HERO */}
