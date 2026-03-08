@@ -69,7 +69,41 @@ let _backendMaintenance = { active: false, message: '', eta: null };
 
 async function _pollMaintenanceState() {
   const routerUrl = process.env.ROUTER_URL;
-  if (!routerUrl) return;
+
+  // ── Auto-promote upcoming → active when start time has passed ───────────────
+  try {
+    const Mnt = require('./models/Mnt');
+    const { meshPost } = require('./middleware/mesh');
+    const due = await Mnt.findOne({ s: 'upcoming', start: { $lte: new Date() } }).lean();
+    if (due) {
+      await Mnt.updateOne({ _id: due._id }, { $set: { s: 'active' } });
+      console.log(`[maintenance] Auto-promoted ${due._id} upcoming→active (start=${due.start})`);
+      if (routerUrl) {
+        await meshPost(
+          process.env.BACKEND_LABEL || 'Backend',
+          `${routerUrl}/mesh/maintenance`,
+          { active: true, message: due.msg || '', eta: due.eta ? due.eta.toISOString() : null, type: due.t },
+        ).catch(e => console.warn('[maintenance] Router sync failed on auto-promote:', e.message));
+      }
+      _backendMaintenance = { active: true, message: due.msg || '', eta: due.eta || null };
+      return;
+    }
+  } catch (err) {
+    console.warn('[maintenance] Auto-promote check failed:', err.message);
+  }
+
+  // ── Poll router for current state ─────────────────────────────────────────
+  if (!routerUrl) {
+    // No router configured — read DB directly so the guard still works
+    try {
+      const Mnt = require('./models/Mnt');
+      const rec = await Mnt.findOne({ s: 'active' }).sort({ ca: -1 }).lean();
+      _backendMaintenance = rec
+        ? { active: true, message: rec.msg || '', eta: rec.eta || null }
+        : { active: false, message: '', eta: null };
+    } catch (_) {}
+    return;
+  }
   try {
     const axios = require('axios');
     const r = await axios.get(`${routerUrl}/maintenance`, { timeout: 5000 });
