@@ -15,6 +15,8 @@ const Employee = require('../models/Employee');
 const { verifyAdmin } = require('../middleware/auth');
 const { authLimiter } = require('../middleware/rateLimiter');
 const { secrets } = require('../keys');
+const Blocklist = require('../models/Blocklist');
+const redis     = require('../services/redisClient');
 
 // ─── Validation middleware ────────────────────────────────────────────────────
 const validate = (req, res, next) => {
@@ -1707,6 +1709,88 @@ router.post('/cc/bulk-events', verifyAdmin, requireSuperAdmin, async (req, res, 
     } else { return res.status(400).json({ error:`Unknown action: ${action}` }); }
     res.json({ ok:true, result:{ ...result, action } });
   } catch(err) { next(err); }
+});
+
+// ─── Blocklist routes ──────────────────────────────────────────────────────────
+
+// GET /admin/blocklist — list all entries, optional ?type= filter
+router.get('/blocklist', verifyAdmin, async (req, res, next) => {
+  try {
+    const filter = {};
+    if (req.query.type) filter.type = req.query.type;
+    const entries = await Blocklist.find(filter).sort({ createdAt: -1 }).lean();
+    res.json({ entries });
+  } catch (err) { next(err); }
+});
+
+// POST /admin/blocklist — add an entry
+// body: { type, value, reason?, permanent?, expiresAt? }
+router.post('/blocklist', verifyAdmin, async (req, res, next) => {
+  try {
+    const { type, value, reason = '', permanent = true, expiresAt = null } = req.body;
+    if (!type || !['ip', 'event', 'name'].includes(type))
+      return res.status(400).json({ error: 'type must be ip, event, or name' });
+    if (!value || !value.trim())
+      return res.status(400).json({ error: 'value is required' });
+
+    // Prevent duplicates
+    const existing = await Blocklist.findOne({ type, value: value.trim() });
+    if (existing) return res.status(409).json({ error: 'Entry already exists', entry: existing });
+
+    const entry = await Blocklist.create({
+      type,
+      value:     value.trim(),
+      reason:    reason.trim(),
+      permanent: permanent && !expiresAt,
+      expiresAt: expiresAt ? new Date(expiresAt) : null,
+      addedBy:   req.admin?.username || 'admin',
+    });
+
+    // Also write to Redis so the in-memory / Redis ban check catches it immediately
+    // without waiting for the next DB query (which has a try/catch that can fail)
+    if (type === 'ip') {
+      const ttl = expiresAt ? Math.floor((new Date(expiresAt) - Date.now()) / 1000) : 0;
+      if (ttl > 0) {
+        await redis.set(`sec:ban:${value.trim()}`, '1', ttl);
+      } else if (!expiresAt) {
+        // Permanent — write with very long TTL (10 years) so Redis also catches it
+        await redis.set(`sec:ban:${value.trim()}`, '1', 60 * 60 * 24 * 365 * 10);
+      }
+    }
+
+    res.status(201).json({ entry });
+  } catch (err) { next(err); }
+});
+
+// DELETE /admin/blocklist/:id — remove an entry
+router.delete('/blocklist/:id', verifyAdmin, async (req, res, next) => {
+  try {
+    const entry = await Blocklist.findByIdAndDelete(req.params.id).lean();
+    if (!entry) return res.status(404).json({ error: 'Not found' });
+    // Also remove from Redis if it was an IP ban
+    if (entry.type === 'ip') {
+      await redis.del(`sec:ban:${entry.value}`);
+    }
+    res.json({ ok: true, entry });
+  } catch (err) { next(err); }
+});
+
+// PATCH /admin/blocklist/:id — update reason or expiry
+router.patch('/blocklist/:id', verifyAdmin, async (req, res, next) => {
+  try {
+    const allowed = ['reason', 'expiresAt', 'permanent'];
+    const updates = {};
+    for (const key of allowed) {
+      if (req.body[key] !== undefined) updates[key] = req.body[key];
+    }
+    if (updates.expiresAt !== undefined) {
+      updates.expiresAt = updates.expiresAt ? new Date(updates.expiresAt) : null;
+      updates.permanent = !updates.expiresAt;
+    }
+    const entry = await Blocklist.findByIdAndUpdate(req.params.id, { $set: updates }, { new: true }).lean();
+    if (!entry) return res.status(404).json({ error: 'Not found' });
+    res.json({ entry });
+  } catch (err) { next(err); }
 });
 
 module.exports = router;
