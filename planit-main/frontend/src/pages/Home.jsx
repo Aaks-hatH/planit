@@ -1125,188 +1125,41 @@ function CinematicLoader({ onDone }) {
 }
 
 // ─────────────────────────────────────────────────────────
-//  HERO NETWORK SVG (parallax, floating nodes)
+//  STAR FIELD (night sky background)
 // ─────────────────────────────────────────────────────────
-const _HN = [
-  { x: 11,  y: 24,  r: 4.2, label: 'Chat',  color: 'rgba(148,163,184,0.55)', delay: 0   },
-  { x: 89,  y: 19,  r: 3.8, label: 'Tasks', color: 'rgba(148,163,184,0.5)',  delay: 0.8 },
-  { x: 18,  y: 71,  r: 3.5, label: 'RSVP',  color: 'rgba(148,163,184,0.45)',delay: 1.3 },
-  { x: 82,  y: 74,  r: 4,   label: 'Floor', color: 'rgba(249,115,22,0.48)',  delay: 0.5 },
-  { x: 50,  y: 50,  r: 7,   label: 'PlanIt',color: 'rgba(255,255,255,0.18)',main:true,  delay: 0 },
-  { x: 36,  y: 31,  r: 2.5, color: 'rgba(255,255,255,0.09)', delay: 1.7 },
-  { x: 64,  y: 31,  r: 2.5, color: 'rgba(255,255,255,0.09)', delay: 2.0 },
-  { x: 31,  y: 69,  r: 2,   color: 'rgba(255,255,255,0.07)', delay: 0.7 },
-  { x: 69,  y: 69,  r: 2,   color: 'rgba(255,255,255,0.07)', delay: 1.3 },
-  { x: 7,   y: 47,  r: 1.6, color: 'rgba(255,255,255,0.05)', delay: 2.4 },
-  { x: 93,  y: 53,  r: 1.6, color: 'rgba(255,255,255,0.05)', delay: 1.9 },
-  { x: 50,  y: 14,  r: 1.8, color: 'rgba(255,255,255,0.06)', delay: 3.0 },
-  { x: 50,  y: 86,  r: 1.8, color: 'rgba(255,255,255,0.06)', delay: 2.8 },
-];
-const _HE = [[4,0],[4,1],[4,2],[4,3],[0,5],[1,6],[5,2],[6,3],[0,9],[1,10],[4,11],[4,12]];
+const STARS = Array.from({ length: 160 }, (_, i) => ({
+  x: Math.abs(Math.sin(i * 7919) * 100),
+  y: Math.abs(Math.sin(i * 6271) * 100),
+  r: Math.abs(Math.sin(i * 3571) * 0.9) + 0.3,
+  opacity: Math.abs(Math.sin(i * 2357) * 0.5) + 0.15,
+  dur: 3 + Math.abs(Math.sin(i * 1234) * 5),
+  delay: Math.abs(Math.sin(i * 9871) * 4),
+}));
 
-function HeroNetworkSVG({ scrollY = 0 }) {
+function StarField() {
   return (
-    <div style={{
-      position: 'absolute', inset: 0, pointerEvents: 'none',
-      transform: `translateY(${Math.round(scrollY * 0.13)}px)`,
-      willChange: 'transform',
-    }}>
+    <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', overflow: 'hidden' }}>
       <svg viewBox="0 0 100 100" preserveAspectRatio="xMidYMid slice"
-        style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', opacity: 0.85 }}
+        style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}
         aria-hidden="true">
-        <defs>
-          <radialGradient id="hng" cx="50%" cy="50%">
-            <stop offset="0%" stopColor="rgba(60,80,160,0.08)"/>
-            <stop offset="100%" stopColor="transparent"/>
-          </radialGradient>
-        </defs>
-        <rect width="100" height="100" fill="url(#hng)"/>
-
-        {/* Grid lines */}
-        {Array.from({length:7},(_,i)=>(
-          <g key={i}>
-            <line x1="0" y1={i*16} x2="100" y2={i*16} stroke="rgba(255,255,255,0.018)" strokeWidth="0.2"/>
-            <line x1={i*16} y1="0" x2={i*16} y2="100" stroke="rgba(255,255,255,0.018)" strokeWidth="0.2"/>
-          </g>
-        ))}
-
-        {/* Edges */}
-        {_HE.map(([a,b],i)=>(
-          <line key={i}
-            x1={_HN[a].x} y1={_HN[a].y} x2={_HN[b].x} y2={_HN[b].y}
-            stroke="rgba(255,255,255,0.055)" strokeWidth="0.2" strokeDasharray="0.9 0.9"/>
-        ))}
-
-        {/* Animated data packets */}
-        {_HE.slice(0,8).map(([a,b],i)=>(
-          <circle key={`pk${i}`} r="0.35" fill="rgba(255,255,255,0.6)">
-            <animateMotion dur={`${5+i*0.9}s`} begin={`${i*0.65}s`} repeatCount="indefinite"
-              path={`M${_HN[a].x},${_HN[a].y} L${_HN[b].x},${_HN[b].y}`}/>
-            <animate attributeName="opacity" values="0;0.85;0.85;0"
-              keyTimes="0;0.1;0.88;1" dur={`${5+i*0.9}s`} begin={`${i*0.65}s`} repeatCount="indefinite"/>
+        {STARS.map((s, i) => (
+          <circle key={i} cx={s.x} cy={s.y} r={s.r} fill="white">
+            <animate attributeName="opacity"
+              values={`${s.opacity};${Math.min(s.opacity + 0.45, 1)};${s.opacity}`}
+              dur={`${s.dur}s`} begin={`${s.delay}s`} repeatCount="indefinite" />
           </circle>
         ))}
-
-        {/* Nodes */}
-        {_HN.map((n,i)=>(
-          <g key={i}>
-            {n.main&&<>
-              <circle cx={n.x} cy={n.y} r="5" fill="none" stroke="rgba(255,255,255,0.04)" strokeWidth="0.3">
-                <animate attributeName="r" values="3;9;3" dur="4s" repeatCount="indefinite"/>
-                <animate attributeName="opacity" values="0.8;0;0.8" dur="4s" repeatCount="indefinite"/>
-              </circle>
-              <circle cx={n.x} cy={n.y} r="3" fill="none" stroke="rgba(255,255,255,0.07)" strokeWidth="0.2">
-                <animate attributeName="r" values="2;6;2" dur="4s" begin="0.55s" repeatCount="indefinite"/>
-                <animate attributeName="opacity" values="0.7;0;0.7" dur="4s" begin="0.55s" repeatCount="indefinite"/>
-              </circle>
-            </>}
-            <circle cx={n.x} cy={n.y} r={n.r*0.185}
-              fill={n.color}
-              stroke={n.main?'rgba(255,255,255,0.2)':'rgba(255,255,255,0.09)'}
-              strokeWidth="0.12">
-              <animate attributeName="cy"
-                values={`${n.y};${n.y-0.75};${n.y+0.5};${n.y}`}
-                dur={`${7+i*0.65}s`} begin={`${n.delay}s`} repeatCount="indefinite"/>
-            </circle>
-            {n.label&&(
-              <text x={n.x} y={n.y+n.r*0.185+1.6}
-                textAnchor="middle" fill="rgba(255,255,255,0.22)"
-                fontSize="1.6" fontWeight="700" letterSpacing="0.04em"
-                style={{fontFamily:'system-ui,sans-serif'}}>
-                {n.label}
-              </text>
-            )}
-          </g>
-        ))}
       </svg>
-
-      {/* Ambient orbs */}
+      {/* Subtle top nebula glow */}
       <div style={{
-        position:'absolute', width:400, height:400, borderRadius:'50%',
-        background:'radial-gradient(circle, rgba(60,80,200,0.06) 0%, transparent 70%)',
-        top:'5%', left:'5%',
-        animation:'orb-float 18s ease-in-out infinite',
-      }}/>
-      <div style={{
-        position:'absolute', width:300, height:300, borderRadius:'50%',
-        background:'radial-gradient(circle, rgba(249,115,22,0.04) 0%, transparent 70%)',
-        bottom:'10%', right:'8%',
-        animation:'orb-float-2 22s ease-in-out infinite',
-      }}/>
+        position: 'absolute', inset: 0,
+        background: 'radial-gradient(ellipse 70% 45% at 50% 0%, rgba(30,35,80,0.45) 0%, transparent 70%)',
+      }} />
     </div>
   );
 }
 
-// ─────────────────────────────────────────────────────────
-//  MARQUEE FEATURE STRIP
-// ─────────────────────────────────────────────────────────
-const MARQUEE_ITEMS = [
-  'Real-time sync', 'QR check-in', 'Live analytics', 'Smart scheduling',
-  'Team chat', 'Task tracking', 'Floor management', 'Guest management',
-  'Enterprise security', 'Venue operations', 'Mobile-ready', 'Custom URLs',
-  'Real-time sync', 'QR check-in', 'Live analytics', 'Smart scheduling',
-  'Team chat', 'Task tracking', 'Floor management', 'Guest management',
-  'Enterprise security', 'Venue operations', 'Mobile-ready', 'Custom URLs',
-];
 
-function MarqueeStrip() {
-  return (
-    <div style={{
-      overflow:'hidden',
-      borderTop:'1px solid rgba(255,255,255,0.04)',
-      borderBottom:'1px solid rgba(255,255,255,0.04)',
-      padding:'13px 0',
-      background:'rgba(255,255,255,0.008)',
-    }}>
-      <div className="marquee-track" style={{ display:'flex', gap:36, width:'max-content', whiteSpace:'nowrap' }}>
-        {MARQUEE_ITEMS.map((item,i)=>(
-          <span key={i} style={{ fontSize:12, fontWeight:600, color:'rgba(255,255,255,0.28)', letterSpacing:'0.04em' }}>
-            {item}
-          </span>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-// ─────────────────────────────────────────────────────────
-//  SCROLL SPY  (animated section progress dots)
-// ─────────────────────────────────────────────────────────
-function ScrollDots({ sections }) {
-  const [active, setActive] = useState(0);
-  useEffect(() => {
-    const fn = () => {
-      const scrolled = window.scrollY + window.innerHeight * 0.4;
-      let found = 0;
-      sections.forEach((id, i) => {
-        const el = document.getElementById(id);
-        if (el && el.offsetTop <= scrolled) found = i;
-      });
-      setActive(found);
-    };
-    window.addEventListener('scroll', fn, { passive:true });
-    return () => window.removeEventListener('scroll', fn);
-  }, [sections]);
-
-  return (
-    <div style={{
-      position:'fixed', right:24, top:'50%', transform:'translateY(-50%)',
-      display:'flex', flexDirection:'column', gap:8, zIndex:50,
-      pointerEvents:'none',
-    }}>
-      {sections.map((id,i)=>(
-        <div key={id} style={{
-          width: i===active ? 6 : 4,
-          height: i===active ? 6 : 4,
-          borderRadius:'50%',
-          background: i===active ? 'rgba(255,255,255,0.8)' : 'rgba(255,255,255,0.18)',
-          transition:'all 0.3s ease',
-          boxShadow: i===active ? '0 0 8px rgba(255,255,255,0.4)' : 'none',
-        }}/>
-      ))}
-    </div>
-  );
-}
 
 // 
 // MAIN
@@ -1328,13 +1181,6 @@ export default function Home() {
   const [fieldErrors, setFieldErrors] = useState({});
   const [selectedBranch, setSelectedBranch] = useState(null); // null | 'events' | 'venue'
   const [showLoader,     setShowLoader]     = useState(() => { try { return !sessionStorage.getItem('planit_loaded'); } catch { return true; } });
-  const [scrollY,        setScrollY]        = useState(0);
-
-  useEffect(() => {
-    const fn = () => setScrollY(window.scrollY);
-    window.addEventListener('scroll', fn, { passive: true });
-    return () => window.removeEventListener('scroll', fn);
-  }, []);
 
   const selectBranch = (branch) => {
     setSelectedBranch(branch);
@@ -1456,10 +1302,9 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen text-white relative" style={{ background: '#07070e', overflowX: 'clip', maxWidth: '100vw', isolation: 'isolate' }}>
+    <div className="min-h-screen text-white relative" style={{ background: '#05050f', overflowX: 'clip', maxWidth: '100vw', isolation: 'isolate' }}>
       {showLoader && <CinematicLoader onDone={() => setShowLoader(false)} />}
       <ScrollProgressBar />
-      <ScrollDots sections={['hero-top','planit-events','planit-venue','create']} />
       <style>{`
         /*  Shimmer text  */
         @keyframes shimmer-slide {
@@ -1603,43 +1448,9 @@ export default function Home() {
           to   { opacity: 1; transform: scale(1); }
         }
         /* ── Horizontal marquee strip ── */
-        @keyframes marquee-left {
-          0%   { transform: translateX(0); }
-          100% { transform: translateX(-50%); }
-        }
-        .marquee-track { animation: marquee-left 28s linear infinite; }
-        .marquee-track:hover { animation-play-state: paused; }
         /* ── Hero orb float ── */
-        @keyframes orb-float {
-          0%, 100% { transform: translate(0, 0) scale(1); opacity: 0.5; }
-          33%  { transform: translate(20px, -30px) scale(1.04); opacity: 0.7; }
-          66%  { transform: translate(-15px, 15px) scale(0.97); opacity: 0.55; }
-        }
-        @keyframes orb-float-2 {
-          0%, 100% { transform: translate(0, 0) scale(1); opacity: 0.4; }
-          40%  { transform: translate(-25px, 20px) scale(1.03); opacity: 0.6; }
-          70%  { transform: translate(18px, -10px) scale(0.98); opacity: 0.45; }
-        }
         /* ── SVG node pulse ── */
-        @keyframes node-heartbeat {
-          0%, 100% { r: 4; opacity: 0.6; }
-          50% { r: 6; opacity: 0.9; }
-        }
-        /* ── Stats card shimmer enhanced ── */
-        @keyframes shimmer-sweep {
-          0%   { transform: translateX(-120%) skewX(-15deg); }
-          100% { transform: translateX(220%) skewX(-15deg); }
-        }
-        .shimmer-card::after {
-          content: '';
-          position: absolute; top: 0; left: 0; right: 0; bottom: 0;
-          background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.04) 50%, transparent 100%);
-          transform: translateX(-120%) skewX(-15deg);
-          animation: shimmer-sweep 4s ease-in-out infinite;
-          pointer-events: none;
-        }
-        .shimmer-card:nth-child(2)::after { animation-delay: 1.3s; }
-        .shimmer-card:nth-child(3)::after { animation-delay: 2.6s; }
+        /* ── Stats card shimmer ── */
         /* ── Interactive scroll section ── */
         @keyframes scroll-indicator-bounce {
           0%, 100% { transform: translateY(0); opacity: 1; }
@@ -1778,11 +1589,11 @@ export default function Home() {
       <main className="relative" style={{ zIndex: 2, overflowX: 'hidden', maxWidth: '100vw' }}>
         {/* HERO */}
         <section id="hero-top" className="relative min-h-screen flex items-center" style={{ overflow: 'hidden', maxWidth: '100vw' }}>
-          {/* Subtle top gradient */}
-          <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse 80% 50% at 50% 0%, rgba(40,40,70,0.25) 0%, transparent 65%)', pointerEvents: 'none' }} />
-          {/* ── Animated network SVG ── */}
-          <HeroNetworkSVG scrollY={scrollY} />
-          <div className="w-full" style={{ transform: `translateY(${-scrollY * 0.06}px)`, willChange: 'transform' }}>
+          {/* Night sky starfield */}
+          <StarField />
+          {/* Vignette so edges feel deep */}
+          <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse 120% 100% at 50% 100%, rgba(7,7,14,0.7) 0%, transparent 60%)', pointerEvents: 'none' }} />
+          <div className="w-full relative z-10">
             <div className="max-w-6xl mx-auto px-4 sm:px-8 lg:px-12 py-20 sm:py-28 lg:py-36 text-center">
 
               <motion.div
@@ -1855,7 +1666,7 @@ export default function Home() {
                   { tag: 'Student developed',   desc: 'Built solo, from the ground up'           },
                 ].map((item, i) => (
                   <div key={i}
-                    className="shimmer-card stat-card text-center p-6 rounded-2xl border border-neutral-800/70 hover:border-neutral-600 transition-all duration-400 cursor-default hover:scale-105 relative overflow-hidden"
+                    className="stat-card text-center p-6 rounded-2xl border border-neutral-800/70 hover:border-neutral-600 transition-all duration-400 cursor-default hover:scale-105"
                     style={{ background: 'rgba(255,255,255,0.03)' }}>
                     <div className="text-sm font-black text-white mb-1 tracking-wide uppercase">{item.tag}</div>
                     <div className="text-xs font-medium text-neutral-500">{item.desc}</div>
@@ -1872,9 +1683,6 @@ export default function Home() {
             </div>
           </div>
         </section>
-
-        {/* ── Marquee feature strip ── */}
-        <MarqueeStrip />
 
 
         {/* ═══════════════════════════════════════════════════════════
