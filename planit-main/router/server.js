@@ -523,8 +523,8 @@ function hwUpdate(currentLoad) {
 
   const forecast = hwLevel + hwTrend;
   const willPreScale = hwRampCount >= HW_MIN_RAMP
-    && forecast >= SCALE_UP_THRESHOLD * HW_HEADROOM
-    && forecast < SCALE_UP_THRESHOLD; // threshold not yet breached (reactive handles that)
+    && forecast >= getEffectiveThresholds().up * HW_HEADROOM
+    && forecast < getEffectiveThresholds().up; // threshold not yet breached (reactive handles that)
 
   hwHistory.push({ load: currentLoad, level: hwLevel, trend: hwTrend });
   if (hwHistory.length > HW_HISTORY) hwHistory.shift();
@@ -554,7 +554,7 @@ let pidLastError = 0;
 let pidLastLoad  = 0;
 
 function pidControl(avgLoad) {
-  const setpoint = SCALE_UP_THRESHOLD * PID_SETPOINT;
+  const setpoint = (getEffectiveThresholds().up) * PID_SETPOINT;
   const error    = avgLoad - setpoint;
   pidIntegral    = Math.max(-15, Math.min(15, pidIntegral + error)); // anti-windup clamp
   const derivative = error - pidLastError;
@@ -588,23 +588,21 @@ let anomalyHoldAt = 0; // timestamp when last anomaly was detected
 
 function anomalyUpdate(load) {
   if (ewmMean === 0 && ewmVariance === 0) {
-    // cold start — seed the model
     ewmMean     = load;
-    ewmVariance = load * 0.25;
+    ewmVariance = Math.max(load * 0.25, 1);
     return { isAnomaly: false, zScore: 0, mean: ewmMean, std: Math.sqrt(ewmVariance) };
   }
-
   const std    = Math.sqrt(ewmVariance);
   const zScore = std > 0.5 ? Math.abs(load - ewmMean) / std : 0;
   const isAnomaly = zScore > ANOMALY_Z_SIGMA;
 
-  if (!isAnomaly) {
-    // Only update the baseline on non-anomalous samples — don't let spikes
-    // corrupt the model's view of "normal"
-    const delta = load - ewmMean;
-    ewmMean     = ewmMean + ANOMALY_ALPHA * delta;
-    ewmVariance = (1 - ANOMALY_ALPHA) * (ewmVariance + ANOMALY_ALPHA * delta * delta);
-  }
+  // Always update baseline — even during anomalies, just much more slowly.
+  // This prevents hold-chaining: after a spike the baseline gradually rises
+  // to meet the new post-spike normal so it stops flagging it as anomalous.
+  const alpha = isAnomaly ? ANOMALY_ALPHA * 0.15 : ANOMALY_ALPHA;
+  const delta = load - ewmMean;
+  ewmMean     = ewmMean + alpha * delta;
+  ewmVariance = (1 - alpha) * (ewmVariance + alpha * delta * delta);
 
   if (isAnomaly) anomalyHoldAt = Date.now();
 
@@ -614,7 +612,6 @@ function anomalyUpdate(load) {
 function isInAnomalyHold() {
   return Date.now() - anomalyHoldAt < ANOMALY_HOLD_MS;
 }
-
 // ─── Scale-up cooldown ────────────────────────────────────────────────────────
 // After any scale-up event, block scale-down for SCALE_UP_COOLDOWN_MS.
 // This is the single most effective fix for the thrashing pattern visible in
@@ -629,6 +626,23 @@ let lastScaleAction = null; // 'up' | 'down' | 'predictive' | 'anomaly' | 'pid' 
 
 function isInScaleUpCooldown() {
   return Date.now() - lastScaleUpAt < SCALE_UP_COOLDOWN_MS;
+}
+
+// ─── Manual override ──────────────────────────────────────────────────────────
+// manualCount: if non-null, auto-scaling is paused and this exact count is held.
+// efficiencyMode: adjusts effective thresholds without changing env vars.
+//   performance → scale-up at 50% of threshold, scale-down disabled
+//   balanced    → defaults
+//   economy     → scale-up at 180% of threshold, aggressive scale-down
+let manualCount    = null;
+let efficiencyMode = 'balanced';
+
+function getEffectiveThresholds() {
+  switch (efficiencyMode) {
+    case 'performance': return { up: Math.round(SCALE_UP_THRESHOLD * 0.5), down: 0 };
+    case 'economy':     return { up: Math.round(SCALE_UP_THRESHOLD * 1.8), down: SCALE_DOWN_THRESHOLD * 2 };
+    default:            return { up: SCALE_UP_THRESHOLD, down: SCALE_DOWN_THRESHOLD };
+  }
 }
 
 // ─── Circadian floor ─────────────────────────────────────────────────────────
@@ -649,21 +663,21 @@ function circadianRecord(hour, avgLoad, currentBackends) {
   const slot = circadianSlots[hour];
   slot.sumLoad += avgLoad;
   slot.count++;
-  slot.peakBackends = Math.max(slot.peakBackends, currentBackends);
+  // Only record peak backends from NON-anomalous windows — an anomaly scaling
+  // to 5 backends must not permanently raise the floor to 4
+  // (caller skips this fn during anomaly windows — extra safety here too)
+  slot.peakBackends = Math.max(slot.peakBackends, Math.min(currentBackends, 2));
 }
 
 function circadianComputeFloor(hour) {
-  // Look at this hour and the previous hour — traffic ramps up before the peak
   const thisSlot = circadianSlots[hour];
   const prevSlot = circadianSlots[(hour + 23) % 24];
-  if (thisSlot.count < 3 && prevSlot.count < 3) return 1; // not enough data
-
-  const thisAvg  = thisSlot.count > 0  ? thisSlot.sumLoad  / thisSlot.count  : 0;
-  const prevAvg  = prevSlot.count  > 0 ? prevSlot.sumLoad  / prevSlot.count  : 0;
+  if (thisSlot.count < 3 && prevSlot.count < 3) return 1;
+  const thisAvg  = thisSlot.count > 0 ? thisSlot.sumLoad / thisSlot.count : 0;
+  const prevAvg  = prevSlot.count  > 0 ? prevSlot.sumLoad / prevSlot.count : 0;
   const combined = Math.max(thisAvg, prevAvg);
-
-  // If this hour historically sees load near the scale-up threshold, keep 2
-  if (combined >= SCALE_UP_THRESHOLD * 0.5) return Math.max(thisSlot.peakBackends - 1, 2);
+  // Floor is max 2 — it prevents idle-time thrashing, NOT permanent over-provisioning
+  if (combined >= SCALE_UP_THRESHOLD * 0.5) return 2;
   if (combined >= SCALE_UP_THRESHOLD * 0.3) return 2;
   return 1;
 }
@@ -680,6 +694,19 @@ function checkAndScale() {
       logScale('⚡ Boost hold', `Maintaining ${activeBackendCount} active backends`);
     }
     // Still allow scale-UP beyond minBackends if load demands it (fall through)
+  }
+
+  // ── Manual override: if admin pinned a count, hold it and skip all auto-scaling
+  if (manualCount !== null) {
+    const clamped = Math.max(1, Math.min(manualCount, BACKENDS.length));
+    if (activeBackendCount !== clamped) {
+      activeBackendCount = clamped;
+      updateActiveSet();
+      logScale('🎛 Manual override', `Admin set backend count to ${clamped}`);
+    }
+    // Still reset window counters so we don't accumulate stale data
+    backendStatus.forEach(b => { b.windowRequests = 0; });
+    return;
   }
 
   const activeHealthy = backendStatus
@@ -707,14 +734,23 @@ function checkAndScale() {
   const loadLabel = activeHealthy.some(b => b.socketConnections > 0) ? 'avg sockets' : 'req/window';
   const nowHour   = new Date().getUTCHours();
 
-  // ── Circadian: record this window's load and recompute floor ──────────────
-  circadianRecord(nowHour, avgLoad, activeBackendCount);
-  circadianFloor = circadianComputeFloor(nowHour);
+  const { up: effectiveUpThreshold, down: effectiveDownThreshold } = getEffectiveThresholds();
 
-  // ── Anomaly detection ──────────────────────────────────────────────────────
+  // ── Anomaly detection (runs BEFORE circadian so spikes don't poison the floor)
   const anomaly = anomalyUpdate(avgLoad);
 
+  // ── Circadian: skip anomalous windows — a 73-req spike must NOT record
+  //    peakBackends=5, otherwise circadianComputeFloor returns 4 forever ──────
+  if (!anomaly.isAnomaly) {
+    circadianRecord(nowHour, avgLoad, activeBackendCount);
+  }
+  circadianFloor = circadianComputeFloor(nowHour);
+
   // ── PID control signal ─────────────────────────────────────────────────────
+  // Hard-reset integral on anomaly: the spike drove it to +15 (max windup).
+  // Without this, PID keeps outputting scale-up pressure for minutes after
+  // the spike clears because it's still paying back the accumulated integral.
+  if (anomaly.isAnomaly) pidIntegral = 0;
   const pid = pidControl(avgLoad);
 
   // ── Holt-Winters predictive pre-scale ──────────────────────────────────────
@@ -776,7 +812,7 @@ function checkAndScale() {
   }
 
   // 4. Hard reactive: raw threshold breached (safety net)
-  if (avgLoad >= SCALE_UP_THRESHOLD && activeBackendCount < BACKENDS.length) {
+  if (avgLoad >= effectiveUpThreshold && activeBackendCount < BACKENDS.length) {
     const next = backendStatus[activeBackendCount];
     if (next && !next.circuitTripped && !next.coldStart) {
       activeBackendCount++;
@@ -784,7 +820,7 @@ function checkAndScale() {
       lastScaleUpAt   = Date.now();
       lastScaleAction = 'up';
       updateActiveSet();
-      logScale(`↑ Scale up`, `${avgLoad.toFixed(1)} ${loadLabel} ≥ ${SCALE_UP_THRESHOLD}`);
+      logScale(`↑ Scale up`, `${avgLoad.toFixed(1)} ${loadLabel} ≥ ${effectiveUpThreshold}${efficiencyMode !== "balanced" ? " (" + efficiencyMode + ")" : ""}`);
     } else if (next) {
       console.log(`  [scale] Deferred — ${next.name} is ${next.coldStart ? 'cold' : 'tripped'}`);
     }
@@ -800,7 +836,7 @@ function checkAndScale() {
     isInAnomalyHold() ||
     activeBackendCount <= circadianFloor;
 
-  if (!scaleDownBlocked && avgLoad <= SCALE_DOWN_THRESHOLD && activeBackendCount > 1) {
+  if (!scaleDownBlocked && effectiveDownThreshold > 0 && avgLoad <= effectiveDownThreshold && activeBackendCount > 1) {
     scaleDownStreak++;
     if (scaleDownStreak >= SCALE_DOWN_PATIENCE) {
       activeBackendCount--;
@@ -1017,6 +1053,12 @@ app.get('/mesh/status', meshAuth(SERVICE_NAME), (_req, res) => {
         })),
       },
     },
+    manual: {
+      active:        manualCount !== null,
+      count:         manualCount,
+      efficiencyMode,
+      effectiveThresholds: getEffectiveThresholds(),
+    },
     scalingLog: scalingLog.slice(0, 20),
     backends: backendStatus.map((s, i) => ({
       index: i, name: s.name, active: s.active, alive: s.alive,
@@ -1134,6 +1176,47 @@ app.post('/mesh/boost', meshAuth(SERVICE_NAME), express.json(), (req, res) => {
 app.delete('/mesh/boost', meshAuth(SERVICE_NAME), (_req, res) => {
   const cancelled = cancelBoost();
   res.json({ ok: true, cancelled });
+});
+
+// ─── Manual scale control ────────────────────────────────────────────────────
+// POST /mesh/scale
+// Body: { count?: number|null, efficiencyMode?: 'performance'|'balanced'|'economy' }
+// count: null = return to auto-scaling, number = pin to that many backends
+app.post('/mesh/scale', meshAuth(SERVICE_NAME), express.json(), (req, res) => {
+  const { count, efficiencyMode: mode } = req.body || {};
+
+  if (mode !== undefined) {
+    if (!['performance','balanced','economy'].includes(mode)) {
+      return res.status(400).json({ error: 'efficiencyMode must be performance | balanced | economy' });
+    }
+    efficiencyMode = mode;
+    console.log(`[scale] Efficiency mode set to ${mode} by admin`);
+  }
+
+  if (count !== undefined) {
+    if (count === null) {
+      manualCount = null;
+      console.log('[scale] Manual override cleared — returning to auto-scaling');
+      logScale('🎛 Auto-scaling restored', 'Admin released manual override');
+    } else {
+      const n = parseInt(count, 10);
+      if (isNaN(n) || n < 1 || n > BACKENDS.length) {
+        return res.status(400).json({ error: `count must be 1–${BACKENDS.length}` });
+      }
+      manualCount = n;
+      // Apply immediately — don't wait for next checkAndScale interval
+      activeBackendCount = Math.max(1, Math.min(n, BACKENDS.length));
+      updateActiveSet();
+      logScale(`🎛 Manual override`, `Admin pinned fleet to ${n} backend${n !== 1 ? 's' : ''}`);
+      console.log(`[scale] Manual override: ${n} backends`);
+    }
+  }
+
+  res.json({
+    ok: true,
+    manual: { active: manualCount !== null, count: manualCount, efficiencyMode, effectiveThresholds: getEffectiveThresholds() },
+    activeBackendCount,
+  });
 });
 
 // ─── Mesh email relay ─────────────────────────────────────────────────────────
