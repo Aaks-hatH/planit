@@ -988,11 +988,13 @@ app.use(cors({
 // Backend polls this same endpoint every 15s and refuses non-exempt requests.
 
 let _maintenance = {
-  active:  process.env.MAINTENANCE_MODE === 'true',
-  message: process.env.MAINTENANCE_MESSAGE || 'PlanIt is undergoing scheduled maintenance. We\'ll be back shortly.',
-  eta:     process.env.MAINTENANCE_ETA     || null,
-  setAt:   process.env.MAINTENANCE_MODE === 'true' ? new Date().toISOString() : null,
-  setBy:   process.env.MAINTENANCE_MODE === 'true' ? 'env'                   : null,
+  active:   process.env.MAINTENANCE_MODE === 'true',
+  upcoming: false,
+  type:     process.env.MAINTENANCE_TYPE || 's',   // 's'|'i'|'d'
+  message:  process.env.MAINTENANCE_MESSAGE || 'PlanIt is undergoing scheduled maintenance. We\'ll be back shortly.',
+  eta:      process.env.MAINTENANCE_ETA     || null,
+  setAt:    process.env.MAINTENANCE_MODE === 'true' ? new Date().toISOString() : null,
+  setBy:    process.env.MAINTENANCE_MODE === 'true' ? 'env'                   : null,
 };
 
 if (_maintenance.active) {
@@ -1006,13 +1008,15 @@ app.get('/maintenance', (_req, res) => res.json(_maintenance));
 app.post('/mesh/maintenance', meshAuth(SERVICE_NAME), express.json(), (req, res) => {
   const prev = _maintenance.active;
   _maintenance = {
-    active:  !!req.body.active,
-    message: req.body.message || _maintenance.message,
-    eta:     req.body.eta     != null ? req.body.eta : null,
-    setAt:   new Date().toISOString(),
-    setBy:   req.meshCaller || 'admin',
+    active:   !!req.body.active,
+    upcoming: !req.body.active && !!req.body.upcoming,
+    type:     req.body.type    || _maintenance.type || 's',
+    message:  req.body.message || _maintenance.message,
+    eta:      req.body.eta     != null ? req.body.eta : null,
+    setAt:    new Date().toISOString(),
+    setBy:    req.meshCaller || 'admin',
   };
-  console.log(`[maintenance] ${_maintenance.active ? '⚠  ENABLED' : '✓  DISABLED'} by ${_maintenance.setBy} (was: ${prev})`);
+  console.log(`[maintenance] ${_maintenance.active ? '⚠  ENABLED' : _maintenance.upcoming ? '⏰  UPCOMING' : '✓  DISABLED'} by ${_maintenance.setBy} (was: ${prev})`);
   res.json({ ok: true, ..._maintenance });
 });
 
