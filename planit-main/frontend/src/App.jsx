@@ -163,7 +163,7 @@ function MaintenanceGate({ children }) {
 
   useEffect(() => {
     const check = () =>
-      fetch('/maintenance').then(r => r.json())
+      fetch('/maintenance', { cache: 'no-store' }).then(r => r.json())
         .then(d => { setInfo((d.active || d.upcoming) ? d : null); setChecked(true); })
         .catch(() => { setInfo(null); setChecked(true); });
     check();
