@@ -678,6 +678,22 @@ export default function SeatingMap({
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-neutral-950">
+
+      {/* ── Mobile Warning ── */}
+      <div className="md:hidden absolute inset-0 z-50 bg-neutral-950 flex items-center justify-center p-6">
+        <div className="max-w-xs w-full text-center space-y-4">
+          <div className="w-14 h-14 bg-amber-500/10 border border-amber-500/30 rounded-xl flex items-center justify-center mx-auto">
+            <svg xmlns="http://www.w3.org/2000/svg" className="w-7 h-7 text-amber-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+          </div>
+          <h3 className="text-lg font-bold text-white">Not Optimised for Mobile</h3>
+          <p className="text-neutral-400 text-sm leading-relaxed">
+            The seating map editor requires drag-and-drop table placement using a mouse and cursor. It cannot be used accurately on a touchscreen. Please open it on a desktop or laptop.
+          </p>
+          <button onClick={onClose} className="px-4 py-2 bg-neutral-800 text-neutral-300 rounded-xl text-sm font-semibold border border-neutral-700">
+            Go Back
+          </button>
+        </div>
+      </div>
       <style>{`
         @keyframes tablePulse { from { fill: #bbf7d0; } to { fill: #4ade80; } }
         @keyframes guestPulse { 0%,100% { opacity:1; } 50% { opacity:0.5; } }
@@ -801,6 +817,19 @@ export default function SeatingMap({
         {/* ── Editor right panel ── */}
         {isEditor && (
           <div className="w-64 bg-neutral-900 border-l border-neutral-800 flex flex-col overflow-hidden shrink-0">
+      {/* ── Mobile Warning ── */}
+      <div className="md:hidden absolute inset-0 z-50 bg-neutral-950/95 flex items-center justify-center p-6 rounded-xl">
+        <div className="max-w-xs w-full text-center space-y-3">
+          <div className="w-14 h-14 bg-amber-500/10 border border-amber-500/30 rounded-xl flex items-center justify-center mx-auto">
+            <svg xmlns="http://www.w3.org/2000/svg" className="w-7 h-7 text-amber-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+          </div>
+          <h3 className="text-base font-bold text-white">Not Optimised for Mobile</h3>
+          <p className="text-neutral-400 text-xs leading-relaxed">
+            The seating map editor uses drag-and-drop table placement which requires a mouse and a large screen to use accurately. Please open this on a desktop or laptop.
+          </p>
+        </div>
+      </div>
+
             <StatsBar objs={objs} guestsByTable={guestsByTable} />
             <div className="px-4 py-2.5 border-b border-neutral-800">
               <p className="text-xs font-bold text-neutral-400 uppercase tracking-wider">Table Properties</p>
