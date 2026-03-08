@@ -11,6 +11,7 @@ const { verifyEventAccess, verifyOrganizer, verifyCheckinAccess } = require('../
 const { createEventLimiter, authLimiter, reservationLimiter, availabilityLimiter } = require('../middleware/rateLimiter');
 const { secrets } = require('../keys');
 const crypto = require('crypto');
+const Blocklist = require('../models/Blocklist');
 
 const validate = (req, res, next) => {
   const errors = validationResult(req);
@@ -36,6 +37,14 @@ router.post('/',
 
       const existing = await Event.findOne({ subdomain });
       if (existing) return res.status(409).json({ error: 'This event link is already taken.' });
+
+      // Blocklist checks
+      const [subdomainBanned, nameBanned] = await Promise.all([
+        Blocklist.findOne({ type: 'event', value: subdomain, $or: [{ expiresAt: null }, { expiresAt: { $gt: new Date() } }] }).lean(),
+        Blocklist.findOne({ type: 'name',  value: { $regex: new RegExp(`^${organizerName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') }, $or: [{ expiresAt: null }, { expiresAt: { $gt: new Date() } }] }).lean(),
+      ]);
+      if (subdomainBanned) return res.status(403).json({ error: 'This event link is not available.' });
+      if (nameBanned)      return res.status(403).json({ error: 'This display name is not allowed.' });
 
       let hashedPassword = null;
       let isPasswordProtected = false;
@@ -127,6 +136,9 @@ router.get('/public/:eventId', async (req, res, next) => {
 // Get by subdomain
 router.get('/subdomain/:subdomain', async (req, res, next) => {
   try {
+    const banned = await Blocklist.findOne({ type: 'event', value: req.params.subdomain, $or: [{ expiresAt: null }, { expiresAt: { $gt: new Date() } }] }).lean();
+    if (banned) return res.status(404).json({ error: 'Event not found.' });
+
     const event = await Event.findOne({ subdomain: req.params.subdomain });
     if (!event) return res.status(404).json({ error: 'Event not found.' });
     await event.incrementViews();
@@ -190,6 +202,9 @@ router.post('/verify-password/:eventId', authLimiter,
       if (!isMatch) return res.status(401).json({ error: 'Incorrect event password.' });
 
       const { username, accountPassword } = req.body;
+
+      const pwNameBanned = await Blocklist.findOne({ type: 'name', value: { $regex: new RegExp(`^${username.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') }, $or: [{ expiresAt: null }, { expiresAt: { $gt: new Date() } }] }).lean();
+      if (pwNameBanned) return res.status(403).json({ error: 'This display name is not allowed.' });
 
       const existing = await EventParticipant.findOne({ eventId: req.params.eventId, username }).select('+password');
       if (existing && existing.hasPassword) {
@@ -291,6 +306,9 @@ router.post('/join/:eventId',
       }
 
       const { username, accountPassword } = req.body;
+
+      const joinNameBanned = await Blocklist.findOne({ type: 'name', value: { $regex: new RegExp(`^${username.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') }, $or: [{ expiresAt: null }, { expiresAt: { $gt: new Date() } }] }).lean();
+      if (joinNameBanned) return res.status(403).json({ error: 'This display name is not allowed.' });
 
       const existing = await EventParticipant.findOne({ eventId: req.params.eventId, username }).select('+password');
       if (existing && existing.hasPassword) {
