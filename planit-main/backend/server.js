@@ -122,18 +122,19 @@ async function _syncDbStateToRouter() {
     const routerUrl = process.env.ROUTER_URL;
     if (!routerUrl) return;
     const rec = await Mnt.findOne({ s: { $in: ['upcoming','active'] } }).sort({ ca: -1 }).lean();
-    if (!rec) return;
+    // Always explicitly push state to router — even if no active record.
+    // Without this, a backend restart after resolve would leave the router
+    // in whatever state it was last set to (possibly still active from a
+    // previous boot-sync), never clearing it.
+    const payload = rec
+      ? { active: rec.s === 'active', upcoming: rec.s === 'upcoming', message: rec.msg || '', eta: rec.eta ? rec.eta.toISOString() : null, type: rec.t }
+      : { active: false, upcoming: false, message: '', eta: null, type: null };
     await meshPost(
       process.env.BACKEND_LABEL || 'Backend',
       `${routerUrl}/mesh/maintenance`,
-      {
-        active:  rec.s === 'active',
-        message: rec.msg  || '',
-        eta:     rec.eta  ? rec.eta.toISOString() : null,
-        type:    rec.t,
-      },
+      payload,
     );
-    console.log(`[maintenance] Synced DB state to router (s=${rec.s} t=${rec.t})`);
+    console.log(`[maintenance] Synced DB state to router → active=${payload.active} (${rec ? `s=${rec.s} t=${rec.t}` : 'no active record in DB'})`);
   } catch (err) {
     console.warn('[maintenance] Could not sync DB state to router:', err.message);
   }
@@ -424,7 +425,7 @@ connectDB().then(async () => {
   // Start polling router for maintenance state (defence-in-depth)
   await _syncDbStateToRouter();          // restore any persisted state into router
   await _pollMaintenanceState();
-  setInterval(_pollMaintenanceState, 15_000);
+  setInterval(_pollMaintenanceState, 5_000);
 
   // Register all Socket.IO handlers
   require('./socket/chatSocket')(io);
