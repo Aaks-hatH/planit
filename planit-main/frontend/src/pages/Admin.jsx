@@ -801,9 +801,37 @@ function SystemPanel() {
   const [loading, setLoading] = useState(true);
   const [watchdogData, setWatchdogData] = useState(null);
 
+  // ── Maintenance mode ──
+  const [maintenance, setMaintenance]       = useState(null);
+  const [maintLoading, setMaintLoading]     = useState(true);
+  const [maintSaving, setMaintSaving]       = useState(false);
+  const [maintForm, setMaintForm]           = useState({ message: '', eta: '' });
+
+  const loadMaintenance = useCallback(async () => {
+    try {
+      const r = await api.get('/api/admin/maintenance');
+      setMaintenance(r.data);
+      if (!r.data.active) setMaintForm({ message: r.data.message || '', eta: '' });
+    } catch (_) {}
+    finally { setMaintLoading(false); }
+  }, []);
+
+  const toggleMaintenance = async (active) => {
+    setMaintSaving(true);
+    try {
+      const payload = { active, message: maintForm.message || undefined, eta: maintForm.eta || undefined };
+      const r = await api.post('/api/admin/maintenance', payload);
+      setMaintenance(r.data);
+      toast.success(active ? '⚠ Maintenance mode enabled — site is now locked' : '✓ Maintenance mode disabled — site is live');
+    } catch (e) {
+      toast.error(e.response?.data?.error || 'Failed to toggle maintenance mode');
+    } finally { setMaintSaving(false); }
+  };
+
+  useEffect(() => { loadMaintenance(); }, [loadMaintenance]);
+
   const load = useCallback(async () => {
     setLoading(true);
-    // Fire both independently — system stats and watchdog render as they arrive
     adminAPI.getSystem()
       .then(r => { if (r?.data) setSys(r.data); })
       .catch(() => {})
@@ -825,6 +853,77 @@ function SystemPanel() {
           <p className="text-sm text-neutral-500">Live infrastructure metrics · auto-refresh 15s</p>
         </div>
         <button onClick={load} className="btn btn-secondary gap-2 text-sm"><RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} /> Refresh</button>
+      </div>
+
+      {/* ── Maintenance Mode ─────────────────────────────────────────────── */}
+      <div className={`rounded-2xl border-2 p-5 transition-all duration-300 ${maintenance?.active ? 'border-amber-400 bg-amber-50' : 'border-neutral-200 bg-white'}`}>
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex items-start gap-3 flex-1 min-w-0">
+            <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${maintenance?.active ? 'bg-amber-100' : 'bg-neutral-100'}`}>
+              <AlertCircle className={`w-5 h-5 ${maintenance?.active ? 'text-amber-600' : 'text-neutral-500'}`} />
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 mb-0.5">
+                <h3 className="font-bold text-sm">Maintenance Mode</h3>
+                {maintenance?.active
+                  ? <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-bold bg-amber-100 text-amber-700 border border-amber-200">
+                      <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse inline-block" />ACTIVE
+                    </span>
+                  : <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-neutral-100 text-neutral-500">OFF</span>
+                }
+              </div>
+              <p className="text-xs text-neutral-500">
+                {maintenance?.active
+                  ? `Site locked — all public traffic blocked since ${maintenance.setAt ? new Date(maintenance.setAt).toLocaleTimeString() : 'unknown'} by ${maintenance.setBy || 'admin'}`
+                  : 'When enabled: blocks all public API requests and shows a maintenance page to all users. Admin panel stays accessible.'}
+              </p>
+              {maintenance?.active && maintenance.message && (
+                <p className="text-xs text-amber-700 font-medium mt-1 bg-amber-100 rounded-lg px-2 py-1 mt-2">"{maintenance.message}"</p>
+              )}
+            </div>
+          </div>
+          {/* Toggle */}
+          <button
+            onClick={() => toggleMaintenance(!maintenance?.active)}
+            disabled={maintSaving || maintLoading}
+            className={`flex-shrink-0 px-4 py-2 rounded-xl text-sm font-bold transition-all duration-200 disabled:opacity-50 ${
+              maintenance?.active
+                ? 'bg-emerald-600 hover:bg-emerald-700 text-white'
+                : 'bg-amber-500 hover:bg-amber-600 text-white'
+            }`}
+          >
+            {maintSaving ? 'Saving…' : maintenance?.active ? 'Disable' : 'Enable'}
+          </button>
+        </div>
+
+        {/* Config fields — only shown when not active so you can pre-set before enabling */}
+        {!maintenance?.active && (
+          <div className="mt-4 pt-4 border-t border-neutral-100 grid sm:grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-semibold text-neutral-500 mb-1">Message shown to users</label>
+              <input
+                type="text"
+                value={maintForm.message}
+                onChange={e => setMaintForm(p => ({ ...p, message: e.target.value }))}
+                placeholder="Scheduled maintenance. Back shortly."
+                className="w-full text-sm border border-neutral-200 rounded-lg px-3 py-2 focus:outline-none focus:border-amber-400"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-neutral-500 mb-1">ETA (optional)</label>
+              <input
+                type="datetime-local"
+                value={maintForm.eta}
+                onChange={e => setMaintForm(p => ({ ...p, eta: e.target.value }))}
+                className="w-full text-sm border border-neutral-200 rounded-lg px-3 py-2 focus:outline-none focus:border-amber-400"
+              />
+            </div>
+            <p className="sm:col-span-2 text-xs text-neutral-400">
+              Mesh communication, watchdog, and this admin panel remain fully operational during maintenance.
+              Backends also block public requests independently as a second layer.
+            </p>
+          </div>
+        )}
       </div>
 
       {sys && (
