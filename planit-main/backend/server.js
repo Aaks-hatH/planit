@@ -59,6 +59,38 @@ const { errorHandler }           = require('./middleware/errorHandler');
 const { attachResponseSignature } = require('./middleware/responseSigning');
 const { trafficGuard }           = require('./middleware/security');
 
+// ─── Maintenance state cache ───────────────────────────────────────────────────
+// Polls router GET /maintenance every 15s.
+// On each request, blocks non-exempt paths when active.
+// This is a defence-in-depth layer — the router already blocks at the edge,
+// but if a request somehow bypasses the router (direct backend hit, internal
+// tool, etc.) the backend refuses it too.
+let _backendMaintenance = { active: false, message: '', eta: null };
+
+async function _pollMaintenanceState() {
+  const routerUrl = process.env.ROUTER_URL;
+  if (!routerUrl) return;
+  try {
+    const axios = require('axios');
+    const r = await axios.get(`${routerUrl}/maintenance`, { timeout: 5000 });
+    _backendMaintenance = r.data || { active: false };
+  } catch (_) {
+    // Router unreachable — stay in last known state
+  }
+}
+
+function maintenanceGuard(req, res, next) {
+  if (!_backendMaintenance.active) return next();
+  const p = req.path;
+  // Always let through: health checks, mesh routes, admin routes, socket.io
+  if (p === '/api/health' || p.startsWith('/api/mesh') || p.startsWith('/api/admin') || p.startsWith('/socket.io')) return next();
+  return res.status(503).json({
+    maintenance: true,
+    message: _backendMaintenance.message || 'Maintenance in progress.',
+    eta:     _backendMaintenance.eta || null,
+  });
+}
+
 app.set('trust proxy', 1);
 
 app.use(helmet({
@@ -122,6 +154,7 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(cookieParser());
 app.use(mongoSanitize());
 app.use(trafficGuard);
+app.use(maintenanceGuard);       // blocks all non-exempt paths during maintenance
 app.use('/api/', apiLimiter);
 app.use('/api/', attachResponseSignature);
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
@@ -327,6 +360,10 @@ async function announceToRouter() {
 connectDB().then(async () => {
   // Attach Redis adapter before any connection is accepted
   await initRedisAdapter();
+
+  // Start polling router for maintenance state (defence-in-depth)
+  await _pollMaintenanceState();
+  setInterval(_pollMaintenanceState, 15_000);
 
   // Register all Socket.IO handlers
   require('./socket/chatSocket')(io);
