@@ -349,18 +349,18 @@ function EventDetail({ event: initialEvent, onBack, onDelete, onUpdate }) {
                     {[
                       ['Subdomain', `/${event.subdomain}`],
                       ['Status', event.status],
-                      ['Password', event.isPasswordProtected ? '✓ Protected' : '✗ None'],
-                      ['Enterprise', event.isEnterpriseMode ? '✓ Enabled' : '✗ Disabled'],
-                      ['Table Service', event.isTableServiceMode ? '✓ Enabled' : '✗ Disabled'],
-                      ['Keep Forever', event.keepForever ? '✓ Yes' : '✗ No'],
-                      ['Public Listing', event.settings?.isPublic ? '✓ Public' : '✗ Private'],
-                      ['Chat', event.settings?.allowChat !== false ? '✓ On' : '✗ Off'],
-                      ['Polls', event.settings?.allowPolls !== false ? '✓ On' : '✗ Off'],
-                      ['File Sharing', event.settings?.allowFileSharing !== false ? '✓ On' : '✗ Off'],
+                      ['Password', event.isPasswordProtected ? 'Protected' : 'None'],
+                      ['Enterprise', event.isEnterpriseMode ? 'Enabled' : 'Disabled'],
+                      ['Table Service', event.isTableServiceMode ? 'Enabled' : 'Disabled'],
+                      ['Keep Forever', event.keepForever ? 'Yes' : 'No'],
+                      ['Public Listing', event.settings?.isPublic ? 'Public' : 'Private'],
+                      ['Chat', event.settings?.allowChat !== false ? 'On' : 'Off'],
+                      ['Polls', event.settings?.allowPolls !== false ? 'On' : 'Off'],
+                      ['File Sharing', event.settings?.allowFileSharing !== false ? 'On' : 'Off'],
                     ].map(([l, v]) => (
                       <div key={l} className="flex justify-between">
                         <p className="text-xs text-neutral-400">{l}</p>
-                        <p className={`text-sm font-medium ${String(v).startsWith('✓') ? 'text-emerald-700' : String(v).startsWith('✗') ? 'text-neutral-400' : 'text-neutral-900'}`}>{v}</p>
+                        <p className={`text-sm font-medium ${['Enabled','Protected','Yes','Public','On'].includes(String(v)) ? 'text-emerald-700' : ['Disabled','None','No','Private','Off'].includes(String(v)) ? 'text-neutral-400' : 'text-neutral-900'}`}>{v}</p>
                       </div>
                     ))}
                   </dl>
@@ -502,7 +502,7 @@ function EventDetail({ event: initialEvent, onBack, onDelete, onUpdate }) {
                         <div className="flex items-center gap-2 mb-1">
                           <p className="text-sm font-medium">{inv.guestName}</p>
                           <span className="text-xs px-2 py-0.5 rounded-full bg-neutral-100 font-mono">{inv.inviteCode}</span>
-                          {inv.checkedIn && <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 font-semibold">✓ In</span>}
+                          {inv.checkedIn && <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 font-semibold">In</span>}
                         </div>
                         <p className="text-xs text-neutral-400">{inv.guestEmail} · {inv.groupSize} {inv.groupSize === 1 ? 'person' : 'people'}</p>
                       </div>
@@ -1464,7 +1464,7 @@ function StaffPanel() {
                     </td>
                     <td className="px-5 py-4"><span className="text-xs bg-teal-50 text-teal-700 px-2 py-0.5 rounded-full font-semibold">{s.role}</span></td>
                     <td className="px-5 py-4 text-xs text-neutral-500">{s.lastSeenAt ? rel(s.lastSeenAt) : 'Never'}</td>
-                    <td className="px-5 py-4">{s.hasPassword ? <span className="text-emerald-500">✓</span> : <span className="text-neutral-300">—</span>}</td>
+                    <td className="px-5 py-4">{s.hasPassword ? <span className="text-emerald-500">Yes</span> : <span className="text-neutral-300">—</span>}</td>
                   </tr>
                 ))}
               </tbody>
@@ -2216,7 +2216,7 @@ function CommandCenterPanel() {
             <div className="grid grid-cols-2 sm:grid-cols-4 xl:grid-cols-8 gap-3">
               <CCStat label="Fleet Status" value={`${online}/${total}`} color={online===total?'text-emerald-600':'text-red-600'} glow={online<total?'cc-glow-r':'cc-glow-g'} sub="services online" />
               <CCStat label="Live Sockets" value={runtime?.wsStats?.connected??'—'} color="text-violet-700" sub="connections" />
-              <CCStat label="Errors / 1h" value={security?.errLast1h??'—'} color={security?.errSpike?'text-red-600':'text-neutral-700'} glow={security?.errSpike?'cc-glow-r':undefined} sub={security?.errSpike?'⚠ Spike detected':'Nominal'} />
+              <CCStat label="Errors / 1h" value={security?.errLast1h??'—'} color={security?.errSpike?'text-red-600':'text-neutral-700'} glow={security?.errSpike?'cc-glow-r':undefined} sub={security?.errSpike?'Spike detected':'Nominal'} />
               <CCStat label="Organizers" value={platform?.maoCount??'—'} color="text-violet-700" sub={`+${platform?.newOrgsThisWeek??0} this week`} />
               <CCStat label="Events Today" value={events?.todayCount??'—'} color="text-amber-700" sub={`${events?.ystdCount??0} yesterday`} />
               <CCStat label="Abandoned" value={events?.abandonedEvents?.length??'—'} color={events?.abandonedEvents?.length>5?'text-red-600':'text-neutral-500'} sub="no check-ins" />
@@ -2280,7 +2280,7 @@ function CommandCenterPanel() {
                     </div>
                     <div className="flex flex-wrap gap-2">
                       {runtime.config.map(c => (
-                        <Tag key={c.key} color={c.set?'green':'red'}>{c.set?'✓':'✗'} {c.label}</Tag>
+                        <Tag key={c.key} color={c.set?'green':'red'}>{c.set ? 'Set' : 'Missing'}: {c.label}</Tag>
                       ))}
                     </div>
                   </div>
@@ -2421,7 +2421,7 @@ function CommandCenterPanel() {
             </div>
 
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              <CCStat label="Errors 1h" value={security?.errLast1h} color={security?.errSpike?'text-red-600':'text-neutral-700'} glow={security?.errSpike?'cc-glow-r':undefined} sub={security?.errSpike?'⚠ SPIKE DETECTED':'nominal'} />
+              <CCStat label="Errors 1h" value={security?.errLast1h} color={security?.errSpike?'text-red-600':'text-neutral-700'} glow={security?.errSpike?'cc-glow-r':undefined} sub={security?.errSpike?'SPIKE DETECTED':'nominal'} />
               <CCStat label="Errors 24h" value={security?.errLast24h} color="text-neutral-500" />
               <CCStat label="Auth Failures" value={security?.failedLogins?.length} color={security?.failedLogins?.length>5?'text-red-600':'text-neutral-400'} sub="in log buffer" />
               <CCStat label="Flagged Users" value={security?.suspiciousParticipants?.length} color={security?.suspiciousParticipants?.length>0?'text-amber-600':'text-neutral-600'} sub="5+ events/24h" />
@@ -2455,7 +2455,7 @@ function CommandCenterPanel() {
 
             {security?.suspiciousParticipants?.length > 0 && (
               <Panel className="border-amber-200 cc-glow-a">
-                <PanelHead><span className="text-xs font-black tracking-wide text-amber-700">⚠ Suspicious Participant Activity</span></PanelHead>
+                <PanelHead><span className="text-xs font-black tracking-wide text-amber-700">Suspicious Participant Activity</span></PanelHead>
                 <table className="w-full text-sm">
                   <thead><tr className="border-b border-neutral-100 bg-neutral-50">
                     <th className="text-left px-4 py-2 text-neutral-600 font-semibold uppercase tracking-wider">Username</th>
@@ -2541,7 +2541,7 @@ function CommandCenterPanel() {
                 {sr && (
                   <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
                     {[
-                      { title:`Participants (${sr.participants?.length})`, items:sr.participants?.map(p=>({ h:p.username, s:`${p.eventTitle} · ${p.checkedIn?'✓ checked in':'not checked in'}` })) },
+                      { title:`Participants (${sr.participants?.length})`, items:sr.participants?.map(p=>({ h:p.username, s:`${p.eventTitle} · ${p.checkedIn?'checked in':'not checked in'}` })) },
                       { title:`Events (${sr.events?.length})`, items:sr.events?.map(e=>({ h:e.title, s:`${e.subdomain} · ${e.status} · ${e.participantCount} guests` })) },
                       { title:`Organizers (${sr.organizers?.length})`, items:sr.organizers?.map(o=>({ h:o.name||'—', s:`${o._id} · ${o.events} events` })) },
                     ].map(({ title, items }) => (
@@ -2870,7 +2870,7 @@ function CommandCenterPanel() {
                       {runtime.config.map(c => (
                         <div key={c.key} className={`flex items-center justify-between px-3 py-2 rounded-lg ${c.set?'bg-emerald-50 border border-emerald-200':'bg-red-50 border border-red-200'}`}>
                           <span className="text-sm text-neutral-500">{c.label}</span>
-                          <Tag color={c.set?'green':'red'}>{c.set?'✓ SET':'✗ MISSING'}</Tag>
+                          <Tag color={c.set?'green':'red'}>{c.set ? 'SET' : 'MISSING'}</Tag>
                         </div>
                       ))}
                     </div>
@@ -3085,7 +3085,7 @@ function BlocklistPanel() {
               onClick={() => { setBulkMode(v => !v); setBulkText(''); }}
               className={`text-xs font-semibold px-3 py-1 rounded-full border transition-all ${bulkMode ? 'bg-red-600 text-white border-red-600' : 'bg-white text-red-600 border-red-300 hover:border-red-500'}`}
             >
-              {bulkMode ? '✕ Single mode' : '⚡ Bulk import'}
+              {bulkMode ? 'Single mode' : 'Bulk import'}
             </button>
           </div>
           <div className="space-y-4">
@@ -4230,10 +4230,10 @@ function ScaleActionBadge({ action }) {
     up:         { label: '↑ Reactive',   cls: 'bg-blue-100 text-blue-700' },
     down:       { label: '↓ Scale Down', cls: 'bg-neutral-100 text-neutral-600' },
     predictive: { label: '~ Predictive', cls: 'bg-indigo-100 text-indigo-700' },
-    pid:        { label: '⚙ PID',        cls: 'bg-violet-100 text-violet-700' },
-    anomaly:    { label: '🔴 Anomaly',   cls: 'bg-red-100 text-red-700' },
-    circadian:  { label: '🌙 Circadian', cls: 'bg-sky-100 text-sky-700' },
-    manual:     { label: '🎛 Manual',    cls: 'bg-amber-100 text-amber-700' },
+    pid:        { label: 'PID',        cls: 'bg-violet-100 text-violet-700' },
+    anomaly:    { label: 'Anomaly',   cls: 'bg-red-100 text-red-700' },
+    circadian:  { label: 'Circadian', cls: 'bg-sky-100 text-sky-700' },
+    manual:     { label: 'Manual',    cls: 'bg-amber-100 text-amber-700' },
   };
   const m = Object.entries(map).find(([k]) => action.toLowerCase().includes(k));
   if (!m) return null;
@@ -4345,7 +4345,7 @@ function FleetControl() {
     setApplyingScale(true);
     try {
       await routerAPI.setScale({ count: manualSlider, efficiencyMode: effMode });
-      toast.success(`🎛 Pinned to ${manualSlider} backend${manualSlider !== 1 ? 's' : ''} · ${effMode} mode`);
+      toast.success(`Pinned to ${manualSlider} backend${manualSlider !== 1 ? 's' : ''} · ${effMode} mode`);
       setManualActive(true);
       load();
     } catch (err) { toast.error(err.response?.data?.error || 'Failed'); }
@@ -4374,7 +4374,7 @@ function FleetControl() {
         minBackends: boostForm.minBackends ? parseInt(boostForm.minBackends) : undefined,
         pinnedEventIds: boostForm.pinnedEventIds ? boostForm.pinnedEventIds.split(',').map(s => s.trim()).filter(Boolean) : [],
       });
-      toast.success('⚡ Boost activated'); load();
+      toast.success('Boost activated'); load();
     } catch (err) { toast.error(err.response?.data?.error || 'Failed'); }
     setBoosting(false);
   };
@@ -4429,7 +4429,7 @@ function FleetControl() {
           <p className="text-sm text-neutral-500 mt-0.5">
             {backends.length} backends · uptime {Math.floor((status.uptime||0)/3600)}h {Math.floor(((status.uptime||0)%3600)/60)}m
             {cooldown?.lastAction && <span className="ml-2">· last: <ScaleActionBadge action={cooldown.lastAction} /></span>}
-            {manual?.active && <span className="ml-2 text-amber-600 font-medium text-xs">🎛 Manual override active</span>}
+            {manual?.active && <span className="ml-2 text-amber-600 font-medium text-xs">Manual override active</span>}
           </p>
         </div>
         <button onClick={load} className="btn btn-secondary text-xs gap-1.5"><RefreshCw className="w-3.5 h-3.5" /> Refresh</button>
@@ -4535,9 +4535,9 @@ function FleetControl() {
           </label>
           <div className="grid grid-cols-3 gap-2">
             {[
-              { id: 'economy',     label: '⚡ Economy',     desc: 'Scale up late, down fast', color: 'emerald' },
-              { id: 'balanced',    label: '⚖ Balanced',    desc: 'Default behaviour',        color: 'indigo'  },
-              { id: 'performance', label: '🚀 Performance', desc: 'Scale up early, stay up',  color: 'violet'  },
+              { id: 'economy',     label: 'Economy',     desc: 'Scale up late, down fast', color: 'emerald' },
+              { id: 'balanced',    label: 'Balanced',    desc: 'Default behaviour',        color: 'indigo'  },
+              { id: 'performance', label: 'Performance', desc: 'Scale up early, stay up',  color: 'violet'  },
             ].map(m => (
               <button key={m.id} onClick={() => setEffMode(m.id)}
                 className={`rounded-xl border-2 p-3 text-left transition-all ${effMode === m.id ? `border-${m.color}-300 bg-${m.color}-50` : 'border-neutral-100 hover:border-neutral-200'}`}>
@@ -4705,7 +4705,7 @@ function FleetControl() {
               <div className="flex items-center justify-between mb-3">
                 <span className="font-semibold text-sm">{b.name}</span>
                 <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${b.circuitTripped ? 'bg-red-100 text-red-700' : b.active ? 'bg-emerald-100 text-emerald-700' : 'bg-neutral-100 text-neutral-500'}`}>
-                  {b.circuitTripped ? '⚡ tripped' : b.active ? '● active' : '○ standby'}
+                  {b.circuitTripped ? 'tripped' : b.active ? 'active' : 'standby'}
                 </span>
               </div>
               <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-xs">
@@ -4720,7 +4720,7 @@ function FleetControl() {
                   <span className={`font-mono ${b.memoryPct > 85 ? 'text-red-600' : b.memoryPct > 70 ? 'text-amber-600' : ''}`}>{b.memoryPct}%</span></>
                 )}
               </div>
-              {b.coldStart && <div className="mt-2 text-xs text-amber-700 bg-amber-50 rounded-lg px-2 py-1">⚠ Cold starting — scale-up deferred until ready</div>}
+              {b.coldStart && <div className="mt-2 text-xs text-amber-700 bg-amber-50 rounded-lg px-2 py-1">Cold starting — scale-up deferred until ready</div>}
               {b.consecutiveErrors > 0 && (
                 <div className="mt-2">
                   <div className="flex justify-between text-xs text-red-500 mb-1">
@@ -5039,7 +5039,7 @@ export default function Admin() {
                   <div className={`w-3 h-3 rounded-full flex-shrink-0 animate-pulse ${outageStatus === 'outage' ? 'bg-red-500' : 'bg-amber-400'}`} />
                   <div className="flex-1 min-w-0">
                     <p className={`text-sm font-semibold ${outageStatus === 'outage' ? 'text-red-700' : 'text-amber-700'}`}>
-                      {outageStatus === 'outage' ? '⚠ Service Outage Detected' : '⚠ Service Degradation Detected'}
+                      {outageStatus === 'outage' ? 'Service Outage Detected' : 'Service Degradation Detected'}
                     </p>
                     {downServices.length > 0 && (
                       <p className={`text-xs mt-0.5 ${outageStatus === 'outage' ? 'text-red-600' : 'text-amber-600'}`}>
@@ -5091,7 +5091,7 @@ export default function Admin() {
                           <td className="px-5 py-3"><p className="text-sm text-neutral-900">{ev.organizerName}</p><p className="text-xs text-neutral-400">{ev.organizerEmail}</p></td>
                           <td className="px-5 py-3 text-xs text-neutral-500">{ev.date ? fmt(ev.date) : '—'}</td>
                           <td className="px-5 py-3"><div className="flex items-center gap-1.5"><Users className="w-3.5 h-3.5 text-neutral-400" /><span className="text-sm font-medium">{ev.participants?.length || 0}</span></div></td>
-                          <td className="px-5 py-3">{ev.isTableServiceMode ? <span className="text-xs font-semibold text-orange-600 bg-orange-50 px-2 py-0.5 rounded-full flex items-center gap-1 w-fit">🍽 Table Service</span> : ev.isEnterpriseMode ? <span className="text-xs font-semibold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full flex items-center gap-1 w-fit"><Zap className="w-3 h-3" /> Enterprise</span> : <span className="text-xs text-neutral-400">Standard</span>}</td>
+                          <td className="px-5 py-3">{ev.isTableServiceMode ? <span className="text-xs font-semibold text-orange-600 bg-orange-50 px-2 py-0.5 rounded-full flex items-center gap-1 w-fit">Table Service</span> : ev.isEnterpriseMode ? <span className="text-xs font-semibold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full flex items-center gap-1 w-fit"><Zap className="w-3 h-3" /> Enterprise</span> : <span className="text-xs text-neutral-400">Standard</span>}</td>
                           <td className="px-5 py-3"><StatusBadge status={ev.status} /></td>
                           <td className="px-5 py-3 text-right"><ChevronRight className="w-4 h-4 text-neutral-400 ml-auto" /></td>
                         </tr>
@@ -5304,7 +5304,7 @@ export default function Admin() {
                   </div>
                   {cleanupResult.cloudinary && !cleanupResult.cloudinary.skipped && (
                     <div className="p-4 bg-blue-50 border border-blue-200 rounded-xl mb-4">
-                      <p className="text-sm font-semibold text-blue-800 mb-1">☁ Cloudinary Orphan Sweep</p>
+                      <p className="text-sm font-semibold text-blue-800 mb-1">Cloudinary Orphan Sweep</p>
                       <p className="text-sm text-blue-700">Scanned: <strong>{cleanupResult.cloudinary.scanned}</strong> assets</p>
                       <p className="text-sm text-blue-700">Orphans deleted: <strong>{cleanupResult.cloudinary.deleted}</strong></p>
                       {cleanupResult.cloudinary.failed > 0 && (
@@ -5314,7 +5314,7 @@ export default function Admin() {
                   )}
                   {cleanupResult.cloudinary?.skipped && (
                     <div className="p-3 bg-neutral-50 border border-neutral-200 rounded-xl mb-4">
-                      <p className="text-xs text-neutral-500">☁ Cloudinary sweep skipped — not configured</p>
+                      <p className="text-xs text-neutral-500">Cloudinary sweep skipped — not configured</p>
                     </div>
                   )}
                   <button onClick={() => setShowCleanup(false)} className="btn btn-secondary w-full">Close</button>
