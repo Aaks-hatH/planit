@@ -532,6 +532,142 @@ function hwUpdate(currentLoad) {
   return { forecast, trend: hwTrend, rampCount: hwRampCount, willPreScale };
 }
 
+// ─── PID Controller ───────────────────────────────────────────────────────────
+// Replaces the hard "avgLoad >= threshold → scale up by 1" with a continuous
+// control signal. The setpoint is 70% of the scale-up threshold — we want to
+// keep load at 70% headroom, not wait until we're already overloaded.
+//
+// Output is a floating-point "scale pressure" value:
+//   > +1.0  → strong scale-up pressure (add a backend)
+//   < -1.0  → sustained scale-down pressure (remove a backend)
+//   between → no action (system is near steady state)
+//
+// Anti-windup: integral is clamped to ±15 so a long idle period doesn't
+// cause a massive overshoot when traffic suddenly returns.
+const PID_KP       = parseFloat(process.env.PID_KP || '0.08');  // proportional gain
+const PID_KI       = parseFloat(process.env.PID_KI || '0.015'); // integral gain
+const PID_KD       = parseFloat(process.env.PID_KD || '0.04');  // derivative gain
+const PID_SETPOINT = parseFloat(process.env.PID_SETPOINT || '0.70'); // target: 70% of threshold
+
+let pidIntegral  = 0;
+let pidLastError = 0;
+let pidLastLoad  = 0;
+
+function pidControl(avgLoad) {
+  const setpoint = SCALE_UP_THRESHOLD * PID_SETPOINT;
+  const error    = avgLoad - setpoint;
+  pidIntegral    = Math.max(-15, Math.min(15, pidIntegral + error)); // anti-windup clamp
+  const derivative = error - pidLastError;
+  pidLastError   = error;
+  pidLastLoad    = avgLoad;
+  const output   = PID_KP * error + PID_KI * pidIntegral + PID_KD * derivative;
+  return { output, error, integral: pidIntegral, derivative, setpoint };
+}
+
+// ─── Anomaly detection (EWMSD) ────────────────────────────────────────────────
+// Maintains an exponentially weighted mean and variance of the load signal.
+// A spike that is > ANOMALY_Z_SIGMA standard deviations from the mean is
+// classified as an anomaly — a one-off burst (DDoS, viral moment, bot wave)
+// rather than organic growth.
+//
+// Anomalies get a DIFFERENT scaling response:
+//   • We still scale UP fast (don't wait) — we need capacity now.
+//   • We do NOT feed the anomalous sample into the HW model — it would corrupt
+//     the trend and cause phantom pre-scaling long after the spike is gone.
+//   • We set a short-lived anomaly hold that prevents early scale-down while
+//     the anomalous load decays.
+//
+// EWMSD alpha: how fast the baseline adapts (low = slow, stable baseline)
+const ANOMALY_ALPHA    = parseFloat(process.env.ANOMALY_ALPHA   || '0.12');
+const ANOMALY_Z_SIGMA  = parseFloat(process.env.ANOMALY_Z_SIGMA || '2.5');
+const ANOMALY_HOLD_MS  = parseInt(process.env.ANOMALY_HOLD_MS   || '180000', 10); // 3min hold
+
+let ewmMean       = 0;
+let ewmVariance   = 0;
+let anomalyHoldAt = 0; // timestamp when last anomaly was detected
+
+function anomalyUpdate(load) {
+  if (ewmMean === 0 && ewmVariance === 0) {
+    // cold start — seed the model
+    ewmMean     = load;
+    ewmVariance = load * 0.25;
+    return { isAnomaly: false, zScore: 0, mean: ewmMean, std: Math.sqrt(ewmVariance) };
+  }
+
+  const std    = Math.sqrt(ewmVariance);
+  const zScore = std > 0.5 ? Math.abs(load - ewmMean) / std : 0;
+  const isAnomaly = zScore > ANOMALY_Z_SIGMA;
+
+  if (!isAnomaly) {
+    // Only update the baseline on non-anomalous samples — don't let spikes
+    // corrupt the model's view of "normal"
+    const delta = load - ewmMean;
+    ewmMean     = ewmMean + ANOMALY_ALPHA * delta;
+    ewmVariance = (1 - ANOMALY_ALPHA) * (ewmVariance + ANOMALY_ALPHA * delta * delta);
+  }
+
+  if (isAnomaly) anomalyHoldAt = Date.now();
+
+  return { isAnomaly, zScore: +zScore.toFixed(2), mean: +ewmMean.toFixed(2), std: +std.toFixed(2) };
+}
+
+function isInAnomalyHold() {
+  return Date.now() - anomalyHoldAt < ANOMALY_HOLD_MS;
+}
+
+// ─── Scale-up cooldown ────────────────────────────────────────────────────────
+// After any scale-up event, block scale-down for SCALE_UP_COOLDOWN_MS.
+// This is the single most effective fix for the thrashing pattern visible in
+// your logs (scale-up at 9:34, scale-down at 9:35, scale-up at 9:37, repeat).
+//
+// New backends need ~30-60s to warm up on Render free tier. Scaling them down
+// before they're even warm is pure waste and causes the re-scale immediately.
+const SCALE_UP_COOLDOWN_MS = parseInt(process.env.SCALE_UP_COOLDOWN_MS || '150000', 10); // 2.5min
+
+let lastScaleUpAt   = 0;
+let lastScaleAction = null; // 'up' | 'down' | 'predictive' | 'anomaly' | 'pid' | 'circadian'
+
+function isInScaleUpCooldown() {
+  return Date.now() - lastScaleUpAt < SCALE_UP_COOLDOWN_MS;
+}
+
+// ─── Circadian floor ─────────────────────────────────────────────────────────
+// Learns your traffic pattern over time. Tracks the average load observed in
+// each hour-of-day slot (0-23). When the current hour historically requires
+// more than 1 backend, it sets a MINIMUM floor — so you never scale all the
+// way down to 1 replica right before your known peak window, only to scramble
+// to scale up again at 9:30 PM every single night.
+//
+// It takes ~24h to populate. Until then, it has zero effect.
+//
+// The floor is soft: it only blocks scale-DOWN, not scale-UP. The PID and HW
+// systems can still scale above the floor freely.
+const circadianSlots = Array.from({ length: 24 }, () => ({ sumLoad: 0, count: 0, peakBackends: 1 }));
+let   circadianFloor = 1; // minimum active backends right now (recomputed each interval)
+
+function circadianRecord(hour, avgLoad, currentBackends) {
+  const slot = circadianSlots[hour];
+  slot.sumLoad += avgLoad;
+  slot.count++;
+  slot.peakBackends = Math.max(slot.peakBackends, currentBackends);
+}
+
+function circadianComputeFloor(hour) {
+  // Look at this hour and the previous hour — traffic ramps up before the peak
+  const thisSlot = circadianSlots[hour];
+  const prevSlot = circadianSlots[(hour + 23) % 24];
+  if (thisSlot.count < 3 && prevSlot.count < 3) return 1; // not enough data
+
+  const thisAvg  = thisSlot.count > 0  ? thisSlot.sumLoad  / thisSlot.count  : 0;
+  const prevAvg  = prevSlot.count  > 0 ? prevSlot.sumLoad  / prevSlot.count  : 0;
+  const combined = Math.max(thisAvg, prevAvg);
+
+  // If this hour historically sees load near the scale-up threshold, keep 2
+  if (combined >= SCALE_UP_THRESHOLD * 0.5) return Math.max(thisSlot.peakBackends - 1, 2);
+  if (combined >= SCALE_UP_THRESHOLD * 0.3) return 2;
+  return 1;
+}
+
 // ─── Auto-scaling ─────────────────────────────────────────────────────────────
 function checkAndScale() {
   const boost = isBoostActive();
@@ -567,32 +703,86 @@ function checkAndScale() {
     const idx = backendStatus.indexOf(b);
     return sum + (b.socketConnections > 0 ? b.socketConnections : windowSnapshot[idx] || 0);
   }, 0);
-  const avgLoad = totalLoad / activeHealthy.length;
+  const avgLoad   = totalLoad / activeHealthy.length;
   const loadLabel = activeHealthy.some(b => b.socketConnections > 0) ? 'avg sockets' : 'req/window';
+  const nowHour   = new Date().getUTCHours();
 
-  // ── Holt-Winters predictive pre-scale (runs every check interval) ──────────
-  const hw = hwUpdate(avgLoad);
-  if (hw.willPreScale && activeBackendCount < BACKENDS.length) {
-    scaleDownStreak = 0;
+  // ── Circadian: record this window's load and recompute floor ──────────────
+  circadianRecord(nowHour, avgLoad, activeBackendCount);
+  circadianFloor = circadianComputeFloor(nowHour);
+
+  // ── Anomaly detection ──────────────────────────────────────────────────────
+  const anomaly = anomalyUpdate(avgLoad);
+
+  // ── PID control signal ─────────────────────────────────────────────────────
+  const pid = pidControl(avgLoad);
+
+  // ── Holt-Winters predictive pre-scale ──────────────────────────────────────
+  // Only feed non-anomalous samples to HW — anomalous spikes would corrupt trend
+  const hw = hwUpdate(anomaly.isAnomaly ? ewmMean : avgLoad);
+
+  // ── SCALE-UP LOGIC (priority order) ───────────────────────────────────────
+
+  // 1. Anomaly fast-path: spike detected → scale up immediately, no HW/PID
+  if (anomaly.isAnomaly && activeBackendCount < BACKENDS.length) {
     const next = backendStatus[activeBackendCount];
     if (next && !next.circuitTripped && !next.coldStart) {
       activeBackendCount++;
+      scaleDownStreak = 0;
+      lastScaleUpAt   = Date.now();
+      lastScaleAction = 'anomaly';
+      updateActiveSet();
+      logScale(
+        `🔴 Anomaly scale-up`,
+        `load ${avgLoad.toFixed(1)} is z=${anomaly.zScore}σ above baseline ${anomaly.mean} — classified as spike not growth`
+      );
+      return;
+    }
+  }
+
+  // 2. PID: output > 1.0 means we're clearly above the comfort setpoint
+  if (pid.output > 1.0 && activeBackendCount < BACKENDS.length) {
+    const next = backendStatus[activeBackendCount];
+    if (next && !next.circuitTripped && !next.coldStart) {
+      activeBackendCount++;
+      scaleDownStreak = 0;
+      lastScaleUpAt   = Date.now();
+      lastScaleAction = 'pid';
+      updateActiveSet();
+      logScale(
+        `⚙️  PID scale-up`,
+        `control output ${pid.output.toFixed(2)} (err=${pid.error.toFixed(1)}, I=${pid.integral.toFixed(1)}, D=${pid.derivative.toFixed(1)})`
+      );
+      return;
+    }
+  }
+
+  // 3. HW predictive: trend sustained, forecast approaching threshold
+  if (hw.willPreScale && activeBackendCount < BACKENDS.length) {
+    const next = backendStatus[activeBackendCount];
+    if (next && !next.circuitTripped && !next.coldStart) {
+      activeBackendCount++;
+      scaleDownStreak = 0;
+      lastScaleUpAt   = Date.now();
+      lastScaleAction = 'predictive';
       updateActiveSet();
       logScale(
         `~ Predictive scale-up`,
         `forecast ${hw.forecast.toFixed(1)} ${loadLabel} approaching threshold ${SCALE_UP_THRESHOLD} ` +
         `(ramp ${hw.rampCount} windows, trend +${hw.trend.toFixed(1)})`
       );
-      return; // skip reactive check this window — we already acted
+      return;
     }
   }
 
-  // Scale up
+  // 4. Hard reactive: raw threshold breached (safety net)
   if (avgLoad >= SCALE_UP_THRESHOLD && activeBackendCount < BACKENDS.length) {
-    scaleDownStreak = 0;
     const next = backendStatus[activeBackendCount];
     if (next && !next.circuitTripped && !next.coldStart) {
       activeBackendCount++;
+      scaleDownStreak = 0;
+      lastScaleUpAt   = Date.now();
+      lastScaleAction = 'up';
       updateActiveSet();
       logScale(`↑ Scale up`, `${avgLoad.toFixed(1)} ${loadLabel} ≥ ${SCALE_UP_THRESHOLD}`);
     } else if (next) {
@@ -601,16 +791,39 @@ function checkAndScale() {
     return;
   }
 
-  // Scale down (suppressed during boost)
-  if (!boost && avgLoad <= SCALE_DOWN_THRESHOLD && activeBackendCount > 1) {
+  // ── SCALE-DOWN LOGIC ───────────────────────────────────────────────────────
+  // Suppressed by: boost, scale-up cooldown, anomaly hold, circadian floor
+
+  const scaleDownBlocked =
+    boost ||
+    isInScaleUpCooldown() ||
+    isInAnomalyHold() ||
+    activeBackendCount <= circadianFloor;
+
+  if (!scaleDownBlocked && avgLoad <= SCALE_DOWN_THRESHOLD && activeBackendCount > 1) {
     scaleDownStreak++;
     if (scaleDownStreak >= SCALE_DOWN_PATIENCE) {
       activeBackendCount--;
-      scaleDownStreak = 0;
+      scaleDownStreak    = 0;
+      lastScaleAction    = 'down';
       updateActiveSet();
-      logScale(`↓ Scale down`, `avg ${avgLoad.toFixed(1)} ${loadLabel} ≤ ${SCALE_DOWN_THRESHOLD} for ${SCALE_DOWN_PATIENCE} checks`);
+      logScale(
+        `↓ Scale down`,
+        `avg ${avgLoad.toFixed(1)} ${loadLabel} ≤ ${SCALE_DOWN_THRESHOLD} for ${SCALE_DOWN_PATIENCE} checks` +
+        (circadianFloor > 1 ? ` (floor=${circadianFloor})` : '')
+      );
     }
   } else if (!boost) {
+    if (isInScaleUpCooldown()) {
+      // log once every ~5 checks to avoid spam
+      if (scaleDownStreak === 0) {
+        const secsLeft = Math.round((SCALE_UP_COOLDOWN_MS - (Date.now() - lastScaleUpAt)) / 1000);
+        console.log(`  [scale] Scale-down blocked by cooldown (${secsLeft}s remaining)`);
+      }
+    }
+    if (activeBackendCount <= circadianFloor && activeBackendCount > 1) {
+      console.log(`  [scale] Scale-down blocked by circadian floor (floor=${circadianFloor}, hour=${nowHour})`);
+    }
     scaleDownStreak = 0;
   }
 }
@@ -771,6 +984,37 @@ app.get('/mesh/status', meshAuth(SERVICE_NAME), (_req, res) => {
         forecast:  parseFloat((hwLevel + hwTrend).toFixed(2)),
         headroom:  HW_HEADROOM,
         historyLen: hwHistory.length,
+      },
+      pid: {
+        integral:   parseFloat(pidIntegral.toFixed(2)),
+        lastError:  parseFloat(pidLastError.toFixed(2)),
+        lastLoad:   parseFloat(pidLastLoad.toFixed(2)),
+        setpoint:   parseFloat((SCALE_UP_THRESHOLD * PID_SETPOINT).toFixed(1)),
+        gains:      { kp: PID_KP, ki: PID_KI, kd: PID_KD },
+      },
+      anomaly: {
+        mean:          parseFloat(ewmMean.toFixed(2)),
+        std:           parseFloat(Math.sqrt(ewmVariance).toFixed(2)),
+        zThreshold:    ANOMALY_Z_SIGMA,
+        holdMs:        ANOMALY_HOLD_MS,
+        inHold:        isInAnomalyHold(),
+        holdSecsLeft:  isInAnomalyHold() ? Math.round((ANOMALY_HOLD_MS - (Date.now() - anomalyHoldAt)) / 1000) : 0,
+      },
+      cooldown: {
+        ms:           SCALE_UP_COOLDOWN_MS,
+        active:       isInScaleUpCooldown(),
+        secsLeft:     isInScaleUpCooldown() ? Math.round((SCALE_UP_COOLDOWN_MS - (Date.now() - lastScaleUpAt)) / 1000) : 0,
+        lastAction:   lastScaleAction,
+      },
+      circadian: {
+        floor:        circadianFloor,
+        currentHour:  new Date().getUTCHours(),
+        slots:        circadianSlots.map((s, i) => ({
+          hour:        i,
+          avgLoad:     s.count > 0 ? parseFloat((s.sumLoad / s.count).toFixed(1)) : null,
+          peakBackends: s.peakBackends,
+          samples:     s.count,
+        })),
       },
     },
     scalingLog: scalingLog.slice(0, 20),
