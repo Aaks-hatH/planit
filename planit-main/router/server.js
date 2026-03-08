@@ -579,22 +579,31 @@ function pidControl(avgLoad) {
 //
 // EWMSD alpha: how fast the baseline adapts (low = slow, stable baseline)
 const ANOMALY_ALPHA    = parseFloat(process.env.ANOMALY_ALPHA   || '0.12');
-const ANOMALY_Z_SIGMA  = parseFloat(process.env.ANOMALY_Z_SIGMA || '2.5');
+// Raised from 2.5 -> 4.0: a fresh baseline with few samples was flagging
+// normal login bursts as anomalies. 4.0 requires a much more extreme deviation.
+const ANOMALY_Z_SIGMA  = parseFloat(process.env.ANOMALY_Z_SIGMA || '4.0');
 const ANOMALY_HOLD_MS  = parseInt(process.env.ANOMALY_HOLD_MS   || '180000', 10); // 3min hold
+// Minimum windows before anomaly detection activates (baseline warm-up guard)
+const ANOMALY_WARMUP_WINDOWS = parseInt(process.env.ANOMALY_WARMUP_WINDOWS || '5', 10);
 
-let ewmMean       = 0;
-let ewmVariance   = 0;
-let anomalyHoldAt = 0; // timestamp when last anomaly was detected
+let ewmMean        = 0;
+let ewmVariance    = 0;
+let anomalyHoldAt  = 0; // timestamp when last anomaly was detected
+let anomalyWindows = 0; // sample count - anomaly disabled during warm-up
 
 function anomalyUpdate(load) {
+  anomalyWindows++;
   if (ewmMean === 0 && ewmVariance === 0) {
     ewmMean     = load;
-    ewmVariance = Math.max(load * 0.25, 1);
+    // Higher initial variance (std >= 3) so the first few login requests
+    // don't look like an 8-sigma spike against a near-zero baseline.
+    ewmVariance = Math.max(load * 0.5, 9);
     return { isAnomaly: false, zScore: 0, mean: ewmMean, std: Math.sqrt(ewmVariance) };
   }
   const std    = Math.sqrt(ewmVariance);
   const zScore = std > 0.5 ? Math.abs(load - ewmMean) / std : 0;
-  const isAnomaly = zScore > ANOMALY_Z_SIGMA;
+  // Suppress classification until we have enough windows to trust the baseline
+  const isAnomaly = anomalyWindows > ANOMALY_WARMUP_WINDOWS && zScore > ANOMALY_Z_SIGMA;
 
   // Always update baseline — even during anomalies, just much more slowly.
   // This prevents hold-chaining: after a spike the baseline gradually rises
