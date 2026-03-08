@@ -816,7 +816,7 @@ function SystemPanel() {
 
   const loadMaintenance = useCallback(async () => {
     try {
-      const r = await api.get('/api/admin/maintenance');
+      const r = await api.get('/admin/maintenance');
       setMaintenance(r.data);
     } catch (_) {}
     finally { setMaintLoading(false); }
@@ -825,7 +825,7 @@ function SystemPanel() {
   const doMaintenance = async (action) => {
     setMaintSaving(true);
     try {
-      const r = await api.post('/api/admin/maintenance', {
+      const r = await api.post('/admin/maintenance', {
         action,
         type:    maintForm.type,
         message: maintForm.message || undefined,
