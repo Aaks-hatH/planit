@@ -15,7 +15,7 @@ import {
   Scroll, Gauge, HardDriveDownload, Fingerprint, Building2,
   WifiOff, AlertOctagon, TrendingDown, GitBranch, Boxes,
   Rocket, Timer, Wifi as WifiOn, Cpu as CpuIcon,
-  Command, Key, Play, Crosshair, Ban,
+  Command, Key, Play, Crosshair, Ban, MoreHorizontal,
 } from 'lucide-react';
 import api, { adminAPI, uptimeAPI, watchdogAPI, routerAPI, bugReportAPI } from '../services/api';
 import { SERVICE_CATEGORIES, ALL_SERVICES_FLAT } from '../utils/serviceCategories';
@@ -2921,8 +2921,62 @@ function CommandCenterPanel() {
 
 // ─── Blocklist Panel ──────────────────────────────────────────────────────────
 // ─── Blocklist Panel ──────────────────────────────────────────────────────────
+
+// Comprehensive public bad-words list (subset of common offensive terms).
+// Words here are matched as substrings — any name/text CONTAINING one of these is blocked.
+const PUBLIC_BAD_WORDS = [
+  "fuck","shit","ass","bitch","cunt","dick","cock","pussy","whore","slut",
+  "nigger","nigga","faggot","fag","retard","kike","spic","chink","gook","wetback",
+  "bastard","twat","prick","wanker","asshole","arsehole","bollocks","motherfucker",
+  "fucker","fucking","bullshit","jackass","dumbass","douchebag","piss","pissed",
+  "crap","damn","hell","boner","dildo","blowjob","handjob","rimjob","cumshot",
+  "jizz","cum","spunk","tits","boobs","boob","nipple","vagina","penis","anus",
+  "anal","arse","skank","hoe","thot","tranny","shemale","trannyfucker","rape",
+  "rapist","pedophile","pedo","molest","molester","necrophile","necro","bestiality",
+  "zoophile","incest","racist","nazism","nazi","kkk","hitler","genocide","slavery",
+  "terrorist","suicide","kill","murder","stab","shoot","bomb","explode","massacre",
+  "gore","decapitate","torture","drugs","cocaine","heroin","meth","crack","fentanyl",
+  "opioid","xanax","mdma","ecstasy","lsd","overdose","pimp","porn","porno","xxx",
+  "nudes","sexting","onlyfans","escort","hooker","prostitute","brothel",
+  "incel","simp","groomer","groom","predator","creep","stalker",
+  "loser","idiot","moron","imbecile","stupid","dumb","ugly","freak","garbage",
+  "scum","trash","filth","vermin","parasite","cocksucker","shithead","fucktard",
+  "dipshit","numbnuts","dingbat","schmuck","prick","knobhead","bellend",
+  "minge","fanny","knob","bumhole","shitter","skidmark","rimmer","spunk",
+  "spunky","wank","wanking","tosser","twatwaffle","asshat","asswipe",
+  "dickhead","dickwad","dickface","dumbfuck","fuckface","fuckwit","fucknugget",
+  "shitbag","shitface","shitgibbon","shitstain","shitshow","clusterfuck",
+  "goatfucker","sheepfucker","pigfucker","cunting","cuntface","cunthole",
+  "cuntrag","twathead","twatlips","nutjob","psycho","maniac","lunatic",
+  "crackhead","junkie","druggie","drunkard","alcoholic","deadbeat","loafer",
+  "dyke","queer","homo","tranny","shim","it","heshe","crossdresser",
+  "kike","spook","coon","darky","wetback","beaner","gook","zipperhead",
+  "towelhead","sandnigger","camel jockey","raghead","cracker","honkey","whitey",
+  "chink","slope","slant","nip","dago","wop","mick","paddy","kraut","fritz",
+  "frenchie","frog","greaser","spic","spick","gringo","halfbreed","mulatto",
+  "uppity","thug","ghetto","hood","ratchet","redneck","hillbilly","white trash",
+  "trailer trash","bumpkin","hick","yokel","rube","guttersnipe","lowlife",
+].map(w => w.toLowerCase());
+
+function blocklistMatchesEntry(input, entryValue, matchType) {
+  if (!input || !entryValue) return false;
+  const haystack = input.toLowerCase();
+  const needle   = entryValue.toLowerCase();
+  if (matchType === 'contains') return haystack.includes(needle);
+  if (matchType === 'regex') {
+    try { return new RegExp(needle, 'i').test(input); } catch { return false; }
+  }
+  return haystack === needle; // exact
+}
+
+// Check a value against the public bad words list (always substring match)
+function containsPublicBadWord(value) {
+  const v = value.toLowerCase();
+  return PUBLIC_BAD_WORDS.find(w => v.includes(w)) || null;
+}
+
 function BlocklistPanel() {
-  const makeEmpty = () => ({ type: 'ip', value: '', reason: '', permanent: true, expiresAt: '' });
+  const makeEmpty = () => ({ type: 'name', value: '', reason: '', permanent: true, expiresAt: '', matchType: 'contains' });
   const [entries, setEntries]       = useState([]);
   const [loading, setLoading]       = useState(true);
   const [loadError, setLoadError]   = useState(null);
@@ -2932,15 +2986,16 @@ function BlocklistPanel() {
   const [showAdd, setShowAdd]       = useState(false);
   const [bulkMode, setBulkMode]     = useState(false);
   const [bulkText, setBulkText]     = useState('');
-  const [bulkProgress, setBulkProgress] = useState(null); // { done, total, failed }
+  const [bulkProgress, setBulkProgress] = useState(null);
   const [search, setSearch]         = useState('');
-  const [confirmDelete, setConfirmDelete] = useState(null); // { id, value } | null
+  const [confirmDelete, setConfirmDelete] = useState(null);
   const [deleting, setDeleting]     = useState(false);
+  const [showPublicList, setShowPublicList] = useState(false);
 
   const TYPE_META = {
     ip:    { label: 'IP Address',   bgClass: 'bg-red-100',    textClass: 'text-red-700',    badgeClass: 'bg-red-100 text-red-800',    icon: Shield,   desc: 'Blocked at the gateway — every request from this IP is rejected.' },
     event: { label: 'Event',        bgClass: 'bg-amber-100',  textClass: 'text-amber-700',  badgeClass: 'bg-amber-100 text-amber-800',  icon: Calendar, desc: 'Blocks access to a specific event workspace by subdomain.' },
-    name:  { label: 'Display Name', bgClass: 'bg-violet-100', textClass: 'text-violet-700', badgeClass: 'bg-violet-100 text-violet-800', icon: UserX,    desc: 'Prevents a username from joining any workspace.' },
+    name:  { label: 'Display Name', bgClass: 'bg-violet-100', textClass: 'text-violet-700', badgeClass: 'bg-violet-100 text-violet-800', icon: UserX,    desc: 'Prevents a username from joining any workspace. Use "contains" to catch variations.' },
   };
 
   const load = useCallback(async () => {
@@ -2972,6 +3027,7 @@ function BlocklistPanel() {
         reason:    form.reason.trim(),
         permanent: !!form.permanent,
         expiresAt: (!form.permanent && form.expiresAt) ? form.expiresAt : null,
+        matchType: form.type === 'name' ? (form.matchType || 'contains') : 'exact',
       });
       toast.success(`${TYPE_META[form.type].label} blocked successfully`);
       setForm(makeEmpty());
@@ -2998,9 +3054,10 @@ function BlocklistPanel() {
         await adminAPI.addBlock({
           type:      form.type,
           value:     words[i],
-          reason:    form.reason.trim(),
+          reason:    form.reason.trim() || 'Bulk import',
           permanent: !!form.permanent,
           expiresAt: (!form.permanent && form.expiresAt) ? form.expiresAt : null,
+          matchType: form.type === 'name' ? 'contains' : 'exact',
         });
       } catch { failed++; }
       setBulkProgress({ done: i + 1, total: words.length, failed });
@@ -3009,11 +3066,20 @@ function BlocklistPanel() {
     setBulkProgress(null);
     const succeeded = words.length - failed;
     if (succeeded > 0) toast.success(`${succeeded} word${succeeded !== 1 ? 's' : ''} added to blocklist`);
-    if (failed > 0) toast.error(`${failed} word${failed !== 1 ? 's' : ''} failed (already blocked?)`);
+    if (failed > 0) toast.error(`${failed} failed (already blocked?)`);
     setBulkText('');
     setShowAdd(false);
     setBulkMode(false);
     await load();
+  };
+
+  const loadPublicList = () => {
+    setBulkText(PUBLIC_BAD_WORDS.join('\n'));
+    setBulkMode(true);
+    setForm(f => ({ ...f, type: 'name', reason: 'Public bad-words list', matchType: 'contains' }));
+    setShowAdd(true);
+    setShowPublicList(false);
+    toast.success(`${PUBLIC_BAD_WORDS.length} words loaded — review and click Add`);
   };
 
   const confirmAndDelete = async () => {
@@ -3043,6 +3109,18 @@ function BlocklistPanel() {
   const counts = { all: entries.length, ip: 0, event: 0, name: 0 };
   entries.forEach(e => { if (counts[e.type] !== undefined) counts[e.type]++; });
 
+  // Live preview: does current form value match any existing entry?
+  const liveMatchWarning = (() => {
+    if (!form.value.trim() || form.type !== 'name') return null;
+    const publicMatch = containsPublicBadWord(form.value.trim());
+    if (publicMatch) return `Already in public bad-words list ("${publicMatch}")`;
+    const existingMatch = entries.find(e =>
+      e.type === 'name' && blocklistMatchesEntry(form.value.trim(), e.value, e.matchType || 'contains')
+    );
+    if (existingMatch) return `Would be caught by existing entry "${existingMatch.value}"`;
+    return null;
+  })();
+
   return (
     <div className="max-w-5xl mx-auto space-y-6">
       {/* Header */}
@@ -3052,17 +3130,50 @@ function BlocklistPanel() {
             <Ban className="w-5 h-5 text-red-600" /> Blocklist
           </h2>
           <p className="text-sm text-neutral-500 mt-0.5">
-            Permanently ban IPs, event subdomains, or display names from using PlanIt.
+            Block IPs, events, or display names. Name blocks use substring matching by default — any name <em>containing</em> a blocked word is rejected.
           </p>
         </div>
-        <button
-          type="button"
-          onClick={() => { setShowAdd(v => !v); setForm(makeEmpty()); setBulkMode(false); setBulkText(''); }}
-          className="btn bg-red-600 hover:bg-red-700 text-white gap-2 text-sm"
-        >
-          <Plus className="w-4 h-4" /> Add Entry
-        </button>
+        <div className="flex gap-2 flex-wrap">
+          <button
+            type="button"
+            onClick={() => setShowPublicList(v => !v)}
+            className="btn bg-violet-600 hover:bg-violet-700 text-white gap-2 text-sm"
+          >
+            <Download className="w-4 h-4" /> Public word list
+          </button>
+          <button
+            type="button"
+            onClick={() => { setShowAdd(v => !v); setForm(makeEmpty()); setBulkMode(false); setBulkText(''); }}
+            className="btn bg-red-600 hover:bg-red-700 text-white gap-2 text-sm"
+          >
+            <Plus className="w-4 h-4" /> Add Entry
+          </button>
+        </div>
       </div>
+
+      {/* Public list preview panel */}
+      {showPublicList && (
+        <div className="card p-5 border-violet-200 bg-violet-50">
+          <div className="flex items-start justify-between mb-3">
+            <div>
+              <h3 className="text-sm font-bold text-violet-900">Public Bad-Words List</h3>
+              <p className="text-xs text-violet-600 mt-0.5">{PUBLIC_BAD_WORDS.length} terms. All loaded as <strong>name contains</strong> rules — any display name containing one of these words will be blocked automatically.</p>
+            </div>
+            <button type="button" onClick={() => setShowPublicList(false)} className="text-violet-400 hover:text-violet-700"><X className="w-4 h-4" /></button>
+          </div>
+          <div className="flex flex-wrap gap-1.5 mb-4 max-h-36 overflow-y-auto p-2 bg-white rounded-xl border border-violet-200">
+            {PUBLIC_BAD_WORDS.map(w => (
+              <span key={w} className="text-xs font-mono bg-red-50 border border-red-200 text-red-700 px-1.5 py-0.5 rounded">{w}</span>
+            ))}
+          </div>
+          <div className="flex gap-3">
+            <button type="button" onClick={() => setShowPublicList(false)} className="btn btn-secondary text-sm">Cancel</button>
+            <button type="button" onClick={loadPublicList} className="btn bg-violet-600 hover:bg-violet-700 text-white gap-2 text-sm">
+              <Download className="w-4 h-4" /> Load all {PUBLIC_BAD_WORDS.length} words into bulk import
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Load error banner */}
       {loadError && (
@@ -3112,6 +3223,31 @@ function BlocklistPanel() {
               })}
             </div>
 
+            {/* Match type (name only) */}
+            {form.type === 'name' && !bulkMode && (
+              <div className="flex items-center gap-4 p-3 bg-white rounded-xl border border-neutral-200">
+                <span className="text-xs font-bold text-neutral-600">Match mode:</span>
+                {[
+                  { val: 'contains', label: 'Contains', desc: 'Blocks any name with this word anywhere in it (recommended)' },
+                  { val: 'exact',    label: 'Exact',    desc: 'Only blocks this exact string' },
+                  { val: 'regex',    label: 'Regex',    desc: 'Custom regex pattern' },
+                ].map(({ val, label, desc }) => (
+                  <label key={val} className="flex items-center gap-1.5 cursor-pointer group" title={desc}>
+                    <input type="radio" name="matchType" value={val}
+                      checked={form.matchType === val}
+                      onChange={() => setForm(f => ({ ...f, matchType: val }))}
+                      className="accent-red-600" />
+                    <span className={`text-xs font-semibold ${form.matchType === val ? 'text-red-700' : 'text-neutral-500'}`}>{label}</span>
+                  </label>
+                ))}
+                <p className="text-xs text-neutral-400 ml-auto hidden sm:block">
+                  {form.matchType === 'contains' && '"fuck" blocks: fuckyou, omgfuck123, fucking'}
+                  {form.matchType === 'exact' && '"fuck" only blocks the exact word "fuck"'}
+                  {form.matchType === 'regex' && 'e.g. "f[u@4][c<][k]" blocks leetspeak variations'}
+                </p>
+              </div>
+            )}
+
             {/* Bulk textarea OR single value+reason */}
             {bulkMode ? (
               <div>
@@ -3127,7 +3263,7 @@ function BlocklistPanel() {
                 />
                 {bulkText.trim() && (
                   <p className="text-xs text-neutral-500 mt-1">
-                    {bulkText.split(/[\s,\n]+/).filter(w => w.trim()).length} words detected
+                    {bulkText.split(/[\s,\n]+/).filter(w => w.trim()).length} words detected — all added as <strong>contains</strong> matches
                   </p>
                 )}
                 <div className="mt-3">
@@ -3142,26 +3278,31 @@ function BlocklistPanel() {
                 </div>
               </div>
             ) : (
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-semibold text-neutral-600 mb-1">
-                    {form.type === 'ip' ? 'IP Address' : form.type === 'event' ? 'Event subdomain' : 'Display name'}
+                    {form.type === 'ip' ? 'IP Address' : form.type === 'event' ? 'Event subdomain' : 'Word or pattern'}
                     <span className="text-red-500 ml-0.5">*</span>
                   </label>
                   <input
                     type="text"
                     className="input text-sm font-mono"
-                    placeholder={form.type === 'ip' ? '192.168.1.1' : form.type === 'event' ? 'my-event-slug' : 'badusername'}
+                    placeholder={form.type === 'ip' ? '192.168.1.1' : form.type === 'event' ? 'my-event-slug' : form.matchType === 'regex' ? 'f[u@4][c<][k]' : 'badword'}
                     value={form.value}
                     onChange={e => setForm(f => ({ ...f, value: e.target.value }))}
                   />
+                  {liveMatchWarning && (
+                    <p className="text-xs text-amber-600 mt-1 flex items-center gap-1">
+                      <AlertTriangle className="w-3 h-3 flex-shrink-0" /> {liveMatchWarning}
+                    </p>
+                  )}
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-neutral-600 mb-1">Reason (internal note)</label>
                   <input
                     type="text"
                     className="input text-sm"
-                    placeholder="e.g. Spamming guests, TOS violation"
+                    placeholder="e.g. Profanity, TOS violation"
                     value={form.reason}
                     onChange={e => setForm(f => ({ ...f, reason: e.target.value }))}
                   />
@@ -3225,7 +3366,6 @@ function BlocklistPanel() {
         </div>
       )}
 
-
       {/* Stats row */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {[
@@ -3246,10 +3386,18 @@ function BlocklistPanel() {
         ))}
       </div>
 
+      {/* How matching works info box */}
+      <div className="rounded-xl bg-blue-50 border border-blue-200 p-4">
+        <p className="text-xs font-bold text-blue-800 mb-1.5">How name blocking works</p>
+        <p className="text-xs text-blue-700 leading-relaxed">
+          Name entries use <strong>contains</strong> matching by default — a blocked word of <code className="font-mono bg-white px-1 rounded border border-blue-200">fuck</code> will block <em>fuckyou</em>, <em>omgfuck123</em>, and <em>fucking</em>. IP and event entries always use exact matching. The backend checks every display name at join time against all entries of type <strong>name</strong>.
+        </p>
+      </div>
+
       {/* Search + list */}
       <div className="card overflow-hidden">
-        <div className="p-4 border-b border-neutral-200 flex items-center gap-3">
-          <div className="relative flex-1 max-w-xs">
+        <div className="p-4 border-b border-neutral-200 flex items-center gap-3 flex-wrap">
+          <div className="relative flex-1 min-w-[160px] max-w-xs">
             <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400" />
             <input
               type="text"
@@ -3259,7 +3407,7 @@ function BlocklistPanel() {
               onChange={e => setSearch(e.target.value)}
             />
           </div>
-          <div className="flex gap-1.5">
+          <div className="flex gap-1.5 flex-wrap">
             {['all', 'ip', 'event', 'name'].map(t => (
               <button
                 key={t}
@@ -3296,6 +3444,7 @@ function BlocklistPanel() {
               const meta = TYPE_META[entry.type] || TYPE_META.ip;
               const MetaIcon = meta.icon;
               const isExpired = entry.expiresAt && new Date(entry.expiresAt) < new Date();
+              const matchBadge = entry.type === 'name' ? (entry.matchType || 'contains') : null;
               return (
                 <div key={entry._id} className={`flex items-start gap-4 px-5 py-4 hover:bg-neutral-50 transition-colors ${isExpired ? 'opacity-50' : ''}`}>
                   <div className={`flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center ${meta.bgClass}`}>
@@ -3307,6 +3456,15 @@ function BlocklistPanel() {
                       <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold ${meta.badgeClass}`}>
                         {meta.label}
                       </span>
+                      {matchBadge && (
+                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold ${
+                          matchBadge === 'contains' ? 'bg-violet-100 text-violet-800' :
+                          matchBadge === 'regex'    ? 'bg-blue-100 text-blue-800' :
+                          'bg-neutral-100 text-neutral-600'
+                        }`}>
+                          {matchBadge === 'contains' ? 'contains' : matchBadge === 'regex' ? 'regex' : 'exact'}
+                        </span>
+                      )}
                       {entry.permanent && !isExpired && (
                         <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-red-100 text-red-800">Permanent</span>
                       )}
@@ -3340,7 +3498,7 @@ function BlocklistPanel() {
         )}
       </div>
 
-      {/* Upstash tip */}
+      {/* Redis tip */}
       <div className="card p-4 bg-neutral-50 border-neutral-200">
         <p className="text-xs font-semibold text-neutral-600 mb-1 flex items-center gap-1.5">
           <Database className="w-3.5 h-3.5" /> Manual Redis ban (alternative)
@@ -3387,25 +3545,6 @@ function BlocklistPanel() {
     </div>
   );
 }
-
-const NAV_ITEMS = [
-  { id: 'dashboard',      label: 'Dashboard',      icon: Monitor },
-  { id: 'events',         label: 'Events',         icon: Calendar },
-  { id: 'users',          label: 'Users',          icon: Users },
-  { id: 'organizers',     label: 'Organizers',     icon: Building2 },
-  { id: 'staff',          label: 'Staff',          icon: UserCheck },
-  { id: 'employees',      label: 'Team',           icon: Briefcase },
-  { id: 'analytics',      label: 'Analytics',      icon: BarChart3 },
-  { id: 'fleet',          label: 'Fleet',          icon: Rocket },
-  { id: 'security',       label: 'Security',       icon: Shield },
-  { id: 'blocklist',      label: 'Blocklist',      icon: Ban },
-  { id: 'marketing',      label: 'Marketing',      icon: Send },
-  { id: 'system',         label: 'System',         icon: Server },
-  { id: 'logs',           label: 'Logs',           icon: Terminal },
-  { id: 'uptime',         label: 'Uptime',         icon: Radio },
-  { id: 'reports',        label: 'Reports',        icon: Inbox },
-  { id: 'command-center', label: 'Command Center', icon: Crosshair },
-];
 
 // ─── Security Panel ───────────────────────────────────────────────────────────
 function SecurityPanel() {
