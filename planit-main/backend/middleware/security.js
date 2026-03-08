@@ -32,7 +32,8 @@
  *   SECURITY_BAN_THRESHOLD   5    (WARNs before temporary BAN)
  */
 
-const redis = require('../services/redisClient');
+const redis     = require('../services/redisClient');
+const Blocklist = require('../models/Blocklist');
 
 const ENABLED        = process.env.SECURITY_ENABLED !== 'false';
 const BAN_MINUTES    = parseInt(process.env.SECURITY_BAN_MINUTES    || '30',  10);
@@ -79,6 +80,15 @@ async function isBanned(ip) {
   const key = `sec:ban:${ip}`;
   const v   = await redis.get(key);
   if (v) return true;
+  // Permanent / long-term blocklist stored in MongoDB
+  try {
+    const entry = await Blocklist.findOne({
+      type:  'ip',
+      value: ip,
+      $or: [{ expiresAt: null }, { expiresAt: { $gt: new Date() } }],
+    }).lean();
+    if (entry) return true;
+  } catch { /* DB unavailable — fall through to in-memory */ }
   // in-memory fallback
   const e = _mem.bans.get(ip);
   return e && Date.now() < e;
