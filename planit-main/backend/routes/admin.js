@@ -1794,31 +1794,114 @@ router.patch('/blocklist/:id', verifyAdmin, async (req, res, next) => {
 });
 
 // ─── Maintenance mode ─────────────────────────────────────────────────────────
-// GET  /admin/maintenance        — read current state from router
-// POST /admin/maintenance        — toggle on/off (proxies to router via mesh)
-router.get('/maintenance', verifyAdmin, async (req, res) => {
-  const routerUrl = process.env.ROUTER_URL;
-  if (!routerUrl) return res.json({ active: false, message: '', eta: null, routerConfigured: false });
-  try {
-    const axios = require('axios');
-    const r = await axios.get(`${routerUrl}/maintenance`, { timeout: 5000 });
-    res.json({ ...r.data, routerConfigured: true });
-  } catch (err) {
-    res.status(502).json({ error: 'Router unreachable', detail: err.message });
-  }
-});
+// Persists to the `mnt` collection (compressed schema) so state survives
+// router/backend restarts without relying on env vars.
+//
+// t  types:   's' = scheduled | 'i' = incident | 'd' = degraded
+// s  statuses:'upcoming' | 'active' | 'resolved'
+//
+// GET  /admin/maintenance         — current state (router + latest DB record)
+// POST /admin/maintenance         — create/activate/resolve
+// GET  /admin/maintenance/history — last 20 records
 
-router.post('/maintenance', verifyAdmin, async (req, res) => {
+const Mnt = require('../models/Mnt');
+const { meshPost: _meshPost } = require('../middleware/mesh');
+
+// Helper: push state to router in-memory cache via mesh
+async function _syncRouter(payload) {
   const routerUrl = process.env.ROUTER_URL;
-  if (!routerUrl) return res.status(503).json({ error: 'ROUTER_URL not configured on backend' });
-  const { meshPost } = require('../middleware/mesh');
-  const result = await meshPost(
+  if (!routerUrl) return;
+  await _meshPost(
     process.env.BACKEND_LABEL || 'Backend',
     `${routerUrl}/mesh/maintenance`,
-    { active: req.body.active, message: req.body.message, eta: req.body.eta },
-  );
-  if (!result.ok) return res.status(502).json({ error: 'Router unreachable or mesh auth failed', detail: result.error });
-  res.json(result.data);
+    payload,
+  ).catch(() => {}); // non-fatal — router will pick up from DB on next poll
+}
+
+// GET /admin/maintenance
+router.get('/maintenance', verifyAdmin, async (req, res) => {
+  try {
+    const rec = await Mnt.findOne({ s: { $in: ['upcoming', 'active'] } }).sort({ ca: -1 }).lean();
+    if (!rec) return res.json({ active: false, upcoming: false, type: null, message: '', eta: null, routerConfigured: !!process.env.ROUTER_URL });
+
+    const active   = rec.s === 'active';
+    const upcoming = rec.s === 'upcoming';
+    res.json({
+      active,
+      upcoming,
+      type:    rec.t,
+      message: rec.msg  || '',
+      eta:     rec.eta  || null,
+      start:   rec.start || null,
+      by:      rec.by   || 'admin',
+      id:      rec._id,
+      routerConfigured: !!process.env.ROUTER_URL,
+    });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// POST /admin/maintenance
+// body: { action, type, message, eta, start }
+//   action = 'activate'  — create + go live immediately
+//   action = 'schedule'  — create as upcoming (banner only, no lockout)
+//   action = 'resolve'   — mark current record resolved, clear router
+router.post('/maintenance', verifyAdmin, async (req, res) => {
+  try {
+    const { action, type = 's', message = '', eta, start } = req.body;
+    const by = req.admin?.username || req.admin?.name || 'admin';
+
+    if (action === 'resolve') {
+      // Resolve all active/upcoming records
+      await Mnt.updateMany({ s: { $in: ['upcoming','active'] } }, { $set: { s: 'resolved', end: new Date() } });
+      await _syncRouter({ active: false, message: '', eta: null, type: null });
+      return res.json({ ok: true, active: false, upcoming: false });
+    }
+
+    if (action === 'activate' || action === 'schedule') {
+      // Resolve any existing active/upcoming first
+      await Mnt.updateMany({ s: { $in: ['upcoming','active'] } }, { $set: { s: 'resolved', end: new Date() } });
+
+      const status = action === 'schedule' ? 'upcoming' : 'active';
+      const rec = await Mnt.create({
+        t:     type,
+        s:     status,
+        msg:   (message || '').slice(0, 280),
+        eta:   eta   ? new Date(eta)   : null,
+        start: start ? new Date(start) : (action === 'activate' ? new Date() : null),
+        by:    (by || 'admin').slice(0, 40),
+        ca:    new Date(),
+      });
+
+      // Sync router: only lock down on 'active', not 'upcoming'
+      await _syncRouter({
+        active:  status === 'active',
+        message: rec.msg,
+        eta:     rec.eta ? rec.eta.toISOString() : null,
+        type:    rec.t,
+      });
+
+      return res.json({
+        ok: true,
+        active:   status === 'active',
+        upcoming: status === 'upcoming',
+        type:     rec.t,
+        message:  rec.msg,
+        eta:      rec.eta || null,
+        start:    rec.start || null,
+        id:       rec._id,
+      });
+    }
+
+    res.status(400).json({ error: 'action must be activate | schedule | resolve' });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// GET /admin/maintenance/history — last 20 records
+router.get('/maintenance/history', verifyAdmin, async (req, res) => {
+  try {
+    const recs = await Mnt.find({}).sort({ ca: -1 }).limit(20).lean();
+    res.json({ records: recs });
+  } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 module.exports = router;
