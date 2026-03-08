@@ -4207,9 +4207,9 @@ function ScaleActionBadge({ action }) {
     up:         { label: '↑ Reactive',   cls: 'bg-blue-100 text-blue-700' },
     down:       { label: '↓ Scale Down', cls: 'bg-neutral-100 text-neutral-600' },
     predictive: { label: '~ Predictive', cls: 'bg-indigo-100 text-indigo-700' },
-    pid:        { label: '⚙ PID',        cls: 'bg-violet-100 text-violet-700' },
-    anomaly:    { label: '🔴 Anomaly',   cls: 'bg-red-100 text-red-700' },
-    circadian:  { label: '🌙 Circadian', cls: 'bg-sky-100 text-sky-700' },
+    pid:        { label: ' PID',        cls: 'bg-violet-100 text-violet-700' },
+    anomaly:    { label: ' Anomaly',   cls: 'bg-red-100 text-red-700' },
+    circadian:  { label: ' Circadian', cls: 'bg-sky-100 text-sky-700' },
   };
   const m = Object.entries(map).find(([k]) => action.toLowerCase().includes(k));
   if (!m) return null;
