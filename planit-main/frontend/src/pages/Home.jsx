@@ -1124,40 +1124,7 @@ function CinematicLoader({ onDone }) {
   );
 }
 
-// ─────────────────────────────────────────────────────────
-//  STAR FIELD (night sky background)
-// ─────────────────────────────────────────────────────────
-const STARS = Array.from({ length: 160 }, (_, i) => ({
-  x: Math.abs(Math.sin(i * 7919) * 100),
-  y: Math.abs(Math.sin(i * 6271) * 100),
-  r: Math.abs(Math.sin(i * 3571) * 0.9) + 0.3,
-  opacity: Math.abs(Math.sin(i * 2357) * 0.5) + 0.15,
-  dur: 3 + Math.abs(Math.sin(i * 1234) * 5),
-  delay: Math.abs(Math.sin(i * 9871) * 4),
-}));
-
-function StarField() {
-  return (
-    <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', overflow: 'hidden' }}>
-      <svg viewBox="0 0 100 100" preserveAspectRatio="xMidYMid slice"
-        style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}
-        aria-hidden="true">
-        {STARS.map((s, i) => (
-          <circle key={i} cx={s.x} cy={s.y} r={s.r} fill="white">
-            <animate attributeName="opacity"
-              values={`${s.opacity};${Math.min(s.opacity + 0.45, 1)};${s.opacity}`}
-              dur={`${s.dur}s`} begin={`${s.delay}s`} repeatCount="indefinite" />
-          </circle>
-        ))}
-      </svg>
-      {/* Subtle top nebula glow */}
-      <div style={{
-        position: 'absolute', inset: 0,
-        background: 'radial-gradient(ellipse 70% 45% at 50% 0%, rgba(30,35,80,0.45) 0%, transparent 70%)',
-      }} />
-    </div>
-  );
-}
+import StarBackground from '../components/StarBackground';
 
 
 
@@ -1589,10 +1556,8 @@ export default function Home() {
       <main className="relative" style={{ zIndex: 2, overflowX: 'hidden', maxWidth: '100vw' }}>
         {/* HERO */}
         <section id="hero-top" className="relative min-h-screen flex items-center" style={{ overflow: 'hidden', maxWidth: '100vw' }}>
-          {/* Night sky starfield */}
-          <StarField />
-          {/* Vignette so edges feel deep */}
-          <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse 120% 100% at 50% 100%, rgba(7,7,14,0.7) 0%, transparent 60%)', pointerEvents: 'none' }} />
+          {/* Static starfield */}
+          <StarBackground fixed={false} />
           <div className="w-full relative z-10">
             <div className="max-w-6xl mx-auto px-4 sm:px-8 lg:px-12 py-20 sm:py-28 lg:py-36 text-center">
 
@@ -1628,7 +1593,7 @@ export default function Home() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.7, delay: 0.42 }}
-                className="text-xl md:text-2xl text-neutral-400 max-w-2xl mx-auto leading-relaxed font-light mb-14"
+                className="text-xl md:text-2xl text-neutral-300 max-w-2xl mx-auto leading-relaxed font-light mb-14"
               >
                 One platform, two branches. <span className="text-neutral-300 font-medium">PlanIt Events</span> for planning teams. <span className="text-orange-400 font-medium">PlanIt Venue</span> for restaurants &amp; hospitality.
               </motion.p>
@@ -1669,14 +1634,14 @@ export default function Home() {
                     className="stat-card text-center p-6 rounded-2xl border border-neutral-800/70 hover:border-neutral-600 transition-all duration-400 cursor-default hover:scale-105"
                     style={{ background: 'rgba(255,255,255,0.03)' }}>
                     <div className="text-sm font-black text-white mb-1 tracking-wide uppercase">{item.tag}</div>
-                    <div className="text-xs font-medium text-neutral-500">{item.desc}</div>
+                    <div className="text-xs font-medium text-neutral-400">{item.desc}</div>
                   </div>
                 ))}
               </motion.div>
 
               {/* Scroll indicator */}
               <div className="mt-16 flex flex-col items-center gap-2 opacity-40 hover:opacity-70 transition-opacity duration-300 cursor-default">
-                <span className="text-[10px] font-bold uppercase tracking-[0.25em] text-neutral-600">Scroll</span>
+                <span className="text-[10px] font-bold uppercase tracking-[0.25em] text-neutral-400">Scroll</span>
                 <div style={{ width: 1, height: 36, background: 'linear-gradient(to bottom, rgba(255,255,255,0.3), transparent)', animation: 'scroll-indicator-bounce 2s ease-in-out infinite' }} />
               </div>
 
@@ -1693,9 +1658,9 @@ export default function Home() {
           <div className="text-center py-10 relative z-10">
             <Reveal>
               <div className="inline-flex items-center gap-3 px-5 py-2.5 rounded-full border border-neutral-800" style={{ background: 'rgba(255,255,255,0.025)' }}>
-                <span className="text-[10px] font-black uppercase tracking-[0.25em] text-neutral-600">The PlanIt Family</span>
+                <span className="text-[10px] font-black uppercase tracking-[0.25em] text-neutral-300">The PlanIt Family</span>
                 <span className="w-px h-3 bg-neutral-700" />
-                <span className="text-[10px] font-bold text-neutral-500">Two branches, one platform</span>
+                <span className="text-[10px] font-bold text-neutral-400">Two branches, one platform</span>
               </div>
             </Reveal>
           </div>
@@ -1720,13 +1685,13 @@ export default function Home() {
                 </div>
                 {/* Headline */}
                 <div className="relative flex-1">
-                  <div className="text-xs font-bold uppercase tracking-widest text-neutral-600 mb-3">Branch 01</div>
+                  <div className="text-xs font-bold uppercase tracking-widest text-neutral-400 mb-3">Branch 01</div>
                   <h3 className="text-4xl sm:text-5xl font-black text-white leading-[0.95] mb-5 tracking-tight">
                     For anyone<br />
                     who runs<br />
-                    <span className="text-neutral-500">events.</span>
+                    <span className="text-neutral-300">events.</span>
                   </h3>
-                  <p className="text-neutral-500 text-sm leading-relaxed max-w-xs mb-8">
+                  <p className="text-neutral-400 text-sm leading-relaxed max-w-xs mb-8">
                     Weddings, corporate retreats, galas, conferences. The complete planning workspace — task management, team chat, RSVP, QR check-in, expenses. Built for the whole arc.
                   </p>
                   <div className="flex flex-wrap gap-2 mb-8">
@@ -1784,7 +1749,7 @@ export default function Home() {
                     busy Friday<br />
                     <span className="text-orange-500/60">night floor.</span>
                   </h3>
-                  <p className="text-neutral-500 text-sm leading-relaxed max-w-xs mb-8">
+                  <p className="text-neutral-400 text-sm leading-relaxed max-w-xs mb-8">
                     Live floor map. Walk-in waitlist. Public wait board. QR reservations. One-tap seating. Everything your front-of-house needs, every night.
                   </p>
                   <div className="flex flex-wrap gap-2 mb-8">
@@ -1874,13 +1839,13 @@ export default function Home() {
           <div className="relative max-w-screen-xl mx-auto px-6 sm:px-10 pt-10 pb-20">
             <div className="grid lg:grid-cols-2 gap-16 items-center">
               <Reveal>
-                <p className="text-xs font-bold text-neutral-600 uppercase tracking-[0.2em] mb-6">For event teams who actually have a lot going on</p>
+                <p className="text-xs font-bold text-neutral-400 uppercase tracking-[0.2em] mb-6">For event teams who actually have a lot going on</p>
                 <h2 className="font-black text-white leading-[0.9] tracking-tight mb-8" style={{ fontSize: 'clamp(2.2rem, 5vw, 4.5rem)' }}>
                   Everything your<br />
                   team needs.<br />
                   <span style={{ color: '#64748b' }}>Nothing you don't.</span>
                 </h2>
-                <p className="text-neutral-500 text-lg leading-relaxed mb-10 max-w-lg">
+                <p className="text-neutral-400 text-lg leading-relaxed mb-10 max-w-lg">
                   From 6 months out to the final wrap-up. PlanIt Events is the workspace for the whole team — organizers, vendors, volunteers, everyone.
                 </p>
                 <div className="flex items-center gap-4">
