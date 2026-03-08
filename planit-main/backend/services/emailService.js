@@ -1,7 +1,5 @@
 'use strict';
 
-const https     = require('https');
-const urlMod    = require('url');
 const redis     = require('./redisClient');
 const { meshPost } = require('../middleware/mesh');
 
@@ -48,28 +46,15 @@ function fmtDate(d) {
   } catch { return String(d || ''); }
 }
 
-// ─── QR fetching ──────────────────────────────────────────────────────────────
+// ─── QR URL builder ───────────────────────────────────────────────────────────
+// Email clients (Gmail, Outlook, Apple Mail) all block data: URIs in <img> tags.
+// Instead we point to qrserver.com which generates the QR on-demand as a plain
+// external PNG -- every email client loads it just like any other image.
 
-function fetchQrAsBase64(event) {
-  return new Promise((resolve) => {
-    const routerUrl = (process.env.ROUTER_URL || '').replace(/\/$/, '');
-    const id        = event._id || event.id || '';
-    if (!routerUrl || !id) return resolve(null);
-    const url = `${routerUrl}/api/events/${id}/qr.svg`;
-    try {
-      const parsed = urlMod.parse(url);
-      const lib    = parsed.protocol === 'https:' ? https : require('http');
-      const req    = lib.get(url, { timeout: 8000 }, (res) => {
-        if (res.statusCode !== 200) return resolve(null);
-        const chunks = [];
-        res.on('data', (c) => chunks.push(c));
-        res.on('end',  () => resolve(`data:image/svg+xml;base64,${Buffer.concat(chunks).toString('base64')}`));
-        res.on('error', () => resolve(null));
-      });
-      req.on('error',   () => resolve(null));
-      req.on('timeout', () => { req.destroy(); resolve(null); });
-    } catch { resolve(null); }
-  });
+function getQrImageUrl(joinUrl) {
+  if (!joinUrl || joinUrl.startsWith('#')) return null;
+  const encoded = encodeURIComponent(joinUrl);
+  return `https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encoded}&bgcolor=ffffff&color=000000&margin=10&format=png`;
 }
 
 // ─── Shared inline style tokens ───────────────────────────────────────────────
@@ -230,15 +215,16 @@ function qrBlock(qrDataUri, link) {
 
 // ─── Template builders ────────────────────────────────────────────────────────
 
-function buildConfirmation(event, qrDataUri) {
-  const url = joinUrl(event);
+function buildConfirmation(event) {
+  const url      = joinUrl(event);
+  const qrImgUrl = getQrImageUrl(url);
 
   const headerRow = `
     <tr>
       <td class="ep" style="padding:36px 40px 30px 40px;border-bottom:1px solid ${RULE};">
         <span style="display:inline-block;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:${MID};background:#F3F4F6;padding:5px 12px;border-radius:5px;margin-bottom:16px;font-family:${FONT};">Event Created</span>
-        <h1 style="margin:0 0 12px 0;font-size:24px;font-weight:800;color:${DARK};letter-spacing:-0.5px;line-height:1.2;font-family:${FONT};">Your event is live and ready.</h1>
-        <p style="margin:0;font-size:15px;color:${MUTED};line-height:1.65;font-family:${FONT};">Everything is set. Share the link below or display the QR code at your venue to give attendees instant access &mdash; no account required on their end.</p>
+        <h1 style="margin:0 0 12px 0;font-size:24px;font-weight:800;color:${DARK};letter-spacing:-0.5px;line-height:1.2;font-family:${FONT};">Your event is live.</h1>
+        <p style="margin:0;font-size:15px;color:${MUTED};line-height:1.65;font-family:${FONT};">Your dashboard is ready. Share the join link below or print the QR code to display at your venue. Guests join in seconds with no account needed.</p>
       </td>
     </tr>`;
 
@@ -256,13 +242,13 @@ function buildConfirmation(event, qrDataUri) {
         </td>
       </tr>
     </table>
-    ${qrBlock(qrDataUri, url)}
+    ${qrBlock(qrImgUrl, url)}
     ${ctaButton('Open Event Dashboard', url)}
-    ${signature('Glad to have you on PlanIt. Your event dashboard is ready when you are. If anything is unclear, reply to this email and I will sort it out personally.')}`;
+    ${signature('Your dashboard is live. Add your guest list, brief your check-in team on the staff PIN, and you are set. If anything comes up before or on the day, just reply to this email.')}`;
 
   return emailShell(
     `Event created: ${event.title}`,
-    `Your event "${event.title}" is live and ready for attendees.`,
+    `Your event "${event.title}" is live. Open your dashboard to get started.`,
     'Confirmation',
     headerRow,
     body,
@@ -280,7 +266,7 @@ function buildReminder(event) {
       <td class="ep" style="padding:36px 40px 30px 40px;border-bottom:1px solid ${RULE};">
         <span style="display:inline-block;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:${MID};background:#F3F4F6;padding:5px 12px;border-radius:5px;margin-bottom:16px;font-family:${FONT};">${h(label)}</span>
         <h1 style="margin:0 0 12px 0;font-size:24px;font-weight:800;color:${DARK};letter-spacing:-0.5px;line-height:1.2;font-family:${FONT};">Your event starts ${timeStr}.</h1>
-        <p style="margin:0;font-size:15px;color:${MUTED};line-height:1.65;font-family:${FONT};">A quick summary to keep close. Everything on PlanIt is ready on your end &mdash; here is a brief checklist to help the day run smoothly.</p>
+        <p style="margin:0;font-size:15px;color:${MUTED};line-height:1.65;font-family:${FONT};">Everything on PlanIt is ready. Here is a short checklist to keep handy before you head in.</p>
       </td>
     </tr>`;
 
@@ -310,7 +296,7 @@ function buildReminder(event) {
       ${checkRows}
     </table>
     ${ctaButton('Open Event Dashboard', url)}
-    ${signature('You are nearly there. Wishing you a smooth and memorable event. PlanIt is here if anything comes up.')}`;
+    ${signature('You are nearly there. Wishing you a smooth event. If anything comes up on the day, reply here and I will respond as fast as I can.')}`;
 
   return emailShell(
     `Reminder: ${event.title} starts ${timeStr}`,
@@ -330,7 +316,7 @@ function buildThankyou(event) {
       <td class="ep" style="background:${DARK};padding:36px 40px 30px 40px;border-bottom:1px solid #1F2937;" bgcolor="${DARK}">
         <span style="display:inline-block;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:rgba(255,255,255,0.4);background:rgba(255,255,255,0.08);padding:5px 12px;border-radius:5px;margin-bottom:16px;font-family:${FONT};">That is a wrap</span>
         <h1 style="margin:0 0 12px 0;font-size:24px;font-weight:800;color:${WHITE};letter-spacing:-0.5px;line-height:1.2;font-family:${FONT};">Well done. Truly.</h1>
-        <p style="margin:0;font-size:15px;color:rgba(255,255,255,0.4);line-height:1.65;font-family:${FONT};">${h(event.title)} &mdash; a personal note from the founder.</p>
+        <p style="margin:0;font-size:15px;color:rgba(255,255,255,0.4);line-height:1.65;font-family:${FONT};">A personal note about ${h(event.title)} from the founder.</p>
       </td>
     </tr>`;
 
@@ -341,8 +327,8 @@ function buildThankyou(event) {
     </table>
     ${hrule()}
     <p style="margin:24px 0 16px 0;font-size:15px;color:${MID};line-height:1.78;font-family:${FONT};">I wanted to take a moment to personally thank you for using PlanIt.</p>
-    <p style="margin:0 0 16px 0;font-size:15px;color:${MID};line-height:1.78;font-family:${FONT};">Every event organised on this platform matters to me &mdash; it is the reason it was built. I hope the people who attended left with something memorable, and that the logistics stayed firmly in the background.</p>
-    <p style="margin:0;font-size:15px;color:${MID};line-height:1.78;font-family:${FONT};">If you have feedback &mdash; positive or critical &mdash; I read every message. Just hit reply.</p>
+    <p style="margin:0 0 16px 0;font-size:15px;color:${MID};line-height:1.78;font-family:${FONT};">Every event on this platform matters to me - it is the reason I built it. I hope the people who attended left with something memorable, and that the logistics stayed completely out of the way.</p>
+    <p style="margin:0;font-size:15px;color:${MID};line-height:1.78;font-family:${FONT};">If you have feedback, positive or critical, I read every message. Just hit reply.</p>
     ${ctaButton('View Event Summary', url)}
     ${signature('With gratitude,')}`;
 
@@ -379,8 +365,7 @@ async function sendEventConfirmation(event) {
   const to = event.organizerEmail;
   if (!to) return;
   if (!(await checkLimit(to))) return;
-  const qr = await fetchQrAsBase64(event);
-  await _send(to, `Event created: ${event.title}`, buildConfirmation(event, qr));
+  await _send(to, `Event created: ${event.title}`, buildConfirmation(event));
 }
 
 async function sendEventReminder(event) {
