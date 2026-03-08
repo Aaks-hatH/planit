@@ -306,6 +306,12 @@ export const adminAPI = {
   ccGetEventIntel:      ()                    => api.get('/admin/cc/event-intel'),
   ccGlobalSearch:       (q)                   => api.get('/admin/cc/global-search', { params: { q } }),
   ccBulkEvents:         (action, filter)      => api.post('/admin/cc/bulk-events', { action, filter }),
+
+  // Blocklist
+  getBlocklist:    (type)         => api.get('/admin/blocklist', { params: type ? { type } : {} }),
+  addBlock:        (data)         => api.post('/admin/blocklist', data),
+  deleteBlock:     (id)           => api.delete(`/admin/blocklist/${id}`),
+  updateBlock:     (id, data)     => api.patch(`/admin/blocklist/${id}`, data),
 };
 
 // ─── Task API ─────────────────────────────────────────────────────────────────
