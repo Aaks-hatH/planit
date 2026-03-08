@@ -62,8 +62,6 @@ function emailShell(title, preheader, pillLabel, pillStyle, headerRowHtml, bodyH
       .ep{padding-left:20px!important;padding-right:20px!important}
       .pill{display:none!important}
       .fc{display:block!important;width:100%!important;padding:0 0 6px 0!important}
-      .ds-btn{display:block!important;text-align:center!important;padding:0 20px 20px!important}
-      .ds-l{border-radius:8px 8px 0 0!important}
       .sc{display:block!important;width:100%!important;padding:0 0 6px 0!important}
     }
   </style>
@@ -116,7 +114,7 @@ function emailShell(title, preheader, pillLabel, pillStyle, headerRowHtml, bodyH
           <tr>
             <td class="ep" style="background:${PANEL};border-top:1px solid ${RULE};padding:20px 40px;" bgcolor="${PANEL}">
               <p style="margin:0 0 4px 0;font-size:11px;color:${FAINT};line-height:1.6;font-family:${FONT};">${h(footerNote)}</p>
-              <p style="margin:0;font-size:11px;color:${FAINT};line-height:1.6;font-family:${FONT};"><a href="#unsubscribe" style="color:#6B7280;text-decoration:underline;font-family:${FONT};">Unsubscribe</a> &nbsp;&middot;&nbsp; Reply with "unsubscribe" to be removed</p>
+              <p style="margin:0;font-size:11px;color:${FAINT};line-height:1.6;font-family:${FONT};">Reply with "unsubscribe" to be removed from this list immediately</p>
             </td>
           </tr>
 
@@ -206,13 +204,11 @@ function darkStrip(capText, headText, subText, subColor, btnLabel, btnColor, cta
   return `
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top:24px;border-radius:8px;overflow:hidden;">
       <tr>
-        <td class="ds-l" style="background:${DARK};padding:20px 24px;border-radius:8px 0 0 8px;vertical-align:middle;" bgcolor="${DARK}">
+        <td style="background:${DARK};padding:24px 28px;" bgcolor="${DARK}">
           <p style="margin:0 0 3px 0;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:rgba(255,255,255,0.28);font-family:${FONT};">${h(capText)}</p>
           <p style="margin:0 0 3px 0;font-size:16px;font-weight:700;color:${WHITE};font-family:${FONT};">${h(headText)}</p>
-          <p style="margin:0;font-size:11px;color:${subColor};font-family:${FONT};">${h(subText)}</p>
-        </td>
-        <td class="ds-btn" style="background:${DARK};padding:20px 24px 20px 0;text-align:right;vertical-align:middle;border-radius:0 8px 8px 0;white-space:nowrap;" bgcolor="${DARK}">
-          <a href="${h(url)}" style="display:inline-block;background:${btnColor};color:${WHITE};font-family:${FONT};font-size:13px;font-weight:700;text-decoration:none;padding:12px 22px;border-radius:6px;">${h(btnLabel)}</a>
+          <p style="margin:0 0 18px 0;font-size:11px;color:${subColor};font-family:${FONT};">${h(subText)}</p>
+          <a href="${h(url)}" style="display:inline-block;background:${btnColor};color:${WHITE};font-family:${FONT};font-size:13px;font-weight:700;text-decoration:none;padding:12px 28px;border-radius:6px;">${h(btnLabel)}</a>
         </td>
       </tr>
     </table>`;
@@ -257,7 +253,7 @@ function personalizedOpener(recipient, templateContext) {
   let lines = [];
   if (fn && company) {
     lines.push(`<p style="margin:0 0 20px 0;font-size:16px;color:${DARK};line-height:1.7;font-family:${FONT};">Hi <strong>${h(fn)}</strong>,</p>`);
-    lines.push(`<p style="margin:0 0 20px 0;font-size:14px;color:${MID};line-height:1.75;font-family:${FONT};">I came across <strong>${company}</strong>${role ? ` and noticed you work in <em>${role}</em>` : ''} — I wanted to reach out because I think PlanIt could genuinely help with how you manage ${templateContext}.</p>`);
+    lines.push(`<p style="margin:0 0 20px 0;font-size:14px;color:${MID};line-height:1.75;font-family:${FONT};">I came across <strong>${company}</strong>${role ? ` and noticed you work in <em>${role}</em>` : ''} - I wanted to reach out because I think PlanIt could genuinely help with how you manage ${templateContext}.</p>`);
   } else if (fn) {
     lines.push(`<p style="margin:0 0 20px 0;font-size:16px;color:${DARK};line-height:1.7;font-family:${FONT};">Hi <strong>${h(fn)}</strong>,</p>`);
     lines.push(`<p style="margin:0 0 20px 0;font-size:14px;color:${MID};line-height:1.75;font-family:${FONT};">I wanted to reach out directly because I think PlanIt could genuinely help with how you manage ${templateContext}.</p>`);
@@ -296,11 +292,7 @@ function buildPlanners(ctaUrl, recipient = {}) {
       { t: 'Live Polls and Q&amp;A',   d: 'Run audience decisions mid-event. Venue vote, session preference, speaker Q&amp;A  all inside PlanIt.' },
       { t: 'File and Document Hub',    d: 'Floor plans, run sheets, vendor contracts, seating charts. One organised place for everything your team needs.' },
     ])}
-    ${pullQuote(
-      'Check-in used to be our most stressful forty minutes. With PlanIt it was running before I even reached the registration desk. The client noticed. They hired us for the next two.',
-      'Senior Event Coordinator, 400-person corporate conference, London',
-      '#3730A3'
-    )}
+    
     ${darkStrip('Free to start, no credit card required', 'Built for people who do this professionally.', 'Upgrade plans available for high-volume teams', '#818CF8', 'Get Started Free', '#3730A3', url)}`;
 
   return emailShell(
@@ -425,9 +417,9 @@ function buildCorporate(ctaUrl, recipient = {}) {
       { t: 'Expense Tracking',            d: 'Log and split event expenses against a budget. Export records for finance sign-off without additional software.' },
     ])}
     ${statsRow([
-      { n: '50,000+', l: 'Events Managed' },
-      { n: '500k+',   l: 'Attendees Tracked' },
-      { n: '99.9%',   l: 'Platform Uptime' },
+      { n: 'Real-time', l: 'Check-in Sync' },
+      { n: 'Any Scale', l: 'No Per-Head Cost' },
+      { n: 'Free',      l: 'To Start' },
     ])}
     ${idealFor(
       'Typical Enterprise Use Cases',
@@ -472,11 +464,7 @@ function buildCommunity(ctaUrl, recipient = {}) {
       { t: 'Fundraising Tracking',         d: 'Log targets and contributions against your event budget. Useful for charity events and grant reporting requirements.' },
       { t: 'Unlimited Participants',       d: 'No cap on team size or attendee numbers. 2,000 visitors at a street festival costs the same as a book club of 15: nothing.' },
     ])}
-    ${pullQuote(
-      'We used PlanIt for our annual community health fair, over 800 attendees, 40 volunteers, three venues running simultaneously. The check-in system alone saved us eight hours of manual data entry that week.',
-      'Community coordinator, non-profit health organisation, Birmingham',
-      '#1D4ED8'
-    )}
+    
     ${idealFor(
       'Who This Is For',
       'Neighbourhood associations, local charities, youth clubs and sports leagues, food banks and community kitchens, cultural and arts organisations, mutual aid groups, residents\' associations, awareness campaigns, and local government outreach events.',
@@ -520,11 +508,7 @@ function buildWeddings(ctaUrl, recipient = {}) {
       { t: 'Post-Event Memory Sharing',     d: 'Share photographs, a video recording, and thank-you notes with all guests through the same event space after the day.' },
       { t: 'Multi-Language Guest Support',  d: 'Your guest list may span multiple countries. PlanIt works in any browser with no translation barriers for international attendees.' },
     ])}
-    ${pullQuote(
-      'We had guests arriving from four countries, two family groups meeting for the first time, and a coordinator managing remotely. Check-in was the one moment I was genuinely anxious about. It took less than three minutes to clear the entire arrivals queue.',
-      'Bride, 180-person wedding reception, New York',
-      '#A21CAF'
-    )}
+    
     ${idealFor(
       'Occasions PlanIt Is Used For',
       `<strong style="color:#86198F;">Western weddings:</strong> ceremony, rehearsal dinner, reception, morning-after brunch<br/><br/><strong style="color:#86198F;">South Asian celebrations:</strong> sangeet, mehendi, haldi, baraat, shaadi, walima, and reception<br/><br/><strong style="color:#86198F;">Other milestone events:</strong> engagement parties, anniversary celebrations, milestone birthdays, naming ceremonies, graduation parties, and retirement dinners`,
@@ -570,11 +554,7 @@ function buildPersonalized(ctaUrl, recipient = {}) {
       { t: 'No per-attendee pricing surprises',           d: 'A 300-person event and an 800-person event should not cost different amounts to run. PlanIt does not charge per head.' },
       { t: 'Data that belongs to the organiser',          d: 'Guest lists, attendance records, message history. Yours. Not sold, not profiled, not used to train anything.' },
     ])}
-    ${pullQuote(
-      'I stopped evaluating alternatives after the first event. Nothing else comes close for the price, and the price is free.',
-      'Independent event coordinator, 14 years experience, Edinburgh',
-      '#0F172A'
-    )}
+    
     ${sectionCap('The Technical Reality')}
     <p style="margin:0 0 16px 0;font-size:14px;color:${MID};line-height:1.8;font-family:${FONT};">PlanIt runs on a distributed architecture with real-time socket communication, automated uptime monitoring, a mesh-networked fleet of services, and a 99.9% uptime SLA. It handles 50 or 5,000 attendees without configuration changes. The backend does the heavy lifting so the event team can focus on the event.</p>
     ${statsRow([
@@ -593,6 +573,54 @@ function buildPersonalized(ctaUrl, recipient = {}) {
     body,
     'Every feature in PlanIt exists because an organiser said they needed it. That philosophy does not change.',
     'You are receiving this because you were identified as someone who organises events professionally or regularly.'
+  );
+}
+
+
+// ─── PlanIt Venue template ────────────────────────────────────────────────────
+
+function buildVenue(ctaUrl, recipient = {}) {
+  const url    = ctaUrl || process.env.FRONTEND_URL || 'https://planitapp.onrender.com';
+  const ORANGE       = '#EA580C';
+  const ORANGE_LIGHT = '#FFF7ED';
+  const ORANGE_PALE  = '#FED7AA';
+
+  const headerRow = `
+    <tr>
+      <td class="ep" style="padding:36px 40px 30px 40px;border-bottom:1px solid ${RULE};">
+        <span style="display:inline-block;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:${ORANGE};background:${ORANGE_LIGHT};padding:5px 12px;border-radius:5px;margin-bottom:16px;font-family:${FONT};">PlanIt Venue</span>
+        <h1 style="margin:0 0 12px 0;font-size:24px;font-weight:800;color:${DARK};letter-spacing:-0.5px;line-height:1.2;font-family:${FONT};">Your floor runs on instinct. Give your team a tool that keeps up.</h1>
+        <p style="margin:0;font-size:15px;color:${MUTED};line-height:1.65;font-family:${FONT};">PlanIt Venue is a free real-time floor management platform for restaurants and hospitality venues. Your whole front-of-house team sees the same live floor map on their phones. No app to install, no hardware to buy.</p>
+      </td>
+    </tr>`;
+
+  const body = `
+    ${personalizedOpener(recipient, 'your restaurant floor')}
+    ${sectionCap('What PlanIt Venue Does')}
+    ${featGrid([
+      { t: 'Live Floor Map',              d: 'Every table shows its current status - available, occupied, reserved, or being cleaned - updated in real time across every device.' },
+      { t: 'Guest Signals at the Table',  d: 'Guests scan a QR code at their table to flag ready to order, need water, want the bill, or need assistance. It shows instantly on your floor map.' },
+      { t: 'Waitlist Management',         d: 'Add walk-ins to a digital waitlist. Seat them with one tap when a table clears. No paper list, no shouting across the floor.' },
+      { t: 'QR Reservations at the Door', d: 'Guests scan a QR code at your entrance to make or check in to a reservation. Your host sees it immediately on the floor view.' },
+      { t: 'Drag-and-Drop Floor Editor',  d: 'Build your floor plan once. Drag tables into position, label them, and save. Change it any time without calling support.' },
+      { t: 'No Hardware, No App',         d: 'Every device your team already owns becomes a floor management terminal. Works on any smartphone browser.' },
+    ])}
+    ${idealFor('Who This Is For',
+      'Independent casual dining restaurants, cafes and brunch spots, bars and cocktail lounges, hotel restaurants, event caterers managing seated dinners, and any hospitality venue where table turnover and guest satisfaction matter.',
+      ORANGE, ORANGE_LIGHT)}
+    ${hrule()}
+    <p style="margin:24px 0 16px 0;font-size:14px;color:${MID};line-height:1.75;font-family:${FONT};">PlanIt Venue is completely free to use. You can set up your floor plan and have your team running it on the same day. No subscription, no per-table fees, no contract.</p>
+    ${darkStrip('Free for restaurants and hospitality venues', 'Your floor, always under control.', 'Set up in under 30 minutes, free forever', ORANGE_PALE, 'Set Up Your Venue Free', ORANGE, url)}`;
+
+  return emailShell(
+    'Free floor management for your restaurant',
+    'PlanIt Venue - live floor map, table signals, waitlist, and QR reservations. Free for restaurants.',
+    'PlanIt Venue',
+    `color:rgba(253,186,116,0.9);border:1px solid rgba(234,88,12,0.45)`,
+    headerRow,
+    body,
+    'Running a floor well is one of the hardest jobs in hospitality. I built PlanIt Venue to make the information side of it invisible so your team can focus on the guests. It is free because it should be.',
+    `You are receiving this because ${recipient.company ? h(recipient.company) + ' was identified' : 'your venue was identified'} as a potential PlanIt Venue user.`
   );
 }
 
@@ -643,10 +671,17 @@ const TEMPLATES = {
   },
   personalized: {
     id: 'personalized',
-    name: 'Universal Outreach — Personalized',
+    name: 'Universal Outreach - Personalized',
     description: 'Direct, persuasive outreach for any event organiser. Built around real organiser feedback. Highest conversion messaging.',
     defaultSubject: 'The event platform built around how events actually run',
     build: buildPersonalized,
+  },
+  venue: {
+    id: 'venue',
+    name: 'PlanIt Venue - Restaurants and Hospitality',
+    description: 'For independent restaurants, cafes, bars, and hospitality venues. Covers live floor map, table signals, waitlist, and QR reservations.',
+    defaultSubject: 'Free floor management for your restaurant',
+    build: buildVenue,
   },
 };
 
@@ -682,7 +717,7 @@ async function sendCampaign({ templateId, recipients, subject, ctaUrl }) {
   const results = { sent: 0, skipped: 0, failed: 0, total: recipients.length };
 
   for (let i = 0; i < recipients.length; i++) {
-    // Normalise recipient — accept plain string or object
+    // Normalise recipient - accept plain string or object
     const raw = recipients[i];
     const recipient = typeof raw === 'string'
       ? { email: raw.trim().toLowerCase(), name: '', company: '', role: '' }
@@ -781,7 +816,7 @@ async function runScheduled() {
   return dispatched;
 }
 
-// Boot the scheduler — checks every 60 seconds
+// Boot the scheduler - checks every 60 seconds
 if (process.env.MARKETING_SCHEDULER !== 'off') {
   setInterval(runScheduled, 60000);
   runScheduled().catch(() => {});
