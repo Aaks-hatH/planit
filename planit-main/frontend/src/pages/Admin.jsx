@@ -2920,66 +2920,88 @@ function CommandCenterPanel() {
 
 
 // ─── Blocklist Panel ──────────────────────────────────────────────────────────
+// ─── Blocklist Panel ──────────────────────────────────────────────────────────
 function BlocklistPanel() {
-  const EMPTY_FORM = { type: 'ip', value: '', reason: '', permanent: true, expiresAt: '' };
-  const [entries, setEntries]     = useState([]);
-  const [loading, setLoading]     = useState(true);
+  const makeEmpty = () => ({ type: 'ip', value: '', reason: '', permanent: true, expiresAt: '' });
+  const [entries, setEntries]       = useState([]);
+  const [loading, setLoading]       = useState(true);
+  const [loadError, setLoadError]   = useState(null);
   const [typeFilter, setTypeFilter] = useState('all');
-  const [form, setForm]           = useState(EMPTY_FORM);
-  const [adding, setAdding]       = useState(false);
-  const [showAdd, setShowAdd]     = useState(false);
-  const [search, setSearch]       = useState('');
+  const [form, setForm]             = useState(makeEmpty);
+  const [adding, setAdding]         = useState(false);
+  const [showAdd, setShowAdd]       = useState(false);
+  const [search, setSearch]         = useState('');
+  const [confirmDelete, setConfirmDelete] = useState(null); // { id, value } | null
+  const [deleting, setDeleting]     = useState(false);
 
   const TYPE_META = {
-    ip:    { label: 'IP Address', color: 'bg-red-100 text-red-800',    icon: Shield,  desc: 'Blocked at the gateway — every request from this IP is rejected.' },
-    event: { label: 'Event',      color: 'bg-amber-100 text-amber-800', icon: Calendar, desc: 'Blocks access to a specific event workspace by subdomain.' },
-    name:  { label: 'Display Name', color: 'bg-violet-100 text-violet-800', icon: UserX, desc: 'Prevents a username from joining any workspace.' },
+    ip:    { label: 'IP Address',   bgClass: 'bg-red-100',    textClass: 'text-red-700',    badgeClass: 'bg-red-100 text-red-800',    icon: Shield,   desc: 'Blocked at the gateway — every request from this IP is rejected.' },
+    event: { label: 'Event',        bgClass: 'bg-amber-100',  textClass: 'text-amber-700',  badgeClass: 'bg-amber-100 text-amber-800',  icon: Calendar, desc: 'Blocks access to a specific event workspace by subdomain.' },
+    name:  { label: 'Display Name', bgClass: 'bg-violet-100', textClass: 'text-violet-700', badgeClass: 'bg-violet-100 text-violet-800', icon: UserX,    desc: 'Prevents a username from joining any workspace.' },
   };
 
-  const load = async () => {
+  const load = useCallback(async () => {
     setLoading(true);
+    setLoadError(null);
     try {
       const r = await adminAPI.getBlocklist();
-      setEntries(r.data.entries || []);
-    } catch { toast.error('Failed to load blocklist'); }
-    finally { setLoading(false); }
-  };
+      setEntries(Array.isArray(r?.data?.entries) ? r.data.entries : []);
+    } catch (err) {
+      const msg = err?.response?.data?.error || err?.message || 'Unknown error';
+      setLoadError(msg);
+      toast.error(`Failed to load blocklist: ${msg}`);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => { load(); }, [load]);
 
-  const handleAdd = async (e) => {
-    e.preventDefault();
-    if (!form.value.trim()) { toast.error('Value is required'); return; }
+  const handleAdd = async () => {
+    const val = form.value.trim();
+    if (!val) { toast.error('Value is required'); return; }
+    if (!form.permanent && !form.expiresAt) { toast.error('Expiry date is required for temporary bans'); return; }
     setAdding(true);
     try {
       await adminAPI.addBlock({
         type:      form.type,
-        value:     form.value.trim(),
+        value:     val,
         reason:    form.reason.trim(),
-        permanent: form.permanent,
+        permanent: !!form.permanent,
         expiresAt: (!form.permanent && form.expiresAt) ? form.expiresAt : null,
       });
-      toast.success(`${TYPE_META[form.type].label} blocked`);
-      setForm(EMPTY_FORM);
+      toast.success(`${TYPE_META[form.type].label} blocked successfully`);
+      setForm(makeEmpty());
       setShowAdd(false);
-      load();
+      await load();
     } catch (err) {
-      toast.error(err.response?.data?.error || 'Failed to add entry');
-    } finally { setAdding(false); }
+      toast.error(err?.response?.data?.error || 'Failed to add entry');
+    } finally {
+      setAdding(false);
+    }
   };
 
-  const handleDelete = async (id, value) => {
-    if (!confirm(`Remove "${value}" from the blocklist? They will regain access immediately.`)) return;
+  const confirmAndDelete = async () => {
+    if (!confirmDelete) return;
+    setDeleting(true);
     try {
-      await adminAPI.deleteBlock(id);
+      await adminAPI.deleteBlock(confirmDelete.id);
       toast.success('Entry removed');
-      setEntries(prev => prev.filter(e => e._id !== id));
-    } catch { toast.error('Failed to remove'); }
+      setEntries(prev => prev.filter(e => e._id !== confirmDelete.id));
+      setConfirmDelete(null);
+    } catch {
+      toast.error('Failed to remove entry');
+    } finally {
+      setDeleting(false);
+    }
   };
 
   const filtered = entries.filter(e => {
     if (typeFilter !== 'all' && e.type !== typeFilter) return false;
-    if (search && !e.value.toLowerCase().includes(search.toLowerCase()) && !e.reason?.toLowerCase().includes(search.toLowerCase())) return false;
+    if (search) {
+      const q = search.toLowerCase();
+      if (!e.value?.toLowerCase().includes(q) && !e.reason?.toLowerCase().includes(q)) return false;
+    }
     return true;
   });
 
@@ -2999,12 +3021,22 @@ function BlocklistPanel() {
           </p>
         </div>
         <button
-          onClick={() => setShowAdd(v => !v)}
+          type="button"
+          onClick={() => { setShowAdd(v => !v); setForm(makeEmpty()); }}
           className="btn bg-red-600 hover:bg-red-700 text-white gap-2 text-sm"
         >
           <Plus className="w-4 h-4" /> Add Entry
         </button>
       </div>
+
+      {/* Load error banner */}
+      {loadError && (
+        <div className="rounded-xl bg-red-50 border border-red-200 px-4 py-3 flex items-center gap-3">
+          <AlertTriangle className="w-4 h-4 text-red-500 flex-shrink-0" />
+          <p className="text-sm text-red-700 flex-1">Could not load blocklist: <span className="font-mono">{loadError}</span></p>
+          <button type="button" onClick={load} className="text-xs font-semibold text-red-600 hover:underline">Retry</button>
+        </div>
+      )}
 
       {/* Add form */}
       {showAdd && (
@@ -3012,7 +3044,7 @@ function BlocklistPanel() {
           <h3 className="text-sm font-bold text-neutral-800 mb-4 flex items-center gap-2">
             <Plus className="w-4 h-4 text-red-600" /> New Blocklist Entry
           </h3>
-          <form onSubmit={handleAdd} className="space-y-4">
+          <div className="space-y-4">
             {/* Type selector */}
             <div className="grid grid-cols-3 gap-3">
               {Object.entries(TYPE_META).map(([k, v]) => {
@@ -3049,7 +3081,6 @@ function BlocklistPanel() {
                   placeholder={form.type === 'ip' ? '192.168.1.1' : form.type === 'event' ? 'my-event-slug' : 'badusername'}
                   value={form.value}
                   onChange={e => setForm(f => ({ ...f, value: e.target.value }))}
-                  required
                 />
               </div>
               <div>
@@ -3065,7 +3096,7 @@ function BlocklistPanel() {
             </div>
 
             {/* Duration */}
-            <div className="flex items-center gap-6">
+            <div className="flex items-center gap-6 flex-wrap">
               <label className="flex items-center gap-2 cursor-pointer select-none">
                 <input
                   type="checkbox"
@@ -3083,33 +3114,38 @@ function BlocklistPanel() {
                     className="input text-sm py-1.5"
                     value={form.expiresAt}
                     onChange={e => setForm(f => ({ ...f, expiresAt: e.target.value }))}
-                    required
                   />
                 </div>
               )}
             </div>
 
             <div className="flex gap-3 pt-1">
-              <button type="button" onClick={() => { setShowAdd(false); setForm(EMPTY_FORM); }} className="btn btn-secondary text-sm">Cancel</button>
-              <button type="submit" disabled={adding} className="btn bg-red-600 hover:bg-red-700 text-white text-sm gap-2 disabled:opacity-60">
+              <button type="button" onClick={() => { setShowAdd(false); setForm(makeEmpty()); }} className="btn btn-secondary text-sm">Cancel</button>
+              <button
+                type="button"
+                disabled={adding}
+                onClick={handleAdd}
+                className="btn bg-red-600 hover:bg-red-700 text-white text-sm gap-2 disabled:opacity-60"
+              >
                 {adding ? <span className="spinner w-4 h-4 border-2 border-white/30 border-t-white" /> : <Ban className="w-4 h-4" />}
                 Add to blocklist
               </button>
             </div>
-          </form>
+          </div>
         </div>
       )}
 
       {/* Stats row */}
       <div className="grid grid-cols-4 gap-3">
         {[
-          { key: 'all',   label: 'Total',        color: 'blue' },
-          { key: 'ip',    label: 'IP Bans',       color: 'red' },
-          { key: 'event', label: 'Event Blocks',  color: 'amber' },
-          { key: 'name',  label: 'Name Blocks',   color: 'violet' },
-        ].map(({ key, label, color }) => (
+          { key: 'all',   label: 'Total' },
+          { key: 'ip',    label: 'IP Bans' },
+          { key: 'event', label: 'Event Blocks' },
+          { key: 'name',  label: 'Name Blocks' },
+        ].map(({ key, label }) => (
           <button
             key={key}
+            type="button"
             onClick={() => setTypeFilter(key)}
             className={`card p-4 text-left transition-all hover:shadow-md ${typeFilter === key ? 'ring-2 ring-neutral-900' : ''}`}
           >
@@ -3136,6 +3172,7 @@ function BlocklistPanel() {
             {['all', 'ip', 'event', 'name'].map(t => (
               <button
                 key={t}
+                type="button"
                 onClick={() => setTypeFilter(t)}
                 className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${typeFilter === t ? 'bg-neutral-900 text-white' : 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200'}`}
               >
@@ -3143,7 +3180,7 @@ function BlocklistPanel() {
               </button>
             ))}
           </div>
-          <button onClick={load} className="btn btn-ghost p-1.5 ml-auto">
+          <button type="button" onClick={load} className="btn btn-ghost p-1.5 ml-auto" title="Refresh">
             <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
           </button>
         </div>
@@ -3170,27 +3207,20 @@ function BlocklistPanel() {
               const isExpired = entry.expiresAt && new Date(entry.expiresAt) < new Date();
               return (
                 <div key={entry._id} className={`flex items-start gap-4 px-5 py-4 hover:bg-neutral-50 transition-colors ${isExpired ? 'opacity-50' : ''}`}>
-                  {/* Type badge */}
-                  <div className={`flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center ${meta.color.replace('text-', 'bg-').split(' ')[0].replace('800', '100')}`}>
-                    <MetaIcon className={`w-4 h-4 ${meta.color.split(' ')[1]}`} />
+                  <div className={`flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center ${meta.bgClass}`}>
+                    <MetaIcon className={`w-4 h-4 ${meta.textClass}`} />
                   </div>
-
-                  {/* Main content */}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap mb-1">
                       <code className="text-sm font-mono font-bold text-neutral-900 break-all">{entry.value}</code>
-                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold ${meta.color}`}>
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold ${meta.badgeClass}`}>
                         {meta.label}
                       </span>
                       {entry.permanent && !isExpired && (
-                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-red-100 text-red-800">
-                          Permanent
-                        </span>
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-red-100 text-red-800">Permanent</span>
                       )}
                       {isExpired && (
-                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-neutral-100 text-neutral-500">
-                          Expired
-                        </span>
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-neutral-100 text-neutral-500">Expired</span>
                       )}
                       {!entry.permanent && !isExpired && entry.expiresAt && (
                         <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-800">
@@ -3199,15 +3229,14 @@ function BlocklistPanel() {
                       )}
                     </div>
                     <div className="flex items-center gap-3 text-xs text-neutral-400">
-                      {entry.reason && <span className="text-neutral-600 italic">"{entry.reason}"</span>}
+                      {entry.reason && <span className="italic">"{entry.reason}"</span>}
                       <span>Added {rel(entry.createdAt)}</span>
                       {entry.addedBy && <span>by {entry.addedBy}</span>}
                     </div>
                   </div>
-
-                  {/* Delete */}
                   <button
-                    onClick={() => handleDelete(entry._id, entry.value)}
+                    type="button"
+                    onClick={() => setConfirmDelete({ id: entry._id, value: entry.value })}
                     className="flex-shrink-0 p-1.5 text-neutral-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
                     title="Remove from blocklist"
                   >
@@ -3232,6 +3261,38 @@ function BlocklistPanel() {
           No TTL = permanent. Delete the key to unban.
         </p>
       </div>
+
+      {/* Delete confirm modal */}
+      {confirmDelete && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 px-4" onClick={() => setConfirmDelete(null)}>
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-xl bg-red-100 flex items-center justify-center flex-shrink-0">
+                <Trash className="w-5 h-5 text-red-600" />
+              </div>
+              <div>
+                <h3 className="font-bold text-neutral-900 text-sm">Remove from blocklist?</h3>
+                <p className="text-xs text-neutral-500 mt-0.5">This will grant immediate access again.</p>
+              </div>
+            </div>
+            <div className="bg-neutral-50 rounded-xl px-4 py-2.5 mb-5">
+              <code className="text-sm font-mono font-bold text-neutral-800 break-all">{confirmDelete.value}</code>
+            </div>
+            <div className="flex gap-3">
+              <button type="button" onClick={() => setConfirmDelete(null)} className="btn btn-secondary flex-1 text-sm">Cancel</button>
+              <button
+                type="button"
+                onClick={confirmAndDelete}
+                disabled={deleting}
+                className="btn bg-red-600 hover:bg-red-700 text-white flex-1 text-sm gap-2 disabled:opacity-60"
+              >
+                {deleting ? <span className="spinner w-4 h-4 border-2 border-white/30 border-t-white" /> : <Trash className="w-4 h-4" />}
+                Remove
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
