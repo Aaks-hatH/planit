@@ -4201,39 +4201,43 @@ function MarketingPanel() {
 
 
 // ─── Fleet Control Panel ──────────────────────────────────────────────────────
+function Tooltip({ text, children }) {
+  const [show, setShow] = React.useState(false);
+  return (
+    <span className="relative inline-flex items-center" onMouseEnter={() => setShow(true)} onMouseLeave={() => setShow(false)}>
+      {children}
+      {show && (
+        <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-50 w-64 bg-neutral-900 text-white text-xs rounded-xl px-3 py-2 shadow-xl leading-relaxed pointer-events-none">
+          {text}
+          <span className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-neutral-900" />
+        </span>
+      )}
+    </span>
+  );
+}
+
+function InfoIcon({ tip }) {
+  return (
+    <Tooltip text={tip}>
+      <Info className="w-3.5 h-3.5 text-neutral-400 hover:text-neutral-600 cursor-help ml-1 flex-shrink-0" />
+    </Tooltip>
+  );
+}
+
 function ScaleActionBadge({ action }) {
   if (!action) return null;
   const map = {
     up:         { label: '↑ Reactive',   cls: 'bg-blue-100 text-blue-700' },
     down:       { label: '↓ Scale Down', cls: 'bg-neutral-100 text-neutral-600' },
     predictive: { label: '~ Predictive', cls: 'bg-indigo-100 text-indigo-700' },
-    pid:        { label: ' PID',        cls: 'bg-violet-100 text-violet-700' },
-    anomaly:    { label: ' Anomaly',   cls: 'bg-red-100 text-red-700' },
-    circadian:  { label: ' Circadian', cls: 'bg-sky-100 text-sky-700' },
+    pid:        { label: '⚙ PID',        cls: 'bg-violet-100 text-violet-700' },
+    anomaly:    { label: '🔴 Anomaly',   cls: 'bg-red-100 text-red-700' },
+    circadian:  { label: '🌙 Circadian', cls: 'bg-sky-100 text-sky-700' },
+    manual:     { label: '🎛 Manual',    cls: 'bg-amber-100 text-amber-700' },
   };
   const m = Object.entries(map).find(([k]) => action.toLowerCase().includes(k));
   if (!m) return null;
   return <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${m[1].cls}`}>{m[1].label}</span>;
-}
-
-function SystemPill({ label, active, color, children }) {
-  const colors = {
-    indigo: active ? 'border-indigo-200 bg-indigo-50' : 'border-neutral-100 bg-neutral-50',
-    violet: active ? 'border-violet-200 bg-violet-50' : 'border-neutral-100 bg-neutral-50',
-    red:    active ? 'border-red-200 bg-red-50'       : 'border-neutral-100 bg-neutral-50',
-    sky:    active ? 'border-sky-200 bg-sky-50'       : 'border-neutral-100 bg-neutral-50',
-    amber:  active ? 'border-amber-200 bg-amber-50'   : 'border-neutral-100 bg-neutral-50',
-  };
-  return (
-    <div className={`rounded-2xl border-2 p-4 transition-all ${colors[color] || colors.indigo}`}>
-      <div className="flex items-center gap-2 mb-3">
-        <span className={`w-2 h-2 rounded-full ${active ? 'bg-current animate-pulse' : 'bg-neutral-300'}`} style={active ? {color: 'inherit'} : {}} />
-        <span className="text-xs font-bold uppercase tracking-wide text-neutral-600">{label}</span>
-        {active && <span className="ml-auto text-xs font-semibold text-emerald-600">ACTIVE</span>}
-      </div>
-      {children}
-    </div>
-  );
 }
 
 function MiniBar({ value, max, color = 'bg-indigo-500' }) {
@@ -4245,51 +4249,120 @@ function MiniBar({ value, max, color = 'bg-indigo-500' }) {
   );
 }
 
+function StatCard({ label, value, sub, color, tip }) {
+  return (
+    <div className="card p-4">
+      <div className="flex items-center gap-1 mb-1">
+        <p className="text-xs text-neutral-500">{label}</p>
+        {tip && <InfoIcon tip={tip} />}
+      </div>
+      <p className={`text-2xl font-bold ${color || 'text-neutral-900'}`}>{value}</p>
+      {sub && <p className="text-xs text-neutral-400 mt-0.5">{sub}</p>}
+    </div>
+  );
+}
+
 function CircadianWheel({ slots, currentHour, floor }) {
   if (!slots) return null;
   const maxLoad = Math.max(...slots.map(s => s.avgLoad || 0), 1);
   return (
     <div className="space-y-1.5">
-      <div className="flex gap-px h-8 items-end">
+      <div className="flex gap-px h-10 items-end">
         {slots.map((s, i) => {
-          const h = s.avgLoad ? Math.max(4, (s.avgLoad / maxLoad) * 32) : 4;
+          const h = s.avgLoad ? Math.max(4, (s.avgLoad / maxLoad) * 40) : 4;
           const isCurrent = i === currentHour;
           const isPeak = s.avgLoad >= maxLoad * 0.6;
           return (
-            <div key={i} title={`${i}:00 — avg ${s.avgLoad ?? '—'} req, peak ${s.peakBackends}b`}
-              className={`flex-1 rounded-sm transition-all cursor-default ${isCurrent ? 'bg-indigo-500' : isPeak ? 'bg-amber-400' : s.samples > 0 ? 'bg-neutral-300' : 'bg-neutral-100'}`}
-              style={{ height: `${h}px` }} />
+            <Tooltip key={i} text={`${String(i).padStart(2,'0')}:00 UTC — avg ${s.avgLoad ?? 'no data'} req/window${s.samples ? `, ${s.samples} samples` : ''}`}>
+              <div className={`flex-1 rounded-sm cursor-default transition-all ${isCurrent ? 'bg-indigo-500' : isPeak ? 'bg-amber-400' : s.samples > 0 ? 'bg-neutral-300' : 'bg-neutral-100'}`}
+                style={{ height: `${h}px` }} />
+            </Tooltip>
           );
         })}
       </div>
       <div className="flex justify-between text-neutral-400" style={{ fontSize: '9px' }}>
         <span>0h</span><span>6h</span><span>12h</span><span>18h</span><span>23h</span>
       </div>
-      <p className="text-xs text-neutral-500">
-        Current floor: <span className="font-semibold text-neutral-800">{floor} backend{floor !== 1 ? 's' : ''}</span>
-        {floor > 1 && <span className="ml-1 text-sky-600">· scale-down blocked</span>}
+      <p className="text-xs text-neutral-500 flex items-center gap-1">
+        Current min floor:
+        <span className={`font-semibold ml-1 ${floor > 1 ? 'text-sky-700' : 'text-neutral-700'}`}>{floor} backend{floor !== 1 ? 's' : ''}</span>
+        {floor > 1 && <span className="text-sky-600 ml-1">· scale-down blocked for this hour</span>}
       </p>
     </div>
   );
 }
 
+function SystemCard({ title, icon: Icon, iconColor, active, activeLabel, tip, children }) {
+  return (
+    <div className={`rounded-2xl border-2 p-4 transition-all ${active ? 'border-indigo-200 bg-indigo-50/60' : 'border-neutral-100 bg-white'}`}>
+      <div className="flex items-center gap-2 mb-3">
+        <Icon className={`w-4 h-4 ${iconColor || 'text-indigo-500'}`} />
+        <span className="text-xs font-bold text-neutral-700 uppercase tracking-wide">{title}</span>
+        {tip && <InfoIcon tip={tip} />}
+        {active && <span className="ml-auto text-xs font-semibold text-indigo-600">{activeLabel || 'ACTIVE'}</span>}
+      </div>
+      {children}
+    </div>
+  );
+}
+
 function FleetControl() {
-  const [status, setStatus]         = useState(null);
-  const [loading, setLoading]       = useState(true);
-  const [boostForm, setBoostForm]   = useState({ durationMinutes: 60, reason: '', minBackends: '', pinnedEventIds: '' });
-  const [boosting, setBoosting]     = useState(false);
-  const [cancelling, setCancelling] = useState(false);
+  const [status, setStatus]           = useState(null);
+  const [loading, setLoading]         = useState(true);
+  const [boostForm, setBoostForm]     = useState({ durationMinutes: 60, reason: '', minBackends: '', pinnedEventIds: '' });
+  const [boosting, setBoosting]       = useState(false);
+  const [cancelling, setCancelling]   = useState(false);
   const [logExpanded, setLogExpanded] = useState(false);
+
+  // Manual controls
+  const [manualSlider, setManualSlider]       = useState(1);
+  const [manualActive, setManualActive]       = useState(false);
+  const [effMode, setEffMode]                 = useState('balanced');
+  const [applyingScale, setApplyingScale]     = useState(false);
+  const [releasingManual, setReleasingManual] = useState(false);
 
   const load = async () => {
     try {
       const r = await routerAPI.getStatus();
-      if (r?.data) setStatus(r.data);
-    } catch { /* router may not be configured */ }
+      if (r?.data) {
+        setStatus(r.data);
+        // Sync UI to current server state
+        if (r.data.manual?.active) {
+          setManualActive(true);
+          setManualSlider(r.data.manual.count);
+        } else {
+          setManualActive(false);
+        }
+        if (r.data.manual?.efficiencyMode) setEffMode(r.data.manual.efficiencyMode);
+      }
+    } catch { }
     setLoading(false);
   };
 
-  useEffect(() => { load(); const t = setInterval(load, 10000); return () => clearInterval(t); }, []);
+  useEffect(() => { load(); const t = setInterval(load, 8000); return () => clearInterval(t); }, []);
+
+  const applyManual = async () => {
+    setApplyingScale(true);
+    try {
+      await routerAPI.setScale({ count: manualSlider, efficiencyMode: effMode });
+      toast.success(`🎛 Pinned to ${manualSlider} backend${manualSlider !== 1 ? 's' : ''} · ${effMode} mode`);
+      setManualActive(true);
+      load();
+    } catch (err) { toast.error(err.response?.data?.error || 'Failed'); }
+    setApplyingScale(false);
+  };
+
+  const releaseManual = async () => {
+    setReleasingManual(true);
+    try {
+      await routerAPI.setScale({ count: null, efficiencyMode: 'balanced' });
+      toast.success('Auto-scaling restored');
+      setManualActive(false);
+      setEffMode('balanced');
+      load();
+    } catch { toast.error('Failed'); }
+    setReleasingManual(false);
+  };
 
   const handleBoost = async (e) => {
     e.preventDefault();
@@ -4297,20 +4370,19 @@ function FleetControl() {
     try {
       await routerAPI.activateBoost({
         durationMinutes: parseInt(boostForm.durationMinutes) || 60,
-        reason:          boostForm.reason || 'Admin boost',
-        minBackends:     boostForm.minBackends ? parseInt(boostForm.minBackends) : undefined,
-        pinnedEventIds:  boostForm.pinnedEventIds ? boostForm.pinnedEventIds.split(',').map(s => s.trim()).filter(Boolean) : [],
+        reason: boostForm.reason || 'Admin boost',
+        minBackends: boostForm.minBackends ? parseInt(boostForm.minBackends) : undefined,
+        pinnedEventIds: boostForm.pinnedEventIds ? boostForm.pinnedEventIds.split(',').map(s => s.trim()).filter(Boolean) : [],
       });
-      toast.success('⚡ Boost activated');
-      load();
-    } catch (err) { toast.error(err.response?.data?.error || 'Failed to activate boost'); }
+      toast.success('⚡ Boost activated'); load();
+    } catch (err) { toast.error(err.response?.data?.error || 'Failed'); }
     setBoosting(false);
   };
 
   const handleCancelBoost = async () => {
     setCancelling(true);
     try { await routerAPI.cancelBoost(); toast.success('Boost cancelled'); load(); }
-    catch { toast.error('Failed to cancel boost'); }
+    catch { toast.error('Failed'); }
     setCancelling(false);
   };
 
@@ -4323,30 +4395,27 @@ function FleetControl() {
   );
 
   if (loading) return <div className="p-8 flex justify-center"><span className="spinner w-6 h-6 border-2 border-neutral-200 border-t-neutral-700" /></div>;
-
   if (!status) return (
     <div className="p-8 text-center">
       <WifiOff className="w-12 h-12 text-red-300 mx-auto mb-4" />
       <h3 className="text-lg font-bold text-neutral-700 mb-2">Router unreachable</h3>
-      <p className="text-sm text-neutral-500">Could not connect to the router. Check VITE_ROUTER_URL and VITE_MESH_SECRET.</p>
+      <p className="text-sm text-neutral-500">Could not connect to the router.</p>
     </div>
   );
 
-  const boost      = status.boost;
-  const scaling    = status.scaling;
-  const backends   = status.backends || [];
-  const activeList = backends.filter(b => b.active);
+  const boost       = status.boost;
+  const scaling     = status.scaling;
+  const backends    = status.backends || [];
+  const activeList  = backends.filter(b => b.active);
   const minutesLeft = boost?.active ? Math.max(0, Math.round((new Date(boost.activeUntil) - Date.now()) / 60000)) : 0;
   const avgLatency  = Math.round(activeList.filter(b => b.latencyMs).reduce((s, b) => s + b.latencyMs, 0) / Math.max(1, activeList.filter(b => b.latencyMs).length)) || null;
-
-  const pid       = scaling?.pid;
-  const anomaly   = scaling?.anomaly;
-  const cooldown  = scaling?.cooldown;
-  const circadian = scaling?.circadian;
-  const pred      = scaling?.predictive;
-
-  // Determine which system last acted
-  const lastAction = cooldown?.lastAction;
+  const pid         = scaling?.pid;
+  const anomaly     = scaling?.anomaly;
+  const cooldown    = scaling?.cooldown;
+  const circadian   = scaling?.circadian;
+  const pred        = scaling?.predictive;
+  const manual      = scaling?.manual || status.manual;
+  const effThresh   = manual?.effectiveThresholds || { up: scaling?.thresholds?.scaleUp, down: scaling?.thresholds?.scaleDown };
 
   return (
     <div className="p-6 space-y-6 max-w-5xl">
@@ -4358,202 +4427,306 @@ function FleetControl() {
             <Rocket className="w-5 h-5 text-indigo-500" /> Fleet Intelligence
           </h2>
           <p className="text-sm text-neutral-500 mt-0.5">
-            {backends.length} backends · uptime {Math.floor((status.uptime || 0) / 3600)}h {Math.floor(((status.uptime || 0) % 3600) / 60)}m
-            {lastAction && <span className="ml-2 text-neutral-400">· last action: <ScaleActionBadge action={lastAction} /></span>}
+            {backends.length} backends · uptime {Math.floor((status.uptime||0)/3600)}h {Math.floor(((status.uptime||0)%3600)/60)}m
+            {cooldown?.lastAction && <span className="ml-2">· last: <ScaleActionBadge action={cooldown.lastAction} /></span>}
+            {manual?.active && <span className="ml-2 text-amber-600 font-medium text-xs">🎛 Manual override active</span>}
           </p>
         </div>
         <button onClick={load} className="btn btn-secondary text-xs gap-1.5"><RefreshCw className="w-3.5 h-3.5" /> Refresh</button>
       </div>
 
+      {/* Manual override banner */}
+      {manual?.active && (
+        <div className="bg-amber-50 border-2 border-amber-200 rounded-2xl p-4 flex items-center gap-4">
+          <div className="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center flex-shrink-0">
+            <Gauge className="w-5 h-5 text-amber-600" />
+          </div>
+          <div className="flex-1">
+            <p className="font-semibold text-amber-900 text-sm">Manual Override Active</p>
+            <p className="text-xs text-amber-700 mt-0.5">
+              Pinned to <strong>{manual.count} backend{manual.count !== 1 ? 's' : ''}</strong> · mode: <strong>{manual.efficiencyMode}</strong> · all auto-scaling paused
+            </p>
+          </div>
+          <button onClick={releaseManual} disabled={releasingManual} className="btn text-xs bg-amber-600 hover:bg-amber-700 text-white gap-1.5 disabled:opacity-60">
+            {releasingManual ? <span className="spinner w-3.5 h-3.5 border border-white/30 border-t-white" /> : <RotateCcw className="w-3.5 h-3.5" />}
+            Release
+          </button>
+        </div>
+      )}
+
       {/* Boost banner */}
       {boost?.active && (
         <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex items-center gap-4">
           <div className="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center flex-shrink-0"><Zap className="w-5 h-5 text-amber-600" /></div>
-          <div className="flex-1 min-w-0">
+          <div className="flex-1">
             <p className="font-semibold text-amber-900 text-sm">Boost Mode Active</p>
             <p className="text-xs text-amber-700 mt-0.5">{boost.reason} · {boost.minBackends} backends minimum · {minutesLeft}m remaining</p>
           </div>
           <button onClick={handleCancelBoost} disabled={cancelling} className="btn text-xs bg-amber-600 hover:bg-amber-700 text-white gap-1.5 disabled:opacity-60">
-            {cancelling ? <span className="spinner w-3.5 h-3.5 border border-white/30 border-t-white" /> : <X className="w-3.5 h-3.5" />}
-            Cancel
+            {cancelling ? <span className="spinner w-3.5 h-3.5 border border-white/30 border-t-white" /> : <X className="w-3.5 h-3.5" />} Cancel
           </button>
         </div>
       )}
 
       {/* Top stats */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <div className="card p-4">
-          <p className="text-xs text-neutral-500 mb-1">Active</p>
-          <p className="text-2xl font-bold text-neutral-900">{scaling.activeBackendCount}<span className="text-sm font-normal text-neutral-400">/{scaling.totalBackends}</span></p>
-          <MiniBar value={scaling.activeBackendCount} max={scaling.totalBackends} color="bg-emerald-500" />
+        <StatCard
+          label="Active Backends" value={`${scaling.activeBackendCount}/${scaling.totalBackends}`}
+          color={manual?.active ? 'text-amber-600' : 'text-neutral-900'}
+          sub={manual?.active ? 'manually pinned' : 'auto-managed'}
+          tip="How many backends are currently receiving traffic out of your total provisioned fleet. Auto-scaling adjusts this number based on load."
+        />
+        <StatCard
+          label="Avg Latency" value={avgLatency ? `${avgLatency}ms` : '—'}
+          color={avgLatency > 2000 ? 'text-red-600' : avgLatency > 800 ? 'text-amber-600' : 'text-emerald-700'}
+          sub="across active backends"
+          tip="Average response time from the router to each active backend. Above 800ms is degraded. Above 2000ms is critical and may indicate a backend is overloaded."
+        />
+        <StatCard
+          label="Circuit Breakers" value={scaling.trippedCount}
+          color={scaling.trippedCount > 0 ? 'text-red-600' : 'text-neutral-900'}
+          sub={scaling.trippedCount > 0 ? 'backends isolated' : 'all clear'}
+          tip="A circuit breaker trips after 3 consecutive errors from a backend. Traffic is immediately rerouted away from it. It resets automatically after 2 clean health checks."
+        />
+        <StatCard
+          label="Scale-Down Streak" value={scaling.scaleDownStreak || 0}
+          color={scaling.scaleDownStreak >= 3 ? 'text-amber-600' : 'text-neutral-900'}
+          sub={`of ${5} needed`}
+          tip="How many consecutive 30s windows load has stayed below the scale-down threshold. Scale-down fires when this reaches 5 (2.5 minutes of sustained low traffic)."
+        />
+      </div>
+
+      {/* ── MANUAL CONTROLS ─────────────────────────────────── */}
+      <div className="card p-5 space-y-5">
+        <div className="flex items-center gap-2">
+          <Gauge className="w-4 h-4 text-amber-500" />
+          <h3 className="text-sm font-bold text-neutral-700">Manual Controls</h3>
+          <InfoIcon tip="Override all auto-scaling intelligence. Pin the exact number of backends you want and set the efficiency mode. Release to return to fully automatic operation." />
         </div>
-        <div className="card p-4">
-          <p className="text-xs text-neutral-500 mb-1">Tripped</p>
-          <p className={`text-2xl font-bold ${scaling.trippedCount > 0 ? 'text-red-600' : 'text-neutral-900'}`}>{scaling.trippedCount}</p>
-          <p className="text-xs text-neutral-400">circuit breakers</p>
+
+        {/* Backend count slider */}
+        <div>
+          <div className="flex items-center justify-between mb-2">
+            <label className="text-xs font-medium text-neutral-600 flex items-center gap-1">
+              Backend Count
+              <InfoIcon tip="Drag to pin the fleet to exactly this many backends. All auto-scaling (PID, Holt-Winters, anomaly detection, circadian floor) is paused until you release." />
+            </label>
+            <span className="text-sm font-bold text-neutral-900 font-mono">
+              {manualSlider} / {backends.length}
+            </span>
+          </div>
+          <input
+            type="range" min="1" max={backends.length} value={manualSlider}
+            onChange={e => setManualSlider(parseInt(e.target.value))}
+            className="w-full h-2 rounded-full appearance-none bg-neutral-200 accent-amber-500 cursor-pointer"
+          />
+          <div className="flex justify-between text-xs text-neutral-400 mt-1">
+            <span>1 (min)</span>
+            <span>{Math.ceil(backends.length / 2)} (half)</span>
+            <span>{backends.length} (all)</span>
+          </div>
         </div>
-        <div className="card p-4">
-          <p className="text-xs text-neutral-500 mb-1">Avg Latency</p>
-          <p className="text-2xl font-bold text-neutral-900">{avgLatency ?? '—'}<span className="text-sm font-normal text-neutral-400">ms</span></p>
-          <p className="text-xs text-neutral-400">active backends</p>
+
+        {/* Efficiency mode */}
+        <div>
+          <label className="text-xs font-medium text-neutral-600 flex items-center gap-1 mb-2">
+            Efficiency Mode
+            <InfoIcon tip="Controls how aggressively the auto-scaling reacts when released. Performance scales up early and never scales down. Economy scales up late and scales down fast. Balanced is the default." />
+          </label>
+          <div className="grid grid-cols-3 gap-2">
+            {[
+              { id: 'economy',     label: '⚡ Economy',     desc: 'Scale up late, down fast', color: 'emerald' },
+              { id: 'balanced',    label: '⚖ Balanced',    desc: 'Default behaviour',        color: 'indigo'  },
+              { id: 'performance', label: '🚀 Performance', desc: 'Scale up early, stay up',  color: 'violet'  },
+            ].map(m => (
+              <button key={m.id} onClick={() => setEffMode(m.id)}
+                className={`rounded-xl border-2 p-3 text-left transition-all ${effMode === m.id ? `border-${m.color}-300 bg-${m.color}-50` : 'border-neutral-100 hover:border-neutral-200'}`}>
+                <p className="text-xs font-semibold text-neutral-800">{m.label}</p>
+                <p className="text-xs text-neutral-500 mt-0.5">{m.desc}</p>
+                {effMode === m.id && manual?.effectiveThresholds && (
+                  <p className="text-xs text-neutral-400 mt-1 font-mono">
+                    ↑{effThresh.up} {effThresh.down > 0 ? `↓${effThresh.down}` : 'no ↓'}
+                  </p>
+                )}
+              </button>
+            ))}
+          </div>
         </div>
-        <div className="card p-4">
-          <p className="text-xs text-neutral-500 mb-1">Circ. Floor</p>
-          <p className={`text-2xl font-bold ${circadian?.floor > 1 ? 'text-sky-600' : 'text-neutral-400'}`}>{circadian?.floor ?? 1}</p>
-          <p className="text-xs text-neutral-400">min backends (learned)</p>
+
+        {/* Apply / Release */}
+        <div className="flex gap-3">
+          <button onClick={applyManual} disabled={applyingScale}
+            className="btn bg-amber-500 hover:bg-amber-600 text-white gap-2 disabled:opacity-60 flex-1">
+            {applyingScale ? <span className="spinner w-4 h-4 border-2 border-white/30 border-t-white" /> : <Gauge className="w-4 h-4" />}
+            Pin to {manualSlider} backend{manualSlider !== 1 ? 's' : ''} · {effMode}
+          </button>
+          {manual?.active && (
+            <button onClick={releaseManual} disabled={releasingManual}
+              className="btn btn-secondary gap-2 disabled:opacity-60">
+              {releasingManual ? <span className="spinner w-4 h-4 border-2 border-neutral-200 border-t-neutral-700" /> : <RotateCcw className="w-4 h-4" />}
+              Release to auto
+            </button>
+          )}
         </div>
       </div>
 
-      {/* Smart Systems Grid */}
+      {/* ── INTELLIGENCE SYSTEMS ─────────────────────────────── */}
       <div>
-        <h3 className="text-sm font-bold text-neutral-700 mb-3 flex items-center gap-2"><Cpu className="w-4 h-4 text-indigo-400" /> Intelligence Systems</h3>
+        <h3 className="text-sm font-bold text-neutral-700 mb-3 flex items-center gap-2">
+          <Cpu className="w-4 h-4 text-indigo-400" /> Intelligence Systems
+          <InfoIcon tip="These four systems run in parallel and vote on scaling decisions every 30 seconds. The highest-priority system that wants to act wins each round." />
+        </h3>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
 
           {/* Holt-Winters */}
-          <SystemPill label="Holt-Winters Predictive" active={pred?.rampCount >= 3} color="indigo">
+          <SystemCard title="Holt-Winters Predictive" icon={TrendingUp} iconColor="text-indigo-500"
+            active={pred?.rampCount >= 3} activeLabel="FORECASTING"
+            tip="Double exponential smoothing — tracks a 'level' (current smoothed load) and a 'trend' (rate of change). After 3 consecutive windows of rising trend, it pre-scales before the threshold is hit. This is why you scale up at 9:30 PM instead of 9:34 PM.">
             {pred ? (
-              <div className="grid grid-cols-3 gap-2 text-center">
-                <div>
-                  <p className="text-xs text-neutral-500">Level</p>
-                  <p className="text-lg font-bold text-neutral-900">{pred.level}</p>
+              <div className="space-y-3">
+                <div className="grid grid-cols-3 gap-2 text-center">
+                  {[
+                    { label: 'Level', value: pred.level, tip: 'Smoothed current load — less jumpy than raw req/window because it averages recent history.' },
+                    { label: 'Trend', value: `${pred.trend > 0 ? '+' : ''}${pred.trend}`, color: pred.trend > 0 ? 'text-amber-600' : pred.trend < 0 ? 'text-emerald-600' : '', tip: 'How fast load is growing per window. Positive = ramping up. Negative = dying down.' },
+                    { label: 'Forecast', value: pred.forecast, color: pred.forecast >= effThresh.up * 0.85 ? 'text-amber-600' : '', tip: `Predicted load next window (level + trend). Pre-scale fires at ${Math.round((pred.headroom||0.85)*100)}% of your threshold.` },
+                  ].map(s => (
+                    <div key={s.label}>
+                      <p className="text-xs text-neutral-500 flex items-center justify-center gap-0.5">{s.label}<InfoIcon tip={s.tip} /></p>
+                      <p className={`text-lg font-bold ${s.color || 'text-neutral-900'}`}>{s.value}</p>
+                    </div>
+                  ))}
                 </div>
                 <div>
-                  <p className="text-xs text-neutral-500">Trend</p>
-                  <p className={`text-lg font-bold ${pred.trend > 0 ? 'text-amber-600' : pred.trend < 0 ? 'text-emerald-600' : 'text-neutral-500'}`}>
-                    {pred.trend > 0 ? '+' : ''}{pred.trend}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-xs text-neutral-500">Forecast</p>
-                  <p className={`text-lg font-bold ${pred.forecast >= scaling.thresholds?.scaleUp * 0.85 ? 'text-amber-600' : 'text-neutral-900'}`}>{pred.forecast}</p>
-                </div>
-                <div className="col-span-3 mt-1">
                   <div className="flex justify-between text-xs text-neutral-400 mb-1">
-                    <span>Ramp: {pred.rampCount} windows</span>
+                    <span className="flex items-center gap-1">Ramp windows: {pred.rampCount}<InfoIcon tip="Consecutive windows with positive trend. Pre-scale requires 3+ to avoid reacting to a single noisy spike." /></span>
                     <span>{pred.historyLen}/30 samples</span>
                   </div>
                   <MiniBar value={pred.rampCount} max={5} color={pred.rampCount >= 3 ? 'bg-indigo-500' : 'bg-neutral-300'} />
                 </div>
               </div>
             ) : <p className="text-xs text-neutral-400">Warming up…</p>}
-          </SystemPill>
+          </SystemCard>
 
-          {/* PID Controller */}
-          <SystemPill label="PID Controller" active={pid && Math.abs(pid.integral) > 2} color="violet">
+          {/* PID */}
+          <SystemCard title="PID Controller" icon={Gauge} iconColor="text-violet-500"
+            active={pid && Math.abs(pid.lastError) > 3} activeLabel="ADJUSTING"
+            tip="Proportional-Integral-Derivative control — the same algorithm used in industrial machinery, thermostats, and aircraft autopilots. It produces a continuous pressure signal instead of a binary on/off. Output > 1.0 triggers a scale-up.">
             {pid ? (
               <div className="space-y-2">
                 <div className="grid grid-cols-3 gap-2 text-center">
-                  <div>
-                    <p className="text-xs text-neutral-500">Setpoint</p>
-                    <p className="text-base font-bold text-neutral-900">{pid.setpoint}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-neutral-500">Error</p>
-                    <p className={`text-base font-bold ${Math.abs(pid.lastError) > 5 ? 'text-amber-600' : 'text-neutral-900'}`}>
-                      {pid.lastError > 0 ? '+' : ''}{pid.lastError}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-neutral-500">Integral</p>
-                    <p className={`text-base font-bold ${Math.abs(pid.integral) > 8 ? 'text-violet-600' : 'text-neutral-900'}`}>{pid.integral}</p>
-                  </div>
+                  {[
+                    { label: 'Setpoint', value: pid.setpoint, tip: `Target load level (${Math.round((scaling?.pid?.gains?.kp||0.08)*100)}% is Kp). When current load exceeds this, the controller starts building pressure to scale up.` },
+                    { label: 'Error', value: `${pid.lastError > 0 ? '+' : ''}${pid.lastError}`, color: Math.abs(pid.lastError) > 5 ? 'text-amber-600' : '', tip: 'Current load minus setpoint. Positive = you\'re above the comfort zone. Negative = you\'re well under capacity.' },
+                    { label: 'Integral', value: pid.integral, color: Math.abs(pid.integral) > 8 ? 'text-violet-600' : '', tip: 'Accumulated error over time — clamped at ±15 to prevent windup. Resets to 0 after an anomaly so a spike doesn\'t cause the integral to keep triggering scale-ups for minutes afterward.' },
+                  ].map(s => (
+                    <div key={s.label}>
+                      <p className="text-xs text-neutral-500 flex items-center justify-center gap-0.5">{s.label}<InfoIcon tip={s.tip} /></p>
+                      <p className={`text-lg font-bold ${s.color || 'text-neutral-900'}`}>{s.value}</p>
+                    </div>
+                  ))}
                 </div>
-                <div className="bg-neutral-100 rounded-lg p-2 flex gap-3 text-xs text-neutral-500 font-mono">
-                  <span>Kp {pid.gains.kp}</span>
-                  <span>Ki {pid.gains.ki}</span>
-                  <span>Kd {pid.gains.kd}</span>
+                <div className="bg-neutral-100 rounded-lg px-2 py-1.5 flex gap-3 text-xs text-neutral-500 font-mono justify-center">
+                  <span title="Proportional gain — how hard it reacts to current error">Kp {pid.gains?.kp}</span>
+                  <span title="Integral gain — how hard it reacts to accumulated error">Ki {pid.gains?.ki}</span>
+                  <span title="Derivative gain — how hard it reacts to rate of change">Kd {pid.gains?.kd}</span>
                 </div>
-                <div>
-                  <div className="flex justify-between text-xs text-neutral-400 mb-1"><span>Integral pressure</span><span>{pid.integral}/±15</span></div>
-                  <MiniBar value={Math.abs(pid.integral) + 15} max={30} color={Math.abs(pid.integral) > 8 ? 'bg-violet-500' : 'bg-neutral-300'} />
-                </div>
+                <MiniBar value={Math.abs(pid.integral) + 15} max={30} color={Math.abs(pid.integral) > 8 ? 'bg-violet-500' : 'bg-neutral-300'} />
               </div>
             ) : <p className="text-xs text-neutral-400">Waiting for data…</p>}
-          </SystemPill>
+          </SystemCard>
 
           {/* Anomaly Detection */}
-          <SystemPill label="Anomaly Detection (EWMSD)" active={anomaly?.inHold} color="red">
+          <SystemCard title="Anomaly Detection (EWMSD)" icon={AlertTriangle} iconColor="text-red-500"
+            active={anomaly?.inHold} activeLabel={anomaly?.inHold ? `HOLD ${anomaly.holdSecsLeft}s` : ''}
+            tip="Exponentially Weighted Moving Standard Deviation — builds a live statistical model of your 'normal' load. A spike more than 2.5σ from baseline is an anomaly. It scales up immediately on a fast path but doesn't feed the spike into Holt-Winters (which would corrupt the trend model). After the spike, the baseline gradually adapts using a slower alpha so normal post-spike traffic stops looking anomalous.">
             {anomaly ? (
               <div className="space-y-2">
                 <div className="grid grid-cols-3 gap-2 text-center">
-                  <div>
-                    <p className="text-xs text-neutral-500">Baseline</p>
-                    <p className="text-base font-bold text-neutral-900">{anomaly.mean}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-neutral-500">Std Dev</p>
-                    <p className="text-base font-bold text-neutral-900">{anomaly.std}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-neutral-500">Z-threshold</p>
-                    <p className="text-base font-bold text-neutral-900">{anomaly.zThreshold}σ</p>
-                  </div>
+                  {[
+                    { label: 'Baseline', value: anomaly.mean, tip: 'Exponentially weighted average of your recent non-anomalous load. This is what "normal" looks like to the detector.' },
+                    { label: 'Std Dev', value: anomaly.std, tip: 'How spread out your normal load variations are. A higher std dev means the detector requires a bigger spike to trigger.' },
+                    { label: 'Threshold', value: `${anomaly.zThreshold}σ`, tip: `Any load more than ${anomaly.zThreshold} standard deviations above the baseline is classified as an anomaly. Your 73 req spike was ~6σ — far beyond this.` },
+                  ].map(s => (
+                    <div key={s.label}>
+                      <p className="text-xs text-neutral-500 flex items-center justify-center gap-0.5">{s.label}<InfoIcon tip={s.tip} /></p>
+                      <p className="text-lg font-bold text-neutral-900">{s.value}</p>
+                    </div>
+                  ))}
                 </div>
                 {anomaly.inHold ? (
                   <div className="bg-red-100 rounded-lg px-3 py-2 text-xs text-red-700 font-medium flex items-center gap-2">
                     <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0" />
-                    Anomaly hold active · scale-down blocked · {anomaly.holdSecsLeft}s remaining
+                    Post-anomaly hold · scale-down blocked · {anomaly.holdSecsLeft}s left
+                    <InfoIcon tip="After a spike, scale-down is blocked briefly so backends don't get removed while traffic is still decaying. This prevents the yo-yo effect." />
                   </div>
                 ) : (
-                  <div className="bg-neutral-50 rounded-lg px-3 py-2 text-xs text-neutral-500">
-                    Baseline stable · next spike classified if &gt;{anomaly.zThreshold}σ from mean
+                  <div className="bg-neutral-50 rounded-lg px-3 py-2 text-xs text-neutral-500 flex items-center gap-1">
+                    Baseline stable · next spike triggers if &gt;{anomaly.zThreshold}σ from mean ({+(anomaly.mean + anomaly.zThreshold * anomaly.std).toFixed(1)} req)
                   </div>
                 )}
               </div>
             ) : <p className="text-xs text-neutral-400">Seeding baseline…</p>}
-          </SystemPill>
+          </SystemCard>
 
-          {/* Circadian Floor */}
-          <SystemPill label="Circadian Floor (24h learned)" active={circadian?.floor > 1} color="sky">
+          {/* Circadian */}
+          <SystemCard title="Circadian Floor (24h learned)" icon={Clock} iconColor="text-sky-500"
+            active={circadian?.floor > 1} activeLabel={circadian?.floor > 1 ? `FLOOR ${circadian.floor}` : ''}
+            tip="Watches your traffic every 30 seconds and builds a per-hour-of-day load profile. When the current hour historically runs hot, it sets a minimum replica floor so you never scale all the way down to 1 backend right before your known peak window. Only records non-anomalous windows — a 73 req spike will not corrupt the floor to 5.">
             {circadian ? (
               <CircadianWheel slots={circadian.slots} currentHour={circadian.currentHour} floor={circadian.floor} />
             ) : <p className="text-xs text-neutral-400">Learning traffic pattern…</p>}
-          </SystemPill>
+          </SystemCard>
 
         </div>
       </div>
 
       {/* Cooldown status */}
       {cooldown && (
-        <div className={`rounded-xl border px-4 py-3 flex items-center gap-3 text-sm ${cooldown.active ? 'border-amber-200 bg-amber-50' : 'border-neutral-100 bg-neutral-50'}`}>
+        <div className={`rounded-xl border px-4 py-3 flex items-center gap-3 ${cooldown.active ? 'border-amber-200 bg-amber-50' : 'border-neutral-100 bg-neutral-50'}`}>
           <Timer className={`w-4 h-4 flex-shrink-0 ${cooldown.active ? 'text-amber-500' : 'text-neutral-400'}`} />
-          <span className={cooldown.active ? 'text-amber-800' : 'text-neutral-500'}>
+          <span className="text-sm flex items-center gap-1">
             {cooldown.active
-              ? <>Scale-up cooldown active — scale-down locked for <strong>{cooldown.secsLeft}s</strong> (prevents thrashing)</>
-              : <>No cooldown active · last action: <strong>{cooldown.lastAction ?? '—'}</strong> · cooldown window {Math.round(cooldown.ms / 1000)}s</>}
+              ? <><span className="text-amber-800">Scale-down locked for <strong>{cooldown.secsLeft}s</strong> — prevents thrashing after a scale-up event</span></>
+              : <span className="text-neutral-500">No cooldown active · last action: <strong>{cooldown.lastAction ?? '—'}</strong> · window: {Math.round(cooldown.ms/1000)}s</span>}
+            <InfoIcon tip="After any scale-up, scale-down is locked for 2.5 minutes. New backends need ~30-60s to warm up on Render. Without this, the system scales up then immediately back down before the backend is even ready, causing the thrashing in your original logs." />
           </span>
         </div>
       )}
 
       {/* Backend cards */}
       <div>
-        <h3 className="text-sm font-bold text-neutral-700 mb-3 flex items-center gap-2"><Server className="w-4 h-4" /> Backends</h3>
+        <h3 className="text-sm font-bold text-neutral-700 mb-3 flex items-center gap-2">
+          <Server className="w-4 h-4" /> Backends
+          <InfoIcon tip="Active backends receive live traffic. Standby backends are healthy but idle. Tripped backends have been isolated by the circuit breaker due to consecutive errors." />
+        </h3>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
           {backends.map(b => (
             <div key={b.index} className={`card p-4 border-2 transition-all ${b.circuitTripped ? 'border-red-200 bg-red-50' : b.active ? 'border-emerald-200 bg-emerald-50' : 'border-neutral-100'}`}>
               <div className="flex items-center justify-between mb-3">
-                <span className="font-semibold text-sm text-neutral-900">{b.name}</span>
+                <span className="font-semibold text-sm">{b.name}</span>
                 <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${b.circuitTripped ? 'bg-red-100 text-red-700' : b.active ? 'bg-emerald-100 text-emerald-700' : 'bg-neutral-100 text-neutral-500'}`}>
                   {b.circuitTripped ? '⚡ tripped' : b.active ? '● active' : '○ standby'}
                 </span>
               </div>
-              <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-xs text-neutral-600">
-                <span className="text-neutral-400">Latency</span>
-                <span className={`font-mono font-semibold ${b.latencyMs > 2000 ? 'text-red-600' : b.latencyMs > 800 ? 'text-amber-600' : 'text-emerald-700'}`}>
-                  {b.latencyMs ? `${b.latencyMs}ms` : '—'}
-                </span>
-                <span className="text-neutral-400">Requests</span><span className="font-mono">{(b.requests || 0).toLocaleString()}</span>
-                <span className="text-neutral-400">Window</span><span className="font-mono">{b.windowRequests ?? 0} req</span>
-                <span className="text-neutral-400">Sockets</span><span className="font-mono">{b.socketConnections || 0}</span>
-                {b.memoryPct != null && <><span className="text-neutral-400">Memory</span><span className={`font-mono ${b.memoryPct > 85 ? 'text-red-600' : b.memoryPct > 70 ? 'text-amber-600' : ''}`}>{b.memoryPct}%</span></>}
+              <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-xs">
+                <span className="text-neutral-400 flex items-center gap-0.5">Latency<InfoIcon tip="Round-trip time from router to this backend. High latency here means the backend is overloaded or waking from sleep." /></span>
+                <span className={`font-mono font-semibold ${b.latencyMs > 2000 ? 'text-red-600' : b.latencyMs > 800 ? 'text-amber-600' : 'text-emerald-700'}`}>{b.latencyMs ? `${b.latencyMs}ms` : '—'}</span>
+                <span className="text-neutral-400 flex items-center gap-0.5">Window req<InfoIcon tip="Requests received in the current 30s window. This is the primary signal the scaling system uses." /></span>
+                <span className="font-mono">{b.windowRequests ?? 0}</span>
+                <span className="text-neutral-400 flex items-center gap-0.5">Sockets<InfoIcon tip="Active WebSocket connections. Used instead of req/window when non-zero, since sockets represent persistent load." /></span>
+                <span className="font-mono">{b.socketConnections || 0}</span>
+                {b.memoryPct != null && (
+                  <><span className="text-neutral-400 flex items-center gap-0.5">Memory<InfoIcon tip="Heap memory usage %. Above 85% may indicate a memory leak or the backend needs more capacity." /></span>
+                  <span className={`font-mono ${b.memoryPct > 85 ? 'text-red-600' : b.memoryPct > 70 ? 'text-amber-600' : ''}`}>{b.memoryPct}%</span></>
+                )}
               </div>
-              {b.coldStart && (
-                <div className="mt-2 text-xs text-amber-700 bg-amber-50 rounded-lg px-2 py-1 font-medium">⚠ Cold starting — scaling deferred</div>
-              )}
+              {b.coldStart && <div className="mt-2 text-xs text-amber-700 bg-amber-50 rounded-lg px-2 py-1">⚠ Cold starting — scale-up deferred until ready</div>}
               {b.consecutiveErrors > 0 && (
                 <div className="mt-2">
-                  <div className="flex justify-between text-xs text-red-500 mb-1"><span>Errors</span><span>{b.consecutiveErrors}/{scaling.thresholds?.tripErrors ?? 3}</span></div>
-                  <MiniBar value={b.consecutiveErrors} max={scaling.thresholds?.tripErrors ?? 3} color="bg-red-400" />
+                  <div className="flex justify-between text-xs text-red-500 mb-1">
+                    <span>Consecutive errors</span><span>{b.consecutiveErrors}/{scaling?.thresholds?.tripErrors ?? 3}</span>
+                  </div>
+                  <MiniBar value={b.consecutiveErrors} max={scaling?.thresholds?.tripErrors ?? 3} color="bg-red-400" />
                 </div>
               )}
             </div>
@@ -4565,18 +4738,21 @@ function FleetControl() {
       {status.scalingLog?.length > 0 && (
         <div className="card p-4">
           <button className="w-full flex items-center justify-between" onClick={() => setLogExpanded(v => !v)}>
-            <h3 className="text-sm font-bold text-neutral-700 flex items-center gap-2"><Activity className="w-4 h-4" /> Scaling Log <span className="text-neutral-400 font-normal">({status.scalingLog.length} events)</span></h3>
+            <h3 className="text-sm font-bold text-neutral-700 flex items-center gap-2">
+              <Activity className="w-4 h-4" /> Scaling Log
+              <span className="text-neutral-400 font-normal">({status.scalingLog.length} events)</span>
+              <InfoIcon tip="Every scaling decision made by any system. The badge tells you which system made it. 'b' on the right is the backend count after that action." />
+            </h3>
             {logExpanded ? <ChevronUp className="w-4 h-4 text-neutral-400" /> : <ChevronDown className="w-4 h-4 text-neutral-400" />}
           </button>
           {logExpanded && (
-            <div className="mt-3 space-y-1.5 max-h-72 overflow-y-auto">
+            <div className="mt-3 space-y-1 max-h-72 overflow-y-auto">
               {status.scalingLog.map((e, i) => (
                 <div key={i} className="flex items-center gap-2 text-xs py-1 border-b border-neutral-50 last:border-0">
-                  <span className="text-neutral-400 font-mono w-20 flex-shrink-0">{new Date(e.time).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit',second:'2-digit'})}</span>
+                  <span className="text-neutral-400 font-mono w-20 flex-shrink-0">{new Date(e.time).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit',second:'2-digit'})}</span>
                   <ScaleActionBadge action={e.action} />
-                  <span className="font-medium text-neutral-800 flex-shrink-0">{e.action}</span>
-                  <span className="text-neutral-500 truncate">{e.reason}</span>
-                  <span className="ml-auto text-neutral-400 flex-shrink-0">{e.activeBackendCount}b</span>
+                  <span className="text-neutral-500 truncate flex-1">{e.reason}</span>
+                  <span className="ml-auto text-neutral-400 flex-shrink-0 font-mono">{e.activeBackendCount}b</span>
                 </div>
               ))}
             </div>
@@ -4587,36 +4763,33 @@ function FleetControl() {
       {/* Boost form */}
       {!boost?.active && (
         <div className="card p-5">
-          <h3 className="text-sm font-bold text-neutral-700 mb-1 flex items-center gap-2"><Zap className="w-4 h-4 text-amber-500" /> Activate Boost Mode</h3>
-          <p className="text-xs text-neutral-500 mb-4">Override all intelligence systems and lock the fleet at full capacity for a set period.</p>
+          <h3 className="text-sm font-bold text-neutral-700 mb-1 flex items-center gap-2">
+            <Zap className="w-4 h-4 text-amber-500" /> Activate Boost Mode
+            <InfoIcon tip="Boost is different from manual override — it expands the fleet to full capacity for a set period, then auto-scaling resumes. Use for events you know are coming. Manual override is for when you want direct control indefinitely." />
+          </h3>
+          <p className="text-xs text-neutral-500 mb-4">Override auto-scaling and lock the fleet at full capacity for a set period.</p>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-medium text-neutral-600 mb-1">Duration (minutes)</label>
               <input type="number" min="5" max="1440" value={boostForm.durationMinutes}
-                onChange={e => setBoostForm(p => ({ ...p, durationMinutes: e.target.value }))}
+                onChange={e => setBoostForm(p => ({...p, durationMinutes: e.target.value}))}
                 className="input text-sm" placeholder="60" />
             </div>
             <div>
               <label className="block text-xs font-medium text-neutral-600 mb-1">Min backends</label>
               <input type="number" min="1" max={backends.length} value={boostForm.minBackends}
-                onChange={e => setBoostForm(p => ({ ...p, minBackends: e.target.value }))}
+                onChange={e => setBoostForm(p => ({...p, minBackends: e.target.value}))}
                 className="input text-sm" placeholder={`${backends.length} (all)`} />
             </div>
             <div className="sm:col-span-2">
               <label className="block text-xs font-medium text-neutral-600 mb-1">Reason</label>
               <input type="text" value={boostForm.reason}
-                onChange={e => setBoostForm(p => ({ ...p, reason: e.target.value }))}
+                onChange={e => setBoostForm(p => ({...p, reason: e.target.value}))}
                 className="input text-sm" placeholder="e.g. Saturday conference, product launch" />
             </div>
             <div className="sm:col-span-2">
-              <label className="block text-xs font-medium text-neutral-600 mb-1">Pin event IDs to backend 0 <span className="text-neutral-400 font-normal">(comma-separated, optional)</span></label>
-              <input type="text" value={boostForm.pinnedEventIds}
-                onChange={e => setBoostForm(p => ({ ...p, pinnedEventIds: e.target.value }))}
-                className="input text-sm font-mono" placeholder="64abc123..., 64def456..." />
-            </div>
-            <div className="sm:col-span-2">
               <button onClick={handleBoost} disabled={boosting} className="btn bg-amber-500 hover:bg-amber-600 text-white gap-2 disabled:opacity-60">
-                {boosting ? <><span className="spinner w-4 h-4 border-2 border-white/30 border-t-white" /> Activating…</> : <><Zap className="w-4 h-4" /> Activate Boost</>}
+                {boosting ? <><span className="spinner w-4 h-4 border-2 border-white/30 border-t-white"/> Activating…</> : <><Zap className="w-4 h-4"/> Activate Boost</>}
               </button>
             </div>
           </div>
@@ -4626,6 +4799,8 @@ function FleetControl() {
     </div>
   );
 }
+
+
 
 export default function Admin() {
   const [auth, setAuth] = useState(false);
