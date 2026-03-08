@@ -440,6 +440,10 @@ export const routerAPI = {
     if (!routerAxios) return Promise.resolve(null);
     return routerAxios.delete('/mesh/boost');
   },
+  setScale: (opts) => {
+    if (!routerAxios) return Promise.resolve(null);
+    return routerAxios.post('/mesh/scale', opts);
+  },
   testEmail: (to) => {
     if (!routerAxios) return Promise.resolve(null);
     return routerAxios.post('/mesh/email/test', { to });
