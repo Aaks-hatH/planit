@@ -4943,6 +4943,20 @@ export default function Admin() {
   // ── Main App ──────────────────────────────────────────────────────────────
   return (
     <div className="min-h-screen bg-neutral-100 flex">
+      {/* ── Mobile Warning ── */}
+      <div className="md:hidden fixed inset-0 z-[9999] bg-neutral-950 flex items-center justify-center p-6">
+        <div className="max-w-sm w-full text-center space-y-4">
+          <div className="w-16 h-16 bg-amber-500/10 border border-amber-500/30 rounded-2xl flex items-center justify-center mx-auto">
+            <svg xmlns="http://www.w3.org/2000/svg" className="w-8 h-8 text-amber-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+          </div>
+          <h1 className="text-xl font-bold text-white">Desktop Required</h1>
+          <p className="text-neutral-400 text-sm leading-relaxed">
+            The admin panel is not optimised for mobile devices. It contains complex data tables, real-time charts, drag-and-drop tools, and multi-column dashboards that require a large screen to use effectively.
+          </p>
+          <p className="text-neutral-600 text-xs">Please open this page on a laptop or desktop computer.</p>
+        </div>
+      </div>
+
       {/* Sidebar */}
       <aside className={`bg-neutral-950 flex-shrink-0 flex flex-col transition-all duration-300 ${sidebarOpen ? 'w-56' : 'w-14'}`} style={{ position: 'sticky', top: 0, height: '100vh', overflowY: 'auto' }}>
         {/* Logo */}
