@@ -187,7 +187,7 @@ export default function Support() {
                 <label className="block text-sm font-medium text-neutral-700 mb-3">
                   Choose amount
                 </label>
-                <div className="grid grid-cols-5 gap-3 mb-3">
+                <div className="grid grid-cols-3 sm:grid-cols-5 gap-3 mb-3">
                   {presetAmounts.map((preset) => (
                     <button
                       key={preset.amount}
@@ -328,7 +328,7 @@ export default function Support() {
                 <label className="block text-sm font-medium text-neutral-700 mb-3">
                   Priority Level <span className="text-red-500">*</span>
                 </label>
-                <div className="grid grid-cols-5 gap-3">
+                <div className="grid grid-cols-3 sm:grid-cols-5 gap-3">
                   {featureAmounts.map((preset) => (
                     <button
                       key={preset.amount}
