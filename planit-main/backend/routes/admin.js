@@ -1793,4 +1793,32 @@ router.patch('/blocklist/:id', verifyAdmin, async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
+// ─── Maintenance mode ─────────────────────────────────────────────────────────
+// GET  /admin/maintenance        — read current state from router
+// POST /admin/maintenance        — toggle on/off (proxies to router via mesh)
+router.get('/maintenance', verifyAdmin, async (req, res) => {
+  const routerUrl = process.env.ROUTER_URL;
+  if (!routerUrl) return res.json({ active: false, message: '', eta: null, routerConfigured: false });
+  try {
+    const axios = require('axios');
+    const r = await axios.get(`${routerUrl}/maintenance`, { timeout: 5000 });
+    res.json({ ...r.data, routerConfigured: true });
+  } catch (err) {
+    res.status(502).json({ error: 'Router unreachable', detail: err.message });
+  }
+});
+
+router.post('/maintenance', verifyAdmin, async (req, res) => {
+  const routerUrl = process.env.ROUTER_URL;
+  if (!routerUrl) return res.status(503).json({ error: 'ROUTER_URL not configured on backend' });
+  const { meshPost } = require('../middleware/mesh');
+  const result = await meshPost(
+    process.env.BACKEND_LABEL || 'Backend',
+    `${routerUrl}/mesh/maintenance`,
+    { active: req.body.active, message: req.body.message, eta: req.body.eta },
+  );
+  if (!result.ok) return res.status(502).json({ error: 'Router unreachable or mesh auth failed', detail: result.error });
+  res.json(result.data);
+});
+
 module.exports = router;
