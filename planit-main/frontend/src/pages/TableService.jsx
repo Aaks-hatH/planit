@@ -1892,7 +1892,7 @@ function SettingsModal({ settings, reservationSettings, onSave, onSaveReserve, o
                   <Toggle checked={rForm.announcementBannerEnabled} onChange={e => setRB('announcementBannerEnabled', e.target.checked)} />
                 </div>
                 {rForm.announcementBannerEnabled && (
-                  <div className="grid grid-cols-3 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     <div className="col-span-2"><label className={labelCls}>Banner Text</label>
                       <input type="text" value={rForm.announcementBanner} onChange={setR('announcementBanner')} placeholder="Closed Christmas Eve & Christmas Day" className={inputCls} /></div>
                     <div><label className={labelCls}>Banner Color</label>
@@ -2828,6 +2828,9 @@ export default function TableService() {
           </button>
           <button onClick={() => setShowFloorEditor(true)} className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 bg-neutral-800 border border-neutral-700 text-neutral-300 rounded-lg text-xs font-semibold hover:bg-neutral-700 transition-colors">
             <LayoutGrid className="w-3.5 h-3.5" />Edit Layout
+          </button>
+          <button onClick={() => setShowFloorEditor(true)} className="sm:hidden p-2 hover:bg-neutral-800 rounded-lg text-neutral-500 hover:text-white transition-colors" title="Edit Layout">
+            <LayoutGrid className="w-4 h-4" />
           </button>
           <button onClick={() => setShowSettings(true)} className="p-2 hover:bg-neutral-800 rounded-lg text-neutral-500 hover:text-white transition-colors"><Settings className="w-4 h-4" /></button>
         </div>
