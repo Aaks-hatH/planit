@@ -4249,7 +4249,7 @@ function MiniBar({ value, max, color = 'bg-indigo-500' }) {
   );
 }
 
-function StatCard({ label, value, sub, color, tip }) {
+function FleetStatCard({ label, value, sub, color, tip }) {
   return (
     <div className="card p-4">
       <div className="flex items-center gap-1 mb-1">
@@ -4470,25 +4470,25 @@ function FleetControl() {
 
       {/* Top stats */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <StatCard
+        <FleetStatCard
           label="Active Backends" value={`${scaling.activeBackendCount}/${scaling.totalBackends}`}
           color={manual?.active ? 'text-amber-600' : 'text-neutral-900'}
           sub={manual?.active ? 'manually pinned' : 'auto-managed'}
           tip="How many backends are currently receiving traffic out of your total provisioned fleet. Auto-scaling adjusts this number based on load."
         />
-        <StatCard
+        <FleetStatCard
           label="Avg Latency" value={avgLatency ? `${avgLatency}ms` : '—'}
           color={avgLatency > 2000 ? 'text-red-600' : avgLatency > 800 ? 'text-amber-600' : 'text-emerald-700'}
           sub="across active backends"
           tip="Average response time from the router to each active backend. Above 800ms is degraded. Above 2000ms is critical and may indicate a backend is overloaded."
         />
-        <StatCard
+        <FleetStatCard
           label="Circuit Breakers" value={scaling.trippedCount}
           color={scaling.trippedCount > 0 ? 'text-red-600' : 'text-neutral-900'}
           sub={scaling.trippedCount > 0 ? 'backends isolated' : 'all clear'}
           tip="A circuit breaker trips after 3 consecutive errors from a backend. Traffic is immediately rerouted away from it. It resets automatically after 2 clean health checks."
         />
-        <StatCard
+        <FleetStatCard
           label="Scale-Down Streak" value={scaling.scaleDownStreak || 0}
           color={scaling.scaleDownStreak >= 3 ? 'text-amber-600' : 'text-neutral-900'}
           sub={`of ${5} needed`}
