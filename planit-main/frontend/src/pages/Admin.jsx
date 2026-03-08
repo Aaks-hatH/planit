@@ -2930,6 +2930,9 @@ function BlocklistPanel() {
   const [form, setForm]             = useState(makeEmpty);
   const [adding, setAdding]         = useState(false);
   const [showAdd, setShowAdd]       = useState(false);
+  const [bulkMode, setBulkMode]     = useState(false);
+  const [bulkText, setBulkText]     = useState('');
+  const [bulkProgress, setBulkProgress] = useState(null); // { done, total, failed }
   const [search, setSearch]         = useState('');
   const [confirmDelete, setConfirmDelete] = useState(null); // { id, value } | null
   const [deleting, setDeleting]     = useState(false);
@@ -2981,6 +2984,38 @@ function BlocklistPanel() {
     }
   };
 
+  const handleBulkAdd = async () => {
+    const words = bulkText
+      .split(/[\s,\n]+/)
+      .map(w => w.trim().toLowerCase())
+      .filter(w => w.length > 0);
+    if (words.length === 0) { toast.error('Paste at least one word'); return; }
+    setAdding(true);
+    setBulkProgress({ done: 0, total: words.length, failed: 0 });
+    let failed = 0;
+    for (let i = 0; i < words.length; i++) {
+      try {
+        await adminAPI.addBlock({
+          type:      form.type,
+          value:     words[i],
+          reason:    form.reason.trim(),
+          permanent: !!form.permanent,
+          expiresAt: (!form.permanent && form.expiresAt) ? form.expiresAt : null,
+        });
+      } catch { failed++; }
+      setBulkProgress({ done: i + 1, total: words.length, failed });
+    }
+    setAdding(false);
+    setBulkProgress(null);
+    const succeeded = words.length - failed;
+    if (succeeded > 0) toast.success(`${succeeded} word${succeeded !== 1 ? 's' : ''} added to blocklist`);
+    if (failed > 0) toast.error(`${failed} word${failed !== 1 ? 's' : ''} failed (already blocked?)`);
+    setBulkText('');
+    setShowAdd(false);
+    setBulkMode(false);
+    await load();
+  };
+
   const confirmAndDelete = async () => {
     if (!confirmDelete) return;
     setDeleting(true);
@@ -3022,7 +3057,7 @@ function BlocklistPanel() {
         </div>
         <button
           type="button"
-          onClick={() => { setShowAdd(v => !v); setForm(makeEmpty()); }}
+          onClick={() => { setShowAdd(v => !v); setForm(makeEmpty()); setBulkMode(false); setBulkText(''); }}
           className="btn bg-red-600 hover:bg-red-700 text-white gap-2 text-sm"
         >
           <Plus className="w-4 h-4" /> Add Entry
@@ -3041,9 +3076,18 @@ function BlocklistPanel() {
       {/* Add form */}
       {showAdd && (
         <div className="card p-5 border-red-200 bg-red-50">
-          <h3 className="text-sm font-bold text-neutral-800 mb-4 flex items-center gap-2">
-            <Plus className="w-4 h-4 text-red-600" /> New Blocklist Entry
-          </h3>
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-sm font-bold text-neutral-800 flex items-center gap-2">
+              <Plus className="w-4 h-4 text-red-600" /> New Blocklist Entry
+            </h3>
+            <button
+              type="button"
+              onClick={() => { setBulkMode(v => !v); setBulkText(''); }}
+              className={`text-xs font-semibold px-3 py-1 rounded-full border transition-all ${bulkMode ? 'bg-red-600 text-white border-red-600' : 'bg-white text-red-600 border-red-300 hover:border-red-500'}`}
+            >
+              {bulkMode ? '✕ Single mode' : '⚡ Bulk import'}
+            </button>
+          </div>
           <div className="space-y-4">
             {/* Type selector */}
             <div className="grid grid-cols-3 gap-3">
@@ -3068,32 +3112,62 @@ function BlocklistPanel() {
               })}
             </div>
 
-            {/* Value + reason */}
-            <div className="grid grid-cols-2 gap-4">
+            {/* Bulk textarea OR single value+reason */}
+            {bulkMode ? (
               <div>
                 <label className="block text-xs font-semibold text-neutral-600 mb-1">
-                  {form.type === 'ip' ? 'IP Address' : form.type === 'event' ? 'Event subdomain' : 'Display name'}
-                  <span className="text-red-500 ml-0.5">*</span>
+                  Words to block <span className="text-red-500">*</span>
+                  <span className="ml-2 font-normal text-neutral-400">— paste comma, space, or newline separated</span>
                 </label>
-                <input
-                  type="text"
-                  className="input text-sm font-mono"
-                  placeholder={form.type === 'ip' ? '192.168.1.1' : form.type === 'event' ? 'my-event-slug' : 'badusername'}
-                  value={form.value}
-                  onChange={e => setForm(f => ({ ...f, value: e.target.value }))}
+                <textarea
+                  className="input text-sm font-mono w-full h-36 resize-y"
+                  placeholder={"fuck, shit, asshole\nbadword1, badword2\nor one per line"}
+                  value={bulkText}
+                  onChange={e => setBulkText(e.target.value)}
                 />
+                {bulkText.trim() && (
+                  <p className="text-xs text-neutral-500 mt-1">
+                    {bulkText.split(/[\s,\n]+/).filter(w => w.trim()).length} words detected
+                  </p>
+                )}
+                <div className="mt-3">
+                  <label className="block text-xs font-semibold text-neutral-600 mb-1">Reason (applied to all)</label>
+                  <input
+                    type="text"
+                    className="input text-sm"
+                    placeholder="e.g. Profanity filter"
+                    value={form.reason}
+                    onChange={e => setForm(f => ({ ...f, reason: e.target.value }))}
+                  />
+                </div>
               </div>
-              <div>
-                <label className="block text-xs font-semibold text-neutral-600 mb-1">Reason (internal note)</label>
-                <input
-                  type="text"
-                  className="input text-sm"
-                  placeholder="e.g. Spamming guests, TOS violation"
-                  value={form.reason}
-                  onChange={e => setForm(f => ({ ...f, reason: e.target.value }))}
-                />
+            ) : (
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-neutral-600 mb-1">
+                    {form.type === 'ip' ? 'IP Address' : form.type === 'event' ? 'Event subdomain' : 'Display name'}
+                    <span className="text-red-500 ml-0.5">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    className="input text-sm font-mono"
+                    placeholder={form.type === 'ip' ? '192.168.1.1' : form.type === 'event' ? 'my-event-slug' : 'badusername'}
+                    value={form.value}
+                    onChange={e => setForm(f => ({ ...f, value: e.target.value }))}
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-neutral-600 mb-1">Reason (internal note)</label>
+                  <input
+                    type="text"
+                    className="input text-sm"
+                    placeholder="e.g. Spamming guests, TOS violation"
+                    value={form.reason}
+                    onChange={e => setForm(f => ({ ...f, reason: e.target.value }))}
+                  />
+                </div>
               </div>
-            </div>
+            )}
 
             {/* Duration */}
             <div className="flex items-center gap-6 flex-wrap">
@@ -3119,21 +3193,38 @@ function BlocklistPanel() {
               )}
             </div>
 
+            {/* Progress bar (bulk only) */}
+            {bulkProgress && (
+              <div>
+                <div className="flex justify-between text-xs text-neutral-500 mb-1">
+                  <span>Adding {bulkProgress.done} / {bulkProgress.total}…</span>
+                  {bulkProgress.failed > 0 && <span className="text-red-500">{bulkProgress.failed} failed</span>}
+                </div>
+                <div className="h-2 bg-neutral-200 rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-red-500 transition-all duration-150"
+                    style={{ width: `${Math.round((bulkProgress.done / bulkProgress.total) * 100)}%` }}
+                  />
+                </div>
+              </div>
+            )}
+
             <div className="flex gap-3 pt-1">
-              <button type="button" onClick={() => { setShowAdd(false); setForm(makeEmpty()); }} className="btn btn-secondary text-sm">Cancel</button>
+              <button type="button" onClick={() => { setShowAdd(false); setForm(makeEmpty()); setBulkMode(false); setBulkText(''); }} className="btn btn-secondary text-sm">Cancel</button>
               <button
                 type="button"
                 disabled={adding}
-                onClick={handleAdd}
+                onClick={bulkMode ? handleBulkAdd : handleAdd}
                 className="btn bg-red-600 hover:bg-red-700 text-white text-sm gap-2 disabled:opacity-60"
               >
                 {adding ? <span className="spinner w-4 h-4 border-2 border-white/30 border-t-white" /> : <Ban className="w-4 h-4" />}
-                Add to blocklist
+                {bulkMode ? `Add ${bulkText.trim() ? bulkText.split(/[\s,\n]+/).filter(w => w.trim()).length + ' words' : 'words'} to blocklist` : 'Add to blocklist'}
               </button>
             </div>
           </div>
         </div>
       )}
+
 
       {/* Stats row */}
       <div className="grid grid-cols-4 gap-3">
