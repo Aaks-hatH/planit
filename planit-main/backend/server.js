@@ -419,6 +419,11 @@ async function announceToRouter() {
 }
 
 connectDB().then(async () => {
+  // Pull shared env vars (Upstash Redis creds etc.) from router FIRST,
+  // before any service that depends on them is initialised.
+  const { syncConfigFromRouter } = require('./services/configSync');
+  await syncConfigFromRouter();
+
   // Attach Redis adapter before any connection is accepted
   await initRedisAdapter();
 
