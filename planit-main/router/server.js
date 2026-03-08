@@ -981,6 +981,58 @@ app.use(cors({
   allowedHeaders: ['Content-Type','Authorization','x-mesh-token','x-mesh-caller','x-mesh-version','x-event-token'],
 }));
 
+// ─── Maintenance mode ─────────────────────────────────────────────────────────
+// Single source of truth. MAINTENANCE_MODE=true in router env activates on boot.
+// Toggle live via POST /mesh/maintenance (mesh-auth only — admin panel uses this).
+// Frontend polls GET /maintenance every 30s.
+// Backend polls this same endpoint every 15s and refuses non-exempt requests.
+
+let _maintenance = {
+  active:  process.env.MAINTENANCE_MODE === 'true',
+  message: process.env.MAINTENANCE_MESSAGE || 'PlanIt is undergoing scheduled maintenance. We\'ll be back shortly.',
+  eta:     process.env.MAINTENANCE_ETA     || null,
+  setAt:   process.env.MAINTENANCE_MODE === 'true' ? new Date().toISOString() : null,
+  setBy:   process.env.MAINTENANCE_MODE === 'true' ? 'env'                   : null,
+};
+
+if (_maintenance.active) {
+  console.log(`[maintenance] ⚠  MAINTENANCE MODE ACTIVE (set by env)`);
+}
+
+// Public read — frontend + backend both poll this
+app.get('/maintenance', (_req, res) => res.json(_maintenance));
+
+// Mesh-protected toggle — only the backend admin route calls this
+app.post('/mesh/maintenance', meshAuth(SERVICE_NAME), express.json(), (req, res) => {
+  const prev = _maintenance.active;
+  _maintenance = {
+    active:  !!req.body.active,
+    message: req.body.message || _maintenance.message,
+    eta:     req.body.eta     != null ? req.body.eta : null,
+    setAt:   new Date().toISOString(),
+    setBy:   req.meshCaller || 'admin',
+  };
+  console.log(`[maintenance] ${_maintenance.active ? '⚠  ENABLED' : '✓  DISABLED'} by ${_maintenance.setBy} (was: ${prev})`);
+  res.json({ ok: true, ..._maintenance });
+});
+
+// Maintenance intercept — fires on EVERY proxied request before cache/proxy.
+// Exempt: health, /maintenance read, all /mesh/* (mesh auth handles those),
+//         /api/admin (admin must stay accessible to toggle maintenance off),
+//         /api/mesh/* (backend mesh routes),
+//         socket.io (WebSocket upgrades go through server.on('upgrade') separately),
+//         OPTIONS preflight.
+function _maintenanceExempt(req) {
+  if (req.method === 'OPTIONS') return true;
+  const p = req.path;
+  if (p === '/health' || p === '/maintenance') return true;
+  if (p.startsWith('/mesh/'))      return true;   // router mesh endpoints
+  if (p.startsWith('/api/mesh'))   return true;   // backend mesh endpoints
+  if (p.startsWith('/api/admin'))  return true;   // admin panel stays alive
+  if (p.startsWith('/socket.io'))  return true;   // socket polling
+  return false;
+}
+
 // ─── Health endpoint ──────────────────────────────────────────────────────────
 app.get('/health', (_req, res) => {
   const active  = backendStatus.filter(b => b.active);
@@ -1441,6 +1493,17 @@ const proxies = BACKENDS.map((target, index) =>
     },
   })
 );
+
+// ─── Maintenance intercept (before cache + proxy) ─────────────────────────────
+app.use((req, res, next) => {
+  if (!_maintenance.active) return next();
+  if (_maintenanceExempt(req)) return next();
+  res.status(503).json({
+    maintenance: true,
+    message:     _maintenance.message,
+    eta:         _maintenance.eta,
+  });
+});
 
 app.use(cacheMiddleware);
 
