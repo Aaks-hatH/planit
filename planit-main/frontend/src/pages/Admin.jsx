@@ -4201,12 +4201,85 @@ function MarketingPanel() {
 
 
 // ─── Fleet Control Panel ──────────────────────────────────────────────────────
+function ScaleActionBadge({ action }) {
+  if (!action) return null;
+  const map = {
+    up:         { label: '↑ Reactive',   cls: 'bg-blue-100 text-blue-700' },
+    down:       { label: '↓ Scale Down', cls: 'bg-neutral-100 text-neutral-600' },
+    predictive: { label: '~ Predictive', cls: 'bg-indigo-100 text-indigo-700' },
+    pid:        { label: '⚙ PID',        cls: 'bg-violet-100 text-violet-700' },
+    anomaly:    { label: '🔴 Anomaly',   cls: 'bg-red-100 text-red-700' },
+    circadian:  { label: '🌙 Circadian', cls: 'bg-sky-100 text-sky-700' },
+  };
+  const m = Object.entries(map).find(([k]) => action.toLowerCase().includes(k));
+  if (!m) return null;
+  return <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${m[1].cls}`}>{m[1].label}</span>;
+}
+
+function SystemPill({ label, active, color, children }) {
+  const colors = {
+    indigo: active ? 'border-indigo-200 bg-indigo-50' : 'border-neutral-100 bg-neutral-50',
+    violet: active ? 'border-violet-200 bg-violet-50' : 'border-neutral-100 bg-neutral-50',
+    red:    active ? 'border-red-200 bg-red-50'       : 'border-neutral-100 bg-neutral-50',
+    sky:    active ? 'border-sky-200 bg-sky-50'       : 'border-neutral-100 bg-neutral-50',
+    amber:  active ? 'border-amber-200 bg-amber-50'   : 'border-neutral-100 bg-neutral-50',
+  };
+  return (
+    <div className={`rounded-2xl border-2 p-4 transition-all ${colors[color] || colors.indigo}`}>
+      <div className="flex items-center gap-2 mb-3">
+        <span className={`w-2 h-2 rounded-full ${active ? 'bg-current animate-pulse' : 'bg-neutral-300'}`} style={active ? {color: 'inherit'} : {}} />
+        <span className="text-xs font-bold uppercase tracking-wide text-neutral-600">{label}</span>
+        {active && <span className="ml-auto text-xs font-semibold text-emerald-600">ACTIVE</span>}
+      </div>
+      {children}
+    </div>
+  );
+}
+
+function MiniBar({ value, max, color = 'bg-indigo-500' }) {
+  const pct = Math.min(100, Math.max(0, max > 0 ? (value / max) * 100 : 0));
+  return (
+    <div className="w-full h-1.5 bg-neutral-200 rounded-full overflow-hidden">
+      <div className={`h-full rounded-full transition-all ${color}`} style={{ width: `${pct}%` }} />
+    </div>
+  );
+}
+
+function CircadianWheel({ slots, currentHour, floor }) {
+  if (!slots) return null;
+  const maxLoad = Math.max(...slots.map(s => s.avgLoad || 0), 1);
+  return (
+    <div className="space-y-1.5">
+      <div className="flex gap-px h-8 items-end">
+        {slots.map((s, i) => {
+          const h = s.avgLoad ? Math.max(4, (s.avgLoad / maxLoad) * 32) : 4;
+          const isCurrent = i === currentHour;
+          const isPeak = s.avgLoad >= maxLoad * 0.6;
+          return (
+            <div key={i} title={`${i}:00 — avg ${s.avgLoad ?? '—'} req, peak ${s.peakBackends}b`}
+              className={`flex-1 rounded-sm transition-all cursor-default ${isCurrent ? 'bg-indigo-500' : isPeak ? 'bg-amber-400' : s.samples > 0 ? 'bg-neutral-300' : 'bg-neutral-100'}`}
+              style={{ height: `${h}px` }} />
+          );
+        })}
+      </div>
+      <div className="flex justify-between text-neutral-400" style={{ fontSize: '9px' }}>
+        <span>0h</span><span>6h</span><span>12h</span><span>18h</span><span>23h</span>
+      </div>
+      <p className="text-xs text-neutral-500">
+        Current floor: <span className="font-semibold text-neutral-800">{floor} backend{floor !== 1 ? 's' : ''}</span>
+        {floor > 1 && <span className="ml-1 text-sky-600">· scale-down blocked</span>}
+      </p>
+    </div>
+  );
+}
+
 function FleetControl() {
   const [status, setStatus]         = useState(null);
   const [loading, setLoading]       = useState(true);
   const [boostForm, setBoostForm]   = useState({ durationMinutes: 60, reason: '', minBackends: '', pinnedEventIds: '' });
   const [boosting, setBoosting]     = useState(false);
   const [cancelling, setCancelling] = useState(false);
+  const [logExpanded, setLogExpanded] = useState(false);
 
   const load = async () => {
     try {
@@ -4222,65 +4295,72 @@ function FleetControl() {
     e.preventDefault();
     setBoosting(true);
     try {
-      const opts = {
+      await routerAPI.activateBoost({
         durationMinutes: parseInt(boostForm.durationMinutes) || 60,
         reason:          boostForm.reason || 'Admin boost',
         minBackends:     boostForm.minBackends ? parseInt(boostForm.minBackends) : undefined,
         pinnedEventIds:  boostForm.pinnedEventIds ? boostForm.pinnedEventIds.split(',').map(s => s.trim()).filter(Boolean) : [],
-      };
-      await routerAPI.activateBoost(opts);
+      });
       toast.success('⚡ Boost activated');
       load();
-    } catch (err) {
-      toast.error(err.response?.data?.error || 'Failed to activate boost');
-    }
+    } catch (err) { toast.error(err.response?.data?.error || 'Failed to activate boost'); }
     setBoosting(false);
   };
 
   const handleCancelBoost = async () => {
     setCancelling(true);
-    try {
-      await routerAPI.cancelBoost();
-      toast.success('Boost cancelled');
-      load();
-    } catch { toast.error('Failed to cancel boost'); }
+    try { await routerAPI.cancelBoost(); toast.success('Boost cancelled'); load(); }
+    catch { toast.error('Failed to cancel boost'); }
     setCancelling(false);
   };
 
-  if (!import.meta.env.VITE_ROUTER_URL) {
-    return (
-      <div className="p-8 text-center">
-        <Rocket className="w-12 h-12 text-neutral-300 mx-auto mb-4" />
-        <h3 className="text-lg font-bold text-neutral-700 mb-2">Router not configured</h3>
-        <p className="text-sm text-neutral-500">Add <code className="bg-neutral-100 px-1 rounded">VITE_ROUTER_URL</code> and <code className="bg-neutral-100 px-1 rounded">VITE_MESH_SECRET</code> to your frontend environment variables.</p>
-      </div>
-    );
-  }
+  if (!import.meta.env.VITE_ROUTER_URL) return (
+    <div className="p-8 text-center">
+      <Rocket className="w-12 h-12 text-neutral-300 mx-auto mb-4" />
+      <h3 className="text-lg font-bold text-neutral-700 mb-2">Router not configured</h3>
+      <p className="text-sm text-neutral-500">Add <code className="bg-neutral-100 px-1 rounded">VITE_ROUTER_URL</code> and <code className="bg-neutral-100 px-1 rounded">VITE_MESH_SECRET</code> to your frontend environment variables.</p>
+    </div>
+  );
 
   if (loading) return <div className="p-8 flex justify-center"><span className="spinner w-6 h-6 border-2 border-neutral-200 border-t-neutral-700" /></div>;
 
-  if (!status) {
-    return (
-      <div className="p-8 text-center">
-        <WifiOff className="w-12 h-12 text-red-300 mx-auto mb-4" />
-        <h3 className="text-lg font-bold text-neutral-700 mb-2">Router unreachable</h3>
-        <p className="text-sm text-neutral-500">Could not connect to the router. Check VITE_ROUTER_URL and VITE_MESH_SECRET.</p>
-      </div>
-    );
-  }
+  if (!status) return (
+    <div className="p-8 text-center">
+      <WifiOff className="w-12 h-12 text-red-300 mx-auto mb-4" />
+      <h3 className="text-lg font-bold text-neutral-700 mb-2">Router unreachable</h3>
+      <p className="text-sm text-neutral-500">Could not connect to the router. Check VITE_ROUTER_URL and VITE_MESH_SECRET.</p>
+    </div>
+  );
 
   const boost      = status.boost;
   const scaling    = status.scaling;
   const backends   = status.backends || [];
   const activeList = backends.filter(b => b.active);
   const minutesLeft = boost?.active ? Math.max(0, Math.round((new Date(boost.activeUntil) - Date.now()) / 60000)) : 0;
+  const avgLatency  = Math.round(activeList.filter(b => b.latencyMs).reduce((s, b) => s + b.latencyMs, 0) / Math.max(1, activeList.filter(b => b.latencyMs).length)) || null;
+
+  const pid       = scaling?.pid;
+  const anomaly   = scaling?.anomaly;
+  const cooldown  = scaling?.cooldown;
+  const circadian = scaling?.circadian;
+  const pred      = scaling?.predictive;
+
+  // Determine which system last acted
+  const lastAction = cooldown?.lastAction;
 
   return (
     <div className="p-6 space-y-6 max-w-5xl">
+
+      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-xl font-bold text-neutral-900 flex items-center gap-2"><Rocket className="w-5 h-5" /> Fleet Control</h2>
-          <p className="text-sm text-neutral-500 mt-0.5">Router · {backends.length} backends · uptime {Math.floor((status.uptime || 0) / 3600)}h {Math.floor(((status.uptime || 0) % 3600) / 60)}m</p>
+          <h2 className="text-xl font-bold text-neutral-900 flex items-center gap-2">
+            <Rocket className="w-5 h-5 text-indigo-500" /> Fleet Intelligence
+          </h2>
+          <p className="text-sm text-neutral-500 mt-0.5">
+            {backends.length} backends · uptime {Math.floor((status.uptime || 0) / 3600)}h {Math.floor(((status.uptime || 0) % 3600) / 60)}m
+            {lastAction && <span className="ml-2 text-neutral-400">· last action: <ScaleActionBadge action={lastAction} /></span>}
+          </p>
         </div>
         <button onClick={load} className="btn btn-secondary text-xs gap-1.5"><RefreshCw className="w-3.5 h-3.5" /> Refresh</button>
       </div>
@@ -4288,58 +4368,228 @@ function FleetControl() {
       {/* Boost banner */}
       {boost?.active && (
         <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex items-center gap-4">
-          <div className="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center flex-shrink-0">
-            <Zap className="w-5 h-5 text-amber-600" />
-          </div>
+          <div className="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center flex-shrink-0"><Zap className="w-5 h-5 text-amber-600" /></div>
           <div className="flex-1 min-w-0">
             <p className="font-semibold text-amber-900 text-sm">Boost Mode Active</p>
             <p className="text-xs text-amber-700 mt-0.5">{boost.reason} · {boost.minBackends} backends minimum · {minutesLeft}m remaining</p>
           </div>
           <button onClick={handleCancelBoost} disabled={cancelling} className="btn text-xs bg-amber-600 hover:bg-amber-700 text-white gap-1.5 disabled:opacity-60">
             {cancelling ? <span className="spinner w-3.5 h-3.5 border border-white/30 border-t-white" /> : <X className="w-3.5 h-3.5" />}
-            Cancel boost
+            Cancel
           </button>
         </div>
       )}
 
-      {/* Fleet overview */}
+      {/* Top stats */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <div className="card p-4"><p className="text-xs text-neutral-500 mb-1">Active</p><p className="text-2xl font-bold text-neutral-900">{scaling.activeBackendCount}</p><p className="text-xs text-neutral-400">of {scaling.totalBackends} total</p></div>
-        <div className="card p-4"><p className="text-xs text-neutral-500 mb-1">Tripped</p><p className={`text-2xl font-bold ${scaling.trippedCount > 0 ? 'text-red-600' : 'text-neutral-900'}`}>{scaling.trippedCount}</p><p className="text-xs text-neutral-400">circuit breakers</p></div>
-        <div className="card p-4"><p className="text-xs text-neutral-500 mb-1">Avg Latency</p><p className="text-2xl font-bold text-neutral-900">{Math.round(activeList.filter(b => b.latencyMs).reduce((s, b) => s + b.latencyMs, 0) / Math.max(1, activeList.filter(b => b.latencyMs).length)) || '—'}<span className="text-sm font-normal text-neutral-400">ms</span></p><p className="text-xs text-neutral-400">active backends</p></div>
-        <div className="card p-4"><p className="text-xs text-neutral-500 mb-1">Boost</p><p className={`text-2xl font-bold ${boost?.active ? 'text-amber-600' : 'text-neutral-400'}`}>{boost?.active ? 'ON' : 'OFF'}</p><p className="text-xs text-neutral-400">{boost?.active ? `${minutesLeft}m left` : 'auto-scaling'}</p></div>
+        <div className="card p-4">
+          <p className="text-xs text-neutral-500 mb-1">Active</p>
+          <p className="text-2xl font-bold text-neutral-900">{scaling.activeBackendCount}<span className="text-sm font-normal text-neutral-400">/{scaling.totalBackends}</span></p>
+          <MiniBar value={scaling.activeBackendCount} max={scaling.totalBackends} color="bg-emerald-500" />
+        </div>
+        <div className="card p-4">
+          <p className="text-xs text-neutral-500 mb-1">Tripped</p>
+          <p className={`text-2xl font-bold ${scaling.trippedCount > 0 ? 'text-red-600' : 'text-neutral-900'}`}>{scaling.trippedCount}</p>
+          <p className="text-xs text-neutral-400">circuit breakers</p>
+        </div>
+        <div className="card p-4">
+          <p className="text-xs text-neutral-500 mb-1">Avg Latency</p>
+          <p className="text-2xl font-bold text-neutral-900">{avgLatency ?? '—'}<span className="text-sm font-normal text-neutral-400">ms</span></p>
+          <p className="text-xs text-neutral-400">active backends</p>
+        </div>
+        <div className="card p-4">
+          <p className="text-xs text-neutral-500 mb-1">Circ. Floor</p>
+          <p className={`text-2xl font-bold ${circadian?.floor > 1 ? 'text-sky-600' : 'text-neutral-400'}`}>{circadian?.floor ?? 1}</p>
+          <p className="text-xs text-neutral-400">min backends (learned)</p>
+        </div>
       </div>
+
+      {/* Smart Systems Grid */}
+      <div>
+        <h3 className="text-sm font-bold text-neutral-700 mb-3 flex items-center gap-2"><Cpu className="w-4 h-4 text-indigo-400" /> Intelligence Systems</h3>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+
+          {/* Holt-Winters */}
+          <SystemPill label="Holt-Winters Predictive" active={pred?.rampCount >= 3} color="indigo">
+            {pred ? (
+              <div className="grid grid-cols-3 gap-2 text-center">
+                <div>
+                  <p className="text-xs text-neutral-500">Level</p>
+                  <p className="text-lg font-bold text-neutral-900">{pred.level}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-neutral-500">Trend</p>
+                  <p className={`text-lg font-bold ${pred.trend > 0 ? 'text-amber-600' : pred.trend < 0 ? 'text-emerald-600' : 'text-neutral-500'}`}>
+                    {pred.trend > 0 ? '+' : ''}{pred.trend}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs text-neutral-500">Forecast</p>
+                  <p className={`text-lg font-bold ${pred.forecast >= scaling.thresholds?.scaleUp * 0.85 ? 'text-amber-600' : 'text-neutral-900'}`}>{pred.forecast}</p>
+                </div>
+                <div className="col-span-3 mt-1">
+                  <div className="flex justify-between text-xs text-neutral-400 mb-1">
+                    <span>Ramp: {pred.rampCount} windows</span>
+                    <span>{pred.historyLen}/30 samples</span>
+                  </div>
+                  <MiniBar value={pred.rampCount} max={5} color={pred.rampCount >= 3 ? 'bg-indigo-500' : 'bg-neutral-300'} />
+                </div>
+              </div>
+            ) : <p className="text-xs text-neutral-400">Warming up…</p>}
+          </SystemPill>
+
+          {/* PID Controller */}
+          <SystemPill label="PID Controller" active={pid && Math.abs(pid.integral) > 2} color="violet">
+            {pid ? (
+              <div className="space-y-2">
+                <div className="grid grid-cols-3 gap-2 text-center">
+                  <div>
+                    <p className="text-xs text-neutral-500">Setpoint</p>
+                    <p className="text-base font-bold text-neutral-900">{pid.setpoint}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-neutral-500">Error</p>
+                    <p className={`text-base font-bold ${Math.abs(pid.lastError) > 5 ? 'text-amber-600' : 'text-neutral-900'}`}>
+                      {pid.lastError > 0 ? '+' : ''}{pid.lastError}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-neutral-500">Integral</p>
+                    <p className={`text-base font-bold ${Math.abs(pid.integral) > 8 ? 'text-violet-600' : 'text-neutral-900'}`}>{pid.integral}</p>
+                  </div>
+                </div>
+                <div className="bg-neutral-100 rounded-lg p-2 flex gap-3 text-xs text-neutral-500 font-mono">
+                  <span>Kp {pid.gains.kp}</span>
+                  <span>Ki {pid.gains.ki}</span>
+                  <span>Kd {pid.gains.kd}</span>
+                </div>
+                <div>
+                  <div className="flex justify-between text-xs text-neutral-400 mb-1"><span>Integral pressure</span><span>{pid.integral}/±15</span></div>
+                  <MiniBar value={Math.abs(pid.integral) + 15} max={30} color={Math.abs(pid.integral) > 8 ? 'bg-violet-500' : 'bg-neutral-300'} />
+                </div>
+              </div>
+            ) : <p className="text-xs text-neutral-400">Waiting for data…</p>}
+          </SystemPill>
+
+          {/* Anomaly Detection */}
+          <SystemPill label="Anomaly Detection (EWMSD)" active={anomaly?.inHold} color="red">
+            {anomaly ? (
+              <div className="space-y-2">
+                <div className="grid grid-cols-3 gap-2 text-center">
+                  <div>
+                    <p className="text-xs text-neutral-500">Baseline</p>
+                    <p className="text-base font-bold text-neutral-900">{anomaly.mean}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-neutral-500">Std Dev</p>
+                    <p className="text-base font-bold text-neutral-900">{anomaly.std}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-neutral-500">Z-threshold</p>
+                    <p className="text-base font-bold text-neutral-900">{anomaly.zThreshold}σ</p>
+                  </div>
+                </div>
+                {anomaly.inHold ? (
+                  <div className="bg-red-100 rounded-lg px-3 py-2 text-xs text-red-700 font-medium flex items-center gap-2">
+                    <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0" />
+                    Anomaly hold active · scale-down blocked · {anomaly.holdSecsLeft}s remaining
+                  </div>
+                ) : (
+                  <div className="bg-neutral-50 rounded-lg px-3 py-2 text-xs text-neutral-500">
+                    Baseline stable · next spike classified if &gt;{anomaly.zThreshold}σ from mean
+                  </div>
+                )}
+              </div>
+            ) : <p className="text-xs text-neutral-400">Seeding baseline…</p>}
+          </SystemPill>
+
+          {/* Circadian Floor */}
+          <SystemPill label="Circadian Floor (24h learned)" active={circadian?.floor > 1} color="sky">
+            {circadian ? (
+              <CircadianWheel slots={circadian.slots} currentHour={circadian.currentHour} floor={circadian.floor} />
+            ) : <p className="text-xs text-neutral-400">Learning traffic pattern…</p>}
+          </SystemPill>
+
+        </div>
+      </div>
+
+      {/* Cooldown status */}
+      {cooldown && (
+        <div className={`rounded-xl border px-4 py-3 flex items-center gap-3 text-sm ${cooldown.active ? 'border-amber-200 bg-amber-50' : 'border-neutral-100 bg-neutral-50'}`}>
+          <Timer className={`w-4 h-4 flex-shrink-0 ${cooldown.active ? 'text-amber-500' : 'text-neutral-400'}`} />
+          <span className={cooldown.active ? 'text-amber-800' : 'text-neutral-500'}>
+            {cooldown.active
+              ? <>Scale-up cooldown active — scale-down locked for <strong>{cooldown.secsLeft}s</strong> (prevents thrashing)</>
+              : <>No cooldown active · last action: <strong>{cooldown.lastAction ?? '—'}</strong> · cooldown window {Math.round(cooldown.ms / 1000)}s</>}
+          </span>
+        </div>
+      )}
 
       {/* Backend cards */}
       <div>
         <h3 className="text-sm font-bold text-neutral-700 mb-3 flex items-center gap-2"><Server className="w-4 h-4" /> Backends</h3>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
           {backends.map(b => (
-            <div key={b.index} className={`card p-4 border-2 transition-colors ${b.circuitTripped ? 'border-red-200 bg-red-50' : b.active ? 'border-emerald-200 bg-emerald-50' : 'border-neutral-100'}`}>
-              <div className="flex items-center justify-between mb-2">
+            <div key={b.index} className={`card p-4 border-2 transition-all ${b.circuitTripped ? 'border-red-200 bg-red-50' : b.active ? 'border-emerald-200 bg-emerald-50' : 'border-neutral-100'}`}>
+              <div className="flex items-center justify-between mb-3">
                 <span className="font-semibold text-sm text-neutral-900">{b.name}</span>
                 <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${b.circuitTripped ? 'bg-red-100 text-red-700' : b.active ? 'bg-emerald-100 text-emerald-700' : 'bg-neutral-100 text-neutral-500'}`}>
-                  {b.circuitTripped ? 'tripped' : b.active ? 'active' : 'standby'}
+                  {b.circuitTripped ? '⚡ tripped' : b.active ? '● active' : '○ standby'}
                 </span>
               </div>
-              <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-neutral-600">
-                <span>Latency</span><span className="font-mono font-medium">{b.latencyMs ? `${b.latencyMs}ms` : '—'}</span>
-                <span>Requests</span><span className="font-mono font-medium">{(b.requests || 0).toLocaleString()}</span>
-                <span>Sockets</span><span className="font-mono font-medium">{b.socketConnections || 0}</span>
-                {b.memoryPct != null && <><span>Memory</span><span className="font-mono font-medium">{b.memoryPct}%</span></>}
-                {b.coldStart && <><span className="col-span-2 text-amber-600 font-medium">⚠ Cold starting</span></>}
+              <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-xs text-neutral-600">
+                <span className="text-neutral-400">Latency</span>
+                <span className={`font-mono font-semibold ${b.latencyMs > 2000 ? 'text-red-600' : b.latencyMs > 800 ? 'text-amber-600' : 'text-emerald-700'}`}>
+                  {b.latencyMs ? `${b.latencyMs}ms` : '—'}
+                </span>
+                <span className="text-neutral-400">Requests</span><span className="font-mono">{(b.requests || 0).toLocaleString()}</span>
+                <span className="text-neutral-400">Window</span><span className="font-mono">{b.windowRequests ?? 0} req</span>
+                <span className="text-neutral-400">Sockets</span><span className="font-mono">{b.socketConnections || 0}</span>
+                {b.memoryPct != null && <><span className="text-neutral-400">Memory</span><span className={`font-mono ${b.memoryPct > 85 ? 'text-red-600' : b.memoryPct > 70 ? 'text-amber-600' : ''}`}>{b.memoryPct}%</span></>}
               </div>
+              {b.coldStart && (
+                <div className="mt-2 text-xs text-amber-700 bg-amber-50 rounded-lg px-2 py-1 font-medium">⚠ Cold starting — scaling deferred</div>
+              )}
+              {b.consecutiveErrors > 0 && (
+                <div className="mt-2">
+                  <div className="flex justify-between text-xs text-red-500 mb-1"><span>Errors</span><span>{b.consecutiveErrors}/{scaling.thresholds?.tripErrors ?? 3}</span></div>
+                  <MiniBar value={b.consecutiveErrors} max={scaling.thresholds?.tripErrors ?? 3} color="bg-red-400" />
+                </div>
+              )}
             </div>
           ))}
         </div>
       </div>
 
+      {/* Scaling log */}
+      {status.scalingLog?.length > 0 && (
+        <div className="card p-4">
+          <button className="w-full flex items-center justify-between" onClick={() => setLogExpanded(v => !v)}>
+            <h3 className="text-sm font-bold text-neutral-700 flex items-center gap-2"><Activity className="w-4 h-4" /> Scaling Log <span className="text-neutral-400 font-normal">({status.scalingLog.length} events)</span></h3>
+            {logExpanded ? <ChevronUp className="w-4 h-4 text-neutral-400" /> : <ChevronDown className="w-4 h-4 text-neutral-400" />}
+          </button>
+          {logExpanded && (
+            <div className="mt-3 space-y-1.5 max-h-72 overflow-y-auto">
+              {status.scalingLog.map((e, i) => (
+                <div key={i} className="flex items-center gap-2 text-xs py-1 border-b border-neutral-50 last:border-0">
+                  <span className="text-neutral-400 font-mono w-20 flex-shrink-0">{new Date(e.time).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit',second:'2-digit'})}</span>
+                  <ScaleActionBadge action={e.action} />
+                  <span className="font-medium text-neutral-800 flex-shrink-0">{e.action}</span>
+                  <span className="text-neutral-500 truncate">{e.reason}</span>
+                  <span className="ml-auto text-neutral-400 flex-shrink-0">{e.activeBackendCount}b</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Boost form */}
       {!boost?.active && (
         <div className="card p-5">
           <h3 className="text-sm font-bold text-neutral-700 mb-1 flex items-center gap-2"><Zap className="w-4 h-4 text-amber-500" /> Activate Boost Mode</h3>
-          <p className="text-xs text-neutral-500 mb-4">Instantly expand the fleet and lock it at full capacity for a set period. Use before large events, announcements, or expected traffic spikes.</p>
-          <form onSubmit={handleBoost} className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <p className="text-xs text-neutral-500 mb-4">Override all intelligence systems and lock the fleet at full capacity for a set period.</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-medium text-neutral-600 mb-1">Duration (minutes)</label>
               <input type="number" min="5" max="1440" value={boostForm.durationMinutes}
@@ -4347,92 +4597,32 @@ function FleetControl() {
                 className="input text-sm" placeholder="60" />
             </div>
             <div>
-              <label className="block text-xs font-medium text-neutral-600 mb-1">Min backends to hold active</label>
+              <label className="block text-xs font-medium text-neutral-600 mb-1">Min backends</label>
               <input type="number" min="1" max={backends.length} value={boostForm.minBackends}
                 onChange={e => setBoostForm(p => ({ ...p, minBackends: e.target.value }))}
                 className="input text-sm" placeholder={`${backends.length} (all)`} />
             </div>
             <div className="sm:col-span-2">
-              <label className="block text-xs font-medium text-neutral-600 mb-1">Reason (shown in logs)</label>
+              <label className="block text-xs font-medium text-neutral-600 mb-1">Reason</label>
               <input type="text" value={boostForm.reason}
                 onChange={e => setBoostForm(p => ({ ...p, reason: e.target.value }))}
                 className="input text-sm" placeholder="e.g. Saturday conference, product launch" />
             </div>
             <div className="sm:col-span-2">
-              <label className="block text-xs font-medium text-neutral-600 mb-1">Pin specific event IDs to backend 0 <span className="text-neutral-400 font-normal">(comma-separated, optional)</span></label>
+              <label className="block text-xs font-medium text-neutral-600 mb-1">Pin event IDs to backend 0 <span className="text-neutral-400 font-normal">(comma-separated, optional)</span></label>
               <input type="text" value={boostForm.pinnedEventIds}
                 onChange={e => setBoostForm(p => ({ ...p, pinnedEventIds: e.target.value }))}
                 className="input text-sm font-mono" placeholder="64abc123..., 64def456..." />
-              <p className="text-xs text-neutral-400 mt-1">Pinned events always route to backend 0, guaranteed active during boost. Other events distribute across the full fleet.</p>
             </div>
             <div className="sm:col-span-2">
-              <button type="submit" disabled={boosting} className="btn bg-amber-500 hover:bg-amber-600 text-white gap-2 disabled:opacity-60">
-                {boosting ? <><span className="spinner w-4 h-4 border-2 border-white/30 border-t-white" /> Activating...</> : <><Zap className="w-4 h-4" /> Activate Boost</>}
+              <button onClick={handleBoost} disabled={boosting} className="btn bg-amber-500 hover:bg-amber-600 text-white gap-2 disabled:opacity-60">
+                {boosting ? <><span className="spinner w-4 h-4 border-2 border-white/30 border-t-white" /> Activating…</> : <><Zap className="w-4 h-4" /> Activate Boost</>}
               </button>
             </div>
-          </form>
-        </div>
-      )}
-
-      {/* Scaling log */}
-      {status.scalingLog?.length > 0 && (
-        <div className="card p-4">
-          <h3 className="text-sm font-bold text-neutral-700 mb-3 flex items-center gap-2"><Activity className="w-4 h-4" /> Recent Scaling Events</h3>
-          <div className="space-y-1.5 max-h-64 overflow-y-auto">
-            {status.scalingLog.map((e, i) => (
-              <div key={i} className="flex items-start gap-3 text-xs">
-                <span className="text-neutral-400 font-mono flex-shrink-0 w-36">{new Date(e.time).toLocaleTimeString()}</span>
-                <span className="font-medium text-neutral-800">{e.action}</span>
-                <span className="text-neutral-500 truncate">{e.reason}</span>
-              </div>
-            ))}
           </div>
         </div>
       )}
 
-      {/* Predictive scaling state (Holt-Winters) */}
-      {scaling?.predictive && (
-        <div className="card p-4">
-          <h3 className="text-sm font-bold text-neutral-700 mb-3 flex items-center gap-2">
-            <TrendingUp className="w-4 h-4 text-indigo-500" /> Predictive Scaling (Holt-Winters)
-          </h3>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-3">
-            <div className="bg-neutral-50 rounded-xl p-3">
-              <p className="text-xs text-neutral-500 mb-1">Smoothed Level</p>
-              <p className="text-xl font-bold text-neutral-900">{scaling.predictive.level}</p>
-              <p className="text-xs text-neutral-400">req/window</p>
-            </div>
-            <div className="bg-neutral-50 rounded-xl p-3">
-              <p className="text-xs text-neutral-500 mb-1">Trend</p>
-              <p className={`text-xl font-bold ${scaling.predictive.trend > 0 ? 'text-amber-600' : scaling.predictive.trend < 0 ? 'text-emerald-600' : 'text-neutral-900'}`}>
-                {scaling.predictive.trend > 0 ? '+' : ''}{scaling.predictive.trend}
-              </p>
-              <p className="text-xs text-neutral-400">per window</p>
-            </div>
-            <div className="bg-neutral-50 rounded-xl p-3">
-              <p className="text-xs text-neutral-500 mb-1">Forecast</p>
-              <p className={`text-xl font-bold ${scaling.predictive.forecast >= scaling.thresholds.scaleUp * (scaling.predictive.headroom || 0.85) ? 'text-amber-600' : 'text-neutral-900'}`}>
-                {scaling.predictive.forecast}
-              </p>
-              <p className="text-xs text-neutral-400">next window</p>
-            </div>
-            <div className="bg-neutral-50 rounded-xl p-3">
-              <p className="text-xs text-neutral-500 mb-1">Ramp Windows</p>
-              <p className={`text-xl font-bold ${scaling.predictive.rampCount >= 3 ? 'text-red-500' : 'text-neutral-900'}`}>
-                {scaling.predictive.rampCount}
-              </p>
-              <p className="text-xs text-neutral-400">consecutive rise</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-2 text-xs text-neutral-500">
-            <span>History: {scaling.predictive.historyLen}/30 windows</span>
-            <span className="text-neutral-300">·</span>
-            <span>Pre-scale threshold: {Math.round((scaling.predictive.headroom || 0.85) * 100)}% of scale-up ({Math.round((scaling.predictive.headroom || 0.85) * scaling.thresholds.scaleUp)} req/window)</span>
-            <span className="text-neutral-300">·</span>
-            <span>Min ramp: 3 windows</span>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
