@@ -1863,9 +1863,9 @@ router.post('/maintenance', verifyAdmin, async (req, res) => {
     const by = req.admin?.username || req.admin?.name || 'admin';
 
     if (action === 'resolve') {
-      // Resolve all active/upcoming records
-      await Mnt.updateMany({ s: { $in: ['upcoming','active'] } }, { $set: { s: 'resolved', end: new Date() } });
-      await _syncRouter({ active: false, message: '', eta: null, type: null });
+      const result = await Mnt.updateMany({ s: { $in: ['upcoming','active'] } }, { $set: { s: 'resolved', end: new Date() } });
+      console.log(`[maintenance] Resolve: updated ${result.modifiedCount} DB record(s) to resolved`);
+      await _syncRouter({ active: false, upcoming: false, message: '', eta: null, type: null });
       return res.json({ ok: true, active: false, upcoming: false });
     }
 
