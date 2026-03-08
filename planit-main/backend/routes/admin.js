@@ -1810,12 +1810,24 @@ const { meshPost: _meshPost } = require('../middleware/mesh');
 // Helper: push state to router in-memory cache via mesh
 async function _syncRouter(payload) {
   const routerUrl = process.env.ROUTER_URL;
-  if (!routerUrl) return;
-  await _meshPost(
-    process.env.BACKEND_LABEL || 'Backend',
-    `${routerUrl}/mesh/maintenance`,
-    payload,
-  ).catch(() => {}); // non-fatal — router will pick up from DB on next poll
+  if (!routerUrl) {
+    console.warn('[maintenance] ROUTER_URL not set — router state not updated. Set ROUTER_URL on the backend to enable live sync.');
+    return;
+  }
+  try {
+    const result = await _meshPost(
+      process.env.BACKEND_LABEL || 'Backend',
+      `${routerUrl}/mesh/maintenance`,
+      payload,
+    );
+    if (result?.ok === false) {
+      console.warn('[maintenance] Router sync returned error:', result.error || result.status);
+    } else {
+      console.log(`[maintenance] Router synced → active=${payload.active}`);
+    }
+  } catch (err) {
+    console.warn('[maintenance] Router sync failed (non-fatal):', err.message);
+  }
 }
 
 // GET /admin/maintenance
