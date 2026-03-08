@@ -15,7 +15,7 @@ import {
   Scroll, Gauge, HardDriveDownload, Fingerprint, Building2,
   WifiOff, AlertOctagon, TrendingDown, GitBranch, Boxes,
   Rocket, Timer, Wifi as WifiOn, Cpu as CpuIcon,
-  Command, Key, Play, Crosshair,
+  Command, Key, Play, Crosshair, Ban,
 } from 'lucide-react';
 import api, { adminAPI, uptimeAPI, watchdogAPI, routerAPI, bugReportAPI } from '../services/api';
 import { SERVICE_CATEGORIES, ALL_SERVICES_FLAT } from '../utils/serviceCategories';
@@ -2919,6 +2919,323 @@ function CommandCenterPanel() {
 
 
 
+// ─── Blocklist Panel ──────────────────────────────────────────────────────────
+function BlocklistPanel() {
+  const EMPTY_FORM = { type: 'ip', value: '', reason: '', permanent: true, expiresAt: '' };
+  const [entries, setEntries]     = useState([]);
+  const [loading, setLoading]     = useState(true);
+  const [typeFilter, setTypeFilter] = useState('all');
+  const [form, setForm]           = useState(EMPTY_FORM);
+  const [adding, setAdding]       = useState(false);
+  const [showAdd, setShowAdd]     = useState(false);
+  const [search, setSearch]       = useState('');
+
+  const TYPE_META = {
+    ip:    { label: 'IP Address', color: 'bg-red-100 text-red-800',    icon: Shield,  desc: 'Blocked at the gateway — every request from this IP is rejected.' },
+    event: { label: 'Event',      color: 'bg-amber-100 text-amber-800', icon: Calendar, desc: 'Blocks access to a specific event workspace by subdomain.' },
+    name:  { label: 'Display Name', color: 'bg-violet-100 text-violet-800', icon: UserX, desc: 'Prevents a username from joining any workspace.' },
+  };
+
+  const load = async () => {
+    setLoading(true);
+    try {
+      const r = await adminAPI.getBlocklist();
+      setEntries(r.data.entries || []);
+    } catch { toast.error('Failed to load blocklist'); }
+    finally { setLoading(false); }
+  };
+
+  useEffect(() => { load(); }, []);
+
+  const handleAdd = async (e) => {
+    e.preventDefault();
+    if (!form.value.trim()) { toast.error('Value is required'); return; }
+    setAdding(true);
+    try {
+      await adminAPI.addBlock({
+        type:      form.type,
+        value:     form.value.trim(),
+        reason:    form.reason.trim(),
+        permanent: form.permanent,
+        expiresAt: (!form.permanent && form.expiresAt) ? form.expiresAt : null,
+      });
+      toast.success(`${TYPE_META[form.type].label} blocked`);
+      setForm(EMPTY_FORM);
+      setShowAdd(false);
+      load();
+    } catch (err) {
+      toast.error(err.response?.data?.error || 'Failed to add entry');
+    } finally { setAdding(false); }
+  };
+
+  const handleDelete = async (id, value) => {
+    if (!confirm(`Remove "${value}" from the blocklist? They will regain access immediately.`)) return;
+    try {
+      await adminAPI.deleteBlock(id);
+      toast.success('Entry removed');
+      setEntries(prev => prev.filter(e => e._id !== id));
+    } catch { toast.error('Failed to remove'); }
+  };
+
+  const filtered = entries.filter(e => {
+    if (typeFilter !== 'all' && e.type !== typeFilter) return false;
+    if (search && !e.value.toLowerCase().includes(search.toLowerCase()) && !e.reason?.toLowerCase().includes(search.toLowerCase())) return false;
+    return true;
+  });
+
+  const counts = { all: entries.length, ip: 0, event: 0, name: 0 };
+  entries.forEach(e => { if (counts[e.type] !== undefined) counts[e.type]++; });
+
+  return (
+    <div className="max-w-5xl mx-auto space-y-6">
+      {/* Header */}
+      <div className="flex items-start justify-between gap-4 flex-wrap">
+        <div>
+          <h2 className="text-xl font-bold text-neutral-900 flex items-center gap-2">
+            <Ban className="w-5 h-5 text-red-600" /> Blocklist
+          </h2>
+          <p className="text-sm text-neutral-500 mt-0.5">
+            Permanently ban IPs, event subdomains, or display names from using PlanIt.
+          </p>
+        </div>
+        <button
+          onClick={() => setShowAdd(v => !v)}
+          className="btn bg-red-600 hover:bg-red-700 text-white gap-2 text-sm"
+        >
+          <Plus className="w-4 h-4" /> Add Entry
+        </button>
+      </div>
+
+      {/* Add form */}
+      {showAdd && (
+        <div className="card p-5 border-red-200 bg-red-50">
+          <h3 className="text-sm font-bold text-neutral-800 mb-4 flex items-center gap-2">
+            <Plus className="w-4 h-4 text-red-600" /> New Blocklist Entry
+          </h3>
+          <form onSubmit={handleAdd} className="space-y-4">
+            {/* Type selector */}
+            <div className="grid grid-cols-3 gap-3">
+              {Object.entries(TYPE_META).map(([k, v]) => {
+                const Icon = v.icon;
+                return (
+                  <button
+                    key={k}
+                    type="button"
+                    onClick={() => setForm(f => ({ ...f, type: k }))}
+                    className={`flex flex-col items-start gap-1.5 p-3 rounded-xl border-2 text-left transition-all ${
+                      form.type === k ? 'border-red-500 bg-white shadow-sm' : 'border-neutral-200 bg-white hover:border-neutral-300'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <Icon className={`w-4 h-4 ${form.type === k ? 'text-red-600' : 'text-neutral-400'}`} />
+                      <span className={`text-xs font-bold ${form.type === k ? 'text-red-700' : 'text-neutral-600'}`}>{v.label}</span>
+                    </div>
+                    <p className="text-xs text-neutral-400 leading-4">{v.desc}</p>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Value + reason */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-semibold text-neutral-600 mb-1">
+                  {form.type === 'ip' ? 'IP Address' : form.type === 'event' ? 'Event subdomain' : 'Display name'}
+                  <span className="text-red-500 ml-0.5">*</span>
+                </label>
+                <input
+                  type="text"
+                  className="input text-sm font-mono"
+                  placeholder={form.type === 'ip' ? '192.168.1.1' : form.type === 'event' ? 'my-event-slug' : 'badusername'}
+                  value={form.value}
+                  onChange={e => setForm(f => ({ ...f, value: e.target.value }))}
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-neutral-600 mb-1">Reason (internal note)</label>
+                <input
+                  type="text"
+                  className="input text-sm"
+                  placeholder="e.g. Spamming guests, TOS violation"
+                  value={form.reason}
+                  onChange={e => setForm(f => ({ ...f, reason: e.target.value }))}
+                />
+              </div>
+            </div>
+
+            {/* Duration */}
+            <div className="flex items-center gap-6">
+              <label className="flex items-center gap-2 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={form.permanent}
+                  onChange={e => setForm(f => ({ ...f, permanent: e.target.checked, expiresAt: '' }))}
+                  className="accent-red-600"
+                />
+                <span className="text-sm font-medium text-neutral-700">Permanent ban</span>
+              </label>
+              {!form.permanent && (
+                <div className="flex items-center gap-2">
+                  <label className="text-xs font-semibold text-neutral-600">Expires at</label>
+                  <input
+                    type="datetime-local"
+                    className="input text-sm py-1.5"
+                    value={form.expiresAt}
+                    onChange={e => setForm(f => ({ ...f, expiresAt: e.target.value }))}
+                    required
+                  />
+                </div>
+              )}
+            </div>
+
+            <div className="flex gap-3 pt-1">
+              <button type="button" onClick={() => { setShowAdd(false); setForm(EMPTY_FORM); }} className="btn btn-secondary text-sm">Cancel</button>
+              <button type="submit" disabled={adding} className="btn bg-red-600 hover:bg-red-700 text-white text-sm gap-2 disabled:opacity-60">
+                {adding ? <span className="spinner w-4 h-4 border-2 border-white/30 border-t-white" /> : <Ban className="w-4 h-4" />}
+                Add to blocklist
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {/* Stats row */}
+      <div className="grid grid-cols-4 gap-3">
+        {[
+          { key: 'all',   label: 'Total',        color: 'blue' },
+          { key: 'ip',    label: 'IP Bans',       color: 'red' },
+          { key: 'event', label: 'Event Blocks',  color: 'amber' },
+          { key: 'name',  label: 'Name Blocks',   color: 'violet' },
+        ].map(({ key, label, color }) => (
+          <button
+            key={key}
+            onClick={() => setTypeFilter(key)}
+            className={`card p-4 text-left transition-all hover:shadow-md ${typeFilter === key ? 'ring-2 ring-neutral-900' : ''}`}
+          >
+            <p className="text-2xl font-bold text-neutral-900">{counts[key]}</p>
+            <p className="text-xs text-neutral-500 mt-0.5">{label}</p>
+          </button>
+        ))}
+      </div>
+
+      {/* Search + list */}
+      <div className="card overflow-hidden">
+        <div className="p-4 border-b border-neutral-200 flex items-center gap-3">
+          <div className="relative flex-1 max-w-xs">
+            <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400" />
+            <input
+              type="text"
+              placeholder="Search value or reason…"
+              className="input pl-9 text-sm py-1.5 w-full"
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+            />
+          </div>
+          <div className="flex gap-1.5">
+            {['all', 'ip', 'event', 'name'].map(t => (
+              <button
+                key={t}
+                onClick={() => setTypeFilter(t)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${typeFilter === t ? 'bg-neutral-900 text-white' : 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200'}`}
+              >
+                {t === 'all' ? 'All' : TYPE_META[t].label}
+              </button>
+            ))}
+          </div>
+          <button onClick={load} className="btn btn-ghost p-1.5 ml-auto">
+            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+          </button>
+        </div>
+
+        {loading ? (
+          <div className="flex justify-center py-16">
+            <span className="spinner w-6 h-6 border-2 border-neutral-300 border-t-neutral-600" />
+          </div>
+        ) : filtered.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-16 text-center">
+            <Ban className="w-10 h-10 text-neutral-200 mb-3" />
+            <p className="text-sm font-semibold text-neutral-500">
+              {entries.length === 0 ? 'No blocklist entries yet' : 'No entries match your filter'}
+            </p>
+            <p className="text-xs text-neutral-400 mt-1">
+              {entries.length === 0 ? 'Add an IP, event, or name to start blocking.' : 'Try a different search or filter.'}
+            </p>
+          </div>
+        ) : (
+          <div className="divide-y divide-neutral-100">
+            {filtered.map(entry => {
+              const meta = TYPE_META[entry.type] || TYPE_META.ip;
+              const MetaIcon = meta.icon;
+              const isExpired = entry.expiresAt && new Date(entry.expiresAt) < new Date();
+              return (
+                <div key={entry._id} className={`flex items-start gap-4 px-5 py-4 hover:bg-neutral-50 transition-colors ${isExpired ? 'opacity-50' : ''}`}>
+                  {/* Type badge */}
+                  <div className={`flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center ${meta.color.replace('text-', 'bg-').split(' ')[0].replace('800', '100')}`}>
+                    <MetaIcon className={`w-4 h-4 ${meta.color.split(' ')[1]}`} />
+                  </div>
+
+                  {/* Main content */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap mb-1">
+                      <code className="text-sm font-mono font-bold text-neutral-900 break-all">{entry.value}</code>
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold ${meta.color}`}>
+                        {meta.label}
+                      </span>
+                      {entry.permanent && !isExpired && (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-red-100 text-red-800">
+                          Permanent
+                        </span>
+                      )}
+                      {isExpired && (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-neutral-100 text-neutral-500">
+                          Expired
+                        </span>
+                      )}
+                      {!entry.permanent && !isExpired && entry.expiresAt && (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-800">
+                          Expires {rel(entry.expiresAt)}
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-3 text-xs text-neutral-400">
+                      {entry.reason && <span className="text-neutral-600 italic">"{entry.reason}"</span>}
+                      <span>Added {rel(entry.createdAt)}</span>
+                      {entry.addedBy && <span>by {entry.addedBy}</span>}
+                    </div>
+                  </div>
+
+                  {/* Delete */}
+                  <button
+                    onClick={() => handleDelete(entry._id, entry.value)}
+                    className="flex-shrink-0 p-1.5 text-neutral-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                    title="Remove from blocklist"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      {/* Upstash tip */}
+      <div className="card p-4 bg-neutral-50 border-neutral-200">
+        <p className="text-xs font-semibold text-neutral-600 mb-1 flex items-center gap-1.5">
+          <Database className="w-3.5 h-3.5" /> Manual Redis ban (alternative)
+        </p>
+        <p className="text-xs text-neutral-500 leading-relaxed">
+          IP bans added here are also written to Redis immediately. You can also ban an IP directly in the Upstash dashboard by creating key{' '}
+          <code className="font-mono bg-white border border-neutral-200 rounded px-1">sec:ban:1.2.3.4</code> with value{' '}
+          <code className="font-mono bg-white border border-neutral-200 rounded px-1">1</code>.
+          No TTL = permanent. Delete the key to unban.
+        </p>
+      </div>
+    </div>
+  );
+}
+
 const NAV_ITEMS = [
   { id: 'dashboard',      label: 'Dashboard',      icon: Monitor },
   { id: 'events',         label: 'Events',         icon: Calendar },
@@ -2929,6 +3246,7 @@ const NAV_ITEMS = [
   { id: 'analytics',      label: 'Analytics',      icon: BarChart3 },
   { id: 'fleet',          label: 'Fleet',          icon: Rocket },
   { id: 'security',       label: 'Security',       icon: Shield },
+  { id: 'blocklist',      label: 'Blocklist',      icon: Ban },
   { id: 'marketing',      label: 'Marketing',      icon: Send },
   { id: 'system',         label: 'System',         icon: Server },
   { id: 'logs',           label: 'Logs',           icon: Terminal },
@@ -4328,6 +4646,7 @@ export default function Admin() {
           {activeSection === 'analytics'      && !selectedEvent && <div className="max-w-5xl mx-auto"><AnalyticsPanel stats={stats} /></div>}
           {activeSection === 'fleet'          && !selectedEvent && <FleetControl />}
           {activeSection === 'security'       && !selectedEvent && <SecurityPanel />}
+          {activeSection === 'blocklist'      && !selectedEvent && <BlocklistPanel />}
           {activeSection === 'marketing'      && !selectedEvent && <div className="max-w-6xl mx-auto"><MarketingPanel /></div>}
           {activeSection === 'system'         && !selectedEvent && <div className="max-w-5xl mx-auto"><SystemPanel /></div>}
           {activeSection === 'logs'           && !selectedEvent && <div className="max-w-6xl mx-auto"><LogsPanel /></div>}
