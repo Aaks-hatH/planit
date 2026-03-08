@@ -302,7 +302,7 @@ export default function OrganizerSettings({ eventId, event, onClose, onUpdated, 
  </div>
 
  {/* Tab bar */}
- <div className="flex border-b border-neutral-100 px-6 gap-1">
+ <div className="flex overflow-x-auto scrollbar-hide border-b border-neutral-100 px-6 gap-1">
  {[
  { id: 'general', label: 'General' },
  { id: 'features', label: 'Features' },
