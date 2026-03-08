@@ -28,6 +28,8 @@ import GuestTablet from './pages/GuestTablet';
 
 // ─── Maintenance page ─────────────────────────────────────────────────────────
 // t = 's' scheduled | 'i' incident | 'd' degraded
+const ROUTER_URL = (import.meta.env.VITE_ROUTER_URL || '').replace(/\/$/, '');
+
 const MTYPE = {
   s: { pill: 'Scheduled Maintenance', dot: '#f59e0b', pillBg: 'rgba(245,158,11,0.10)', pillBrd: 'rgba(245,158,11,0.25)', heading: "We'll be right back.",  sub: "PlanIt is undergoing scheduled maintenance. We'll be back shortly."  },
   i: { pill: 'Service Disruption',    dot: '#ef4444', pillBg: 'rgba(239,68,68,0.10)',  pillBrd: 'rgba(239,68,68,0.28)',  heading: "We're on it.",          sub: "We're experiencing an unexpected issue. Our team is working on a fix." },
@@ -163,7 +165,7 @@ function MaintenanceGate({ children }) {
 
   useEffect(() => {
     const check = () =>
-      fetch('/maintenance', { cache: 'no-store' }).then(r => r.json())
+      fetch(`${ROUTER_URL}/maintenance`, { cache: 'no-store' }).then(r => r.json())
         .then(d => { setInfo((d.active || d.upcoming) ? d : null); setChecked(true); })
         .catch(() => { setInfo(null); setChecked(true); });
     check();
