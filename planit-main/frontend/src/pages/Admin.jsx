@@ -660,7 +660,7 @@ function UptimePanel() {
               <button onClick={() => setShowCreate(false)} className="p-1 hover:bg-neutral-100 rounded-lg"><X className="w-4 h-4 text-neutral-400" /></button>
             </div>
             <div className="p-5 space-y-4 overflow-y-auto">
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div className="col-span-2"><label className="block text-xs font-medium text-neutral-600 mb-1">Title *</label><input value={createForm.title} onChange={e => setCreateForm(f => ({ ...f, title: e.target.value }))} placeholder="e.g. API Delays" className="input w-full text-sm" /></div>
                 <div><label className="block text-xs font-medium text-neutral-600 mb-1">Severity</label><select value={createForm.severity} onChange={e => setCreateForm(f => ({ ...f, severity: e.target.value }))} className="input w-full text-sm">{['minor', 'major', 'critical'].map(s => <option key={s} value={s}>{s}</option>)}</select></div>
               </div>
@@ -859,7 +859,7 @@ function SystemPanel() {
               <MemBar label="Heap Used" used={sys.process.memoryMB.heapUsed} total={sys.process.memoryMB.heapTotal} color="violet" />
               <MemBar label="RSS (Resident)" used={sys.process.memoryMB.rss} total={sys.process.memoryMB.heapTotal} color="amber" />
             </div>
-            <div className="grid grid-cols-4 gap-3 mt-4">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-4">
               {[['RSS', sys.process.memoryMB.rss], ['Heap Used', sys.process.memoryMB.heapUsed], ['Heap Total', sys.process.memoryMB.heapTotal], ['External', sys.process.memoryMB.external]].map(([l, v]) => (
                 <div key={l} className="text-center p-3 bg-neutral-50 rounded-xl">
                   <p className="text-xs text-neutral-400 mb-1">{l}</p>
@@ -872,7 +872,7 @@ function SystemPanel() {
           {/* Load Average */}
           <div className="card p-5">
             <h3 className="text-sm font-bold text-neutral-700 mb-4 flex items-center gap-2"><Activity className="w-4 h-4" /> System Load</h3>
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               {['1 min', '5 min', '15 min'].map((l, i) => {
                 const v = sys.os.loadAvg[i] || 0;
                 const pct = Math.min((v / sys.os.cpus) * 100, 100);
@@ -1721,7 +1721,7 @@ function BugReportsPanel() {
       </div>
 
       {/* Status count cards */}
-      <div className="grid grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {[
           { key: 'open',        label: 'Open',        color: 'blue'    },
           { key: 'in_progress', label: 'In Progress', color: 'purple'  },
@@ -2247,7 +2247,7 @@ function CommandCenterPanel() {
                       </div>
                       {!ok && <p className="text-sm text-red-600 mb-3 bg-red-50 rounded-lg p-2">{svc.error||'Service unreachable'}</p>}
                       {ok && (
-                        <div className="grid grid-cols-3 gap-2 text-sm">
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-sm">
                           {svc.uptime   != null && <div className="bg-neutral-50 rounded-lg p-2.5"><p className="text-neutral-400 text-xs mb-0.5">Uptime</p><p className="font-semibold text-neutral-400 cc-mono">{fmtUptime(svc.uptime)}</p></div>}
                           {svc.pid      != null && <div className="bg-neutral-50 rounded-lg p-2.5"><p className="text-neutral-400 text-xs mb-0.5">PID</p><p className="font-semibold text-neutral-400 cc-mono">{svc.pid}</p></div>}
                           {svc.node              && <div className="bg-neutral-50 rounded-lg p-2.5"><p className="text-neutral-400 text-xs mb-0.5">Node</p><p className="font-semibold text-neutral-400 cc-mono">{svc.node}</p></div>}
@@ -2662,7 +2662,7 @@ function CommandCenterPanel() {
               <div className="p-5 space-y-4">
                 <div>
                   <p className="text-xs text-neutral-400 tracking-wide uppercase mb-2 font-bold">Target Node</p>
-                  <div className="grid grid-cols-3 gap-2">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                     {['backend','router','watchdog'].map(t => (
                       <button key={t} onClick={()=>{setDTarget(t);setDCmd(CMDS[t][0].id);}}
                         className={`py-2 rounded-lg text-sm font-semibold uppercase tracking-wide transition-all ${dTarget===t?'bg-violet-600 text-white':'bg-neutral-100 text-neutral-600 hover:bg-neutral-100 border border-neutral-200'}`}>
@@ -2792,7 +2792,7 @@ function CommandCenterPanel() {
             {!db
               ? <div className="rounded-xl bg-neutral-50 p-10 text-center text-neutral-700 text-sm">Loading database…</div>
               : <>
-                <div className="grid grid-cols-3 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <CCStat label="Collections" value={db.collections?.length} />
                   <CCStat label="DB State" value={db.state?.toUpperCase()} color={db.state==='connected'?'text-emerald-600':'text-red-600'} />
                   <CCStat label="Database" value={db.dbName} color="text-violet-700" />
@@ -2836,7 +2836,7 @@ function CommandCenterPanel() {
                 <Panel>
                   <PanelHead><span className="text-sm font-semibold text-neutral-700">Process Vitals</span></PanelHead>
                   <div className="p-4 space-y-3">
-                    <div className="grid grid-cols-3 gap-2 text-sm">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-sm">
                       {[['PID',runtime.process.pid],['NODE',runtime.process.node],['UPTIME',fmtUptime(runtime.process.uptime)],
                         ['CPU CORES',runtime.process.cpuCount],['LOAD 1m',runtime.process.loadAvg?.[0]],['LOAD 5m',runtime.process.loadAvg?.[1]]
                       ].map(([l,v]) => (
@@ -3090,7 +3090,7 @@ function BlocklistPanel() {
           </div>
           <div className="space-y-4">
             {/* Type selector */}
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               {Object.entries(TYPE_META).map(([k, v]) => {
                 const Icon = v.icon;
                 return (
@@ -3227,7 +3227,7 @@ function BlocklistPanel() {
 
 
       {/* Stats row */}
-      <div className="grid grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {[
           { key: 'all',   label: 'Total' },
           { key: 'ip',    label: 'IP Bans' },
@@ -4001,7 +4001,7 @@ function MarketingPanel() {
                       : <><Send className="w-4 h-4" /> Send to {selectedRows.length} {selectedRows.length === 1 ? 'recipient' : 'recipients'}</>}
                   </button>
                   {result && (
-                    <div className="mt-4 grid grid-cols-3 gap-3">
+                    <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-3">
                       <div className="bg-emerald-50 rounded-xl p-3 text-center border border-emerald-100">
                         <p className="text-2xl font-bold text-emerald-700">{result.sent}</p>
                         <p className="text-xs text-emerald-600 mt-0.5 font-medium">Delivered</p>
@@ -4545,7 +4545,7 @@ function FleetControl() {
             Efficiency Mode
             <InfoIcon tip="Controls how aggressively the auto-scaling reacts when released. Performance scales up early and never scales down. Economy scales up late and scales down fast. Balanced is the default." />
           </label>
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
             {[
               { id: 'economy',     label: 'Economy',     desc: 'Scale up late, down fast', color: 'emerald' },
               { id: 'balanced',    label: 'Balanced',    desc: 'Default behaviour',        color: 'indigo'  },
@@ -4596,7 +4596,7 @@ function FleetControl() {
             tip="Double exponential smoothing — tracks a 'level' (current smoothed load) and a 'trend' (rate of change). After 3 consecutive windows of rising trend, it pre-scales before the threshold is hit. This is why you scale up at 9:30 PM instead of 9:34 PM.">
             {pred ? (
               <div className="space-y-3">
-                <div className="grid grid-cols-3 gap-2 text-center">
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-center">
                   {[
                     { label: 'Level', value: pred.level, tip: 'Smoothed current load — less jumpy than raw req/window because it averages recent history.' },
                     { label: 'Trend', value: `${pred.trend > 0 ? '+' : ''}${pred.trend}`, color: pred.trend > 0 ? 'text-amber-600' : pred.trend < 0 ? 'text-emerald-600' : '', tip: 'How fast load is growing per window. Positive = ramping up. Negative = dying down.' },
@@ -4625,7 +4625,7 @@ function FleetControl() {
             tip="Proportional-Integral-Derivative control — the same algorithm used in industrial machinery, thermostats, and aircraft autopilots. It produces a continuous pressure signal instead of a binary on/off. Output > 1.0 triggers a scale-up.">
             {pid ? (
               <div className="space-y-2">
-                <div className="grid grid-cols-3 gap-2 text-center">
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-center">
                   {[
                     { label: 'Setpoint', value: pid.setpoint, tip: `Target load level (${Math.round((scaling?.pid?.gains?.kp||0.08)*100)}% is Kp). When current load exceeds this, the controller starts building pressure to scale up.` },
                     { label: 'Error', value: `${pid.lastError > 0 ? '+' : ''}${pid.lastError}`, color: Math.abs(pid.lastError) > 5 ? 'text-amber-600' : '', tip: 'Current load minus setpoint. Positive = you\'re above the comfort zone. Negative = you\'re well under capacity.' },
@@ -4653,7 +4653,7 @@ function FleetControl() {
             tip="Exponentially Weighted Moving Standard Deviation — builds a live statistical model of your 'normal' load. A spike more than 2.5σ from baseline is an anomaly. It scales up immediately on a fast path but doesn't feed the spike into Holt-Winters (which would corrupt the trend model). After the spike, the baseline gradually adapts using a slower alpha so normal post-spike traffic stops looking anomalous.">
             {anomaly ? (
               <div className="space-y-2">
-                <div className="grid grid-cols-3 gap-2 text-center">
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-center">
                   {[
                     { label: 'Baseline', value: anomaly.mean, tip: 'Exponentially weighted average of your recent non-anomalous load. This is what "normal" looks like to the detector.' },
                     { label: 'Std Dev', value: anomaly.std, tip: 'How spread out your normal load variations are. A higher std dev means the detector requires a bigger spike to trigger.' },
@@ -4814,6 +4814,59 @@ function FleetControl() {
 
 
 
+
+// ─── Mobile "More" nav button ─────────────────────────────────────────────────
+const MORE_SECTIONS = ['organizers','staff','employees','analytics','security','blocklist','reports','uptime','command-center'];
+function MoreNavButton({ activeSection, setActiveSection }) {
+  const [open, setOpen] = React.useState(false);
+  const isActive = MORE_SECTIONS.includes(activeSection);
+  const labels = {
+    organizers: 'Organizers', staff: 'Staff', employees: 'Team',
+    analytics: 'Analytics', security: 'Security', blocklist: 'Blocklist',
+    reports: 'Reports', uptime: 'Uptime', 'command-center': 'Command',
+  };
+  const icons = {
+    organizers: Building2, staff: UserCheck, employees: Briefcase,
+    analytics: BarChart3, security: Shield, blocklist: Ban,
+    reports: Inbox, uptime: Radio, 'command-center': Crosshair,
+  };
+  return (
+    <>
+      {open && (
+        <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
+      )}
+      <div className="relative flex-1">
+        <button
+          onClick={() => setOpen(v => !v)}
+          className={`flex flex-col items-center gap-0.5 py-2 px-2 w-full transition-colors ${isActive ? 'text-white' : 'text-neutral-500'}`}
+        >
+          <MoreHorizontal className="w-5 h-5 flex-shrink-0" />
+          <span className="text-[9px] font-semibold">More</span>
+          {isActive && <span className="w-1 h-1 rounded-full bg-blue-400" />}
+        </button>
+        {open && (
+          <div className="absolute bottom-full right-0 mb-2 w-44 bg-neutral-900 border border-white/10 rounded-2xl overflow-hidden shadow-2xl z-50">
+            {MORE_SECTIONS.map(id => {
+              const Icon = icons[id] || Settings;
+              return (
+                <button key={id}
+                  onClick={() => { setActiveSection(id); setOpen(false); }}
+                  className={`w-full flex items-center gap-3 px-4 py-3 text-sm font-medium transition-colors ${
+                    activeSection === id ? 'bg-white/10 text-white' : 'text-neutral-400 hover:bg-white/5 hover:text-white'
+                  }`}
+                >
+                  <Icon className="w-4 h-4 flex-shrink-0" />
+                  {labels[id]}
+                </button>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    </>
+  );
+}
+
 export default function Admin() {
   const [auth, setAuth] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -4943,22 +4996,8 @@ export default function Admin() {
   // ── Main App ──────────────────────────────────────────────────────────────
   return (
     <div className="min-h-screen bg-neutral-100 flex">
-      {/* ── Mobile Warning ── */}
-      <div className="md:hidden fixed inset-0 z-[9999] bg-neutral-950 flex items-center justify-center p-6">
-        <div className="max-w-sm w-full text-center space-y-4">
-          <div className="w-16 h-16 bg-amber-500/10 border border-amber-500/30 rounded-2xl flex items-center justify-center mx-auto">
-            <svg xmlns="http://www.w3.org/2000/svg" className="w-8 h-8 text-amber-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
-          </div>
-          <h1 className="text-xl font-bold text-white">Desktop Required</h1>
-          <p className="text-neutral-400 text-sm leading-relaxed">
-            The admin panel is not optimised for mobile devices. It contains complex data tables, real-time charts, drag-and-drop tools, and multi-column dashboards that require a large screen to use effectively.
-          </p>
-          <p className="text-neutral-600 text-xs">Please open this page on a laptop or desktop computer.</p>
-        </div>
-      </div>
-
       {/* Sidebar */}
-      <aside className={`bg-neutral-950 flex-shrink-0 flex flex-col transition-all duration-300 ${sidebarOpen ? 'w-56' : 'w-14'}`} style={{ position: 'sticky', top: 0, height: '100vh', overflowY: 'auto' }}>
+      <aside className={`hidden md:flex bg-neutral-950 flex-shrink-0 flex-col transition-all duration-300 ${sidebarOpen ? 'w-56' : 'w-14'}`} style={{ position: 'sticky', top: 0, height: '100vh', overflowY: 'auto' }}>
         {/* Logo */}
         <div className="h-14 flex items-center gap-3 px-3 border-b border-white/5">
           <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center flex-shrink-0">
@@ -5007,17 +5046,17 @@ export default function Admin() {
       <div className="flex-1 flex flex-col min-w-0">
         {/* Top bar */}
         <header className="h-14 bg-white border-b border-neutral-200 flex items-center gap-4 px-6 sticky top-0 z-40 shadow-sm">
-          <div className="flex-1">
-            <h1 className="text-sm font-bold text-neutral-900">
+          <div className="flex-1 min-w-0">
+            <h1 className="text-sm font-bold text-neutral-900 truncate">
               {selectedEvent ? selectedEvent.title : NAV_ITEMS.find(n => n.id === activeSection)?.label || 'Dashboard'}
             </h1>
             <p className="text-xs text-neutral-400">
-              {selectedEvent ? `Event Management` : 'PlanIt Admin'}
+              {selectedEvent ? 'Event Management' : 'PlanIt Admin'}
             </p>
           </div>
 
-          {/* Global search */}
-          <form onSubmit={async (e) => {
+          {/* Global search — desktop only */}
+          <form className="hidden sm:flex gap-2 items-center" onSubmit={async (e) => {
             e.preventDefault();
             if (!searchQuery.trim()) return;
             setSearchLoading(true);
@@ -5036,12 +5075,12 @@ export default function Admin() {
             </button>
           </form>
 
-          <button onClick={async () => { try { const r = await adminAPI.exportData('events'); const b = new Blob([JSON.stringify(r.data.data, null, 2)], { type: 'application/json' }); const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = `planit-export-${Date.now()}.json`; a.click(); toast.success('Exported'); } catch { toast.error('Export failed'); } }} className="btn btn-secondary text-xs gap-1.5 py-1.5">
+          <button className="hidden sm:flex" onClick={async () => { try { const r = await adminAPI.exportData('events'); const b = new Blob([JSON.stringify(r.data.data, null, 2)], { type: 'application/json' }); const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = `planit-export-${Date.now()}.json`; a.click(); toast.success('Exported'); } catch { toast.error('Export failed'); } }} className="btn btn-secondary text-xs gap-1.5 py-1.5">
             <Download className="w-3.5 h-3.5" /> Export All
           </button>
 
           {stats && (
-            <div className="flex items-center gap-1.5 text-xs text-neutral-500 bg-neutral-50 border border-neutral-200 rounded-lg px-3 py-1.5">
+            <div className="hidden sm:flex items-center gap-1.5 text-xs text-neutral-500 bg-neutral-50 border border-neutral-200 rounded-lg px-3 py-1.5">
               <Activity className="w-3 h-3 text-emerald-500" />
               <span className="font-medium">{formatNumber(stats.totalEvents)}</span> events
               <span className="text-neutral-300">·</span>
@@ -5051,7 +5090,7 @@ export default function Admin() {
         </header>
 
         {/* Content */}
-        <main className="flex-1 p-6 overflow-y-auto">
+        <main className="flex-1 p-3 sm:p-6 pb-24 md:pb-6 overflow-y-auto">
           {/* Dashboard */}
           {activeSection === 'dashboard' && !selectedEvent && (
             <div className="space-y-6 max-w-7xl mx-auto">
@@ -5350,6 +5389,32 @@ export default function Admin() {
           </div>
         </div>
       )}
-    </div>
+    
+      {/* ── Mobile bottom nav ── */}
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-neutral-950 border-t border-white/10 flex items-center justify-around px-1 safe-area-pb" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
+        {[
+          { id: 'dashboard',  icon: Monitor,   label: 'Home'      },
+          { id: 'events',     icon: Calendar,  label: 'Events'    },
+          { id: 'users',      icon: Users,     label: 'Users'     },
+          { id: 'fleet',      icon: Rocket,    label: 'Fleet'     },
+          { id: 'marketing',  icon: Send,      label: 'Marketing' },
+          { id: 'system',     icon: Server,    label: 'System'    },
+        ].map(({ id, icon: Icon, label }) => (
+          <button key={id}
+            onClick={() => { setActiveSection(id); setSelectedEvent(null); }}
+            className={`flex flex-col items-center gap-0.5 py-2 px-2 min-w-0 flex-1 transition-colors ${
+              activeSection === id ? 'text-white' : 'text-neutral-500'
+            }`}
+          >
+            <Icon className="w-5 h-5 flex-shrink-0" />
+            <span className="text-[9px] font-semibold truncate w-full text-center">{label}</span>
+            {activeSection === id && <span className="w-1 h-1 rounded-full bg-blue-400" />}
+          </button>
+        ))}
+        {/* More button → cycles through remaining sections */}
+        <MoreNavButton activeSection={activeSection} setActiveSection={(id) => { setActiveSection(id); setSelectedEvent(null); }} />
+      </nav>
+
+</div>
   );
 }
