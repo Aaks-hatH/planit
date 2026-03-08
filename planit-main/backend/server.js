@@ -79,6 +79,32 @@ async function _pollMaintenanceState() {
   }
 }
 
+// On boot: load any active/upcoming record from DB and sync to router
+// so state survives router restarts without needing env vars.
+async function _syncDbStateToRouter() {
+  try {
+    const Mnt = require('./models/Mnt');
+    const { meshPost } = require('./middleware/mesh');
+    const routerUrl = process.env.ROUTER_URL;
+    if (!routerUrl) return;
+    const rec = await Mnt.findOne({ s: { $in: ['upcoming','active'] } }).sort({ ca: -1 }).lean();
+    if (!rec) return;
+    await meshPost(
+      process.env.BACKEND_LABEL || 'Backend',
+      `${routerUrl}/mesh/maintenance`,
+      {
+        active:  rec.s === 'active',
+        message: rec.msg  || '',
+        eta:     rec.eta  ? rec.eta.toISOString() : null,
+        type:    rec.t,
+      },
+    );
+    console.log(`[maintenance] Synced DB state to router (s=${rec.s} t=${rec.t})`);
+  } catch (err) {
+    console.warn('[maintenance] Could not sync DB state to router:', err.message);
+  }
+}
+
 function maintenanceGuard(req, res, next) {
   if (!_backendMaintenance.active) return next();
   const p = req.path;
@@ -362,6 +388,7 @@ connectDB().then(async () => {
   await initRedisAdapter();
 
   // Start polling router for maintenance state (defence-in-depth)
+  await _syncDbStateToRouter();          // restore any persisted state into router
   await _pollMaintenanceState();
   setInterval(_pollMaintenanceState, 15_000);
 
