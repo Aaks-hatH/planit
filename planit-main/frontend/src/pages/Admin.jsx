@@ -3889,18 +3889,30 @@ function MarketingPanel() {
                 <h3 className="font-semibold text-neutral-800">Choose a Template</h3>
               </div>
               <div className="space-y-2">
-                {templates.map(tpl => (
-                  <label key={tpl.id}
-                    className={`flex items-start gap-3 p-3 rounded-xl border-2 cursor-pointer transition-colors ${
-                      selected === tpl.id ? 'border-violet-500 bg-violet-50' : 'border-neutral-100 hover:border-neutral-200 bg-white'}`}>
-                    <input type="radio" name="template" value={tpl.id} checked={selected === tpl.id}
-                      onChange={() => handleTemplateChange(tpl.id)} className="mt-0.5 accent-violet-600" />
-                    <div>
-                      <p className="text-sm font-semibold text-neutral-900">{tpl.name}</p>
-                      <p className="text-xs text-neutral-500 mt-0.5">{tpl.description}</p>
-                    </div>
-                  </label>
-                ))}
+                {templates.map(tpl => {
+                  const isVenue = tpl.id === 'venue';
+                  const activeClass = isVenue
+                    ? 'border-orange-400 bg-orange-50'
+                    : 'border-violet-500 bg-violet-50';
+                  return (
+                    <label key={tpl.id}
+                      className={`flex items-start gap-3 p-3 rounded-xl border-2 cursor-pointer transition-colors ${
+                        selected === tpl.id ? activeClass : 'border-neutral-100 hover:border-neutral-200 bg-white'}`}>
+                      <input type="radio" name="template" value={tpl.id} checked={selected === tpl.id}
+                        onChange={() => handleTemplateChange(tpl.id)} className={`mt-0.5 ${isVenue ? 'accent-orange-500' : 'accent-violet-600'}`} />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <p className="text-sm font-semibold text-neutral-900">{tpl.name}</p>
+                          {isVenue
+                            ? <span className="text-xs font-bold px-1.5 py-0.5 rounded-full bg-orange-100 text-orange-700">Venue</span>
+                            : <span className="text-xs font-bold px-1.5 py-0.5 rounded-full bg-blue-100 text-blue-700">Events</span>
+                          }
+                        </div>
+                        <p className="text-xs text-neutral-500 mt-0.5">{tpl.description}</p>
+                      </div>
+                    </label>
+                  );
+                })}
                 {templates.length === 0 && (
                   <div className="flex justify-center py-6">
                     <span className="spinner w-5 h-5 border-2 border-neutral-200 border-t-neutral-600" />
