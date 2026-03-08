@@ -5006,6 +5006,25 @@ function MoreNavButton({ activeSection, setActiveSection }) {
   );
 }
 
+// ─── Nav Items ────────────────────────────────────────────────────────────────
+const NAV_ITEMS = [
+  { id: 'dashboard',      label: 'Dashboard',    icon: Monitor    },
+  { id: 'events',         label: 'Events',       icon: Calendar   },
+  { id: 'users',          label: 'Users',        icon: Users      },
+  { id: 'organizers',     label: 'Organizers',   icon: Building2  },
+  { id: 'staff',          label: 'Staff',        icon: UserCheck  },
+  { id: 'employees',      label: 'Team',         icon: Briefcase  },
+  { id: 'fleet',          label: 'Fleet',        icon: Rocket     },
+  { id: 'marketing',      label: 'Marketing',    icon: Send       },
+  { id: 'analytics',      label: 'Analytics',    icon: BarChart3  },
+  { id: 'security',       label: 'Security',     icon: Shield     },
+  { id: 'blocklist',      label: 'Blocklist',    icon: Ban        },
+  { id: 'reports',        label: 'Reports',      icon: Inbox      },
+  { id: 'uptime',         label: 'Uptime',       icon: Radio      },
+  { id: 'system',         label: 'System',       icon: Server     },
+  { id: 'command-center', label: 'Command',      icon: Crosshair  },
+];
+
 export default function Admin() {
   const [auth, setAuth] = useState(false);
   const [loading, setLoading] = useState(true);
