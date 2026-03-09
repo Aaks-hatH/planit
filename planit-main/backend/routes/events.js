@@ -3556,7 +3556,7 @@ router.get('/public/reserve/:subdomain', availabilityLimiter, async (req, res, n
       .select('title isTableServiceMode tableServiceSettings reservationPageSettings seatingMap tableStates tableServiceWaitlist')
       .lean();
     if (!event) return res.status(404).json({ error: 'Not found' });
-    if (!event.isTableServiceMode) return res.status(404).json({ error: 'Not found' });
+    if (!event.isTableServiceMode) return res.status(404).json({ error: 'Reservation pages are only available for restaurant events.' });
 
     const rps = event.reservationPageSettings || {};
     const tss = event.tableServiceSettings   || {};
@@ -3564,11 +3564,15 @@ router.get('/public/reserve/:subdomain', availabilityLimiter, async (req, res, n
     // Live wait times per common party sizes (1-2, 3-4, 5-8)
     let waitTimes = null;
     if (rps.showLiveWaitTime !== false) {
-      const objects = event.seatingMap?.objects || [];
-      const states  = event.tableStates || [];
-      const activeWait = (event.tableServiceWaitlist || []).filter(w => w.status === 'waiting' || w.status === 'notified');
-
-      waitTimes = calcWaitTimes(objects, states, tss, activeWait);
+      try {
+        const objects = event.seatingMap?.objects || [];
+        const states  = event.tableStates || [];
+        const activeWait = (event.tableServiceWaitlist || []).filter(w => w.status === 'waiting' || w.status === 'notified');
+        waitTimes = calcWaitTimes(objects, states, tss, activeWait);
+      } catch (wtErr) {
+        console.error('[reserve] calcWaitTimes failed for', req.params.subdomain, wtErr.message);
+        // Non-fatal — proceed without wait time data rather than 500ing the whole page
+      }
     }
 
     res.json({
