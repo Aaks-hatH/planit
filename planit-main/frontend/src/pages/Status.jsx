@@ -3,6 +3,8 @@ import { Link } from 'react-router-dom';
 import { uptimeAPI, watchdogAPI } from '../services/api';
 import { SERVICE_CATEGORIES, ALL_SERVICES_FLAT } from '../utils/serviceCategories';
 
+const ROUTER_URL = (import.meta.env.VITE_ROUTER_URL || '').replace(/\/$/,'');
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function formatUTCDate(dateStr) {
@@ -555,6 +557,7 @@ export default function Status() {
   const [success, setSuccess]             = useState(false);
   const [autoReported, setAutoReported]   = useState(false);
   const [lastFetch, setLastFetch]         = useState(null);
+  const [maintenance, setMaintenance]     = useState(null);
 
   const pingFailsRef   = useRef(0);
   const lastAutoReport = useRef(0);
@@ -611,6 +614,15 @@ export default function Status() {
       .catch(() => {});
   }, []);
 
+  const fetchMaintenance = useCallback(async () => {
+    if (!ROUTER_URL) return;
+    try {
+      const r = await fetch(`${ROUTER_URL}/maintenance`, { cache: 'no-store' });
+      const d = await r.json();
+      setMaintenance((d.active || d.upcoming) ? d : null);
+    } catch { /* non-fatal */ }
+  }, []);
+
   const ping = useCallback(async () => {
     const t = Date.now();
     try {
@@ -650,6 +662,7 @@ export default function Status() {
     fetchStatus();
     ping();
     fetchUptimeHistory();
+    fetchMaintenance();
 
     statusTimerRef.current = setInterval(fetchStatus,        30_000);
     pingTimerRef.current   = setInterval(ping,               online ? 15_000 : 5_000);
@@ -732,6 +745,56 @@ export default function Status() {
         </header>
 
         <main style={{ maxWidth: '860px', margin: '0 auto', padding: '0 24px 80px' }}>
+
+          {/* Scheduled maintenance card */}
+          {maintenance && (
+            <div style={{
+              marginTop: '24px',
+              padding: '16px 20px',
+              borderRadius: '12px',
+              border: `1px solid ${maintenance.active ? '#fecaca' : '#fde68a'}`,
+              borderLeft: `4px solid ${maintenance.active ? '#ef4444' : '#f59e0b'}`,
+              background: maintenance.active ? '#fef2f2' : '#fffbeb',
+              display: 'flex', alignItems: 'flex-start', gap: '14px',
+              animation: 'fadeIn 0.3s ease both',
+            }}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" style={{ flexShrink:0, marginTop:2 }}>
+                <circle cx="12" cy="12" r="12" fill={maintenance.active ? '#ef4444' : '#f59e0b'} />
+                <line x1="12" y1="7" x2="12" y2="14" stroke="#fff" strokeWidth="2.5" strokeLinecap="round"/>
+                <circle cx="12" cy="17" r="1.2" fill="#fff"/>
+              </svg>
+              <div style={{ flex:1 }}>
+                <p style={{ margin:0, fontSize:15, fontWeight:700, color: maintenance.active ? '#dc2626' : '#92400e', fontFamily:'"DM Sans",sans-serif' }}>
+                  {maintenance.active ? 'Maintenance In Progress' : 'Scheduled Maintenance'}
+                </p>
+                {maintenance.message && (
+                  <p style={{ margin:'4px 0 0', fontSize:14, color:'#374151', fontFamily:'"DM Sans",sans-serif' }}>
+                    {maintenance.message}
+                  </p>
+                )}
+                <div style={{ display:'flex', gap:16, marginTop:6, flexWrap:'wrap' }}>
+                  {maintenance.start && (
+                    <span style={{ fontSize:12, color:'#6b7280', fontFamily:'"DM Sans",sans-serif' }}>
+                      Starts: <strong>{new Date(maintenance.start).toLocaleString(undefined,{weekday:'short',month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'})}</strong>
+                    </span>
+                  )}
+                  {maintenance.eta && (
+                    <span style={{ fontSize:12, color:'#6b7280', fontFamily:'"DM Sans",sans-serif' }}>
+                      Est. back: <strong>{new Date(maintenance.eta).toLocaleString(undefined,{weekday:'short',month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'})}</strong>
+                    </span>
+                  )}
+                </div>
+              </div>
+              <span style={{
+                fontSize:11, fontWeight:700, letterSpacing:'0.05em', textTransform:'uppercase',
+                padding:'3px 10px', borderRadius:999, flexShrink:0,
+                background: maintenance.active ? '#fee2e2' : '#fef3c7',
+                color: maintenance.active ? '#dc2626' : '#b45309',
+              }}>
+                {maintenance.active ? 'Active' : 'Upcoming'}
+              </span>
+            </div>
+          )}
 
           {/* Auto-report banner */}
           {autoReported && !online && (
