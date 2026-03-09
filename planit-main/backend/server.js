@@ -8,14 +8,16 @@ const { verifyIntegrity, scheduleReverification } = require('./keys');
 verifyIntegrity();
 scheduleReverification();
 
-const express    = require('express');
-const mongoose   = require('mongoose');
-const cors       = require('cors');
+const express      = require('express');
+const mongoose     = require('mongoose');
+const cors         = require('cors');
 const mongoSanitize = require('express-mongo-sanitize');
-const helmet     = require('helmet');
-const http       = require('http');
-const socketIo   = require('socket.io');
-const path       = require('path');
+const helmet       = require('helmet');
+const compression  = require('compression');
+const cookieParser = require('cookie-parser');
+const http         = require('http');
+const socketIo     = require('socket.io');
+const path         = require('path');
 
 const supportRoutes   = require('./routes/support');
 const bugReportRoutes = require('./routes/bug-reports');
@@ -150,7 +152,10 @@ function maintenanceGuard(req, res, next) {
   });
 }
 
-app.set('trust proxy', 1);
+// Render LB → Router → Backend = 2 proxy hops.
+// trust proxy: 2 ensures req.ip resolves to the real client IP
+// from x-forwarded-for, not the Router's IP.
+app.set('trust proxy', 2);
 
 app.use(helmet({
   hsts: { maxAge: 63072000, includeSubDomains: true, preload: true },
