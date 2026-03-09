@@ -119,37 +119,59 @@ function MaintenancePage({ message, eta, type = 's' }) {
   );
 }
 
-// ─── Maintenance banner ───────────────────────────────────────────────────────
-// Shown on all pages when s='upcoming' — thin top strip, dismissible per session.
-const BANNER_COLORS = {
-  s: { bg:'rgba(245,158,11,0.10)', brd:'rgba(245,158,11,0.22)', color:'#fcd34d', dot:'#f59e0b', label:'Scheduled maintenance' },
-  i: { bg:'rgba(239,68,68,0.10)',  brd:'rgba(239,68,68,0.22)',  color:'#fca5a5', dot:'#ef4444', label:'Service disruption'    },
-  d: { bg:'rgba(249,115,22,0.10)', brd:'rgba(249,115,22,0.22)', color:'#fdba74', dot:'#f97316', label:'Degraded performance'  },
+// --- Maintenance banner ---
+// Shown on all pages when s='upcoming' - slim top bar, dismissible per session.
+// Renders in normal document flow (NOT fixed) so it never overlaps page content.
+const BANNER_CFG = {
+  s: { bg:'#fffbeb', border:'#fde68a', text:'#92400e', dot:'#f59e0b', pill:'#fef3c7', pillText:'#b45309', label:'Scheduled Maintenance' },
+  i: { bg:'#fff1f2', border:'#fecdd3', text:'#9f1239', dot:'#f43f5e', pill:'#ffe4e6', pillText:'#be123c', label:'Service Disruption'    },
+  d: { bg:'#fff7ed', border:'#fed7aa', text:'#9a3412', dot:'#f97316', pill:'#ffedd5', pillText:'#c2410c', label:'Degraded Performance'  },
 };
 
 function MaintenanceBanner({ info }) {
-  const [dismissed, setDismissed] = useState(() => { try { return sessionStorage.getItem('mnt_banner_dismissed') === '1'; } catch { return false; } });
+  const [dismissed, setDismissed] = useState(() => {
+    try { return sessionStorage.getItem('mnt_banner_dismissed') === '1'; } catch { return false; }
+  });
   if (dismissed) return null;
 
-  const cfg = BANNER_COLORS[info.type] || BANNER_COLORS.s;
+  const c = BANNER_CFG[info.type] || BANNER_CFG.s;
   const dismiss = () => { try { sessionStorage.setItem('mnt_banner_dismissed', '1'); } catch {} setDismissed(true); };
 
-  const etaStr = info.start ? new Date(info.start).toLocaleString(undefined, { month:'short', day:'numeric', hour:'2-digit', minute:'2-digit' }) : null;
+  const startStr = info.start
+    ? new Date(info.start).toLocaleString(undefined, { weekday:'short', month:'short', day:'numeric', hour:'2-digit', minute:'2-digit' })
+    : null;
+  const etaStr = info.eta
+    ? new Date(info.eta).toLocaleString(undefined, { hour:'2-digit', minute:'2-digit' })
+    : null;
 
   return (
-    <div style={{ position:'fixed', top:0, left:0, right:0, zIndex:9998, display:'flex', alignItems:'center', justifyContent:'center', gap:10, padding:'8px 16px', background:cfg.bg, borderBottom:`1px solid ${cfg.brd}`, fontSize:12, fontWeight:500, color:cfg.color, fontFamily:'system-ui,sans-serif' }}>
-      <span style={{ width:6, height:6, borderRadius:'50%', background:cfg.dot, boxShadow:`0 0 6px ${cfg.dot}`, flexShrink:0, animation:'mnt-pulse 2s infinite' }} />
-      <span style={{ flex:1, textAlign:'center' }}>
-        <strong style={{ fontWeight:700 }}>{cfg.label}</strong>
-        {etaStr ? ` — ${etaStr}` : ''}
-        {info.message ? ` · ${info.message}` : ''}
-        {' '}
-        <a href="/status" style={{ color:'inherit', opacity:0.7, fontWeight:600 }}>Details →</a>
-      </span>
-      <button onClick={dismiss} style={{ background:'none', border:'none', cursor:'pointer', color:cfg.color, opacity:0.5, padding:4, display:'flex', alignItems:'center', lineHeight:1 }} aria-label="Dismiss">
-        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-      </button>
-      <style>{`@keyframes mnt-pulse{0%,100%{opacity:1}50%{opacity:0.25}}`}</style>
+    <div style={{ width:'100%', background:c.bg, borderBottom:`1px solid ${c.border}`, fontFamily:'system-ui,-apple-system,sans-serif' }}>
+      <div style={{ maxWidth:900, margin:'0 auto', padding:'9px 16px', display:'flex', alignItems:'center', gap:10 }}>
+        <span style={{ width:7, height:7, borderRadius:'50%', background:c.dot, flexShrink:0, animation:'mnt-blink 2s ease-in-out infinite' }} />
+        <span style={{ fontSize:11, fontWeight:700, letterSpacing:'0.04em', textTransform:'uppercase', background:c.pill, color:c.pillText, padding:'2px 8px', borderRadius:999, flexShrink:0 }}>
+          {c.label}
+        </span>
+        <span style={{ fontSize:13, color:c.text, flex:1, minWidth:0 }}>
+          {info.message || (startStr ? `Planned for ${startStr}` : 'Upcoming maintenance window')}
+          {startStr && !info.message && etaStr ? ` — estimated back by ${etaStr}` : ''}
+          {info.message && startStr ? <span style={{ opacity:0.6 }}> · {startStr}{etaStr ? ` – ${etaStr}` : ''}</span> : ''}
+        </span>
+        <a href="/status" style={{ fontSize:12, fontWeight:600, color:c.pillText, textDecoration:'none', flexShrink:0, opacity:0.8 }}>
+          Status page →
+        </a>
+        <button
+          onClick={dismiss}
+          aria-label="Dismiss"
+          style={{ background:'none', border:'none', cursor:'pointer', color:c.text, opacity:0.4, padding:'2px 4px', display:'flex', alignItems:'center', flexShrink:0, borderRadius:4 }}
+          onMouseEnter={e => e.currentTarget.style.opacity = '0.8'}
+          onMouseLeave={e => e.currentTarget.style.opacity = '0.4'}
+        >
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+            <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
+      </div>
+      <style>{"@keyframes mnt-blink{0%,100%{opacity:1}50%{opacity:0.3}}"}</style>
     </div>
   );
 }
@@ -173,14 +195,18 @@ function MaintenanceGate({ children }) {
     return () => clearInterval(t);
   }, []);
 
-  const isAdmin = window.location.pathname.startsWith('/admin');
+  const path    = window.location.pathname;
+  const isAdmin  = path.startsWith('/admin');
+  const isStatus = path === '/status';
   if (!checked) return null;
 
-  if (info?.active && !isAdmin) return <MaintenancePage message={info.message} eta={info.eta} type={info.type} />;
+  // Full lockout — admin and status page always bypass so you can still resolve
+  if (info?.active && !isAdmin && !isStatus) return <MaintenancePage message={info.message} eta={info.eta} type={info.type} />;
 
   return (
     <>
-      {info?.upcoming && !isAdmin && <MaintenanceBanner info={info} />}
+      {/* Banner: skip on admin (has its own) and status (has its own maintenance card) */}
+      {info?.upcoming && !isAdmin && !isStatus && <MaintenanceBanner info={info} />}
       {children}
     </>
   );
