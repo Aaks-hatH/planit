@@ -268,10 +268,112 @@ const verifyCheckinAccess = async (req, res, next) => {
   }
 };
 
+// ─── requirePermission(perm) ──────────────────────────────────────────────────
+// Middleware factory. Place AFTER verifyAdmin on any route that should be
+// restricted to specific employees.
+//
+// Rules:
+//   • super_admin always passes — they bypass every permission check.
+//   • Non-employee root admin (ADMIN_USERNAME env login) always passes.
+//   • Demo accounts always FAIL permission-gated routes (they are read-only
+//     guests and should never reach destructive endpoints even if intercepted).
+//   • Everyone else: the named flag must be true on req.admin.permissions.
+//
+// Usage:
+//   router.delete('/events/:id', verifyAdmin, requirePermission('canDeleteEvents'), handler)
+//
+const requirePermission = (perm) => (req, res, next) => {
+  const admin = req.admin;
+  if (!admin) return res.status(401).json({ error: 'Not authenticated.' });
+
+  // Root super-admin (env-var login) passes everything
+  if (!admin.isEmployee && admin.isAdmin === true) return next();
+
+  // Employee super_admin passes everything
+  if (admin.role === 'super_admin') return next();
+
+  // Demo accounts are never allowed past a permission gate
+  if (admin.isDemo) {
+    return res.status(403).json({
+      error: 'Demo accounts cannot perform this action.',
+      demo: true,
+    });
+  }
+
+  // Check the named permission flag
+  if (admin.permissions && admin.permissions[perm] === true) return next();
+
+  return res.status(403).json({
+    error: `Your account does not have the '${perm}' permission required for this action.`,
+    requiredPermission: perm,
+  });
+};
+
+// ─── requireSuperAdminRole ────────────────────────────────────────────────────
+// Stricter than requirePermission — only the root env-login or an employee
+// with role === 'super_admin' can pass. Used for /cc/* command-center routes
+// and employee management.
+const requireSuperAdminRole = (req, res, next) => {
+  const admin = req.admin;
+  if (!admin) return res.status(401).json({ error: 'Not authenticated.' });
+  if (!admin.isEmployee && admin.isAdmin === true) return next(); // root login
+  if (admin.role === 'super_admin') return next();
+  return res.status(403).json({ error: 'Super-admin access required.' });
+};
+
+// ─── demoGuard ────────────────────────────────────────────────────────────────
+// Mount this as a router-level middleware AFTER verifyAdmin, BEFORE any route
+// handlers. It intercepts ALL state-mutating requests (POST/PATCH/PUT/DELETE)
+// from demo accounts and returns a realistic-looking fake success response
+// without touching the database.
+//
+// GET and HEAD requests pass through untouched so the demo sees real data.
+//
+// Certain paths are HARD-BLOCKED for demo (403, no fake success):
+//   /cc/*           — command-center infrastructure controls
+//   /maintenance    — toggling this would break the live site
+//   /employees      — managing real employee accounts
+//
+const DEMO_HARD_BLOCK = ['/cc/', '/maintenance', '/employees'];
+
+const demoGuard = (req, res, next) => {
+  const admin = req.admin;
+  if (!admin || !admin.isDemo) return next(); // not a demo account — pass through
+
+  const method = req.method.toUpperCase();
+  const path   = req.path;
+
+  // Hard-block sensitive paths regardless of method
+  const isHardBlocked = DEMO_HARD_BLOCK.some(prefix => path.startsWith(prefix));
+  if (isHardBlocked) {
+    return res.status(403).json({
+      error: 'Demo accounts cannot access this section.',
+      demo: true,
+    });
+  }
+
+  // Pass through read-only requests
+  if (method === 'GET' || method === 'HEAD' || method === 'OPTIONS') return next();
+
+  // Intercept all writes and return a convincing fake response
+  console.log(`[demo] Intercepted ${method} ${path} from demo account "${admin.name || admin.email}"`);
+  return res.status(200).json({
+    ok: true,
+    _demo: true,
+    message: 'Demo mode: this action was simulated and has not been saved.',
+    // Mirror back any IDs the frontend might need so UI state updates cleanly
+    ...(req.body?.id  ? { id:  req.body.id  } : {}),
+    ...(req.params?.id ? { id: req.params.id } : {}),
+  });
+};
+
 module.exports = {
   verifyToken,
   verifyEventAccess,
   verifyOrganizer,
   verifyCheckinAccess,
-  verifyAdmin
+  verifyAdmin,
+  requirePermission,
+  requireSuperAdminRole,
+  demoGuard,
 };
