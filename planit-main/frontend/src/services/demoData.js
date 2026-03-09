@@ -396,5 +396,4 @@ export function getDemoAnalytics() {
   };
 }
 
-// ─── Demo System Info ─────────────────────────────────────────────────────────
-export { getDemoSystem, getDemoFleet, getDemoScaling };
+// ─── Demo System Info is already exported above via getDemoSystem / getDemoFleet / getDemoScaling ───
