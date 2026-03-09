@@ -281,3 +281,120 @@ export function getDemoEvents({ page = 1, status = 'all' } = {}) {
 
   return { events, totalPages };
 }
+
+// ─── Demo Organizers ──────────────────────────────────────────────────────────
+export function getDemoOrganizers() {
+  return [
+    { name: 'Sarah Chen',        email: 'sarah.chen@nexusevents.io',      totalEvents: 47, activeEvents: 12, totalParticipants: 184203, firstEvent: '2024-01-14T10:00:00Z', lastEvent: '2026-03-01T09:00:00Z', isEnterprise: true  },
+    { name: 'Marcus Williams',   email: 'mwilliams@globalconferences.com', totalEvents: 89, activeEvents: 6,  totalParticipants: 521840, firstEvent: '2023-08-02T09:00:00Z', lastEvent: '2026-02-28T14:00:00Z', isEnterprise: true  },
+    { name: 'Priya Nair',        email: 'priya.nair@eventosphere.co',      totalEvents: 31, activeEvents: 8,  totalParticipants: 97411,  firstEvent: '2024-03-10T19:00:00Z', lastEvent: '2026-03-05T11:00:00Z', isEnterprise: false },
+    { name: 'James O\'Sullivan', email: 'james@premier-events.ie',         totalEvents: 22, activeEvents: 3,  totalParticipants: 44820,  firstEvent: '2024-05-18T18:00:00Z', lastEvent: '2026-01-22T16:00:00Z', isEnterprise: true  },
+    { name: 'Aiko Tanaka',       email: 'aiko.tanaka@shinsei-events.jp',   totalEvents: 58, activeEvents: 14, totalParticipants: 312044, firstEvent: '2023-11-01T09:00:00Z', lastEvent: '2026-03-07T10:00:00Z', isEnterprise: true  },
+    { name: 'Reza Ahmadi',       email: 'reza@tehran-summit.com',          totalEvents: 9,  activeEvents: 2,  totalParticipants: 18240,  firstEvent: '2024-09-20T14:00:00Z', lastEvent: '2025-12-15T13:00:00Z', isEnterprise: false },
+    { name: 'Chloe Dupont',      email: 'cdupont@pariseventco.fr',         totalEvents: 41, activeEvents: 5,  totalParticipants: 208317, firstEvent: '2023-06-12T20:00:00Z', lastEvent: '2026-02-14T18:00:00Z', isEnterprise: true  },
+    { name: 'Kwame Asante',      email: 'kwame.asante@afroevents.gh',      totalEvents: 17, activeEvents: 4,  totalParticipants: 62100,  firstEvent: '2024-02-28T08:00:00Z', lastEvent: '2026-03-01T09:00:00Z', isEnterprise: false },
+    { name: 'Natasha Ivanova',   email: 'n.ivanova@eventpro-eu.ru',        totalEvents: 33, activeEvents: 7,  totalParticipants: 149820, firstEvent: '2024-01-10T10:00:00Z', lastEvent: '2026-02-20T15:00:00Z', isEnterprise: true  },
+    { name: 'Diego Fernández',   email: 'dfernandez@latam-events.mx',      totalEvents: 26, activeEvents: 9,  totalParticipants: 88403,  firstEvent: '2024-04-22T11:00:00Z', lastEvent: '2026-03-03T12:00:00Z', isEnterprise: false },
+    { name: 'Amara Diallo',      email: 'amara.diallo@westcoast-events.sn',totalEvents: 12, activeEvents: 2,  totalParticipants: 24100,  firstEvent: '2024-07-14T09:00:00Z', lastEvent: '2025-11-30T14:00:00Z', isEnterprise: false },
+    { name: 'Lena Hoffmann',     email: 'lhoffmann@berlinevent-gmbh.de',   totalEvents: 64, activeEvents: 18, totalParticipants: 397840, firstEvent: '2023-03-01T08:00:00Z', lastEvent: '2026-03-06T16:00:00Z', isEnterprise: true  },
+  ];
+}
+
+// ─── Demo Staff ───────────────────────────────────────────────────────────────
+const DEMO_STAFF_RAW = [
+  { username: 'checkin_sarah',   eventTitle: 'Global Tech Summit 2026',          eventSubdomain: 'global-tech-summit', role: 'check-in', lastSeen: '2026-03-08T08:41:00Z', hasPin: true  },
+  { username: 'door_james',      eventTitle: 'Global Tech Summit 2026',          eventSubdomain: 'global-tech-summit', role: 'check-in', lastSeen: '2026-03-08T09:02:00Z', hasPin: true  },
+  { username: 'vip_host_kai',    eventTitle: 'World AI Congress — Singapore 2026',eventSubdomain: 'wac-sg-2026',       role: 'host',     lastSeen: '2026-03-07T22:15:00Z', hasPin: true  },
+  { username: 'reg_desk_01',     eventTitle: 'World AI Congress — Singapore 2026',eventSubdomain: 'wac-sg-2026',       role: 'check-in', lastSeen: '2026-03-08T07:58:00Z', hasPin: true  },
+  { username: 'security_a',      eventTitle: 'Harvard CS Commencement 2026',     eventSubdomain: 'harvard-cs-2026',   role: 'security', lastSeen: '2026-03-06T14:30:00Z', hasPin: false },
+  { username: 'staff_london_01', eventTitle: 'Diwali Cultural Gala — London',    eventSubdomain: 'diwali-gala-london',role: 'check-in', lastSeen: '2026-02-10T19:45:00Z', hasPin: true  },
+  { username: 'staff_london_02', eventTitle: 'Diwali Cultural Gala — London',    eventSubdomain: 'diwali-gala-london',role: 'check-in', lastSeen: '2026-02-10T20:10:00Z', hasPin: true  },
+  { username: 'vc_night_host',   eventTitle: 'NYC Startup Showcase — Investor Night',eventSubdomain: 'nyc-startup-night',role: 'host',  lastSeen: '2026-02-18T17:55:00Z', hasPin: true  },
+  { username: 'scanner_1',       eventTitle: 'Google I/O Community Satellite — NYC',eventSubdomain: 'gio-nyc',         role: 'check-in', lastSeen: '2026-02-22T11:20:00Z', hasPin: true  },
+  { username: 'climate_reg',     eventTitle: 'Global Climate Summit — Youth Track',eventSubdomain: 'climate-summit-yt',role: 'check-in', lastSeen: '2026-01-22T09:15:00Z', hasPin: false },
+  { username: 'pride_door_1',    eventTitle: 'Pride Month Opening Concert',      eventSubdomain: 'pride-concert-2026',role: 'security', lastSeen: '2026-01-28T15:30:00Z', hasPin: true  },
+  { username: 'pride_door_2',    eventTitle: 'Pride Month Opening Concert',      eventSubdomain: 'pride-concert-2026',role: 'security', lastSeen: '2026-01-28T16:00:00Z', hasPin: true  },
+  { username: 'palace_liaison',  eventTitle: 'Royal State Reception',            eventSubdomain: 'royal-reception',   role: 'host',     lastSeen: '2026-02-28T16:30:00Z', hasPin: true  },
+  { username: 'ycomb_staff',     eventTitle: 'Y Combinator Spring Demo Day (W26)',eventSubdomain: 'yc-w26-demo-day',  role: 'check-in', lastSeen: '2026-02-10T14:20:00Z', hasPin: true  },
+  { username: 'blockchain_reg',  eventTitle: 'Blockchain Developer Summit — Seoul',eventSubdomain: 'blockchain-seoul', role: 'check-in', lastSeen: '2026-02-27T13:45:00Z', hasPin: false },
+];
+
+export function getDemoStaff() {
+  return DEMO_STAFF_RAW.map((s, i) => ({
+    _id: `demo-staff-${i}`,
+    ...s,
+  }));
+}
+
+// ─── Demo Employees (Internal PlanIt team) ────────────────────────────────────
+export const DEMO_EMPLOYEES = [
+  { _id: 'emp-01', name: 'Alex Rivera',    email: 'alex.rivera@planit.app',    role: 'super_admin', isDemo: false, createdAt: '2023-01-10T09:00:00Z' },
+  { _id: 'emp-02', name: 'Jordan Kim',     email: 'jordan.kim@planit.app',     role: 'admin',       isDemo: false, createdAt: '2023-03-14T10:00:00Z' },
+  { _id: 'emp-03', name: 'Sam Okafor',     email: 'sam.okafor@planit.app',     role: 'moderator',   isDemo: false, createdAt: '2023-06-01T11:00:00Z' },
+  { _id: 'emp-04', name: 'Taylor Reeves',  email: 'taylor.reeves@planit.app',  role: 'support',     isDemo: false, createdAt: '2023-07-22T09:30:00Z' },
+  { _id: 'emp-05', name: 'Morgan Hayes',   email: 'morgan.hayes@planit.app',   role: 'analyst',     isDemo: false, createdAt: '2024-01-08T08:00:00Z' },
+  { _id: 'emp-06', name: 'Casey Lin',      email: 'casey.lin@planit.app',      role: 'developer',   isDemo: false, createdAt: '2024-02-15T10:00:00Z' },
+  { _id: 'emp-07', name: 'Demo Account',   email: 'demo@planit.app',           role: 'demo',        isDemo: true,  createdAt: '2024-06-01T12:00:00Z' },
+];
+
+// ─── Demo Participants (All Users Panel) ──────────────────────────────────────
+const DEMO_USERNAMES = [
+  'skyler_events','priya.nair92','marcus_w','lena_h','aiko.t','kwame_a','reza.ahmadi',
+  'chloe_d','diego_f','natasha_iv','amara_d','james_os','victor_cheng','fatima_z',
+  'oliver_schmidt','yuki_tanaka','carlos_m','isabella_r','noah_anderson','sofia_b',
+  'ethan_park','mia_chen','liam_nguyen','emma_garcia','william_brown','ava_johnson',
+  'lucas_wilson','harper_taylor','mason_moore','evelyn_jackson','logan_martin',
+  'abigail_lee','benjamin_white','ella_harris','james_thompson','scarlett_lewis',
+  'elijah_clark','grace_robinson','aiden_walker','chloe_hall','sebastian_young',
+  'zoey_allen','matthew_king','riley_wright','henry_scott','nora_green',
+  'alexander_baker','lily_adams','daniel_nelson','hannah_carter',
+];
+
+export function getDemoParticipants({ page = 1, search = '' } = {}) {
+  const events = DEMO_EVENT_POOL;
+  const all = DEMO_USERNAMES.map((u, i) => ({
+    _id: `demo-user-${i}`,
+    username: u,
+    eventTitle: events[i % events.length].title,
+    eventSubdomain: events[i % events.length].organizerName.replace(/\./g,'-'),
+    joinedAt: new Date(Date.now() - (i * 86400000 * 3)).toISOString(),
+    hasPassword: i % 3 !== 0,
+    rsvp: i % 4 === 0 ? null : { status: ['attending','not_attending','maybe'][i % 3] },
+  }));
+  const filtered = search ? all.filter(u => u.username.toLowerCase().includes(search.toLowerCase())) : all;
+  const limit = 50;
+  const pages = Math.ceil(filtered.length / limit);
+  return {
+    participants: filtered.slice((page - 1) * limit, page * limit),
+    total: filtered.length,
+    pages,
+  };
+}
+
+// ─── Demo Analytics ───────────────────────────────────────────────────────────
+export function getDemoAnalytics() {
+  return {
+    totalEvents:       2847193,
+    activeEvents:      94281,
+    totalParticipants: 1294837004,
+    totalMessages:     418663027,
+    totalPolls:        12994841,
+    totalFiles:        87442310,
+    recentEvents:      4821,
+    newUsersToday:     jitter(12847),
+    avgSessionMin:     jitter(24),
+    peakConcurrent:    jitter(284730),
+    eventsThisWeek:    jitter(48271),
+    eventsThisMonth:   jitter(184203),
+    growthPct:         +(18.4 + noise(40, 2)).toFixed(1),
+    exportStats: {
+      totalExports:       jitter(284739),
+      csvExports:         jitter(184203),
+      calendarExports:    jitter(98472),
+      lastExport:         new Date(Date.now() - 1800000).toISOString(),
+    },
+  };
+}
+
+// ─── Demo System Info ─────────────────────────────────────────────────────────
+export { getDemoSystem, getDemoFleet, getDemoScaling };
