@@ -924,6 +924,9 @@ const CACHE_RULES = [
   // Availability and reserve config are time-sensitive — never cache them.
   // The broader /public/ pattern below intentionally excludes these paths.
   { pattern: /^\/api\/events\/public\/reserve\//,  ttl: 0 },
+  // Live wait board data must never be served stale — it shows real-time
+  // table occupancy and queue position to customers standing in the venue.
+  { pattern: /^\/api\/events\/public\/wait\/.*\/live/, ttl: 0 },
   { pattern: /^\/api\/events\/public\/(?!reserve)/, ttl: 60_000 },
   { pattern: /^\/api\/events\/subdomain\//,    ttl: 60_000 },
   { pattern: /^\/api\/events\/participants\//, ttl: 30_000 },
