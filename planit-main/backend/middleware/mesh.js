@@ -46,8 +46,6 @@ function verifyToken(tokenStr) {
   const [timestamp, ...nameParts] = payload.split(':');
   const callerName   = nameParts.join(':');
 
-  // Check timestamp freshness
-  const age = Date.now() - parseInt(timestamp, 10);
   // Check timestamp freshness.
   // Allow CLOCK_SKEW_MS in the negative direction to tolerate slight differences
   // between service clocks on Render (observed: up to ~55ms skew causing false rejections).
