@@ -2,6 +2,8 @@ require('dotenv').config();
 const express      = require('express');
 const cors         = require('cors');
 const cookieParser = require('cookie-parser');
+const helmet       = require('helmet');
+const rateLimit    = require('express-rate-limit');
 const { createProxyMiddleware } = require('http-proxy-middleware');
 const axios        = require('axios');
 const http         = require('http');
@@ -968,6 +970,21 @@ function cacheMiddleware(req, res, next) {
 // ─── App ──────────────────────────────────────────────────────────────────────
 const app = express();
 app.use(cookieParser());
+
+// L1: Security headers — costs nothing on a proxy, prevents header-sniffing attacks
+app.use(helmet({ contentSecurityPolicy: false }));
+
+// H4: Rate limiting — protects router endpoints from flood/scan attacks.
+// Mesh routes use HMAC auth so skip them here; /health is exempt as well.
+const routerRateLimit = rateLimit({
+  windowMs: 60_000,
+  max: 300,
+  skip: (req) => req.path.startsWith('/mesh') || req.path === '/health',
+  standardHeaders: true,
+  legacyHeaders: false,
+  handler: (_req, res) => res.status(429).json({ error: 'Too many requests' }),
+});
+app.use(routerRateLimit);
 
 const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || '').split(',').map(o => o.trim()).filter(Boolean);
 app.use(cors({
