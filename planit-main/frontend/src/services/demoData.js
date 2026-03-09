@@ -157,11 +157,11 @@ export function getDemoSystem() {
 
 export const LIVE_EVENT_NAMES = [
   'Global Tech Summit 2026', 'TED×Mumbai 2026', 'AWS re:Invent Watch Party',
-  'Harvard CS Graduation Party', 'Friends Gala — London', 'Champions League VIP',
+  'Harvard CS Graduation', 'Diwali Gala — London', 'UEFA Champions League VIP',
   'Startup Pitch Night NYC', 'Coachella Pre-Party', 'Google I/O Satellite',
   'Oxford Philosophy Forum', 'Bollywood Night — Dubai', 'Eid al-Fitr Gathering',
   'Y Combinator Demo Day', 'Apple WWDC Watch Party', 'Pride Parade After-Party',
-  'John\'s Wedding Reception', 'Formula 1 Singapore GP VIP', 'Gala After-Party',
+  'Royal Wedding Reception', 'Formula 1 Singapore GP VIP', 'Met Gala After-Party',
   'Davos Side Summit', 'Cannes Film Festival Premiere',
 ];
 
@@ -198,4 +198,54 @@ export function getDemoScaling() {
     cooldown: { ms: 150000, active: false, secsLeft: 0, lastAction: 'predictive' },
     circadian: { floor: 3, currentHour: new Date().getUTCHours() },
   };
+}
+
+// ── Demo event list ───────────────────────────────────────────────────────────
+// Matches the shape that admin/events API returns so the Events tab renders normally.
+
+const DEMO_EVENT_POOL = [
+  { title: 'Global Tech Summit 2026',        organizerName: 'sarah.chen',   status: 'active',    participants: 4821, createdAt: '2026-01-14T10:00:00Z', isPasswordProtected: false },
+  { title: 'Harvard CS Graduation Ceremony', organizerName: 'j.rodriguez',  status: 'active',    participants: 2140, createdAt: '2026-02-01T09:00:00Z', isPasswordProtected: true  },
+  { title: 'Y Combinator W26 Demo Day',      organizerName: 'alex.kim',     status: 'active',    participants: 987,  createdAt: '2026-02-10T14:00:00Z', isPasswordProtected: true  },
+  { title: 'Friends Gala — London 2026',      organizerName: 'priya.sharma', status: 'active',    participants: 3402, createdAt: '2026-02-15T12:00:00Z', isPasswordProtected: false },
+  { title: 'Coachella Pre-Party VIP',        organizerName: 'mike.taylor',  status: 'active',    participants: 750,  createdAt: '2026-02-20T16:00:00Z', isPasswordProtected: true  },
+  { title: 'Google I/O Satellite — NYC',     organizerName: 'dev.team',     status: 'active',    participants: 1883, createdAt: '2026-02-22T11:00:00Z', isPasswordProtected: false },
+  { title: 'Oxford Philosophy Forum',        organizerName: 'dr.watson',    status: 'completed', participants: 320,  createdAt: '2025-11-01T09:00:00Z', isPasswordProtected: false },
+  { title: 'Startup Pitch Night NYC',        organizerName: 'vc.hub',       status: 'completed', participants: 612,  createdAt: '2025-12-05T18:00:00Z', isPasswordProtected: false },
+  { title: 'Bollywood Night — Dubai',        organizerName: 'events.ae',    status: 'completed', participants: 2800, createdAt: '2025-12-20T20:00:00Z', isPasswordProtected: true  },
+  { title: 'F1 Singapore GP VIP Lounge',     organizerName: 'racing.club',  status: 'completed', participants: 430,  createdAt: '2025-09-20T14:00:00Z', isPasswordProtected: true  },
+  { title: 'Met Gala After-Party 2025',      organizerName: 'fashion.inc',  status: 'completed', participants: 290,  createdAt: '2025-05-05T22:00:00Z', isPasswordProtected: true  },
+  { title: 'Davos Side Summit',              organizerName: 'wef.admin',    status: 'draft',     participants: 0,    createdAt: '2026-03-01T08:00:00Z', isPasswordProtected: false },
+  { title: 'Cannes Film Festival Premiere',  organizerName: 'cinema.guild', status: 'draft',     participants: 0,    createdAt: '2026-03-05T10:00:00Z', isPasswordProtected: false },
+  { title: 'Pride Parade After-Party 2026',  organizerName: 'community.org',status: 'cancelled', participants: 880,  createdAt: '2026-01-28T15:00:00Z', isPasswordProtected: false },
+  { title: 'TED×Mumbai 2026',               organizerName: 'tedx.mumbai',  status: 'active',    participants: 1240, createdAt: '2026-02-25T09:00:00Z', isPasswordProtected: false },
+  { title: 'Apple WWDC Watch Party',         organizerName: 'dev.fans',     status: 'active',    participants: 677,  createdAt: '2026-03-01T13:00:00Z', isPasswordProtected: false },
+  { title: 'Eid al-Fitr Celebration',        organizerName: 'community.ae', status: 'active',    participants: 5200, createdAt: '2026-03-01T08:00:00Z', isPasswordProtected: false },
+  { title: 'Royal Wedding Reception',        organizerName: 'palace.events',status: 'active',    participants: 840,  createdAt: '2026-02-28T16:00:00Z', isPasswordProtected: true  },
+  { title: 'AWS re:Invent Watch Party',      organizerName: 'cloud.crew',   status: 'completed', participants: 395,  createdAt: '2025-11-28T10:00:00Z', isPasswordProtected: false },
+  { title: 'UEFA Champions League VIP',      organizerName: 'sport.mgmt',   status: 'completed', participants: 1100, createdAt: '2025-10-15T18:00:00Z', isPasswordProtected: true  },
+];
+
+const PER_PAGE = 20;
+
+export function getDemoEvents({ page = 1, status = 'all' } = {}) {
+  const filtered = status === 'all'
+    ? DEMO_EVENT_POOL
+    : DEMO_EVENT_POOL.filter(e => e.status === status);
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PER_PAGE));
+  const slice = filtered.slice((page - 1) * PER_PAGE, page * PER_PAGE);
+
+  const events = slice.map((e, i) => ({
+    _id:                `demo-${i}-${page}`,
+    title:              e.title,
+    organizerName:      e.organizerName,
+    status:             e.status,
+    isPasswordProtected: e.isPasswordProtected,
+    createdAt:          e.createdAt,
+    participants:       Array.from({ length: e.participants }, (_, j) => ({ username: `user${j}` })),
+    settings:           { requireApproval: false },
+  }));
+
+  return { events, totalPages };
 }
