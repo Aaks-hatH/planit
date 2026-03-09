@@ -45,9 +45,12 @@ function verifyToken(tokenStr) {
   const [timestamp, ...nameParts] = payload.split(':');
   const callerName   = nameParts.join(':');
 
-  // Check timestamp freshness
+  // Check timestamp freshness.
+  // Allow CLOCK_SKEW_MS in the negative direction to tolerate slight differences
+  // between service clocks on Render (observed: up to ~55ms skew causing false rejections).
+  const CLOCK_SKEW_MS = 2000;
   const age = Date.now() - parseInt(timestamp, 10);
-  if (isNaN(age) || age < 0 || age > MESH_TOKEN_TTL_MS) {
+  if (isNaN(age) || age < -CLOCK_SKEW_MS || age > MESH_TOKEN_TTL_MS) {
     return { ok: false, reason: `token expired (age: ${age}ms)` };
   }
 
