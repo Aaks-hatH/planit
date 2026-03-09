@@ -199,13 +199,6 @@ async function trafficGuard(req, res, next) {
     }
   }
 
-  // L4: Hourly volume counter — catches slow-and-low scans invisible to rapid detector
-  const hourKey = `sec:vol:${ip}`;
-  const hourCnt = await redis.incrWithExpiry(hourKey, 3600);
-  if (hourCnt > 1000) {
-    await addWarn(ip, `high volume: ${hourCnt} req/hr`);
-  }
-
   // 5. Oversized payload probe on non-upload routes
   const cl = parseInt(req.headers['content-length'] || '0', 10);
   const isUpload = req.path.includes('/upload') || req.path.includes('/cover');
