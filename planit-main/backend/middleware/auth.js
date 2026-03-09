@@ -203,9 +203,13 @@ const verifyOrganizer = async (req, res, next) => {
 
 // Verify admin access
 const verifyAdmin = (req, res, next) => {
-  // req.query.token is accepted so browser EventSource (SSE) can authenticate —
-  // EventSource cannot send custom headers, so the token must travel in the URL.
-  const token = req.headers.authorization?.split(' ')[1] || req.cookies.adminToken || req.query.token;
+  // req.query.token is accepted ONLY for SSE (EventSource) routes because the
+  // browser EventSource API cannot send custom headers. On all other routes the
+  // query param is ignored to prevent tokens appearing in server logs / Referer headers.
+  const isSSE = req.headers.accept === 'text/event-stream';
+  const token = req.headers.authorization?.split(' ')[1]
+              || req.cookies.adminToken
+              || (isSSE ? req.query.token : null);
 
   if (!token) {
     return res.status(401).json({ error: 'Admin login required.' });
