@@ -12,7 +12,7 @@ const File = require('../models/File');
 const EventParticipant = require('../models/EventParticipant');
 const Invite = require('../models/Invite');
 const Employee = require('../models/Employee');
-const { verifyAdmin } = require('../middleware/auth');
+const { verifyAdmin, requirePermission, requireSuperAdminRole, demoGuard } = require('../middleware/auth');
 const { authLimiter } = require('../middleware/rateLimiter');
 const { secrets } = require('../keys');
 const Blocklist = require('../models/Blocklist');
@@ -77,6 +77,40 @@ router.post(
       const adminUsername = process.env.ADMIN_USERNAME || 'admin';
       const adminPassword = process.env.ADMIN_PASSWORD || 'admin123';
 
+      // ── Demo account check ──────────────────────────────────────────────
+      // Set DEMO_USERNAME and DEMO_PASSWORD in env to enable.
+      // Demo tokens carry isDemo:true so demoGuard intercepts all writes.
+      const demoUsername = process.env.DEMO_USERNAME || '';
+      const demoPassword = process.env.DEMO_PASSWORD || '';
+      if (demoUsername && demoPassword && username === demoUsername && password === demoPassword) {
+        const demoToken = jwt.sign(
+          {
+            username:  demoUsername,
+            name:      'Demo Account',
+            isAdmin:   true,
+            isEmployee: true,
+            isDemo:    true,
+            role:      'demo',
+            permissions: {}, // no permissions — demo only reads
+          },
+          secrets.jwt,
+          { expiresIn: '8h' },
+        );
+        return res.json({
+          message: 'Demo login successful',
+          token:   demoToken,
+          user: {
+            username:    demoUsername,
+            name:        'Demo Account',
+            role:        'demo',
+            isEmployee:  true,
+            isDemo:      true,
+            permissions: {},
+          },
+        });
+      }
+      // ── End demo check ──────────────────────────────────────────────────
+
       if (username !== adminUsername || password !== adminPassword) {
         // Super admin check failed — try employee login (email + password)
         const employee = await Employee.findOne({ email: username.toLowerCase().trim(), status: 'active' });
@@ -90,6 +124,7 @@ router.post(
         const empToken = jwt.sign(
           { employeeId: employee._id, name: employee.name, email: employee.email,
             role: employee.role, isAdmin: true, isEmployee: true,
+            isDemo: employee.isDemo || false,
             permissions: employee.permissions },
           secrets.jwt,
           { expiresIn: '24h' }
@@ -97,7 +132,9 @@ router.post(
         return res.json({
           message: 'Employee login successful',
           token: empToken,
-          user: { username: employee.name, email: employee.email, role: employee.role, isEmployee: true, permissions: employee.permissions },
+          user: { username: employee.name, email: employee.email, role: employee.role,
+                  isEmployee: true, isDemo: employee.isDemo || false,
+                  permissions: employee.permissions },
         });
       }
 
@@ -117,6 +154,16 @@ router.post(
     }
   }
 );
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// DEMO GUARD  —  router-level write intercept for demo accounts
+// ═══════════════════════════════════════════════════════════════════════════════
+// Mounted here so it covers ALL routes below.  The login route above is exempt
+// (no auth required there).  demoGuard is a no-op when req.admin is not yet set
+// (the individual route's verifyAdmin will run first, but demoGuard only acts
+// on demo tokens anyway — and requirePermission ALSO blocks demo accounts on
+// any permissioned route, giving us defence-in-depth).
+router.use(demoGuard);
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // DASHBOARD & STATISTICS
@@ -171,7 +218,7 @@ router.get('/stats', verifyAdmin, async (req, res, next) => {
 // SYSTEM INFO  —  GET /admin/system
 // ═══════════════════════════════════════════════════════════════════════════════
 
-router.get('/system', verifyAdmin, async (req, res, next) => {
+router.get('/system', verifyAdmin, requirePermission('canViewSystem'), async (req, res, next) => {
   try {
     const mem      = process.memoryUsage();
     const load     = os.loadavg();
@@ -247,7 +294,7 @@ router.get('/system', verifyAdmin, async (req, res, next) => {
 // The router fans out to itself, every known backend, and the watchdog, then
 // returns everything merged by timestamp. Only ROUTER_URL needs to be set here —
 // WATCHDOG_URL and backend URLs are all managed on the router side.
-router.get('/logs/fleet', verifyAdmin, async (req, res) => {
+router.get('/logs/fleet', verifyAdmin, requirePermission('canViewLogs'), requirePermission('canViewLogs'), async (req, res) => {
   const { meshGet } = require('../middleware/mesh');
   const CALLER    = process.env.BACKEND_LABEL || 'Backend';
   const routerUrl = process.env.ROUTER_URL    || '';
@@ -288,7 +335,7 @@ router.get('/logs/fleet', verifyAdmin, async (req, res) => {
 });
 
 // GET /admin/logs  — last N log lines (n=all returns everything)
-router.get('/logs', verifyAdmin, (req, res) => {
+router.get('/logs', verifyAdmin, requirePermission('canViewLogs'), (req, res) => {
   const raw = req.query.n;
   const n   = raw === 'all' ? Infinity : (parseInt(raw) || 500);
   const lvl = req.query.level;
@@ -298,7 +345,7 @@ router.get('/logs', verifyAdmin, (req, res) => {
 });
 
 // GET /admin/logs/stream  — Server-Sent Events real-time log stream
-router.get('/logs/stream', verifyAdmin, (req, res) => {
+router.get('/logs/stream', verifyAdmin, requirePermission('canViewLogs'), (req, res) => {
   res.setHeader('Content-Type',  'text/event-stream');
   res.setHeader('Cache-Control', 'no-cache');
   res.setHeader('Connection',    'keep-alive');
@@ -323,7 +370,7 @@ router.get('/logs/stream', verifyAdmin, (req, res) => {
 
 // GET /admin/logs/full — complete system snapshot: ALL logs + full system state
 // No pagination, no limits. Intended for debugging and incident investigation.
-router.get('/logs/full', verifyAdmin, async (req, res, next) => {
+router.get('/logs/full', verifyAdmin, requirePermission('canViewLogs'), async (req, res, next) => {
   try {
     const mem      = process.memoryUsage();
     const load     = os.loadavg();
@@ -464,7 +511,7 @@ router.get('/events/:eventId', verifyAdmin, async (req, res, next) => {
 });
 
 // Update event (full edit)
-router.patch('/events/:eventId', verifyAdmin, async (req, res, next) => {
+router.patch('/events/:eventId', verifyAdmin, requirePermission('canEditEvents'), async (req, res, next) => {
   try {
     const allowed = [
       'title', 'description', 'date', 'location',
@@ -501,6 +548,7 @@ router.patch('/events/:eventId', verifyAdmin, async (req, res, next) => {
 router.patch(
   '/events/:eventId/status',
   verifyAdmin,
+  requirePermission('canEditEvents'),
   [
     body('status')
       .isIn(['draft', 'active', 'completed', 'cancelled'])
@@ -523,7 +571,7 @@ router.patch(
 );
 
 // Delete event + all related data
-router.delete('/events/:eventId', verifyAdmin, async (req, res, next) => {
+router.delete('/events/:eventId', verifyAdmin, requirePermission('canDeleteEvents'), async (req, res, next) => {
   try {
     const event = await Event.findById(req.params.eventId);
     if (!event) return res.status(404).json({ error: 'Event not found' });
@@ -575,14 +623,14 @@ router.get('/events/:eventId/messages', verifyAdmin, async (req, res, next) => {
   } catch (error) { next(error); }
 });
 
-router.delete('/events/:eventId/messages/:messageId', verifyAdmin, async (req, res, next) => {
+router.delete('/events/:eventId/messages/:messageId', verifyAdmin, requirePermission('canDeleteEvents'), async (req, res, next) => {
   try {
     await Message.findByIdAndUpdate(req.params.messageId, { isDeleted: true, deletedAt: new Date() });
     res.json({ message: 'Message deleted' });
   } catch (error) { next(error); }
 });
 
-router.post('/events/:eventId/messages/bulk-delete', verifyAdmin, async (req, res, next) => {
+router.post('/events/:eventId/messages/bulk-delete', verifyAdmin, requirePermission('canDeleteEvents'), async (req, res, next) => {
   try {
     const { messageIds } = req.body;
     await Message.updateMany(
@@ -607,7 +655,7 @@ router.get('/events/:eventId/participants', verifyAdmin, async (req, res, next) 
   } catch (error) { next(error); }
 });
 
-router.delete('/events/:eventId/participants/:username', verifyAdmin, async (req, res, next) => {
+router.delete('/events/:eventId/participants/:username', verifyAdmin, requirePermission('canManageUsers'), async (req, res, next) => {
   try {
     await EventParticipant.deleteOne({ eventId: req.params.eventId, username: req.params.username });
     await Event.findByIdAndUpdate(req.params.eventId, {
@@ -617,7 +665,7 @@ router.delete('/events/:eventId/participants/:username', verifyAdmin, async (req
   } catch (error) { next(error); }
 });
 
-router.delete('/events/:eventId/participants/:username/password', verifyAdmin, async (req, res, next) => {
+router.delete('/events/:eventId/participants/:username/password', verifyAdmin, requirePermission('canManageUsers'), async (req, res, next) => {
   try {
     await EventParticipant.findOneAndUpdate(
       { eventId: req.params.eventId, username: req.params.username },
@@ -627,7 +675,7 @@ router.delete('/events/:eventId/participants/:username/password', verifyAdmin, a
   } catch (error) { next(error); }
 });
 
-router.post('/events/:eventId/participants/bulk-remove', verifyAdmin, async (req, res, next) => {
+router.post('/events/:eventId/participants/bulk-remove', verifyAdmin, requirePermission('canManageUsers'), async (req, res, next) => {
   try {
     const { usernames } = req.body;
     await EventParticipant.deleteMany({
@@ -652,7 +700,7 @@ router.get('/events/:eventId/polls', verifyAdmin, async (req, res, next) => {
   } catch (error) { next(error); }
 });
 
-router.delete('/events/:eventId/polls/:pollId', verifyAdmin, async (req, res, next) => {
+router.delete('/events/:eventId/polls/:pollId', verifyAdmin, requirePermission('canDeleteEvents'), async (req, res, next) => {
   try {
     await Poll.findByIdAndDelete(req.params.pollId);
     res.json({ message: 'Poll deleted' });
@@ -672,7 +720,7 @@ router.get('/events/:eventId/files', verifyAdmin, async (req, res, next) => {
   } catch (error) { next(error); }
 });
 
-router.delete('/events/:eventId/files/:fileId', verifyAdmin, async (req, res, next) => {
+router.delete('/events/:eventId/files/:fileId', verifyAdmin, requirePermission('canDeleteEvents'), async (req, res, next) => {
   try {
     await File.findByIdAndUpdate(req.params.fileId, { isDeleted: true, deletedAt: new Date() });
     res.json({ message: 'File deleted' });
@@ -693,7 +741,7 @@ router.get('/events/:eventId/invites', verifyAdmin, async (req, res, next) => {
   } catch (error) { next(error); }
 });
 
-router.post('/events/:eventId/invites/:inviteCode/checkin', verifyAdmin, async (req, res, next) => {
+router.post('/events/:eventId/invites/:inviteCode/checkin', verifyAdmin, requirePermission('canDeleteEvents'), async (req, res, next) => {
   try {
     if (!Invite) return res.status(404).json({ error: 'Invite system not available' });
     const invite = await Invite.findOneAndUpdate(
@@ -706,7 +754,7 @@ router.post('/events/:eventId/invites/:inviteCode/checkin', verifyAdmin, async (
   } catch (error) { next(error); }
 });
 
-router.delete('/events/:eventId/invites/:inviteId', verifyAdmin, async (req, res, next) => {
+router.delete('/events/:eventId/invites/:inviteId', verifyAdmin, requirePermission('canDeleteEvents'), async (req, res, next) => {
   try {
     if (!Invite) return res.status(404).json({ error: 'Invite system not available' });
     await Invite.findByIdAndDelete(req.params.inviteId);
@@ -874,22 +922,54 @@ router.get('/all-participants', verifyAdmin, async (req, res, next) => {
 // EMPLOYEE MANAGEMENT  —  /admin/employees
 // ═══════════════════════════════════════════════════════════════════════════════
 
+// GET /admin/me — returns the current admin's own profile and permission set.
+// Useful for the frontend to know which UI sections to show/hide.
+router.get('/me', verifyAdmin, (req, res) => {
+  const admin = req.admin;
+  res.json({
+    name:        admin.name        || admin.username || 'Admin',
+    email:       admin.email       || null,
+    role:        admin.role        || 'super_admin',
+    isEmployee:  admin.isEmployee  || false,
+    isDemo:      admin.isDemo      || false,
+    permissions: admin.permissions || null, // null = root admin (all access)
+  });
+});
+
 router.get('/employees', verifyAdmin, async (req, res, next) => {
   try {
-    const employees = await Employee.find().sort({ createdAt: -1 }).lean();
+    // Strip passwordHash from every record before sending.
+    // Non-super_admin employees also cannot see the isDemo flag or full permissions
+    // of OTHER employees — only their own (via /me above).
+    const isSuperAdmin = req.admin.role === 'super_admin' ||
+                         (!req.admin.isEmployee && req.admin.isAdmin === true);
+
+    const raw = await Employee.find().sort({ createdAt: -1 }).lean();
+    const employees = raw.map(e => {
+      // eslint-disable-next-line no-unused-vars
+      const { passwordHash, ...safe } = e;
+      if (!isSuperAdmin) {
+        // Redact sensitive fields from non-super-admin viewers
+        delete safe.permissions;
+        delete safe.isDemo;
+        delete safe.passwordHash;
+      }
+      return safe;
+    });
     res.json({ employees });
   } catch (error) { next(error); }
 });
 
-router.post('/employees', verifyAdmin, async (req, res, next) => {
+router.post('/employees', verifyAdmin, requireSuperAdminRole, async (req, res, next) => {
   try {
-    const { name, email, role, department, phone, notes, permissions, startDate, status } = req.body;
+    const { name, email, role, department, phone, notes, permissions, startDate, status, isDemo } = req.body;
     if (!name || !email) return res.status(400).json({ error: 'Name and email required' });
 
     const existing = await Employee.findOne({ email: email.toLowerCase().trim() });
     if (existing) return res.status(400).json({ error: 'Email already registered' });
 
     const empData = { name, email, role: role || 'support', department, phone, notes, permissions, status };
+    if (typeof isDemo === 'boolean') empData.isDemo = isDemo;
     if (startDate && startDate.trim()) {
       const d = new Date(startDate);
       if (!isNaN(d.getTime())) empData.startDate = d;
@@ -902,7 +982,7 @@ router.post('/employees', verifyAdmin, async (req, res, next) => {
   } catch (error) { next(error); }
 });
 
-router.patch('/employees/:id', verifyAdmin, async (req, res, next) => {
+router.patch('/employees/:id', verifyAdmin, requireSuperAdminRole, async (req, res, next) => {
   try {
     const { password, startDate, ...rest } = req.body;
     const updateData = { ...rest };
@@ -935,7 +1015,7 @@ router.patch('/employees/:id', verifyAdmin, async (req, res, next) => {
   } catch (error) { next(error); }
 });
 
-router.delete('/employees/:id', verifyAdmin, async (req, res, next) => {
+router.delete('/employees/:id', verifyAdmin, requireSuperAdminRole, async (req, res, next) => {
   try {
     await Employee.findByIdAndDelete(req.params.id);
     res.json({ message: 'Employee deleted' });
@@ -946,7 +1026,7 @@ router.delete('/employees/:id', verifyAdmin, async (req, res, next) => {
 // DATA EXPORT
 // ═══════════════════════════════════════════════════════════════════════════════
 
-router.get('/export', verifyAdmin, async (req, res, next) => {
+router.get('/export', verifyAdmin, requirePermission('canExportData'), async (req, res, next) => {
   try {
     const type    = req.query.type || 'events';
     const eventId = req.query.eventId;
@@ -995,7 +1075,7 @@ router.get('/export', verifyAdmin, async (req, res, next) => {
   }
 });
 
-router.get('/export/stats', verifyAdmin, async (req, res, next) => {
+router.get('/export/stats', verifyAdmin, requirePermission('canExportData'), async (req, res, next) => {
   try {
     const [eventsByStatus, eventsByMonth, messagesByDay] = await Promise.all([
       Event.aggregate([{ $group: { _id: '$status', count: { $sum: 1 } } }]),
@@ -1022,7 +1102,7 @@ router.get('/export/stats', verifyAdmin, async (req, res, next) => {
 // ADMIN EVENT ACCESS — bypass password
 // ═══════════════════════════════════════════════════════════════════════════════
 
-router.post('/events/:eventId/access', verifyAdmin, async (req, res, next) => {
+router.post('/events/:eventId/access', verifyAdmin, requirePermission('canEditEvents'), async (req, res, next) => {
   try {
     const event = await Event.findById(req.params.eventId);
     if (!event) return res.status(404).json({ error: 'Event not found' });
@@ -1066,7 +1146,7 @@ router.post('/events/:eventId/access', verifyAdmin, async (req, res, next) => {
 // MANUAL CLEANUP — run the 7-day cleanup job on demand
 // ═══════════════════════════════════════════════════════════════════════════════
 
-router.post('/cleanup', verifyAdmin, async (req, res, next) => {
+router.post('/cleanup', verifyAdmin, requirePermission('canRunCleanup'), async (req, res, next) => {
   try {
     const { manualCleanup, cleanupOrphanedCloudinaryAssets } = require('../jobs/cleanupJob');
 
@@ -1108,14 +1188,14 @@ router.post('/cleanup', verifyAdmin, async (req, res, next) => {
 
 // GET /admin/marketing/templates
 // Returns the list of available marketing email templates.
-router.get('/marketing/templates', verifyAdmin, (_req, res) => {
+router.get('/marketing/templates', verifyAdmin, requirePermission('canViewMarketing'), (_req, res) => {
   const { listTemplates } = require('../services/marketingService');
   res.json({ templates: listTemplates() });
 });
 
 // GET /admin/marketing/preview/:templateId
 // Returns the rendered HTML of a template for previewing in an iframe.
-router.get('/marketing/preview/:templateId', verifyAdmin, (req, res) => {
+router.get('/marketing/preview/:templateId', verifyAdmin, requirePermission('canViewMarketing'), (req, res) => {
   const { previewTemplate } = require('../services/marketingService');
   const { ctaUrl, recipientName, recipientCompany, recipientRole } = req.query;
   const recipient = {
@@ -1135,15 +1215,9 @@ router.get('/marketing/preview/:templateId', verifyAdmin, (req, res) => {
 // COMMAND CENTER  —  super_admin only
 // ═══════════════════════════════════════════════════════════════════════════════
 
-function requireSuperAdmin(req, res, next) {
-  // verifyAdmin sets req.admin — never req.user
-  const admin = req.admin;
-  if (!admin) return res.status(403).json({ error: 'Command Center is restricted to super_admin.' });
-  // Allow super_admin JWT role, or non-employee admins (the root admin login)
-  const ok = admin.role === 'super_admin' || (!admin.isEmployee && admin.isAdmin === true);
-  if (!ok) return res.status(403).json({ error: 'Command Center is restricted to super_admin.' });
-  next();
-}
+// requireSuperAdmin is imported from auth.js as requireSuperAdminRole.
+// Keep local alias for backward compatibility with all /cc/* route definitions.
+const requireSuperAdmin = requireSuperAdminRole;
 
 // GET /admin/cc/fleet — full fleet metrics from all services
 router.get('/cc/fleet', verifyAdmin, requireSuperAdmin, async (req, res) => {
@@ -1302,7 +1376,7 @@ router.get('/cc/db', verifyAdmin, requireSuperAdmin, async (req, res, next) => {
 // MARKETING — SCHEDULING
 // ═══════════════════════════════════════════════════════════════════════════════
 
-router.post('/marketing/schedule', verifyAdmin, async (req, res, next) => {
+router.post('/marketing/schedule', verifyAdmin, requirePermission('canSendMarketing'), async (req, res, next) => {
   try {
     const redis = require('../services/redisClient');
     const { templateId, recipients, subject, ctaUrl, sendAt, label } = req.body || {};
@@ -1324,7 +1398,7 @@ router.post('/marketing/schedule', verifyAdmin, async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
-router.get('/marketing/scheduled', verifyAdmin, async (req, res, next) => {
+router.get('/marketing/scheduled', verifyAdmin, requirePermission('canViewMarketing'), async (req, res, next) => {
   try {
     const redis = require('../services/redisClient');
     const listRaw = await redis.get('mktschedlist').catch(() => null);
@@ -1334,7 +1408,7 @@ router.get('/marketing/scheduled', verifyAdmin, async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
-router.delete('/marketing/schedule/:id', verifyAdmin, async (req, res, next) => {
+router.delete('/marketing/schedule/:id', verifyAdmin, requirePermission('canSendMarketing'), async (req, res, next) => {
   try {
     const redis = require('../services/redisClient');
     const id    = req.params.id;
@@ -1354,7 +1428,7 @@ router.delete('/marketing/schedule/:id', verifyAdmin, async (req, res, next) => 
 // ═══════════════════════════════════════════════════════════════════════════════
 
 // POST /admin/marketing/discover  — start a discovery run, streams results via SSE
-router.get('/marketing/discover', verifyAdmin, async (req, res) => {
+router.get('/marketing/discover', verifyAdmin, requirePermission('canViewMarketing'), async (req, res) => {
   const { query, industry, location, limit } = req.query;
   if (!query && !industry) return res.status(400).json({ error: 'query or industry required' });
 
@@ -1401,7 +1475,7 @@ router.get('/marketing/discover', verifyAdmin, async (req, res) => {
 });
 
 // GET /admin/marketing/contacted  — list of already-emailed addresses
-router.get('/marketing/contacted', verifyAdmin, async (req, res, next) => {
+router.get('/marketing/contacted', verifyAdmin, requirePermission('canViewMarketing'), async (req, res, next) => {
   try {
     const redis = require('../services/redisClient');
     const raw = await redis.get('mkt:contacted').catch(() => null);
@@ -1411,7 +1485,7 @@ router.get('/marketing/contacted', verifyAdmin, async (req, res, next) => {
 });
 
 // POST /admin/marketing/contacted/add  — manually mark emails as contacted
-router.post('/marketing/contacted/add', verifyAdmin, async (req, res, next) => {
+router.post('/marketing/contacted/add', verifyAdmin, requirePermission('canSendMarketing'), async (req, res, next) => {
   try {
     const redis = require('../services/redisClient');
     const { emails } = req.body;
@@ -1425,7 +1499,7 @@ router.post('/marketing/contacted/add', verifyAdmin, async (req, res, next) => {
 });
 
 // DELETE /admin/marketing/contacted/:email  — remove from contacted list
-router.delete('/marketing/contacted/:email', verifyAdmin, async (req, res, next) => {
+router.delete('/marketing/contacted/:email', verifyAdmin, requirePermission('canSendMarketing'), async (req, res, next) => {
   try {
     const redis = require('../services/redisClient');
     const email = decodeURIComponent(req.params.email).toLowerCase();
@@ -1438,7 +1512,7 @@ router.delete('/marketing/contacted/:email', verifyAdmin, async (req, res, next)
 
 // Override sendCampaign to auto-track sent emails
 const _origSend = router.stack; // just a reference; we patch via middleware below
-router.post('/marketing/send', verifyAdmin, async (req, res, next) => {
+router.post('/marketing/send', verifyAdmin, requirePermission('canSendMarketing'), async (req, res, next) => {
   try {
     const { templateId, recipients, subject, ctaUrl } = req.body || {};
 
@@ -1714,7 +1788,7 @@ router.post('/cc/bulk-events', verifyAdmin, requireSuperAdmin, async (req, res, 
 // ─── Blocklist routes ──────────────────────────────────────────────────────────
 
 // GET /admin/blocklist — list all entries, optional ?type= filter
-router.get('/blocklist', verifyAdmin, async (req, res, next) => {
+router.get('/blocklist', verifyAdmin, requirePermission('canManageBlocklist'), async (req, res, next) => {
   try {
     const filter = {};
     if (req.query.type) filter.type = req.query.type;
@@ -1725,7 +1799,7 @@ router.get('/blocklist', verifyAdmin, async (req, res, next) => {
 
 // POST /admin/blocklist — add an entry
 // body: { type, value, reason?, permanent?, expiresAt? }
-router.post('/blocklist', verifyAdmin, async (req, res, next) => {
+router.post('/blocklist', verifyAdmin, requirePermission('canManageBlocklist'), async (req, res, next) => {
   try {
     const { type, value, reason = '', permanent = true, expiresAt = null } = req.body;
     if (!type || !['ip', 'event', 'name'].includes(type))
@@ -1763,7 +1837,7 @@ router.post('/blocklist', verifyAdmin, async (req, res, next) => {
 });
 
 // DELETE /admin/blocklist/:id — remove an entry
-router.delete('/blocklist/:id', verifyAdmin, async (req, res, next) => {
+router.delete('/blocklist/:id', verifyAdmin, requirePermission('canManageBlocklist'), async (req, res, next) => {
   try {
     const entry = await Blocklist.findByIdAndDelete(req.params.id).lean();
     if (!entry) return res.status(404).json({ error: 'Not found' });
@@ -1776,7 +1850,7 @@ router.delete('/blocklist/:id', verifyAdmin, async (req, res, next) => {
 });
 
 // PATCH /admin/blocklist/:id — update reason or expiry
-router.patch('/blocklist/:id', verifyAdmin, async (req, res, next) => {
+router.patch('/blocklist/:id', verifyAdmin, requirePermission('canManageBlocklist'), async (req, res, next) => {
   try {
     const allowed = ['reason', 'expiresAt', 'permanent'];
     const updates = {};
@@ -1857,7 +1931,7 @@ router.get('/maintenance', verifyAdmin, async (req, res) => {
 //   action = 'activate'  — create + go live immediately
 //   action = 'schedule'  — create as upcoming (banner only, no lockout)
 //   action = 'resolve'   — mark current record resolved, clear router
-router.post('/maintenance', verifyAdmin, async (req, res) => {
+router.post('/maintenance', verifyAdmin, requirePermission('canToggleMaintenance'), async (req, res) => {
   try {
     const { action, type = 's', message = '', eta, start } = req.body;
     const by = req.admin?.username || req.admin?.name || 'admin';
