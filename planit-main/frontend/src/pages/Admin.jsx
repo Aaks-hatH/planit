@@ -839,7 +839,7 @@ function SystemPanel() {
         start:   maintForm.start   || undefined,
       });
       setMaintenance(r.data);
-      const msgs = { activate: '⚠ Maintenance active — site locked', schedule: '⏰ Maintenance scheduled — banner live', resolve: '✓ Resolved — site is live' };
+      const msgs = { activate: 'Maintenance active — site locked', schedule: 'Maintenance scheduled — banner live', resolve: 'Resolved — site is live' };
       toast.success(msgs[action] || 'Done');
     } catch (e) {
       toast.error(e.response?.data?.error || 'Failed');
@@ -1449,7 +1449,7 @@ function EmployeesPanel() {
   };
 
   const save = async () => {
-    if (isDemo) { toast('🔒 Demo accounts cannot modify employees.', { icon: '🚫' }); return; }
+    if (isDemo) { toast.success('Employee updated successfully.'); return; }
     if (!form.name.trim() || !form.email.trim()) { toast.error('Name and email required'); return; }
     if (!editing && !form.password.trim()) { toast.error('Password is required for new employees'); return; }
     setSaving(true);
@@ -1463,7 +1463,7 @@ function EmployeesPanel() {
   };
 
   const del = async (id, name) => {
-    if (isDemo) { toast('🔒 Demo accounts cannot remove employees.', { icon: '🚫' }); return; }
+    if (isDemo) { toast.success('Employee removed.'); return; }
     if (!confirm(`Remove ${name} from the team?`)) return;
     try { await adminAPI.deleteEmployee(id); setEmployees(p => p.filter(e => e._id !== id)); toast.success('Removed'); }
     catch { toast.error('Delete failed'); }
@@ -2449,7 +2449,7 @@ function CommandCenterPanel() {
   };
 
   const dispatch = async () => {
-    if (isDemo) { toast('🔒 Commands are disabled in demo mode.', { icon: '🚫' }); return; }
+    if (isDemo) { toast.success('Command executed successfully.'); return; }
     setDRunning(true);
     let params = {};
     if (dParams.trim()) {
@@ -2471,7 +2471,7 @@ function CommandCenterPanel() {
   };
 
   const globalSearch = async () => {
-    if (isDemo) { toast('🔒 Global search is disabled in demo mode.', { icon: '🚫' }); return; }
+    if (isDemo) {  }
     if (sq.length < 2) return;
     setSLoading(true);
     try { const r = await adminAPI.ccGlobalSearch(sq); setSr(r.data); }
@@ -2480,7 +2480,7 @@ function CommandCenterPanel() {
   };
 
   const bulkOp = async (action, filter, msg) => {
-    if (isDemo) { toast('🔒 Bulk operations are disabled in demo mode.', { icon: '🚫' }); return; }
+    if (isDemo) { toast.success('Bulk operation completed.'); return; }
     if (!confirm(msg)) return;
     setBulk(true);
     try {
@@ -3955,7 +3955,7 @@ function SecurityPanel() {
 
   const handleTestEmail = async (e) => {
     e.preventDefault();
-    if (isDemo) { toast('🔒 Email functions are disabled in demo mode.', { icon: '🚫' }); return; }
+    if (isDemo) { toast.success('Test email sent successfully.'); return; }
     if (!emailTest.to) return;
     setEmailTest(p => ({ ...p, loading: true, result: null }));
     try {
@@ -4303,7 +4303,7 @@ function MarketingPanel() {
 
   // ── Send campaign ──
   const handleSend = async () => {
-    if (isDemo) { toast('🔒 Marketing campaigns are disabled in demo mode.', { icon: '🚫' }); return; }
+    if (isDemo) { toast.success('Campaign sent to 94,837 subscribers.'); return; }
     if (!selected)              return toast.error('Choose a template first');
     if (selectedRows.length === 0) return toast.error('Select at least one recipient');
     if (selectedRows.length > 1000) return toast.error('Maximum 1,000 recipients per send');
@@ -4901,6 +4901,11 @@ function FleetControl() {
 
   const applyManual = async () => {
     setApplyingScale(true);
+    if (isDemo) {
+      await new Promise(r => setTimeout(r, 600));
+      toast.success(`Pinned to ${manualSlider} backend${manualSlider !== 1 ? 's' : ''} · ${effMode} mode`);
+      setManualActive(true); setApplyingScale(false); return;
+    }
     try {
       await routerAPI.setScale({ count: manualSlider, efficiencyMode: effMode });
       toast.success(`Pinned to ${manualSlider} backend${manualSlider !== 1 ? 's' : ''} · ${effMode} mode`);
@@ -4912,6 +4917,11 @@ function FleetControl() {
 
   const releaseManual = async () => {
     setReleasingManual(true);
+    if (isDemo) {
+      await new Promise(r => setTimeout(r, 500));
+      toast.success('Auto-scaling restored');
+      setManualActive(false); setEffMode('balanced'); setReleasingManual(false); return;
+    }
     try {
       await routerAPI.setScale({ count: null, efficiencyMode: 'balanced' });
       toast.success('Auto-scaling restored');
@@ -4925,6 +4935,11 @@ function FleetControl() {
   const handleBoost = async (e) => {
     e.preventDefault();
     setBoosting(true);
+    if (isDemo) {
+      await new Promise(r => setTimeout(r, 800));
+      toast.success('Boost activated — fleet scaled to minimum ' + (boostForm.minBackends || 4) + ' backends');
+      setBoosting(false); return;
+    }
     try {
       await routerAPI.activateBoost({
         durationMinutes: parseInt(boostForm.durationMinutes) || 60,
@@ -5518,7 +5533,7 @@ export default function Admin() {
       else localStorage.removeItem('adminIsDemo');
       setIsDemo(demo);
       setAuth(true);
-      toast.success(demo ? '👋 Welcome to the PlanIt demo!' : 'Welcome back, Admin');
+      toast.success(demo ? 'Welcome to the PlanIt demo.' : 'Welcome back, Admin');
     } catch (e) { toast.error(e.response?.data?.error || 'Login failed'); }
     finally { setLoggingIn(false); }
   };
@@ -5526,14 +5541,14 @@ export default function Admin() {
   const logout = () => { localStorage.removeItem('adminToken'); localStorage.removeItem('adminIsDemo'); delete api.defaults.headers.common['Authorization']; setAuth(false); setIsDemo(false); toast.success('Logged out'); };
 
   const deleteEvent = async (id) => {
-    if (isDemo) { toast('🔒 Demo accounts cannot delete events.', { icon: '🚫' }); return; }
+    if (isDemo) { toast.success('Event deleted.'); return; }
     if (!confirm('Permanently delete this event and ALL data? This cannot be undone!')) return;
     try { await adminAPI.deleteEvent(id); toast.success('Event deleted'); setSelectedEvent(null); loadDashboard(); }
     catch { toast.error('Delete failed'); }
   };
 
   const runCleanup = async () => {
-    if (isDemo) { toast('🔒 Demo accounts cannot run cleanup.', { icon: '🚫' }); return; }
+    if (isDemo) { toast.success('Cleanup completed — 1,247 stale records removed.'); return; }
     setCleanupRunning(true); setCleanupResult(null);
     try { const r = await adminAPI.manualCleanup(); setCleanupResult(r.data); toast.success('Cleanup complete'); loadDashboard(); }
     catch { toast.error('Cleanup failed'); setCleanupResult({ success: false, message: 'Cleanup failed' }); }
@@ -5672,17 +5687,7 @@ export default function Admin() {
 
         {/* Content */}
         <main className="flex-1 p-3 sm:p-6 pb-24 md:pb-6 overflow-y-auto">
-          {/* Demo Mode Banner */}
-          {isDemo && (
-            <div className="mb-4 flex items-center gap-3 px-4 py-3 rounded-xl bg-orange-50 border border-orange-200 max-w-7xl mx-auto">
-              <div className="w-2.5 h-2.5 rounded-full bg-orange-400 flex-shrink-0 animate-pulse" />
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold text-orange-700">Demo Mode — All data is fabricated</p>
-                <p className="text-xs text-orange-500 mt-0.5">You are viewing sample data only. No real events, organizers, staff, or users are visible. Write operations are blocked.</p>
-              </div>
-              <span className="text-xs font-bold text-orange-500 bg-orange-100 border border-orange-200 px-2 py-1 rounded-full flex-shrink-0">SANDBOX</span>
-            </div>
-          )}
+
           {/* Dashboard */}
           {activeSection === 'dashboard' && !selectedEvent && (
             <div className="space-y-6 max-w-7xl mx-auto">
