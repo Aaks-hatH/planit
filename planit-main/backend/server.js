@@ -15,6 +15,7 @@ const mongoSanitize = require('express-mongo-sanitize');
 const helmet     = require('helmet');
 const compression = require('compression');
 const cookieParser = require('cookie-parser');
+const hpp        = require('hpp');
 const http       = require('http');
 const socketIo   = require('socket.io');
 const path       = require('path');
@@ -159,8 +160,8 @@ app.use(helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc:  ["'self'"],
-      scriptSrc:   ["'self'", "'unsafe-inline'"],
-      styleSrc:    ["'self'", "'unsafe-inline'"],
+      scriptSrc:   ["'none'"],   // Backend serves JSON only — no scripts needed
+      styleSrc:    ["'none'"],   // Backend serves JSON only — no styles needed
       imgSrc:      ["'self'", 'data:', 'https:', 'http:'],
       connectSrc:  ["'self'", 'wss:', 'ws:', 'https:', 'http:'],
       fontSrc:     ["'self'", 'data:'],
@@ -210,10 +211,11 @@ const corsOptions = {
 };
 
 app.use(cors(corsOptions));
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+app.use(express.json({ limit: '2mb' }));
+app.use(express.urlencoded({ extended: true, limit: '2mb' }));
 app.use(cookieParser());
 app.use(mongoSanitize());
+app.use(hpp());          // M5: prevent HTTP Parameter Pollution (deduplicates query params)
 app.use(trafficGuard);
 app.use(maintenanceGuard);       // blocks all non-exempt paths during maintenance
 app.use('/api/', apiLimiter);
