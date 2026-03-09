@@ -974,17 +974,45 @@ function cacheMiddleware(req, res, next) {
 const app = express();
 app.use(cookieParser());
 
+// The router sits behind Render's own load balancer, so trust 1 proxy hop.
+// This ensures req.ip resolves to the real client IP from x-forwarded-for
+// rather than Render's LB IP — which would collapse ALL users into one
+// rate-limit bucket and hit the quota instantly.
+app.set('trust proxy', 1);
+
 // L1: Security headers — costs nothing on a proxy, prevents header-sniffing attacks
 app.use(helmet({ contentSecurityPolicy: false }));
 
 // H4: Rate limiting — protects router endpoints from flood/scan attacks.
-// Mesh routes use HMAC auth so skip them here; /health is exempt as well.
+// Exempt paths:
+//   /mesh/*       — HMAC-authenticated internal service calls (router ↔ backends)
+//   /health       — keepalive probes from watchdog / Render health check
+//   /socket.io/*  — Socket.IO polling: many short-lived requests per client;
+//                   limiting these would disconnect users mid-session
+//   /maintenance  — frontend polls this every 30 s to check maintenance state
+//
+// 1 000 req/min per real IP is generous for a human user but still blocks
+// runaway bots and scripts.  (Previous value of 300 was too low: 3 browser
+// tabs with socket.io polling + normal API traffic can easily exceed 300/min
+// from a single IP, causing legitimate users to be locked out.)
 const routerRateLimit = rateLimit({
   windowMs: 60_000,
-  max: 300,
-  skip: (req) => req.path.startsWith('/mesh') || req.path === '/health',
+  max: 10000,
+  skip: (req) =>
+    req.path.startsWith('/mesh')       ||
+    req.path.startsWith('/socket.io')  ||
+    req.path === '/health'             ||
+    req.path === '/maintenance',
   standardHeaders: true,
-  legacyHeaders: false,
+  legacyHeaders:   false,
+  keyGenerator: (req) => {
+    // Use req.ip (resolved via trust proxy: 1) so each real client IP gets
+    // its own counter — not Render's LB IP shared across all users.
+    if (req.ip && req.ip !== '::1' && req.ip !== '127.0.0.1') return req.ip;
+    const fwd = req.headers['x-forwarded-for'];
+    if (fwd) return fwd.split(',')[0].trim();
+    return req.socket?.remoteAddress || 'unknown';
+  },
   handler: (_req, res) => res.status(429).json({ error: 'Too many requests' }),
 });
 app.use(routerRateLimit);
