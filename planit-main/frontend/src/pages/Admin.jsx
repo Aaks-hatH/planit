@@ -23,6 +23,7 @@ import { formatNumber, formatFileSize } from '../utils/formatters';
 import { DateTime } from 'luxon';
 import toast from 'react-hot-toast';
 import socketService from '../services/socket';
+import DemoDashboard from '../components/DemoDashboard';
 
 // ─── Formatters ───────────────────────────────────────────────────────────────
 const fmt = (date) => {
@@ -1341,7 +1342,31 @@ function EmployeesPanel() {
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editing, setEditing] = useState(null);
-  const [form, setForm] = useState({ name: '', email: '', role: 'support', department: '', phone: '', notes: '', status: 'active', password: '', startDate: '', permissions: { canDeleteEvents: false, canManageUsers: false, canViewLogs: false, canManageIncidents: true, canExportData: false, canRunCleanup: false } });
+
+  // Full permission set matching the Employee model
+  const EMPTY_PERMS = {
+    canDeleteEvents:      false,
+    canEditEvents:        false,
+    canManageUsers:       false,
+    canViewLogs:          false,
+    canViewSystem:        false,
+    canManageIncidents:   true,
+    canExportData:        false,
+    canRunCleanup:        false,
+    canSendMarketing:     false,
+    canViewMarketing:     false,
+    canManageBlocklist:   false,
+    canToggleMaintenance: false,
+  };
+
+  const EMPTY_FORM = {
+    name: '', email: '', role: 'support', department: '', phone: '',
+    notes: '', status: 'active', password: '', startDate: '',
+    isDemo: false,
+    permissions: { ...EMPTY_PERMS },
+  };
+
+  const [form, setForm] = useState(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => { load(); }, []);
@@ -1354,13 +1379,25 @@ function EmployeesPanel() {
 
   const openCreate = () => {
     setEditing(null);
-    setForm({ name: '', email: '', role: 'support', department: '', phone: '', notes: '', status: 'active', password: '', startDate: '', permissions: { canDeleteEvents: false, canManageUsers: false, canViewLogs: false, canManageIncidents: true, canExportData: false, canRunCleanup: false } });
+    setForm(EMPTY_FORM);
     setShowModal(true);
   };
 
   const openEdit = (emp) => {
     setEditing(emp._id);
-    setForm({ name: emp.name, email: emp.email, role: emp.role, department: emp.department || '', phone: emp.phone || '', notes: emp.notes || '', status: emp.status, password: '', startDate: emp.startDate || '', permissions: { ...emp.permissions } });
+    setForm({
+      name:        emp.name,
+      email:       emp.email,
+      role:        emp.role,
+      department:  emp.department  || '',
+      phone:       emp.phone       || '',
+      notes:       emp.notes       || '',
+      status:      emp.status,
+      password:    '',
+      startDate:   emp.startDate   || '',
+      isDemo:      emp.isDemo      || false,
+      permissions: { ...EMPTY_PERMS, ...emp.permissions },
+    });
     setShowModal(true);
   };
 
@@ -1383,16 +1420,71 @@ function EmployeesPanel() {
     catch { toast.error('Delete failed'); }
   };
 
-  const PERMS = [
-    ['canDeleteEvents', 'Delete Events'],
-    ['canManageUsers', 'Manage Users'],
-    ['canViewLogs', 'View Logs'],
-    ['canManageIncidents', 'Manage Incidents'],
-    ['canExportData', 'Export Data'],
-    ['canRunCleanup', 'Run Cleanup'],
+  const togglePerm = (k) => setForm(f => ({ ...f, permissions: { ...f.permissions, [k]: !f.permissions[k] } }));
+
+  // Permissions grouped by area for cleaner UI
+  const PERM_GROUPS = [
+    {
+      label: 'Events',
+      perms: [
+        ['canEditEvents',   'Edit Events'],
+        ['canDeleteEvents', 'Delete Events'],
+      ],
+    },
+    {
+      label: 'Users',
+      perms: [
+        ['canManageUsers', 'Manage Users'],
+      ],
+    },
+    {
+      label: 'Operations',
+      perms: [
+        ['canManageIncidents',   'Manage Incidents'],
+        ['canRunCleanup',        'Run Cleanup'],
+        ['canToggleMaintenance', 'Toggle Maintenance'],
+      ],
+    },
+    {
+      label: 'Data & Logs',
+      perms: [
+        ['canExportData',  'Export Data'],
+        ['canViewLogs',    'View Logs'],
+        ['canViewSystem',  'View System Info'],
+      ],
+    },
+    {
+      label: 'Marketing',
+      perms: [
+        ['canViewMarketing', 'View Campaigns'],
+        ['canSendMarketing', 'Send Campaigns'],
+      ],
+    },
+    {
+      label: 'Security',
+      perms: [
+        ['canManageBlocklist', 'Manage Blocklist'],
+      ],
+    },
   ];
 
-  const ROLES = ['super_admin', 'admin', 'moderator', 'support', 'analyst', 'developer'];
+  // Flat list for the employee card summary (only granted ones)
+  const ALL_PERMS_FLAT = PERM_GROUPS.flatMap(g => g.perms);
+
+  const ROLES = ['super_admin', 'admin', 'moderator', 'support', 'analyst', 'developer', 'demo'];
+
+  const avatarColor = (role) => {
+    const map = {
+      super_admin: 'bg-purple-100 text-purple-700',
+      admin:       'bg-blue-100 text-blue-700',
+      moderator:   'bg-amber-100 text-amber-700',
+      support:     'bg-teal-100 text-teal-700',
+      analyst:     'bg-indigo-100 text-indigo-700',
+      developer:   'bg-cyan-100 text-cyan-700',
+      demo:        'bg-orange-100 text-orange-700',
+    };
+    return map[role] || 'bg-neutral-100 text-neutral-600';
+  };
 
   return (
     <div className="space-y-5">
@@ -1414,25 +1506,36 @@ function EmployeesPanel() {
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           {employees.map(emp => (
-            <div key={emp._id} className={`card p-5 hover:shadow-lg transition-all ${emp.status === 'inactive' ? 'opacity-60' : ''}`}>
+            <div key={emp._id} className={`card p-5 hover:shadow-lg transition-all ${emp.status !== 'active' ? 'opacity-60' : ''}`}>
               <div className="flex items-start gap-4">
-                <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-lg font-bold flex-shrink-0 ${emp.role === 'super_admin' ? 'bg-purple-100 text-purple-700' : emp.role === 'admin' ? 'bg-blue-100 text-blue-700' : 'bg-neutral-100 text-neutral-600'}`}>
+                <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-lg font-bold flex-shrink-0 ${avatarColor(emp.role)}`}>
                   {emp.name.charAt(0).toUpperCase()}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1">
+                  <div className="flex items-center gap-2 mb-1 flex-wrap">
                     <p className="text-sm font-bold text-neutral-900">{emp.name}</p>
                     <RoleBadge role={emp.role} />
+                    {emp.isDemo && (
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-orange-100 text-orange-700">
+                        demo
+                      </span>
+                    )}
                     {emp.status !== 'active' && <StatusBadge status={emp.status} />}
                   </div>
                   <p className="text-xs text-neutral-500 mb-1">{emp.email}</p>
                   {emp.department && <p className="text-xs text-neutral-400">{emp.department}</p>}
                   {emp.startDate && <p className="text-xs text-neutral-400">Since {fmt(emp.startDate)}</p>}
-                  <div className="flex flex-wrap gap-1 mt-2">
-                    {PERMS.filter(([k]) => emp.permissions?.[k]).map(([k, l]) => (
-                      <span key={k} className="text-xs bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full font-medium">{l}</span>
-                    ))}
-                  </div>
+                  {emp.permissions && (
+                    <div className="flex flex-wrap gap-1 mt-2">
+                      {emp.role === 'super_admin'
+                        ? <span className="text-xs bg-purple-50 text-purple-600 px-2 py-0.5 rounded-full font-medium">Full Access</span>
+                        : ALL_PERMS_FLAT.filter(([k]) => emp.permissions?.[k]).map(([k, l]) => (
+                            <span key={k} className="text-xs bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full font-medium">{l}</span>
+                          ))
+                      }
+                      {emp.isDemo && <span className="text-xs bg-orange-50 text-orange-500 px-2 py-0.5 rounded-full font-medium">Sandbox mode</span>}
+                    </div>
+                  )}
                 </div>
                 <div className="flex gap-2 flex-shrink-0">
                   <button onClick={() => openEdit(emp)} className="btn btn-secondary p-1.5"><Edit2 className="w-3.5 h-3.5" /></button>
@@ -1455,7 +1558,9 @@ function EmployeesPanel() {
               </div>
               <button onClick={() => setShowModal(false)} className="p-1.5 hover:bg-neutral-100 rounded-lg"><X className="w-4 h-4 text-neutral-400" /></button>
             </div>
-            <div className="p-6 space-y-4 overflow-y-auto flex-1">
+
+            <div className="p-6 space-y-5 overflow-y-auto flex-1">
+              {/* Basic info */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-medium text-neutral-600 mb-1.5">Full Name *</label>
@@ -1498,25 +1603,68 @@ function EmployeesPanel() {
                   <p className="text-xs text-neutral-400 mt-1">Employees log in at the admin page using their email + this password.</p>
                 </div>
               </div>
+
+              {/* Notes */}
               <div>
                 <label className="block text-xs font-medium text-neutral-600 mb-1.5">Notes</label>
                 <textarea className="input w-full text-sm resize-none" rows={2} placeholder="Internal notes..." value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} />
               </div>
+
+              {/* Demo mode toggle */}
+              <div className={`rounded-xl border-2 p-4 transition-all ${form.isDemo ? 'border-orange-300 bg-orange-50' : 'border-neutral-200 bg-neutral-50'}`}>
+                <label className="flex items-start gap-3 cursor-pointer">
+                  <div className="mt-0.5 flex-shrink-0">
+                    <div className={`w-9 h-5 rounded-full transition-all relative ${form.isDemo ? 'bg-orange-500' : 'bg-neutral-300'}`}
+                      onClick={() => setForm(f => ({ ...f, isDemo: !f.isDemo }))}>
+                      <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-all ${form.isDemo ? 'left-4' : 'left-0.5'}`} />
+                    </div>
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-neutral-800">Sandbox / Demo Account</p>
+                    <p className="text-xs text-neutral-500 mt-0.5">
+                      All writes are silently intercepted — the account can browse everything but nothing they do is saved.
+                      Great for giving friends or investors access to explore.
+                    </p>
+                  </div>
+                </label>
+              </div>
+
+              {/* Permissions — grouped */}
               <div>
-                <label className="block text-xs font-medium text-neutral-600 mb-2">Permissions</label>
-                <div className="grid grid-cols-2 gap-2">
-                  {PERMS.map(([k, l]) => (
-                    <label key={k} className="flex items-center gap-2.5 p-2.5 rounded-lg border border-neutral-200 cursor-pointer hover:bg-neutral-50 transition-colors">
-                      <div className={`w-4 h-4 rounded border-2 flex items-center justify-center transition-all ${form.permissions[k] ? 'bg-neutral-900 border-neutral-900' : 'border-neutral-300'}`}>
-                        {form.permissions[k] && <svg width="10" height="10" viewBox="0 0 12 12" fill="none"><polyline points="2 6 5 9 10 3" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /></svg>}
-                      </div>
-                      <input type="checkbox" className="sr-only" checked={form.permissions[k]} onChange={e => setForm(f => ({ ...f, permissions: { ...f.permissions, [k]: e.target.checked } }))} />
-                      <span className="text-xs text-neutral-700">{l}</span>
-                    </label>
-                  ))}
+                <div className="flex items-center justify-between mb-3">
+                  <label className="text-xs font-medium text-neutral-600">Permissions</label>
+                  {form.role === 'super_admin' && (
+                    <span className="text-xs text-purple-600 font-medium">super_admin bypasses all permission checks</span>
+                  )}
                 </div>
+                {form.isDemo ? (
+                  <div className="rounded-lg border border-orange-200 bg-orange-50 px-4 py-3 text-xs text-orange-700">
+                    Permissions are ignored for demo accounts — all write operations are intercepted regardless.
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {PERM_GROUPS.map(group => (
+                      <div key={group.label}>
+                        <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest mb-1.5">{group.label}</p>
+                        <div className="grid grid-cols-2 gap-1.5">
+                          {group.perms.map(([k, l]) => (
+                            <label key={k} className={`flex items-center gap-2.5 p-2.5 rounded-lg border cursor-pointer transition-all ${form.permissions[k] ? 'border-neutral-900 bg-neutral-900' : 'border-neutral-200 hover:bg-neutral-50'}`}
+                              onClick={() => togglePerm(k)}>
+                              <div className={`w-4 h-4 rounded border-2 flex items-center justify-center flex-shrink-0 transition-all ${form.permissions[k] ? 'bg-white border-white' : 'border-neutral-300'}`}>
+                                {form.permissions[k] && <svg width="10" height="10" viewBox="0 0 12 12" fill="none"><polyline points="2 6 5 9 10 3" stroke="#111" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>}
+                              </div>
+                              <input type="checkbox" className="sr-only" checked={!!form.permissions[k]} readOnly />
+                              <span className={`text-xs ${form.permissions[k] ? 'text-white font-medium' : 'text-neutral-700'}`}>{l}</span>
+                            </label>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
+
             <div className="px-6 py-4 border-t flex gap-3 flex-shrink-0">
               <button onClick={() => setShowModal(false)} className="flex-1 btn btn-secondary text-sm">Cancel</button>
               <button onClick={save} disabled={saving} className="flex-1 btn bg-neutral-900 hover:bg-neutral-800 text-white text-sm gap-2 disabled:opacity-50">
@@ -5196,6 +5344,7 @@ const NAV_ITEMS = [
 
 export default function Admin() {
   const [auth, setAuth] = useState(false);
+  const [isDemo, setIsDemo] = useState(false);
   const [loading, setLoading] = useState(true);
   const [loggingIn, setLoggingIn] = useState(false);
   const [loginForm, setLoginForm] = useState({ username: '', password: '' });
@@ -5237,6 +5386,7 @@ export default function Admin() {
     const token = localStorage.getItem('adminToken');
     if (token) api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
     setAuth(!!token);
+    setIsDemo(localStorage.getItem('adminIsDemo') === 'true');
     setLoading(false);
     const fn = () => { setAuth(false); setStats(null); setEvents([]); };
     window.addEventListener('planit:admin-logout', fn);
@@ -5266,13 +5416,17 @@ export default function Admin() {
       const r = await adminAPI.login(loginForm.username, loginForm.password);
       localStorage.setItem('adminToken', r.data.token);
       api.defaults.headers.common['Authorization'] = `Bearer ${r.data.token}`;
+      const demo = r.data.user?.isDemo === true;
+      if (demo) localStorage.setItem('adminIsDemo', 'true');
+      else localStorage.removeItem('adminIsDemo');
+      setIsDemo(demo);
       setAuth(true);
-      toast.success('Welcome back, Admin');
+      toast.success(demo ? '👋 Welcome to the PlanIt demo!' : 'Welcome back, Admin');
     } catch (e) { toast.error(e.response?.data?.error || 'Login failed'); }
     finally { setLoggingIn(false); }
   };
 
-  const logout = () => { localStorage.removeItem('adminToken'); delete api.defaults.headers.common['Authorization']; setAuth(false); toast.success('Logged out'); };
+  const logout = () => { localStorage.removeItem('adminToken'); localStorage.removeItem('adminIsDemo'); delete api.defaults.headers.common['Authorization']; setAuth(false); setIsDemo(false); toast.success('Logged out'); };
 
   const deleteEvent = async (id) => {
     if (!confirm('Permanently delete this event and ALL data? This cannot be undone!')) return;
@@ -5288,6 +5442,9 @@ export default function Admin() {
   };
 
   if (loading) return <div className="min-h-screen bg-neutral-50 flex items-center justify-center"><div className="spinner w-8 h-8 border-4 border-neutral-300 border-t-neutral-700" /></div>;
+
+  // ── Demo Mode — full fake infrastructure dashboard ─────────────────────────
+  if (auth && isDemo) return <DemoDashboard onLogout={logout} />;
 
   // ── Login Screen ──────────────────────────────────────────────────────────
   if (!auth) return (
