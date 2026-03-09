@@ -824,7 +824,57 @@ router.get('/:eventId/analytics', verifyEventAccess, async (req, res, next) => {
     );
     if (!isOrg) return res.status(403).json({ error: 'Only organizers can view analytics' });
 
-    
+    const Message = require('../models/Message');
+    const Poll = require('../models/Poll');
+    const File = require('../models/File');
+    const Invite = require('../models/Invite');
+
+    const promises = [
+      Message.countDocuments({ eventId: req.params.eventId }).catch(() => 0),
+      Poll.countDocuments({ eventId: req.params.eventId }).catch(() => 0),
+      File.countDocuments({ eventId: req.params.eventId }).catch(() => 0)
+    ];
+
+    if (req.event.isEnterpriseMode) {
+      promises.push(Invite.find({ eventId: req.params.eventId }).catch(() => []));
+    }
+
+    const results = await Promise.all(promises);
+    const [messageCount, pollCount, fileCount, invites] = results;
+
+    const baseAnalytics = req.event.getAnalytics ? req.event.getAnalytics() : {
+      views: req.event.metadata?.views || 0,
+      participants: req.event.participants?.length || 0,
+      rsvps: req.event.getRsvpSummary ? req.event.getRsvpSummary() : { yes: 0, maybe: 0, no: 0 },
+      tasks: req.event.getTaskStats ? req.event.getTaskStats() : { total: 0, completed: 0, pending: 0 },
+      expenses: req.event.getExpenseSummary ? req.event.getExpenseSummary() : { total: 0, count: 0, byCategory: {} },
+      lastActivity: req.event.metadata?.lastActivity || new Date()
+    };
+
+    const analytics = { ...baseAnalytics, messages: messageCount, polls: pollCount, files: fileCount };
+
+    if (req.event.isEnterpriseMode && invites) {
+      const checkedInInvites = invites.filter(i => i.checkedIn);
+      const totalInvites = invites.length;
+      const totalExpectedGuests = invites.reduce((sum, i) => sum + (i.adults || 1) + (i.children || 0), 0);
+      const totalCheckedIn = checkedInInvites.reduce((sum, i) => sum + (i.actualAttendees || (i.adults || 1) + (i.children || 0)), 0);
+      analytics.checkins = {
+        totalInvites,
+        checkedInInvites: checkedInInvites.length,
+        pendingInvites: totalInvites - checkedInInvites.length,
+        totalExpectedGuests,
+        totalCheckedIn,
+        checkInRate: totalInvites > 0 ? Math.round((checkedInInvites.length / totalInvites) * 100) : 0,
+        attendanceRate: totalExpectedGuests > 0 ? Math.round((totalCheckedIn / totalExpectedGuests) * 100) : 0
+      };
+    }
+
+    res.json({ analytics });
+  } catch (error) {
+    console.error('Analytics error:', error);
+    next(error);
+  }
+});
 // ═══════════════════════════════════════════════════════════════════════════
 // PUBLIC LIVE WAIT BOARD API  (/api/events/public/wait/...)
 // No auth required. Rate-limited. For walk-in / waitlist-only restaurants.
@@ -1199,114 +1249,8 @@ router.post('/public/wait/:subdomain/join', availabilityLimiter, async (req, res
 });
 
 
-// ── PATCH /:eventId/table-service/reservation-page-settings ──────────────────
-// Organizer updates the full reservation page config.
-router.patch('/:eventId/table-service/reservation-page-settings', verifyOrganizer, async (req, res, next) => {
-  try {
-    const event = await Event.findById(req.params.eventId);
-    if (!event) return res.status(404).json({ error: 'Event not found' });
-    if (!event.isTableServiceMode) return res.status(403).json({ error: 'Not a table service event' });
 
-    const ALLOWED_KEYS = [
-      'acceptingReservations','confirmationMode','heroImageUrl','logoUrl','accentColor',
-      'backgroundStyle','fontStyle','headerTagline','showPoweredBy','hidePlanitBranding',
-      'announcementBanner','announcementBannerColor','announcementBannerEnabled',
-      'publicDescription','cuisine','priceRange','dressCode','parkingInfo','accessibilityInfo',
-      'address','phone','websiteUrl','instagramHandle','facebookUrl','googleMapsUrl',
-      'operatingDays','blackoutDates',
-      'slotIntervalMinutes','maxAdvanceDays','minAdvanceHours','cancelCutoffHours',
-      'maxPartySizePublic','minPartySizePublic','maxReservationsPerDay','maxReservationsPerSlot',
-      'lastBookingBeforeCloseMinutes',
-      'requirePhone','requireEmail','allowSpecialRequests','allowDietaryNeeds',
-      'allowOccasionSelect','occasionOptions',
-      'showLiveWaitTime','showAvailabilityStatus','showTableCount','showPartySizeWaitTimes',
-      'availabilityDisplayMode',
-      'confirmationMessage','confirmationEmailSubject','sendConfirmationEmail',
-      'sendReminderEmail','reminderHoursBefore','sendCancellationEmail',
-      'notifyOrganizerOnBooking','notifyOrganizerOnCancel','notifyOrganizerEmail',
-      'cancellationPolicy','depositRequired','depositAmount','depositNote',
-      'termsUrl','privacyUrl','faqItems','menus',
-      'metaTitle','metaDescription',
-      'walkInOnlyMode','publicWaitBoardEnabled','waitBoardMessage','waitBoardTitle',
-    ];
 
-    if (!event.reservationPageSettings) event.reservationPageSettings = {};
-    ALLOWED_KEYS.forEach(k => {
-      if (req.body[k] !== undefined) event.reservationPageSettings[k] = req.body[k];
-    });
-    event.keepForever = true;
-    event.markModified('reservationPageSettings');
-    await event.save();
-
-    res.json({ success: true, settings: event.reservationPageSettings, reservationPageSettings: event.reservationPageSettings });
-  } catch (err) { next(err); }
-});
-
-const Message = require('../models/Message');
-    const Poll = require('../models/Poll');
-    const File = require('../models/File');
-    const Invite = require('../models/Invite');
-
-    const promises = [
-      Message.countDocuments({ eventId: req.params.eventId }).catch(() => 0),
-      Poll.countDocuments({ eventId: req.params.eventId }).catch(() => 0),
-      File.countDocuments({ eventId: req.params.eventId }).catch(() => 0)
-    ];
-
-    // Add check-in analytics for enterprise events
-    if (req.event.isEnterpriseMode) {
-      promises.push(
-        Invite.find({ eventId: req.params.eventId }).catch(() => [])
-      );
-    }
-
-    const results = await Promise.all(promises);
-    const [messageCount, pollCount, fileCount, invites] = results;
-
-    const baseAnalytics = req.event.getAnalytics ? req.event.getAnalytics() : {
-      views: req.event.metadata?.views || 0,
-      participants: req.event.participants?.length || 0,
-      rsvps: req.event.getRsvpSummary ? req.event.getRsvpSummary() : { yes: 0, maybe: 0, no: 0 },
-      tasks: req.event.getTaskStats ? req.event.getTaskStats() : { total: 0, completed: 0, pending: 0 },
-      expenses: req.event.getExpenseSummary ? req.event.getExpenseSummary() : { total: 0, count: 0, byCategory: {} },
-      lastActivity: req.event.metadata?.lastActivity || new Date()
-    };
-
-    const analytics = {
-      ...baseAnalytics,
-      messages: messageCount,
-      polls: pollCount,
-      files: fileCount
-    };
-
-    // Add enterprise check-in analytics
-    if (req.event.isEnterpriseMode && invites) {
-      const checkedInInvites = invites.filter(i => i.checkedIn);
-      const totalInvites = invites.length;
-      const totalExpectedGuests = invites.reduce((sum, i) => {
-        return sum + (i.adults || 1) + (i.children || 0);
-      }, 0);
-      const totalCheckedIn = checkedInInvites.reduce((sum, i) => {
-        return sum + (i.actualAttendees || (i.adults || 1) + (i.children || 0));
-      }, 0);
-
-      analytics.checkins = {
-        totalInvites,
-        checkedInInvites: checkedInInvites.length,
-        pendingInvites: totalInvites - checkedInInvites.length,
-        totalExpectedGuests,
-        totalCheckedIn,
-        checkInRate: totalInvites > 0 ? Math.round((checkedInInvites.length / totalInvites) * 100) : 0,
-        attendanceRate: totalExpectedGuests > 0 ? Math.round((totalCheckedIn / totalExpectedGuests) * 100) : 0
-      };
-    }
-
-    res.json({ analytics });
-  } catch (error) { 
-    console.error('Analytics error:', error);
-    next(error); 
-  }
-});
 
 // ── UTILITIES ─────────────────────────────────────────────────────────────
 // Generate ICS calendar file
@@ -3393,8 +3337,48 @@ router.patch('/:eventId/table-service/settings', verifyOrganizer, async (req, re
     res.json({ success: true, settings: event.tableServiceSettings });
   } catch (err) { next(err); }
 });
-// ═══════════════════════════════════════════════════════════════════════════
 
+// ── PATCH /:eventId/table-service/reservation-page-settings ──────────────────
+router.patch('/:eventId/table-service/reservation-page-settings', verifyOrganizer, async (req, res, next) => {
+  try {
+    const event = await Event.findById(req.params.eventId);
+    if (!event) return res.status(404).json({ error: 'Event not found' });
+    if (!event.isTableServiceMode) return res.status(403).json({ error: 'Not a table service event' });
+
+    const ALLOWED_KEYS = [
+      'acceptingReservations','confirmationMode','heroImageUrl','logoUrl','accentColor',
+      'backgroundStyle','fontStyle','headerTagline','showPoweredBy','hidePlanitBranding',
+      'announcementBanner','announcementBannerColor','announcementBannerEnabled',
+      'publicDescription','cuisine','priceRange','dressCode','parkingInfo','accessibilityInfo',
+      'address','phone','websiteUrl','instagramHandle','facebookUrl','googleMapsUrl',
+      'operatingDays','blackoutDates',
+      'slotIntervalMinutes','maxAdvanceDays','minAdvanceHours','cancelCutoffHours',
+      'maxPartySizePublic','minPartySizePublic','maxReservationsPerDay','maxReservationsPerSlot',
+      'lastBookingBeforeCloseMinutes',
+      'requirePhone','requireEmail','allowSpecialRequests','allowDietaryNeeds',
+      'allowOccasionSelect','occasionOptions',
+      'showLiveWaitTime','showAvailabilityStatus','showTableCount','showPartySizeWaitTimes',
+      'availabilityDisplayMode',
+      'confirmationMessage','confirmationEmailSubject','sendConfirmationEmail',
+      'sendReminderEmail','reminderHoursBefore','sendCancellationEmail',
+      'notifyOrganizerOnBooking','notifyOrganizerOnCancel','notifyOrganizerEmail',
+      'cancellationPolicy','depositRequired','depositAmount','depositNote',
+      'termsUrl','privacyUrl','faqItems','menus',
+      'metaTitle','metaDescription',
+      'walkInOnlyMode','publicWaitBoardEnabled','waitBoardMessage','waitBoardTitle',
+    ];
+
+    if (!event.reservationPageSettings) event.reservationPageSettings = {};
+    ALLOWED_KEYS.forEach(k => {
+      if (req.body[k] !== undefined) event.reservationPageSettings[k] = req.body[k];
+    });
+    event.keepForever = true;
+    event.markModified('reservationPageSettings');
+    await event.save();
+
+    res.json({ success: true, settings: event.reservationPageSettings, reservationPageSettings: event.reservationPageSettings });
+  } catch (err) { next(err); }
+});
 
 // ═══════════════════════════════════════════════════════════════════════════
 // PUBLIC RESERVATION API  (/api/events/public/reserve/...)
@@ -3898,48 +3882,6 @@ router.delete('/public/reserve/cancel/:cancelToken', reservationLimiter, async (
   } catch (err) { next(err); }
 });
 
-// ── PATCH /:eventId/table-service/reservation-page-settings ──────────────────
-// Organizer updates the full reservation page config.
-router.patch('/:eventId/table-service/reservation-page-settings', verifyOrganizer, async (req, res, next) => {
-  try {
-    const event = await Event.findById(req.params.eventId);
-    if (!event) return res.status(404).json({ error: 'Event not found' });
-    if (!event.isTableServiceMode) return res.status(403).json({ error: 'Not a table service event' });
-
-    const ALLOWED_KEYS = [
-      'acceptingReservations','confirmationMode','heroImageUrl','logoUrl','accentColor',
-      'backgroundStyle','fontStyle','headerTagline','showPoweredBy','hidePlanitBranding',
-      'announcementBanner','announcementBannerColor','announcementBannerEnabled',
-      'publicDescription','cuisine','priceRange','dressCode','parkingInfo','accessibilityInfo',
-      'address','phone','websiteUrl','instagramHandle','facebookUrl','googleMapsUrl',
-      'operatingDays','blackoutDates',
-      'slotIntervalMinutes','maxAdvanceDays','minAdvanceHours','cancelCutoffHours',
-      'maxPartySizePublic','minPartySizePublic','maxReservationsPerDay','maxReservationsPerSlot',
-      'lastBookingBeforeCloseMinutes',
-      'requirePhone','requireEmail','allowSpecialRequests','allowDietaryNeeds',
-      'allowOccasionSelect','occasionOptions',
-      'showLiveWaitTime','showAvailabilityStatus','showTableCount','showPartySizeWaitTimes',
-      'availabilityDisplayMode',
-      'confirmationMessage','confirmationEmailSubject','sendConfirmationEmail',
-      'sendReminderEmail','reminderHoursBefore','sendCancellationEmail',
-      'notifyOrganizerOnBooking','notifyOrganizerOnCancel','notifyOrganizerEmail',
-      'cancellationPolicy','depositRequired','depositAmount','depositNote',
-      'termsUrl','privacyUrl','faqItems','menus',
-      'metaTitle','metaDescription',
-      'walkInOnlyMode','publicWaitBoardEnabled','waitBoardMessage','waitBoardTitle',
-    ];
-
-    if (!event.reservationPageSettings) event.reservationPageSettings = {};
-    ALLOWED_KEYS.forEach(k => {
-      if (req.body[k] !== undefined) event.reservationPageSettings[k] = req.body[k];
-    });
-    event.keepForever = true;
-    event.markModified('reservationPageSettings');
-    await event.save();
-
-    res.json({ success: true, settings: event.reservationPageSettings, reservationPageSettings: event.reservationPageSettings });
-  } catch (err) { next(err); }
-});
 
 const Message = require('../models/Message');
 const Poll = require('../models/Poll');
