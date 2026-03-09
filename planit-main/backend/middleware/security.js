@@ -43,11 +43,18 @@ const BAN_THRESHOLD  = parseInt(process.env.SECURITY_BAN_THRESHOLD  || '5',   10
 const BAN_TTL        = BAN_MINUTES * 60;
 
 // ─── Known scanner / exploit user-agent fragments ─────────────────────────────
-// Intentionally short list to avoid false-positives.
+// Covers version-agnostic prefixes so new releases are blocked automatically.
 const BAD_UA_PATTERNS = [
   'sqlmap', 'nikto', 'masscan', 'nmap', 'zgrab', 'dirbuster',
   'gobuster', 'wfuzz', 'acunetix', 'netsparker', 'appscan',
-  'openvas', 'hydra', 'medusa', 'python-requests/2.1',
+  'openvas', 'hydra', 'medusa',
+  // Version-agnostic HTTP-library patterns (covers all versions)
+  'python-requests',  // was: 'python-requests/2.1' — now blocks all versions
+  'httpx/', 'aiohttp/',
+  'libwww-perl', 'lwp-useragent',
+  'go-http-client',
+  'java/', 'okhttp/',
+  'scrapy/', 'mechanize',
 ];
 
 // ─── Path patterns that real users never send ─────────────────────────────────
@@ -126,10 +133,10 @@ async function checkRapid(ip, path) {
 }
 
 // ─── Extract real IP ──────────────────────────────────────────────────────────
+// Use req.ip which is already normalised by Express's trust-proxy logic.
+// Never read X-Forwarded-For directly — it is fully spoofable by attackers.
 function realIp(req) {
-  return (req.headers['x-forwarded-for'] || '').split(',')[0].trim()
-      || req.socket?.remoteAddress
-      || '0.0.0.0';
+  return req.ip || req.socket?.remoteAddress || '0.0.0.0';
 }
 
 // ─── trafficGuard middleware ──────────────────────────────────────────────────
@@ -158,8 +165,15 @@ async function trafficGuard(req, res, next) {
     if (banned) return res.status(403).json({ error: 'Forbidden' });
   }
 
-  // 3. Path fuzzing
-  const fuzz = FUZZ_PATTERNS.some(p => p.test(req.url));
+  // M3: Warn on missing / suspiciously short User-Agent (strong bot signal)
+  if (!ua || ua.length < 5) {
+    const banned = await addWarn(ip, 'missing/empty user-agent');
+    if (banned) return res.status(403).json({ error: 'Forbidden' });
+  }
+
+  // 3. Path fuzzing — check both raw URL and percent-decoded URL (H1 fix)
+  const decodedUrl = (() => { try { return decodeURIComponent(req.url); } catch { return req.url; } })();
+  const fuzz = FUZZ_PATTERNS.some(p => p.test(req.url) || p.test(decodedUrl));
   if (fuzz) {
     const banned = await addWarn(ip, `path fuzz: ${req.url.slice(0, 80)}`);
     if (banned) return res.status(403).json({ error: 'Forbidden' });
@@ -174,6 +188,13 @@ async function trafficGuard(req, res, next) {
       const banned = await addWarn(ip, `rapid: ${req.method} ${req.path.slice(0, 60)}`);
       if (banned) return res.status(429).json({ error: 'Too many requests' });
     }
+  }
+
+  // L4: Hourly volume counter — catches slow-and-low scans invisible to rapid detector
+  const hourKey = `sec:vol:${ip}`;
+  const hourCnt = await redis.incrWithExpiry(hourKey, 3600);
+  if (hourCnt > 1000) {
+    await addWarn(ip, `high volume: ${hourCnt} req/hr`);
   }
 
   // 5. Oversized payload probe on non-upload routes
