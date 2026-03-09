@@ -494,13 +494,18 @@ export default function LiveWaitBoard() {
           </div>
 
           {(() => {
-            const numericWaits = Object.values(waitTimes)
-              .filter(v => typeof v === 'number' && v > 0);
+            const WAIT_BRACKETS = ['forTwo', 'forFour', 'forEight'];
+            // Only look at the actual wait-time bracket keys — not queueDepth or
+            // other numeric fields that Object.values() would otherwise pick up.
+            const knownBrackets = WAIT_BRACKETS.filter(k => waitTimes[k] !== null && waitTimes[k] !== undefined);
+            const numericWaits = knownBrackets.map(k => waitTimes[k]).filter(v => typeof v === 'number' && v > 0);
             // Only treat as "occupied/full" if we have real table data.
             // When tableStats.total is 0 (no floor plan yet) or all wait times
             // are null, we cannot infer fullness from wait-time numbers alone.
+            // Also require ALL known brackets to have a wait — a 60min wait for
+            // parties of 8 does not mean parties of 2 cannot be seated.
             const hasRealTableData = tableStats.total > 0;
-            const anyOccupied = hasRealTableData && numericWaits.length > 0;
+            const anyOccupied = hasRealTableData && knownBrackets.length > 0 && numericWaits.length === knownBrackets.length;
             const shortestWait = anyOccupied ? Math.min(...numericWaits) : 0;
 
             if (waitlist.length > 0) {
