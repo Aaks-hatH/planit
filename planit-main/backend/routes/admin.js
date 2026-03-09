@@ -1958,12 +1958,13 @@ router.post('/maintenance', verifyAdmin, requirePermission('canToggleMaintenance
         ca:    new Date(),
       });
 
-      // Sync router: only lock down on 'active', not 'upcoming'
+      // Sync router: lock down on 'active', banner-only on 'upcoming'
       await _syncRouter({
-        active:  status === 'active',
-        message: rec.msg,
-        eta:     rec.eta ? rec.eta.toISOString() : null,
-        type:    rec.t,
+        active:   status === 'active',
+        upcoming: status === 'upcoming',
+        message:  rec.msg,
+        eta:      rec.eta ? rec.eta.toISOString() : null,
+        type:     rec.t,
       });
 
       return res.json({
