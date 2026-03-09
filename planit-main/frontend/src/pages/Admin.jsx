@@ -1,4 +1,8 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, createContext, useContext } from 'react';
+
+// ─── Demo isolation context ───────────────────────────────────────────────────
+// All sub-panels read this to decide whether to call real APIs or return fake data.
+export const DemoContext = createContext(false);
 import { useNavigate } from 'react-router-dom';
 import {
   Calendar, Users, Activity, TrendingUp, Database, HardDrive,
@@ -23,7 +27,7 @@ import { formatNumber, formatFileSize } from '../utils/formatters';
 import { DateTime } from 'luxon';
 import toast from 'react-hot-toast';
 import socketService from '../services/socket';
-import { getDemoStats, getDemoEvents } from '../services/demoData';
+import { getDemoStats, getDemoEvents, getDemoOrganizers, getDemoStaff, DEMO_EMPLOYEES, getDemoParticipants, getDemoAnalytics, getDemoSystem, getDemoFleet } from '../services/demoData';
 
 // ─── Formatters ───────────────────────────────────────────────────────────────
 const fmt = (date) => {
@@ -798,6 +802,7 @@ function UptimePanel() {
 // SYSTEM MONITOR PANEL
 // ═══════════════════════════════════════════════════════════════════════════════
 function SystemPanel() {
+  const isDemo = useContext(DemoContext);
   const [sys, setSys] = useState(null);
   const [loading, setLoading] = useState(true);
   const [watchdogData, setWatchdogData] = useState(null);
@@ -844,6 +849,7 @@ function SystemPanel() {
   useEffect(() => { loadMaintenance(); }, [loadMaintenance]);
 
   const load = useCallback(async () => {
+    if (isDemo) { setSys(getDemoSystem()); setLoading(false); return; }
     setLoading(true);
     adminAPI.getSystem()
       .then(r => { if (r?.data) setSys(r.data); })
@@ -852,7 +858,7 @@ function SystemPanel() {
     watchdogAPI.getStatus()
       .then(r => { if (r?.data) setWatchdogData(r.data); })
       .catch(() => {});
-  }, []);
+  }, [isDemo]);
 
   useEffect(() => { load(); const t = setInterval(load, 15000); return () => clearInterval(t); }, [load]);
 
@@ -1145,6 +1151,7 @@ function SystemPanel() {
 // FLEET LOGS PANEL
 // ═══════════════════════════════════════════════════════════════════════════════
 function LogsPanel() {
+  const isDemo = useContext(DemoContext);
   const [logs, setLogs]             = useState([]);
   const [sources, setSources]       = useState([]);
   const [filter, setFilter]         = useState('all');
@@ -1156,7 +1163,45 @@ function LogsPanel() {
   const bottomRef = useRef(null);
   const esRef     = useRef(null);
 
+  const DEMO_LOG_MESSAGES = [
+    { level: 'info',  msg: 'Event "Global Tech Summit 2026" participant joined: skyler_events' },
+    { level: 'info',  msg: 'Check-in completed for invite #INV-4821 at World AI Congress' },
+    { level: 'info',  msg: 'Poll created in event "Harvard CS Commencement 2026"' },
+    { level: 'warn',  msg: 'Rate limit approaching for region ap-east-1 (92% of threshold)' },
+    { level: 'info',  msg: 'Message sent in "Pride Month Opening Concert" by priya.nair92' },
+    { level: 'info',  msg: 'File uploaded to "Blockchain Developer Summit — Seoul" (2.4 MB)' },
+    { level: 'info',  msg: 'RSVP confirmed for "Diwali Cultural Gala — London" — marcus_w' },
+    { level: 'info',  msg: 'New event created: "Davos Innovation Side-Session" by wef.admin' },
+    { level: 'info',  msg: 'Seating map saved for "Royal State Reception" (24 tables)' },
+    { level: 'warn',  msg: 'Slow query detected on events collection (148ms)' },
+    { level: 'info',  msg: 'Announcement broadcast to 4821 participants in Global Tech Summit' },
+    { level: 'info',  msg: 'Staff account created: door_james for Global Tech Summit 2026' },
+    { level: 'info',  msg: 'Expense logged ($4,200) in "NYC Startup Showcase — Investor Night"' },
+    { level: 'info',  msg: 'WebSocket connected: vip_host_kai from 103.42.x.x' },
+    { level: 'info',  msg: 'Webhook delivered to https://hooks.example.com/planit (200ms)' },
+    { level: 'error', msg: 'Email delivery failed for invite INV-0042 — retrying in 30s' },
+    { level: 'info',  msg: 'Cleanup job: removed 142 expired sessions' },
+    { level: 'info',  msg: 'Task toggled in "Y Combinator Spring Demo Day (W26)"' },
+    { level: 'info',  msg: 'Analytics snapshot saved for event "Global Climate Summit"' },
+    { level: 'info',  msg: 'Event cloned: "Global Tech Summit 2026" → "Global Tech Summit 2027"' },
+  ];
+
   const loadLogs = async () => {
+    if (isDemo) {
+      const now = Date.now();
+      const fakeLogs = DEMO_LOG_MESSAGES.map((l, i) => ({
+        _id: `demo-log-${i}`,
+        level: l.level,
+        msg: l.msg,
+        ts: new Date(now - i * 47000).toISOString(),
+        source: 'backend',
+        sourceName: 'Backend (us-east-1)',
+      })).reverse();
+      setLogs(fakeLogs);
+      setSources([{ source: 'backend', name: 'Backend (us-east-1)', ok: true, count: fakeLogs.length }]);
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     try {
       const r = await adminAPI.getFleetLogs();
@@ -1338,6 +1383,7 @@ function LogsPanel() {
 // EMPLOYEES PANEL
 // ═══════════════════════════════════════════════════════════════════════════════
 function EmployeesPanel() {
+  const isDemo = useContext(DemoContext);
   const [employees, setEmployees] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
@@ -1372,6 +1418,7 @@ function EmployeesPanel() {
   useEffect(() => { load(); }, []);
   const load = async () => {
     setLoading(true);
+    if (isDemo) { setEmployees(DEMO_EMPLOYEES); setLoading(false); return; }
     try { const r = await adminAPI.getEmployees(); setEmployees(r.data.employees || []); }
     catch { toast.error('Failed to load employees'); }
     finally { setLoading(false); }
@@ -1402,6 +1449,7 @@ function EmployeesPanel() {
   };
 
   const save = async () => {
+    if (isDemo) { toast('🔒 Demo accounts cannot modify employees.', { icon: '🚫' }); return; }
     if (!form.name.trim() || !form.email.trim()) { toast.error('Name and email required'); return; }
     if (!editing && !form.password.trim()) { toast.error('Password is required for new employees'); return; }
     setSaving(true);
@@ -1415,6 +1463,7 @@ function EmployeesPanel() {
   };
 
   const del = async (id, name) => {
+    if (isDemo) { toast('🔒 Demo accounts cannot remove employees.', { icon: '🚫' }); return; }
     if (!confirm(`Remove ${name} from the team?`)) return;
     try { await adminAPI.deleteEmployee(id); setEmployees(p => p.filter(e => e._id !== id)); toast.success('Removed'); }
     catch { toast.error('Delete failed'); }
@@ -1683,11 +1732,15 @@ function EmployeesPanel() {
 // ORGANIZERS PANEL
 // ═══════════════════════════════════════════════════════════════════════════════
 function OrganizersPanel() {
+  const isDemo = useContext(DemoContext);
   const [organizers, setOrganizers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
 
-  useEffect(() => { adminAPI.getOrganizers().then(r => setOrganizers(r.data.organizers || [])).catch(() => toast.error('Failed')).finally(() => setLoading(false)); }, []);
+  useEffect(() => {
+    if (isDemo) { setOrganizers(getDemoOrganizers()); setLoading(false); return; }
+    adminAPI.getOrganizers().then(r => setOrganizers(r.data.organizers || [])).catch(() => toast.error('Failed')).finally(() => setLoading(false));
+  }, [isDemo]);
 
   const filtered = organizers.filter(o => !search || o.email?.toLowerCase().includes(search.toLowerCase()) || o.name?.toLowerCase().includes(search.toLowerCase()));
 
@@ -1744,11 +1797,15 @@ function OrganizersPanel() {
 // STAFF PANEL (all staff across all events)
 // ═══════════════════════════════════════════════════════════════════════════════
 function StaffPanel() {
+  const isDemo = useContext(DemoContext);
   const [staff, setStaff] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
 
-  useEffect(() => { adminAPI.getAllStaff().then(r => setStaff(r.data.staff || [])).catch(() => toast.error('Failed')).finally(() => setLoading(false)); }, []);
+  useEffect(() => {
+    if (isDemo) { setStaff(getDemoStaff()); setLoading(false); return; }
+    adminAPI.getAllStaff().then(r => setStaff(r.data.staff || [])).catch(() => toast.error('Failed')).finally(() => setLoading(false));
+  }, [isDemo]);
 
   const filtered = staff.filter(s => !search || s.username?.toLowerCase().includes(search.toLowerCase()) || s.eventTitle?.toLowerCase().includes(search.toLowerCase()));
 
@@ -1797,6 +1854,7 @@ function StaffPanel() {
 // ALL USERS PANEL
 // ═══════════════════════════════════════════════════════════════════════════════
 function AllUsersPanel() {
+  const isDemo = useContext(DemoContext);
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
@@ -1806,6 +1864,11 @@ function AllUsersPanel() {
 
   const load = async (p = page, q = search) => {
     setLoading(true);
+    if (isDemo) {
+      const result = getDemoParticipants({ page: p, search: q });
+      setUsers(result.participants); setTotal(result.total); setPages(result.pages);
+      setLoading(false); return;
+    }
     try { const r = await adminAPI.getAllParticipants({ page: p, limit: 50, search: q || undefined }); setUsers(r.data.participants || []); setTotal(r.data.total || 0); setPages(r.data.pages || 1); }
     catch { toast.error('Failed'); }
     finally { setLoading(false); }
@@ -1866,10 +1929,14 @@ function AllUsersPanel() {
 // ANALYTICS PANEL
 // ═══════════════════════════════════════════════════════════════════════════════
 function AnalyticsPanel({ stats }) {
+  const isDemo = useContext(DemoContext);
   const [exportStats, setExportStats] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => { adminAPI.exportStats().then(r => setExportStats(r.data)).catch(() => {}).finally(() => setLoading(false)); }, []);
+  useEffect(() => {
+    if (isDemo) { setExportStats(getDemoAnalytics().exportStats); setLoading(false); return; }
+    adminAPI.exportStats().then(r => setExportStats(r.data)).catch(() => {}).finally(() => setLoading(false));
+  }, [isDemo]);
 
   return (
     <div className="space-y-6">
@@ -2291,6 +2358,7 @@ function CCBar({ v, max, color }) {
 }
 
 function CommandCenterPanel() {
+  const isDemo = useContext(DemoContext);
   const [tab, setTab]           = useState('grid');
   const [live, setLive]         = useState(true);
   const [loading, setLoading]   = useState(true);
@@ -2323,6 +2391,19 @@ function CommandCenterPanel() {
   const addLog = e => setCmdLog(p => [{ ts: new Date().toISOString(), ...e }, ...p].slice(0, 300));
 
   const fetchAll = useCallback(async (which = ['fleet','pool','db','platform','security','runtime','events']) => {
+    if (isDemo) {
+      const demoFleet = getDemoFleet();
+      const demoSys   = getDemoSystem();
+      setFleet({ backends: demoFleet.backends, totalServers: demoFleet.totalServers, activeServers: demoFleet.activeServers, reqPerSecond: demoFleet.reqPerSecond, p99LatencyMs: demoFleet.p99LatencyMs });
+      setDb(demoSys.db);
+      setPlatform({ totalEvents: 2847193, activeEvents: 94281, totalParticipants: 1294837004, peakConcurrent: 284730 });
+      setSecurity({ threatScore: 12, blockedIPs: 4821, rateLimitHits: 18293, suspiciousRequests: 42 });
+      setRuntime({ activeWebsockets: demoFleet.activeWebsockets, socketRooms: demoFleet.socketRooms, memory: demoSys.memory });
+      setEvents({ liveEvents: 94281, recentCreated: 4821 });
+      setLoading(false);
+      setRefreshAt(new Date());
+      return;
+    }
     setLoading(true);
     const p = [];
     if (which.includes('fleet'))    p.push(adminAPI.ccGetFleet().then(r => setFleet(r.data)).catch(() => {}));
@@ -2335,7 +2416,7 @@ function CommandCenterPanel() {
     await Promise.allSettled(p);
     setLoading(false);
     setRefreshAt(new Date());
-  }, []);
+  }, [isDemo]);
 
   useEffect(() => {
     fetchAll();
@@ -2368,6 +2449,7 @@ function CommandCenterPanel() {
   };
 
   const dispatch = async () => {
+    if (isDemo) { toast('🔒 Commands are disabled in demo mode.', { icon: '🚫' }); return; }
     setDRunning(true);
     let params = {};
     if (dParams.trim()) {
@@ -2389,6 +2471,7 @@ function CommandCenterPanel() {
   };
 
   const globalSearch = async () => {
+    if (isDemo) { toast('🔒 Global search is disabled in demo mode.', { icon: '🚫' }); return; }
     if (sq.length < 2) return;
     setSLoading(true);
     try { const r = await adminAPI.ccGlobalSearch(sq); setSr(r.data); }
@@ -2397,6 +2480,7 @@ function CommandCenterPanel() {
   };
 
   const bulkOp = async (action, filter, msg) => {
+    if (isDemo) { toast('🔒 Bulk operations are disabled in demo mode.', { icon: '🚫' }); return; }
     if (!confirm(msg)) return;
     setBulk(true);
     try {
@@ -3865,11 +3949,13 @@ function BlocklistPanel() {
 
 // ─── Security Panel ───────────────────────────────────────────────────────────
 function SecurityPanel() {
+  const isDemo = useContext(DemoContext);
   const [emailTest, setEmailTest]   = useState({ to: '', loading: false, result: null });
   const [emailCfg, setEmailCfg]     = useState(null);
 
   const handleTestEmail = async (e) => {
     e.preventDefault();
+    if (isDemo) { toast('🔒 Email functions are disabled in demo mode.', { icon: '🚫' }); return; }
     if (!emailTest.to) return;
     setEmailTest(p => ({ ...p, loading: true, result: null }));
     try {
@@ -4016,6 +4102,7 @@ function SecurityPanel() {
 
 // ─── Marketing Panel ──────────────────────────────────────────────────────────
 function MarketingPanel() {
+  const isDemo = useContext(DemoContext);
   // ── Template & campaign settings ──
   const [templates, setTemplates]     = useState([]);
   const [selected, setSelected]       = useState('');
@@ -4216,6 +4303,7 @@ function MarketingPanel() {
 
   // ── Send campaign ──
   const handleSend = async () => {
+    if (isDemo) { toast('🔒 Marketing campaigns are disabled in demo mode.', { icon: '🚫' }); return; }
     if (!selected)              return toast.error('Choose a template first');
     if (selectedRows.length === 0) return toast.error('Select at least one recipient');
     if (selectedRows.length > 1000) return toast.error('Maximum 1,000 recipients per send');
@@ -4775,6 +4863,7 @@ function SystemCard({ title, icon: Icon, iconColor, active, activeLabel, tip, ch
 }
 
 function FleetControl() {
+  const isDemo = useContext(DemoContext);
   const [status, setStatus]           = useState(null);
   const [loading, setLoading]         = useState(true);
   const [boostForm, setBoostForm]     = useState({ durationMinutes: 60, reason: '', minBackends: '', pinnedEventIds: '' });
@@ -4790,6 +4879,7 @@ function FleetControl() {
   const [releasingManual, setReleasingManual] = useState(false);
 
   const load = async () => {
+    if (isDemo) { setStatus(getDemoFleet()); setLoading(false); return; }
     try {
       const r = await routerAPI.getStatus();
       if (r?.data) {
@@ -5436,12 +5526,14 @@ export default function Admin() {
   const logout = () => { localStorage.removeItem('adminToken'); localStorage.removeItem('adminIsDemo'); delete api.defaults.headers.common['Authorization']; setAuth(false); setIsDemo(false); toast.success('Logged out'); };
 
   const deleteEvent = async (id) => {
+    if (isDemo) { toast('🔒 Demo accounts cannot delete events.', { icon: '🚫' }); return; }
     if (!confirm('Permanently delete this event and ALL data? This cannot be undone!')) return;
     try { await adminAPI.deleteEvent(id); toast.success('Event deleted'); setSelectedEvent(null); loadDashboard(); }
     catch { toast.error('Delete failed'); }
   };
 
   const runCleanup = async () => {
+    if (isDemo) { toast('🔒 Demo accounts cannot run cleanup.', { icon: '🚫' }); return; }
     setCleanupRunning(true); setCleanupResult(null);
     try { const r = await adminAPI.manualCleanup(); setCleanupResult(r.data); toast.success('Cleanup complete'); loadDashboard(); }
     catch { toast.error('Cleanup failed'); setCleanupResult({ success: false, message: 'Cleanup failed' }); }
@@ -5483,6 +5575,7 @@ export default function Admin() {
 
   // ── Main App ──────────────────────────────────────────────────────────────
   return (
+    <DemoContext.Provider value={isDemo}>
     <div className="min-h-screen bg-neutral-100 flex">
       {/* Sidebar */}
       <aside className={`hidden md:flex bg-neutral-950 flex-shrink-0 flex-col transition-all duration-300 ${sidebarOpen ? 'w-56' : 'w-14'}`} style={{ position: 'sticky', top: 0, height: '100vh', overflowY: 'auto' }}>
@@ -5579,6 +5672,17 @@ export default function Admin() {
 
         {/* Content */}
         <main className="flex-1 p-3 sm:p-6 pb-24 md:pb-6 overflow-y-auto">
+          {/* Demo Mode Banner */}
+          {isDemo && (
+            <div className="mb-4 flex items-center gap-3 px-4 py-3 rounded-xl bg-orange-50 border border-orange-200 max-w-7xl mx-auto">
+              <div className="w-2.5 h-2.5 rounded-full bg-orange-400 flex-shrink-0 animate-pulse" />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold text-orange-700">Demo Mode — All data is fabricated</p>
+                <p className="text-xs text-orange-500 mt-0.5">You are viewing sample data only. No real events, organizers, staff, or users are visible. Write operations are blocked.</p>
+              </div>
+              <span className="text-xs font-bold text-orange-500 bg-orange-100 border border-orange-200 px-2 py-1 rounded-full flex-shrink-0">SANDBOX</span>
+            </div>
+          )}
           {/* Dashboard */}
           {activeSection === 'dashboard' && !selectedEvent && (
             <div className="space-y-6 max-w-7xl mx-auto">
@@ -5904,5 +6008,6 @@ export default function Admin() {
       </nav>
 
 </div>
+    </DemoContext.Provider>
   );
 }
