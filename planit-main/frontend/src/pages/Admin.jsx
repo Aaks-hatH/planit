@@ -23,7 +23,7 @@ import { formatNumber, formatFileSize } from '../utils/formatters';
 import { DateTime } from 'luxon';
 import toast from 'react-hot-toast';
 import socketService from '../services/socket';
-import DemoDashboard from '../components/DemoDashboard';
+import { getDemoStats, getDemoEvents } from '../services/demoData';
 
 // ─── Formatters ───────────────────────────────────────────────────────────────
 const fmt = (date) => {
@@ -5398,6 +5398,13 @@ export default function Admin() {
   }, [auth, currentPage, statusFilter]);
 
   const loadDashboard = async () => {
+    if (isDemo) {
+      setStats(getDemoStats());
+      const { events, totalPages } = getDemoEvents({ page: currentPage, status: statusFilter });
+      setEvents(events);
+      setTotalPages(totalPages);
+      return;
+    }
     try {
       const [sr, er] = await Promise.all([
         adminAPI.getStats(),
@@ -5442,9 +5449,6 @@ export default function Admin() {
   };
 
   if (loading) return <div className="min-h-screen bg-neutral-50 flex items-center justify-center"><div className="spinner w-8 h-8 border-4 border-neutral-300 border-t-neutral-700" /></div>;
-
-  // ── Demo Mode — full fake infrastructure dashboard ─────────────────────────
-  if (auth && isDemo) return <DemoDashboard onLogout={logout} />;
 
   // ── Login Screen ──────────────────────────────────────────────────────────
   if (!auth) return (
