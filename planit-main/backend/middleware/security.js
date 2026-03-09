@@ -36,6 +36,12 @@ const redis     = require('../services/redisClient');
 const Blocklist = require('../models/Blocklist');
 
 const ENABLED        = process.env.SECURITY_ENABLED !== 'false';
+// Comma-separated list of IPs to completely bypass trafficGuard.
+// Set SECURITY_WHITELIST_IPS in Render env vars to unblock yourself.
+// e.g. SECURITY_WHITELIST_IPS=1.2.3.4,5.6.7.8
+const WHITELIST_IPS  = new Set(
+  (process.env.SECURITY_WHITELIST_IPS || '').split(',').map(s => s.trim()).filter(Boolean)
+);
 const BAN_MINUTES    = parseInt(process.env.SECURITY_BAN_MINUTES    || '30',  10);
 const WARN_WINDOW_S  = parseInt(process.env.SECURITY_WARN_WINDOW_S  || '10',  10);
 const WARN_THRESHOLD = parseInt(process.env.SECURITY_WARN_THRESHOLD || '25',  10);
@@ -147,6 +153,9 @@ async function trafficGuard(req, res, next) {
   if (req.path.startsWith('/api/mesh') || req.path === '/health') return next();
 
   const ip = realIp(req);
+
+  // Whitelisted IPs bypass all checks — use SECURITY_WHITELIST_IPS env var
+  if (WHITELIST_IPS.size > 0 && WHITELIST_IPS.has(ip)) return next();
   const ua = (req.headers['user-agent'] || '').toLowerCase();
 
   // 1. Check if already banned
