@@ -13,9 +13,6 @@ const mongoose   = require('mongoose');
 const cors       = require('cors');
 const mongoSanitize = require('express-mongo-sanitize');
 const helmet     = require('helmet');
-const compression = require('compression');
-const cookieParser = require('cookie-parser');
-const hpp        = require('hpp');
 const http       = require('http');
 const socketIo   = require('socket.io');
 const path       = require('path');
@@ -215,7 +212,6 @@ app.use(express.json({ limit: '2mb' }));
 app.use(express.urlencoded({ extended: true, limit: '2mb' }));
 app.use(cookieParser());
 app.use(mongoSanitize());
-app.use(hpp());          // M5: prevent HTTP Parameter Pollution (deduplicates query params)
 app.use(trafficGuard);
 app.use(maintenanceGuard);       // blocks all non-exempt paths during maintenance
 app.use('/api/', apiLimiter);
