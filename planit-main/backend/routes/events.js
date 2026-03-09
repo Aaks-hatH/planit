@@ -9,6 +9,17 @@ const Event = require('../models/Event');
 const EventParticipant = require('../models/EventParticipant');
 const { verifyEventAccess, verifyOrganizer, verifyCheckinAccess } = require('../middleware/auth');
 const { createEventLimiter, authLimiter, reservationLimiter, availabilityLimiter } = require('../middleware/rateLimiter');
+const rateLimit = require('express-rate-limit');
+
+// M4: Per-event password brute-force limiter (keyed on ip:eventId, not just ip)
+const eventPasswordLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  keyGenerator: (req) => `pwd:${req.ip}:${req.params.eventId || 'none'}`,
+  handler: (_req, res) => res.status(429).json({ error: 'Too many password attempts for this event.' }),
+  standardHeaders: true,
+  legacyHeaders: false,
+});
 const { secrets } = require('../keys');
 const crypto = require('crypto');
 const Blocklist = require('../models/Blocklist');
@@ -86,10 +97,8 @@ router.post('/',
       const token = jwt.sign(
         { eventId: event._id.toString(), username: organizerName, role: 'organizer' },
         secrets.jwt,
-        { expiresIn: '30d' }
+        { expiresIn: '24h' }
       );
-
-      // Fire confirmation email non-blocking (organizer email)
       const { sendEventConfirmation } = require('../services/emailService');
       sendEventConfirmation(event).catch(() => {});
 
@@ -158,7 +167,7 @@ router.get('/subdomain/:subdomain', async (req, res, next) => {
 });
 
 // Verify password + join
-router.post('/verify-password/:eventId', authLimiter,
+router.post('/verify-password/:eventId', authLimiter, eventPasswordLimiter,
   [body('password').notEmpty(), body('username').trim().isLength({ min: 1, max: 100 }), body('accountPassword').optional(), validate],
   async (req, res, next) => {
     try {
@@ -247,7 +256,7 @@ router.post('/verify-password/:eventId', authLimiter,
       const role = verifiedOrganizerByPassword ? 'organizer' : 'participant';
       const token = jwt.sign(
         { eventId: event._id.toString(), username, role },
-        secrets.jwt, { expiresIn: '30d' }
+        secrets.jwt, { expiresIn: '7d' }
       );
       res.json({ message: 'Access granted', token, event: { id: event._id, title: event.title } });
     } catch (error) { next(error); }
@@ -351,7 +360,7 @@ router.post('/join/:eventId',
       const joinRole = verifiedOrganizerByPassword ? 'organizer' : 'participant';
       const token = jwt.sign(
         { eventId: event._id.toString(), username, role: joinRole },
-        secrets.jwt, { expiresIn: '30d' }
+        secrets.jwt, { expiresIn: '7d' }
       );
       res.json({ message: 'Joined successfully', token, event: { id: event._id, title: event.title } });
     } catch (error) { next(error); }
@@ -2937,7 +2946,7 @@ router.post('/:eventId/clone', verifyOrganizer,
       const token = jwt.sign(
         { eventId: cloned._id.toString(), username: source.organizerName, role: 'organizer' },
         secrets.jwt,
-        { expiresIn: '30d' }
+        { expiresIn: '24h' }
       );
 
       res.status(201).json({
@@ -3296,7 +3305,7 @@ router.get('/:eventId/approval-status', async (req, res, next) => {
       );
       const token = jwt.sign(
         { eventId: eventId.toString(), username, role: 'participant' },
-        secrets.jwt, { expiresIn: '30d' }
+        secrets.jwt, { expiresIn: '7d' }
       );
       return res.json({ approved: true, token, event: { id: event._id, title: event.title } });
     }
@@ -3343,7 +3352,7 @@ router.post('/:eventId/approval-queue/:username/approve', verifyOrganizer, async
     // Issue a token for them to use
     const token = jwt.sign(
       { eventId: eventId.toString(), username, role: 'participant' },
-      secrets.jwt, { expiresIn: '30d' }
+      secrets.jwt, { expiresIn: '7d' }
     );
 
     const io = req.app.get('io');
