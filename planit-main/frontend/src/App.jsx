@@ -1,5 +1,6 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { useState, useEffect } from 'react';
+import { WhiteLabelProvider, useWhiteLabel } from './context/WhiteLabelContext';
 import LiveWaitBoard from './pages/LiveWaitBoard';
 import Home from './pages/Home';
 import EventSpace from './pages/EventSpace';
@@ -212,11 +213,86 @@ function MaintenanceGate({ children }) {
   );
 }
 
+// ─── White-label suspended page ───────────────────────────────────────────────
+function WLSuspendedPage() {
+  return (
+    <div style={{ minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center', background:'#fff', fontFamily:'sans-serif', textAlign:'center', padding:'2rem' }}>
+      <p style={{ fontSize:14, color:'#888', margin:0 }}>This page has been suspended.</p>
+    </div>
+  );
+}
+
+// ─── White-label theme injector ────────────────────────────────────────────────
+// Reads branding from context and applies CSS variables + favicon + title.
+function WhiteLabelTheme({ children }) {
+  const { wl, isWL, resolved, suspended } = useWhiteLabel();
+
+  useEffect(() => {
+    if (!isWL || !wl?.branding) return;
+    const b = wl.branding;
+    const root = document.documentElement;
+
+    // Inject CSS custom properties
+    if (b.primaryColor) root.style.setProperty('--wl-primary', b.primaryColor);
+    if (b.accentColor)  root.style.setProperty('--wl-accent',  b.accentColor);
+    if (b.fontFamily)   root.style.setProperty('--wl-font',    b.fontFamily);
+
+    // Document title
+    if (b.companyName || wl.clientName) {
+      document.title = `${b.companyName || wl.clientName} — Reservations`;
+    }
+
+    // Favicon
+    if (b.faviconUrl) {
+      let link = document.querySelector("link[rel~='icon']");
+      if (!link) {
+        link = document.createElement('link');
+        link.rel = 'icon';
+        document.head.appendChild(link);
+      }
+      link.href = b.faviconUrl;
+    }
+
+    // Custom CSS (enterprise only — injected as a <style> tag)
+    if (b.customCss) {
+      const existing = document.getElementById('wl-custom-css');
+      if (existing) existing.remove();
+      const style = document.createElement('style');
+      style.id = 'wl-custom-css';
+      style.textContent = b.customCss;
+      document.head.appendChild(style);
+    }
+
+    return () => {
+      root.style.removeProperty('--wl-primary');
+      root.style.removeProperty('--wl-accent');
+      root.style.removeProperty('--wl-font');
+    };
+  }, [isWL, wl]);
+
+  // Don't render anything until resolution is done — prevents flash of PlanIt branding
+  if (!resolved) return (
+    <div style={{ minHeight:'100vh', background:'#05050f', display:'flex', alignItems:'center', justifyContent:'center' }}>
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.2)" strokeWidth="2" strokeLinecap="round">
+        <path d="M21 12a9 9 0 11-6.219-8.56" style={{ animation:'spin 1s linear infinite', transformOrigin:'center' }}/>
+      </svg>
+      <style>{`@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}`}</style>
+    </div>
+  );
+
+  // Suspended
+  if (isWL && suspended) return <WLSuspendedPage />;
+
+  return <>{children}</>;
+}
+
 function App() {
   return (
-    <MaintenanceGate>
-      <Router>
-        <Routes>
+    <WhiteLabelProvider>
+      <WhiteLabelTheme>
+        <MaintenanceGate>
+          <Router>
+            <Routes>
         <Route path="/" element={<Home />} />
 
         <Route path="/e/:subdomain"              element={<EventSpace />} />
@@ -255,7 +331,9 @@ function App() {
         <Route path="*"                element={<NotFound />} />
       </Routes>
     </Router>
-    </MaintenanceGate>
+        </MaintenanceGate>
+      </WhiteLabelTheme>
+    </WhiteLabelProvider>
   );
 }
 
