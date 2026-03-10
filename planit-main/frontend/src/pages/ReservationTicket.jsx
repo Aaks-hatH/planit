@@ -11,6 +11,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import { useWhiteLabel } from '../context/WhiteLabelContext';
 import {
   UtensilsCrossed, Calendar, Users, Clock, MapPin, Phone,
   CheckCircle, XCircle, AlertCircle, Loader2, QrCode,
@@ -102,7 +103,8 @@ export default function ReservationTicket() {
   );
 
   const { reservation: r, restaurantName, accentColor, address, phone, confirmationMessage, cancelCutoffHours } = data;
-  const accent = accentColor || '#f97316';
+  const { wl, isWL } = useWhiteLabel();
+  const accent = (isWL && wl?.branding?.primaryColor) || accentColor || '#f97316';
   const statusMeta = STATUS_LABELS[r.status] || STATUS_LABELS.confirmed;
   const qrUrl = r.qrToken
     ? `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(r.qrToken)}&bgcolor=0a0a0a&color=ffffff&margin=2`
@@ -325,9 +327,11 @@ export default function ReservationTicket() {
           </p>
         )}
 
-        <p className="text-center text-xs text-neutral-800 mt-4">
-          Powered by <a href="https://planitapp.onrender.com" className="hover:opacity-70" style={{ color: accent }}>PlanIt</a>
-        </p>
+        {!(isWL && wl?.branding?.hidePoweredBy) && (
+          <p className="text-center text-xs text-neutral-800 mt-4">
+            Powered by <a href="https://planitapp.onrender.com" className="hover:opacity-70" style={{ color: accent }}>PlanIt</a>
+          </p>
+        )}
       </div>
     </div>
   );
