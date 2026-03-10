@@ -12,6 +12,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import { useWhiteLabel } from '../context/WhiteLabelContext';
 import {
   Clock, Users, MapPin, Phone, Globe, Instagram, ChevronRight,
   ChevronLeft, Check, X, Calendar, Star, Info, AlertCircle,
@@ -88,8 +89,9 @@ function SlotStatus({ status, freeCount, showCount }) {
 // ── Confirmation screen ───────────────────────────────────────────────────────
 
 function ConfirmationScreen({ booking, config, subdomain, onReset }) {
+  const { wl, isWL } = useWhiteLabel();
   const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(booking.qrToken)}&bgcolor=0a0a0a&color=ffffff&margin=2`;
-  const accent = config.accentColor || '#f97316';
+  const accent = (isWL && wl?.branding?.primaryColor) || config.accentColor || '#f97316';
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4" style={{ background: config.backgroundStyle === 'light' ? '#f8fafc' : '#09090f' }}>
@@ -160,7 +162,7 @@ function ConfirmationScreen({ booking, config, subdomain, onReset }) {
           Make another reservation
         </button>
 
-        {config.showPoweredBy !== false && (
+        {config.showPoweredBy !== false && !(isWL && wl?.branding?.hidePoweredBy) && (
           <div className="text-center text-xs mt-6" style={{ color: config.backgroundStyle === 'light' ? '#ccc' : '#333' }}>
             Powered by <a href="https://planitapp.onrender.com" className="hover:opacity-80" style={{ color: accent }}>PlanIt</a>
           </div>
@@ -231,6 +233,7 @@ export function ReserveCancelPage() {
 export default function ReservePage() {
   const { subdomain } = useParams();
   const navigate = useNavigate();
+  const { wl, isWL } = useWhiteLabel();
 
   const [config, setConfig]   = useState(null);
   const [loading, setLoading] = useState(true);
@@ -256,7 +259,7 @@ export default function ReservePage() {
   const [openMenu, setOpenMenu] = useState(null);
 
   const slotTimerRef = useRef(null);
-  const accent = config?.accentColor || '#f97316';
+  const accent = (isWL && wl?.branding?.primaryColor) || config?.accentColor || '#f97316';
   const isDark = config?.backgroundStyle !== 'light';
 
   const c = {
@@ -936,7 +939,7 @@ export default function ReservePage() {
       </div>
 
       {/* Footer */}
-      {config.showPoweredBy !== false && (
+      {config.showPoweredBy !== false && !(isWL && wl?.branding?.hidePoweredBy) && (
         <div className="text-center py-8 text-xs" style={{ color: isDark ? '#333' : '#ccc' }}>
           Powered by <a href="https://planitapp.onrender.com" className="hover:opacity-70" style={{ color: accent }}>PlanIt</a>
         </div>
