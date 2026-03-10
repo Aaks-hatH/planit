@@ -5377,7 +5377,7 @@ function FleetControl() {
 
 
 // ─── Mobile "More" nav button ─────────────────────────────────────────────────
-const MORE_SECTIONS = ['organizers','staff','employees','analytics','security','blocklist','reports','uptime','command-center'];
+const MORE_SECTIONS = ['organizers','staff','employees','analytics','security','blocklist','reports','uptime','command-center','whitelabel'];
 function MoreNavButton({ activeSection, setActiveSection }) {
   const [open, setOpen] = React.useState(false);
   const isActive = MORE_SECTIONS.includes(activeSection);
@@ -5385,11 +5385,13 @@ function MoreNavButton({ activeSection, setActiveSection }) {
     organizers: 'Organizers', staff: 'Staff', employees: 'Team',
     analytics: 'Analytics', security: 'Security', blocklist: 'Blocklist',
     reports: 'Reports', uptime: 'Uptime', 'command-center': 'Command',
+    whitelabel: 'White Label',
   };
   const icons = {
     organizers: Building2, staff: UserCheck, employees: Briefcase,
     analytics: BarChart3, security: Shield, blocklist: Ban,
     reports: Inbox, uptime: Radio, 'command-center': Crosshair,
+    whitelabel: Layers,
   };
   return (
     <>
@@ -5446,6 +5448,648 @@ const NAV_ITEMS = [
   { id: 'system',         label: 'System',       icon: Server     },
   { id: 'command-center', label: 'Command',      icon: Crosshair  },
 ];
+
+  { id: 'system',         label: 'System',       icon: Server     },
+  { id: 'command-center', label: 'Command',      icon: Crosshair  },
+];
+
+// ─── White Label Panel ────────────────────────────────────────────────────────
+const TIER_COLORS = {
+  basic:      { bg: 'bg-slate-100',  text: 'text-slate-700',  label: 'Basic'      },
+  pro:        { bg: 'bg-blue-100',   text: 'text-blue-700',   label: 'Pro'        },
+  enterprise: { bg: 'bg-purple-100', text: 'text-purple-700', label: 'Enterprise' },
+};
+const STATUS_COLORS = {
+  trial:     { bg: 'bg-amber-100',  text: 'text-amber-700',  label: 'Trial'     },
+  active:    { bg: 'bg-green-100',  text: 'text-green-700',  label: 'Active'    },
+  suspended: { bg: 'bg-red-100',    text: 'text-red-700',    label: 'Suspended' },
+  cancelled: { bg: 'bg-neutral-100',text: 'text-neutral-600',label: 'Cancelled' },
+};
+
+const EMPTY_FORM = {
+  clientName: '', domain: '', tier: 'basic', status: 'trial',
+  contactName: '', contactEmail: '', contactPhone: '',
+  notes: '', keyValidDays: 365,
+  branding: { companyName: '', primaryColor: '#2563eb', accentColor: '#1d4ed8', hidePoweredBy: false },
+  billing: { monthlyAmount: 0 },
+  limits: { maxEvents: 10, maxGuestsPerEvent: 500, maxAdminUsers: 3 },
+};
+
+function WhiteLabelPanel() {
+  const isDemo = useContext(DemoContext);
+  const [items, setItems] = useState([]);
+  const [stats, setStats] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState('');
+  const [filterStatus, setFilterStatus] = useState('');
+  const [filterTier, setFilterTier] = useState('');
+
+  // Modal state
+  const [modal, setModal] = useState(null); // null | 'create' | 'edit' | 'view'
+  const [selected, setSelected] = useState(null);
+  const [form, setForm] = useState(EMPTY_FORM);
+  const [saving, setSaving] = useState(false);
+
+  // Key display
+  const [revealedKey, setRevealedKey] = useState(null);
+  const [confirmDelete, setConfirmDelete] = useState(null);
+  const [confirmSuspend, setConfirmSuspend] = useState(null);
+
+  const API = '/api/whitelabel';
+
+  const load = useCallback(async () => {
+    if (isDemo) {
+      setItems([
+        { _id: 'demo1', clientName: 'La Taverna Dayton', domain: 'reservations.latavernadayton.com', tier: 'pro', status: 'active', contactEmail: 'ops@latavernadayton.com', keyExpiresAt: new Date(Date.now() + 200*24*60*60*1000), licenseKey: 'WL-PRO-A3F72C1B-67AB3200-9F2E8C4D1A3B', billing: { mode: 'sandbox', billingStatus: 'sandbox', monthlyAmount: 29900 }, branding: { primaryColor: '#b45309', companyName: 'La Taverna' }, createdAt: new Date() },
+        { _id: 'demo2', clientName: 'The Grand Ballroom', domain: 'book.grandballroom.com', tier: 'enterprise', status: 'trial', contactEmail: 'hello@grandballroom.com', keyExpiresAt: new Date(Date.now() + 30*24*60*60*1000), licenseKey: 'WL-ENT-B2E83D2C-68BC4311-0A3F9D5E2B4C', billing: { mode: 'sandbox', billingStatus: 'sandbox', monthlyAmount: 0 }, branding: { primaryColor: '#7c3aed', companyName: 'Grand Ballroom' }, createdAt: new Date() },
+      ]);
+      setStats({ total: 2, active: 1, trial: 1, suspended: 0, mrr: 29900, tiers: { pro: 1, enterprise: 1 } });
+      setLoading(false);
+      return;
+    }
+    try {
+      setLoading(true);
+      const params = new URLSearchParams();
+      if (search) params.set('search', search);
+      if (filterStatus) params.set('status', filterStatus);
+      if (filterTier)   params.set('tier', filterTier);
+      const [itemsRes, statsRes] = await Promise.all([
+        adminAPI.get(`${API}?${params}`),
+        adminAPI.get(`${API}/meta/stats`),
+      ]);
+      setItems(itemsRes.data.items || []);
+      setStats(statsRes.data);
+    } catch (e) {
+      toast.error('Failed to load white labels');
+    } finally {
+      setLoading(false);
+    }
+  }, [isDemo, search, filterStatus, filterTier]);
+
+  useEffect(() => { load(); }, [load]);
+
+  const openCreate = () => { setForm(EMPTY_FORM); setModal('create'); };
+  const openEdit = (item) => {
+    setSelected(item);
+    setForm({
+      clientName: item.clientName || '', domain: item.domain || '',
+      tier: item.tier || 'basic', status: item.status || 'trial',
+      contactName: item.contactName || '', contactEmail: item.contactEmail || '',
+      contactPhone: item.contactPhone || '', notes: item.notes || '',
+      keyValidDays: 365,
+      branding: { ...EMPTY_FORM.branding, ...(item.branding || {}) },
+      billing: { monthlyAmount: item.billing?.monthlyAmount || 0 },
+      limits: { ...EMPTY_FORM.limits, ...(item.limits || {}) },
+    });
+    setModal('edit');
+  };
+  const openView = (item) => { setSelected(item); setRevealedKey(null); setModal('view'); };
+
+  const handleSave = async () => {
+    if (!form.clientName.trim() || !form.domain.trim()) {
+      toast.error('Client name and domain are required');
+      return;
+    }
+    if (isDemo) { toast.success(modal === 'create' ? 'White label created (sandbox)' : 'Changes saved (sandbox)'); setModal(null); return; }
+    setSaving(true);
+    try {
+      if (modal === 'create') {
+        await adminAPI.post(API, form);
+        toast.success('White label created');
+      } else {
+        await adminAPI.patch(`${API}/${selected._id}`, form);
+        toast.success('Changes saved');
+      }
+      setModal(null);
+      load();
+    } catch (e) {
+      const msg = e?.response?.data?.error;
+      toast.error(msg === 'domain_taken' ? 'That domain is already registered' : 'Save failed');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleRegenKey = async (id) => {
+    if (isDemo) { toast.success('Key regenerated (sandbox)'); return; }
+    try {
+      const res = await adminAPI.post(`${API}/${id}/regenerate-key`, { keyValidDays: 365 });
+      toast.success('License key regenerated');
+      setSelected(prev => prev ? { ...prev, licenseKey: res.data.licenseKey, keyExpiresAt: res.data.keyExpiresAt } : prev);
+      load();
+    } catch { toast.error('Failed to regenerate key'); }
+  };
+
+  const handleSuspend = async (item, suspend) => {
+    if (isDemo) { toast.success(suspend ? 'Suspended (sandbox)' : 'Unsuspended (sandbox)'); setConfirmSuspend(null); return; }
+    try {
+      await adminAPI.patch(`${API}/${item._id}/suspend`, { suspend, reason: 'Admin action' });
+      toast.success(suspend ? 'White label suspended' : 'White label reactivated');
+      setConfirmSuspend(null);
+      if (modal === 'view') setSelected(prev => prev ? { ...prev, status: suspend ? 'suspended' : 'active' } : prev);
+      load();
+    } catch { toast.error('Action failed'); }
+  };
+
+  const handleDelete = async (id) => {
+    if (isDemo) { toast.success('Deleted (sandbox)'); setConfirmDelete(null); setModal(null); return; }
+    try {
+      await adminAPI.delete(`${API}/${id}`);
+      toast.success('White label deleted');
+      setConfirmDelete(null);
+      setModal(null);
+      load();
+    } catch { toast.error('Delete failed'); }
+  };
+
+  const copyKey = (key) => {
+    navigator.clipboard.writeText(key).then(() => toast.success('License key copied'));
+  };
+
+  const fmtDate = (d) => d ? new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—';
+  const fmtMoney = (cents) => cents ? `$${(cents/100).toLocaleString('en-US', { minimumFractionDigits: 2 })}` : '$0.00';
+
+  const daysUntil = (d) => {
+    if (!d) return null;
+    const diff = Math.ceil((new Date(d) - Date.now()) / (1000*60*60*24));
+    return diff;
+  };
+
+  // ── Tier defaults ──────────────────────────────────────────────────────────
+  const applyTierDefaults = (tier) => {
+    const defaults = {
+      basic:      { maxEvents: 10,  maxGuestsPerEvent: 500,   maxAdminUsers: 3  },
+      pro:        { maxEvents: 50,  maxGuestsPerEvent: 2000,  maxAdminUsers: 10 },
+      enterprise: { maxEvents: 999, maxGuestsPerEvent: 99999, maxAdminUsers: 999},
+    };
+    setForm(f => ({ ...f, tier, limits: defaults[tier] || f.limits,
+      branding: { ...f.branding, hidePoweredBy: tier !== 'basic' ? f.branding.hidePoweredBy : false } }));
+  };
+
+  return (
+    <div className="p-6 space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-2xl font-bold text-neutral-900 flex items-center gap-2">
+            <Layers className="w-6 h-6 text-blue-600" /> White Label
+          </h2>
+          <p className="text-sm text-neutral-500 mt-0.5">Manage custom-branded deployments for your clients</p>
+        </div>
+        <button onClick={openCreate} className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-xl font-medium text-sm hover:bg-blue-700 transition-colors">
+          <Plus className="w-4 h-4" /> New Client
+        </button>
+      </div>
+
+      {/* Stats bar */}
+      {stats && (
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+          {[
+            { label: 'Total Clients', value: stats.total, icon: Layers, color: 'text-neutral-700' },
+            { label: 'Active',        value: stats.active, icon: CheckCircle, color: 'text-green-600' },
+            { label: 'Trial',         value: stats.trial,  icon: Clock, color: 'text-amber-600' },
+            { label: 'Suspended',     value: stats.suspended, icon: AlertTriangle, color: 'text-red-600' },
+            { label: 'MRR (sandbox)', value: fmtMoney(stats.mrr), icon: DollarSign, color: 'text-blue-600', note: 'Stripe not live' },
+          ].map(({ label, value, icon: Icon, color, note }) => (
+            <div key={label} className="bg-white border border-neutral-200 rounded-xl p-4">
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-xs text-neutral-500 font-medium">{label}</span>
+                <Icon className={`w-4 h-4 ${color}`} />
+              </div>
+              <div className={`text-2xl font-bold ${color}`}>{value}</div>
+              {note && <div className="text-[10px] text-amber-600 mt-0.5 flex items-center gap-1"><AlertCircle className="w-3 h-3" />{note}</div>}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Filters */}
+      <div className="flex flex-wrap gap-3">
+        <div className="relative flex-1 min-w-[200px]">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
+          <input
+            className="w-full pl-9 pr-4 py-2 border border-neutral-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            placeholder="Search clients, domains…"
+            value={search} onChange={e => setSearch(e.target.value)}
+          />
+        </div>
+        <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)}
+          className="border border-neutral-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+          <option value="">All Statuses</option>
+          {Object.entries(STATUS_COLORS).map(([k,v]) => <option key={k} value={k}>{v.label}</option>)}
+        </select>
+        <select value={filterTier} onChange={e => setFilterTier(e.target.value)}
+          className="border border-neutral-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+          <option value="">All Tiers</option>
+          {Object.entries(TIER_COLORS).map(([k,v]) => <option key={k} value={k}>{v.label}</option>)}
+        </select>
+      </div>
+
+      {/* Table */}
+      <div className="bg-white border border-neutral-200 rounded-2xl overflow-hidden">
+        {loading ? (
+          <div className="flex items-center justify-center h-40 text-neutral-400 gap-2">
+            <RefreshCw className="w-5 h-5 animate-spin" /> Loading…
+          </div>
+        ) : items.length === 0 ? (
+          <div className="flex flex-col items-center justify-center h-40 text-neutral-400">
+            <Layers className="w-8 h-8 mb-2 opacity-30" />
+            <p className="text-sm">No white label clients yet</p>
+            <button onClick={openCreate} className="mt-3 text-blue-600 text-sm hover:underline">Create your first client →</button>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-neutral-50 border-b border-neutral-200">
+                <tr>
+                  {['Client', 'Domain', 'Tier', 'Status', 'Key Expires', 'Billing', ''].map(h => (
+                    <th key={h} className="text-left px-4 py-3 text-xs font-semibold text-neutral-500 uppercase tracking-wider">{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-neutral-100">
+                {items.map(item => {
+                  const tier = TIER_COLORS[item.tier] || TIER_COLORS.basic;
+                  const status = STATUS_COLORS[item.status] || STATUS_COLORS.trial;
+                  const days = daysUntil(item.keyExpiresAt);
+                  const keyWarn = days !== null && days <= 30;
+                  return (
+                    <tr key={item._id} className="hover:bg-neutral-50 transition-colors">
+                      <td className="px-4 py-3">
+                        <div className="font-medium text-neutral-900">{item.clientName}</div>
+                        {item.contactEmail && <div className="text-xs text-neutral-400">{item.contactEmail}</div>}
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-1 text-neutral-600 font-mono text-xs">
+                          <Globe className="w-3 h-3 flex-shrink-0" />
+                          {item.domain}
+                        </div>
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold ${tier.bg} ${tier.text}`}>
+                          {tier.label}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold ${status.bg} ${status.text}`}>
+                          {status.label}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3">
+                        {item.keyExpiresAt ? (
+                          <span className={`text-xs flex items-center gap-1 ${keyWarn ? 'text-red-600 font-medium' : 'text-neutral-500'}`}>
+                            {keyWarn && <AlertTriangle className="w-3 h-3" />}
+                            {fmtDate(item.keyExpiresAt)}
+                            {days !== null && <span className="text-neutral-400">({days}d)</span>}
+                          </span>
+                        ) : <span className="text-neutral-400 text-xs">No key</span>}
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-1">
+                          <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${item.billing?.billingStatus === 'active' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}>
+                            {item.billing?.mode === 'sandbox' ? '⚠ Sandbox' : fmtMoney(item.billing?.monthlyAmount) + '/mo'}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-1">
+                          <button onClick={() => openView(item)} className="p-1.5 rounded-lg hover:bg-neutral-100 text-neutral-500 hover:text-neutral-900 transition-colors" title="View"><Eye className="w-3.5 h-3.5" /></button>
+                          <button onClick={() => openEdit(item)} className="p-1.5 rounded-lg hover:bg-blue-50 text-neutral-500 hover:text-blue-600 transition-colors" title="Edit"><Edit2 className="w-3.5 h-3.5" /></button>
+                          <button
+                            onClick={() => setConfirmSuspend({ item, suspend: item.status !== 'suspended' })}
+                            className={`p-1.5 rounded-lg transition-colors ${item.status === 'suspended' ? 'hover:bg-green-50 text-neutral-500 hover:text-green-600' : 'hover:bg-amber-50 text-neutral-500 hover:text-amber-600'}`}
+                            title={item.status === 'suspended' ? 'Unsuspend' : 'Suspend'}
+                          >
+                            {item.status === 'suspended' ? <Play className="w-3.5 h-3.5" /> : <Power className="w-3.5 h-3.5" />}
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      {/* ── Create/Edit Modal ───────────────────────────────────────────────── */}
+      {(modal === 'create' || modal === 'edit') && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between p-6 border-b border-neutral-200 sticky top-0 bg-white z-10">
+              <h3 className="text-lg font-bold text-neutral-900">
+                {modal === 'create' ? 'New White Label Client' : `Edit — ${selected?.clientName}`}
+              </h3>
+              <button onClick={() => setModal(null)} className="p-2 rounded-xl hover:bg-neutral-100"><X className="w-5 h-5" /></button>
+            </div>
+            <div className="p-6 space-y-6">
+              {/* Client Info */}
+              <div>
+                <h4 className="text-xs font-semibold text-neutral-500 uppercase tracking-wider mb-3">Client Info</h4>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="col-span-2">
+                    <label className="block text-sm font-medium text-neutral-700 mb-1">Client Name *</label>
+                    <input className="w-full border border-neutral-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      value={form.clientName} onChange={e => setForm(f => ({ ...f, clientName: e.target.value }))} placeholder="La Taverna Dayton" />
+                  </div>
+                  <div className="col-span-2">
+                    <label className="block text-sm font-medium text-neutral-700 mb-1">Custom Domain *</label>
+                    <input className="w-full border border-neutral-200 rounded-xl px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      value={form.domain} onChange={e => setForm(f => ({ ...f, domain: e.target.value.toLowerCase() }))}
+                      placeholder="reservations.theirclient.com"
+                      disabled={modal === 'edit'} />
+                    {modal === 'edit' && <p className="text-xs text-neutral-400 mt-1">Domain cannot be changed after creation. Delete and recreate if needed.</p>}
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-neutral-700 mb-1">Contact Name</label>
+                    <input className="w-full border border-neutral-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      value={form.contactName} onChange={e => setForm(f => ({ ...f, contactName: e.target.value }))} placeholder="Jane Smith" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-neutral-700 mb-1">Contact Email</label>
+                    <input type="email" className="w-full border border-neutral-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      value={form.contactEmail} onChange={e => setForm(f => ({ ...f, contactEmail: e.target.value }))} placeholder="jane@client.com" />
+                  </div>
+                </div>
+              </div>
+
+              {/* Tier & Status */}
+              <div>
+                <h4 className="text-xs font-semibold text-neutral-500 uppercase tracking-wider mb-3">Plan</h4>
+                <div className="grid grid-cols-3 gap-3">
+                  {Object.entries(TIER_COLORS).map(([key, val]) => (
+                    <button key={key} onClick={() => applyTierDefaults(key)}
+                      className={`p-3 border-2 rounded-xl text-left transition-all ${form.tier === key ? 'border-blue-500 bg-blue-50' : 'border-neutral-200 hover:border-neutral-300'}`}>
+                      <div className={`text-xs font-bold mb-1 ${val.text}`}>{val.label}</div>
+                      <div className="text-[11px] text-neutral-500">
+                        {key === 'basic' && 'Custom domain, logo & colors'}
+                        {key === 'pro' && 'Full white label, no branding'}
+                        {key === 'enterprise' && 'Everything + SLA + CSS'}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+                {modal === 'edit' && (
+                  <div className="mt-3">
+                    <label className="block text-sm font-medium text-neutral-700 mb-1">Status</label>
+                    <select value={form.status} onChange={e => setForm(f => ({ ...f, status: e.target.value }))}
+                      className="border border-neutral-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                      {Object.entries(STATUS_COLORS).map(([k,v]) => <option key={k} value={k}>{v.label}</option>)}
+                    </select>
+                  </div>
+                )}
+              </div>
+
+              {/* Branding */}
+              <div>
+                <h4 className="text-xs font-semibold text-neutral-500 uppercase tracking-wider mb-3">Branding</h4>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-neutral-700 mb-1">Display Name</label>
+                    <input className="w-full border border-neutral-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      value={form.branding.companyName} onChange={e => setForm(f => ({ ...f, branding: { ...f.branding, companyName: e.target.value } }))}
+                      placeholder={form.clientName || 'Company name on guest pages'} />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-neutral-700 mb-1">Primary Color</label>
+                    <div className="flex items-center gap-2">
+                      <input type="color" className="w-10 h-9 border border-neutral-200 rounded-lg cursor-pointer"
+                        value={form.branding.primaryColor} onChange={e => setForm(f => ({ ...f, branding: { ...f.branding, primaryColor: e.target.value } }))} />
+                      <input className="flex-1 border border-neutral-200 rounded-xl px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        value={form.branding.primaryColor} onChange={e => setForm(f => ({ ...f, branding: { ...f.branding, primaryColor: e.target.value } }))} />
+                    </div>
+                  </div>
+                  {form.tier !== 'basic' && (
+                    <div className="col-span-2 flex items-center gap-3 p-3 bg-blue-50 rounded-xl border border-blue-200">
+                      <div className={`w-9 h-5 rounded-full relative cursor-pointer transition-all ${form.branding.hidePoweredBy ? 'bg-blue-600' : 'bg-neutral-300'}`}
+                        onClick={() => setForm(f => ({ ...f, branding: { ...f.branding, hidePoweredBy: !f.branding.hidePoweredBy } }))}>
+                        <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-all ${form.branding.hidePoweredBy ? 'left-4' : 'left-0.5'}`} />
+                      </div>
+                      <div>
+                        <div className="text-sm font-medium text-neutral-800">Hide "Powered by PlanIt"</div>
+                        <div className="text-xs text-neutral-500">Pro/Enterprise only — removes all PlanIt branding from guest pages</div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Billing (Sandbox notice) */}
+              <div>
+                <h4 className="text-xs font-semibold text-neutral-500 uppercase tracking-wider mb-3">Billing</h4>
+                <div className="flex items-start gap-3 p-4 bg-amber-50 border border-amber-200 rounded-xl mb-3">
+                  <AlertCircle className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
+                  <div className="text-sm text-amber-800">
+                    <strong>Stripe Sandbox Mode</strong> — billing is not live. Set a monthly amount for record-keeping. Stripe integration can be activated later without touching this data.
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-neutral-700 mb-1">Monthly Amount (USD)</label>
+                  <div className="flex items-center gap-2">
+                    <span className="text-neutral-500 text-sm">$</span>
+                    <input type="number" min="0" step="0.01" className="w-40 border border-neutral-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      value={(form.billing.monthlyAmount / 100).toFixed(2)}
+                      onChange={e => setForm(f => ({ ...f, billing: { ...f.billing, monthlyAmount: Math.round(parseFloat(e.target.value || 0) * 100) } }))} />
+                    <span className="text-neutral-400 text-sm">/ month</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* License Key Validity */}
+              {modal === 'create' && (
+                <div>
+                  <h4 className="text-xs font-semibold text-neutral-500 uppercase tracking-wider mb-3">License Key</h4>
+                  <div>
+                    <label className="block text-sm font-medium text-neutral-700 mb-1">Valid for (days)</label>
+                    <div className="flex gap-2">
+                      {[90, 180, 365, 730].map(d => (
+                        <button key={d} onClick={() => setForm(f => ({ ...f, keyValidDays: d }))}
+                          className={`px-3 py-1.5 rounded-xl text-sm font-medium border transition-all ${form.keyValidDays === d ? 'bg-blue-600 text-white border-blue-600' : 'border-neutral-200 text-neutral-600 hover:border-blue-300'}`}>
+                          {d === 365 ? '1yr' : d === 730 ? '2yr' : `${d}d`}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Notes */}
+              <div>
+                <label className="block text-sm font-medium text-neutral-700 mb-1">Internal Notes</label>
+                <textarea rows={3} className="w-full border border-neutral-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                  value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))}
+                  placeholder="Contract date, special terms, contact history…" />
+              </div>
+            </div>
+            <div className="flex items-center justify-between p-6 border-t border-neutral-200 sticky bottom-0 bg-white">
+              {modal === 'edit' && (
+                <button onClick={() => setConfirmDelete(selected._id)}
+                  className="flex items-center gap-2 text-red-600 hover:text-red-700 text-sm font-medium">
+                  <Trash2 className="w-4 h-4" /> Delete
+                </button>
+              )}
+              {modal === 'create' && <div />}
+              <div className="flex gap-3">
+                <button onClick={() => setModal(null)} className="px-4 py-2 rounded-xl border border-neutral-200 text-sm font-medium hover:bg-neutral-50">Cancel</button>
+                <button onClick={handleSave} disabled={saving}
+                  className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-xl text-sm font-medium hover:bg-blue-700 disabled:opacity-50">
+                  {saving ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                  {saving ? 'Saving…' : modal === 'create' ? 'Create Client' : 'Save Changes'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── View / Detail Modal ─────────────────────────────────────────────── */}
+      {modal === 'view' && selected && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between p-6 border-b border-neutral-200 sticky top-0 bg-white">
+              <div>
+                <h3 className="text-lg font-bold text-neutral-900">{selected.clientName}</h3>
+                <p className="text-sm text-neutral-500 font-mono">{selected.domain}</p>
+              </div>
+              <button onClick={() => setModal(null)} className="p-2 rounded-xl hover:bg-neutral-100"><X className="w-5 h-5" /></button>
+            </div>
+            <div className="p-6 space-y-5">
+              {/* Badges */}
+              <div className="flex gap-2 flex-wrap">
+                <span className={`px-3 py-1 rounded-full text-sm font-semibold ${TIER_COLORS[selected.tier]?.bg} ${TIER_COLORS[selected.tier]?.text}`}>
+                  {TIER_COLORS[selected.tier]?.label}
+                </span>
+                <span className={`px-3 py-1 rounded-full text-sm font-semibold ${STATUS_COLORS[selected.status]?.bg} ${STATUS_COLORS[selected.status]?.text}`}>
+                  {STATUS_COLORS[selected.status]?.label}
+                </span>
+                {selected.billing?.mode === 'sandbox' && (
+                  <span className="px-3 py-1 rounded-full text-sm font-semibold bg-amber-100 text-amber-700 flex items-center gap-1">
+                    <AlertCircle className="w-3 h-3" /> Billing Sandbox
+                  </span>
+                )}
+              </div>
+
+              {/* License Key */}
+              <div className="bg-neutral-50 border border-neutral-200 rounded-xl p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs font-semibold text-neutral-500 uppercase tracking-wider flex items-center gap-1"><Key className="w-3 h-3" /> License Key</span>
+                  <div className="flex gap-1">
+                    <button onClick={() => setRevealedKey(v => v === selected._id ? null : selected._id)}
+                      className="p-1.5 rounded-lg hover:bg-neutral-200 text-neutral-500 text-xs flex items-center gap-1">
+                      {revealedKey === selected._id ? <><EyeIcon className="w-3 h-3" /> Hide</> : <><Eye className="w-3 h-3" /> Reveal</>}
+                    </button>
+                    {selected.licenseKey && (
+                      <button onClick={() => copyKey(selected.licenseKey)} className="p-1.5 rounded-lg hover:bg-neutral-200 text-neutral-500 text-xs flex items-center gap-1">
+                        <Download className="w-3 h-3" /> Copy
+                      </button>
+                    )}
+                  </div>
+                </div>
+                {selected.licenseKey ? (
+                  <div className="font-mono text-sm text-neutral-800 break-all">
+                    {revealedKey === selected._id ? selected.licenseKey : '•'.repeat(selected.licenseKey.length)}
+                  </div>
+                ) : <div className="text-sm text-neutral-400">No key generated</div>}
+                <div className="flex items-center justify-between mt-2">
+                  <span className={`text-xs ${daysUntil(selected.keyExpiresAt) <= 30 ? 'text-red-600 font-medium' : 'text-neutral-500'}`}>
+                    Expires {fmtDate(selected.keyExpiresAt)}
+                    {daysUntil(selected.keyExpiresAt) !== null && ` (${daysUntil(selected.keyExpiresAt)} days)`}
+                  </span>
+                  <button onClick={() => handleRegenKey(selected._id)}
+                    className="text-xs text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1">
+                    <RefreshCw className="w-3 h-3" /> Regenerate
+                  </button>
+                </div>
+              </div>
+
+              {/* Details grid */}
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                {[
+                  { label: 'Contact', value: [selected.contactName, selected.contactEmail].filter(Boolean).join(' · ') || '—' },
+                  { label: 'Created', value: fmtDate(selected.createdAt) },
+                  { label: 'Monthly Amount', value: fmtMoney(selected.billing?.monthlyAmount) },
+                  { label: 'Last Heartbeat', value: selected.lastHeartbeat ? fmtDate(selected.lastHeartbeat) : 'Never' },
+                  { label: 'Heartbeats', value: `${selected.heartbeatCount || 0} (${selected.heartbeatFailed || 0} failed)` },
+                  { label: 'Hide Branding', value: selected.branding?.hidePoweredBy ? 'Yes' : 'No' },
+                ].map(({ label, value }) => (
+                  <div key={label}>
+                    <div className="text-xs text-neutral-400 mb-0.5">{label}</div>
+                    <div className="font-medium text-neutral-800">{value}</div>
+                  </div>
+                ))}
+              </div>
+
+              {selected.notes && (
+                <div className="bg-neutral-50 rounded-xl p-3">
+                  <div className="text-xs font-semibold text-neutral-500 uppercase tracking-wider mb-1">Notes</div>
+                  <div className="text-sm text-neutral-700">{selected.notes}</div>
+                </div>
+              )}
+
+              {selected.suspendReason && selected.status === 'suspended' && (
+                <div className="bg-red-50 border border-red-200 rounded-xl p-3">
+                  <div className="text-xs font-semibold text-red-600 uppercase tracking-wider mb-1">Suspend Reason</div>
+                  <div className="text-sm text-red-700">{selected.suspendReason}</div>
+                </div>
+              )}
+            </div>
+            <div className="flex gap-3 p-6 border-t border-neutral-200 sticky bottom-0 bg-white">
+              <button onClick={() => { setModal(null); openEdit(selected); }}
+                className="flex-1 flex items-center justify-center gap-2 border border-neutral-200 rounded-xl py-2 text-sm font-medium hover:bg-neutral-50">
+                <Edit2 className="w-4 h-4" /> Edit
+              </button>
+              <button
+                onClick={() => setConfirmSuspend({ item: selected, suspend: selected.status !== 'suspended' })}
+                className={`flex-1 flex items-center justify-center gap-2 rounded-xl py-2 text-sm font-medium ${selected.status === 'suspended' ? 'bg-green-600 text-white hover:bg-green-700' : 'bg-amber-500 text-white hover:bg-amber-600'}`}>
+                {selected.status === 'suspended' ? <><Play className="w-4 h-4" /> Reactivate</> : <><Power className="w-4 h-4" /> Suspend</>}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Confirm Suspend ─────────────────────────────────────────────────── */}
+      {confirmSuspend && (
+        <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl p-6 shadow-2xl max-w-sm w-full">
+            <h4 className="text-lg font-bold text-neutral-900 mb-2">
+              {confirmSuspend.suspend ? 'Suspend Client?' : 'Reactivate Client?'}
+            </h4>
+            <p className="text-sm text-neutral-500 mb-5">
+              {confirmSuspend.suspend
+                ? `${confirmSuspend.item.clientName}'s domain will return a suspended page immediately. Their license key will be invalidated.`
+                : `${confirmSuspend.item.clientName} will be reactivated and their white label domain will work again.`}
+            </p>
+            <div className="flex gap-3">
+              <button onClick={() => setConfirmSuspend(null)} className="flex-1 border border-neutral-200 rounded-xl py-2 text-sm font-medium hover:bg-neutral-50">Cancel</button>
+              <button onClick={() => handleSuspend(confirmSuspend.item, confirmSuspend.suspend)}
+                className={`flex-1 rounded-xl py-2 text-sm font-medium text-white ${confirmSuspend.suspend ? 'bg-red-600 hover:bg-red-700' : 'bg-green-600 hover:bg-green-700'}`}>
+                {confirmSuspend.suspend ? 'Suspend' : 'Reactivate'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Confirm Delete ──────────────────────────────────────────────────── */}
+      {confirmDelete && (
+        <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl p-6 shadow-2xl max-w-sm w-full">
+            <h4 className="text-lg font-bold text-neutral-900 mb-2">Delete White Label?</h4>
+            <p className="text-sm text-neutral-500 mb-5">
+              This is permanent. Their license key will be invalidated immediately and their domain will stop working.
+            </p>
+            <div className="flex gap-3">
+              <button onClick={() => setConfirmDelete(null)} className="flex-1 border border-neutral-200 rounded-xl py-2 text-sm font-medium hover:bg-neutral-50">Cancel</button>
+              <button onClick={() => handleDelete(confirmDelete)} className="flex-1 bg-red-600 text-white rounded-xl py-2 text-sm font-medium hover:bg-red-700">Delete</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function Admin() {
   const [auth, setAuth] = useState(false);
@@ -5832,6 +6476,7 @@ export default function Admin() {
           {activeSection === 'uptime'         && !selectedEvent && <div className="max-w-4xl mx-auto"><UptimePanel /></div>}
           {activeSection === 'reports'        && !selectedEvent && <div className="max-w-5xl mx-auto"><BugReportsPanel /></div>}
           {activeSection === 'command-center' && !selectedEvent && <CommandCenterPanel />}
+          {activeSection === 'whitelabel'     && !selectedEvent && <div className="max-w-7xl mx-auto"><WhiteLabelPanel /></div>}
         </main>
       </div>
 
