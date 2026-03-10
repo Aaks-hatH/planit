@@ -1017,11 +1017,55 @@ const routerRateLimit = rateLimit({
 });
 app.use(routerRateLimit);
 
-const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || '').split(',').map(o => o.trim()).filter(Boolean);
+// ─── CORS — static origins + dynamic white-label domains ─────────────────────
+// Static list from env var (your main frontend + any manually added domains).
+// White-label domains are fetched from the backend every 5 minutes and cached
+// in memory. Any active/trial WL domain is automatically allowed — no env var
+// change or router redeploy needed when you onboard a new client.
+
+const STATIC_ORIGINS = (process.env.ALLOWED_ORIGINS || '').split(',').map(o => o.trim()).filter(Boolean);
+
+// In-memory cache of white-label domains fetched from backend
+let _wlOrigins     = new Set();
+let _wlLastFetched = 0;
+const WL_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+
+async function _refreshWLOrigins() {
+  const backend = BACKENDS[0]; // only need one — they all share the same DB
+  if (!backend) return;
+  try {
+    // Hit the backend directly (internal — no auth needed for domain list)
+    const res = await axios.get(`${backend}/api/whitelabel/cors-domains`, { timeout: 8000 });
+    const domains = res.data?.domains;
+    if (Array.isArray(domains)) {
+      _wlOrigins = new Set(domains);
+      _wlLastFetched = Date.now();
+      console.log(`[cors] Refreshed WL origins — ${domains.length} domain(s) cached`);
+    }
+  } catch (err) {
+    // Non-fatal — stale cache is fine, STATIC_ORIGINS still works
+    console.warn('[cors] WL origin refresh failed:', err.message);
+  }
+}
+
+// Refresh every 5 minutes after first request triggers it
+function _maybeRefreshWL() {
+  if (Date.now() - _wlLastFetched > WL_CACHE_TTL) {
+    _refreshWLOrigins().catch(() => {});
+  }
+}
+
+// Kick off an initial fetch once the event loop is free
+setImmediate(() => _refreshWLOrigins().catch(() => {}));
+
 app.use(cors({
   origin: (origin, cb) => {
     if (!origin || origin === 'null') return cb(null, true);
-    if (ALLOWED_ORIGINS.length === 0 || ALLOWED_ORIGINS.includes(origin)) return cb(null, true);
+    // Always check static list first (fast, no set lookup overhead)
+    if (STATIC_ORIGINS.length === 0 || STATIC_ORIGINS.includes(origin)) return cb(null, true);
+    // Check dynamic WL cache
+    _maybeRefreshWL();
+    if (_wlOrigins.has(origin)) return cb(null, true);
     cb(new Error(`CORS: ${origin} not allowed`));
   },
   credentials: true,
