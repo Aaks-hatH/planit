@@ -10,6 +10,7 @@ import ServerView from './pages/ServerView';
 import GuestInvite from './pages/GuestInvite';
 import OrganizerLogin from './pages/OrganizerLogin';
 import Admin from './pages/Admin';
+import SecurityDashboard from './pages/SecurityDashboard';
 import Terms from './pages/Terms';
 import Privacy from './pages/Privacy';
 import NotFound from './pages/NotFound';
@@ -319,6 +320,7 @@ function App() {
         <Route path="/card/:inviteCode"          element={<InviteCard />} />
 
         <Route path="/admin"           element={<Admin />} />
+        <Route path="/admin/security"  element={<SecurityDashboard />} />
         <Route path="/terms"           element={<Terms />} />
         <Route path="/privacy"         element={<Privacy />} />
         <Route path="/support"         element={<Support />} />
