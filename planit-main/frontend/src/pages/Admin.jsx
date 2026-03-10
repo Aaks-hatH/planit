@@ -5449,10 +5449,6 @@ const NAV_ITEMS = [
   { id: 'command-center', label: 'Command',      icon: Crosshair  },
 ];
 
-  { id: 'system',         label: 'System',       icon: Server     },
-  { id: 'command-center', label: 'Command',      icon: Crosshair  },
-];
-
 // ─── White Label Panel ────────────────────────────────────────────────────────
 const TIER_COLORS = {
   basic:      { bg: 'bg-slate-100',  text: 'text-slate-700',  label: 'Basic'      },
@@ -5514,8 +5510,8 @@ function WhiteLabelPanel() {
       if (filterStatus) params.set('status', filterStatus);
       if (filterTier)   params.set('tier', filterTier);
       const [itemsRes, statsRes] = await Promise.all([
-        adminAPI.get(`${API}?${params}`),
-        adminAPI.get(`${API}/meta/stats`),
+        api.get(`${API}?${params}`),
+        api.get(`${API}/meta/stats`),
       ]);
       setItems(itemsRes.data.items || []);
       setStats(statsRes.data);
@@ -5554,10 +5550,10 @@ function WhiteLabelPanel() {
     setSaving(true);
     try {
       if (modal === 'create') {
-        await adminAPI.post(API, form);
+        await api.post(API, form);
         toast.success('White label created');
       } else {
-        await adminAPI.patch(`${API}/${selected._id}`, form);
+        await api.patch(`${API}/${selected._id}`, form);
         toast.success('Changes saved');
       }
       setModal(null);
@@ -5573,7 +5569,7 @@ function WhiteLabelPanel() {
   const handleRegenKey = async (id) => {
     if (isDemo) { toast.success('Key regenerated (sandbox)'); return; }
     try {
-      const res = await adminAPI.post(`${API}/${id}/regenerate-key`, { keyValidDays: 365 });
+      const res = await api.post(`${API}/${id}/regenerate-key`, { keyValidDays: 365 });
       toast.success('License key regenerated');
       setSelected(prev => prev ? { ...prev, licenseKey: res.data.licenseKey, keyExpiresAt: res.data.keyExpiresAt } : prev);
       load();
@@ -5583,7 +5579,7 @@ function WhiteLabelPanel() {
   const handleSuspend = async (item, suspend) => {
     if (isDemo) { toast.success(suspend ? 'Suspended (sandbox)' : 'Unsuspended (sandbox)'); setConfirmSuspend(null); return; }
     try {
-      await adminAPI.patch(`${API}/${item._id}/suspend`, { suspend, reason: 'Admin action' });
+      await api.patch(`${API}/${item._id}/suspend`, { suspend, reason: 'Admin action' });
       toast.success(suspend ? 'White label suspended' : 'White label reactivated');
       setConfirmSuspend(null);
       if (modal === 'view') setSelected(prev => prev ? { ...prev, status: suspend ? 'suspended' : 'active' } : prev);
@@ -5594,7 +5590,7 @@ function WhiteLabelPanel() {
   const handleDelete = async (id) => {
     if (isDemo) { toast.success('Deleted (sandbox)'); setConfirmDelete(null); setModal(null); return; }
     try {
-      await adminAPI.delete(`${API}/${id}`);
+      await api.delete(`${API}/${id}`);
       toast.success('White label deleted');
       setConfirmDelete(null);
       setModal(null);
