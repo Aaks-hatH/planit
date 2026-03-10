@@ -5447,6 +5447,7 @@ const NAV_ITEMS = [
   { id: 'uptime',         label: 'Uptime',       icon: Radio      },
   { id: 'system',         label: 'System',       icon: Server     },
   { id: 'command-center', label: 'Command',      icon: Crosshair  },
+  { id: 'whitelabel',     label: 'White Label',  icon: Layers     },
 ];
 
 // ─── White Label Panel ────────────────────────────────────────────────────────
@@ -6246,13 +6247,19 @@ export default function Admin() {
         </div>
 
         {/* Nav */}
-        <nav className="flex-1 py-3 px-2 space-y-0.5">
+        <nav className="flex-1 py-3 px-2 space-y-0.5 overflow-y-auto">
           {NAV_ITEMS.map(({ id, label, icon: I }) => {
-            const isCc = id === 'command-center';
+            const isCc  = id === 'command-center';
+            const isSec = id === 'security';
+            const isWl  = id === 'whitelabel';
             return (
               <React.Fragment key={id}>
                 {isCc && <div className="mx-2 my-2 border-t border-white/10" />}
-                <button onClick={() => { setActiveSection(id); setSelectedEvent(null); }}
+                {isWl && <div className="mx-2 my-2 border-t border-white/10" />}
+                <button onClick={() => {
+                  if (isSec) { window.location.href = '/admin/security'; return; }
+                  setActiveSection(id); setSelectedEvent(null);
+                }}
                   className={`w-full flex items-center gap-3 px-2.5 py-2.5 rounded-xl text-sm font-medium transition-all group ${
                     activeSection === id
                       ? isCc ? 'bg-violet-900/60 text-violet-300' : 'bg-white/10 text-white'
@@ -6261,6 +6268,7 @@ export default function Admin() {
                   title={!sidebarOpen ? label : undefined}>
                   <I className="w-4 h-4 flex-shrink-0" />
                   {sidebarOpen && <span>{label}</span>}
+                  {sidebarOpen && isSec && <span className="ml-auto text-xs opacity-30">↗</span>}
                 </button>
               </React.Fragment>
             );
