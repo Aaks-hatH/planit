@@ -5687,7 +5687,7 @@ function WhiteLabelPanel() {
         ))}
       </div>
       {activeTab === 'clients' && (
-        <>
+        <div>
       {/* Filters */}
       <div className="flex flex-wrap gap-3">
         <div className="relative flex-1 min-w-[200px]">
@@ -6104,10 +6104,11 @@ function WhiteLabelPanel() {
             </div>
           </div>
         </div>
-        </>
       )}
 
+      </div>
       )}
+
       {/* ── Leads view (activeTab === 'leads') ─────────────────────────────── */}
       {activeTab === 'leads' && (
         <div className="space-y-3">
@@ -6341,31 +6342,58 @@ export default function Admin() {
 
   // ── Login Screen ──────────────────────────────────────────────────────────
   if (!auth) return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-neutral-900 to-slate-900 flex items-center justify-center px-4">
-      <div className="w-full max-w-sm">
-        <div className="text-center mb-8">
-          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-2xl mx-auto mb-4">
-            <Shield className="w-9 h-9 text-white" />
-          </div>
-          <h1 className="text-2xl font-bold text-white tracking-tight">Super Admin</h1>
-          <p className="text-sm text-slate-400 mt-1">PlanIt Master Control Panel</p>
+    <div className="min-h-screen flex" style={{background:'#080808'}}>
+      {/* Left decorative panel */}
+      <div className="hidden lg:flex flex-col justify-between w-[420px] flex-shrink-0 p-12" style={{background:'rgba(255,255,255,0.02)',borderRight:'1px solid rgba(255,255,255,0.05)'}}>
+        <div style={{fontFamily:"'Georgia',serif",fontSize:'1.1rem',fontWeight:500,color:'rgba(245,240,232,0.9)',letterSpacing:'0.02em'}}>PlanIt</div>
+        <div>
+          <div style={{width:'32px',height:'1px',background:'#c8a96e',marginBottom:'2rem'}} />
+          <p style={{fontFamily:"'Georgia',serif",fontSize:'1.6rem',fontWeight:300,color:'rgba(245,240,232,0.85)',lineHeight:1.4,margin:'0 0 1rem'}}>
+            The control panel<br />for everything.
+          </p>
+          <p style={{fontSize:'0.8rem',color:'rgba(255,255,255,0.25)',lineHeight:1.6}}>
+            Manage events, white label clients, reservations, and platform health from one place.
+          </p>
         </div>
-        <div className="card p-7 shadow-2xl border border-white/5 bg-white/5 backdrop-blur-sm">
-          <form onSubmit={login} className="space-y-4">
+        <div style={{fontSize:'0.7rem',color:'rgba(255,255,255,0.15)',letterSpacing:'0.1em',textTransform:'uppercase'}}>
+          Restricted Access
+        </div>
+      </div>
+      {/* Right login panel */}
+      <div className="flex-1 flex items-center justify-center px-6">
+        <div className="w-full max-w-[360px]">
+          <div className="lg:hidden mb-10" style={{fontFamily:"'Georgia',serif",fontSize:'1.1rem',color:'rgba(245,240,232,0.7)'}}>PlanIt</div>
+          <h1 style={{fontFamily:"'Georgia',serif",fontSize:'1.9rem',fontWeight:300,color:'rgba(245,240,232,0.95)',margin:'0 0 0.4rem',letterSpacing:'-0.01em'}}>Welcome back</h1>
+          <p style={{fontSize:'0.82rem',color:'rgba(255,255,255,0.3)',marginBottom:'2.5rem'}}>Sign in to continue</p>
+          <form onSubmit={login} style={{display:'flex',flexDirection:'column',gap:'1.25rem'}}>
             <div>
-              <label className="block text-xs font-medium text-slate-300 mb-1.5">Username</label>
-              <input type="text" required className="input bg-white/10 border-white/10 text-white placeholder-slate-500 focus:border-blue-400" placeholder="admin" value={loginForm.username} onChange={e => setLoginForm({ ...loginForm, username: e.target.value })} autoFocus />
+              <label style={{display:'block',fontSize:'0.7rem',letterSpacing:'0.1em',textTransform:'uppercase',color:'rgba(255,255,255,0.35)',marginBottom:'0.5rem'}}>Username</label>
+              <input type="text" required
+                style={{width:'100%',boxSizing:'border-box',background:'rgba(255,255,255,0.04)',border:'1px solid rgba(255,255,255,0.1)',borderRadius:'4px',padding:'0.8rem 1rem',color:'rgba(245,240,232,0.9)',fontSize:'0.9rem',outline:'none'}}
+                placeholder="username" value={loginForm.username}
+                onChange={e => setLoginForm({ ...loginForm, username: e.target.value })}
+                onFocus={e => e.target.style.borderColor='rgba(200,169,110,0.5)'}
+                onBlur={e => e.target.style.borderColor='rgba(255,255,255,0.1)'}
+                autoFocus />
             </div>
             <div>
-              <label className="block text-xs font-medium text-slate-300 mb-1.5">Password</label>
-              <input type="password" required className="input bg-white/10 border-white/10 text-white placeholder-slate-500 focus:border-blue-400" placeholder="••••••••" value={loginForm.password} onChange={e => setLoginForm({ ...loginForm, password: e.target.value })} />
+              <label style={{display:'block',fontSize:'0.7rem',letterSpacing:'0.1em',textTransform:'uppercase',color:'rgba(255,255,255,0.35)',marginBottom:'0.5rem'}}>Password</label>
+              <input type="password" required
+                style={{width:'100%',boxSizing:'border-box',background:'rgba(255,255,255,0.04)',border:'1px solid rgba(255,255,255,0.1)',borderRadius:'4px',padding:'0.8rem 1rem',color:'rgba(245,240,232,0.9)',fontSize:'0.9rem',outline:'none'}}
+                placeholder="••••••••" value={loginForm.password}
+                onChange={e => setLoginForm({ ...loginForm, password: e.target.value })}
+                onFocus={e => e.target.style.borderColor='rgba(200,169,110,0.5)'}
+                onBlur={e => e.target.style.borderColor='rgba(255,255,255,0.1)'} />
             </div>
-            <button type="submit" disabled={loggingIn} className="w-full py-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-semibold flex items-center justify-center gap-2 transition-colors disabled:opacity-60 mt-2">
-              {loggingIn ? <><span className="spinner w-4 h-4 border-2 border-white/30 border-t-white" /> Authenticating...</> : <><Shield className="w-4 h-4" /> Sign In</>}
+            <button type="submit" disabled={loggingIn}
+              style={{marginTop:'0.5rem',width:'100%',padding:'0.875rem',background:loggingIn?'rgba(200,169,110,0.5)':'#c8a96e',color:'#080808',border:'none',borderRadius:'4px',fontSize:'0.78rem',fontWeight:700,letterSpacing:'0.1em',textTransform:'uppercase',cursor:loggingIn?'default':'pointer',display:'flex',alignItems:'center',justifyContent:'center',gap:'0.5rem'}}>
+              {loggingIn ? <><span className="spinner w-4 h-4 border-2" style={{borderColor:'rgba(0,0,0,0.2)',borderTopColor:'#080808'}} /> Signing in...</> : 'Sign In'}
             </button>
           </form>
+          <div style={{marginTop:'2rem',textAlign:'center'}}>
+            <a href="/" style={{fontSize:'0.75rem',color:'rgba(255,255,255,0.2)',textDecoration:'none',letterSpacing:'0.05em'}}>← Back to PlanIt</a>
+          </div>
         </div>
-        <div className="text-center mt-5"><a href="/" className="text-xs text-slate-500 hover:text-slate-300 transition-colors">← Back to PlanIt</a></div>
       </div>
     </div>
   );
