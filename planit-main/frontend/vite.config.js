@@ -47,6 +47,7 @@ export default defineConfig({
         ]
       },
       workbox: {
+        maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff,woff2}'],
         runtimeCaching: [
           {
@@ -114,7 +115,9 @@ export default defineConfig({
         manualChunks: {
           'react-vendor': ['react', 'react-dom', 'react-router-dom'],
           'socket': ['socket.io-client'],
-          'utils': ['axios', 'crypto-js', 'date-fns']
+          'utils': ['axios', 'crypto-js', 'date-fns'],
+          'admin': ['./src/pages/Admin.jsx'],
+          'charts': ['recharts']
         }
       }
     }
