@@ -28,6 +28,8 @@ import ReservePage, { ReserveCancelPage } from './pages/ReservePage';
 import ReservationTicket from './pages/ReservationTicket';
 import GuestTablet from './pages/GuestTablet';
 import WhiteLabelSignup from './pages/WhiteLabelSignup';
+import SetupFee from './pages/SetupFee';
+import SetupFeeSuccess from './pages/SetupFeeSuccess';
 
 // ─── Maintenance page ─────────────────────────────────────────────────────────
 // t = 's' scheduled | 'i' incident | 'd' degraded
@@ -331,7 +333,9 @@ function App() {
         <Route path="/status"          element={<Status />} />
         <Route path="/discover"        element={<Discover />} />
         <Route path="/help"            element={<Help />} />
-        <Route path="/white-label"     element={<WhiteLabelSignup />} />
+        <Route path="/white-label"              element={<WhiteLabelSignup />} />
+        <Route path="/white-label/setup-fee"      element={<SetupFee />} />
+        <Route path="/white-label/setup-success"  element={<SetupFeeSuccess />} />
         <Route path="*"                element={<NotFound />} />
       </Routes>
     </Router>
