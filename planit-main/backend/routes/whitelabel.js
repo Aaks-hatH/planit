@@ -23,6 +23,9 @@ const router    = express.Router();
 const crypto    = require('crypto');
 const WhiteLabel = require('../models/WhiteLabel');
 const { verifyAdmin, requireSuperAdminRole, demoGuard } = require('../middleware/auth');
+const axios      = require('axios');
+const { body, validationResult } = require('express-validator');
+const WLLead     = require('../models/WLLead');
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -406,6 +409,216 @@ router.delete('/:id', verifyAdmin, requireSuperAdminRole, demoGuard, async (req,
   }
 });
 
+// ─── Stripe helpers ───────────────────────────────────────────────────────────
+// Reuses the same STRIPE_SECRET_KEY already configured for support payments.
+// Lazy singleton — same pattern as support.js.
+
+let _stripe = null;
+function getStripe() {
+  if (!_stripe) {
+    if (!process.env.STRIPE_SECRET_KEY) throw new Error("STRIPE_SECRET_KEY is not configured");
+    _stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
+  }
+  return _stripe;
+}
+
+const TIER_PRICES = () => ({
+  basic:      process.env.STRIPE_PRICE_BASIC,
+  pro:        process.env.STRIPE_PRICE_PRO,
+  enterprise: process.env.STRIPE_PRICE_ENTERPRISE,
+});
+
+// ─── Create Stripe Checkout session ──────────────────────────────────────────
+// Admin calls this → returns a Stripe-hosted checkout URL → send to client
+
+router.post('/:id/create-checkout', verifyAdmin, demoGuard, async (req, res) => {
+  try {
+    const stripe = getStripe();
+    const wl = await WhiteLabel.findById(req.params.id).lean();
+    if (!wl) return res.status(404).json({ error: 'not_found' });
+
+    const prices = TIER_PRICES();
+    const priceId = prices[wl.tier];
+    if (!priceId) return res.status(400).json({ error: `No Stripe price configured for tier: ${wl.tier}. Set STRIPE_PRICE_${wl.tier.toUpperCase()} in env.` });
+
+    // Create or reuse Stripe customer
+    let customerId = wl.billing?.stripeCustomerId;
+    if (!customerId) {
+      const customer = await stripe.customers.create({
+        name:  wl.clientName,
+        email: wl.contactEmail || undefined,
+        metadata: { planit_wl_id: String(wl._id), domain: wl.domain },
+      });
+      customerId = customer.id;
+      await WhiteLabel.findByIdAndUpdate(wl._id, { 'billing.stripeCustomerId': customerId });
+    }
+
+    const frontendUrl = process.env.FRONTEND_URL || 'https://planitapp.onrender.com';
+
+    const session = await stripe.checkout.sessions.create({
+      customer:   customerId,
+      mode:       'subscription',
+      line_items: [{ price: priceId, quantity: 1 }],
+      metadata:   { planit_wl_id: String(wl._id) },
+      success_url: `${frontendUrl}/admin?section=whitelabel&checkout=success&wl=${wl._id}`,
+      cancel_url:  `${frontendUrl}/admin?section=whitelabel&checkout=cancelled&wl=${wl._id}`,
+      subscription_data: {
+        metadata: { planit_wl_id: String(wl._id), domain: wl.domain, tier: wl.tier },
+      },
+    });
+
+    return res.json({ url: session.url, sessionId: session.id });
+  } catch (err) {
+    console.error('[whitelabel] create-checkout error', err.message);
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+// ─── Stripe Customer Portal (for client self-service) ────────────────────────
+// Returns a Stripe-hosted portal URL where the client can update payment details or cancel
+
+router.post('/:id/billing-portal', verifyAdmin, async (req, res) => {
+  try {
+    const stripe = getStripe();
+    const wl = await WhiteLabel.findById(req.params.id).lean();
+    if (!wl) return res.status(404).json({ error: 'not_found' });
+
+    const customerId = wl.billing?.stripeCustomerId;
+    if (!customerId) return res.status(400).json({ error: 'No Stripe customer linked to this client yet. Create a checkout session first.' });
+
+    const frontendUrl = process.env.FRONTEND_URL || 'https://planitapp.onrender.com';
+
+    const session = await stripe.billingPortal.sessions.create({
+      customer:   customerId,
+      return_url: `${frontendUrl}/admin?section=whitelabel`,
+    });
+
+    return res.json({ url: session.url });
+  } catch (err) {
+    console.error('[whitelabel] billing-portal error', err.message);
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+// ─── Stripe Webhook ───────────────────────────────────────────────────────────
+// Stripe calls this endpoint when subscription events occur.
+// IMPORTANT: This route must receive the raw request body (not JSON-parsed).
+// In server.js the webhook path is registered with express.raw() BEFORE express.json().
+
+router.post('/webhooks/stripe', async (req, res) => {
+  const sig    = req.headers['stripe-signature'];
+  const secret = process.env.STRIPE_WEBHOOK_SECRET;
+
+  if (!secret) {
+    console.error('[whitelabel] STRIPE_WEBHOOK_SECRET not set — webhook rejected');
+    return res.status(500).send('Webhook secret not configured');
+  }
+
+  let event;
+  try {
+    const stripe = getStripe();
+    event = stripe.webhooks.constructEvent(req.body, sig, secret);
+  } catch (err) {
+    console.error('[whitelabel] Webhook signature verification failed:', err.message);
+    return res.status(400).send(`Webhook Error: ${err.message}`);
+  }
+
+  const obj  = event.data.object;
+  const wlId = obj.metadata?.planit_wl_id || obj.subscription_details?.metadata?.planit_wl_id;
+
+  try {
+    switch (event.type) {
+
+      // Payment collected — subscription is live
+      case 'checkout.session.completed': {
+        if (obj.mode !== 'subscription') break;
+        const subscriptionId = obj.subscription;
+        const update = {
+          status:                       'active',
+          'billing.stripeSubscriptionId': subscriptionId,
+          'billing.billingStatus':        'active',
+          'billing.mode':                 'live',
+        };
+        if (wlId) {
+          await WhiteLabel.findByIdAndUpdate(wlId, update);
+          console.log(`[whitelabel] ✓ Activated ${wlId} via checkout`);
+        } else {
+          // Fallback: look up by customer ID
+          await WhiteLabel.findOneAndUpdate({ 'billing.stripeCustomerId': obj.customer }, update);
+          console.log(`[whitelabel] ✓ Activated by customer ${obj.customer}`);
+        }
+        break;
+      }
+
+      // Subscription status changed (upgrade, downgrade, pause, etc.)
+      case 'customer.subscription.updated': {
+        const stripeStatus = obj.status; // active | past_due | canceled | paused | unpaid
+        const billingStatus = stripeStatus === 'active' ? 'active' : stripeStatus === 'past_due' ? 'past_due' : 'cancelled';
+        const platformStatus = billingStatus === 'active' ? 'active' : billingStatus === 'past_due' ? 'active' : 'suspended';
+        const nextBillingDate = obj.current_period_end ? new Date(obj.current_period_end * 1000) : undefined;
+
+        const update = {
+          status: platformStatus,
+          'billing.billingStatus':  billingStatus,
+          ...(nextBillingDate && { 'billing.nextBillingDate': nextBillingDate }),
+        };
+
+        if (wlId) {
+          await WhiteLabel.findByIdAndUpdate(wlId, update);
+        } else {
+          await WhiteLabel.findOneAndUpdate({ 'billing.stripeSubscriptionId': obj.id }, update);
+        }
+        console.log(`[whitelabel] Subscription updated: ${obj.id} → ${stripeStatus}`);
+        break;
+      }
+
+      // Subscription cancelled (by client or admin)
+      case 'customer.subscription.deleted': {
+        const update = { status: 'cancelled', 'billing.billingStatus': 'cancelled' };
+        if (wlId) {
+          await WhiteLabel.findByIdAndUpdate(wlId, update);
+        } else {
+          await WhiteLabel.findOneAndUpdate({ 'billing.stripeSubscriptionId': obj.id }, update);
+        }
+        console.log(`[whitelabel] Subscription cancelled: ${obj.id}`);
+        break;
+      }
+
+      // Payment failed — mark past_due but keep access briefly
+      case 'invoice.payment_failed': {
+        const subId = obj.subscription;
+        if (!subId) break;
+        await WhiteLabel.findOneAndUpdate(
+          { 'billing.stripeSubscriptionId': subId },
+          { 'billing.billingStatus': 'past_due' },
+        );
+        console.log(`[whitelabel] Payment failed for subscription ${subId}`);
+        break;
+      }
+
+      // Invoice paid — ensure status is active (handles recovery from past_due)
+      case 'invoice.payment_succeeded': {
+        const subId = obj.subscription;
+        if (!subId) break;
+        await WhiteLabel.findOneAndUpdate(
+          { 'billing.stripeSubscriptionId': subId },
+          { status: 'active', 'billing.billingStatus': 'active' },
+        );
+        break;
+      }
+
+      default:
+        // Unhandled event type — ignore silently
+        break;
+    }
+  } catch (err) {
+    console.error('[whitelabel] Webhook handler error:', err.message);
+    // Still return 200 so Stripe doesn't retry
+  }
+
+  res.json({ received: true });
+});
+
 // ─── Admin: Stats summary ─────────────────────────────────────────────────────
 
 router.get('/meta/stats', verifyAdmin, async (req, res) => {
@@ -436,4 +649,116 @@ router.get('/meta/stats', verifyAdmin, async (req, res) => {
   }
 });
 
+module.exports = router;
+
+// ─── PUBLIC: Sign-up / Lead request ──────────────────────────────────────────
+// No auth. Called from the /white-label marketing page.
+
+router.post('/request', [
+  body('businessName').trim().notEmpty().isLength({ max: 200 }),
+  body('contactName').trim().notEmpty().isLength({ max: 200 }),
+  body('email').isEmail().normalizeEmail(),
+  body('businessType').isIn(['restaurant', 'venue', 'hotel', 'corporate', 'other']),
+  body('tierInterest').optional().isIn(['basic', 'pro', 'enterprise', 'unsure']),
+  body('phone').optional().trim().isLength({ max: 30 }),
+  body('website').optional().trim().isLength({ max: 300 }),
+  body('message').optional().trim().isLength({ max: 2000 }),
+], async (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) return res.status(400).json({ error: 'validation', details: errors.array() });
+
+  try {
+    const { businessName, contactName, email, businessType, tierInterest, phone, website, message } = req.body;
+
+    // Deduplicate by email — update existing or create new
+    const lead = await WLLead.findOneAndUpdate(
+      { email },
+      { businessName, contactName, email, businessType, tierInterest: tierInterest || 'unsure', phone, website, message },
+      { upsert: true, new: true, setDefaultsOnInsert: true },
+    );
+
+    console.log(`[wl-lead] New lead: ${businessName} <${email}> tier=${tierInterest}`);
+
+    // Discord notification — reuse same webhook as support.js
+    const discordUrl = process.env.DISCORD_WEBHOOK_URL;
+    if (discordUrl) {
+      const tierLabels = { basic: 'Basic ($149/mo)', pro: 'Pro ($249/mo)', enterprise: 'Enterprise ($499/mo)', unsure: 'Not sure yet' };
+      const typeLabels = { restaurant: 'Restaurant', venue: 'Venue / Event Space', hotel: 'Hotel', corporate: 'Corporate', other: 'Other' };
+      try {
+        await axios.post(discordUrl, {
+          content: `New white label inquiry from **${businessName}**`,
+          embeds: [{
+            title: 'White Label Sign-up Request',
+            color: 0x6366f1,
+            fields: [
+              { name: 'Business', value: businessName, inline: true },
+              { name: 'Type', value: typeLabels[businessType] || businessType, inline: true },
+              { name: 'Contact', value: `${contactName} — ${email}`, inline: false },
+              { name: 'Tier Interest', value: tierLabels[tierInterest] || 'Not specified', inline: true },
+              ...(phone ? [{ name: 'Phone', value: phone, inline: true }] : []),
+              ...(website ? [{ name: 'Website', value: website, inline: true }] : []),
+              ...(message ? [{ name: 'Message', value: message.substring(0, 1024) }] : []),
+            ],
+            timestamp: new Date().toISOString(),
+            footer: { text: 'PlanIt White Label' },
+          }],
+        }, { headers: { 'Content-Type': 'application/json' } });
+      } catch (e) {
+        console.warn('[wl-lead] Discord notify failed:', e.message);
+      }
+    }
+
+    return res.json({ ok: true, id: lead._id });
+  } catch (err) {
+    console.error('[wl-lead] request error', err);
+    return res.status(500).json({ error: 'internal' });
+  }
+});
+
+// ─── Admin: List leads ────────────────────────────────────────────────────────
+
+router.get('/leads', verifyAdmin, async (req, res) => {
+  try {
+    const { status, limit = 50, skip = 0 } = req.query;
+    const filter = status ? { status } : {};
+    const [leads, total] = await Promise.all([
+      WLLead.find(filter).sort({ createdAt: -1 }).limit(Number(limit)).skip(Number(skip)).lean(),
+      WLLead.countDocuments(filter),
+    ]);
+    const counts = await WLLead.aggregate([{ $group: { _id: '$status', n: { $sum: 1 } } }]);
+    const bystatus = {};
+    for (const c of counts) bystatus[c._id] = c.n;
+    return res.json({ leads, total, bystatus });
+  } catch (err) {
+    return res.status(500).json({ error: 'internal' });
+  }
+});
+
+// ─── Admin: Update lead status / notes ───────────────────────────────────────
+
+router.patch('/leads/:id', verifyAdmin, async (req, res) => {
+  try {
+    const { status, notes, convertedToId } = req.body;
+    const update = {};
+    if (status) update.status = status;
+    if (notes !== undefined) update.notes = notes;
+    if (convertedToId) update.convertedToId = convertedToId;
+    const lead = await WLLead.findByIdAndUpdate(req.params.id, update, { new: true }).lean();
+    if (!lead) return res.status(404).json({ error: 'not_found' });
+    return res.json(lead);
+  } catch (err) {
+    return res.status(500).json({ error: 'internal' });
+  }
+});
+
+// ─── Admin: Delete lead ───────────────────────────────────────────────────────
+
+router.delete('/leads/:id', verifyAdmin, requireSuperAdminRole, async (req, res) => {
+  try {
+    await WLLead.findByIdAndDelete(req.params.id);
+    return res.json({ ok: true });
+  } catch (err) {
+    return res.status(500).json({ error: 'internal' });
+  }
+});
 module.exports = router;
