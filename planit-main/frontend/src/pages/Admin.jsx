@@ -5530,7 +5530,28 @@ function WhiteLabelPanel() {
     }
   }, [isDemo, search, filterStatus, filterTier]);
 
+  // Load lead counts on mount so the tab badge always shows
+  const loadLeads = async (status) => {
+    setLeadsLoading(true);
+    try {
+      const r = await api.get('/whitelabel/leads?status=' + status);
+      setLeads(r.data.leads || []);
+      setLeadCounts(r.data.bystatus || {});
+    } catch(e) { /* silent */ }
+    setLeadsLoading(false);
+  };
+
   useEffect(() => { load(); }, [load]);
+
+  // Fetch lead counts silently on mount so the badge shows immediately
+  useEffect(() => {
+    if (!isDemo) {
+      api.get('/whitelabel/leads?status=new').then(r => {
+        setLeads(r.data.leads || []);
+        setLeadCounts(r.data.bystatus || {});
+      }).catch(() => {});
+    }
+  }, [isDemo]);
 
   const openCreate = () => { setForm(EMPTY_FORM); setModal('create'); };
   const openEdit = (item) => {
@@ -6111,83 +6132,148 @@ function WhiteLabelPanel() {
 
       {/* ── Leads view (activeTab === 'leads') ─────────────────────────────── */}
       {activeTab === 'leads' && (
-        <div className="space-y-3">
-          <div className="flex items-center gap-3 flex-wrap">
-            {['new','contacted','converted','rejected'].map(s => (
-              <button key={s} onClick={() => {
-                setLeadStatusFilter(s);
-                setLeadsLoading(true);
-                api.get('/whitelabel/leads?status=' + s).then(r => {
-                  setLeads(r.data.leads || []); setLeadCounts(r.data.bystatus || {}); setLeadsLoading(false);
-                }).catch(() => setLeadsLoading(false));
-              }} className={`px-3 py-1 rounded-lg text-xs font-medium capitalize transition-colors ${leadStatusFilter === s ? 'bg-blue-600 text-white' : 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200'}`}>
-                {s} {leadCounts[s] ? `(${leadCounts[s]})` : ''}
+        <div className="space-y-4">
+
+          {/* Status filter tabs + refresh */}
+          <div className="flex items-center gap-2 flex-wrap">
+            {[
+              { s: 'new',       label: 'New' },
+              { s: 'contacted', label: 'Contacted' },
+              { s: 'converted', label: 'Converted' },
+              { s: 'rejected',  label: 'Rejected' },
+            ].map(({ s, label }) => (
+              <button key={s} onClick={() => { setLeadStatusFilter(s); loadLeads(s); }}
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold capitalize transition-colors ${leadStatusFilter === s ? 'bg-blue-600 text-white' : 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200'}`}>
+                {label}{leadCounts[s] ? ` (${leadCounts[s]})` : ''}
               </button>
             ))}
-            <a href="/white-label" target="_blank" rel="noopener noreferrer" className="ml-auto flex items-center gap-1 text-xs text-blue-600 hover:underline">
+            <button onClick={() => loadLeads(leadStatusFilter)} className="ml-auto text-xs text-neutral-400 hover:text-neutral-600 flex items-center gap-1">
+              <RefreshCw className="w-3 h-3" /> Refresh
+            </button>
+            <a href="/white-label" target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-xs text-blue-600 hover:underline">
               <ExternalLink className="w-3 h-3" /> View signup page
             </a>
           </div>
+
+          {/* Lead count summary */}
+          <div className="grid grid-cols-4 gap-2">
+            {[
+              { s: 'new',       label: 'New',       color: 'text-blue-600',   bg: 'bg-blue-50'   },
+              { s: 'contacted', label: 'Contacted',  color: 'text-amber-600',  bg: 'bg-amber-50'  },
+              { s: 'converted', label: 'Converted',  color: 'text-green-600',  bg: 'bg-green-50'  },
+              { s: 'rejected',  label: 'Rejected',   color: 'text-neutral-400', bg: 'bg-neutral-50' },
+            ].map(({ s, label, color, bg }) => (
+              <div key={s} className={`${bg} rounded-xl p-3 text-center cursor-pointer`} onClick={() => { setLeadStatusFilter(s); loadLeads(s); }}>
+                <div className={`text-xl font-bold ${color}`}>{leadCounts[s] || 0}</div>
+                <div className="text-xs text-neutral-500 mt-0.5">{label}</div>
+              </div>
+            ))}
+          </div>
+
+          {/* Leads list */}
           {leadsLoading ? (
-            <div className="text-sm text-neutral-400 py-8 text-center">Loading...</div>
+            <div className="text-sm text-neutral-400 py-10 text-center">Loading...</div>
           ) : leads.length === 0 ? (
-            <div className="text-sm text-neutral-400 py-8 text-center">No leads with status "{leadStatusFilter}"</div>
+            <div className="py-10 text-center">
+              <div className="text-sm text-neutral-400">No {leadStatusFilter} leads yet.</div>
+              {leadStatusFilter === 'new' && (
+                <a href="/white-label" target="_blank" className="text-xs text-blue-600 hover:underline mt-2 inline-block">Share your signup page to start receiving leads →</a>
+              )}
+            </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-neutral-200">
-                    {['Business', 'Contact', 'Type', 'Tier Interest', 'Received', 'Actions'].map(h => (
-                      <th key={h} className="text-left text-xs font-semibold text-neutral-500 py-2 px-3 uppercase tracking-wide">{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {leads.map(lead => (
-                    <tr key={lead._id} className="border-b border-neutral-100 hover:bg-neutral-50">
-                      <td className="py-3 px-3">
-                        <div className="font-medium text-neutral-900">{lead.businessName}</div>
-                        {lead.website && <div className="text-xs text-neutral-400">{lead.website}</div>}
-                      </td>
-                      <td className="py-3 px-3">
-                        <div>{lead.contactName}</div>
-                        <div className="text-xs text-neutral-400">{lead.email}</div>
-                        {lead.phone && <div className="text-xs text-neutral-400">{lead.phone}</div>}
-                      </td>
-                      <td className="py-3 px-3 capitalize text-neutral-600">{lead.businessType}</td>
-                      <td className="py-3 px-3">
-                        <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${lead.tierInterest === 'enterprise' ? 'bg-purple-100 text-purple-700' : lead.tierInterest === 'pro' ? 'bg-blue-100 text-blue-700' : lead.tierInterest === 'basic' ? 'bg-slate-100 text-slate-700' : 'bg-neutral-100 text-neutral-500'}`}>
-                          {lead.tierInterest === 'unsure' ? 'Not sure' : lead.tierInterest}
-                        </span>
-                      </td>
-                      <td className="py-3 px-3 text-neutral-400 text-xs">{new Date(lead.createdAt).toLocaleDateString()}</td>
-                      <td className="py-3 px-3">
-                        <div className="flex items-center gap-2">
-                          <select value={lead.status} onChange={async e => {
-                            const newStatus = e.target.value;
-                            await api.patch(`/whitelabel/leads/${lead._id}`, { status: newStatus });
-                            setLeads(prev => prev.map(l => l._id === lead._id ? { ...l, status: newStatus } : l));
-                          }} className="text-xs border border-neutral-200 rounded-lg px-2 py-1 focus:outline-none">
-                            {['new','contacted','converted','rejected'].map(s => <option key={s} value={s}>{s}</option>)}
-                          </select>
-                          <button onClick={() => {
-                            openCreate();
-                            setTimeout(() => {
-                              setForm(f => ({ ...f, clientName: lead.businessName, contactName: lead.contactName, contactEmail: lead.email, contactPhone: lead.phone || '' }));
-                            }, 50);
-                          }} className="text-xs text-blue-600 hover:underline whitespace-nowrap">Convert</button>
-                        </div>
-                        {lead.message && <div className="text-xs text-neutral-400 mt-1 max-w-xs truncate" title={lead.message}>{lead.message}</div>}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            <div className="space-y-3">
+              {leads.map(lead => (
+                <div key={lead._id} className="bg-white border border-neutral-200 rounded-xl p-4 hover:border-neutral-300 transition-colors">
+                  <div className="flex items-start justify-between gap-4 flex-wrap">
+
+                    {/* Left: Business info */}
+                    <div className="flex-1 min-w-[200px]">
+                      <div className="flex items-center gap-2 flex-wrap mb-1">
+                        <span className="font-semibold text-neutral-900">{lead.businessName}</span>
+                        <span className={`text-xs px-2 py-0.5 rounded-full font-medium capitalize ${
+                          lead.businessType === 'restaurant' ? 'bg-orange-100 text-orange-700' :
+                          lead.businessType === 'venue'      ? 'bg-purple-100 text-purple-700' :
+                          lead.businessType === 'hotel'      ? 'bg-blue-100 text-blue-700' :
+                          lead.businessType === 'corporate'  ? 'bg-slate-100 text-slate-700' :
+                          'bg-neutral-100 text-neutral-600'
+                        }`}>{lead.businessType}</span>
+                        <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                          lead.tierInterest === 'enterprise' ? 'bg-violet-100 text-violet-700' :
+                          lead.tierInterest === 'pro'        ? 'bg-indigo-100 text-indigo-700' :
+                          lead.tierInterest === 'basic'      ? 'bg-sky-100 text-sky-700' :
+                          'bg-neutral-100 text-neutral-500'
+                        }`}>{lead.tierInterest === 'unsure' ? 'Tier TBD' : lead.tierInterest + ' plan'}</span>
+                      </div>
+                      <div className="text-sm text-neutral-600">{lead.contactName} &middot; <a href={`mailto:${lead.email}`} className="text-blue-600 hover:underline">{lead.email}</a></div>
+                      {lead.phone   && <div className="text-xs text-neutral-400 mt-0.5">{lead.phone}</div>}
+                      {lead.website && <div className="text-xs text-neutral-400">{lead.website}</div>}
+                      {lead.message && <div className="mt-2 text-xs text-neutral-500 bg-neutral-50 rounded-lg p-2 border border-neutral-100">"{lead.message}"</div>}
+                      <div className="text-xs text-neutral-300 mt-2">Received {new Date(lead.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</div>
+                    </div>
+
+                    {/* Right: Actions */}
+                    <div className="flex flex-col gap-2 min-w-[200px]">
+
+                      {/* Payment link button */}
+                      <button
+                        onClick={() => {
+                          const base = window.location.origin;
+                          const url = `${base}/white-label/setup-fee?lead=${lead._id}&business=${encodeURIComponent(lead.businessName)}&email=${encodeURIComponent(lead.email)}&name=${encodeURIComponent(lead.contactName || '')}`;
+                          navigator.clipboard.writeText(url).then(() => toast.success('Payment link copied to clipboard'));
+                        }}
+                        className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg px-3 py-2 text-xs font-semibold transition-colors">
+                        <CreditCard className="w-3.5 h-3.5" /> Copy $299 Payment Link
+                      </button>
+
+                      {/* Email link */}
+                      <a
+                        href={`mailto:${lead.email}?subject=Your PlanIt White Label Setup&body=Hi ${lead.contactName || ''},
+
+Thank you for your interest in PlanIt White Label. To get started, please complete your $299 setup fee payment using the link below:
+
+${window.location.origin}/white-label/setup-fee?lead=${lead._id}&business=${encodeURIComponent(lead.businessName)}&email=${encodeURIComponent(lead.email)}&name=${encodeURIComponent(lead.contactName || '')}
+
+Once payment is confirmed, we will begin your setup and have you live within 48 hours.
+
+Best,
+PlanIt Team`}
+                        className="flex items-center justify-center gap-2 border border-neutral-200 hover:bg-neutral-50 text-neutral-700 rounded-lg px-3 py-2 text-xs font-medium transition-colors text-center no-underline">
+                        <Mail className="w-3.5 h-3.5" /> Email Payment Link
+                      </a>
+
+                      {/* Convert to client */}
+                      <button onClick={() => {
+                        openCreate();
+                        setTimeout(() => {
+                          setForm(f => ({ ...f, clientName: lead.businessName, contactName: lead.contactName, contactEmail: lead.email, contactPhone: lead.phone || '', tier: lead.tierInterest === 'unsure' ? 'basic' : lead.tierInterest }));
+                        }, 50);
+                        api.patch(`/whitelabel/leads/${lead._id}`, { status: 'converted' }).then(() => {
+                          setLeads(prev => prev.filter(l => l._id !== lead._id));
+                        });
+                      }} className="flex items-center justify-center gap-2 border border-green-200 hover:bg-green-50 text-green-700 rounded-lg px-3 py-2 text-xs font-medium transition-colors">
+                        <UserPlus className="w-3.5 h-3.5" /> Convert to Client
+                      </button>
+
+                      {/* Status + reject */}
+                      <div className="flex gap-2">
+                        <select value={lead.status} onChange={async e => {
+                          const newStatus = e.target.value;
+                          await api.patch(`/whitelabel/leads/${lead._id}`, { status: newStatus });
+                          setLeads(prev => prev.map(l => l._id === lead._id ? { ...l, status: newStatus } : l));
+                          setLeadCounts(prev => ({ ...prev, [lead.status]: (prev[lead.status] || 1) - 1, [newStatus]: (prev[newStatus] || 0) + 1 }));
+                        }} className="flex-1 text-xs border border-neutral-200 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white">
+                          {['new','contacted','converted','rejected'].map(s => <option key={s} value={s}>{s}</option>)}
+                        </select>
+                      </div>
+                    </div>
+
+                  </div>
+                </div>
+              ))}
             </div>
           )}
         </div>
       )}
-
       {/* ── Confirm Suspend ─────────────────────────────────────────────────── */}
       {confirmSuspend && (
         <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4">
