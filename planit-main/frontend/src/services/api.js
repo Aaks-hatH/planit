@@ -12,7 +12,7 @@ const api = axios.create({
 });
 
 api.interceptors.request.use((config) => {
-  const isAdminRequest = config.url && config.url.includes('/admin');
+  const isAdminRequest = config.url && (config.url.includes('/admin') || config.url.includes('/whitelabel'));
 
   if (isAdminRequest) {
     const adminToken = localStorage.getItem('adminToken');
