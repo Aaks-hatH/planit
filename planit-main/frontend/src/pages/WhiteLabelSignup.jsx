@@ -18,7 +18,7 @@ const useReveal = () => {
 const TIERS = [
   {
     name: 'Basic',
-    price: '$149',
+    price: '$49.00',
     period: '/month',
     tagline: 'Your brand, fully managed.',
     description: 'Custom domain, logo and colors, reservation system, waitlist, and ongoing support. The fastest way to launch a branded booking experience.',
@@ -27,7 +27,7 @@ const TIERS = [
   },
   {
     name: 'Pro',
-    price: '$249',
+    price: '$99.99',
     period: '/month',
     tagline: 'Completely invisible. Completely yours.',
     description: 'Everything in Basic, plus complete removal of PlanIt attribution. Guests see only your brand — from the first page to the confirmation email.',
@@ -36,7 +36,7 @@ const TIERS = [
   },
   {
     name: 'Enterprise',
-    price: '$499',
+    price: '$149.99',
     period: '/month',
     tagline: 'Built exactly to your brand standards.',
     description: 'Everything in Pro, plus custom CSS injection for total visual control. Built for properties with a design team and strict brand guidelines.',
