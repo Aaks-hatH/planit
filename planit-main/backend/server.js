@@ -214,6 +214,9 @@ const corsOptions = {
 };
 
 app.use(cors(corsOptions));
+// Stripe webhook needs the raw body before JSON parsing
+app.use('/api/whitelabel/webhooks/stripe', express.raw({ type: 'application/json' }));
+
 app.use(express.json({ limit: '2mb' }));
 app.use(express.urlencoded({ extended: true, limit: '2mb' }));
 app.use(cookieParser());
