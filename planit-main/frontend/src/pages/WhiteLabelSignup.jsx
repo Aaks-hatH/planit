@@ -11,15 +11,15 @@ const BUSINESS_TYPES = [
 ];
 
 const TIER_OPTIONS = [
-  { value: 'basic',      label: 'Basic — $49/month' },
-  { value: 'pro',        label: 'Pro — $99/month' },
-  { value: 'enterprise', label: 'Enterprise — $149/month' },
+  { value: 'basic',      label: 'Basic — $49.00/month' },
+  { value: 'pro',        label: 'Pro — $99.99/month' },
+  { value: 'enterprise', label: 'Enterprise — $149.99/month' },
   { value: 'unsure',     label: 'Not sure yet' },
 ];
 
 const TIERS = [
   {
-    name: 'Basic', price: '$49.99',
+    name: 'Basic', price: '$49.00',
     tagline: 'Launch fast with your brand.',
     features: ['Custom domain and SSL','Logo, colors, and font','Full reservation system','Live waitlist management','Up to 10 events','Up to 500 guests per event','Onboarding and setup included','Ongoing support'],
     highlight: false,
