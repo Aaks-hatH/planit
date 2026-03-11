@@ -116,8 +116,7 @@ export default defineConfig({
           'react-vendor': ['react', 'react-dom', 'react-router-dom'],
           'socket': ['socket.io-client'],
           'utils': ['axios', 'crypto-js', 'date-fns'],
-          'admin': ['./src/pages/Admin.jsx'],
-          'charts': ['recharts']
+          'admin': ['./src/pages/Admin.jsx']
         }
       }
     }
