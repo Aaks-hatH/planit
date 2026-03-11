@@ -5492,7 +5492,7 @@ function WhiteLabelPanel() {
   const [confirmDelete, setConfirmDelete] = useState(null);
   const [confirmSuspend, setConfirmSuspend] = useState(null);
 
-  const API = '/api/whitelabel';
+  const API = '/whitelabel';
 
   const load = useCallback(async () => {
     if (isDemo) {
