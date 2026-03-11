@@ -27,6 +27,7 @@ import InviteCard from './pages/InviteCard';
 import ReservePage, { ReserveCancelPage } from './pages/ReservePage';
 import ReservationTicket from './pages/ReservationTicket';
 import GuestTablet from './pages/GuestTablet';
+import WhiteLabelSignup from './pages/WhiteLabelSignup';
 
 // ─── Maintenance page ─────────────────────────────────────────────────────────
 // t = 's' scheduled | 'i' incident | 'd' degraded
@@ -330,6 +331,7 @@ function App() {
         <Route path="/status"          element={<Status />} />
         <Route path="/discover"        element={<Discover />} />
         <Route path="/help"            element={<Help />} />
+        <Route path="/white-label"     element={<WhiteLabelSignup />} />
         <Route path="*"                element={<NotFound />} />
       </Routes>
     </Router>
