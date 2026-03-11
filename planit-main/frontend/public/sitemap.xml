@@ -1,58 +1,65 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
 
-  <!-- Homepage -->
   <url>
     <loc>https://planitapp.onrender.com/</loc>
-    <lastmod>2026-02-21</lastmod>
+    <lastmod>2026-03-11</lastmod>
     <changefreq>weekly</changefreq>
     <priority>1.0</priority>
   </url>
 
-  <!-- About page -->
   <url>
-    <loc>https://planitapp.onrender.com/about</loc>
-    <lastmod>2026-02-21</lastmod>
+    <loc>https://planitapp.onrender.com/white-label</loc>
+    <lastmod>2026-03-11</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.9</priority>
+  </url>
+
+  <url>
+    <loc>https://planitapp.onrender.com/white-label/setup-fee</loc>
+    <lastmod>2026-03-11</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
 
-  <!-- Support / donate page -->
   <url>
-    <loc>https://planitapp.onrender.com/support</loc>
-    <lastmod>2026-02-21</lastmod>
+    <loc>https://planitapp.onrender.com/about</loc>
+    <lastmod>2026-03-11</lastmod>
     <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
-
-  <!-- Wall of supporters -->
-  <url>
-    <loc>https://planitapp.onrender.com/support/wall</loc>
-    <lastmod>2026-02-21</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.5</priority>
-  </url>
-
-  <!-- System status — real-time, changefreq always -->
-  <url>
-    <loc>https://planitapp.onrender.com/status</loc>
-    <lastmod>2026-02-21</lastmod>
-    <changefreq>always</changefreq>
     <priority>0.7</priority>
   </url>
 
-  <!-- Terms of service -->
+  <url>
+    <loc>https://planitapp.onrender.com/discover</loc>
+    <lastmod>2026-03-11</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.7</priority>
+  </url>
+
+  <url>
+    <loc>https://planitapp.onrender.com/status</loc>
+    <lastmod>2026-03-11</lastmod>
+    <changefreq>always</changefreq>
+    <priority>0.6</priority>
+  </url>
+
+  <url>
+    <loc>https://planitapp.onrender.com/support</loc>
+    <lastmod>2026-03-11</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.5</priority>
+  </url>
+
   <url>
     <loc>https://planitapp.onrender.com/terms</loc>
-    <lastmod>2026-02-21</lastmod>
+    <lastmod>2026-03-11</lastmod>
     <changefreq>yearly</changefreq>
     <priority>0.3</priority>
   </url>
 
-  <!-- Privacy policy -->
   <url>
     <loc>https://planitapp.onrender.com/privacy</loc>
-    <lastmod>2026-02-21</lastmod>
+    <lastmod>2026-03-11</lastmod>
     <changefreq>yearly</changefreq>
     <priority>0.3</priority>
   </url>
