@@ -76,6 +76,7 @@ export function WhiteLabelProvider({ children }) {
     }
 
     let cancelled = false;
+    let retries = 0;
 
     async function run() {
       // 1. Fetch branding
@@ -106,8 +107,20 @@ export function WhiteLabelProvider({ children }) {
         if (!r.ok) throw new Error('resolve failed');
         branding = await r.json();
       } catch {
-        // Network error — fail open so a blip doesn't kill a live site
-        if (!cancelled) setState({ wl: null, isWL: false, resolved: true, blocked: false, blockReason: null });
+        // Network error on a custom domain — don't fail open to normal PlanIt.
+        // Retry up to 3 times with backoff, then show a connecting error page.
+        if (retries < 3) {
+          retries++;
+          await new Promise(r => setTimeout(r, 1500 * retries));
+          if (!cancelled) run();
+          return;
+        }
+        // After retries exhausted — show a neutral "can't connect" state
+        // rather than rendering the wrong app.
+        if (!cancelled) setState({
+          wl: null, isWL: true, resolved: true,
+          blocked: true, blockReason: 'network_error',
+        });
         return;
       }
 
