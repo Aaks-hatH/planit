@@ -142,11 +142,14 @@ router.get('/resolve', async (req, res) => {
 
     if (!wl) return res.status(404).json({ error: 'not_found' });
 
-    // Only return branding — never internal billing/key data
+    // Return branding + license metadata for client-side heartbeat enforcement
     return res.json({
-      clientName:   wl.clientName,
-      tier:         wl.tier,
-      branding:     wl.branding,
+      clientName:    wl.clientName,
+      tier:          wl.tier,
+      status:        wl.status,
+      branding:      wl.branding,
+      licenseKey:    wl.licenseKey,
+      keyExpiresAt:  wl.keyExpiresAt,
     });
   } catch (err) {
     console.error('[whitelabel] resolve error', err);
@@ -155,27 +158,44 @@ router.get('/resolve', async (req, res) => {
 });
 
 // ─── Public: Heartbeat (called by white-label instances) ─────────────────────
+// Client sends only the domain — backend looks up the stored key and verifies
+// it internally. This keeps the licenseKey off the wire after initial setup.
+//
+// Response codes:
+//   200  { ok: true,  status, tier, expiresAt }  — valid, let them through
+//   403  { ok: false, reason: 'suspended' }       — admin manually suspended
+//   403  { ok: false, reason: 'expired'   }       — key past expiry date
+//   403  { ok: false, reason: ... }               — tampered / invalid key
+//   404  { error:  'not_found' }                  — domain not registered
 
 router.post('/heartbeat', async (req, res) => {
   try {
-    const { domain, licenseKey } = req.body;
-    if (!domain || !licenseKey) return res.status(400).json({ error: 'missing fields' });
+    const { domain } = req.body;
+    if (!domain) return res.status(400).json({ error: 'domain required' });
 
-    const wl = await WhiteLabel.findOne({ domain: domain.toLowerCase(), licenseKey });
+    const wl = await WhiteLabel.findOne({ domain: domain.toLowerCase().trim() }).lean();
     if (!wl) return res.status(404).json({ error: 'not_found' });
 
-    const check = verifyLicenseKey(licenseKey, domain, wl.tier);
-    if (!check.valid) {
+    // Admin suspension takes priority
+    if (wl.status === 'suspended') {
       await WhiteLabel.updateOne({ _id: wl._id }, { $inc: { heartbeatFailed: 1 } });
-      return res.status(403).json({ error: 'invalid_key', reason: check.reason });
+      return res.status(403).json({ ok: false, reason: 'suspended' });
     }
 
+    // Cryptographic verification of the stored license key
+    const check = verifyLicenseKey(wl.licenseKey, domain, wl.tier);
+    if (!check.valid) {
+      await WhiteLabel.updateOne({ _id: wl._id }, { $inc: { heartbeatFailed: 1 } });
+      return res.status(403).json({ ok: false, reason: check.reason });
+    }
+
+    // All good — record the heartbeat
     await WhiteLabel.updateOne({ _id: wl._id }, {
-      $set:  { lastHeartbeat: new Date(), heartbeatFailed: 0 },
-      $inc:  { heartbeatCount: 1 },
+      $set: { lastHeartbeat: new Date(), heartbeatFailed: 0 },
+      $inc: { heartbeatCount: 1 },
     });
 
-    return res.json({ ok: true, status: wl.status, tier: wl.tier });
+    return res.json({ ok: true, status: wl.status, tier: wl.tier, expiresAt: check.expiresAt });
   } catch (err) {
     console.error('[whitelabel] heartbeat error', err);
     return res.status(500).json({ error: 'internal' });
@@ -258,23 +278,91 @@ router.post('/webhooks/stripe', async (req, res) => {
   try {
     switch (event.type) {
 
-      // Payment collected — subscription is live
+      // Payment collected — handles BOTH $299 setup fee AND subscription start
       case 'checkout.session.completed': {
-        if (obj.mode !== 'subscription') break;
-        const subscriptionId = obj.subscription;
-        const update = {
-          status:                       'active',
-          'billing.stripeSubscriptionId': subscriptionId,
-          'billing.billingStatus':        'active',
-          'billing.mode':                 'live',
-        };
-        if (wlId) {
-          await WhiteLabel.findByIdAndUpdate(wlId, update);
-          console.log(`[whitelabel] ✓ Activated ${wlId} via checkout`);
-        } else {
-          // Fallback: look up by customer ID
-          await WhiteLabel.findOneAndUpdate({ 'billing.stripeCustomerId': obj.customer }, update);
-          console.log(`[whitelabel] ✓ Activated by customer ${obj.customer}`);
+        const discordUrl = process.env.DISCORD_WEBHOOK_URL;
+
+        // ── One-time setup fee payment ($299) ─────────────────────────────────
+        if (obj.mode === 'payment') {
+          const leadId      = obj.metadata?.leadId;
+          const bizName     = obj.metadata?.businessName || 'Unknown business';
+          const custEmail   = obj.customer_details?.email || obj.customer_email || '';
+          const amountPaid  = ((obj.amount_total || 0) / 100).toFixed(2);
+
+          // Mark lead as "contacted" (already done at checkout creation, but ensure it)
+          if (leadId) {
+            await WLLead.findByIdAndUpdate(leadId, { status: 'contacted' }).catch(() => {});
+          }
+
+          console.log(`[whitelabel] ✓ Setup fee paid — ${bizName} <${custEmail}> $${amountPaid}`);
+
+          // Discord notification to admin
+          if (discordUrl) {
+            await axios.post(discordUrl, {
+              content: `💰 **Setup fee paid — $${amountPaid}**`,
+              embeds: [{
+                title: 'White Label Setup Fee Received',
+                color: 0x22c55e,
+                fields: [
+                  { name: 'Business',    value: bizName,    inline: true },
+                  { name: 'Email',       value: custEmail,  inline: true },
+                  { name: 'Amount',      value: `$${amountPaid}`, inline: true },
+                  { name: 'Next step',   value: 'Go to Admin → White Label → Leads → Convert to Client → set up their domain', inline: false },
+                ],
+                timestamp: new Date().toISOString(),
+                footer: { text: 'PlanIt White Label — Stripe Webhook' },
+              }],
+            }, { headers: { 'Content-Type': 'application/json' } }).catch(e => {
+              console.warn('[whitelabel] Discord setup fee notify failed:', e.message);
+            });
+          }
+          break;
+        }
+
+        // ── Subscription checkout completed ───────────────────────────────────
+        if (obj.mode === 'subscription') {
+          const subscriptionId = obj.subscription;
+          const update = {
+            status:                         'active',
+            'billing.stripeSubscriptionId': subscriptionId,
+            'billing.billingStatus':        'active',
+            'billing.mode':                 'live',
+          };
+          let clientName = '';
+          if (wlId) {
+            const updated = await WhiteLabel.findByIdAndUpdate(wlId, update, { new: true }).lean();
+            clientName = updated?.clientName || wlId;
+            console.log(`[whitelabel] ✓ Subscription activated ${wlId}`);
+          } else {
+            const updated = await WhiteLabel.findOneAndUpdate(
+              { 'billing.stripeCustomerId': obj.customer }, update, { new: true }
+            ).lean();
+            clientName = updated?.clientName || obj.customer;
+            console.log(`[whitelabel] ✓ Subscription activated by customer ${obj.customer}`);
+          }
+
+          // Discord notification
+          if (discordUrl) {
+            const custEmail = obj.customer_details?.email || '';
+            const amountStr = obj.amount_total ? `$${(obj.amount_total / 100).toFixed(2)}/mo` : 'recurring';
+            await axios.post(discordUrl, {
+              content: `🎉 **New subscription started — ${clientName}**`,
+              embeds: [{
+                title: 'White Label Subscription Active',
+                color: 0x6366f1,
+                fields: [
+                  { name: 'Client',    value: clientName, inline: true },
+                  { name: 'Email',     value: custEmail,  inline: true },
+                  { name: 'Amount',    value: amountStr,  inline: true },
+                  { name: 'Sub ID',    value: subscriptionId || 'n/a', inline: false },
+                ],
+                timestamp: new Date().toISOString(),
+                footer: { text: 'PlanIt White Label — Stripe Webhook' },
+              }],
+            }, { headers: { 'Content-Type': 'application/json' } }).catch(e => {
+              console.warn('[whitelabel] Discord subscription notify failed:', e.message);
+            });
+          }
         }
         break;
       }
