@@ -205,3 +205,50 @@
   outline: 2px solid #0a0a0a;
   outline-offset: 2px;
 }
+/* ─── White-label theme overrides ────────────────────────────────────────────
+ * When a WL client's branding is active, --wl-primary and --wl-accent are
+ * injected onto :root by WhiteLabelTheme in App.jsx.
+ * These rules re-map the design tokens to the client's brand colors.
+ * They are scoped to [data-wl] so they only fire when branding is active.
+ * ─────────────────────────────────────────────────────────────────────────── */
+
+[data-wl] {
+  /* Primary action color — buttons, links, focus rings */
+  --wl-btn-bg:    var(--wl-primary, #111827);
+  --wl-btn-hover: color-mix(in srgb, var(--wl-primary, #111827) 85%, black);
+  --wl-focus:     var(--wl-primary, #111827);
+  font-family: var(--wl-font, inherit), system-ui, sans-serif;
+}
+
+[data-wl] .btn-primary {
+  background-color: var(--wl-primary, #111827) !important;
+  color: #fff !important;
+}
+
+[data-wl] .btn-primary:hover:not(:disabled) {
+  background-color: color-mix(in srgb, var(--wl-primary, #111827) 85%, black) !important;
+}
+
+[data-wl] *:focus-visible {
+  outline-color: var(--wl-primary, #0a0a0a) !important;
+}
+
+[data-wl] a:not(.btn) {
+  color: var(--wl-primary, inherit);
+}
+
+/* Accent color — progress bars, highlights, active states */
+[data-wl] [class*="bg-blue-500"],
+[data-wl] [class*="bg-indigo-500"] {
+  background-color: var(--wl-accent, var(--wl-primary, #111827)) !important;
+}
+
+[data-wl] [class*="text-blue-600"],
+[data-wl] [class*="text-indigo-600"] {
+  color: var(--wl-primary, inherit) !important;
+}
+
+[data-wl] [class*="border-blue-"],
+[data-wl] [class*="border-indigo-"] {
+  border-color: color-mix(in srgb, var(--wl-primary, #111827) 40%, transparent) !important;
+}
