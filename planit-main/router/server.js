@@ -1031,20 +1031,33 @@ let _wlLastFetched = 0;
 const WL_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
 async function _refreshWLOrigins() {
-  const backend = BACKENDS[0]; // only need one — they all share the same DB
-  if (!backend) return;
-  try {
-    // Hit the backend directly (internal — no auth needed for domain list)
-    const res = await axios.get(`${backend}/api/whitelabel/cors-domains`, { timeout: 8000 });
-    const domains = res.data?.domains;
-    if (Array.isArray(domains)) {
-      _wlOrigins = new Set(domains);
-      _wlLastFetched = Date.now();
-      console.log(`[cors] Refreshed WL origins — ${domains.length} domain(s) cached`);
+  if (BACKENDS.length === 0) return;
+
+  // Poll ALL backends and union results — so a stale/old instance on one
+  // backend doesn't prevent a newly added domain from being allowed.
+  // Any single backend succeeding is enough.
+  const results = await Promise.allSettled(
+    BACKENDS.map(backend =>
+      axios.get(`${backend}/api/whitelabel/cors-domains`, { timeout: 8000 })
+        .then(r => r.data?.domains)
+    )
+  );
+
+  const merged = new Set();
+  let anySuccess = false;
+  for (const r of results) {
+    if (r.status === 'fulfilled' && Array.isArray(r.value)) {
+      for (const d of r.value) merged.add(d);
+      anySuccess = true;
     }
-  } catch (err) {
-    // Non-fatal — stale cache is fine, STATIC_ORIGINS still works
-    console.warn('[cors] WL origin refresh failed:', err.message);
+  }
+
+  if (anySuccess) {
+    _wlOrigins = merged;
+    _wlLastFetched = Date.now();
+    console.log(`[cors] Refreshed WL origins — ${merged.size} domain(s) cached (polled ${BACKENDS.length} backend(s))`);
+  } else {
+    console.warn('[cors] WL origin refresh failed on all backends — keeping stale cache');
   }
 }
 
