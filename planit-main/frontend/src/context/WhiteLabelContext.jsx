@@ -2,45 +2,30 @@
  * WhiteLabelContext.jsx
  *
  * Detects whether the app is running on a custom (white-label) domain and,
- * if so, fetches the branding config from the PlanIt backend.
+ * if so, fetches the branding config AND verifies the license is valid.
  *
- * Usage:
- *   const { wl, isWL, resolved } = useWhiteLabel();
+ * Enforcement flow:
+ *   1. /resolve  — fetches branding, confirms the domain is registered
+ *   2. /heartbeat — verifies the license key cryptographically (domain only,
+ *                   backend does the key lookup internally)
+ *   3. If heartbeat returns 403 for any reason (suspended, expired, tampered)
+ *      sets blocked: true with a reason, App.jsx renders the blocked page.
  *
- * wl shape (when active):
- *   {
- *     clientName: 'La Taverna Dayton',
- *     tier: 'pro',           // basic | pro | enterprise
- *     branding: {
- *       companyName: 'La Taverna',
- *       logoUrl: '...',
- *       faviconUrl: '...',
- *       primaryColor: '#b45309',
- *       accentColor: '#92400e',
- *       fontFamily: 'Inter',
- *       hidePoweredBy: true,
- *       customCss: '',
- *     },
- *     status: 'active',      // active | trial | suspended
- *   }
- *
- * Heartbeat:
- *   Sends POST /api/whitelabel/heartbeat at most once every 23 hours.
- *   Stores last-sent time in localStorage under "wl_hb".
- *   A failed heartbeat is silently swallowed — it only affects the admin
- *   dashboard counters, not the guest experience.
+ * Heartbeat cache:
+ *   Passes are cached in localStorage for 1 hour so repeated page loads
+ *   don't hammer the API. Blocks are NOT cached — every visit re-checks
+ *   so a re-activation takes effect immediately.
  */
 
 import { createContext, useContext, useEffect, useState } from 'react';
 
 const API_URL = (import.meta.env.VITE_API_URL || 'http://localhost:5000/api').replace(/\/$/, '');
 
-// Domains that are "native" PlanIt — never attempt WL resolution on these.
 const NATIVE_HOSTS = [
   'localhost',
   '127.0.0.1',
   'planitapp.onrender.com',
-  // Add your main prod domain here if it differs, e.g. 'app.planit.com'
+  'planit-router.onrender.com',
   ...(import.meta.env.VITE_MAIN_DOMAIN ? [import.meta.env.VITE_MAIN_DOMAIN] : []),
 ];
 
@@ -48,63 +33,135 @@ function isCustomDomain(hostname) {
   return !NATIVE_HOSTS.some(h => hostname === h || hostname.endsWith('.' + h));
 }
 
+const HB_KEY = 'wl_hb_v2';
+const HB_TTL = 60 * 60 * 1000; // 1 hour
+
+function getCachedHB(domain) {
+  try {
+    const raw = localStorage.getItem(HB_KEY);
+    if (!raw) return null;
+    const c = JSON.parse(raw);
+    if (c.domain !== domain) return null;
+    if (Date.now() - c.ts > HB_TTL) return null;
+    return c;
+  } catch { return null; }
+}
+
+function setCachedHB(domain, ok) {
+  try {
+    localStorage.setItem(HB_KEY, JSON.stringify({ domain, ts: Date.now(), ok }));
+  } catch { /* ignore */ }
+}
+
 const WhiteLabelContext = createContext({
-  wl:       null,    // branding object or null
-  isWL:     false,   // true if on a custom domain and resolved successfully
-  resolved: false,   // true once the lookup has finished (success or not)
-  suspended: false,  // true if this domain's WL is suspended
+  wl: null, isWL: false, resolved: false,
+  blocked: false, blockReason: null,
 });
 
 export function useWhiteLabel() {
   return useContext(WhiteLabelContext);
 }
 
-async function sendHeartbeat(domain, licenseKey) {
-  // Throttle: once per 23 hours
-  const KEY = 'wl_hb';
-  try {
-    const last = parseInt(localStorage.getItem(KEY) || '0', 10);
-    if (Date.now() - last < 23 * 60 * 60 * 1000) return;
-    await fetch(`${API_URL}/whitelabel/heartbeat`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ domain, licenseKey }),
-    });
-    localStorage.setItem(KEY, String(Date.now()));
-  } catch {
-    // Silent — heartbeat failure doesn't affect the guest experience
-  }
-}
-
 export function WhiteLabelProvider({ children }) {
-  const [state, setState] = useState({ wl: null, isWL: false, resolved: false, suspended: false });
+  const [state, setState] = useState({
+    wl: null, isWL: false, resolved: false, blocked: false, blockReason: null,
+  });
 
   useEffect(() => {
     const hostname = window.location.hostname;
 
     if (!isCustomDomain(hostname)) {
-      setState({ wl: null, isWL: false, resolved: true, suspended: false });
+      setState({ wl: null, isWL: false, resolved: true, blocked: false, blockReason: null });
       return;
     }
 
-    // Custom domain — resolve branding
-    fetch(`${API_URL}/whitelabel/resolve?domain=${encodeURIComponent(hostname)}`, { cache: 'no-store' })
-      .then(async r => {
+    let cancelled = false;
+
+    async function run() {
+      // 1. Fetch branding
+      let branding = null;
+      try {
+        const r = await fetch(
+          `${API_URL}/whitelabel/resolve?domain=${encodeURIComponent(hostname)}`,
+          { cache: 'no-store' }
+        );
         if (r.status === 404) {
-          // Domain not registered — just run normally, no branding
-          setState({ wl: null, isWL: false, resolved: true, suspended: false });
+          // Not a registered WL domain at all — render as normal PlanIt
+          if (!cancelled) setState({ wl: null, isWL: false, resolved: true, blocked: false, blockReason: null });
+          return;
+        }
+        if (r.status === 403) {
+          // Domain is registered but suspended/cancelled — show suspended page
+          // We still get branding back so the page can look branded
+          const data = await r.json().catch(() => ({}));
+          if (!cancelled) setState({
+            wl: data,
+            isWL: true,
+            resolved: true,
+            blocked: true,
+            blockReason: data.status || 'suspended',
+          });
           return;
         }
         if (!r.ok) throw new Error('resolve failed');
-        const data = await r.json();
-        setState({ wl: data, isWL: true, resolved: true, suspended: false });
-        // Fire heartbeat (throttled)
-        sendHeartbeat(hostname, null);
-      })
-      .catch(() => {
-        // Network error — run as normal PlanIt, don't block the page
-        setState({ wl: null, isWL: false, resolved: true, suspended: false });
-      });
+        branding = await r.json();
+      } catch {
+        // Network error — fail open so a blip doesn't kill a live site
+        if (!cancelled) setState({ wl: null, isWL: false, resolved: true, blocked: false, blockReason: null });
+        return;
+      }
+
+      // 2. Check cache — only trust cached PASSES (ok: true)
+      const cached = getCachedHB(hostname);
+      if (cached && cached.ok) {
+        if (!cancelled) setState({ wl: branding, isWL: true, resolved: true, blocked: false, blockReason: null });
+        return;
+      }
+
+      // 3. Live heartbeat — real enforcement
+      try {
+        const r = await fetch(`${API_URL}/whitelabel/heartbeat`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ domain: hostname }),
+        });
+        const data = await r.json().catch(() => ({}));
+
+        if (r.status === 403) {
+          // Blocked — don't cache, force re-check every visit
+          if (!cancelled) setState({
+            wl: branding, isWL: true, resolved: true,
+            blocked: true, blockReason: data.reason || 'invalid',
+          });
+          return;
+        }
+
+        if (r.status === 404) {
+          if (!cancelled) setState({ wl: null, isWL: false, resolved: true, blocked: false, blockReason: null });
+          return;
+        }
+
+        if (!r.ok) {
+          // Server error — fail open, don't kill a live site over a blip
+          console.warn('[WL] heartbeat server error', r.status, '— failing open');
+          setCachedHB(hostname, true);
+          if (!cancelled) setState({ wl: branding, isWL: true, resolved: true, blocked: false, blockReason: null });
+          return;
+        }
+
+        // Valid
+        setCachedHB(hostname, true);
+        if (!cancelled) setState({ wl: branding, isWL: true, resolved: true, blocked: false, blockReason: null });
+
+      } catch {
+        // Network error — fail open
+        console.warn('[WL] heartbeat network error — failing open');
+        if (!cancelled) setState({ wl: branding, isWL: true, resolved: true, blocked: false, blockReason: null });
+      }
+    }
+
+    run();
+    return () => { cancelled = true; };
   }, []);
 
   return (
