@@ -5507,7 +5507,7 @@ function WhiteLabelPanel() {
         { _id: 'demo1', clientName: 'La Taverna Dayton', domain: 'reservations.latavernadayton.com', tier: 'pro', status: 'active', contactEmail: 'ops@latavernadayton.com', keyExpiresAt: new Date(Date.now() + 200*24*60*60*1000), licenseKey: 'WL-PRO-A3F72C1B-67AB3200-9F2E8C4D1A3B', billing: { mode: 'sandbox', billingStatus: 'sandbox', monthlyAmount: 29900 }, branding: { primaryColor: '#b45309', companyName: 'La Taverna' }, createdAt: new Date() },
         { _id: 'demo2', clientName: 'The Grand Ballroom', domain: 'book.grandballroom.com', tier: 'enterprise', status: 'trial', contactEmail: 'hello@grandballroom.com', keyExpiresAt: new Date(Date.now() + 30*24*60*60*1000), licenseKey: 'WL-ENT-B2E83D2C-68BC4311-0A3F9D5E2B4C', billing: { mode: 'sandbox', billingStatus: 'sandbox', monthlyAmount: 0 }, branding: { primaryColor: '#7c3aed', companyName: 'Grand Ballroom' }, createdAt: new Date() },
       ]);
-      setStats({ total: 2, active: 1, trial: 1, suspended: 0, mrr: 29900, tiers: { pro: 1, enterprise: 1 } });
+      setStats({ total: 2, active: 1, trial: 1, suspended: 0, mrr: 9999, tiers: { pro: 1, enterprise: 1 } });
       setLoading(false);
       return;
     }
@@ -6225,18 +6225,24 @@ function WhiteLabelPanel() {
                         <CreditCard className="w-3.5 h-3.5" /> Copy $299 Payment Link
                       </button>
 
-                      {/* Email link */}
+                      {/* Email link — body must be fully encodeURIComponent'd so & in URL survives */}
                       <a
-                        href={`mailto:${lead.email}?subject=Your PlanIt White Label Setup&body=Hi ${lead.contactName || ''},
-
-Thank you for your interest in PlanIt White Label. To get started, please complete your $299 setup fee payment using the link below:
-
-${window.location.origin}/white-label/setup-fee?lead=${lead._id}&business=${encodeURIComponent(lead.businessName)}&email=${encodeURIComponent(lead.email)}&name=${encodeURIComponent(lead.contactName || '')}
-
-Once payment is confirmed, we will begin your setup and have you live within 48 hours.
-
-Best,
-PlanIt Team`}
+                        href={(() => {
+                          const payUrl = `${window.location.origin}/white-label/setup-fee?lead=${lead._id}&business=${encodeURIComponent(lead.businessName)}&email=${encodeURIComponent(lead.email)}&name=${encodeURIComponent(lead.contactName || '')}`;
+                          const body = [
+                            `Hi ${lead.contactName || 'there'},`,
+                            '',
+                            'Thank you for your interest in PlanIt White Label. To get started, please complete your $299 setup fee payment using the link below:',
+                            '',
+                            payUrl,
+                            '',
+                            'Once payment is confirmed, we will begin your setup and have you live within 48 hours.',
+                            '',
+                            'Best,',
+                            'PlanIt Team',
+                          ].join('\n');
+                          return `mailto:${lead.email}?subject=${encodeURIComponent('Your PlanIt White Label Setup')}&body=${encodeURIComponent(body)}`;
+                        })()}
                         className="flex items-center justify-center gap-2 border border-neutral-200 hover:bg-neutral-50 text-neutral-700 rounded-lg px-3 py-2 text-xs font-medium transition-colors text-center no-underline">
                         <Mail className="w-3.5 h-3.5" /> Email Payment Link
                       </a>
