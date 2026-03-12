@@ -217,11 +217,68 @@ function MaintenanceGate({ children }) {
   );
 }
 
-// ─── White-label suspended page ───────────────────────────────────────────────
+// ─── White-label suspended / blocked page ─────────────────────────────────────
 function WLSuspendedPage() {
+  const { blockReason, wl } = useWhiteLabel();
+
+  const isExpired      = blockReason === 'expired';
+  const isTampered     = blockReason === 'tier_mismatch' || blockReason === 'domain_mismatch' || blockReason === 'invalid_signature';
+  const isNetworkError = blockReason === 'network_error';
+
+  const primary = wl?.branding?.primaryColor || '#111827';
+  const company = wl?.branding?.companyName || wl?.clientName || '';
+  const hidePoweredBy = wl?.branding?.hidePoweredBy || false;
+
+  const title   = isNetworkError ? 'Connection Error'
+                : isExpired      ? 'Subscription Expired'
+                : isTampered     ? 'License Invalid'
+                :                  'Account Suspended';
+
+  const message = isNetworkError
+    ? 'Unable to connect to the platform. Please check your connection and try refreshing.'
+    : isExpired
+    ? 'The subscription for this platform has expired. Please contact the site owner to renew.'
+    : isTampered
+    ? 'A license validation error was detected. Please contact the site owner.'
+    : 'This platform has been temporarily suspended. Please contact the site owner for assistance.';
+
+  // Icon color: network error = amber, tampered = red, else use primary brand color
+  const iconBg  = isNetworkError ? '#fef3c7' : isExpired ? '#fef3c7' : '#fee2e2';
+  const iconClr = isNetworkError ? '#d97706' : isExpired ? '#d97706' : '#ef4444';
+
   return (
-    <div style={{ minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center', background:'#fff', fontFamily:'sans-serif', textAlign:'center', padding:'2rem' }}>
-      <p style={{ fontSize:14, color:'#888', margin:0 }}>This page has been suspended.</p>
+    <div style={{ minHeight:'100vh', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', background:'#f9fafb', fontFamily:"'Inter',-apple-system,sans-serif", textAlign:'center', padding:'2rem' }}>
+      {company && (
+        <p style={{ position:'absolute', top:'24px', left:'50%', transform:'translateX(-50%)', fontSize:'0.85rem', fontWeight:600, color:primary, letterSpacing:'-0.01em', opacity:.8 }}>
+          {company}
+        </p>
+      )}
+      <div style={{ maxWidth:'420px' }}>
+        <div style={{ width:'52px', height:'52px', background:iconBg, borderRadius:'50%', display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto 1.5rem' }}>
+          {isNetworkError ? (
+            <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
+              <path d="M1 1l20 20M9 9a3 3 0 014.12.12M5.68 5.68A7 7 0 0117 17M2.6 2.6A12 12 0 0119.4 19.4" stroke={iconClr} strokeWidth="1.8" strokeLinecap="round"/>
+            </svg>
+          ) : (
+            <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
+              <path d="M11 7v5M11 15h.01M21 11a10 10 0 11-20 0 10 10 0 0120 0z" stroke={iconClr} strokeWidth="1.8" strokeLinecap="round"/>
+            </svg>
+          )}
+        </div>
+        <h1 style={{ fontSize:'1.5rem', fontWeight:700, color:'#111827', margin:'0 0 0.75rem', letterSpacing:'-0.03em' }}>{title}</h1>
+        <p style={{ fontSize:'0.9rem', color:'#6b7280', lineHeight:1.7, margin:'0 0 2rem' }}>{message}</p>
+        {isNetworkError && (
+          <button
+            onClick={() => window.location.reload()}
+            style={{ display:'inline-flex', alignItems:'center', gap:'6px', padding:'8px 20px', background:primary, color:'#fff', border:'none', borderRadius:'8px', fontSize:'0.875rem', fontWeight:500, cursor:'pointer', marginBottom:'2rem' }}
+          >
+            Try Again
+          </button>
+        )}
+        {!hidePoweredBy && (
+          <p style={{ fontSize:'0.75rem', color:'#d1d5db' }}>Powered by PlanIt</p>
+        )}
+      </div>
     </div>
   );
 }
@@ -229,35 +286,36 @@ function WLSuspendedPage() {
 // ─── White-label theme injector ────────────────────────────────────────────────
 // Reads branding from context and applies CSS variables + favicon + title.
 function WhiteLabelTheme({ children }) {
-  const { wl, isWL, resolved, suspended } = useWhiteLabel();
+  const { wl, isWL, resolved, blocked, blockReason } = useWhiteLabel();
 
   useEffect(() => {
     if (!isWL || !wl?.branding) return;
     const b = wl.branding;
     const root = document.documentElement;
 
+    // Add data-wl attribute so CSS overrides in index.css activate
+    root.setAttribute('data-wl', '1');
+
     // Inject CSS custom properties
     if (b.primaryColor) root.style.setProperty('--wl-primary', b.primaryColor);
     if (b.accentColor)  root.style.setProperty('--wl-accent',  b.accentColor);
-    if (b.fontFamily)   root.style.setProperty('--wl-font',    b.fontFamily);
+    if (b.fontFamily)   root.style.setProperty('--wl-font',    `'${b.fontFamily}'`);
 
     // Document title
-    if (b.companyName || wl.clientName) {
-      document.title = `${b.companyName || wl.clientName} — Reservations`;
-    }
+    const name = b.companyName || wl.clientName;
+    if (name) document.title = name;
 
     // Favicon
     if (b.faviconUrl) {
       let link = document.querySelector("link[rel~='icon']");
-      if (!link) {
-        link = document.createElement('link');
-        link.rel = 'icon';
-        document.head.appendChild(link);
-      }
+      if (!link) { link = document.createElement('link'); link.rel = 'icon'; document.head.appendChild(link); }
       link.href = b.faviconUrl;
     }
 
-    // Custom CSS (enterprise only — injected as a <style> tag)
+    // Logo — inject a meta tag so any component can read it without context drilling
+    if (b.logoUrl) root.setAttribute('data-wl-logo', b.logoUrl);
+
+    // Custom CSS (enterprise only)
     if (b.customCss) {
       const existing = document.getElementById('wl-custom-css');
       if (existing) existing.remove();
@@ -268,9 +326,12 @@ function WhiteLabelTheme({ children }) {
     }
 
     return () => {
+      root.removeAttribute('data-wl');
+      root.removeAttribute('data-wl-logo');
       root.style.removeProperty('--wl-primary');
       root.style.removeProperty('--wl-accent');
       root.style.removeProperty('--wl-font');
+      document.getElementById('wl-custom-css')?.remove();
     };
   }, [isWL, wl]);
 
@@ -285,7 +346,7 @@ function WhiteLabelTheme({ children }) {
   );
 
   // Suspended
-  if (isWL && suspended) return <WLSuspendedPage />;
+  if (isWL && (blocked || blockReason)) return <WLSuspendedPage />;
 
   return <>{children}</>;
 }
