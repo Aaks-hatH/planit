@@ -195,6 +195,31 @@ const _localhostOrigins = [
   'http://127.0.0.1:5173', 'http://127.0.0.1:3000',
 ];
 
+// In-process WL origin cache — avoids a DB hit on every preflight.
+// Falls back to DB when origin isn’t in the static CORS_ORIGIN list.
+const _wlOriginCache = new Map();
+const _WL_CACHE_TTL  = 5 * 60 * 1000; // 5 minutes
+
+async function _isWLOrigin(origin) {
+  const cached = _wlOriginCache.get(origin);
+  if (cached && (Date.now() - cached.ts) < _WL_CACHE_TTL) return cached.allowed;
+  try {
+    const hostname = new URL(origin).hostname;
+    const WhiteLabel = require('./models/WhiteLabel');
+    const wl = await WhiteLabel.findOne(
+      { domain: hostname, status: { $in: ['active', 'trial', 'suspended', 'cancelled'] } },
+      { _id: 1 }
+    ).lean();
+    const allowed = !!wl;
+    _wlOriginCache.set(origin, { allowed, ts: Date.now() });
+    if (allowed) console.log(`[CORS] WL origin allowed (cached 5 min): ${origin}`);
+    return allowed;
+  } catch (err) {
+    console.error('[CORS] WL origin DB lookup failed:', err.message);
+    return true; // fail open — don’t lock out WL clients on a momentary DB blip
+  }
+}
+
 const corsOptions = {
   origin(origin, callback) {
     if (!origin) return callback(null, true);
@@ -202,8 +227,14 @@ const corsOptions = {
     if (process.env.NODE_ENV !== 'production' && _localhostOrigins.includes(origin)) {
       return callback(null, true);
     }
-    console.warn(`[CORS] Rejected: ${origin}`);
-    callback(new Error('Not allowed by CORS'));
+    // Dynamic DB check for white-label domains — no static list needed
+    _isWLOrigin(origin)
+      .then(allowed => {
+        if (allowed) return callback(null, true);
+        console.warn(`[CORS] Rejected: ${origin}`);
+        callback(new Error('Not allowed by CORS'));
+      })
+      .catch(() => callback(new Error('Not allowed by CORS')));
   },
   credentials:      true,
   methods:          ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
