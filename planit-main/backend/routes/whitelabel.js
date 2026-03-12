@@ -113,8 +113,10 @@ function verifyLicenseKey(key, domain, tier) {
 
 router.get('/cors-domains', async (req, res) => {
   try {
+    // Include suspended/cancelled so the browser can still reach /resolve
+    // and get a proper 403 suspended response instead of a CORS error
     const items = await WhiteLabel.find(
-      { status: { $in: ['active', 'trial'] } },
+      { status: { $in: ['active', 'trial', 'suspended', 'cancelled'] } },
       { domain: 1, _id: 0 },
     ).lean();
 
@@ -135,21 +137,32 @@ router.get('/resolve', async (req, res) => {
     const { domain } = req.query;
     if (!domain) return res.status(400).json({ error: 'domain required' });
 
+    // Include suspended/cancelled so frontend can show a proper suspended page
+    // instead of falling through to default PlanIt branding
     const wl = await WhiteLabel.findOne({
       domain: domain.toLowerCase().trim(),
-      status: { $in: ['active', 'trial'] },
     }).lean();
 
     if (!wl) return res.status(404).json({ error: 'not_found' });
 
-    // Return branding + license metadata for client-side heartbeat enforcement
+    // For suspended/cancelled/expired — return 403 with status so frontend
+    // can render the correct suspended page immediately without a heartbeat call
+    if (wl.status === 'suspended' || wl.status === 'cancelled') {
+      return res.status(403).json({
+        error:      'suspended',
+        status:     wl.status,
+        clientName: wl.clientName,
+        branding:   wl.branding,  // still return branding so suspended page can look branded
+      });
+    }
+
     return res.json({
-      clientName:    wl.clientName,
-      tier:          wl.tier,
-      status:        wl.status,
-      branding:      wl.branding,
-      licenseKey:    wl.licenseKey,
-      keyExpiresAt:  wl.keyExpiresAt,
+      clientName:   wl.clientName,
+      tier:         wl.tier,
+      status:       wl.status,
+      branding:     wl.branding,
+      licenseKey:   wl.licenseKey,
+      keyExpiresAt: wl.keyExpiresAt,
     });
   } catch (err) {
     console.error('[whitelabel] resolve error', err);
