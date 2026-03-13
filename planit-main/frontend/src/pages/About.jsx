@@ -1571,103 +1571,154 @@ export default function About() {
           </Section>
 
           {/* ─── ABOUT THE CREATOR ───────────────────────────────── */}
-          <section id="creator" className="py-16 border-b border-neutral-200">
-            <div className="max-w-3xl mx-auto px-6">
+          <section id="creator" className="py-20 border-b border-neutral-200" style={{ background: 'linear-gradient(180deg, #f8f8f6 0%, #ffffff 100%)' }}>
+            <div className="max-w-4xl mx-auto px-6">
 
-              {/* Header */}
-              <div className="mb-12">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="w-10 h-10 rounded-xl bg-neutral-900 border border-neutral-800 flex items-center justify-center flex-shrink-0">
-                    <Heart className="w-5 h-5 text-white" />
-                  </div>
-                  <h2 className="text-2xl font-black text-neutral-900">About the creator</h2>
+              {/* Section label */}
+              <div className="flex items-center gap-3 mb-10">
+                <div className="w-10 h-10 rounded-xl bg-neutral-900 border border-neutral-800 flex items-center justify-center flex-shrink-0">
+                  <Heart className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <p className="text-xs font-bold text-neutral-400 uppercase tracking-widest">The person behind it</p>
+                  <h2 className="text-2xl font-black text-neutral-900 leading-none">About the creator</h2>
                 </div>
               </div>
 
-              {/* Card */}
-              <div className="relative rounded-3xl overflow-hidden border border-neutral-200 bg-neutral-900">
+              {/* Hero card */}
+              <div className="relative rounded-3xl overflow-hidden border border-neutral-200 bg-neutral-900 mb-8"
+                style={{ boxShadow: '0 20px 60px -10px rgba(0,0,0,0.3)' }}>
 
-                {/* Dark gradient top band */}
-                <div className="h-32 w-full bg-gradient-to-br from-neutral-800 via-neutral-900 to-black relative overflow-hidden">
-                  {/* Subtle grid pattern */}
-                  <div className="absolute inset-0 opacity-10" style={{
-                    backgroundImage: 'repeating-linear-gradient(0deg, transparent, transparent 24px, rgba(255,255,255,0.15) 24px, rgba(255,255,255,0.15) 25px), repeating-linear-gradient(90deg, transparent, transparent 24px, rgba(255,255,255,0.15) 24px, rgba(255,255,255,0.15) 25px)'
+                {/* Animated gradient banner */}
+                <div className="relative h-44 overflow-hidden"
+                  style={{ background: 'linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 35%, #16213e 65%, #0f3460 100%)' }}>
+                  {/* Animated grid */}
+                  <div className="absolute inset-0" style={{
+                    backgroundImage: 'repeating-linear-gradient(0deg, transparent, transparent 30px, rgba(255,255,255,0.03) 30px, rgba(255,255,255,0.03) 31px), repeating-linear-gradient(90deg, transparent, transparent 30px, rgba(255,255,255,0.03) 30px, rgba(255,255,255,0.03) 31px)'
                   }} />
+                  {/* Glowing orbs */}
+                  <div className="absolute top-6 right-12 w-32 h-32 rounded-full" style={{ background: 'radial-gradient(circle, rgba(99,102,241,0.25) 0%, transparent 70%)' }} />
+                  <div className="absolute bottom-0 left-1/3 w-48 h-24 rounded-full" style={{ background: 'radial-gradient(circle, rgba(59,130,246,0.15) 0%, transparent 70%)' }} />
+                  {/* Floating tech labels */}
+                  <div className="absolute top-5 right-6 flex flex-wrap gap-1.5 max-w-52">
+                    {['React', 'Node.js', 'MongoDB', 'Socket.IO'].map(t => (
+                      <span key={t} className="px-2 py-0.5 rounded-full text-[10px] font-bold border border-white/10 text-white/40" style={{ background: 'rgba(255,255,255,0.04)' }}>{t}</span>
+                    ))}
+                  </div>
+                  {/* Name watermark */}
+                  <div className="absolute bottom-5 right-6 text-right">
+                    <p className="text-[9px] font-bold uppercase tracking-[0.3em] text-white/20">Est. 20--</p>
+                  </div>
+                  {/* Avatar */}
                   <div className="absolute bottom-0 left-8 translate-y-1/2">
-                    <div className="w-20 h-20 rounded-2xl border-4 border-neutral-900 bg-gradient-to-br from-neutral-700 to-neutral-900 flex items-center justify-center shadow-2xl">
-                      <span className="text-2xl font-black text-white select-none">AH</span>
+                    <div className="w-24 h-24 rounded-2xl border-4 border-neutral-900 flex items-center justify-center shadow-2xl overflow-hidden"
+                      style={{ background: 'linear-gradient(135deg, #1e1e3f 0%, #0a0a1a 100%)', boxShadow: '0 8px 32px rgba(0,0,0,0.5)' }}>
+                      <span className="text-3xl font-black text-white select-none" style={{ letterSpacing: '-0.02em' }}>AH</span>
+                    </div>
+                    {/* Online indicator */}
+                    <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-emerald-500 rounded-full border-2 border-neutral-900 flex items-center justify-center">
+                      <div className="w-2 h-2 bg-white rounded-full" />
                     </div>
                   </div>
                 </div>
 
                 {/* Content */}
-                <div className="px-8 pt-14 pb-10">
+                <div className="px-8 pt-16 pb-10">
 
-                  {/* Name + badges */}
-                  <div className="flex flex-wrap items-start justify-between gap-4 mb-6">
+                  {/* Name + title + badges */}
+                  <div className="flex flex-wrap items-start justify-between gap-4 mb-7">
                     <div>
-                      <h3 className="text-2xl font-black text-white mb-1">Aakshat Hariharan</h3>
-                      <p className="text-neutral-400 text-sm font-medium">New Jersey, United States</p>
+                      <h3 className="text-3xl font-black text-white mb-1 tracking-tight">Aakshat Hariharan</h3>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-neutral-400 text-sm font-medium">New Jersey, United States</span>
+                        <span className="text-neutral-700">·</span>
+                        <span className="text-emerald-400 text-xs font-bold uppercase tracking-wider">Building in public</span>
+                      </div>
                     </div>
                     <div className="flex flex-wrap gap-2">
                       {[
-                        { label: 'Self-Taught Dev', color: 'bg-blue-950 text-blue-300 border-blue-800' },
-                        { label: 'Student',          color: 'bg-emerald-950 text-emerald-300 border-emerald-800' },
-                        { label: 'Cybersecurity',    color: 'bg-amber-950 text-amber-300 border-amber-800' },
-                        { label: 'Pentesting',       color: 'bg-red-950 text-red-300 border-red-800' },
+                        { label: 'Self-Taught', color: 'bg-blue-950 text-blue-300 border-blue-800' },
+                        { label: 'Student',     color: 'bg-emerald-950 text-emerald-300 border-emerald-800' },
+                        { label: 'Security',    color: 'bg-amber-950 text-amber-300 border-amber-800' },
+                        { label: 'Pentesting',  color: 'bg-red-950 text-red-300 border-red-800' },
                       ].map(b => (
-                        <span key={b.label} className={`px-2.5 py-1 rounded-full text-xs font-bold border ${b.color}`}>{b.label}</span>
+                        <span key={b.label} className={`px-3 py-1 rounded-full text-xs font-bold border ${b.color}`}>{b.label}</span>
                       ))}
                     </div>
                   </div>
 
-                  {/* Bio */}
-                  <div className="space-y-4 mb-8">
-                    <p className="text-neutral-300 leading-relaxed text-sm">
-                      PlanIt was built by one person, self-taught, working from New Jersey. No computer science degree. No bootcamp. Just a problem worth solving and enough stubbornness to see it through.
-                    </p>
-                    <p className="text-neutral-300 leading-relaxed text-sm">
-                      The problem was real: organising an event across group chats, email threads, shared spreadsheets, and scattered note apps is genuinely exhausting. Every tool either did too little or required too much setup. PlanIt started as a solution to that specific frustration — a single workspace where the entire event lived, with no account required to get started.
-                    </p>
-                    <p className="text-neutral-300 leading-relaxed text-sm">
-                      What it became was a full-stack distributed system: a multi-backend fleet with auto-scaling, a dedicated load-balancing router, a separate watchdog monitoring service, mesh authentication between services, a real-time check-in platform with multi-layer anti-fraud middleware, and a public status page that updates itself. None of that was in the original plan. It grew piece by piece because each problem had an obvious next solution.
-                    </p>
-                    <p className="text-neutral-300 leading-relaxed text-sm">
-                      Beyond web development, the work extends into cybersecurity — pentesting, security analysis, and vulnerability research. That background informs how PlanIt is built: rate limiting is layered, passwords are hashed correctly, API responses are cryptographically signed, internal service communication is HMAC-authenticated with replay protection. Security is not an afterthought.
-                    </p>
-                    <p className="text-neutral-300 leading-relaxed text-sm">
-                      The goal is straightforward: keep building things that are actually useful, keep learning from doing rather than watching, and eventually work on problems that matter at scale. PlanIt is part of that progression — a project that grew well beyond its original scope because the problems it ran into were worth solving properly.
+                  {/* Quote / mission statement */}
+                  <div className="relative mb-8 pl-5 border-l-2 border-indigo-500/50">
+                    <p className="text-neutral-300 text-base leading-relaxed italic">
+                      "No degree. No bootcamp. Just a problem worth solving and enough stubbornness to see it through."
                     </p>
                   </div>
 
-                  {/* Divider */}
+                  {/* Bio paragraphs */}
+                  <div className="space-y-4 mb-8">
+                    <p className="text-neutral-400 leading-relaxed text-sm">
+                      PlanIt started as a solution to a real frustration: organising an event across group chats, spreadsheets, and scattered apps is exhausting. What began as a simple workspace grew into a full-stack distributed system — a multi-backend fleet with auto-scaling, a dedicated load-balancing router, a watchdog monitoring service, mesh authentication between services, a real-time check-in platform with multi-layer anti-fraud middleware, and a live status page.
+                    </p>
+                    <p className="text-neutral-400 leading-relaxed text-sm">
+                      Beyond web development, the work extends into cybersecurity — pentesting, security analysis, and vulnerability research. That background shapes how PlanIt is built: rate limiting is layered, passwords are hashed correctly, API responses are cryptographically signed, and internal service communication uses HMAC authentication with replay protection. Security is not an afterthought here.
+                    </p>
+                  </div>
+
                   <div className="border-t border-neutral-800 mb-8" />
+
+                  {/* Stats row */}
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
+                    {[
+                      { value: '2024',     label: 'Started building', icon: <Calendar className="w-3.5 h-3.5" /> },
+                      { value: 'Solo',     label: 'Built entirely alone', icon: <Zap className="w-3.5 h-3.5" /> },
+                      { value: '100%',     label: 'Self-taught', icon: <Star className="w-3.5 h-3.5" /> },
+                      { value: '∞',        label: 'Problems left to solve', icon: <Sparkles className="w-3.5 h-3.5" /> },
+                    ].map(s => (
+                      <div key={s.label} className="p-4 rounded-2xl border border-neutral-800 text-center" style={{ background: 'rgba(255,255,255,0.02)' }}>
+                        <div className="flex items-center justify-center gap-1.5 text-neutral-500 mb-1.5">{s.icon}</div>
+                        <p className="text-xl font-black text-white mb-0.5">{s.value}</p>
+                        <p className="text-[10px] text-neutral-500 uppercase tracking-wider font-medium leading-tight">{s.label}</p>
+                      </div>
+                    ))}
+                  </div>
 
                   {/* Tech stack */}
                   <div className="mb-8">
-                    <p className="text-xs font-bold text-neutral-500 uppercase tracking-widest mb-4">Technologies</p>
+                    <p className="text-xs font-bold text-neutral-500 uppercase tracking-widest mb-4">Tech stack</p>
                     <div className="flex flex-wrap gap-2">
                       {[
-                        'React', 'Vite', 'Tailwind CSS', 'Node.js', 'Express',
-                        'Socket.IO', 'MongoDB', 'JWT', 'Redis', 'Cloudinary',
-                        'JavaScript', 'HTML / CSS', 'Linux', 'Git',
-                        'Pentesting', 'Network security', 'Vulnerability analysis',
+                        { name: 'React',              color: '#61dafb22', border: '#61dafb40', text: '#61dafb' },
+                        { name: 'Vite',               color: '#a78bfa22', border: '#a78bfa40', text: '#a78bfa' },
+                        { name: 'Tailwind CSS',        color: '#06b6d422', border: '#06b6d440', text: '#06b6d4' },
+                        { name: 'Node.js',             color: '#86efac22', border: '#86efac40', text: '#86efac' },
+                        { name: 'Express',             color: '#d1d5db22', border: '#d1d5db40', text: '#d1d5db' },
+                        { name: 'Socket.IO',           color: '#fbbf2422', border: '#fbbf2440', text: '#fbbf24' },
+                        { name: 'MongoDB',             color: '#86efac22', border: '#86efac40', text: '#4ade80' },
+                        { name: 'JWT',                 color: '#f9731622', border: '#f9731640', text: '#fb923c' },
+                        { name: 'Redis',               color: '#f8717122', border: '#f8717140', text: '#f87171' },
+                        { name: 'Cloudinary',          color: '#818cf822', border: '#818cf840', text: '#818cf8' },
+                        { name: 'Linux',               color: '#fde04722', border: '#fde04740', text: '#fde047' },
+                        { name: 'Pentesting',          color: '#f4727222', border: '#f4727240', text: '#f87171' },
+                        { name: 'Network Security',    color: '#e2e8f022', border: '#e2e8f040', text: '#cbd5e1' },
                       ].map(t => (
-                        <span key={t} className="px-2.5 py-1 bg-neutral-800 border border-neutral-700 text-neutral-300 text-xs font-medium rounded-lg">{t}</span>
+                        <span key={t.name}
+                          className="px-2.5 py-1 text-xs font-semibold rounded-lg border"
+                          style={{ background: t.color, borderColor: t.border, color: t.text }}>{t.name}</span>
                       ))}
                     </div>
                   </div>
 
-                  {/* Goals */}
+                  {/* What's next */}
                   <div className="mb-8">
                     <p className="text-xs font-bold text-neutral-500 uppercase tracking-widest mb-4">What's next</p>
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                       {[
-                        { title: 'Build at scale',    desc: 'Systems that handle real traffic and real failure modes, not just demos.' },
-                        { title: 'Security work',     desc: 'Deeper into pentesting, CTFs, and eventually professional security research.' },
-                        { title: 'Ship more',         desc: 'More projects. More problems worth solving. Less waiting until it\'s perfect.' },
+                        { icon: <Server className="w-4 h-4" />, title: 'Build at scale', desc: 'Systems that handle real traffic and real failure modes, not just demos.', color: '#3b82f6' },
+                        { icon: <Shield className="w-4 h-4" />, title: 'Security work', desc: 'Deeper into pentesting, CTFs, and eventually professional security research.', color: '#ef4444' },
+                        { icon: <Zap className="w-4 h-4" />, title: 'Ship more', desc: 'More projects. More problems worth solving. Less waiting until it's perfect.', color: '#f59e0b' },
                       ].map(g => (
-                        <div key={g.title} className="p-4 bg-neutral-800 border border-neutral-700 rounded-2xl">
+                        <div key={g.title} className="p-4 bg-neutral-800/50 border border-neutral-700 rounded-2xl group hover:border-neutral-600 transition-colors">
+                          <div className="mb-2" style={{ color: g.color }}>{g.icon}</div>
                           <p className="text-sm font-bold text-white mb-1">{g.title}</p>
                           <p className="text-xs text-neutral-400 leading-relaxed">{g.desc}</p>
                         </div>
@@ -1679,33 +1730,23 @@ export default function About() {
                   <div className="border-t border-neutral-800 pt-6">
                     <p className="text-xs font-bold text-neutral-500 uppercase tracking-widest mb-4">Find me</p>
                     <div className="flex flex-wrap gap-3">
-                      <a
-                        href="https://github.com/Aaks-hatH"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center gap-2.5 px-4 py-2.5 bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 hover:border-neutral-600 rounded-xl transition-all text-sm text-white font-medium"
-                      >
-                        <svg className="w-4 h-4 flex-shrink-0" viewBox="0 0 24 24" fill="currentColor">
+                      <a href="https://github.com/Aaks-hatH" target="_blank" rel="noopener noreferrer"
+                        className="group flex items-center gap-2.5 px-4 py-2.5 bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 hover:border-neutral-500 rounded-xl transition-all text-sm text-white font-medium">
+                        <svg className="w-4 h-4 flex-shrink-0 group-hover:scale-110 transition-transform" viewBox="0 0 24 24" fill="currentColor">
                           <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z" />
                         </svg>
                         GitHub
                       </a>
-                      <a
-                        href="mailto:hariharanaakshat@gmail.com"
-                        className="flex items-center gap-2.5 px-4 py-2.5 bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 hover:border-neutral-600 rounded-xl transition-all text-sm text-white font-medium"
-                      >
-                        <svg className="w-4 h-4 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <a href="mailto:hariharanaakshat@gmail.com"
+                        className="group flex items-center gap-2.5 px-4 py-2.5 bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 hover:border-neutral-500 rounded-xl transition-all text-sm text-white font-medium">
+                        <svg className="w-4 h-4 flex-shrink-0 group-hover:scale-110 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                           <rect x="2" y="4" width="20" height="16" rx="2" /><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
                         </svg>
                         Email
                       </a>
-                      <a
-                        href="https://aaks-hath.pages.dev"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center gap-2.5 px-4 py-2.5 bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 hover:border-neutral-600 rounded-xl transition-all text-sm text-white font-medium"
-                      >
-                        <Globe className="w-4 h-4 flex-shrink-0" />
+                      <a href="https://aaks-hath.pages.dev" target="_blank" rel="noopener noreferrer"
+                        className="group flex items-center gap-2.5 px-4 py-2.5 bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 hover:border-neutral-500 rounded-xl transition-all text-sm text-white font-medium">
+                        <Globe className="w-4 h-4 flex-shrink-0 group-hover:scale-110 transition-transform" />
                         Personal site
                       </a>
                     </div>
@@ -1713,10 +1754,18 @@ export default function About() {
 
                 </div>
               </div>
+
+              {/* Bottom tagline */}
+              <div className="flex items-center gap-4 px-2">
+                <div className="flex-1 h-px bg-neutral-200" />
+                <p className="text-xs text-neutral-400 text-center font-medium">Built solo · Self-taught · New Jersey</p>
+                <div className="flex-1 h-px bg-neutral-200" />
+              </div>
+
             </div>
           </section>
 
-          {/* Footer */}
+                    {/* Footer */}
           <div className="pt-12 pb-8 flex items-center justify-between border-t border-neutral-200 mt-4">
             <p className="text-sm text-neutral-400">© 2026 PlanIt. All rights reserved.</p>
             <a href="/" className="text-sm font-bold text-neutral-900 hover:text-neutral-600 transition-colors flex items-center gap-2">
