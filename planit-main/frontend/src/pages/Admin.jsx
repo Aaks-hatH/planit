@@ -5472,6 +5472,90 @@ const EMPTY_FORM = {
   limits: { maxEvents: 10, maxGuestsPerEvent: 500, maxAdminUsers: 3 },
 };
 
+// ─── Portal password row — shown inside the WL client view modal ─────────────
+function PortalPasswordRow({ selected, isDemo, API }) {
+  const [pw, setPw]         = useState('');
+  const [show, setShow]     = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [status, setStatus] = useState(null); // { enabled, lastLoginAt, portalUrl }
+
+  React.useEffect(() => {
+    if (!selected?._id) return;
+    api.get(`${API}/${selected._id}/portal/status`)
+      .then(r => setStatus(r.data))
+      .catch(() => {});
+  }, [selected?._id]);
+
+  const setPassword = async () => {
+    if (pw.length < 12) { toast.error('Password must be at least 12 characters'); return; }
+    if (isDemo) { toast.success('Portal password set (sandbox)'); setPw(''); return; }
+    setSaving(true);
+    try {
+      const r = await api.post(`${API}/${selected._id}/portal/set-password`, { password: pw });
+      setStatus(s => ({ ...s, enabled: true, portalUrl: r.data.portalUrl }));
+      setPw('');
+      toast.success('Portal password set. Client can now access ' + r.data.portalUrl);
+    } catch (e) {
+      toast.error(e?.response?.data?.error || 'Failed to set password');
+    } finally { setSaving(false); }
+  };
+
+  const disable = async () => {
+    if (!confirm('Disable portal access for this client?')) return;
+    if (isDemo) { toast.success('Portal disabled (sandbox)'); return; }
+    try {
+      await api.post(`${API}/${selected._id}/portal/disable`);
+      setStatus(s => ({ ...s, enabled: false }));
+      toast.success('Portal access disabled');
+    } catch { toast.error('Failed'); }
+  };
+
+  return (
+    <div className="border border-neutral-200 rounded-xl p-3 space-y-2">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Lock className="w-3.5 h-3.5 text-neutral-500" />
+          <span className="text-xs font-semibold text-neutral-700">Client Portal</span>
+          {status?.enabled
+            ? <span className="text-xs px-1.5 py-0.5 rounded bg-green-50 text-green-700 border border-green-200">Enabled</span>
+            : <span className="text-xs px-1.5 py-0.5 rounded bg-neutral-100 text-neutral-500">Disabled</span>
+          }
+        </div>
+        {status?.enabled && (
+          <div className="flex items-center gap-2">
+            <a href={status.portalUrl} target="_blank" rel="noreferrer"
+              className="text-xs text-blue-600 hover:text-blue-800 flex items-center gap-1">
+              <ExternalLink className="w-3 h-3" /> Open
+            </a>
+            <button onClick={disable} className="text-xs text-red-500 hover:text-red-700">Disable</button>
+          </div>
+        )}
+      </div>
+      {status?.lastLoginAt && (
+        <p className="text-xs text-neutral-400">Last login: {new Date(status.lastLoginAt).toLocaleString()}</p>
+      )}
+      <div className="flex gap-2">
+        <div className="relative flex-1">
+          <input
+            type={show ? 'text' : 'password'}
+            value={pw} onChange={e => setPw(e.target.value)}
+            placeholder={status?.enabled ? 'Set new password...' : 'Set portal password (min 12 chars)'}
+            className="w-full px-3 py-1.5 pr-8 text-xs rounded-lg border border-neutral-200 bg-neutral-50 outline-none"
+          />
+          <button type="button" onClick={() => setShow(s => !s)}
+            className="absolute right-2 top-1/2 -translate-y-1/2 text-neutral-400">
+            {show ? <EyeIcon className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+          </button>
+        </div>
+        <button onClick={setPassword} disabled={saving || !pw}
+          className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-neutral-900 text-white hover:bg-neutral-700 disabled:opacity-40 whitespace-nowrap">
+          {saving ? '...' : status?.enabled ? 'Reset' : 'Enable'}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function WhiteLabelPanel() {
   const isDemo = useContext(DemoContext);
   const [items, setItems] = useState([]);
@@ -6110,6 +6194,8 @@ function WhiteLabelPanel() {
                   <ExternalLink className="w-3.5 h-3.5" /> Billing Portal
                 </button>
               </div>
+              {/* Client portal row */}
+              <PortalPasswordRow selected={selected} isDemo={isDemo} API={API} />
               {/* Edit / Suspend row */}
               <div className="flex gap-2">
                 <button onClick={() => { setModal(null); openEdit(selected); }}
