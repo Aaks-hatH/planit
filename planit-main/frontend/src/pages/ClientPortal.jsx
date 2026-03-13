@@ -153,7 +153,7 @@ function Toast({ msg, type }) {
 }
 
 // ─── Section: Branding ────────────────────────────────────────────────────────
-function BrandingSection({ data, tier, token, onUpdate, toast }) {
+function BrandingSection({ data, tier, token, onUpdate, toast, onRefresh }) {
   const [form, setForm] = useState({
     companyName:   data?.companyName   || '',
     primaryColor:  data?.primaryColor  || '#2563eb',
@@ -183,7 +183,8 @@ function BrandingSection({ data, tier, token, onUpdate, toast }) {
       onUpdate('branding', j.branding);
       setSaved(true);
       setDirty(false);
-      toast('Branding saved — reload your site to see changes applied to visitors', 'success');
+      toast('Branding saved ✓ — refreshing site branding…', 'success');
+      onRefresh && onRefresh();
       setTimeout(() => setSaved(false), 4000);
     } catch (e) {
       toast(e.message, 'error');
@@ -328,7 +329,7 @@ function BrandingSection({ data, tier, token, onUpdate, toast }) {
 }
 
 // ─── Section: Pages ───────────────────────────────────────────────────────────
-function PagesSection({ data, token, onUpdate, toast }) {
+function PagesSection({ data, token, onUpdate, toast, onRefresh }) {
   const [form, setForm] = useState({
     home: {
       headline:     data?.home?.headline     || '',
@@ -374,7 +375,8 @@ function PagesSection({ data, token, onUpdate, toast }) {
       if (!r.ok) throw new Error(j.error || 'Save failed');
       onUpdate('pages', j.pages);
       setSaved(true);
-      toast('Page content saved', 'success');
+      toast('Page content saved ✓', 'success');
+      onRefresh && onRefresh();
       setTimeout(() => setSaved(false), 3000);
     } catch (e) { toast(e.message, 'error'); }
     finally { setSaving(false); }
@@ -460,25 +462,21 @@ function PagesSection({ data, token, onUpdate, toast }) {
 }
 
 // ─── Section: Features ────────────────────────────────────────────────────────
-function FeaturesSection({ data, tier, token, onUpdate, toast }) {
+function FeaturesSection({ data, tier, token, onUpdate, toast, onRefresh }) {
   const [features, setFeatures] = useState({
     showGuestList:    data?.showGuestList    !== false,
     showWaitlist:     data?.showWaitlist     !== false,
-    showSeatingChart: data?.showSeatingChart || false,
     showSocialShare:  data?.showSocialShare  !== false,
-    showReviews:      data?.showReviews      || false,
     allowGuestSignup: data?.allowGuestSignup !== false,
   });
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
 
   const ITEMS = [
-    { key: 'showGuestList',    label: 'Guest list',          hint: 'Show attendee list on event pages' },
-    { key: 'showWaitlist',     label: 'Waitlist',            hint: 'Let guests join waitlist for sold-out events' },
-    { key: 'showSeatingChart', label: 'Seating chart',       hint: 'Visual seating selection at checkout', proOnly: true },
-    { key: 'showSocialShare',  label: 'Social sharing',      hint: 'Share buttons on event pages' },
-    { key: 'showReviews',      label: 'Reviews',             hint: 'Post-event review prompts and display' },
-    { key: 'allowGuestSignup', label: 'Guest self-checkout', hint: 'Allow ticket purchase without an account' },
+    { key: 'showGuestList',    label: 'Guest list',          hint: 'Show the attendee list on public event pages' },
+    { key: 'showWaitlist',     label: 'Waitlist',            hint: 'Let guests join a waitlist when an event is full' },
+    { key: 'showSocialShare',  label: 'Social sharing',      hint: 'Share / copy-link button on guest invite pages' },
+    { key: 'allowGuestSignup', label: 'Guest self-checkout', hint: 'Allow ticket purchase without a PlanIt account' },
   ];
 
   const save = async () => {
@@ -493,7 +491,8 @@ function FeaturesSection({ data, tier, token, onUpdate, toast }) {
       if (!r.ok) throw new Error(j.error || 'Save failed');
       onUpdate('features', j.features);
       setSaved(true);
-      toast('Features saved', 'success');
+      toast('Features saved ✓', 'success');
+      onRefresh && onRefresh();
       setTimeout(() => setSaved(false), 3000);
     } catch (e) { toast(e.message, 'error'); }
     finally { setSaving(false); }
@@ -746,7 +745,7 @@ function LoginScreen({ wl, onLogin }) {
 
 // ─── Main ClientPortal ────────────────────────────────────────────────────────
 export default function ClientPortal() {
-  const { wl, isWL, resolved } = useWhiteLabel();
+  const { wl, isWL, resolved, refresh: refreshWL } = useWhiteLabel();
   const [token, setToken]    = useState(null);
   const [client, setClient]  = useState(null);
   const [data, setData]      = useState({ branding: {}, pages: {}, features: {} });
@@ -908,13 +907,13 @@ export default function ClientPortal() {
         {/* Content */}
         <main className="flex-1 p-6 max-w-2xl w-full mx-auto">
           {section === 'branding' && (
-            <BrandingSection data={data.branding} tier={tier} token={token} onUpdate={handleUpdate} toast={showToast} />
+            <BrandingSection data={data.branding} tier={tier} token={token} onUpdate={handleUpdate} toast={showToast} onRefresh={refreshWL} />
           )}
           {section === 'pages' && (
-            <PagesSection data={data.pages} token={token} onUpdate={handleUpdate} toast={showToast} />
+            <PagesSection data={data.pages} token={token} onUpdate={handleUpdate} toast={showToast} onRefresh={refreshWL} />
           )}
           {section === 'features' && (
-            <FeaturesSection data={data.features} tier={tier} token={token} onUpdate={handleUpdate} toast={showToast} />
+            <FeaturesSection data={data.features} tier={tier} token={token} onUpdate={handleUpdate} toast={showToast} onRefresh={refreshWL} />
           )}
           {section === 'security' && (
             <SecuritySection token={token} toast={showToast} />
