@@ -54,6 +54,7 @@ const dataRetentionRoutes = require('./routes/dataRetention7Days');
 const meshRoutes        = require('./routes/mesh');
 const seatingRoutes     = require('./routes/seating');   // NEW
 const whiteLabelRoutes  = require('./routes/whitelabel');
+const { router: wlPortalRoutes } = require('./routes/wl-portal');
 
 const { apiLimiter }             = require('./middleware/rateLimiter');
 const { errorHandler }           = require('./middleware/errorHandler');
@@ -307,6 +308,7 @@ app.use('/api/events',    checkinRoutes);
 app.use('/api/events',    dataRetentionRoutes);
 app.use('/api/events',    seatingRoutes);     // NEW: seating map CRUD
 app.use('/api/whitelabel', whiteLabelRoutes);  // White label tenant management
+app.use('/api/wl-portal', wlPortalRoutes);     // WL client self-service portal
 
 const frontendUrls = (process.env.FRONTEND_URL || '')
   .split(',').map(u => u.trim()).filter(Boolean);
