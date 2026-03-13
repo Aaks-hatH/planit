@@ -10,10 +10,17 @@ import toast from 'react-hot-toast';
 import { formatDateInTimezone } from '../utils/timezoneUtils';
 import { motion } from 'framer-motion';
 import StarBackground from '../components/StarBackground';
+import { useWhiteLabel } from '../context/WhiteLabelContext';
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
 export default function GuestInvite() {
+  const { wl, isWL } = useWhiteLabel();
+  const wlFeatures = isWL ? (wl?.features || {}) : {};
+  // Feature flags — default to true (show) if not on a WL domain
+  const showSocialShare = !isWL || wlFeatures.showSocialShare !== false;
+  const showGuestList   = !isWL || wlFeatures.showGuestList   !== false;
+  const showWaitlist    = !isWL || wlFeatures.showWaitlist    !== false;
   const { inviteCode } = useParams();
   const navigate = useNavigate();
   const [invite, setInvite] = useState(null);
@@ -225,13 +232,13 @@ export default function GuestInvite() {
                 <p className="text-xs text-neutral-500">Event Management</p>
               </div>
             </div>
-            <button
+            {showSocialShare && (<button
               onClick={handleCopyLink}
               className="flex items-center gap-2 px-4 py-2 bg-neutral-800/60 hover:bg-neutral-700/60 border border-neutral-700 rounded-xl text-sm font-medium text-neutral-300 transition-all"
             >
               {copied ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
               {copied ? 'Copied!' : 'Share'}
-            </button>
+            </button>)}
           </div>
         </motion.header>
 
@@ -483,10 +490,12 @@ export default function GuestInvite() {
                       <CalendarPlus className="w-5 h-5" /> Add to Calendar
                     </button>
                   )}
+{showSocialShare && (
                   <button onClick={handleCopyLink} className="flex items-center justify-center gap-2 px-6 py-4 bg-neutral-800/50 hover:bg-neutral-700/50 border border-neutral-700 rounded-xl font-semibold text-neutral-200 transition-all">
                     {copied ? <Check className="w-5 h-5 text-emerald-400" /> : <Share2 className="w-5 h-5" />}
                     {copied ? 'Link Copied!' : 'Share Invite'}
                   </button>
+)}
                 </div>
               </div>
 
