@@ -175,6 +175,8 @@ router.get('/resolve', async (req, res) => {
       tier:         wl.tier,
       status:       wl.status,
       branding:     wl.branding,
+      features:     wl.features || {},
+      pages:        wl.pages    || {},
       licenseKey:   wl.licenseKey,
       keyExpiresAt: wl.keyExpiresAt,
     });
