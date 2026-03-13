@@ -92,8 +92,9 @@ export function WhiteLabelProvider({ children }) {
           return;
         }
         if (r.status === 403) {
-          // Domain is registered but suspended/cancelled — show suspended page
-          // We still get branding back so the page can look branded
+          // Domain is registered but suspended/cancelled — show suspended page.
+          // Also nuke any cached heartbeat pass so it doesn't confuse future checks.
+          try { localStorage.removeItem(HB_KEY); } catch { /* ignore */ }
           const data = await r.json().catch(() => ({}));
           if (!cancelled) setState({
             wl: data,
