@@ -56,6 +56,7 @@ function setCachedHB(domain, ok) {
 const WhiteLabelContext = createContext({
   wl: null, isWL: false, resolved: false,
   blocked: false, blockReason: null,
+  features: {}, pages: {},
 });
 
 export function useWhiteLabel() {
@@ -65,6 +66,7 @@ export function useWhiteLabel() {
 export function WhiteLabelProvider({ children }) {
   const [state, setState] = useState({
     wl: null, isWL: false, resolved: false, blocked: false, blockReason: null,
+    features: {}, pages: {},
   });
 
   useEffect(() => {
@@ -128,7 +130,7 @@ export function WhiteLabelProvider({ children }) {
       // 2. Check cache — only trust cached PASSES (ok: true)
       const cached = getCachedHB(hostname);
       if (cached && cached.ok) {
-        if (!cancelled) setState({ wl: branding, isWL: true, resolved: true, blocked: false, blockReason: null });
+        if (!cancelled) setState({ wl: branding, isWL: true, resolved: true, blocked: false, blockReason: null, features: branding?.features || {}, pages: branding?.pages || {} });
         return;
       }
 
@@ -159,18 +161,18 @@ export function WhiteLabelProvider({ children }) {
           // Server error — fail open, don't kill a live site over a blip
           console.warn('[WL] heartbeat server error', r.status, '— failing open');
           setCachedHB(hostname, true);
-          if (!cancelled) setState({ wl: branding, isWL: true, resolved: true, blocked: false, blockReason: null });
+          if (!cancelled) setState({ wl: branding, isWL: true, resolved: true, blocked: false, blockReason: null, features: branding?.features || {}, pages: branding?.pages || {} });
           return;
         }
 
         // Valid
         setCachedHB(hostname, true);
-        if (!cancelled) setState({ wl: branding, isWL: true, resolved: true, blocked: false, blockReason: null });
+        if (!cancelled) setState({ wl: branding, isWL: true, resolved: true, blocked: false, blockReason: null, features: branding?.features || {}, pages: branding?.pages || {} });
 
       } catch {
         // Network error — fail open
         console.warn('[WL] heartbeat network error — failing open');
-        if (!cancelled) setState({ wl: branding, isWL: true, resolved: true, blocked: false, blockReason: null });
+        if (!cancelled) setState({ wl: branding, isWL: true, resolved: true, blocked: false, blockReason: null, features: branding?.features || {}, pages: branding?.pages || {} });
       }
     }
 
