@@ -234,6 +234,8 @@ export default function ReservePage() {
   const { subdomain } = useParams();
   const navigate = useNavigate();
   const { wl, isWL } = useWhiteLabel();
+  const wlFeatures = isWL ? (wl?.features || {}) : {};
+  const showSocialShare = !isWL || wlFeatures.showSocialShare !== false;
 
   const [config, setConfig]   = useState(null);
   const [loading, setLoading] = useState(true);
