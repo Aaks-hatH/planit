@@ -1032,6 +1032,7 @@ const CATEGORIES = [
   { label: 'Planning Tools',        icon: Calendar,        id: 'Planning Tools' },
   { label: 'Enterprise & Check-in', icon: UserCheck,       id: 'Enterprise & Check-in' },
   { label: 'Table Service',         icon: UtensilsCrossed, id: 'Table Service' },
+  { label: 'White Label & Branding', icon: Globe,          id: 'White Label & Branding' },
   { label: 'Security & Passwords',  icon: Shield,          id: 'Security & Passwords' },
   { label: 'Data & Privacy',        icon: Database,        id: 'Data & Privacy' },
   { label: 'Errors & Troubleshooting', icon: AlertTriangle, id: 'Errors & Troubleshooting' },
@@ -2485,6 +2486,322 @@ const ARTICLES_EXTRA = [
         type: 'callout',
         variant: 'warning',
         text: 'All analytics data is deleted permanently 7 days after the event date. Take screenshots or note the key figures before the deletion window. There is no export button — manual capture is the current method.'
+      }
+    ]
+  },
+
+  // ── WHITE LABEL & BRANDING ─────────────────────────────────────────────
+  {
+    id: 'wl-overview',
+    category: 'White Label & Branding',
+    title: 'What is the white label platform?',
+    icon: Globe,
+    tags: ['white label', 'custom domain', 'branding', 'branded', 'reseller', 'own brand', 'logo', 'colours'],
+    content: [
+      {
+        type: 'intro',
+        text: 'The PlanIt white label gives your business the full PlanIt event management platform running on your own custom domain — with your logo, your colours, and your company name. Your guests and staff see only your brand, not PlanIt\'s.'
+      },
+      {
+        type: 'steps',
+        items: [
+          { title: 'Your own domain', body: 'Instead of guests visiting planitapp.onrender.com, they visit your domain — for example, events.yourvenuehere.com or reservations.yourrestaurant.com. Everything that PlanIt does is available there, under your brand.' },
+          { title: 'Full platform, your branding', body: 'All PlanIt features are available on your domain: event workspaces, Enterprise check-in, Table Service, real-time tools, and QR codes. Your logo, brand colours, and font replace PlanIt\'s defaults across every page.' },
+          { title: 'Licence-bound and verified', body: 'Your domain is tied to a signed licence key that the platform verifies automatically on every visit (called a "heartbeat"). This keeps the platform secure and ensures your subscription is current. You never see this process — it happens invisibly in under a second.' },
+          { title: 'Your dashboard', body: 'You get a private client dashboard at yourdomain.com/dashboard where you can update branding, customise page content, manage feature toggles, and change your portal password — without needing to contact PlanIt support for most updates.' },
+        ]
+      },
+      {
+        type: 'callout',
+        variant: 'info',
+        text: 'White label is different from creating a regular PlanIt event. It is a subscription product that gives your entire business a branded copy of the platform. Individual events are still created the same way — from the home page of your domain.'
+      },
+      {
+        type: 'faq',
+        items: [
+          { q: 'Do my guests know they are using PlanIt?', a: 'On Pro and Enterprise tiers, no — the "Powered by PlanIt" badge is hidden and the branding is entirely yours. On the Basic tier, a small "Powered by PlanIt" badge appears at the bottom of pages.' },
+          { q: 'Can I have multiple events on my domain?', a: 'Yes. Your domain supports unlimited events created through the home page (subject to your tier\'s event limits). Each event gets its own workspace link under your domain.' },
+          { q: 'Is the platform the same as the main PlanIt app?', a: 'Yes — it is the same software, same features, same reliability. Only the visual branding changes. You receive every update PlanIt ships automatically.' },
+          { q: 'What happens if my subscription lapses?', a: 'If your subscription expires or is suspended, visitors to your domain see a branded suspension page with your company name. They cannot access the platform until the subscription is renewed.' },
+        ]
+      }
+    ]
+  },
+  {
+    id: 'wl-dashboard-login',
+    category: 'White Label & Branding',
+    title: 'Accessing your branded dashboard',
+    icon: Key,
+    tags: ['dashboard', 'login', 'portal', 'client portal', 'password', 'session', 'white label'],
+    content: [
+      {
+        type: 'intro',
+        text: 'Your private client dashboard lives at /dashboard on your custom domain. It is the control panel for your branded platform — branding, page content, feature toggles, and account security. Access is password-protected and separate from your event organizer accounts.'
+      },
+      {
+        type: 'steps',
+        items: [
+          { title: 'Navigate to your dashboard', body: 'Open a browser and go to yourdomain.com/dashboard — replacing "yourdomain.com" with your actual custom domain. If your domain is events.mycompany.com, the URL is events.mycompany.com/dashboard.' },
+          { title: 'Enter your portal password', body: 'Type the portal password that was provided to you when your white label account was set up. This is different from any event organizer password. If you have never received a portal password, contact PlanIt support.' },
+          { title: 'Log in', body: 'Click "Sign in". If the password is correct you are taken to the dashboard immediately. Your session is valid for 8 hours. After 8 hours you are automatically logged out and will need to re-enter your password.' },
+          { title: 'Navigate the dashboard sections', body: 'The left sidebar has five sections: Branding (logo, colours, font), Pages (homepage and contact content), Features (toggle platform capabilities), Security (change your portal password), and Activity (your login history).' },
+          { title: 'Log out when finished', body: 'Click the logout button at the bottom of the sidebar when you are done. Because the session lives in your browser tab only, closing the tab also ends the session automatically.' },
+        ]
+      },
+      {
+        type: 'callout',
+        variant: 'warning',
+        text: 'After 5 consecutive failed login attempts your portal is locked for 15 minutes. If you are locked out, wait 15 minutes before trying again. If you have forgotten your portal password entirely, contact PlanIt support — it cannot be self-reset.'
+      },
+      {
+        type: 'callout',
+        variant: 'info',
+        text: 'The dashboard is only accessible from your custom domain — not from planitapp.onrender.com. If you visit /dashboard on the main PlanIt site, you will see a "not a white-label domain" message. Always log in from your own domain.'
+      }
+    ]
+  },
+  {
+    id: 'wl-branding',
+    category: 'White Label & Branding',
+    title: 'Customising your branding: logo, colours, and fonts',
+    icon: Settings,
+    tags: ['branding', 'logo', 'colour', 'color', 'font', 'favicon', 'powered by', 'custom css', 'white label', 'design'],
+    content: [
+      {
+        type: 'intro',
+        text: 'The Branding section of your dashboard controls how your platform looks to every visitor on your domain. Changes apply globally across all pages the moment a visitor loads or reloads the site.'
+      },
+      {
+        type: 'steps',
+        items: [
+          { title: 'Company name', body: 'This is the name shown in the browser tab title and throughout the platform header. Set it to your business name exactly as you want customers to see it.' },
+          { title: 'Logo URL', body: 'Paste a direct link to your logo image (PNG or SVG recommended). The image should be hosted somewhere publicly accessible — for example, in your website\'s CDN, an S3 bucket, or an image hosting service like Cloudinary. The URL must start with https://. The logo appears in the platform header on every page.' },
+          { title: 'Favicon URL', body: 'Paste a link to your favicon — the small icon that appears in the browser tab. A 32×32 or 64×64 PNG or ICO file works best. Leave blank to use a generic icon.' },
+          { title: 'Primary and accent colours', body: 'Enter hex colour codes (e.g. #1a56db) for your brand colours. The primary colour is used for buttons, links, and key interactive elements. The accent colour is used for hover states and secondary highlights. Use your existing brand guidelines or website colours to keep everything consistent.' },
+          { title: 'Font family', body: 'Choose a font family name from Google Fonts or system fonts (e.g. Inter, Poppins, Georgia, "Times New Roman"). The font loads automatically via CSS. If you specify a Google Font, it will render correctly as long as visitors have internet access. Stick to widely available fonts for the best reliability.' },
+          { title: 'Hide "Powered by PlanIt" (Pro and Enterprise only)', body: 'Toggle this on to remove the PlanIt attribution badge from the platform. On the Basic tier this option is greyed out and cannot be enabled.' },
+          { title: 'Custom CSS (Enterprise only)', body: 'Enterprise clients can paste raw CSS that is injected into every page on the domain. Use this for deep style overrides beyond what the colour and font fields offer. Be careful — incorrect CSS can break the layout. Always test changes on a non-critical page first.' },
+          { title: 'Save your changes', body: 'Click "Save changes" when you are done. You will see a green confirmation. Changes apply immediately — any new visitor (or an existing visitor who reloads the page) will see the updated branding. There is no publish step.' },
+        ]
+      },
+      {
+        type: 'callout',
+        variant: 'info',
+        text: 'If you update your colours or logo and do not see the change immediately, try a hard refresh (Ctrl+Shift+R on Windows/Linux, Cmd+Shift+R on Mac). The platform caches the licence check for up to one hour in the browser to avoid repeated network calls — a hard refresh bypasses this cache and forces a fresh branding fetch.'
+      },
+      {
+        type: 'callout',
+        variant: 'warning',
+        text: 'Logo and favicon URLs must point to images that are publicly accessible at all times. If the hosting URL goes down or the image is deleted, your logo will disappear for all visitors. Do not use temporary upload links or localhost URLs.'
+      }
+    ]
+  },
+  {
+    id: 'wl-domain',
+    category: 'White Label & Branding',
+    title: 'How your custom domain works',
+    icon: Link,
+    tags: ['domain', 'dns', 'custom domain', 'heartbeat', 'licence', 'CNAME', 'SSL', 'certificate', 'suspended'],
+    content: [
+      {
+        type: 'intro',
+        text: 'Your custom domain is the address your customers and staff use to access the platform. Understanding how the domain, DNS, and licence verification work helps you troubleshoot problems and plan around your setup.'
+      },
+      {
+        type: 'steps',
+        items: [
+          { title: 'DNS setup (handled by PlanIt support)', body: 'The DNS configuration that points your domain at the PlanIt infrastructure is set up during onboarding by the PlanIt team. You typically need to add a CNAME record in your domain registrar pointing your subdomain (e.g. events.yourcompany.com) at the PlanIt servers. Exact instructions are provided during setup. You do not need to touch DNS after initial setup unless you are changing domain registrars.' },
+          { title: 'SSL certificate', body: 'HTTPS is provisioned automatically when your domain is registered with PlanIt. All traffic to your domain is encrypted. You do not manage the certificate yourself.' },
+          { title: 'Licence heartbeat', body: 'Every time someone loads your platform, the frontend silently calls the PlanIt API to verify your licence is current and not tampered with. This takes less than a second and is invisible to users. A successful check is cached locally for one hour, so repeat page loads are instant — only one network call per hour per browser.' },
+          { title: 'What routes are available', body: 'All PlanIt routes work on your domain. The home page (/) shows the event creation form. Event workspaces live at /e/your-event-slug. Enterprise check-in is at /e/slug/checkin. Table Service floor management is at /e/slug/floor. Reservations are at /e/slug/reserve. Your dashboard is at /dashboard.' },
+          { title: 'What happens if the licence is suspended', body: 'If your subscription is paused or cancelled, visitors to your domain immediately see a suspension page with your company name and a message asking them to contact you. Staff cannot access event workspaces until the subscription is reinstated. Your data is preserved during suspension.' },
+          { title: 'What happens if the licence expires', body: 'If the licence key passes its expiry date (independent of billing — this is a cryptographic expiry), visitors see an "Subscription Expired" page. This is resolved by PlanIt renewing and reissuing your licence key, which happens automatically with active billing.' },
+        ]
+      },
+      {
+        type: 'callout',
+        variant: 'info',
+        text: 'If your domain suddenly stops loading or shows a generic error rather than your platform, check your domain registrar to make sure the CNAME record is still pointing correctly. Accidentally removing or changing the DNS record is the most common cause of domain outages.'
+      }
+    ]
+  },
+  {
+    id: 'wl-tiers',
+    category: 'White Label & Branding',
+    title: 'Subscription tiers: Basic, Pro, and Enterprise',
+    icon: TrendingUp,
+    tags: ['tier', 'plan', 'basic', 'pro', 'enterprise', 'limits', 'events', 'guests', 'pricing', 'subscription'],
+    content: [
+      {
+        type: 'intro',
+        text: 'White label subscriptions come in three tiers. Your current tier is shown in the top-left of your dashboard. The tier determines your branding options, event and guest limits, and access to advanced features.'
+      },
+      {
+        type: 'compare',
+        items: [
+          {
+            label: 'Basic',
+            color: 'neutral',
+            desc: 'Custom domain and logo with core branding. "Powered by PlanIt" badge displayed.',
+            features: [
+              'Custom domain',
+              'Your logo and brand colours',
+              'Custom font family',
+              'Up to 10 events at a time',
+              'Up to 500 guests per event',
+              'Up to 3 organizer accounts',
+              '"Powered by PlanIt" badge shown',
+            ],
+            best: 'Small venues, boutique event organizers, getting started'
+          },
+          {
+            label: 'Pro',
+            color: 'indigo',
+            desc: 'Full white label — no PlanIt branding anywhere. Ideal for established businesses.',
+            features: [
+              'Everything in Basic',
+              '"Powered by PlanIt" badge hidden',
+              'Up to 50 events at a time',
+              'Up to 2,000 guests per event',
+              'Up to 10 organizer accounts',
+              'Priority support response',
+            ],
+            best: 'Hotels, mid-size venues, professional event companies'
+          },
+          {
+            label: 'Enterprise',
+            color: 'indigo',
+            desc: 'Maximum scale with dedicated infrastructure and custom contract terms.',
+            features: [
+              'Everything in Pro',
+              'Custom CSS injection for deep style control',
+              'Unlimited events',
+              'Unlimited guests per event',
+              'Unlimited organizer accounts',
+              'SLA guarantee',
+              'Dedicated infrastructure',
+              'Custom contract',
+            ],
+            best: 'Large hotel chains, convention centres, enterprise event platforms'
+          }
+        ]
+      },
+      {
+        type: 'callout',
+        variant: 'info',
+        text: 'Your current tier and its limits are visible in the top-left corner of your dashboard. If you need to upgrade, contact PlanIt support. Upgrades are applied to the same domain without any downtime or DNS changes.'
+      },
+      {
+        type: 'faq',
+        items: [
+          { q: 'What happens if I hit my event limit?', a: 'The home page event creation form will not allow new events to be created once you reach your tier\'s maximum active event count. You will need to delete old events or upgrade your tier to create more.' },
+          { q: 'What counts as an "event"?', a: 'Any event workspace created on your domain counts toward your limit regardless of mode (Standard, Enterprise, or Table Service). Deleted events do not count.' },
+          { q: 'Can I downgrade my tier?', a: 'Downgrades are handled by PlanIt support. Contact support@planit to discuss. Note that downgrading from Pro to Basic will re-enable the "Powered by PlanIt" badge automatically.' },
+        ]
+      }
+    ]
+  },
+  {
+    id: 'wl-features',
+    category: 'White Label & Branding',
+    title: 'Managing platform features',
+    icon: LayoutGrid,
+    tags: ['features', 'toggle', 'guest list', 'waitlist', 'seating chart', 'social share', 'reviews', 'dashboard', 'white label'],
+    content: [
+      {
+        type: 'intro',
+        text: 'The Features section of your dashboard lets you turn platform capabilities on or off for your customers. Changes apply across your entire domain after saving.'
+      },
+      {
+        type: 'steps',
+        items: [
+          { title: 'Open the Features section', body: 'In your dashboard sidebar, click "Features" (the toggle icon). You will see a list of capabilities with on/off toggles.' },
+          { title: 'Guest list', body: 'When enabled, the attendee list is visible on event pages. When disabled, guests cannot see who else is attending an event. Organizers can always see the list regardless of this setting.' },
+          { title: 'Waitlist', body: 'When enabled, a "Join waitlist" option appears on sold-out or fully-checked-in events so guests can register interest. When disabled, no waitlist option is shown.' },
+          { title: 'Seating chart (Pro and Enterprise only)', body: 'Enables the visual seating selection interface during event setup. This is locked to Basic-tier clients. On Basic, the toggle appears greyed out with a "Pro+" badge.' },
+          { title: 'Social sharing', body: 'When enabled, share buttons (copy link, native share sheet on mobile) appear on event pages. When disabled, no sharing prompts appear.' },
+          { title: 'Reviews', body: 'When enabled, a post-event review prompt is shown to attendees after the event date passes. When disabled, no review prompts appear.' },
+          { title: 'Guest self-checkout', body: 'When enabled, guests can RSVP or reserve without creating an account. When disabled, guests must log in before completing a reservation or RSVP.' },
+          { title: 'Save your changes', body: 'Click "Save changes" when done. A green confirmation toast appears. The changes take effect on your domain immediately for new page loads.' },
+        ]
+      },
+      {
+        type: 'callout',
+        variant: 'info',
+        text: 'Features only affect the guest-facing side of your platform. Organizer and staff tools (check-in dashboard, floor management, analytics) are always available to logged-in organizers regardless of feature settings.'
+      }
+    ]
+  },
+  {
+    id: 'wl-pages',
+    category: 'White Label & Branding',
+    title: 'Customising your homepage and page content',
+    icon: FileText,
+    tags: ['pages', 'homepage', 'headline', 'subheadline', 'CTA', 'contact', 'content', 'copy', 'text', 'white label'],
+    content: [
+      {
+        type: 'intro',
+        text: 'The Pages section of your dashboard lets you customise the text content of key pages on your platform. You can personalise the homepage headline, the call-to-action button, your contact details, and messages shown during checkout — without touching any code.'
+      },
+      {
+        type: 'steps',
+        items: [
+          { title: 'Open the Pages section', body: 'Click "Pages" in your dashboard sidebar. You will see tabs for different pages: Home, Events, Checkout, and Contact.' },
+          { title: 'Home page — Headline', body: 'This is the large text at the top of your platform\'s home page. Make it relevant to your business: "Book a table at The Grand Room" or "Manage your events with us" both work well. Keep it under 80 characters for best display on mobile.' },
+          { title: 'Home page — Subheadline', body: 'A short supporting line that appears under the headline. Use it to communicate your value proposition, operating hours, or a friendly welcome. Keep it under 150 characters.' },
+          { title: 'Home page — CTA button text', body: 'This is the label on the primary call-to-action button on the home page. Default is "Get Started". You can change it to something more specific like "Book a Table", "Reserve Your Seat", or "Create Your Event".' },
+          { title: 'Events page — Headline', body: 'The title shown at the top of the event listing page. Change it to "Upcoming Events" or "Reserve a Session" — whatever fits your context.' },
+          { title: 'Events page — Empty state text', body: 'The message shown when there are no active events. Use it to reassure visitors: "Check back soon — new dates are being added regularly" or "No tables available tonight. Call us at 555-1234 to enquire."' },
+          { title: 'Checkout — Header note', body: 'A short note shown at the top of the reservation/checkout flow. Use it for policies: "Reservations are held for 15 minutes. A credit card is required to confirm." Keep it under 200 characters.' },
+          { title: 'Checkout — Success headline and message', body: 'Customise what guests see after a successful reservation. The headline might be "You\'re confirmed!" and the message could include your cancellation policy, directions, or a warm welcome note.' },
+          { title: 'Contact details', body: 'Enter your business email, phone number, and address. These appear in the contact section of your platform and in confirmation emails. Keeping these up to date means guests can always reach you directly.' },
+          { title: 'Save', body: 'Each page tab has its own Save button. Make sure to save each tab separately if you edit multiple pages in one session.' },
+        ]
+      },
+      {
+        type: 'callout',
+        variant: 'info',
+        text: 'If you leave a field blank, the platform falls back to sensible defaults — so you only need to fill in the fields that matter for your business. You can update page content as often as you like with no downtime.'
+      },
+      {
+        type: 'callout',
+        variant: 'warning',
+        text: 'Page content changes are not immediately visible if your visitors have the page open. Advise staff to reload their browser after you make changes. There is no caching of page text — a normal page reload (F5) is sufficient.'
+      }
+    ]
+  },
+  {
+    id: 'wl-security',
+    category: 'White Label & Branding',
+    title: 'Dashboard security and changing your portal password',
+    icon: Lock,
+    tags: ['password', 'portal password', 'change password', 'security', 'login', 'lockout', 'activity', 'audit', 'white label'],
+    content: [
+      {
+        type: 'intro',
+        text: 'Your dashboard is protected by a portal password that is separate from any PlanIt event organizer account. The Security section lets you change this password and review recent login activity.'
+      },
+      {
+        type: 'steps',
+        items: [
+          { title: 'Open the Security section', body: 'Click "Security" in your dashboard sidebar (the lock icon). You will see a password change form and, below it, your recent login audit log.' },
+          { title: 'Change your portal password', body: 'Enter your current password in the first field to confirm your identity. Then enter your new password in the "New password" and "Confirm new password" fields. Your new password must be at least 12 characters. Click "Update password" to apply the change. You will remain logged in with the new password taking effect immediately.' },
+          { title: 'Review the activity log', body: 'The Activity tab shows the last 20 login attempts for your dashboard — including the timestamp, IP address, and whether the attempt succeeded or failed. Review this periodically. If you see successful logins from IP addresses you do not recognise, change your password immediately.' },
+          { title: 'What to do if you suspect unauthorised access', body: 'Change your portal password immediately from the Security section. Then review the Activity log to understand when access occurred. Contact PlanIt support if you believe the intrusion affected your event data or guest information.' },
+        ]
+      },
+      {
+        type: 'callout',
+        variant: 'warning',
+        text: 'If you forget your current portal password, you cannot change it yourself — there is no "forgot password" flow in the dashboard. Contact PlanIt support to reset your portal password. For this reason, store it securely (a password manager is strongly recommended).'
+      },
+      {
+        type: 'faq',
+        items: [
+          { q: 'How long is a dashboard session?', a: 'Sessions last 8 hours from the moment you log in. After 8 hours you are automatically signed out and must log in again. Closing the browser tab also ends the session.' },
+          { q: 'Can multiple people use the dashboard at the same time?', a: 'Yes. The portal password can be shared among your team. All logged-in sessions are independent. There is no multi-user access control within the portal — everyone who knows the password has full access.' },
+          { q: 'What happens after 5 wrong password attempts?', a: 'The portal is locked for 15 minutes after 5 consecutive failures. This applies per IP address and per portal account. Wait 15 minutes before trying again.' },
+        ]
       }
     ]
   },
