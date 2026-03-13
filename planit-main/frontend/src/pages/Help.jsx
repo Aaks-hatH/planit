@@ -3685,21 +3685,6 @@ const ARTICLES_EXTRA = [
 
 ];
 
-const CATEGORIES = [
-  { label: 'All Articles',          icon: BookOpen,        id: 'all' },
-  { label: 'Getting Started',       icon: Star,            id: 'Getting Started' },
-  { label: 'Planning Tools',        icon: Calendar,        id: 'Planning Tools' },
-  { label: 'Enterprise & Check-in', icon: UserCheck,       id: 'Enterprise & Check-in' },
-  { label: 'Table Service',         icon: UtensilsCrossed, id: 'Table Service' },
-  { label: 'White Label & Branding', icon: Globe,          id: 'White Label & Branding' },
-  { label: 'Security & Passwords',  icon: Shield,          id: 'Security & Passwords' },
-  { label: 'Data & Privacy',        icon: Database,        id: 'Data & Privacy' },
-  { label: 'Errors & Troubleshooting', icon: AlertTriangle, id: 'Errors & Troubleshooting' },
-  { label: 'Status & Monitoring',   icon: Activity,        id: 'Status & Monitoring' },
-  { label: 'Settings & Customisation', icon: Settings,     id: 'Settings & Customisation' },
-  { label: 'Contact & Support',     icon: LifeBuoy,        id: 'Contact & Support' },
-];
-
 ARTICLES.push(...ARTICLES_EXTRA);
 
 const POPULAR = ['gs-create', 'err-service-crash', 'err-loading', 'err-password', 'ent-checkin', 'data-retention', 'ts-overview', 'ts-waitlist'];
