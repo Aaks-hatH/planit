@@ -10,6 +10,7 @@ import {
 import { eventAPI } from '../services/api';
 import toast from 'react-hot-toast';
 import { motion } from 'framer-motion';
+import { useWhiteLabel } from '../context/WhiteLabelContext';
 
 /*
 PLANIT SOFTWARE LICENSE AGREEMENT
@@ -1133,6 +1134,18 @@ import StarBackground from '../components/StarBackground';
 // 
 
 export default function Home() {
+  const { wl, isWL } = useWhiteLabel();
+  const wlName    = isWL ? (wl?.branding?.companyName || wl?.clientName || '') : '';
+  const wlLogo    = isWL ? (wl?.branding?.logoUrl    || '') : '';
+  const wlPrimary = isWL ? (wl?.branding?.primaryColor || '') : '';
+  // Pages content from WL portal
+  const wlPages   = isWL ? (wl?.pages  || {}) : {};
+  const wlFeatures= isWL ? (wl?.features || {}) : {};
+  // Home page overrides
+  const heroHeadline    = wlPages?.home?.headline    || '';
+  const heroSubheadline = wlPages?.home?.subheadline || '';
+  const heroCta         = wlPages?.home?.ctaText     || '';
+  const heroImage       = wlPages?.home?.heroImageUrl|| '';
   const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [mode, setMode] = useState('standard');
@@ -1147,6 +1160,8 @@ export default function Home() {
   const [showAccountPassword, setShowAccountPassword] = useState(false);
   const [fieldErrors, setFieldErrors] = useState({});
   const [selectedBranch, setSelectedBranch] = useState(null); // null | 'events' | 'venue'
+  // On white-label domains, skip the branch selector and go straight to event creation
+  useEffect(() => { if (isWL) { setSelectedBranch('events'); } }, [isWL]);
   const [showLoader,     setShowLoader]     = useState(() => { try { return !sessionStorage.getItem('planit_loaded'); } catch { return true; } });
 
   const selectBranch = (branch) => {
@@ -1443,16 +1458,22 @@ export default function Home() {
           <div className="flex items-center gap-3">
             {/* ── Events brand: visible outside Venue section ── */}
             <div style={{ display: selectedBranch === 'venue' ? 'none' : 'flex' }} className="items-center gap-3 transition-opacity duration-300">
-              <div className="relative">
-                <div className="w-9 h-9 rounded-2xl bg-neutral-800 border border-neutral-700 flex items-center justify-center">
-                  <Calendar className="w-5 h-5 text-neutral-300" />
-                </div>
-                <div className="absolute -top-1 -right-1 w-3 h-3 bg-emerald-500 rounded-full border-2 border-[#06060c] animate-pulse" />
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="text-xl font-bold text-white">PlanIt</span>
-                <span className="hidden sm:block px-2 py-0.5 rounded-md text-[10px] font-bold bg-neutral-800 border border-neutral-700 text-neutral-400 uppercase tracking-wider">Events</span>
-              </div>
+              {isWL && wlLogo ? (
+                <img src={wlLogo} alt={wlName} className="h-8 object-contain" />
+              ) : (
+                <>
+                  <div className="relative">
+                    <div className="w-9 h-9 rounded-2xl bg-neutral-800 border border-neutral-700 flex items-center justify-center">
+                      <Calendar className="w-5 h-5 text-neutral-300" />
+                    </div>
+                    {!isWL && <div className="absolute -top-1 -right-1 w-3 h-3 bg-emerald-500 rounded-full border-2 border-[#06060c] animate-pulse" />}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xl font-bold text-white">{isWL ? wlName : 'PlanIt'}</span>
+                    {!isWL && <span className="hidden sm:block px-2 py-0.5 rounded-md text-[10px] font-bold bg-neutral-800 border border-neutral-700 text-neutral-400 uppercase tracking-wider">Events</span>}
+                  </div>
+                </>
+              )}
             </div>
             {/* ── Venue brand: visible only in Venue section ── */}
             <div style={{ display: selectedBranch === 'venue' ? 'flex' : 'none' }} className="items-center gap-3 transition-opacity duration-300">
@@ -1460,8 +1481,8 @@ export default function Home() {
                 <UtensilsCrossed className="w-5 h-5 text-orange-400" />
               </div>
               <div className="flex items-center gap-2">
-                <span className="text-xl font-bold text-white">PlanIt</span>
-                <span className="hidden sm:block px-2 py-0.5 rounded-md text-[10px] font-bold bg-orange-500/10 border border-orange-500/25 text-orange-400 uppercase tracking-wider">Venue</span>
+                <span className="text-xl font-bold text-white">{isWL ? wlName : 'PlanIt'}</span>
+                {!isWL && <span className="hidden sm:block px-2 py-0.5 rounded-md text-[10px] font-bold bg-orange-500/10 border border-orange-500/25 text-orange-400 uppercase tracking-wider">Venue</span>}
               </div>
             </div>
           </div>
@@ -1476,13 +1497,13 @@ export default function Home() {
               </button>
             )}
             {/* ── When NOT in Venue section: show Venue link ── */}
-            <a href="#planit-venue"
+            {!isWL && <a href="#planit-venue"
               onClick={(e) => { e.preventDefault(); selectBranch('venue'); }}
               style={{ display: selectedBranch === 'venue' ? 'none' : undefined }}
               className="hidden md:flex items-center gap-1.5 px-3 py-2 text-sm text-orange-400/80 hover:text-orange-300 hover:bg-orange-500/8 rounded-xl transition-all duration-200">
               <UtensilsCrossed className="w-3.5 h-3.5" />
               PlanIt Venue
-            </a>
+            </a>}
             {/* ── When IN Venue section: show Events link ── */}
             <a href="#planit-events"
               onClick={(e) => { e.preventDefault(); selectBranch('events'); }}
@@ -1527,7 +1548,7 @@ export default function Home() {
         {mobileMenuOpen && (
           <div className="md:hidden border-t border-neutral-800/60 px-4 py-3 space-y-1" style={{ background: 'rgba(6,6,12,0.98)' }}>
             <a href="#planit-venue" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-2.5 px-3 py-2.5 text-sm text-orange-400 hover:text-orange-300 hover:bg-orange-500/10 rounded-xl transition-all">
-              <UtensilsCrossed className="w-4 h-4" />PlanIt Venue
+              <UtensilsCrossed className="w-4 h-4" />{isWL ? 'Venue' : 'PlanIt Venue'}
             </a>
             <a href="/discover" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-2.5 px-3 py-2.5 text-sm text-neutral-300 hover:text-white hover:bg-neutral-800/60 rounded-xl transition-all">
               <Zap className="w-4 h-4 text-neutral-500" />Discover
@@ -1556,8 +1577,11 @@ export default function Home() {
       <main className="relative" style={{ zIndex: 2, overflowX: 'hidden', maxWidth: '100vw' }}>
         {/* HERO */}
         <section id="hero-top" className="relative min-h-screen flex items-center" style={{ overflow: 'hidden', maxWidth: '100vw' }}>
-          {/* Static starfield */}
-          <StarBackground fixed={false} />
+          {/* Background — hero image if WL sets one, otherwise starfield */}
+          {(isWL && heroImage)
+            ? <div className="absolute inset-0" style={{ backgroundImage: `url(${heroImage})`, backgroundSize: 'cover', backgroundPosition: 'center', opacity: 0.3 }} />
+            : <StarBackground fixed={false} />
+          }
           <div className="w-full relative z-10">
             <div className="max-w-6xl mx-auto px-4 sm:px-8 lg:px-12 py-20 sm:py-28 lg:py-36 text-center">
 
@@ -1568,11 +1592,11 @@ export default function Home() {
                 className="inline-flex items-center gap-3 mb-12"
               >
                 <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold border border-neutral-800/80 text-neutral-400 uppercase tracking-widest cursor-default" style={{ background: 'rgba(255,255,255,0.02)' }}>
-                  <Calendar className="w-3 h-3" />PlanIt Events
+                  <Calendar className="w-3 h-3" />{isWL ? 'Events' : 'PlanIt Events'}
                 </span>
                 <span className="text-neutral-700 text-sm">·</span>
                 <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold border border-orange-500/25 text-orange-400 uppercase tracking-widest cursor-default" style={{ background: 'rgba(249,115,22,0.06)' }}>
-                  <UtensilsCrossed className="w-3 h-3" />PlanIt Venue
+                  <UtensilsCrossed className="w-3 h-3" />{isWL ? 'Venue' : 'PlanIt Venue'}
                 </span>
               </motion.div>
 
@@ -1583,10 +1607,7 @@ export default function Home() {
                 className="font-black leading-[0.92] tracking-tight mb-8"
                 style={{ fontSize: 'clamp(2.5rem, 8.5vw, 7rem)' }}
               >
-                Make it{' '}
-                <span className="shimmer-slate">Effortless</span>
-                ,{' '}
-                <span className="shimmer-white">by design.</span>
+                {(isWL && heroHeadline) ? heroHeadline : <>Make it{' '}<span className="shimmer-slate">Effortless</span>,{' '}<span className="shimmer-white">by design.</span></>}
               </motion.h1>
 
               <motion.p
@@ -1595,7 +1616,7 @@ export default function Home() {
                 transition={{ duration: 0.7, delay: 0.42 }}
                 className="text-xl md:text-2xl text-neutral-300 max-w-2xl mx-auto leading-relaxed font-light mb-14"
               >
-                One platform, two branches. <span className="text-neutral-300 font-medium">PlanIt Events</span> for planning teams. <span className="text-orange-400 font-medium">PlanIt Venue</span> for restaurants &amp; hospitality.
+                {isWL ? (heroSubheadline || wlName || 'Your event platform') : <>One platform, two branches. <span className="text-neutral-300 font-medium">PlanIt Events</span> for planning teams. <span className="text-orange-400 font-medium">PlanIt Venue</span> for restaurants &amp; hospitality.</>}
               </motion.p>
 
               <motion.div
@@ -1606,7 +1627,7 @@ export default function Home() {
               >
                 <a href="#planit-events" onClick={(e) => { e.preventDefault(); selectBranch('events'); }} className="group inline-flex items-center justify-center gap-3 w-full sm:w-auto px-7 py-4 bg-white text-neutral-900 text-sm font-bold rounded-2xl hover:bg-neutral-100 hover:scale-105 transition-all duration-300 shadow-2xl">
                   <Calendar className="w-4 h-4" />
-                  PlanIt Events
+                  {(isWL && heroCta) ? heroCta : 'PlanIt Events'}
                   <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform duration-300" />
                 </a>
                 <a href="#planit-venue"
@@ -1653,12 +1674,12 @@ export default function Home() {
         {/* ═══════════════════════════════════════════════════════════
             BRANCH GATEWAY — two-panel split, one PlanIt family
         ═══════════════════════════════════════════════════════════ */}
-        <section className="relative border-t border-neutral-800/40 overflow-hidden" style={{ display: selectedBranch ? 'none' : 'block' }}>
+        <section className="relative border-t border-neutral-800/40 overflow-hidden" style={{ display: (selectedBranch || isWL) ? 'none' : 'block' }}>
           {/* Shared family label at top */}
           <div className="text-center py-10 relative z-10">
             <Reveal>
               <div className="inline-flex items-center gap-3 px-5 py-2.5 rounded-full border border-neutral-800" style={{ background: 'rgba(255,255,255,0.025)' }}>
-                <span className="text-[10px] font-black uppercase tracking-[0.25em] text-neutral-300">The PlanIt Family</span>
+                {!isWL && <span className="text-[10px] font-black uppercase tracking-[0.25em] text-neutral-300">The PlanIt Family</span>}
                 <span className="w-px h-3 bg-neutral-700" />
                 <span className="text-[10px] font-bold text-neutral-400">Two branches, one platform</span>
               </div>
@@ -1680,7 +1701,7 @@ export default function Home() {
                 <div className="relative mb-10">
                   <div className="inline-flex items-center gap-2.5 px-3.5 py-2 rounded-2xl border border-neutral-700/60 bg-neutral-800/60">
                     <Calendar className="w-3.5 h-3.5 text-neutral-400" />
-                    <span className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400">PlanIt Events</span>
+                    <span className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400">{isWL ? (wlName || 'Events') : 'PlanIt Events'}</span>
                   </div>
                 </div>
                 {/* Headline */}
@@ -1826,7 +1847,7 @@ export default function Home() {
                   <Calendar className="w-5 h-5 text-neutral-300" />
                 </div>
                 <div>
-                  <div className="text-[10px] font-black uppercase tracking-[0.3em] text-neutral-600">PlanIt</div>
+                  <div className="text-[10px] font-black uppercase tracking-[0.3em] text-neutral-600">{isWL ? '' : 'PlanIt'}</div>
                   <div className="text-lg font-black text-white tracking-tight leading-none">Events</div>
                 </div>
                 <div className="ml-2 h-px flex-1 bg-neutral-800" />
@@ -1846,7 +1867,7 @@ export default function Home() {
                   <span style={{ color: '#64748b' }}>Nothing you don't.</span>
                 </h2>
                 <p className="text-neutral-400 text-lg leading-relaxed mb-10 max-w-lg">
-                  From 6 months out to the final wrap-up. PlanIt Events is the workspace for the whole team — organizers, vendors, volunteers, everyone.
+                  From 6 months out to the final wrap-up. {isWL ? (wlName || 'Your platform') : 'PlanIt Events'} is the workspace for the whole team — organizers, vendors, volunteers, everyone.
                 </p>
                 <div className="flex items-center gap-4">
                   <a href="#create" className="inline-flex items-center gap-2 px-6 py-3 bg-white text-neutral-900 rounded-xl font-bold hover:bg-neutral-100 transition-colors text-sm">
@@ -2392,7 +2413,7 @@ export default function Home() {
                         {[
                           { val: 'standard',      label: 'Standard',      sub: 'Team planning' },
                           { val: 'enterprise',    label: 'Enterprise',    sub: 'Full Execution' },
-                          { val: 'table-service', label: 'PlanIt Venue', sub: 'Restaurant Floor' },
+                          { val: 'table-service', label: isWL ? 'Venue' : 'PlanIt Venue', sub: 'Restaurant Floor' },
                         ].map(({ val, label, sub }) => (
                           <button key={val} type="button" onClick={() => setMode(val)}
                             data-mode={val}
@@ -2587,10 +2608,13 @@ export default function Home() {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-8 sm:gap-12 mb-12">
               <div>
                 <div className="flex items-center gap-3 mb-5">
-                  <div className="w-10 h-10 rounded-2xl bg-neutral-800 border border-neutral-700 flex items-center justify-center"><Calendar className="w-5 h-5 text-neutral-300" /></div>
-                  <span className="font-black text-xl text-white">PlanIt</span>
+                  {isWL && wlLogo
+                    ? <img src={wlLogo} alt={wlName} className="h-8 object-contain" />
+                    : <><div className="w-10 h-10 rounded-2xl bg-neutral-800 border border-neutral-700 flex items-center justify-center"><Calendar className="w-5 h-5 text-neutral-300" /></div>
+                       <span className="font-black text-xl text-white">{isWL ? wlName : 'PlanIt'}</span></>
+                  }
                 </div>
-                <p className="text-sm text-neutral-500 leading-relaxed mb-4">The ultimate planning hub for event teams. Plan smart, execute flawlessly.</p>
+                <p className="text-sm text-neutral-500 leading-relaxed mb-4">{isWL ? '' : 'The ultimate planning hub for event teams. Plan smart, execute flawlessly.'}</p>
                 <p className="text-xs text-neutral-600">Built by Aakshat Hariharan</p>
               </div>
               <div>
