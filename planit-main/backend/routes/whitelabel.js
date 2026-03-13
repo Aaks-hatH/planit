@@ -134,26 +134,39 @@ router.get('/cors-domains', async (req, res) => {
 // Returns 404 if not found or suspended.
 
 router.get('/resolve', async (req, res) => {
+  // ── Explicit CORS for this public endpoint ────────────────────────────────
+  // This route is called cross-origin from every WL domain on every page load.
+  // We set the header explicitly here so the browser can always read the
+  // response — even if the CORS middleware hasn't run (e.g. during a deploy
+  // where not all backend instances are on the latest server.js).
+  // Without this, a suspended-domain 403 arrives without CORS headers and the
+  // browser silently swallows it, causing the JS catch block to fire and the
+  // normal PlanIt app to render instead of the suspended page.
+  const origin = req.headers.origin;
+  if (origin) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
+    res.setHeader('Vary', 'Origin');
+  }
+
   try {
     const { domain } = req.query;
     if (!domain) return res.status(400).json({ error: 'domain required' });
 
-    // Include suspended/cancelled so frontend can show a proper suspended page
-    // instead of falling through to default PlanIt branding
     const wl = await WhiteLabel.findOne({
       domain: domain.toLowerCase().trim(),
     }).lean();
 
     if (!wl) return res.status(404).json({ error: 'not_found' });
 
-    // For suspended/cancelled/expired — return 403 with status so frontend
-    // can render the correct suspended page immediately without a heartbeat call
+    // Suspended/cancelled — return 403 WITH branding so the suspended page
+    // can be styled with the client's brand colors and logo.
     if (wl.status === 'suspended' || wl.status === 'cancelled') {
       return res.status(403).json({
         error:      'suspended',
         status:     wl.status,
         clientName: wl.clientName,
-        branding:   wl.branding,  // still return branding so suspended page can look branded
+        branding:   wl.branding,
       });
     }
 
