@@ -1715,7 +1715,7 @@ export default function About() {
                       {[
                         { icon: <Server className="w-4 h-4" />, title: 'Build at scale', desc: 'Systems that handle real traffic and real failure modes, not just demos.', color: '#3b82f6' },
                         { icon: <Shield className="w-4 h-4" />, title: 'Security work', desc: 'Deeper into pentesting, CTFs, and eventually professional security research.', color: '#ef4444' },
-                        { icon: <Zap className="w-4 h-4" />, title: 'Ship more', desc: 'More projects. More problems worth solving. Less waiting until it's perfect.', color: '#f59e0b' },
+                        { icon: <Zap className="w-4 h-4" />, title: 'Ship more', desc: 'More projects. More problems worth solving. Less waiting until it\'s perfect.', color: '#f59e0b' },
                       ].map(g => (
                         <div key={g.title} className="p-4 bg-neutral-800/50 border border-neutral-700 rounded-2xl group hover:border-neutral-600 transition-colors">
                           <div className="mb-2" style={{ color: g.color }}>{g.icon}</div>
