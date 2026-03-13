@@ -2687,6 +2687,8 @@ const ARTICLES_EXTRA = [
         items: [
           { q: 'Can I downgrade my tier?', a: 'Downgrades are handled by PlanIt support. Contact support to discuss. Note that downgrading from Pro to Basic will re-enable the "Powered by PlanIt" badge automatically.' },
           { q: 'What features are locked to my tier?', a: 'The main tier-gated features are the "Powered by PlanIt" badge removal (Pro and above) and Custom CSS injection (Enterprise only). Everything else — event creation, check-in, Table Service, guest management — is available on all tiers. Contact support if you are unsure what your plan includes.' },
+        ]
+      },
       {
         type: 'steps',
         items: [
