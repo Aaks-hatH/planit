@@ -26,6 +26,7 @@ const { verifyAdmin, requireSuperAdminRole, demoGuard } = require('../middleware
 const axios      = require('axios');
 const { body, validationResult } = require('express-validator');
 const WLLead     = require('../models/WLLead');
+const bcrypt     = require('bcryptjs');
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -931,6 +932,64 @@ router.post('/:id/billing-portal', verifyAdmin, async (req, res) => {
     console.error('[whitelabel] billing-portal error', err.message);
     return res.status(500).json({ error: err.message });
   }
+});
+
+module.exports = router;
+// ─── Admin: Set / reset portal password for a WL client ──────────────────────
+// POST /api/whitelabel/:id/portal/set-password
+// Only super-admin or root admin. Enables portal access and sets the password.
+
+router.post('/:id/portal/set-password', verifyAdmin, requireSuperAdminRole, demoGuard, [
+  require('express-validator').body('password')
+    .isString().trim()
+    .isLength({ min: 12, max: 200 })
+    .withMessage('Password must be at least 12 characters.'),
+], async (req, res) => {
+  const { validationResult } = require('express-validator');
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) return res.status(400).json({ error: errors.array()[0].msg });
+
+  const wl = await WhiteLabel.findById(req.params.id);
+  if (!wl) return res.status(404).json({ error: 'Client not found.' });
+
+  const hash = await bcrypt.hash(req.body.password.trim(), 12);
+
+  await WhiteLabel.updateOne({ _id: wl._id }, {
+    $set: {
+      'portal.enabled':       true,
+      'portal.passwordHash':  hash,
+      'portal.loginAttempts': 0,
+      'portal.lockedUntil':   null,
+    },
+  });
+
+  console.log(`[wl-portal] Admin set portal password for ${wl.domain} (id=${wl._id})`);
+  res.json({ ok: true, portalUrl: `https://${wl.domain}/dashboard` });
+});
+
+// POST /api/whitelabel/:id/portal/disable
+router.post('/:id/portal/disable', verifyAdmin, requireSuperAdminRole, demoGuard, async (req, res) => {
+  const wl = await WhiteLabel.findById(req.params.id);
+  if (!wl) return res.status(404).json({ error: 'Client not found.' });
+  await WhiteLabel.updateOne({ _id: wl._id }, { $set: { 'portal.enabled': false } });
+  res.json({ ok: true });
+});
+
+// GET /api/whitelabel/:id/portal/status
+router.get('/:id/portal/status', verifyAdmin, async (req, res) => {
+  const wl = await WhiteLabel.findById(req.params.id)
+    .select('portal.enabled portal.lastLoginAt portal.lastLoginIp portal.loginAttempts portal.lockedUntil portal.loginLog domain')
+    .lean();
+  if (!wl) return res.status(404).json({ error: 'Client not found.' });
+  res.json({
+    enabled:       wl.portal?.enabled || false,
+    lastLoginAt:   wl.portal?.lastLoginAt,
+    lastLoginIp:   wl.portal?.lastLoginIp,
+    loginAttempts: wl.portal?.loginAttempts || 0,
+    lockedUntil:   wl.portal?.lockedUntil,
+    recentLogins:  (wl.portal?.loginLog || []).reverse().slice(0, 20),
+    portalUrl:     `https://${wl.domain}/dashboard`,
+  });
 });
 
 module.exports = router;
