@@ -57,6 +57,7 @@ const WhiteLabelContext = createContext({
   wl: null, isWL: false, resolved: false,
   blocked: false, blockReason: null,
   features: {}, pages: {},
+  refresh: () => {},
 });
 
 export function useWhiteLabel() {
@@ -64,16 +65,23 @@ export function useWhiteLabel() {
 }
 
 export function WhiteLabelProvider({ children }) {
+  const [refreshKey, setRefreshKey] = useState(0);
   const [state, setState] = useState({
     wl: null, isWL: false, resolved: false, blocked: false, blockReason: null,
     features: {}, pages: {},
   });
 
+  // Bust cache and re-fetch after portal saves
+  const refresh = () => {
+    try { localStorage.removeItem(HB_KEY); } catch {}
+    setRefreshKey(k => k + 1);
+  };
+
   useEffect(() => {
     const hostname = window.location.hostname;
 
     if (!isCustomDomain(hostname)) {
-      setState({ wl: null, isWL: false, resolved: true, blocked: false, blockReason: null });
+      setState({ wl: null, isWL: false, resolved: true, blocked: false, blockReason: null, features: {}, pages: {} });
       return;
     }
 
@@ -178,10 +186,10 @@ export function WhiteLabelProvider({ children }) {
 
     run();
     return () => { cancelled = true; };
-  }, []);
+  }, [refreshKey]);
 
   return (
-    <WhiteLabelContext.Provider value={state}>
+    <WhiteLabelContext.Provider value={{ ...state, refresh }}>
       {children}
     </WhiteLabelContext.Provider>
   );
