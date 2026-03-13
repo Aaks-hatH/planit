@@ -2520,7 +2520,7 @@ const ARTICLES_EXTRA = [
         type: 'faq',
         items: [
           { q: 'Do my guests know they are using PlanIt?', a: 'On Pro and Enterprise tiers, no — the "Powered by PlanIt" badge is hidden and the branding is entirely yours. On the Basic tier, a small "Powered by PlanIt" badge appears at the bottom of pages.' },
-          { q: 'Can I have multiple events on my domain?', a: 'Yes. Your domain supports unlimited events created through the home page (subject to your tier\'s event limits). Each event gets its own workspace link under your domain.' },
+          { q: 'Can I have multiple events on my domain?', a: 'Yes. Your domain supports as many events as you need created through the home page. Each event gets its own workspace link under your domain.' },
           { q: 'Is the platform the same as the main PlanIt app?', a: 'Yes — it is the same software, same features, same reliability. Only the visual branding changes. You receive every update PlanIt ships automatically.' },
           { q: 'What happens if my subscription lapses?', a: 'If your subscription expires or is suspended, visitors to your domain see a branded suspension page with your company name. They cannot access the platform until the subscription is renewed.' },
         ]
@@ -2634,7 +2634,7 @@ const ARTICLES_EXTRA = [
     content: [
       {
         type: 'intro',
-        text: 'White label subscriptions come in three tiers. Your current tier is shown in the top-left of your dashboard. The tier determines your branding options, event and guest limits, and access to advanced features.'
+        text: 'White label subscriptions come in three tiers. Your current tier is shown in the top-left of your dashboard. The tier determines your branding options and access to advanced features.'
       },
       {
         type: 'compare',
@@ -2647,9 +2647,6 @@ const ARTICLES_EXTRA = [
               'Custom domain',
               'Your logo and brand colours',
               'Custom font family',
-              'Up to 10 events at a time',
-              'Up to 500 guests per event',
-              'Up to 3 organizer accounts',
               '"Powered by PlanIt" badge shown',
             ],
             best: 'Small venues, boutique event organizers, getting started'
@@ -2661,9 +2658,6 @@ const ARTICLES_EXTRA = [
             features: [
               'Everything in Basic',
               '"Powered by PlanIt" badge hidden',
-              'Up to 50 events at a time',
-              'Up to 2,000 guests per event',
-              'Up to 10 organizer accounts',
               'Priority support response',
             ],
             best: 'Hotels, mid-size venues, professional event companies'
@@ -2675,9 +2669,6 @@ const ARTICLES_EXTRA = [
             features: [
               'Everything in Pro',
               'Custom CSS injection for deep style control',
-              'Unlimited events',
-              'Unlimited guests per event',
-              'Unlimited organizer accounts',
               'SLA guarantee',
               'Dedicated infrastructure',
               'Custom contract',
@@ -2689,123 +2680,1024 @@ const ARTICLES_EXTRA = [
       {
         type: 'callout',
         variant: 'info',
-        text: 'Your current tier and its limits are visible in the top-left corner of your dashboard. If you need to upgrade, contact PlanIt support. Upgrades are applied to the same domain without any downtime or DNS changes.'
+        text: 'If you need to upgrade your tier or have questions about what is included in your plan, contact PlanIt support. Upgrades are applied to the same domain without any downtime or DNS changes.'
       },
       {
         type: 'faq',
         items: [
-          { q: 'What happens if I hit my event limit?', a: 'The home page event creation form will not allow new events to be created once you reach your tier\'s maximum active event count. You will need to delete old events or upgrade your tier to create more.' },
-          { q: 'What counts as an "event"?', a: 'Any event workspace created on your domain counts toward your limit regardless of mode (Standard, Enterprise, or Table Service). Deleted events do not count.' },
-          { q: 'Can I downgrade my tier?', a: 'Downgrades are handled by PlanIt support. Contact support@planit to discuss. Note that downgrading from Pro to Basic will re-enable the "Powered by PlanIt" badge automatically.' },
+          { q: 'Can I downgrade my tier?', a: 'Downgrades are handled by PlanIt support. Contact support to discuss. Note that downgrading from Pro to Basic will re-enable the "Powered by PlanIt" badge automatically.' },
+          { q: 'What features are locked to my tier?', a: 'The main tier-gated features are the "Powered by PlanIt" badge removal (Pro and above) and Custom CSS injection (Enterprise only). Everything else — event creation, check-in, Table Service, guest management — is available on all tiers. Contact support if you are unsure what your plan includes.' },
+      {
+        type: 'steps',
+        items: [
+          { title: 'Go to the home page', body: 'Navigate to planitapp.onrender.com. You\'ll see the event creation form in the hero section. If you\'re already on the page, click "Get Started" or scroll down to the "Create your event" form.' },
+          { title: 'Enter your event title', body: 'Type the name of your event. As you type, PlanIt automatically generates a URL slug from your title — you\'ll see it update live in the preview below the title field. For example, "Summer Retreat 2026" becomes "summer-retreat-2026-ab3f".' },
+          { title: 'Set the date, time, and timezone', body: 'Pick the date and time your event starts. PlanIt automatically detects and pre-selects your browser\'s timezone, but you can change it to any timezone from the dropdown. This ensures the countdown and all timestamps display correctly for everyone.' },
+          { title: 'Add a location (optional)', body: 'Type the venue address or name. This appears on the guest invite page and powers the "Get Directions" button that opens Google Maps. Leave it blank if your event is virtual or the location isn\'t set yet.' },
+          { title: 'Customise your event URL (optional)', body: 'The slug field auto-fills from your title. You can edit it to anything you like — something shorter and easier to share by voice. Once you type in this field manually, auto-generation from the title stops so your custom value is never overwritten. If your chosen slug is taken, PlanIt tells you before you submit.' },
+          { title: 'Set your account password', body: 'This is required. It\'s your organizer identity credential — the password you\'ll need to claim organizer access from any new browser or device. Store it somewhere safe. It cannot be reset or recovered, because PlanIt has no email on file to send a reset link to.' },
+          { title: 'Set an event password (optional)', body: 'This gates entry to the workspace for everyone — guests, team members, and organizers. Anyone navigating to the event URL must enter this password. Use it if your event is confidential. If left blank, anyone with the link can join.' },
+          { title: 'Choose Standard or Enterprise mode', body: 'Standard mode is for team planning without a formal guest list. Enterprise mode adds the full guest management and QR check-in system. You cannot change the mode after creation, so choose deliberately.' },
+          { title: 'Click "Create Event"', body: 'PlanIt creates your workspace and drops you straight in. Your event link is shown in the workspace header and in the Share tab. Copy it and send it to your team.' }
         ]
+      },
+      {
+        type: 'callout',
+        variant: 'warning',
+        text: 'Write down your account password before you share the event link. If you share the link with your team and later forget the password, you cannot reclaim organizer access. There is no password recovery flow.'
+      },
+      {
+        type: 'callout',
+        variant: 'info',
+        text: 'The event URL follows the format planitapp.onrender.com/e/your-slug. If you didn\'t set a custom slug, the fallback is planitapp.onrender.com/event/[database-id].'
       }
     ]
   },
   {
-    id: 'wl-features',
-    category: 'White Label & Branding',
-    title: 'Managing platform features',
-    icon: LayoutGrid,
-    tags: ['features', 'toggle', 'guest list', 'waitlist', 'seating chart', 'social share', 'reviews', 'dashboard', 'white label'],
+    id: 'gs-join',
+    category: 'Getting Started',
+    title: 'Joining an event workspace',
+    icon: Users,
+    tags: ['join', 'enter', 'workspace', 'participant', 'link', 'access', 'password'],
     content: [
       {
         type: 'intro',
-        text: 'The Features section of your dashboard lets you turn platform capabilities on or off for your customers. Changes apply across your entire domain after saving.'
+        text: 'To join an event workspace you need the event link from the organizer. If the event has a password, you\'ll need that too.'
       },
       {
         type: 'steps',
         items: [
-          { title: 'Open the Features section', body: 'In your dashboard sidebar, click "Features" (the toggle icon). You will see a list of capabilities with on/off toggles.' },
-          { title: 'Guest list', body: 'When enabled, the attendee list is visible on event pages. When disabled, guests cannot see who else is attending an event. Organizers can always see the list regardless of this setting.' },
-          { title: 'Waitlist', body: 'When enabled, a "Join waitlist" option appears on sold-out or fully-checked-in events so guests can register interest. When disabled, no waitlist option is shown.' },
-          { title: 'Seating chart (Pro and Enterprise only)', body: 'Enables the visual seating selection interface during event setup. This is locked to Basic-tier clients. On Basic, the toggle appears greyed out with a "Pro+" badge.' },
-          { title: 'Social sharing', body: 'When enabled, share buttons (copy link, native share sheet on mobile) appear on event pages. When disabled, no sharing prompts appear.' },
-          { title: 'Reviews', body: 'When enabled, a post-event review prompt is shown to attendees after the event date passes. When disabled, no review prompts appear.' },
-          { title: 'Guest self-checkout', body: 'When enabled, guests can RSVP or reserve without creating an account. When disabled, guests must log in before completing a reservation or RSVP.' },
-          { title: 'Save your changes', body: 'Click "Save changes" when done. A green confirmation toast appears. The changes take effect on your domain immediately for new page loads.' },
+          { title: 'Open the event link', body: 'Click or paste the link the organizer shared with you. It looks like planitapp.onrender.com/e/event-name or planitapp.onrender.com/event/[id].' },
+          { title: 'Enter the event password (if required)', body: 'If the organizer set an event password, you\'ll see a password prompt before you can enter. Enter the password they gave you. This is separate from the organizer account password.' },
+          { title: 'Choose a display name', body: 'Pick a username that your team will recognise you by. This name appears in the chat, on tasks you create or complete, in polls, and in the people list.' },
+          { title: 'You\'re in', body: 'You\'ll land directly in the workspace. The chat tab opens by default. Use the tab bar to navigate between Chat, Polls, Files, Agenda, People, Tasks, Bulletin, Budget, Notes, Share, and (if it\'s an Enterprise event and you\'re the organizer) Analytics.' }
         ]
       },
       {
         type: 'callout',
         variant: 'info',
-        text: 'Features only affect the guest-facing side of your platform. Organizer and staff tools (check-in dashboard, floor management, analytics) are always available to logged-in organizers regardless of feature settings.'
+        text: 'If you close your browser and come back later, you\'ll need to re-enter the event link and your display name. Your session is stored in your browser\'s localStorage — it doesn\'t follow you to a different browser or device.'
       }
     ]
   },
   {
-    id: 'wl-pages',
-    category: 'White Label & Branding',
-    title: 'Customising your homepage and page content',
+    id: 'gs-modes',
+    category: 'Getting Started',
+    title: 'Standard vs Enterprise vs Table Service mode',
+    icon: Zap,
+    tags: ['standard', 'enterprise', 'table service', 'mode', 'difference', 'guest', 'checkin', 'qr', 'restaurant', 'floor'],
+    content: [
+      {
+        type: 'intro',
+        text: 'PlanIt has three modes. The mode is chosen at creation and cannot be changed afterward.'
+      },
+      {
+        type: 'compare',
+        items: [
+          {
+            label: 'Standard Mode',
+            color: 'neutral',
+            desc: 'Full planning workspace for your team. No guest list, no check-in system.',
+            features: [
+              'Chat, Tasks, Polls, Notes, Announcements',
+              'Expense tracking and budget management',
+              'File sharing and countdown timer',
+              'Share / utilities panel',
+              'Agenda and people list',
+            ],
+            best: 'Team offsites, internal workshops, planning retreats, virtual meetups'
+          },
+          {
+            label: 'Enterprise Mode',
+            color: 'indigo',
+            desc: 'Everything in Standard, plus a complete guest management and check-in system.',
+            features: [
+              'All Standard features',
+              'Guest list with per-guest invite links and QR codes',
+              'RSVP tracking and personal organizer notes per guest',
+              'Real-time check-in dashboard with QR scanner',
+              'Multi-layer anti-fraud middleware',
+              'Manager override for guests without phones',
+              'Attendance analytics and arrival timeline',
+            ],
+            best: 'Weddings, galas, corporate dinners, conferences, award ceremonies'
+          },
+          {
+            label: 'Table Service Mode',
+            color: 'orange',
+            desc: 'A live floor management system for restaurants and venues. No planning workspace — just the floor.',
+            features: [
+              'Visual floor plan with live table status colours',
+              'Walk-in waitlist with estimated wait times',
+              'QR code reservations with configurable expiry',
+              'Per-table party details, server assignment, notes',
+              'Occupancy overview and turn time estimation',
+              'Data never auto-deleted — persists indefinitely',
+            ],
+            best: 'Restaurants, private dining rooms, bars, hospitality venues'
+          }
+        ]
+      },
+      {
+        type: 'callout',
+        variant: 'warning',
+        text: 'You cannot switch modes after creation. Table Service mode opens a completely different interface at /e/your-venue/floor — there is no planning workspace. If you need both event planning and floor management for the same occasion, create two separate venues.'
+      }
+    ]
+  },
+  {
+    id: 'gs-organizer',
+    category: 'Getting Started',
+    title: 'Claiming and using organizer access',
+    icon: Key,
+    tags: ['organizer', 'admin', 'login', 'password', 'claim', 'role', 'access'],
+    content: [
+      {
+        type: 'intro',
+        text: 'The organizer role gives you elevated permissions in your event: posting announcements, managing the guest list, configuring settings, and more. Here\'s how to claim and use it.'
+      },
+      {
+        type: 'steps',
+        items: [
+          { title: 'Find the organizer login button', body: 'In the event workspace header, look for the shield icon or "Organizer Login" button. On mobile it may be in the overflow menu.' },
+          { title: 'Enter your account password', body: 'Type the account password you set when you created the event. This is the credential that proves you\'re the organizer.' },
+          { title: 'You\'re now an organizer', body: 'Your workspace gains additional controls: you can post announcements, manage the guest list (Enterprise mode), access analytics, configure workspace settings, and see the waitlist.' },
+          { title: 'Organizer status persists per session', body: 'Your organizer status is stored in your browser session. If you close the tab and return, you\'ll need to log in again with your account password.' }
+        ]
+      },
+      {
+        type: 'callout',
+        variant: 'warning',
+        text: 'If you forget your account password, there is no recovery option. PlanIt stores no email address and has no reset flow. The only resolution is to contact support — but recovery is not guaranteed. Always store your password somewhere safe before sharing your event link.'
+      }
+    ]
+  },
+
+  // ── PLANNING TOOLS ────────────────────────────────────────────────────────
+  {
+    id: 'tool-chat',
+    category: 'Planning Tools',
+    title: 'Using team chat',
+    icon: MessageSquare,
+    tags: ['chat', 'message', 'team', 'typing', 'realtime', 'history', 'communication'],
+    content: [
+      {
+        type: 'intro',
+        text: 'The Chat tab is the real-time messaging channel for your planning team. Messages are delivered in milliseconds and stored persistently for the lifetime of the event.'
+      },
+      {
+        type: 'steps',
+        items: [
+          { title: 'Open the Chat tab', body: 'It\'s the first tab in the workspace tab bar, labelled "Chat" with a message bubble icon.' },
+          { title: 'Type and send a message', body: 'Click the message input at the bottom of the chat panel and type your message. Press Enter or click the send button to send. Messages appear immediately for everyone currently in the workspace.' },
+          { title: 'See who\'s typing', body: 'When another team member is composing a message, a typing indicator appears at the bottom of the chat showing their username. It disappears when they send or stop typing.' },
+          { title: 'Scroll through history', body: 'All messages since the event was created are loaded when you open the chat. Scroll up to read older messages. Team members joining late can scroll back to catch up on everything that was discussed.' },
+        ]
+      },
+      {
+        type: 'callout',
+        variant: 'info',
+        text: 'The chat rate limiter allows up to 30 messages per minute. If you hit this limit, you\'ll see a brief error. It resets automatically after a minute.'
+      },
+      {
+        type: 'faq',
+        items: [
+          { q: 'Can I delete messages?', a: 'Organizers can delete messages. Participants can only delete their own messages.' },
+          { q: 'Are messages private?', a: 'No — the chat is shared with everyone in the workspace. There is no direct messaging or private channel system.' },
+          { q: 'Do messages disappear when I leave?', a: 'No — messages persist in the database for the lifetime of the event (7 days after the event date). They load for everyone when they open the chat.' }
+        ]
+      }
+    ]
+  },
+  {
+    id: 'tool-tasks',
+    category: 'Planning Tools',
+    title: 'Managing tasks',
+    icon: CheckCircle2,
+    tags: ['tasks', 'todo', 'assign', 'priority', 'complete', 'due date', 'checklist'],
+    content: [
+      {
+        type: 'intro',
+        text: 'The Tasks tab is a shared to-do list for your entire planning team. Any participant can create, assign, prioritise, and complete tasks.'
+      },
+      {
+        type: 'steps',
+        items: [
+          { title: 'Open the Tasks tab', body: 'Click the "Tasks" tab in the workspace tab bar (checkmark icon).' },
+          { title: 'Create a new task', body: 'Click the "+" or "Add task" button. Fill in a title (required), description (optional), assignee name (optional), due date (optional), and priority level.' },
+          { title: 'Set a priority', body: 'Choose High (red), Medium (amber), or Low (blue). High-priority tasks sort to the top of the list automatically. This order is maintained live for everyone in the workspace.' },
+          { title: 'Complete a task', body: 'Click the circle icon to the left of any task to toggle it complete or incomplete. Completed tasks move to the bottom of the list with a strikethrough style. This update is broadcast live to all connected team members.' },
+          { title: 'Delete a task', body: 'Click the trash icon on a task card to delete it. The task is removed from the database immediately and disappears from all connected sessions.' }
+        ]
+      },
+      {
+        type: 'callout',
+        variant: 'info',
+        text: 'Tasks count, completion rate, and pending count are shown at the top of the task panel. These update live as tasks are created and completed.'
+      },
+      {
+        type: 'faq',
+        items: [
+          { q: 'Can only the organizer create tasks?', a: 'No — any participant in the workspace can create, complete, and delete tasks.' },
+          { q: 'What happens to overdue tasks?', a: 'Tasks whose due date has passed and that are not yet complete are highlighted with an amber indicator to draw attention to them.' },
+          { q: 'Can I assign a task to someone not in the workspace?', a: 'Yes — the assignee field is free text. You can type anyone\'s name, even if they\'re not a workspace participant (e.g. external vendors).' }
+        ]
+      }
+    ]
+  },
+  {
+    id: 'tool-polls',
+    category: 'Planning Tools',
+    title: 'Creating and voting on polls',
+    icon: BarChart3,
+    tags: ['poll', 'vote', 'voting', 'decision', 'options', 'results', 'tally'],
+    content: [
+      {
+        type: 'intro',
+        text: 'The Polls tab lets your team make group decisions in real time. Anyone can create a poll, and votes update live for all connected participants.'
+      },
+      {
+        type: 'steps',
+        items: [
+          { title: 'Open the Polls tab', body: 'Click the "Polls" tab in the workspace tab bar (bar chart icon).' },
+          { title: 'Create a poll', body: 'Click "New Poll". Enter your question and between 2 and 10 options. Click "Create" to publish the poll to the workspace immediately.' },
+          { title: 'Cast a vote', body: 'Click any option in an active poll to cast your vote. Your vote is attributed to your session username. You cannot vote twice on the same poll.' },
+          { title: 'Watch live results', body: 'Vote counts update in real time on every participant\'s screen as votes come in. You can watch the results change live without refreshing.' },
+          { title: 'Review past polls', body: 'All polls remain visible in the panel, most recent first, for the lifetime of the event.' }
+        ]
+      },
+      {
+        type: 'faq',
+        items: [
+          { q: 'Can I change my vote?', a: 'No — votes are final once cast. There is no vote-change mechanism.' },
+          { q: 'Can I delete a poll?', a: 'Organizers can delete any poll. Participants cannot delete polls they didn\'t create.' },
+          { q: 'How many options can a poll have?', a: 'Between 2 and 10 options.' }
+        ]
+      }
+    ]
+  },
+  {
+    id: 'tool-notes',
+    category: 'Planning Tools',
+    title: 'Using color-coded notes',
+    icon: StickyNote,
+    tags: ['notes', 'sticky', 'color', 'write', 'shared', 'scratchpad', 'cards'],
+    content: [
+      {
+        type: 'intro',
+        text: 'The Notes tab is a shared scratchpad for your team, styled as a grid of color-coded sticky notes. Unlike chat, notes are persistent, structured pieces of content designed to be revisited.'
+      },
+      {
+        type: 'steps',
+        items: [
+          { title: 'Open the Notes tab', body: 'Click "Notes" in the workspace tab bar (sticky note icon).' },
+          { title: 'Create a note', body: 'Click "Add Note". Enter a title and body text, then choose one of seven background colors: yellow, blue, red, green, purple, orange, or pink. Click Save.' },
+          { title: 'Edit a note', body: 'Click the edit (pencil) icon on any note card. The creation form opens pre-filled with the current content. Save to update — the change broadcasts to all connected sessions.' },
+          { title: 'Delete a note', body: 'Click the trash icon on a note card. A confirmation dialog appears before the note is permanently removed.' }
+        ]
+      },
+      {
+        type: 'callout',
+        variant: 'info',
+        text: 'Your team can develop informal conventions around colors — for example: yellow for open decisions, green for confirmed items, red for blockers. PlanIt doesn\'t enforce any meaning on the colors, but consistency makes the notes board much easier to scan at a glance.'
+      }
+    ]
+  },
+  {
+    id: 'tool-announcements',
+    category: 'Planning Tools',
+    title: 'Posting announcements',
+    icon: Megaphone,
+    tags: ['announcement', 'bulletin', 'broadcast', 'important', 'notify', 'organizer', 'post'],
+    content: [
+      {
+        type: 'intro',
+        text: 'The Bulletin tab is a one-way broadcast channel from the organizer to the rest of the team. Only organizers can post announcements, but all participants can read them.'
+      },
+      {
+        type: 'steps',
+        items: [
+          { title: 'Open the Bulletin tab', body: 'Click "Bulletin" in the workspace tab bar (megaphone icon). You\'ll need to be logged in as an organizer to see the post button.' },
+          { title: 'Post an announcement', body: 'Click "New Announcement". Type your message. Check the "Important" checkbox if this requires immediate attention from the team.' },
+          { title: 'Mark as important', body: 'Important announcements are displayed with red-bordered alert styling in the list. Every connected team member receives a toast notification at the top of their screen regardless of which tab they\'re currently viewing.' },
+          { title: 'View announcement history', body: 'All announcements stay in the panel after posting, sorted most-recent-first. Team members who were offline when an announcement was made will see it when they join the workspace.' }
+        ]
+      },
+      {
+        type: 'callout',
+        variant: 'info',
+        text: 'Use announcements for information everyone needs to see and act on — venue changes, schedule shifts, emergency communications. Use the chat for discussion. Keeping the two channels separate ensures important messages don\'t get buried in conversation.'
+      }
+    ]
+  },
+  {
+    id: 'tool-expenses',
+    category: 'Planning Tools',
+    title: 'Tracking expenses and budget',
+    icon: DollarSign,
+    tags: ['expense', 'budget', 'cost', 'money', 'track', 'finance', 'spend', 'category'],
+    content: [
+      {
+        type: 'intro',
+        text: 'The Budget tab is a shared ledger for logging costs as they\'re incurred and comparing total spending against a target budget.'
+      },
+      {
+        type: 'steps',
+        items: [
+          { title: 'Open the Budget tab', body: 'Click "Budget" in the workspace tab bar (dollar sign icon).' },
+          { title: 'Set a budget (organizer only)', body: 'Click "Set Budget" and enter the total amount you want to spend. Once set, the panel shows total spent vs budget and a remaining amount that turns red when you go over.' },
+          { title: 'Log an expense', body: 'Click "Add Expense". Enter a title, amount, category (e.g. Venue, Catering, AV), who paid it, and any notes. Click Save. The entry appears immediately for all connected team members.' },
+          { title: 'Review the breakdown', body: 'The category summary shows exactly where money is going without any extra configuration — it derives automatically from the category labels you use.' },
+          { title: 'Delete an expense', body: 'Click the trash icon on any expense entry. The total and breakdown update live.' }
+        ]
+      },
+      {
+        type: 'faq',
+        items: [
+          { q: 'Can anyone log expenses or just the organizer?', a: 'Any participant in the workspace can log expenses. Only the organizer can set or change the budget.' },
+          { q: 'Are amounts in USD?', a: 'The expense tracker stores amounts as numbers without enforcing a currency. Treat all amounts as whatever currency your event is budgeted in — it\'s a shared ledger, not a payment system.' }
+        ]
+      }
+    ]
+  },
+  {
+    id: 'tool-files',
+    category: 'Planning Tools',
+    title: 'Sharing files',
     icon: FileText,
-    tags: ['pages', 'homepage', 'headline', 'subheadline', 'CTA', 'contact', 'content', 'copy', 'text', 'white label'],
+    tags: ['file', 'upload', 'download', 'share', 'attachment', 'document', 'pdf', 'image'],
     content: [
       {
         type: 'intro',
-        text: 'The Pages section of your dashboard lets you customise the text content of key pages on your platform. You can personalise the homepage headline, the call-to-action button, your contact details, and messages shown during checkout — without touching any code.'
+        text: 'The Files tab lets your team upload and download documents, images, and other files directly inside the workspace — no external file sharing service required.'
       },
       {
         type: 'steps',
         items: [
-          { title: 'Open the Pages section', body: 'Click "Pages" in your dashboard sidebar. You will see tabs for different pages: Home, Events, Checkout, and Contact.' },
-          { title: 'Home page — Headline', body: 'This is the large text at the top of your platform\'s home page. Make it relevant to your business: "Book a table at The Grand Room" or "Manage your events with us" both work well. Keep it under 80 characters for best display on mobile.' },
-          { title: 'Home page — Subheadline', body: 'A short supporting line that appears under the headline. Use it to communicate your value proposition, operating hours, or a friendly welcome. Keep it under 150 characters.' },
-          { title: 'Home page — CTA button text', body: 'This is the label on the primary call-to-action button on the home page. Default is "Get Started". You can change it to something more specific like "Book a Table", "Reserve Your Seat", or "Create Your Event".' },
-          { title: 'Events page — Headline', body: 'The title shown at the top of the event listing page. Change it to "Upcoming Events" or "Reserve a Session" — whatever fits your context.' },
-          { title: 'Events page — Empty state text', body: 'The message shown when there are no active events. Use it to reassure visitors: "Check back soon — new dates are being added regularly" or "No tables available tonight. Call us at 555-1234 to enquire."' },
-          { title: 'Checkout — Header note', body: 'A short note shown at the top of the reservation/checkout flow. Use it for policies: "Reservations are held for 15 minutes. A credit card is required to confirm." Keep it under 200 characters.' },
-          { title: 'Checkout — Success headline and message', body: 'Customise what guests see after a successful reservation. The headline might be "You\'re confirmed!" and the message could include your cancellation policy, directions, or a warm welcome note.' },
-          { title: 'Contact details', body: 'Enter your business email, phone number, and address. These appear in the contact section of your platform and in confirmation emails. Keeping these up to date means guests can always reach you directly.' },
-          { title: 'Save', body: 'Each page tab has its own Save button. Make sure to save each tab separately if you edit multiple pages in one session.' },
+          { title: 'Open the Files tab', body: 'Click "Files" in the workspace tab bar (document icon).' },
+          { title: 'Upload a file', body: 'Click "Upload File" or drag and drop a file onto the panel. Files are stored on Cloudinary and become immediately downloadable by all participants.' },
+          { title: 'Download a file', body: 'Click the download icon next to any file in the list. The file downloads directly to your device.' },
+          { title: 'Delete a file', body: 'Click the trash icon next to a file. Deletion removes it from storage and from the file list for all connected sessions.' }
+        ]
+      },
+      {
+        type: 'callout',
+        variant: 'warning',
+        text: 'Files are limited to 20 uploads per hour per IP address. All files are permanently deleted 7 days after the event date along with all other event data. Download anything you need to keep before that window closes.'
+      }
+    ]
+  },
+  {
+    id: 'tool-countdown',
+    category: 'Planning Tools',
+    title: 'Countdown timer',
+    icon: Timer,
+    tags: ['countdown', 'timer', 'time', 'days', 'hours', 'minutes', 'live', 'clock'],
+    content: [
+      {
+        type: 'intro',
+        text: 'The workspace includes a live countdown clock that counts down to your event\'s date and time, updated every second.'
+      },
+      {
+        type: 'steps',
+        items: [
+          { title: 'Find the countdown', body: 'The countdown is visible in the event workspace header and as a card in the workspace area, showing days, hours, minutes, and seconds remaining.' },
+          { title: 'Event goes live', body: 'When the current time passes the event\'s scheduled start, the countdown transitions automatically to a green "Event is Live!" state. No manual action needed — it updates on every connected session simultaneously.' },
+          { title: 'Timezone accuracy', body: 'The countdown accounts for the timezone you set at event creation. Team members in different timezones all see the correct remaining time because the calculation uses the absolute UTC timestamp, not a local interpretation.' }
+        ]
+      }
+    ]
+  },
+  {
+    id: 'tool-agenda',
+    category: 'Planning Tools',
+    title: 'Managing the agenda',
+    icon: List,
+    tags: ['agenda', 'schedule', 'itinerary', 'timeline', 'session', 'slot'],
+    content: [
+      {
+        type: 'intro',
+        text: 'The Agenda tab lets you build a structured run-of-show for your event — individual time slots, sessions, or items with times and descriptions.'
+      },
+      {
+        type: 'steps',
+        items: [
+          { title: 'Open the Agenda tab', body: 'Click "Agenda" in the workspace tab bar (clock icon).' },
+          { title: 'Add an agenda item', body: 'Click "Add Item". Enter a title, start time, end time, and optional description or speaker name.' },
+          { title: 'Reorder or edit items', body: 'Click the edit icon on any item to update it. Items are displayed in chronological order by start time.' },
+          { title: 'Share the agenda', body: 'The agenda is visible to all workspace participants. Guests in Enterprise mode can also see a read-only version from their invite page.' }
+        ]
+      }
+    ]
+  },
+  {
+    id: 'tool-utilities',
+    category: 'Planning Tools',
+    title: 'Using the Share / utilities panel',
+    icon: Share2,
+    tags: ['share', 'utilities', 'qr code', 'calendar', 'export', 'link', 'copy', 'ics'],
+    content: [
+      {
+        type: 'intro',
+        text: 'The Share tab (also called the utilities panel) consolidates tools for sharing the event, exporting data, and accessing the check-in system from one place.'
+      },
+      {
+        type: 'steps',
+        items: [
+          { title: 'Copy the event link', body: 'The event URL is displayed in a read-only field. Click "Copy" to write it to your clipboard. The button briefly changes to a checkmark to confirm the copy worked.' },
+          { title: 'Show the workspace QR code', body: 'Click "Show QR Code" to see a QR code encoding the event workspace URL. This is for getting team members into the workspace quickly by scanning — it\'s not the same as guest invite QR codes.' },
+          { title: 'Export to calendar (.ics)', body: 'Click "Add to Calendar" to download an .ics file compatible with Apple Calendar, Google Calendar, Outlook, and any other app that accepts the iCalendar standard. The file includes the event title, date, time, location, and workspace URL.' },
+          { title: 'Access the check-in dashboard', body: 'For Enterprise mode events, the Share panel includes a direct button to the check-in dashboard.' }
+        ]
+      }
+    ]
+  },
+
+  // ── ENTERPRISE & CHECK-IN ─────────────────────────────────────────────────
+  {
+    id: 'ent-guests',
+    category: 'Enterprise & Check-in',
+    title: 'Adding guests and sending invites',
+    icon: UserCheck,
+    tags: ['guest', 'invite', 'add', 'enterprise', 'email', 'qr', 'link', 'rsvp'],
+    content: [
+      {
+        type: 'intro',
+        text: 'In Enterprise mode, the check-in dashboard lets you build a guest list with individual invite links and QR codes for each guest.'
+      },
+      {
+        type: 'steps',
+        items: [
+          { title: 'Open the check-in dashboard', body: 'Click "Check-in" in the workspace header, or use the button in the Share tab. You need to be logged in as organizer.' },
+          { title: 'Add a guest', body: 'Click "Add Guest". Enter their name, email address, party size (adults and children tracked separately), table assignment, dietary notes, and an optional personal note. The personal note appears highlighted in amber on their invite page.' },
+          { title: 'Copy and send the invite link', body: 'Each guest gets a unique, personal invite URL. Click the copy icon next to their name to copy it. Send it to them via email, WhatsApp, or any other method you prefer. PlanIt does not send invites automatically — you distribute them yourself.' },
+          { title: 'Track RSVPs', body: 'The dashboard shows which guests have viewed their invite page. You can see RSVP status and filter the guest list accordingly.' },
+          { title: 'Edit guest details', body: 'Click the edit icon on any guest record to update their name, party size, table, notes, or email at any time before the event.' }
         ]
       },
       {
         type: 'callout',
         variant: 'info',
-        text: 'If you leave a field blank, the platform falls back to sensible defaults — so you only need to fill in the fields that matter for your business. You can update page content as often as you like with no downtime.'
-      },
-      {
-        type: 'callout',
-        variant: 'warning',
-        text: 'Page content changes are not immediately visible if your visitors have the page open. Advise staff to reload their browser after you make changes. There is no caching of page text — a normal page reload (F5) is sufficient.'
+        text: 'Each invite link is unique and personal — it is tied to that one guest\'s record. Forwarding an invite link to someone else does not give them a new identity. The name and details on the invite page belong to the original guest.'
       }
     ]
   },
   {
-    id: 'wl-security',
-    category: 'White Label & Branding',
-    title: 'Dashboard security and changing your portal password',
-    icon: Lock,
-    tags: ['password', 'portal password', 'change password', 'security', 'login', 'lockout', 'activity', 'audit', 'white label'],
+    id: 'ent-checkin',
+    category: 'Enterprise & Check-in',
+    title: 'Running check-in on event day',
+    icon: QrCode,
+    tags: ['checkin', 'check-in', 'scan', 'qr', 'admit', 'deny', 'event day', 'door', 'entrance'],
     content: [
       {
         type: 'intro',
-        text: 'Your dashboard is protected by a portal password that is separate from any PlanIt event organizer account. The Security section lets you change this password and review recent login activity.'
+        text: 'The check-in screen is used by door staff to scan guest QR codes and admit or deny entry. It\'s designed for speed — the full scan-to-decision flow takes under 5 seconds.'
       },
       {
         type: 'steps',
         items: [
-          { title: 'Open the Security section', body: 'Click "Security" in your dashboard sidebar (the lock icon). You will see a password change form and, below it, your recent login audit log.' },
-          { title: 'Change your portal password', body: 'Enter your current password in the first field to confirm your identity. Then enter your new password in the "New password" and "Confirm new password" fields. Your new password must be at least 12 characters. Click "Update password" to apply the change. You will remain logged in with the new password taking effect immediately.' },
-          { title: 'Review the activity log', body: 'The Activity tab shows the last 20 login attempts for your dashboard — including the timestamp, IP address, and whether the attempt succeeded or failed. Review this periodically. If you see successful logins from IP addresses you do not recognise, change your password immediately.' },
-          { title: 'What to do if you suspect unauthorised access', body: 'Change your portal password immediately from the Security section. Then review the Activity log to understand when access occurred. Contact PlanIt support if you believe the intrusion affected your event data or guest information.' },
+          { title: 'Open the check-in dashboard on staff devices', body: 'Have every staff member open the check-in dashboard on their phone or tablet. They\'ll need the event link and the organizer password to access the dashboard.' },
+          { title: 'Tap "Scan QR Code"', body: 'The camera opens. Point it at the guest\'s QR code on their phone or printed ticket. The scan validates instantly against the server.' },
+          { title: 'Review the result screen', body: 'You\'ll see the guest\'s name, party size, table assignment, and any special notes from the organizer. Any anti-fraud warnings appear here too.' },
+          { title: 'Tap Admit or Deny', body: 'Admit marks the guest as checked in, records the timestamp, and increments the live attendance counter visible to all staff and the organizer. Deny returns to the ready state without recording check-in.' },
+          { title: 'Already admitted guests', body: 'If a QR code is scanned for a guest who is already admitted, the screen shows an "already checked in" state with the original admission timestamp. This catches duplicated or forwarded QR codes.' }
+        ]
+      },
+      {
+        type: 'callout',
+        variant: 'info',
+        text: 'The attendance count on the dashboard is live — every staff device sees the same number in real time. The organizer can also monitor check-in progress remotely from any device.'
+      }
+    ]
+  },
+  {
+    id: 'ent-antifraud',
+    category: 'Enterprise & Check-in',
+    title: 'Anti-fraud system explained',
+    icon: Shield,
+    tags: ['antifraud', 'fraud', 'security', 'trust score', 'block', 'suspicious', 'duplicate', 'fingerprint'],
+    content: [
+      {
+        type: 'intro',
+        text: 'PlanIt\'s anti-fraud middleware runs automatically on every check-in attempt in Enterprise mode. Here\'s what each layer does and what you\'ll see as a staff member.'
+      },
+      {
+        type: 'steps',
+        items: [
+          { title: 'Duplicate detection', body: 'Compares each invite\'s fingerprint against all other invites in the event. If a matching fingerprint is found already checked in, the staff member sees a warning. With autoBlockDuplicates enabled, the check-in is refused automatically.' },
+          { title: 'Reentrancy protection', body: 'Prevents two staff members from simultaneously processing the same QR code. The first scan gets an exclusive lock; the second receives a conflict response immediately. This prevents race conditions at busy entrances.' },
+          { title: 'Suspicious pattern detection', body: 'Tracks rapid repeated scans of the same code (3+ scans within 10 seconds) and multiple device locations scanning the same code. Flags are displayed as warnings on the check-in result screen.' },
+          { title: 'Trust score', body: 'Each invite has a trust score starting at 100. Security events (duplicates, rapid scans, multiple devices) reduce the score. Organizers can configure a minimum score threshold; invites below it can be auto-blocked or flagged for review.' },
+          { title: 'Time window enforcement', body: 'By default, check-in accepts scans in a window from 2 hours before the event to 30 minutes after it starts. Scans outside this window are refused with a message explaining when the window opens or closed.' }
+        ]
+      },
+      {
+        type: 'callout',
+        variant: 'info',
+        text: 'Anti-fraud warnings do NOT automatically block admission unless the specific auto-block setting is enabled. The warning gives the staff member information to make a judgment call — you always retain the final decision.'
+      }
+    ]
+  },
+  {
+    id: 'ent-override',
+    category: 'Enterprise & Check-in',
+    title: 'Manager override: checking in guests without a QR code',
+    icon: Key,
+    tags: ['override', 'manager', 'manual', 'no phone', 'no qr', 'lost', 'battery', 'search'],
+    content: [
+      {
+        type: 'intro',
+        text: 'When a guest arrives without their QR code — dead battery, no signal, lost the email — the manager override lets you check them in manually by searching the guest list.'
+      },
+      {
+        type: 'steps',
+        items: [
+          { title: 'Find the override option', body: 'On the check-in dashboard, look for the "Manager Override" or "Manual Check-in" button.' },
+          { title: 'Enter the organizer password', body: 'The override requires authentication with the event\'s account (organizer) password. This prevents staff from bypassing the QR system without authorization.' },
+          { title: 'Search for the guest', body: 'Type the guest\'s name in the search field. The matching records appear. Select the correct guest.' },
+          { title: 'Confirm the override', body: 'Tap Admit. The check-in is recorded with a "manual override" flag and the staff member\'s attribution, identical to a QR scan but traceable as a manual entry.' }
+        ]
+      },
+      {
+        type: 'callout',
+        variant: 'info',
+        text: 'Override check-ins appear in the audit log with a manual override flag. They count identically toward attendance and are fully traceable.'
+      }
+    ]
+  },
+
+  // ── SECURITY & PASSWORDS ──────────────────────────────────────────────────
+  {
+    id: 'sec-passwords',
+    category: 'Security & Passwords',
+    title: 'Understanding the two-password system',
+    icon: Lock,
+    tags: ['password', 'account password', 'event password', 'security', 'credentials', 'two passwords'],
+    content: [
+      {
+        type: 'intro',
+        text: 'PlanIt uses two completely separate passwords that serve different purposes. Confusing them is the most common source of access problems.'
+      },
+      {
+        type: 'compare',
+        items: [
+          {
+            label: 'Account Password',
+            color: 'neutral',
+            desc: 'Your organizer identity credential.',
+            features: [
+              'Required when creating the event',
+              'Proves you are the organizer',
+              'Needed to claim organizer role from any new browser/device',
+              'Needed for manager override in Enterprise mode',
+              'Cannot be reset or recovered',
+              'Hashed with bcrypt — not stored in readable form',
+            ],
+            best: 'Store this somewhere you can always access it — a password manager, a note, anywhere secure.'
+          },
+          {
+            label: 'Event Password',
+            color: 'neutral',
+            desc: 'Optional gate to the workspace for everyone.',
+            features: [
+              'Optional — set at event creation',
+              'Required by all visitors before entering the workspace',
+              'Share with your entire planning team',
+              'Cannot be changed after creation',
+              'Hashed and stored separately from account password',
+            ],
+            best: 'Use this when your event is confidential and you don\'t want anyone who finds the link to enter the workspace.'
+          }
+        ]
+      }
+    ]
+  },
+  {
+    id: 'sec-jwt',
+    category: 'Security & Passwords',
+    title: 'Sessions, tokens, and device access',
+    icon: Shield,
+    tags: ['session', 'jwt', 'token', 'browser', 'device', 'logout', 'localStorage'],
+    content: [
+      {
+        type: 'intro',
+        text: 'PlanIt uses JWTs (JSON Web Tokens) stored in your browser\'s localStorage to manage your session. Understanding how this works prevents confusion when switching devices.'
+      },
+      {
+        type: 'steps',
+        items: [
+          { title: 'Your session is browser-local', body: 'When you authenticate, the server issues a signed JWT that lives in your browser\'s localStorage. It\'s tied to that specific browser on that specific device.' },
+          { title: 'Switching devices', body: 'Opening the event link on a different device or browser starts a fresh session. You\'ll need to enter your display name and any event password again. Organizers need to re-enter their account password to reclaim organizer status.' },
+          { title: 'Clearing browser data', body: 'Clearing localStorage or browser history removes your session token. The next visit to the event link starts fresh.' },
+          { title: 'Logging out', body: 'Click the logout icon (door with arrow) in the workspace header to manually clear your session and return to the home page.' }
+        ]
+      }
+    ]
+  },
+
+  // ── DATA & PRIVACY ────────────────────────────────────────────────────────
+  {
+    id: 'data-retention',
+    category: 'Data & Privacy',
+    title: 'Data retention: the 7-day deletion policy',
+    icon: Trash2,
+    tags: ['delete', 'deletion', 'data', 'retention', '7 days', 'export', 'backup', 'cleanup', 'table service'],
+    content: [
+      {
+        type: 'intro',
+        text: 'All event data is permanently deleted 7 days after the event\'s scheduled date. This policy applies to Standard and Enterprise events. Table Service venues are permanently exempt.'
+      },
+      {
+        type: 'steps',
+        items: [
+          { title: 'What gets deleted', body: 'The event record, all messages, tasks, polls, notes, announcements, expenses, files, participant records, guest invitation records, check-in logs, and analytics data. Everything. Permanently.' },
+          { title: 'When the deletion warning appears', body: 'As your event approaches the 7-day deletion window, a persistent amber warning banner appears at the top of every workspace page showing days remaining.' },
+          { title: 'How to export before deletion', body: 'Use the Share tab: download the .ics calendar file, export the participant list, save any files from the Files tab. For analytics, take screenshots or note the key numbers before they\'re gone.' },
+          { title: 'Early deletion', body: 'If you want your event data deleted before 7 days, email planit.userhelp@gmail.com with your event link. We\'ll process it manually.' },
+          { title: 'Table Service mode exception', body: 'Venues created in Table Service mode are never auto-deleted. The cleanup job skips them entirely. Your floor layout, reservation history, table states, and settings persist until you choose to delete the venue yourself. This is intentional — a restaurant cannot have its floor plan wiped on a schedule.' }
         ]
       },
       {
         type: 'callout',
         variant: 'warning',
-        text: 'If you forget your current portal password, you cannot change it yourself — there is no "forgot password" flow in the dashboard. Contact PlanIt support to reset your portal password. For this reason, store it securely (a password manager is strongly recommended).'
+        text: 'There is NO recovery after deletion. The data is gone permanently. If you need records beyond 7 days, download or export them before the deletion date. This does NOT apply to Table Service venues, which are never automatically deleted.'
+      }
+    ]
+  },
+  {
+    id: 'data-noAccount',
+    category: 'Data & Privacy',
+    title: 'No-account model: what it means for you',
+    icon: Eye,
+    tags: ['no account', 'privacy', 'anonymous', 'register', 'email', 'identity'],
+    content: [
+      {
+        type: 'intro',
+        text: 'PlanIt requires no email address, no registration, and no account. This is deliberate — but it comes with tradeoffs you should understand.'
       },
       {
-        type: 'faq',
+        type: 'compare',
         items: [
-          { q: 'How long is a dashboard session?', a: 'Sessions last 8 hours from the moment you log in. After 8 hours you are automatically signed out and must log in again. Closing the browser tab also ends the session.' },
-          { q: 'Can multiple people use the dashboard at the same time?', a: 'Yes. The portal password can be shared among your team. All logged-in sessions are independent. There is no multi-user access control within the portal — everyone who knows the password has full access.' },
-          { q: 'What happens after 5 wrong password attempts?', a: 'The portal is locked for 15 minutes after 5 consecutive failures. This applies per IP address and per portal account. Wait 15 minutes before trying again.' },
+          {
+            label: 'The benefits',
+            color: 'neutral',
+            desc: 'Why no account works in your favour:',
+            features: [
+              'Start planning in under 2 minutes with no setup friction',
+              'No personal data tied to your identity on PlanIt\'s servers',
+              'No email address to protect or worry about',
+              'No profile page, no tracking across events',
+            ],
+            best: ''
+          },
+          {
+            label: 'The tradeoffs',
+            color: 'neutral',
+            desc: 'What you give up without an account:',
+            features: [
+              'No password reset — if you forget, it\'s gone',
+              'Sessions don\'t sync across devices',
+              'No persistent history after 7 days',
+              'The event link is effectively the key — protect it',
+            ],
+            best: ''
+          }
         ]
       }
     ]
   },
+
+  // ── ERRORS & TROUBLESHOOTING ──────────────────────────────────────────────
+  {
+    id: 'err-loading',
+    category: 'Errors & Troubleshooting',
+    title: 'Event won\'t load / blank workspace',
+    icon: AlertTriangle,
+    tags: ['loading', 'blank', 'not loading', 'spinner', 'stuck', 'white screen', 'error loading'],
+    content: [
+      {
+        type: 'intro',
+        text: 'If the workspace is stuck on a loading spinner or you see a blank screen, work through these steps in order.'
+      },
+      {
+        type: 'steps',
+        items: [
+          { title: 'Hard refresh the page', body: 'Press Ctrl+Shift+R (Windows/Linux) or Cmd+Shift+R (Mac) to force a full reload bypassing cache. Wait 10–15 seconds for the backend to respond, especially if the server was recently restarted.' },
+          { title: 'Check the status page', body: 'Go to planitapp.onrender.com/status to see if there\'s a known incident or outage. If a backend is marked as degraded or down, that\'s why the workspace isn\'t loading.' },
+          { title: 'Wait for cold-start', body: 'PlanIt runs on Render\'s free tier. Servers spin down after 15 minutes of inactivity and take 30–60 seconds to cold-start. If the first load is slow, wait a minute and try again.' },
+          { title: 'Check your event link', body: 'Make sure the URL is correct. An incorrect slug or event ID will show a "not found" error. The correct format is planitapp.onrender.com/e/your-slug or planitapp.onrender.com/event/[id].' },
+          { title: 'Try a different browser', body: 'If the issue persists on one browser, try Chrome, Firefox, or Safari. Clear localStorage on your current browser (DevTools → Application → Local Storage → Clear).' },
+          { title: 'Still broken?', body: 'Email planit.userhelp@gmail.com with your event link, the browser you\'re using, and a screenshot of any error messages. We\'ll investigate.' }
+        ]
+      },
+      {
+        type: 'callout',
+        variant: 'info',
+        text: 'Cold-start delays (30–60 second loading on first visit) are expected when the server has been idle. This is a known limitation of the free-tier hosting. Once the server is warm, subsequent loads are fast.'
+      }
+    ]
+  },
+  {
+    id: 'err-realtime',
+    category: 'Errors & Troubleshooting',
+    title: 'Real-time features not working (chat not updating, votes not showing)',
+    icon: WifiOff,
+    tags: ['realtime', 'websocket', 'socket', 'not updating', 'disconnected', 'offline', 'amber dot', 'connection'],
+    content: [
+      {
+        type: 'intro',
+        text: 'If chat messages, vote tallies, or task updates are not appearing in real time, the WebSocket connection may have dropped.'
+      },
+      {
+        type: 'steps',
+        items: [
+          { title: 'Check the connection dot in the header', body: 'Look at the small dot next to the event title in the workspace header. Green = connected and live. Amber = disconnected. If it\'s amber, the real-time connection is down.' },
+          { title: 'Wait for automatic reconnect', body: 'Socket.IO will attempt to reconnect automatically. Give it 10–20 seconds. When it reconnects, the dot turns green and any missed updates load from the database.' },
+          { title: 'Check your internet connection', body: 'If your device has lost network access, the socket will stay disconnected. Reconnect to WiFi or mobile data and the socket should re-establish.' },
+          { title: 'Refresh the page', body: 'If the dot stays amber for more than a minute, do a normal page refresh (F5 or Ctrl+R). The socket re-establishes on load.' },
+          { title: 'Check for a server incident', body: 'Visit planitapp.onrender.com/status. If the backend is degraded, real-time features may be unavailable until the service recovers.' }
+        ]
+      },
+      {
+        type: 'callout',
+        variant: 'info',
+        text: 'No updates are lost during a disconnection. When the socket reconnects, the workspace reloads data from the database, so you\'ll see everything that happened while you were offline.'
+      }
+    ]
+  },
+  {
+    id: 'err-password',
+    category: 'Errors & Troubleshooting',
+    title: 'Forgot organizer password / can\'t claim organizer role',
+    icon: Key,
+    tags: ['forgot password', 'lost password', 'organizer', 'can\'t login', 'locked out', 'reset', 'recover'],
+    content: [
+      {
+        type: 'intro',
+        text: 'There is no automated password reset in PlanIt because no email address is collected. If you\'ve lost your organizer password, here\'s what you can and cannot do.'
+      },
+      {
+        type: 'steps',
+        items: [
+          { title: 'Check everywhere you might have saved it', body: 'Password managers, browser-saved passwords, notes apps, messages to yourself, email drafts. The password was set during event creation — did you write it somewhere?' },
+          { title: 'Try common variations', body: 'Check for capitalisation differences, spaces, or symbols you might have typed slightly differently. The login form allows unlimited attempts before rate limiting kicks in (20 failed attempts per 15 minutes).' },
+          { title: 'Contact support', body: 'Email planit.userhelp@gmail.com with your event link, your name, and any details that confirm you created the event (e.g. the event title, date, approximate creation time). We may be able to provide limited assistance, but password recovery is not guaranteed.' },
+          { title: 'Create a new event', body: 'If recovery isn\'t possible, the practical solution for a future event is to create a new one and store the password properly this time. Use a password manager.' }
+        ]
+      },
+      {
+        type: 'callout',
+        variant: 'warning',
+        text: 'This is not a bug — it is an intentional design tradeoff of the no-account model. The same system that requires no email for signup means there\'s no email to send a reset link to. Please store your organizer password before sharing the event link.'
+      }
+    ]
+  },
+  {
+    id: 'err-checkin',
+    category: 'Errors & Troubleshooting',
+    title: 'QR code not scanning / check-in errors',
+    icon: QrCode,
+    tags: ['qr code', 'scan', 'not scanning', 'checkin error', 'invalid', 'camera', 'check-in not working'],
+    content: [
+      {
+        type: 'intro',
+        text: 'If the check-in scanner isn\'t reading QR codes or showing errors, work through these steps.'
+      },
+      {
+        type: 'steps',
+        items: [
+          { title: 'Check camera permissions', body: 'The scanner requires camera access. If the browser is blocked from accessing the camera, you\'ll see a blank scanner. Go to your browser\'s site settings and allow camera access for planitapp.onrender.com.' },
+          { title: 'Increase screen brightness on the guest\'s phone', body: 'QR codes scan best at maximum brightness. Ask the guest to turn up their screen brightness before scanning.' },
+          { title: 'Use the fullscreen QR view', body: 'On the guest\'s invite page, tapping the QR code expands it to fill the entire screen. Scan from the fullscreen view — it\'s higher contrast and easier to read.' },
+          { title: '"Already checked in" message', body: 'This means the QR code was already scanned and admitted earlier. Verify the guest\'s identity manually. If it\'s the same person (e.g. they left and came back), use the manager override to mark them re-admitted.' },
+          { title: '"Invalid code" or "not found"', body: 'The invite code doesn\'t match any record in the event. This can happen if the guest is scanning from a different event\'s invite or if the invite was created after the check-in window opened. Check the event link and invite code manually.' },
+          { title: 'Server error during scan', body: 'If the scan returns a 500 or connection error, check the status page. If the backend is having issues, you may need to switch to manual check-in via the manager override until the service recovers.' }
+        ]
+      }
+    ]
+  },
+  {
+    id: 'err-files',
+    category: 'Errors & Troubleshooting',
+    title: 'File upload failing',
+    icon: Upload,
+    tags: ['upload', 'file upload', 'error', 'failed', 'too large', 'limit', 'file type'],
+    content: [
+      {
+        type: 'intro',
+        text: 'If file uploads are failing, check these common causes.'
+      },
+      {
+        type: 'steps',
+        items: [
+          { title: 'Check the file size', body: 'Individual files have a size limit. If your file is very large (typically over 10MB depending on Cloudinary settings), the upload will fail. Try compressing the file first.' },
+          { title: 'Check the rate limit', body: 'Uploads are limited to 20 per hour per IP. If your team has uploaded many files in the past hour, you may have hit this limit. Wait until the hour resets.' },
+          { title: 'Check your connection', body: 'Large file uploads can fail on slow or unstable connections. Try uploading on a stronger network connection.' },
+          { title: 'Try a different file type', body: 'Standard document, image, and PDF types are supported. Executables (.exe, .app) and certain archive types may be blocked. If a specific file type fails consistently, contact support.' }
+        ]
+      }
+    ]
+  },
+  {
+    id: 'err-service-crash',
+    category: 'Errors & Troubleshooting',
+    title: 'What to do when a service crashes or goes down',
+    icon: Server,
+    tags: ['crash', 'down', 'outage', 'service', 'unavailable', '503', '502', 'server error', 'backend', 'not responding'],
+    content: [
+      {
+        type: 'intro',
+        text: 'PlanIt runs on a distributed infrastructure — a router, multiple backend servers, and a watchdog monitoring service. If something crashes, here\'s exactly what happens and what you should do.'
+      },
+      {
+        type: 'steps',
+        items: [
+          { title: 'Check the status page first', body: 'Go to planitapp.onrender.com/status. This is the first thing to check. If a server is down, you\'ll see an active incident. The page updates automatically — you don\'t need to refresh.' },
+          { title: 'Understand what a backend crash means', body: 'PlanIt runs multiple backend instances behind a load-balancing router. If one backend goes down, the router detects it via circuit breaker (within 3 failed pings) and stops sending traffic to it. Requests are automatically rerouted to healthy backends. You may notice a brief blip, but service should continue.' },
+          { title: 'If the router itself is unreachable', body: 'This is more serious. If the router is down, no requests can reach any backend. The workspace will fail to load entirely. Check the status page (it\'s served from a different infrastructure layer) and wait. The watchdog detects this within 3 minutes and creates an incident.' },
+          { title: 'If you see a 502 or 503 error', body: 'A 502 (Bad Gateway) or 503 (Service Unavailable) means the router can\'t reach a healthy backend. This typically resolves within 1–5 minutes as the failed instance restarts or is removed from rotation. Refresh the page after a minute.' },
+          { title: 'Cold-start after a crash', body: 'After a backend restarts, it goes through a 90-second cold-start window where the router deprioritises it. You may see slightly slower responses for the first 2 minutes after recovery.' },
+          { title: 'Report the issue', body: 'If an outage isn\'t reflected on the status page within 5 minutes, submit a report at planitapp.onrender.com/status (use the "Report an issue" button) or email planit.userhelp@gmail.com. Reports from multiple users trigger automatic incident creation.' }
+        ]
+      },
+      {
+        type: 'callout',
+        variant: 'info',
+        text: 'The watchdog service monitors every server every 60 seconds. When a failure is detected, it fires an urgent push notification to the platform operator and creates an incident on the status page automatically. You don\'t need to do anything — the system detects and reports itself.'
+      },
+      {
+        type: 'faq',
+        items: [
+          { q: 'Will I lose my event data during a crash?', a: 'No. All event data is stored in MongoDB Atlas, which is separate from the application servers. A backend crash doesn\'t affect the database. When the server comes back up, all data is exactly as you left it.' },
+          { q: 'What if the crash happens during check-in at my event?', a: 'Check-in data written before the crash is safe in the database. For new check-ins during the outage, switch to manager override mode — search guests by name manually and use the override to admit them. All manual overrides are recorded when the server recovers.' },
+          { q: 'How long do outages typically last?', a: 'Most incidents resolve within 5–10 minutes through automatic restart and rerouting. Longer outages are rare and are tracked on the status page with regular updates.' }
+        ]
+      }
+    ]
+  },
+  {
+    id: 'err-rate-limit',
+    category: 'Errors & Troubleshooting',
+    title: 'Rate limit errors (429 Too Many Requests)',
+    icon: Ban,
+    tags: ['rate limit', '429', 'too many requests', 'blocked', 'slow down', 'throttle'],
+    content: [
+      {
+        type: 'intro',
+        text: 'A 429 error means you\'ve sent too many requests in a short period. PlanIt applies rate limits to protect the service.'
+      },
+      {
+        type: 'steps',
+        items: [
+          { title: 'Wait and retry', body: 'Most rate limits reset within 1–15 minutes. Stop what you\'re doing, wait a few minutes, and try again. The response will include a Retry-After header if your browser is showing the raw error.' },
+          { title: 'Identify which limit you hit', body: 'Authentication attempts: 20 failures per 15 minutes. Chat messages: 30 per minute. File uploads: 20 per hour. Event creation: 10 per hour. General API: 10,000 per 15 minutes (very hard to hit normally).' },
+          { title: 'Check for automation or bots', body: 'If you\'re seeing 429 errors unexpectedly, check if any browser extensions, scripts, or tools are making automated requests to PlanIt on your behalf.' }
+        ]
+      }
+    ]
+  },
+  {
+    id: 'err-cold-start',
+    category: 'Errors & Troubleshooting',
+    title: 'Slow initial loading (cold start)',
+    icon: Cpu,
+    tags: ['slow', 'loading', 'cold start', 'spin down', 'render', 'wait', '30 seconds', '60 seconds'],
+    content: [
+      {
+        type: 'intro',
+        text: 'PlanIt\'s backend servers may spin down after 15 minutes of inactivity and take 30–60 seconds to restart on the first request after being idle. We do use Uptimerobot and our own services to prevent this.'
+      },
+      {
+        type: 'steps',
+        items: [
+          { title: 'Recognise a cold-start', body: 'The page loads the frontend (fast) but all API calls time out or hang. The workspace shows a loading spinner that doesn\'t resolve for 30–60 seconds, then suddenly everything loads.' },
+          { title: 'Just wait', body: 'This is expected behaviour. Wait up to 60 seconds. The server will wake up and your workspace will load. There\'s nothing wrong.' },
+          { title: 'Warm up the server before your event', body: 'On event day, open your workspace about 5 minutes before guests start arriving. This warms the server so check-in doesn\'t experience cold-start delays at the door.' }
+        ]
+      },
+      {
+        type: 'callout',
+        variant: 'info',
+        text: 'Tip for event day: open the workspace 5–10 minutes early to wake the server. Once warm, it stays fast for the duration of activity.'
+      }
+    ]
+  },
+
+  // ── STATUS PAGE ───────────────────────────────────────────────────────────
+  {
+    id: 'status-page',
+    category: 'Status & Monitoring',
+    title: 'How to use the status page',
+    icon: Activity,
+    tags: ['status', 'uptime', 'incident', 'monitoring', 'operational', 'history', 'report'],
+    content: [
+      {
+        type: 'intro',
+        text: 'The PlanIt status page at planitapp.onrender.com/status gives real-time visibility into platform health. Here\'s how to read it.'
+      },
+      {
+        type: 'steps',
+        items: [
+          { title: 'Overall status indicator', body: 'The banner at the top shows one of three states: All Systems Operational (green), Degraded Performance (amber), or Service Outage (red). This reflects the current state across all monitored services.' },
+          { title: 'Service history bars', body: 'Each service shows a row of bars representing the past 15 days of uptime. Green = ≥99% uptime. Amber = 80–99%. Red = significant outage. Grey = no monitoring data for that day.' },
+          { title: 'Active incidents', body: 'Any ongoing incident appears below the status banner with its severity, affected service, and a real-time timeline of updates as the issue is investigated and resolved.' },
+          { title: 'Resolved incidents', body: 'The 10 most recently resolved incidents from the past 7 days are listed, each with their full update timeline and total downtime duration.' },
+          { title: 'Submit a report', body: 'If you\'re experiencing an issue not shown on the status page, click "Report an Issue". Fill in what you\'re seeing, which service seems affected, and your email if you want a follow-up. Three or more reports on the same service within 10 minutes triggers automatic incident creation.' }
+        ]
+      }
+    ]
+  },
+  {
+    id: 'status-alerts',
+    category: 'Status & Monitoring',
+    title: 'Getting notified about outages',
+    icon: Bell,
+    tags: ['notification', 'alert', 'ntfy', 'outage', 'push', 'subscribe', 'monitor'],
+    content: [
+      {
+        type: 'intro',
+        text: 'The PlanIt status page is your primary source for outage information. Here\'s how the automated alert system works and how you can stay informed.'
+      },
+      {
+        type: 'steps',
+        items: [
+          { title: 'Bookmark the status page', body: 'planitapp.onrender.com/status — check this first whenever something seems wrong. It updates in real time, so a refresh will always show the latest state.' },
+          { title: 'Submit an issue report', body: 'If you\'re experiencing a problem and there\'s no active incident on the status page, submit a report. If others are experiencing the same thing, an incident will be created automatically and you\'ll be part of the record.' },
+          { title: 'How the automated detection works', body: 'The watchdog service pings every backend server every 60 seconds. Three consecutive failures trigger an incident automatically and fire an urgent alert to the operator. You don\'t need to report outages for them to be detected — the system catches them independently.' }
+        ]
+      }
+    ]
+  },
+
+  // ── ACCOUNT & SETTINGS ────────────────────────────────────────────────────
+  {
+    id: 'acct-settings',
+    category: 'Settings & Customisation',
+    title: 'Workspace settings (organizer)',
+    icon: Settings,
+    tags: ['settings', 'configure', 'organizer', 'toggle', 'chat', 'polls', 'features', 'disable'],
+    content: [
+      {
+        type: 'intro',
+        text: 'As an organizer, you can configure which features are available in the workspace and set various event-level options.'
+      },
+      {
+        type: 'steps',
+        items: [
+          { title: 'Open workspace settings', body: 'In the workspace header, click the settings icon (sliders or gear). You must be logged in as organizer to see this.' },
+          { title: 'Toggle features on or off', body: 'You can disable Chat, Polls, and File Sharing from settings. Disabling a feature removes its tab from the workspace for all participants.' },
+          { title: 'Enterprise check-in settings', body: 'In Enterprise mode, you can configure anti-fraud settings: which middleware layers are active, minimum trust score thresholds, time window for check-in, capacity limits, and whether auto-blocking is enabled.' },
+          { title: 'Save settings', body: 'Settings are saved to the database and take effect immediately for all connected sessions.' }
+        ]
+      }
+    ]
+  },
+
+  // ── CONTACT & SUPPORT ─────────────────────────────────────────────────────
+  {
+    id: 'support-contact',
+    category: 'Contact & Support',
+    title: 'How to contact support',
+    icon: Mail,
+    tags: ['contact', 'support', 'email', 'help', 'report', 'issue', 'feedback'],
+    content: [
+      {
+        type: 'intro',
+        text: 'PlanIt support is operated by the developer directly. Here are the ways to get help.'
+      },
+      {
+        type: 'steps',
+        items: [
+          { title: 'Use the support form', body: 'Go to planitapp.onrender.com/status and fill in the report issue form. Select the category that best describes your issue, describe the problem in detail, and include your event link if relevant.' },
+          { title: 'Email directly', body: 'Email planit.userhelp@gmail.com. Include: your event link, what you were trying to do, what happened instead, the browser and device you\'re using, and any error messages or screenshots.' },
+          { title: 'Response time', body: 'Support aims to respond within 48 business hours. Complex technical issues may take longer.' }
+        ]
+      },
+      {
+        type: 'callout',
+        variant: 'info',
+        text: 'PlanIt is built and operated by one person. Support responses are thorough but not instantaneous. For urgent event-day issues, the status page is your fastest resource — it\'s automated and doesn\'t require a human to update.'
+      }
+    ]
+  },
+
 ];
+
+const CATEGORIES = [
+  { label: 'All Articles',          icon: BookOpen,        id: 'all' },
+  { label: 'Getting Started',       icon: Star,            id: 'Getting Started' },
+  { label: 'Planning Tools',        icon: Calendar,        id: 'Planning Tools' },
+  { label: 'Enterprise & Check-in', icon: UserCheck,       id: 'Enterprise & Check-in' },
+  { label: 'Table Service',         icon: UtensilsCrossed, id: 'Table Service' },
+  { label: 'White Label & Branding', icon: Globe,          id: 'White Label & Branding' },
+  { label: 'Security & Passwords',  icon: Shield,          id: 'Security & Passwords' },
+  { label: 'Data & Privacy',        icon: Database,        id: 'Data & Privacy' },
+  { label: 'Errors & Troubleshooting', icon: AlertTriangle, id: 'Errors & Troubleshooting' },
+  { label: 'Status & Monitoring',   icon: Activity,        id: 'Status & Monitoring' },
+  { label: 'Settings & Customisation', icon: Settings,     id: 'Settings & Customisation' },
+  { label: 'Contact & Support',     icon: LifeBuoy,        id: 'Contact & Support' },
+];
+
 ARTICLES.push(...ARTICLES_EXTRA);
 
 const POPULAR = ['gs-create', 'err-service-crash', 'err-loading', 'err-password', 'ent-checkin', 'data-retention', 'ts-overview', 'ts-waitlist'];
