@@ -51,6 +51,13 @@ export default defineConfig({
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff,woff2}'],
         runtimeCaching: [
           {
+            // API calls must NEVER be cached or intercepted by the SW.
+            // The /resolve endpoint in particular must always hit the network
+            // so suspended/cancelled WL sites are blocked immediately.
+            urlPattern: /\/api\//i,
+            handler: 'NetworkOnly',
+          },
+          {
             urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
             handler: 'CacheFirst',
             options: {
