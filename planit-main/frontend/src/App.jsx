@@ -30,6 +30,7 @@ import GuestTablet from './pages/GuestTablet';
 import WhiteLabelSignup from './pages/WhiteLabelSignup';
 import SetupFee from './pages/SetupFee';
 import SetupFeeSuccess from './pages/SetupFeeSuccess';
+import ClientPortal from './pages/ClientPortal';
 
 // ─── Maintenance page ─────────────────────────────────────────────────────────
 // t = 's' scheduled | 'i' incident | 'd' degraded
@@ -385,6 +386,7 @@ function App() {
 
         <Route path="/admin"           element={<Admin />} />
         <Route path="/admin/security"  element={<SecurityDashboard />} />
+        <Route path="/dashboard"       element={<ClientPortal />} />
         <Route path="/terms"           element={<Terms />} />
         <Route path="/privacy"         element={<Privacy />} />
         <Route path="/support"         element={<Support />} />
