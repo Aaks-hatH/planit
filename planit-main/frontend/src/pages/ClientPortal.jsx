@@ -165,9 +165,10 @@ function BrandingSection({ data, tier, token, onUpdate, toast }) {
     customCss:     data?.customCss     || '',
   });
   const [saving, setSaving] = useState(false);
-  const [saved, setSaved] = useState(false);
+  const [saved, setSaved]   = useState(false);
+  const [dirty, setDirty]   = useState(false);
 
-  const set = (k, v) => { setForm(f => ({ ...f, [k]: v })); setSaved(false); };
+  const set = (k, v) => { setForm(f => ({ ...f, [k]: v })); setSaved(false); setDirty(true); };
 
   const save = async () => {
     setSaving(true);
@@ -181,8 +182,9 @@ function BrandingSection({ data, tier, token, onUpdate, toast }) {
       if (!r.ok) throw new Error(j.error || 'Save failed');
       onUpdate('branding', j.branding);
       setSaved(true);
-      toast('Branding saved', 'success');
-      setTimeout(() => setSaved(false), 3000);
+      setDirty(false);
+      toast('Branding saved — reload your site to see changes applied to visitors', 'success');
+      setTimeout(() => setSaved(false), 4000);
     } catch (e) {
       toast(e.message, 'error');
     } finally {
@@ -192,73 +194,136 @@ function BrandingSection({ data, tier, token, onUpdate, toast }) {
 
   const FONTS = ['Inter', 'DM Sans', 'Roboto', 'Open Sans', 'Lato', 'Montserrat', 'Playfair Display', 'Georgia'];
 
+  // Live preview derived from form state
+  const preview = {
+    primary: form.primaryColor || '#2563eb',
+    accent:  form.accentColor  || '#1d4ed8',
+    font:    form.fontFamily   || 'Inter',
+    name:    form.companyName  || 'Your Brand',
+    logo:    form.logoUrl,
+  };
+
   return (
-    <Card>
-      <SectionHeader title="Branding" subtitle="Logo, colors, and fonts shown across your platform" />
-      <div className="p-6 space-y-5">
-        <Field label="Company name" hint="Shown in the browser tab and page headers">
-          <Input value={form.companyName} onChange={e => set('companyName', e.target.value)} placeholder="Your Business Name" maxLength={200} />
-        </Field>
-
-        <div className="grid grid-cols-2 gap-4">
-          <Field label="Primary color">
-            <div className="flex items-center gap-2">
-              <input type="color" value={form.primaryColor} onChange={e => set('primaryColor', e.target.value)}
-                className="w-10 h-9 rounded-lg border border-neutral-200 cursor-pointer p-0.5 bg-neutral-50" />
-              <Input value={form.primaryColor} onChange={e => set('primaryColor', e.target.value)} placeholder="#2563eb" maxLength={9} />
-            </div>
-          </Field>
-          <Field label="Accent color">
-            <div className="flex items-center gap-2">
-              <input type="color" value={form.accentColor} onChange={e => set('accentColor', e.target.value)}
-                className="w-10 h-9 rounded-lg border border-neutral-200 cursor-pointer p-0.5 bg-neutral-50" />
-              <Input value={form.accentColor} onChange={e => set('accentColor', e.target.value)} placeholder="#1d4ed8" maxLength={9} />
-            </div>
-          </Field>
-        </div>
-
-        <Field label="Font family">
-          <select
-            value={form.fontFamily} onChange={e => set('fontFamily', e.target.value)}
-            className="w-full px-3 py-2 text-sm rounded-lg border border-neutral-200 bg-neutral-50 text-neutral-900 outline-none"
+    <div className="space-y-4">
+      {/* Live Preview Card */}
+      <Card>
+        <SectionHeader title="Live Preview" subtitle="Updates as you edit — shows how your brand will look to visitors" />
+        <div className="p-4">
+          <div
+            className="rounded-xl overflow-hidden border border-neutral-200"
+            style={{ fontFamily: `'${preview.font}', system-ui, sans-serif` }}
           >
-            {FONTS.map(f => <option key={f} value={f}>{f}</option>)}
-          </select>
-        </Field>
-
-        <Field label="Logo URL" hint="Direct link to your logo image (PNG or SVG recommended)">
-          <Input value={form.logoUrl} onChange={e => set('logoUrl', e.target.value)} placeholder="https://..." />
-        </Field>
-
-        <Field label="Favicon URL" hint="Direct link to your favicon (.ico or 32×32 PNG)">
-          <Input value={form.faviconUrl} onChange={e => set('faviconUrl', e.target.value)} placeholder="https://..." />
-        </Field>
-
-        {(tier === 'pro' || tier === 'enterprise') && (
-          <Toggle
-            value={form.hidePoweredBy}
-            onChange={v => set('hidePoweredBy', v)}
-            label="Hide 'Powered by PlanIt' badge"
-          />
-        )}
-
-        {tier === 'enterprise' && (
-          <Field label="Custom CSS" hint="Advanced: injected on every page. Use with care.">
-            <Textarea
-              value={form.customCss}
-              onChange={e => set('customCss', e.target.value)}
-              placeholder="/* your custom styles */"
-              rows={6}
-              maxLength={10000}
-            />
-          </Field>
-        )}
-
-        <div className="flex justify-end pt-2">
-          <SaveButton onClick={save} saving={saving} saved={saved} />
+            {/* Mock nav */}
+            <div className="flex items-center gap-3 px-4 py-3" style={{ background: preview.primary }}>
+              {preview.logo
+                ? <img src={preview.logo} alt="" className="h-6 object-contain" onError={e => { e.target.style.display = 'none'; }} />
+                : <div className="w-6 h-6 rounded bg-white/20 flex items-center justify-center text-white font-bold text-xs">{preview.name[0]}</div>
+              }
+              <span className="text-sm font-semibold text-white truncate">{preview.name}</span>
+            </div>
+            {/* Mock body */}
+            <div className="px-4 py-5 bg-white">
+              <p className="text-xs font-bold text-neutral-800 mb-1">Welcome to {preview.name}</p>
+              <p className="text-xs text-neutral-500 mb-3">Your platform, your brand.</p>
+              <button
+                className="px-3 py-1.5 rounded-lg text-xs font-semibold text-white"
+                style={{ background: `linear-gradient(135deg, ${preview.primary}, ${preview.accent})` }}
+              >
+                Get Started
+              </button>
+            </div>
+            {!form.hidePoweredBy && (
+              <div className="px-4 py-2 border-t border-neutral-100 text-center bg-neutral-50">
+                <p className="text-[10px] text-neutral-400">Powered by PlanIt</p>
+              </div>
+            )}
+          </div>
+          {dirty && (
+            <p className="text-xs text-amber-600 mt-2 flex items-center gap-1">
+              <span>⚠</span> You have unsaved changes.
+            </p>
+          )}
         </div>
-      </div>
-    </Card>
+      </Card>
+
+      {/* Settings Card */}
+      <Card>
+        <SectionHeader title="Branding Settings" subtitle="Logo, colours, and fonts shown across your platform" />
+        <div className="p-6 space-y-5">
+          <Field label="Company name" hint="Shown in the browser tab and page headers">
+            <Input value={form.companyName} onChange={e => set('companyName', e.target.value)} placeholder="Your Business Name" maxLength={200} />
+          </Field>
+
+          <div className="grid grid-cols-2 gap-4">
+            <Field label="Primary colour" hint="Buttons, headers, links">
+              <div className="flex items-center gap-2">
+                <input type="color" value={form.primaryColor} onChange={e => set('primaryColor', e.target.value)}
+                  className="w-10 h-9 rounded-lg border border-neutral-200 cursor-pointer p-0.5 bg-neutral-50" />
+                <Input value={form.primaryColor} onChange={e => set('primaryColor', e.target.value)} placeholder="#2563eb" maxLength={9} />
+              </div>
+            </Field>
+            <Field label="Accent colour" hint="Hover states, highlights">
+              <div className="flex items-center gap-2">
+                <input type="color" value={form.accentColor} onChange={e => set('accentColor', e.target.value)}
+                  className="w-10 h-9 rounded-lg border border-neutral-200 cursor-pointer p-0.5 bg-neutral-50" />
+                <Input value={form.accentColor} onChange={e => set('accentColor', e.target.value)} placeholder="#1d4ed8" maxLength={9} />
+              </div>
+            </Field>
+          </div>
+
+          <Field label="Font family" hint="Google Font or system font name (e.g. Inter, Poppins)">
+            <select
+              value={form.fontFamily} onChange={e => set('fontFamily', e.target.value)}
+              className="w-full px-3 py-2 text-sm rounded-lg border border-neutral-200 bg-neutral-50 text-neutral-900 outline-none"
+            >
+              {FONTS.map(f => <option key={f} value={f}>{f}</option>)}
+            </select>
+          </Field>
+
+          <Field label="Logo URL" hint="Direct https:// link to your logo (PNG or SVG). Must stay publicly accessible.">
+            <Input value={form.logoUrl} onChange={e => set('logoUrl', e.target.value)} placeholder="https://..." />
+          </Field>
+
+          <Field label="Favicon URL" hint="Direct link to your favicon (.ico or 32×32 PNG)">
+            <Input value={form.faviconUrl} onChange={e => set('faviconUrl', e.target.value)} placeholder="https://..." />
+          </Field>
+
+          {(tier === 'pro' || tier === 'enterprise') ? (
+            <Toggle
+              value={form.hidePoweredBy}
+              onChange={v => set('hidePoweredBy', v)}
+              label="Hide 'Powered by PlanIt' badge"
+            />
+          ) : (
+            <div className="flex items-center gap-3 opacity-50 cursor-not-allowed">
+              <div className="relative flex-shrink-0" style={{ width: 40, height: 22 }}>
+                <div style={{ width: 40, height: 22, borderRadius: 11, background: '#d1d5db' }} />
+                <div style={{ position: 'absolute', top: 3, left: 3, width: 16, height: 16, borderRadius: '50%', background: '#fff', boxShadow: '0 1px 3px rgba(0,0,0,0.2)' }} />
+              </div>
+              <span className="text-sm text-neutral-700">Hide 'Powered by PlanIt' badge</span>
+              <span className="text-xs px-1.5 py-0.5 rounded bg-amber-50 text-amber-700 border border-amber-200 font-medium">Pro+</span>
+            </div>
+          )}
+
+          {tier === 'enterprise' && (
+            <Field label="Custom CSS" hint="Advanced: injected on every page. Incorrect CSS can break the layout — test carefully.">
+              <Textarea
+                value={form.customCss}
+                onChange={e => set('customCss', e.target.value)}
+                placeholder="/* your custom styles */"
+                rows={6}
+                maxLength={10000}
+              />
+            </Field>
+          )}
+
+          <div className="flex items-center justify-between pt-2 border-t border-neutral-100">
+            <p className="text-xs text-neutral-400">Changes apply after saving. Visitors may need to hard-refresh (Ctrl+Shift+R) to see updates.</p>
+            <SaveButton onClick={save} saving={saving} saved={saved} />
+          </div>
+        </div>
+      </Card>
+    </div>
   );
 }
 
