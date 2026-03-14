@@ -11,7 +11,17 @@ const api = axios.create({
   timeout: 15000,
 });
 
+// Native PlanIt hosts — requests from these should NOT set x-wl-domain
+const NATIVE_HOSTS = ['localhost', '127.0.0.1', 'planitapp.onrender.com', 'planit-router.onrender.com'];
+const _isWLHost = !NATIVE_HOSTS.some(h => window.location.hostname === h || window.location.hostname.endsWith('.' + h));
+
 api.interceptors.request.use((config) => {
+  // Tag every request from a WL domain so the backend can scope it correctly
+  // (e.g. wlDomain on new events, scoped discovery, etc.)
+  if (_isWLHost) {
+    config.headers['x-wl-domain'] = window.location.hostname;
+  }
+
   const isAdminRequest = config.url && (config.url.includes('/admin') || config.url.includes('/whitelabel'));
 
   if (isAdminRequest) {
