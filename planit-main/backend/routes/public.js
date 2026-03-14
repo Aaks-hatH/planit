@@ -297,4 +297,37 @@ router.get('/events/public', async (req, res, next) => {
   }
 });
 
+
+// ── WL-scoped public events — for WLHome discovery feed ──────────────────────
+// GET /api/events/public/wl?domain=tickets.venue.com&limit=12
+// Returns only events tagged with that wlDomain, sorted by date ascending.
+router.get('/events/public/wl', async (req, res, next) => {
+  try {
+    const { domain, limit: rawLimit = 12 } = req.query;
+    if (!domain) return res.status(400).json({ error: 'domain required' });
+
+    const limit = Math.min(parseInt(rawLimit) || 12, 50);
+
+    const events = await Event.find({
+      wlDomain: domain.toLowerCase().trim(),
+      'settings.isPublic': true,
+      status: 'active',
+    })
+    .select('subdomain title description date location participants maxParticipants coverImage themeColor tags createdAt')
+    .sort({ date: 1 })
+    .limit(limit)
+    .lean();
+
+    res.json({
+      events: events.map(e => ({
+        ...e,
+        participantCount: e.participants?.length || 0,
+        participants: undefined,
+      })),
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
 module.exports = router;
