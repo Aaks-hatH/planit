@@ -22,6 +22,7 @@ import Status from './pages/Status';
 import Discover from './pages/Discover';
 import Waitlist from './pages/Waitlist';
 import Help from './pages/Help';
+import License from './pages/License';
 import InviteBadge from './pages/InviteBadge';
 import InviteCard from './pages/InviteCard';
 import ReservePage, { ReserveCancelPage } from './pages/ReservePage';
@@ -410,6 +411,7 @@ function App() {
         <Route path="/status"          element={<Status />} />
         <Route path="/discover"        element={<Discover />} />
         <Route path="/help"            element={<Help />} />
+        <Route path="/license"         element={<License />} />
         <Route path="/white-label"              element={<WhiteLabelSignup />} />
         <Route path="/white-label/setup-fee"      element={<SetupFee />} />
         <Route path="/white-label/setup-success"  element={<SetupFeeSuccess />} />
