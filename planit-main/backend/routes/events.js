@@ -64,13 +64,19 @@ router.post('/',
         isPasswordProtected = true;
       }
 
+      // Tag with WL domain if the request originated from a custom domain.
+      // The frontend sends x-wl-domain when running on a WL host so events
+      // are scoped to that tenant's discovery feed.
+      const wlDomain = req.headers['x-wl-domain']?.toLowerCase().trim() || null;
+
       const event = new Event({
         subdomain, title, description, date, location, organizerName, organizerEmail,
         password: hashedPassword, isPasswordProtected,
         isEnterpriseMode: isEnterpriseMode || false,
         isTableServiceMode: isTableServiceMode || false,
         settings: settings || {}, maxParticipants: maxParticipants || 100,
-        participants: [{ username: organizerName, role: 'organizer' }]
+        participants: [{ username: organizerName, role: 'organizer' }],
+        wlDomain,
       });
 
       await event.save();
