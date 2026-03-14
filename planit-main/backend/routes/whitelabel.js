@@ -171,14 +171,15 @@ router.get('/resolve', async (req, res) => {
     }
 
     return res.json({
-      clientName:   wl.clientName,
-      tier:         wl.tier,
-      status:       wl.status,
-      branding:     wl.branding,
-      features:     wl.features || {},
-      pages:        wl.pages    || {},
-      licenseKey:   wl.licenseKey,
-      keyExpiresAt: wl.keyExpiresAt,
+      clientName:      wl.clientName,
+      tier:            wl.tier,
+      status:          wl.status,
+      branding:        wl.branding,
+      pages:           wl.pages   || {},
+      features:        wl.features || {},
+      licenseKey:      wl.licenseKey,
+      keyExpiresAt:    wl.keyExpiresAt,
+      portalEnabled:   wl.portal?.enabled || false,
     });
   } catch (err) {
     console.error('[whitelabel] resolve error', err);
