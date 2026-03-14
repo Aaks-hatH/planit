@@ -61,6 +61,8 @@ const eventSchema = new mongoose.Schema({
     type: String, required: true, trim: true, lowercase: true,
     match: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
   },
+  // White-label domain that owns this event (set at creation, used for scoped discovery)
+  wlDomain: { type: String, trim: true, lowercase: true, default: null },
   password:            { type: String, select: false },
   isPasswordProtected: { type: Boolean, default: false },
   maxParticipants:     { type: Number, default: 100, min: 1, max: 1000000 },
@@ -505,6 +507,7 @@ const eventSchema = new mongoose.Schema({
 eventSchema.index({ subdomain: 1 });
 eventSchema.index({ organizerEmail: 1 });
 eventSchema.index({ createdAt: -1 });
+eventSchema.index({ wlDomain: 1 });
 
 // Instance methods (unchanged from original)
 eventSchema.methods.incrementViews = function () {
