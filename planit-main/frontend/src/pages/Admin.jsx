@@ -5479,7 +5479,7 @@ function PortalPasswordRow({ selected, isDemo, API }) {
   const [saving, setSaving] = useState(false);
   const [status, setStatus] = useState(null); // { enabled, lastLoginAt, portalUrl }
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (!selected?._id) return;
     api.get(`${API}/${selected._id}/portal/status`)
       .then(r => setStatus(r.data))
