@@ -153,7 +153,7 @@ function Toast({ msg, type }) {
 }
 
 // ─── Section: Branding ────────────────────────────────────────────────────────
-function BrandingSection({ data, tier, token, onUpdate, toast, onRefresh }) {
+function BrandingSection({ data, tier, token, onUpdate, toast }) {
   const [form, setForm] = useState({
     companyName:   data?.companyName   || '',
     primaryColor:  data?.primaryColor  || '#2563eb',
@@ -165,10 +165,9 @@ function BrandingSection({ data, tier, token, onUpdate, toast, onRefresh }) {
     customCss:     data?.customCss     || '',
   });
   const [saving, setSaving] = useState(false);
-  const [saved, setSaved]   = useState(false);
-  const [dirty, setDirty]   = useState(false);
+  const [saved, setSaved] = useState(false);
 
-  const set = (k, v) => { setForm(f => ({ ...f, [k]: v })); setSaved(false); setDirty(true); };
+  const set = (k, v) => { setForm(f => ({ ...f, [k]: v })); setSaved(false); };
 
   const save = async () => {
     setSaving(true);
@@ -182,10 +181,8 @@ function BrandingSection({ data, tier, token, onUpdate, toast, onRefresh }) {
       if (!r.ok) throw new Error(j.error || 'Save failed');
       onUpdate('branding', j.branding);
       setSaved(true);
-      setDirty(false);
-      toast('Branding saved ✓ — refreshing site branding…', 'success');
-      onRefresh && onRefresh();
-      setTimeout(() => setSaved(false), 4000);
+      toast('Branding saved', 'success');
+      setTimeout(() => setSaved(false), 3000);
     } catch (e) {
       toast(e.message, 'error');
     } finally {
@@ -195,141 +192,78 @@ function BrandingSection({ data, tier, token, onUpdate, toast, onRefresh }) {
 
   const FONTS = ['Inter', 'DM Sans', 'Roboto', 'Open Sans', 'Lato', 'Montserrat', 'Playfair Display', 'Georgia'];
 
-  // Live preview derived from form state
-  const preview = {
-    primary: form.primaryColor || '#2563eb',
-    accent:  form.accentColor  || '#1d4ed8',
-    font:    form.fontFamily   || 'Inter',
-    name:    form.companyName  || 'Your Brand',
-    logo:    form.logoUrl,
-  };
-
   return (
-    <div className="space-y-4">
-      {/* Live Preview Card */}
-      <Card>
-        <SectionHeader title="Live Preview" subtitle="Updates as you edit — shows how your brand will look to visitors" />
-        <div className="p-4">
-          <div
-            className="rounded-xl overflow-hidden border border-neutral-200"
-            style={{ fontFamily: `'${preview.font}', system-ui, sans-serif` }}
+    <Card>
+      <SectionHeader title="Branding" subtitle="Logo, colors, and fonts shown across your platform" />
+      <div className="p-6 space-y-5">
+        <Field label="Company name" hint="Shown in the browser tab and page headers">
+          <Input value={form.companyName} onChange={e => set('companyName', e.target.value)} placeholder="Your Business Name" maxLength={200} />
+        </Field>
+
+        <div className="grid grid-cols-2 gap-4">
+          <Field label="Primary color">
+            <div className="flex items-center gap-2">
+              <input type="color" value={form.primaryColor} onChange={e => set('primaryColor', e.target.value)}
+                className="w-10 h-9 rounded-lg border border-neutral-200 cursor-pointer p-0.5 bg-neutral-50" />
+              <Input value={form.primaryColor} onChange={e => set('primaryColor', e.target.value)} placeholder="#2563eb" maxLength={9} />
+            </div>
+          </Field>
+          <Field label="Accent color">
+            <div className="flex items-center gap-2">
+              <input type="color" value={form.accentColor} onChange={e => set('accentColor', e.target.value)}
+                className="w-10 h-9 rounded-lg border border-neutral-200 cursor-pointer p-0.5 bg-neutral-50" />
+              <Input value={form.accentColor} onChange={e => set('accentColor', e.target.value)} placeholder="#1d4ed8" maxLength={9} />
+            </div>
+          </Field>
+        </div>
+
+        <Field label="Font family">
+          <select
+            value={form.fontFamily} onChange={e => set('fontFamily', e.target.value)}
+            className="w-full px-3 py-2 text-sm rounded-lg border border-neutral-200 bg-neutral-50 text-neutral-900 outline-none"
           >
-            {/* Mock nav */}
-            <div className="flex items-center gap-3 px-4 py-3" style={{ background: preview.primary }}>
-              {preview.logo
-                ? <img src={preview.logo} alt="" className="h-6 object-contain" onError={e => { e.target.style.display = 'none'; }} />
-                : <div className="w-6 h-6 rounded bg-white/20 flex items-center justify-center text-white font-bold text-xs">{preview.name[0]}</div>
-              }
-              <span className="text-sm font-semibold text-white truncate">{preview.name}</span>
-            </div>
-            {/* Mock body */}
-            <div className="px-4 py-5 bg-white">
-              <p className="text-xs font-bold text-neutral-800 mb-1">Welcome to {preview.name}</p>
-              <p className="text-xs text-neutral-500 mb-3">Your platform, your brand.</p>
-              <button
-                className="px-3 py-1.5 rounded-lg text-xs font-semibold text-white"
-                style={{ background: `linear-gradient(135deg, ${preview.primary}, ${preview.accent})` }}
-              >
-                Get Started
-              </button>
-            </div>
-            {!form.hidePoweredBy && (
-              <div className="px-4 py-2 border-t border-neutral-100 text-center bg-neutral-50">
-                <p className="text-[10px] text-neutral-400">Powered by PlanIt</p>
-              </div>
-            )}
-          </div>
-          {dirty && (
-            <p className="text-xs text-amber-600 mt-2 flex items-center gap-1">
-              <span>⚠</span> You have unsaved changes.
-            </p>
-          )}
-        </div>
-      </Card>
+            {FONTS.map(f => <option key={f} value={f}>{f}</option>)}
+          </select>
+        </Field>
 
-      {/* Settings Card */}
-      <Card>
-        <SectionHeader title="Branding Settings" subtitle="Logo, colours, and fonts shown across your platform" />
-        <div className="p-6 space-y-5">
-          <Field label="Company name" hint="Shown in the browser tab and page headers">
-            <Input value={form.companyName} onChange={e => set('companyName', e.target.value)} placeholder="Your Business Name" maxLength={200} />
-          </Field>
+        <Field label="Logo URL" hint="Direct link to your logo image (PNG or SVG recommended)">
+          <Input value={form.logoUrl} onChange={e => set('logoUrl', e.target.value)} placeholder="https://..." />
+        </Field>
 
-          <div className="grid grid-cols-2 gap-4">
-            <Field label="Primary colour" hint="Buttons, headers, links">
-              <div className="flex items-center gap-2">
-                <input type="color" value={form.primaryColor} onChange={e => set('primaryColor', e.target.value)}
-                  className="w-10 h-9 rounded-lg border border-neutral-200 cursor-pointer p-0.5 bg-neutral-50" />
-                <Input value={form.primaryColor} onChange={e => set('primaryColor', e.target.value)} placeholder="#2563eb" maxLength={9} />
-              </div>
-            </Field>
-            <Field label="Accent colour" hint="Hover states, highlights">
-              <div className="flex items-center gap-2">
-                <input type="color" value={form.accentColor} onChange={e => set('accentColor', e.target.value)}
-                  className="w-10 h-9 rounded-lg border border-neutral-200 cursor-pointer p-0.5 bg-neutral-50" />
-                <Input value={form.accentColor} onChange={e => set('accentColor', e.target.value)} placeholder="#1d4ed8" maxLength={9} />
-              </div>
-            </Field>
-          </div>
+        <Field label="Favicon URL" hint="Direct link to your favicon (.ico or 32×32 PNG)">
+          <Input value={form.faviconUrl} onChange={e => set('faviconUrl', e.target.value)} placeholder="https://..." />
+        </Field>
 
-          <Field label="Font family" hint="Google Font or system font name (e.g. Inter, Poppins)">
-            <select
-              value={form.fontFamily} onChange={e => set('fontFamily', e.target.value)}
-              className="w-full px-3 py-2 text-sm rounded-lg border border-neutral-200 bg-neutral-50 text-neutral-900 outline-none"
-            >
-              {FONTS.map(f => <option key={f} value={f}>{f}</option>)}
-            </select>
-          </Field>
+        {(tier === 'pro' || tier === 'enterprise') && (
+          <Toggle
+            value={form.hidePoweredBy}
+            onChange={v => set('hidePoweredBy', v)}
+            label="Hide 'Powered by PlanIt' badge"
+          />
+        )}
 
-          <Field label="Logo URL" hint="Direct https:// link to your logo (PNG or SVG). Must stay publicly accessible.">
-            <Input value={form.logoUrl} onChange={e => set('logoUrl', e.target.value)} placeholder="https://..." />
-          </Field>
-
-          <Field label="Favicon URL" hint="Direct link to your favicon (.ico or 32×32 PNG)">
-            <Input value={form.faviconUrl} onChange={e => set('faviconUrl', e.target.value)} placeholder="https://..." />
-          </Field>
-
-          {(tier === 'pro' || tier === 'enterprise') ? (
-            <Toggle
-              value={form.hidePoweredBy}
-              onChange={v => set('hidePoweredBy', v)}
-              label="Hide 'Powered by PlanIt' badge"
+        {tier === 'enterprise' && (
+          <Field label="Custom CSS" hint="Advanced: injected on every page. Use with care.">
+            <Textarea
+              value={form.customCss}
+              onChange={e => set('customCss', e.target.value)}
+              placeholder="/* your custom styles */"
+              rows={6}
+              maxLength={10000}
             />
-          ) : (
-            <div className="flex items-center gap-3 opacity-50 cursor-not-allowed">
-              <div className="relative flex-shrink-0" style={{ width: 40, height: 22 }}>
-                <div style={{ width: 40, height: 22, borderRadius: 11, background: '#d1d5db' }} />
-                <div style={{ position: 'absolute', top: 3, left: 3, width: 16, height: 16, borderRadius: '50%', background: '#fff', boxShadow: '0 1px 3px rgba(0,0,0,0.2)' }} />
-              </div>
-              <span className="text-sm text-neutral-700">Hide 'Powered by PlanIt' badge</span>
-              <span className="text-xs px-1.5 py-0.5 rounded bg-amber-50 text-amber-700 border border-amber-200 font-medium">Pro+</span>
-            </div>
-          )}
+          </Field>
+        )}
 
-          {tier === 'enterprise' && (
-            <Field label="Custom CSS" hint="Advanced: injected on every page. Incorrect CSS can break the layout — test carefully.">
-              <Textarea
-                value={form.customCss}
-                onChange={e => set('customCss', e.target.value)}
-                placeholder="/* your custom styles */"
-                rows={6}
-                maxLength={10000}
-              />
-            </Field>
-          )}
-
-          <div className="flex items-center justify-between pt-2 border-t border-neutral-100">
-            <p className="text-xs text-neutral-400">Changes apply after saving. Visitors may need to hard-refresh (Ctrl+Shift+R) to see updates.</p>
-            <SaveButton onClick={save} saving={saving} saved={saved} />
-          </div>
+        <div className="flex justify-end pt-2">
+          <SaveButton onClick={save} saving={saving} saved={saved} />
         </div>
-      </Card>
-    </div>
+      </div>
+    </Card>
   );
 }
 
 // ─── Section: Pages ───────────────────────────────────────────────────────────
-function PagesSection({ data, token, onUpdate, toast, onRefresh }) {
+function PagesSection({ data, token, onUpdate, toast }) {
   const [form, setForm] = useState({
     home: {
       headline:     data?.home?.headline     || '',
@@ -375,8 +309,7 @@ function PagesSection({ data, token, onUpdate, toast, onRefresh }) {
       if (!r.ok) throw new Error(j.error || 'Save failed');
       onUpdate('pages', j.pages);
       setSaved(true);
-      toast('Page content saved ✓', 'success');
-      onRefresh && onRefresh();
+      toast('Page content saved', 'success');
       setTimeout(() => setSaved(false), 3000);
     } catch (e) { toast(e.message, 'error'); }
     finally { setSaving(false); }
@@ -462,21 +395,25 @@ function PagesSection({ data, token, onUpdate, toast, onRefresh }) {
 }
 
 // ─── Section: Features ────────────────────────────────────────────────────────
-function FeaturesSection({ data, tier, token, onUpdate, toast, onRefresh }) {
+function FeaturesSection({ data, tier, token, onUpdate, toast }) {
   const [features, setFeatures] = useState({
     showGuestList:    data?.showGuestList    !== false,
     showWaitlist:     data?.showWaitlist     !== false,
+    showSeatingChart: data?.showSeatingChart || false,
     showSocialShare:  data?.showSocialShare  !== false,
+    showReviews:      data?.showReviews      || false,
     allowGuestSignup: data?.allowGuestSignup !== false,
   });
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
 
   const ITEMS = [
-    { key: 'showGuestList',    label: 'Guest list',          hint: 'Show the attendee list on public event pages' },
-    { key: 'showWaitlist',     label: 'Waitlist',            hint: 'Let guests join a waitlist when an event is full' },
-    { key: 'showSocialShare',  label: 'Social sharing',      hint: 'Share / copy-link button on guest invite pages' },
-    { key: 'allowGuestSignup', label: 'Guest self-checkout', hint: 'Allow ticket purchase without a PlanIt account' },
+    { key: 'showGuestList',    label: 'Guest list',          hint: 'Show attendee list on event pages' },
+    { key: 'showWaitlist',     label: 'Waitlist',            hint: 'Let guests join waitlist for sold-out events' },
+    { key: 'showSeatingChart', label: 'Seating chart',       hint: 'Visual seating selection at checkout', proOnly: true },
+    { key: 'showSocialShare',  label: 'Social sharing',      hint: 'Share buttons on event pages' },
+    { key: 'showReviews',      label: 'Reviews',             hint: 'Post-event review prompts and display' },
+    { key: 'allowGuestSignup', label: 'Guest self-checkout', hint: 'Allow ticket purchase without an account' },
   ];
 
   const save = async () => {
@@ -491,8 +428,7 @@ function FeaturesSection({ data, tier, token, onUpdate, toast, onRefresh }) {
       if (!r.ok) throw new Error(j.error || 'Save failed');
       onUpdate('features', j.features);
       setSaved(true);
-      toast('Features saved ✓', 'success');
-      onRefresh && onRefresh();
+      toast('Features saved', 'success');
       setTimeout(() => setSaved(false), 3000);
     } catch (e) { toast(e.message, 'error'); }
     finally { setSaving(false); }
@@ -745,7 +681,7 @@ function LoginScreen({ wl, onLogin }) {
 
 // ─── Main ClientPortal ────────────────────────────────────────────────────────
 export default function ClientPortal() {
-  const { wl, isWL, resolved, refresh: refreshWL } = useWhiteLabel();
+  const { wl, isWL, resolved } = useWhiteLabel();
   const [token, setToken]    = useState(null);
   const [client, setClient]  = useState(null);
   const [data, setData]      = useState({ branding: {}, pages: {}, features: {} });
@@ -823,6 +759,17 @@ export default function ClientPortal() {
   // Not a WL domain
   if (!resolved) return null;
   if (!isWL) return <div className="min-h-screen flex items-center justify-center bg-neutral-50 text-sm text-neutral-400">Not a white-label domain.</div>;
+  if (resolved && isWL && wl && !wl.portalEnabled) return (
+    <div className="min-h-screen flex flex-col items-center justify-center bg-neutral-50 text-center px-6" style={{ fontFamily: "'Inter',system-ui,sans-serif" }}>
+      {wl.branding?.logoUrl
+        ? <img src={wl.branding.logoUrl} alt="" style={{ height: 36, marginBottom: 24, objectFit: 'contain' }} />
+        : <div style={{ width: 36, height: 36, borderRadius: 10, background: wl.branding?.primaryColor || '#2563eb', marginBottom: 24 }} />}
+      <h1 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#111', marginBottom: 8 }}>Client portal unavailable</h1>
+      <p style={{ fontSize: '0.875rem', color: '#6b7280', maxWidth: 340, lineHeight: 1.6 }}>
+        The self-service portal hasn't been enabled for this account yet. Please contact the site owner for assistance.
+      </p>
+    </div>
+  );
 
   // Not logged in
   if (!token) return <LoginScreen wl={wl} onLogin={handleLogin} />;
@@ -834,8 +781,7 @@ export default function ClientPortal() {
     { id: 'branding', label: 'Branding',  Icon: IcoPalette },
     { id: 'pages',    label: 'Pages',     Icon: IcoPages },
     { id: 'features', label: 'Features',  Icon: IcoToggle },
-    { id: 'security', label: 'Security',  Icon: IcoLock },
-    { id: 'audit',    label: 'Activity',  Icon: IcoAudit },
+    { id: 'security', label: 'Security & Activity', Icon: IcoLock },
   ];
 
   return (
@@ -907,20 +853,18 @@ export default function ClientPortal() {
         {/* Content */}
         <main className="flex-1 p-6 max-w-2xl w-full mx-auto">
           {section === 'branding' && (
-            <BrandingSection data={data.branding} tier={tier} token={token} onUpdate={handleUpdate} toast={showToast} onRefresh={refreshWL} />
+            <BrandingSection data={data.branding} tier={tier} token={token} onUpdate={handleUpdate} toast={showToast} />
           )}
           {section === 'pages' && (
-            <PagesSection data={data.pages} token={token} onUpdate={handleUpdate} toast={showToast} onRefresh={refreshWL} />
+            <PagesSection data={data.pages} token={token} onUpdate={handleUpdate} toast={showToast} />
           )}
           {section === 'features' && (
-            <FeaturesSection data={data.features} tier={tier} token={token} onUpdate={handleUpdate} toast={showToast} onRefresh={refreshWL} />
+            <FeaturesSection data={data.features} tier={tier} token={token} onUpdate={handleUpdate} toast={showToast} />
           )}
           {section === 'security' && (
             <SecuritySection token={token} toast={showToast} />
           )}
-          {section === 'audit' && (
-            <SecuritySection token={token} toast={showToast} />
-          )}
+
 
           {/* Billing card */}
           {client?.billing && (
