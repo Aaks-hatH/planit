@@ -1,0 +1,1247 @@
+================================================================================
+================================================================================
+================================================================================
+
+                     PLANIT PLATFORM — MASTER LICENSE AGREEMENT
+                    CONSOLIDATED INTELLECTUAL PROPERTY DECLARATION
+
+================================================================================
+================================================================================
+================================================================================
+
+                           PlanIt Platform License — Version 2.0
+                                     January 2026
+
+              Copyright (c) 2026 Aakshat Hariharan. All Rights Reserved.
+
+                          planit.userhelp@gmail.com
+                        https://planitapp.onrender.com
+
+================================================================================
+================================================================================
+
+                       IMPORTANT — READ BEFORE PROCEEDING
+
+================================================================================
+================================================================================
+
+This Master License Agreement ("Master Agreement") is the single authoritative
+legal instrument governing all intellectual property rights in and to the PlanIt
+platform, a proprietary event management and white-label SaaS platform created,
+owned, and operated solely by Aakshat Hariharan ("Author").
+
+The PlanIt platform is not a single application. It is a multi-service
+distributed system comprising four distinct software components, each of which
+is separately developed, separately deployed, and separately owned by the Author.
+This Master Agreement consolidates the four individual component license
+agreements into a single document and establishes the overarching legal framework
+that governs all of them.
+
+This document serves three purposes:
+
+   FIRST:   It explains in plain terms what each component of the PlanIt platform
+            is, what it does, and why it is protected.
+
+   SECOND:  It sets out the overarching licensing terms that apply across all
+            components of the platform as a unified whole.
+
+   THIRD:   It reproduces in full each individual component license agreement,
+            so that the complete legal terms for every part of the platform
+            are accessible in a single place.
+
+BY ACCESSING THE REPOSITORY CONTAINING ANY COMPONENT OF THE PLANIT PLATFORM,
+VIEWING ANY SOURCE CODE FILE, CLONING OR FORKING THE REPOSITORY, RUNNING ANY
+COMPONENT LOCALLY, OR USING THE HOSTED SERVICE AT PLANITAPP.ONRENDER.COM, YOU
+AGREE TO BE LEGALLY BOUND BY THIS MASTER AGREEMENT AND BY EACH INDIVIDUAL
+COMPONENT LICENSE THAT APPLIES TO THE PORTION OF THE SOFTWARE YOU ARE ACCESSING.
+
+IF YOU DO NOT AGREE TO THESE TERMS, IMMEDIATELY CEASE ALL INTERACTION WITH THE
+PLANIT PLATFORM IN ANY FORM.
+
+================================================================================
+================================================================================
+
+                  PART ONE: THE PLANIT PLATFORM — AN OVERVIEW
+          (Understanding What You Are Licensing Before Reading the Terms)
+
+================================================================================
+================================================================================
+
+The purpose of this section is to give You context. A software license is
+meaningless without understanding what is being licensed and why. The following
+describes each component of the PlanIt platform, what it does, and what makes
+it proprietary — before the formal legal terms begin.
+
+────────────────────────────────────────────────────────────────────────────────
+COMPONENT A: THE FRONTEND APPLICATION
+────────────────────────────────────────────────────────────────────────────────
+
+The PlanIt Frontend Application is the client-side web application that users
+interact with directly. It is built with React and Vite and is served as a
+single-page application at planitapp.onrender.com. It encompasses:
+
+  THE PUBLIC-FACING EXPERIENCE: The PlanIt homepage (event creation form, venue
+  mode, branch selector), the event discovery page, and all publicly accessible
+  marketing and informational pages.
+
+  THE EVENT MANAGEMENT INTERFACE: The EventSpace — the rich, real-time event
+  dashboard through which organizers manage attendees, run chat, conduct polls,
+  share files, manage seating charts, track budgets, post announcements, and
+  view analytics.
+
+  THE ADMIN PANEL: A password-protected multi-section administrative interface
+  through which the Author manages all events, white-label clients, billing,
+  employees, incident reporting, system settings, and security monitoring across
+  the entire platform.
+
+  THE WHITE-LABEL CLIENT PORTAL: A self-service portal (/dashboard) accessible
+  on white-label custom domains, allowing paying white-label clients to customize
+  their platform's branding, page content, feature flags, and security settings.
+
+  THE WHITE-LABEL THEMING SYSTEM: A dynamic CSS variable injection architecture
+  that transforms the application's visual identity at runtime based on a white-
+  label client's branding configuration (colors, fonts, logo, company name),
+  allowing a single React application to serve hundreds of differently-branded
+  instances.
+
+  THE WHITE-LABEL HOME PAGE (WLHome): A branded landing page served at the root
+  URL of white-label custom domains, showing the client's own hero content, event
+  discovery feed scoped to their tenant, and contact information — without any
+  PlanIt branding where the client has configured hidePoweredBy.
+
+  THE RESERVATION SYSTEM: The ReservePage and associated flows through which
+  guests discover, reserve, and receive confirmation for event spots, with
+  white-label customizable messaging throughout.
+
+  ADDITIONAL FLOWS: Public ticket pages, waitlist signup, organizer login,
+  table service interfaces for venue mode, check-in kiosks, QR-code-based
+  guest invite flows, invitation badge and card generators, and support flows.
+
+  THE DESIGN SYSTEM: A complete, proprietary visual language — dark-mode first,
+  built on a near-black (#080810) base, with blue-to-indigo gradients, ambient
+  radial glow orbs as decorative backgrounds, glassmorphism card treatments, and
+  a distinctive micro-interaction vocabulary — that constitutes protectable trade
+  dress and a commercial differentiator for the Author.
+
+  THE WHITE-LABEL CONTEXT: A React context provider (WhiteLabelContext) that
+  wraps the entire application, performing domain detection, branding resolution
+  via the /api/whitelabel/resolve endpoint, cryptographic heartbeat verification
+  via /api/whitelabel/heartbeat, and periodic re-enforcement — all at application
+  startup and continuously while the app is running — to enforce white-label
+  licensing terms in the browser without requiring any user action.
+
+What makes the Frontend Application proprietary:
+
+  The Frontend Application is the product of an enormous amount of creative
+  design and engineering work. Its value lies not just in the code, but in
+  the decisions: which components to build, how they interact, what the user
+  experience flows feel like, how the white-label system works architecturally,
+  and what the visual design language communicates. Taken as a whole, the
+  Frontend Application constitutes both a copyrighted work and protectable
+  trade dress. Individual components, when extracted, still carry the Author's
+  copyright and may not be used without permission.
+
+────────────────────────────────────────────────────────────────────────────────
+COMPONENT B: THE BACKEND APPLICATION
+────────────────────────────────────────────────────────────────────────────────
+
+The PlanIt Backend Application is the server-side engine of the platform,
+built on Node.js and Express.js and deployed as a fleet of five identical
+instances (named Maverick, Goose, Iceman, Slider, and Viper). It encompasses:
+
+  THE EVENT MANAGEMENT ENGINE: All API endpoints for creating, reading,
+  updating, and deleting events; managing participants; handling RSVP flows;
+  processing file uploads to Cloudinary; managing real-time chat via Socket.IO;
+  conducting polls; and executing all other event-related business operations.
+
+  THE AUTHENTICATION AND AUTHORIZATION SYSTEM: JWT-based authentication with
+  per-role authorization (organizer, staff, guest, admin), bcrypt password
+  hashing, secure token generation, and the admin credential verification
+  system.
+
+  THE WHITE-LABEL MANAGEMENT API: All endpoints for creating, managing,
+  suspending, renewing, and configuring white-label client accounts, including
+  the /resolve endpoint (which identifies a custom domain and returns its
+  branding configuration) and the /heartbeat endpoint (which verifies that a
+  white-label license is currently valid and active).
+
+  THE CRYPTOGRAPHIC LICENSE KEY SYSTEM: A proprietary HMAC-SHA256-based license
+  key generation and verification system with the format
+  WL-{TIER}-{DOMAIN_HASH_8}-{EXPIRY_HEX}-{HMAC_12}. This system allows the
+  backend to issue tamper-evident license keys to white-label clients and to
+  verify their authenticity without a database lookup. The key format, hash
+  algorithm, domain hash derivation, expiry encoding, and HMAC construction are
+  all proprietary inventions of the Author.
+
+  THE WHITE-LABEL CLIENT PORTAL API: Authenticated endpoints (/api/wl-portal/*)
+  for white-label clients to log in to their self-service portal, update their
+  branding configuration, customize page content, toggle feature flags, change
+  their portal password, and review their login audit log.
+
+  THE SECURITY MIDDLEWARE LAYER (trafficGuard): A comprehensive request
+  inspection and traffic management middleware that provides: IP-based rate
+  limiting; suspicious request pattern detection; automated attack mitigation;
+  honeypot endpoint detection; bot signature identification; and integration
+  with the platform's security monitoring system.
+
+  THE EMAIL SERVICE: Integration with Brevo (primary) and Mailjet (fallback)
+  for transactional email delivery, including event confirmation emails,
+  participant join notifications, organizer alerts, and white-label billing
+  communications.
+
+  THE MAINTENANCE SYSTEM: A distributed maintenance mode implementation that
+  coordinates across the Router Service and all Backend instances to enforce
+  platform-wide maintenance windows, with carefully engineered exemptions that
+  keep white-label client sites, uptime monitoring, and UptimeRobot health
+  checks functioning even during PlanIt maintenance.
+
+  THE DATA MODELS: A comprehensive set of Mongoose schemas defining the Event,
+  WhiteLabel, WLLead, EventParticipant, Incident, and MaintenanceSchedule
+  entities, with carefully designed indexes, validation rules, and field-level
+  access controls.
+
+  THE REAL-TIME LAYER: Socket.IO integration providing room-based event
+  broadcasting, live participant state synchronization, real-time chat delivery,
+  table service order notifications, and organizer announcements.
+
+What makes the Backend Application proprietary:
+
+  The Backend Application's value lies in three things: (1) the completeness
+  and correctness of its data models, which encode all the Author's thinking
+  about what an event management platform needs to track and how; (2) the
+  security architecture, particularly the trafficGuard middleware and the
+  white-label license enforcement system; and (3) the Cryptographic License
+  Key System, which is a novel invention that enables offline-verifiable,
+  tamper-evident license enforcement at scale. None of these may be copied,
+  adapted, or used as a reference implementation without the Author's permission.
+
+────────────────────────────────────────────────────────────────────────────────
+COMPONENT C: THE ROUTER SERVICE
+────────────────────────────────────────────────────────────────────────────────
+
+The PlanIt Router Service is the intelligent HTTP traffic orchestration layer
+deployed at planit-router.onrender.com. It sits between the public internet
+and the Backend Fleet, and is responsible for:
+
+  INTELLIGENT LOAD DISTRIBUTION: Routing incoming HTTP requests to the most
+  appropriate backend instance using a proprietary scoring algorithm that
+  factors in: real-time health status; consecutive alive/dead transitions;
+  request history; and configured backend weights — not simple round-robin.
+
+  HEALTH-AWARE ORCHESTRATION: Continuously polling all backend instances,
+  maintaining their alive/dead state, and dynamically removing unhealthy
+  instances from the routing pool without dropping in-flight requests.
+
+  ADAPTIVE SCALING: A boost mode system that temporarily expands the active
+  backend count during high-traffic periods, with configurable thresholds,
+  duration, and reversion logic.
+
+  MAINTENANCE COORDINATION: A distributed maintenance enforcement system that
+  returns appropriate 503 responses during maintenance windows, with a carefully
+  engineered list of exemptions that keep critical paths (white-label resolution,
+  uptime monitoring, UptimeRobot health checks) accessible at all times.
+
+  CORS MANAGEMENT: Dynamic CORS header injection that allows the Router to
+  serve the PlanIt frontend, all white-label custom domains, and authorized
+  development origins, pulling the current list of white-label domains from
+  the Backend Fleet periodically.
+
+  MESH AUTHENTICATION: An HMAC-based mutual authentication protocol for all
+  inter-service communication (between the Router and the Backend Fleet),
+  preventing unauthorized services from calling internal mesh endpoints.
+
+  RESPONSE CACHING: A short-TTL response cache for frequently-requested
+  read-only API endpoints, reducing Backend Fleet load for common data fetches.
+
+  WEBSOCKET PROXYING: Pass-through of WebSocket upgrade requests and Socket.IO
+  long-polling connections to the appropriate backend instance with sticky
+  session behavior.
+
+What makes the Router Service proprietary:
+
+  The Router Service's value is entirely in its Routing Intelligence — the
+  specific algorithm by which it selects backend instances. This is not publicly
+  known and is not reproducible from first principles without the Author's
+  specific engineering decisions. It also contains the Mesh Protocol, which
+  is a custom security protocol designed specifically for the PlanIt platform.
+  Both constitute trade secrets in addition to copyrighted works.
+
+────────────────────────────────────────────────────────────────────────────────
+COMPONENT D: THE WATCHDOG SERVICE
+────────────────────────────────────────────────────────────────────────────────
+
+The PlanIt Watchdog Service is an autonomous infrastructure monitoring daemon
+that operates independently of all other platform components. It is responsible
+for:
+
+  REAL-TIME HEALTH MONITORING: Continuously polling the PlanIt Router Service,
+  Backend Fleet instances, and all other monitored infrastructure components
+  at configurable intervals, interpreting their health responses, and maintaining
+  a live operational status picture.
+
+  INCIDENT LIFECYCLE MANAGEMENT: Detecting incidents (service degradations or
+  outages) based on consecutive health check failures, creating incident records,
+  tracking their progression through open/investigating/resolved states, and
+  auto-resolving incidents when services recover.
+
+  ALERT ROUTING AND DELIVERY: Sending real-time push notifications via ntfy.sh
+  and Discord webhooks when incidents are detected, when severity changes, and
+  when incidents resolve — with alert deduplication and suppression logic to
+  prevent notification flooding.
+
+  UPTIME HISTORY AGGREGATION: Computing and storing rolling uptime percentages
+  for all monitored services, providing historical availability data to the
+  public PlanIt status page at planitapp.onrender.com/status.
+
+  STATUS PAGE DATA API: Providing the /watchdog/status endpoint (mesh-
+  authenticated) and the /api/uptime/status endpoint (public) through which
+  the frontend status page retrieves current platform health information.
+
+  AUTO-PROMOTION OF SCHEDULED MAINTENANCE: Polling for upcoming maintenance
+  windows defined in the database and automatically promoting them to active
+  maintenance mode at the correct time, coordinating across all Router and
+  Backend instances.
+
+What makes the Watchdog Service proprietary:
+
+  The Watchdog Service's value lies in its Monitoring Intelligence — the
+  specific configuration of polling intervals, failure thresholds, incident
+  severity rules, alert routing logic, and uptime aggregation methodology
+  that the Author has developed through operational experience running the
+  PlanIt platform. These are not publicly known, are not derivable from
+  generic monitoring best practices, and constitute trade secrets.
+
+================================================================================
+================================================================================
+
+            PART TWO: OVERARCHING TERMS APPLICABLE TO ALL COMPONENTS
+
+================================================================================
+================================================================================
+
+The following terms apply to the PlanIt platform as a unified whole, in
+addition to the individual component license terms set out in Parts Three
+through Six below.
+
+────────────────────────────────────────────────────────────────────────────────
+MASTER SECTION 1 — UNIFIED OWNERSHIP DECLARATION
+────────────────────────────────────────────────────────────────────────────────
+
+M-1.1  The Author is the sole and exclusive owner of all intellectual property
+       rights in and to the PlanIt platform as a whole and in each individual
+       component thereof, including all copyrights, trade secrets, trade dress,
+       and any other proprietary rights recognized under applicable law.
+
+M-1.2  The PlanIt platform, considered as a whole, constitutes a collective
+       work under copyright law in addition to the individual copyrights
+       subsisting in each component. The Author owns the copyright in the
+       collective work in addition to the component copyrights.
+
+M-1.3  The architectural decisions that govern how the four components interact
+       — the CORS scheme, the mesh authentication protocol, the white-label
+       domain flow from frontend resolution through backend heartbeat to Router-
+       level CORS registration, the maintenance exemption hierarchy — together
+       constitute a proprietary system design that is itself a trade secret and
+       copyrighted work of the Author, separate from and in addition to the
+       individual component copyrights.
+
+────────────────────────────────────────────────────────────────────────────────
+MASTER SECTION 2 — SCOPE OF THE MASTER AGREEMENT
+────────────────────────────────────────────────────────────────────────────────
+
+M-2.1  This Master Agreement governs any and all access to and use of the
+       PlanIt platform, regardless of which component or components You interact
+       with.
+
+M-2.2  Where a more specific individual component license agreement addresses
+       a particular topic (e.g., the Cryptographic License System in the Backend
+       License, or the Routing Intelligence in the Router License), that
+       specific provision takes precedence over any general provision in this
+       Master Agreement with respect to that specific topic.
+
+M-2.3  Interaction with any single component of the PlanIt platform (e.g.,
+       reading only the Router source code) subjects You to the Master Agreement
+       AND to the individual license agreement for that component.
+
+────────────────────────────────────────────────────────────────────────────────
+MASTER SECTION 3 — UNIFIED GRANT OF LIMITED LICENSE
+────────────────────────────────────────────────────────────────────────────────
+
+M-3.1  Subject to Your full and continuous compliance with this Master
+       Agreement and all applicable individual component license agreements,
+       the Author grants You a limited, personal, non-exclusive, non-
+       transferable, non-sublicensable, revocable license to:
+
+       (a)  View the source code of any component of the PlanIt platform
+            solely for personal, non-commercial educational and reference
+            purposes; and
+
+       (b)  Access and use the Hosted Service as an end-user for its intended
+            purpose of event planning and event management, subject to the
+            Terms of Service at planitapp.onrender.com.
+
+M-3.2  White-label clients with executed white-label agreements hold additional
+       rights as specified in those agreements only.
+
+M-3.3  All rights not expressly granted are reserved by the Author.
+
+────────────────────────────────────────────────────────────────────────────────
+MASTER SECTION 4 — UNIFIED RESTRICTIONS
+────────────────────────────────────────────────────────────────────────────────
+
+M-4.1  Across the entire PlanIt platform, without explicit prior written
+       permission from the Author, You must NOT:
+
+       (a)  Deploy any component of the platform on any infrastructure;
+       (b)  Copy, clone, or reproduce any component in any form;
+       (c)  Distribute any component to any third party;
+       (d)  Create any Derivative Work from any component;
+       (e)  Use any component for any Commercial Use;
+       (f)  Reverse engineer any security or enforcement mechanism;
+       (g)  Use any component's source code in any ML training dataset;
+       (h)  Remove any copyright notice or proprietary marking.
+
+────────────────────────────────────────────────────────────────────────────────
+MASTER SECTION 5 — NO OPEN SOURCE
+────────────────────────────────────────────────────────────────────────────────
+
+M-5.1  The PlanIt platform is NOT open source software. No component of the
+       platform is released under any open-source license, including but not
+       limited to the MIT License, Apache 2.0, GNU GPL, GNU LGPL, BSD licenses,
+       Creative Commons licenses, or any other license that would permit
+       copying, modification, or redistribution.
+
+M-5.2  The presence of this source code in a publicly accessible repository
+       does not, under any interpretation, constitute: (a) an open-source
+       release; (b) a public domain dedication; (c) an implied license of any
+       kind; (d) a waiver of any copyright or other proprietary right; or
+       (e) consent to any use beyond viewing for educational reference.
+
+M-5.3  The Author has chosen to make this source code publicly visible solely
+       to demonstrate technical capability and for reference purposes. This
+       choice is made expressly without waiving any intellectual property right.
+
+────────────────────────────────────────────────────────────────────────────────
+MASTER SECTION 6 — UNIFIED DISCLAIMERS AND LIMITATIONS
+────────────────────────────────────────────────────────────────────────────────
+
+M-6.1  THE ENTIRE PLANIT PLATFORM IS PROVIDED "AS IS" WITHOUT WARRANTY OF
+       ANY KIND, EXPRESS OR IMPLIED. THE AUTHOR DISCLAIMS ALL WARRANTIES
+       TO THE MAXIMUM EXTENT PERMITTED BY LAW.
+
+M-6.2  THE AUTHOR'S TOTAL LIABILITY UNDER THIS MASTER AGREEMENT AND ALL
+       INDIVIDUAL COMPONENT LICENSES COMBINED SHALL NOT EXCEED USD $100.00.
+
+M-6.3  IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY INDIRECT, CONSEQUENTIAL,
+       INCIDENTAL, SPECIAL, OR PUNITIVE DAMAGES ARISING FROM ANY COMPONENT OF
+       THE PLATFORM.
+
+────────────────────────────────────────────────────────────────────────────────
+MASTER SECTION 7 — GOVERNING LAW AND DISPUTE RESOLUTION
+────────────────────────────────────────────────────────────────────────────────
+
+M-7.1  This Master Agreement and all individual component license agreements
+       shall be governed by the laws of the jurisdiction in which the Author
+       resides, without regard to conflict of law principles.
+
+M-7.2  Any dispute arising under this Master Agreement that cannot be resolved
+       by direct negotiation between the parties shall be submitted to binding
+       arbitration under rules mutually agreed by the parties, except that the
+       Author shall always be entitled to seek emergency injunctive relief from
+       any court of competent jurisdiction without first submitting to
+       arbitration.
+
+M-7.3  Each party irrevocably waives any objection to the venue or personal
+       jurisdiction of courts in the Author's jurisdiction for any proceeding
+       that escapes arbitration.
+
+────────────────────────────────────────────────────────────────────────────────
+MASTER SECTION 8 — CONTACT AND PERMISSIONS
+────────────────────────────────────────────────────────────────────────────────
+
+M-8.1  All requests for permissions beyond those granted in this Master
+       Agreement — including commercial license inquiries, white-label
+       partnership inquiries, academic use requests, and security vulnerability
+       reports — must be directed to:
+
+                    Email: planit.userhelp@gmail.com
+                    Web:   https://planitapp.onrender.com (Support page)
+
+M-8.2  Permission requests must be made in writing, must identify the
+       requestor and their intended use in detail, and will be evaluated
+       at the Author's sole discretion. Permission is never implied, deemed,
+       or constructively granted.
+
+================================================================================
+================================================================================
+
+             PART THREE: PLANIT FRONTEND APPLICATION LICENSE (FULL TEXT)
+
+================================================================================
+================================================================================
+
+The following is the complete, unabridged text of the PlanIt Frontend
+Application License Agreement, which governs all access to and use of the
+PlanIt client-side React application. This component license is set out in
+full below and is also available as the file LICENSE-FRONTEND in the root
+of the frontend repository directory.
+
+This license covers every .jsx, .tsx, .css, .html, .json, and .js file in
+the /frontend/src/ directory and its subdirectories, the Vite configuration,
+the PWA configuration, all design assets, and the complete Visual Design System
+of the PlanIt platform.
+
+────────────────────────────────────────────────────────────────────────────────
+
+================================================================================
+================================================================================
+
+              PLANIT FRONTEND APPLICATION — PROPRIETARY SOFTWARE LICENSE
+                         EXCLUSIVE RIGHTS RESERVED
+
+================================================================================
+================================================================================
+
+                     PlanIt Frontend Interface License Agreement
+                              Version 2.0 — January 2026
+
+              Copyright (c) 2026 Aakshat Hariharan. All Rights Reserved.
+
+                          planit.userhelp@gmail.com
+                        https://planitapp.onrender.com
+
+================================================================================
+                            PREAMBLE AND LEGAL NOTICE
+================================================================================
+
+IMPORTANT — READ THIS ENTIRE AGREEMENT CAREFULLY BEFORE ACCESSING, VIEWING,
+DOWNLOADING, CLONING, FORKING, INSPECTING, COMPILING, EXECUTING, OR OTHERWISE
+INTERACTING WITH THE PLANIT FRONTEND APPLICATION OR ANY PORTION THEREOF.
+
+This License Agreement ("Agreement") is a binding legal contract between You
+and Aakshat Hariharan ("Author") governing all access to and use of the PlanIt
+frontend application, its source code, compiled assets, design system, visual
+components, and all related materials. This Agreement takes effect at the
+earliest moment You interact with this software in any form — including the
+act of reading this source code.
+
+The public availability of this source code on a version control platform does
+NOT constitute an open-source release, a public domain dedication, an implied
+license, or consent to use, copy, fork, adapt, or build upon this work for any
+purpose beyond the narrow rights expressly granted in Section 2.
+
+================================================================================
+SECTION 1 — DEFINITIONS
+================================================================================
+
+1.1   "Frontend Application" or "Software" means the PlanIt client-side web
+      application in its entirety, encompassing all React component source files,
+      all context providers and consumer hooks, all service modules and API client
+      files, all UI components, design tokens, Tailwind CSS configuration, custom
+      CSS stylesheets, animation definitions, the Vite build configuration, PWA
+      manifest, public/ directory assets, the complete Visual Design System,
+      the white-label theming architecture, and all documentation and code
+      comments.
+
+1.2   "Author" means Aakshat Hariharan, the sole designer, architect, developer,
+      and intellectual property owner of the Frontend Application.
+
+1.3   "You" or "Licensee" means any individual, developer, designer, engineer,
+      researcher, student, company, organization, or other legal or natural
+      person that accesses, views, reads, downloads, clones, compiles, executes,
+      deploys, or otherwise interacts with the Frontend Application.
+
+1.4   "Hosted Service" means the production deployment at planitapp.onrender.com
+      and all associated white-label custom domains.
+
+1.5   "Visual Design System" means the complete proprietary visual language
+      including dark color palette, gradient definitions, glassmorphism
+      treatments, ambient glow patterns, typography hierarchy, micro-interaction
+      patterns, icon usage conventions, and overall aesthetic system.
+
+1.6   "Derivative Work" means any work derived from, copying, adapting, or
+      substantially similar to the Frontend Application in code, design,
+      architecture, or user experience.
+
+1.7   "Commercial Use" means any use in connection with any revenue-generating
+      activity.
+
+1.8   "Deploy" means to serve, host, publish, or make operational the Frontend
+      Application on any infrastructure.
+
+1.9   "Distribute" means to share, transfer, publish, or make available the
+      Frontend Application to any third party.
+
+================================================================================
+SECTION 2 — GRANT OF LIMITED LICENSE
+================================================================================
+
+2.1   The Author grants You a limited, personal, non-exclusive, non-transferable,
+      non-sublicensable, revocable license to: (a) view the source code for
+      personal educational reference; and (b) access and use the Hosted Service
+      as an end-user.
+
+2.2   White-label clients with executed agreements hold additional rights per
+      those agreements only.
+
+2.3   All rights not expressly granted are reserved by the Author.
+
+2.4   The Author may revoke this license at any time without notice.
+
+================================================================================
+SECTION 3 — RESTRICTIONS ON USE
+================================================================================
+
+3.1   Without prior explicit written permission from the Author, You will NOT:
+
+      (a)  Copy, clone, mirror, or reproduce the Frontend Application;
+      (b)  Deploy the Frontend Application on any infrastructure;
+      (c)  Distribute the Frontend Application to any third party;
+      (d)  Modify or create any Derivative Work;
+      (e)  Reverse engineer any compiled or minified portion;
+      (f)  Use the Visual Design System for any other product's design;
+      (g)  Use any portion for Commercial Use;
+      (h)  Remove any copyright notices, license notices, or attributions;
+      (i)  Use "PlanIt" or "Aakshat Hariharan" without written consent;
+      (j)  Use automated tools to extract source code or content at scale;
+      (k)  Use source code in ML training datasets or code generation models;
+      (l)  Frame or embed the Hosted Service to misrepresent its origin;
+      (m)  Circumvent any technical enforcement mechanism.
+
+3.2   Restrictions apply to the whole and to every individual component,
+      file, function, style, and design choice within the Frontend Application.
+
+================================================================================
+SECTION 4 — INTELLECTUAL PROPERTY OWNERSHIP
+================================================================================
+
+4.1   The Frontend Application and all constituent elements are the sole and
+      exclusive property of the Author.
+
+4.2   The Visual Design System constitutes protectable trade dress and
+      confidential trade secret information.
+
+4.3   The white-label theming architecture, including the WhiteLabelContext,
+      heartbeat verification, and CSS variable injection, constitutes a
+      proprietary technical system and trade secret.
+
+4.4   Any feedback or input You provide is assigned to the Author in full
+      without compensation.
+
+4.5   Third-party open-source dependency copyrights remain with their respective
+      owners. The Author's rights extend to original creative expression in
+      how those dependencies are assembled and used.
+
+================================================================================
+SECTIONS 5–11 — CONFIDENTIALITY, WARRANTIES, LIABILITY, INDEMNIFICATION,
+TERMINATION, ENFORCEMENT, GENERAL PROVISIONS
+================================================================================
+
+5.1   You agree to treat the source code, design decisions, component
+      architecture, and all non-public aspects as strictly confidential.
+
+5.2   You agree not to disclose any Confidential Information to any third party.
+
+6.1   THE SOFTWARE IS PROVIDED "AS IS" WITHOUT WARRANTY OF ANY KIND.
+
+6.2   THE AUTHOR DISCLAIMS ALL WARRANTIES TO THE MAXIMUM EXTENT PERMITTED BY LAW.
+
+7.1   IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY INDIRECT, INCIDENTAL,
+      SPECIAL, CONSEQUENTIAL, OR PUNITIVE DAMAGES.
+
+7.2   THE AUTHOR'S TOTAL LIABILITY SHALL NOT EXCEED USD $100.00.
+
+8.1   You agree to indemnify and hold harmless the Author from any claims
+      arising from Your breach of this Agreement.
+
+9.1   This Agreement is effective from first access and continues until
+      terminated. Breach results in immediate termination without notice.
+
+9.3   Upon termination, You must cease all use and permanently delete all copies.
+
+10.1  The Author is entitled to seek injunctive relief without bond for any
+      unauthorized use.
+
+11.1  Governing Law: jurisdiction of the Author's residence.
+11.2  Entire Agreement: supersedes all prior agreements.
+11.3  Severability: invalid provisions severed, remainder continues.
+11.5  No assignment without Author's written consent.
+11.7  Contact: planit.userhelp@gmail.com
+
+================================================================================
+
+                  Copyright (c) 2026 Aakshat Hariharan.
+                         All Rights Reserved.
+
+================================================================================
+
+────────────────────────────────────────────────────────────────────────────────
+
+               [END OF PLANIT FRONTEND APPLICATION LICENSE — PART THREE]
+
+================================================================================
+================================================================================
+
+              PART FOUR: PLANIT BACKEND APPLICATION LICENSE (FULL TEXT)
+
+================================================================================
+================================================================================
+
+The following is the complete, unabridged text of the PlanIt Backend Application
+License Agreement, which governs all access to and use of the PlanIt server-side
+Node.js/Express application. This component license is set out in full below
+and is also available as the file LICENSE-BACKEND in the backend repository.
+
+This license covers every .js file in the /backend/ directory and its
+subdirectories, including all route handlers, data models, middleware, service
+modules, configuration files, and the proprietary Cryptographic License
+Key System.
+
+────────────────────────────────────────────────────────────────────────────────
+
+================================================================================
+================================================================================
+
+               PLANIT BACKEND APPLICATION — PROPRIETARY SOFTWARE LICENSE
+                          EXCLUSIVE RIGHTS RESERVED
+
+================================================================================
+================================================================================
+
+                      PlanIt Backend Services License Agreement
+                              Version 2.0 — January 2026
+
+              Copyright (c) 2026 Aakshat Hariharan. All Rights Reserved.
+
+                          planit.userhelp@gmail.com
+                        https://planitapp.onrender.com
+
+================================================================================
+                            PREAMBLE AND LEGAL NOTICE
+================================================================================
+
+IMPORTANT — READ THIS ENTIRE AGREEMENT BEFORE ACCESSING, READING, CLONING,
+EXECUTING, DEPLOYING, OR INTERACTING WITH THE PLANIT BACKEND APPLICATION OR
+ANY PART OF ITS INFRASTRUCTURE.
+
+The PlanIt Backend Application is the server-side engine powering all data
+persistence, business logic, authentication, authorization, real-time
+communication, external integrations, and API services for the PlanIt platform.
+
+================================================================================
+SECTION 1 — DEFINITIONS
+================================================================================
+
+1.1   "Backend Application" or "Software" means the PlanIt server-side
+      application in its entirety, including the main Express.js server, all
+      route handlers (/routes/), all Mongoose data models (/models/), all
+      middleware (/middleware/), all service modules (/services/), the
+      Cryptographic License Key System, the white-label resolution and heartbeat
+      enforcement system, the Socket.IO real-time layer, all configuration
+      files, and all documentation and comments.
+
+1.2   "Author" means Aakshat Hariharan, the sole architect, developer, and
+      intellectual property owner of the Backend Application.
+
+1.3   "You" means any individual or entity interacting with the Backend
+      Application in any way.
+
+1.4   "Cryptographic License System" means the HMAC-SHA256-based license key
+      generation and verification system, including the key format, algorithm,
+      domain hash function, expiry encoding, and HMAC construction.
+
+1.5   "Data Models" means all Mongoose schema definitions and associated
+      business logic, constituting trade secrets of the Author.
+
+1.6   "Derivative Work" means any work derived from, reimplementing, or
+      substantially similar to the Backend Application.
+
+1.7   "Deploy" means to execute, run, or host the Backend Application on any
+      computing infrastructure.
+
+1.8   "Commercial Use" means any use in connection with commercial activity.
+
+================================================================================
+SECTION 2 — GRANT OF LIMITED LICENSE
+================================================================================
+
+2.1   The Author grants You a limited, personal, non-exclusive, non-transferable,
+      non-sublicensable, revocable license to: (a) view the source code for
+      personal educational reference; and (b) access the API Surface through
+      the official frontend only, or as explicitly authorized in writing.
+
+2.2   No right to Deploy, modify, distribute, or commercially exploit the
+      Backend Application is granted.
+
+2.3   All rights not expressly granted are reserved.
+
+================================================================================
+SECTION 3 — RESTRICTIONS ON USE
+================================================================================
+
+3.1   Without prior explicit written permission, You must NOT:
+
+      (a)  Deploy, execute, or host the Backend Application;
+      (b)  Copy, clone, or reproduce the Backend Application;
+      (c)  Distribute the Backend Application to any third party;
+      (d)  Modify or create any Derivative Work, including reimplementing
+           the Data Models or Cryptographic License System;
+      (e)  Reverse engineer the Cryptographic License System;
+      (f)  Access the API Surface through any means other than the official
+           frontend, except as explicitly authorized;
+      (g)  Conduct Penetration Testing or vulnerability assessment;
+      (h)  Access, extract, or aggregate any user data;
+      (i)  Use source code in ML training datasets;
+      (j)  Circumvent any security mechanism;
+      (k)  Use Data Models as basis for competing platform;
+      (l)  Use for Commercial Use without written license.
+
+3.2   Unauthorized direct API access constitutes a breach of this Agreement.
+
+3.3   Security vulnerability reports must be submitted to
+      planit.userhelp@gmail.com without public disclosure.
+
+================================================================================
+SECTION 4 — CRYPTOGRAPHIC LICENSE SYSTEM
+================================================================================
+
+4.1   The Cryptographic License System is the Author's proprietary invention
+      and most sensitive trade secret.
+
+4.2   Any attempt to reverse engineer, bypass, spoof, or circumvent it
+      constitutes trade secret misappropriation and potential criminal liability.
+
+4.3   The WL_LICENSE_SECRET and all related secrets are inaccessible to You
+      under any circumstance.
+
+================================================================================
+SECTION 5 — DATA AND PRIVACY
+================================================================================
+
+5.1   Unauthorized access to the Backend Application or its databases constitutes
+      a serious privacy violation and may trigger breach notification obligations
+      under applicable data protection law.
+
+================================================================================
+SECTION 6 — INTELLECTUAL PROPERTY
+================================================================================
+
+6.1   The Backend Application and all components are the sole property of the
+      Author. All copyrights and trade secrets belong exclusively to the Author.
+
+================================================================================
+SECTIONS 7–11 — CONFIDENTIALITY, WARRANTIES, LIABILITY, INDEMNIFICATION,
+TERMINATION, ENFORCEMENT, GENERAL PROVISIONS
+================================================================================
+
+The Backend Application is provided "AS IS" without warranty. The Author's
+liability is limited to USD $100.00. You agree to indemnify the Author for
+any breach. The Author may terminate this Agreement immediately upon breach.
+Injunctive relief is available to the Author without bond. Governing law is
+the jurisdiction of the Author's residence.
+
+11.8  Export Compliance: You agree to comply with all applicable export
+      control laws.
+
+11.9  Security Obligations: You agree not to use knowledge from this source
+      code to harm the Author, the platform, its users, or any third party.
+
+================================================================================
+
+                  Copyright (c) 2026 Aakshat Hariharan.
+                         All Rights Reserved.
+
+================================================================================
+
+────────────────────────────────────────────────────────────────────────────────
+
+                [END OF PLANIT BACKEND APPLICATION LICENSE — PART FOUR]
+
+================================================================================
+================================================================================
+
+                PART FIVE: PLANIT ROUTER SERVICE LICENSE (FULL TEXT)
+
+================================================================================
+================================================================================
+
+The following is the complete, unabridged text of the PlanIt Router Service
+License Agreement, which governs all access to and use of the PlanIt intelligent
+HTTP traffic orchestration layer. This component license is also available as
+LICENSE-ROUTER in the router repository directory.
+
+This license covers every source file in the /router/ directory, the entire
+Routing Intelligence, the Mesh Protocol implementation, and all configuration
+and operational tooling associated with the Router Service.
+
+────────────────────────────────────────────────────────────────────────────────
+
+================================================================================
+================================================================================
+
+                PLANIT ROUTER SERVICE — PROPRIETARY SOFTWARE LICENSE
+                          EXCLUSIVE RIGHTS RESERVED
+
+================================================================================
+================================================================================
+
+                     PlanIt Router Infrastructure License Agreement
+                              Version 2.0 — January 2026
+
+              Copyright (c) 2026 Aakshat Hariharan. All Rights Reserved.
+
+                          planit.userhelp@gmail.com
+                        https://planitapp.onrender.com
+
+================================================================================
+                            PREAMBLE AND LEGAL NOTICE
+================================================================================
+
+The Router Service embodies proprietary algorithms for adaptive backend
+selection, health-aware load distribution, maintenance-safe traffic management,
+mesh-authenticated inter-service communication, and white-label-aware routing
+that represent significant engineering investment and constitute trade secrets.
+
+================================================================================
+SECTION 1 — DEFINITIONS
+================================================================================
+
+1.1   "Router Service" or "Software" means the PlanIt HTTP routing and
+      orchestration layer in its entirety, including all backend selection
+      algorithms, health-check polling logic, maintenance intercept middleware,
+      CORS management system, mesh authentication protocol, response caching
+      layer, rate limiting configuration, health check aggregation, deploy hook
+      configuration, backend fleet registry, WebSocket proxying configuration,
+      and all documentation and comments.
+
+1.2   "Author" means Aakshat Hariharan, the sole architect and owner.
+
+1.3   "You" means any individual or entity interacting with the Router Service.
+
+1.4   "Routing Intelligence" means the proprietary scoring algorithm, health
+      heuristics, boost mode logic, and all decision-making code — constituting
+      trade secrets of the Author.
+
+1.5   "Mesh Protocol" means the HMAC-based inter-service authentication system.
+
+1.6   "Derivative Work" means any work derived from or reimplementing any
+      portion of the Router Service.
+
+1.7   "Deploy" means to execute or host the Router Service on any infrastructure.
+
+1.8   "Commercial Use" means any use in connection with commercial activity.
+
+================================================================================
+SECTION 2 — GRANT OF LIMITED LICENSE
+================================================================================
+
+2.1   The Author grants You a limited, personal, non-exclusive, non-transferable,
+      non-sublicensable, revocable license to view the source code for personal
+      educational reference only.
+
+2.2   No deployment, modification, distribution, or commercial exploitation right
+      is granted.
+
+2.3   All rights not expressly granted are reserved.
+
+================================================================================
+SECTION 3 — RESTRICTIONS ON USE
+================================================================================
+
+3.1   Without prior written permission, You must NOT:
+
+      (a)  Deploy or host the Router Service;
+      (b)  Copy or reproduce the Router Service;
+      (c)  Distribute the Router Service;
+      (d)  Modify or create any Derivative Work, including reimplementing
+           the Routing Intelligence;
+      (e)  Benchmark or reverse engineer the Routing Intelligence for building
+           a competing system;
+      (f)  Disclose Confidential Information to any third party;
+      (g)  Probe or stress-test the Hosted Infrastructure;
+      (h)  Forge or bypass Mesh Protocol authentication;
+      (i)  Use source code in ML training datasets;
+      (j)  Remove copyright notices;
+      (k)  Use for Commercial Use without a written license.
+
+3.2   The Routing Intelligence is classified as Confidential Information and
+      a trade secret. Any attempt to extract or commercialize it constitutes
+      trade secret misappropriation.
+
+================================================================================
+SECTION 4 — ROUTING INTELLIGENCE AS TRADE SECRET
+================================================================================
+
+4.1   The Routing Intelligence constitutes a proprietary system developed
+      through substantial engineering investment. The specific combination of
+      health-check scoring weights, backend alive-state hysteresis logic,
+      boost mode thresholds, and maintenance exemption categorization are not
+      publicly known and provide the Author with a competitive advantage.
+
+4.2   Your obligation to maintain the confidentiality of the Routing Intelligence
+      survives termination of this Agreement indefinitely.
+
+================================================================================
+SECTIONS 5–11 — CONFIDENTIALITY, WARRANTIES, LIABILITY, INDEMNIFICATION,
+TERMINATION, ENFORCEMENT, GENERAL PROVISIONS
+================================================================================
+
+The Router Service is provided "AS IS" without warranty. The Author's liability
+is limited to USD $100.00. You agree to indemnify the Author for any breach.
+The Author may terminate this Agreement immediately upon breach. Injunctive
+relief is available to the Author without bond. Governing law is the
+jurisdiction of the Author's residence.
+
+11.8  Infrastructure Integrity: You agree not to take any action that could
+      degrade, disrupt, or damage the Hosted Infrastructure or Backend Fleet.
+
+================================================================================
+
+                  Copyright (c) 2026 Aakshat Hariharan.
+                         All Rights Reserved.
+
+================================================================================
+
+────────────────────────────────────────────────────────────────────────────────
+
+                 [END OF PLANIT ROUTER SERVICE LICENSE — PART FIVE]
+
+================================================================================
+================================================================================
+
+               PART SIX: PLANIT WATCHDOG SERVICE LICENSE (FULL TEXT)
+
+================================================================================
+================================================================================
+
+The following is the complete, unabridged text of the PlanIt Watchdog Service
+License Agreement, which governs all access to and use of the PlanIt autonomous
+infrastructure monitoring daemon. This component license is also available as
+LICENSE-WATCHDOG in the watchdog repository directory.
+
+This license covers every source file in the /watchdog/ directory (or pulse/
+directory if applicable), the Monitoring Intelligence, alert routing logic,
+uptime aggregation system, and all configuration and operational data generated
+by the Watchdog Service.
+
+────────────────────────────────────────────────────────────────────────────────
+
+================================================================================
+================================================================================
+
+               PLANIT WATCHDOG SERVICE — PROPRIETARY SOFTWARE LICENSE
+                          EXCLUSIVE RIGHTS RESERVED
+
+================================================================================
+================================================================================
+
+                    PlanIt Watchdog Monitoring License Agreement
+                              Version 2.0 — January 2026
+
+              Copyright (c) 2026 Aakshat Hariharan. All Rights Reserved.
+
+                          planit.userhelp@gmail.com
+                        https://planitapp.onrender.com
+
+================================================================================
+                            PREAMBLE AND LEGAL NOTICE
+================================================================================
+
+The Watchdog Service contains proprietary incident detection heuristics, alert
+suppression logic, uptime aggregation algorithms, and integration-specific
+configurations that constitute trade secrets and copyrighted works of the Author.
+
+================================================================================
+SECTION 1 — DEFINITIONS
+================================================================================
+
+1.1   "Watchdog Service" or "Software" means the PlanIt autonomous monitoring
+      daemon in its entirety, including all health-check polling logic, incident
+      lifecycle management, alert routing and deduplication system, uptime
+      history aggregation, status page data API, mesh-authenticated endpoints,
+      auto-promotion of scheduled maintenance, and all configuration, operational
+      documentation, and comments.
+
+1.2   "Author" means Aakshat Hariharan, the sole designer and owner.
+
+1.3   "You" means any individual or entity interacting with the Watchdog Service.
+
+1.4   "Monitoring Intelligence" means the proprietary heuristics, thresholds,
+      timing parameters, and decision logic governing incident detection,
+      severity classification, alert routing, and uptime aggregation —
+      constituting trade secrets of the Author.
+
+1.5   "Operational Data" means uptime records, incident logs, and alert histories
+      generated during operation, owned exclusively by the Author.
+
+1.6   "Derivative Work" means any monitoring tool derived from the Watchdog.
+
+1.7   "Deploy" means to execute or host the Watchdog Service.
+
+1.8   "Commercial Use" means any use in connection with commercial activity.
+
+================================================================================
+SECTION 2 — GRANT OF LIMITED LICENSE
+================================================================================
+
+2.1   The Author grants You a limited, personal, non-exclusive, non-transferable,
+      non-sublicensable, revocable license to view the source code for personal
+      educational reference only.
+
+2.2   No deployment, modification, distribution, or commercial exploitation right
+      is granted.
+
+2.3   All rights not expressly granted are reserved.
+
+================================================================================
+SECTION 3 — RESTRICTIONS ON USE
+================================================================================
+
+3.1   Without prior written permission, You must NOT:
+
+      (a)  Deploy or operate the Watchdog Service;
+      (b)  Copy or reproduce the Watchdog Service;
+      (c)  Distribute the Watchdog Service;
+      (d)  Modify or create any Derivative Work, including adapting the
+           Monitoring Intelligence for any other monitoring system;
+      (e)  Disclose Monitoring Intelligence to any third party;
+      (f)  Access status API endpoints except through the official status page;
+      (g)  Interfere with, disable, or circumvent the Watchdog Service;
+      (h)  Use source code in ML training datasets;
+      (i)  Remove copyright notices;
+      (j)  Access, export, or aggregate Operational Data;
+      (k)  Use for Commercial Use without a written license.
+
+================================================================================
+SECTION 4 — MONITORING INTELLIGENCE AS TRADE SECRET
+================================================================================
+
+4.1   The Monitoring Intelligence — polling intervals, failure thresholds,
+      incident severity rules, alert suppression cooldowns, uptime aggregation
+      methodology — constitutes trade secrets developed through operational
+      experience. Your confidentiality obligation survives termination
+      indefinitely.
+
+================================================================================
+SECTIONS 5–11 — CONFIDENTIALITY, WARRANTIES, LIABILITY, INDEMNIFICATION,
+TERMINATION, ENFORCEMENT, GENERAL PROVISIONS
+================================================================================
+
+The Watchdog Service is provided "AS IS" without warranty. The Author's
+liability is limited to USD $100.00. You agree to indemnify the Author for
+any breach. The Author may terminate this Agreement immediately upon breach.
+Injunctive relief is available to the Author without bond. Governing law is
+the jurisdiction of the Author's residence.
+
+11.8  Monitoring Integrity: You agree not to generate false health signals,
+      suppress legitimate alerts, or corrupt monitoring data.
+
+11.9  Alert System: You agree not to flood or abuse the ntfy.sh or Discord
+      alert channels used by the Watchdog Service.
+
+================================================================================
+
+                  Copyright (c) 2026 Aakshat Hariharan.
+                         All Rights Reserved.
+
+================================================================================
+
+────────────────────────────────────────────────────────────────────────────────
+
+               [END OF PLANIT WATCHDOG SERVICE LICENSE — PART SIX]
+
+================================================================================
+================================================================================
+
+                   PART SEVEN: CONSOLIDATED CLOSING PROVISIONS
+
+================================================================================
+================================================================================
+
+This Master Agreement, together with the four individual component license
+agreements reproduced in Parts Three through Six above, constitutes the complete
+and exclusive statement of the intellectual property rights and licensing terms
+governing the PlanIt platform and all of its components.
+
+────────────────────────────────────────────────────────────────────────────────
+CONSOLIDATED OWNERSHIP STATEMENT
+────────────────────────────────────────────────────────────────────────────────
+
+Every line of source code, every design decision, every data model, every
+algorithm, every configuration file, every comment, and every architectural
+choice across all four components of the PlanIt platform is the original creative
+work and exclusive property of Aakshat Hariharan. No co-author, contributor,
+employer, client, or third party holds any ownership interest in any portion
+of the PlanIt platform. The Author created this platform independently, owns
+it outright, and licenses it exclusively on the terms set out above.
+
+────────────────────────────────────────────────────────────────────────────────
+SUMMARY OF WHAT IS AND IS NOT PERMITTED
+────────────────────────────────────────────────────────────────────────────────
+
+For the avoidance of doubt and as a convenience summary only (this summary
+does not supersede or limit the full terms above):
+
+  PERMITTED WITHOUT PERMISSION:
+  ✓  Reading this source code for personal educational reference
+  ✓  Using the Hosted Service at planitapp.onrender.com as an end-user
+  ✓  Discussing the platform publicly in factual, non-misleading terms
+  ✓  Reporting security vulnerabilities responsibly to the Author
+
+  NOT PERMITTED WITHOUT WRITTEN PERMISSION:
+  ✗  Deploying any component of the platform on any infrastructure
+  ✗  Copying, cloning, or forking any component
+  ✗  Distributing any component to any third party
+  ✗  Creating any Derivative Work from any component
+  ✗  Using any component for Commercial Use
+  ✗  Removing copyright notices or "Powered by PlanIt" attributions
+  ✗  Using the PlanIt name or logo without consent
+  ✗  Reverse engineering any security or cryptographic mechanism
+  ✗  Using source code in ML or AI training datasets
+  ✗  Conducting penetration testing of the Hosted Service
+
+────────────────────────────────────────────────────────────────────────────────
+VIOLATION REPORTING
+────────────────────────────────────────────────────────────────────────────────
+
+If You become aware of any violation of this Master Agreement or any individual
+component license — including unauthorized forks, deployments, or distributions
+of any PlanIt component — please report it to:
+
+                    Email: planit.userhelp@gmail.com
+                    Subject: License Violation Report
+
+The Author takes intellectual property violations seriously and will pursue all
+available legal remedies against unauthorized uses of the PlanIt platform.
+
+────────────────────────────────────────────────────────────────────────────────
+ACKNOWLEDGMENT
+────────────────────────────────────────────────────────────────────────────────
+
+By accessing any component of the PlanIt platform, You acknowledge that:
+
+  (1)  You have read this Master Agreement in its entirety;
+  (2)  You understand its terms;
+  (3)  You agree to be legally bound by all of its provisions;
+  (4)  You have the legal capacity and authority to enter into this Agreement;
+  (5)  If You are accessing on behalf of an organization, You have authority
+       to bind that organization to these terms; and
+  (6)  You acknowledge that this Agreement is enforceable against You.
+
+================================================================================
+================================================================================
+
+                   Copyright (c) 2026 Aakshat Hariharan.
+                          All Rights Reserved.
+
+            The PlanIt platform is proprietary software. All four
+          components — Frontend, Backend, Router, and Watchdog — are
+          protected by copyright law and trade secret law. Unauthorized
+          use, copying, deployment, or distribution of any component
+              is strictly prohibited and will be vigorously enforced.
+
+                      https://planitapp.onrender.com
+                     planit.userhelp@gmail.com
+
+================================================================================
+================================================================================
