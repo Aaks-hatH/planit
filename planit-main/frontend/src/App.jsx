@@ -31,6 +31,7 @@ import WhiteLabelSignup from './pages/WhiteLabelSignup';
 import SetupFee from './pages/SetupFee';
 import SetupFeeSuccess from './pages/SetupFeeSuccess';
 import ClientPortal from './pages/ClientPortal';
+import WLHome from './pages/WLHome';
 
 // ─── Maintenance page ─────────────────────────────────────────────────────────
 // t = 's' scheduled | 'i' incident | 'd' degraded
@@ -187,7 +188,10 @@ function MaintenanceBanner({ info }) {
 // active=true  → full-page lockout (MaintenancePage)
 // upcoming=true → banner only (MaintenanceBanner), app stays usable
 // Admin path always bypasses lockout.
+// WL domains ALWAYS bypass — their clients have a paid SLA and shouldn't
+// see PlanIt's maintenance page; their own events/platform must stay up.
 function MaintenanceGate({ children }) {
+  const { isWL } = useWhiteLabel();
   const [info, setInfo]       = useState(null);
   const [checked, setChecked] = useState(false);
 
@@ -201,9 +205,13 @@ function MaintenanceGate({ children }) {
     return () => clearInterval(t);
   }, []);
 
-  const path    = window.location.pathname;
+  const path     = window.location.pathname;
   const isAdmin  = path.startsWith('/admin');
   const isStatus = path === '/status';
+
+  // WL domains bypass maintenance entirely — their platform must stay live
+  if (isWL) return <>{children}</>;
+
   if (!checked) return null;
 
   // Full lockout — admin and status page always bypass so you can still resolve
@@ -216,6 +224,12 @@ function MaintenanceGate({ children }) {
       {children}
     </>
   );
+}
+
+// ─── Home route — WL domains get their branded landing, PlanIt gets its own ──
+function HomeRoute() {
+  const { isWL } = useWhiteLabel();
+  return isWL ? <WLHome /> : <Home />;
 }
 
 // ─── White-label suspended / blocked page ─────────────────────────────────────
@@ -359,7 +373,7 @@ function App() {
         <MaintenanceGate>
           <Router>
             <Routes>
-        <Route path="/" element={<Home />} />
+        <Route path="/" element={<HomeRoute />} />
 
         <Route path="/e/:subdomain"              element={<EventSpace />} />
         <Route path="/event/:eventId"            element={<EventSpace />} />
