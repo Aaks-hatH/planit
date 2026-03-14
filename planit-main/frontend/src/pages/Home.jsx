@@ -2620,7 +2620,7 @@ export default function Home() {
               <div>
                 <h3 className="text-xs font-bold text-neutral-500 mb-5 uppercase tracking-wider">Product</h3>
                 <ul className="space-y-3 text-sm text-neutral-500">
-                  {[['Features', '#features'], ['Discover', '/discover'], ['Status', '/status'], ['Help', '/help'], ['Get Started', '#create'], ['Help', '/help']].map(([l, h]) => (
+                  {[['Features', '#features'], ['Discover', '/discover'], ['Status', '/status'], ['Help', '/help'], ['Get Started', '#create'], ['License', '/license']].map(([l, h]) => (
                     <li key={l}><a href={h} className="hover:text-neutral-200 transition-colors">{l}</a></li>
                   ))}
                 </ul>
