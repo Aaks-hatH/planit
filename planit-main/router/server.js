@@ -1139,6 +1139,17 @@ function _maintenanceExempt(req) {
   if (p.startsWith('/api/mesh'))   return true;   // backend mesh endpoints
   if (p.startsWith('/api/admin'))  return true;   // admin panel stays alive
   if (p.startsWith('/socket.io'))  return true;   // socket polling
+  // White-label endpoints must NEVER be blocked by maintenance.
+  if (p.startsWith('/api/whitelabel/resolve'))   return true;
+  if (p.startsWith('/api/whitelabel/heartbeat')) return true;
+  if (p.startsWith('/api/whitelabel/cors'))      return true;
+  if (p.startsWith('/api/wl-portal'))            return true;
+  // Status page endpoints — /api/uptime/* must stay live during maintenance
+  // so the public status page keeps showing real data instead of 503s.
+  if (p.startsWith('/api/uptime'))               return true;
+  // HEAD / and GET / — UptimeRobot and other monitors hit this to check
+  // the site is reachable. Returning 503 causes false-positive alerts.
+  if (p === '/' && (req.method === 'HEAD' || req.method === 'GET')) return true;
   return false;
 }
 
