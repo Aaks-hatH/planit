@@ -6520,125 +6520,125 @@ export default function Admin() {
 
   // ── Login Screen ──────────────────────────────────────────────────────────
   if (!auth) return (
-    <div className="min-h-screen flex" style={{background:'#0a0a0a'}}>
+    <div style={{
+      minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center',
+      background:'#080810', fontFamily:"'Inter',-apple-system,sans-serif",
+      position:'relative', overflow:'hidden',
+    }}>
+      {/* Ambient glow orbs */}
+      <div style={{position:'absolute',top:'-20%',left:'-10%',width:600,height:600,borderRadius:'50%',background:'radial-gradient(circle,rgba(59,130,246,0.07) 0%,transparent 70%)',pointerEvents:'none'}} />
+      <div style={{position:'absolute',bottom:'-20%',right:'-10%',width:500,height:500,borderRadius:'50%',background:'radial-gradient(circle,rgba(99,102,241,0.06) 0%,transparent 70%)',pointerEvents:'none'}} />
 
-      {/* Sidebar — matches the real app sidebar exactly */}
-      <div className="hidden lg:flex flex-col w-56 flex-shrink-0" style={{background:'#0a0a0a',borderRight:'1px solid rgba(255,255,255,0.06)'}}>
-        {/* Logo row */}
-        <div className="h-14 flex items-center gap-3 px-4" style={{borderBottom:'1px solid rgba(255,255,255,0.06)'}}>
-          <div className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0" style={{background:'linear-gradient(135deg,#3b82f6,#6366f1)'}}>
-            <Shield className="w-4 h-4 text-white" />
-          </div>
-          <span className="text-sm font-bold text-white">Admin Panel</span>
-        </div>
-        {/* Ghost nav items — visual only */}
-        <nav className="flex-1 py-3 px-2 space-y-0.5">
-          {[
-            { label: 'Dashboard',    icon: BarChart3 },
-            { label: 'Events',       icon: Calendar },
-            { label: 'White Label',  icon: Globe },
-            { label: 'Security',     icon: Shield },
-            { label: 'Settings',     icon: Settings },
-          ].map(({ label, icon: Icon }) => (
-            <div key={label} className="w-full flex items-center gap-3 px-2.5 py-2.5 rounded-xl text-sm font-medium text-neutral-600 select-none">
-              <Icon className="w-4 h-4 flex-shrink-0" />
-              <span>{label}</span>
-            </div>
-          ))}
-        </nav>
-        <div className="p-4" style={{borderTop:'1px solid rgba(255,255,255,0.06)'}}>
-          <p className="text-xs text-neutral-700">Restricted access</p>
-        </div>
-      </div>
+      <div style={{width:'100%',maxWidth:380,padding:'0 24px',position:'relative',zIndex:1}}>
 
-      {/* Main area — same bg as real app */}
-      <div className="flex-1 flex flex-col" style={{background:'#f5f5f5'}}>
-
-        {/* Top bar — same height and style as real app */}
-        <div className="h-14 flex items-center px-6 gap-4" style={{background:'#fff',borderBottom:'1px solid #e5e5e5'}}>
-          <div className="flex items-center gap-2">
-            <div className="w-2 h-2 rounded-full bg-neutral-300" />
-            <span className="text-sm font-medium text-neutral-400">Dashboard</span>
+        {/* Logo mark */}
+        <div style={{display:'flex',flexDirection:'column',alignItems:'center',marginBottom:40}}>
+          <div style={{
+            width:52,height:52,borderRadius:16,
+            background:'linear-gradient(135deg,#3b82f6 0%,#6366f1 100%)',
+            display:'flex',alignItems:'center',justifyContent:'center',
+            boxShadow:'0 0 0 1px rgba(99,102,241,0.3), 0 8px 32px rgba(59,130,246,0.25)',
+            marginBottom:20,
+          }}>
+            <Shield style={{width:22,height:22,color:'#fff'}} />
           </div>
-          <div className="flex-1" />
-          <div className="w-7 h-7 rounded-full bg-neutral-200 flex items-center justify-center">
-            <User className="w-3.5 h-3.5 text-neutral-500" />
-          </div>
+          <h1 style={{fontSize:'1.35rem',fontWeight:700,color:'#fff',letterSpacing:'-0.03em',margin:0,lineHeight:1}}>
+            Admin Panel
+          </h1>
+          <p style={{fontSize:'0.8rem',color:'rgba(255,255,255,0.35)',marginTop:6,letterSpacing:'0.01em'}}>
+            PlanIt · Restricted Access
+          </p>
         </div>
 
-        {/* Centered login card */}
-        <div className="flex-1 flex items-center justify-center px-6 py-12">
-          <div className="w-full max-w-sm">
-
-            {/* Card */}
-            <div className="bg-white rounded-2xl border border-neutral-200 shadow-sm overflow-hidden">
-              <div className="px-8 pt-8 pb-6 border-b border-neutral-100">
-                <div className="flex items-center gap-3 mb-6">
-                  <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0" style={{background:'linear-gradient(135deg,#3b82f6,#6366f1)'}}>
-                    <Shield className="w-4 h-4 text-white" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-bold text-neutral-900 leading-none">Admin Panel</p>
-                    <p className="text-xs text-neutral-400 mt-0.5">PlanIt</p>
-                  </div>
-                </div>
-                <h1 className="text-xl font-bold text-neutral-900 tracking-tight">Sign in</h1>
-                <p className="text-sm text-neutral-500 mt-1">Enter your credentials to continue</p>
-              </div>
-
-              <form onSubmit={login} className="px-8 py-6 space-y-4">
-                <div>
-                  <label className="block text-xs font-semibold text-neutral-600 mb-1.5 tracking-wide uppercase" style={{letterSpacing:'0.06em',fontSize:'0.68rem'}}>
-                    Username
-                  </label>
-                  <input
-                    type="text" required autoFocus
-                    className="w-full px-3.5 py-2.5 text-sm rounded-lg border border-neutral-200 bg-neutral-50 text-neutral-900 placeholder-neutral-400 outline-none transition-all"
-                    style={{fontFamily:'inherit'}}
-                    placeholder="username"
-                    value={loginForm.username}
-                    onChange={e => setLoginForm({ ...loginForm, username: e.target.value })}
-                    onFocus={e => { e.target.style.borderColor='#3b82f6'; e.target.style.background='#fff'; e.target.style.boxShadow='0 0 0 3px rgba(59,130,246,0.1)'; }}
-                    onBlur={e => { e.target.style.borderColor='#e5e5e5'; e.target.style.background='#fafafa'; e.target.style.boxShadow='none'; }}
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-neutral-600 mb-1.5 tracking-wide uppercase" style={{letterSpacing:'0.06em',fontSize:'0.68rem'}}>
-                    Password
-                  </label>
-                  <input
-                    type="password" required
-                    className="w-full px-3.5 py-2.5 text-sm rounded-lg border border-neutral-200 bg-neutral-50 text-neutral-900 placeholder-neutral-400 outline-none transition-all"
-                    style={{fontFamily:'inherit'}}
-                    placeholder="••••••••"
-                    value={loginForm.password}
-                    onChange={e => setLoginForm({ ...loginForm, password: e.target.value })}
-                    onFocus={e => { e.target.style.borderColor='#3b82f6'; e.target.style.background='#fff'; e.target.style.boxShadow='0 0 0 3px rgba(59,130,246,0.1)'; }}
-                    onBlur={e => { e.target.style.borderColor='#e5e5e5'; e.target.style.background='#fafafa'; e.target.style.boxShadow='none'; }}
-                  />
-                </div>
-                <button
-                  type="submit" disabled={loggingIn}
-                  className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-semibold text-white transition-all"
-                  style={{
-                    background: loggingIn ? '#93c5fd' : 'linear-gradient(135deg,#3b82f6,#6366f1)',
-                    cursor: loggingIn ? 'default' : 'pointer',
-                    boxShadow: loggingIn ? 'none' : '0 1px 3px rgba(59,130,246,0.3)',
-                    marginTop:'0.25rem'
-                  }}
-                >
-                  {loggingIn
-                    ? <><span className="spinner w-4 h-4 border-2 border-white/30 border-t-white" /> Signing in...</>
-                    : 'Sign in'}
-                </button>
-              </form>
+        {/* Card */}
+        <div style={{
+          background:'rgba(255,255,255,0.04)',
+          border:'1px solid rgba(255,255,255,0.08)',
+          borderRadius:20,
+          padding:'32px 32px 28px',
+          backdropFilter:'blur(20px)',
+        }}>
+          <form onSubmit={login}>
+            {/* Username */}
+            <div style={{marginBottom:16}}>
+              <label style={{display:'block',fontSize:'0.7rem',fontWeight:600,color:'rgba(255,255,255,0.4)',letterSpacing:'0.1em',textTransform:'uppercase',marginBottom:8}}>
+                Username
+              </label>
+              <input
+                type="text" required autoFocus
+                placeholder="username"
+                value={loginForm.username}
+                onChange={e => setLoginForm({ ...loginForm, username: e.target.value })}
+                onFocus={e => { e.target.style.borderColor='rgba(99,102,241,0.6)'; e.target.style.boxShadow='0 0 0 3px rgba(99,102,241,0.12)'; }}
+                onBlur={e => { e.target.style.borderColor='rgba(255,255,255,0.08)'; e.target.style.boxShadow='none'; }}
+                style={{
+                  width:'100%', boxSizing:'border-box',
+                  padding:'11px 14px', fontSize:'0.875rem',
+                  background:'rgba(255,255,255,0.05)',
+                  border:'1px solid rgba(255,255,255,0.08)',
+                  borderRadius:10, color:'#fff',
+                  outline:'none', fontFamily:'inherit',
+                  transition:'border-color 0.15s,box-shadow 0.15s',
+                }}
+              />
             </div>
 
-            <p className="text-center mt-6 text-xs text-neutral-400">
-              <a href="/" className="hover:text-neutral-600 transition-colors">← Back to PlanIt</a>
-            </p>
-          </div>
+            {/* Password */}
+            <div style={{marginBottom:24}}>
+              <label style={{display:'block',fontSize:'0.7rem',fontWeight:600,color:'rgba(255,255,255,0.4)',letterSpacing:'0.1em',textTransform:'uppercase',marginBottom:8}}>
+                Password
+              </label>
+              <input
+                type="password" required
+                placeholder="••••••••••••"
+                value={loginForm.password}
+                onChange={e => setLoginForm({ ...loginForm, password: e.target.value })}
+                onFocus={e => { e.target.style.borderColor='rgba(99,102,241,0.6)'; e.target.style.boxShadow='0 0 0 3px rgba(99,102,241,0.12)'; }}
+                onBlur={e => { e.target.style.borderColor='rgba(255,255,255,0.08)'; e.target.style.boxShadow='none'; }}
+                style={{
+                  width:'100%', boxSizing:'border-box',
+                  padding:'11px 14px', fontSize:'0.875rem',
+                  background:'rgba(255,255,255,0.05)',
+                  border:'1px solid rgba(255,255,255,0.08)',
+                  borderRadius:10, color:'#fff',
+                  outline:'none', fontFamily:'inherit',
+                  transition:'border-color 0.15s,box-shadow 0.15s',
+                }}
+              />
+            </div>
+
+            {/* Submit */}
+            <button
+              type="submit" disabled={loggingIn}
+              style={{
+                width:'100%', padding:'12px',
+                borderRadius:10, border:'none',
+                background: loggingIn ? 'rgba(99,102,241,0.4)' : 'linear-gradient(135deg,#3b82f6 0%,#6366f1 100%)',
+                color:'#fff', fontSize:'0.875rem', fontWeight:600,
+                cursor: loggingIn ? 'default' : 'pointer',
+                display:'flex', alignItems:'center', justifyContent:'center', gap:8,
+                boxShadow: loggingIn ? 'none' : '0 4px 16px rgba(99,102,241,0.3)',
+                transition:'all 0.15s', fontFamily:'inherit',
+                letterSpacing:'-0.01em',
+              }}
+              onMouseEnter={e => { if (!loggingIn) e.currentTarget.style.boxShadow='0 6px 24px rgba(99,102,241,0.45)'; }}
+              onMouseLeave={e => { if (!loggingIn) e.currentTarget.style.boxShadow='0 4px 16px rgba(99,102,241,0.3)'; }}
+            >
+              {loggingIn
+                ? <><span className="spinner w-4 h-4 border-2 border-white/30 border-t-white" /> Signing in...</>
+                : 'Sign in →'}
+            </button>
+          </form>
         </div>
+
+        {/* Footer link */}
+        <p style={{textAlign:'center',marginTop:28,fontSize:'0.75rem',color:'rgba(255,255,255,0.2)'}}>
+          <a href="/" style={{color:'rgba(255,255,255,0.25)',textDecoration:'none',transition:'color 0.15s'}}
+            onMouseEnter={e => e.target.style.color='rgba(255,255,255,0.5)'}
+            onMouseLeave={e => e.target.style.color='rgba(255,255,255,0.25)'}>
+            ← Back to PlanIt
+          </a>
+        </p>
       </div>
     </div>
   );
