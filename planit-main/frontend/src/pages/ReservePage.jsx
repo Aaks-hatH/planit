@@ -102,12 +102,12 @@ function ConfirmationScreen({ booking, config, subdomain, onReset }) {
             <Check className="w-8 h-8" style={{ color: accent }} />
           </div>
           <h1 className="text-2xl font-black mb-2" style={{ color: config.backgroundStyle === 'light' ? '#111' : '#fff' }}>
-            {booking.isPending ? 'Request Received!' : 'You\'re booked!'}
+            {booking.isPending ? 'Request Received!' : (wl?.pages?.checkout?.successHeadline || 'You\'re booked!')}
           </h1>
           <p className="text-sm" style={{ color: config.backgroundStyle === 'light' ? '#666' : '#999' }}>
             {booking.isPending
               ? 'Your reservation request is pending confirmation. We\'ll be in touch shortly.'
-              : 'Your reservation is confirmed. See you soon!'}
+              : (wl?.pages?.checkout?.successMessage || 'Your reservation is confirmed. See you soon!')}
           </p>
         </div>
 
@@ -162,6 +162,17 @@ function ConfirmationScreen({ booking, config, subdomain, onReset }) {
           Make another reservation
         </button>
 
+        {isWL && wl?.pages?.contact?.email && (
+          <div className="text-center text-xs mt-4" style={{ color: config.backgroundStyle === 'light' ? '#999' : '#555' }}>
+            Questions?{' '}
+            <a href={`mailto:${wl.pages.contact.email}`} className="underline" style={{ color: accent }}>
+              {wl.pages.contact.email}
+            </a>
+            {wl.pages.contact.phone && (
+              <span> · <a href={`tel:${wl.pages.contact.phone}`} className="underline" style={{ color: accent }}>{wl.pages.contact.phone}</a></span>
+            )}
+          </div>
+        )}
         {config.showPoweredBy !== false && !(isWL && wl?.branding?.hidePoweredBy) && (
           <div className="text-center text-xs mt-6" style={{ color: config.backgroundStyle === 'light' ? '#ccc' : '#333' }}>
             Powered by <a href="https://planitapp.onrender.com" className="hover:opacity-80" style={{ color: accent }}>PlanIt</a>
@@ -175,6 +186,7 @@ function ConfirmationScreen({ booking, config, subdomain, onReset }) {
 // ── Cancel landing page ───────────────────────────────────────────────────────
 export function ReserveCancelPage() {
   const { cancelToken } = useParams();
+  const { wl, isWL } = useWhiteLabel();
   const [state, setState] = useState('idle'); // idle | loading | success | error
   const [msg, setMsg]     = useState('');
 
@@ -195,7 +207,7 @@ export function ReserveCancelPage() {
         <Check className="w-12 h-12 text-emerald-400 mx-auto mb-4" />
         <h1 className="text-2xl font-black text-white mb-2">Reservation Cancelled</h1>
         <p className="text-neutral-400 text-sm">Your reservation has been cancelled. We hope to see you another time.</p>
-        <a href="/" className="inline-block mt-6 text-sm text-neutral-500 hover:text-neutral-300">← Back to PlanIt</a>
+        <a href="/" className="inline-block mt-6 text-sm text-neutral-500 hover:text-neutral-300">← Back to {isWL ? (wl?.branding?.companyName || wl?.clientName || "Home") : "PlanIt"}</a>
       </div>
     </div>
   );
@@ -234,8 +246,6 @@ export default function ReservePage() {
   const { subdomain } = useParams();
   const navigate = useNavigate();
   const { wl, isWL } = useWhiteLabel();
-  const wlFeatures = isWL ? (wl?.features || {}) : {};
-  const showSocialShare = !isWL || wlFeatures.showSocialShare !== false;
 
   const [config, setConfig]   = useState(null);
   const [loading, setLoading] = useState(true);
@@ -816,12 +826,22 @@ export default function ReservePage() {
                       </p>
                     )}
 
+                    {isWL && wl?.pages?.checkout?.headerNote && (
+                      <div className="text-xs text-center px-1 mb-2" style={{ color: c.muted }}>
+                        {wl.pages.checkout.headerNote}
+                      </div>
+                    )}
                     <button onClick={handleSubmit} disabled={submitting}
                       className="w-full py-4 rounded-xl font-black text-base flex items-center justify-center gap-2 transition-all hover:opacity-90 disabled:opacity-60 mt-2"
                       style={{ background: accent, color: '#fff', boxShadow: `0 4px 24px ${accent}44` }}>
                       {submitting ? <Loader2 className="w-5 h-5 animate-spin" /> : <Check className="w-5 h-5" />}
                       {config.confirmationMode === 'manual' ? 'Request Reservation' : 'Confirm Reservation'}
                     </button>
+                    {isWL && wl?.pages?.checkout?.footerNote && (
+                      <p className="text-xs text-center mt-3" style={{ color: c.muted }}>
+                        {wl.pages.checkout.footerNote}
+                      </p>
+                    )}
                   </div>
                 )}
               </div>
