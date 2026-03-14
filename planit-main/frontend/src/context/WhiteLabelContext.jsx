@@ -17,7 +17,7 @@
  *   so a re-activation takes effect immediately.
  */
 
-import { createContext, useContext, useEffect, useState } from 'react';
+import { createContext, useContext, useEffect, useRef, useState } from 'react';
 
 const API_URL = (import.meta.env.VITE_API_URL || 'http://localhost:5000/api').replace(/\/$/, '');
 
@@ -56,37 +56,57 @@ function setCachedHB(domain, ok) {
 const WhiteLabelContext = createContext({
   wl: null, isWL: false, resolved: false,
   blocked: false, blockReason: null,
-  features: {}, pages: {},
-  refresh: () => {},
 });
 
 export function useWhiteLabel() {
   return useContext(WhiteLabelContext);
 }
 
+// Interval between background heartbeat re-checks (30 min)
+const HB_RECHECK_MS = 30 * 60 * 1000;
+
 export function WhiteLabelProvider({ children }) {
-  const [refreshKey, setRefreshKey] = useState(0);
   const [state, setState] = useState({
     wl: null, isWL: false, resolved: false, blocked: false, blockReason: null,
-    features: {}, pages: {},
   });
-
-  // Bust cache and re-fetch after portal saves
-  const refresh = () => {
-    try { localStorage.removeItem(HB_KEY); } catch {}
-    setRefreshKey(k => k + 1);
-  };
+  // Ref so the periodic checker can call the latest heartbeat without stale closure
+  const recheckRef = useRef(null);
 
   useEffect(() => {
     const hostname = window.location.hostname;
 
     if (!isCustomDomain(hostname)) {
-      setState({ wl: null, isWL: false, resolved: true, blocked: false, blockReason: null, features: {}, pages: {} });
+      setState({ wl: null, isWL: false, resolved: true, blocked: false, blockReason: null });
       return;
     }
 
     let cancelled = false;
     let retries = 0;
+
+    // Standalone heartbeat-only re-check for periodic enforcement
+    // Only runs after the initial resolve has passed. If it comes back 403,
+    // immediately block — no second chance.
+    async function recheck() {
+      if (cancelled) return;
+      try {
+        const r = await fetch(`${API_URL}/whitelabel/heartbeat`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ domain: hostname }),
+        });
+        if (r.status === 403) {
+          const data = await r.json().catch(() => ({}));
+          try { localStorage.removeItem(HB_KEY); } catch { /* ignore */ }
+          if (!cancelled) setState(prev => ({
+            ...prev, blocked: true, blockReason: data.reason || 'suspended',
+          }));
+        }
+        // 200 = still valid, do nothing
+        // network error = fail open (don't kill a live site over a blip)
+      } catch { /* fail open */ }
+    }
+
+    recheckRef.current = recheck;
 
     async function run() {
       // 1. Fetch branding
@@ -138,7 +158,7 @@ export function WhiteLabelProvider({ children }) {
       // 2. Check cache — only trust cached PASSES (ok: true)
       const cached = getCachedHB(hostname);
       if (cached && cached.ok) {
-        if (!cancelled) setState({ wl: branding, isWL: true, resolved: true, blocked: false, blockReason: null, features: branding?.features || {}, pages: branding?.pages || {} });
+        if (!cancelled) setState({ wl: branding, isWL: true, resolved: true, blocked: false, blockReason: null });
         return;
       }
 
@@ -169,27 +189,51 @@ export function WhiteLabelProvider({ children }) {
           // Server error — fail open, don't kill a live site over a blip
           console.warn('[WL] heartbeat server error', r.status, '— failing open');
           setCachedHB(hostname, true);
-          if (!cancelled) setState({ wl: branding, isWL: true, resolved: true, blocked: false, blockReason: null, features: branding?.features || {}, pages: branding?.pages || {} });
+          if (!cancelled) setState({ wl: branding, isWL: true, resolved: true, blocked: false, blockReason: null });
           return;
         }
 
         // Valid
         setCachedHB(hostname, true);
-        if (!cancelled) setState({ wl: branding, isWL: true, resolved: true, blocked: false, blockReason: null, features: branding?.features || {}, pages: branding?.pages || {} });
+        if (!cancelled) setState({ wl: branding, isWL: true, resolved: true, blocked: false, blockReason: null });
 
       } catch {
         // Network error — fail open
         console.warn('[WL] heartbeat network error — failing open');
-        if (!cancelled) setState({ wl: branding, isWL: true, resolved: true, blocked: false, blockReason: null, features: branding?.features || {}, pages: branding?.pages || {} });
+        if (!cancelled) setState({ wl: branding, isWL: true, resolved: true, blocked: false, blockReason: null });
       }
     }
 
     run();
-    return () => { cancelled = true; };
-  }, [refreshKey]);
+
+    // Periodic re-check every 30 min while tab is open
+    const interval = setInterval(() => {
+      if (recheckRef.current) recheckRef.current();
+    }, HB_RECHECK_MS);
+
+    // Re-check when user returns to the tab after > 5 min away
+    // Catches the case where an admin suspends while the client's tab is open
+    let lastHidden = 0;
+    function onVisibility() {
+      if (document.visibilityState === 'hidden') {
+        lastHidden = Date.now();
+      } else if (document.visibilityState === 'visible') {
+        if (Date.now() - lastHidden > 5 * 60 * 1000) {
+          if (recheckRef.current) recheckRef.current();
+        }
+      }
+    }
+    document.addEventListener('visibilitychange', onVisibility);
+
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', onVisibility);
+    };
+  }, []);
 
   return (
-    <WhiteLabelContext.Provider value={{ ...state, refresh }}>
+    <WhiteLabelContext.Provider value={state}>
       {children}
     </WhiteLabelContext.Provider>
   );
