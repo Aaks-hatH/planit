@@ -15,6 +15,7 @@ import SecurityAlerts, { useSecurityAlerts } from '../components/SecurityAlerts'
 import { formatDate, formatRelativeTime, formatFileSize } from '../utils/formatters';
 import { MAX_MESSAGE_LENGTH, MAX_FILE_SIZE, ALLOWED_FILE_TYPES } from '../utils/constants';
 import toast from 'react-hot-toast';
+import { useWhiteLabel } from '../context/WhiteLabelContext';
 
 import Tasks from '../components/Tasks';
 import Announcements from '../components/Announcements';
@@ -497,11 +498,22 @@ function JoinGate({ eventId, onJoined }) {
       {/* Top bar */}
       <div className="relative z-10 flex items-center justify-between px-6 py-5 max-w-4xl mx-auto w-full">
         <div className="flex items-center gap-2.5">
-          <div className="w-7 h-7 rounded-lg flex items-center justify-center"
-            style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.1)' }}>
-            <Calendar className="w-3.5 h-3.5" style={{ color: 'rgba(255,255,255,0.6)' }} />
-          </div>
-          <span className="text-sm font-bold tracking-tight" style={{ color: 'rgba(255,255,255,0.7)' }}>PlanIt</span>
+          {isWL && wl?.branding?.logoUrl
+            ? <img src={wl.branding.logoUrl} alt={wl.branding.companyName || wl.clientName || ''} style={{ height: 26, objectFit: 'contain', maxWidth: 120 }} />
+            : isWL && wl?.branding?.hidePoweredBy
+            ? null
+            : (
+              <>
+                <div className="w-7 h-7 rounded-lg flex items-center justify-center"
+                  style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.1)' }}>
+                  <Calendar className="w-3.5 h-3.5" style={{ color: 'rgba(255,255,255,0.6)' }} />
+                </div>
+                <span className="text-sm font-bold tracking-tight" style={{ color: 'rgba(255,255,255,0.7)' }}>
+                  {isWL ? (wl?.branding?.companyName || wl?.clientName || '') : 'PlanIt'}
+                </span>
+              </>
+            )
+          }
         </div>
         <button onClick={() => navigate('/')} className="text-xs transition-colors"
           style={{ color: 'rgba(255,255,255,0.35)' }}
@@ -779,6 +791,7 @@ function ReactionBar({ messageId, reactions = [], currentUser, eventId }) {
 
 /* ─── Main EventSpace ─────────────────────────────────────────────────────── */
 export default function EventSpace() {
+  const { wl, isWL } = useWhiteLabel();
   const { eventId: paramEventId, subdomain } = useParams();
   const navigate = useNavigate();
   const messagesEndRef   = useRef(null);
@@ -1198,18 +1211,23 @@ export default function EventSpace() {
   };
 
   const settings = event?.settings || {};
+  // WL feature flags — fall back to true (show everything) when not on a WL domain
+  const wlFeatures = wl?.features || {};
+  const wlShowGuestList = !isWL || wlFeatures.showGuestList !== false;
+  const wlShowWaitlist  = !isWL || wlFeatures.showWaitlist  !== false;
+
   const tabs = [
     ...(settings.allowChat !== false        ? [{ id: 'chat',          label: 'Chat',    icon: MessageSquare, count: messages.length    }] : []),
     ...(settings.allowPolls !== false       ? [{ id: 'polls',         label: 'Polls',   icon: BarChart3,     count: polls.length       }] : []),
     ...(settings.allowFileSharing !== false ? [{ id: 'files',         label: 'Files',   icon: FileText,      count: files.length       }] : []),
     { id: 'agenda',        label: 'Agenda',   icon: Clock,       count: agenda.length   },
-    { id: 'people',        label: 'People',   icon: Users,       count: participants.length },
+    ...(wlShowGuestList ? [{ id: 'people', label: 'People', icon: Users, count: participants.length }] : []),
     { id: 'tasks',         label: 'Tasks',    icon: CheckCircle2 },
     { id: 'announcements', label: 'Bulletin', icon: Megaphone    },
     { id: 'expenses',      label: 'Budget',   icon: DollarSign   },
     { id: 'notes',         label: 'Notes',    icon: StickyNote   },
     ...(isOrganizer && event?.isEnterpriseMode ? [{ id: 'analytics', label: 'Analytics', icon: BarChart3 }] : []),
-    { id: 'utilities', label: 'Share', icon: Share2 },
+    ...((!isWL || wlFeatures.showSocialShare !== false) ? [{ id: 'utilities', label: 'Share', icon: Share2 }] : []),
   ];
 
   useEffect(() => {
@@ -1298,7 +1316,7 @@ export default function EventSpace() {
                 <UserCheck className="w-3.5 h-3.5" />Check-in
               </button>
             )}
-            {isOrganizer && (
+            {isOrganizer && wlShowWaitlist && (
               <button onClick={() => navigate(`/event/${eventId}/waitlist`)} title="Waitlist"
                 className="relative w-8 h-8 rounded-lg bg-neutral-100 hover:bg-neutral-200 flex items-center justify-center transition-colors">
                 <ClipboardList className="w-3.5 h-3.5 text-neutral-600" />
