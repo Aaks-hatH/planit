@@ -147,6 +147,18 @@ function maintenanceGuard(req, res, next) {
   const p = req.path;
   // Always let through: health checks, mesh routes, admin routes, socket.io
   if (p === '/api/health' || p.startsWith('/api/mesh') || p.startsWith('/api/admin') || p.startsWith('/socket.io')) return next();
+  // White-label resolve, heartbeat, cors-domains, and client portal must always
+  // be reachable so WL custom domains keep working during PlanIt maintenance.
+  if (p.startsWith('/api/whitelabel/resolve'))   return next();
+  if (p.startsWith('/api/whitelabel/heartbeat')) return next();
+  if (p.startsWith('/api/whitelabel/cors'))      return next();
+  if (p.startsWith('/api/wl-portal'))            return next();
+  // Status page — keep /api/uptime/* live so the public status page shows
+  // real data during maintenance rather than a wall of 503s.
+  if (p.startsWith('/api/uptime'))               return next();
+  // HEAD / and GET / — UptimeRobot and other monitors ping this to check
+  // reachability. Blocking it causes false-positive downtime alerts.
+  if (p === '/' && (req.method === 'HEAD' || req.method === 'GET')) return next();
   return res.status(503).json({
     maintenance: true,
     message: _backendMaintenance.message || 'Maintenance in progress.',
