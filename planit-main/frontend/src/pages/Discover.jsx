@@ -5,6 +5,7 @@ import {
   Zap, Clock, ChevronLeft, ChevronRight, X, Sparkles, Share2, Tag
 } from 'lucide-react';
 import { discoverAPI } from '../services/api';
+import { useWhiteLabel } from '../context/WhiteLabelContext';
 import StarBackground from '../components/StarBackground';
 
 function formatDate(d) {
@@ -213,6 +214,7 @@ function getAllTags(events) {
 }
 
 export default function Discover() {
+  const { wl, isWL } = useWhiteLabel();
   const [events,    setEvents]    = useState([]);
   const [loading,   setLoading]   = useState(true);
   const [search,    setSearch]    = useState('');
@@ -222,13 +224,32 @@ export default function Discover() {
   const navigate = useNavigate();
   const LIMIT = 12;
 
+  const primary  = (isWL && wl?.branding?.primaryColor) || '#6366f1';
+  const company  = (isWL && (wl?.branding?.companyName || wl?.clientName)) || 'PlanIt';
+  const logo     = isWL && wl?.branding?.logoUrl;
+  const headline = (isWL && wl?.pages?.events?.headline) || 'Discover Events';
+  const subline  = (isWL && !wl?.branding?.hidePoweredBy)
+    ? `Events hosted on ${company}`
+    : isWL
+    ? `Events on ${company}`
+    : 'Browse public events and jump in — no invite needed.';
+
   useEffect(() => {
     setLoading(true);
-    discoverAPI.getPublicEvents({ page, limit: LIMIT })
-      .then(r => { setEvents(r.data.events || []); setTotal(r.data.pagination?.total || 0); })
-      .catch(() => setEvents([]))
-      .finally(() => setLoading(false));
-  }, [page]);
+    if (isWL) {
+      // WL domain: fetch only this tenant's events
+      fetch(`${(import.meta.env.VITE_API_URL || 'http://localhost:5000/api').replace(/\/$/, '')}/events/public/wl?domain=${encodeURIComponent(window.location.hostname)}&limit=${LIMIT}`)
+        .then(r => r.ok ? r.json() : { events: [] })
+        .then(d => { setEvents(d.events || []); setTotal(d.events?.length || 0); })
+        .catch(() => setEvents([]))
+        .finally(() => setLoading(false));
+    } else {
+      discoverAPI.getPublicEvents({ page, limit: LIMIT })
+        .then(r => { setEvents(r.data.events || []); setTotal(r.data.pagination?.total || 0); })
+        .catch(() => setEvents([]))
+        .finally(() => setLoading(false));
+    }
+  }, [page, isWL]);
 
   const filtered = events.filter(ev => {
     const ms = !search.trim() || [ev.title, ev.location, ev.description].some(f => f?.toLowerCase().includes(search.toLowerCase()));
@@ -251,13 +272,20 @@ export default function Discover() {
       <header className="sticky top-0 z-50 border-b border-neutral-800/60" style={{ background: 'rgba(6,6,12,0.96)', backdropFilter: 'blur(12px)' }}>
         <div className="max-w-6xl mx-auto px-6 h-16 flex items-center gap-4">
           <div className="flex items-center gap-2.5 cursor-pointer flex-shrink-0" onClick={() => navigate('/')}>
-            <div className="relative">
-              <div className="w-9 h-9 rounded-2xl bg-neutral-800 border border-neutral-700 flex items-center justify-center">
-                <Calendar className="w-5 h-5 text-neutral-300" />
-              </div>
-              <div className="absolute -top-1 -right-1 w-3 h-3 bg-emerald-500 rounded-full border-2 border-[#06060c] animate-pulse" />
-            </div>
-            <span className="text-lg font-bold text-white">PlanIt</span>
+            {logo
+              ? <img src={logo} alt={company} style={{ height: 30, objectFit: 'contain', maxWidth: 130 }} />
+              : (
+                <>
+                  <div className="relative">
+                    <div className="w-9 h-9 rounded-2xl bg-neutral-800 border border-neutral-700 flex items-center justify-center">
+                      <Calendar className="w-5 h-5 text-neutral-300" />
+                    </div>
+                    {!isWL && <div className="absolute -top-1 -right-1 w-3 h-3 bg-emerald-500 rounded-full border-2 border-[#06060c] animate-pulse" />}
+                  </div>
+                  <span className="text-lg font-bold text-white">{company}</span>
+                </>
+              )
+            }
           </div>
 
           <div className="relative flex-1 max-w-md mx-auto">
@@ -276,19 +304,21 @@ export default function Discover() {
             )}
           </div>
 
-          <button onClick={() => navigate('/')} className="flex-shrink-0 flex items-center gap-2 px-5 py-2.5 bg-white text-neutral-900 text-sm font-bold rounded-xl hover:bg-neutral-100 hover:scale-105 transition-all">
-            <Zap className="w-4 h-4" /><span className="hidden sm:inline">Create event</span>
-          </button>
+          {!isWL && (
+            <button onClick={() => navigate('/')} className="flex-shrink-0 flex items-center gap-2 px-5 py-2.5 bg-white text-neutral-900 text-sm font-bold rounded-xl hover:bg-neutral-100 hover:scale-105 transition-all">
+              <Zap className="w-4 h-4" /><span className="hidden sm:inline">Create event</span>
+            </button>
+          )}
         </div>
       </header>
 
       <main className="relative max-w-6xl mx-auto px-6 py-12" style={{ zIndex: 2 }}>
         <div className="mb-10 text-center">
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-neutral-800 text-xs font-medium text-neutral-500 mb-6" style={{ background: 'rgba(255,255,255,0.03)' }}>
-            <Sparkles className="w-3.5 h-3.5" />Open to everyone
+            <Sparkles className="w-3.5 h-3.5" />{isWL ? company : "Open to everyone"}
           </div>
-          <h1 className="text-5xl md:text-6xl font-black text-white tracking-tight mb-4">Discover Events</h1>
-          <p className="text-lg text-neutral-500 max-w-md mx-auto">Browse public events and jump in — no invite needed.</p>
+          <h1 className="text-5xl md:text-6xl font-black text-white tracking-tight mb-4">{headline}</h1>
+          <p className="text-lg text-neutral-500 max-w-md mx-auto">{subline}</p>
           {!loading && total > 0 && (
             <div className="inline-flex items-center gap-2 mt-5 px-4 py-2 rounded-full border border-neutral-800 text-sm text-neutral-500" style={{ background: 'rgba(255,255,255,0.02)' }}>
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
@@ -363,7 +393,7 @@ export default function Discover() {
           </div>
         )}
 
-        {totalPages > 1 && !loading && (
+        {totalPages > 1 && !loading && !isWL && (
           <div className="flex items-center justify-center gap-3 mt-14">
             <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}
               className="flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium text-neutral-400 border border-neutral-800 rounded-xl hover:border-neutral-600 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-all"
