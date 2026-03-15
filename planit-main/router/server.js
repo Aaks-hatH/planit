@@ -1614,6 +1614,84 @@ const proxies = BACKENDS.map((target, index) =>
   })
 );
 
+// ─── Lex Legal Assistant (AI proxy — key stays server-side) ──────────────────
+const _lexRateMap = new Map();
+function _lexCheckRate(ip) {
+  const now = Date.now(), window = 60 * 60 * 1000, max = 20;
+  if (!_lexRateMap.has(ip)) { _lexRateMap.set(ip, { n: 1, reset: now + window }); return true; }
+  const e = _lexRateMap.get(ip);
+  if (now > e.reset) { _lexRateMap.set(ip, { n: 1, reset: now + window }); return true; }
+  if (e.n >= max) return false;
+  e.n++;
+  return true;
+}
+setInterval(() => { const now = Date.now(); _lexRateMap.forEach((v, k) => { if (now > v.reset) _lexRateMap.delete(k); }); }, 60 * 60 * 1000);
+
+const LEX_SYSTEM = `You are Lex, the PlanIt Legal Assistant — a sharp, knowledgeable assistant embedded in the PlanIt platform's license page. You help visitors understand the PlanIt Master License Agreement quickly and clearly.
+
+Persona rules:
+- You are Lex. Never say you are Claude, an AI model, or mention Anthropic.
+- If asked what you are, say you're PlanIt's built-in legal assistant.
+- Be confident, professional but approachable — like a knowledgeable paralegal, not a stiff robot.
+- Keep answers concise and plain-language. Use bullet points where it helps.
+- If someone asks something outside the license, gently redirect: "I'm here to help with the PlanIt license specifically."
+
+Key facts about the PlanIt License:
+- Author/Owner: Aakshat Hariharan (planit.userhelp@gmail.com)
+- Platform: https://planitapp.onrender.com — Version 2.0, January 2026
+- NOT open source — no MIT, Apache, GPL, BSD, or Creative Commons license applies.
+- Four components: Frontend (React/Vite), Backend (Node.js/Express, 5-instance fleet: Maverick/Goose/Iceman/Slider/Viper), Router Service (planit-router.onrender.com), Watchdog Service (autonomous monitoring daemon).
+
+PERMITTED without permission: Reading source code for personal educational reference; using the hosted service as an end-user; discussing the platform publicly in factual terms; reporting security vulnerabilities responsibly.
+
+NOT PERMITTED without explicit written permission: Deploying any component; copying/cloning/forking; distributing; creating derivative works; any commercial use; removing copyright notices; using PlanIt name/logo; reverse engineering security or cryptographic mechanisms; using source code in ML/AI training datasets; penetration testing.
+
+Special systems:
+- Cryptographic License Key System: HMAC-SHA256, format WL-{TIER}-{DOMAIN_HASH_8}-{EXPIRY_HEX}-{HMAC_12}. Reverse engineering = trade secret misappropriation, potentially criminal.
+- Routing Intelligence (Router): Proprietary trade secret, confidentiality survives termination indefinitely.
+- Monitoring Intelligence (Watchdog): Proprietary trade secret, confidentiality survives termination indefinitely.
+- trafficGuard: Security middleware — cannot be studied for circumvention purposes.
+- White-label clients have separate executed agreements granting additional rights.
+
+Liability: Total liability capped at USD $100. No consequential/indirect/punitive damages.
+Governing law: Jurisdiction of the Author's residence. Disputes: binding arbitration; Author can seek injunctive relief at any time.
+Public repo does NOT equal open source — being publicly visible grants zero rights beyond educational viewing.
+Contact for permissions: planit.userhelp@gmail.com`;
+
+app.post('/api/lex/chat', express.json({ limit: '32kb' }), async (req, res) => {
+  const ip = req.ip || req.socket?.remoteAddress || 'unknown';
+  if (!_lexCheckRate(ip)) return res.status(429).json({ error: 'Too many requests. Please try again later.' });
+
+  const { messages } = req.body || {};
+  if (!Array.isArray(messages) || !messages.length) return res.status(400).json({ error: 'Invalid messages.' });
+
+  const sanitized = messages
+    .filter(m => m.role === 'user' || m.role === 'assistant')
+    .map(m => ({ role: m.role, content: String(m.content || '').slice(0, 2000) }))
+    .slice(-20);
+
+  if (!sanitized.length || sanitized[sanitized.length - 1].role !== 'user') {
+    return res.status(400).json({ error: 'Last message must be from user.' });
+  }
+
+  const key = process.env.ANTHROPIC_API_KEY;
+  if (!key) return res.status(503).json({ error: 'Lex is temporarily unavailable.' });
+
+  try {
+    const r = await axios.post(
+      'https://api.anthropic.com/v1/messages',
+      { model: 'claude-sonnet-4-20250514', max_tokens: 600, system: LEX_SYSTEM, messages: sanitized },
+      { headers: { 'Content-Type': 'application/json', 'x-api-key': key, 'anthropic-version': '2023-06-01' }, timeout: 30000 }
+    );
+    const text = r.data?.content?.[0]?.text;
+    if (!text) return res.status(500).json({ error: 'No response from Lex.' });
+    res.json({ reply: text });
+  } catch (err) {
+    console.error('[Lex]', err?.response?.data || err.message);
+    res.status(500).json({ error: 'Lex encountered an error. Please try again.' });
+  }
+});
+
 // ─── Maintenance intercept (before cache + proxy) ─────────────────────────────
 app.use((req, res, next) => {
   if (!_maintenance.active) return next();
