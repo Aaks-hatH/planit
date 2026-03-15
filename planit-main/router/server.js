@@ -1690,11 +1690,30 @@ app.post('/api/lex/chat', express.json({ limit: '32kb' }), async (req, res) => {
         system_instruction: { parts: [{ text: LEX_SYSTEM }] },
         contents: geminiContents,
         generationConfig: { maxOutputTokens: 600, temperature: 0.7 },
+        // Disable safety filters — legal language triggers them ("criminal liability", "misappropriation" etc.)
+        safetySettings: [
+          { category: 'HARM_CATEGORY_HARASSMENT',        threshold: 'BLOCK_NONE' },
+          { category: 'HARM_CATEGORY_HATE_SPEECH',        threshold: 'BLOCK_NONE' },
+          { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT',  threshold: 'BLOCK_NONE' },
+          { category: 'HARM_CATEGORY_DANGEROUS_CONTENT',  threshold: 'BLOCK_NONE' },
+        ],
       },
       { headers: { 'Content-Type': 'application/json' }, timeout: 30000 }
     );
-    const text = r.data?.candidates?.[0]?.content?.parts?.[0]?.text;
-    if (!text) return res.status(500).json({ error: 'No response from Lex.' });
+
+    // Log full response in dev so we can see safety blocks or empty candidates
+    const candidate = r.data?.candidates?.[0];
+    const finishReason = candidate?.finishReason;
+    const text = candidate?.content?.parts?.[0]?.text;
+
+    if (!text) {
+      console.error('[Lex] Empty response — finishReason:', finishReason, '| full:', JSON.stringify(r.data).slice(0, 400));
+      const msg = finishReason === 'SAFETY'
+        ? 'Lex could not answer that due to content filtering. Try rephrasing your question.'
+        : 'No response from Lex. Please try again.';
+      return res.status(500).json({ error: msg });
+    }
+
     res.json({ reply: text });
   } catch (err) {
     console.error('[Lex]', err?.response?.data || err.message);
