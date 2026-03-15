@@ -1674,7 +1674,8 @@ app.post('/api/lex/chat', express.json({ limit: '32kb' }), async (req, res) => {
     return res.status(400).json({ error: 'Last message must be from user.' });
   }
 
-  const key = process.env.GEMINI_API_KEY;
+  // Trim key — copy-paste from Render dashboard often adds whitespace/newlines
+  const key = (process.env.GEMINI_API_KEY || '').trim();
   if (!key) return res.status(503).json({ error: 'Lex is temporarily unavailable.' });
 
   // Convert to Gemini format — roles are 'user' | 'model'
@@ -1685,12 +1686,11 @@ app.post('/api/lex/chat', express.json({ limit: '32kb' }), async (req, res) => {
 
   try {
     const r = await axios.post(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${key}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${key}`,
       {
         system_instruction: { parts: [{ text: LEX_SYSTEM }] },
         contents: geminiContents,
         generationConfig: { maxOutputTokens: 600, temperature: 0.7 },
-        // Disable safety filters — legal language triggers them ("criminal liability", "misappropriation" etc.)
         safetySettings: [
           { category: 'HARM_CATEGORY_HARASSMENT',        threshold: 'BLOCK_NONE' },
           { category: 'HARM_CATEGORY_HATE_SPEECH',        threshold: 'BLOCK_NONE' },
@@ -1701,23 +1701,26 @@ app.post('/api/lex/chat', express.json({ limit: '32kb' }), async (req, res) => {
       { headers: { 'Content-Type': 'application/json' }, timeout: 30000 }
     );
 
-    // Log full response in dev so we can see safety blocks or empty candidates
     const candidate = r.data?.candidates?.[0];
     const finishReason = candidate?.finishReason;
     const text = candidate?.content?.parts?.[0]?.text;
 
     if (!text) {
-      console.error('[Lex] Empty response — finishReason:', finishReason, '| full:', JSON.stringify(r.data).slice(0, 400));
-      const msg = finishReason === 'SAFETY'
-        ? 'Lex could not answer that due to content filtering. Try rephrasing your question.'
-        : 'No response from Lex. Please try again.';
-      return res.status(500).json({ error: msg });
+      const detail = JSON.stringify(r.data).slice(0, 500);
+      console.error('[Lex] Empty text — finishReason:', finishReason, '| raw:', detail);
+      return res.status(500).json({
+        error: finishReason === 'SAFETY'
+          ? 'Lex could not answer due to content filtering. Try rephrasing.'
+          : 'No response from Lex.',
+        debug: detail,
+      });
     }
 
     res.json({ reply: text });
   } catch (err) {
-    console.error('[Lex]', err?.response?.data || err.message);
-    res.status(500).json({ error: 'Lex encountered an error. Please try again.' });
+    const detail = err?.response?.data || err.message;
+    console.error('[Lex] Gemini error:', JSON.stringify(detail).slice(0, 500));
+    res.status(500).json({ error: 'Lex encountered an error. Please try again.', debug: detail });
   }
 });
 
