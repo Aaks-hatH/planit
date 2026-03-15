@@ -1674,16 +1674,26 @@ app.post('/api/lex/chat', express.json({ limit: '32kb' }), async (req, res) => {
     return res.status(400).json({ error: 'Last message must be from user.' });
   }
 
-  const key = process.env.ANTHROPIC_API_KEY;
+  const key = process.env.GEMINI_API_KEY;
   if (!key) return res.status(503).json({ error: 'Lex is temporarily unavailable.' });
+
+  // Convert to Gemini format — roles are 'user' | 'model'
+  const geminiContents = sanitized.map(m => ({
+    role: m.role === 'assistant' ? 'model' : 'user',
+    parts: [{ text: m.content }],
+  }));
 
   try {
     const r = await axios.post(
-      'https://api.anthropic.com/v1/messages',
-      { model: 'claude-sonnet-4-20250514', max_tokens: 600, system: LEX_SYSTEM, messages: sanitized },
-      { headers: { 'Content-Type': 'application/json', 'x-api-key': key, 'anthropic-version': '2023-06-01' }, timeout: 30000 }
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${key}`,
+      {
+        system_instruction: { parts: [{ text: LEX_SYSTEM }] },
+        contents: geminiContents,
+        generationConfig: { maxOutputTokens: 600, temperature: 0.7 },
+      },
+      { headers: { 'Content-Type': 'application/json' }, timeout: 30000 }
     );
-    const text = r.data?.content?.[0]?.text;
+    const text = r.data?.candidates?.[0]?.content?.parts?.[0]?.text;
     if (!text) return res.status(500).json({ error: 'No response from Lex.' });
     res.json({ reply: text });
   } catch (err) {
