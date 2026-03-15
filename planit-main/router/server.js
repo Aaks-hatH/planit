@@ -1686,7 +1686,7 @@ app.post('/api/lex/chat', express.json({ limit: '32kb' }), async (req, res) => {
 
   try {
     const r = await axios.post(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${key}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${key}`,
       {
         system_instruction: { parts: [{ text: LEX_SYSTEM }] },
         contents: geminiContents,
