@@ -106,7 +106,7 @@ function LexChat() {
     setMsgs(next);
     setLoading(true);
     try {
-      const ROUTER = (import.meta?.env?.VITE_ROUTER_URL || '').replace(/\/$/, '');
+      const ROUTER = (import.meta.env.VITE_ROUTER_URL || '').replace(/\/$/, '');
       // Gemini requires conversation to start with 'user' — strip leading assistant messages and error strings
       let payload = next.filter(m => (m.role === 'user' || m.role === 'assistant') && !m.content.includes('Something went wrong') && !m.content.includes('Please try again'));
       while (payload.length && payload[0].role !== 'user') payload.shift();
@@ -410,76 +410,30 @@ function CompLicense({ id, partLabel, title, accent, coverage, defs, grantLines,
 ═══════════════════════════════════════ */
 export default function License() {
   const navigate = useNavigate();
-  const pct = useScrollPct();
-  const active = useActiveSection(TOC.map(t => t.id));
 
   return (
-    <div style={{ minHeight: '100vh', background: '#fff', color: '#111827', fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif" }}>
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap');
-        *{box-sizing:border-box;margin:0;padding:0;}
-        html{scroll-behavior:smooth;}
-        ::-webkit-scrollbar{width:4px;}
-        ::-webkit-scrollbar-track{background:#f9fafb;}
-        ::-webkit-scrollbar-thumb{background:#d1d5db;border-radius:99px;}
-        ::-webkit-scrollbar-thumb:hover{background:#9ca3af;}
-        @keyframes lexPulse{0%,100%{box-shadow:0 4px 20px rgba(0,0,0,0.15),0 0 0 0 rgba(30,41,59,0.25);}60%{box-shadow:0 4px 20px rgba(0,0,0,0.15),0 0 0 10px rgba(30,41,59,0);}}
-        @media(max-width:900px){.lic-sidebar{display:none!important;}.lic-main{max-width:100%!important;}}
-        @media(max-width:600px){.perm-grid{grid-template-columns:1fr!important;}.meta-grid{grid-template-columns:1fr 1fr!important;}.liab-grid{grid-template-columns:1fr!important;}}
-      `}</style>
+    <div className="min-h-screen bg-neutral-50">
+      <style>{`@keyframes lexPulse{0%,100%{box-shadow:0 4px 20px rgba(0,0,0,0.15),0 0 0 0 rgba(30,41,59,0.25);}60%{box-shadow:0 4px 20px rgba(0,0,0,0.15),0 0 0 10px rgba(30,41,59,0);}}`}</style>
 
-      {/* Slim progress bar */}
-      <div style={{ position: 'fixed', top: 0, left: 0, right: 0, height: '2px', zIndex: 1001, background: '#f3f4f6' }}>
-        <div style={{ height: '100%', width: `${pct}%`, background: '#374151', transition: 'width 0.1s linear' }} />
-      </div>
-
-      {/* Header */}
-      <header style={{ position: 'sticky', top: 0, zIndex: 100, background: 'rgba(255,255,255,0.97)', backdropFilter: 'blur(8px)', borderBottom: '1px solid #e5e7eb', padding: '0 2rem', height: '52px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
-          <button onClick={() => navigate('/')} style={{ all: 'unset', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.8rem', color: '#6b7280', fontFamily: 'inherit', padding: '0.3rem 0.6rem', borderRadius: '6px', border: '1px solid #e5e7eb', transition: 'all 0.15s' }}
-            onMouseEnter={e => { e.currentTarget.style.color = '#111827'; e.currentTarget.style.borderColor = '#d1d5db'; }}
-            onMouseLeave={e => { e.currentTarget.style.color = '#6b7280'; e.currentTarget.style.borderColor = '#e5e7eb'; }}>
-            <svg width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2.2" viewBox="0 0 24 24"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
-            Back
-          </button>
-          <div style={{ width: 1, height: '1rem', background: '#e5e7eb' }} />
-          <span style={{ fontSize: '0.82rem', fontWeight: 600, color: '#374151' }}>PlanIt · License Agreement</span>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-          <span style={{ fontSize: '0.72rem', fontFamily: 'monospace', color: '#9ca3af' }}>v2.0 · Jan 2026</span>
-          <span style={{ fontSize: '0.65rem', fontFamily: 'monospace', background: '#f3f4f6', color: '#6b7280', padding: '0.2rem 0.6rem', borderRadius: '4px', border: '1px solid #e5e7eb' }}>ALL RIGHTS RESERVED</span>
+      <header className="bg-white border-b border-neutral-200 sticky top-0 z-50 shadow-sm">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+          <div className="flex items-center gap-4">
+            <button onClick={() => navigate('/')} className="btn btn-secondary p-2">
+              <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
+            </button>
+            <div className="flex items-center gap-3">
+              <div className="bg-neutral-900 p-2 rounded-xl">
+                <svg width="20" height="20" fill="none" stroke="white" strokeWidth="2" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+              </div>
+              <h1 className="text-lg font-semibold text-neutral-900">License Agreement</h1>
+            </div>
+          </div>
         </div>
       </header>
 
-      <div style={{ maxWidth: '1160px', margin: '0 auto', padding: '0 2rem', display: 'flex', gap: '3.5rem' }}>
-
-        {/* Sidebar TOC */}
-        <aside className="lic-sidebar" style={{ width: '196px', flexShrink: 0, position: 'sticky', top: '52px', height: 'calc(100vh - 52px)', overflowY: 'auto', padding: '2rem 0', paddingRight: '1.25rem', borderRight: '1px solid #f3f4f6' }}>
-          <p style={{ fontSize: '0.62rem', fontFamily: 'monospace', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.1em', margin: '0 0 0.5rem' }}>On this page</p>
-          <nav style={{ display: 'flex', flexDirection: 'column' }}>
-            {TOC.map(({ id, label }) => {
-              const isActive = active === id;
-              const isNested = label.startsWith('·');
-              return (
-                <button key={id} onClick={() => document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' })}
-                  style={{ all: 'unset', cursor: 'pointer', fontSize: isNested ? '0.76rem' : '0.79rem', padding: isNested ? '0.22rem 0.6rem 0.22rem 1rem' : '0.28rem 0.6rem', borderRadius: '5px', color: isActive ? '#111827' : '#6b7280', fontWeight: isActive ? 600 : 400, background: isActive ? '#f3f4f6' : 'transparent', borderLeft: `2px solid ${isActive ? '#374151' : 'transparent'}`, transition: 'all 0.15s', fontFamily: 'inherit', textAlign: 'left', lineHeight: 1.45 }}
-                  onMouseEnter={e => { if (!isActive) e.currentTarget.style.color = '#374151'; }}
-                  onMouseLeave={e => { if (!isActive) e.currentTarget.style.color = '#6b7280'; }}>
-                  {isNested ? label.slice(2) : label}
-                </button>
-              );
-            })}
-          </nav>
-
-          {/* Ask Lex hint */}
-          <div style={{ marginTop: '1.75rem', padding: '0.75rem 0.85rem', background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: '8px' }}>
-            <p style={{ fontSize: '0.68rem', fontWeight: 600, color: '#374151', margin: '0 0 0.3rem' }}>Have a question?</p>
-            <p style={{ fontSize: '0.68rem', color: '#6b7280', lineHeight: 1.5, margin: 0 }}>Ask <strong>Lex</strong>, PlanIt's legal assistant — bottom right ↘</p>
-          </div>
-        </aside>
-
-        {/* Main content */}
-        <main style={{ flex: 1, minWidth: 0, paddingTop: '2.5rem', paddingBottom: '5rem' }}>
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        <div className="bg-white rounded-2xl shadow-sm border border-neutral-200 p-8 md:p-14">
+          <main>
 
           {/* ── Overview ── */}
           <section id="overview" style={{ scrollMarginTop: '72px', paddingBottom: '3rem', marginBottom: '3rem', borderBottom: '1px solid #e5e7eb' }}>
@@ -720,7 +674,8 @@ export default function License() {
             </Reveal>
           </section>
 
-        </main>
+          </main>
+        </div>
       </div>
 
       <LexChat />
