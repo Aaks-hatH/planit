@@ -5467,7 +5467,12 @@ const EMPTY_FORM = {
   clientName: '', domain: '', tier: 'basic', status: 'trial',
   contactName: '', contactEmail: '', contactPhone: '',
   notes: '', keyValidDays: 365,
-  branding: { companyName: '', primaryColor: '#2563eb', accentColor: '#1d4ed8', hidePoweredBy: false },
+  branding: { companyName: '', primaryColor: '#2563eb', accentColor: '#1d4ed8', hidePoweredBy: false, logoUrl: '', fontFamily: 'Inter' },
+  pages: {
+    home: { headline: '', subheadline: '', heroImageUrl: '', ctaText: '', showSearch: true, tableServiceEventId: '' },
+    contact: { email: '', phone: '', address: '' },
+  },
+  features: { showGuestList: true, showWaitlist: true, showSeatingChart: false, showSocialShare: true },
   billing: { monthlyAmount: 0 },
   limits: { maxEvents: 10, maxGuestsPerEvent: 500, maxAdminUsers: 3 },
 };
@@ -5647,6 +5652,11 @@ function WhiteLabelPanel() {
       contactPhone: item.contactPhone || '', notes: item.notes || '',
       keyValidDays: 365,
       branding: { ...EMPTY_FORM.branding, ...(item.branding || {}) },
+      pages: {
+        home: { ...EMPTY_FORM.pages.home, ...(item.pages?.home || {}) },
+        contact: { ...EMPTY_FORM.pages.contact, ...(item.pages?.contact || {}) },
+      },
+      features: { ...EMPTY_FORM.features, ...(item.features || {}) },
       billing: { monthlyAmount: item.billing?.monthlyAmount || 0 },
       limits: { ...EMPTY_FORM.limits, ...(item.limits || {}) },
     });
@@ -5990,6 +6000,19 @@ function WhiteLabelPanel() {
                         value={form.branding.primaryColor} onChange={e => setForm(f => ({ ...f, branding: { ...f.branding, primaryColor: e.target.value } }))} />
                     </div>
                   </div>
+                  <div>
+                    <label className="block text-sm font-medium text-neutral-700 mb-1">Logo URL</label>
+                    <input className="w-full border border-neutral-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      value={form.branding.logoUrl || ''} onChange={e => setForm(f => ({ ...f, branding: { ...f.branding, logoUrl: e.target.value } }))}
+                      placeholder="https://..." />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-neutral-700 mb-1">Font Family</label>
+                    <select className="w-full border border-neutral-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      value={form.branding.fontFamily || 'Inter'} onChange={e => setForm(f => ({ ...f, branding: { ...f.branding, fontFamily: e.target.value } }))}>
+                      {['Inter','Roboto','Poppins','Lato','Montserrat','Playfair Display','Georgia'].map(f => <option key={f} value={f}>{f}</option>)}
+                    </select>
+                  </div>
                   {form.tier !== 'basic' && (
                     <div className="col-span-2 flex items-center gap-3 p-3 bg-blue-50 rounded-xl border border-blue-200">
                       <div className={`w-9 h-5 rounded-full relative cursor-pointer transition-all ${form.branding.hidePoweredBy ? 'bg-blue-600' : 'bg-neutral-300'}`}
@@ -6002,6 +6025,141 @@ function WhiteLabelPanel() {
                       </div>
                     </div>
                   )}
+                </div>
+              </div>
+
+              {/* Live Preview */}
+              <div>
+                <h4 className="text-xs font-semibold text-neutral-500 uppercase tracking-wider mb-3">Live Preview</h4>
+                <div className="rounded-xl border border-neutral-200 overflow-hidden" style={{ fontFamily: `'${form.branding.fontFamily || 'Inter'}', sans-serif` }}>
+                  {/* Mini nav */}
+                  <div className="flex items-center gap-2 px-4 py-2.5 bg-white border-b border-neutral-100">
+                    {form.branding.logoUrl
+                      ? <img src={form.branding.logoUrl} alt="" style={{ height: 22, objectFit: 'contain' }} onError={e => e.target.style.display='none'} />
+                      : <div style={{ width: 22, height: 22, borderRadius: 6, background: form.branding.primaryColor || '#2563eb', flexShrink: 0 }} />
+                    }
+                    <span className="text-sm font-bold text-neutral-900">{form.branding.companyName || form.clientName || 'Your Business'}</span>
+                  </div>
+                  {/* Mini hero */}
+                  <div style={{
+                    background: form.pages?.home?.heroImageUrl
+                      ? `linear-gradient(rgba(0,0,0,0.45),rgba(0,0,0,0.45)), url(${form.pages.home.heroImageUrl}) center/cover`
+                      : `linear-gradient(135deg, ${form.branding.primaryColor || '#2563eb'}22, ${form.branding.primaryColor || '#2563eb'}08)`,
+                    padding: '28px 20px',
+                    textAlign: 'center',
+                  }}>
+                    <div className="text-base font-bold mb-1" style={{ color: form.pages?.home?.heroImageUrl ? '#fff' : '#111' }}>
+                      {form.pages?.home?.headline || `Welcome to ${form.branding.companyName || form.clientName || 'Your Business'}`}
+                    </div>
+                    <div className="text-xs mb-3" style={{ color: form.pages?.home?.heroImageUrl ? 'rgba(255,255,255,0.8)' : '#666' }}>
+                      {form.pages?.home?.subheadline || 'Browse and book upcoming events.'}
+                    </div>
+                    {form.pages?.home?.tableServiceEventId ? (
+                      <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-white" style={{ background: form.branding.primaryColor || '#2563eb' }}>
+                        → Redirects to reservation floor
+                      </div>
+                    ) : (
+                      <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-white" style={{ background: form.branding.primaryColor || '#2563eb' }}>
+                        {form.pages?.home?.ctaText || 'Browse events'}
+                      </div>
+                    )}
+                  </div>
+                  {/* Mini footer */}
+                  <div className="flex items-center justify-between px-4 py-2 bg-white border-t border-neutral-100">
+                    <span className="text-xs text-neutral-400">{form.branding.companyName || form.clientName || 'Your Business'}</span>
+                    {!form.branding.hidePoweredBy && <span className="text-xs text-neutral-300">Powered by PlanIt</span>}
+                  </div>
+                </div>
+              </div>
+
+              {/* Page Content */}
+              <div>
+                <h4 className="text-xs font-semibold text-neutral-500 uppercase tracking-wider mb-3">Home Page Content</h4>
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-sm font-medium text-neutral-700 mb-1">Main Headline</label>
+                    <input className="w-full border border-neutral-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      value={form.pages?.home?.headline || ''} onChange={e => setForm(f => ({ ...f, pages: { ...f.pages, home: { ...f.pages.home, headline: e.target.value } } }))}
+                      placeholder="Book your table tonight" maxLength={200} />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-neutral-700 mb-1">Subheadline</label>
+                    <input className="w-full border border-neutral-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      value={form.pages?.home?.subheadline || ''} onChange={e => setForm(f => ({ ...f, pages: { ...f.pages, home: { ...f.pages.home, subheadline: e.target.value } } }))}
+                      placeholder="Reserve your spot in seconds." maxLength={400} />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-neutral-700 mb-1">Hero Image URL</label>
+                    <input className="w-full border border-neutral-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      value={form.pages?.home?.heroImageUrl || ''} onChange={e => setForm(f => ({ ...f, pages: { ...f.pages, home: { ...f.pages.home, heroImageUrl: e.target.value } } }))}
+                      placeholder="https://..." />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-neutral-700 mb-1">CTA Button Text</label>
+                    <input className="w-full border border-neutral-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      value={form.pages?.home?.ctaText || ''} onChange={e => setForm(f => ({ ...f, pages: { ...f.pages, home: { ...f.pages.home, ctaText: e.target.value } } }))}
+                      placeholder="Browse events" maxLength={60} />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-neutral-700 mb-1">
+                      Reservation Page — Linked Event Subdomain
+                    </label>
+                    <input className="w-full border border-neutral-200 rounded-xl px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      value={form.pages?.home?.tableServiceEventId || ''} onChange={e => setForm(f => ({ ...f, pages: { ...f.pages, home: { ...f.pages.home, tableServiceEventId: e.target.value.trim() } } }))}
+                      placeholder="e.g. nobu-downtown" maxLength={200} />
+                    {form.pages?.home?.tableServiceEventId && (
+                      <p className="text-xs text-blue-600 mt-1">
+                        Home page will redirect to: <code className="font-mono">/e/{form.pages.home.tableServiceEventId}/floor</code>
+                      </p>
+                    )}
+                    <p className="text-xs text-neutral-400 mt-1">Leave blank to show the events grid instead.</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Contact Info */}
+              <div>
+                <h4 className="text-xs font-semibold text-neutral-500 uppercase tracking-wider mb-3">Contact Info (shown on guest pages)</h4>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-sm font-medium text-neutral-700 mb-1">Email</label>
+                    <input type="email" className="w-full border border-neutral-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      value={form.pages?.contact?.email || ''} onChange={e => setForm(f => ({ ...f, pages: { ...f.pages, contact: { ...f.pages.contact, email: e.target.value } } }))}
+                      placeholder="hello@restaurant.com" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-neutral-700 mb-1">Phone</label>
+                    <input className="w-full border border-neutral-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      value={form.pages?.contact?.phone || ''} onChange={e => setForm(f => ({ ...f, pages: { ...f.pages, contact: { ...f.pages.contact, phone: e.target.value } } }))}
+                      placeholder="+1 555 000 0000" />
+                  </div>
+                  <div className="col-span-2">
+                    <label className="block text-sm font-medium text-neutral-700 mb-1">Address</label>
+                    <input className="w-full border border-neutral-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      value={form.pages?.contact?.address || ''} onChange={e => setForm(f => ({ ...f, pages: { ...f.pages, contact: { ...f.pages.contact, address: e.target.value } } }))}
+                      placeholder="123 Main St, City, State" />
+                  </div>
+                </div>
+              </div>
+
+              {/* Features */}
+              <div>
+                <h4 className="text-xs font-semibold text-neutral-500 uppercase tracking-wider mb-3">Feature Flags</h4>
+                <div className="space-y-2">
+                  {[
+                    ['showGuestList',    'Show guest list'],
+                    ['showWaitlist',     'Enable waitlist'],
+                    ['showSeatingChart', 'Seating chart'],
+                    ['showSocialShare',  'Social share buttons'],
+                  ].map(([key, label]) => (
+                    <div key={key} className="flex items-center justify-between py-2 px-3 rounded-xl bg-neutral-50 border border-neutral-100">
+                      <span className="text-sm text-neutral-700">{label}</span>
+                      <div className={`w-9 h-5 rounded-full relative cursor-pointer transition-all ${form.features?.[key] ? 'bg-blue-600' : 'bg-neutral-300'}`}
+                        onClick={() => setForm(f => ({ ...f, features: { ...f.features, [key]: !f.features?.[key] } }))}>
+                        <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-all ${form.features?.[key] ? 'left-4' : 'left-0.5'}`} />
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
 
