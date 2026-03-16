@@ -443,7 +443,7 @@ function PagesSection({ data, branding, token, onUpdate, toast }) {
                 {form.home.tableServiceEventId ? (
                   <div className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold text-white"
                     style={{ background: branding?.primaryColor || '#2563eb' }}>
-                    → Redirects to /e/{form.home.tableServiceEventId}/floor
+                    → Redirects to /e/{form.home.tableServiceEventId}/reserve
                   </div>
                 ) : (
                   <div className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold text-white"
