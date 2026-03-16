@@ -768,7 +768,7 @@ router.patch('/:id', verifyAdmin, demoGuard, async (req, res) => {
     const allowed = [
       'clientName', 'tier', 'status',
       'contactName', 'contactEmail', 'contactPhone',
-      'branding', 'limits', 'notes', 'billing',
+      'branding', 'pages', 'features', 'limits', 'notes', 'billing',
     ];
 
     const updates = {};
