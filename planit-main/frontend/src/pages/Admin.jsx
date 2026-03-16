@@ -6056,7 +6056,7 @@ function WhiteLabelPanel() {
                     </div>
                     {form.pages?.home?.tableServiceEventId ? (
                       <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-white" style={{ background: form.branding.primaryColor || '#2563eb' }}>
-                        → Redirects to reservation floor
+                        → Redirects to reservation page
                       </div>
                     ) : (
                       <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-white" style={{ background: form.branding.primaryColor || '#2563eb' }}>
@@ -6109,7 +6109,7 @@ function WhiteLabelPanel() {
                       placeholder="e.g. nobu-downtown" maxLength={200} />
                     {form.pages?.home?.tableServiceEventId && (
                       <p className="text-xs text-blue-600 mt-1">
-                        Home page will redirect to: <code className="font-mono">/e/{form.pages.home.tableServiceEventId}/floor</code>
+                        Home page will redirect to: <code className="font-mono">/e/{form.pages.home.tableServiceEventId}/reserve</code>
                       </p>
                     )}
                     <p className="text-xs text-neutral-400 mt-1">Leave blank to show the events grid instead.</p>
