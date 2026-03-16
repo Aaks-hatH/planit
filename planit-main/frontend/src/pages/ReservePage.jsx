@@ -413,6 +413,26 @@ export default function ReservePage() {
   return (
     <div className="min-h-screen font-sans leading-relaxed" style={{ background: c.bg, color: c.text }}>
 
+      {/* ── WL Branded Nav — only shown on white-label domains ── */}
+      {isWL && (
+        <header style={{ background: c.card, borderBottom: `1px solid ${c.border}`, position: 'sticky', top: 0, zIndex: 50 }}>
+          <div className="max-w-4xl mx-auto px-6 h-14 flex items-center gap-3">
+            {wl?.branding?.logoUrl
+              ? <img src={wl.branding.logoUrl} alt={wl.branding.companyName || ''} style={{ height: 28, objectFit: 'contain' }} />
+              : <div style={{ width: 28, height: 28, borderRadius: 8, background: accent, flexShrink: 0 }} />
+            }
+            <span className="font-bold text-sm" style={{ color: c.text }}>
+              {wl?.branding?.companyName || wl?.clientName || 'Reserve'}
+            </span>
+            <div style={{ flex: 1 }} />
+            {wl?.pages?.contact?.phone && (
+              <a href={`tel:${wl.pages.contact.phone}`} className="text-xs font-medium hidden sm:block"
+                style={{ color: accent }}>{wl.pages.contact.phone}</a>
+            )}
+          </div>
+        </header>
+      )}
+
       {/* ── Announcement banner ── */}
       {config.announcementBanner && (
         <div className="text-center text-sm font-semibold py-2.5 px-4" style={{ background: config.announcementBannerColor || '#f59e0b', color: '#000' }}>
