@@ -93,11 +93,14 @@ const whiteLabelSchema = new mongoose.Schema({
   // Frontend reads wl.pages.home.headline etc. with safe defaults.
   pages: {
     home: {
-      headline:       { type: String, maxlength: 200 },
-      subheadline:    { type: String, maxlength: 400 },
-      heroImageUrl:   { type: String },
-      ctaText:        { type: String, maxlength: 60 },
-      showSearch:     { type: Boolean, default: true },
+      headline:              { type: String, maxlength: 200 },
+      subheadline:           { type: String, maxlength: 400 },
+      heroImageUrl:          { type: String },
+      ctaText:               { type: String, maxlength: 60 },
+      showSearch:            { type: Boolean, default: true },
+      // If set, the WL home page redirects to the table service floor for this event
+      // instead of showing the events grid. Value is the event subdomain string.
+      tableServiceEventId:   { type: String, maxlength: 200, default: null },
     },
     events: {
       headline:       { type: String, maxlength: 200 },
