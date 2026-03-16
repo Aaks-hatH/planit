@@ -5737,12 +5737,18 @@ function WhiteLabelPanel() {
   // ── Tier defaults ──────────────────────────────────────────────────────────
   const applyTierDefaults = (tier) => {
     const defaults = {
-      basic:      { maxEvents: 10,  maxGuestsPerEvent: 500,   maxAdminUsers: 3  },
-      pro:        { maxEvents: 50,  maxGuestsPerEvent: 2000,  maxAdminUsers: 10 },
-      enterprise: { maxEvents: 999, maxGuestsPerEvent: 99999, maxAdminUsers: 999},
+      basic:      { maxEvents: 10,  maxGuestsPerEvent: 500,   maxAdminUsers: 3,   monthlyAmount: 9900  },
+      pro:        { maxEvents: 50,  maxGuestsPerEvent: 2000,  maxAdminUsers: 10,  monthlyAmount: 29900 },
+      enterprise: { maxEvents: 999, maxGuestsPerEvent: 99999, maxAdminUsers: 999, monthlyAmount: 99900 },
     };
-    setForm(f => ({ ...f, tier, limits: defaults[tier] || f.limits,
-      branding: { ...f.branding, hidePoweredBy: tier !== 'basic' ? f.branding.hidePoweredBy : false } }));
+    const d = defaults[tier] || defaults.basic;
+    setForm(f => ({
+      ...f,
+      tier,
+      limits: { maxEvents: d.maxEvents, maxGuestsPerEvent: d.maxGuestsPerEvent, maxAdminUsers: d.maxAdminUsers },
+      billing: { ...f.billing, monthlyAmount: d.monthlyAmount },
+      branding: { ...f.branding, hidePoweredBy: tier !== 'basic' ? f.branding.hidePoweredBy : false },
+    }));
   };
 
   return (
@@ -6169,9 +6175,30 @@ function WhiteLabelPanel() {
                 <div className="flex items-start gap-3 p-4 bg-amber-50 border border-amber-200 rounded-xl mb-3">
                   <AlertCircle className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
                   <div className="text-sm text-amber-800">
-                    <strong>Stripe Sandbox Mode</strong> — billing is not live. Set a monthly amount for record-keeping. Stripe integration can be activated later without touching this data.
+                    <strong>Stripe Sandbox Mode</strong> — billing is not live. The amount you set here is what the client sees in their dashboard. Pick a preset or enter a custom amount.
                   </div>
                 </div>
+
+                {/* Tier-matched presets */}
+                <div className="mb-3">
+                  <p className="text-xs font-medium text-neutral-500 mb-2">Quick presets for <span className="font-semibold capitalize">{form.tier}</span> tier</p>
+                  <div className="flex flex-wrap gap-2">
+                    {(form.tier === 'basic'
+                      ? [{ label: '$49/mo', amount: 4900 }, { label: '$79/mo', amount: 7900 }, { label: '$99/mo', amount: 9900 }, { label: 'Free', amount: 0 }]
+                      : form.tier === 'pro'
+                      ? [{ label: '$149/mo', amount: 14900 }, { label: '$199/mo', amount: 19900 }, { label: '$299/mo', amount: 29900 }, { label: '$399/mo', amount: 39900 }]
+                      : [{ label: '$499/mo', amount: 49900 }, { label: '$699/mo', amount: 69900 }, { label: '$999/mo', amount: 99900 }, { label: 'Custom', amount: null }]
+                    ).map(({ label, amount }) => (
+                      <button key={label}
+                        onClick={() => amount !== null && setForm(f => ({ ...f, billing: { ...f.billing, monthlyAmount: amount } }))}
+                        className={`px-3 py-1.5 rounded-xl text-sm font-medium border transition-all ${form.billing.monthlyAmount === amount && amount !== null ? 'bg-blue-600 text-white border-blue-600' : 'border-neutral-200 text-neutral-600 hover:border-blue-300'}`}>
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Custom amount input */}
                 <div>
                   <label className="block text-sm font-medium text-neutral-700 mb-1">Monthly Amount (USD)</label>
                   <div className="flex items-center gap-2">
@@ -6180,6 +6207,7 @@ function WhiteLabelPanel() {
                       value={(form.billing.monthlyAmount / 100).toFixed(2)}
                       onChange={e => setForm(f => ({ ...f, billing: { ...f.billing, monthlyAmount: Math.round(parseFloat(e.target.value || 0) * 100) } }))} />
                     <span className="text-neutral-400 text-sm">/ month</span>
+                    <span className="text-xs text-neutral-400">— shown in client dashboard</span>
                   </div>
                 </div>
               </div>
