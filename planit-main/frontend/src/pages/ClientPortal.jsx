@@ -266,11 +266,12 @@ function BrandingSection({ data, tier, token, onUpdate, toast }) {
 function PagesSection({ data, token, onUpdate, toast }) {
   const [form, setForm] = useState({
     home: {
-      headline:     data?.home?.headline     || '',
-      subheadline:  data?.home?.subheadline  || '',
-      heroImageUrl: data?.home?.heroImageUrl || '',
-      ctaText:      data?.home?.ctaText      || '',
-      showSearch:   data?.home?.showSearch   !== false,
+      headline:              data?.home?.headline              || '',
+      subheadline:           data?.home?.subheadline           || '',
+      heroImageUrl:          data?.home?.heroImageUrl          || '',
+      ctaText:               data?.home?.ctaText               || '',
+      showSearch:            data?.home?.showSearch            !== false,
+      tableServiceEventId:   data?.home?.tableServiceEventId   || '',
     },
     events: {
       headline:       data?.events?.headline       || '',
@@ -316,10 +317,11 @@ function PagesSection({ data, token, onUpdate, toast }) {
   };
 
   const TABS = [
-    { id: 'home',     label: 'Home' },
-    { id: 'events',   label: 'Events' },
-    { id: 'checkout', label: 'Checkout' },
-    { id: 'contact',  label: 'Contact' },
+    { id: 'home',        label: 'Home' },
+    { id: 'reservation', label: 'Reservation Page' },
+    { id: 'events',      label: 'Events' },
+    { id: 'checkout',    label: 'Checkout' },
+    { id: 'contact',     label: 'Contact' },
   ];
 
   return (
@@ -348,6 +350,32 @@ function PagesSection({ data, token, onUpdate, toast }) {
             <Input value={form.home.ctaText} onChange={e => set('home', 'ctaText', e.target.value)} placeholder="Browse events" maxLength={60} />
           </Field>
           <Toggle value={form.home.showSearch} onChange={v => set('home', 'showSearch', v)} label="Show search bar on home page" />
+        </>}
+
+        {tab === 'reservation' && <>
+          <Field
+            label="Linked table service event"
+            hint="When set, your home page (/) redirects straight to this event's table service floor instead of showing the events grid. Paste the event subdomain from its URL — e.g. if your event lives at /e/nobu-downtown, enter nobu-downtown."
+          >
+            <Input
+              value={form.home.tableServiceEventId}
+              onChange={e => set('home', 'tableServiceEventId', e.target.value.trim())}
+              placeholder="e.g. nobu-downtown"
+              maxLength={200}
+            />
+          </Field>
+          {form.home.tableServiceEventId && (
+            <div className="flex items-start gap-2 p-3 rounded-lg bg-blue-50 border border-blue-100 text-xs text-blue-700">
+              <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" className="flex-shrink-0 mt-0.5"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+              Guests visiting your home page will be redirected to <strong className="mx-1">/e/{form.home.tableServiceEventId}/floor</strong>. Make sure that event exists and has table service enabled before saving.
+            </div>
+          )}
+          {!form.home.tableServiceEventId && (
+            <div className="flex items-start gap-2 p-3 rounded-lg bg-neutral-50 border border-neutral-200 text-xs text-neutral-500">
+              <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" className="flex-shrink-0 mt-0.5"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+              Leave blank to keep the default events grid on your home page.
+            </div>
+          )}
         </>}
 
         {tab === 'events' && <>
