@@ -5738,8 +5738,8 @@ function WhiteLabelPanel() {
   const applyTierDefaults = (tier) => {
     const defaults = {
       basic:      { maxEvents: 10,  maxGuestsPerEvent: 500,   maxAdminUsers: 3,   monthlyAmount: 9900  },
-      pro:        { maxEvents: 50,  maxGuestsPerEvent: 2000,  maxAdminUsers: 10,  monthlyAmount: 29900 },
-      enterprise: { maxEvents: 999, maxGuestsPerEvent: 99999, maxAdminUsers: 999, monthlyAmount: 99900 },
+      pro:        { maxEvents: 50,  maxGuestsPerEvent: 2000,  maxAdminUsers: 10,  monthlyAmount: 9900  },
+      enterprise: { maxEvents: 999, maxGuestsPerEvent: 99999, maxAdminUsers: 999, monthlyAmount: 14900 },
     };
     const d = defaults[tier] || defaults.basic;
     setForm(f => ({
@@ -6186,8 +6186,8 @@ function WhiteLabelPanel() {
                     {(form.tier === 'basic'
                       ? [{ label: '$49/mo', amount: 4900 }, { label: '$79/mo', amount: 7900 }, { label: '$99/mo', amount: 9900 }, { label: 'Free', amount: 0 }]
                       : form.tier === 'pro'
-                      ? [{ label: '$149/mo', amount: 14900 }, { label: '$199/mo', amount: 19900 }, { label: '$299/mo', amount: 29900 }, { label: '$399/mo', amount: 39900 }]
-                      : [{ label: '$499/mo', amount: 49900 }, { label: '$699/mo', amount: 69900 }, { label: '$999/mo', amount: 99900 }, { label: 'Custom', amount: null }]
+                      ? [{ label: '$99/mo', amount: 9900 }, { label: '$109/mo', amount: 10900 }, { label: '$119/mo', amount: 11900 }, { label: '$129/mo', amount: 12900 }]
+                      : [{ label: '$149/mo', amount: 14900 }, { label: '$169/mo', amount: 16900 }, { label: '$199/mo', amount: 19900 }, { label: '$249/mo', amount: 24900 }]
                     ).map(({ label, amount }) => (
                       <button key={label}
                         onClick={() => amount !== null && setForm(f => ({ ...f, billing: { ...f.billing, monthlyAmount: amount } }))}
