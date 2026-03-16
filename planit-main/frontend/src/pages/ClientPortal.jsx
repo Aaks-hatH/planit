@@ -263,7 +263,7 @@ function BrandingSection({ data, tier, token, onUpdate, toast }) {
 }
 
 // ─── Section: Pages ───────────────────────────────────────────────────────────
-function PagesSection({ data, token, onUpdate, toast }) {
+function PagesSection({ data, branding, token, onUpdate, toast }) {
   const [form, setForm] = useState({
     home: {
       headline:              data?.home?.headline              || '',
@@ -413,6 +413,59 @@ function PagesSection({ data, token, onUpdate, toast }) {
             <Textarea value={form.contact.address} onChange={e => set('contact', 'address', e.target.value)} placeholder="123 Main St, City, State 00000" maxLength={300} rows={2} />
           </Field>
         </>}
+
+        {/* Live Preview — only show when editing home or reservation tab */}
+        {(tab === 'home' || tab === 'reservation') && (
+          <div>
+            <p className="text-xs font-semibold text-neutral-500 uppercase tracking-wider mb-2">Live Preview</p>
+            <div className="rounded-xl border border-neutral-200 overflow-hidden text-sm"
+              style={{ fontFamily: `'${branding?.fontFamily || 'Inter'}', sans-serif` }}>
+              <div className="flex items-center gap-2 px-4 py-2.5 bg-white border-b border-neutral-100">
+                {branding?.logoUrl
+                  ? <img src={branding.logoUrl} alt="" style={{ height: 20, objectFit: 'contain' }} onError={e => e.target.style.display = 'none'} />
+                  : <div style={{ width: 20, height: 20, borderRadius: 5, background: branding?.primaryColor || '#2563eb', flexShrink: 0 }} />
+                }
+                <span className="font-bold text-neutral-900 text-xs">{branding?.companyName || 'Your Business'}</span>
+              </div>
+              <div style={{
+                background: form.home.heroImageUrl
+                  ? `linear-gradient(rgba(0,0,0,0.45),rgba(0,0,0,0.45)), url(${form.home.heroImageUrl}) center/cover`
+                  : `linear-gradient(135deg, ${branding?.primaryColor || '#2563eb'}20, ${branding?.primaryColor || '#2563eb'}06)`,
+                padding: '24px 16px',
+                textAlign: 'center',
+              }}>
+                <div className="font-bold mb-1 text-sm" style={{ color: form.home.heroImageUrl ? '#fff' : '#111' }}>
+                  {form.home.headline || `Welcome to ${branding?.companyName || 'Your Business'}`}
+                </div>
+                <div className="text-xs mb-3" style={{ color: form.home.heroImageUrl ? 'rgba(255,255,255,0.8)' : '#666' }}>
+                  {form.home.subheadline || 'Browse and book upcoming events.'}
+                </div>
+                {form.home.tableServiceEventId ? (
+                  <div className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold text-white"
+                    style={{ background: branding?.primaryColor || '#2563eb' }}>
+                    → Redirects to /e/{form.home.tableServiceEventId}/floor
+                  </div>
+                ) : (
+                  <div className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold text-white"
+                    style={{ background: branding?.primaryColor || '#2563eb' }}>
+                    {form.home.ctaText || 'Browse events'}
+                  </div>
+                )}
+              </div>
+              {(form.contact?.email || form.contact?.phone) && (
+                <div className="flex gap-4 px-4 py-2 bg-white border-t border-neutral-100 text-xs"
+                  style={{ color: branding?.primaryColor || '#2563eb' }}>
+                  {form.contact.email && <span>{form.contact.email}</span>}
+                  {form.contact.phone && <span>{form.contact.phone}</span>}
+                </div>
+              )}
+              <div className="flex items-center justify-between px-4 py-2 bg-white border-t border-neutral-100">
+                <span className="text-xs text-neutral-400">{branding?.companyName || 'Your Business'}</span>
+                {!branding?.hidePoweredBy && <span className="text-xs text-neutral-300">Powered by PlanIt</span>}
+              </div>
+            </div>
+          </div>
+        )}
 
         <div className="flex justify-end pt-2">
           <SaveButton onClick={save} saving={saving} saved={saved} />
@@ -884,7 +937,7 @@ export default function ClientPortal() {
             <BrandingSection data={data.branding} tier={tier} token={token} onUpdate={handleUpdate} toast={showToast} />
           )}
           {section === 'pages' && (
-            <PagesSection data={data.pages} token={token} onUpdate={handleUpdate} toast={showToast} />
+            <PagesSection data={data.pages} branding={data.branding} token={token} onUpdate={handleUpdate} toast={showToast} />
           )}
           {section === 'features' && (
             <FeaturesSection data={data.features} tier={tier} token={token} onUpdate={handleUpdate} toast={showToast} />
