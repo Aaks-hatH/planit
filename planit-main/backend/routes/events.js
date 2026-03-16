@@ -128,6 +128,32 @@ router.get('/participants/:eventId', async (req, res, next) => {
   } catch (error) { next(error); }
 });
 
+// WL discovery — returns events scoped to a white-label domain
+// MUST be before /public/:eventId so 'wl' isn't treated as an ObjectId
+router.get('/public/wl', async (req, res, next) => {
+  try {
+    const { domain, limit: rawLimit = 12 } = req.query;
+    if (!domain) return res.status(400).json({ error: 'domain required' });
+    const limit = Math.min(parseInt(rawLimit) || 12, 50);
+    const events = await Event.find({
+      wlDomain: domain.toLowerCase().trim(),
+      'settings.isPublic': true,
+      status: 'active',
+    })
+    .select('subdomain title description date location participants maxParticipants coverImage themeColor tags createdAt')
+    .sort({ date: 1 })
+    .limit(limit)
+    .lean();
+    res.json({
+      events: events.map(e => ({
+        ...e,
+        participantCount: e.participants?.length || 0,
+        participants: undefined,
+      })),
+    });
+  } catch (err) { next(err); }
+});
+
 // Public info (no auth) — for join gate
 router.get('/public/:eventId', async (req, res, next) => {
   try {
