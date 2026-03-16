@@ -51,7 +51,7 @@ export default function WLHome() {
   const linkedEventId = home.tableServiceEventId?.trim();
   useEffect(() => {
     if (linkedEventId) {
-      navigate(`/e/${linkedEventId}/floor`, { replace: true });
+      navigate(`/e/${linkedEventId}/reserve`, { replace: true });
     }
   }, [linkedEventId]);
 
