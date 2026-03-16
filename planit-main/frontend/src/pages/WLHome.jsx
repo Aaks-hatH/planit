@@ -46,6 +46,18 @@ export default function WLHome() {
   const company  = branding.companyName  || wl?.clientName || 'Welcome';
   const logo     = branding.logoUrl      || null;
 
+  // If the owner linked a table service event, redirect the home page straight
+  // to that event's floor/reservation view instead of showing the events grid.
+  const linkedEventId = home.tableServiceEventId?.trim();
+  useEffect(() => {
+    if (linkedEventId) {
+      navigate(`/e/${linkedEventId}/floor`, { replace: true });
+    }
+  }, [linkedEventId]);
+
+  // Don't render the rest while redirecting
+  if (linkedEventId) return null;
+
   const headline    = home.headline    || `Welcome to ${company}`;
   const subheadline = home.subheadline || 'Browse and book upcoming events.';
   const heroImg     = home.heroImageUrl || null;
