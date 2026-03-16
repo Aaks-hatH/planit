@@ -775,9 +775,15 @@ router.patch('/:id', verifyAdmin, demoGuard, async (req, res) => {
     for (const k of allowed) {
       if (req.body[k] !== undefined) {
         if (typeof req.body[k] === 'object' && !Array.isArray(req.body[k])) {
-          // Merge nested objects
+          // Merge nested objects — go two levels deep for pages.home, pages.contact etc.
           for (const [subKey, val] of Object.entries(req.body[k])) {
-            updates[`${k}.${subKey}`] = val;
+            if (val !== null && typeof val === 'object' && !Array.isArray(val)) {
+              for (const [leafKey, leafVal] of Object.entries(val)) {
+                updates[`${k}.${subKey}.${leafKey}`] = leafVal;
+              }
+            } else {
+              updates[`${k}.${subKey}`] = val;
+            }
           }
         } else {
           updates[k] = req.body[k];
