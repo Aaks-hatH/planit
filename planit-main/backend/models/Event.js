@@ -488,6 +488,13 @@ const eventSchema = new mongoose.Schema({
     // ── SEO / meta ──────────────────────────────────────────────────────────
     metaTitle:       { type: String, default: '', maxlength: 100 },
     metaDescription: { type: String, default: '', maxlength: 300 },
+
+    // ── Walk-in / wait board ─────────────────────────────────────────────────
+    // When true, the reservation page shows a walk-in queue instead of a booking form.
+    walkInOnlyMode:          { type: Boolean, default: false },
+    publicWaitBoardEnabled:  { type: Boolean, default: false },
+    waitBoardTitle:          { type: String,  default: '', maxlength: 100 },
+    waitBoardMessage:        { type: String,  default: '', maxlength: 500 },
   },
 
   // Walk-in waitlist (separate from the event waitlist)
