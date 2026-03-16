@@ -304,6 +304,7 @@ router.patch('/pages', verifyWLClient, [
   body('home.heroImageUrl').optional().custom(v => !v || SAFE_URL.test(v)),
   body('home.ctaText').optional().isString().trim().isLength({ max: 60 }),
   body('home.showSearch').optional().isBoolean(),
+  body('home.tableServiceEventId').optional({ nullable: true }).isString().trim().isLength({ max: 200 }),
   body('events.headline').optional().isString().trim().isLength({ max: 200 }),
   body('events.emptyStateText').optional().isString().trim().isLength({ max: 300 }),
   body('checkout.headerNote').optional().isString().trim().isLength({ max: 500 }),
@@ -320,7 +321,7 @@ router.patch('/pages', verifyWLClient, [
   const wl = req.wlClient;
   const PAGES = ['home', 'events', 'checkout', 'contact'];
   const PAGE_FIELDS = {
-    home:     ['headline', 'subheadline', 'heroImageUrl', 'ctaText', 'showSearch'],
+    home:     ['headline', 'subheadline', 'heroImageUrl', 'ctaText', 'showSearch', 'tableServiceEventId'],
     events:   ['headline', 'emptyStateText'],
     checkout: ['headerNote', 'successHeadline', 'successMessage', 'footerNote'],
     contact:  ['email', 'phone', 'address'],
