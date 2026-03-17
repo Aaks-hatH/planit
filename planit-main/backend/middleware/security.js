@@ -71,7 +71,8 @@ const MONITOR_PATHS = new Set([
 // Checked BEFORE the bad-UA list so that services whose UA contains 'bot'
 // (e.g. UptimeRobot) are never accidentally warned or banned.
 const GOOD_UA_PATTERNS = [
-  'uptimerobot',   // UptimeRobot/2.0; +https://uptimerobot.com
+  'uptimerobot',  // UptimeRobot/2.0; +https://uptimerobot.com
+  'axios/',
   'pingdom',       // Pingdom.com_bot
   'statuscake',    // StatusCake
   'freshping',     // Freshping
@@ -109,7 +110,7 @@ const BAD_UA_PATTERNS = [
   'httpx/', 'aiohttp/', 'libwww-perl', 'lwp-useragent',
   'go-http-client', 'okhttp/', 'okhttp',
   'curl/', 'wget/', 'libcurl', 'pycurl',
-  'node-fetch', 'axios/', 'got/', 'unirest',
+  'node-fetch', 'got/', 'unirest',
 
   // languages (sometimes noisy — use carefully)
   'java/', 'php/', 'perl',
@@ -213,7 +214,7 @@ const FUZZ_PATTERNS = [
   /\b(sh|bash|pwsh|powershell|cmd\.exe)\b/i,
   /(curl|wget)\s+http/i,
 
-  // generic suspicious query
+  // generic suspicious 
   /\/\?.*=/i
 ];
 
@@ -294,7 +295,7 @@ async function trafficGuard(req, res, next) {
   if (!ENABLED) return next();
 
   // Skip internal mesh calls (they use HMAC auth already)
-  if (req.path.startsWith('/api/mesh')) return next();
+  if (req.path.startsWith('/api/mesh') || req.path.startsWith('/mesh/')) return next();
 
   const ip = realIp(req);
 
