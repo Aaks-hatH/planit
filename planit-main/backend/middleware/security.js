@@ -30,6 +30,10 @@
  *   SECURITY_WARN_WINDOW_S  10    (seconds window for rapid-request detection)
  *   SECURITY_WARN_THRESHOLD 25    (identical requests in window before WARN)
  *   SECURITY_BAN_THRESHOLD   5    (WARNs before temporary BAN)
+ *   SECURITY_WHITELIST_IPS        Comma-separated IPs to bypass all checks
+ *   SECURITY_MONITOR_PATHS        Comma-separated extra paths that skip UA/fuzz
+ *                                 checks (e.g. '/ping,/status'). /health, /ping,
+ *                                 and /status are always included.
  */
 
 const redis     = require('../services/redisClient');
@@ -48,8 +52,48 @@ const WARN_THRESHOLD = parseInt(process.env.SECURITY_WARN_THRESHOLD || '25',  10
 const BAN_THRESHOLD  = parseInt(process.env.SECURITY_BAN_THRESHOLD  || '5',   10);
 const BAN_TTL        = BAN_MINUTES * 60;
 
+// ─── Loopback addresses — always bypass all checks ────────────────────────────
+// Covers self-pings and internal health checks originating from the same process
+// or the same host (e.g. your own API calling itself).
+const LOOPBACK_IPS = new Set(['127.0.0.1', '::1', '::ffff:127.0.0.1']);
+
+// ─── Paths that skip UA / fuzz / rapid / payload checks ──────────────────────
+// These paths still respect the ban list, but are otherwise unchecked so that
+// uptime monitors hitting /health, /ping, or /status are never penalised.
+// Add your own via SECURITY_MONITOR_PATHS env var (comma-separated).
+const MONITOR_PATHS = new Set([
+  '/health', '/ping', '/status',
+  ...(process.env.SECURITY_MONITOR_PATHS || '')
+    .split(',').map(s => s.trim()).filter(Boolean),
+]);
+
+// ─── Legitimate monitoring / uptime-bot UA substrings ────────────────────────
+// Checked BEFORE the bad-UA list so that services whose UA contains 'bot'
+// (e.g. UptimeRobot) are never accidentally warned or banned.
+const GOOD_UA_PATTERNS = [
+  'uptimerobot',   // UptimeRobot/2.0; +https://uptimerobot.com
+  'pingdom',       // Pingdom.com_bot
+  'statuscake',    // StatusCake
+  'freshping',     // Freshping
+  'site24x7',      // Site24x7
+  'hetrixtools',   // HetrixTools
+  'betteruptime',  // BetterUptime
+  'hyperping',     // Hyperping
+  'updown.io',     // updown.io daemon
+  'checkly',       // Checkly
+  'nodeping',      // NodePing
+  'nodebing',
+  'datadog',       // Datadog synthetics
+  'newrelic',      // New Relic synthetics
+  'googlebot',     // Google crawler
+  'bingbot',       // Bing crawler
+  'applebot',      // Apple crawler
+];
+
 // ─── Known scanner / exploit user-agent fragments ─────────────────────────────
 // Covers version-agnostic prefixes so new releases are blocked automatically.
+// NOTE: 'bot' is intentionally kept here — legitimate monitoring bots are
+// caught by GOOD_UA_PATTERNS above and bypass this list entirely.
 const BAD_UA_PATTERNS = [
   // scanners / fuzzers
   'sqlmap', 'nikto', 'masscan', 'nmap', 'zgrab', 'zmap',
@@ -84,6 +128,7 @@ const BAD_UA_PATTERNS = [
   // generic suspicious terms
   'scanner', 'scan', 'fuzz', 'fuzzer', 'pentest'
 ];
+
 // ─── Path patterns that real users never send ─────────────────────────────────
 const FUZZ_PATTERNS = [
   // traversal / encoding tricks
@@ -135,7 +180,7 @@ const FUZZ_PATTERNS = [
   /javascript:\s*alert\(/i,
   /document\.cookie/i,
 
-  // system file access (FIXED LINE)
+  // system file access
   /\/etc\/(passwd|shadow|hosts)/i,
   /\/proc\/self\/environ/i,
 
@@ -231,8 +276,8 @@ async function addWarn(ip, reason) {
 
 // ─── Rapid identical request detector ────────────────────────────────────────
 async function checkRapid(ip, path) {
-  const key  = `sec:rapid:${ip}:${path.slice(0, 80)}`;
-  const cnt  = await redis.incrWithExpiry(key, WARN_WINDOW_S);
+  const key = `sec:rapid:${ip}:${path.slice(0, 80)}`;
+  const cnt = await redis.incrWithExpiry(key, WARN_WINDOW_S);
   if (cnt >= WARN_THRESHOLD) return true;
   return false;
 }
@@ -249,15 +294,18 @@ async function trafficGuard(req, res, next) {
   if (!ENABLED) return next();
 
   // Skip internal mesh calls (they use HMAC auth already)
-  if (req.path.startsWith('/api/mesh') || req.path === '/health') return next();
+  if (req.path.startsWith('/api/mesh')) return next();
 
   const ip = realIp(req);
 
-  // Whitelisted IPs bypass all checks — use SECURITY_WHITELIST_IPS env var
-  if (WHITELIST_IPS.size > 0 && WHITELIST_IPS.has(ip)) return next();
-  const ua = (req.headers['user-agent'] || '').toLowerCase();
+  // ── Loopback: self-pings and internal health checks ───────────────────────
+  // 127.0.0.1 / ::1 are never subject to any security checks.
+  if (LOOPBACK_IPS.has(ip)) return next();
 
-  // 1. Check if already banned
+  // ── Explicit IP whitelist ─────────────────────────────────────────────────
+  if (WHITELIST_IPS.size > 0 && WHITELIST_IPS.has(ip)) return next();
+
+  // ── Ban list: always enforced, even for monitor paths ─────────────────────
   if (await isBanned(ip)) {
     return res.status(429).json({
       error:   'Too many requests',
@@ -266,26 +314,39 @@ async function trafficGuard(req, res, next) {
     });
   }
 
-  // 2. Suspicious user-agent
-  const badUa = BAD_UA_PATTERNS.some(p => ua.includes(p));
-  if (badUa) {
-    const banned = await addWarn(ip, `bad UA: ${ua.slice(0, 60)}`);
-    if (banned) return res.status(403).json({ error: 'Forbidden' });
+  // ── Monitor / health paths: skip all further checks ──────────────────────
+  // Uptime monitors (UptimeRobot, Pingdom, etc.) typically hit /health or
+  // /ping on a fixed interval. Skipping UA + fuzz + rapid checks here means
+  // they can never accumulate warns regardless of their user-agent string.
+  if (MONITOR_PATHS.has(req.path)) return next();
+
+  const ua = (req.headers['user-agent'] || '').toLowerCase();
+
+  // 2. Suspicious user-agent — allow known legitimate monitors first so that
+  //    services whose UA contains 'bot' (UptimeRobot, Googlebot, etc.) are
+  //    never accidentally warned or banned.
+  const goodUa = GOOD_UA_PATTERNS.some(p => ua.includes(p));
+  if (!goodUa) {
+    const badUa = BAD_UA_PATTERNS.some(p => ua.includes(p));
+    if (badUa) {
+      const banned = await addWarn(ip, `bad UA: ${ua.slice(0, 60)}`);
+      if (banned) return res.status(403).json({ error: 'Forbidden' });
+    }
+
+    // Warn on missing / suspiciously short User-Agent (strong bot signal)
+    if (!ua || ua.length < 5) {
+      const banned = await addWarn(ip, 'missing/empty user-agent');
+      if (banned) return res.status(403).json({ error: 'Forbidden' });
+    }
   }
 
-  // M3: Warn on missing / suspiciously short User-Agent (strong bot signal)
-  if (!ua || ua.length < 5) {
-    const banned = await addWarn(ip, 'missing/empty user-agent');
-    if (banned) return res.status(403).json({ error: 'Forbidden' });
-  }
-
-  // 3. Path fuzzing — check both raw URL and percent-decoded URL (H1 fix)
+  // 3. Path fuzzing — check both raw URL and percent-decoded URL
   const decodedUrl = (() => { try { return decodeURIComponent(req.url); } catch { return req.url; } })();
   const fuzz = FUZZ_PATTERNS.some(p => p.test(req.url) || p.test(decodedUrl));
   if (fuzz) {
     const banned = await addWarn(ip, `path fuzz: ${req.url.slice(0, 80)}`);
     if (banned) return res.status(403).json({ error: 'Forbidden' });
-    // Even on first fuzz attempt return 404 to not reveal what exists
+    // Return 404 on first fuzz attempt to not reveal what exists
     return res.status(404).json({ error: 'Not found' });
   }
 
@@ -347,9 +408,9 @@ const MIME_MAP = {
 function scanUpload(file) {
   if (!file) return { ok: false, reason: 'No file provided' };
 
-  const name      = (file.originalname || file.filename || '').toLowerCase();
-  const ext       = name.split('.').pop() || '';
-  const mime      = (file.mimetype || '').toLowerCase();
+  const name = (file.originalname || file.filename || '').toLowerCase();
+  const ext  = name.split('.').pop() || '';
+  const mime = (file.mimetype || '').toLowerCase();
 
   // 1. Block dangerous extensions
   if (BLOCKED_EXTENSIONS.has(ext)) {
