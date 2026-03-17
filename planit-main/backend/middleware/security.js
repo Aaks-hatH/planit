@@ -51,26 +51,118 @@ const BAN_TTL        = BAN_MINUTES * 60;
 // ─── Known scanner / exploit user-agent fragments ─────────────────────────────
 // Covers version-agnostic prefixes so new releases are blocked automatically.
 const BAD_UA_PATTERNS = [
-  'sqlmap', 'nikto', 'masscan', 'nmap', 'zgrab', 'dirbuster',
-  'gobuster', 'wfuzz', 'acunetix', 'netsparker', 'appscan',
-  'openvas', 'hydra', 'medusa',
-  // Version-agnostic HTTP-library patterns (covers all versions)
-  'python-requests',  // was: 'python-requests/2.1' — now blocks all versions
-  'httpx/', 'aiohttp/',
-  'libwww-perl', 'lwp-useragent',
-  'go-http-client',
-  'java/', 'okhttp/',
-  'scrapy/', 'mechanize',
+  // core scanners / vulnerability scanners / fuzzers
+  'sqlmap', 'nikto', 'masscan', 'nmap', 'zgrab', 'zmap', 'dirbuster',
+  'dirb', 'gobuster', 'wfuzz', 'fuzz', 'fuzzer', 'fuzzing', 'ffuf',
+  'acunetix', 'netsparker', 'appscan', 'openvas', 'nessus', 'burpsuite',
+  'burst', 'burp', 'arachni', 'wpscan', 'whatweb', 'theharvester', 'fierce',
+  'amap', 'venus', 'acunetix', 'scan', 'vscan', 'scanner',
+
+  // bruteforce / auth / credential tools
+  'hydra', 'medusa', 'patator', 'crowbar', 'brutus', 'ncrack',
+
+  // HTTP libraries / language clients (version-agnostic)
+  'python-requests', 'python-urllib', 'python-urllib3', 'python-httplib',
+  'python-requests/', 'python-requests\\/', 'python-requests ', // variations
+  'httpx/', 'aiohttp/', 'asyncio', 'urllib/', 'urllib3',
+  'libwww-perl', 'lwp-useragent', 'perl', 'go-http-client', 'go-http-client/',
+  'golang', 'golang-http', 'java/', 'okhttp/', 'okhttp', 'curl/', 'wget/',
+  'libcurl', 'pycurl', 'php/', 'php7', 'php5', 'php-curl', 'php-requests',
+  'node-fetch', 'node.js', 'nodejs', 'axios/', 'got/', 'unirest',
+
+  // crawlers / scrapers / bots
+  'scrapy/', 'mechanize', 'httpclient', 'crawler', 'spider', 'bot', 'robot',
+  'facebookexternalhit', 'facebookcatalog', 'linkedinbot', 'slurp', 'bingbot',
+  'googlebot', 'applebot', 'duckduckgo', 'baiduspider', 'yandex',
+
+  // security tools / proxies / scanners
+  'fiddler', 'httpry', 'burp-suite', 'burp', 'mitmproxy', 'mitm', 'zaproxy',
+  'owasp-zap', 'nessus', 'nuclei', 'nuclei-scan', 'metallica', 'metasploit',
+
+  // misc suspicious fragments
+  'scan', 'securityscanner', 'pentest', 'pentester', 'recon', 'recon-ng',
+  'blackwidow', 'havij', 'netsparker', 'acunetix', 'uniscan', 'webinspect'
 ];
 
 // ─── Path patterns that real users never send ─────────────────────────────────
 const FUZZ_PATTERNS = [
-  /\.\.(\/|\\)/,          // path traversal
+  // Local file / traversal / LFI / RFI / dotfiles
+  /\.\.(\/|\\)/,                            // path traversal
+  /%2e%2e|%252e%252e/i,                    // double-encoded ../
+  /\/(\.git|\.svn|\.hg|CVS)\/?/i,
+  /\/\.env\b/i,
+  /\/\.(htaccess|htpasswd|DS_Store|bash_history)\b/i,
+  /\/(composer\.json|composer\.lock|package\.json|package-lock\.json)\b/i,
+  /\/(config\.php|wp-config\.php|\.user\.ini)\b/i,
+  /\/(phpunit|phpmyadmin|pma|adminer|sqladmin|phpmyadmin|\bphpmyadmin\b)/i,
+  /\/(phpinfo\.php|info\.php)\b/i,
+  /\/(backup|backups|bak|old|archive)\/?/i,
+  /\.(bak|old|orig|save|sql|tar|gz|zip|7z|rar)$/i,
+
+  // common webshell / uploader names
+  /(cmd|shell|r57|c99|wso|m00t)\.php/i,
+  /eval\(|base64_decode\(|system\(|exec\(|passthru\(|shell_exec\(|popen\(/i,
+
+  // SQL injection probes (classic + payload fingerprints)
+  /union(\s+all)?\s+select/i,
+  /select\s+.*\s+from\s+/i,
+  /information_schema/i,
+  /concat\(|group_concat\(/i,
+  /load_file\(|into\s+outfile/i,
+  /(or|and)\s+1\s*=\s*1\b/i,
+  /benchmark\(|sleep\(|pg_sleep\(|WAITFOR\s+DELAY/i,
+  /xp_cmdshell\b/i,
+  /--\s*$/i,                       // SQL comment at end
+  /\/\*!\d+/i,                     // MySQL versioned comments
+
+  // XSS / script injection attempts (in path or query)
+  /<script\b/i,
+  /<iframe\b/i,
+  /<svg\b.*onload\b/i,
+  /onerror=|onload=|onmouseover=|onfocus=/i,
+  /javascript:\s*alert\(/i,
+  /prompt\(|confirm\(|console\.log\(/i,
+  /document\.cookie/i,
+
+  // common file / config leaks
   /\/etc\/(passwd|shadow|hosts)/i,
-  /\.(env|git|svn|htaccess|htpasswd|DS_Store)/i,
-  /\/(wp-admin|wp-login|phpmyadmin|adminer|manager\/html)/i,
-  /<script|onerror=/i,    // basic XSS probe in URL
-  /union.*select|or.*1=1/i, // SQL injection probe in URL
+  /\/proc\/self\/environ/i,
+  /\/wp-admin\/|\/wp-login\.php/i,
+  /\/(administrator|administrator\/index\.php|administrator\/components\/com_)/i, // Joomla
+  /\/manager\/html\b/i,            // Tomcat manager
+  /\/(vendor|node_modules|\.idea|\.vscode)\/?/i,
+  /(\.git\/HEAD|\.git\/config|\.git\/index)$/i,
+
+  // file include / remote include attempts
+  /(https?:\/\/|ftp:\/\/)[^\s'"]+/i,   // remote URLs in path
+  /(\.\.\/|\.\.\\).*(http|ftp|php|data):/i,
+  /php:\/\/input/i,
+
+  // dangerous parameters & patterns often used by scanners
+  /(\?|&)(cmd|command|exec|system|eval|file|path|phpinfo|download|sql)=/i,
+  /(\?|&)(GLOBALS|_REQUEST|_SESSION|_GET|_POST)=/i,
+  /(\?|&)(base64|data)=[A-Za-z0-9+\/=]{16,}/i, // big base64 chunks in URL
+  /(\?|&)redirect=(http|https):/i, // open redirect probes
+
+  // attempts to access backup / sensitive filenames
+  /\/(backup|db_backup|dump|dump.sql|backup\.sql)$/i,
+  /\.(sql|env|ini|conf|pem|key|pfx|crt|bak)$/i,
+
+  // scanning / fuzzing payload signatures
+  /(dirsearch|dirb|gobuster|ffuf|wfuzz|fuzzer|fuzzing|nuclei|nmap|masscan|zgrab)/i,
+  /(\bHEAD\b|\bOPTIONS\b|\bTRACE\b)\s+/i, // unusual method probes in path-like strings
+
+  // attempts to trigger template engines / SSRF / prototype pollution
+  /__proto__|constructor\.prototype|prototype\./i,
+  /\{\{.*\}\}|\{\%.*\%\}|\<\?php/i,
+
+  // RCE / OS command indicators in URL path/query
+  /\b(sh\b|bash\b|pwsh\b|powershell\b|cmd\.exe)\b/i,
+  /(curl|wget)\s+http/i,
+
+  // short heuristics to catch typical noisy probes
+  /(etc\/passwd|/etc/passwd|/etc/shadow)/i,
+  /\/\?.*=/i // generic querystring with suspicious payloads
 ];
 
 // ─── In-process state (falls back to this if Redis is unavailable) ────────────
