@@ -136,4 +136,22 @@ async function meshPost(callerName, url, body = {}, opts = {}) {
   }
 }
 
-module.exports = { meshHeaders, meshAuth, meshGet, meshPost, signToken, verifyToken };
+async function meshDelete(callerName, url, opts = {}) {
+  const t0 = Date.now();
+  try {
+    const res = await axios.delete(url, {
+      timeout: opts.timeout || 10000,
+      headers: { ...meshHeaders(callerName), ...(opts.headers || {}) },
+      validateStatus: opts.validateStatus,
+    });
+    const ms = Date.now() - t0;
+    const path = new URL(url).pathname;
+    console.log(`[mesh] ${callerName} → mesh call  DELETE ${path} — ${ms}ms`);
+    return { ok: true, data: res.data, status: res.status, ms };
+  } catch (err) {
+    const ms = Date.now() - t0;
+    return { ok: false, error: err.message, ms };
+  }
+}
+
+module.exports = { meshHeaders, meshAuth, meshGet, meshPost, meshDelete, signToken, verifyToken };
