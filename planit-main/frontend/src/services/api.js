@@ -404,74 +404,22 @@ export const watchdogAPI = {
 };
 
 // ─── Router API ───────────────────────────────────────────────────────────────
-const MESH_SECRET = import.meta.env.VITE_MESH_SECRET || '';
-const MESH_CALLER = 'AdminUI';
-
-async function signMeshToken() {
-  const timestamp = Date.now().toString();
-  const payload   = `${timestamp}:${MESH_CALLER}`;
-  const enc       = new TextEncoder();
-  const key       = await crypto.subtle.importKey(
-    'raw',
-    enc.encode(MESH_SECRET),
-    { name: 'HMAC', hash: 'SHA-256' },
-    false,
-    ['sign']
-  );
-  const sigBuf = await crypto.subtle.sign('HMAC', key, enc.encode(payload));
-  const hmac   = Array.from(new Uint8Array(sigBuf))
-    .map(b => b.toString(16).padStart(2, '0'))
-    .join('');
-  return `${payload}:${hmac}`;
-}
-
-const routerAxios = ROUTER_URL
-  ? axios.create({ baseURL: ROUTER_URL, timeout: 10000 })
-  : null;
-
-if (routerAxios) {
-  routerAxios.interceptors.request.use(async (config) => {
-    const token = await signMeshToken();
-    config.headers['X-Mesh-Token']   = token;
-    config.headers['X-Mesh-Caller']  = MESH_CALLER;
-    config.headers['X-Mesh-Version'] = '1';
-    return config;
-  });
-}
+// All router calls go through the backend /admin/cc/router/* routes.
+// The regular admin JWT (stored in localStorage as adminToken) is the only
+// credential needed — no VITE_MESH_SECRET required.
 
 export const routerAPI = {
   getHealth: () => {
-    if (!routerAxios) return Promise.resolve(null);
-    return routerAxios.get('/health');
+    if (!ROUTER_URL) return Promise.resolve(null);
+    return axios.get(`${ROUTER_URL}/health`, { timeout: 8000 }).catch(() => null);
   },
-  getStatus: () => {
-    if (!routerAxios) return Promise.resolve(null);
-    return routerAxios.get('/mesh/status');
-  },
-  activateBoost: (opts) => {
-    if (!routerAxios) return Promise.resolve(null);
-    return routerAxios.post('/mesh/boost', opts);
-  },
-  cancelBoost: () => {
-    if (!routerAxios) return Promise.resolve(null);
-    return routerAxios.delete('/mesh/boost');
-  },
-  setScale: (opts) => {
-    if (!routerAxios) return Promise.resolve(null);
-    return routerAxios.post('/mesh/scale', opts);
-  },
-  testEmail: (to) => {
-    if (!routerAxios) return Promise.resolve(null);
-    return routerAxios.post('/mesh/email/test', { to });
-  },
-  getEmailPool: () => {
-    if (!routerAxios) return Promise.resolve(null);
-    return routerAxios.get('/mesh/email/pool');
-  },
-  execCommand: (command, params) => {
-    if (!routerAxios) return Promise.resolve(null);
-    return routerAxios.post('/mesh/exec', { command, params: params || {} });
-  },
+  getStatus: () => api.get('/admin/cc/router/status'),
+  activateBoost: (opts) => api.post('/admin/cc/router/boost', opts),
+  cancelBoost: () => api.delete('/admin/cc/router/boost'),
+  setScale: (opts) => api.post('/admin/cc/router/scale', opts),
+  testEmail: (to) => api.post('/admin/cc/router/email/test', { to }),
+  getEmailPool: () => api.get('/admin/cc/email-pool'),
+  execCommand: (command, params) => api.post('/admin/cc/command', { target: 'router', command, params: params || {} }),
 };
 
 // ─── Utility API ──────────────────────────────────────────────────────────────
