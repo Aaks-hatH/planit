@@ -1354,6 +1354,65 @@ router.get('/cc/email-pool', verifyAdmin, requireSuperAdmin, async (req, res) =>
   res.status(502).json({ ok: false, error: r.error || 'Router unreachable' });
 });
 
+// ─── Router proxy routes ──────────────────────────────────────────────────────
+// These replace the old frontend-direct mesh calls. The admin JWT (verifyAdmin)
+// is the only credential needed — no VITE_MESH_SECRET in the browser.
+
+// GET /admin/cc/router/status
+router.get('/cc/router/status', verifyAdmin, requireSuperAdmin, async (req, res) => {
+  const { meshGet } = require('../middleware/mesh');
+  const CALLER    = process.env.BACKEND_LABEL || 'Backend';
+  const routerUrl = (process.env.ROUTER_URL || '').replace(/\/$/, '');
+  if (!routerUrl) return res.status(503).json({ error: 'ROUTER_URL not set' });
+  const r = await meshGet(CALLER, `${routerUrl}/mesh/status`, { timeout: 8000 });
+  if (r.ok) return res.json(r.data);
+  res.status(502).json({ ok: false, error: r.error || 'Router unreachable' });
+});
+
+// POST /admin/cc/router/boost
+router.post('/cc/router/boost', verifyAdmin, requireSuperAdmin, async (req, res) => {
+  const { meshPost } = require('../middleware/mesh');
+  const CALLER    = process.env.BACKEND_LABEL || 'Backend';
+  const routerUrl = (process.env.ROUTER_URL || '').replace(/\/$/, '');
+  if (!routerUrl) return res.status(503).json({ error: 'ROUTER_URL not set' });
+  const r = await meshPost(CALLER, `${routerUrl}/mesh/boost`, req.body, { timeout: 8000 });
+  if (r.ok) return res.json(r.data);
+  res.status(502).json({ ok: false, error: r.error || 'Router unreachable' });
+});
+
+// DELETE /admin/cc/router/boost
+router.delete('/cc/router/boost', verifyAdmin, requireSuperAdmin, async (req, res) => {
+  const { meshDelete } = require('../middleware/mesh');
+  const CALLER    = process.env.BACKEND_LABEL || 'Backend';
+  const routerUrl = (process.env.ROUTER_URL || '').replace(/\/$/, '');
+  if (!routerUrl) return res.status(503).json({ error: 'ROUTER_URL not set' });
+  const r = await meshDelete(CALLER, `${routerUrl}/mesh/boost`, { timeout: 8000 });
+  if (r.ok) return res.json(r.data);
+  res.status(502).json({ ok: false, error: r.error || 'Router unreachable' });
+});
+
+// POST /admin/cc/router/scale
+router.post('/cc/router/scale', verifyAdmin, requireSuperAdmin, async (req, res) => {
+  const { meshPost } = require('../middleware/mesh');
+  const CALLER    = process.env.BACKEND_LABEL || 'Backend';
+  const routerUrl = (process.env.ROUTER_URL || '').replace(/\/$/, '');
+  if (!routerUrl) return res.status(503).json({ error: 'ROUTER_URL not set' });
+  const r = await meshPost(CALLER, `${routerUrl}/mesh/scale`, req.body, { timeout: 8000 });
+  if (r.ok) return res.json(r.data);
+  res.status(502).json({ ok: false, error: r.error || 'Router unreachable' });
+});
+
+// POST /admin/cc/router/email/test
+router.post('/cc/router/email/test', verifyAdmin, requireSuperAdmin, async (req, res) => {
+  const { meshPost } = require('../middleware/mesh');
+  const CALLER    = process.env.BACKEND_LABEL || 'Backend';
+  const routerUrl = (process.env.ROUTER_URL || '').replace(/\/$/, '');
+  if (!routerUrl) return res.status(503).json({ error: 'ROUTER_URL not set' });
+  const r = await meshPost(CALLER, `${routerUrl}/mesh/email/test`, req.body, { timeout: 10000 });
+  if (r.ok) return res.json(r.data);
+  res.status(502).json({ ok: false, error: r.error || 'Router unreachable' });
+});
+
 // GET /admin/cc/db — live database collection sizes and index info
 router.get('/cc/db', verifyAdmin, requireSuperAdmin, async (req, res, next) => {
   try {
