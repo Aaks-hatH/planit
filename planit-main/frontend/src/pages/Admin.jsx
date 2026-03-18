@@ -1150,18 +1150,76 @@ function SystemPanel() {
 // ═══════════════════════════════════════════════════════════════════════════════
 // FLEET LOGS PANEL
 // ═══════════════════════════════════════════════════════════════════════════════
+// ─── Virtual log list ─────────────────────────────────────────────────────────
+// Renders only the rows visible in the viewport + a small buffer above/below.
+// With 2000 log entries at ~22px each the total scroll height is ~44 000px,
+// but at any moment we only create ~50 DOM nodes — keeping the browser fast.
+const ROW_H  = 22;   // px — must match the rendered height of <LogLine>
+const BUFFER = 15;   // extra rows to render above and below the visible window
+
+function VirtualLogList({ entries, autoScroll }) {
+  const outerRef  = useRef(null);
+  const [scrollTop, setScrollTop] = React.useState(0);
+
+  // Scroll to bottom when autoScroll is on and entries change
+  useEffect(() => {
+    if (autoScroll && outerRef.current) {
+      outerRef.current.scrollTop = outerRef.current.scrollHeight;
+    }
+  }, [entries, autoScroll]);
+
+  const totalH    = entries.length * ROW_H;
+  const viewH     = 540; // matches the container height below
+
+  const startIdx  = Math.max(0, Math.floor(scrollTop / ROW_H) - BUFFER);
+  const visCount  = Math.ceil(viewH / ROW_H) + BUFFER * 2;
+  const endIdx    = Math.min(entries.length, startIdx + visCount);
+
+  const paddingTop    = startIdx * ROW_H;
+  const paddingBottom = Math.max(0, totalH - endIdx * ROW_H);
+
+  const visible = entries.slice(startIdx, endIdx);
+
+  return (
+    <div
+      ref={outerRef}
+      style={{ height: viewH, overflowY: 'auto' }}
+      onScroll={e => setScrollTop(e.currentTarget.scrollTop)}
+      className="p-2"
+    >
+      {entries.length === 0 ? (
+        <p className="text-neutral-500 text-xs font-mono p-4">No logs match filter</p>
+      ) : (
+        <div style={{ paddingTop, paddingBottom }}>
+          {visible.map((entry, i) => (
+            <LogLine key={`${entry.ts}-${startIdx + i}`} entry={entry} />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function LogsPanel() {
   const isDemo = useContext(DemoContext);
   const [logs, setLogs]             = useState([]);
   const [sources, setSources]       = useState([]);
   const [filter, setFilter]         = useState('all');
   const [sourceFilter, setSourceFilter] = useState('all');
+  const [searchRaw, setSearchRaw]   = useState('');
   const [search, setSearch]         = useState('');
   const [autoScroll, setAutoScroll] = useState(true);
   const [live, setLive]             = useState(false);
   const [loading, setLoading]       = useState(true);
-  const bottomRef = useRef(null);
-  const esRef     = useRef(null);
+  const esRef      = useRef(null);
+  const liveBuffer = useRef([]);       // batch SSE entries before flushing to state
+  const flushTimer = useRef(null);
+
+  // Debounce search input — avoids re-filtering on every keystroke
+  useEffect(() => {
+    const t = setTimeout(() => setSearch(searchRaw), 200);
+    return () => clearTimeout(t);
+  }, [searchRaw]);
 
   const DEMO_LOG_MESSAGES = [
     { level: 'info',  msg: 'Event "Global Tech Summit 2026" participant joined: skyler_events' },
@@ -1176,26 +1234,18 @@ function LogsPanel() {
     { level: 'warn',  msg: 'Slow query detected on events collection (148ms)' },
     { level: 'info',  msg: 'Announcement broadcast to 4821 participants in Global Tech Summit' },
     { level: 'info',  msg: 'Staff account created: door_james for Global Tech Summit 2026' },
-    { level: 'info',  msg: 'Expense logged ($4,200) in "NYC Startup Showcase — Investor Night"' },
-    { level: 'info',  msg: 'WebSocket connected: vip_host_kai from 103.42.x.x' },
-    { level: 'info',  msg: 'Webhook delivered to https://hooks.example.com/planit (200ms)' },
     { level: 'error', msg: 'Email delivery failed for invite INV-0042 — retrying in 30s' },
     { level: 'info',  msg: 'Cleanup job: removed 142 expired sessions' },
-    { level: 'info',  msg: 'Task toggled in "Y Combinator Spring Demo Day (W26)"' },
     { level: 'info',  msg: 'Analytics snapshot saved for event "Global Climate Summit"' },
-    { level: 'info',  msg: 'Event cloned: "Global Tech Summit 2026" → "Global Tech Summit 2027"' },
   ];
 
   const loadLogs = async () => {
     if (isDemo) {
       const now = Date.now();
       const fakeLogs = DEMO_LOG_MESSAGES.map((l, i) => ({
-        _id: `demo-log-${i}`,
-        level: l.level,
-        msg: l.msg,
+        _id: `demo-log-${i}`, level: l.level, msg: l.msg,
         ts: new Date(now - i * 47000).toISOString(),
-        source: 'backend',
-        sourceName: 'Backend (us-east-1)',
+        source: 'backend', sourceName: 'Backend (us-east-1)',
       })).reverse();
       setLogs(fakeLogs);
       setSources([{ source: 'backend', name: 'Backend (us-east-1)', ok: true, count: fakeLogs.length }]);
@@ -1208,21 +1258,30 @@ function LogsPanel() {
       setLogs(r.data.logs || []);
       setSources(r.data.sources || []);
     } catch {
-      // fallback: local backend only
       try {
         const r = await adminAPI.getLogs('all');
-        const backendName = 'Backend';
-        setLogs((r.data.logs || []).map(e => ({ ...e, source: 'backend', sourceName: backendName })));
-        setSources([{ source: 'backend', name: backendName, ok: true, count: r.data.logs?.length || 0 }]);
+        setLogs((r.data.logs || []).map(e => ({ ...e, source: 'backend', sourceName: 'Backend' })));
+        setSources([{ source: 'backend', name: 'Backend', ok: true, count: r.data.logs?.length || 0 }]);
       } catch { toast.error('Failed to load logs'); }
     } finally { setLoading(false); }
   };
 
   useEffect(() => { loadLogs(); }, []);
 
-  useEffect(() => {
-    if (autoScroll) bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [logs, autoScroll]);
+  // Flush the live buffer into state at most every 500ms — prevents a state
+  // update on every single SSE message which would re-render 2000 nodes/sec.
+  const scheduleFlush = () => {
+    if (flushTimer.current) return;
+    flushTimer.current = setTimeout(() => {
+      flushTimer.current = null;
+      const batch = liveBuffer.current.splice(0);
+      if (batch.length === 0) return;
+      setLogs(prev => {
+        const combined = [...prev, ...batch];
+        return combined.length > 2000 ? combined.slice(combined.length - 2000) : combined;
+      });
+    }, 500);
+  };
 
   const startLive = () => {
     if (esRef.current) return;
@@ -1233,15 +1292,21 @@ function LogsPanel() {
     es.onmessage = (e) => {
       try {
         const entry = JSON.parse(e.data);
-        const tagged = { ...entry, source: entry.source || 'backend', sourceName: entry.sourceName || 'Backend' };
-        setLogs(prev => [...prev.slice(-1999), tagged]);
+        liveBuffer.current.push({ ...entry, source: entry.source || 'backend', sourceName: entry.sourceName || 'Backend' });
+        scheduleFlush();
       } catch {}
     };
     es.onerror = () => { toast.error('Live log stream disconnected'); stopLive(); };
     setLive(true);
   };
 
-  const stopLive = () => { esRef.current?.close(); esRef.current = null; setLive(false); };
+  const stopLive = () => {
+    esRef.current?.close();
+    esRef.current = null;
+    if (flushTimer.current) { clearTimeout(flushTimer.current); flushTimer.current = null; }
+    liveBuffer.current = [];
+    setLive(false);
+  };
 
   const downloadFull = async () => {
     try {
@@ -1258,23 +1323,31 @@ function LogsPanel() {
     } catch { toast.error('Failed to fetch full dump'); }
   };
 
-  useEffect(() => () => esRef.current?.close(), []);
+  useEffect(() => () => { esRef.current?.close(); if (flushTimer.current) clearTimeout(flushTimer.current); }, []);
 
-  const filtered = logs.filter(l => {
-    if (filter !== 'all' && l.level !== filter) return false;
-    if (sourceFilter !== 'all' && (l.source || 'backend') !== sourceFilter) return false;
-    if (search && !l.msg?.toLowerCase().includes(search.toLowerCase())) return false;
-    return true;
-  });
+  // Memoize filtered list — only recomputes when logs/filters actually change
+  const filtered = React.useMemo(() => {
+    const lc = search.toLowerCase();
+    return logs.filter(l => {
+      if (filter !== 'all' && l.level !== filter) return false;
+      if (sourceFilter !== 'all' && (l.source || 'backend') !== sourceFilter) return false;
+      if (lc && !l.msg?.toLowerCase().includes(lc)) return false;
+      return true;
+    });
+  }, [logs, filter, sourceFilter, search]);
 
-  const counts = {
+  // Memoize counts — avoids four separate passes over the array on every render
+  const counts = React.useMemo(() => ({
     all:   logs.length,
-    info:  logs.filter(l => l.level === 'info').length,
-    warn:  logs.filter(l => l.level === 'warn').length,
-    error: logs.filter(l => l.level === 'error').length,
-  };
+    info:  logs.reduce((n, l) => n + (l.level === 'info'  ? 1 : 0), 0),
+    warn:  logs.reduce((n, l) => n + (l.level === 'warn'  ? 1 : 0), 0),
+    error: logs.reduce((n, l) => n + (l.level === 'error' ? 1 : 0), 0),
+  }), [logs]);
 
-  const uniqueSources = [...new Set(logs.map(l => l.source || 'backend'))];
+  const uniqueSources = React.useMemo(
+    () => [...new Set(logs.map(l => l.source || 'backend'))],
+    [logs]
+  );
 
   return (
     <div className="space-y-4">
@@ -1285,7 +1358,7 @@ function LogsPanel() {
           <p className="text-sm text-neutral-500">{counts.all.toLocaleString()} entries · {counts.error} errors · {counts.warn} warnings · {sources.length} source{sources.length !== 1 ? 's' : ''}</p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
-          <button onClick={autoScroll ? () => setAutoScroll(false) : () => setAutoScroll(true)} className={`btn text-sm gap-1 ${autoScroll ? 'btn-primary' : 'btn-secondary'}`}>
+          <button onClick={() => setAutoScroll(v => !v)} className={`btn text-sm gap-1 ${autoScroll ? 'btn-primary' : 'btn-secondary'}`}>
             {autoScroll ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronUp className="w-3.5 h-3.5" />} Auto-scroll
           </button>
           <button onClick={live ? stopLive : startLive} className={`btn text-sm gap-2 ${live ? 'bg-red-600 text-white border-red-600 hover:bg-red-700' : 'bg-emerald-600 text-white border-emerald-600 hover:bg-emerald-700'}`}>
@@ -1345,11 +1418,17 @@ function LogsPanel() {
 
         <div className="flex-1 min-w-40 relative">
           <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400" />
-          <input type="text" placeholder="Search all logs..." className="input pl-9 text-sm py-1.5" value={search} onChange={e => setSearch(e.target.value)} />
+          <input
+            type="text"
+            placeholder="Search all logs..."
+            className="input pl-9 text-sm py-1.5"
+            value={searchRaw}
+            onChange={e => setSearchRaw(e.target.value)}
+          />
         </div>
         {live && (
           <div className="flex items-center gap-2 text-xs font-medium text-emerald-600 bg-emerald-50 px-3 py-1.5 rounded-full">
-            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" /> LIVE (backend)
+            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" /> LIVE
           </div>
         )}
       </div>
@@ -1365,15 +1444,10 @@ function LogsPanel() {
           <span className="text-xs text-neutral-500 font-mono">fleet logs · all services · sorted by time</span>
           <span className="ml-auto text-xs text-neutral-600">{filtered.length.toLocaleString()} / {counts.all.toLocaleString()}</span>
         </div>
-        <div className="h-[560px] overflow-y-auto p-2" onScroll={e => { if (autoScroll) { const el = e.target; setAutoScroll(el.scrollHeight - el.scrollTop - el.clientHeight < 50); } }}>
-          {loading
-            ? <p className="text-neutral-500 text-xs font-mono p-4">Fetching logs from all fleet services...</p>
-            : filtered.length === 0
-            ? <p className="text-neutral-500 text-xs font-mono p-4">No logs match filter</p>
-            : filtered.map((entry, i) => <LogLine key={`${entry.ts}-${i}`} entry={entry} />)
-          }
-          <div ref={bottomRef} />
-        </div>
+        {loading
+          ? <p className="text-neutral-500 text-xs font-mono p-4">Fetching logs from all fleet services...</p>
+          : <VirtualLogList entries={filtered} autoScroll={autoScroll} />
+        }
       </div>
     </div>
   );
