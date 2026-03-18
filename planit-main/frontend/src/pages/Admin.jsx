@@ -5377,20 +5377,20 @@ function FleetControl() {
 
 
 // ─── Mobile "More" nav button ─────────────────────────────────────────────────
-const MORE_SECTIONS = ['organizers','staff','employees','analytics','security','blocklist','reports','uptime','command-center','whitelabel'];
+const MORE_SECTIONS = ['organizers','staff','employees','analytics','security','blocklist','reports','logs','uptime','command-center','whitelabel'];
 function MoreNavButton({ activeSection, setActiveSection }) {
   const [open, setOpen] = React.useState(false);
   const isActive = MORE_SECTIONS.includes(activeSection);
   const labels = {
     organizers: 'Organizers', staff: 'Staff', employees: 'Team',
     analytics: 'Analytics', security: 'Security', blocklist: 'Blocklist',
-    reports: 'Reports', uptime: 'Uptime', 'command-center': 'Command',
+    reports: 'Reports', logs: 'Logs', uptime: 'Uptime', 'command-center': 'Command',
     whitelabel: 'White Label',
   };
   const icons = {
     organizers: Building2, staff: UserCheck, employees: Briefcase,
     analytics: BarChart3, security: Shield, blocklist: Ban,
-    reports: Inbox, uptime: Radio, 'command-center': Crosshair,
+    reports: Inbox, logs: Terminal, uptime: Radio, 'command-center': Crosshair,
     whitelabel: Layers,
   };
   return (
@@ -5446,6 +5446,7 @@ const NAV_ITEMS = [
   { id: 'reports',        label: 'Reports',      icon: Inbox      },
   { id: 'uptime',         label: 'Uptime',       icon: Radio      },
   { id: 'system',         label: 'System',       icon: Server     },
+  { id: 'logs',           label: 'Logs',         icon: Terminal   },
   { id: 'command-center', label: 'Command',      icon: Crosshair  },
   { id: 'whitelabel',     label: 'White Label',  icon: Layers     },
 ];
