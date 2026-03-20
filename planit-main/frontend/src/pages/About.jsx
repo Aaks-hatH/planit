@@ -262,7 +262,7 @@ export default function About() {
               <Sparkles className="w-3.5 h-3.5" />
               Every feature, explained in full
             </div>
-            <h1 className="text-4xl font-black text-neutral-900 mb-4 leading-tight">
+            <h1 className="font-display text-4xl font-black text-neutral-900 mb-4 leading-tight">
               About PlanIt
             </h1>
             <p className="text-lg text-neutral-500 leading-relaxed max-w-xl">
