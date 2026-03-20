@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=DM+Mono:wght@400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=DM+Mono:wght@400;500&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -10,15 +10,21 @@
     --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
     --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.07), 0 2px 4px -2px rgb(0 0 0 / 0.05);
 
-    /*
-      Safe-area custom properties.
-      On non-iOS or in browser mode these resolve to 0px — zero side-effects.
-      On iPhone standalone PWA they carry the actual inset values from the OS.
-    */
+    /* Unified dark backgrounds — one source of truth */
+    --bg-base:    #05050f;
+    --bg-surface: #08080f;
+    --bg-venue:   #0a0704;
+
+    /* Safe-area custom properties */
     --safe-top:    env(safe-area-inset-top,    0px);
     --safe-right:  env(safe-area-inset-right,  0px);
     --safe-bottom: env(safe-area-inset-bottom, 0px);
     --safe-left:   env(safe-area-inset-left,   0px);
+
+    /* Typography */
+    --font-display: 'Instrument Serif', Georgia, serif;
+    --font-body:    'DM Sans', system-ui, -apple-system, sans-serif;
+    --font-mono:    'DM Mono', 'Fira Mono', monospace;
   }
 
   * { box-sizing: border-box; }
@@ -47,10 +53,16 @@
     -webkit-font-smoothing: antialiased;
   }
 
-  h1, h2, h3, h4, h5, h6 {
+  h1, h2, h3 {
+    font-family: 'Syne', 'DM Sans', system-ui, sans-serif;
+    font-weight: 700;
+    letter-spacing: -0.025em;
+    line-height: 1.2;
+  }
+  h4, h5, h6 {
     font-family: 'DM Sans', system-ui, sans-serif;
     font-weight: 600;
-    letter-spacing: -0.025em;
+    letter-spacing: -0.02em;
     line-height: 1.25;
   }
 
@@ -148,6 +160,126 @@
 
   .planit-hero {
     background: #fafafa;
+  }
+
+  /* ─── Dark form inputs (used in Home.jsx creation form) ─── */
+  .dark-input {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    background: rgba(15,15,25,0.8);
+    border: 1px solid #334155;
+    border-radius: 0.75rem;
+    color: white;
+    font-size: 0.875rem;
+    outline: none;
+    transition: border-color 0.2s;
+    font-family: var(--font-body);
+  }
+  .dark-input:focus { border-color: #64748b; }
+  .dark-input::placeholder { color: #475569; }
+  .dark-input option { background: #0f172a; color: white; }
+
+  /* ─── Marketing page animated elements ─── */
+  @keyframes shimmer-slide {
+    0%   { background-position: -200% center; }
+    100% { background-position:  200% center; }
+  }
+  .shimmer-white {
+    background: linear-gradient(90deg, #94a3b8 15%, #ffffff 42%, #94a3b8 68%);
+    background-size: 200% auto;
+    -webkit-background-clip: text; background-clip: text;
+    -webkit-text-fill-color: transparent;
+    animation: shimmer-slide 4s ease-in-out infinite;
+  }
+  .shimmer-slate {
+    background: linear-gradient(120deg, #64748b 0%, #cbd5e1 48%, #64748b 90%);
+    background-size: 200% auto;
+    -webkit-background-clip: text; background-clip: text;
+    -webkit-text-fill-color: transparent;
+    animation: shimmer-slide 5s ease-in-out infinite;
+  }
+
+  @keyframes scan-sweep {
+    0%   { transform: translateX(-120%); }
+    100% { transform: translateX(220%);  }
+  }
+  .stat-card { position: relative; overflow: hidden; }
+  .stat-card::after {
+    content: '';
+    position: absolute; inset: 0;
+    background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.03) 50%, transparent 100%);
+    transform: translateX(-120%);
+    animation: scan-sweep 5s ease-in-out infinite;
+    pointer-events: none;
+  }
+  .stat-card:nth-child(2)::after { animation-delay: 1.6s; }
+  .stat-card:nth-child(3)::after { animation-delay: 3.2s; }
+
+  @keyframes typing-dot {
+    0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
+    30% { transform: translateY(-4px); opacity: 1; }
+  }
+  .typing-dot { animation: typing-dot 1.4s ease-in-out infinite; }
+  .typing-dot:nth-child(2) { animation-delay: 0.2s; }
+  .typing-dot:nth-child(3) { animation-delay: 0.4s; }
+
+  @keyframes check-pop {
+    0%   { transform: scale(0.6); opacity: 0; }
+    70%  { transform: scale(1.2); }
+    100% { transform: scale(1);   opacity: 1; }
+  }
+  .check-pop { animation: check-pop 0.4s ease forwards; }
+
+  @keyframes table-available-pulse {
+    0%, 100% { fill: rgba(34,197,94,0.13); stroke: #22c55e; }
+    50%       { fill: rgba(34,197,94,0.28); stroke: #4ade80; }
+  }
+  @keyframes table-ring-pulse {
+    0%, 100% { opacity: 0.7; r: 27; }
+    50%       { opacity: 1;   r: 29; }
+  }
+  .table-pulse-fill  { animation: table-available-pulse 2.2s ease-in-out infinite; }
+  .table-pulse-ring  { animation: table-ring-pulse 2.2s ease-in-out infinite; }
+
+  @keyframes count-tick {
+    0%, 89%  { opacity: 1; transform: translateY(0); }
+    90%      { opacity: 0; transform: translateY(-8px); }
+    91%      { opacity: 0; transform: translateY(8px); }
+    100%     { opacity: 1; transform: translateY(0); }
+  }
+  .waitlist-tick { animation: count-tick 6s ease-in-out infinite; }
+
+  .product-divider {
+    height: 1px;
+    background: linear-gradient(90deg, transparent 0%, rgba(249,115,22,0.4) 30%, rgba(249,115,22,0.6) 50%, rgba(249,115,22,0.4) 70%, transparent 100%);
+  }
+  .product-divider-events {
+    height: 1px;
+    background: linear-gradient(90deg, transparent 0%, rgba(148,163,184,0.3) 30%, rgba(255,255,255,0.4) 50%, rgba(148,163,184,0.3) 70%, transparent 100%);
+  }
+
+  @keyframes msg-float {
+    from { opacity: 0; transform: translateY(10px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .msg-1 { animation: msg-float 0.5s ease forwards 0.3s; opacity: 0; }
+  .msg-2 { animation: msg-float 0.5s ease forwards 1.1s; opacity: 0; }
+  .msg-3 { animation: msg-float 0.5s ease forwards 2.0s; opacity: 0; }
+
+  @keyframes progress-bar-glow {
+    0%, 100% { box-shadow: 0 0 4px rgba(255,255,255,0.15); }
+    50% { box-shadow: 0 0 14px rgba(255,255,255,0.5); }
+  }
+
+  @keyframes scroll-indicator-bounce {
+    0%, 100% { transform: translateY(0); opacity: 1; }
+    50% { transform: translateY(6px); opacity: 0.5; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .stat-card::after, .shimmer-white, .shimmer-slate,
+    .typing-dot, .table-pulse-fill, .table-pulse-ring,
+    .waitlist-tick, .msg-1, .msg-2, .msg-3 { animation: none !important; opacity: 1 !important; }
   }
 }
 
@@ -252,3 +384,136 @@
 [data-wl] [class*="border-indigo-"] {
   border-color: color-mix(in srgb, var(--wl-primary, #111827) 40%, transparent) !important;
 }
+
+/* ─── Global dark-page CSS variables: defined in @layer base :root above ─── */
+
+/* ─── Display font for headings on dark pages ───────────────────────────── */
+.font-display {
+  font-family: 'Syne', system-ui, sans-serif;
+}
+
+/* ─── Dark input (used in Home form) ────────────────────────────────────── */
+.dark-input {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  background: rgba(15,15,25,0.8);
+  border: 1px solid #334155;
+  border-radius: 0.75rem;
+  color: white;
+  font-size: 0.875rem;
+  font-family: 'DM Sans', system-ui, sans-serif;
+  outline: none;
+  transition: border-color 0.2s;
+}
+.dark-input:focus { border-color: #64748b; }
+.dark-input::placeholder { color: #475569; }
+.dark-input option { background: #0f172a; color: white; }
+
+/* ─── Landing page keyframes (extracted from Home.jsx inline styles) ──── */
+@keyframes shimmer-slide {
+  0%   { background-position: -200% center; }
+  100% { background-position:  200% center; }
+}
+.shimmer-white {
+  background: linear-gradient(90deg, #94a3b8 15%, #ffffff 42%, #94a3b8 68%);
+  background-size: 200% auto;
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: shimmer-slide 4s ease-in-out infinite;
+}
+.shimmer-slate {
+  background: linear-gradient(120deg, #64748b 0%, #cbd5e1 48%, #64748b 90%);
+  background-size: 200% auto;
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: shimmer-slide 5s ease-in-out infinite;
+}
+
+@keyframes scan-sweep {
+  0%   { transform: translateX(-120%); }
+  100% { transform: translateX(220%);  }
+}
+.stat-card { position: relative; overflow: hidden; }
+.stat-card::after {
+  content: '';
+  position: absolute; inset: 0;
+  background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.03) 50%, transparent 100%);
+  transform: translateX(-120%);
+  animation: scan-sweep 5s ease-in-out infinite;
+  pointer-events: none;
+}
+.stat-card:nth-child(2)::after { animation-delay: 1.6s; }
+.stat-card:nth-child(3)::after { animation-delay: 3.2s; }
+
+@keyframes typing-dot {
+  0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
+  30% { transform: translateY(-4px); opacity: 1; }
+}
+.typing-dot { animation: typing-dot 1.4s ease-in-out infinite; }
+.typing-dot:nth-child(2) { animation-delay: 0.2s; }
+.typing-dot:nth-child(3) { animation-delay: 0.4s; }
+
+@keyframes check-pop {
+  0%   { transform: scale(0.6); opacity: 0; }
+  70%  { transform: scale(1.2); }
+  100% { transform: scale(1);   opacity: 1; }
+}
+.check-pop { animation: check-pop 0.4s ease forwards; }
+
+@keyframes table-available-pulse {
+  0%, 100% { fill: rgba(34,197,94,0.13); stroke: #22c55e; }
+  50%       { fill: rgba(34,197,94,0.28); stroke: #4ade80; }
+}
+@keyframes table-ring-pulse {
+  0%, 100% { opacity: 0.7; r: 27; }
+  50%       { opacity: 1;   r: 29; }
+}
+.table-pulse-fill  { animation: table-available-pulse 2.2s ease-in-out infinite; }
+.table-pulse-ring  { animation: table-ring-pulse 2.2s ease-in-out infinite; }
+
+@keyframes count-tick {
+  0%, 89%  { opacity: 1; transform: translateY(0); }
+  90%      { opacity: 0; transform: translateY(-8px); }
+  91%      { opacity: 0; transform: translateY(8px); }
+  100%     { opacity: 1; transform: translateY(0); }
+}
+.waitlist-tick { animation: count-tick 6s ease-in-out infinite; }
+
+.product-divider {
+  height: 1px;
+  background: linear-gradient(90deg, transparent 0%, rgba(249,115,22,0.4) 30%, rgba(249,115,22,0.6) 50%, rgba(249,115,22,0.4) 70%, transparent 100%);
+}
+.product-divider-events {
+  height: 1px;
+  background: linear-gradient(90deg, transparent 0%, rgba(148,163,184,0.3) 30%, rgba(255,255,255,0.4) 50%, rgba(148,163,184,0.3) 70%, transparent 100%);
+}
+
+@keyframes msg-float {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.msg-1 { animation: msg-float 0.5s ease forwards 0.3s; opacity: 0; }
+.msg-2 { animation: msg-float 0.5s ease forwards 1.1s; opacity: 0; }
+.msg-3 { animation: msg-float 0.5s ease forwards 2.0s; opacity: 0; }
+
+@keyframes progress-bar-glow {
+  0%, 100% { box-shadow: 0 0 4px rgba(255,255,255,0.15); }
+  50% { box-shadow: 0 0 14px rgba(255,255,255,0.5); }
+}
+
+@keyframes scroll-indicator-bounce {
+  0%, 100% { transform: translateY(0); opacity: 1; }
+  50% { transform: translateY(6px); opacity: 0.5; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .stat-card::after, .shimmer-white, .shimmer-slate,
+  .typing-dot, .table-pulse-fill, .table-pulse-ring,
+  .waitlist-tick, .msg-1, .msg-2, .msg-3 { animation: none !important; opacity: 1 !important; }
+}
+
+/* ─── Gateway hover state ────────────────────────────────────────────────── */
+.gateway:hover .gateway-events:not(:hover) { opacity: 0.35; }
+.gateway:hover .gateway-venue:not(:hover)  { opacity: 0.35; }
+.gateway-events { transition: opacity 0.4s ease, transform 0.4s ease; }
+.gateway-venue  { transition: opacity 0.4s ease, transform 0.4s ease; }
