@@ -4230,7 +4230,7 @@ export default function Help() {
                 <LifeBuoy className="w-3.5 h-3.5" />
                 Help Center
               </div>
-              <h1 className="text-4xl font-black text-neutral-900 mb-3">How can we help?</h1>
+              <h1 className="font-display text-4xl font-black text-neutral-900 mb-3">How can we help?</h1>
               <p className="text-base text-neutral-500 mb-8 max-w-lg mx-auto">
                 Search for a feature, an error message, or anything you need help with.
               </p>
