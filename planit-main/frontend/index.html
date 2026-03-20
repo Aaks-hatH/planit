@@ -1253,73 +1253,250 @@ By accessing any component of the PlanIt platform, You acknowledge that:
 ================================================================================
 -->
     <!--
-      viewport-fit=cover  →  content extends under the Dynamic Island / notch.
+      viewport-fit=cover → content extends under the Dynamic Island / notch.
       We then use env(safe-area-inset-*) in CSS to push content back into view.
     -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <meta name="description" content="PlanIt — the event and reservation management platform for restaurants, venues, and hospitality businesses. Manage bookings, waitlists, and guest lists in real time." />
-    <meta name="keywords" content="PlanIt, event planning tool, restaurant reservation system, venue management software, restaurant management tool, event booking platform, waitlist management, white label reservation system, hospitality software" />
-    <meta name="robots" content="index, follow" />
+
+    <!-- ═══════════════════════════════════════════════════
+         PRIMARY SEO META TAGS
+    ═══════════════════════════════════════════════════ -->
+    <title>PlanIt — Free Event Planning & Restaurant Reservation Management Software</title>
+    <meta name="description" content="PlanIt is the free, all-in-one platform for event planning and restaurant management. Create events in seconds — team chat, RSVP, QR check-in, tasks, seating maps, waitlists & live floor management. No account required." />
+    <meta name="keywords" content="free event planning software, event management platform, restaurant reservation system, venue management software, event RSVP tool, QR check-in app, waitlist management, team event planner, corporate event planning, wedding planner software, restaurant floor management, table management software, event ticketing free, guest list management, online event registration, event coordination tool, hospitality software, free event platform" />
+    <meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1" />
     <link rel="canonical" href="https://planitapp.onrender.com/" />
 
-    <!-- Structured data: SoftwareApplication -->
+    <!-- ═══════════════════════════════════════════════════
+         GEO & LANGUAGE
+    ═══════════════════════════════════════════════════ -->
+    <meta name="language" content="English" />
+    <meta name="geo.region" content="US" />
+    <link rel="alternate" hreflang="en" href="https://planitapp.onrender.com/" />
+
+    <!-- ═══════════════════════════════════════════════════
+         AUTHOR / OWNERSHIP
+    ═══════════════════════════════════════════════════ -->
+    <meta name="author" content="Aakshat Hariharan" />
+    <meta name="copyright" content="Aakshat Hariharan 2026" />
+    <meta name="revisit-after" content="7 days" />
+
+    <!-- ═══════════════════════════════════════════════════
+         OPEN GRAPH (Facebook / LinkedIn / Slack previews)
+    ═══════════════════════════════════════════════════ -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="PlanIt" />
+    <meta property="og:url" content="https://planitapp.onrender.com/" />
+    <meta property="og:title" content="PlanIt — Free Event Planning & Restaurant Management Platform" />
+    <meta property="og:description" content="Plan every detail. Execute flawlessly. Free event management with team chat, RSVP, QR check-in, tasks & live restaurant floor management. No account needed." />
+    <meta property="og:image" content="https://planitapp.onrender.com/planit-og.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="PlanIt — Event & Venue Management Platform" />
+    <meta property="og:locale" content="en_US" />
+
+    <!-- ═══════════════════════════════════════════════════
+         TWITTER / X CARD
+    ═══════════════════════════════════════════════════ -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:site" content="@planitapp" />
+    <meta name="twitter:title" content="PlanIt — Free Event Planning & Restaurant Management" />
+    <meta name="twitter:description" content="The all-in-one platform for events & hospitality. Team chat, RSVP, QR check-in, seating maps, waitlists. Free forever, no account needed." />
+    <meta name="twitter:image" content="https://planitapp.onrender.com/planit-og.png" />
+    <meta name="twitter:image:alt" content="PlanIt event management dashboard" />
+
+    <!-- ═══════════════════════════════════════════════════
+         STRUCTURED DATA — SoftwareApplication (rich result)
+    ═══════════════════════════════════════════════════ -->
     <script type="application/ld+json">
     {
       "@context": "https://schema.org",
       "@type": "SoftwareApplication",
       "name": "PlanIt",
+      "alternateName": ["PlanIt Events", "PlanIt Venue"],
       "applicationCategory": "BusinessApplication",
-      "operatingSystem": "Web",
+      "applicationSubCategory": "Event Management Software",
+      "operatingSystem": "Web, iOS, Android (PWA)",
       "url": "https://planitapp.onrender.com",
-      "description": "PlanIt is an event and reservation management platform for restaurants, venues, hotels, and corporate clients. Manage bookings, waitlists, guest check-in, and staff — all in one place.",
+      "description": "PlanIt is a free, all-in-one event planning and restaurant management platform. Features include team chat, RSVP management, QR code check-in, task management, seating maps, budget tracking, waitlist management, and live restaurant floor management.",
+      "featureList": [
+        "Real-time team chat",
+        "RSVP and guest list management",
+        "QR code check-in",
+        "Task and to-do management",
+        "Seating chart creator",
+        "Budget and expense tracking",
+        "Live restaurant floor management",
+        "Waitlist management",
+        "File sharing",
+        "Live polls and voting",
+        "Enterprise check-in dashboard",
+        "White-label branding"
+      ],
       "offers": {
         "@type": "Offer",
         "price": "0",
-        "priceCurrency": "USD"
+        "priceCurrency": "USD",
+        "description": "Free forever — no credit card required"
+      },
+      "aggregateRating": {
+        "@type": "AggregateRating",
+        "ratingValue": "5",
+        "ratingCount": "1",
+        "bestRating": "5"
       },
       "creator": {
         "@type": "Person",
-        "name": "Aakshat Hariharan"
+        "name": "Aakshat Hariharan",
+        "email": "planit.userhelp@gmail.com",
+        "url": "https://planitapp.onrender.com/about"
+      },
+      "screenshot": "https://planitapp.onrender.com/ss1.png",
+      "softwareVersion": "2.0",
+      "datePublished": "2026-01-01",
+      "inLanguage": "en-US",
+      "isAccessibleForFree": true
+    }
+    </script>
+
+    <!-- ═══════════════════════════════════════════════════
+         STRUCTURED DATA — WebSite (sitelinks searchbox)
+    ═══════════════════════════════════════════════════ -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebSite",
+      "name": "PlanIt",
+      "url": "https://planitapp.onrender.com",
+      "description": "Free event planning and restaurant management platform",
+      "potentialAction": {
+        "@type": "SearchAction",
+        "target": {
+          "@type": "EntryPoint",
+          "urlTemplate": "https://planitapp.onrender.com/discover?q={search_term_string}"
+        },
+        "query-input": "required name=search_term_string"
       }
     }
     </script>
 
-    <!-- PWA theme colour — matches the white header in light mode -->
-    <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
-    <meta name="theme-color" content="#0a0a0a" media="(prefers-color-scheme: dark)" />
+    <!-- ═══════════════════════════════════════════════════
+         STRUCTURED DATA — Organization
+    ═══════════════════════════════════════════════════ -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "Organization",
+      "name": "PlanIt",
+      "url": "https://planitapp.onrender.com",
+      "logo": "https://planitapp.onrender.com/planit-icon.svg",
+      "contactPoint": {
+        "@type": "ContactPoint",
+        "email": "planit.userhelp@gmail.com",
+        "contactType": "customer support",
+        "availableLanguage": "English"
+      },
+      "sameAs": []
+    }
+    </script>
 
-    <!--
-      iOS PWA
-      "default" → iOS renders an opaque status bar ABOVE the app content.
-      The header sits cleanly below the Dynamic Island with no blending.
-      (black-translucent is what caused the overlap — removed.)
-    -->
+    <!-- ═══════════════════════════════════════════════════
+         STRUCTURED DATA — FAQPage (rich result in search)
+    ═══════════════════════════════════════════════════ -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "Is PlanIt free to use?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Yes. PlanIt is completely free forever. No credit card is required, and there is no account needed to get started. Simply enter your event details and PlanIt generates a workspace instantly."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "What types of events can I manage with PlanIt?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "PlanIt supports any event type — weddings, corporate retreats, galas, conferences, birthday parties, nonprofit fundraisers, and more. PlanIt Venue also supports restaurant and hospitality operations including table management, waitlists, and QR reservations."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Do guests need to create an account to join my event?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "No. Guests join PlanIt events by entering their name — no account, email, or password required. This makes check-in and participation frictionless for all attendees."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "What features does PlanIt include?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "PlanIt includes real-time team chat, task management, RSVP tracking, QR code check-in, seating chart creation, budget and expense tracking, file sharing, live polls, waitlist management, and a restaurant floor manager. Enterprise mode adds personalized QR invites and a real-time attendance dashboard."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Can I use PlanIt for restaurant and venue management?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Yes. PlanIt Venue is specifically designed for restaurants, bars, and hospitality venues. It provides a live floor map, walk-in waitlist management, a public wait board, QR-based reservations, and server assignment tools — everything your front-of-house needs."
+          }
+        }
+      ]
+    }
+    </script>
+
+    <!-- ═══════════════════════════════════════════════════
+         PWA / MOBILE APP
+    ═══════════════════════════════════════════════════ -->
+    <meta name="theme-color" content="#050508" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="PlanIt" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <meta name="mobile-web-app-capable" content="yes" />
 
-    <!-- Open Graph / Facebook -->
-    <meta property="og:type" content="website" />
-    <meta property="og:url" content="https://planitapp.onrender.com/" />
-    <meta property="og:title" content="PlanIt — Event & Reservation Management for Restaurants and Venues" />
-    <meta property="og:description" content="Manage bookings, waitlists, and guest check-in for your restaurant, venue, or event. PlanIt is the all-in-one platform built for hospitality businesses." />
-    <meta property="og:image" content="/planit-og.png" />
+    <!-- ═══════════════════════════════════════════════════
+         PERFORMANCE — font preloads
+    ═══════════════════════════════════════════════════ -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" crossorigin />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="dns-prefetch" href="//fonts.googleapis.com" />
+    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,700;0,9..40,800&display=swap" rel="stylesheet" />
 
-    <!-- Twitter -->
-    <meta property="twitter:card" content="summary_large_image" />
-    <meta property="twitter:title" content="PlanIt — Event & Reservation Management" />
-    <meta property="twitter:description" content="Manage bookings, waitlists, and guest check-in for restaurants, venues, and events." />
-    <meta property="twitter:image" content="/planit-og.png" />
+    <!-- ═══════════════════════════════════════════════════
+         SECURITY HEADERS (supplementary — main headers on server)
+    ═══════════════════════════════════════════════════ -->
+    <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 
-    <!-- Fonts -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=Outfit:wght@600;700;800&display=swap" rel="stylesheet">
-
-    <title>PlanIt — Event & Reservation Management for Restaurants and Venues</title>
   </head>
   <body>
+    <!-- Noscript fallback for crawlers -->
+    <noscript>
+      <div style="font-family:sans-serif;padding:2rem;max-width:600px;margin:auto">
+        <h1>PlanIt — Free Event Planning &amp; Restaurant Management</h1>
+        <p>PlanIt is the free, all-in-one platform for event planning and restaurant management. Create events instantly — team chat, RSVP, QR check-in, tasks, seating maps, waitlists, and live floor management included. No account required.</p>
+        <p>Please enable JavaScript to use PlanIt, or visit <a href="https://planitapp.onrender.com">planitapp.onrender.com</a>.</p>
+        <h2>Features</h2>
+        <ul>
+          <li>Free event creation — no credit card needed</li>
+          <li>Real-time team chat for event coordinators</li>
+          <li>RSVP and guest list management</li>
+          <li>QR code check-in system</li>
+          <li>Task &amp; to-do management</li>
+          <li>Seating chart builder</li>
+          <li>Budget and expense tracking</li>
+          <li>Restaurant floor manager with live waitlist</li>
+          <li>White-label event platform for businesses</li>
+        </ul>
+      </div>
+    </noscript>
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
   </body>
