@@ -317,7 +317,7 @@ export default function Discover() {
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-neutral-800 text-xs font-medium text-neutral-500 mb-6" style={{ background: 'rgba(255,255,255,0.03)' }}>
             <Sparkles className="w-3.5 h-3.5" />{isWL ? company : "Open to everyone"}
           </div>
-          <h1 className="text-5xl md:text-6xl font-black text-white tracking-tight mb-4">{headline}</h1>
+          <h1 className="font-display text-5xl md:text-6xl font-black text-white tracking-tight mb-4">{headline}</h1>
           <p className="text-lg text-neutral-500 max-w-md mx-auto">{subline}</p>
           {!loading && total > 0 && (
             <div className="inline-flex items-center gap-2 mt-5 px-4 py-2 rounded-full border border-neutral-800 text-sm text-neutral-500" style={{ background: 'rgba(255,255,255,0.02)' }}>
