@@ -422,7 +422,7 @@ export default function OrganizerLogin() {
           <div className="w-16 h-16 mx-auto rounded-2xl bg-neutral-900 flex items-center justify-center mb-4">
             <Lock className="w-8 h-8 text-white" />
           </div>
-          <h1 className="text-2xl font-bold text-neutral-900 mb-1">Organizer Login</h1>
+          <h1 className="font-display text-2xl font-bold text-neutral-900 mb-1">Organizer Login</h1>
           {eventTitle && <p className="text-sm text-neutral-600 font-medium mb-1">{eventTitle}</p>}
           <p className="text-sm text-neutral-500">Log back in to access your event</p>
         </div>
