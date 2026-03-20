@@ -276,9 +276,33 @@ function JoinGate({ eventId, onJoined }) {
   const isNewUser     = step === 'name' && username.trim() && !lookupParticipant(username);
   const isFullBlocked = isFull && step === 'name' && username.trim() && !lookupParticipant(username);
 
+  // Step label map for the progress indicator
+  const STEP_LABELS = {
+    'name': 1,
+    'account-password': 2,
+    'event-password': publicInfo?.isPasswordProtected ? 3 : 2,
+    'pending-approval': 2,
+  };
+  const totalSteps = publicInfo?.isPasswordProtected ? 3 : 2;
+  const currentStepNum = STEP_LABELS[step] || 1;
+  const showStepProgress = step !== 'name';
+
   // Single inline form — no inner components so React never unmounts/remounts on keystroke
   const joinFormJSX = (
     <div className="space-y-4">
+
+      {/* ── Step progress dots ── */}
+      {showStepProgress && step !== 'pending-approval' && (
+        <div className="flex items-center gap-1.5 justify-center mb-2">
+          {Array.from({ length: totalSteps }).map((_, i) => (
+            <div key={i} className={`rounded-full transition-all duration-300 ${
+              i < currentStepNum
+                ? 'w-6 h-1.5 bg-neutral-900'
+                : 'w-1.5 h-1.5 bg-neutral-300'
+            }`} />
+          ))}
+        </div>
+      )}
 
       {/* ── STEP: name ── */}
       {step === 'name' && (
@@ -459,20 +483,29 @@ function JoinGate({ eventId, onJoined }) {
       {/* ── STEP: pending approval ── */}
       {step === 'pending-approval' && (
         <div className="text-center py-4 space-y-4">
-          <div className="w-16 h-16 mx-auto rounded-full bg-amber-50 border-2 border-amber-200 flex items-center justify-center">
-            <Clock className="w-7 h-7 text-amber-500" />
+          {/* Animated pulse ring */}
+          <div className="relative w-16 h-16 mx-auto">
+            <div className="absolute inset-0 rounded-full bg-amber-100 border-2 border-amber-200 animate-pulse" />
+            <div className="absolute inset-0 flex items-center justify-center">
+              <Clock className="w-7 h-7 text-amber-500" />
+            </div>
           </div>
           <div>
             <p className="font-bold text-neutral-900 mb-1">Awaiting organizer approval</p>
             <p className="text-sm text-neutral-500 leading-relaxed">
               Your request to join as <strong className="text-neutral-700">{username}</strong> has been sent.
-              This page will automatically unlock once the organizer approves your request.
+              This page will automatically unlock once the organizer approves.
             </p>
           </div>
           <div className="flex items-center justify-center gap-2 py-3 px-4 bg-amber-50 border border-amber-200 rounded-xl">
-            <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
-            <span className="text-xs font-semibold text-amber-700">Waiting for approval…</span>
+            <span className="flex gap-0.5">
+              <span className="w-1 h-3 bg-amber-400 rounded-full animate-[bounce_1s_ease-in-out_infinite]" style={{animationDelay:'0ms'}}/>
+              <span className="w-1 h-3 bg-amber-400 rounded-full animate-[bounce_1s_ease-in-out_infinite]" style={{animationDelay:'150ms'}}/>
+              <span className="w-1 h-3 bg-amber-400 rounded-full animate-[bounce_1s_ease-in-out_infinite]" style={{animationDelay:'300ms'}}/>
+            </span>
+            <span className="text-xs font-semibold text-amber-700">Checking every 4 seconds…</span>
           </div>
+          <p className="text-xs text-neutral-400">You'll be taken straight in once approved — no need to refresh.</p>
           <button
             onClick={() => { setStep('name'); setUsername(''); setError(''); }}
             className="text-xs text-neutral-400 hover:text-neutral-700 transition-colors underline underline-offset-2"
@@ -1263,7 +1296,10 @@ export default function EventSpace() {
       )}
       {showOnboarding && (
         <Onboarding eventId={eventId} subdomain={event?.subdomain}
-          isOrganizer={isOrganizer} onClose={() => setShowOnboarding(false)} />
+          isOrganizer={isOrganizer}
+          isEnterprise={event?.isEnterpriseMode}
+          isVenue={event?.isTableServiceMode}
+          onClose={() => setShowOnboarding(false)} />
       )}
 
       {/* Cover banner */}
