@@ -351,9 +351,229 @@ SECTION 12 -- GENERAL PROVISIONS
 Copyright (c) 2026 Aakshat Hariharan. All rights reserved.
 */
 
-// 
-// UTILITIES
-// 
+// ─────────────────────────────────────────────────────────────────────────────
+// GLOBAL STYLES — injected once
+// ─────────────────────────────────────────────────────────────────────────────
+const GLOBAL_CSS = `
+  @import url('https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,700&display=swap');
+
+  :root {
+    --accent-1: #6366f1;
+    --accent-2: #8b5cf6;
+    --glow-1: rgba(99,102,241,0.18);
+    --glow-2: rgba(139,92,246,0.12);
+    --surface-glass: rgba(255,255,255,0.03);
+    --border-subtle: rgba(255,255,255,0.06);
+  }
+
+  @keyframes loader-bar {
+    0%   { transform: scaleX(0);   }
+    60%  { transform: scaleX(0.85);}
+    100% { transform: scaleX(1);   }
+  }
+  @keyframes loader-fade-out {
+    0%   { opacity:1; }
+    100% { opacity:0; pointer-events:none; }
+  }
+  @keyframes hero-word-in {
+    0%   { opacity:0; transform: translateY(28px) skewY(3deg); filter: blur(6px); }
+    100% { opacity:1; transform: translateY(0) skewY(0deg);   filter: blur(0);   }
+  }
+  @keyframes grid-pulse {
+    0%,100% { opacity:0.018; }
+    50%      { opacity:0.042; }
+  }
+  @keyframes orb-drift-a {
+    0%,100% { transform: translate(0,0) scale(1);      }
+    33%     { transform: translate(30px,-20px) scale(1.06); }
+    66%     { transform: translate(-18px,25px) scale(0.96); }
+  }
+  @keyframes orb-drift-b {
+    0%,100% { transform: translate(0,0) scale(1);      }
+    33%     { transform: translate(-22px,18px) scale(1.04); }
+    66%     { transform: translate(28px,-15px) scale(0.98); }
+  }
+  @keyframes badge-glow {
+    0%,100% { box-shadow: 0 0 0 0 rgba(99,102,241,0); }
+    50%     { box-shadow: 0 0 22px 2px rgba(99,102,241,0.22); }
+  }
+  @keyframes scan-line {
+    0%   { transform: translateY(-100%); }
+    100% { transform: translateY(100vh); }
+  }
+  @keyframes cta-shimmer {
+    0%   { background-position: -200% center; }
+    100% { background-position:  200% center; }
+  }
+  @keyframes float-gentle {
+    0%,100% { transform: translateY(0px); }
+    50%     { transform: translateY(-8px); }
+  }
+  @keyframes scroll-indicator-bounce {
+    0%,100% { opacity:0.3; transform:translateY(0); }
+    50%     { opacity:0.7; transform:translateY(6px); }
+  }
+  @keyframes tick-in {
+    0%   { opacity:0; transform:scale(0.6); }
+    80%  { transform:scale(1.15); }
+    100% { opacity:1; transform:scale(1); }
+  }
+
+  .font-syne    { font-family: 'Syne', sans-serif; }
+  .hero-word    { animation: hero-word-in 0.7s cubic-bezier(0.22,1,0.36,1) both; }
+  .loading-bar  { animation: loader-bar 1.6s cubic-bezier(0.22,1,0.36,1) forwards; transform-origin: left; }
+  .cta-primary  {
+    background: linear-gradient(135deg, #fff 0%, #e8e8f0 100%);
+    background-size: 200% auto;
+    transition: background-position 0.5s ease, transform 0.2s ease, box-shadow 0.3s ease;
+  }
+  .cta-primary:hover {
+    background-position: right center;
+    transform: translateY(-2px);
+    box-shadow: 0 20px 40px rgba(0,0,0,0.4), 0 0 30px rgba(99,102,241,0.15);
+  }
+  .cta-venue {
+    transition: transform 0.2s ease, box-shadow 0.3s ease, border-color 0.3s ease;
+  }
+  .cta-venue:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 20px 40px rgba(0,0,0,0.4), 0 0 30px rgba(249,115,22,0.12);
+    border-color: rgba(249,115,22,0.6);
+  }
+  .branch-card {
+    transition: transform 0.4s cubic-bezier(0.22,1,0.36,1), box-shadow 0.4s ease;
+  }
+  .branch-card:hover { transform: translateY(-4px); }
+  .branch-card-events:hover { box-shadow: 0 30px 60px rgba(0,0,0,0.5), 0 0 60px rgba(99,102,241,0.08); }
+  .branch-card-venue:hover  { box-shadow: 0 30px 60px rgba(0,0,0,0.5), 0 0 60px rgba(249,115,22,0.08); }
+  .feature-card {
+    transition: transform 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+    border: 1px solid rgba(255,255,255,0.05);
+  }
+  .feature-card:hover {
+    transform: translateY(-3px);
+    border-color: rgba(99,102,241,0.25);
+    box-shadow: 0 16px 40px rgba(0,0,0,0.4), 0 0 24px rgba(99,102,241,0.07);
+  }
+  .stat-card {
+    border: 1px solid rgba(255,255,255,0.06);
+    transition: border-color 0.3s ease, box-shadow 0.3s ease, transform 0.3s ease;
+  }
+  .stat-card:hover {
+    border-color: rgba(99,102,241,0.3);
+    box-shadow: 0 8px 32px rgba(99,102,241,0.1);
+    transform: translateY(-2px);
+  }
+  .shimmer-white {
+    background: linear-gradient(90deg, #fff 0%, #a5b4fc 50%, #fff 100%);
+    background-size: 200% auto;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    animation: cta-shimmer 4s linear infinite;
+  }
+  .shimmer-slate {
+    background: linear-gradient(90deg, #94a3b8 0%, #cbd5e1 50%, #94a3b8 100%);
+    background-size: 200% auto;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    animation: cta-shimmer 4s linear infinite;
+  }
+  .typing-dot { animation: float-gentle 1.2s ease-in-out infinite; }
+  .typing-dot:nth-child(2) { animation-delay: 0.2s; }
+  .typing-dot:nth-child(3) { animation-delay: 0.4s; }
+  .nav-link { position:relative; }
+  .nav-link::after {
+    content:''; position:absolute; bottom:-2px; left:50%; right:50%;
+    height:1px; background:var(--accent-1);
+    transition: left 0.3s ease, right 0.3s ease;
+  }
+  .nav-link:hover::after { left:10%; right:10%; }
+`;
+
+function InjectGlobalCSS() {
+  useEffect(() => {
+    const id = 'planit-home-styles';
+    if (!document.getElementById(id)) {
+      const s = document.createElement('style'); s.id = id; s.textContent = GLOBAL_CSS;
+      document.head.appendChild(s);
+    }
+    return () => { const el = document.getElementById(id); if (el) el.remove(); };
+  }, []);
+  return null;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// CINEMATIC LOADING SCREEN
+// ─────────────────────────────────────────────────────────────────────────────
+function LoadingScreen({ onDone }) {
+  const [phase, setPhase] = useState(0); // 0=loading, 1=fading
+  useEffect(() => {
+    const t1 = setTimeout(() => setPhase(1), 1700);
+    const t2 = setTimeout(() => onDone(), 2100);
+    return () => { clearTimeout(t1); clearTimeout(t2); };
+  }, [onDone]);
+  return (
+    <div
+      aria-hidden="true"
+      style={{
+        position:'fixed', inset:0, zIndex:9999, background:'#050508',
+        display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center',
+        transition:'opacity 0.4s ease',
+        opacity: phase === 1 ? 0 : 1,
+        pointerEvents: phase === 1 ? 'none' : 'all',
+      }}
+    >
+      {/* Scan line */}
+      <div style={{ position:'absolute', inset:0, overflow:'hidden', pointerEvents:'none' }}>
+        <div style={{ position:'absolute', top:0, left:0, right:0, height:'2px', background:'linear-gradient(90deg, transparent, rgba(99,102,241,0.4), transparent)', animation:'scan-line 1.8s linear 1' }} />
+      </div>
+      {/* Logo */}
+      <div style={{ display:'flex', alignItems:'center', gap:14, marginBottom:36 }}>
+        <div style={{ width:44, height:44, borderRadius:14, background:'rgba(99,102,241,0.1)', border:'1px solid rgba(99,102,241,0.3)', display:'flex', alignItems:'center', justifyContent:'center', boxShadow:'0 0 24px rgba(99,102,241,0.2)' }}>
+          <Calendar style={{ width:22, height:22, color:'#818cf8' }} />
+        </div>
+        <span style={{ fontFamily:'Syne,sans-serif', fontSize:26, fontWeight:800, color:'#fff', letterSpacing:'-0.03em' }}>PlanIt</span>
+      </div>
+      {/* Progress bar */}
+      <div style={{ width:200, height:1, background:'rgba(255,255,255,0.06)', borderRadius:1, overflow:'hidden' }}>
+        <div className="loading-bar" style={{ height:'100%', background:'linear-gradient(90deg, #6366f1, #8b5cf6)', borderRadius:1 }} />
+      </div>
+      <p style={{ marginTop:16, fontSize:11, letterSpacing:'0.18em', textTransform:'uppercase', color:'rgba(255,255,255,0.25)', fontFamily:'DM Sans,sans-serif' }}>Event & venue management</p>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ANIMATED GRID BACKGROUND
+// ─────────────────────────────────────────────────────────────────────────────
+function CinematicGrid() {
+  return (
+    <div aria-hidden="true" style={{ position:'absolute', inset:0, overflow:'hidden', pointerEvents:'none', zIndex:0 }}>
+      {/* Animated grid lines */}
+      <svg style={{ position:'absolute', inset:0, width:'100%', height:'100%', animation:'grid-pulse 6s ease-in-out infinite' }} preserveAspectRatio="xMidYMid slice">
+        <defs>
+          <pattern id="grid-sm" width="60" height="60" patternUnits="userSpaceOnUse">
+            <path d="M 60 0 L 0 0 0 60" fill="none" stroke="rgba(255,255,255,0.03)" strokeWidth="1"/>
+          </pattern>
+          <pattern id="grid-lg" width="240" height="240" patternUnits="userSpaceOnUse">
+            <path d="M 240 0 L 0 0 0 240" fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth="1"/>
+          </pattern>
+          <radialGradient id="grid-fade" cx="50%" cy="40%" r="60%">
+            <stop offset="0%" stopColor="white" stopOpacity="1"/>
+            <stop offset="100%" stopColor="white" stopOpacity="0"/>
+          </radialGradient>
+          <mask id="grid-mask"><rect width="100%" height="100%" fill="url(#grid-fade)"/></mask>
+        </defs>
+        <rect width="100%" height="100%" fill="url(#grid-sm)" mask="url(#grid-mask)"/>
+        <rect width="100%" height="100%" fill="url(#grid-lg)" mask="url(#grid-mask)"/>
+      </svg>
+      {/* Floating orbs */}
+      <div style={{ position:'absolute', top:'15%', left:'12%', width:500, height:500, borderRadius:'50%', background:'radial-gradient(circle, rgba(99,102,241,0.1) 0%, transparent 70%)', animation:'orb-drift-a 18s ease-in-out infinite', filter:'blur(40px)' }}/>
+      <div style={{ position:'absolute', bottom:'10%', right:'10%', width:400, height:400, borderRadius:'50%', background:'radial-gradient(circle, rgba(139,92,246,0.08) 0%, transparent 70%)', animation:'orb-drift-b 22s ease-in-out infinite', filter:'blur(50px)' }}/>
+      <div style={{ position:'absolute', top:'55%', left:'55%', width:300, height:300, borderRadius:'50%', background:'radial-gradient(circle, rgba(249,115,22,0.04) 0%, transparent 70%)', animation:'orb-drift-a 26s ease-in-out infinite reverse', filter:'blur(60px)' }}/>
+    </div>
+  );
+}
 
 function slugify(text) {
   return text.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').substring(0, 40);
@@ -440,7 +660,7 @@ function SectionHeader({ eyebrow, title, subtitle }) {
   return (
     <Reveal className="text-center mb-16">
       {eyebrow && <p className="text-xs font-semibold text-neutral-500 uppercase tracking-widest mb-3">{eyebrow}</p>}
-      <h2 className="font-display text-3xl sm:text-5xl md:text-7xl font-black text-white mb-5 leading-tight">{title}</h2>
+      <h2 className="font-syne text-3xl sm:text-5xl md:text-7xl font-black text-white mb-5 leading-tight">{title}</h2>
       {subtitle && <p className="text-xl text-neutral-400 max-w-2xl mx-auto leading-relaxed">{subtitle}</p>}
     </Reveal>
   );
@@ -929,31 +1149,6 @@ function EnterpriseDemo() {
   );
 }
 
-// ─────────────────────────────────────────────────────────
-//  SCROLL PROGRESS BAR
-// ─────────────────────────────────────────────────────────
-function ScrollProgressBar() {
-  const [p, setP] = useState(0);
-  useEffect(() => {
-    const update = () => {
-      const max = document.documentElement.scrollHeight - window.innerHeight;
-      setP(max > 0 ? (window.scrollY / max) * 100 : 0);
-    };
-    window.addEventListener('scroll', update, { passive: true });
-    return () => window.removeEventListener('scroll', update);
-  }, []);
-  return (
-    <div className="fixed top-0 left-0 right-0 pointer-events-none" style={{ height: 2, zIndex: 998, background: 'rgba(255,255,255,0.03)' }}>
-      <div style={{
-        height: '100%', width: `${p}%`,
-        background: 'linear-gradient(90deg, rgba(100,116,139,0.5), rgba(255,255,255,0.9))',
-        transition: 'width 0.06s linear',
-        animation: 'progress-bar-glow 2s ease-in-out infinite',
-      }} />
-    </div>
-  );
-}
-
 import StarBackground from '../components/StarBackground';
 
 
@@ -989,8 +1184,9 @@ export default function Home() {
   const [showAccountPassword, setShowAccountPassword] = useState(false);
   const [fieldErrors, setFieldErrors] = useState({});
   const [selectedBranch, setSelectedBranch] = useState(null); // null | 'events' | 'venue'
+  const [loadingDone, setLoadingDone] = useState(false);
   // On white-label domains, skip the branch selector and go straight to event creation
-  useEffect(() => { if (isWL) { setSelectedBranch('events'); } }, [isWL]);
+  useEffect(() => { if (isWL) { setSelectedBranch('events'); setLoadingDone(true); } }, [isWL]);
 
   const selectBranch = (branch) => {
     setSelectedBranch(branch);
@@ -1113,6 +1309,8 @@ export default function Home() {
 
   return (
     <div className="min-h-screen text-white relative" style={{ background: 'var(--bg-base)', overflowX: 'clip', maxWidth: '100vw', isolation: 'isolate' }}>
+      <InjectGlobalCSS />
+      {!isWL && !loadingDone && <LoadingScreen onDone={() => setLoadingDone(true)} />}
       <ScrollProgressBar />
 
 
@@ -1139,7 +1337,7 @@ export default function Home() {
                     {!isWL && <div className="absolute -top-1 -right-1 w-3 h-3 bg-emerald-500 rounded-full border-2 border-[#06060c] animate-pulse" />}
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className="text-xl font-bold text-white">{isWL ? wlName : 'PlanIt'}</span>
+                    <span className="font-syne text-xl font-bold text-white tracking-tight">{isWL ? wlName : 'PlanIt'}</span>
                     {!isWL && <span className="hidden sm:block px-2 py-0.5 rounded-md text-[10px] font-bold bg-neutral-800 border border-neutral-700 text-neutral-400 uppercase tracking-wider">Events</span>}
                   </div>
                 </>
@@ -1151,7 +1349,7 @@ export default function Home() {
                 <UtensilsCrossed className="w-5 h-5 text-orange-400" />
               </div>
               <div className="flex items-center gap-2">
-                <span className="text-xl font-bold text-white">{isWL ? wlName : 'PlanIt'}</span>
+                <span className="font-syne text-xl font-bold text-white tracking-tight">{isWL ? wlName : 'PlanIt'}</span>
                 {!isWL && <span className="hidden sm:block px-2 py-0.5 rounded-md text-[10px] font-bold bg-orange-500/10 border border-orange-500/25 text-orange-400 uppercase tracking-wider">Venue</span>}
               </div>
             </div>
@@ -1241,175 +1439,182 @@ export default function Home() {
       </header>
 
       <main className="relative" style={{ zIndex: 2, overflowX: 'hidden', maxWidth: '100vw' }}>
-        {/* HERO */}
+        {/* HERO — redesigned */}
         <section id="hero-top" className="relative min-h-screen flex items-center" style={{ overflow: 'hidden', maxWidth: '100vw' }}>
-          {/* Ambient gradient depth layer */}
-          <div className="absolute inset-0 pointer-events-none" style={{
-            backgroundImage: 'radial-gradient(ellipse 80% 50% at 50% -10%, rgba(100,116,139,0.12) 0%, transparent 60%), radial-gradient(ellipse 40% 30% at 80% 80%, rgba(249,115,22,0.04) 0%, transparent 50%)',
-            zIndex: 1,
-          }} />
-          {/* Background — hero image if WL sets one, otherwise starfield */}
+          {/* Layered background system */}
           {(isWL && heroImage)
-            ? <div className="absolute inset-0" style={{ backgroundImage: `url(${heroImage})`, backgroundSize: 'cover', backgroundPosition: 'center', opacity: 0.3 }} />
-            : <StarBackground fixed={false} />
+            ? <div className="absolute inset-0" style={{ backgroundImage: `url(${heroImage})`, backgroundSize: 'cover', backgroundPosition: 'center', opacity: 0.2 }} />
+            : <CinematicGrid />
           }
+          {/* Deep ambient radials */}
+          <div aria-hidden="true" className="absolute inset-0 pointer-events-none" style={{ zIndex: 1,
+            background: 'radial-gradient(ellipse 90% 60% at 50% 0%, rgba(99,102,241,0.07) 0%, transparent 55%), radial-gradient(ellipse 50% 40% at 85% 90%, rgba(249,115,22,0.05) 0%, transparent 50%), radial-gradient(ellipse 60% 40% at 10% 70%, rgba(139,92,246,0.05) 0%, transparent 50%)',
+          }} />
+
           <div className="w-full relative" style={{ zIndex: 2 }}>
             <div className="max-w-6xl mx-auto px-4 sm:px-8 lg:px-12 py-20 sm:py-28 lg:py-36 text-center">
 
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6, delay: 0.15 }}
+              {/* Eyebrow badges */}
+              <motion.div initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }} transition={{ duration:0.5, delay:0.1 }}
                 className="inline-flex items-center gap-3 mb-12"
               >
-                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold border border-neutral-800/80 text-neutral-400 uppercase tracking-widest cursor-default" style={{ background: 'rgba(255,255,255,0.02)' }}>
+                <span className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold border border-indigo-500/20 text-indigo-300 uppercase tracking-widest cursor-default"
+                  style={{ background: 'rgba(99,102,241,0.07)', animation:'badge-glow 3s ease-in-out infinite' }}>
                   <Calendar className="w-3 h-3" />{isWL ? 'Events' : 'PlanIt Events'}
                 </span>
-                <span className="text-neutral-700 text-sm">·</span>
-                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold border border-orange-500/25 text-orange-400 uppercase tracking-widest cursor-default" style={{ background: 'rgba(249,115,22,0.06)' }}>
+                <span className="w-1 h-1 rounded-full bg-neutral-700" />
+                <span className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold border border-orange-500/25 text-orange-400 uppercase tracking-widest cursor-default"
+                  style={{ background: 'rgba(249,115,22,0.06)' }}>
                   <UtensilsCrossed className="w-3 h-3" />{isWL ? 'Venue' : 'PlanIt Venue'}
                 </span>
               </motion.div>
 
-              <motion.h1
-                initial={{ opacity: 0, y: 30 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.9, delay: 0.28, ease: [0.22, 1, 0.36, 1] }}
-                className="font-display font-black leading-[0.92] tracking-tight mb-8"
-                style={{ fontSize: 'clamp(2.5rem, 8.5vw, 7rem)' }}
-              >
-                {(isWL && heroHeadline) ? heroHeadline : <>Plan every detail.<br /><span className="shimmer-slate">Execute</span>{' '}<span className="shimmer-white">flawlessly.</span></>}
-              </motion.h1>
+              {/* Main headline — word-by-word animation */}
+              {(isWL && heroHeadline)
+                ? (
+                  <motion.h1 initial={{ opacity:0, y:30 }} animate={{ opacity:1, y:0 }} transition={{ duration:0.9, delay:0.25 }}
+                    className="font-syne font-black leading-[0.92] tracking-tight mb-8 text-white"
+                    style={{ fontSize:'clamp(2.5rem,8.5vw,7rem)' }}>
+                    {heroHeadline}
+                  </motion.h1>
+                ) : (
+                  <h1 className="font-syne font-black leading-[0.9] tracking-tight mb-8"
+                    style={{ fontSize:'clamp(2.6rem,8.5vw,7rem)' }}>
+                    <span className="hero-word inline-block text-white" style={{ animationDelay:'0.25s' }}>Plan</span>{' '}
+                    <span className="hero-word inline-block text-white" style={{ animationDelay:'0.38s' }}>every</span>{' '}
+                    <span className="hero-word inline-block text-white" style={{ animationDelay:'0.51s' }}>detail.</span>
+                    <br />
+                    <span className="hero-word inline-block shimmer-slate" style={{ animationDelay:'0.64s' }}>Execute</span>{' '}
+                    <span className="hero-word inline-block shimmer-white" style={{ animationDelay:'0.77s' }}>flawlessly.</span>
+                  </h1>
+                )
+              }
 
-              <motion.p
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.7, delay: 0.42 }}
-                className="text-xl md:text-2xl text-neutral-300 max-w-2xl mx-auto leading-relaxed font-light mb-14"
+              {/* Sub-headline */}
+              <motion.p initial={{ opacity:0, y:20 }} animate={{ opacity:1, y:0 }} transition={{ duration:0.7, delay:0.9 }}
+                className="text-lg md:text-xl text-neutral-400 max-w-2xl mx-auto leading-relaxed font-light mb-14"
               >
-                {isWL ? (heroSubheadline || wlName || 'Your event platform') : <>The all-in-one workspace for events and hospitality. <span className="text-neutral-200 font-medium">Team chat, tasks, RSVP, check-in</span> — and a live floor manager for restaurants.</>}
+                {isWL
+                  ? (heroSubheadline || wlName || 'Your event platform')
+                  : <>The complete workspace for events &amp; hospitality —{' '}
+                      <span className="text-neutral-200 font-medium">team chat, tasks, RSVP, check-in</span>
+                      {' '}and a live floor manager for restaurants.</>
+                }
               </motion.p>
 
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.7, delay: 0.55 }}
-                className="flex flex-col sm:flex-row items-center justify-center gap-3 mb-16 w-full px-0 sm:px-0"
-              >
-                <a href="#planit-events" onClick={(e) => { e.preventDefault(); selectBranch('events'); }} className="group inline-flex items-center justify-center gap-3 w-full sm:w-auto px-7 py-4 bg-white text-neutral-900 text-sm font-bold rounded-2xl hover:bg-neutral-100 hover:scale-105 transition-all duration-300 shadow-2xl">
+              {/* CTA buttons */}
+              <motion.div initial={{ opacity:0, y:20 }} animate={{ opacity:1, y:0 }} transition={{ duration:0.7, delay:1.05 }}
+                className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-16">
+                <a href="#planit-events"
+                  onClick={(e) => { e.preventDefault(); selectBranch('events'); }}
+                  className="cta-primary group inline-flex items-center justify-center gap-3 w-full sm:w-auto px-8 py-4 bg-white text-neutral-900 text-sm font-bold rounded-2xl shadow-2xl">
                   <Calendar className="w-4 h-4" />
-                  {(isWL && heroCta) ? heroCta : 'PlanIt Events'}
+                  {(isWL && heroCta) ? heroCta : 'Start with Events'}
                   <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform duration-300" />
                 </a>
                 <a href="#planit-venue"
                   onClick={(e) => { e.preventDefault(); selectBranch('venue'); }}
-                  className="group inline-flex items-center justify-center gap-3 w-full sm:w-auto px-7 py-4 border border-orange-500/30 text-orange-400 text-sm font-bold rounded-2xl hover:border-orange-400 hover:scale-105 transition-all duration-300"
+                  className="cta-venue group inline-flex items-center justify-center gap-3 w-full sm:w-auto px-8 py-4 border border-orange-500/30 text-orange-400 text-sm font-bold rounded-2xl"
                   style={{ background: 'rgba(249,115,22,0.06)' }}>
                   <UtensilsCrossed className="w-4 h-4" />
-                  PlanIt Venue
+                  Explore Venue
                   <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform duration-300" />
                 </a>
               </motion.div>
 
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.7, delay: 0.68 }}
-                className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6 max-w-xl mx-auto w-full"
-              >
+              {/* Trust stats */}
+              <motion.div initial={{ opacity:0, y:20 }} animate={{ opacity:1, y:0 }} transition={{ duration:0.7, delay:1.2 }}
+                className="grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-xl mx-auto">
                 {[
-                  { tag: 'Free forever',      desc: 'No credit card required'          },
-                  { tag: 'No accounts',       desc: 'Guests join by name, instantly'   },
-                  { tag: 'Unlimited team',    desc: 'Every organizer, vendor, volunteer'},
-                ].map((item, i) => (
-                  <div key={i}
-                    className="stat-card text-center p-6 rounded-2xl border border-neutral-800/70 hover:border-neutral-600 transition-all duration-400 cursor-default hover:scale-105"
-                    style={{ background: 'rgba(255,255,255,0.03)' }}>
-                    <div className="text-sm font-black text-white mb-1 tracking-wide uppercase">{item.tag}</div>
-                    <div className="text-xs font-medium text-neutral-400">{item.desc}</div>
+                  { tag: 'Free forever',   desc: 'No credit card required',           icon: '✦' },
+                  { tag: 'Zero accounts',  desc: 'Guests join by name instantly',      icon: '◈' },
+                  { tag: 'Unlimited team', desc: 'Every organizer & vendor included',  icon: '◉' },
+                ].map((item) => (
+                  <div key={item.tag} className="stat-card text-center p-5 rounded-2xl cursor-default"
+                    style={{ background:'rgba(255,255,255,0.025)', backdropFilter:'blur(12px)' }}>
+                    <div className="text-indigo-400 text-lg mb-1">{item.icon}</div>
+                    <div className="text-sm font-black text-white mb-0.5 tracking-wide">{item.tag}</div>
+                    <div className="text-xs text-neutral-500">{item.desc}</div>
                   </div>
                 ))}
               </motion.div>
 
               {/* Scroll indicator */}
-              <div className="mt-16 flex flex-col items-center gap-2 opacity-40 hover:opacity-70 transition-opacity duration-300 cursor-default">
-                <span className="text-[10px] font-bold uppercase tracking-[0.25em] text-neutral-400">Scroll</span>
-                <div style={{ width: 1, height: 36, background: 'linear-gradient(to bottom, rgba(255,255,255,0.3), transparent)', animation: 'scroll-indicator-bounce 2s ease-in-out infinite' }} />
+              <div className="mt-16 flex flex-col items-center gap-2 cursor-default" style={{ opacity:0.4 }}>
+                <span className="text-[10px] font-bold uppercase tracking-[0.25em] text-neutral-500">Scroll</span>
+                <div style={{ width:1, height:36, background:'linear-gradient(to bottom, rgba(99,102,241,0.6), transparent)', animation:'scroll-indicator-bounce 2s ease-in-out infinite' }} />
               </div>
-
             </div>
           </div>
         </section>
 
 
         {/* ═══════════════════════════════════════════════════════════
-            BRANCH GATEWAY — two-panel split, one PlanIt family
+            BRANCH GATEWAY — redesigned cards
         ═══════════════════════════════════════════════════════════ */}
-        <section className="relative border-t border-neutral-800/40 overflow-hidden" style={{ display: (selectedBranch || isWL) ? 'none' : 'block' }}>
-          {/* Shared family label at top */}
-          <div className="text-center py-10 relative z-10">
+        <section className="relative border-t overflow-hidden" style={{ borderColor:'rgba(255,255,255,0.05)', display: (selectedBranch || isWL) ? 'none' : 'block' }}>
+          {/* Section label */}
+          <div className="text-center pt-14 pb-8 relative z-10">
             <Reveal>
-              <div className="inline-flex items-center gap-3 px-5 py-2.5 rounded-full border border-neutral-800" style={{ background: 'rgba(255,255,255,0.025)' }}>
+              <div className="inline-flex items-center gap-3 px-5 py-2.5 rounded-full border border-neutral-800"
+                style={{ background:'rgba(255,255,255,0.02)', backdropFilter:'blur(8px)' }}>
                 {!isWL && <span className="text-[10px] font-black uppercase tracking-[0.25em] text-neutral-300">The PlanIt Family</span>}
-                <span className="w-px h-3 bg-neutral-700" />
-                <span className="text-[10px] font-bold text-neutral-400">Two branches, one platform</span>
+                <span className="w-px h-3 bg-neutral-800" />
+                <span className="text-[10px] font-bold text-neutral-500">Two branches, one platform</span>
               </div>
             </Reveal>
           </div>
 
-          {/* Split panel */}
-          <div className="grid md:grid-cols-2">
+          {/* Split cards */}
+          <div className="grid md:grid-cols-2 gap-px" style={{ background:'rgba(255,255,255,0.04)' }}>
 
-            {/* ── Events branch ── */}
+            {/* Events branch */}
             <Reveal>
               <a href="#planit-events"
                 onClick={(e) => { e.preventDefault(); selectBranch('events'); }}
-                className="group relative flex flex-col p-10 sm:p-14 overflow-hidden border-r border-neutral-800/50 cursor-pointer block"
-                style={{ minHeight: '480px', background: 'rgba(15,15,20,0.8)' }}>
+                className="branch-card branch-card-events group relative flex flex-col p-10 sm:p-14 overflow-hidden cursor-pointer block"
+                style={{ minHeight:'500px', background:'#08080f' }}>
+                {/* Hover glow */}
                 <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-700"
-                  style={{ background: 'radial-gradient(ellipse 70% 60% at 15% 50%, rgba(148,163,184,0.07) 0%, transparent 70%)' }} />
-                {/* Branch badge */}
+                  style={{ background:'radial-gradient(ellipse 80% 70% at 0% 50%, rgba(99,102,241,0.08) 0%, transparent 65%)' }} />
+                {/* Top accent line */}
+                <div className="absolute top-0 left-0 right-0 h-px opacity-0 group-hover:opacity-100 transition-opacity duration-500"
+                  style={{ background:'linear-gradient(90deg, transparent, rgba(99,102,241,0.5), transparent)' }} />
                 <div className="relative mb-10">
-                  <div className="inline-flex items-center gap-2.5 px-3.5 py-2 rounded-2xl border border-neutral-700/60 bg-neutral-800/60">
-                    <Calendar className="w-3.5 h-3.5 text-neutral-400" />
-                    <span className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400">{isWL ? (wlName || 'Events') : 'PlanIt Events'}</span>
+                  <div className="inline-flex items-center gap-2.5 px-3.5 py-2 rounded-2xl border border-indigo-500/20 bg-indigo-500/8">
+                    <Calendar className="w-3.5 h-3.5 text-indigo-400" />
+                    <span className="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-400">{isWL ? (wlName || 'Events') : 'PlanIt Events'}</span>
                   </div>
                 </div>
-                {/* Headline */}
                 <div className="relative flex-1">
-                  <div className="text-xs font-bold uppercase tracking-widest text-neutral-400 mb-3">Branch 01</div>
-                  <h3 className="font-display text-4xl sm:text-5xl font-black text-white leading-[0.95] mb-5 tracking-tight">
-                    For anyone<br />
-                    who runs<br />
-                    <span className="text-neutral-300">events.</span>
+                  <div className="text-xs font-bold uppercase tracking-widest text-neutral-600 mb-3">Branch 01</div>
+                  <h3 className="font-syne text-4xl sm:text-5xl font-black text-white leading-[0.92] mb-5 tracking-tight">
+                    For anyone<br />who runs<br /><span className="text-neutral-400">events.</span>
                   </h3>
-                  <p className="text-neutral-400 text-sm leading-relaxed max-w-xs mb-8">
-                    Weddings, corporate retreats, galas, conferences. The complete planning workspace — task management, team chat, RSVP, QR check-in, expenses. Built for the whole arc.
+                  <p className="text-neutral-500 text-sm leading-relaxed max-w-xs mb-8">
+                    Weddings, corporate retreats, galas, conferences. The complete planning workspace — tasks, team chat, RSVP, QR check-in, expenses. Built for the whole arc.
                   </p>
                   <div className="flex flex-wrap gap-2 mb-8">
                     {['Chat', 'Tasks', 'RSVP', 'QR check-in', 'Polls', 'Files', 'Budget'].map(t => (
-                      <span key={t} className="px-2.5 py-1 text-[11px] font-semibold rounded-lg bg-neutral-800/80 border border-neutral-700/60 text-neutral-500">{t}</span>
+                      <span key={t} className="px-2.5 py-1 text-[11px] font-semibold rounded-lg bg-indigo-500/8 border border-indigo-500/15 text-indigo-400/70">{t}</span>
                     ))}
                   </div>
-                  <div className="flex items-center gap-2 text-sm font-bold text-neutral-400 group-hover:text-white transition-colors duration-300">
+                  <div className="flex items-center gap-2 text-sm font-bold text-neutral-500 group-hover:text-indigo-400 transition-colors duration-300">
                     Explore Events <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform duration-300" />
                   </div>
                 </div>
-                {/* Mini chat mockup bottom-right */}
-                <div className="absolute bottom-8 right-8 w-48 opacity-20 group-hover:opacity-40 transition-opacity duration-500 hidden lg:block">
-                  <div className="rounded-xl border border-neutral-700 overflow-hidden" style={{ background: 'rgba(13,13,20,0.9)' }}>
-                    <div className="px-3 py-2 border-b border-neutral-800 flex items-center gap-2">
+                {/* Mini mockup */}
+                <div className="absolute bottom-8 right-8 w-48 opacity-15 group-hover:opacity-40 transition-opacity duration-500 hidden lg:block">
+                  <div className="rounded-xl border border-indigo-500/15 overflow-hidden" style={{ background:'rgba(8,8,20,0.95)' }}>
+                    <div className="px-3 py-2 border-b border-indigo-500/10 flex items-center gap-2">
                       <div className="w-2 h-2 rounded-full bg-emerald-500" />
-                      <span className="text-[9px] text-neutral-500 font-mono">team-chat</span>
+                      <span className="text-[9px] text-indigo-400/50 font-mono">team-chat</span>
                     </div>
                     <div className="p-2.5 space-y-2">
-                      {[['Alex','Venue confirmed!','#64748b'],['Sam','Floor plan attached','#94a3b8'],['You','All set','#e2e8f0']].map(([n,m,c]) => (
+                      {[['Alex','Venue confirmed!','#818cf8'],['Sam','Floor plan attached','#a5b4fc'],['You','All set ✓','#e2e8f0']].map(([n,m,c]) => (
                         <div key={n} className="flex items-start gap-1.5">
-                          <div className="w-3.5 h-3.5 rounded-full bg-neutral-700 flex-shrink-0 mt-0.5" />
-                          <div>
-                            <span className="text-[8px] font-bold" style={{ color: c }}>{n}</span>
-                            <div className="text-[8px] text-neutral-500">{m}</div>
-                          </div>
+                          <div className="w-3.5 h-3.5 rounded-full bg-indigo-900/60 flex-shrink-0 mt-0.5" />
+                          <div><span className="text-[8px] font-bold" style={{ color:c }}>{n}</span><div className="text-[8px] text-neutral-600">{m}</div></div>
                         </div>
                       ))}
                     </div>
@@ -1418,30 +1623,28 @@ export default function Home() {
               </a>
             </Reveal>
 
-            {/* ── Venue branch ── */}
+            {/* Venue branch */}
             <Reveal delay={100}>
               <a href="#planit-venue"
                 onClick={(e) => { e.preventDefault(); selectBranch('venue'); }}
-                className="group relative flex flex-col p-10 sm:p-14 overflow-hidden cursor-pointer block"
-                style={{ minHeight: '480px', background: 'rgba(12,8,4,0.9)' }}>
-                <div className="absolute inset-0 opacity-40 group-hover:opacity-80 transition-opacity duration-700"
-                  style={{ background: 'radial-gradient(ellipse 70% 60% at 85% 50%, rgba(249,115,22,0.08) 0%, transparent 70%)' }} />
-                {/* Branch badge */}
+                className="branch-card branch-card-venue group relative flex flex-col p-10 sm:p-14 overflow-hidden cursor-pointer block"
+                style={{ minHeight:'500px', background:'#0a0804' }}>
+                <div className="absolute inset-0 opacity-30 group-hover:opacity-80 transition-opacity duration-700"
+                  style={{ background:'radial-gradient(ellipse 80% 70% at 100% 50%, rgba(249,115,22,0.08) 0%, transparent 65%)' }} />
+                <div className="absolute top-0 left-0 right-0 h-px opacity-0 group-hover:opacity-100 transition-opacity duration-500"
+                  style={{ background:'linear-gradient(90deg, transparent, rgba(249,115,22,0.5), transparent)' }} />
                 <div className="relative mb-10">
                   <div className="inline-flex items-center gap-2.5 px-3.5 py-2 rounded-2xl border border-orange-500/25 bg-orange-500/8">
                     <UtensilsCrossed className="w-3.5 h-3.5 text-orange-400" />
                     <span className="text-[10px] font-black uppercase tracking-[0.2em] text-orange-400">PlanIt Venue</span>
                   </div>
                 </div>
-                {/* Headline */}
                 <div className="relative flex-1">
-                  <div className="text-xs font-bold uppercase tracking-widest text-orange-500/40 mb-3">Branch 02</div>
-                  <h3 className="font-display text-4xl sm:text-5xl font-black text-white leading-[0.95] mb-5 tracking-tight">
-                    For every<br />
-                    busy Friday<br />
-                    <span className="text-orange-500/60">night floor.</span>
+                  <div className="text-xs font-bold uppercase tracking-widest text-orange-900/60 mb-3">Branch 02</div>
+                  <h3 className="font-syne text-4xl sm:text-5xl font-black text-white leading-[0.92] mb-5 tracking-tight">
+                    For every<br />busy Friday<br /><span className="text-orange-500/60">night floor.</span>
                   </h3>
-                  <p className="text-neutral-400 text-sm leading-relaxed max-w-xs mb-8">
+                  <p className="text-neutral-500 text-sm leading-relaxed max-w-xs mb-8">
                     Live floor map. Walk-in waitlist. Public wait board. QR reservations. One-tap seating. Everything your front-of-house needs, every night.
                   </p>
                   <div className="flex flex-wrap gap-2 mb-8">
@@ -1449,19 +1652,18 @@ export default function Home() {
                       <span key={t} className="px-2.5 py-1 text-[11px] font-semibold rounded-lg bg-orange-500/8 border border-orange-500/20 text-orange-500/70">{t}</span>
                     ))}
                   </div>
-                  <div className="flex items-center gap-2 text-sm font-bold text-orange-500/60 group-hover:text-orange-400 transition-colors duration-300">
+                  <div className="flex items-center gap-2 text-sm font-bold text-orange-600/50 group-hover:text-orange-400 transition-colors duration-300">
                     Explore Venue <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform duration-300" />
                   </div>
                 </div>
-                {/* Mini floor mockup bottom-left */}
-                <div className="absolute bottom-8 right-8 w-48 opacity-20 group-hover:opacity-40 transition-opacity duration-500 hidden lg:block">
-                  <div className="rounded-xl border border-orange-500/20 overflow-hidden" style={{ background: 'rgba(13,10,6,0.95)' }}>
+                <div className="absolute bottom-8 right-8 w-48 opacity-15 group-hover:opacity-40 transition-opacity duration-500 hidden lg:block">
+                  <div className="rounded-xl border border-orange-500/20 overflow-hidden" style={{ background:'rgba(14,10,6,0.95)' }}>
                     <div className="px-3 py-2 border-b border-orange-500/10 flex items-center justify-between">
-                      <span className="text-[9px] text-orange-400/60 font-mono">floor</span>
+                      <span className="text-[9px] text-orange-400/50 font-mono">floor</span>
                       <div className="flex gap-1">
-                        <div className="w-1.5 h-1.5 rounded-full bg-emerald-500/60" />
-                        <div className="w-1.5 h-1.5 rounded-full bg-red-500/60" />
-                        <div className="w-1.5 h-1.5 rounded-full bg-amber-500/60" />
+                        <div className="w-1.5 h-1.5 rounded-full bg-emerald-500/70" />
+                        <div className="w-1.5 h-1.5 rounded-full bg-red-500/70" />
+                        <div className="w-1.5 h-1.5 rounded-full bg-amber-500/70" />
                       </div>
                     </div>
                     <div className="p-3">
@@ -1477,9 +1679,6 @@ export default function Home() {
                   </div>
                 </div>
               </a>
-            </Reveal>
-          </div>
-        </section>
 
         {/* ═══════════════════════════════════════════════════════════
             PLANIT EVENTS — its own "page" section
@@ -1532,7 +1731,7 @@ export default function Home() {
             <div className="grid lg:grid-cols-2 gap-16 items-center">
               <Reveal>
                 <p className="text-xs font-bold text-neutral-400 uppercase tracking-[0.2em] mb-6">For event teams who actually have a lot going on</p>
-                <h2 className="font-display font-black text-white leading-[0.9] tracking-tight mb-8" style={{ fontSize: 'clamp(2.2rem, 5vw, 4.5rem)' }}>
+                <h2 className="font-syne font-black text-white leading-[0.9] tracking-tight mb-8" style={{ fontSize: 'clamp(2.2rem, 5vw, 4.5rem)' }}>
                   Everything your<br />
                   team needs.<br />
                   <span style={{ color: '#64748b' }}>Nothing you don't.</span>
@@ -1628,7 +1827,7 @@ export default function Home() {
             <div className="max-w-screen-xl mx-auto px-6 sm:px-10 py-16">
               <Reveal className="mb-10">
                 <p className="text-xs font-bold uppercase tracking-[0.2em] text-neutral-600 mb-2">What's included</p>
-                <h3 className="font-display text-2xl font-black text-white">Every tool. One workspace.</h3>
+                <h3 className="font-syne text-2xl font-black text-white">Every tool. One workspace.</h3>
               </Reveal>
               <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {[
@@ -1640,7 +1839,7 @@ export default function Home() {
                   { icon: QrCode,        label: 'QR check-in',           desc: 'Professional guest check-in with real-time attendance.' },
                 ].map((f, i) => (
                   <Reveal key={f.label} delay={i * 60}>
-                    <div className="group p-5 rounded-2xl border border-neutral-800/60 hover:border-neutral-700 transition-all duration-300" style={{ background: 'rgba(255,255,255,0.02)' }}>
+                    <div className="feature-card group p-5 rounded-2xl" style={{ background: 'rgba(255,255,255,0.02)' }}>
                       <div className="w-9 h-9 rounded-xl bg-neutral-800 border border-neutral-700/50 flex items-center justify-center mb-3 group-hover:bg-neutral-700 transition-colors">
                         <f.icon className="w-4 h-4 text-neutral-400" />
                       </div>
@@ -1750,7 +1949,7 @@ export default function Home() {
             <div className="grid lg:grid-cols-2 gap-16 items-center">
               <Reveal>
                 <p className="text-xs font-bold uppercase tracking-[0.2em] text-orange-500/40 mb-6">For restaurants that run a real floor every night</p>
-                <h2 className="font-display font-black text-white leading-[0.9] tracking-tight mb-8" style={{ fontSize: 'clamp(2.2rem, 5vw, 4.5rem)' }}>
+                <h2 className="font-syne font-black text-white leading-[0.9] tracking-tight mb-8" style={{ fontSize: 'clamp(2.2rem, 5vw, 4.5rem)' }}>
                   Run your floor.<br />
                   Know your wait.<br />
                   <span style={{ color: 'rgba(249,115,22,0.5)' }}>Seat every table.</span>
@@ -1838,7 +2037,7 @@ export default function Home() {
             <div className="max-w-screen-xl mx-auto px-6 sm:px-10 py-16">
               <Reveal className="mb-10">
                 <p className="text-xs font-bold uppercase tracking-[0.2em] text-orange-500/40 mb-2">What's included</p>
-                <h3 className="font-display text-2xl font-black text-white">Your whole floor, in one screen.</h3>
+                <h3 className="font-syne text-2xl font-black text-white">Your whole floor, in one screen.</h3>
               </Reveal>
               <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {[
@@ -1884,7 +2083,7 @@ export default function Home() {
           <div className="max-w-screen-xl mx-auto px-4 sm:px-8">
             <Reveal className="text-center mb-12">
               <p className="text-xs font-semibold text-neutral-500 uppercase tracking-widest mb-3">Explore more</p>
-              <h2 className="font-display text-4xl md:text-5xl font-black text-white mb-4">Everything you need</h2>
+              <h2 className="font-syne text-4xl md:text-5xl font-black text-white mb-4">Everything you need</h2>
               <p className="text-lg text-neutral-400 max-w-md mx-auto">Find public events and check our service health — all in one place.</p>
             </Reveal>
             <div className="grid md:grid-cols-2 gap-6">
@@ -1943,7 +2142,7 @@ export default function Home() {
               <div className="lg:sticky lg:top-24">
                 <Reveal>
                   <div className="mb-10">
-                    <h2 className="font-display text-5xl font-black text-white mb-6 tracking-tight leading-tight">
+                    <h2 className="font-syne text-5xl font-black text-white mb-6 tracking-tight leading-tight">
                       {created
                         ? mode === 'table-service' ? 'Venue created!' : 'Event created!'
                         : mode === 'table-service' ? 'Set up your venue' : 'Start planning your event'}
