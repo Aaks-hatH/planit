@@ -1,4 +1,29 @@
+# PlanIt — robots.txt
+# https://planitapp.onrender.com
+
 User-agent: *
 Allow: /
 
+# Block internal/authenticated app routes from indexing
+Disallow: /event/
+Disallow: /e/*/admin
+Disallow: /e/*/staff
+Disallow: /e/*/checkin
+Disallow: /dashboard
+Disallow: /admin
+Disallow: /api/
+
+# Allow important public pages
+Allow: /discover
+Allow: /about
+Allow: /help
+Allow: /status
+Allow: /terms
+Allow: /privacy
+Allow: /license
+
+# Crawl-delay for polite crawling
+Crawl-delay: 1
+
+# Sitemaps
 Sitemap: https://planitapp.onrender.com/sitemap.xml
