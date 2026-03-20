@@ -24,7 +24,7 @@ export default {
       fontFamily: {
         sans: ['"DM Sans"', 'system-ui', '-apple-system', 'sans-serif'],
         mono: ['"DM Mono"', '"Courier New"', 'monospace'],
-        display: ['"DM Sans"', 'system-ui', 'sans-serif'],
+        display: ['"Syne"', '"DM Sans"', 'system-ui', 'sans-serif'],
       },
       fontSize: {
         xs: ['0.75rem', { lineHeight: '1.4' }],
