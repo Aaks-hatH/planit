@@ -440,7 +440,7 @@ function SectionHeader({ eyebrow, title, subtitle }) {
   return (
     <Reveal className="text-center mb-16">
       {eyebrow && <p className="text-xs font-semibold text-neutral-500 uppercase tracking-widest mb-3">{eyebrow}</p>}
-      <h2 className="text-3xl sm:text-5xl md:text-7xl font-black text-white mb-5 leading-tight">{title}</h2>
+      <h2 className="font-display text-3xl sm:text-5xl md:text-7xl font-black text-white mb-5 leading-tight">{title}</h2>
       {subtitle && <p className="text-xl text-neutral-400 max-w-2xl mx-auto leading-relaxed">{subtitle}</p>}
     </Reveal>
   );
@@ -449,7 +449,7 @@ function SectionHeader({ eyebrow, title, subtitle }) {
 function FeatureCard({ icon: Icon, title, description, delay = 0 }) {
   return (
     <Reveal delay={delay}>
-      <div className="group relative p-6 sm:p-10 rounded-3xl border border-neutral-800/80 bg-neutral-900/40 hover:border-neutral-600 hover:bg-neutral-800/50 transition-all duration-500 h-full">
+      <div className="group relative p-6 sm:p-10 rounded-2xl border border-neutral-800/80 bg-neutral-900/40 hover:border-neutral-600 hover:bg-neutral-800/50 transition-all duration-500 h-full">
         <div className="mb-5">
           <div className="w-14 h-14 rounded-2xl bg-neutral-800 flex items-center justify-center group-hover:bg-white transition-all duration-500 group-hover:scale-110">
             <Icon className="w-7 h-7 text-neutral-400 group-hover:text-neutral-900 transition-colors duration-500" />
@@ -465,7 +465,7 @@ function FeatureCard({ icon: Icon, title, description, delay = 0 }) {
 function TestimonialCard({ quote, author, role, event, delay = 0 }) {
   return (
     <Reveal delay={delay}>
-      <div className="p-8 rounded-3xl border border-neutral-800 bg-neutral-900/50 hover:border-neutral-700 hover:bg-neutral-800/50 transition-all duration-500 h-full">
+      <div className="p-8 rounded-2xl border border-neutral-800 bg-neutral-900/50 hover:border-neutral-700 hover:bg-neutral-800/50 transition-all duration-500 h-full">
         <div className="flex items-start gap-4 mb-5">
           <div className="flex-shrink-0 w-12 h-12 rounded-2xl bg-white flex items-center justify-center">
             <span className="text-base font-bold text-neutral-900">{author.charAt(0)}</span>
@@ -701,7 +701,7 @@ function EnterpriseDemo() {
         <div className="flex gap-1 border-b border-neutral-800">
           {['guests', 'security', 'analytics'].map(t => (
             <button key={t} onClick={() => setTab(t)}
-              className={`px-3 py-2.5 text-xs font-bold capitalize transition-all duration-200 border-b-2 -mb-px flex items-center gap-1.5 ${tab === t ? 'text-white border-white' : 'text-neutral-500 border-transparent hover:text-neutral-300'}`}>
+              className={`px-3 py-2.5 text-xs font-bold capitalize transition-all duration-200 border-b-2 -mb-px flex items-center gap-1.5 ${tab === t ? 'text-white border-white bg-white/5 rounded-t-lg' : 'text-neutral-500 border-transparent hover:text-neutral-300 hover:bg-white/3 rounded-t-lg'}`}>
               {t === 'security' && securityLog.length > 0 && (
                 <span className="w-4 h-4 rounded-full bg-red-500 text-white text-xs flex items-center justify-center font-black" style={{ fontSize: 9 }}>
                   {securityLog.filter(l => l.severity === 'critical' || l.severity === 'high').length}
@@ -954,177 +954,6 @@ function ScrollProgressBar() {
   );
 }
 
-// ─────────────────────────────────────────────────────────
-//  CINEMATIC LOADER  (fake SaaS boot screen)
-// ─────────────────────────────────────────────────────────
-const BOOT_STEPS = [
-  { text: 'Initializing workspace engine',  ms: 320 },
-  { text: 'Loading real-time modules',       ms: 560 },
-  { text: 'Connecting event pipeline',       ms: 430 },
-  { text: 'Mounting floor manager',          ms: 510 },
-  { text: 'All systems operational',         ms: 360 },
-];
-
-function CinematicLoader({ onDone }) {
-  const [step,     setStep]     = useState(-1);
-  const [progress, setProgress] = useState(0);
-  const [exiting,  setExiting]  = useState(false);
-
-  useEffect(() => {
-    const timers = [];
-    let cum = 100;
-    BOOT_STEPS.forEach(({ ms }, i) => {
-      cum += ms;
-      timers.push(setTimeout(() => {
-        setStep(i);
-        setProgress(Math.round(((i + 1) / BOOT_STEPS.length) * 100));
-      }, cum));
-    });
-    timers.push(setTimeout(() => {
-      setExiting(true);
-      setTimeout(() => {
-        onDone();
-        try { sessionStorage.setItem('planit_loaded', '1'); } catch {}
-      }, 900);
-    }, cum + 520));
-    return () => timers.forEach(clearTimeout);
-  }, []);
-
-  return (
-    <div style={{
-      position: 'fixed', inset: 0, zIndex: 9999,
-      background: '#03030a',
-      display: 'flex', flexDirection: 'column',
-      alignItems: 'center', justifyContent: 'center',
-      opacity: exiting ? 0 : 1,
-      transform: exiting ? 'scale(1.04)' : 'scale(1)',
-      transition: 'opacity 0.9s cubic-bezier(0.4,0,0.2,1), transform 0.9s cubic-bezier(0.4,0,0.2,1)',
-      pointerEvents: exiting ? 'none' : 'all',
-      userSelect: 'none',
-    }}>
-      {/* Grid background */}
-      <svg style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }} aria-hidden="true">
-        <defs>
-          <pattern id="lg-grid" width="64" height="64" patternUnits="userSpaceOnUse">
-            <path d="M 64 0 L 0 0 0 64" fill="none" stroke="rgba(255,255,255,0.028)" strokeWidth="1"/>
-          </pattern>
-          <radialGradient id="lg-center" cx="50%" cy="50%">
-            <stop offset="0%" stopColor="rgba(80,100,170,0.12)"/>
-            <stop offset="65%" stopColor="transparent"/>
-          </radialGradient>
-        </defs>
-        <rect width="100%" height="100%" fill="url(#lg-grid)"/>
-        <rect width="100%" height="100%" fill="url(#lg-center)"/>
-        {/* animated scan-line */}
-        <line x1="0" y1="0" x2="100%" y2="0" stroke="rgba(255,255,255,0.04)" strokeWidth="1">
-          <animateTransform attributeName="transform" type="translate"
-            values="0,0;0,100vh" dur="8s" repeatCount="indefinite"/>
-          <animate attributeName="opacity" values="0;0.6;0" dur="8s" repeatCount="indefinite"/>
-        </line>
-      </svg>
-
-      {/* Corner brackets */}
-      {[
-        ['top-8 left-8',     'M0,18 L0,0 L18,0'],
-        ['top-8 right-8',    'M0,0 L18,0 L18,18'],
-        ['bottom-8 left-8',  'M0,0 L0,18 L18,18'],
-        ['bottom-8 right-8', 'M18,0 L18,18 L0,18'],
-      ].map(([cls, d]) => (
-        <svg key={cls} className={`absolute ${cls}`} width="18" height="18" viewBox="0 0 18 18" aria-hidden="true">
-          <path d={d} fill="none" stroke="rgba(255,255,255,0.1)" strokeWidth="1.5"/>
-        </svg>
-      ))}
-
-      {/* Build badge */}
-      <div style={{ position: 'absolute', bottom: 28, right: 32, fontSize: 10, fontFamily: 'monospace', letterSpacing: '0.12em', color: 'rgba(255,255,255,0.1)', fontWeight: 600 }}>
-        v2.0 · BETA · 2026
-      </div>
-
-      {/* Status indicator top-left */}
-      <div style={{ position: 'absolute', top: 32, left: 32, display: 'flex', alignItems: 'center', gap: 8 }}>
-        <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#22c55e', boxShadow: '0 0 8px rgba(34,197,94,0.8)', animation: 'pulse 2s infinite' }} />
-        <span style={{ fontSize: 10, fontFamily: 'monospace', color: 'rgba(255,255,255,0.18)', letterSpacing: '0.1em', fontWeight: 600 }}>SECURE BOOT</span>
-      </div>
-
-      {/* Logo */}
-      <div style={{ position: 'relative', textAlign: 'center', marginBottom: 56 }}>
-        <div style={{
-          width: 76, height: 76, margin: '0 auto 22px',
-          background: 'rgba(255,255,255,0.03)',
-          border: '1px solid rgba(255,255,255,0.1)',
-          borderRadius: 22,
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          animation: 'loader-logo-pulse 2.5s ease-in-out infinite',
-          position: 'relative', overflow: 'hidden',
-        }}>
-          {/* logo shimmer sweep */}
-          <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(105deg, transparent 40%, rgba(255,255,255,0.06) 50%, transparent 60%)', animation: 'shimmer-slide 3s ease-in-out infinite' }} />
-          <Calendar style={{ width: 36, height: 36, color: 'rgba(255,255,255,0.72)', position: 'relative', zIndex: 1 }} />
-        </div>
-        <h1 style={{ fontSize: 32, fontWeight: 900, color: 'white', letterSpacing: -2, margin: 0, lineHeight: 1 }}>
-          PlanIt
-        </h1>
-        <p style={{ fontSize: 10, fontWeight: 700, color: 'rgba(255,255,255,0.16)', letterSpacing: '0.32em', textTransform: 'uppercase', marginTop: 10 }}>
-          Workspace Platform
-        </p>
-      </div>
-
-      {/* Progress + checks */}
-      <div style={{ width: 268 }}>
-        {/* Bar */}
-        <div style={{ height: 1.5, background: 'rgba(255,255,255,0.07)', borderRadius: 2, overflow: 'hidden', marginBottom: 22 }}>
-          <div style={{
-            height: '100%', width: `${progress}%`,
-            background: 'linear-gradient(90deg, rgba(100,116,139,0.8), white)',
-            boxShadow: '0 0 14px rgba(255,255,255,0.5)',
-            transition: 'width 0.52s cubic-bezier(0.4,0,0.2,1)',
-            borderRadius: 2,
-          }} />
-        </div>
-
-        {/* Step list */}
-        <div style={{ minHeight: 130 }}>
-          {BOOT_STEPS.map(({ text }, i) => {
-            const vis    = i <= step;
-            const active = i === step;
-            const done   = i < step;
-            return (
-              <div key={i} style={{
-                display: 'flex', alignItems: 'center', gap: 10, marginBottom: 9,
-                opacity: vis ? (done ? 0.25 : 1) : 0,
-                transform: vis ? 'none' : 'translateX(-12px)',
-                transition: 'opacity 0.38s ease, transform 0.38s ease',
-              }}>
-                <div style={{
-                  width: 5, height: 5, borderRadius: '50%', flexShrink: 0,
-                  background: done ? 'rgba(34,197,94,0.55)' : active ? '#22c55e' : 'rgba(255,255,255,0.1)',
-                  boxShadow: active ? '0 0 8px rgba(34,197,94,0.8)' : 'none',
-                  transition: 'background 0.3s, box-shadow 0.3s',
-                }} />
-                <span style={{
-                  fontSize: 11, fontFamily: 'monospace', fontWeight: 600, letterSpacing: '0.02em',
-                  color: active ? 'rgba(255,255,255,0.75)' : done ? 'rgba(255,255,255,0.18)' : 'rgba(255,255,255,0.08)',
-                }}>
-                  {done ? '✓ ' : active ? '› ' : '  '}{text}
-                </span>
-              </div>
-            );
-          })}
-        </div>
-
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 4 }}>
-          <span style={{ fontSize: 10, fontFamily: 'monospace', color: 'rgba(255,255,255,0.12)', letterSpacing: '0.08em' }}>
-            {step >= 0 ? BOOT_STEPS[step].text.split(' ').slice(0,1)[0].toUpperCase() : 'STANDBY'}
-          </span>
-          <span style={{ fontSize: 11, fontFamily: 'monospace', color: 'rgba(255,255,255,0.18)', fontWeight: 700 }}>
-            {progress}%
-          </span>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 import StarBackground from '../components/StarBackground';
 
 
@@ -1162,7 +991,6 @@ export default function Home() {
   const [selectedBranch, setSelectedBranch] = useState(null); // null | 'events' | 'venue'
   // On white-label domains, skip the branch selector and go straight to event creation
   useEffect(() => { if (isWL) { setSelectedBranch('events'); } }, [isWL]);
-  const [showLoader,     setShowLoader]     = useState(() => { try { return !sessionStorage.getItem('planit_loaded'); } catch { return true; } });
 
   const selectBranch = (branch) => {
     setSelectedBranch(branch);
@@ -1284,167 +1112,9 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen text-white relative" style={{ background: '#05050f', overflowX: 'clip', maxWidth: '100vw', isolation: 'isolate' }}>
-      {showLoader && <CinematicLoader onDone={() => setShowLoader(false)} />}
+    <div className="min-h-screen text-white relative" style={{ background: 'var(--bg-base)', overflowX: 'clip', maxWidth: '100vw', isolation: 'isolate' }}>
       <ScrollProgressBar />
-      <style>{`
-        /*  Shimmer text  */
-        @keyframes shimmer-slide {
-          0%   { background-position: -200% center; }
-          100% { background-position:  200% center; }
-        }
-        .shimmer-white {
-          background: linear-gradient(90deg, #94a3b8 15%, #ffffff 42%, #94a3b8 68%);
-          background-size: 200% auto;
-          -webkit-background-clip: text; background-clip: text;
-          -webkit-text-fill-color: transparent;
-          animation: shimmer-slide 4s ease-in-out infinite;
-        }
-        .shimmer-slate {
-          background: linear-gradient(120deg, #64748b 0%, #cbd5e1 48%, #64748b 90%);
-          background-size: 200% auto;
-          -webkit-background-clip: text; background-clip: text;
-          -webkit-text-fill-color: transparent;
-          animation: shimmer-slide 5s ease-in-out infinite;
-        }
-        /*  Scan-line sweep on stat cards  */
-        @keyframes scan-sweep {
-          0%   { transform: translateX(-120%); }
-          100% { transform: translateX(220%);  }
-        }
-        .stat-card { position: relative; overflow: hidden; }
-        .stat-card::after {
-          content: '';
-          position: absolute; inset: 0;
-          background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.03) 50%, transparent 100%);
-          transform: translateX(-120%);
-          animation: scan-sweep 5s ease-in-out infinite;
-          pointer-events: none;
-        }
-        .stat-card:nth-child(2)::after { animation-delay: 1.6s; }
-        .stat-card:nth-child(3)::after { animation-delay: 3.2s; }
-        /*  Input styles  */
-        .dark-input {
-          width: 100%;
-          padding: 0.75rem 1rem;
-          background: rgba(15,15,25,0.8);
-          border: 1px solid #334155;
-          border-radius: 0.75rem;
-          color: white;
-          font-size: 0.875rem;
-          outline: none;
-          transition: border-color 0.2s;
-        }
-        .dark-input:focus { border-color: #64748b; }
-        .dark-input::placeholder { color: #475569; }
-        .dark-input option { background: #0f172a; color: white; }
 
-        /* Product gateway split */
-        .gateway-events { transition: opacity 0.4s ease, transform 0.4s ease; }
-        .gateway-venue  { transition: opacity 0.4s ease, transform 0.4s ease; }
-        .gateway:hover .gateway-events:not(:hover) { opacity: 0.35; }
-        .gateway:hover .gateway-venue:not(:hover)  { opacity: 0.35; }
-
-        /* Typing indicator dots */
-        @keyframes typing-dot {
-          0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
-          30% { transform: translateY(-4px); opacity: 1; }
-        }
-        .typing-dot { animation: typing-dot 1.4s ease-in-out infinite; }
-        .typing-dot:nth-child(2) { animation-delay: 0.2s; }
-        .typing-dot:nth-child(3) { animation-delay: 0.4s; }
-
-        /* Task check animation */
-        @keyframes check-pop {
-          0%   { transform: scale(0.6); opacity: 0; }
-          70%  { transform: scale(1.2); }
-          100% { transform: scale(1);   opacity: 1; }
-        }
-        .check-pop { animation: check-pop 0.4s ease forwards; }
-
-        /* Table pulse animation for venue floor */
-        @keyframes table-available-pulse {
-          0%, 100% { fill: rgba(34,197,94,0.13); stroke: #22c55e; }
-          50%       { fill: rgba(34,197,94,0.28); stroke: #4ade80; }
-        }
-        @keyframes table-ring-pulse {
-          0%, 100% { opacity: 0.7; r: 27; }
-          50%       { opacity: 1;   r: 29; }
-        }
-        .table-pulse-fill  { animation: table-available-pulse 2.2s ease-in-out infinite; }
-        .table-pulse-ring  { animation: table-ring-pulse 2.2s ease-in-out infinite; }
-
-        /* Waitlist count tick */
-        @keyframes count-tick {
-          0%, 89%  { opacity: 1; transform: translateY(0); }
-          90%      { opacity: 0; transform: translateY(-8px); }
-          91%      { opacity: 0; transform: translateY(8px); }
-          100%     { opacity: 1; transform: translateY(0); }
-        }
-        .waitlist-tick { animation: count-tick 6s ease-in-out infinite; }
-
-        /* Section page divider glow line */
-        .product-divider {
-          height: 1px;
-          background: linear-gradient(90deg, transparent 0%, rgba(249,115,22,0.4) 30%, rgba(249,115,22,0.6) 50%, rgba(249,115,22,0.4) 70%, transparent 100%);
-        }
-        .product-divider-events {
-          height: 1px;
-          background: linear-gradient(90deg, transparent 0%, rgba(148,163,184,0.3) 30%, rgba(255,255,255,0.4) 50%, rgba(148,163,184,0.3) 70%, transparent 100%);
-        }
-
-        /* Chat message float in */
-        @keyframes msg-float {
-          from { opacity: 0; transform: translateY(10px); }
-          to   { opacity: 1; transform: translateY(0); }
-        }
-        .msg-1 { animation: msg-float 0.5s ease forwards 0.3s; opacity: 0; }
-        .msg-2 { animation: msg-float 0.5s ease forwards 1.1s; opacity: 0; }
-        .msg-3 { animation: msg-float 0.5s ease forwards 2.0s; opacity: 0; }
-
-        /* ── Cinematic loader ── */
-        @keyframes loader-logo-pulse {
-          0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255,255,255,0); }
-          50% { transform: scale(1.035); box-shadow: 0 0 32px 6px rgba(255,255,255,0.05); }
-        }
-        /* ── Scroll progress bar glow ── */
-        @keyframes progress-bar-glow {
-          0%, 100% { box-shadow: 0 0 4px rgba(255,255,255,0.15); }
-          50% { box-shadow: 0 0 14px rgba(255,255,255,0.5); }
-        }
-        /* ── Reveal animation variants ── */
-        @keyframes reveal-up {
-          from { opacity: 0; transform: translateY(32px); }
-          to   { opacity: 1; transform: translateY(0); }
-        }
-        @keyframes reveal-left {
-          from { opacity: 0; transform: translateX(-32px); }
-          to   { opacity: 1; transform: translateX(0); }
-        }
-        @keyframes reveal-right {
-          from { opacity: 0; transform: translateX(32px); }
-          to   { opacity: 1; transform: translateX(0); }
-        }
-        @keyframes reveal-scale {
-          from { opacity: 0; transform: scale(0.92); }
-          to   { opacity: 1; transform: scale(1); }
-        }
-        /* ── Horizontal marquee strip ── */
-        /* ── Hero orb float ── */
-        /* ── SVG node pulse ── */
-        /* ── Stats card shimmer ── */
-        /* ── Interactive scroll section ── */
-        @keyframes scroll-indicator-bounce {
-          0%, 100% { transform: translateY(0); opacity: 1; }
-          50% { transform: translateY(6px); opacity: 0.5; }
-        }
-        /*  Respect reduced motion  */
-        @media (prefers-reduced-motion: reduce) {
-          .stat-card::after, .shimmer-white, .shimmer-slate,
-          .typing-dot, .table-pulse-fill, .table-pulse-ring,
-          .waitlist-tick, .msg-1, .msg-2, .msg-3 { animation: none !important; opacity: 1 !important; }
-        }
-      `}</style>
 
       {/* Nav */}
       <header
@@ -1523,12 +1193,8 @@ export default function Home() {
             <a href="/help" className="hidden md:flex items-center gap-1.5 px-3 py-2 text-sm text-neutral-400 hover:text-neutral-200 hover:bg-neutral-800/50 rounded-xl transition-all duration-200">
               Help
             </a>
-            {['Terms|/terms', 'Privacy|/privacy'].map(s => {
-              const [label, href] = s.split('|');
-              return <a key={label} href={href} className="hidden lg:block px-3 py-2 text-sm text-neutral-500 hover:text-neutral-200 hover:bg-neutral-800/50 rounded-xl transition-all duration-200">{label}</a>;
-            })}
-            <a href="/support" className="hidden sm:inline-flex ml-2 px-3 sm:px-5 py-2.5 text-sm font-medium text-white bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 rounded-xl transition-all duration-200">
-              Support Us
+            <a href="/about" className="hidden md:flex items-center gap-1.5 px-3 py-2 text-sm text-neutral-400 hover:text-neutral-200 hover:bg-neutral-800/50 rounded-xl transition-all duration-200">
+              About
             </a>
             {/* Hamburger — mobile only */}
             <button
@@ -1559,15 +1225,15 @@ export default function Home() {
             <a href="/help" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-2.5 px-3 py-2.5 text-sm text-neutral-300 hover:text-white hover:bg-neutral-800/60 rounded-xl transition-all">
               <svg className="w-4 h-4 text-neutral-500" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3M12 17h.01"/></svg>Help
             </a>
-            <a href="/terms" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-2.5 px-3 py-2.5 text-sm text-neutral-400 hover:text-white hover:bg-neutral-800/60 rounded-xl transition-all">
-              Terms
+            <a href="/about" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-2.5 px-3 py-2.5 text-sm text-neutral-400 hover:text-white hover:bg-neutral-800/60 rounded-xl transition-all">
+              About
             </a>
-            <a href="/privacy" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-2.5 px-3 py-2.5 text-sm text-neutral-400 hover:text-white hover:bg-neutral-800/60 rounded-xl transition-all">
-              Privacy
-            </a>
-            <div className="pt-1 border-t border-neutral-800">
-              <a href="/support" onClick={() => setMobileMenuOpen(false)} className="flex items-center justify-center gap-2 mt-2 w-full px-4 py-3 text-sm font-semibold text-white bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 rounded-xl transition-all">
-                Support Us
+            <div className="pt-1 border-t border-neutral-800 flex gap-2 mt-1">
+              <a href="/terms" onClick={() => setMobileMenuOpen(false)} className="flex-1 text-center py-2 text-xs text-neutral-600 hover:text-neutral-400 rounded-lg hover:bg-neutral-800/40 transition-all">
+                Terms
+              </a>
+              <a href="/privacy" onClick={() => setMobileMenuOpen(false)} className="flex-1 text-center py-2 text-xs text-neutral-600 hover:text-neutral-400 rounded-lg hover:bg-neutral-800/40 transition-all">
+                Privacy
               </a>
             </div>
           </div>
@@ -1577,12 +1243,17 @@ export default function Home() {
       <main className="relative" style={{ zIndex: 2, overflowX: 'hidden', maxWidth: '100vw' }}>
         {/* HERO */}
         <section id="hero-top" className="relative min-h-screen flex items-center" style={{ overflow: 'hidden', maxWidth: '100vw' }}>
+          {/* Ambient gradient depth layer */}
+          <div className="absolute inset-0 pointer-events-none" style={{
+            backgroundImage: 'radial-gradient(ellipse 80% 50% at 50% -10%, rgba(100,116,139,0.12) 0%, transparent 60%), radial-gradient(ellipse 40% 30% at 80% 80%, rgba(249,115,22,0.04) 0%, transparent 50%)',
+            zIndex: 1,
+          }} />
           {/* Background — hero image if WL sets one, otherwise starfield */}
           {(isWL && heroImage)
             ? <div className="absolute inset-0" style={{ backgroundImage: `url(${heroImage})`, backgroundSize: 'cover', backgroundPosition: 'center', opacity: 0.3 }} />
             : <StarBackground fixed={false} />
           }
-          <div className="w-full relative z-10">
+          <div className="w-full relative" style={{ zIndex: 2 }}>
             <div className="max-w-6xl mx-auto px-4 sm:px-8 lg:px-12 py-20 sm:py-28 lg:py-36 text-center">
 
               <motion.div
@@ -1604,10 +1275,10 @@ export default function Home() {
                 initial={{ opacity: 0, y: 30 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.9, delay: 0.28, ease: [0.22, 1, 0.36, 1] }}
-                className="font-black leading-[0.92] tracking-tight mb-8"
+                className="font-display font-black leading-[0.92] tracking-tight mb-8"
                 style={{ fontSize: 'clamp(2.5rem, 8.5vw, 7rem)' }}
               >
-                {(isWL && heroHeadline) ? heroHeadline : <>Make it{' '}<span className="shimmer-slate">Effortless</span>,{' '}<span className="shimmer-white">by design.</span></>}
+                {(isWL && heroHeadline) ? heroHeadline : <>Plan every detail.<br /><span className="shimmer-slate">Execute</span>{' '}<span className="shimmer-white">flawlessly.</span></>}
               </motion.h1>
 
               <motion.p
@@ -1616,7 +1287,7 @@ export default function Home() {
                 transition={{ duration: 0.7, delay: 0.42 }}
                 className="text-xl md:text-2xl text-neutral-300 max-w-2xl mx-auto leading-relaxed font-light mb-14"
               >
-                {isWL ? (heroSubheadline || wlName || 'Your event platform') : <>One platform, two branches. <span className="text-neutral-300 font-medium">PlanIt Events</span> for planning teams. <span className="text-orange-400 font-medium">PlanIt Venue</span> for restaurants &amp; hospitality.</>}
+                {isWL ? (heroSubheadline || wlName || 'Your event platform') : <>The all-in-one workspace for events and hospitality. <span className="text-neutral-200 font-medium">Team chat, tasks, RSVP, check-in</span> — and a live floor manager for restaurants.</>}
               </motion.p>
 
               <motion.div
@@ -1647,9 +1318,9 @@ export default function Home() {
                 className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6 max-w-xl mx-auto w-full"
               >
                 {[
-                  { tag: 'Beta',                desc: 'Early access, free while we grow'       },
-                  { tag: 'Growing fast',        desc: 'New features shipping every week'         },
-                  { tag: 'Student developed',   desc: 'Built solo, from the ground up'           },
+                  { tag: 'Free forever',      desc: 'No credit card required'          },
+                  { tag: 'No accounts',       desc: 'Guests join by name, instantly'   },
+                  { tag: 'Unlimited team',    desc: 'Every organizer, vendor, volunteer'},
                 ].map((item, i) => (
                   <div key={i}
                     className="stat-card text-center p-6 rounded-2xl border border-neutral-800/70 hover:border-neutral-600 transition-all duration-400 cursor-default hover:scale-105"
@@ -1707,7 +1378,7 @@ export default function Home() {
                 {/* Headline */}
                 <div className="relative flex-1">
                   <div className="text-xs font-bold uppercase tracking-widest text-neutral-400 mb-3">Branch 01</div>
-                  <h3 className="text-4xl sm:text-5xl font-black text-white leading-[0.95] mb-5 tracking-tight">
+                  <h3 className="font-display text-4xl sm:text-5xl font-black text-white leading-[0.95] mb-5 tracking-tight">
                     For anyone<br />
                     who runs<br />
                     <span className="text-neutral-300">events.</span>
@@ -1726,7 +1397,7 @@ export default function Home() {
                 </div>
                 {/* Mini chat mockup bottom-right */}
                 <div className="absolute bottom-8 right-8 w-48 opacity-20 group-hover:opacity-40 transition-opacity duration-500 hidden lg:block">
-                  <div className="rounded-xl border border-neutral-700 overflow-hidden" style={{ background: '#0d0d14' }}>
+                  <div className="rounded-xl border border-neutral-700 overflow-hidden" style={{ background: 'rgba(13,13,20,0.9)' }}>
                     <div className="px-3 py-2 border-b border-neutral-800 flex items-center gap-2">
                       <div className="w-2 h-2 rounded-full bg-emerald-500" />
                       <span className="text-[9px] text-neutral-500 font-mono">team-chat</span>
@@ -1765,7 +1436,7 @@ export default function Home() {
                 {/* Headline */}
                 <div className="relative flex-1">
                   <div className="text-xs font-bold uppercase tracking-widest text-orange-500/40 mb-3">Branch 02</div>
-                  <h3 className="text-4xl sm:text-5xl font-black text-white leading-[0.95] mb-5 tracking-tight">
+                  <h3 className="font-display text-4xl sm:text-5xl font-black text-white leading-[0.95] mb-5 tracking-tight">
                     For every<br />
                     busy Friday<br />
                     <span className="text-orange-500/60">night floor.</span>
@@ -1784,7 +1455,7 @@ export default function Home() {
                 </div>
                 {/* Mini floor mockup bottom-left */}
                 <div className="absolute bottom-8 right-8 w-48 opacity-20 group-hover:opacity-40 transition-opacity duration-500 hidden lg:block">
-                  <div className="rounded-xl border border-orange-500/20 overflow-hidden" style={{ background: '#0d0a06' }}>
+                  <div className="rounded-xl border border-orange-500/20 overflow-hidden" style={{ background: 'rgba(13,10,6,0.95)' }}>
                     <div className="px-3 py-2 border-b border-orange-500/10 flex items-center justify-between">
                       <span className="text-[9px] text-orange-400/60 font-mono">floor</span>
                       <div className="flex gap-1">
@@ -1813,7 +1484,7 @@ export default function Home() {
         {/* ═══════════════════════════════════════════════════════════
             PLANIT EVENTS — its own "page" section
         ═══════════════════════════════════════════════════════════ */}
-        <section id="planit-events" className="relative overflow-hidden" style={{ background: '#08080f', display: selectedBranch === 'events' ? 'block' : 'none' }}>
+        <section id="planit-events" className="relative overflow-hidden" style={{ background: 'var(--bg-surface)', display: selectedBranch === 'events' ? 'block' : 'none' }}>
           {/* Page-break top border with glow */}
           <div style={{ height: '2px', background: 'linear-gradient(90deg, transparent, rgba(148,163,184,0.12) 20%, rgba(255,255,255,0.25) 50%, rgba(148,163,184,0.12) 80%, transparent)' }} />
           {/* Background texture */}
@@ -1861,7 +1532,7 @@ export default function Home() {
             <div className="grid lg:grid-cols-2 gap-16 items-center">
               <Reveal>
                 <p className="text-xs font-bold text-neutral-400 uppercase tracking-[0.2em] mb-6">For event teams who actually have a lot going on</p>
-                <h2 className="font-black text-white leading-[0.9] tracking-tight mb-8" style={{ fontSize: 'clamp(2.2rem, 5vw, 4.5rem)' }}>
+                <h2 className="font-display font-black text-white leading-[0.9] tracking-tight mb-8" style={{ fontSize: 'clamp(2.2rem, 5vw, 4.5rem)' }}>
                   Everything your<br />
                   team needs.<br />
                   <span style={{ color: '#64748b' }}>Nothing you don't.</span>
@@ -1879,9 +1550,9 @@ export default function Home() {
 
               {/* Animated workspace mockup */}
               <Reveal delay={120}>
-                <div className="relative rounded-2xl border border-neutral-800 overflow-hidden" style={{ background: '#0d0d16' }}>
+                <div className="relative rounded-2xl border border-neutral-800 overflow-hidden" style={{ background: 'rgba(13,13,22,0.9)' }}>
                   {/* App chrome */}
-                  <div className="flex items-center gap-2 px-4 py-3 border-b border-neutral-800/60" style={{ background: '#0a0a12' }}>
+                  <div className="flex items-center gap-2 px-4 py-3 border-b border-neutral-800/60" style={{ background: 'rgba(10,10,18,0.95)' }}>
                     <div className="flex gap-1.5">
                       <div className="w-2.5 h-2.5 rounded-full bg-neutral-700" />
                       <div className="w-2.5 h-2.5 rounded-full bg-neutral-700" />
@@ -1957,7 +1628,7 @@ export default function Home() {
             <div className="max-w-screen-xl mx-auto px-6 sm:px-10 py-16">
               <Reveal className="mb-10">
                 <p className="text-xs font-bold uppercase tracking-[0.2em] text-neutral-600 mb-2">What's included</p>
-                <h3 className="text-2xl font-black text-white">Every tool. One workspace.</h3>
+                <h3 className="font-display text-2xl font-black text-white">Every tool. One workspace.</h3>
               </Reveal>
               <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {[
@@ -1974,7 +1645,7 @@ export default function Home() {
                         <f.icon className="w-4 h-4 text-neutral-400" />
                       </div>
                       <div className="text-sm font-bold text-white mb-1">{f.label}</div>
-                      <div className="text-xs text-neutral-600 leading-relaxed">{f.desc}</div>
+                      <div className="text-xs text-neutral-400 leading-relaxed">{f.desc}</div>
                     </div>
                   </Reveal>
                 ))}
@@ -2011,7 +1682,7 @@ export default function Home() {
         {/* ═══════════════════════════════════════════════════════════
             BRANCH TRANSITION — visual page turn
         ═══════════════════════════════════════════════════════════ */}
-        <div className="relative py-12 flex items-center justify-center overflow-hidden" style={{ background: '#06060a', display: selectedBranch ? 'none' : 'flex' }}>
+        <div className="relative py-12 flex items-center justify-center overflow-hidden" style={{ background: 'var(--bg-base)', display: selectedBranch ? 'none' : 'flex' }}>
           <div className="absolute inset-0" style={{ backgroundImage: 'radial-gradient(circle at 50% 50%, rgba(249,115,22,0.04) 0%, transparent 60%)' }} />
           <Reveal>
             <div className="relative flex items-center gap-5 text-center">
@@ -2033,7 +1704,7 @@ export default function Home() {
         {/* ═══════════════════════════════════════════════════════════
             PLANIT VENUE — its own "page" section
         ═══════════════════════════════════════════════════════════ */}
-        <section id="planit-venue" className="relative overflow-hidden" style={{ background: '#0a0704', display: selectedBranch === 'venue' ? 'block' : 'none' }}>
+        <section id="planit-venue" className="relative overflow-hidden" style={{ background: 'var(--bg-venue)', display: selectedBranch === 'venue' ? 'block' : 'none' }}>
           {/* Page-break top border with orange glow */}
           <div style={{ height: '2px', background: 'linear-gradient(90deg, transparent, rgba(249,115,22,0.15) 20%, rgba(249,115,22,0.5) 50%, rgba(249,115,22,0.15) 80%, transparent)' }} />
           {/* Background */}
@@ -2079,7 +1750,7 @@ export default function Home() {
             <div className="grid lg:grid-cols-2 gap-16 items-center">
               <Reveal>
                 <p className="text-xs font-bold uppercase tracking-[0.2em] text-orange-500/40 mb-6">For restaurants that run a real floor every night</p>
-                <h2 className="font-black text-white leading-[0.9] tracking-tight mb-8" style={{ fontSize: 'clamp(2.2rem, 5vw, 4.5rem)' }}>
+                <h2 className="font-display font-black text-white leading-[0.9] tracking-tight mb-8" style={{ fontSize: 'clamp(2.2rem, 5vw, 4.5rem)' }}>
                   Run your floor.<br />
                   Know your wait.<br />
                   <span style={{ color: 'rgba(249,115,22,0.5)' }}>Seat every table.</span>
@@ -2098,9 +1769,9 @@ export default function Home() {
 
               {/* Animated floor map */}
               <Reveal delay={120}>
-                <div className="relative rounded-2xl border border-orange-500/15 overflow-hidden" style={{ background: '#0d0a05' }}>
+                <div className="relative rounded-2xl border border-orange-500/15 overflow-hidden" style={{ background: 'rgba(13,10,5,0.95)' }}>
                   {/* App chrome */}
-                  <div className="flex items-center justify-between px-4 py-3 border-b border-orange-500/10" style={{ background: '#0a0803' }}>
+                  <div className="flex items-center justify-between px-4 py-3 border-b border-orange-500/10" style={{ background: 'rgba(10,8,3,0.98)' }}>
                     <div className="flex items-center gap-2">
                       <div className="w-5 h-5 rounded-lg bg-orange-500/15 border border-orange-500/20 flex items-center justify-center">
                         <UtensilsCrossed className="w-2.5 h-2.5 text-orange-400" />
@@ -2167,7 +1838,7 @@ export default function Home() {
             <div className="max-w-screen-xl mx-auto px-6 sm:px-10 py-16">
               <Reveal className="mb-10">
                 <p className="text-xs font-bold uppercase tracking-[0.2em] text-orange-500/40 mb-2">What's included</p>
-                <h3 className="text-2xl font-black text-white">Your whole floor, in one screen.</h3>
+                <h3 className="font-display text-2xl font-black text-white">Your whole floor, in one screen.</h3>
               </Reveal>
               <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {[
@@ -2184,7 +1855,7 @@ export default function Home() {
                         <f.icon className="w-4 h-4 text-orange-400" />
                       </div>
                       <div className="text-sm font-bold text-white mb-1">{f.label}</div>
-                      <div className="text-xs text-neutral-700 leading-relaxed">{f.desc}</div>
+                      <div className="text-xs text-neutral-500 leading-relaxed">{f.desc}</div>
                     </div>
                   </Reveal>
                 ))}
@@ -2213,7 +1884,7 @@ export default function Home() {
           <div className="max-w-screen-xl mx-auto px-4 sm:px-8">
             <Reveal className="text-center mb-12">
               <p className="text-xs font-semibold text-neutral-500 uppercase tracking-widest mb-3">Explore more</p>
-              <h2 className="text-4xl md:text-5xl font-black text-white mb-4">Everything you need</h2>
+              <h2 className="font-display text-4xl md:text-5xl font-black text-white mb-4">Everything you need</h2>
               <p className="text-lg text-neutral-400 max-w-md mx-auto">Find public events and check our service health — all in one place.</p>
             </Reveal>
             <div className="grid md:grid-cols-2 gap-6">
@@ -2272,7 +1943,7 @@ export default function Home() {
               <div className="lg:sticky lg:top-24">
                 <Reveal>
                   <div className="mb-10">
-                    <h2 className="text-5xl font-black text-white mb-6 tracking-tight leading-tight">
+                    <h2 className="font-display text-5xl font-black text-white mb-6 tracking-tight leading-tight">
                       {created
                         ? mode === 'table-service' ? 'Venue created!' : 'Event created!'
                         : mode === 'table-service' ? 'Set up your venue' : 'Start planning your event'}
@@ -2409,12 +2080,12 @@ export default function Home() {
                   <div className="bg-neutral-900/60 rounded-3xl border border-neutral-800 p-5 sm:p-10 hover:border-neutral-700 transition-all duration-500 sticky top-24">
                     <div className="mb-8 p-5 bg-neutral-950/80 rounded-2xl border border-neutral-800">
                       <label className="block text-xs font-bold text-neutral-500 uppercase tracking-wider mb-4">Mode</label>
-                      <div className="grid grid-cols-3 gap-2">
+                      <div className={`grid gap-2 ${selectedBranch === 'venue' ? 'grid-cols-1' : 'grid-cols-2'}`}>
                         {[
-                          { val: 'standard',      label: 'Standard',      sub: 'Team planning' },
-                          { val: 'enterprise',    label: 'Enterprise',    sub: 'Full Execution' },
-                          { val: 'table-service', label: isWL ? 'Venue' : 'PlanIt Venue', sub: 'Restaurant Floor' },
-                        ].map(({ val, label, sub }) => (
+                          { val: 'standard',      label: 'Standard',      sub: 'Team planning',     branch: 'events' },
+                          { val: 'enterprise',    label: 'Enterprise',    sub: 'Large events + QR', branch: 'events' },
+                          { val: 'table-service', label: isWL ? 'Venue' : 'PlanIt Venue', sub: 'Restaurant floor', branch: 'venue' },
+                        ].filter(({ branch }) => !selectedBranch || branch === selectedBranch).map(({ val, label, sub }) => (
                           <button key={val} type="button" onClick={() => setMode(val)}
                             data-mode={val}
                             className={`px-3 py-4 text-sm font-bold rounded-2xl border-2 transition-all duration-300 ${mode === val ? 'bg-white text-neutral-900 border-white shadow-lg scale-[1.03]' : 'bg-neutral-900 text-neutral-400 border-neutral-700 hover:border-neutral-500 hover:scale-[1.02]'}`}>
@@ -2441,42 +2112,40 @@ export default function Home() {
                           onChange={(e) => { handleTitleChange(e); if (fieldErrors.title) setFieldErrors(p => ({...p, title: ''})); }}
                         />
                         {fieldErrors.title && <p className="field-error text-xs text-red-400 mt-1.5 flex items-center gap-1"><AlertCircle className="w-3 h-3" />{fieldErrors.title}</p>}
-                        {formData.title && formData.subdomain && (
-                          <div className="mt-3 space-y-1.5">
-                            <label className="block text-xs font-semibold text-neutral-500 uppercase tracking-widest">
-                              Event URL
-                              {formData._subdomainTouched && (
-                                <span className="ml-2 text-neutral-600 normal-case tracking-normal font-normal">custom</span>
-                              )}
-                            </label>
-                            <div className="flex items-center bg-neutral-950/60 border border-neutral-800 rounded-lg overflow-hidden focus-within:border-neutral-600 transition-colors">
-                              <span className="pl-3 pr-1 text-xs text-neutral-600 font-mono whitespace-nowrap flex-shrink-0">/e/</span>
-                              <input
-                                type="text"
-                                value={formData.subdomain}
-                                onChange={(e) => {
-                                  const cleaned = e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '-').replace(/-{2,}/g, '-');
-                                  setFormData(prev => ({ ...prev, subdomain: cleaned, _subdomainTouched: true }));
-                                }}
-                                className="flex-1 bg-transparent text-xs text-neutral-300 font-mono font-bold py-2 pr-3 outline-none min-w-0"
-                                spellCheck={false}
-                                autoComplete="off"
-                              />
-                              {formData._subdomainTouched && (
-                                <button
-                                  type="button"
-                                  onClick={() => setFormData(prev => ({ ...prev, subdomain: makeSubdomain(prev.title), _subdomainTouched: false }))}
-                                  className="px-3 py-2 text-xs text-neutral-600 hover:text-neutral-400 transition-colors border-l border-neutral-800 flex-shrink-0"
-                                  title="Reset to auto-generated"
-                                >
-                                  Reset
-                                </button>
-                              )}
-                            </div>
-                            <p className="text-xs text-neutral-700">Only lowercase letters, numbers, and hyphens.</p>
-                          </div>
-                        )}
                       </div>
+
+                      {/* URL field — always rendered, fades in when title is present */}
+                      <div className={`transition-all duration-300 ${formData.title ? 'opacity-100' : 'opacity-0 pointer-events-none h-0 overflow-hidden'}`}>
+                        <label className="block text-xs font-semibold text-neutral-500 uppercase tracking-widest mb-1.5">
+                          {mode === 'table-service' ? 'Venue' : 'Event'} URL{formData._subdomainTouched && <span className="ml-2 text-neutral-600 normal-case tracking-normal font-normal">· custom</span>}
+                        </label>
+                        <div className="flex items-center bg-neutral-950/60 border border-neutral-800 rounded-lg overflow-hidden focus-within:border-neutral-600 transition-colors">
+                          <span className="pl-3 pr-1 text-xs text-neutral-600 font-mono whitespace-nowrap flex-shrink-0">/e/</span>
+                          <input
+                            type="text"
+                            value={formData.subdomain}
+                            onChange={(e) => {
+                              const cleaned = e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '-').replace(/-{2,}/g, '-');
+                              setFormData(prev => ({ ...prev, subdomain: cleaned, _subdomainTouched: true }));
+                            }}
+                            className="flex-1 bg-transparent text-xs text-neutral-300 font-mono font-bold py-2 pr-3 outline-none min-w-0"
+                            spellCheck={false}
+                            autoComplete="off"
+                          />
+                          {formData._subdomainTouched && (
+                            <button
+                              type="button"
+                              onClick={() => setFormData(prev => ({ ...prev, subdomain: makeSubdomain(prev.title), _subdomainTouched: false }))}
+                              className="px-3 py-2 text-xs text-neutral-600 hover:text-neutral-400 transition-colors border-l border-neutral-800 flex-shrink-0"
+                              title="Reset to auto-generated"
+                            >
+                              Reset
+                            </button>
+                          )}
+                        </div>
+                        <p className="text-xs text-neutral-700 mt-1">Lowercase letters, numbers, and hyphens only.</p>
+                      </div>
+
                       <div>
                         <label className="block text-sm font-bold text-neutral-300 mb-2">Description</label>
                         <textarea className="dark-input resize-none" rows="3" placeholder={mode === 'table-service' ? 'A short description of your venue (optional)' : "What's this event about?"} value={formData.description} onChange={update('description')} />
@@ -2628,7 +2297,7 @@ export default function Home() {
               <div>
                 <h3 className="text-xs font-bold text-neutral-500 mb-5 uppercase tracking-wider">Company</h3>
                 <ul className="space-y-3 text-sm text-neutral-500">
-                  {[['Terms of Service', '/terms'], ['Privacy Policy', '/privacy'], ['Admin Login', '/admin']].map(([l, h]) => (
+                  {[['Terms of Service', '/terms'], ['Privacy Policy', '/privacy']].map(([l, h]) => (
                     <li key={l}><a href={h} className="hover:text-neutral-200 transition-colors">{l}</a></li>
                   ))}
                 </ul>
