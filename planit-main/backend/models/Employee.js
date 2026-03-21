@@ -47,6 +47,9 @@ const employeeSchema = new mongoose.Schema({
 
     // Maintenance mode — very destructive, tread carefully
     canToggleMaintenance: { type: Boolean, default: false },
+
+    // Blog / content management
+    canEditContent:       { type: Boolean, default: false },
   },
 
   // ── Demo flag ─────────────────────────────────────────────────────────────
