@@ -100,31 +100,53 @@ const BLOG_CSS = `
 .b-pill:hover { color: #cbd5e1; border-color: rgba(255,255,255,0.14); background: rgba(255,255,255,0.055); }
 .b-pill.active { border-color: rgba(99,102,241,0.4); background: rgba(99,102,241,0.13); color: #a5b4fc; }
 
-/* Prose — Lora body, Syne heads. Nothing else in the codebase uses Lora. */
+/* Prose — Lora body, DM Sans heads. Editorial, readable, not blocky. */
 .b-prose h2 {
-  font-family: 'Syne', sans-serif; font-size: clamp(1.2rem,2.5vw,1.45rem);
-  font-weight: 800; color: #f1f5f9; margin: 2.5rem 0 0.75rem;
-  letter-spacing: -0.02em; line-height: 1.25;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #e2e8f0;
+  margin: 2.8rem 0 0.65rem;
+  letter-spacing: -0.01em;
+  line-height: 1.35;
+  padding-top: 0.25rem;
 }
 .b-prose h3 {
-  font-family: 'Syne', sans-serif; font-size: 1.075rem;
-  font-weight: 700; color: #e2e8f0; margin: 1.8rem 0 0.55rem; line-height: 1.3;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 1.025rem;
+  font-weight: 600;
+  color: #cbd5e1;
+  margin: 2rem 0 0.5rem;
+  line-height: 1.4;
 }
 .b-prose p {
-  font-family: 'Lora', serif; font-size: 1.0625rem;
-  line-height: 1.9; color: #cbd5e1; margin: 0 0 1.35rem;
+  font-family: 'Lora', serif;
+  font-size: 1.0625rem;
+  line-height: 1.95;
+  color: #b0bec5;
+  margin: 0 0 1.6rem;
 }
-.b-prose strong { color: #f1f5f9; font-weight: 700; }
+.b-prose strong { color: #e2e8f0; font-weight: 700; }
 .b-prose em { font-style: italic; color: #e2e8f0; }
-.b-prose ul, .b-prose ol { margin: 0.7rem 0 1.35rem 1.35rem; }
-.b-prose li { font-family: 'Lora', serif; font-size: 1.0625rem; line-height: 1.8; color: #cbd5e1; margin-bottom: 0.38rem; }
+.b-prose ul, .b-prose ol { margin: 0.5rem 0 1.6rem 1.4rem; }
+.b-prose li {
+  font-family: 'Lora', serif;
+  font-size: 1.0625rem;
+  line-height: 1.85;
+  color: #b0bec5;
+  margin-bottom: 0.5rem;
+}
 .b-prose li::marker { color: #6366f1; }
 .b-prose code {
   background: rgba(99,102,241,0.11); border: 1px solid rgba(99,102,241,0.2);
   padding: 0.1em 0.38em; border-radius: 4px; font-size: 0.86em;
   color: #a5b4fc; font-family: 'SF Mono','Fira Code',monospace;
 }
-.b-prose hr { border:none; border-top:1px solid rgba(255,255,255,0.08); margin:2.8rem 0; }
+.b-prose hr {
+  border: none;
+  border-top: 1px solid rgba(255,255,255,0.08);
+  margin: 3rem 0;
+}
 
 @media (max-width: 768px) {
   .b-article-layout { grid-template-columns: 1fr !important; }
@@ -263,44 +285,44 @@ function ArticleView({ post, allPosts, onBack }) {
         </div>
       </header>
 
-      {/* Hero */}
-      <div style={{ borderBottom:'1px solid rgba(255,255,255,0.06)', background:`linear-gradient(155deg, ${accent}0b 0%, transparent 55%)`, padding:'64px 32px 52px' }}>
-        <div style={{ maxWidth:1140, margin:'0 auto' }}>
-          <div className="b-up" style={{ display:'flex', alignItems:'center', gap:10, marginBottom:22 }}>
+      {/* Hero — constrained 720px, editorial */}
+      <div style={{ borderBottom:'1px solid rgba(255,255,255,0.06)', padding:'48px 24px 40px' }}>
+        <div style={{ maxWidth:720, margin:'0 auto' }}>
+          <div className="b-up" style={{ display:'flex', alignItems:'center', gap:10, marginBottom:16 }}>
             <CatBadge cat={post.category} />
             {post.featured && <span style={{ fontSize:10, fontWeight:700, padding:'2px 8px', borderRadius:4, background:'rgba(251,191,36,0.09)', border:'1px solid rgba(251,191,36,0.2)', color:'#fbbf24', textTransform:'uppercase', letterSpacing:'.06em' }}>Featured</span>}
           </div>
-          <h1 className="b-syne b-up" style={{ fontSize:'clamp(1.8rem,4vw,2.8rem)', fontWeight:800, color:'#f8fafc', lineHeight:1.1, letterSpacing:'-0.03em', marginBottom:20, maxWidth:820, animationDelay:'.06s' }}>
+          <h1 className="b-syne b-up" style={{ fontSize:'clamp(1.45rem,2.8vw,1.95rem)', fontWeight:700, color:'#f1f5f9', lineHeight:1.22, letterSpacing:'-0.02em', marginBottom:14, animationDelay:'.06s' }}>
             {post.title}
           </h1>
-          <p className="b-up" style={{ fontSize:'1.0625rem', color:'#94a3b8', lineHeight:1.75, marginBottom:28, maxWidth:680, fontWeight:400, animationDelay:'.12s' }}>
+          <p className="b-up" style={{ fontSize:'1.0625rem', color:'#64748b', lineHeight:1.7, marginBottom:22, fontWeight:400, animationDelay:'.12s' }}>
             {post.excerpt}
           </p>
-          <div className="b-up" style={{ display:'flex', alignItems:'center', gap:18, flexWrap:'wrap', animationDelay:'.18s' }}>
-            <div style={{ display:'flex', alignItems:'center', gap:8 }}>
-              <div style={{ width:28, height:28, borderRadius:'50%', background:`${accent}1e`, border:`1px solid ${accent}33`, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
-                <span style={{ fontSize:11, fontWeight:800, color:accent }}>{(post.author||'P')[0]}</span>
+          <div className="b-up" style={{ display:'flex', alignItems:'center', gap:16, flexWrap:'wrap', paddingTop:16, borderTop:'1px solid rgba(255,255,255,0.07)', animationDelay:'.18s' }}>
+            <div style={{ display:'flex', alignItems:'center', gap:7 }}>
+              <div style={{ width:26, height:26, borderRadius:'50%', background:`${accent}1e`, border:`1px solid ${accent}33`, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+                <span style={{ fontSize:10, fontWeight:800, color:accent }}>{(post.author||'P')[0]}</span>
               </div>
-              <span style={{ fontSize:13, color:'#94a3b8', fontWeight:500 }}>{post.author}</span>
+              <span style={{ fontSize:13, color:'#64748b', fontWeight:500 }}>{post.author}</span>
             </div>
-            <span style={{ width:1, height:14, background:'rgba(255,255,255,0.1)', display:'inline-block' }} />
-            <span style={{ fontSize:13, color:'#64748b', display:'flex', alignItems:'center', gap:5 }}>
-              <Calendar style={{ width:12, height:12 }} />{fmtDate(post.publishDate || post.date)}
+            <span style={{ width:1, height:12, background:'rgba(255,255,255,0.08)', display:'inline-block' }} />
+            <span style={{ fontSize:13, color:'#475569', display:'flex', alignItems:'center', gap:4 }}>
+              <Calendar style={{ width:11, height:11 }} />{fmtDate(post.publishDate || post.date)}
             </span>
-            <span style={{ fontSize:13, color:'#64748b', display:'flex', alignItems:'center', gap:5 }}>
-              <Clock style={{ width:12, height:12 }} />{post.readTime} min read
+            <span style={{ fontSize:13, color:'#475569', display:'flex', alignItems:'center', gap:4 }}>
+              <Clock style={{ width:11, height:11 }} />{post.readTime} min read
             </span>
           </div>
         </div>
       </div>
 
-      {/* Body: article + sticky sidebar */}
-      <div style={{ maxWidth:1140, margin:'0 auto', padding:'0 32px 80px' }}>
-        <div className="b-article-layout" style={{ display:'grid', gridTemplateColumns:'1fr 256px', gap:64, paddingTop:52, alignItems:'start' }}>
+      {/* Body: wide wrapper, narrow prose + sidebar */}
+      <div style={{ maxWidth:1100, margin:'0 auto', padding:'0 24px 80px' }}>
+        <div className="b-article-layout" style={{ display:'grid', gridTemplateColumns:'minmax(0,680px) 220px', gap:56, paddingTop:48, alignItems:'start', justifyContent:'center' }}>
           <article>
             <Prose content={post.content || ''} />
             {post.tags?.length > 0 && (
-              <div style={{ marginTop:48, paddingTop:24, borderTop:'1px solid rgba(255,255,255,0.07)', display:'flex', flexWrap:'wrap', gap:7, alignItems:'center' }}>
+              <div style={{ marginTop:44, paddingTop:22, borderTop:'1px solid rgba(255,255,255,0.07)', display:'flex', flexWrap:'wrap', gap:7, alignItems:'center' }}>
                 <Tag style={{ width:12, height:12, color:'#334155', flexShrink:0 }} />
                 {(Array.isArray(post.tags) ? post.tags : String(post.tags).split(',').map(t=>t.trim())).map(tag => (
                   <span key={tag} style={{ fontSize:12, color:'#475569', background:'rgba(255,255,255,0.04)', border:'1px solid rgba(255,255,255,0.08)', padding:'3px 10px', borderRadius:6, fontWeight:500 }}>#{tag}</span>
@@ -311,14 +333,14 @@ function ArticleView({ post, allPosts, onBack }) {
 
           {/* Sidebar */}
           <aside className="b-sidebar" style={{ position:'sticky', top:68 }}>
-            <div style={{ borderRadius:14, background:'rgba(99,102,241,0.06)', border:'1px solid rgba(99,102,241,0.15)', padding:'22px 20px', marginBottom:16 }}>
-              <div style={{ width:34, height:34, borderRadius:9, background:'rgba(99,102,241,0.12)', border:'1px solid rgba(99,102,241,0.22)', display:'flex', alignItems:'center', justifyContent:'center', marginBottom:13 }}>
-                <Calendar style={{ width:15, height:15, color:'#818cf8' }} />
+            <div style={{ borderRadius:14, background:'rgba(99,102,241,0.06)', border:'1px solid rgba(99,102,241,0.15)', padding:'20px 18px', marginBottom:16 }}>
+              <div style={{ width:32, height:32, borderRadius:9, background:'rgba(99,102,241,0.12)', border:'1px solid rgba(99,102,241,0.22)', display:'flex', alignItems:'center', justifyContent:'center', marginBottom:12 }}>
+                <Calendar style={{ width:14, height:14, color:'#818cf8' }} />
               </div>
-              <h3 className="b-syne" style={{ fontSize:14, fontWeight:800, color:'#f1f5f9', marginBottom:7, letterSpacing:'-0.01em' }}>Ready to plan?</h3>
-              <p style={{ fontSize:13, color:'#64748b', lineHeight:1.65, marginBottom:15 }}>PlanIt gives you team chat, RSVP, QR check-in, seating charts, and budget tracking — free forever.</p>
-              <a href="/" style={{ display:'flex', alignItems:'center', gap:6, padding:'9px 16px', borderRadius:9, background:'#fff', color:'#0f0f17', fontSize:13, fontWeight:700, textDecoration:'none' }}>
-                Get Started Free <ArrowRight style={{ width:12, height:12 }} />
+              <h3 className="b-syne" style={{ fontSize:13, fontWeight:700, color:'#f1f5f9', marginBottom:6 }}>Ready to plan?</h3>
+              <p style={{ fontSize:12.5, color:'#475569', lineHeight:1.65, marginBottom:14 }}>PlanIt gives you team chat, RSVP, QR check-in, seating charts, and budget tracking — free forever.</p>
+              <a href="/" style={{ display:'flex', alignItems:'center', gap:6, padding:'8px 14px', borderRadius:9, background:'#fff', color:'#0f0f17', fontSize:12.5, fontWeight:700, textDecoration:'none' }}>
+                Get Started Free <ArrowRight style={{ width:11, height:11 }} />
               </a>
             </div>
 
@@ -326,11 +348,11 @@ function ArticleView({ post, allPosts, onBack }) {
               <div>
                 <p className="b-syne" style={{ fontSize:10, fontWeight:700, color:'#334155', textTransform:'uppercase', letterSpacing:'0.1em', marginBottom:10 }}>More in this category</p>
                 {related.map(p => (
-                  <button key={p._id} onClick={() => onBack(p)} style={{ width:'100%', textAlign:'left', background:'none', border:'none', cursor:'pointer', padding:'9px 10px', borderRadius:9, transition:'background .15s' }}
+                  <button key={p._id} onClick={() => onBack(p)} style={{ width:'100%', textAlign:'left', background:'none', border:'none', cursor:'pointer', padding:'8px 10px', borderRadius:9, transition:'background .15s' }}
                     onMouseEnter={e => e.currentTarget.style.background='rgba(255,255,255,0.04)'}
                     onMouseLeave={e => e.currentTarget.style.background='none'}
                   >
-                    <p style={{ fontSize:13, color:'#cbd5e1', fontWeight:600, lineHeight:1.4, marginBottom:3 }}>{p.title}</p>
+                    <p style={{ fontSize:12.5, color:'#94a3b8', fontWeight:500, lineHeight:1.45, marginBottom:3 }}>{p.title}</p>
                     <span style={{ fontSize:11, color:'#334155' }}>{p.readTime} min read</span>
                   </button>
                 ))}
