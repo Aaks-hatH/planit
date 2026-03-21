@@ -23,6 +23,7 @@ const supportRoutes   = require('./routes/support');
 const bugReportRoutes = require('./routes/bug-reports');
 const uptimeRoutes    = require('./routes/uptime');
 const { startCleanupScheduler } = require('./jobs/cleanupJob');
+const { seedBlogPosts }         = require('./services/blogSeeder');
 
 const app    = express();
 const server = http.createServer(app);
@@ -49,6 +50,7 @@ const pollRoutes        = require('./routes/polls');
 const fileRoutes        = require('./routes/files');
 const adminRoutes       = require('./routes/admin');
 const publicRoutes      = require('./routes/public');
+const blogRoutes        = require('./routes/blog');
 const checkinRoutes     = require('./routes/checkin-with-override');
 const dataRetentionRoutes = require('./routes/dataRetention7Days');
 const meshRoutes        = require('./routes/mesh');
@@ -311,6 +313,7 @@ app.use('/api/chat',      chatRoutes);
 app.use('/api/polls',     pollRoutes);
 app.use('/api/files',     fileRoutes);
 app.use('/api/admin',     adminRoutes);
+app.use('/api/blog',      blogRoutes);
 app.use('/api/support',   supportRoutes);
 app.use('/api/bug-reports', bugReportRoutes);
 app.use('/api/uptime',    uptimeRoutes);
@@ -434,6 +437,7 @@ const connectDB = async () => {
     console.log(`  Database: ${mongoose.connection.name}`);
 
     startCleanupScheduler();
+    seedBlogPosts(); // no-op if posts already exist; populates fresh DB on first boot
 
     mongoose.connection.on('error',       err  => console.error('MongoDB error:', err));
     mongoose.connection.on('disconnected', ()   => console.warn('MongoDB disconnected'));
