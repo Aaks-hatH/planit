@@ -168,10 +168,14 @@ function maintenanceGuard(req, res, next) {
   });
 }
 
-// Render LB → Router → Backend = 2 proxy hops.
-// trust proxy: 2 ensures req.ip resolves to the real client IP
-// from x-forwarded-for, not the Router's IP.
-app.set('trust proxy', 2);
+// Full proxy chain: Client → Cloudflare → Render LB → Router → Backend
+// That is 3 trusted hops. With trust proxy: 3, Express reads the real client
+// IP from the leftmost entry in X-Forwarded-For after skipping the 3 proxies.
+// Setting this correctly is critical — if the count is wrong, req.ip resolves
+// to a proxy IP (Cloudflare or Router) instead of the real client, which means
+// IP-based blocking, rate limiting, and the entire trafficGuard middleware all
+// operate on the wrong IP and appear completely non-functional.
+app.set('trust proxy', 3);
 
 app.use(helmet({
   hsts: { maxAge: 63072000, includeSubDomains: true, preload: true },
