@@ -33,6 +33,7 @@ import SetupFee from './pages/SetupFee';
 import SetupFeeSuccess from './pages/SetupFeeSuccess';
 import ClientPortal from './pages/ClientPortal';
 import WLHome from './pages/WLHome';
+import Blog from './pages/Blog';
 
 // ─── Maintenance page ─────────────────────────────────────────────────────────
 // t = 's' scheduled | 'i' incident | 'd' degraded
@@ -411,6 +412,8 @@ function App() {
         <Route path="/status"          element={<Status />} />
         <Route path="/discover"        element={<Discover />} />
         <Route path="/help"            element={<Help />} />
+        <Route path="/blog"            element={<Blog />} />
+        <Route path="/blog/:slug"      element={<Blog />} />
         <Route path="/license"         element={<License />} />
         <Route path="/white-label"              element={<WhiteLabelSignup />} />
         <Route path="/white-label/setup-fee"      element={<SetupFee />} />
