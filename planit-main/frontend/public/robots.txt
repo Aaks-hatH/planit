@@ -13,7 +13,9 @@ Disallow: /dashboard
 Disallow: /admin
 Disallow: /api/
 
-# Allow important public pages
+# Allow important public pages explicitly
+Allow: /blog
+Allow: /blog/
 Allow: /discover
 Allow: /about
 Allow: /help
@@ -26,4 +28,4 @@ Allow: /license
 Crawl-delay: 1
 
 # Sitemaps
-Sitemap: https://planitapp.onrender.com/sitemap.xml
+Sitemap: https://planitapp.onrender.com/api/sitemap.xml
