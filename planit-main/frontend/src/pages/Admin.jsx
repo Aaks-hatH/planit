@@ -20,8 +20,9 @@ import {
   WifiOff, AlertOctagon, TrendingDown, GitBranch, Boxes,
   Rocket, Timer, Wifi as WifiOn, Cpu as CpuIcon,
   Command, Key, Play, Crosshair, Ban, MoreHorizontal, CreditCard,
+  BookOpen, Edit3, Tag, Check, Star,
 } from 'lucide-react';
-import api, { adminAPI, uptimeAPI, watchdogAPI, routerAPI, bugReportAPI } from '../services/api';
+import api, { adminAPI, uptimeAPI, watchdogAPI, routerAPI, bugReportAPI, blogAPI } from '../services/api';
 import { SERVICE_CATEGORIES, ALL_SERVICES_FLAT } from '../utils/serviceCategories';
 import { formatNumber, formatFileSize } from '../utils/formatters';
 import { DateTime } from 'luxon';
@@ -5377,7 +5378,7 @@ function FleetControl() {
 
 
 // ─── Mobile "More" nav button ─────────────────────────────────────────────────
-const MORE_SECTIONS = ['organizers','staff','employees','analytics','security','blocklist','reports','uptime','command-center','whitelabel'];
+const MORE_SECTIONS = ['organizers','staff','employees','analytics','security','blocklist','reports','uptime','command-center','whitelabel','blog'];
 function MoreNavButton({ activeSection, setActiveSection }) {
   const [open, setOpen] = React.useState(false);
   const isActive = MORE_SECTIONS.includes(activeSection);
@@ -5385,13 +5386,13 @@ function MoreNavButton({ activeSection, setActiveSection }) {
     organizers: 'Organizers', staff: 'Staff', employees: 'Team',
     analytics: 'Analytics', security: 'Security', blocklist: 'Blocklist',
     reports: 'Reports', uptime: 'Uptime', 'command-center': 'Command',
-    whitelabel: 'White Label',
+    whitelabel: 'White Label', blog: 'Blog CMS',
   };
   const icons = {
     organizers: Building2, staff: UserCheck, employees: Briefcase,
     analytics: BarChart3, security: Shield, blocklist: Ban,
     reports: Inbox, uptime: Radio, 'command-center': Crosshair,
-    whitelabel: Layers,
+    whitelabel: Layers, blog: BookOpen,
   };
   return (
     <>
@@ -5430,6 +5431,7 @@ function MoreNavButton({ activeSection, setActiveSection }) {
   );
 }
 
+
 // ─── Nav Items ────────────────────────────────────────────────────────────────
 const NAV_ITEMS = [
   { id: 'dashboard',      label: 'Dashboard',    icon: Monitor    },
@@ -5448,6 +5450,7 @@ const NAV_ITEMS = [
   { id: 'system',         label: 'System',       icon: Server     },
   { id: 'command-center', label: 'Command',      icon: Crosshair  },
   { id: 'whitelabel',     label: 'White Label',  icon: Layers     },
+  { id: 'blog',           label: 'Blog CMS',     icon: BookOpen   },
 ];
 
 // ─── White Label Panel ────────────────────────────────────────────────────────
@@ -5556,6 +5559,551 @@ function PortalPasswordRow({ selected, isDemo, API }) {
           className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-neutral-900 text-white hover:bg-neutral-700 disabled:opacity-40 whitespace-nowrap">
           {saving ? '...' : status?.enabled ? 'Reset' : 'Enable'}
         </button>
+      </div>
+    </div>
+  );
+}
+
+// ─── Blog CMS Panel ───────────────────────────────────────────────────────────
+//
+// Fully DB-backed blog management panel for the admin.
+// All reads/writes go through /api/blog via the authenticated blogAPI service
+// (which attaches the admin JWT from localStorage on every request).
+// The panel never stores posts in localStorage — that was the old insecure model.
+//
+const BLOG_CATEGORIES = [
+  'Event Planning', 'Restaurant Management', 'How-To Guides',
+  'Wedding Planning', 'Team Collaboration', 'Resources',
+];
+const EMPTY_FORM = {
+  title: '', slug: '', excerpt: '', content: '', category: 'Event Planning',
+  tags: '', author: 'PlanIt Team', publishDate: new Date().toISOString().slice(0, 10),
+  readTime: 5, featured: false, heroColor: '#6366f1',
+};
+
+function BlogCMSPanel() {
+  const isDemo = useContext(DemoContext);
+
+  // ── state ─────────────────────────────────────────────────────────────────
+  const [posts, setPosts]           = useState([]);
+  const [loading, setLoading]       = useState(true);
+  const [view, setView]             = useState('list'); // 'list' | 'edit' | 'new'
+  const [editingPost, setEditingPost] = useState(null); // full post object when editing
+  const [form, setForm]             = useState({ ...EMPTY_FORM });
+  const [saving, setSaving]         = useState(false);
+  const [savedOk, setSavedOk]       = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState(null); // post._id
+  const [deleting, setDeleting]     = useState(null);
+  const [error, setError]           = useState('');
+  const [filter, setFilter]         = useState('');
+
+  // ── load posts ────────────────────────────────────────────────────────────
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError('');
+    try {
+      if (isDemo) {
+        // In demo mode return a placeholder so admins can see the panel shape
+        setPosts([{
+          _id: 'demo1', title: 'Demo: How to Plan a Corporate Event', slug: 'how-to-plan-corporate-event',
+          category: 'Event Planning', publishDate: '2026-03-10', readTime: 9, featured: true,
+          heroColor: '#6366f1', deleted: false, author: 'PlanIt Team', excerpt: 'Demo post.',
+        }]);
+      } else {
+        const { data } = await blogAPI.adminList();
+        setPosts(data.posts || []);
+      }
+    } catch (e) {
+      setError(e?.response?.data?.error || 'Failed to load posts');
+    } finally {
+      setLoading(false);
+    }
+  }, [isDemo]);
+
+  useEffect(() => { load(); }, [load]);
+
+  // ── helpers ───────────────────────────────────────────────────────────────
+  const upd = (key) => (e) =>
+    setForm(f => ({ ...f, [key]: e.target.type === 'checkbox' ? e.target.checked : e.target.value }));
+
+  const openNew = () => {
+    setEditingPost(null);
+    setForm({ ...EMPTY_FORM, publishDate: new Date().toISOString().slice(0, 10) });
+    setView('new');
+    setError('');
+  };
+
+  const openEdit = (post) => {
+    setEditingPost(post);
+    setForm({
+      title:       post.title       || '',
+      slug:        post.slug        || '',
+      excerpt:     post.excerpt     || '',
+      content:     post.content     || '',
+      category:    post.category    || 'Event Planning',
+      tags:        Array.isArray(post.tags) ? post.tags.join(', ') : (post.tags || ''),
+      author:      post.author      || 'PlanIt Team',
+      publishDate: post.publishDate || new Date().toISOString().slice(0, 10),
+      readTime:    post.readTime    || 5,
+      featured:    post.featured    || false,
+      heroColor:   post.heroColor   || '#6366f1',
+    });
+    setView('edit');
+    setError('');
+  };
+
+  const handleSave = async () => {
+    if (!form.title.trim()) { setError('Title is required'); return; }
+    if (isDemo) { toast.error('Save disabled in demo mode'); return; }
+    setSaving(true); setError('');
+    try {
+      const payload = {
+        ...form,
+        tags:     form.tags.split(',').map(t => t.trim()).filter(Boolean),
+        readTime: Number(form.readTime) || 5,
+        // Slug is optional — the backend derives it from title if blank
+        slug: form.slug.trim() || undefined,
+      };
+      if (view === 'new') {
+        await blogAPI.create(payload);
+        toast.success('Post created');
+      } else {
+        await blogAPI.update(editingPost._id, payload);
+        toast.success('Post saved');
+      }
+      setSavedOk(true);
+      await load();
+      setTimeout(() => { setSavedOk(false); setView('list'); }, 900);
+    } catch (e) {
+      setError(e?.response?.data?.errors?.[0]?.msg || e?.response?.data?.error || 'Save failed');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDelete = async (id) => {
+    if (isDemo) { toast.error('Delete disabled in demo mode'); return; }
+    setDeleting(id);
+    try {
+      await blogAPI.remove(id);
+      toast.success('Post deleted');
+      setDeleteConfirm(null);
+      await load();
+    } catch (e) {
+      toast.error(e?.response?.data?.error || 'Delete failed');
+    } finally {
+      setDeleting(null);
+    }
+  };
+
+  // ── filtered post list ────────────────────────────────────────────────────
+  const visible = posts.filter(p => {
+    if (!filter) return true;
+    const q = filter.toLowerCase();
+    return (
+      p.title?.toLowerCase().includes(q) ||
+      p.category?.toLowerCase().includes(q) ||
+      p.author?.toLowerCase().includes(q)
+    );
+  });
+
+  // ── shared label style ────────────────────────────────────────────────────
+  const fieldLabel = 'block text-xs font-semibold text-neutral-500 uppercase tracking-wider mb-1';
+
+  // ═════════════════════════════════════════════════════════════════════════
+  // LIST VIEW
+  // ═════════════════════════════════════════════════════════════════════════
+  if (view === 'list') return (
+    <div className="space-y-4">
+      {/* Header */}
+      <div className="card p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div>
+          <h2 className="text-base font-bold text-neutral-900 flex items-center gap-2">
+            <BookOpen className="w-4 h-4 text-indigo-500" /> Blog CMS
+          </h2>
+          <p className="text-xs text-neutral-400 mt-0.5">
+            Create and manage blog posts. All changes save directly to the database.
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <button onClick={load} className="btn btn-ghost p-2" title="Refresh">
+            <RefreshCw className="w-4 h-4" />
+          </button>
+          <button
+            onClick={openNew}
+            className="btn btn-primary flex items-center gap-1.5 text-sm"
+          >
+            <Plus className="w-4 h-4" /> New Post
+          </button>
+        </div>
+      </div>
+
+      {/* Stats row */}
+      <div className="grid grid-cols-3 gap-3">
+        <StatCard label="Total Posts" value={posts.filter(p => !p.deleted).length} icon={BookOpen} color="indigo" />
+        <StatCard label="Featured"    value={posts.filter(p => p.featured && !p.deleted).length} icon={Star} color="amber" />
+        <StatCard label="Deleted"     value={posts.filter(p => p.deleted).length} icon={Archive} color="red" />
+      </div>
+
+      {error && (
+        <div className="rounded-xl bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700 flex items-center gap-2">
+          <AlertTriangle className="w-4 h-4 flex-shrink-0" /> {error}
+        </div>
+      )}
+
+      {/* Filter */}
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400 pointer-events-none" />
+        <input
+          className="input pl-9 text-sm w-full max-w-sm"
+          placeholder="Filter posts…"
+          value={filter}
+          onChange={e => setFilter(e.target.value)}
+        />
+      </div>
+
+      {/* Post list */}
+      {loading ? (
+        <div className="card p-8 text-center text-neutral-400 text-sm">Loading posts…</div>
+      ) : visible.length === 0 ? (
+        <div className="card p-10 text-center">
+          <BookOpen className="w-8 h-8 text-neutral-300 mx-auto mb-3" />
+          <p className="text-sm font-semibold text-neutral-600">No posts yet</p>
+          <p className="text-xs text-neutral-400 mt-1">Click "New Post" to create your first blog post</p>
+        </div>
+      ) : (
+        <div className="card divide-y divide-neutral-100 overflow-hidden">
+          {visible.map(post => (
+            <div
+              key={post._id}
+              className={`flex items-center gap-3 px-5 py-3.5 hover:bg-neutral-50 transition-colors ${post.deleted ? 'opacity-50' : ''}`}
+            >
+              {/* Colour swatch */}
+              <div
+                className="w-8 h-8 rounded-lg flex-shrink-0 flex items-center justify-center"
+                style={{ background: `${post.heroColor}22`, border: `1px solid ${post.heroColor}44` }}
+              >
+                <div className="w-2.5 h-2.5 rounded-full" style={{ background: post.heroColor }} />
+              </div>
+
+              {/* Info */}
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-sm font-semibold text-neutral-900 truncate max-w-xs">
+                    {post.title}
+                  </span>
+                  {post.featured && (
+                    <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 uppercase tracking-wide flex-shrink-0">
+                      Featured
+                    </span>
+                  )}
+                  {post.deleted && (
+                    <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-red-100 text-red-600 uppercase tracking-wide flex-shrink-0">
+                      Deleted
+                    </span>
+                  )}
+                </div>
+                <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                  <span className="text-xs text-neutral-400">{post.category}</span>
+                  <span className="text-neutral-300 text-xs">·</span>
+                  <span className="text-xs text-neutral-400">{post.publishDate}</span>
+                  <span className="text-neutral-300 text-xs">·</span>
+                  <span className="text-xs text-neutral-400">{post.readTime}m read</span>
+                  <span className="text-neutral-300 text-xs">·</span>
+                  <span className="text-xs font-mono text-neutral-300">/{post.slug}</span>
+                </div>
+              </div>
+
+              {/* Actions */}
+              {!post.deleted && (
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  <a
+                    href={`/blog/${post.slug}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="btn btn-ghost p-1.5"
+                    title="Preview post"
+                  >
+                    <Eye className="w-3.5 h-3.5 text-neutral-400" />
+                  </a>
+                  <button
+                    onClick={() => openEdit(post)}
+                    className="btn btn-ghost p-1.5"
+                    title="Edit post"
+                  >
+                    <Edit2 className="w-3.5 h-3.5 text-neutral-500" />
+                  </button>
+                  {deleteConfirm === post._id ? (
+                    <div className="flex items-center gap-1">
+                      <button
+                        onClick={() => handleDelete(post._id)}
+                        disabled={deleting === post._id}
+                        className="text-xs font-semibold px-2.5 py-1 rounded-lg bg-red-100 text-red-700 hover:bg-red-200 transition-colors disabled:opacity-50"
+                      >
+                        {deleting === post._id ? '…' : 'Confirm'}
+                      </button>
+                      <button
+                        onClick={() => setDeleteConfirm(null)}
+                        className="text-xs px-2 py-1 rounded-lg text-neutral-500 hover:bg-neutral-100 transition-colors"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => setDeleteConfirm(post._id)}
+                      className="btn btn-ghost p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50"
+                      title="Delete post"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+
+  // ═════════════════════════════════════════════════════════════════════════
+  // EDIT / NEW VIEW
+  // ═════════════════════════════════════════════════════════════════════════
+  return (
+    <div className="space-y-4">
+      {/* Header bar */}
+      <div className="card p-4 flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setView('list')}
+            className="btn btn-ghost p-1.5"
+            title="Back to list"
+          >
+            <ArrowLeft className="w-4 h-4 text-neutral-500" />
+          </button>
+          <h2 className="text-sm font-bold text-neutral-900">
+            {view === 'new' ? 'New Post' : `Editing: ${editingPost?.title?.slice(0, 48) || '…'}`}
+          </h2>
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setView('list')}
+            className="btn btn-secondary text-sm"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleSave}
+            disabled={saving}
+            className={`btn text-sm flex items-center gap-1.5 min-w-[110px] justify-center transition-all ${
+              savedOk
+                ? 'bg-emerald-600 hover:bg-emerald-600 text-white'
+                : 'btn-primary'
+            }`}
+          >
+            {saving ? (
+              <><RefreshCw className="w-3.5 h-3.5 animate-spin" /> Saving…</>
+            ) : savedOk ? (
+              <><CheckCircle className="w-3.5 h-3.5" /> Saved!</>
+            ) : (
+              <><Save className="w-3.5 h-3.5" /> Save & Publish</>
+            )}
+          </button>
+        </div>
+      </div>
+
+      {error && (
+        <div className="rounded-xl bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700 flex items-center gap-2">
+          <AlertTriangle className="w-4 h-4 flex-shrink-0" /> {error}
+        </div>
+      )}
+
+      {/* Two-column layout: main content | settings sidebar */}
+      <div className="grid grid-cols-1 xl:grid-cols-[1fr_280px] gap-4 items-start">
+
+        {/* ── Main content column ── */}
+        <div className="space-y-4">
+          <div className="card p-5 space-y-4">
+            <div>
+              <label className={fieldLabel}>Post Title *</label>
+              <input
+                className="input w-full text-base font-semibold"
+                placeholder="An attention-grabbing headline…"
+                value={form.title}
+                onChange={upd('title')}
+                maxLength={300}
+              />
+            </div>
+
+            <div>
+              <label className={fieldLabel}>URL Slug</label>
+              <input
+                className="input w-full font-mono text-sm text-indigo-600"
+                placeholder="auto-generated-from-title"
+                value={form.slug}
+                onChange={upd('slug')}
+                maxLength={200}
+              />
+              <p className="text-xs text-neutral-400 mt-1">
+                Leave blank to auto-generate. Only lowercase letters, digits, and hyphens.
+              </p>
+            </div>
+
+            <div>
+              <label className={fieldLabel}>Excerpt</label>
+              <textarea
+                className="input w-full resize-none text-sm leading-relaxed"
+                rows={3}
+                placeholder="A compelling summary that makes readers want to read more…"
+                value={form.excerpt}
+                onChange={upd('excerpt')}
+                maxLength={600}
+              />
+            </div>
+          </div>
+
+          <div className="card p-5">
+            <label className={fieldLabel}>
+              Content{' '}
+              <span className="font-normal normal-case tracking-normal text-neutral-400">
+                — Markdown: ## h2 · ### h3 · **bold** · *italic* · `code` · - list · --- divider
+              </span>
+            </label>
+            <textarea
+              className="input w-full font-mono text-xs leading-relaxed resize-y"
+              rows={30}
+              placeholder={"## First Section\n\nWrite your content here…\n\n## Another Section\n\nMore content…"}
+              value={form.content}
+              onChange={upd('content')}
+            />
+          </div>
+        </div>
+
+        {/* ── Settings sidebar ── */}
+        <div className="space-y-4 xl:sticky xl:top-6">
+          <div className="card p-5 space-y-4">
+            <h3 className="text-xs font-bold text-neutral-700 uppercase tracking-wider">Post Settings</h3>
+
+            <div>
+              <label className={fieldLabel}>Category</label>
+              <select className="input w-full text-sm" value={form.category} onChange={upd('category')}>
+                {BLOG_CATEGORIES.map(c => <option key={c}>{c}</option>)}
+              </select>
+            </div>
+
+            <div>
+              <label className={fieldLabel}>Tags (comma-separated)</label>
+              <input
+                className="input w-full text-sm"
+                placeholder="planning, tips, events"
+                value={form.tags}
+                onChange={upd('tags')}
+              />
+            </div>
+
+            <div>
+              <label className={fieldLabel}>Author</label>
+              <input
+                className="input w-full text-sm"
+                value={form.author}
+                onChange={upd('author')}
+                maxLength={100}
+              />
+            </div>
+
+            <div>
+              <label className={fieldLabel}>Publish Date</label>
+              <input
+                className="input w-full text-sm"
+                type="date"
+                value={form.publishDate}
+                onChange={upd('publishDate')}
+              />
+            </div>
+
+            <div>
+              <label className={fieldLabel}>Read Time (minutes)</label>
+              <input
+                className="input w-full text-sm"
+                type="number"
+                min={1}
+                max={120}
+                value={form.readTime}
+                onChange={upd('readTime')}
+              />
+            </div>
+
+            <div>
+              <label className={fieldLabel}>Accent Color</label>
+              <div className="flex items-center gap-2 mt-1">
+                <input
+                  type="color"
+                  value={form.heroColor}
+                  onChange={upd('heroColor')}
+                  className="w-9 h-9 rounded-lg border border-neutral-200 cursor-pointer p-0.5 bg-white"
+                />
+                <input
+                  className="input flex-1 text-sm font-mono"
+                  value={form.heroColor}
+                  onChange={upd('heroColor')}
+                  placeholder="#6366f1"
+                  maxLength={7}
+                />
+              </div>
+            </div>
+
+            {/* Featured toggle */}
+            <button
+              type="button"
+              onClick={() => setForm(f => ({ ...f, featured: !f.featured }))}
+              className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl border transition-all ${
+                form.featured
+                  ? 'bg-amber-50 border-amber-200'
+                  : 'bg-neutral-50 border-neutral-200'
+              }`}
+            >
+              <span className={`text-sm font-semibold ${form.featured ? 'text-amber-700' : 'text-neutral-500'}`}>
+                Featured Post
+              </span>
+              <div className={`w-9 h-5 rounded-full transition-all relative ${form.featured ? 'bg-amber-400' : 'bg-neutral-200'}`}>
+                <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-all ${form.featured ? 'left-4' : 'left-0.5'}`} />
+              </div>
+            </button>
+          </div>
+
+          {/* Save button repeated in sidebar for convenience */}
+          <button
+            onClick={handleSave}
+            disabled={saving}
+            className={`w-full btn text-sm flex items-center gap-2 justify-center py-2.5 transition-all ${
+              savedOk ? 'bg-emerald-600 hover:bg-emerald-600 text-white' : 'btn-primary'
+            }`}
+          >
+            {saving ? (
+              <><RefreshCw className="w-4 h-4 animate-spin" /> Saving…</>
+            ) : savedOk ? (
+              <><CheckCircle className="w-4 h-4" /> Saved!</>
+            ) : (
+              <><Save className="w-4 h-4" /> Save & Publish</>
+            )}
+          </button>
+
+          {view === 'edit' && editingPost?.slug && (
+            <a
+              href={`/blog/${editingPost.slug}`}
+              target="_blank"
+              rel="noreferrer"
+              className="w-full btn btn-secondary text-sm flex items-center gap-2 justify-center"
+            >
+              <Eye className="w-4 h-4" /> Preview Live Post
+            </a>
+          )}
+
+          <p className="text-[11px] text-neutral-400 text-center leading-relaxed px-2">
+            Posts are saved to the database and published immediately. Use soft-delete from the list view to unpublish.
+          </p>
+        </div>
       </div>
     </div>
   );
@@ -7081,6 +7629,7 @@ export default function Admin() {
           {activeSection === 'reports'        && !selectedEvent && <div className="max-w-5xl mx-auto"><BugReportsPanel /></div>}
           {activeSection === 'command-center' && !selectedEvent && <CommandCenterPanel />}
           {activeSection === 'whitelabel'     && !selectedEvent && <div className="max-w-7xl mx-auto"><WhiteLabelPanel /></div>}
+          {activeSection === 'blog'           && !selectedEvent && <div className="max-w-6xl mx-auto"><BlogCMSPanel /></div>}
         </main>
       </div>
 
