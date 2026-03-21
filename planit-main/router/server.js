@@ -2202,6 +2202,20 @@ app.post('/api/lex/chat', express.json({ limit: '16kb' }), async (req, res) => {
 
 const PRERENDER_BOT_UA = /googlebot|google-inspectiontool|bingbot|slurp|duckduckbot|baiduspider|yandexbot|facebookexternalhit|twitterbot|linkedinbot|whatsapp|telegrambot|applebot|discordbot|slackbot|rogerbot|embedly|quora|outbrain|pinterest|vkshare|facebot|w3c_validator|ia_archiver/i;
 
+// Paths owned entirely by the frontend SPA — the backend has no HTML route
+// for these and would return JSON/404 to a bot. Prerender must render the
+// React app at FRONTEND_URL for all of these.
+const FRONTEND_ONLY_PATHS = new Set([
+  '/', '/blog', '/discover', '/about', '/help',
+  '/status', '/terms', '/privacy', '/license', '/support', '/waitlist',
+]);
+const FRONTEND_PREFIX_PATHS = ['/blog/', '/invite/'];
+
+function _isFrontendPath(p) {
+  if (FRONTEND_ONLY_PATHS.has(p)) return true;
+  return FRONTEND_PREFIX_PATHS.some(prefix => p.startsWith(prefix));
+}
+
 // Only prerender paths that contain real content — skip API, assets, sockets
 function _shouldPrerender(req) {
   if (!process.env.PRERENDER_TOKEN) return false;
@@ -2209,7 +2223,7 @@ function _shouldPrerender(req) {
   const ua = req.headers['user-agent'] || '';
   if (!PRERENDER_BOT_UA.test(ua)) return false;
   const p = req.path;
-  // Skip anything that isn't a frontend page
+  // Hard-skip paths that are never HTML
   if (p.startsWith('/api/'))      return false;
   if (p.startsWith('/socket.io')) return false;
   if (p.startsWith('/mesh/'))     return false;
@@ -2224,6 +2238,9 @@ app.use(async (req, res, next) => {
   const frontendBase = (process.env.FRONTEND_URL || '').replace(/\/$/, '');
   if (!frontendBase) return next();
 
+  // Always point prerender at the frontend URL — it needs to render the React
+  // app, not the backend API. For frontend-only paths (/, /blog, etc.) this
+  // is especially critical since the backend has no route for them at all.
   const targetUrl = encodeURIComponent(`${frontendBase}${req.url}`);
   const prerenderUrl = `https://service.prerender.io/${targetUrl}`;
 
