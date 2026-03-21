@@ -5575,7 +5575,7 @@ const BLOG_CATEGORIES = [
   'Event Planning', 'Restaurant Management', 'How-To Guides',
   'Wedding Planning', 'Team Collaboration', 'Resources',
 ];
-const EMPTY_FORM = {
+const BLOG_EMPTY_FORM = {
   title: '', slug: '', excerpt: '', content: '', category: 'Event Planning',
   tags: '', author: 'PlanIt Team', publishDate: new Date().toISOString().slice(0, 10),
   readTime: 5, featured: false, heroColor: '#6366f1',
@@ -5589,7 +5589,7 @@ function BlogCMSPanel() {
   const [loading, setLoading]       = useState(true);
   const [view, setView]             = useState('list'); // 'list' | 'edit' | 'new'
   const [editingPost, setEditingPost] = useState(null); // full post object when editing
-  const [form, setForm]             = useState({ ...EMPTY_FORM });
+  const [form, setForm]             = useState({ ...BLOG_EMPTY_FORM });
   const [saving, setSaving]         = useState(false);
   const [savedOk, setSavedOk]       = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState(null); // post._id
@@ -5628,7 +5628,7 @@ function BlogCMSPanel() {
 
   const openNew = () => {
     setEditingPost(null);
-    setForm({ ...EMPTY_FORM, publishDate: new Date().toISOString().slice(0, 10) });
+    setForm({ ...BLOG_EMPTY_FORM, publishDate: new Date().toISOString().slice(0, 10) });
     setView('new');
     setError('');
   };
