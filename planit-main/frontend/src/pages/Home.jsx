@@ -721,6 +721,24 @@ const DEMO_GUESTS = [
   { id: 6, name: 'Amara Okafor',    group: 1, table: 7,  code: 'AO1F-Q2', role: 'Attendee', status: 'flagged',  flagReason: 'Low trust score: 42/100 — scanned from 3 different devices' },
 ];
 
+function ScrollProgressBar() {
+  const [progress, setProgress] = useState(0);
+  useEffect(() => {
+    const update = () => {
+      const scrollTop = window.scrollY;
+      const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+      setProgress(docHeight > 0 ? (scrollTop / docHeight) * 100 : 0);
+    };
+    window.addEventListener('scroll', update, { passive: true });
+    return () => window.removeEventListener('scroll', update);
+  }, []);
+  return (
+    <div style={{ position: 'fixed', top: 0, left: 0, right: 0, height: 2, zIndex: 9999, background: 'rgba(255,255,255,0.04)', pointerEvents: 'none' }}>
+      <div style={{ height: '100%', width: `${progress}%`, background: 'linear-gradient(90deg,#6366f1,#8b5cf6)', transition: 'width .1s linear', boxShadow: '0 0 8px rgba(99,102,241,0.5)' }} />
+    </div>
+  );
+}
+
 function QRPattern({ code, size = 40, faded = false }) {
   const cells = 10;
   const hash = code.split('').reduce((acc, c) => acc * 31 + c.charCodeAt(0), 7);
