@@ -244,6 +244,34 @@ function fmtDate(d) {
   catch { return d; }
 }
 
+// ─── Meta tag helper ──────────────────────────────────────────────────────────
+// Creates or updates a <meta> tag. Used for SEO and Open Graph on article pages.
+function setMeta(name, content) {
+  const isOg = name.startsWith('og:') || name.startsWith('twitter:') || name.startsWith('article:');
+  const attr = isOg ? 'property' : 'name';
+  let el = document.querySelector(`meta[${attr}="${name}"]`);
+  if (!el) {
+    el = document.createElement('meta');
+    el.setAttribute(attr, name);
+    document.head.appendChild(el);
+  }
+  el.setAttribute('content', content || '');
+}
+
+function removeMeta(name) {
+  const isOg = name.startsWith('og:') || name.startsWith('twitter:') || name.startsWith('article:');
+  const attr = isOg ? 'property' : 'name';
+  const el = document.querySelector(`meta[${attr}="${name}"]`);
+  if (el) el.remove();
+}
+
+const META_TAGS = [
+  'description',
+  'og:title', 'og:description', 'og:url', 'og:type', 'og:site_name',
+  'twitter:card', 'twitter:title', 'twitter:description',
+  'article:published_time', 'article:author', 'article:section',
+];
+
 // ─── Article view ─────────────────────────────────────────────────────────────
 function ArticleView({ post, allPosts, onBack }) {
   const related = allPosts.filter(p => p._id !== post._id && p.category === post.category).slice(0, 3);
@@ -251,8 +279,47 @@ function ArticleView({ post, allPosts, onBack }) {
 
   useEffect(() => {
     window.scrollTo({ top: 0 });
+
+    const base = 'https://planitapp.onrender.com';
+    const url  = `${base}/blog/${post.slug}`;
+
     document.title = `${post.title} — PlanIt Blog`;
-    return () => { document.title = 'PlanIt Blog'; };
+
+    // Standard SEO
+    setMeta('description',           post.excerpt || '');
+
+    // Open Graph — controls how the link looks when shared on LinkedIn, Slack, iMessage, etc.
+    setMeta('og:title',              post.title);
+    setMeta('og:description',        post.excerpt || '');
+    setMeta('og:url',                url);
+    setMeta('og:type',               'article');
+    setMeta('og:site_name',          'PlanIt Blog');
+
+    // Twitter / X card
+    setMeta('twitter:card',          'summary');
+    setMeta('twitter:title',         post.title);
+    setMeta('twitter:description',   post.excerpt || '');
+
+    // Article-specific structured data (used by Google News, Discover)
+    setMeta('article:published_time', post.publishDate || '');
+    setMeta('article:author',         post.author || 'PlanIt Team');
+    setMeta('article:section',        post.category || 'Event Planning');
+
+    // Canonical link — tells Google the definitive URL for this content
+    let canonical = document.querySelector('link[rel="canonical"]');
+    if (!canonical) {
+      canonical = document.createElement('link');
+      canonical.setAttribute('rel', 'canonical');
+      document.head.appendChild(canonical);
+    }
+    canonical.setAttribute('href', url);
+
+    return () => {
+      document.title = 'PlanIt Blog';
+      META_TAGS.forEach(removeMeta);
+      const c = document.querySelector('link[rel="canonical"]');
+      if (c) c.remove();
+    };
   }, [post._id]);
 
   const share = () => {
