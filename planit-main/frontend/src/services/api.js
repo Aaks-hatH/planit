@@ -22,7 +22,13 @@ api.interceptors.request.use((config) => {
     config.headers['x-wl-domain'] = window.location.hostname;
   }
 
-  const isAdminRequest = config.url && (config.url.includes('/admin') || config.url.includes('/whitelabel'));
+  // Treat any /admin or /whitelabel path as an admin request.
+  // Also treat /blog/admin/all and any non-GET /blog call as admin so the JWT
+  // is attached automatically — /blog write endpoints require verifyAdmin.
+  const url = config.url || '';
+  const isBlogAdminUrl = url.includes('/blog/admin/') ||
+    (url.match(/\/blog(\/[^/]+)?$/) && config.method && config.method.toLowerCase() !== 'get');
+  const isAdminRequest = url.includes('/admin') || url.includes('/whitelabel') || isBlogAdminUrl;
 
   if (isAdminRequest) {
     const adminToken = localStorage.getItem('adminToken');
@@ -45,7 +51,11 @@ api.interceptors.response.use(
   (error) => {
     if (error.response?.status === 401) {
       const url = error.config?.url || '';
-      const isAdminRequest = url.includes('/admin');
+      const method = (error.config?.method || 'get').toLowerCase();
+      // Blog admin routes: /blog/admin/all or any non-GET /blog write
+      const isBlogAdmin = url.includes('/blog/admin/') ||
+        (url.match(/\/blog(\/[^/]+)?$/) && method !== 'get');
+      const isAdminRequest = url.includes('/admin') || isBlogAdmin;
       const isCoreAdminAuth = isAdminRequest && !url.includes('/bug-reports');
 
       if (isCoreAdminAuth) {
@@ -322,6 +332,23 @@ export const adminAPI = {
   addBlock:        (data)         => api.post('/admin/blocklist', data),
   deleteBlock:     (id)           => api.delete(`/admin/blocklist/${id}`),
   updateBlock:     (id, data)     => api.patch(`/admin/blocklist/${id}`, data),
+};
+
+// ─── Blog API (public reads + admin writes) ───────────────────────────────────
+// Public GETs (list, getBySlug) need no auth — served to all visitors.
+// Admin writes (create, update, remove, adminList) are automatically tagged
+// with the admin JWT by the request interceptor above — no manual token
+// attachment needed here, keeping this DRY and future-proof.
+export const blogAPI = {
+  // Public reads — no auth
+  list:      (params) => api.get('/blog', { params }),
+  getBySlug: (slug)   => api.get(`/blog/${slug}`),
+
+  // Admin CMS — JWT attached by interceptor (isBlogAdminUrl matches)
+  adminList: ()           => api.get('/blog/admin/all'),
+  create:    (data)       => api.post('/blog', data),
+  update:    (id, data)   => api.patch(`/blog/${id}`, data),
+  remove:    (id)         => api.delete(`/blog/${id}`),
 };
 
 // ─── Task API ─────────────────────────────────────────────────────────────────
