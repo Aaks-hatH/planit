@@ -330,4 +330,60 @@ router.get('/events/public/wl', async (req, res, next) => {
   }
 });
 
+// ─── GET /api/sitemap.xml ─────────────────────────────────────────────────────
+// Dynamic sitemap covering all public pages + every published blog post.
+// Submit https://planitapp.onrender.com/api/sitemap.xml to Google Search Console.
+// The router forwards this as a normal proxied request — no special config needed.
+router.get('/sitemap.xml', async (req, res, next) => {
+  try {
+    const BlogPost = require('../models/BlogPost');
+    const base = (process.env.FRONTEND_URL || 'https://planitapp.onrender.com').replace(/\/$/, '');
+    const now  = new Date().toISOString().split('T')[0];
+
+    // Static pages
+    const staticPages = [
+      { loc: '/',         priority: '1.0', changefreq: 'weekly'  },
+      { loc: '/blog',     priority: '0.9', changefreq: 'daily'   },
+      { loc: '/discover', priority: '0.8', changefreq: 'daily'   },
+      { loc: '/about',    priority: '0.6', changefreq: 'monthly' },
+      { loc: '/help',     priority: '0.6', changefreq: 'weekly'  },
+      { loc: '/terms',    priority: '0.4', changefreq: 'monthly' },
+      { loc: '/privacy',  priority: '0.4', changefreq: 'monthly' },
+    ];
+
+    // Published blog posts
+    const posts = await BlogPost
+      .find({ deleted: false })
+      .select('slug updatedAt publishDate')
+      .sort({ publishDate: -1 })
+      .lean();
+
+    const staticUrls = staticPages.map(p => `  <url>
+    <loc>${base}${p.loc}</loc>
+    <lastmod>${now}</lastmod>
+    <changefreq>${p.changefreq}</changefreq>
+    <priority>${p.priority}</priority>
+  </url>`).join('\n');
+
+    const postUrls = posts.map(p => `  <url>
+    <loc>${base}/blog/${p.slug}</loc>
+    <lastmod>${new Date(p.updatedAt || p.publishDate).toISOString().split('T')[0]}</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>`).join('\n');
+
+    const xml = `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+${staticUrls}
+${postUrls}
+</urlset>`;
+
+    res.set('Content-Type', 'application/xml');
+    res.set('Cache-Control', 'public, max-age=3600'); // cache 1 hour
+    res.send(xml);
+  } catch (err) {
+    next(err);
+  }
+});
+
 module.exports = router;
