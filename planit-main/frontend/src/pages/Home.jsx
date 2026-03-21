@@ -1688,6 +1688,9 @@ export default function Home() {
                   </div>
                 </div>
               </a>
+            </Reveal>
+          </div>{/* end grid */}
+        </section>{/* end BRANCH GATEWAY */}
 
         {/* ═══════════════════════════════════════════════════════════
             PLANIT EVENTS — its own "page" section
