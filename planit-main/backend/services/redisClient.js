@@ -105,6 +105,13 @@ function _upstash(cmd, ...args) {
 const redis = {
   get isRedis() { return cfg().use; },
 
+  // Called by configSync after writing UPSTASH_REDIS_URL/TOKEN into process.env.
+  // Resets the lazy config cache so the next Redis operation re-reads credentials.
+  _resetCfg() {
+    _cfg = null;
+    console.log('[redis] Config cache reset — will re-initialize on next operation');
+  },
+
   async get(key) {
     if (cfg().use) {
       const r = await _upstash('GET', key);
