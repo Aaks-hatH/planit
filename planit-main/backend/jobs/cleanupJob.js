@@ -8,6 +8,8 @@ const EventParticipant = require('../models/EventParticipant');
 const Invite = require('../models/Invite');
 const UptimeReport = require('../models/UptimeReport');
 const Incident = require('../models/Incident');
+const BlogPost = require('../models/BlogPost');
+const WLLead = require('../models/WLLead');
 
 /**
  * AUTO-CLEANUP SERVICE
@@ -232,6 +234,54 @@ async function scheduleThankyouEmails() {
   }
 }
 
+// ─── Blog soft-delete purge ───────────────────────────────────────────────────
+// Posts are soft-deleted (deleted: true) by the admin CMS rather than hard-
+// deleted, allowing accidental-delete recovery. After 30 days they serve no
+// purpose and waste storage — purge them permanently.
+async function cleanupDeletedBlogPosts() {
+  try {
+    const cutoff = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+    const result = await BlogPost.deleteMany({
+      deleted:   true,
+      updatedAt: { $lt: cutoff },
+    });
+    if (result.deletedCount > 0) {
+      console.log(`[blog cleanup] Permanently removed ${result.deletedCount} soft-deleted post(s) older than 30 days`);
+    }
+  } catch (err) {
+    console.error('[blog cleanup] Error:', err.message);
+  }
+}
+
+// ─── WL lead cleanup ──────────────────────────────────────────────────────────
+// White-label leads that were converted (became active WL clients) or rejected
+// more than 90 days ago are no longer useful. Leads that were never actioned
+// are kept for 180 days then purged.
+async function cleanupStaleWLLeads() {
+  try {
+    const now = new Date();
+
+    // Converted / rejected leads older than 90 days
+    const actioned = await WLLead.deleteMany({
+      status:    { $in: ['converted', 'rejected', 'unsubscribed'] },
+      updatedAt: { $lt: new Date(now - 90 * 24 * 60 * 60 * 1000) },
+    });
+
+    // Unactioned leads older than 180 days (went cold)
+    const stale = await WLLead.deleteMany({
+      status:    { $in: ['new', 'contacted', 'negotiating'] },
+      createdAt: { $lt: new Date(now - 180 * 24 * 60 * 60 * 1000) },
+    });
+
+    const total = actioned.deletedCount + stale.deletedCount;
+    if (total > 0) {
+      console.log(`[wl-lead cleanup] Removed ${actioned.deletedCount} actioned lead(s), ${stale.deletedCount} stale lead(s)`);
+    }
+  } catch (err) {
+    console.error('[wl-lead cleanup] Error:', err.message);
+  }
+}
+
 // Schedule cleanup job to run daily at 2 AM
 function startCleanupScheduler() {
   console.log(' Event cleanup scheduler initialized');
@@ -244,6 +294,8 @@ function startCleanupScheduler() {
     withLock('daily', async () => {
       await cleanupOldEvents();
       await cleanupUptimeData();
+      await cleanupDeletedBlogPosts();
+      await cleanupStaleWLLeads();
     });
   });
 
@@ -267,6 +319,8 @@ function startCleanupScheduler() {
   withLock('startup', async () => {
     await cleanupOldEvents();
     await cleanupUptimeData();
+    await cleanupDeletedBlogPosts();
+    await cleanupStaleWLLeads();
   });
 }
 
@@ -399,4 +453,6 @@ module.exports = {
   manualCleanup,
   cleanupOldEvents,
   cleanupOrphanedCloudinaryAssets,
+  cleanupDeletedBlogPosts,
+  cleanupStaleWLLeads,
 };
