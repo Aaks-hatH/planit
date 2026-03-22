@@ -56,6 +56,16 @@ async function syncConfigFromRouter() {
 
       if (applied.length > 0) {
         console.log(`[configSync] Synced from router: ${applied.join(', ')}`);
+        // Reset the Redis client lazy-config cache so it re-reads credentials
+        // we just wrote into process.env. Without this, if any code touched
+        // Redis before configSync finished (health check, first request, etc.)
+        // the client would have cached a no-credentials state and stayed in
+        // in-memory fallback mode for the entire process lifetime — silently
+        // making all ban/warn operations non-persistent and non-shared.
+        try {
+          const redis = require('./redisClient');
+          if (typeof redis._resetCfg === 'function') redis._resetCfg();
+        } catch { /* no-op if redisClient doesn't export _resetCfg yet */ }
       } else {
         console.log('[configSync] Router config received — all keys already set locally');
       }
