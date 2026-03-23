@@ -2,6 +2,10 @@ export const API_URL      = import.meta.env.VITE_API_URL      || 'http://localho
 export const WS_URL       = import.meta.env.VITE_WS_URL       || 'ws://localhost:5000';
 export const WATCHDOG_URL = import.meta.env.VITE_WATCHDOG_URL || '';
 export const BASE_DOMAIN  = import.meta.env.VITE_BASE_DOMAIN  || 'localhost:5173';
+// Cloudflare Turnstile public site key — safe to expose in frontend code.
+// Set VITE_TURNSTILE_SITE_KEY in your build environment.
+// If unset, the Turnstile widget is hidden and verification is skipped.
+export const TURNSTILE_SITE_KEY = import.meta.env.VITE_TURNSTILE_SITE_KEY || '';
 
 export const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 export const MAX_FILES_PER_UPLOAD = 5;
