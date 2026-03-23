@@ -1385,37 +1385,130 @@ function LogsPanel() {
 // ═══════════════════════════════════════════════════════════════════════════════
 function EmployeesPanel() {
   const isDemo = useContext(DemoContext);
-  const [employees, setEmployees] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [showModal, setShowModal] = useState(false);
-  const [editing, setEditing] = useState(null);
+  const [employees, setEmployees]   = useState([]);
+  const [loading, setLoading]       = useState(true);
+  const [showModal, setShowModal]   = useState(false);
+  const [editing, setEditing]       = useState(null);
+  const [search, setSearch]         = useState('');
+  const [filterRole, setFilterRole] = useState('all');
+  const [filterStatus, setFilterStatus] = useState('all');
+  const [activeTab, setActiveTab]   = useState('info'); // 'info' | 'security' | 'permissions'
 
-  // Full permission set matching the Employee model
+  // ── Permission definitions ─────────────────────────────────────────────────
   const EMPTY_PERMS = {
-    canDeleteEvents:      false,
-    canEditEvents:        false,
-    canManageUsers:       false,
-    canViewLogs:          false,
-    canViewSystem:        false,
-    canManageIncidents:   true,
-    canExportData:        false,
-    canRunCleanup:        false,
-    canSendMarketing:     false,
-    canViewMarketing:     false,
-    canManageBlocklist:   false,
+    canCreateEvents: false, canEditEvents: false, canDeleteEvents: false,
+    canManageUsers: false, canBanUsers: false, canViewUserProfiles: false,
+    canManageInvites: false, canCheckinGuests: false,
+    canManagePolls: false, canManageSeating: false,
+    canManageFiles: false,
+    canViewLogs: false, canViewSystem: false, canAccessAPI: false,
+    canExportData: false, canRunCleanup: false, canViewAnalytics: false, canViewFinancials: false,
+    canManageIncidents: true, canSendNotifications: false,
+    canSendMarketing: false, canViewMarketing: false,
+    canManageBlocklist: false, canViewSecurityLogs: false,
     canToggleMaintenance: false,
+    canEditContent: false, canPublishContent: false,
+    canManageWhiteLabel: false,
+    canViewEmployees: false,
   };
 
+  const PERM_GROUPS = [
+    { label: 'Events', icon: '📅', perms: [
+      ['canCreateEvents','Create Events'],['canEditEvents','Edit Events'],['canDeleteEvents','Delete Events'],
+    ]},
+    { label: 'Users', icon: '👥', perms: [
+      ['canManageUsers','Manage Users'],['canBanUsers','Ban Users'],['canViewUserProfiles','View Profiles'],
+    ]},
+    { label: 'Invites & Check-in', icon: '🎫', perms: [
+      ['canManageInvites','Manage Invites'],['canCheckinGuests','Check-in Guests'],
+    ]},
+    { label: 'Polls & Seating', icon: '🪑', perms: [
+      ['canManagePolls','Manage Polls'],['canManageSeating','Manage Seating'],
+    ]},
+    { label: 'Files', icon: '📁', perms: [
+      ['canManageFiles','Manage Files'],
+    ]},
+    { label: 'Data & Analytics', icon: '📊', perms: [
+      ['canViewAnalytics','View Analytics'],['canViewFinancials','View Financials'],
+      ['canExportData','Export Data'],['canRunCleanup','Run Cleanup'],
+    ]},
+    { label: 'Internal Tooling', icon: '🔧', perms: [
+      ['canViewLogs','View Logs'],['canViewSystem','View System Info'],['canAccessAPI','API Access'],
+    ]},
+    { label: 'Incidents', icon: '🚨', perms: [
+      ['canManageIncidents','Manage Incidents'],['canSendNotifications','Send Notifications'],
+    ]},
+    { label: 'Marketing', icon: '📣', perms: [
+      ['canViewMarketing','View Campaigns'],['canSendMarketing','Send Campaigns'],
+    ]},
+    { label: 'Security', icon: '🔒', perms: [
+      ['canManageBlocklist','Manage Blocklist'],['canViewSecurityLogs','Security Logs'],
+      ['canToggleMaintenance','Toggle Maintenance'],
+    ]},
+    { label: 'Content', icon: '✍️', perms: [
+      ['canEditContent','Edit Content'],['canPublishContent','Publish Content'],
+    ]},
+    { label: 'Admin & Team', icon: '🏢', perms: [
+      ['canManageWhiteLabel','White-label Settings'],['canViewEmployees','View Team'],
+    ]},
+  ];
+
+  const ALL_PERMS_FLAT = PERM_GROUPS.flatMap(g => g.perms);
+
+  // ── Permission presets ─────────────────────────────────────────────────────
+  const PRESETS = [
+    { label: 'Support Agent', color: 'teal', perms: {
+      canManageIncidents: true, canManageInvites: true, canCheckinGuests: true,
+      canViewUserProfiles: true, canSendNotifications: true,
+    }},
+    { label: 'Content Editor', color: 'indigo', perms: {
+      canEditContent: true, canPublishContent: true, canManageFiles: true, canViewAnalytics: true,
+    }},
+    { label: 'Event Manager', color: 'blue', perms: {
+      canCreateEvents: true, canEditEvents: true, canManageInvites: true,
+      canCheckinGuests: true, canManagePolls: true, canManageSeating: true,
+      canManageFiles: true, canManageUsers: true,
+    }},
+    { label: 'Analyst', color: 'purple', perms: {
+      canViewAnalytics: true, canViewFinancials: true, canExportData: true,
+      canViewMarketing: true, canViewLogs: true, canViewSystem: true,
+    }},
+    { label: 'Moderator', color: 'amber', perms: {
+      canManageUsers: true, canBanUsers: true, canManageBlocklist: true,
+      canViewSecurityLogs: true, canManageIncidents: true, canViewUserProfiles: true,
+    }},
+    { label: 'Marketing', color: 'pink', perms: {
+      canViewMarketing: true, canSendMarketing: true, canViewAnalytics: true, canExportData: true,
+    }},
+  ];
+
+  const PRESET_COLORS = {
+    teal: 'bg-teal-50 text-teal-700 border-teal-200 hover:bg-teal-100',
+    indigo: 'bg-indigo-50 text-indigo-700 border-indigo-200 hover:bg-indigo-100',
+    blue: 'bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100',
+    purple: 'bg-purple-50 text-purple-700 border-purple-200 hover:bg-purple-100',
+    amber: 'bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100',
+    pink: 'bg-pink-50 text-pink-700 border-pink-200 hover:bg-pink-100',
+  };
+
+  const applyPreset = (preset) => {
+    setForm(f => ({ ...f, permissions: { ...EMPTY_PERMS, ...preset.perms } }));
+  };
+
+  // ── Form state ─────────────────────────────────────────────────────────────
   const EMPTY_FORM = {
     name: '', email: '', role: 'support', department: '', phone: '',
     notes: '', status: 'active', password: '', startDate: '',
     isDemo: false,
+    timezone: '', location: '', emergencyContact: '', employeeId: '',
+    twoFactorEnabled: false, forcePasswordReset: false,
     permissions: { ...EMPTY_PERMS },
   };
 
   const [form, setForm] = useState(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
 
+  // ── Load ───────────────────────────────────────────────────────────────────
   useEffect(() => { load(); }, []);
   const load = async () => {
     setLoading(true);
@@ -1425,30 +1518,29 @@ function EmployeesPanel() {
     finally { setLoading(false); }
   };
 
+  // ── Open create/edit ───────────────────────────────────────────────────────
   const openCreate = () => {
-    setEditing(null);
-    setForm(EMPTY_FORM);
-    setShowModal(true);
+    setEditing(null); setForm(EMPTY_FORM); setActiveTab('info'); setShowModal(true);
   };
 
   const openEdit = (emp) => {
     setEditing(emp._id);
     setForm({
-      name:        emp.name,
-      email:       emp.email,
-      role:        emp.role,
-      department:  emp.department  || '',
-      phone:       emp.phone       || '',
-      notes:       emp.notes       || '',
-      status:      emp.status,
-      password:    '',
-      startDate:   emp.startDate   || '',
-      isDemo:      emp.isDemo      || false,
+      name: emp.name, email: emp.email, role: emp.role,
+      department: emp.department || '', phone: emp.phone || '',
+      notes: emp.notes || '', status: emp.status, password: '',
+      startDate: emp.startDate || '', isDemo: emp.isDemo || false,
+      timezone: emp.timezone || '', location: emp.location || '',
+      emergencyContact: emp.emergencyContact || '', employeeId: emp.employeeId || '',
+      twoFactorEnabled: emp.twoFactorEnabled || false,
+      forcePasswordReset: emp.forcePasswordReset || false,
       permissions: { ...EMPTY_PERMS, ...emp.permissions },
     });
+    setActiveTab('info');
     setShowModal(true);
   };
 
+  // ── Save ───────────────────────────────────────────────────────────────────
   const save = async () => {
     if (isDemo) { toast.success('Employee updated successfully.'); return; }
     if (!form.name.trim() || !form.email.trim()) { toast.error('Name and email required'); return; }
@@ -1457,8 +1549,7 @@ function EmployeesPanel() {
     try {
       if (editing) { await adminAPI.updateEmployee(editing, form); toast.success('Employee updated'); }
       else { await adminAPI.createEmployee(form); toast.success('Employee created'); }
-      setShowModal(false);
-      load();
+      setShowModal(false); load();
     } catch (e) { toast.error(e.response?.data?.error || 'Save failed'); }
     finally { setSaving(false); }
   };
@@ -1470,74 +1561,50 @@ function EmployeesPanel() {
     catch { toast.error('Delete failed'); }
   };
 
+  // ── Permission toggle (FIX: use div onClick, not label, to avoid double-fire) ──
   const togglePerm = (k) => setForm(f => ({ ...f, permissions: { ...f.permissions, [k]: !f.permissions[k] } }));
 
-  // Permissions grouped by area for cleaner UI
-  const PERM_GROUPS = [
-    {
-      label: 'Events',
-      perms: [
-        ['canEditEvents',   'Edit Events'],
-        ['canDeleteEvents', 'Delete Events'],
-      ],
-    },
-    {
-      label: 'Users',
-      perms: [
-        ['canManageUsers', 'Manage Users'],
-      ],
-    },
-    {
-      label: 'Operations',
-      perms: [
-        ['canManageIncidents',   'Manage Incidents'],
-        ['canRunCleanup',        'Run Cleanup'],
-        ['canToggleMaintenance', 'Toggle Maintenance'],
-      ],
-    },
-    {
-      label: 'Data & Logs',
-      perms: [
-        ['canExportData',  'Export Data'],
-        ['canViewLogs',    'View Logs'],
-        ['canViewSystem',  'View System Info'],
-      ],
-    },
-    {
-      label: 'Marketing',
-      perms: [
-        ['canViewMarketing', 'View Campaigns'],
-        ['canSendMarketing', 'Send Campaigns'],
-      ],
-    },
-    {
-      label: 'Security',
-      perms: [
-        ['canManageBlocklist', 'Manage Blocklist'],
-      ],
-    },
-  ];
+  const grantedCount = Object.values(form.permissions).filter(Boolean).length;
+  const totalPerms   = Object.keys(EMPTY_PERMS).length;
 
-  // Flat list for the employee card summary (only granted ones)
-  const ALL_PERMS_FLAT = PERM_GROUPS.flatMap(g => g.perms);
-
+  // ── Filtering ──────────────────────────────────────────────────────────────
   const ROLES = ['super_admin', 'admin', 'moderator', 'support', 'analyst', 'developer', 'demo'];
+
+  const filtered = employees.filter(emp => {
+    const q = search.toLowerCase();
+    const matchSearch = !q || emp.name.toLowerCase().includes(q) || emp.email.toLowerCase().includes(q) || (emp.department || '').toLowerCase().includes(q);
+    const matchRole   = filterRole === 'all'   || emp.role === filterRole;
+    const matchStatus = filterStatus === 'all' || emp.status === filterStatus;
+    return matchSearch && matchRole && matchStatus;
+  });
 
   const avatarColor = (role) => {
     const map = {
-      super_admin: 'bg-purple-100 text-purple-700',
-      admin:       'bg-blue-100 text-blue-700',
-      moderator:   'bg-amber-100 text-amber-700',
-      support:     'bg-teal-100 text-teal-700',
-      analyst:     'bg-indigo-100 text-indigo-700',
-      developer:   'bg-cyan-100 text-cyan-700',
-      demo:        'bg-orange-100 text-orange-700',
+      super_admin: 'bg-purple-100 text-purple-700', admin: 'bg-blue-100 text-blue-700',
+      moderator: 'bg-amber-100 text-amber-700', support: 'bg-teal-100 text-teal-700',
+      analyst: 'bg-indigo-100 text-indigo-700', developer: 'bg-cyan-100 text-cyan-700',
+      demo: 'bg-orange-100 text-orange-700',
     };
     return map[role] || 'bg-neutral-100 text-neutral-600';
   };
 
+  const statusDot = (status) => {
+    if (status === 'active')    return 'bg-emerald-400';
+    if (status === 'suspended') return 'bg-red-400';
+    return 'bg-neutral-300';
+  };
+
+  // ── Stats bar ──────────────────────────────────────────────────────────────
+  const stats = {
+    active:    employees.filter(e => e.status === 'active').length,
+    suspended: employees.filter(e => e.status === 'suspended').length,
+    demo:      employees.filter(e => e.isDemo).length,
+  };
+
   return (
     <div className="space-y-5">
+
+      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-lg font-bold">Team & Employees</h2>
@@ -1546,147 +1613,389 @@ function EmployeesPanel() {
         <button onClick={openCreate} className="btn btn-primary gap-2 text-sm"><UserPlus className="w-4 h-4" /> Add Employee</button>
       </div>
 
-      {loading ? <div className="flex justify-center py-12"><div className="spinner w-6 h-6 border-2 border-neutral-300 border-t-neutral-600" /></div> : employees.length === 0 ? (
+      {/* Stats */}
+      {employees.length > 0 && (
+        <div className="grid grid-cols-3 gap-3">
+          <div className="card px-4 py-3 flex items-center gap-3">
+            <div className="w-2 h-2 rounded-full bg-emerald-400 flex-shrink-0" />
+            <div><p className="text-lg font-bold">{stats.active}</p><p className="text-xs text-neutral-500">Active</p></div>
+          </div>
+          <div className="card px-4 py-3 flex items-center gap-3">
+            <div className="w-2 h-2 rounded-full bg-red-400 flex-shrink-0" />
+            <div><p className="text-lg font-bold">{stats.suspended}</p><p className="text-xs text-neutral-500">Suspended</p></div>
+          </div>
+          <div className="card px-4 py-3 flex items-center gap-3">
+            <div className="w-2 h-2 rounded-full bg-orange-400 flex-shrink-0" />
+            <div><p className="text-lg font-bold">{stats.demo}</p><p className="text-xs text-neutral-500">Demo Accounts</p></div>
+          </div>
+        </div>
+      )}
+
+      {/* Search + Filters */}
+      {employees.length > 0 && (
+        <div className="flex flex-col sm:flex-row gap-2">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-neutral-400" />
+            <input
+              className="input w-full text-sm pl-8"
+              placeholder="Search by name, email, department…"
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+            />
+          </div>
+          <select className="input text-sm w-full sm:w-36" value={filterRole} onChange={e => setFilterRole(e.target.value)}>
+            <option value="all">All Roles</option>
+            {ROLES.map(r => <option key={r} value={r}>{r.replace('_',' ')}</option>)}
+          </select>
+          <select className="input text-sm w-full sm:w-36" value={filterStatus} onChange={e => setFilterStatus(e.target.value)}>
+            <option value="all">All Statuses</option>
+            {['active','inactive','suspended'].map(s => <option key={s} value={s}>{s}</option>)}
+          </select>
+        </div>
+      )}
+
+      {/* Employee list */}
+      {loading ? (
+        <div className="flex justify-center py-12"><div className="spinner w-6 h-6 border-2 border-neutral-300 border-t-neutral-600" /></div>
+      ) : employees.length === 0 ? (
         <div className="text-center py-20 text-neutral-400">
           <Briefcase className="w-12 h-12 mx-auto mb-3 opacity-30" />
           <p className="text-base font-medium text-neutral-500 mb-2">No employees yet</p>
           <p className="text-sm">Add your first team member to get started</p>
           <button onClick={openCreate} className="btn btn-primary mt-4 gap-2"><UserPlus className="w-4 h-4" /> Add Employee</button>
         </div>
+      ) : filtered.length === 0 ? (
+        <div className="text-center py-12 text-neutral-400">
+          <p className="text-sm">No employees match your search or filters.</p>
+          <button className="text-xs text-blue-500 mt-2 underline" onClick={() => { setSearch(''); setFilterRole('all'); setFilterStatus('all'); }}>Clear filters</button>
+        </div>
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          {employees.map(emp => (
-            <div key={emp._id} className={`card p-5 hover:shadow-lg transition-all ${emp.status !== 'active' ? 'opacity-60' : ''}`}>
-              <div className="flex items-start gap-4">
-                <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-lg font-bold flex-shrink-0 ${avatarColor(emp.role)}`}>
-                  {emp.name.charAt(0).toUpperCase()}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1 flex-wrap">
-                    <p className="text-sm font-bold text-neutral-900">{emp.name}</p>
-                    <RoleBadge role={emp.role} />
-                    {emp.isDemo && (
-                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-orange-100 text-orange-700">
-                        demo
-                      </span>
-                    )}
-                    {emp.status !== 'active' && <StatusBadge status={emp.status} />}
-                  </div>
-                  <p className="text-xs text-neutral-500 mb-1">{emp.email}</p>
-                  {emp.department && <p className="text-xs text-neutral-400">{emp.department}</p>}
-                  {emp.startDate && <p className="text-xs text-neutral-400">Since {fmt(emp.startDate)}</p>}
-                  {emp.permissions && (
-                    <div className="flex flex-wrap gap-1 mt-2">
-                      {emp.role === 'super_admin'
-                        ? <span className="text-xs bg-purple-50 text-purple-600 px-2 py-0.5 rounded-full font-medium">Full Access</span>
-                        : ALL_PERMS_FLAT.filter(([k]) => emp.permissions?.[k]).map(([k, l]) => (
-                            <span key={k} className="text-xs bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full font-medium">{l}</span>
-                          ))
-                      }
-                      {emp.isDemo && <span className="text-xs bg-orange-50 text-orange-500 px-2 py-0.5 rounded-full font-medium">Sandbox mode</span>}
+          {filtered.map(emp => {
+            const grantedPerms = ALL_PERMS_FLAT.filter(([k]) => emp.permissions?.[k]);
+            return (
+              <div key={emp._id} className={`card p-5 hover:shadow-lg transition-all ${emp.status !== 'active' ? 'opacity-60' : ''}`}>
+                <div className="flex items-start gap-4">
+                  <div className="relative flex-shrink-0">
+                    <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-lg font-bold ${avatarColor(emp.role)}`}>
+                      {emp.name.charAt(0).toUpperCase()}
                     </div>
-                  )}
-                </div>
-                <div className="flex gap-2 flex-shrink-0">
-                  <button onClick={() => openEdit(emp)} className="btn btn-secondary p-1.5"><Edit2 className="w-3.5 h-3.5" /></button>
-                  <button onClick={() => del(emp._id, emp.name)} className="btn btn-secondary p-1.5 text-red-500 hover:bg-red-50"><Trash2 className="w-3.5 h-3.5" /></button>
+                    <div className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-white ${statusDot(emp.status)}`} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-0.5 flex-wrap">
+                      <p className="text-sm font-bold text-neutral-900">{emp.name}</p>
+                      <RoleBadge role={emp.role} />
+                      {emp.isDemo && <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-orange-100 text-orange-700">demo</span>}
+                      {emp.forcePasswordReset && <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-red-100 text-red-600">pw reset</span>}
+                    </div>
+                    <p className="text-xs text-neutral-500">{emp.email}</p>
+                    {emp.department && <p className="text-xs text-neutral-400">{emp.department}{emp.location ? ` · ${emp.location}` : ''}</p>}
+                    {emp.employeeId && <p className="text-xs text-neutral-400">ID: {emp.employeeId}</p>}
+                    {emp.startDate && <p className="text-xs text-neutral-400">Since {fmt(emp.startDate)}</p>}
+                    {emp.lastLogin && <p className="text-xs text-neutral-400">Last login: {fmt(emp.lastLogin)}</p>}
+                    {emp.permissions && (
+                      <div className="flex flex-wrap gap-1 mt-2">
+                        {emp.role === 'super_admin'
+                          ? <span className="text-xs bg-purple-50 text-purple-600 px-2 py-0.5 rounded-full font-medium">Full Access</span>
+                          : grantedPerms.length === 0
+                            ? <span className="text-xs bg-neutral-50 text-neutral-400 px-2 py-0.5 rounded-full">No permissions</span>
+                            : grantedPerms.slice(0, 4).map(([k, l]) => (
+                                <span key={k} className="text-xs bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full font-medium">{l}</span>
+                              ))
+                        }
+                        {grantedPerms.length > 4 && (
+                          <span className="text-xs bg-neutral-100 text-neutral-500 px-2 py-0.5 rounded-full">+{grantedPerms.length - 4} more</span>
+                        )}
+                        {emp.isDemo && <span className="text-xs bg-orange-50 text-orange-500 px-2 py-0.5 rounded-full font-medium">Sandbox</span>}
+                        {emp.twoFactorEnabled && <span className="text-xs bg-emerald-50 text-emerald-600 px-2 py-0.5 rounded-full font-medium">2FA</span>}
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex gap-2 flex-shrink-0">
+                    <button onClick={() => openEdit(emp)} className="btn btn-secondary p-1.5"><Edit2 className="w-3.5 h-3.5" /></button>
+                    <button onClick={() => del(emp._id, emp.name)} className="btn btn-secondary p-1.5 text-red-500 hover:bg-red-50"><Trash2 className="w-3.5 h-3.5" /></button>
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 
-      {/* Modal */}
+      {/* ── Modal ── */}
       {showModal && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 px-4" onClick={e => e.target === e.currentTarget && setShowModal(false)}>
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden" style={{ maxHeight: '90vh', display: 'flex', flexDirection: 'column' }}>
-            <div className="px-6 py-5 border-b flex items-center justify-between flex-shrink-0">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden" style={{ maxHeight: '92vh', display: 'flex', flexDirection: 'column' }}>
+
+            {/* Modal header */}
+            <div className="px-6 py-4 border-b flex items-center justify-between flex-shrink-0">
               <div>
                 <h3 className="font-bold text-neutral-900">{editing ? 'Edit Employee' : 'New Employee'}</h3>
-                <p className="text-xs text-neutral-500 mt-0.5">{editing ? 'Update team member details' : 'Add a new team member'}</p>
+                <p className="text-xs text-neutral-500 mt-0.5">{editing ? 'Update team member details and access' : 'Add a new team member'}</p>
               </div>
               <button onClick={() => setShowModal(false)} className="p-1.5 hover:bg-neutral-100 rounded-lg"><X className="w-4 h-4 text-neutral-400" /></button>
             </div>
 
-            <div className="p-6 space-y-5 overflow-y-auto flex-1">
-              {/* Basic info */}
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-medium text-neutral-600 mb-1.5">Full Name *</label>
-                  <input className="input w-full text-sm" placeholder="Jane Smith" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-neutral-600 mb-1.5">Email *</label>
-                  <input type="email" className="input w-full text-sm" placeholder="jane@company.com" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-neutral-600 mb-1.5">Role</label>
-                  <select className="input w-full text-sm" value={form.role} onChange={e => setForm(f => ({ ...f, role: e.target.value }))}>
-                    {ROLES.map(r => <option key={r} value={r}>{r.replace('_', ' ')}</option>)}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-neutral-600 mb-1.5">Status</label>
-                  <select className="input w-full text-sm" value={form.status} onChange={e => setForm(f => ({ ...f, status: e.target.value }))}>
-                    {['active', 'inactive', 'suspended'].map(s => <option key={s} value={s}>{s}</option>)}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-neutral-600 mb-1.5">Department</label>
-                  <input className="input w-full text-sm" placeholder="Engineering" value={form.department} onChange={e => setForm(f => ({ ...f, department: e.target.value }))} />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-neutral-600 mb-1.5">Phone</label>
-                  <input className="input w-full text-sm" placeholder="+1 555 000 0000" value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-neutral-600 mb-1.5">Start Date</label>
-                  <input type="date" className="input w-full text-sm" value={form.startDate ? new Date(form.startDate).toISOString().slice(0, 10) : ''} onChange={e => setForm(f => ({ ...f, startDate: e.target.value || undefined }))} />
-                </div>
-                <div className="col-span-2">
-                  <label className="block text-xs font-medium text-neutral-600 mb-1.5">
-                    {editing ? 'New Password' : 'Password *'}
-                    {editing && <span className="text-neutral-400 font-normal ml-1">(leave blank to keep existing)</span>}
-                  </label>
-                  <input type="password" className="input w-full text-sm" placeholder={editing ? 'Leave blank to keep current' : 'Set login password'} value={form.password} onChange={e => setForm(f => ({ ...f, password: e.target.value }))} />
-                  <p className="text-xs text-neutral-400 mt-1">Employees log in at the admin page using their email + this password.</p>
-                </div>
-              </div>
+            {/* Tabs */}
+            <div className="px-6 border-b flex gap-0 flex-shrink-0">
+              {[['info','Profile'],['security','Security'],['permissions','Permissions']].map(([tab, label]) => (
+                <button
+                  key={tab}
+                  onClick={() => setActiveTab(tab)}
+                  className={`px-4 py-3 text-xs font-semibold border-b-2 transition-all -mb-px ${activeTab === tab ? 'border-neutral-900 text-neutral-900' : 'border-transparent text-neutral-400 hover:text-neutral-600'}`}
+                >
+                  {label}
+                  {tab === 'permissions' && grantedCount > 0 && (
+                    <span className="ml-1.5 bg-blue-100 text-blue-600 text-[10px] font-bold px-1.5 py-0.5 rounded-full">{grantedCount}</span>
+                  )}
+                </button>
+              ))}
+            </div>
 
-              {/* Notes */}
-              <div>
-                <label className="block text-xs font-medium text-neutral-600 mb-1.5">Notes</label>
-                <textarea className="input w-full text-sm resize-none" rows={2} placeholder="Internal notes..." value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} />
-              </div>
+            {/* Modal body */}
+            <div className="p-6 overflow-y-auto flex-1">
 
-              {/* Demo mode toggle */}
-              <div className={`rounded-xl border-2 p-4 transition-all ${form.isDemo ? 'border-orange-300 bg-orange-50' : 'border-neutral-200 bg-neutral-50'}`}>
-                <label className="flex items-start gap-3 cursor-pointer">
-                  <div className="mt-0.5 flex-shrink-0">
-                    <div className={`w-9 h-5 rounded-full transition-all relative ${form.isDemo ? 'bg-orange-500' : 'bg-neutral-300'}`}
-                      onClick={() => setForm(f => ({ ...f, isDemo: !f.isDemo }))}>
-                      <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-all ${form.isDemo ? 'left-4' : 'left-0.5'}`} />
+              {/* ── TAB: Profile ── */}
+              {activeTab === 'info' && (
+                <div className="space-y-5">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-medium text-neutral-600 mb-1.5">Full Name *</label>
+                      <input className="input w-full text-sm" placeholder="Jane Smith" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-neutral-600 mb-1.5">Email *</label>
+                      <input type="email" className="input w-full text-sm" placeholder="jane@company.com" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-neutral-600 mb-1.5">Role</label>
+                      <select className="input w-full text-sm" value={form.role} onChange={e => setForm(f => ({ ...f, role: e.target.value }))}>
+                        {ROLES.map(r => <option key={r} value={r}>{r.replace('_', ' ')}</option>)}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-neutral-600 mb-1.5">Status</label>
+                      <select className="input w-full text-sm" value={form.status} onChange={e => setForm(f => ({ ...f, status: e.target.value }))}>
+                        {['active','inactive','suspended'].map(s => <option key={s} value={s}>{s}</option>)}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-neutral-600 mb-1.5">Department</label>
+                      <input className="input w-full text-sm" placeholder="Engineering" value={form.department} onChange={e => setForm(f => ({ ...f, department: e.target.value }))} />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-neutral-600 mb-1.5">Employee ID</label>
+                      <input className="input w-full text-sm" placeholder="EMP-001" value={form.employeeId} onChange={e => setForm(f => ({ ...f, employeeId: e.target.value }))} />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-neutral-600 mb-1.5">Phone</label>
+                      <input className="input w-full text-sm" placeholder="+1 555 000 0000" value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-neutral-600 mb-1.5">Location / Office</label>
+                      <input className="input w-full text-sm" placeholder="New York, NY" value={form.location} onChange={e => setForm(f => ({ ...f, location: e.target.value }))} />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-neutral-600 mb-1.5">Timezone</label>
+                      <input className="input w-full text-sm" placeholder="America/New_York" value={form.timezone} onChange={e => setForm(f => ({ ...f, timezone: e.target.value }))} />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-neutral-600 mb-1.5">Start Date</label>
+                      <input type="date" className="input w-full text-sm" value={form.startDate ? new Date(form.startDate).toISOString().slice(0,10) : ''} onChange={e => setForm(f => ({ ...f, startDate: e.target.value || undefined }))} />
+                    </div>
+                    <div className="col-span-2">
+                      <label className="block text-xs font-medium text-neutral-600 mb-1.5">Emergency Contact</label>
+                      <input className="input w-full text-sm" placeholder="Name — Phone or Email" value={form.emergencyContact} onChange={e => setForm(f => ({ ...f, emergencyContact: e.target.value }))} />
+                    </div>
+                    <div className="col-span-2">
+                      <label className="block text-xs font-medium text-neutral-600 mb-1.5">Notes</label>
+                      <textarea className="input w-full text-sm resize-none" rows={2} placeholder="Internal notes…" value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} />
                     </div>
                   </div>
-                  <div>
-                    <p className="text-sm font-semibold text-neutral-800">Sandbox / Demo Account</p>
-                    <p className="text-xs text-neutral-500 mt-0.5">
-                      All writes are silently intercepted — the account can browse everything but nothing they do is saved.
-                      Great for giving friends or investors access to explore.
-                    </p>
-                  </div>
-                </label>
-              </div>
 
-              {/* Permissions — grouped */}
-              <div>
-                <div className="flex items-center justify-between mb-3">
-                  <label className="text-xs font-medium text-neutral-600">Permissions</label>
-                  {form.role === 'super_admin' && (
-                    <span className="text-xs text-purple-600 font-medium">super_admin bypasses all permission checks</span>
+                  {/* Demo mode toggle */}
+                  <div className={`rounded-xl border-2 p-4 transition-all cursor-pointer ${form.isDemo ? 'border-orange-300 bg-orange-50' : 'border-neutral-200 bg-neutral-50'}`}
+                    onClick={() => setForm(f => ({ ...f, isDemo: !f.isDemo }))}>
+                    <div className="flex items-start gap-3">
+                      <div className="mt-0.5 flex-shrink-0">
+                        <div className={`w-9 h-5 rounded-full transition-all relative ${form.isDemo ? 'bg-orange-500' : 'bg-neutral-300'}`}>
+                          <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-all ${form.isDemo ? 'left-4' : 'left-0.5'}`} />
+                        </div>
+                      </div>
+                      <div>
+                        <p className="text-sm font-semibold text-neutral-800">Sandbox / Demo Account</p>
+                        <p className="text-xs text-neutral-500 mt-0.5">All writes are silently intercepted — great for demos or investor access.</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* ── TAB: Security ── */}
+              {activeTab === 'security' && (
+                <div className="space-y-4">
+                  {/* Password */}
+                  <div>
+                    <label className="block text-xs font-medium text-neutral-600 mb-1.5">
+                      {editing ? 'New Password' : 'Password *'}
+                      {editing && <span className="text-neutral-400 font-normal ml-1">(leave blank to keep existing)</span>}
+                    </label>
+                    <input type="password" className="input w-full text-sm" placeholder={editing ? 'Leave blank to keep current' : 'Set login password'} value={form.password} onChange={e => setForm(f => ({ ...f, password: e.target.value }))} />
+                    <p className="text-xs text-neutral-400 mt-1">Employees log in at the admin page using their email + this password.</p>
+                  </div>
+
+                  {/* Security toggles */}
+                  <div className="space-y-3">
+                    {[
+                      {
+                        key: 'forcePasswordReset',
+                        title: 'Force Password Reset on Next Login',
+                        desc: 'Employee must change their password the next time they sign in.',
+                        color: 'red',
+                      },
+                      {
+                        key: 'twoFactorEnabled',
+                        title: '2FA Enabled',
+                        desc: 'Mark that this employee has two-factor authentication set up.',
+                        color: 'emerald',
+                      },
+                    ].map(({ key, title, desc, color }) => (
+                      <div
+                        key={key}
+                        className={`rounded-xl border-2 p-4 transition-all cursor-pointer ${form[key] ? `border-${color}-300 bg-${color}-50` : 'border-neutral-200 bg-neutral-50'}`}
+                        onClick={() => setForm(f => ({ ...f, [key]: !f[key] }))}
+                      >
+                        <div className="flex items-start gap-3">
+                          <div className="mt-0.5 flex-shrink-0">
+                            <div className={`w-9 h-5 rounded-full transition-all relative ${form[key] ? `bg-${color}-500` : 'bg-neutral-300'}`}>
+                              <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-all ${form[key] ? 'left-4' : 'left-0.5'}`} />
+                            </div>
+                          </div>
+                          <div>
+                            <p className="text-sm font-semibold text-neutral-800">{title}</p>
+                            <p className="text-xs text-neutral-500 mt-0.5">{desc}</p>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Login activity */}
+                  {editing && (
+                    <div className="rounded-xl border border-neutral-200 p-4 space-y-2">
+                      <p className="text-xs font-bold text-neutral-500 uppercase tracking-widest">Login Activity</p>
+                      <div className="grid grid-cols-2 gap-2 text-xs text-neutral-600">
+                        <div className="bg-neutral-50 rounded-lg px-3 py-2">
+                          <p className="text-[10px] text-neutral-400 uppercase font-semibold mb-0.5">Login Count</p>
+                          <p className="font-bold">{employees.find(e => e._id === editing)?.loginCount || 0}</p>
+                        </div>
+                        <div className="bg-neutral-50 rounded-lg px-3 py-2">
+                          <p className="text-[10px] text-neutral-400 uppercase font-semibold mb-0.5">Last Login</p>
+                          <p className="font-bold">{employees.find(e => e._id === editing)?.lastLogin ? fmt(employees.find(e => e._id === editing).lastLogin) : 'Never'}</p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Access scope note */}
+                  <div className="rounded-xl bg-blue-50 border border-blue-200 px-4 py-3 text-xs text-blue-700">
+                    <strong>Session expiry:</strong> Employee tokens expire after 24 hours. They must log in again after expiry.
+                  </div>
+                </div>
+              )}
+
+              {/* ── TAB: Permissions ── */}
+              {activeTab === 'permissions' && (
+                <div className="space-y-4">
+                  {form.role === 'super_admin' ? (
+                    <div className="rounded-xl bg-purple-50 border border-purple-200 px-4 py-3 text-xs text-purple-700 font-medium">
+                      super_admin bypasses all permission checks — individual flags are ignored.
+                    </div>
+                  ) : form.isDemo ? (
+                    <div className="rounded-xl bg-orange-50 border border-orange-200 px-4 py-3 text-xs text-orange-700">
+                      Permissions are ignored for demo accounts — all write operations are intercepted regardless.
+                    </div>
+                  ) : (
+                    <>
+                      {/* Presets */}
+                      <div>
+                        <p className="text-xs font-bold text-neutral-500 uppercase tracking-widest mb-2">Quick Presets</p>
+                        <div className="flex flex-wrap gap-2">
+                          {PRESETS.map(p => (
+                            <button key={p.label} onClick={() => applyPreset(p)}
+                              className={`text-xs px-3 py-1.5 rounded-full border font-medium transition-all ${PRESET_COLORS[p.color]}`}>
+                              {p.label}
+                            </button>
+                          ))}
+                          <button onClick={() => setForm(f => ({ ...f, permissions: { ...EMPTY_PERMS } }))}
+                            className="text-xs px-3 py-1.5 rounded-full border border-neutral-200 text-neutral-500 hover:bg-neutral-50 font-medium">
+                            Clear All
+                          </button>
+                          <button onClick={() => setForm(f => ({ ...f, permissions: Object.fromEntries(Object.keys(EMPTY_PERMS).map(k => [k, true])) }))}
+                            className="text-xs px-3 py-1.5 rounded-full border border-neutral-200 text-neutral-500 hover:bg-neutral-50 font-medium">
+                            Grant All
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Progress */}
+                      <div className="flex items-center gap-3">
+                        <div className="flex-1 bg-neutral-100 rounded-full h-1.5">
+                          <div className="bg-blue-500 h-1.5 rounded-full transition-all" style={{ width: `${(grantedCount / totalPerms) * 100}%` }} />
+                        </div>
+                        <p className="text-xs text-neutral-500 flex-shrink-0">{grantedCount} / {totalPerms} granted</p>
+                      </div>
+
+                      {/* Permission groups */}
+                      <div className="space-y-4">
+                        {PERM_GROUPS.map(group => (
+                          <div key={group.label}>
+                            <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest mb-2">
+                              {group.icon} {group.label}
+                            </p>
+                            <div className="grid grid-cols-2 gap-1.5">
+                              {group.perms.map(([k, l]) => (
+                                /* FIX: use div with onClick instead of label wrapping a checkbox.
+                                   A <label> containing a readOnly checkbox fires the handler twice
+                                   (once for the label click, once for the synthetic checkbox click),
+                                   which causes togglePerm to toggle and immediately un-toggle. */
+                                <div
+                                  key={k}
+                                  onClick={() => togglePerm(k)}
+                                  className={`flex items-center gap-2.5 p-2.5 rounded-lg border cursor-pointer select-none transition-all ${form.permissions[k] ? 'border-neutral-900 bg-neutral-900' : 'border-neutral-200 hover:bg-neutral-50'}`}
+                                >
+                                  <div className={`w-4 h-4 rounded border-2 flex items-center justify-center flex-shrink-0 transition-all ${form.permissions[k] ? 'bg-white border-white' : 'border-neutral-300'}`}>
+                                    {form.permissions[k] && <svg width="10" height="10" viewBox="0 0 12 12" fill="none"><polyline points="2 6 5 9 10 3" stroke="#111" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>}
+                                  </div>
+                                  <span className={`text-xs ${form.permissions[k] ? 'text-white font-medium' : 'text-neutral-700'}`}>{l}</span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </>
                   )}
                 </div>
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="px-6 py-4 border-t flex gap-3 flex-shrink-0">
+              <button onClick={() => setShowModal(false)} className="flex-1 btn btn-secondary text-sm">Cancel</button>
+              <button onClick={save} disabled={saving} className="flex-1 btn bg-neutral-900 hover:bg-neutral-800 text-white text-sm gap-2 disabled:opacity-50">
+                {saving ? <span className="spinner w-4 h-4 border-2 border-white/30 border-t-white" /> : <Save className="w-4 h-4" />}
+                {editing ? 'Update' : 'Create'} Employee
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
                 {form.isDemo ? (
                   <div className="rounded-lg border border-orange-200 bg-orange-50 px-4 py-3 text-xs text-orange-700">
                     Permissions are ignored for demo accounts — all write operations are intercepted regardless.
