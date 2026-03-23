@@ -100,6 +100,13 @@ const employeeSchema = new mongoose.Schema({
   twoFactorEnabled:  { type: Boolean, default: false },
   forcePasswordReset:{ type: Boolean, default: false },
 
+  // ── TOTP (Time-based One-Time Password) ───────────────────────────────────
+  // totpSecret is the base32-encoded TOTP seed stored encrypted at rest.
+  // totpEnabled mirrors twoFactorEnabled but is the canonical flag — both are
+  // kept in sync so existing code reading twoFactorEnabled still works.
+  totpSecret:        { type: String, select: false }, // never returned by default
+  totpEnabled:       { type: Boolean, default: false },
+
   // ── Access scope ──────────────────────────────────────────────────────────
   // Optional list of event IDs this employee is restricted to. Empty = all events.
   accessibleEvents:  [{ type: String }],
