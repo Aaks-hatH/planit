@@ -1561,6 +1561,48 @@ function EmployeesPanel() {
     catch { toast.error('Delete failed'); }
   };
 
+  const toggleSuspend = async (emp) => {
+    if (isDemo) { toast.success('Status updated (demo).'); return; }
+    const suspend = emp.status !== 'suspended';
+    const reason  = suspend ? prompt(`Reason for suspending ${emp.name}?`) : undefined;
+    if (suspend && reason === null) return; // cancelled
+    try {
+      await adminAPI.suspendEmployee(emp._id, suspend, reason || '');
+      setEmployees(p => p.map(e => e._id === emp._id ? { ...e, status: suspend ? 'suspended' : 'active' } : e));
+      toast.success(suspend ? `${emp.name} suspended` : `${emp.name} unsuspended`);
+    } catch (e) { toast.error(e.response?.data?.error || 'Action failed'); }
+  };
+
+  const doForceReset = async (emp) => {
+    if (isDemo) { toast.success('Password reset flagged (demo).'); return; }
+    if (!confirm(`Force password reset for ${emp.name}? They will be locked to the password-change screen on next login.`)) return;
+    try {
+      await adminAPI.forceResetEmployee(emp._id);
+      setEmployees(p => p.map(e => e._id === emp._id ? { ...e, forcePasswordReset: true } : e));
+      toast.success('Force-reset flag set');
+    } catch (e) { toast.error(e.response?.data?.error || 'Action failed'); }
+  };
+
+  // ── Change-password modal state ─────────────────────────────────────────────
+  const [cpModal, setCpModal]   = useState(null); // the employee being targeted
+  const [cpNew, setCpNew]       = useState('');
+  const [cpConfirm, setCpConfirm] = useState('');
+  const [cpSaving, setCpSaving] = useState(false);
+
+  const openCp = (emp) => { setCpModal(emp); setCpNew(''); setCpConfirm(''); };
+  const doChangePassword = async () => {
+    if (isDemo) { toast.success('Password changed (demo).'); setCpModal(null); return; }
+    if (cpNew.length < 8) { toast.error('Password must be at least 8 characters'); return; }
+    if (cpNew !== cpConfirm) { toast.error('Passwords do not match'); return; }
+    setCpSaving(true);
+    try {
+      await adminAPI.changeEmployeePassword(cpModal._id, { newPassword: cpNew });
+      toast.success(`Password changed for ${cpModal.name}`);
+      setCpModal(null);
+    } catch (e) { toast.error(e.response?.data?.error || 'Failed to change password'); }
+    finally { setCpSaving(false); }
+  };
+
   // ── Permission toggle (FIX: use div onClick, not label, to avoid double-fire) ──
   const togglePerm = (k) => setForm(f => ({ ...f, permissions: { ...f.permissions, [k]: !f.permissions[k] } }));
 
@@ -1712,9 +1754,16 @@ function EmployeesPanel() {
                       </div>
                     )}
                   </div>
-                  <div className="flex gap-2 flex-shrink-0">
-                    <button onClick={() => openEdit(emp)} className="btn btn-secondary p-1.5"><Edit2 className="w-3.5 h-3.5" /></button>
-                    <button onClick={() => del(emp._id, emp.name)} className="btn btn-secondary p-1.5 text-red-500 hover:bg-red-50"><Trash2 className="w-3.5 h-3.5" /></button>
+                  <div className="flex gap-2 flex-shrink-0 flex-wrap justify-end">
+                    <button onClick={() => openEdit(emp)} className="btn btn-secondary p-1.5" title="Edit"><Edit2 className="w-3.5 h-3.5" /></button>
+                    <button onClick={() => openCp(emp)} className="btn btn-secondary p-1.5" title="Change Password"><Key className="w-3.5 h-3.5" /></button>
+                    <button onClick={() => doForceReset(emp)} className="btn btn-secondary p-1.5 text-amber-600 hover:bg-amber-50" title="Force Password Reset"><RotateCcw className="w-3.5 h-3.5" /></button>
+                    <button onClick={() => toggleSuspend(emp)}
+                      className={`btn btn-secondary p-1.5 ${emp.status === 'suspended' ? 'text-emerald-600 hover:bg-emerald-50' : 'text-orange-500 hover:bg-orange-50'}`}
+                      title={emp.status === 'suspended' ? 'Unsuspend' : 'Suspend'}>
+                      <Power className="w-3.5 h-3.5" />
+                    </button>
+                    <button onClick={() => del(emp._id, emp.name)} className="btn btn-secondary p-1.5 text-red-500 hover:bg-red-50" title="Delete"><Trash2 className="w-3.5 h-3.5" /></button>
                   </div>
                 </div>
               </div>
@@ -1992,43 +2041,49 @@ function EmployeesPanel() {
           </div>
         </div>
       )}
-    </div>
-  );
-}
-
-                {form.isDemo ? (
-                  <div className="rounded-lg border border-orange-200 bg-orange-50 px-4 py-3 text-xs text-orange-700">
-                    Permissions are ignored for demo accounts — all write operations are intercepted regardless.
-                  </div>
-                ) : (
-                  <div className="space-y-3">
-                    {PERM_GROUPS.map(group => (
-                      <div key={group.label}>
-                        <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest mb-1.5">{group.label}</p>
-                        <div className="grid grid-cols-2 gap-1.5">
-                          {group.perms.map(([k, l]) => (
-                            <label key={k} className={`flex items-center gap-2.5 p-2.5 rounded-lg border cursor-pointer transition-all ${form.permissions[k] ? 'border-neutral-900 bg-neutral-900' : 'border-neutral-200 hover:bg-neutral-50'}`}
-                              onClick={() => togglePerm(k)}>
-                              <div className={`w-4 h-4 rounded border-2 flex items-center justify-center flex-shrink-0 transition-all ${form.permissions[k] ? 'bg-white border-white' : 'border-neutral-300'}`}>
-                                {form.permissions[k] && <svg width="10" height="10" viewBox="0 0 12 12" fill="none"><polyline points="2 6 5 9 10 3" stroke="#111" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>}
-                              </div>
-                              <input type="checkbox" className="sr-only" checked={!!form.permissions[k]} readOnly />
-                              <span className={`text-xs ${form.permissions[k] ? 'text-white font-medium' : 'text-neutral-700'}`}>{l}</span>
-                            </label>
-                          ))}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
+      {/* ── Change Password Modal ── */}
+      {cpModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 px-4" onClick={e => e.target === e.currentTarget && setCpModal(null)}>
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
+            <div className="px-6 py-4 border-b flex items-center justify-between">
+              <div>
+                <h3 className="font-bold text-neutral-900">Change Password</h3>
+                <p className="text-xs text-neutral-500 mt-0.5">Set a new password for <strong>{cpModal.name}</strong></p>
               </div>
+              <button onClick={() => setCpModal(null)} className="p-1.5 hover:bg-neutral-100 rounded-lg"><X className="w-4 h-4 text-neutral-400" /></button>
             </div>
-
-            <div className="px-6 py-4 border-t flex gap-3 flex-shrink-0">
-              <button onClick={() => setShowModal(false)} className="flex-1 btn btn-secondary text-sm">Cancel</button>
-              <button onClick={save} disabled={saving} className="flex-1 btn bg-neutral-900 hover:bg-neutral-800 text-white text-sm gap-2 disabled:opacity-50">
-                {saving ? <span className="spinner w-4 h-4 border-2 border-white/30 border-t-white" /> : <Save className="w-4 h-4" />}
-                {editing ? 'Update' : 'Create'} Employee
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="block text-xs font-medium text-neutral-600 mb-1.5">New Password</label>
+                <input
+                  type="password"
+                  className="input w-full text-sm"
+                  placeholder="Min. 8 characters"
+                  value={cpNew}
+                  onChange={e => setCpNew(e.target.value)}
+                  autoFocus
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-neutral-600 mb-1.5">Confirm Password</label>
+                <input
+                  type="password"
+                  className="input w-full text-sm"
+                  placeholder="Repeat password"
+                  value={cpConfirm}
+                  onChange={e => setCpConfirm(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && doChangePassword()}
+                />
+              </div>
+              {cpNew && cpConfirm && cpNew !== cpConfirm && (
+                <p className="text-xs text-red-500 flex items-center gap-1"><AlertTriangle className="w-3 h-3" /> Passwords do not match</p>
+              )}
+            </div>
+            <div className="px-6 py-4 border-t flex gap-3">
+              <button onClick={() => setCpModal(null)} className="flex-1 btn btn-secondary text-sm">Cancel</button>
+              <button onClick={doChangePassword} disabled={cpSaving || !cpNew || cpNew !== cpConfirm} className="flex-1 btn bg-neutral-900 hover:bg-neutral-800 text-white text-sm disabled:opacity-50 gap-2">
+                {cpSaving ? <span className="spinner w-4 h-4 border-2 border-white/30 border-t-white" /> : <Key className="w-4 h-4" />}
+                Set Password
               </button>
             </div>
           </div>
@@ -2037,10 +2092,6 @@ function EmployeesPanel() {
     </div>
   );
 }
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// ORGANIZERS PANEL
-// ═══════════════════════════════════════════════════════════════════════════════
 function OrganizersPanel() {
   const isDemo = useContext(DemoContext);
   const [organizers, setOrganizers] = useState([]);
@@ -5710,7 +5761,7 @@ function FleetControl() {
 
 
 // ─── Mobile "More" nav button ─────────────────────────────────────────────────
-const MORE_SECTIONS = ['organizers','staff','employees','analytics','security','blocklist','reports','uptime','command-center','whitelabel','blog'];
+const MORE_SECTIONS = ['organizers','staff','employees','audit-logs','analytics','security','blocklist','reports','uptime','command-center','whitelabel','blog'];
 function MoreNavButton({ activeSection, setActiveSection }) {
   const [open, setOpen] = React.useState(false);
   const isActive = MORE_SECTIONS.includes(activeSection);
@@ -5764,6 +5815,178 @@ function MoreNavButton({ activeSection, setActiveSection }) {
 }
 
 
+// ═══════════════════════════════════════════════════════════════════════════════
+// AUDIT LOGS PANEL
+// ═══════════════════════════════════════════════════════════════════════════════
+function AuditLogsPanel() {
+  const isDemo = useContext(DemoContext);
+
+  const [logs,    setLogs]    = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [page,    setPage]    = useState(1);
+  const [total,   setTotal]   = useState(0);
+  const [pages,   setPages]   = useState(1);
+  const LIMIT = 25;
+
+  // Filters
+  const [filterAction, setFilterAction] = useState('');
+  const [filterActor,  setFilterActor]  = useState('');
+  const [filterFrom,   setFilterFrom]   = useState('');
+  const [filterTo,     setFilterTo]     = useState('');
+
+  const DEMO_LOGS = [
+    { _id:'1', action:'employee.create',      actor:'admin',    actorRole:'super_admin', target:'jane.doe@example.com', ip:'192.168.1.1', createdAt: new Date(Date.now()-3600000).toISOString() },
+    { _id:'2', action:'employee.suspend',     actor:'admin',    actorRole:'super_admin', target:'bob.smith@example.com', ip:'192.168.1.1', createdAt: new Date(Date.now()-7200000).toISOString() },
+    { _id:'3', action:'employee.force_reset', actor:'admin',    actorRole:'super_admin', target:'alice@example.com',    ip:'10.0.0.1',    createdAt: new Date(Date.now()-14400000).toISOString() },
+    { _id:'4', action:'employee.delete',      actor:'superadmin', actorRole:'super_admin', target:'old.emp@example.com', ip:'10.0.0.1',   createdAt: new Date(Date.now()-86400000).toISOString() },
+    { _id:'5', action:'employee.update',      actor:'admin',    actorRole:'super_admin', target:'jane.doe@example.com', ip:'192.168.1.1', createdAt: new Date(Date.now()-172800000).toISOString() },
+    { _id:'6', action:'employee.unsuspend',   actor:'admin',    actorRole:'super_admin', target:'bob.smith@example.com', ip:'192.168.1.1', createdAt: new Date(Date.now()-259200000).toISOString() },
+  ];
+
+  const load = async () => {
+    setLoading(true);
+    if (isDemo) {
+      setLogs(DEMO_LOGS); setTotal(DEMO_LOGS.length); setPages(1); setLoading(false); return;
+    }
+    try {
+      const params = { page, limit: LIMIT };
+      if (filterAction) params.action = filterAction;
+      if (filterActor)  params.actor  = filterActor;
+      if (filterFrom)   params.from   = filterFrom;
+      if (filterTo)     params.to     = filterTo;
+      const r = await adminAPI.getAuditLogs(params);
+      setLogs(r.data.logs || []);
+      setTotal(r.data.total || 0);
+      setPages(r.data.pages || 1);
+    } catch { toast.error('Failed to load audit logs'); }
+    finally { setLoading(false); }
+  };
+
+  useEffect(() => { load(); }, [page, filterAction, filterActor, filterFrom, filterTo]);
+
+  const ACTION_COLORS = {
+    'employee.create':      'bg-emerald-100 text-emerald-700',
+    'employee.update':      'bg-blue-100 text-blue-700',
+    'employee.delete':      'bg-red-100 text-red-700',
+    'employee.suspend':     'bg-orange-100 text-orange-700',
+    'employee.unsuspend':   'bg-teal-100 text-teal-700',
+    'employee.force_reset': 'bg-amber-100 text-amber-700',
+    'employee.password_change': 'bg-purple-100 text-purple-700',
+  };
+
+  const actionColor = (action) => ACTION_COLORS[action] || 'bg-neutral-100 text-neutral-600';
+
+  const KNOWN_ACTIONS = Object.keys(ACTION_COLORS);
+
+  return (
+    <div className="space-y-5">
+      {/* Header */}
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <div>
+          <h2 className="text-lg font-bold">Audit Logs</h2>
+          <p className="text-sm text-neutral-500">{total} recorded events · 90-day retention</p>
+        </div>
+        <button onClick={() => load()} className="btn btn-secondary gap-1.5 text-sm">
+          <RefreshCw className="w-3.5 h-3.5" /> Refresh
+        </button>
+      </div>
+
+      {/* Filters */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
+        <select className="input text-sm" value={filterAction} onChange={e => { setFilterAction(e.target.value); setPage(1); }}>
+          <option value="">All Actions</option>
+          {KNOWN_ACTIONS.map(a => <option key={a} value={a}>{a}</option>)}
+        </select>
+        <input
+          className="input text-sm"
+          placeholder="Filter by actor username…"
+          value={filterActor}
+          onChange={e => { setFilterActor(e.target.value); setPage(1); }}
+        />
+        <div className="flex items-center gap-1">
+          <label className="text-xs text-neutral-500 flex-shrink-0">From</label>
+          <input type="date" className="input text-sm flex-1" value={filterFrom} onChange={e => { setFilterFrom(e.target.value); setPage(1); }} />
+        </div>
+        <div className="flex items-center gap-1">
+          <label className="text-xs text-neutral-500 flex-shrink-0">To</label>
+          <input type="date" className="input text-sm flex-1" value={filterTo} onChange={e => { setFilterTo(e.target.value); setPage(1); }} />
+        </div>
+      </div>
+
+      {/* Table */}
+      {loading ? (
+        <div className="flex justify-center py-16"><div className="spinner w-6 h-6 border-2 border-neutral-300 border-t-neutral-600" /></div>
+      ) : logs.length === 0 ? (
+        <div className="text-center py-20 text-neutral-400">
+          <FileText className="w-12 h-12 mx-auto mb-3 opacity-30" />
+          <p className="text-sm font-medium text-neutral-500">No audit events found</p>
+          <p className="text-xs mt-1">Try adjusting your filters, or check back after activity occurs.</p>
+        </div>
+      ) : (
+        <>
+          <div className="card overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="bg-neutral-50 border-b border-neutral-100">
+                    <th className="text-left px-4 py-3 text-xs font-semibold text-neutral-500 uppercase tracking-wider">Action</th>
+                    <th className="text-left px-4 py-3 text-xs font-semibold text-neutral-500 uppercase tracking-wider">Actor</th>
+                    <th className="text-left px-4 py-3 text-xs font-semibold text-neutral-500 uppercase tracking-wider">Target</th>
+                    <th className="text-left px-4 py-3 text-xs font-semibold text-neutral-500 uppercase tracking-wider">IP</th>
+                    <th className="text-left px-4 py-3 text-xs font-semibold text-neutral-500 uppercase tracking-wider">When</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-neutral-100">
+                  {logs.map(log => (
+                    <tr key={log._id} className="hover:bg-neutral-50 transition-colors">
+                      <td className="px-4 py-3">
+                        <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-semibold ${actionColor(log.action)}`}>
+                          {log.action}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3">
+                        <p className="font-medium text-neutral-800">{log.actor || '—'}</p>
+                        {log.actorRole && <p className="text-xs text-neutral-400">{log.actorRole}</p>}
+                      </td>
+                      <td className="px-4 py-3 text-neutral-600 max-w-[180px] truncate" title={log.target}>{log.target || '—'}</td>
+                      <td className="px-4 py-3 font-mono text-xs text-neutral-500">{log.ip || '—'}</td>
+                      <td className="px-4 py-3 text-xs text-neutral-500 whitespace-nowrap">
+                        {new Date(log.createdAt).toLocaleString()}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Pagination */}
+          {pages > 1 && (
+            <div className="flex items-center justify-between">
+              <p className="text-xs text-neutral-500">Page {page} of {pages} · {total} total</p>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setPage(p => Math.max(1, p - 1))}
+                  disabled={page === 1}
+                  className="btn btn-secondary text-xs px-3 py-1.5 disabled:opacity-40">
+                  ← Prev
+                </button>
+                <button
+                  onClick={() => setPage(p => Math.min(pages, p + 1))}
+                  disabled={page === pages}
+                  className="btn btn-secondary text-xs px-3 py-1.5 disabled:opacity-40">
+                  Next →
+                </button>
+              </div>
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  );
+}
+
+
 // ─── Nav Items ────────────────────────────────────────────────────────────────
 const NAV_ITEMS = [
   { id: 'dashboard',      label: 'Dashboard',    icon: Monitor    },
@@ -5772,6 +5995,7 @@ const NAV_ITEMS = [
   { id: 'organizers',     label: 'Organizers',   icon: Building2  },
   { id: 'staff',          label: 'Staff',        icon: UserCheck  },
   { id: 'employees',      label: 'Team',         icon: Briefcase  },
+  { id: 'audit-logs',    label: 'Audit Logs',   icon: FileText   },
   { id: 'fleet',          label: 'Fleet',        icon: Rocket     },
   { id: 'marketing',      label: 'Marketing',    icon: Send       },
   { id: 'analytics',      label: 'Analytics',    icon: BarChart3  },
@@ -7950,6 +8174,7 @@ export default function Admin() {
           {activeSection === 'organizers'     && !selectedEvent && <div className="max-w-7xl mx-auto"><OrganizersPanel /></div>}
           {activeSection === 'staff'          && !selectedEvent && <div className="max-w-7xl mx-auto"><StaffPanel /></div>}
           {activeSection === 'employees'      && !selectedEvent && <div className="max-w-5xl mx-auto"><EmployeesPanel /></div>}
+          {activeSection === 'audit-logs'    && !selectedEvent && <div className="max-w-5xl mx-auto"><AuditLogsPanel /></div>}
           {activeSection === 'analytics'      && !selectedEvent && <div className="max-w-5xl mx-auto"><AnalyticsPanel stats={stats} /></div>}
           {activeSection === 'fleet'          && !selectedEvent && <FleetControl />}
           {activeSection === 'security'       && !selectedEvent && <SecurityPanel />}
