@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
+const crypto = require('crypto');
 const os = require('os');
 const mongoose = require('mongoose');
 const { body, validationResult } = require('express-validator');
@@ -12,11 +13,25 @@ const File = require('../models/File');
 const EventParticipant = require('../models/EventParticipant');
 const Invite = require('../models/Invite');
 const Employee = require('../models/Employee');
-const { verifyAdmin, requirePermission, requireSuperAdminRole, demoGuard } = require('../middleware/auth');
+const { verifyAdmin, requirePermission, requireSuperAdminRole, demoGuard,
+        revokeEmployeeSessions, clearEmployeeRevocation } = require('../middleware/auth');
 const { authLimiter } = require('../middleware/rateLimiter');
 const { secrets } = require('../keys');
 const Blocklist = require('../models/Blocklist');
 const redis     = require('../services/redisClient');
+const { audit, getAuditLogs } = require('../models/AuditLog');
+
+// ─── Brute-force lockout constants ────────────────────────────────────────────
+// After LOCKOUT_MAX_ATTEMPTS failed logins from the same IP + username combo,
+// the account is locked for LOCKOUT_WINDOW_SECS seconds. Subsequent attempts
+// return 429 without ever hitting bcrypt, which also prevents timing attacks.
+const LOCKOUT_MAX_ATTEMPTS = 5;
+const LOCKOUT_WINDOW_SECS  = 15 * 60; // 15 minutes
+
+// Key helpers — scoped to IP + lowercased username so username enumeration is
+// harder (an attacker from a new IP gets a fresh counter).
+const _lockKey = (ip, user) => `login:lock:${ip}:${user.toLowerCase().slice(0, 50)}`;
+const _failKey = (ip, user) => `login:fail:${ip}:${user.toLowerCase().slice(0, 50)}`;
 
 // ─── Validation middleware ────────────────────────────────────────────────────
 const validate = (req, res, next) => {
@@ -73,18 +88,69 @@ router.post(
   async (req, res) => {
     try {
       const { username, password } = req.body;
+      const ip = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.ip || 'unknown';
+
+      // ── Brute-force lockout check ────────────────────────────────────────────
+      // Checked BEFORE any credential validation so bcrypt is never called while
+      // an account is locked (prevents timing-attack enumeration during lockout).
+      const lockKey = _lockKey(ip, username);
+      const isLocked = await redis.get(lockKey);
+      if (isLocked) {
+        audit('login_locked', {
+          req,
+          actor: { email: username, role: 'unknown' },
+          status: 'blocked',
+          details: { username, ip, reason: 'lockout_active' },
+        });
+        return res.status(429).json({
+          error: 'Too many failed login attempts. This account is temporarily locked. Try again in 15 minutes.',
+          lockedOut: true,
+        });
+      }
+
+      // ── Helper: record a failed attempt and potentially lock ─────────────────
+      const recordFailure = async (reason = '') => {
+        const failKey  = _failKey(ip, username);
+        const attempts = await redis.incrWithExpiry(failKey, LOCKOUT_WINDOW_SECS);
+        if (attempts >= LOCKOUT_MAX_ATTEMPTS) {
+          // Escalate to lockout — clear the counter and set the lock key
+          await redis.set(lockKey, '1', LOCKOUT_WINDOW_SECS);
+          await redis.del(failKey);
+          audit('login_locked', {
+            req,
+            actor: { email: username, role: 'unknown' },
+            status: 'blocked',
+            details: { username, ip, attempts, reason },
+          });
+          return { locked: true, attempts };
+        }
+        audit('login_failure', {
+          req,
+          actor: { email: username, role: 'unknown' },
+          status: 'failure',
+          details: { username, ip, attempts, remaining: LOCKOUT_MAX_ATTEMPTS - attempts, reason },
+        });
+        return { locked: false, attempts };
+      };
+
+      // ── Helper: clear fail counter after a successful login ───────────────────
+      const clearFailCounter = async () => {
+        await redis.del(_failKey(ip, username)).catch(() => {});
+      };
 
       const adminUsername = process.env.ADMIN_USERNAME || 'admin';
       const adminPassword = process.env.ADMIN_PASSWORD || 'admin123';
 
-      // ── Demo account check ──────────────────────────────────────────────
-      // Set DEMO_USERNAME and DEMO_PASSWORD in env to enable.
+      // ── Demo account check ───────────────────────────────────────────────────
       // Demo tokens carry isDemo:true so demoGuard intercepts all writes.
       const demoUsername = process.env.DEMO_USERNAME || '';
       const demoPassword = process.env.DEMO_PASSWORD || '';
       if (demoUsername && demoPassword && username === demoUsername && password === demoPassword) {
+        // Demo logins don't get a fail counter — they're a fixed credential
+        const jti = crypto.randomUUID();
         const demoToken = jwt.sign(
           {
+            jti,
             username:  demoUsername,
             name:      'Demo Account',
             isAdmin:   true,
@@ -96,6 +162,11 @@ router.post(
           secrets.jwt,
           { expiresIn: '8h' },
         );
+        audit('login_success', {
+          req,
+          actor: { email: demoUsername, role: 'demo', name: 'Demo Account' },
+          details: { type: 'demo', ip },
+        });
         return res.json({
           message: 'Demo login successful',
           token:   demoToken,
@@ -109,46 +180,129 @@ router.post(
           },
         });
       }
-      // ── End demo check ──────────────────────────────────────────────────
+      // ── End demo check ───────────────────────────────────────────────────────
 
       if (username !== adminUsername || password !== adminPassword) {
         // Super admin check failed — try employee login (email + password)
         const employee = await Employee.findOne({ email: username.toLowerCase().trim(), status: 'active' });
         if (!employee || !employee.passwordHash) {
+          const { locked } = await recordFailure('unknown_user');
+          if (locked) {
+            return res.status(429).json({
+              error: 'Too many failed login attempts. Account locked for 15 minutes.',
+              lockedOut: true,
+            });
+          }
           return res.status(401).json({ error: 'Invalid credentials' });
         }
+
         const match = await bcrypt.compare(password, employee.passwordHash);
         if (!match) {
+          const { locked } = await recordFailure('bad_password');
+          if (locked) {
+            return res.status(429).json({
+              error: 'Too many failed login attempts. Account locked for 15 minutes.',
+              lockedOut: true,
+            });
+          }
           return res.status(401).json({ error: 'Invalid credentials' });
         }
+
+        // ── forcePasswordReset enforcement ────────────────────────────────────
+        // The employee must change their password before getting a full-access
+        // token. Issue a short-lived, restricted token that only the
+        // POST /admin/employees/:id/change-password route accepts.
+        if (employee.forcePasswordReset) {
+          await clearFailCounter();
+          const resetJti   = crypto.randomUUID();
+          const resetToken = jwt.sign(
+            {
+              jti:              resetJti,
+              employeeId:       employee._id.toString(),
+              email:            employee.email,
+              role:             employee.role,
+              isAdmin:          true,
+              isEmployee:       true,
+              forcePasswordReset: true,
+              restricted:       true, // verifyAdmin blocks restricted tokens on all other routes
+            },
+            secrets.jwt,
+            { expiresIn: '1h' },
+          );
+          audit('login_failure', {
+            req,
+            actor: { employeeId: employee._id.toString(), email: employee.email, role: employee.role, name: employee.name },
+            status: 'failure',
+            details: { reason: 'force_password_reset_required', ip },
+          });
+          return res.status(403).json({
+            error: 'You must change your password before continuing.',
+            forcePasswordReset: true,
+            resetToken,
+            employeeId: employee._id.toString(),
+          });
+        }
+
+        // ── Successful employee login ─────────────────────────────────────────
+        await clearFailCounter();
+        const jti      = crypto.randomUUID();
         const empToken = jwt.sign(
-          { employeeId: employee._id, name: employee.name, email: employee.email,
-            role: employee.role, isAdmin: true, isEmployee: true,
-            isDemo: employee.isDemo || false,
-            permissions: employee.permissions },
+          {
+            jti,
+            employeeId:  employee._id.toString(),
+            name:        employee.name,
+            email:       employee.email,
+            role:        employee.role,
+            isAdmin:     true,
+            isEmployee:  true,
+            isDemo:      employee.isDemo || false,
+            permissions: employee.permissions,
+          },
           secrets.jwt,
-          { expiresIn: '24h' }
+          { expiresIn: '24h' },
         );
-        // Track login activity (fire-and-forget, don't block the response)
+
+        // Track login activity (fire-and-forget — don't block the response)
         Employee.findByIdAndUpdate(employee._id, {
           $set:  { lastLogin: new Date() },
           $inc:  { loginCount: 1 },
         }).catch(() => {});
+
+        audit('login_success', {
+          req,
+          actor: { employeeId: employee._id.toString(), email: employee.email, role: employee.role, name: employee.name },
+          details: { ip, jti },
+        });
+
         return res.json({
           message: 'Employee login successful',
           token: empToken,
-          user: { username: employee.name, email: employee.email, role: employee.role,
-                  isEmployee: true, isDemo: employee.isDemo || false,
-                  permissions: employee.permissions,
-                  forcePasswordReset: employee.forcePasswordReset || false },
+          user: {
+            username:    employee.name,
+            email:       employee.email,
+            role:        employee.role,
+            isEmployee:  true,
+            isDemo:      employee.isDemo || false,
+            permissions: employee.permissions,
+            forcePasswordReset: false,
+          },
         });
       }
 
+      // ── Root super-admin login ────────────────────────────────────────────────
+      await clearFailCounter();
+      const jti   = crypto.randomUUID();
       const token = jwt.sign(
-        { username, isAdmin: true, role: 'super_admin' },
+        { jti, username, isAdmin: true, role: 'super_admin' },
         secrets.jwt,
-        { expiresIn: '24h' }
+        { expiresIn: '24h' },
       );
+
+      audit('login_success', {
+        req,
+        actor: { email: username, role: 'super_admin', name: 'Root Admin' },
+        details: { type: 'root', ip, jti },
+      });
 
       res.json({
         message: 'Admin login successful',
@@ -993,6 +1147,11 @@ router.post('/employees', verifyAdmin, requireSuperAdminRole, async (req, res, n
       empData.passwordHash = await bcrypt.hash(req.body.password.trim(), 10);
     }
     const emp = await Employee.create(empData);
+    audit('employee_created', {
+      req, actor: req.admin,
+      targetId: emp._id.toString(), targetType: 'employee',
+      details: { name: emp.name, email: emp.email, role: emp.role, createdBy: req.admin.email || req.admin.username },
+    });
     res.status(201).json({ employee: emp, message: 'Employee created' });
   } catch (error) { next(error); }
 });
@@ -1029,13 +1188,28 @@ router.patch('/employees/:id', verifyAdmin, requireSuperAdminRole, async (req, r
       { new: true, runValidators: true }
     );
     if (!emp) return res.status(404).json({ error: 'Employee not found' });
+    audit('employee_updated', {
+      req, actor: req.admin,
+      targetId: emp._id.toString(), targetType: 'employee',
+      details: { name: emp.name, email: emp.email, updatedFields: Object.keys(updateData), updatedBy: req.admin.email || req.admin.username },
+    });
     res.json({ employee: emp, message: 'Employee updated' });
   } catch (error) { next(error); }
 });
 
 router.delete('/employees/:id', verifyAdmin, requireSuperAdminRole, async (req, res, next) => {
   try {
+    const emp = await Employee.findById(req.params.id).lean();
+    if (!emp) return res.status(404).json({ error: 'Employee not found' });
     await Employee.findByIdAndDelete(req.params.id);
+    // Revoke all active sessions immediately — the employee no longer exists
+    // so any lingering JWT would otherwise grant ghost access for up to 24h.
+    await revokeEmployeeSessions(req.params.id);
+    audit('employee_deleted', {
+      req, actor: req.admin,
+      targetId: req.params.id, targetType: 'employee',
+      details: { name: emp.name, email: emp.email, role: emp.role, deletedBy: req.admin.email || req.admin.username },
+    });
     res.json({ message: 'Employee deleted' });
   } catch (error) { next(error); }
 });
@@ -1043,9 +1217,25 @@ router.delete('/employees/:id', verifyAdmin, requireSuperAdminRole, async (req, 
 // POST /admin/employees/:id/force-reset — flag the employee to reset pw on next login
 router.post('/employees/:id/force-reset', verifyAdmin, requireSuperAdminRole, async (req, res, next) => {
   try {
-    const emp = await Employee.findByIdAndUpdate(req.params.id, { $set: { forcePasswordReset: true } }, { new: true });
+    const emp = await Employee.findByIdAndUpdate(
+      req.params.id,
+      { $set: { forcePasswordReset: true } },
+      { new: true }
+    );
     if (!emp) return res.status(404).json({ error: 'Employee not found' });
-    res.json({ message: 'Password reset flag set', employee: emp });
+
+    // Revoke all active sessions immediately so the employee MUST re-login.
+    // On re-login the forcePasswordReset flag is checked and a restricted
+    // reset-token is issued — they cannot reach any route until they change it.
+    await revokeEmployeeSessions(req.params.id);
+
+    audit('force_password_reset_set', {
+      req, actor: req.admin,
+      targetId: req.params.id, targetType: 'employee',
+      details: { name: emp.name, email: emp.email, setBy: req.admin.email || req.admin.username },
+    });
+
+    res.json({ message: 'Password reset flag set — employee sessions revoked', employee: emp });
   } catch (error) { next(error); }
 });
 
@@ -1057,6 +1247,28 @@ router.post('/employees/:id/suspend', verifyAdmin, requireSuperAdminRole, async 
     const next_status = emp.status === 'suspended' ? 'active' : 'suspended';
     emp.status = next_status;
     await emp.save();
+
+    if (next_status === 'suspended') {
+      // Immediately invalidate all active JWT sessions for this employee.
+      // Any request from a token issued before this timestamp will be rejected
+      // by verifyAdmin's Redis revocation check — even if the token is still
+      // within its 24-hour expiry window.
+      await revokeEmployeeSessions(emp._id.toString());
+      audit('employee_suspended', {
+        req, actor: req.admin,
+        targetId: emp._id.toString(), targetType: 'employee',
+        details: { name: emp.name, email: emp.email, suspendedBy: req.admin.email || req.admin.username },
+      });
+    } else {
+      // Unsuspending: clear the revocation flag so new logins work normally.
+      await clearEmployeeRevocation(emp._id.toString());
+      audit('employee_unsuspended', {
+        req, actor: req.admin,
+        targetId: emp._id.toString(), targetType: 'employee',
+        details: { name: emp.name, email: emp.email, unsuspendedBy: req.admin.email || req.admin.username },
+      });
+    }
+
     res.json({ message: `Employee ${next_status}`, status: next_status });
   } catch (error) { next(error); }
 });
@@ -1076,9 +1288,137 @@ router.get('/employees/:id/activity', verifyAdmin, requireSuperAdminRole, async 
   } catch (error) { next(error); }
 });
 
+// ─────────────────────────────────────────────────────────────────────────────
+// POST /admin/employees/:id/change-password
+// ─────────────────────────────────────────────────────────────────────────────
+// Dual-purpose endpoint:
+//   1. Forced-reset flow: called by the employee themselves using the restricted
+//      resetToken issued at login when forcePasswordReset is true.  The token is
+//      short-lived (1h), carries `restricted: true`, and is accepted here only.
+//   2. Admin-initiated: a super_admin can set any employee's password directly.
+//
+// In both cases a new full-access token is issued and the forcePasswordReset flag
+// is cleared, so the employee can immediately continue working.
+// ─────────────────────────────────────────────────────────────────────────────
+router.post(
+  '/employees/:id/change-password',
+  // Accept either a restricted reset-token (employee self-service) or a full admin token
+  async (req, res, next) => {
+    const token = req.headers.authorization?.split(' ')[1] || req.cookies.adminToken;
+    if (!token) return res.status(401).json({ error: 'Authentication required.' });
+    try {
+      const decoded = require('jsonwebtoken').verify(token, secrets.jwt);
+      // Allow if: (a) caller is a super_admin or root admin, OR
+      //           (b) caller is the employee themselves with a restricted reset-token
+      const isSelf      = decoded.restricted && decoded.isEmployee &&
+                          decoded.employeeId?.toString() === req.params.id;
+      const isAdminCall = decoded.isAdmin && !decoded.restricted &&
+                          (decoded.role === 'super_admin' || (!decoded.isEmployee && decoded.isAdmin));
+      if (!isSelf && !isAdminCall) {
+        return res.status(403).json({ error: 'Not authorised to change this password.' });
+      }
+      req._pwChangeDecoded   = decoded;
+      req._pwChangeSelf      = isSelf;
+      next();
+    } catch {
+      return res.status(401).json({ error: 'Session expired. Please log in again.' });
+    }
+  },
+  [
+    body('newPassword')
+      .isLength({ min: 10 }).withMessage('Password must be at least 10 characters')
+      .matches(/[A-Z]/).withMessage('Password must contain at least one uppercase letter')
+      .matches(/[0-9]/).withMessage('Password must contain at least one number')
+      .matches(/[^A-Za-z0-9]/).withMessage('Password must contain at least one special character'),
+    validate,
+  ],
+  async (req, res, next) => {
+    try {
+      const emp = await Employee.findById(req.params.id);
+      if (!emp) return res.status(404).json({ error: 'Employee not found.' });
+
+      const newHash = await bcrypt.hash(req.body.newPassword, 12);
+      emp.passwordHash      = newHash;
+      emp.forcePasswordReset = false;
+      await emp.save();
+
+      // Revoke old sessions (including the restricted reset-token), then issue
+      // a fresh full-access token so the employee can continue without re-logging in.
+      await revokeEmployeeSessions(emp._id.toString());
+
+      const jti      = crypto.randomUUID();
+      const newToken = jwt.sign(
+        {
+          jti,
+          employeeId:  emp._id.toString(),
+          name:        emp.name,
+          email:       emp.email,
+          role:        emp.role,
+          isAdmin:     true,
+          isEmployee:  true,
+          isDemo:      emp.isDemo || false,
+          permissions: emp.permissions,
+        },
+        secrets.jwt,
+        { expiresIn: '24h' },
+      );
+
+      audit('password_changed', {
+        req,
+        actor: req._pwChangeDecoded,
+        targetId:   emp._id.toString(),
+        targetType: 'employee',
+        details: {
+          name:       emp.name,
+          email:      emp.email,
+          selfChange: req._pwChangeSelf,
+          changedBy:  req._pwChangeDecoded.email || req._pwChangeDecoded.username,
+        },
+      });
+
+      res.json({
+        message: 'Password changed successfully.',
+        token:   newToken, // fresh full-access token (no forcePasswordReset)
+        user: {
+          username:           emp.name,
+          email:              emp.email,
+          role:               emp.role,
+          isEmployee:         true,
+          isDemo:             emp.isDemo || false,
+          permissions:        emp.permissions,
+          forcePasswordReset: false,
+        },
+      });
+    } catch (error) { next(error); }
+  }
+);
+
 // ═══════════════════════════════════════════════════════════════════════════════
-// DATA EXPORT
+// AUDIT LOG VIEWER
 // ═══════════════════════════════════════════════════════════════════════════════
+// GET /admin/audit-logs
+// Returns the decrypted audit trail. Restricted to employees with canViewSecurityLogs
+// or any super_admin / root admin.
+//
+// Query params:
+//   limit    — max records (default 100, max 500)
+//   skip     — pagination offset
+//   action   — filter by action string (e.g. 'login_failure')
+//   actorId  — filter by employee ID
+//   targetId — filter by affected resource ID
+// ─────────────────────────────────────────────────────────────────────────────
+router.get('/audit-logs', verifyAdmin, requirePermission('canViewSecurityLogs'), async (req, res, next) => {
+  try {
+    const limit    = Math.min(parseInt(req.query.limit  || '100', 10), 500);
+    const skip     = parseInt(req.query.skip   || '0',   10);
+    const { action, actorId, targetId } = req.query;
+
+    const logs = await getAuditLogs({ limit, skip, action, actorId, targetId });
+    res.json({ logs, count: logs.length, limit, skip });
+  } catch (error) { next(error); }
+});
+
+
 
 router.get('/export', verifyAdmin, requirePermission('canExportData'), async (req, res, next) => {
   try {
