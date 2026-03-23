@@ -5,6 +5,35 @@ const Event = require('../models/Event');
 // JWT secret is derived from the license key — not read from JWT_SECRET env var.
 // This means the app silently fails all auth if the wrong key is present.
 const { secrets } = require('../keys');
+// Redis for session revocation checks (brute-force lockout keys also live here)
+const redis = require('../services/redisClient');
+
+// ─── Session revocation key helpers ───────────────────────────────────────────
+// When an employee is suspended or deleted, their employee-level revocation key
+// is set in Redis with a 25-hour TTL (24h token max-age + 1h buffer).
+// verifyAdmin checks this key and rejects tokens issued before the revocation.
+//
+// Key format:  revoked:emp:{employeeId}  →  unix-ms timestamp of revocation
+// Any token whose iat (issued-at) is earlier than that timestamp is invalid.
+const REVOCATION_KEY = (empId) => `revoked:emp:${empId}`;
+const REVOCATION_TTL = 25 * 60 * 60; // 25 hours
+
+// Exported so admin.js can call them on suspend/delete/force-reset
+async function revokeEmployeeSessions(employeeId) {
+  try {
+    await redis.set(REVOCATION_KEY(employeeId), Date.now().toString(), REVOCATION_TTL);
+  } catch (e) {
+    console.error('[auth] revokeEmployeeSessions failed (non-fatal):', e.message);
+  }
+}
+
+async function clearEmployeeRevocation(employeeId) {
+  try {
+    await redis.del(REVOCATION_KEY(employeeId));
+  } catch (e) {
+    console.error('[auth] clearEmployeeRevocation failed (non-fatal):', e.message);
+  }
+}
 
 // ─── Event cache ──────────────────────────────────────────────────────────────
 //
@@ -202,7 +231,12 @@ const verifyOrganizer = async (req, res, next) => {
 };
 
 // Verify admin access
-const verifyAdmin = (req, res, next) => {
+// ─── IMPORTANT: now async — it checks Redis for session revocation. ───────────
+// Suspended or deleted employees have a `revoked:emp:{id}` key in Redis.
+// Any token issued BEFORE the revocation timestamp is rejected, even if the JWT
+// signature is still valid. This closes the gap where a suspended employee's
+// 24-hour token would otherwise continue to work until natural expiry.
+const verifyAdmin = async (req, res, next) => {
   // req.query.token is accepted ONLY for SSE (EventSource) routes because the
   // browser EventSource API cannot send custom headers. On all other routes the
   // query param is ignored to prevent tokens appearing in server logs / Referer headers.
@@ -215,18 +249,49 @@ const verifyAdmin = (req, res, next) => {
     return res.status(401).json({ error: 'Admin login required.' });
   }
 
+  let decoded;
   try {
-    const decoded = jwt.verify(token, secrets.jwt);
-
-    if (!decoded.isAdmin) {
-      return res.status(403).json({ error: 'Your account does not have admin privileges.' });
-    }
-
-    req.admin = decoded;
-    next();
+    decoded = jwt.verify(token, secrets.jwt);
   } catch (error) {
-    res.status(401).json({ error: 'Admin session expired. Please log in again.' });
+    return res.status(401).json({ error: 'Admin session expired. Please log in again.' });
   }
+
+  if (!decoded.isAdmin) {
+    return res.status(403).json({ error: 'Your account does not have admin privileges.' });
+  }
+
+  // ── Restricted tokens (forcePasswordReset) must not access normal routes ──
+  if (decoded.restricted) {
+    return res.status(403).json({
+      error: 'You must change your password before continuing.',
+      forcePasswordReset: true,
+    });
+  }
+
+  // ── Session revocation check (for employee tokens only) ───────────────────
+  // Root admin (env-login) tokens have no employeeId — skip revocation check.
+  if (decoded.isEmployee && decoded.employeeId) {
+    try {
+      const revokedAt = await redis.get(REVOCATION_KEY(decoded.employeeId));
+      if (revokedAt) {
+        const revokedTs  = parseInt(revokedAt, 10);
+        const issuedAtMs = (decoded.iat || 0) * 1000; // JWT iat is in seconds
+        if (issuedAtMs < revokedTs) {
+          return res.status(401).json({
+            error: 'Your session has been revoked. Please log in again.',
+            revoked: true,
+          });
+        }
+      }
+    } catch (redisErr) {
+      // Redis unavailable — fail OPEN to avoid locking everyone out on Redis downtime.
+      // Log the error so ops can investigate.
+      console.error('[auth] Redis revocation check failed (fail-open):', redisErr.message);
+    }
+  }
+
+  req.admin = decoded;
+  next();
 };
 
 // Verify user is organizer OR check-in staff
@@ -376,4 +441,6 @@ module.exports = {
   requirePermission,
   requireSuperAdminRole,
   demoGuard,
+  revokeEmployeeSessions,
+  clearEmployeeRevocation,
 };
