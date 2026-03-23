@@ -1,26 +1,23 @@
 const rateLimit = require('express-rate-limit');
+const { realIp: resolveRealIp, isPrivate } = require('./realIp');
 
 // ── Real-IP resolver ──────────────────────────────────────────────────────────
-// On Render the request path is:
-//   Internet → Render LB (adds x-forwarded-for) → Router (appends its own IP)
-//   → Backend
-//
-// With trust proxy: 2 (set in server.js), Express resolves req.ip to the
-// actual client IP correctly.  This helper provides a belt-and-braces fallback
-// in case the header chain ever looks different (single-hop deploy, local dev).
+// Delegates to the shared realIp module (CF-Connecting-IP → XFF → req.ip)
+// which correctly skips all private/internal ranges (10.x, 172.16-31.x, etc.).
+// If the resolved IP is private/unknown (internal Render hop without Cloudflare),
+// return a per-request unique key so we never rate-limit one user as all users.
 function realIp(req) {
-  // Express has already resolved req.ip using the trust-proxy setting.
-  // Use it first.  Fall back to the raw x-forwarded-for leftmost entry, then
-  // the socket address.
-  if (req.ip && req.ip !== '::1' && req.ip !== '127.0.0.1') return req.ip;
-
-  const fwd = req.headers['x-forwarded-for'];
-  if (fwd) {
-    const first = fwd.split(',')[0].trim();
-    if (first) return first;
+  const ip = resolveRealIp(req);
+  // If we can't determine a real public IP, derive a key from the Authorization
+  // token or a unique request ID so limits don't collapse all traffic onto one key.
+  if (isPrivate(ip) || ip === 'unknown') {
+    const authHeader = req.headers['authorization'] || '';
+    const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7, 47) : null;
+    if (token) return `tok:${token}`;
+    // Absolute last resort: let it through ungrouped
+    return `priv:${Math.random()}`;
   }
-
-  return req.socket?.remoteAddress || 'unknown';
+  return ip;
 }
 
 // ── Skip helpers ──────────────────────────────────────────────────────────────
