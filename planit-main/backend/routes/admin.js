@@ -129,12 +129,18 @@ router.post(
           secrets.jwt,
           { expiresIn: '24h' }
         );
+        // Track login activity (fire-and-forget, don't block the response)
+        Employee.findByIdAndUpdate(employee._id, {
+          $set:  { lastLogin: new Date() },
+          $inc:  { loginCount: 1 },
+        }).catch(() => {});
         return res.json({
           message: 'Employee login successful',
           token: empToken,
           user: { username: employee.name, email: employee.email, role: employee.role,
                   isEmployee: true, isDemo: employee.isDemo || false,
-                  permissions: employee.permissions },
+                  permissions: employee.permissions,
+                  forcePasswordReset: employee.forcePasswordReset || false },
         });
       }
 
@@ -962,14 +968,23 @@ router.get('/employees', verifyAdmin, async (req, res, next) => {
 
 router.post('/employees', verifyAdmin, requireSuperAdminRole, async (req, res, next) => {
   try {
-    const { name, email, role, department, phone, notes, permissions, startDate, status, isDemo } = req.body;
+    const {
+      name, email, role, department, phone, notes, permissions, startDate, status, isDemo,
+      timezone, location, emergencyContact, employeeId, twoFactorEnabled, forcePasswordReset, accessibleEvents,
+    } = req.body;
     if (!name || !email) return res.status(400).json({ error: 'Name and email required' });
 
     const existing = await Employee.findOne({ email: email.toLowerCase().trim() });
     if (existing) return res.status(400).json({ error: 'Email already registered' });
 
-    const empData = { name, email, role: role || 'support', department, phone, notes, permissions, status };
+    const empData = {
+      name, email, role: role || 'support', department, phone, notes, permissions, status,
+      timezone, location, emergencyContact, employeeId,
+    };
     if (typeof isDemo === 'boolean') empData.isDemo = isDemo;
+    if (typeof twoFactorEnabled === 'boolean') empData.twoFactorEnabled = twoFactorEnabled;
+    if (typeof forcePasswordReset === 'boolean') empData.forcePasswordReset = forcePasswordReset;
+    if (Array.isArray(accessibleEvents)) empData.accessibleEvents = accessibleEvents;
     if (startDate && startDate.trim()) {
       const d = new Date(startDate);
       if (!isNaN(d.getTime())) empData.startDate = d;
@@ -990,6 +1005,7 @@ router.patch('/employees/:id', verifyAdmin, requireSuperAdminRole, async (req, r
     // Hash new password if provided
     if (password && password.trim()) {
       updateData.passwordHash = await bcrypt.hash(password.trim(), 10);
+      updateData.forcePasswordReset = false; // clear force-reset flag on manual set
     }
 
     // Only set startDate if it's a valid non-empty value
@@ -1004,6 +1020,8 @@ router.patch('/employees/:id', verifyAdmin, requireSuperAdminRole, async (req, r
     delete updateData._id;
     delete updateData.__v;
     delete updateData.passwordHash; // only set via password field above
+    delete updateData.lastLogin;    // only updated via auth middleware
+    delete updateData.loginCount;   // only updated via auth middleware
 
     const emp = await Employee.findByIdAndUpdate(
       req.params.id,
@@ -1019,6 +1037,42 @@ router.delete('/employees/:id', verifyAdmin, requireSuperAdminRole, async (req, 
   try {
     await Employee.findByIdAndDelete(req.params.id);
     res.json({ message: 'Employee deleted' });
+  } catch (error) { next(error); }
+});
+
+// POST /admin/employees/:id/force-reset — flag the employee to reset pw on next login
+router.post('/employees/:id/force-reset', verifyAdmin, requireSuperAdminRole, async (req, res, next) => {
+  try {
+    const emp = await Employee.findByIdAndUpdate(req.params.id, { $set: { forcePasswordReset: true } }, { new: true });
+    if (!emp) return res.status(404).json({ error: 'Employee not found' });
+    res.json({ message: 'Password reset flag set', employee: emp });
+  } catch (error) { next(error); }
+});
+
+// POST /admin/employees/:id/suspend — quick suspend/unsuspend toggle
+router.post('/employees/:id/suspend', verifyAdmin, requireSuperAdminRole, async (req, res, next) => {
+  try {
+    const emp = await Employee.findById(req.params.id);
+    if (!emp) return res.status(404).json({ error: 'Employee not found' });
+    const next_status = emp.status === 'suspended' ? 'active' : 'suspended';
+    emp.status = next_status;
+    await emp.save();
+    res.json({ message: `Employee ${next_status}`, status: next_status });
+  } catch (error) { next(error); }
+});
+
+// GET /admin/employees/:id/activity — lightweight activity summary
+router.get('/employees/:id/activity', verifyAdmin, requireSuperAdminRole, async (req, res, next) => {
+  try {
+    const emp = await Employee.findById(req.params.id).lean();
+    if (!emp) return res.status(404).json({ error: 'Employee not found' });
+    res.json({
+      lastLogin:    emp.lastLogin   || null,
+      loginCount:   emp.loginCount  || 0,
+      createdAt:    emp.createdAt,
+      updatedAt:    emp.updatedAt,
+      startDate:    emp.startDate   || null,
+    });
   } catch (error) { next(error); }
 });
 
