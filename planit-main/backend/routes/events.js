@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const { realIp } = require('../middleware/realIp');
 const { body, validationResult } = require('express-validator');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
@@ -15,7 +16,7 @@ const rateLimit = require('express-rate-limit');
 const eventPasswordLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 10,
-  keyGenerator: (req) => `pwd:${req.ip}:${req.params.eventId || 'none'}`,
+  keyGenerator: (req) => `pwd:${realIp(req)}:${req.params.eventId || 'none'}`,
   handler: (_req, res) => res.status(429).json({ error: 'Too many password attempts for this event.' }),
   standardHeaders: true,
   legacyHeaders: false,
@@ -1701,7 +1702,7 @@ router.get('/:eventId/verify-scan/:inviteCode',
   try {
     const Invite = require('../models/Invite');
     const { eventId, inviteCode } = req.params;
-    const ip = req.ip || req.connection.remoteAddress || '';
+    const ip = realIp(req);
     const staffUser = req.eventAccess?.username || 'staff';
 
     // ── Cross-event security: invite must belong to THIS event ──
@@ -1797,7 +1798,7 @@ router.post('/:eventId/verify-pin/:inviteCode', verifyEventAccess, async (req, r
     const Invite = require('../models/Invite');
     const { eventId, inviteCode } = req.params;
     const { pin } = req.body;
-    const ip = req.ip || req.connection.remoteAddress || '';
+    const ip = realIp(req);
     const staffUser = req.eventAccess?.username || 'staff';
 
     const invite = await Invite.findOne({ inviteCode: inviteCode.toUpperCase().trim(), eventId });
@@ -1838,7 +1839,7 @@ router.post('/:eventId/checkin/:inviteCode',
     const Invite = require('../models/Invite');
     const { eventId, inviteCode } = req.params;
     const { actualAttendees, pinVerified } = req.body;
-    const ip = req.ip || req.connection.remoteAddress || '';
+    const ip = realIp(req);
     const staffUser = req.eventAccess?.username || 'staff';
 
     // Re-verify event ownership on commit (belt-and-suspenders)
