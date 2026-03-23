@@ -289,6 +289,14 @@ export const adminAPI = {
   updateEmployee: (id, data) => api.patch(`/admin/employees/${id}`, data),
   deleteEmployee: (id)       => api.delete(`/admin/employees/${id}`),
 
+  // Employee security actions
+  suspendEmployee:     (id, suspend, reason) => api.patch(`/admin/employees/${id}/suspend`, { suspend, reason }),
+  forceResetEmployee:  (id)                  => api.post(`/admin/employees/${id}/force-reset`),
+  changeEmployeePassword: (id, data)         => api.post(`/admin/employees/${id}/change-password`, data),
+
+  // Audit logs (paginated + filterable)
+  getAuditLogs: (params) => api.get('/admin/audit-logs', { params }),
+
   // Marketing emails
   getMarketingTemplates:  ()                     => api.get('/admin/marketing/templates'),
   getMarketingPreviewUrl: (templateId, ctaUrl) => {
