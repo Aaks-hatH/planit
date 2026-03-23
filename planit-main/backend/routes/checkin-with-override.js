@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const { realIp } = require('../middleware/realIp');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const Invite = require('../models/Invite');
@@ -136,7 +137,7 @@ router.post('/:eventId/request-override',
       invite.scanAttempts.push({
         reason: 'override_requested',
         attemptedBy: managerUsername,
-        ipAddress: req.ip || req.connection.remoteAddress || '',
+        ipAddress: realIp(req),
         deviceInfo: `Override request: ${reason.substring(0, 100)}`,
       });
       await invite.save();
@@ -245,7 +246,7 @@ router.post('/:eventId/checkin-with-override/:inviteCode',
     try {
       const { eventId, inviteCode } = req.params;
       const { overrideToken, actualAttendees } = req.body;
-      const ip = req.ip || req.connection.remoteAddress || '';
+      const ip = realIp(req);
       const staffUser = req.eventAccess?.username || 'staff';
 
       // Validate override token
