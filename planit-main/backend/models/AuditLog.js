@@ -1,5 +1,6 @@
 'use strict';
 
+const { realIp } = require('../middleware/realIp');
 /**
  * models/AuditLog.js
  *
@@ -235,9 +236,7 @@ async function audit(action, { req, actor, targetId, targetType, details = {}, s
     if (!Model) return; // audit DB unavailable — skip silently
 
     const admin = actor || {};
-    const ip    = req
-      ? (req.headers?.['x-forwarded-for']?.split(',')[0]?.trim() || req.ip || req.connection?.remoteAddress || 'unknown')
-      : 'system';
+    const ip    = req ? realIp(req) : 'system';
 
     await Model.create({
       actorId:    admin.employeeId || admin.id || (admin.isEmployee ? admin.employeeId : 'root'),
