@@ -1413,42 +1413,42 @@ function EmployeesPanel() {
   };
 
   const PERM_GROUPS = [
-    { label: 'Events', icon: '📅', perms: [
+    { label: 'Events', icon: '', perms: [
       ['canCreateEvents','Create Events'],['canEditEvents','Edit Events'],['canDeleteEvents','Delete Events'],
     ]},
-    { label: 'Users', icon: '👥', perms: [
+    { label: 'Users', icon: '', perms: [
       ['canManageUsers','Manage Users'],['canBanUsers','Ban Users'],['canViewUserProfiles','View Profiles'],
     ]},
-    { label: 'Invites & Check-in', icon: '🎫', perms: [
+    { label: 'Invites & Check-in', icon: '', perms: [
       ['canManageInvites','Manage Invites'],['canCheckinGuests','Check-in Guests'],
     ]},
-    { label: 'Polls & Seating', icon: '🪑', perms: [
+    { label: 'Polls & Seating', icon: '', perms: [
       ['canManagePolls','Manage Polls'],['canManageSeating','Manage Seating'],
     ]},
-    { label: 'Files', icon: '📁', perms: [
+    { label: 'Files', icon: '', perms: [
       ['canManageFiles','Manage Files'],
     ]},
-    { label: 'Data & Analytics', icon: '📊', perms: [
+    { label: 'Data & Analytics', icon: '', perms: [
       ['canViewAnalytics','View Analytics'],['canViewFinancials','View Financials'],
       ['canExportData','Export Data'],['canRunCleanup','Run Cleanup'],
     ]},
-    { label: 'Internal Tooling', icon: '🔧', perms: [
+    { label: 'Internal Tooling', icon: '', perms: [
       ['canViewLogs','View Logs'],['canViewSystem','View System Info'],['canAccessAPI','API Access'],
     ]},
-    { label: 'Incidents', icon: '🚨', perms: [
+    { label: 'Incidents', icon: '', perms: [
       ['canManageIncidents','Manage Incidents'],['canSendNotifications','Send Notifications'],
     ]},
-    { label: 'Marketing', icon: '📣', perms: [
+    { label: 'Marketing', icon: '', perms: [
       ['canViewMarketing','View Campaigns'],['canSendMarketing','Send Campaigns'],
     ]},
-    { label: 'Security', icon: '🔒', perms: [
+    { label: 'Security', icon: '', perms: [
       ['canManageBlocklist','Manage Blocklist'],['canViewSecurityLogs','Security Logs'],
       ['canToggleMaintenance','Toggle Maintenance'],
     ]},
-    { label: 'Content', icon: '✍️', perms: [
+    { label: 'Content', icon: '', perms: [
       ['canEditContent','Edit Content'],['canPublishContent','Publish Content'],
     ]},
-    { label: 'Admin & Team', icon: '🏢', perms: [
+    { label: 'Admin & Team', icon: '', perms: [
       ['canManageWhiteLabel','White-label Settings'],['canViewEmployees','View Team'],
     ]},
   ];
