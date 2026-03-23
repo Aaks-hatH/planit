@@ -2278,7 +2278,30 @@ function BugReportsPanel() {
 
               {/* Email reporter link */}
               <a
-                href={`mailto:${selected.email}?subject=Re: ${encodeURIComponent(selected.summary)}&body=Hi ${encodeURIComponent(selected.name)},%0A%0AThank you for reporting this issue. We wanted to let you know...`}
+                href={`mailto:${selected.email}?subject=${encodeURIComponent(`Re: ${selected.summary}`)}&body=${encodeURIComponent(`Hi ${selected.name || 'there'},
+
+We've looked into the issue you reported and wanted to give you an update.
+
+Here's a summary of your report:
+
+  Report ID:   ${selected._id}
+  Category:    ${selected.category}
+  Summary:     ${selected.summary}
+  Severity:    ${selected.severity}
+  Submitted:   ${new Date(selected.createdAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}
+
+${selected.description ? `Your description:\n"${selected.description}"\n\n` : ''}[ADD YOUR UPDATE HERE]
+
+If you have any further questions or the issue persists, just reply to this email and we'll get back to you as soon as possible.
+
+Thanks for helping us make PlanIt better — it genuinely means a lot.
+
+Aakshat Hariharan
+Founder & CEO, PlanIt
+planitapp.onrender.com
+
+---
+This email is in response to a bug report submitted at planitapp.onrender.com/help.`)}`}
                 className="flex items-center justify-center gap-2 w-full py-2 border border-neutral-200 rounded-xl text-xs font-semibold text-neutral-700 hover:bg-neutral-50 transition-colors"
               >
                 <Mail className="w-3.5 h-3.5" />
