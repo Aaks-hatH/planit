@@ -21,6 +21,53 @@ const { secrets } = require('../keys');
 const Blocklist = require('../models/Blocklist');
 const redis     = require('../services/redisClient');
 const { audit, getAuditLogs } = require('../models/AuditLog');
+const speakeasy  = require('speakeasy');
+const QRCode     = require('qrcode');
+const { meshPost } = require('../middleware/mesh');
+
+// ─── Turnstile verification (via router mesh) ─────────────────────────────────
+// The Turnstile SECRET KEY lives only in the router env — never here.
+// We call /mesh/turnstile over the authenticated mesh channel.
+// Returns true if the challenge passed (or if no secret is configured in dev).
+async function verifyTurnstile(token, ip) {
+  const routerUrl = (process.env.ROUTER_URL || '').replace(/\/$/, '');
+  if (!routerUrl) {
+    // No router configured (local dev without router) — skip verification
+    return { ok: true, skipped: true };
+  }
+  if (!token) return { ok: false, error: 'Turnstile token required' };
+  const result = await meshPost('backend', `${routerUrl}/mesh/turnstile`, { token, ip });
+  if (!result.ok) return { ok: false, error: 'Could not reach Turnstile verification service' };
+  return result.data; // { ok: true } or { ok: false, error: '...' }
+}
+
+// ─── TOTP helpers ─────────────────────────────────────────────────────────────
+// Encrypt a TOTP secret before storing it so the DB field is not plaintext.
+// We derive an encryption key from the license key so there's no extra secret.
+function _totpKey() {
+  return secrets.db.slice(0, 32); // 32 hex chars → 16 bytes AES-128 key
+}
+function encryptTotpSecret(secret) {
+  const iv  = crypto.randomBytes(16);
+  const key = Buffer.from(_totpKey(), 'hex');
+  const cipher = crypto.createCipheriv('aes-128-cbc', key, iv);
+  const enc = Buffer.concat([cipher.update(secret, 'utf8'), cipher.final()]);
+  return iv.toString('hex') + ':' + enc.toString('hex');
+}
+function decryptTotpSecret(stored) {
+  const [ivHex, encHex] = stored.split(':');
+  const iv  = Buffer.from(ivHex,  'hex');
+  const enc = Buffer.from(encHex, 'hex');
+  const key = Buffer.from(_totpKey(), 'hex');
+  const decipher = crypto.createDecipheriv('aes-128-cbc', key, iv);
+  return Buffer.concat([decipher.update(enc), decipher.final()]).toString('utf8');
+}
+function verifyTotpCode(encryptedSecret, code) {
+  try {
+    const secret = decryptTotpSecret(encryptedSecret);
+    return speakeasy.totp.verify({ secret, encoding: 'base32', token: code, window: 1 });
+  } catch { return false; }
+}
 
 // ─── Brute-force lockout constants ────────────────────────────────────────────
 // After LOCKOUT_MAX_ATTEMPTS failed logins from the same IP + username combo,
@@ -84,17 +131,26 @@ router.post(
   [
     body('username').trim().notEmpty().withMessage('Username is required'),
     body('password').notEmpty().withMessage('Password is required'),
+    // turnstileToken is optional — validated below only when configured
+    body('turnstileToken').optional().isString(),
     validate,
   ],
   async (req, res) => {
     try {
-      const { username, password } = req.body;
+      const { username, password, turnstileToken, totpCode } = req.body;
       const ip = realIp(req);
 
+      // ── Turnstile verification ────────────────────────────────────────────────
+      // Checked first, before any credential work, so bots can't even attempt
+      // brute-force without solving a challenge. Fails open when router is
+      // unreachable (network error) so a router outage never locks admins out.
+      const tsResult = await verifyTurnstile(turnstileToken, ip);
+      if (!tsResult.ok) {
+        return res.status(400).json({ error: 'Human verification failed. Please try again.' });
+      }
+
       // ── Brute-force lockout check ────────────────────────────────────────────
-      // Checked BEFORE any credential validation so bcrypt is never called while
-      // an account is locked (prevents timing-attack enumeration during lockout).
-      const lockKey = _lockKey(ip, username);
+      const lockKey  = _lockKey(ip, username);
       const isLocked = await redis.get(lockKey);
       if (isLocked) {
         audit('login_locked', {
@@ -114,7 +170,6 @@ router.post(
         const failKey  = _failKey(ip, username);
         const attempts = await redis.incrWithExpiry(failKey, LOCKOUT_WINDOW_SECS);
         if (attempts >= LOCKOUT_MAX_ATTEMPTS) {
-          // Escalate to lockout — clear the counter and set the lock key
           await redis.set(lockKey, '1', LOCKOUT_WINDOW_SECS);
           await redis.del(failKey);
           audit('login_locked', {
@@ -143,22 +198,15 @@ router.post(
       const adminPassword = process.env.ADMIN_PASSWORD || 'admin123';
 
       // ── Demo account check ───────────────────────────────────────────────────
-      // Demo tokens carry isDemo:true so demoGuard intercepts all writes.
       const demoUsername = process.env.DEMO_USERNAME || '';
       const demoPassword = process.env.DEMO_PASSWORD || '';
       if (demoUsername && demoPassword && username === demoUsername && password === demoPassword) {
-        // Demo logins don't get a fail counter — they're a fixed credential
         const jti = crypto.randomUUID();
         const demoToken = jwt.sign(
           {
-            jti,
-            username:  demoUsername,
-            name:      'Demo Account',
-            isAdmin:   true,
-            isEmployee: true,
-            isDemo:    true,
-            role:      'demo',
-            permissions: {}, // no permissions — demo only reads
+            jti, username: demoUsername, name: 'Demo Account',
+            isAdmin: true, isEmployee: true, isDemo: true,
+            role: 'demo', permissions: {},
           },
           secrets.jwt,
           { expiresIn: '8h' },
@@ -170,62 +218,42 @@ router.post(
         });
         return res.json({
           message: 'Demo login successful',
-          token:   demoToken,
-          user: {
-            username:    demoUsername,
-            name:        'Demo Account',
-            role:        'demo',
-            isEmployee:  true,
-            isDemo:      true,
-            permissions: {},
-          },
+          token: demoToken,
+          user: { username: demoUsername, name: 'Demo Account', role: 'demo', isEmployee: true, isDemo: true, permissions: {} },
         });
       }
-      // ── End demo check ───────────────────────────────────────────────────────
 
       if (username !== adminUsername || password !== adminPassword) {
-        // Super admin check failed — try employee login (email + password)
-        const employee = await Employee.findOne({ email: username.toLowerCase().trim(), status: 'active' });
+        // ── Employee login ────────────────────────────────────────────────────
+        // Fetch with +totpSecret so we can verify TOTP when enabled
+        const employee = await Employee.findOne(
+          { email: username.toLowerCase().trim(), status: 'active' },
+        ).select('+totpSecret');
+
         if (!employee || !employee.passwordHash) {
           const { locked } = await recordFailure('unknown_user');
-          if (locked) {
-            return res.status(429).json({
-              error: 'Too many failed login attempts. Account locked for 15 minutes.',
-              lockedOut: true,
-            });
-          }
+          if (locked) return res.status(429).json({ error: 'Too many failed login attempts. Account locked for 15 minutes.', lockedOut: true });
           return res.status(401).json({ error: 'Invalid credentials' });
         }
 
         const match = await bcrypt.compare(password, employee.passwordHash);
         if (!match) {
           const { locked } = await recordFailure('bad_password');
-          if (locked) {
-            return res.status(429).json({
-              error: 'Too many failed login attempts. Account locked for 15 minutes.',
-              lockedOut: true,
-            });
-          }
+          if (locked) return res.status(429).json({ error: 'Too many failed login attempts. Account locked for 15 minutes.', lockedOut: true });
           return res.status(401).json({ error: 'Invalid credentials' });
         }
 
-        // ── forcePasswordReset enforcement ────────────────────────────────────
-        // The employee must change their password before getting a full-access
-        // token. Issue a short-lived, restricted token that only the
-        // POST /admin/employees/:id/change-password route accepts.
+        // ── forcePasswordReset enforcement ─────────────────────────────────────
         if (employee.forcePasswordReset) {
           await clearFailCounter();
-          const resetJti   = crypto.randomUUID();
           const resetToken = jwt.sign(
             {
-              jti:              resetJti,
-              employeeId:       employee._id.toString(),
-              email:            employee.email,
-              role:             employee.role,
-              isAdmin:          true,
-              isEmployee:       true,
-              forcePasswordReset: true,
-              restricted:       true, // verifyAdmin blocks restricted tokens on all other routes
+              jti: crypto.randomUUID(),
+              employeeId: employee._id.toString(),
+              email: employee.email,
+              role: employee.role,
+              isAdmin: true, isEmployee: true,
+              forcePasswordReset: true, restricted: true,
             },
             secrets.jwt,
             { expiresIn: '1h' },
@@ -238,15 +266,31 @@ router.post(
           });
           return res.status(403).json({
             error: 'You must change your password before continuing.',
-            forcePasswordReset: true,
-            resetToken,
-            employeeId: employee._id.toString(),
+            forcePasswordReset: true, resetToken, employeeId: employee._id.toString(),
           });
         }
 
-        // ── Successful employee login ─────────────────────────────────────────
+        // ── TOTP check ────────────────────────────────────────────────────────
+        // If the employee has TOTP enabled, password alone is insufficient.
+        // Return requiresTOTP: true so the frontend shows the code input.
+        // The totpCode must arrive in the same request (single round-trip after
+        // the first challenge response) to prevent a half-authenticated state.
+        if (employee.totpEnabled && employee.totpSecret) {
+          if (!totpCode) {
+            // Password correct but no TOTP code supplied — signal the frontend
+            return res.status(200).json({ requiresTOTP: true });
+          }
+          const validTotp = verifyTotpCode(employee.totpSecret, String(totpCode).replace(/\s/g, ''));
+          if (!validTotp) {
+            const { locked } = await recordFailure('bad_totp');
+            if (locked) return res.status(429).json({ error: 'Too many failed login attempts. Account locked for 15 minutes.', lockedOut: true });
+            return res.status(401).json({ error: 'Invalid authenticator code.' });
+          }
+        }
+
+        // ── Successful employee login ──────────────────────────────────────────
         await clearFailCounter();
-        const jti      = crypto.randomUUID();
+        const jti = crypto.randomUUID();
         const empToken = jwt.sign(
           {
             jti,
@@ -263,16 +307,14 @@ router.post(
           { expiresIn: '24h' },
         );
 
-        // Track login activity (fire-and-forget — don't block the response)
         Employee.findByIdAndUpdate(employee._id, {
-          $set:  { lastLogin: new Date() },
-          $inc:  { loginCount: 1 },
+          $set: { lastLogin: new Date() }, $inc: { loginCount: 1 },
         }).catch(() => {});
 
         audit('login_success', {
           req,
           actor: { employeeId: employee._id.toString(), email: employee.email, role: employee.role, name: employee.name },
-          details: { ip, jti },
+          details: { ip, jti, totp: employee.totpEnabled },
         });
 
         return res.json({
@@ -286,11 +328,14 @@ router.post(
             isDemo:      employee.isDemo || false,
             permissions: employee.permissions,
             forcePasswordReset: false,
+            totpEnabled: employee.totpEnabled || false,
           },
         });
       }
 
       // ── Root super-admin login ────────────────────────────────────────────────
+      // Super-admin does NOT have TOTP (no Employee record). Protect with a
+      // strong ADMIN_PASSWORD and the Turnstile challenge above instead.
       await clearFailCounter();
       const jti   = crypto.randomUUID();
       const token = jwt.sign(
@@ -311,10 +356,126 @@ router.post(
         user: { username, role: 'super_admin' },
       });
     } catch (error) {
+      console.error('[admin/login] error:', error);
       res.status(500).json({ error: 'Login failed' });
     }
   }
 );
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// TOTP SETUP ROUTES  (authenticated — employee must already be logged in)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+// GET /admin/totp/status  — returns whether TOTP is enabled for the caller
+router.get('/totp/status', verifyAdmin, async (req, res) => {
+  try {
+    const empId = req.user?.employeeId;
+    if (!empId) return res.json({ totpEnabled: false, isRootAdmin: true });
+    const emp = await Employee.findById(empId).select('totpEnabled');
+    res.json({ totpEnabled: emp?.totpEnabled || false });
+  } catch { res.status(500).json({ error: 'Failed to fetch TOTP status' }); }
+});
+
+// POST /admin/totp/setup  — generate a new TOTP secret, return QR code URI
+// Does NOT enable TOTP yet — the employee must verify a code first.
+router.post('/totp/setup', verifyAdmin, async (req, res) => {
+  try {
+    const empId = req.user?.employeeId;
+    if (!empId) return res.status(400).json({ error: 'TOTP setup is not available for the root admin account.' });
+
+    const emp = await Employee.findById(empId);
+    if (!emp) return res.status(404).json({ error: 'Employee not found' });
+
+    const rawSecret = speakeasy.generateSecret({ length: 20 });
+    // Store encrypted secret in a temporary Redis key — only committed to DB
+    // once the employee verifies a valid code (prevents dangling secrets).
+    const encryptedPending = encryptTotpSecret(rawSecret.base32);
+    await redis.set(`totp:pending:${empId}`, encryptedPending, 10 * 60); // 10 min TTL
+
+    const otpauthUrl = speakeasy.otpauthURL({
+      secret: rawSecret.ascii,
+      label:  encodeURIComponent(`PlanIt:${emp.email}`),
+      issuer: 'PlanIt',
+    });
+    const qrDataUrl = await QRCode.toDataURL(otpauthUrl);
+
+    res.json({ qr: qrDataUrl, secret: rawSecret.base32 });
+  } catch (err) {
+    console.error('[totp/setup]', err);
+    res.status(500).json({ error: 'TOTP setup failed' });
+  }
+});
+
+// POST /admin/totp/enable  — verify the setup code and activate TOTP
+router.post('/totp/enable', verifyAdmin, async (req, res) => {
+  try {
+    const empId = req.user?.employeeId;
+    if (!empId) return res.status(400).json({ error: 'Root admin cannot use TOTP setup.' });
+
+    const { code } = req.body;
+    if (!code || typeof code !== 'string') return res.status(400).json({ error: 'Verification code required' });
+
+    const pendingKey = `totp:pending:${empId}`;
+    const encryptedPending = await redis.get(pendingKey);
+    if (!encryptedPending) return res.status(400).json({ error: 'TOTP setup session expired. Please start setup again.' });
+
+    const valid = verifyTotpCode(encryptedPending, code.replace(/\s/g, ''));
+    if (!valid) return res.status(400).json({ error: 'Invalid code. Please check your authenticator app and try again.' });
+
+    await Employee.findByIdAndUpdate(empId, {
+      $set: { totpSecret: encryptedPending, totpEnabled: true, twoFactorEnabled: true },
+    });
+    await redis.del(pendingKey);
+
+    audit('totp_enabled', {
+      req,
+      actor: { employeeId: empId, email: req.user.email, role: req.user.role },
+      details: { ip: realIp(req) },
+    });
+
+    res.json({ ok: true, message: 'Two-factor authentication has been enabled.' });
+  } catch (err) {
+    console.error('[totp/enable]', err);
+    res.status(500).json({ error: 'Failed to enable TOTP' });
+  }
+});
+
+// POST /admin/totp/disable  — disable TOTP (requires current password + totp code)
+router.post('/totp/disable', verifyAdmin, async (req, res) => {
+  try {
+    const empId = req.user?.employeeId;
+    if (!empId) return res.status(400).json({ error: 'Root admin does not have TOTP.' });
+
+    const { password, code } = req.body;
+    if (!password || !code) return res.status(400).json({ error: 'Current password and authenticator code required.' });
+
+    const emp = await Employee.findById(empId).select('+totpSecret +passwordHash totpEnabled');
+    if (!emp) return res.status(404).json({ error: 'Employee not found' });
+    if (!emp.totpEnabled || !emp.totpSecret) return res.status(400).json({ error: 'TOTP is not enabled.' });
+
+    const passOk = await bcrypt.compare(password, emp.passwordHash || '');
+    if (!passOk) return res.status(401).json({ error: 'Incorrect password.' });
+
+    const totpOk = verifyTotpCode(emp.totpSecret, String(code).replace(/\s/g, ''));
+    if (!totpOk) return res.status(401).json({ error: 'Invalid authenticator code.' });
+
+    await Employee.findByIdAndUpdate(empId, {
+      $set:   { totpEnabled: false, twoFactorEnabled: false },
+      $unset: { totpSecret: '' },
+    });
+
+    audit('totp_disabled', {
+      req,
+      actor: { employeeId: empId, email: req.user.email, role: req.user.role },
+      details: { ip: realIp(req) },
+    });
+
+    res.json({ ok: true, message: 'Two-factor authentication has been disabled.' });
+  } catch (err) {
+    console.error('[totp/disable]', err);
+    res.status(500).json({ error: 'Failed to disable TOTP' });
+  }
+});
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // DEMO GUARD  —  router-level write intercept for demo accounts
