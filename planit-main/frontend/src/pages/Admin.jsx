@@ -7704,9 +7704,20 @@ export default function Admin() {
   const [loading, setLoading] = useState(true);
   const [loggingIn, setLoggingIn] = useState(false);
   const [loginForm, setLoginForm] = useState({ username: '', password: '' });
-  const [activeSection, setActiveSection] = useState('dashboard');
+  const [loginStep, setLoginStep] = useState('credentials'); // 'credentials' | 'totp'
+  const [totpCode, setTotpCode] = useState('');
+  const [turnstileToken, setTurnstileToken] = useState('');
+  const [turnstileKey, setTurnstileKey] = useState(0); // increment to reset widget
+  const activeSection_state = useState('dashboard');
+  const [activeSection, setActiveSection] = activeSection_state;
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [sidebarOpen, setSidebarOpen] = useState(true);
+
+  // Wire Cloudflare Turnstile global callback into React state
+  useEffect(() => {
+    window.__planitSetTurnstile = setTurnstileToken;
+    return () => { delete window.__planitSetTurnstile; };
+  }, []);
 
   // Watchdog state — polled top-level so outage banner shows on any tab
   const [outageStatus, setOutageStatus] = useState(null); // null | 'operational' | 'degraded' | 'outage'
@@ -7774,9 +7785,40 @@ export default function Admin() {
 
   const login = async (e) => {
     e.preventDefault();
+    if (loginStep === 'totp') {
+      // Second step — submit password + TOTP code together
+      setLoggingIn(true);
+      try {
+        const r = await adminAPI.login(loginForm.username, loginForm.password, turnstileToken, totpCode);
+        localStorage.setItem('adminToken', r.data.token);
+        api.defaults.headers.common['Authorization'] = `Bearer ${r.data.token}`;
+        const demo = r.data.user?.isDemo === true;
+        if (demo) localStorage.setItem('adminIsDemo', 'true');
+        else localStorage.removeItem('adminIsDemo');
+        setIsDemo(demo);
+        setAuth(true);
+        toast.success(demo ? 'Welcome to the PlanIt demo.' : 'Welcome back, Admin');
+      } catch (e) {
+        toast.error(e.response?.data?.error || 'Invalid code');
+        setTotpCode('');
+        // Reset Turnstile so a new challenge is required on retry
+        setTurnstileToken('');
+        setTurnstileKey(k => k + 1);
+        setLoginStep('credentials');
+      } finally { setLoggingIn(false); }
+      return;
+    }
+
+    // First step — credentials + turnstile
     setLoggingIn(true);
     try {
-      const r = await adminAPI.login(loginForm.username, loginForm.password);
+      const r = await adminAPI.login(loginForm.username, loginForm.password, turnstileToken);
+      if (r.data.requiresTOTP) {
+        // Password correct, TOTP needed — advance to second step
+        setLoginStep('totp');
+        setLoggingIn(false);
+        return;
+      }
       localStorage.setItem('adminToken', r.data.token);
       api.defaults.headers.common['Authorization'] = `Bearer ${r.data.token}`;
       const demo = r.data.user?.isDemo === true;
@@ -7785,8 +7827,11 @@ export default function Admin() {
       setIsDemo(demo);
       setAuth(true);
       toast.success(demo ? 'Welcome to the PlanIt demo.' : 'Welcome back, Admin');
-    } catch (e) { toast.error(e.response?.data?.error || 'Login failed'); }
-    finally { setLoggingIn(false); }
+    } catch (e) {
+      toast.error(e.response?.data?.error || 'Login failed');
+      setTurnstileToken('');
+      setTurnstileKey(k => k + 1);
+    } finally { setLoggingIn(false); }
   };
 
   const logout = () => { localStorage.removeItem('adminToken'); localStorage.removeItem('adminIsDemo'); delete api.defaults.headers.common['Authorization']; setAuth(false); setIsDemo(false); toast.success('Logged out'); };
@@ -7849,61 +7894,120 @@ export default function Admin() {
           backdropFilter:'blur(20px)',
         }}>
           <form onSubmit={login}>
-            {/* Username */}
-            <div style={{marginBottom:16}}>
-              <label style={{display:'block',fontSize:'0.7rem',fontWeight:600,color:'rgba(255,255,255,0.4)',letterSpacing:'0.1em',textTransform:'uppercase',marginBottom:8}}>
-                Username
-              </label>
-              <input
-                type="text" required autoFocus
-                placeholder="username"
-                value={loginForm.username}
-                onChange={e => setLoginForm({ ...loginForm, username: e.target.value })}
-                onFocus={e => { e.target.style.borderColor='rgba(99,102,241,0.6)'; e.target.style.boxShadow='0 0 0 3px rgba(99,102,241,0.12)'; }}
-                onBlur={e => { e.target.style.borderColor='rgba(255,255,255,0.08)'; e.target.style.boxShadow='none'; }}
-                style={{
-                  width:'100%', boxSizing:'border-box',
-                  padding:'11px 14px', fontSize:'0.875rem',
-                  background:'rgba(255,255,255,0.05)',
-                  border:'1px solid rgba(255,255,255,0.08)',
-                  borderRadius:10, color:'#fff',
-                  outline:'none', fontFamily:'inherit',
-                  transition:'border-color 0.15s,box-shadow 0.15s',
-                }}
-              />
-            </div>
+            {loginStep === 'credentials' ? (<>
+              {/* Username */}
+              <div style={{marginBottom:16}}>
+                <label style={{display:'block',fontSize:'0.7rem',fontWeight:600,color:'rgba(255,255,255,0.4)',letterSpacing:'0.1em',textTransform:'uppercase',marginBottom:8}}>
+                  Username
+                </label>
+                <input
+                  type="text" required autoFocus
+                  placeholder="username"
+                  value={loginForm.username}
+                  onChange={e => setLoginForm({ ...loginForm, username: e.target.value })}
+                  onFocus={e => { e.target.style.borderColor='rgba(99,102,241,0.6)'; e.target.style.boxShadow='0 0 0 3px rgba(99,102,241,0.12)'; }}
+                  onBlur={e => { e.target.style.borderColor='rgba(255,255,255,0.08)'; e.target.style.boxShadow='none'; }}
+                  style={{
+                    width:'100%', boxSizing:'border-box',
+                    padding:'11px 14px', fontSize:'0.875rem',
+                    background:'rgba(255,255,255,0.05)',
+                    border:'1px solid rgba(255,255,255,0.08)',
+                    borderRadius:10, color:'#fff',
+                    outline:'none', fontFamily:'inherit',
+                    transition:'border-color 0.15s,box-shadow 0.15s',
+                  }}
+                />
+              </div>
 
-            {/* Password */}
-            <div style={{marginBottom:24}}>
-              <label style={{display:'block',fontSize:'0.7rem',fontWeight:600,color:'rgba(255,255,255,0.4)',letterSpacing:'0.1em',textTransform:'uppercase',marginBottom:8}}>
-                Password
-              </label>
-              <input
-                type="password" required
-                placeholder="••••••••••••"
-                value={loginForm.password}
-                onChange={e => setLoginForm({ ...loginForm, password: e.target.value })}
-                onFocus={e => { e.target.style.borderColor='rgba(99,102,241,0.6)'; e.target.style.boxShadow='0 0 0 3px rgba(99,102,241,0.12)'; }}
-                onBlur={e => { e.target.style.borderColor='rgba(255,255,255,0.08)'; e.target.style.boxShadow='none'; }}
-                style={{
-                  width:'100%', boxSizing:'border-box',
-                  padding:'11px 14px', fontSize:'0.875rem',
-                  background:'rgba(255,255,255,0.05)',
-                  border:'1px solid rgba(255,255,255,0.08)',
-                  borderRadius:10, color:'#fff',
-                  outline:'none', fontFamily:'inherit',
-                  transition:'border-color 0.15s,box-shadow 0.15s',
-                }}
-              />
-            </div>
+              {/* Password */}
+              <div style={{marginBottom:20}}>
+                <label style={{display:'block',fontSize:'0.7rem',fontWeight:600,color:'rgba(255,255,255,0.4)',letterSpacing:'0.1em',textTransform:'uppercase',marginBottom:8}}>
+                  Password
+                </label>
+                <input
+                  type="password" required
+                  placeholder="••••••••••••"
+                  value={loginForm.password}
+                  onChange={e => setLoginForm({ ...loginForm, password: e.target.value })}
+                  onFocus={e => { e.target.style.borderColor='rgba(99,102,241,0.6)'; e.target.style.boxShadow='0 0 0 3px rgba(99,102,241,0.12)'; }}
+                  onBlur={e => { e.target.style.borderColor='rgba(255,255,255,0.08)'; e.target.style.boxShadow='none'; }}
+                  style={{
+                    width:'100%', boxSizing:'border-box',
+                    padding:'11px 14px', fontSize:'0.875rem',
+                    background:'rgba(255,255,255,0.05)',
+                    border:'1px solid rgba(255,255,255,0.08)',
+                    borderRadius:10, color:'#fff',
+                    outline:'none', fontFamily:'inherit',
+                    transition:'border-color 0.15s,box-shadow 0.15s',
+                  }}
+                />
+              </div>
+
+              {/* Cloudflare Turnstile widget */}
+              {import.meta.env.VITE_TURNSTILE_SITE_KEY && (
+                <div style={{marginBottom:20,display:'flex',justifyContent:'center'}}>
+                  <div
+                    key={turnstileKey}
+                    className="cf-turnstile"
+                    data-sitekey={import.meta.env.VITE_TURNSTILE_SITE_KEY}
+                    data-theme="dark"
+                    data-callback="__planitTurnstileCallback"
+                    data-expired-callback="__planitTurnstileExpired"
+                  />
+                </div>
+              )}
+            </>) : (
+              /* ── TOTP step ── */
+              <div>
+                <div style={{textAlign:'center',marginBottom:20}}>
+                  <div style={{fontSize:'2rem',marginBottom:8}}>🔐</div>
+                  <p style={{color:'rgba(255,255,255,0.6)',fontSize:'0.875rem',margin:0}}>
+                    Enter the 6-digit code from your authenticator app.
+                  </p>
+                </div>
+                <div style={{marginBottom:20}}>
+                  <label style={{display:'block',fontSize:'0.7rem',fontWeight:600,color:'rgba(255,255,255,0.4)',letterSpacing:'0.1em',textTransform:'uppercase',marginBottom:8}}>
+                    Authenticator Code
+                  </label>
+                  <input
+                    type="text" required autoFocus autoComplete="one-time-code"
+                    inputMode="numeric" pattern="\d{6}" maxLength={6}
+                    placeholder="000000"
+                    value={totpCode}
+                    onChange={e => setTotpCode(e.target.value.replace(/\D/g,'').slice(0,6))}
+                    onFocus={e => { e.target.style.borderColor='rgba(99,102,241,0.6)'; e.target.style.boxShadow='0 0 0 3px rgba(99,102,241,0.12)'; }}
+                    onBlur={e => { e.target.style.borderColor='rgba(255,255,255,0.08)'; e.target.style.boxShadow='none'; }}
+                    style={{
+                      width:'100%', boxSizing:'border-box',
+                      padding:'14px', fontSize:'1.5rem',
+                      letterSpacing:'0.3em', textAlign:'center',
+                      background:'rgba(255,255,255,0.05)',
+                      border:'1px solid rgba(255,255,255,0.08)',
+                      borderRadius:10, color:'#fff',
+                      outline:'none', fontFamily:'monospace',
+                      transition:'border-color 0.15s,box-shadow 0.15s',
+                    }}
+                  />
+                </div>
+                <button
+                  type="button"
+                  onClick={() => { setLoginStep('credentials'); setTotpCode(''); setTurnstileKey(k=>k+1); setTurnstileToken(''); }}
+                  style={{background:'none',border:'none',color:'rgba(255,255,255,0.35)',fontSize:'0.8rem',cursor:'pointer',marginBottom:16,padding:0,fontFamily:'inherit'}}>
+                  ← Back to login
+                </button>
+              </div>
+            )}
 
             {/* Submit */}
             <button
-              type="submit" disabled={loggingIn}
+              type="submit"
+              disabled={loggingIn || (loginStep === 'credentials' && !!import.meta.env.VITE_TURNSTILE_SITE_KEY && !turnstileToken)}
               style={{
                 width:'100%', padding:'12px',
                 borderRadius:10, border:'none',
-                background: loggingIn ? 'rgba(99,102,241,0.4)' : 'linear-gradient(135deg,#3b82f6 0%,#6366f1 100%)',
+                background: (loggingIn || (loginStep === 'credentials' && !!import.meta.env.VITE_TURNSTILE_SITE_KEY && !turnstileToken))
+                  ? 'rgba(99,102,241,0.4)'
+                  : 'linear-gradient(135deg,#3b82f6 0%,#6366f1 100%)',
                 color:'#fff', fontSize:'0.875rem', fontWeight:600,
                 cursor: loggingIn ? 'default' : 'pointer',
                 display:'flex', alignItems:'center', justifyContent:'center', gap:8,
@@ -7916,7 +8020,7 @@ export default function Admin() {
             >
               {loggingIn
                 ? <><span className="spinner w-4 h-4 border-2 border-white/30 border-t-white" /> Signing in...</>
-                : 'Sign in →'}
+                : loginStep === 'totp' ? 'Verify →' : 'Sign in →'}
             </button>
           </form>
         </div>
@@ -7929,6 +8033,12 @@ export default function Admin() {
             ← Back to PlanIt
           </a>
         </p>
+
+        {/* Turnstile callback bridge — sets React state from the global Turnstile callback */}
+        <script dangerouslySetInnerHTML={{__html:`
+          window.__planitTurnstileCallback  = function(token){ window.__planitSetTurnstile && window.__planitSetTurnstile(token); };
+          window.__planitTurnstileExpired   = function(){ window.__planitSetTurnstile && window.__planitSetTurnstile(''); };
+        `}} />
       </div>
     </div>
   );
