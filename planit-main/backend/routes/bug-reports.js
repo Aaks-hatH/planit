@@ -2,6 +2,7 @@
 
 const express   = require('express');
 const router    = express.Router();
+const { realIp } = require('../middleware/realIp');
 const { body, validationResult } = require('express-validator');
 const mongoose  = require('mongoose');
 const rateLimit = require('express-rate-limit');
@@ -18,7 +19,7 @@ const reportLimiter = rateLimit({
   max: 5,
   standardHeaders: true,
   legacyHeaders: false,
-  keyGenerator: (req) => req.ip || req.socket?.remoteAddress || 'unknown',
+  keyGenerator: (req) => realIp(req),
   message: {
     error: 'Too many reports submitted from this IP. Please wait before submitting again.',
     retryAfter: 3600,
@@ -191,7 +192,7 @@ router.post('/',
         eventLink:   eventLink || '',
         browser:     browser   || '',
         severity:    severity  || 'medium',
-        ip: req.ip || req.socket?.remoteAddress || '',
+        ip: realIp(req),
       });
 
       await report.save();
