@@ -1,5 +1,6 @@
 const express      = require('express');
 const router       = express.Router();
+const { realIp }   = require('../middleware/realIp');
 const mongoose     = require('mongoose');
 const axios        = require('axios');
 const rateLimit    = require('express-rate-limit');
@@ -40,9 +41,9 @@ const reportRateLimit = rateLimit({
   max:              3,              // max 3 submissions per IP
   standardHeaders:  true,
   legacyHeaders:    false,
-  keyGenerator:     (req) => req.ip,
+  keyGenerator:     (req) => realIp(req),
   handler: (req, res) => {
-    console.log(`[uptime] Rate limit hit for IP ${req.ip}`);
+    console.log(`[uptime] Rate limit hit for IP ${realIp(req)}`);
     res.status(429).json({
       error:  'Too many reports from this IP. You can submit up to 3 reports per hour.',
       retryAfter: Math.ceil(req.rateLimit.resetTime
@@ -211,7 +212,7 @@ router.post('/report', reportRateLimit, async (req, res) => {
     }
 
     const service  = normaliseService(affectedService);
-    const clientIp = req.ip;
+    const clientIp = realIp(req);
 
     // ── Per-service IP dedup ──────────────────────────────────────────────
     // If this IP already reported this service in the current 60-min window,
