@@ -1,5 +1,6 @@
 const Invite = require('../models/Invite');
 const Event  = require('../models/Event');
+const { realIp } = require('./realIp');
 
 /**
  * ANTI-FRAUD MIDDLEWARE SUITE
@@ -184,7 +185,7 @@ async function preventReentrancy(req, res, next) {
 async function detectSuspiciousPatterns(req, res, next) {
   try {
     const { eventId, inviteCode } = req.params;
-    const ip = req.ip || req.connection.remoteAddress || '';
+    const ip = realIp(req);
     const deviceInfo = req.headers['user-agent'] || '';
     
     const invite = await Invite.findOne({ inviteCode: inviteCode.toUpperCase().trim(), eventId });
@@ -486,7 +487,7 @@ async function enforceCapacity(req, res, next) {
 async function auditLog(req, res, next) {
   try {
     const { eventId, inviteCode } = req.params;
-    const ip = req.ip || req.connection.remoteAddress || '';
+    const ip = realIp(req);
     const deviceInfo = req.headers['user-agent'] || '';
     const staffUser = req.eventAccess?.username || 'staff';
     
