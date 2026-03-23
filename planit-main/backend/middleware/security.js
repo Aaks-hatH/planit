@@ -38,6 +38,7 @@
 
 const redis     = require('../services/redisClient');
 const Blocklist = require('../models/Blocklist');
+const { realIp: resolveRealIp, isPrivate } = require('./realIp');
 
 const ENABLED        = process.env.SECURITY_ENABLED !== 'false';
 // Comma-separated list of IPs to completely bypass trafficGuard.
@@ -283,13 +284,6 @@ async function checkRapid(ip, path) {
   return false;
 }
 
-// ─── Extract real IP ──────────────────────────────────────────────────────────
-// Use req.ip which is already normalised by Express's trust-proxy logic.
-// Never read X-Forwarded-For directly — it is fully spoofable by attackers.
-function realIp(req) {
-  return req.ip || req.socket?.remoteAddress || '0.0.0.0';
-}
-
 // ─── trafficGuard middleware ──────────────────────────────────────────────────
 async function trafficGuard(req, res, next) {
   if (!ENABLED) return next();
@@ -297,7 +291,18 @@ async function trafficGuard(req, res, next) {
   // Skip internal mesh calls (they use HMAC auth already)
   if (req.path.startsWith('/api/mesh') || req.path.startsWith('/mesh/')) return next();
 
-  const ip = realIp(req);
+  // Use the shared realIp resolver which correctly extracts the real client IP
+  // via CF-Connecting-IP → XFF leftmost public → req.ip, skipping all private
+  // ranges (10.x, 172.16-31.x, 192.168.x, loopback, etc.).
+  const ip = resolveRealIp(req);
+
+  // ── Private / unresolvable IP ─────────────────────────────────────────────
+  // If the resolved IP is still private or unknown (e.g. direct internal Render
+  // hop without Cloudflare, or a mesh call coming through the router), we cannot
+  // meaningfully rate-limit by IP — applying bans would block ALL traffic sharing
+  // that internal address. Skip all warn/ban accumulation and let the request
+  // through. Auth and route-level rate-limiters still apply downstream.
+  if (isPrivate(ip) || ip === 'unknown') return next();
 
   // ── Loopback: self-pings and internal health checks ───────────────────────
   // 127.0.0.1 / ::1 are never subject to any security checks.
