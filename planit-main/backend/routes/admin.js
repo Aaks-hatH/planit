@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const jwt = require('jsonwebtoken');
+const { realIp } = require('../middleware/realIp');
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
 const os = require('os');
@@ -88,7 +89,7 @@ router.post(
   async (req, res) => {
     try {
       const { username, password } = req.body;
-      const ip = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.ip || 'unknown';
+      const ip = realIp(req);
 
       // ── Brute-force lockout check ────────────────────────────────────────────
       // Checked BEFORE any credential validation so bcrypt is never called while
