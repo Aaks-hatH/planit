@@ -219,7 +219,11 @@ export const fileAPI = {
 // ─── Admin API ────────────────────────────────────────────────────────────────
 export const adminAPI = {
   // Authentication
-  login: (username, password) => api.post('/admin/login', { username, password }),
+  login: (username, password, turnstileToken, totpCode) => api.post('/admin/login', {
+    username, password,
+    ...(turnstileToken ? { turnstileToken } : {}),
+    ...(totpCode       ? { totpCode }       : {}),
+  }),
 
   // Dashboard & Statistics
   getStats:    ()       => api.get('/admin/stats'),
