@@ -1446,6 +1446,44 @@ app.get('/mesh/email/pool', meshAuth(SERVICE_NAME), (_req, res) => {
   res.json({ ok: true, pool: _keyPoolStats(), fetchedAt: new Date().toISOString() });
 });
 
+// ─── Turnstile verification ───────────────────────────────────────────────────
+// POST /mesh/turnstile — verify a Cloudflare Turnstile challenge response.
+// The Turnstile SECRET KEY lives ONLY in the router (never in any backend env).
+// Key is read lazily at call-time so it can be rotated without a restart.
+// This endpoint is mesh-authenticated — untrusted clients never reach it.
+app.post('/mesh/turnstile', meshAuth(SERVICE_NAME), express.json({ limit: '8kb' }), async (req, res) => {
+  // Lazy read — picked up at call time, not module load, for hot rotation
+  const secret = process.env.TURNSTILE_SECRET_KEY;
+  if (!secret) {
+    console.warn('[turnstile] TURNSTILE_SECRET_KEY not set — skipping (dev mode)');
+    return res.json({ ok: true, skipped: true, reason: 'no_secret_configured' });
+  }
+
+  const { token, ip } = req.body || {};
+  if (!token || typeof token !== 'string' || token.length > 2048) {
+    return res.status(400).json({ ok: false, error: 'missing or invalid turnstile token' });
+  }
+
+  try {
+    const formBody = `secret=${encodeURIComponent(secret)}&response=${encodeURIComponent(token)}${ip ? `&remoteip=${encodeURIComponent(ip)}` : ''}`;
+    const cfRes  = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body:    formBody,
+    });
+    const cfData = await cfRes.json();
+
+    if (cfData.success) return res.json({ ok: true });
+
+    console.warn('[turnstile] challenge failed:', cfData['error-codes']);
+    return res.status(400).json({ ok: false, error: 'Turnstile challenge failed', codes: cfData['error-codes'] });
+  } catch (err) {
+    console.error('[turnstile] verify error:', err.message);
+    // Fail open on transient network errors — Cloudflare outage shouldn't lock admins out
+    return res.json({ ok: true, skipped: true, reason: 'network_error' });
+  }
+});
+
 // POST /mesh/exec — execute a named command on the router itself
 // Supported commands: flush-logs, ping, stats, gc, clear-key-suspension
 app.post('/mesh/exec', meshAuth(SERVICE_NAME), express.json(), (req, res) => {
