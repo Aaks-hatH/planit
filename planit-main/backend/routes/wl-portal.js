@@ -28,6 +28,7 @@
 
 const express    = require('express');
 const router     = express.Router();
+const { realIp } = require('../middleware/realIp');
 const jwt        = require('jsonwebtoken');
 const bcrypt     = require('bcryptjs');
 const crypto     = require('crypto');
@@ -51,10 +52,7 @@ const portalLoginLimiter = rateLimit({
   skipSuccessfulRequests: true,
   standardHeaders:        true,
   legacyHeaders:          false,
-  keyGenerator: (req) => {
-    const fwd = req.headers['x-forwarded-for'];
-    return (fwd ? fwd.split(',')[0].trim() : null) || req.ip || 'unknown';
-  },
+  keyGenerator: (req) => realIp(req),
   handler: (req, res) => {
     res.status(429).json({
       error: 'Too many login attempts from this network. Try again in 15 minutes.',
@@ -65,8 +63,7 @@ const portalLoginLimiter = rateLimit({
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function clientIp(req) {
-  const fwd = req.headers['x-forwarded-for'];
-  return (fwd ? fwd.split(',')[0].trim() : null) || req.ip || 'unknown';
+  return realIp(req);
 }
 
 function clientUa(req) {
