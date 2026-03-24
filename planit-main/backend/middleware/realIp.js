@@ -107,6 +107,29 @@ function firstPublicFromXff(xff) {
 function realIp(req) {
   if (!req) return 'unknown';
 
+  // 0. Router-stamped real client IP (X-Planit-Client-IP).
+  //
+  // Our router injects this header in every proxyReq callback after resolving
+  // the real client IP via Express trust-proxy:1 (Render LB hop stripped).
+  // We only trust it when the socket connection itself is from a private /
+  // internal address — meaning the request physically arrived from our router
+  // (Render private networking), not from the public internet.
+  //
+  // This is the security invariant that prevents spoofing: an external attacker
+  // hitting the backend directly would have a PUBLIC socket address, so this
+  // branch is skipped and their X-Planit-Client-IP header is ignored entirely.
+  // Only requests whose TCP socket originates from a private Render-internal
+  // address (our router) can benefit from this header.
+  const rawSocket = req.socket?.remoteAddress || req.connection?.remoteAddress || '';
+  const socketAddr = rawSocket.replace(/^::ffff:/, '');
+  if (isPrivate(socketAddr) || socketAddr === '') {
+    const routerIp = req.headers?.['x-planit-client-ip'];
+    if (routerIp && typeof routerIp === 'string') {
+      const cleaned = routerIp.trim();
+      if (cleaned && !isPrivate(cleaned)) return cleaned;
+    }
+  }
+
   // 1. Cloudflare-guaranteed header — cannot be forged by end users.
   const cf = req.headers?.['cf-connecting-ip'];
   if (cf && typeof cf === 'string' && cf.trim() && !isPrivate(cf.trim())) {
