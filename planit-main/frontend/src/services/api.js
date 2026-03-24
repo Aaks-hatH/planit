@@ -343,6 +343,10 @@ export const adminAPI = {
   getBlocklist:    (type)         => api.get('/admin/blocklist', { params: type ? { type } : {} }),
   addBlock:        (data)         => api.post('/admin/blocklist', data),
   deleteBlock:     (id)           => api.delete(`/admin/blocklist/${id}`),
+
+  // trafficGuard active bans (Redis / in-memory, separate from the permanent Blocklist)
+  getBans:  ()     => api.get('/admin/security/bans'),
+  unbanIp:  (ip)   => api.post('/admin/security/unban', { ip }),
   updateBlock:     (id, data)     => api.patch(`/admin/blocklist/${id}`, data),
 };
 
