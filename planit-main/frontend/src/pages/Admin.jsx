@@ -25,7 +25,7 @@ import {
   XCircle, Wifi, Terminal, Monitor, Globe, Network, Layers,
   Briefcase, UserCheck, UserPlus, Power, RotateCcw, Archive,
   Hash, BarChart2, PieChart, Inbox, Bell, Package,
-  ChevronLeft, Filter, MoreVertical, Send, Eye as EyeIcon,
+  ChevronLeft, Filter, MoreVertical, Send, Eye as EyeIcon, EyeOff,
   Scroll, Gauge, HardDriveDownload, Fingerprint, Building2,
   WifiOff, AlertOctagon, TrendingDown, GitBranch, Boxes,
   Rocket, Timer, Wifi as WifiOn, Cpu as CpuIcon,
@@ -8267,6 +8267,19 @@ export default function Admin() {
   const [loggingIn, setLoggingIn] = useState(false);
   const [loginForm, setLoginForm] = useState({ username: '', password: '' });
   const [loginStep, setLoginStep] = useState('credentials'); // 'credentials' | 'totp'
+
+  // ── Force-password-reset gate ─────────────────────────────────────────────
+  // When the backend returns a 403 with forcePasswordReset:true, we store the
+  // restricted token here. auth stays false, and the main app renders a
+  // full-screen password-change wall instead of the normal admin panel.
+  const [forceResetToken,    setForceResetToken]    = useState(null);  // restricted JWT
+  const [forceResetEmpId,    setForceResetEmpId]    = useState(null);  // employee _id
+  const [forceResetNew,      setForceResetNew]      = useState('');
+  const [forceResetConfirm,  setForceResetConfirm]  = useState('');
+  const [forceResetSaving,   setForceResetSaving]   = useState(false);
+  const [forceResetShowNew,  setForceResetShowNew]  = useState(false);
+  const [forceResetShowConf, setForceResetShowConf] = useState(false);
+  const [forceResetError,    setForceResetError]    = useState('');
   const [totpCode, setTotpCode] = useState('');
   const [turnstileToken, setTurnstileToken] = useState('');
   const [turnstileKey, setTurnstileKey] = useState(0); // increment to force widget re-render
@@ -8290,7 +8303,9 @@ export default function Admin() {
   // Explicit render() gives full control: we remove the old widget first, then
   // mount a fresh one into the stable ref node — widget always appears.
   useEffect(() => {
+    if (loading) return;                          // login screen not rendered yet, ref is null
     if (auth) return;                             // already logged in
+    if (forceResetToken) return;                  // force-reset wall is showing, not login screen
     if (loginStep !== 'credentials') return;      // TOTP step has no widget
     if (!'0x4AAAAAACvGuW0fbNIYbAiK') return;
 
@@ -8352,7 +8367,7 @@ export default function Admin() {
         turnstileWidget.current = null;
       }
     };
-  }, [auth, loginStep, turnstileKey]);
+  }, [auth, loading, forceResetToken, loginStep, turnstileKey]);
 
   // Watchdog state — polled top-level so outage banner shows on any tab
   const [outageStatus, setOutageStatus] = useState(null); // null | 'operational' | 'degraded' | 'outage'
@@ -8463,6 +8478,20 @@ export default function Admin() {
       setAuth(true);
       toast.success(demo ? 'Welcome to the PlanIt demo.' : 'Welcome back, Admin');
     } catch (e) {
+      // ── Force-reset gate ──────────────────────────────────────────────────
+      // Backend returns 403 + { forcePasswordReset: true, resetToken, employeeId }
+      // when the employee's account is flagged. Store the restricted token and
+      // switch to the change-password wall — do NOT clear it like a normal error.
+      if (e.response?.status === 403 && e.response?.data?.forcePasswordReset) {
+        const { resetToken, employeeId } = e.response.data;
+        setForceResetToken(resetToken);
+        setForceResetEmpId(employeeId);
+        setForceResetNew('');
+        setForceResetConfirm('');
+        setForceResetError('');
+        setLoggingIn(false);
+        return;
+      }
       toast.error(e.response?.data?.error || 'Login failed');
       setTurnstileToken('');
       setTurnstileKey(k => k + 1);
@@ -8487,6 +8516,231 @@ export default function Admin() {
   };
 
   if (loading) return <div className="min-h-screen bg-neutral-50 flex items-center justify-center"><div className="spinner w-8 h-8 border-4 border-neutral-300 border-t-neutral-700" /></div>;
+
+  // ── Force-password-reset wall ─────────────────────────────────────────────
+  // Shown when the backend accepted credentials but issued a restricted token
+  // requiring a password change before any other action is possible.
+  // auth is still false, so the normal admin app never renders.
+  if (forceResetToken) {
+    const pwStrong = forceResetNew.length >= 10
+      && /[A-Z]/.test(forceResetNew)
+      && /[0-9]/.test(forceResetNew)
+      && /[^A-Za-z0-9]/.test(forceResetNew);
+    const pwMatch  = forceResetNew === forceResetConfirm && forceResetConfirm.length > 0;
+
+    const submitReset = async (e) => {
+      e.preventDefault();
+      setForceResetError('');
+      if (!pwStrong) { setForceResetError('Password must be 10+ chars with an uppercase letter, number, and special character.'); return; }
+      if (!pwMatch)  { setForceResetError('Passwords do not match.'); return; }
+      setForceResetSaving(true);
+      try {
+        // POST with the restricted reset token in the Authorization header
+        const { data } = await api.post(
+          `/admin/employees/${forceResetEmpId}/change-password`,
+          { newPassword: forceResetNew },
+          { headers: { Authorization: `Bearer ${forceResetToken}` } },
+        );
+        // Backend returns a fresh full-access token — store it and log in
+        localStorage.setItem('adminToken', data.token);
+        api.defaults.headers.common['Authorization'] = `Bearer ${data.token}`;
+        setForceResetToken(null);
+        setForceResetEmpId(null);
+        setAuth(true);
+        toast.success('Password updated — welcome back!');
+      } catch (err) {
+        setForceResetError(err.response?.data?.error || err.response?.data?.errors?.[0]?.msg || 'Password change failed. Please try again.');
+      } finally { setForceResetSaving(false); }
+    };
+
+    // Strength indicator helpers
+    const checks = [
+      { label: '10+ characters',       ok: forceResetNew.length >= 10 },
+      { label: 'Uppercase letter',      ok: /[A-Z]/.test(forceResetNew) },
+      { label: 'Number',               ok: /[0-9]/.test(forceResetNew) },
+      { label: 'Special character',    ok: /[^A-Za-z0-9]/.test(forceResetNew) },
+    ];
+    const passedCount = checks.filter(c => c.ok).length;
+    const strengthColor = passedCount <= 1 ? '#ef4444' : passedCount <= 2 ? '#f97316' : passedCount === 3 ? '#eab308' : '#22c55e';
+
+    return (
+      <div style={{
+        minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center',
+        background: '#09090b', fontFamily: "'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif",
+        position: 'relative', overflow: 'hidden', padding: '24px',
+      }}>
+        {/* Dot-grid texture */}
+        <div style={{
+          position: 'absolute', inset: 0, pointerEvents: 'none',
+          backgroundImage: 'radial-gradient(rgba(255,255,255,0.05) 1px, transparent 1px)',
+          backgroundSize: '28px 28px',
+        }} />
+        {/* Top accent */}
+        <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 1, background: 'linear-gradient(90deg,transparent,rgba(239,68,68,0.6),transparent)', pointerEvents: 'none' }} />
+
+        <div style={{ position: 'relative', width: '100%', maxWidth: 420 }}>
+
+          {/* Header */}
+          <div style={{ textAlign: 'center', marginBottom: 32 }}>
+            {/* Icon */}
+            <div style={{
+              width: 56, height: 56, borderRadius: 14,
+              background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.22)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              margin: '0 auto 20px',
+            }}>
+              <Lock style={{ width: 24, height: 24, color: '#f87171' }} />
+            </div>
+            <h1 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#fff', margin: '0 0 8px', letterSpacing: '-0.03em' }}>
+              Password reset required
+            </h1>
+            <p style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.3)', margin: 0, lineHeight: 1.6 }}>
+              An administrator has required you to set a new password<br />before you can access the panel.
+            </p>
+          </div>
+
+          {/* Card */}
+          <div style={{
+            background: 'rgba(255,255,255,0.025)', border: '1px solid rgba(255,255,255,0.07)',
+            borderRadius: 14, padding: '28px 26px 24px',
+          }}>
+            <form onSubmit={submitReset}>
+
+              {/* New password */}
+              <div style={{ marginBottom: 14 }}>
+                <label style={{ display: 'block', fontSize: '0.68rem', fontWeight: 500, color: 'rgba(255,255,255,0.3)', letterSpacing: '0.07em', textTransform: 'uppercase', marginBottom: 7 }}>
+                  New Password
+                </label>
+                <div style={{ position: 'relative' }}>
+                  <input
+                    type={forceResetShowNew ? 'text' : 'password'}
+                    required autoFocus autoComplete="new-password"
+                    placeholder="Enter new password"
+                    value={forceResetNew}
+                    onChange={e => { setForceResetNew(e.target.value); setForceResetError(''); }}
+                    onFocus={e => { e.target.style.borderColor = 'rgba(239,68,68,0.45)'; }}
+                    onBlur={e => { e.target.style.borderColor = 'rgba(255,255,255,0.07)'; }}
+                    style={{
+                      width: '100%', boxSizing: 'border-box',
+                      padding: '10px 40px 10px 13px', fontSize: '0.875rem',
+                      background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)',
+                      borderRadius: 7, color: '#fff', outline: 'none', fontFamily: 'inherit',
+                      transition: 'border-color 0.12s', caretColor: '#f87171',
+                    }}
+                  />
+                  <button type="button" tabIndex={-1} onClick={() => setForceResetShowNew(v => !v)}
+                    style={{ position: 'absolute', right: 11, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', padding: 0, color: 'rgba(255,255,255,0.25)', display: 'flex' }}>
+                    {forceResetShowNew
+                      ? <EyeOff style={{ width: 15, height: 15 }} />
+                      : <Eye style={{ width: 15, height: 15 }} />}
+                  </button>
+                </div>
+
+                {/* Strength bar */}
+                {forceResetNew.length > 0 && (
+                  <div style={{ marginTop: 10 }}>
+                    <div style={{ display: 'flex', gap: 3, marginBottom: 8 }}>
+                      {[0,1,2,3].map(i => (
+                        <div key={i} style={{
+                          flex: 1, height: 3, borderRadius: 2,
+                          background: i < passedCount ? strengthColor : 'rgba(255,255,255,0.08)',
+                          transition: 'background 0.2s',
+                        }} />
+                      ))}
+                    </div>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px 14px' }}>
+                      {checks.map(c => (
+                        <span key={c.label} style={{ fontSize: '0.69rem', color: c.ok ? '#4ade80' : 'rgba(255,255,255,0.25)', display: 'flex', alignItems: 'center', gap: 4, transition: 'color 0.15s' }}>
+                          <span style={{ fontSize: '0.6rem' }}>{c.ok ? '✓' : '○'}</span>{c.label}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Confirm password */}
+              <div style={{ marginBottom: 22 }}>
+                <label style={{ display: 'block', fontSize: '0.68rem', fontWeight: 500, color: 'rgba(255,255,255,0.3)', letterSpacing: '0.07em', textTransform: 'uppercase', marginBottom: 7 }}>
+                  Confirm Password
+                </label>
+                <div style={{ position: 'relative' }}>
+                  <input
+                    type={forceResetShowConf ? 'text' : 'password'}
+                    required autoComplete="new-password"
+                    placeholder="Confirm new password"
+                    value={forceResetConfirm}
+                    onChange={e => { setForceResetConfirm(e.target.value); setForceResetError(''); }}
+                    onFocus={e => { e.target.style.borderColor = forceResetConfirm.length > 0 && !pwMatch ? 'rgba(239,68,68,0.45)' : 'rgba(239,68,68,0.45)'; }}
+                    onBlur={e => { e.target.style.borderColor = 'rgba(255,255,255,0.07)'; }}
+                    style={{
+                      width: '100%', boxSizing: 'border-box',
+                      padding: '10px 40px 10px 13px', fontSize: '0.875rem',
+                      background: 'rgba(255,255,255,0.03)',
+                      border: `1px solid ${forceResetConfirm.length > 0 ? (pwMatch ? 'rgba(34,197,94,0.35)' : 'rgba(239,68,68,0.35)') : 'rgba(255,255,255,0.07)'}`,
+                      borderRadius: 7, color: '#fff', outline: 'none', fontFamily: 'inherit',
+                      transition: 'border-color 0.12s', caretColor: '#f87171',
+                    }}
+                  />
+                  <button type="button" tabIndex={-1} onClick={() => setForceResetShowConf(v => !v)}
+                    style={{ position: 'absolute', right: 11, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', padding: 0, color: 'rgba(255,255,255,0.25)', display: 'flex' }}>
+                    {forceResetShowConf
+                      ? <EyeOff style={{ width: 15, height: 15 }} />
+                      : <Eye style={{ width: 15, height: 15 }} />}
+                  </button>
+                </div>
+                {forceResetConfirm.length > 0 && (
+                  <p style={{ margin: '6px 0 0', fontSize: '0.7rem', color: pwMatch ? '#4ade80' : '#f87171' }}>
+                    {pwMatch ? '✓ Passwords match' : '✗ Passwords do not match'}
+                  </p>
+                )}
+              </div>
+
+              {/* Error */}
+              {forceResetError && (
+                <div style={{
+                  marginBottom: 16, padding: '10px 13px', borderRadius: 7,
+                  background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)',
+                  fontSize: '0.78rem', color: '#fca5a5', lineHeight: 1.5,
+                }}>
+                  {forceResetError}
+                </div>
+              )}
+
+              {/* Submit */}
+              <button
+                type="submit"
+                disabled={forceResetSaving || !pwStrong || !pwMatch}
+                style={{
+                  width: '100%', padding: '11px 16px', borderRadius: 7,
+                  border: '1px solid rgba(255,255,255,0.12)',
+                  background: forceResetSaving || !pwStrong || !pwMatch
+                    ? 'rgba(255,255,255,0.06)' : 'rgba(255,255,255,0.92)',
+                  color: forceResetSaving || !pwStrong || !pwMatch
+                    ? 'rgba(255,255,255,0.2)' : '#09090b',
+                  fontSize: '0.875rem', fontWeight: 600,
+                  cursor: forceResetSaving || !pwStrong || !pwMatch ? 'default' : 'pointer',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                  transition: 'all 0.12s', fontFamily: 'inherit', letterSpacing: '-0.01em',
+                }}
+              >
+                {forceResetSaving
+                  ? <><span className="spinner w-4 h-4 border-2 border-neutral-700/40 border-t-neutral-900" /> Saving…</>
+                  : 'Set new password & continue'}
+              </button>
+
+            </form>
+          </div>
+
+          {/* Footer note */}
+          <p style={{ textAlign: 'center', marginTop: 18, fontSize: '0.7rem', color: 'rgba(255,255,255,0.15)', lineHeight: 1.6 }}>
+            Your previous sessions have been revoked.<br />
+            Contact your administrator if you need help.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   // ── Login Screen ──────────────────────────────────────────────────────────
   if (!auth) return (
