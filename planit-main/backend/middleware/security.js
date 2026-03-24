@@ -453,6 +453,45 @@ function scanUpload(file) {
   return { ok: true };
 }
 
+// ─── List active bans ─────────────────────────────────────────────────────────
+// Returns all IPs currently banned via trafficGuard (Redis sec:ban:* keys).
+// Each entry: { ip, source: 'redis'|'memory', ttlSeconds, expiresAt }
+// Used by GET /admin/security/bans so admins can see and clear bans in the UI.
+async function listActiveBans() {
+  const result = [];
+  const seen   = new Set();
+
+  try {
+    const keys = await redis.scan('sec:ban:*');
+    for (const key of keys) {
+      const ip  = key.replace(/^sec:ban:/, '');
+      const ttl = await redis.ttl(key);
+      seen.add(ip);
+      result.push({
+        ip,
+        source:     'redis',
+        ttlSeconds: ttl >= 0 ? ttl : null,
+        expiresAt:  ttl >= 0 ? new Date(Date.now() + ttl * 1000).toISOString() : null,
+      });
+    }
+  } catch { /* Redis unavailable — fall through to in-memory */ }
+
+  // Include any in-memory bans not already listed from Redis
+  const now = Date.now();
+  for (const [ip, exp] of _mem.bans) {
+    if (now < exp && !seen.has(ip)) {
+      result.push({
+        ip,
+        source:     'memory',
+        ttlSeconds: Math.ceil((exp - now) / 1000),
+        expiresAt:  new Date(exp).toISOString(),
+      });
+    }
+  }
+
+  return result.sort((a, b) => a.ip.localeCompare(b.ip));
+}
+
 // ─── Manual unban ─────────────────────────────────────────────────────────────
 // Called by the admin route POST /admin/security/unban so ops can instantly
 // clear a mistaken ban without waiting for the Redis TTL to expire.
@@ -470,4 +509,4 @@ async function unbanIp(ip) {
   }
 }
 
-module.exports = { trafficGuard, scanUpload, unbanIp };
+module.exports = { trafficGuard, scanUpload, unbanIp, listActiveBans };
