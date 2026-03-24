@@ -20,7 +20,7 @@ import {
   WifiOff, AlertOctagon, TrendingDown, GitBranch, Boxes,
   Rocket, Timer, Wifi as WifiOn, Cpu as CpuIcon,
   Command, Key, Play, Crosshair, Ban, MoreHorizontal, CreditCard,
-  BookOpen, Edit3, Tag, Check, Star,
+  BookOpen, Edit3, Tag, Check, Star, ShieldAlert, ShieldCheck, Loader2,
 } from 'lucide-react';
 import api, { adminAPI, uptimeAPI, watchdogAPI, routerAPI, bugReportAPI, blogAPI } from '../services/api';
 import { SERVICE_CATEGORIES, ALL_SERVICES_FLAT } from '../utils/serviceCategories';
@@ -3704,7 +3704,236 @@ function CommandCenterPanel() {
 
 
 
-// ─── Blocklist Panel ──────────────────────────────────────────────────────────
+// ─── Banned IPs Panel ─────────────────────────────────────────────────────────
+// Shows all IPs currently banned by trafficGuard (Redis sec:ban:* keys + in-memory
+// fallback). Each row shows the IP, source, time remaining, and an Unban button.
+// Separate from the permanent MongoDB Blocklist — these are the temporary rolling bans.
+
+function BannedIpsPanel() {
+  const [bans, setBans]               = useState([]);
+  const [loading, setLoading]         = useState(true);
+  const [loadError, setLoadError]     = useState(null);
+  const [unbanning, setUnbanning]     = useState(null); // ip being unbanned
+  const [confirmIp, setConfirmIp]     = useState(null); // ip awaiting confirm
+  const [manualIp, setManualIp]       = useState('');
+  const [showManual, setShowManual]   = useState(false);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    setLoadError(null);
+    try {
+      const r = await adminAPI.getBans();
+      setBans(Array.isArray(r?.data?.bans) ? r.data.bans : []);
+    } catch (err) {
+      const msg = err?.response?.data?.error || err?.message || 'Unknown error';
+      setLoadError(msg);
+      toast.error(`Failed to load bans: ${msg}`);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { load(); }, [load]);
+
+  const handleUnban = async (ip) => {
+    setUnbanning(ip);
+    try {
+      await adminAPI.unbanIp(ip);
+      toast.success(`${ip} unbanned`);
+      setBans(prev => prev.filter(b => b.ip !== ip));
+    } catch (err) {
+      toast.error(err?.response?.data?.error || `Failed to unban ${ip}`);
+    } finally {
+      setUnbanning(null);
+      setConfirmIp(null);
+    }
+  };
+
+  const handleManualUnban = async () => {
+    const ip = manualIp.trim();
+    if (!ip) { toast.error('Enter an IP address'); return; }
+    await handleUnban(ip);
+    setManualIp('');
+    setShowManual(false);
+  };
+
+  const fmtTtl = (ttlSeconds) => {
+    if (ttlSeconds == null) return 'Permanent';
+    if (ttlSeconds <= 0)    return 'Expiring…';
+    const m = Math.floor(ttlSeconds / 60);
+    const s = ttlSeconds % 60;
+    if (m >= 60) return `${Math.floor(m / 60)}h ${m % 60}m`;
+    if (m > 0)   return `${m}m ${s}s`;
+    return `${s}s`;
+  };
+
+  const fmtExpiry = (iso) => {
+    if (!iso) return '—';
+    const d = new Date(iso);
+    return d.toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+  };
+
+  return (
+    <div className="max-w-4xl mx-auto px-4 py-6">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <div className="flex items-center gap-2 mb-1">
+            <ShieldAlert className="w-5 h-5 text-red-500" />
+            <h2 className="text-xl font-bold text-neutral-900">Banned IPs</h2>
+            {!loading && (
+              <span className="ml-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-red-100 text-red-700">{bans.length}</span>
+            )}
+          </div>
+          <p className="text-sm text-neutral-500">
+            Active trafficGuard bans (Redis + in-memory). These are temporary rolling bans — permanent blocklist entries live in the Blocklist section.
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setShowManual(v => !v)}
+            className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium border border-neutral-200 rounded-lg text-neutral-600 hover:bg-neutral-50 transition-colors"
+          >
+            <ShieldCheck className="w-4 h-4" />
+            Unban IP
+          </button>
+          <button
+            onClick={load}
+            disabled={loading}
+            className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium border border-neutral-200 rounded-lg text-neutral-600 hover:bg-neutral-50 transition-colors disabled:opacity-50"
+          >
+            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+            Refresh
+          </button>
+        </div>
+      </div>
+
+      {/* Manual unban input */}
+      {showManual && (
+        <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-xl flex items-center gap-3">
+          <input
+            type="text"
+            value={manualIp}
+            onChange={e => setManualIp(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && handleManualUnban()}
+            placeholder="e.g. 203.0.113.42 or 2001:db8::1"
+            className="flex-1 px-3 py-2 text-sm border border-blue-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-300"
+            autoFocus
+          />
+          <button
+            onClick={handleManualUnban}
+            disabled={unbanning != null}
+            className="px-4 py-2 text-sm font-semibold bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+          >
+            {unbanning ? 'Unbanning…' : 'Unban'}
+          </button>
+          <button onClick={() => { setShowManual(false); setManualIp(''); }} className="text-neutral-400 hover:text-neutral-600 transition-colors">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+
+      {/* Confirm dialog */}
+      {confirmIp && (
+        <div className="mb-4 p-4 bg-amber-50 border border-amber-200 rounded-xl flex items-center justify-between gap-4">
+          <div className="flex items-center gap-2 text-sm text-amber-800">
+            <AlertTriangle className="w-4 h-4 flex-shrink-0 text-amber-500" />
+            Unban <strong className="font-mono">{confirmIp}</strong>? This clears the Redis key and in-memory warn counter immediately.
+          </div>
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <button onClick={() => setConfirmIp(null)} className="px-3 py-1.5 text-sm border border-neutral-300 rounded-lg text-neutral-600 hover:bg-neutral-50 transition-colors">Cancel</button>
+            <button
+              onClick={() => handleUnban(confirmIp)}
+              disabled={unbanning === confirmIp}
+              className="px-3 py-1.5 text-sm font-semibold bg-amber-500 text-white rounded-lg hover:bg-amber-600 transition-colors disabled:opacity-50"
+            >
+              {unbanning === confirmIp ? 'Unbanning…' : 'Confirm Unban'}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* States */}
+      {loading && (
+        <div className="flex items-center justify-center py-16 text-neutral-400">
+          <Loader2 className="w-6 h-6 animate-spin mr-2" />
+          <span className="text-sm">Loading bans…</span>
+        </div>
+      )}
+
+      {!loading && loadError && (
+        <div className="p-4 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700">
+          <strong>Error:</strong> {loadError}
+        </div>
+      )}
+
+      {!loading && !loadError && bans.length === 0 && (
+        <div className="flex flex-col items-center justify-center py-20 text-neutral-400">
+          <ShieldCheck className="w-10 h-10 mb-3 text-green-400" />
+          <p className="text-sm font-medium text-neutral-600">No active bans</p>
+          <p className="text-xs mt-1">All IPs are currently permitted.</p>
+        </div>
+      )}
+
+      {!loading && !loadError && bans.length > 0 && (
+        <div className="bg-white border border-neutral-200 rounded-2xl overflow-hidden shadow-sm">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-neutral-100 bg-neutral-50">
+                <th className="text-left px-4 py-3 font-semibold text-neutral-500 text-xs uppercase tracking-wide">IP Address</th>
+                <th className="text-left px-4 py-3 font-semibold text-neutral-500 text-xs uppercase tracking-wide">Source</th>
+                <th className="text-left px-4 py-3 font-semibold text-neutral-500 text-xs uppercase tracking-wide">Expires</th>
+                <th className="text-left px-4 py-3 font-semibold text-neutral-500 text-xs uppercase tracking-wide">Time Left</th>
+                <th className="px-4 py-3" />
+              </tr>
+            </thead>
+            <tbody>
+              {bans.map((ban, i) => (
+                <tr key={ban.ip} className={`border-b border-neutral-100 last:border-0 hover:bg-neutral-50 transition-colors ${i % 2 === 0 ? '' : 'bg-neutral-50/40'}`}>
+                  <td className="px-4 py-3">
+                    <span className="font-mono font-medium text-neutral-800 text-xs bg-neutral-100 px-2 py-0.5 rounded">{ban.ip}</span>
+                  </td>
+                  <td className="px-4 py-3">
+                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
+                      ban.source === 'redis' ? 'bg-blue-100 text-blue-700' : 'bg-violet-100 text-violet-700'
+                    }`}>
+                      {ban.source === 'redis' ? 'Redis' : 'Memory'}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 text-neutral-600 text-xs">{fmtExpiry(ban.expiresAt)}</td>
+                  <td className="px-4 py-3">
+                    <span className={`text-xs font-mono font-semibold ${
+                      ban.ttlSeconds == null ? 'text-red-600' :
+                      ban.ttlSeconds < 120   ? 'text-amber-600' : 'text-neutral-600'
+                    }`}>
+                      {fmtTtl(ban.ttlSeconds)}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 text-right">
+                    <button
+                      onClick={() => setConfirmIp(ban.ip)}
+                      disabled={unbanning === ban.ip || confirmIp === ban.ip}
+                      className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-semibold rounded-lg border border-red-200 text-red-600 hover:bg-red-50 transition-colors disabled:opacity-40"
+                    >
+                      {unbanning === ban.ip
+                        ? <><Loader2 className="w-3 h-3 animate-spin" /> Unbanning…</>
+                        : <><ShieldCheck className="w-3 h-3" /> Unban</>
+                      }
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <div className="px-4 py-2 border-t border-neutral-100 bg-neutral-50 text-xs text-neutral-400">
+            {bans.length} active ban{bans.length !== 1 ? 's' : ''} · These expire automatically per <code className="bg-neutral-100 px-1 rounded">SECURITY_BAN_MINUTES</code>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Blocklist Panel ──────────────────────────────────────────────────────────
 
 // Comprehensive public bad-words list (subset of common offensive terms).
@@ -5761,19 +5990,21 @@ function FleetControl() {
 
 
 // ─── Mobile "More" nav button ─────────────────────────────────────────────────
-const MORE_SECTIONS = ['organizers','staff','employees','audit-logs','analytics','security','blocklist','reports','uptime','command-center','whitelabel','blog'];
+const MORE_SECTIONS = ['organizers','staff','employees','audit-logs','analytics','security','blocklist','banned-ips','reports','uptime','command-center','whitelabel','blog'];
 function MoreNavButton({ activeSection, setActiveSection }) {
   const [open, setOpen] = React.useState(false);
   const isActive = MORE_SECTIONS.includes(activeSection);
   const labels = {
     organizers: 'Organizers', staff: 'Staff', employees: 'Team',
     analytics: 'Analytics', security: 'Security', blocklist: 'Blocklist',
+    'banned-ips': 'Banned IPs',
     reports: 'Reports', uptime: 'Uptime', 'command-center': 'Command',
     whitelabel: 'White Label', blog: 'Blog CMS',
   };
   const icons = {
     organizers: Building2, staff: UserCheck, employees: Briefcase,
     analytics: BarChart3, security: Shield, blocklist: Ban,
+    'banned-ips': ShieldAlert,
     reports: Inbox, uptime: Radio, 'command-center': Crosshair,
     whitelabel: Layers, blog: BookOpen,
   };
@@ -6001,6 +6232,7 @@ const NAV_ITEMS = [
   { id: 'analytics',      label: 'Analytics',    icon: BarChart3  },
   { id: 'security',       label: 'Security',     icon: Shield     },
   { id: 'blocklist',      label: 'Blocklist',    icon: Ban        },
+  { id: 'banned-ips',     label: 'Banned IPs',   icon: ShieldAlert },
   { id: 'reports',        label: 'Reports',      icon: Inbox      },
   { id: 'uptime',         label: 'Uptime',       icon: Radio      },
   { id: 'system',         label: 'System',       icon: Server     },
@@ -8289,6 +8521,7 @@ export default function Admin() {
           {activeSection === 'fleet'          && !selectedEvent && <FleetControl />}
           {activeSection === 'security'       && !selectedEvent && <SecurityPanel />}
           {activeSection === 'blocklist'      && !selectedEvent && <BlocklistPanel />}
+          {activeSection === 'banned-ips'     && !selectedEvent && <BannedIpsPanel />}
           {activeSection === 'marketing'      && !selectedEvent && <div className="max-w-6xl mx-auto"><MarketingPanel /></div>}
           {activeSection === 'system'         && !selectedEvent && <div className="max-w-5xl mx-auto"><SystemPanel /></div>}
           {activeSection === 'logs'           && !selectedEvent && <div className="max-w-6xl mx-auto"><LogsPanel /></div>}
