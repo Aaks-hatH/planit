@@ -122,7 +122,7 @@ const BAD_UA_PATTERNS = [
 //
 const FUZZ_PATTERNS = [
   // traversal
-  /\.\.(\\/|\\)/,
+  /\.\.(\/|\\)/,
   /%2e%2e|%252e%252e/i,
 
   // sensitive dotfiles / dirs
