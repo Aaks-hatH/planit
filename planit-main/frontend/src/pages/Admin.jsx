@@ -8336,18 +8336,14 @@ export default function Admin() {
       }, 50);
     };
 
-    if (scriptEl) {
-      // Script tag exists — it's either loading or already loaded
-      if (scriptEl.readyState === 'complete' || scriptEl.async === false) {
-        // Treat as already-loaded but global not yet set — just poll
-        startPolling();
-      } else {
-        scriptEl.addEventListener('load', () => { startPolling(); }, { once: true });
-      }
-    } else {
-      // No script tag at all yet — poll anyway; it may be injected shortly
-      startPolling();
-    }
+    // Whether or not the <script> tag exists, always poll for window.turnstile.
+    // The old approach registered a 'load' listener on the script element, but
+    // in a React SPA the component often mounts *after* the async script has
+    // already fired its load event — the listener is never called, polling
+    // never starts, and the widget silently stays blank.
+    // Polling is cheap (50 ms ticks, stops immediately on resolution) so there
+    // is no downside to always using it regardless of script state.
+    startPolling();
 
     return () => {
       if (pollInterval !== null) clearInterval(pollInterval);
