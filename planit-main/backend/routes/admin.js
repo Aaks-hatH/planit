@@ -24,7 +24,7 @@ const { audit, getAuditLogs } = require('../models/AuditLog');
 const speakeasy  = require('speakeasy');
 const QRCode     = require('qrcode');
 const { meshPost } = require('../middleware/mesh');
-const { unbanIp } = require('../middleware/security');
+const { unbanIp, listActiveBans } = require('../middleware/security');
 
 // ─── Turnstile verification (via router mesh) ─────────────────────────────────
 // The Turnstile SECRET KEY lives only in the router env — never here.
@@ -2462,6 +2462,16 @@ router.delete('/blocklist/:id', verifyAdmin, requirePermission('canManageBlockli
       await redis.del(`sec:ban:${entry.value}`);
     }
     res.json({ ok: true, entry });
+  } catch (err) { next(err); }
+});
+
+// GET /admin/security/bans — list all IPs currently banned by trafficGuard
+// Returns bans from Redis (sec:ban:*) plus the in-memory fallback map.
+// Does NOT include permanent MongoDB blocklist entries — those live under /blocklist.
+router.get('/security/bans', verifyAdmin, requirePermission('canManageBlocklist'), async (req, res, next) => {
+  try {
+    const bans = await listActiveBans();
+    res.json({ bans, total: bans.length });
   } catch (err) { next(err); }
 });
 
