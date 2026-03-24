@@ -23,16 +23,19 @@ function realIp(req) {
 // ── Skip helpers ──────────────────────────────────────────────────────────────
 // Health-check and internal mesh routes must NEVER be rate-limited.
 // The router pings /api/mesh/health and /api/mesh/seen every 4 minutes.
-// The watchdog pings /api/health every 60 s.
-// Counting these against user-facing quotas causes false "backend down" alerts.
+// The watchdog pings /api/health on every backend every 30 s.
+// Counting these against quotas causes false "backend down" alerts.
+// Two path forms are checked because req.path is mount-relative:
+//   globally-mounted middleware → sees '/api/health'
+//   mounted at '/api/'          → sees '/health'
 const skipInternal = (req) => {
   const p = req.path;
-  // req.path is stripped of the /api/ prefix by the time it reaches the
-  // middleware mounted via app.use('/api/', apiLimiter).
   return (
-    p === '/health'       ||   // watchdog + healthcheck probes
-    p.startsWith('/mesh') ||   // router keepalive / mesh protocol
-    p === '/uptime/ping'       // uptime reporting ping
+    p === '/health'         || p === '/api/health'      ||
+    p === '/ping'           || p === '/api/ping'        ||
+    p === '/status'         || p === '/api/status'      ||
+    p === '/uptime/ping'    || p === '/api/uptime/ping' ||
+    p.startsWith('/mesh')   || p.startsWith('/api/mesh')
   );
 };
 
