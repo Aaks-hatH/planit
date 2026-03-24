@@ -31,9 +31,17 @@ const { unbanIp, listActiveBans } = require('../middleware/security');
 // We call /mesh/turnstile over the authenticated mesh channel.
 // Returns true if the challenge passed (or if no secret is configured in dev).
 async function verifyTurnstile(token, ip) {
+  // Turnstile is only enforced when explicitly opted in via TURNSTILE_ENABLED=true.
+  // ROUTER_URL may be set for other mesh purposes (fleet, email pool, etc.) without
+  // Turnstile being configured — so we guard on its own flag rather than ROUTER_URL.
+  if (process.env.TURNSTILE_ENABLED !== 'true') {
+    return { ok: true, skipped: true };
+  }
   const routerUrl = (process.env.ROUTER_URL || '').replace(/\/$/, '');
   if (!routerUrl) {
-    // No router configured (local dev without router) — skip verification
+    // Turnstile enabled but no router to validate against — fail open so a
+    // misconfiguration never permanently locks admins out.
+    console.warn('[admin] TURNSTILE_ENABLED=true but ROUTER_URL is not set — skipping');
     return { ok: true, skipped: true };
   }
   if (!token) return { ok: false, error: 'Turnstile token required' };
