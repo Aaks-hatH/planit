@@ -5991,7 +5991,7 @@ function FleetControl() {
 
 // ─── Mobile "More" nav button ─────────────────────────────────────────────────
 const MORE_SECTIONS = ['organizers','staff','employees','audit-logs','analytics','security','blocklist','banned-ips','reports','uptime','command-center','whitelabel','blog','account'];
-function MoreNavButton({ activeSection, setActiveSection }) {
+function MoreNavButton({ activeSection, setActiveSection, onLogout }) {
   const [open, setOpen] = React.useState(false);
   const isActive = MORE_SECTIONS.includes(activeSection);
   const labels = {
@@ -6040,6 +6040,14 @@ function MoreNavButton({ activeSection, setActiveSection }) {
                 </button>
               );
             })}
+            <div className="border-t border-white/10" />
+            <button
+              onClick={() => { setOpen(false); onLogout(); }}
+              className="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium text-red-400 hover:bg-red-900/30 hover:text-red-300 transition-colors"
+            >
+              <LogOut className="w-4 h-4 flex-shrink-0" />
+              Log out
+            </button>
           </div>
         )}
       </div>
@@ -9088,7 +9096,7 @@ export default function Admin() {
           </button>
         ))}
         {/* More button → cycles through remaining sections */}
-        <MoreNavButton activeSection={activeSection} setActiveSection={(id) => { setActiveSection(id); setSelectedEvent(null); }} />
+        <MoreNavButton activeSection={activeSection} setActiveSection={(id) => { setActiveSection(id); setSelectedEvent(null); }} onLogout={logout} />
       </nav>
 
 </div>
