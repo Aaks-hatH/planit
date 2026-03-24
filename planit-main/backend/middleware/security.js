@@ -58,12 +58,20 @@ const BAN_TTL        = BAN_MINUTES * 60;
 // or the same host (e.g. your own API calling itself).
 const LOOPBACK_IPS = new Set(['127.0.0.1', '::1', '::ffff:127.0.0.1']);
 
-// ─── Paths that skip UA / fuzz / rapid / payload checks ──────────────────────
-// These paths still respect the ban list, but are otherwise unchecked so that
-// uptime monitors hitting /health, /ping, or /status are never penalised.
-// Add your own via SECURITY_MONITOR_PATHS env var (comma-separated).
+// ─── Paths that are ALWAYS exempt — ban list included ─────────────────────────
+// Health-check and ping paths must pass even when an IP is banned, because
+// the watchdog hits /api/health on every backend directly. If a ban blocks
+// health checks the watchdog marks the backend as down, triggers incidents,
+// and floods ntfy — exactly the loop we saw in production.
+//
+// Two path variants are registered for each monitor endpoint because req.path
+// is relative to the Express mount point: a globally-mounted middleware sees
+// '/api/health', while a middleware mounted at '/api/' sees '/health'.
 const MONITOR_PATHS = new Set([
-  '/health', '/ping', '/status',
+  '/health',      '/api/health',
+  '/ping',        '/api/ping',
+  '/status',      '/api/status',
+  '/uptime/ping', '/api/uptime/ping',
   ...(process.env.SECURITY_MONITOR_PATHS || '')
     .split(',').map(s => s.trim()).filter(Boolean),
 ]);
@@ -311,7 +319,15 @@ async function trafficGuard(req, res, next) {
   // ── Explicit IP whitelist ─────────────────────────────────────────────────
   if (WHITELIST_IPS.size > 0 && WHITELIST_IPS.has(ip)) return next();
 
-  // ── Ban list: always enforced, even for monitor paths ─────────────────────
+  // ── Monitor / health paths: ALWAYS pass — ban list does NOT apply ────────────
+  // The watchdog hits /api/health on each backend every 30 s. If that IP is
+  // banned the watchdog marks the backend down → incident created → ntfy spam →
+  // the exact cascade we saw.  Health-check paths are exempt from every check,
+  // including the ban list.  They carry no user-controllable payload, so there
+  // is zero risk in exempting them unconditionally.
+  if (MONITOR_PATHS.has(req.path)) return next();
+
+  // ── Ban list ──────────────────────────────────────────────────────────────
   if (await isBanned(ip)) {
     return res.status(429).json({
       error:   'Too many requests',
@@ -319,12 +335,6 @@ async function trafficGuard(req, res, next) {
       retryAfterMinutes: BAN_MINUTES,
     });
   }
-
-  // ── Monitor / health paths: skip all further checks ──────────────────────
-  // Uptime monitors (UptimeRobot, Pingdom, etc.) typically hit /health or
-  // /ping on a fixed interval. Skipping UA + fuzz + rapid checks here means
-  // they can never accumulate warns regardless of their user-agent string.
-  if (MONITOR_PATHS.has(req.path)) return next();
 
   const ua = (req.headers['user-agent'] || '').toLowerCase();
 
@@ -443,4 +453,21 @@ function scanUpload(file) {
   return { ok: true };
 }
 
-module.exports = { trafficGuard, scanUpload };
+// ─── Manual unban ─────────────────────────────────────────────────────────────
+// Called by the admin route POST /admin/security/unban so ops can instantly
+// clear a mistaken ban without waiting for the Redis TTL to expire.
+async function unbanIp(ip) {
+  try {
+    const key = `sec:ban:${ip}`;
+    await redis.del(key);
+    _mem.bans.delete(ip);
+    const warnKey = `sec:warn:${ip}`;
+    await redis.del(warnKey).catch(() => {});
+    _mem.warns.delete(ip);
+    return { ok: true };
+  } catch (err) {
+    return { ok: false, error: err.message };
+  }
+}
+
+module.exports = { trafficGuard, scanUpload, unbanIp };
