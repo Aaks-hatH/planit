@@ -351,6 +351,10 @@ export const adminAPI = {
 
   // Root TOTP management
   getTotpStatus: ()                    => api.get('/admin/totp/status'),
+  getMe:         ()                    => api.get('/admin/me'),
+  getMeFull:     ()                    => api.get('/admin/me/full'),
+  updateMe:      (data)                => api.patch('/admin/me', data),
+  getMeAudit:    (params)              => api.get('/admin/me/audit', { params }),
   setupTotp:     ()                    => api.post('/admin/totp/setup'),
   enableTotp:    (code)               => api.post('/admin/totp/enable', { code }),
   disableTotp:   (password, code)     => api.post('/admin/totp/disable', { password, code }),
