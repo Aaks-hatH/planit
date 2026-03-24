@@ -348,6 +348,12 @@ export const adminAPI = {
   getBans:  ()     => api.get('/admin/security/bans'),
   unbanIp:  (ip)   => api.post('/admin/security/unban', { ip }),
   updateBlock:     (id, data)     => api.patch(`/admin/blocklist/${id}`, data),
+
+  // Root TOTP management
+  getTotpStatus: ()                    => api.get('/admin/totp/status'),
+  setupTotp:     ()                    => api.post('/admin/totp/setup'),
+  enableTotp:    (code)               => api.post('/admin/totp/enable', { code }),
+  disableTotp:   (password, code)     => api.post('/admin/totp/disable', { password, code }),
 };
 
 // ─── Blog API (public reads + admin writes) ───────────────────────────────────
