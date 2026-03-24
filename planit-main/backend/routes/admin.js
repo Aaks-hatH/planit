@@ -24,6 +24,7 @@ const { audit, getAuditLogs } = require('../models/AuditLog');
 const speakeasy  = require('speakeasy');
 const QRCode     = require('qrcode');
 const { meshPost } = require('../middleware/mesh');
+const { unbanIp } = require('../middleware/security');
 
 // ─── Turnstile verification (via router mesh) ─────────────────────────────────
 // The Turnstile SECRET KEY lives only in the router env — never here.
@@ -2461,6 +2462,25 @@ router.delete('/blocklist/:id', verifyAdmin, requirePermission('canManageBlockli
       await redis.del(`sec:ban:${entry.value}`);
     }
     res.json({ ok: true, entry });
+  } catch (err) { next(err); }
+});
+
+// POST /admin/security/unban — instantly clear a trafficGuard ban + warn counter
+// for an IP without waiting for the Redis TTL. Useful when a watchdog IP or
+// a legitimate admin accidentally gets banned.
+router.post('/security/unban', verifyAdmin, requirePermission('canManageBlocklist'), async (req, res, next) => {
+  try {
+    const { ip } = req.body;
+    if (!ip || typeof ip !== 'string' || ip.length > 100) {
+      return res.status(400).json({ error: 'ip required' });
+    }
+    const result = await unbanIp(ip.trim());
+    audit('security_unban', {
+      req,
+      actor: { employeeId: req.user?.employeeId, email: req.user?.email, role: req.user?.role },
+      details: { ip: ip.trim(), operator: realIp(req) },
+    });
+    res.json(result);
   } catch (err) { next(err); }
 });
 
