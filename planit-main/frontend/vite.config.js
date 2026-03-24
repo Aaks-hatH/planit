@@ -48,8 +48,26 @@ export default defineConfig({
       },
       workbox: {
         maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
-        globPatterns: ['**/*.{js,css,html,ico,png,svg,woff,woff2}'],
+        // Never precache index.html — it must always be fetched fresh so
+        // Safari picks up new deployments immediately instead of serving
+        // the stale shell from the service-worker cache.
+        globPatterns: ['**/*.{js,css,ico,png,svg,woff,woff2}'],
         runtimeCaching: [
+          {
+            // Navigation requests (HTML) — always go to the network first.
+            // Falls back to cache only when fully offline. This ensures
+            // Safari always receives the latest index.html on every load.
+            urlPattern: ({ request }) => request.mode === 'navigate',
+            handler: 'NetworkFirst',
+            options: {
+              cacheName: 'pages-cache',
+              networkTimeoutSeconds: 5,
+              expiration: {
+                maxEntries: 5,
+                maxAgeSeconds: 60 * 60 * 24, // 1 day max in offline cache
+              },
+            },
+          },
           {
             // API calls must NEVER be cached or intercepted by the SW.
             // The /resolve endpoint in particular must always hit the network
