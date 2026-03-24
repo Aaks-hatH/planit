@@ -5990,23 +5990,25 @@ function FleetControl() {
 
 
 // ─── Mobile "More" nav button ─────────────────────────────────────────────────
-const MORE_SECTIONS = ['organizers','staff','employees','audit-logs','analytics','security','blocklist','banned-ips','reports','uptime','command-center','whitelabel','blog'];
+const MORE_SECTIONS = ['organizers','staff','employees','audit-logs','analytics','security','blocklist','banned-ips','reports','uptime','command-center','whitelabel','blog','account'];
 function MoreNavButton({ activeSection, setActiveSection }) {
   const [open, setOpen] = React.useState(false);
   const isActive = MORE_SECTIONS.includes(activeSection);
   const labels = {
     organizers: 'Organizers', staff: 'Staff', employees: 'Team',
+    'audit-logs': 'Audit Logs',
     analytics: 'Analytics', security: 'Security', blocklist: 'Blocklist',
     'banned-ips': 'Banned IPs',
     reports: 'Reports', uptime: 'Uptime', 'command-center': 'Command',
-    whitelabel: 'White Label', blog: 'Blog CMS',
+    whitelabel: 'White Label', blog: 'Blog CMS', account: 'My Account',
   };
   const icons = {
     organizers: Building2, staff: UserCheck, employees: Briefcase,
+    'audit-logs': FileText,
     analytics: BarChart3, security: Shield, blocklist: Ban,
     'banned-ips': ShieldAlert,
     reports: Inbox, uptime: Radio, 'command-center': Crosshair,
-    whitelabel: Layers, blog: BookOpen,
+    whitelabel: Layers, blog: BookOpen, account: User,
   };
   return (
     <>
@@ -8272,7 +8274,7 @@ export default function Admin() {
   useEffect(() => {
     if (auth) return;                             // already logged in
     if (loginStep !== 'credentials') return;      // TOTP step has no widget
-    if (!import.meta.env.VITE_TURNSTILE_SITE_KEY) return;
+    if (!'0x4AAAAAACvGuW0fbNIYbAiK') return;
 
     const mount = () => {
       if (!turnstileRef.current || !window.turnstile) return;
@@ -8282,7 +8284,7 @@ export default function Admin() {
         turnstileWidget.current = null;
       }
       turnstileWidget.current = window.turnstile.render(turnstileRef.current, {
-        sitekey:            import.meta.env.VITE_TURNSTILE_SITE_KEY,
+        sitekey:            '0x4AAAAAACvGuW0fbNIYbAiK',
         theme:              'dark',
         callback:           (token) => setTurnstileToken(token),
         'expired-callback': ()      => setTurnstileToken(''),
@@ -8563,7 +8565,7 @@ export default function Admin() {
               </div>
 
               {/* Cloudflare Turnstile widget */}
-              {import.meta.env.VITE_TURNSTILE_SITE_KEY && (
+              {'0x4AAAAAACvGuW0fbNIYbAiK' && (
                 <div style={{marginBottom:20,display:'flex',justifyContent:'center'}}>
                   <div ref={turnstileRef} />
                 </div>
@@ -8613,11 +8615,11 @@ export default function Admin() {
             {/* Submit */}
             <button
               type="submit"
-              disabled={loggingIn || (loginStep === 'credentials' && !!import.meta.env.VITE_TURNSTILE_SITE_KEY && !turnstileToken)}
+              disabled={loggingIn || (loginStep === 'credentials' && !!'0x4AAAAAACvGuW0fbNIYbAiK' && !turnstileToken)}
               style={{
                 width:'100%', padding:'12px',
                 borderRadius:10, border:'none',
-                background: (loggingIn || (loginStep === 'credentials' && !!import.meta.env.VITE_TURNSTILE_SITE_KEY && !turnstileToken))
+                background: (loggingIn || (loginStep === 'credentials' && !!'0x4AAAAAACvGuW0fbNIYbAiK' && !turnstileToken))
                   ? 'rgba(99,102,241,0.4)'
                   : 'linear-gradient(135deg,#3b82f6 0%,#6366f1 100%)',
                 color:'#fff', fontSize:'0.875rem', fontWeight:600,
