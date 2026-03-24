@@ -1346,6 +1346,7 @@ router.get('/all-participants', verifyAdmin, async (req, res, next) => {
 router.get('/me', verifyAdmin, (req, res) => {
   const admin = req.admin;
   res.json({
+    _id:         admin.employeeId  || null,  // MongoDB _id for employee accounts; null for root
     name:        admin.name        || admin.username || 'Admin',
     email:       admin.email       || null,
     role:        admin.role        || 'super_admin',
@@ -1353,6 +1354,101 @@ router.get('/me', verifyAdmin, (req, res) => {
     isDemo:      admin.isDemo      || false,
     permissions: admin.permissions || null, // null = root admin (all access)
   });
+});
+
+// GET /admin/me/full — full self-profile (all safe fields, no passwordHash/totpSecret)
+router.get('/me/full', verifyAdmin, async (req, res, next) => {
+  try {
+    const empId = req.admin?.employeeId;
+    if (!empId) {
+      // Root admin — return synthetic profile
+      return res.json({
+        name:             req.admin.username || 'Root Admin',
+        email:            null,
+        role:             'super_admin',
+        isEmployee:       false,
+        department:       null,
+        phone:            null,
+        timezone:         null,
+        location:         null,
+        emergencyContact: null,
+        employeeId:       null,
+        startDate:        null,
+        lastLogin:        null,
+        loginCount:       0,
+        createdAt:        null,
+        twoFactorEnabled: !!(await redis.get('totp:root:secret').catch(() => null)),
+        permissions:      null,
+        status:           'active',
+        notes:            null,
+      });
+    }
+    const emp = await Employee.findById(empId)
+      .select('-passwordHash -totpSecret')
+      .lean();
+    if (!emp) return res.status(404).json({ error: 'Employee not found' });
+    res.json(emp);
+  } catch (error) { next(error); }
+});
+
+// PATCH /admin/me — self-service profile update
+// Employees can update their own display name, phone, timezone, location, and
+// emergency contact. Role, permissions, and all security fields are immutable
+// from this endpoint — those require a super_admin.
+router.patch(
+  '/me',
+  verifyAdmin,
+  [
+    body('name').optional().trim().isLength({ min: 1, max: 100 }).withMessage('Name must be 1–100 characters'),
+    body('phone').optional({ nullable: true }).trim().isLength({ max: 30 }).withMessage('Phone too long'),
+    body('timezone').optional({ nullable: true }).trim().isLength({ max: 60 }).withMessage('Timezone too long'),
+    body('location').optional({ nullable: true }).trim().isLength({ max: 100 }).withMessage('Location too long'),
+    body('emergencyContact').optional({ nullable: true }).trim().isLength({ max: 200 }).withMessage('Emergency contact too long'),
+  ],
+  async (req, res, next) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) return res.status(400).json({ error: errors.array()[0].msg });
+    try {
+      const empId = req.admin?.employeeId;
+      if (!empId) return res.status(403).json({ error: 'Root admin profile is not editable via this endpoint.' });
+
+      // Whitelist — only these fields may be self-edited
+      const allowed = ['name', 'phone', 'timezone', 'location', 'emergencyContact'];
+      const update  = {};
+      for (const field of allowed) {
+        if (req.body[field] !== undefined) update[field] = req.body[field] || null;
+      }
+      if (Object.keys(update).length === 0) return res.status(400).json({ error: 'No updatable fields provided.' });
+
+      const emp = await Employee.findByIdAndUpdate(
+        empId,
+        { $set: update },
+        { new: true, runValidators: true }
+      ).select('-passwordHash -totpSecret');
+
+      if (!emp) return res.status(404).json({ error: 'Employee not found' });
+
+      audit('employee_updated', {
+        req, actor: req.admin,
+        targetId: emp._id.toString(), targetType: 'employee',
+        details: { selfUpdate: true, updatedFields: Object.keys(update), email: emp.email },
+      });
+
+      res.json({ employee: emp, message: 'Profile updated' });
+    } catch (error) { next(error); }
+  }
+);
+
+// GET /admin/me/audit — own audit log (last 100 entries for this employee)
+// No extra permission required — employees are always allowed to see their own activity.
+router.get('/me/audit', verifyAdmin, async (req, res, next) => {
+  try {
+    const empId = req.admin?.employeeId || 'root';
+    const limit = Math.min(parseInt(req.query.limit || '50', 10), 100);
+    const skip  = parseInt(req.query.skip || '0', 10);
+    const logs  = await getAuditLogs({ actorId: empId, limit, skip });
+    res.json({ logs, count: logs.length });
+  } catch (error) { next(error); }
 });
 
 router.get('/employees', verifyAdmin, async (req, res, next) => {
