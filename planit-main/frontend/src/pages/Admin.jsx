@@ -1393,7 +1393,7 @@ function LogsPanel() {
 // ═══════════════════════════════════════════════════════════════════════════════
 // EMPLOYEES PANEL
 // ═══════════════════════════════════════════════════════════════════════════════
-function EmployeesPanel() {
+function EmployeesPanel({ currentUser }) {
   const isDemo = useContext(DemoContext);
   const [employees, setEmployees]   = useState([]);
   const [loading, setLoading]       = useState(true);
@@ -1738,6 +1738,10 @@ function EmployeesPanel() {
                     <div className="flex items-center gap-2 mb-0.5 flex-wrap">
                       <p className="text-sm font-bold text-neutral-900">{emp.name}</p>
                       <RoleBadge role={emp.role} />
+                      {/* ── "You" badge — identifies the logged-in employee's own row ── */}
+                      {currentUser?.isEmployee && currentUser?.email === emp.email && (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-indigo-100 text-indigo-700">You</span>
+                      )}
                       {emp.isDemo && <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-orange-100 text-orange-700">demo</span>}
                       {emp.forcePasswordReset && <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-red-100 text-red-600">pw reset</span>}
                     </div>
@@ -1764,17 +1768,23 @@ function EmployeesPanel() {
                       </div>
                     )}
                   </div>
-                  <div className="flex gap-2 flex-shrink-0 flex-wrap justify-end">
-                    <button onClick={() => openEdit(emp)} className="btn btn-secondary p-1.5" title="Edit"><Edit2 className="w-3.5 h-3.5" /></button>
-                    <button onClick={() => openCp(emp)} className="btn btn-secondary p-1.5" title="Change Password"><Key className="w-3.5 h-3.5" /></button>
-                    <button onClick={() => doForceReset(emp)} className="btn btn-secondary p-1.5 text-amber-600 hover:bg-amber-50" title="Force Password Reset"><RotateCcw className="w-3.5 h-3.5" /></button>
-                    <button onClick={() => toggleSuspend(emp)}
-                      className={`btn btn-secondary p-1.5 ${emp.status === 'suspended' ? 'text-emerald-600 hover:bg-emerald-50' : 'text-orange-500 hover:bg-orange-50'}`}
-                      title={emp.status === 'suspended' ? 'Unsuspend' : 'Suspend'}>
-                      <Power className="w-3.5 h-3.5" />
-                    </button>
-                    <button onClick={() => del(emp._id, emp.name)} className="btn btn-secondary p-1.5 text-red-500 hover:bg-red-50" title="Delete"><Trash2 className="w-3.5 h-3.5" /></button>
-                  </div>
+                  {/* ── Action buttons — all disabled on own row ── */}
+                  {(() => {
+                    const isSelf = currentUser?.isEmployee && currentUser?.email === emp.email;
+                    return (
+                      <div className="flex gap-2 flex-shrink-0 flex-wrap justify-end">
+                        <button onClick={() => !isSelf && openEdit(emp)} disabled={isSelf} className={`btn btn-secondary p-1.5 ${isSelf ? 'opacity-30 cursor-not-allowed' : ''}`} title={isSelf ? "Use the Account tab to edit your own profile" : "Edit"}><Edit2 className="w-3.5 h-3.5" /></button>
+                        <button onClick={() => !isSelf && openCp(emp)} disabled={isSelf} className={`btn btn-secondary p-1.5 ${isSelf ? 'opacity-30 cursor-not-allowed' : ''}`} title={isSelf ? "Use the Account tab to change your own password" : "Change Password"}><Key className="w-3.5 h-3.5" /></button>
+                        <button onClick={() => !isSelf && doForceReset(emp)} disabled={isSelf} className={`btn btn-secondary p-1.5 text-amber-600 hover:bg-amber-50 ${isSelf ? 'opacity-30 cursor-not-allowed' : ''}`} title={isSelf ? "Cannot force-reset your own account" : "Force Password Reset"}><RotateCcw className="w-3.5 h-3.5" /></button>
+                        <button onClick={() => !isSelf && toggleSuspend(emp)} disabled={isSelf}
+                          className={`btn btn-secondary p-1.5 ${isSelf ? 'opacity-30 cursor-not-allowed' : emp.status === 'suspended' ? 'text-emerald-600 hover:bg-emerald-50' : 'text-orange-500 hover:bg-orange-50'}`}
+                          title={isSelf ? "Cannot suspend your own account" : emp.status === 'suspended' ? 'Unsuspend' : 'Suspend'}>
+                          <Power className="w-3.5 h-3.5" />
+                        </button>
+                        <button onClick={() => !isSelf && del(emp._id, emp.name)} disabled={isSelf} className={`btn btn-secondary p-1.5 text-red-500 hover:bg-red-50 ${isSelf ? 'opacity-30 cursor-not-allowed' : ''}`} title={isSelf ? "Cannot delete your own account" : "Delete"}><Trash2 className="w-3.5 h-3.5" /></button>
+                      </div>
+                    );
+                  })()}
                 </div>
               </div>
             );
@@ -6262,6 +6272,538 @@ const NAV_ITEMS = [
   { id: 'account',        label: 'My Account',   icon: User       },
 ];
 
+// ─── Employee Account Panel ───────────────────────────────────────────────────
+// Shown in the Account section when the logged-in user is an employee (not root).
+// Surfaces their own profile info, TOTP setup, and self-service password change.
+// The TOTP routes already handle employees correctly via req.user.employeeId.
+// ─── helpers ─────────────────────────────────────────────────────────────────
+const ACCOUNT_TABS = [
+  { id: 'profile',     label: 'Profile',     icon: User        },
+  { id: 'security',    label: 'Security',    icon: Shield      },
+  { id: 'permissions', label: 'Permissions', icon: Lock        },
+  { id: 'activity',    label: 'Activity',    icon: Activity    },
+];
+const PERM_LABELS = {
+  canDeleteEvents:'Delete Events', canEditEvents:'Edit Events', canCreateEvents:'Create Events',
+  canManageUsers:'Manage Users', canBanUsers:'Ban Users', canViewUserProfiles:'View Profiles',
+  canManageInvites:'Manage Invites', canCheckinGuests:'Check-In Guests',
+  canManagePolls:'Manage Polls', canManageSeating:'Manage Seating', canManageFiles:'Manage Files',
+  canViewLogs:'View Logs', canViewSystem:'View System', canAccessAPI:'API Access',
+  canExportData:'Export Data', canRunCleanup:'Run Cleanup', canViewAnalytics:'View Analytics',
+  canViewFinancials:'View Financials', canManageIncidents:'Manage Incidents',
+  canSendNotifications:'Send Notifications', canSendMarketing:'Send Marketing',
+  canViewMarketing:'View Marketing', canManageBlocklist:'Manage Blocklist',
+  canViewSecurityLogs:'Security Logs', canToggleMaintenance:'Toggle Maintenance',
+  canEditContent:'Edit Content', canPublishContent:'Publish Content',
+  canManageWhiteLabel:'White Label', canViewEmployees:'View Employees',
+};
+const AUDIT_COLORS = {
+  login_success:'bg-emerald-100 text-emerald-700', login_failure:'bg-red-100 text-red-700',
+  login_locked:'bg-red-100 text-red-700', logout:'bg-neutral-100 text-neutral-600',
+  password_changed:'bg-blue-100 text-blue-700', force_password_reset_set:'bg-amber-100 text-amber-700',
+  totp_enabled:'bg-indigo-100 text-indigo-700', totp_disabled:'bg-orange-100 text-orange-700',
+  employee_created:'bg-teal-100 text-teal-700', employee_updated:'bg-sky-100 text-sky-700',
+  employee_deleted:'bg-red-100 text-red-700', employee_suspended:'bg-amber-100 text-amber-700',
+  employee_unsuspended:'bg-emerald-100 text-emerald-700',
+  event_created:'bg-violet-100 text-violet-700', event_updated:'bg-sky-100 text-sky-700',
+  event_deleted:'bg-red-100 text-red-700', data_exported:'bg-indigo-100 text-indigo-700',
+  maintenance_toggled:'bg-orange-100 text-orange-700', blocklist_updated:'bg-amber-100 text-amber-700',
+  session_revoked:'bg-red-100 text-red-700', permission_denied:'bg-red-100 text-red-700',
+};
+function fmtTs(ts) {
+  if (!ts) return '—';
+  const d = new Date(ts);
+  return d.toLocaleString(undefined, { month:'short', day:'numeric', year:'numeric', hour:'2-digit', minute:'2-digit' });
+}
+function timeAgo(ts) {
+  if (!ts) return '—';
+  const diff = Date.now() - new Date(ts).getTime();
+  const m = Math.floor(diff/60000), h = Math.floor(m/60), d = Math.floor(h/24);
+  if (d > 0) return `${d}d ago`;
+  if (h > 0) return `${h}h ago`;
+  if (m > 0) return `${m}m ago`;
+  return 'just now';
+}
+
+function EmployeeAccountPanel({ currentUser }) {
+  // ── tab ──────────────────────────────────────────────────────────────────
+  const [tab, setTab] = useState('profile');
+
+  // ── full profile (fetched from /me/full) ──────────────────────────────────
+  const [profile,        setProfile]        = useState(null);
+  const [profileLoading, setProfileLoading] = useState(true);
+
+  // ── profile edit ─────────────────────────────────────────────────────────
+  const [editing,    setEditing]    = useState(false);
+  const [editForm,   setEditForm]   = useState({});
+  const [editSaving, setEditSaving] = useState(false);
+  const [editErr,    setEditErr]    = useState('');
+
+  // ── TOTP ─────────────────────────────────────────────────────────────────
+  const [totpEnabled,    setTotpEnabled]    = useState(false);
+  const [setupStep,      setSetupStep]      = useState('idle');
+  const [qrUri,          setQrUri]          = useState('');
+  const [manualKey,      setManualKey]      = useState('');
+  const [setupCode,      setSetupCode]      = useState('');
+  const [setupLoading,   setSetupLoading]   = useState(false);
+  const [showDisable,    setShowDisable]    = useState(false);
+  const [disablePass,    setDisablePass]    = useState('');
+  const [disableCode,    setDisableCode]    = useState('');
+  const [disableLoading, setDisableLoading] = useState(false);
+  const [totpErr,        setTotpErr]        = useState('');
+
+  // ── password change ───────────────────────────────────────────────────────
+  const [pwNew,     setPwNew]     = useState('');
+  const [pwConfirm, setPwConfirm] = useState('');
+  const [pwShowNew, setPwShowNew] = useState(false);
+  const [pwShowCon, setPwShowCon] = useState(false);
+  const [pwSaving,  setPwSaving]  = useState(false);
+  const [pwErr,     setPwErr]     = useState('');
+  const [pwOk,      setPwOk]      = useState(false);
+
+  // ── activity log ─────────────────────────────────────────────────────────
+  const [auditLogs,    setAuditLogs]    = useState([]);
+  const [auditLoading, setAuditLoading] = useState(false);
+  const [auditLoaded,  setAuditLoaded]  = useState(false);
+
+  // ── initial load ─────────────────────────────────────────────────────────
+  useEffect(() => {
+    Promise.all([
+      adminAPI.getMeFull(),
+      adminAPI.getTotpStatus(),
+    ]).then(([pr, tr]) => {
+      setProfile(pr.data);
+      setEditForm({
+        name:             pr.data.name             || '',
+        phone:            pr.data.phone            || '',
+        timezone:         pr.data.timezone         || '',
+        location:         pr.data.location         || '',
+        emergencyContact: pr.data.emergencyContact || '',
+      });
+      setTotpEnabled(tr.data.totpEnabled || false);
+    }).catch(() => {}).finally(() => setProfileLoading(false));
+  }, []);
+
+  // Load audit logs when that tab is first opened
+  useEffect(() => {
+    if (tab !== 'activity' || auditLoaded) return;
+    setAuditLoading(true);
+    adminAPI.getMeAudit({ limit: 50 })
+      .then(r => { setAuditLogs(r.data.logs || []); setAuditLoaded(true); })
+      .catch(() => {})
+      .finally(() => setAuditLoading(false));
+  }, [tab, auditLoaded]);
+
+  // ── profile save ─────────────────────────────────────────────────────────
+  const saveProfile = async () => {
+    setEditErr(''); setEditSaving(true);
+    try {
+      const r = await adminAPI.updateMe(editForm);
+      setProfile(r.data.employee);
+      setEditing(false);
+      toast.success('Profile updated');
+    } catch (e) { setEditErr(e.response?.data?.error || 'Save failed'); }
+    finally { setEditSaving(false); }
+  };
+
+  // ── TOTP helpers ─────────────────────────────────────────────────────────
+  const beginSetup = async () => {
+    if (isDemo) { toast.success('[Demo] Would open TOTP setup'); return; }
+    setTotpErr(''); setSetupLoading(true);
+    try {
+      const r = await adminAPI.setupTotp();
+      setQrUri(r.data.qr || r.data.otpauthUrl || '');
+      setManualKey(r.data.secret || '');
+      setSetupStep('qr');
+    } catch (e) { setTotpErr(e.response?.data?.error || 'Setup failed'); }
+    finally { setSetupLoading(false); }
+  };
+  const confirmEnable = async () => {
+    if (!setupCode.trim()) { setTotpErr('Enter the 6-digit code.'); return; }
+    if (isDemo) { setTotpEnabled(true); setSetupStep('done'); return; }
+    setTotpErr(''); setSetupLoading(true);
+    try {
+      await adminAPI.enableTotp(setupCode.replace(/\s/g, ''));
+      setTotpEnabled(true); setSetupStep('done');
+      toast.success('Two-factor authentication enabled!');
+    } catch (e) { setTotpErr(e.response?.data?.error || 'Invalid code.'); setSetupCode(''); }
+    finally { setSetupLoading(false); }
+  };
+  const confirmDisable = async () => {
+    if (!disablePass || !disableCode) { setTotpErr('Password and code required.'); return; }
+    if (isDemo) { setTotpEnabled(false); setShowDisable(false); return; }
+    setTotpErr(''); setDisableLoading(true);
+    try {
+      await adminAPI.disableTotp(disablePass, disableCode.replace(/\s/g, ''));
+      setTotpEnabled(false); setShowDisable(false); setDisablePass(''); setDisableCode('');
+      toast.success('2FA disabled.');
+    } catch (e) { setTotpErr(e.response?.data?.error || 'Invalid password or code.'); setDisableCode(''); }
+    finally { setDisableLoading(false); }
+  };
+  const resetSetup = () => { setSetupStep('idle'); setSetupCode(''); setQrUri(''); setManualKey(''); setTotpErr(''); };
+
+  // ── password change ───────────────────────────────────────────────────────
+  const pwChecks = [
+    { label: '10+ characters',    ok: pwNew.length >= 10 },
+    { label: 'Uppercase',         ok: /[A-Z]/.test(pwNew) },
+    { label: 'Number',            ok: /[0-9]/.test(pwNew) },
+    { label: 'Special character', ok: /[^A-Za-z0-9]/.test(pwNew) },
+  ];
+  const pwStrong   = pwChecks.every(c => c.ok);
+  const pwMatch    = pwNew === pwConfirm && pwConfirm.length > 0;
+  const pwPassed   = pwChecks.filter(c => c.ok).length;
+  const pwBarColor = pwPassed <= 1 ? '#ef4444' : pwPassed <= 2 ? '#f97316' : pwPassed === 3 ? '#eab308' : '#22c55e';
+
+  const changePassword = async (e) => {
+    e.preventDefault(); setPwErr(''); setPwOk(false);
+    if (!pwStrong) { setPwErr('Password does not meet requirements.'); return; }
+    if (!pwMatch)  { setPwErr('Passwords do not match.'); return; }
+    if (isDemo)    { toast.success('[Demo] Password would be changed.'); setPwNew(''); setPwConfirm(''); return; }
+    setPwSaving(true);
+    try {
+      await adminAPI.changeEmployeePassword(currentUser._id, { newPassword: pwNew });
+      setPwOk(true); setPwNew(''); setPwConfirm('');
+      toast.success('Password changed.');
+    } catch (err) { setPwErr(err.response?.data?.error || err.response?.data?.errors?.[0]?.msg || 'Change failed.'); }
+    finally { setPwSaving(false); }
+  };
+
+  if (profileLoading) return (
+    <div className="p-12 flex items-center justify-center gap-3 text-neutral-400">
+      <Loader2 className="w-5 h-5 animate-spin" /> Loading…
+    </div>
+  );
+
+  const p = profile || {};
+  const grantedPerms = p.permissions ? Object.entries(p.permissions).filter(([,v]) => v) : [];
+
+  // ── account stats cards ───────────────────────────────────────────────────
+  const stats = [
+    { label: 'Total Logins',  value: p.loginCount || 0,      icon: Activity    },
+    { label: 'Last Login',    value: timeAgo(p.lastLogin),    icon: Clock       },
+    { label: 'Member Since',  value: p.startDate ? new Date(p.startDate).toLocaleDateString(undefined,{month:'short',year:'numeric'}) : '—', icon: Calendar },
+    { label: 'Status',        value: (p.status || 'active').charAt(0).toUpperCase()+(p.status||'active').slice(1), icon: p.status==='active' ? CheckCircle : AlertCircle },
+  ];
+
+  return (
+    <div className="max-w-2xl mx-auto p-6 space-y-5">
+      {/* Header */}
+      <div className="flex items-start gap-4">
+        <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-indigo-500 to-violet-500 flex items-center justify-center text-white text-2xl font-bold flex-shrink-0 shadow-lg">
+          {(p.name || currentUser?.name || 'A').charAt(0).toUpperCase()}
+        </div>
+        <div className="flex-1 min-w-0">
+          <h2 className="text-xl font-bold text-neutral-900 leading-tight">{p.name || currentUser?.name}</h2>
+          <p className="text-sm text-neutral-500">{p.email || currentUser?.email}</p>
+          <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+            <span className="text-xs bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full font-medium capitalize">
+              {(p.role || currentUser?.role || '').replace(/_/g,' ')}
+            </span>
+            {p.department && <span className="text-xs bg-neutral-100 text-neutral-600 px-2 py-0.5 rounded-full">{p.department}</span>}
+            {totpEnabled && <span className="text-xs bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full font-medium flex items-center gap-1"><ShieldCheck className="w-3 h-3"/>2FA On</span>}
+          </div>
+        </div>
+      </div>
+
+      {/* Stats row */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        {stats.map(s => (
+          <div key={s.label} className="rounded-xl border border-neutral-200 bg-white p-3 text-center">
+            <s.icon className="w-4 h-4 text-neutral-400 mx-auto mb-1" />
+            <p className="text-sm font-bold text-neutral-900 truncate">{s.value}</p>
+            <p className="text-xs text-neutral-400 mt-0.5">{s.label}</p>
+          </div>
+        ))}
+      </div>
+
+      {/* Tabs */}
+      <div className="flex gap-1 border-b border-neutral-200">
+        {ACCOUNT_TABS.map(t => (
+          <button key={t.id} onClick={() => setTab(t.id)}
+            className={`flex items-center gap-1.5 px-3 py-2 text-xs font-medium border-b-2 transition-colors -mb-px ${
+              tab === t.id ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-neutral-500 hover:text-neutral-800'
+            }`}>
+            <t.icon className="w-3.5 h-3.5" />{t.label}
+          </button>
+        ))}
+      </div>
+
+      {/* ── PROFILE TAB ─────────────────────────────────────────────────── */}
+      {tab === 'profile' && (
+        <div className="rounded-2xl border border-neutral-200 bg-white p-5 space-y-4">
+          <div className="flex items-center justify-between mb-1">
+            <h3 className="font-semibold text-neutral-900 text-sm">Profile Details</h3>
+            {!editing
+              ? <button onClick={() => { setEditing(true); setEditErr(''); }} className="text-xs text-indigo-600 hover:text-indigo-800 font-medium flex items-center gap-1"><Edit2 className="w-3 h-3"/>Edit</button>
+              : <div className="flex gap-2">
+                  <button onClick={() => { setEditing(false); setEditErr(''); }} className="text-xs text-neutral-500 hover:text-neutral-700">Cancel</button>
+                  <button onClick={saveProfile} disabled={editSaving} className="text-xs bg-indigo-600 text-white px-3 py-1 rounded-lg hover:bg-indigo-700 disabled:opacity-50 flex items-center gap-1">
+                    {editSaving ? <Loader2 className="w-3 h-3 animate-spin"/> : <Save className="w-3 h-3"/>} Save
+                  </button>
+                </div>
+            }
+          </div>
+
+          {editErr && <div className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{editErr}</div>}
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {[
+              { key:'name',             label:'Full Name',         placeholder:'Your name' },
+              { key:'phone',            label:'Phone',             placeholder:'+1 (555) 000-0000' },
+              { key:'timezone',         label:'Timezone',          placeholder:'America/New_York' },
+              { key:'location',         label:'Location',          placeholder:'City, Country' },
+              { key:'emergencyContact', label:'Emergency Contact',  placeholder:'Name · Phone', full:true },
+            ].map(f => (
+              <div key={f.key} className={f.full ? 'sm:col-span-2' : ''}>
+                <p className="text-xs font-medium text-neutral-400 mb-1 uppercase tracking-wide">{f.label}</p>
+                {editing
+                  ? <input value={editForm[f.key] || ''} onChange={e => setEditForm(v => ({...v,[f.key]:e.target.value}))} placeholder={f.placeholder}
+                      className="w-full border border-neutral-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+                  : <p className="text-sm text-neutral-800">{p[f.key] || <span className="text-neutral-400 italic">Not set</span>}</p>
+                }
+              </div>
+            ))}
+          </div>
+
+          {/* Read-only fields */}
+          <div className="pt-3 border-t border-neutral-100 grid grid-cols-2 gap-3">
+            {[
+              { label:'Employee ID', value: p.employeeId || '—' },
+              { label:'Department',  value: p.department  || '—' },
+              { label:'Start Date',  value: p.startDate ? new Date(p.startDate).toLocaleDateString() : '—' },
+              { label:'Last Login',  value: fmtTs(p.lastLogin) },
+              { label:'Created',     value: fmtTs(p.createdAt) },
+              { label:'Notes',       value: p.notes || '—' },
+            ].map(f => (
+              <div key={f.label}>
+                <p className="text-xs text-neutral-400 uppercase tracking-wide mb-0.5">{f.label}</p>
+                <p className="text-xs text-neutral-700">{f.value}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* ── SECURITY TAB ────────────────────────────────────────────────── */}
+      {tab === 'security' && (
+        <div className="space-y-4">
+          {/* 2FA card */}
+          <div className={`rounded-2xl border p-5 ${totpEnabled ? 'border-emerald-200 bg-emerald-50' : 'border-neutral-200 bg-white'}`}>
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex items-start gap-3">
+                <div className={`mt-0.5 w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 ${totpEnabled ? 'bg-emerald-100' : 'bg-neutral-100'}`}>
+                  {totpEnabled ? <ShieldCheck className="w-5 h-5 text-emerald-600"/> : <ShieldOff className="w-5 h-5 text-neutral-400"/>}
+                </div>
+                <div>
+                  <p className="font-semibold text-neutral-900 text-sm">Two-Factor Authentication</p>
+                  <p className="text-xs text-neutral-500 mt-0.5">{totpEnabled ? 'Active — authenticator code required at every login.' : 'Not enabled — password alone protects your account.'}</p>
+                  {totpEnabled && <span className="inline-flex items-center gap-1 mt-1.5 text-xs font-medium text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full"><Check className="w-3 h-3"/>Enabled</span>}
+                </div>
+              </div>
+              {(setupStep==='idle'||setupStep==='done') && (
+                totpEnabled
+                  ? <button onClick={()=>{setShowDisable(true);setTotpErr('');}} className="flex-shrink-0 px-3 py-1.5 text-xs font-medium rounded-lg border border-red-200 text-red-600 hover:bg-red-50 transition-colors">Disable 2FA</button>
+                  : <button onClick={beginSetup} disabled={setupLoading} className="flex-shrink-0 px-3 py-1.5 text-xs font-medium rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 flex items-center gap-1.5">
+                      {setupLoading?<Loader2 className="w-3 h-3 animate-spin"/>:<Key className="w-3 h-3"/>} Set up 2FA
+                    </button>
+              )}
+            </div>
+            {setupStep==='qr' && (
+              <div className="mt-5 pt-5 border-t border-neutral-200 space-y-4">
+                <p className="text-sm font-semibold text-neutral-800 flex items-center gap-2"><span className="w-5 h-5 rounded-full bg-blue-600 text-white text-xs flex items-center justify-center font-bold">1</span>Scan with your authenticator app</p>
+                <p className="text-xs text-neutral-500">Use <strong>Google Authenticator</strong>, <strong>Authy</strong>, <strong>1Password</strong>, or any TOTP app.</p>
+                <div className="flex flex-col items-center gap-3">
+                  <div className="p-3 bg-white rounded-xl border border-neutral-200 shadow-sm">
+                    <img src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(qrUri)}`} alt="TOTP QR" width={180} height={180} className="block rounded"/>
+                  </div>
+                  {manualKey && (
+                    <div className="w-full">
+                      <p className="text-xs text-neutral-500 mb-1">Manual key:</p>
+                      <div className="flex items-center gap-2">
+                        <code className="flex-1 text-xs bg-neutral-100 border border-neutral-200 rounded-lg px-3 py-2 font-mono tracking-widest select-all break-all">{manualKey}</code>
+                        <button onClick={()=>{navigator.clipboard.writeText(manualKey);toast.success('Copied');}} className="p-2 border border-neutral-200 rounded-lg text-neutral-500 hover:bg-neutral-100"><Hash className="w-4 h-4"/></button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+                <p className="text-sm font-semibold text-neutral-800 flex items-center gap-2 pt-2"><span className="w-5 h-5 rounded-full bg-blue-600 text-white text-xs flex items-center justify-center font-bold">2</span>Enter the 6-digit code to confirm</p>
+                <div className="flex gap-2">
+                  <input type="text" inputMode="numeric" maxLength={6} placeholder="000000" value={setupCode}
+                    onChange={e=>{setSetupCode(e.target.value.replace(/\D/g,''));setTotpErr('');}}
+                    onKeyDown={e=>e.key==='Enter'&&confirmEnable()}
+                    className="flex-1 border border-neutral-300 rounded-xl px-4 py-2.5 text-center text-lg font-mono tracking-[0.3em] focus:outline-none focus:ring-2 focus:ring-blue-500"/>
+                  <button onClick={confirmEnable} disabled={setupLoading||setupCode.length<6} className="px-5 py-2.5 bg-blue-600 text-white rounded-xl font-medium text-sm hover:bg-blue-700 disabled:opacity-40 flex items-center gap-2">
+                    {setupLoading?<Loader2 className="w-4 h-4 animate-spin"/>:<ShieldCheck className="w-4 h-4"/>} Activate
+                  </button>
+                </div>
+                <button onClick={resetSetup} className="text-xs text-neutral-400 hover:text-neutral-600">Cancel setup</button>
+              </div>
+            )}
+            {setupStep==='done' && (
+              <div className="mt-4 pt-4 border-t border-emerald-200 flex items-center gap-2 text-sm text-emerald-700">
+                <CheckCircle className="w-4 h-4 flex-shrink-0"/> TOTP active. You'll be prompted for a code at every login.
+              </div>
+            )}
+            {totpErr && <div className="mt-3 flex items-start gap-2 text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2"><AlertCircle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5"/>{totpErr}</div>}
+          </div>
+
+          {/* Change password */}
+          <div className="rounded-2xl border border-neutral-200 bg-white p-5">
+            <h3 className="font-semibold text-neutral-900 text-sm flex items-center gap-2 mb-4"><Key className="w-4 h-4 text-neutral-400"/>Change Password</h3>
+            <form onSubmit={changePassword} className="space-y-3">
+              <div>
+                <label className="text-xs font-medium text-neutral-500 block mb-1.5">New Password</label>
+                <div className="relative">
+                  <input type={pwShowNew?'text':'password'} placeholder="New password" value={pwNew} autoComplete="new-password"
+                    onChange={e=>{setPwNew(e.target.value);setPwErr('');setPwOk(false);}}
+                    className="w-full border border-neutral-300 rounded-xl px-4 py-2.5 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"/>
+                  <button type="button" tabIndex={-1} onClick={()=>setPwShowNew(v=>!v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400">
+                    {pwShowNew?<EyeOff className="w-4 h-4"/>:<Eye className="w-4 h-4"/>}
+                  </button>
+                </div>
+                {pwNew.length>0 && (
+                  <div className="mt-2">
+                    <div className="flex gap-1 mb-1.5">{[0,1,2,3].map(i=><div key={i} style={{flex:1,height:3,borderRadius:2,background:i<pwPassed?pwBarColor:'#e5e7eb',transition:'background 0.2s'}}/>)}</div>
+                    <div className="flex flex-wrap gap-x-3 gap-y-0.5">{pwChecks.map(c=><span key={c.label} className="text-xs flex items-center gap-1" style={{color:c.ok?'#16a34a':'#9ca3af'}}><span>{c.ok?'✓':'○'}</span>{c.label}</span>)}</div>
+                  </div>
+                )}
+              </div>
+              <div>
+                <label className="text-xs font-medium text-neutral-500 block mb-1.5">Confirm Password</label>
+                <div className="relative">
+                  <input type={pwShowCon?'text':'password'} placeholder="Confirm password" value={pwConfirm} autoComplete="new-password"
+                    onChange={e=>{setPwConfirm(e.target.value);setPwErr('');setPwOk(false);}}
+                    className={`w-full border rounded-xl px-4 py-2.5 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 ${pwConfirm.length>0?(pwMatch?'border-emerald-400':'border-red-300'):'border-neutral-300'}`}/>
+                  <button type="button" tabIndex={-1} onClick={()=>setPwShowCon(v=>!v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400">
+                    {pwShowCon?<EyeOff className="w-4 h-4"/>:<Eye className="w-4 h-4"/>}
+                  </button>
+                </div>
+                {pwConfirm.length>0 && <p className={`text-xs mt-1 ${pwMatch?'text-emerald-600':'text-red-500'}`}>{pwMatch?'✓ Passwords match':'✗ Do not match'}</p>}
+              </div>
+              {pwErr && <div className="flex items-start gap-2 text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2"><AlertCircle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5"/>{pwErr}</div>}
+              {pwOk  && <div className="flex items-center gap-2 text-xs text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2"><CheckCircle className="w-3.5 h-3.5 flex-shrink-0"/>Password changed successfully.</div>}
+              <button type="submit" disabled={pwSaving||!pwStrong||!pwMatch} className="w-full px-4 py-2.5 bg-neutral-900 text-white rounded-xl text-sm font-medium hover:bg-neutral-700 disabled:opacity-40 flex items-center justify-center gap-2">
+                {pwSaving?<><Loader2 className="w-4 h-4 animate-spin"/>Saving…</>:'Update Password'}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ── PERMISSIONS TAB ─────────────────────────────────────────────── */}
+      {tab === 'permissions' && (
+        <div className="rounded-2xl border border-neutral-200 bg-white p-5">
+          {p.role === 'super_admin' || p.permissions === null ? (
+            <div className="flex flex-col items-center justify-center py-8 gap-3">
+              <div className="w-12 h-12 rounded-2xl bg-purple-100 flex items-center justify-center">
+                <Shield className="w-6 h-6 text-purple-600"/>
+              </div>
+              <p className="font-semibold text-neutral-900">Full Access</p>
+              <p className="text-sm text-neutral-500 text-center">Super admins bypass all permission checks and have unrestricted access to every feature.</p>
+            </div>
+          ) : (
+            <>
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="font-semibold text-neutral-900 text-sm">Your Permissions</h3>
+                <span className="text-xs text-neutral-500">{grantedPerms.length} of {Object.keys(PERM_LABELS).length} granted</span>
+              </div>
+              {grantedPerms.length === 0 ? (
+                <p className="text-sm text-neutral-400 text-center py-6">No permissions have been granted to your account yet. Contact a super admin.</p>
+              ) : (
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                  {Object.entries(PERM_LABELS).map(([key, label]) => {
+                    const granted = p.permissions?.[key];
+                    return (
+                      <div key={key} className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-xs font-medium ${
+                        granted ? 'border-emerald-200 bg-emerald-50 text-emerald-800' : 'border-neutral-100 bg-neutral-50 text-neutral-300'
+                      }`}>
+                        {granted ? <Check className="w-3 h-3 text-emerald-600 flex-shrink-0"/> : <X className="w-3 h-3 text-neutral-300 flex-shrink-0"/>}
+                        {label}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+              <p className="text-xs text-neutral-400 mt-4">Permissions are managed by super admins. To request changes, contact your administrator.</p>
+            </>
+          )}
+        </div>
+      )}
+
+      {/* ── ACTIVITY TAB ────────────────────────────────────────────────── */}
+      {tab === 'activity' && (
+        <div className="rounded-2xl border border-neutral-200 bg-white p-5">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="font-semibold text-neutral-900 text-sm">Your Activity Log</h3>
+            <button onClick={()=>{setAuditLoaded(false);setAuditLogs([]);}} className="text-xs text-neutral-400 hover:text-neutral-600 flex items-center gap-1">
+              <RefreshCw className="w-3 h-3"/>Refresh
+            </button>
+          </div>
+          {auditLoading ? (
+            <div className="flex items-center justify-center py-10 gap-2 text-neutral-400"><Loader2 className="w-5 h-5 animate-spin"/>Loading…</div>
+          ) : auditLogs.length === 0 ? (
+            <p className="text-sm text-neutral-400 text-center py-8">No activity recorded yet.</p>
+          ) : (
+            <div className="space-y-2">
+              {auditLogs.map((log, i) => (
+                <div key={log._id || i} className="flex items-start gap-3 py-2.5 border-b border-neutral-100 last:border-0">
+                  <span className={`flex-shrink-0 text-xs font-medium px-2 py-0.5 rounded-full ${AUDIT_COLORS[log.action] || 'bg-neutral-100 text-neutral-600'}`}>
+                    {(log.action || '').replace(/_/g,' ')}
+                  </span>
+                  <div className="flex-1 min-w-0">
+                    {log.details?.ip && <p className="text-xs text-neutral-500">IP: {log.details.ip}</p>}
+                    {log.details?.reason && <p className="text-xs text-neutral-500">{log.details.reason}</p>}
+                    {log.details?.updatedFields && <p className="text-xs text-neutral-500">Fields: {log.details.updatedFields.join(', ')}</p>}
+                  </div>
+                  <div className="flex-shrink-0 text-right">
+                    <p className="text-xs text-neutral-400">{timeAgo(log.createdAt)}</p>
+                    <p className="text-xs text-neutral-300">{log.status}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Disable 2FA modal */}
+      {showDisable && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 px-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 space-y-4">
+            <div className="flex items-start justify-between">
+              <div><h3 className="font-bold text-neutral-900">Disable Two-Factor Auth</h3><p className="text-xs text-neutral-500 mt-0.5">Confirm with your password and current code.</p></div>
+              <button onClick={()=>{setShowDisable(false);setTotpErr('');setDisablePass('');setDisableCode('');}} className="text-neutral-400 hover:text-neutral-600 p-1"><X className="w-4 h-4"/></button>
+            </div>
+            <div className="space-y-3">
+              <div>
+                <label className="text-xs font-medium text-neutral-600 block mb-1">Password</label>
+                <input type="password" placeholder="Your current password" value={disablePass} onChange={e=>{setDisablePass(e.target.value);setTotpErr('');}} className="w-full border border-neutral-300 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-red-400"/>
+              </div>
+              <div>
+                <label className="text-xs font-medium text-neutral-600 block mb-1">Authenticator Code</label>
+                <input type="text" inputMode="numeric" maxLength={6} placeholder="000000" value={disableCode}
+                  onChange={e=>{setDisableCode(e.target.value.replace(/\D/g,''));setTotpErr('');}}
+                  onKeyDown={e=>e.key==='Enter'&&confirmDisable()}
+                  className="w-full border border-neutral-300 rounded-xl px-3 py-2.5 text-sm font-mono tracking-widest text-center focus:outline-none focus:ring-2 focus:ring-red-400"/>
+              </div>
+            </div>
+            {totpErr && <div className="flex items-start gap-2 text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2"><AlertCircle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5"/>{totpErr}</div>}
+            <div className="flex gap-2 pt-1">
+              <button onClick={()=>{setShowDisable(false);setTotpErr('');setDisablePass('');setDisableCode('');}} className="flex-1 px-4 py-2.5 border border-neutral-200 rounded-xl text-sm text-neutral-600 hover:bg-neutral-50">Cancel</button>
+              <button onClick={confirmDisable} disabled={disableLoading||!disablePass||disableCode.length<6} className="flex-1 px-4 py-2.5 bg-red-600 text-white rounded-xl text-sm font-medium hover:bg-red-700 disabled:opacity-40 flex items-center justify-center gap-2">
+                {disableLoading?<Loader2 className="w-4 h-4 animate-spin"/>:<ShieldOff className="w-4 h-4"/>} Disable
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+
+
+
 // ─── Root Account Panel (TOTP / 2FA setup for root admin) ────────────────────
 function RootAccountPanel() {
   const isDemo = useContext(DemoContext);
@@ -8263,6 +8805,9 @@ function WhiteLabelPanel() {
 export default function Admin() {
   const [auth, setAuth] = useState(false);
   const [isDemo, setIsDemo] = useState(false);
+  // Who is currently logged in — populated by /admin/me after auth.
+  // null = root admin (no employeeId), object = employee record subset.
+  const [currentUser, setCurrentUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [loggingIn, setLoggingIn] = useState(false);
   const [loginForm, setLoginForm] = useState({ username: '', password: '' });
@@ -8401,11 +8946,16 @@ export default function Admin() {
 
   useEffect(() => {
     const token = localStorage.getItem('adminToken');
-    if (token) api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+    if (token) {
+      api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+      // Identify who is logged in so the UI can differentiate root vs employee
+      // and mark the logged-in user's own row in the Team panel.
+      adminAPI.getMe().then(r => setCurrentUser(r.data)).catch(() => setCurrentUser(null));
+    }
     setAuth(!!token);
     setIsDemo(localStorage.getItem('adminIsDemo') === 'true');
     setLoading(false);
-    const fn = () => { setAuth(false); setStats(null); setEvents([]); };
+    const fn = () => { setAuth(false); setStats(null); setEvents([]); setCurrentUser(null); };
     window.addEventListener('planit:admin-logout', fn);
     return () => window.removeEventListener('planit:admin-logout', fn);
   }, []);
@@ -8446,6 +8996,7 @@ export default function Admin() {
         if (demo) localStorage.setItem('adminIsDemo', 'true');
         else localStorage.removeItem('adminIsDemo');
         setIsDemo(demo);
+        adminAPI.getMe().then(r => setCurrentUser(r.data)).catch(() => setCurrentUser(null));
         setAuth(true);
         toast.success(demo ? 'Welcome to the PlanIt demo.' : 'Welcome back, Admin');
       } catch (e) {
@@ -8475,6 +9026,7 @@ export default function Admin() {
       if (demo) localStorage.setItem('adminIsDemo', 'true');
       else localStorage.removeItem('adminIsDemo');
       setIsDemo(demo);
+      adminAPI.getMe().then(r => setCurrentUser(r.data)).catch(() => setCurrentUser(null));
       setAuth(true);
       toast.success(demo ? 'Welcome to the PlanIt demo.' : 'Welcome back, Admin');
     } catch (e) {
@@ -8498,7 +9050,7 @@ export default function Admin() {
     } finally { setLoggingIn(false); }
   };
 
-  const logout = () => { localStorage.removeItem('adminToken'); localStorage.removeItem('adminIsDemo'); delete api.defaults.headers.common['Authorization']; setAuth(false); setIsDemo(false); toast.success('Logged out'); };
+  const logout = () => { localStorage.removeItem('adminToken'); localStorage.removeItem('adminIsDemo'); delete api.defaults.headers.common['Authorization']; setAuth(false); setIsDemo(false); setCurrentUser(null); toast.success('Logged out'); };
 
   const deleteEvent = async (id) => {
     if (isDemo) { toast.success('Event deleted.'); return; }
@@ -8544,6 +9096,7 @@ export default function Admin() {
         // Backend returns a fresh full-access token — store it and log in
         localStorage.setItem('adminToken', data.token);
         api.defaults.headers.common['Authorization'] = `Bearer ${data.token}`;
+        adminAPI.getMe().then(r => setCurrentUser(r.data)).catch(() => setCurrentUser(null));
         setForceResetToken(null);
         setForceResetEmpId(null);
         setAuth(true);
@@ -9286,7 +9839,7 @@ export default function Admin() {
           {activeSection === 'users'          && !selectedEvent && <div className="max-w-7xl mx-auto"><AllUsersPanel /></div>}
           {activeSection === 'organizers'     && !selectedEvent && <div className="max-w-7xl mx-auto"><OrganizersPanel /></div>}
           {activeSection === 'staff'          && !selectedEvent && <div className="max-w-7xl mx-auto"><StaffPanel /></div>}
-          {activeSection === 'employees'      && !selectedEvent && <div className="max-w-5xl mx-auto"><EmployeesPanel /></div>}
+          {activeSection === 'employees'      && !selectedEvent && <div className="max-w-5xl mx-auto"><EmployeesPanel currentUser={currentUser} /></div>}
           {activeSection === 'audit-logs'    && !selectedEvent && <div className="max-w-5xl mx-auto"><AuditLogsPanel /></div>}
           {activeSection === 'analytics'      && !selectedEvent && <div className="max-w-5xl mx-auto"><AnalyticsPanel stats={stats} /></div>}
           {activeSection === 'fleet'          && !selectedEvent && <FleetControl />}
@@ -9301,7 +9854,13 @@ export default function Admin() {
           {activeSection === 'command-center' && !selectedEvent && <CommandCenterPanel />}
           {activeSection === 'whitelabel'     && !selectedEvent && <div className="max-w-7xl mx-auto"><WhiteLabelPanel /></div>}
           {activeSection === 'blog'           && !selectedEvent && <div className="max-w-6xl mx-auto"><BlogCMSPanel /></div>}
-          {activeSection === 'account'        && !selectedEvent && <div className="max-w-2xl mx-auto"><RootAccountPanel /></div>}
+          {activeSection === 'account'        && !selectedEvent && (
+            <div className="max-w-2xl mx-auto">
+              {currentUser?.isEmployee
+                ? <EmployeeAccountPanel currentUser={currentUser} />
+                : <RootAccountPanel />}
+            </div>
+          )}
         </main>
       </div>
 
