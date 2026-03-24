@@ -163,6 +163,42 @@ const redis = {
     return _mem.delete(key) ? 1 : 0;
   },
 
+  // SCAN — returns all keys matching a glob pattern.
+  // Iterates via cursor until exhausted. Returns string[].
+  // Falls back to filtering the in-memory store when Redis is unavailable.
+  async scan(pattern) {
+    if (cfg().use) {
+      const keys = [];
+      let cursor = '0';
+      do {
+        const r = await _upstash('SCAN', cursor, 'MATCH', pattern, 'COUNT', '200');
+        if (!r.ok || !Array.isArray(r.result)) break;
+        cursor = String(r.result[0]);
+        const batch = r.result[1];
+        if (Array.isArray(batch)) keys.push(...batch);
+      } while (cursor !== '0');
+      return keys;
+    }
+    // In-memory fallback: convert glob pattern to regex
+    const rx = new RegExp('^' + pattern.replace(/\*/g, '.*').replace(/\?/g, '.') + '$');
+    const now = Date.now();
+    return [..._mem.entries()]
+      .filter(([k, v]) => rx.test(k) && !(v.expiresAt && now > v.expiresAt))
+      .map(([k]) => k);
+  },
+
+  // TTL — returns seconds remaining, -1 (no expiry), or -2 (missing). 
+  async ttl(key) {
+    if (cfg().use) {
+      const r = await _upstash('TTL', key);
+      return r.ok ? (r.result ?? -2) : -2;
+    }
+    const e = _mem.get(key);
+    if (!e) return -2;
+    if (!e.expiresAt) return -1;
+    return Math.max(0, Math.ceil((e.expiresAt - Date.now()) / 1000));
+  },
+
   // Atomic: increment and set expiry only on the very first call (value === 1).
   // This is the pattern used for per-day counters that reset at midnight via TTL.
   async incrWithExpiry(key, ttlSeconds) {
