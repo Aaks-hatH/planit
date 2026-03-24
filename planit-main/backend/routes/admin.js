@@ -335,8 +335,30 @@ router.post(
       }
 
       // ── Root super-admin login ────────────────────────────────────────────────
-      // Super-admin does NOT have TOTP (no Employee record). Protect with a
-      // strong ADMIN_PASSWORD and the Turnstile challenge above instead.
+      // Root admin TOTP is stored in Redis under key `totp:root:secret` (encrypted,
+      // same AES-128 scheme used for employee secrets). If that key exists, TOTP
+      // is considered enabled and a valid code must accompany the login.
+      const rootTotpEncrypted = await redis.get('totp:root:secret').catch(() => null);
+      const rootTotpEnabled   = !!rootTotpEncrypted;
+
+      if (rootTotpEnabled) {
+        if (!totpCode) {
+          // Password correct but no TOTP code — tell frontend to show the TOTP step
+          return res.status(200).json({ requiresTOTP: true });
+        }
+        const validTotp = verifyTotpCode(rootTotpEncrypted, String(totpCode).replace(/\s/g, ''));
+        if (!validTotp) {
+          const { locked } = await recordFailure('bad_totp_root');
+          if (locked) {
+            return res.status(429).json({
+              error: 'Too many failed attempts. This account is temporarily locked.',
+              lockedOut: true,
+            });
+          }
+          return res.status(401).json({ error: 'Invalid authenticator code.' });
+        }
+      }
+
       await clearFailCounter();
       const jti   = crypto.randomUUID();
       const token = jwt.sign(
@@ -348,13 +370,13 @@ router.post(
       audit('login_success', {
         req,
         actor: { email: username, role: 'super_admin', name: 'Root Admin' },
-        details: { type: 'root', ip, jti },
+        details: { type: 'root', ip, jti, totp: rootTotpEnabled },
       });
 
       res.json({
         message: 'Admin login successful',
         token,
-        user: { username, role: 'super_admin' },
+        user: { username, role: 'super_admin', totpEnabled: rootTotpEnabled },
       });
     } catch (error) {
       console.error('[admin/login] error:', error);
@@ -371,27 +393,47 @@ router.post(
 router.get('/totp/status', verifyAdmin, async (req, res) => {
   try {
     const empId = req.user?.employeeId;
-    if (!empId) return res.json({ totpEnabled: false, isRootAdmin: true });
+    if (!empId) {
+      // Root admin — secret lives in Redis
+      const rootSecret = await redis.get('totp:root:secret').catch(() => null);
+      return res.json({ totpEnabled: !!rootSecret, isRootAdmin: true });
+    }
     const emp = await Employee.findById(empId).select('totpEnabled');
-    res.json({ totpEnabled: emp?.totpEnabled || false });
+    res.json({ totpEnabled: emp?.totpEnabled || false, isRootAdmin: false });
   } catch { res.status(500).json({ error: 'Failed to fetch TOTP status' }); }
 });
 
 // POST /admin/totp/setup  — generate a new TOTP secret, return QR code URI
-// Does NOT enable TOTP yet — the employee must verify a code first.
+// Does NOT enable TOTP yet — caller must verify a code first via /totp/enable.
+// Works for both employee accounts (secret stored in DB) and the root admin
+// (secret stored in Redis under totp:root:secret, same AES-128 encryption).
 router.post('/totp/setup', verifyAdmin, async (req, res) => {
   try {
     const empId = req.user?.employeeId;
-    if (!empId) return res.status(400).json({ error: 'TOTP setup is not available for the root admin account.' });
 
+    // ── Root admin path ───────────────────────────────────────────────────────
+    if (!empId) {
+      const rawSecret = speakeasy.generateSecret({ length: 20 });
+      const encryptedPending = encryptTotpSecret(rawSecret.base32);
+      // 10-minute window to scan the QR and verify a code
+      await redis.set('totp:root:pending', encryptedPending, 10 * 60);
+
+      const otpauthUrl = speakeasy.otpauthURL({
+        secret: rawSecret.ascii,
+        label:  encodeURIComponent('PlanIt:root'),
+        issuer: 'PlanIt',
+      });
+      const qrDataUrl = await QRCode.toDataURL(otpauthUrl);
+      return res.json({ qr: qrDataUrl, secret: rawSecret.base32, isRootAdmin: true });
+    }
+
+    // ── Employee path ─────────────────────────────────────────────────────────
     const emp = await Employee.findById(empId);
     if (!emp) return res.status(404).json({ error: 'Employee not found' });
 
     const rawSecret = speakeasy.generateSecret({ length: 20 });
-    // Store encrypted secret in a temporary Redis key — only committed to DB
-    // once the employee verifies a valid code (prevents dangling secrets).
     const encryptedPending = encryptTotpSecret(rawSecret.base32);
-    await redis.set(`totp:pending:${empId}`, encryptedPending, 10 * 60); // 10 min TTL
+    await redis.set(`totp:pending:${empId}`, encryptedPending, 10 * 60);
 
     const otpauthUrl = speakeasy.otpauthURL({
       secret: rawSecret.ascii,
@@ -399,8 +441,7 @@ router.post('/totp/setup', verifyAdmin, async (req, res) => {
       issuer: 'PlanIt',
     });
     const qrDataUrl = await QRCode.toDataURL(otpauthUrl);
-
-    res.json({ qr: qrDataUrl, secret: rawSecret.base32 });
+    res.json({ qr: qrDataUrl, secret: rawSecret.base32, isRootAdmin: false });
   } catch (err) {
     console.error('[totp/setup]', err);
     res.status(500).json({ error: 'TOTP setup failed' });
@@ -411,11 +452,30 @@ router.post('/totp/setup', verifyAdmin, async (req, res) => {
 router.post('/totp/enable', verifyAdmin, async (req, res) => {
   try {
     const empId = req.user?.employeeId;
-    if (!empId) return res.status(400).json({ error: 'Root admin cannot use TOTP setup.' });
-
     const { code } = req.body;
     if (!code || typeof code !== 'string') return res.status(400).json({ error: 'Verification code required' });
 
+    // ── Root admin path ───────────────────────────────────────────────────────
+    if (!empId) {
+      const encryptedPending = await redis.get('totp:root:pending');
+      if (!encryptedPending) return res.status(400).json({ error: 'TOTP setup session expired. Please start setup again.' });
+
+      const valid = verifyTotpCode(encryptedPending, code.replace(/\s/g, ''));
+      if (!valid) return res.status(400).json({ error: 'Invalid code. Please check your authenticator app and try again.' });
+
+      // Promote pending → permanent (no TTL)
+      await redis.set('totp:root:secret', encryptedPending);
+      await redis.del('totp:root:pending');
+
+      audit('totp_enabled', {
+        req,
+        actor: { email: req.user?.username, role: 'super_admin', name: 'Root Admin' },
+        details: { ip: realIp(req), account: 'root' },
+      });
+      return res.json({ ok: true, message: 'Two-factor authentication has been enabled for the root admin.' });
+    }
+
+    // ── Employee path ─────────────────────────────────────────────────────────
     const pendingKey = `totp:pending:${empId}`;
     const encryptedPending = await redis.get(pendingKey);
     if (!encryptedPending) return res.status(400).json({ error: 'TOTP setup session expired. Please start setup again.' });
@@ -445,11 +505,34 @@ router.post('/totp/enable', verifyAdmin, async (req, res) => {
 router.post('/totp/disable', verifyAdmin, async (req, res) => {
   try {
     const empId = req.user?.employeeId;
-    if (!empId) return res.status(400).json({ error: 'Root admin does not have TOTP.' });
-
     const { password, code } = req.body;
     if (!password || !code) return res.status(400).json({ error: 'Current password and authenticator code required.' });
 
+    // ── Root admin path ───────────────────────────────────────────────────────
+    if (!empId) {
+      const rootSecret = await redis.get('totp:root:secret');
+      if (!rootSecret) return res.status(400).json({ error: 'TOTP is not enabled on the root account.' });
+
+      // Verify password
+      const adminUser = (process.env.ADMIN_USERNAME || '').trim();
+      const adminPass = (process.env.ADMIN_PASSWORD || '').trim();
+      if (password !== adminPass) return res.status(401).json({ error: 'Incorrect password.' });
+
+      // Verify TOTP code
+      const totpOk = verifyTotpCode(rootSecret, String(code).replace(/\s/g, ''));
+      if (!totpOk) return res.status(401).json({ error: 'Invalid authenticator code.' });
+
+      await redis.del('totp:root:secret');
+
+      audit('totp_disabled', {
+        req,
+        actor: { email: adminUser, role: 'super_admin', name: 'Root Admin' },
+        details: { ip: realIp(req), account: 'root' },
+      });
+      return res.json({ ok: true, message: 'Two-factor authentication has been disabled for the root admin.' });
+    }
+
+    // ── Employee path ─────────────────────────────────────────────────────────
     const emp = await Employee.findById(empId).select('+totpSecret +passwordHash totpEnabled');
     if (!emp) return res.status(404).json({ error: 'Employee not found' });
     if (!emp.totpEnabled || !emp.totpSecret) return res.status(400).json({ error: 'TOTP is not enabled.' });
