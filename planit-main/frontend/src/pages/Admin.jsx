@@ -7945,10 +7945,22 @@ export default function Admin() {
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
-  // Wire Cloudflare Turnstile global callback into React state
+  // Wire Cloudflare Turnstile global callbacks into React state.
+  // MUST be a useEffect — React intentionally never executes scripts in
+  // dangerouslySetInnerHTML (XSS protection), so the old <script> tag below
+  // silently did nothing. That left window.__planitTurnstileCallback undefined,
+  // Turnstile completed its challenge but the token was never forwarded into
+  // React state, turnstileToken stayed '', and the submit button stayed
+  // permanently disabled. Fixed by registering all three globals here.
   useEffect(() => {
-    window.__planitSetTurnstile = setTurnstileToken;
-    return () => { delete window.__planitSetTurnstile; };
+    window.__planitSetTurnstile      = setTurnstileToken;
+    window.__planitTurnstileCallback = (token) => setTurnstileToken(token);
+    window.__planitTurnstileExpired  = ()      => setTurnstileToken('');
+    return () => {
+      delete window.__planitSetTurnstile;
+      delete window.__planitTurnstileCallback;
+      delete window.__planitTurnstileExpired;
+    };
   }, []);
 
   // Watchdog state — polled top-level so outage banner shows on any tab
@@ -8133,7 +8145,7 @@ export default function Admin() {
                   Username
                 </label>
                 <input
-                  type="text" required autoFocus
+                  type="text" required autoFocus autoComplete="username"
                   placeholder="username"
                   value={loginForm.username}
                   onChange={e => setLoginForm({ ...loginForm, username: e.target.value })}
@@ -8157,7 +8169,7 @@ export default function Admin() {
                   Password
                 </label>
                 <input
-                  type="password" required
+                  type="password" required autoComplete="current-password"
                   placeholder="••••••••••••"
                   value={loginForm.password}
                   onChange={e => setLoginForm({ ...loginForm, password: e.target.value })}
@@ -8266,11 +8278,7 @@ export default function Admin() {
           </a>
         </p>
 
-        {/* Turnstile callback bridge — sets React state from the global Turnstile callback */}
-        <script dangerouslySetInnerHTML={{__html:`
-          window.__planitTurnstileCallback  = function(token){ window.__planitSetTurnstile && window.__planitSetTurnstile(token); };
-          window.__planitTurnstileExpired   = function(){ window.__planitSetTurnstile && window.__planitSetTurnstile(''); };
-        `}} />
+        {/* Callbacks are registered in useEffect above — no script tag needed */}
       </div>
     </div>
   );
