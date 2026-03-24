@@ -1599,6 +1599,14 @@ app.post('/mesh/register', meshAuth(SERVICE_NAME), express.json(), (req, res) =>
     target: url, changeOrigin: true, ws: true, proxyTimeout: 60000, timeout: 60000,
     on: {
       proxyReq(_p, req) {
+        // Same real-IP stamping as the static proxies above
+        const clientIp = req.ip
+          || req.headers['x-forwarded-for']?.split(',')[0]?.trim()
+          || '';
+        if (clientIp && clientIp !== '::1' && clientIp !== '127.0.0.1') {
+          _p.setHeader('X-Planit-Client-IP', clientIp);
+        }
+
         backendStatus[capturedIndex].activeConnections++;
         backendStatus[capturedIndex].windowRequests++;
         req._proxyFinished = false;
@@ -1629,6 +1637,24 @@ const proxies = BACKENDS.map((target, index) =>
     target, changeOrigin: true, ws: true, proxyTimeout: 60000, timeout: 60000,
     on: {
       proxyReq(_p, req) {
+        // ── Real client IP propagation ──────────────────────────────────────
+        // The router is an internal hop — backends see our Render-internal IP
+        // as the socket source, not the real client. Without this header the
+        // backend's realIp() falls through to the socket address (router IP)
+        // and bans the router instead of the attacker.
+        //
+        // req.ip is resolved by Express trust-proxy:1, which peels off the
+        // Render LB hop and gives us the actual public client IP. We stamp it
+        // onto X-Planit-Client-IP so backends can trust it unconditionally —
+        // they can verify the header came from us because only internal-socket
+        // connections (i.e. our router) can set it without being stripped.
+        const clientIp = req.ip
+          || req.headers['x-forwarded-for']?.split(',')[0]?.trim()
+          || '';
+        if (clientIp && clientIp !== '::1' && clientIp !== '127.0.0.1') {
+          _p.setHeader('X-Planit-Client-IP', clientIp);
+        }
+
         backendStatus[index].activeConnections++;
         backendStatus[index].windowRequests++;
         req._proxyFinished = false;
