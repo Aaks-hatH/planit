@@ -7939,29 +7939,65 @@ export default function Admin() {
   const [loginStep, setLoginStep] = useState('credentials'); // 'credentials' | 'totp'
   const [totpCode, setTotpCode] = useState('');
   const [turnstileToken, setTurnstileToken] = useState('');
-  const [turnstileKey, setTurnstileKey] = useState(0); // increment to reset widget
+  const [turnstileKey, setTurnstileKey] = useState(0); // increment to force widget re-render
+  const turnstileRef    = useRef(null); // DOM node that Turnstile mounts into
+  const turnstileWidget = useRef(null); // widget ID from window.turnstile.render()
   const activeSection_state = useState('dashboard');
   const [activeSection, setActiveSection] = activeSection_state;
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
-  // Wire Cloudflare Turnstile global callbacks into React state.
-  // MUST be a useEffect — React intentionally never executes scripts in
-  // dangerouslySetInnerHTML (XSS protection), so the old <script> tag below
-  // silently did nothing. That left window.__planitTurnstileCallback undefined,
-  // Turnstile completed its challenge but the token was never forwarded into
-  // React state, turnstileToken stayed '', and the submit button stayed
-  // permanently disabled. Fixed by registering all three globals here.
+  // Explicitly render (and re-render on key bump) the Cloudflare Turnstile widget.
+  //
+  // The old approach used data-callback="__planitTurnstileCallback" on a
+  // .cf-turnstile div and relied on Cloudflare's MutationObserver to detect it.
+  // In a React SPA this is unreliable: when turnstileKey increments, React
+  // destroys and recreates the node — the observer fires but Cloudflare's
+  // internal state for the old widget is already torn down, leaving the new
+  // div silently empty. The submit button stayed permanently disabled because
+  // the token callback never fired into React state.
+  //
+  // Explicit render() gives full control: we remove the old widget first, then
+  // mount a fresh one into the stable ref node — widget always appears.
   useEffect(() => {
-    window.__planitSetTurnstile      = setTurnstileToken;
-    window.__planitTurnstileCallback = (token) => setTurnstileToken(token);
-    window.__planitTurnstileExpired  = ()      => setTurnstileToken('');
-    return () => {
-      delete window.__planitSetTurnstile;
-      delete window.__planitTurnstileCallback;
-      delete window.__planitTurnstileExpired;
+    if (auth) return;                             // already logged in
+    if (loginStep !== 'credentials') return;      // TOTP step has no widget
+    if (!import.meta.env.VITE_TURNSTILE_SITE_KEY) return;
+
+    const mount = () => {
+      if (!turnstileRef.current || !window.turnstile) return;
+      // Tear down any previous widget in this container
+      if (turnstileWidget.current !== null) {
+        try { window.turnstile.remove(turnstileWidget.current); } catch (_) {}
+        turnstileWidget.current = null;
+      }
+      turnstileWidget.current = window.turnstile.render(turnstileRef.current, {
+        sitekey:            import.meta.env.VITE_TURNSTILE_SITE_KEY,
+        theme:              'dark',
+        callback:           (token) => setTurnstileToken(token),
+        'expired-callback': ()      => setTurnstileToken(''),
+        'error-callback':   ()      => setTurnstileToken(''),
+      });
     };
-  }, []);
+
+    if (window.turnstile) {
+      mount();
+    } else {
+      // Turnstile script hasn't finished loading yet — wait for it
+      const script = document.querySelector('script[src*="turnstile"]');
+      if (script) {
+        script.addEventListener('load', mount, { once: true });
+        return () => script.removeEventListener('load', mount);
+      }
+    }
+
+    return () => {
+      if (turnstileWidget.current !== null) {
+        try { window.turnstile.remove(turnstileWidget.current); } catch (_) {}
+        turnstileWidget.current = null;
+      }
+    };
+  }, [auth, loginStep, turnstileKey]);
 
   // Watchdog state — polled top-level so outage banner shows on any tab
   const [outageStatus, setOutageStatus] = useState(null); // null | 'operational' | 'degraded' | 'outage'
@@ -8190,14 +8226,7 @@ export default function Admin() {
               {/* Cloudflare Turnstile widget */}
               {import.meta.env.VITE_TURNSTILE_SITE_KEY && (
                 <div style={{marginBottom:20,display:'flex',justifyContent:'center'}}>
-                  <div
-                    key={turnstileKey}
-                    className="cf-turnstile"
-                    data-sitekey={import.meta.env.VITE_TURNSTILE_SITE_KEY}
-                    data-theme="dark"
-                    data-callback="__planitTurnstileCallback"
-                    data-expired-callback="__planitTurnstileExpired"
-                  />
+                  <div ref={turnstileRef} />
                 </div>
               )}
             </>) : (
