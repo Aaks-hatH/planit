@@ -38,7 +38,12 @@ async function verifyTurnstile(token, ip) {
   }
   if (!token) return { ok: false, error: 'Turnstile token required' };
   const result = await meshPost('backend', `${routerUrl}/mesh/turnstile`, { token, ip });
-  if (!result.ok) return { ok: false, error: 'Could not reach Turnstile verification service' };
+  // Mesh/network error — fail OPEN so an infrastructure blip never locks admins out.
+  // Only fail closed when the router explicitly says the challenge was invalid.
+  if (!result.ok) {
+    console.warn('[admin] Turnstile router unreachable — failing open:', result.error);
+    return { ok: true, skipped: true };
+  }
   return result.data; // { ok: true } or { ok: false, error: '...' }
 }
 
