@@ -1,5 +1,15 @@
 import React, { useState, useEffect, useRef, useCallback, createContext, useContext } from 'react';
 
+// ─── Login screen responsive style ───────────────────────────────────────────
+// Injected once so the left branding panel appears on md+ screens without
+// adding a global CSS file dependency.
+if (typeof document !== 'undefined' && !document.getElementById('planit-login-style')) {
+  const s = document.createElement('style');
+  s.id = 'planit-login-style';
+  s.textContent = `@media(min-width:768px){.login-left-panel{display:flex!important;}}`;
+  document.head.appendChild(s);
+}
+
 // ─── Demo isolation context ───────────────────────────────────────────────────
 // All sub-panels read this to decide whether to call real APIs or return fake data.
 export const DemoContext = createContext(false);
@@ -8485,182 +8495,305 @@ export default function Admin() {
   // ── Login Screen ──────────────────────────────────────────────────────────
   if (!auth) return (
     <div style={{
-      minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center',
-      background:'#080810', fontFamily:"'Inter',-apple-system,sans-serif",
-      position:'relative', overflow:'hidden',
+      minHeight: '100vh',
+      display: 'flex',
+      background: '#09090b',
+      fontFamily: "'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif",
+      position: 'relative',
+      overflow: 'hidden',
     }}>
-      {/* Ambient glow orbs */}
-      <div style={{position:'absolute',top:'-20%',left:'-10%',width:600,height:600,borderRadius:'50%',background:'radial-gradient(circle,rgba(59,130,246,0.07) 0%,transparent 70%)',pointerEvents:'none'}} />
-      <div style={{position:'absolute',bottom:'-20%',right:'-10%',width:500,height:500,borderRadius:'50%',background:'radial-gradient(circle,rgba(99,102,241,0.06) 0%,transparent 70%)',pointerEvents:'none'}} />
+      {/* Subtle dot-grid texture */}
+      <div style={{
+        position: 'absolute', inset: 0, pointerEvents: 'none',
+        backgroundImage: 'radial-gradient(rgba(255,255,255,0.06) 1px, transparent 1px)',
+        backgroundSize: '28px 28px',
+      }} />
+      {/* Top accent line */}
+      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 1, background: 'linear-gradient(90deg, transparent 0%, rgba(99,102,241,0.6) 50%, transparent 100%)', pointerEvents: 'none' }} />
 
-      <div style={{width:'100%',maxWidth:380,padding:'0 24px',position:'relative',zIndex:1}}>
-
-        {/* Logo mark */}
-        <div style={{display:'flex',flexDirection:'column',alignItems:'center',marginBottom:40}}>
+      {/* ── Left branding panel (desktop only) ── */}
+      <div className="hidden lg:flex" style={{
+        flexDirection: 'column',
+        justifyContent: 'space-between',
+        width: '400px',
+        flexShrink: 0,
+        padding: '48px',
+        borderRight: '1px solid rgba(255,255,255,0.05)',
+        position: 'relative',
+      }}>
+        {/* Wordmark */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <div style={{
-            width:52,height:52,borderRadius:16,
-            background:'linear-gradient(135deg,#3b82f6 0%,#6366f1 100%)',
-            display:'flex',alignItems:'center',justifyContent:'center',
-            boxShadow:'0 0 0 1px rgba(99,102,241,0.3), 0 8px 32px rgba(59,130,246,0.25)',
-            marginBottom:20,
+            width: 30, height: 30, borderRadius: 7,
+            border: '1px solid rgba(255,255,255,0.12)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}>
-            <Shield style={{width:22,height:22,color:'#fff'}} />
+            <Shield style={{ width: 14, height: 14, color: 'rgba(255,255,255,0.7)' }} />
           </div>
-          <h1 style={{fontSize:'1.35rem',fontWeight:700,color:'#fff',letterSpacing:'-0.03em',margin:0,lineHeight:1}}>
-            Admin Panel
-          </h1>
-          <p style={{fontSize:'0.8rem',color:'rgba(255,255,255,0.35)',marginTop:6,letterSpacing:'0.01em'}}>
-            PlanIt · Restricted Access
+          <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'rgba(255,255,255,0.6)', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+            PlanIt
+          </span>
+          <span style={{
+            fontSize: '0.6rem', fontWeight: 600, letterSpacing: '0.1em',
+            textTransform: 'uppercase', color: 'rgba(99,102,241,0.8)',
+            border: '1px solid rgba(99,102,241,0.25)', padding: '2px 7px', borderRadius: 4,
+          }}>
+            Admin
+          </span>
+        </div>
+
+        {/* Center copy */}
+        <div>
+          <div style={{
+            display: 'inline-flex', alignItems: 'center', gap: 6,
+            fontSize: '0.65rem', fontWeight: 600, letterSpacing: '0.12em',
+            textTransform: 'uppercase', color: 'rgba(99,102,241,0.6)',
+            marginBottom: 18,
+          }}>
+            <span style={{ width: 16, height: 1, background: 'rgba(99,102,241,0.4)', display: 'inline-block' }} />
+            Restricted Access
+          </div>
+          <h2 style={{
+            fontSize: '1.85rem', fontWeight: 700, color: '#fff',
+            letterSpacing: '-0.04em', lineHeight: 1.15, margin: '0 0 18px',
+          }}>
+            Infrastructure<br />Control Center
+          </h2>
+          <p style={{
+            fontSize: '0.78rem', color: 'rgba(255,255,255,0.28)',
+            lineHeight: 1.75, margin: 0, maxWidth: 260,
+          }}>
+            Authorized personnel only. All sessions are logged, timestamped, and subject to audit review.
           </p>
         </div>
 
-        {/* Card */}
-        <div style={{
-          background:'rgba(255,255,255,0.04)',
-          border:'1px solid rgba(255,255,255,0.08)',
-          borderRadius:20,
-          padding:'32px 32px 28px',
-          backdropFilter:'blur(20px)',
-        }}>
-          <form onSubmit={login}>
-            {loginStep === 'credentials' ? (<>
-              {/* Username */}
-              <div style={{marginBottom:16}}>
-                <label style={{display:'block',fontSize:'0.7rem',fontWeight:600,color:'rgba(255,255,255,0.4)',letterSpacing:'0.1em',textTransform:'uppercase',marginBottom:8}}>
-                  Username
-                </label>
-                <input
-                  type="text" required autoFocus autoComplete="username"
-                  placeholder="username"
-                  value={loginForm.username}
-                  onChange={e => setLoginForm({ ...loginForm, username: e.target.value })}
-                  onFocus={e => { e.target.style.borderColor='rgba(99,102,241,0.6)'; e.target.style.boxShadow='0 0 0 3px rgba(99,102,241,0.12)'; }}
-                  onBlur={e => { e.target.style.borderColor='rgba(255,255,255,0.08)'; e.target.style.boxShadow='none'; }}
-                  style={{
-                    width:'100%', boxSizing:'border-box',
-                    padding:'11px 14px', fontSize:'0.875rem',
-                    background:'rgba(255,255,255,0.05)',
-                    border:'1px solid rgba(255,255,255,0.08)',
-                    borderRadius:10, color:'#fff',
-                    outline:'none', fontFamily:'inherit',
-                    transition:'border-color 0.15s,box-shadow 0.15s',
-                  }}
-                />
-              </div>
+        {/* Status indicator */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <div style={{
+            width: 6, height: 6, borderRadius: '50%',
+            background: '#22c55e',
+            boxShadow: '0 0 0 3px rgba(34,197,94,0.15)',
+          }} />
+          <span style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.2)', letterSpacing: '0.02em' }}>
+            Systems operational
+          </span>
+        </div>
+      </div>
 
-              {/* Password */}
-              <div style={{marginBottom:20}}>
-                <label style={{display:'block',fontSize:'0.7rem',fontWeight:600,color:'rgba(255,255,255,0.4)',letterSpacing:'0.1em',textTransform:'uppercase',marginBottom:8}}>
-                  Password
-                </label>
-                <input
-                  type="password" required autoComplete="current-password"
-                  placeholder="••••••••••••"
-                  value={loginForm.password}
-                  onChange={e => setLoginForm({ ...loginForm, password: e.target.value })}
-                  onFocus={e => { e.target.style.borderColor='rgba(99,102,241,0.6)'; e.target.style.boxShadow='0 0 0 3px rgba(99,102,241,0.12)'; }}
-                  onBlur={e => { e.target.style.borderColor='rgba(255,255,255,0.08)'; e.target.style.boxShadow='none'; }}
-                  style={{
-                    width:'100%', boxSizing:'border-box',
-                    padding:'11px 14px', fontSize:'0.875rem',
-                    background:'rgba(255,255,255,0.05)',
-                    border:'1px solid rgba(255,255,255,0.08)',
-                    borderRadius:10, color:'#fff',
-                    outline:'none', fontFamily:'inherit',
-                    transition:'border-color 0.15s,box-shadow 0.15s',
-                  }}
-                />
-              </div>
+      {/* ── Right form panel ── */}
+      <div style={{
+        flex: 1, display: 'flex', alignItems: 'center',
+        justifyContent: 'center', padding: '40px 24px',
+      }}>
+        <div style={{ width: '100%', maxWidth: 348 }}>
 
-              {/* Cloudflare Turnstile widget */}
-              {'0x4AAAAAACvGuW0fbNIYbAiK' && (
-                <div style={{marginBottom:20,display:'flex',justifyContent:'center'}}>
-                  <div ref={turnstileRef} />
-                </div>
-              )}
-            </>) : (
-              /* ── TOTP step ── */
-              <div>
-                <div style={{textAlign:'center',marginBottom:20}}>
-                  <div style={{fontSize:'2rem',marginBottom:8}}>🔐</div>
-                  <p style={{color:'rgba(255,255,255,0.6)',fontSize:'0.875rem',margin:0}}>
-                    Enter the 6-digit code from your authenticator app.
-                  </p>
-                </div>
-                <div style={{marginBottom:20}}>
-                  <label style={{display:'block',fontSize:'0.7rem',fontWeight:600,color:'rgba(255,255,255,0.4)',letterSpacing:'0.1em',textTransform:'uppercase',marginBottom:8}}>
-                    Authenticator Code
-                  </label>
+          {/* Mobile wordmark */}
+          <div className="flex lg:hidden" style={{
+            alignItems: 'center', gap: 8,
+            marginBottom: 44, justifyContent: 'center',
+          }}>
+            <div style={{
+              width: 26, height: 26, borderRadius: 6,
+              border: '1px solid rgba(255,255,255,0.12)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}>
+              <Shield style={{ width: 13, height: 13, color: 'rgba(255,255,255,0.6)' }} />
+            </div>
+            <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'rgba(255,255,255,0.5)', letterSpacing: '0.08em', textTransform: 'uppercase' }}>PlanIt Admin</span>
+          </div>
+
+          {/* Heading */}
+          <div style={{ marginBottom: 32 }}>
+            <h1 style={{ fontSize: '1.2rem', fontWeight: 700, color: '#fff', margin: '0 0 7px', letterSpacing: '-0.03em' }}>
+              {loginStep === 'totp' ? 'Two-factor verification' : 'Sign in to Admin'}
+            </h1>
+            <p style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.28)', margin: 0, lineHeight: 1.5 }}>
+              {loginStep === 'totp'
+                ? 'Enter the 6-digit code from your authenticator app'
+                : 'Enter your credentials to continue'}
+            </p>
+          </div>
+
+          {/* Card */}
+          <div style={{
+            background: 'rgba(255,255,255,0.025)',
+            border: '1px solid rgba(255,255,255,0.07)',
+            borderRadius: 12,
+            padding: '26px 24px 22px',
+          }}>
+            <form onSubmit={login}>
+
+              {loginStep === 'credentials' ? (<>
+
+                {/* Username */}
+                <div style={{ marginBottom: 14 }}>
+                  <label style={{
+                    display: 'block', fontSize: '0.68rem', fontWeight: 500,
+                    color: 'rgba(255,255,255,0.3)', letterSpacing: '0.07em',
+                    textTransform: 'uppercase', marginBottom: 7,
+                  }}>Username</label>
                   <input
-                    type="text" required autoFocus autoComplete="one-time-code"
-                    inputMode="numeric" pattern="\d{6}" maxLength={6}
-                    placeholder="000000"
-                    value={totpCode}
-                    onChange={e => setTotpCode(e.target.value.replace(/\D/g,'').slice(0,6))}
-                    onFocus={e => { e.target.style.borderColor='rgba(99,102,241,0.6)'; e.target.style.boxShadow='0 0 0 3px rgba(99,102,241,0.12)'; }}
-                    onBlur={e => { e.target.style.borderColor='rgba(255,255,255,0.08)'; e.target.style.boxShadow='none'; }}
+                    type="text" required autoFocus autoComplete="username"
+                    placeholder="Enter username"
+                    value={loginForm.username}
+                    onChange={e => setLoginForm({ ...loginForm, username: e.target.value })}
+                    onFocus={e => { e.target.style.borderColor = 'rgba(99,102,241,0.45)'; e.target.style.background = 'rgba(99,102,241,0.04)'; }}
+                    onBlur={e => { e.target.style.borderColor = 'rgba(255,255,255,0.07)'; e.target.style.background = 'rgba(255,255,255,0.03)'; }}
                     style={{
-                      width:'100%', boxSizing:'border-box',
-                      padding:'14px', fontSize:'1.5rem',
-                      letterSpacing:'0.3em', textAlign:'center',
-                      background:'rgba(255,255,255,0.05)',
-                      border:'1px solid rgba(255,255,255,0.08)',
-                      borderRadius:10, color:'#fff',
-                      outline:'none', fontFamily:'monospace',
-                      transition:'border-color 0.15s,box-shadow 0.15s',
+                      width: '100%', boxSizing: 'border-box',
+                      padding: '10px 13px', fontSize: '0.875rem',
+                      background: 'rgba(255,255,255,0.03)',
+                      border: '1px solid rgba(255,255,255,0.07)',
+                      borderRadius: 7, color: '#fff',
+                      outline: 'none', fontFamily: 'inherit',
+                      transition: 'border-color 0.12s, background 0.12s',
+                      caretColor: '#818cf8',
                     }}
                   />
                 </div>
-                <button
-                  type="button"
-                  onClick={() => { setLoginStep('credentials'); setTotpCode(''); setTurnstileKey(k=>k+1); setTurnstileToken(''); }}
-                  style={{background:'none',border:'none',color:'rgba(255,255,255,0.35)',fontSize:'0.8rem',cursor:'pointer',marginBottom:16,padding:0,fontFamily:'inherit'}}>
-                  ← Back to login
-                </button>
-              </div>
-            )}
 
-            {/* Submit */}
-            <button
-              type="submit"
-              disabled={loggingIn || (loginStep === 'credentials' && !!'0x4AAAAAACvGuW0fbNIYbAiK' && !turnstileToken)}
-              style={{
-                width:'100%', padding:'12px',
-                borderRadius:10, border:'none',
-                background: (loggingIn || (loginStep === 'credentials' && !!'0x4AAAAAACvGuW0fbNIYbAiK' && !turnstileToken))
-                  ? 'rgba(99,102,241,0.4)'
-                  : 'linear-gradient(135deg,#3b82f6 0%,#6366f1 100%)',
-                color:'#fff', fontSize:'0.875rem', fontWeight:600,
-                cursor: loggingIn ? 'default' : 'pointer',
-                display:'flex', alignItems:'center', justifyContent:'center', gap:8,
-                boxShadow: loggingIn ? 'none' : '0 4px 16px rgba(99,102,241,0.3)',
-                transition:'all 0.15s', fontFamily:'inherit',
-                letterSpacing:'-0.01em',
-              }}
-              onMouseEnter={e => { if (!loggingIn) e.currentTarget.style.boxShadow='0 6px 24px rgba(99,102,241,0.45)'; }}
-              onMouseLeave={e => { if (!loggingIn) e.currentTarget.style.boxShadow='0 4px 16px rgba(99,102,241,0.3)'; }}
+                {/* Password */}
+                <div style={{ marginBottom: 22 }}>
+                  <label style={{
+                    display: 'block', fontSize: '0.68rem', fontWeight: 500,
+                    color: 'rgba(255,255,255,0.3)', letterSpacing: '0.07em',
+                    textTransform: 'uppercase', marginBottom: 7,
+                  }}>Password</label>
+                  <input
+                    type="password" required autoComplete="current-password"
+                    placeholder="Enter password"
+                    value={loginForm.password}
+                    onChange={e => setLoginForm({ ...loginForm, password: e.target.value })}
+                    onFocus={e => { e.target.style.borderColor = 'rgba(99,102,241,0.45)'; e.target.style.background = 'rgba(99,102,241,0.04)'; }}
+                    onBlur={e => { e.target.style.borderColor = 'rgba(255,255,255,0.07)'; e.target.style.background = 'rgba(255,255,255,0.03)'; }}
+                    style={{
+                      width: '100%', boxSizing: 'border-box',
+                      padding: '10px 13px', fontSize: '0.875rem',
+                      background: 'rgba(255,255,255,0.03)',
+                      border: '1px solid rgba(255,255,255,0.07)',
+                      borderRadius: 7, color: '#fff',
+                      outline: 'none', fontFamily: 'inherit',
+                      transition: 'border-color 0.12s, background 0.12s',
+                      caretColor: '#818cf8',
+                    }}
+                  />
+                </div>
+
+                {/* Turnstile */}
+                {'0x4AAAAAACvGuW0fbNIYbAiK' && (
+                  <div style={{ marginBottom: 22, display: 'flex', justifyContent: 'center' }}>
+                    <div ref={turnstileRef} />
+                  </div>
+                )}
+
+              </>) : (
+                /* ── TOTP step ── */
+                <div>
+                  <div style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    width: 42, height: 42, borderRadius: 10,
+                    background: 'rgba(99,102,241,0.08)',
+                    border: '1px solid rgba(99,102,241,0.18)',
+                    margin: '0 auto 22px',
+                  }}>
+                    <Fingerprint style={{ width: 20, height: 20, color: '#818cf8' }} />
+                  </div>
+
+                  <div style={{ marginBottom: 16 }}>
+                    <label style={{
+                      display: 'block', fontSize: '0.68rem', fontWeight: 500,
+                      color: 'rgba(255,255,255,0.3)', letterSpacing: '0.07em',
+                      textTransform: 'uppercase', marginBottom: 7,
+                    }}>Authenticator Code</label>
+                    <input
+                      type="text" required autoFocus autoComplete="one-time-code"
+                      inputMode="numeric" pattern="\d{6}" maxLength={6}
+                      placeholder="000 000"
+                      value={totpCode}
+                      onChange={e => setTotpCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                      onFocus={e => { e.target.style.borderColor = 'rgba(99,102,241,0.45)'; }}
+                      onBlur={e => { e.target.style.borderColor = 'rgba(255,255,255,0.07)'; }}
+                      style={{
+                        width: '100%', boxSizing: 'border-box',
+                        padding: '13px', fontSize: '1.6rem',
+                        letterSpacing: '0.4em', textAlign: 'center',
+                        background: 'rgba(255,255,255,0.03)',
+                        border: '1px solid rgba(255,255,255,0.07)',
+                        borderRadius: 7, color: '#fff',
+                        outline: 'none', fontFamily: 'ui-monospace, monospace',
+                        transition: 'border-color 0.12s',
+                        caretColor: '#818cf8',
+                      }}
+                    />
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => { setLoginStep('credentials'); setTotpCode(''); setTurnstileKey(k => k + 1); setTurnstileToken(''); }}
+                    style={{
+                      background: 'none', border: 'none',
+                      color: 'rgba(255,255,255,0.25)', fontSize: '0.76rem',
+                      cursor: 'pointer', marginBottom: 18, padding: 0,
+                      fontFamily: 'inherit', display: 'flex', alignItems: 'center', gap: 4,
+                      transition: 'color 0.12s',
+                    }}
+                    onMouseEnter={e => e.currentTarget.style.color = 'rgba(255,255,255,0.5)'}
+                    onMouseLeave={e => e.currentTarget.style.color = 'rgba(255,255,255,0.25)'}
+                  >
+                    <ChevronLeft style={{ width: 12, height: 12 }} /> Back to login
+                  </button>
+                </div>
+              )}
+
+              {/* Submit button */}
+              <button
+                type="submit"
+                disabled={loggingIn || (loginStep === 'credentials' && !!'0x4AAAAAACvGuW0fbNIYbAiK' && !turnstileToken)}
+                style={{
+                  width: '100%', padding: '11px 16px',
+                  borderRadius: 7,
+                  border: '1px solid rgba(255,255,255,0.12)',
+                  background: (loggingIn || (loginStep === 'credentials' && !!'0x4AAAAAACvGuW0fbNIYbAiK' && !turnstileToken))
+                    ? 'rgba(255,255,255,0.06)'
+                    : 'rgba(255,255,255,0.92)',
+                  color: (loggingIn || (loginStep === 'credentials' && !!'0x4AAAAAACvGuW0fbNIYbAiK' && !turnstileToken))
+                    ? 'rgba(255,255,255,0.2)'
+                    : '#09090b',
+                  fontSize: '0.875rem', fontWeight: 600,
+                  cursor: loggingIn ? 'default' : 'pointer',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                  transition: 'all 0.12s', fontFamily: 'inherit',
+                  letterSpacing: '-0.01em',
+                }}
+                onMouseEnter={e => { if (!loggingIn && turnstileToken) e.currentTarget.style.background = '#fff'; }}
+                onMouseLeave={e => { if (!loggingIn && turnstileToken) e.currentTarget.style.background = 'rgba(255,255,255,0.92)'; }}
+              >
+                {loggingIn
+                  ? <><span className="spinner w-4 h-4 border-2 border-neutral-700/40 border-t-neutral-900" /> Authenticating</>
+                  : loginStep === 'totp' ? 'Verify identity' : 'Continue'}
+              </button>
+
+            </form>
+          </div>
+
+          {/* Footer */}
+          <div style={{ marginTop: 22, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <a href="/"
+              style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.18)', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 3, transition: 'color 0.12s' }}
+              onMouseEnter={e => e.currentTarget.style.color = 'rgba(255,255,255,0.4)'}
+              onMouseLeave={e => e.currentTarget.style.color = 'rgba(255,255,255,0.18)'}
             >
-              {loggingIn
-                ? <><span className="spinner w-4 h-4 border-2 border-white/30 border-t-white" /> Signing in...</>
-                : loginStep === 'totp' ? 'Verify →' : 'Sign in →'}
-            </button>
-          </form>
+              <ChevronLeft style={{ width: 11, height: 11 }} /> Back to site
+            </a>
+            <span style={{ fontSize: '0.68rem', color: 'rgba(255,255,255,0.1)', letterSpacing: '0.03em' }}>
+              Monitored · Audited
+            </span>
+          </div>
+
         </div>
-
-        {/* Footer link */}
-        <p style={{textAlign:'center',marginTop:28,fontSize:'0.75rem',color:'rgba(255,255,255,0.2)'}}>
-          <a href="/" style={{color:'rgba(255,255,255,0.25)',textDecoration:'none',transition:'color 0.15s'}}
-            onMouseEnter={e => e.target.style.color='rgba(255,255,255,0.5)'}
-            onMouseLeave={e => e.target.style.color='rgba(255,255,255,0.25)'}>
-            ← Back to PlanIt
-          </a>
-        </p>
-
-        {/* Callbacks are registered in useEffect above — no script tag needed */}
       </div>
     </div>
   );
-
   // ── Main App ──────────────────────────────────────────────────────────────
   return (
     <DemoContext.Provider value={isDemo}>
