@@ -7982,16 +7982,45 @@ export default function Admin() {
 
     if (window.turnstile) {
       mount();
-    } else {
-      // Turnstile script hasn't finished loading yet — wait for it
-      const script = document.querySelector('script[src*="turnstile"]');
-      if (script) {
-        script.addEventListener('load', mount, { once: true });
-        return () => script.removeEventListener('load', mount);
+      return () => {
+        if (turnstileWidget.current !== null) {
+          try { window.turnstile.remove(turnstileWidget.current); } catch (_) {}
+          turnstileWidget.current = null;
+        }
+      };
+    }
+
+    // Script may already be in the DOM but window.turnstile not yet assigned
+    // (fires before the global is set on cached/fast loads). Poll until ready
+    // instead of relying on the load event which may have already fired.
+    let pollInterval = null;
+    const scriptEl = document.querySelector('script[src*="turnstile"]');
+
+    const startPolling = () => {
+      pollInterval = setInterval(() => {
+        if (window.turnstile) {
+          clearInterval(pollInterval);
+          pollInterval = null;
+          mount();
+        }
+      }, 50);
+    };
+
+    if (scriptEl) {
+      // Script tag exists — it's either loading or already loaded
+      if (scriptEl.readyState === 'complete' || scriptEl.async === false) {
+        // Treat as already-loaded but global not yet set — just poll
+        startPolling();
+      } else {
+        scriptEl.addEventListener('load', () => { startPolling(); }, { once: true });
       }
+    } else {
+      // No script tag at all yet — poll anyway; it may be injected shortly
+      startPolling();
     }
 
     return () => {
+      if (pollInterval !== null) clearInterval(pollInterval);
       if (turnstileWidget.current !== null) {
         try { window.turnstile.remove(turnstileWidget.current); } catch (_) {}
         turnstileWidget.current = null;
