@@ -6239,7 +6239,317 @@ const NAV_ITEMS = [
   { id: 'command-center', label: 'Command',      icon: Crosshair  },
   { id: 'whitelabel',     label: 'White Label',  icon: Layers     },
   { id: 'blog',           label: 'Blog CMS',     icon: BookOpen   },
+  { id: 'account',        label: 'My Account',   icon: User       },
 ];
+
+// ─── Root Account Panel (TOTP / 2FA setup for root admin) ────────────────────
+function RootAccountPanel() {
+  const isDemo = useContext(DemoContext);
+
+  // TOTP status
+  const [totpEnabled, setTotpEnabled]   = useState(false);
+  const [isRoot,      setIsRoot]        = useState(false);
+  const [statusLoading, setStatusLoading] = useState(true);
+
+  // Setup flow
+  const [setupStep,  setSetupStep]  = useState('idle'); // 'idle'|'qr'|'verify'|'done'
+  const [qrUri,      setQrUri]      = useState('');
+  const [manualKey,  setManualKey]  = useState('');
+  const [setupCode,  setSetupCode]  = useState('');
+  const [setupLoading, setSetupLoading] = useState(false);
+
+  // Disable flow
+  const [showDisable,   setShowDisable]   = useState(false);
+  const [disablePass,   setDisablePass]   = useState('');
+  const [disableCode,   setDisableCode]   = useState('');
+  const [disableLoading, setDisableLoading] = useState(false);
+
+  const [err, setErr] = useState('');
+
+  // ── Load status ────────────────────────────────────────────────────────────
+  useEffect(() => {
+    setStatusLoading(true);
+    adminAPI.getTotpStatus()
+      .then(r => {
+        setTotpEnabled(r.data.totpEnabled || false);
+        setIsRoot(r.data.isRootAdmin || false);
+      })
+      .catch(() => {})
+      .finally(() => setStatusLoading(false));
+  }, []);
+
+  // ── Begin setup: call /totp/setup to get QR URI ────────────────────────────
+  const beginSetup = async () => {
+    if (isDemo) { toast.success('[Demo] Would open TOTP setup'); return; }
+    setErr('');
+    setSetupLoading(true);
+    try {
+      const r = await adminAPI.setupTotp();
+      setQrUri(r.data.otpauthUrl);
+      setManualKey(r.data.secret || '');
+      setSetupStep('qr');
+    } catch (e) {
+      setErr(e.response?.data?.error || 'Setup failed');
+    } finally {
+      setSetupLoading(false);
+    }
+  };
+
+  // ── Verify code to activate TOTP ──────────────────────────────────────────
+  const confirmEnable = async () => {
+    if (!setupCode.trim()) { setErr('Enter the 6-digit code from your authenticator app.'); return; }
+    if (isDemo) { setTotpEnabled(true); setSetupStep('done'); toast.success('[Demo] TOTP enabled'); return; }
+    setErr('');
+    setSetupLoading(true);
+    try {
+      await adminAPI.enableTotp(setupCode.replace(/\s/g, ''));
+      setTotpEnabled(true);
+      setSetupStep('done');
+      toast.success('Two-factor authentication enabled!');
+    } catch (e) {
+      setErr(e.response?.data?.error || 'Invalid code — try again.');
+      setSetupCode('');
+    } finally {
+      setSetupLoading(false);
+    }
+  };
+
+  // ── Disable TOTP ──────────────────────────────────────────────────────────
+  const confirmDisable = async () => {
+    if (!disablePass.trim() || !disableCode.trim()) { setErr('Password and authenticator code are required.'); return; }
+    if (isDemo) { setTotpEnabled(false); setShowDisable(false); toast.success('[Demo] TOTP disabled'); return; }
+    setErr('');
+    setDisableLoading(true);
+    try {
+      await adminAPI.disableTotp(disablePass, disableCode.replace(/\s/g, ''));
+      setTotpEnabled(false);
+      setShowDisable(false);
+      setDisablePass('');
+      setDisableCode('');
+      toast.success('Two-factor authentication disabled.');
+    } catch (e) {
+      setErr(e.response?.data?.error || 'Invalid password or code.');
+      setDisableCode('');
+    } finally {
+      setDisableLoading(false);
+    }
+  };
+
+  const resetSetup = () => { setSetupStep('idle'); setSetupCode(''); setQrUri(''); setManualKey(''); setErr(''); };
+
+  if (statusLoading) return (
+    <div className="max-w-2xl mx-auto p-8 flex items-center justify-center gap-3 text-neutral-400">
+      <Loader2 className="w-5 h-5 animate-spin" /> Loading account settings…
+    </div>
+  );
+
+  return (
+    <div className="max-w-2xl mx-auto p-6 space-y-6">
+      {/* Header */}
+      <div>
+        <h2 className="text-xl font-bold text-neutral-900 flex items-center gap-2">
+          <User className="w-5 h-5 text-neutral-500" /> My Account
+        </h2>
+        <p className="text-sm text-neutral-500 mt-1">
+          {isRoot ? 'Root super-admin account' : 'Admin account'} — security settings
+        </p>
+      </div>
+
+      {/* 2FA status card */}
+      <div className={`rounded-2xl border p-5 ${totpEnabled ? 'border-emerald-200 bg-emerald-50' : 'border-neutral-200 bg-white'}`}>
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex items-start gap-3">
+            <div className={`mt-0.5 w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 ${totpEnabled ? 'bg-emerald-100' : 'bg-neutral-100'}`}>
+              {totpEnabled
+                ? <ShieldCheck className="w-5 h-5 text-emerald-600" />
+                : <ShieldOff   className="w-5 h-5 text-neutral-400" />}
+            </div>
+            <div>
+              <p className="font-semibold text-neutral-900 text-sm">
+                Two-Factor Authentication (TOTP)
+              </p>
+              <p className="text-xs text-neutral-500 mt-0.5">
+                {totpEnabled
+                  ? 'Active — your account requires an authenticator code at every login.'
+                  : 'Not enabled — anyone with your password can sign in.'}
+              </p>
+              {totpEnabled && (
+                <span className="inline-flex items-center gap-1 mt-1.5 text-xs font-medium text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full">
+                  <Check className="w-3 h-3" /> Enabled
+                </span>
+              )}
+            </div>
+          </div>
+
+          {/* Action button — only shown in idle/done state */}
+          {setupStep === 'idle' || setupStep === 'done' ? (
+            totpEnabled ? (
+              <button
+                onClick={() => { setShowDisable(true); setErr(''); }}
+                className="flex-shrink-0 px-3 py-1.5 text-xs font-medium rounded-lg border border-red-200 text-red-600 hover:bg-red-50 transition-colors">
+                Disable 2FA
+              </button>
+            ) : (
+              <button
+                onClick={beginSetup}
+                disabled={setupLoading}
+                className="flex-shrink-0 px-3 py-1.5 text-xs font-medium rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 transition-colors flex items-center gap-1.5">
+                {setupLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Key className="w-3 h-3" />}
+                Set up 2FA
+              </button>
+            )
+          ) : null}
+        </div>
+
+        {/* ── SETUP FLOW ── */}
+        {setupStep === 'qr' && (
+          <div className="mt-5 pt-5 border-t border-neutral-200 space-y-4">
+            <p className="text-sm font-semibold text-neutral-800 flex items-center gap-2">
+              <span className="w-5 h-5 rounded-full bg-blue-600 text-white text-xs flex items-center justify-center font-bold">1</span>
+              Scan this QR code with your authenticator app
+            </p>
+            <p className="text-xs text-neutral-500">
+              Use <strong>Google Authenticator</strong>, <strong>Authy</strong>, <strong>1Password</strong>, or any TOTP-compatible app.
+            </p>
+
+            {/* QR code rendered via Google Charts API (no extra dep) */}
+            <div className="flex flex-col items-center gap-3">
+              <div className="p-3 bg-white rounded-xl border border-neutral-200 shadow-sm inline-block">
+                <img
+                  src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(qrUri)}`}
+                  alt="TOTP QR Code"
+                  width={180} height={180}
+                  className="block rounded"
+                />
+              </div>
+              {manualKey && (
+                <div className="w-full">
+                  <p className="text-xs text-neutral-500 mb-1">Or enter this key manually:</p>
+                  <div className="flex items-center gap-2">
+                    <code className="flex-1 text-xs bg-neutral-100 border border-neutral-200 rounded-lg px-3 py-2 font-mono tracking-widest text-neutral-700 select-all break-all">
+                      {manualKey}
+                    </code>
+                    <button
+                      onClick={() => { navigator.clipboard.writeText(manualKey); toast.success('Key copied'); }}
+                      className="flex-shrink-0 p-2 border border-neutral-200 rounded-lg text-neutral-500 hover:bg-neutral-100 transition-colors">
+                      <Hash className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Step 2 — verify */}
+            <p className="text-sm font-semibold text-neutral-800 flex items-center gap-2 pt-2">
+              <span className="w-5 h-5 rounded-full bg-blue-600 text-white text-xs flex items-center justify-center font-bold">2</span>
+              Enter the 6-digit code to confirm
+            </p>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                inputMode="numeric"
+                maxLength={6}
+                placeholder="000000"
+                value={setupCode}
+                onChange={e => { setSetupCode(e.target.value.replace(/\D/g,'')); setErr(''); }}
+                onKeyDown={e => e.key === 'Enter' && confirmEnable()}
+                className="flex-1 border border-neutral-300 rounded-xl px-4 py-2.5 text-center text-lg font-mono tracking-[0.3em] focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <button
+                onClick={confirmEnable}
+                disabled={setupLoading || setupCode.length < 6}
+                className="px-5 py-2.5 bg-blue-600 text-white rounded-xl font-medium text-sm hover:bg-blue-700 disabled:opacity-40 transition-colors flex items-center gap-2">
+                {setupLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <ShieldCheck className="w-4 h-4" />}
+                Activate
+              </button>
+            </div>
+            <button onClick={resetSetup} className="text-xs text-neutral-400 hover:text-neutral-600 transition-colors">Cancel setup</button>
+          </div>
+        )}
+
+        {/* ── SUCCESS ── */}
+        {setupStep === 'done' && (
+          <div className="mt-4 pt-4 border-t border-emerald-200 flex items-center gap-2 text-sm text-emerald-700">
+            <CheckCircle className="w-4 h-4 flex-shrink-0" />
+            TOTP is now active. You will be prompted for a code at every login.
+          </div>
+        )}
+
+        {/* Error */}
+        {err && (
+          <div className="mt-3 flex items-start gap-2 text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+            <AlertCircle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
+            {err}
+          </div>
+        )}
+      </div>
+
+      {/* ── DISABLE MODAL ── */}
+      {showDisable && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 px-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 space-y-4">
+            <div className="flex items-start justify-between">
+              <div>
+                <h3 className="font-bold text-neutral-900">Disable Two-Factor Auth</h3>
+                <p className="text-xs text-neutral-500 mt-0.5">Confirm with your password and current authenticator code.</p>
+              </div>
+              <button onClick={() => { setShowDisable(false); setErr(''); setDisablePass(''); setDisableCode(''); }} className="text-neutral-400 hover:text-neutral-600 p-1">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="space-y-3">
+              <div>
+                <label className="text-xs font-medium text-neutral-600 block mb-1">Admin Password</label>
+                <input
+                  type="password"
+                  placeholder="Your current password"
+                  value={disablePass}
+                  onChange={e => { setDisablePass(e.target.value); setErr(''); }}
+                  className="w-full border border-neutral-300 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-red-400"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-medium text-neutral-600 block mb-1">Authenticator Code</label>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  maxLength={6}
+                  placeholder="000000"
+                  value={disableCode}
+                  onChange={e => { setDisableCode(e.target.value.replace(/\D/g,'')); setErr(''); }}
+                  onKeyDown={e => e.key === 'Enter' && confirmDisable()}
+                  className="w-full border border-neutral-300 rounded-xl px-3 py-2.5 text-sm font-mono tracking-widest text-center focus:outline-none focus:ring-2 focus:ring-red-400"
+                />
+              </div>
+            </div>
+
+            {err && (
+              <div className="flex items-start gap-2 text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+                <AlertCircle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" /> {err}
+              </div>
+            )}
+
+            <div className="flex gap-2 pt-1">
+              <button
+                onClick={() => { setShowDisable(false); setErr(''); setDisablePass(''); setDisableCode(''); }}
+                className="flex-1 px-4 py-2.5 border border-neutral-200 rounded-xl text-sm text-neutral-600 hover:bg-neutral-50 transition-colors">
+                Cancel
+              </button>
+              <button
+                onClick={confirmDisable}
+                disabled={disableLoading || !disablePass || disableCode.length < 6}
+                className="flex-1 px-4 py-2.5 bg-red-600 text-white rounded-xl text-sm font-medium hover:bg-red-700 disabled:opacity-40 transition-colors flex items-center justify-center gap-2">
+                {disableLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <ShieldOff className="w-4 h-4" />}
+                Disable 2FA
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 // ─── White Label Panel ────────────────────────────────────────────────────────
 const TIER_COLORS = {
@@ -8364,10 +8674,12 @@ export default function Admin() {
             const isCc  = id === 'command-center';
             const isSec = id === 'security';
             const isWl  = id === 'whitelabel';
+            const isAcc = id === 'account';
             return (
               <React.Fragment key={id}>
-                {isCc && <div className="mx-2 my-2 border-t border-white/10" />}
-                {isWl && <div className="mx-2 my-2 border-t border-white/10" />}
+                {isCc  && <div className="mx-2 my-2 border-t border-white/10" />}
+                {isWl  && <div className="mx-2 my-2 border-t border-white/10" />}
+                {isAcc && <div className="mx-2 my-2 border-t border-white/10" />}
                 <button onClick={() => {
                   if (isSec) { window.location.href = '/admin/security'; return; }
                   setActiveSection(id); setSelectedEvent(null);
@@ -8596,6 +8908,7 @@ export default function Admin() {
           {activeSection === 'command-center' && !selectedEvent && <CommandCenterPanel />}
           {activeSection === 'whitelabel'     && !selectedEvent && <div className="max-w-7xl mx-auto"><WhiteLabelPanel /></div>}
           {activeSection === 'blog'           && !selectedEvent && <div className="max-w-6xl mx-auto"><BlogCMSPanel /></div>}
+          {activeSection === 'account'        && !selectedEvent && <div className="max-w-2xl mx-auto"><RootAccountPanel /></div>}
         </main>
       </div>
 
