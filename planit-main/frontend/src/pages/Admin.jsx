@@ -6808,6 +6808,9 @@ function EmployeeAccountPanel({ currentUser }) {
 function RootAccountPanel() {
   const isDemo = useContext(DemoContext);
 
+  // Tab
+  const [tab, setTab] = useState('security');
+
   // TOTP status
   const [totpEnabled, setTotpEnabled]   = useState(false);
   const [isRoot,      setIsRoot]        = useState(false);
@@ -6828,6 +6831,11 @@ function RootAccountPanel() {
 
   const [err, setErr] = useState('');
 
+  // Activity log
+  const [auditLogs,    setAuditLogs]    = useState([]);
+  const [auditLoading, setAuditLoading] = useState(false);
+  const [auditLoaded,  setAuditLoaded]  = useState(false);
+
   // ── Load status ────────────────────────────────────────────────────────────
   useEffect(() => {
     setStatusLoading(true);
@@ -6839,6 +6847,16 @@ function RootAccountPanel() {
       .catch(() => {})
       .finally(() => setStatusLoading(false));
   }, []);
+
+  // Load activity log when that tab is first opened
+  useEffect(() => {
+    if (tab !== 'activity' || auditLoaded) return;
+    setAuditLoading(true);
+    adminAPI.getMeAudit({ limit: 50 })
+      .then(r => { setAuditLogs(r.data.logs || []); setAuditLoaded(true); })
+      .catch(() => {})
+      .finally(() => setAuditLoading(false));
+  }, [tab, auditLoaded]);
 
   // ── Begin setup: call /totp/setup to get QR URI ────────────────────────────
   const beginSetup = async () => {
@@ -6917,6 +6935,27 @@ function RootAccountPanel() {
         </p>
       </div>
 
+      {/* Tab bar */}
+      <div className="flex gap-1 border-b border-neutral-200">
+        {[
+          { id: 'security', label: 'Security' },
+          { id: 'activity', label: 'Activity Log' },
+        ].map(t => (
+          <button
+            key={t.id}
+            onClick={() => setTab(t.id)}
+            className={`px-4 py-2 text-sm font-medium rounded-t-lg transition-colors -mb-px border-b-2 ${
+              tab === t.id
+                ? 'border-blue-600 text-blue-600'
+                : 'border-transparent text-neutral-500 hover:text-neutral-700'
+            }`}>
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {/* ── SECURITY TAB ── */}
+      {tab === 'security' && (<>
       {/* 2FA status card */}
       <div className={`rounded-2xl border p-5 ${totpEnabled ? 'border-emerald-200 bg-emerald-50' : 'border-neutral-200 bg-white'}`}>
         <div className="flex items-start justify-between gap-4">
@@ -7107,6 +7146,62 @@ function RootAccountPanel() {
               </button>
             </div>
           </div>
+        </div>
+      )}
+      </>)}
+
+      {/* ── ACTIVITY LOG TAB ── */}
+      {tab === 'activity' && (
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <p className="text-sm text-neutral-500">Last 50 actions on this account</p>
+            <button
+              onClick={() => { setAuditLoaded(false); setAuditLogs([]); }}
+              className="text-xs text-blue-600 hover:underline flex items-center gap-1">
+              <RefreshCw className="w-3 h-3" /> Refresh
+            </button>
+          </div>
+          {auditLoading ? (
+            <div className="flex items-center justify-center gap-2 py-12 text-neutral-400">
+              <Loader2 className="w-5 h-5 animate-spin" /> Loading activity…
+            </div>
+          ) : auditLogs.length === 0 ? (
+            <div className="text-center py-12 text-neutral-400 text-sm">No activity recorded yet.</div>
+          ) : (
+            <div className="space-y-2">
+              {auditLogs.map((log, i) => {
+                const details  = log.details || {};
+                const ip       = details.ip || '—';
+                const isOk     = log.status === 'success';
+                const isFail   = log.status === 'failure';
+                const isBlocked = log.status === 'blocked';
+                return (
+                  <div key={log._id || i} className="flex items-start gap-3 p-3 rounded-xl border border-neutral-100 bg-white">
+                    <div className={`mt-0.5 w-2 h-2 rounded-full flex-shrink-0 ${isOk ? 'bg-emerald-400' : isFail ? 'bg-red-400' : 'bg-amber-400'}`} />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-sm font-medium text-neutral-800">{log.action?.replace(/_/g, ' ')}</span>
+                        {ip !== '—' && (
+                          <span className="text-xs text-neutral-400 font-mono">IP: {ip}</span>
+                        )}
+                        {details.reason && (
+                          <span className="text-xs text-neutral-400">{details.reason}</span>
+                        )}
+                        <span className={`ml-auto text-xs font-medium px-2 py-0.5 rounded-full ${
+                          isOk ? 'bg-emerald-50 text-emerald-700' :
+                          isFail ? 'bg-red-50 text-red-700' :
+                          'bg-amber-50 text-amber-700'
+                        }`}>{log.status}</span>
+                      </div>
+                      <p className="text-xs text-neutral-400 mt-0.5">
+                        {new Date(log.createdAt).toLocaleString()}
+                      </p>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       )}
     </div>
