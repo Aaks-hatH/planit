@@ -374,42 +374,42 @@ function WhiteLabelTheme({ children }) {
 // White-label domains automatically use the client's company name instead —
 // see the WL title section in WhiteLabelTheme above (line ~322).
 const PAGE_TITLES = {
-  '/':                        'PlanIt | Free Event Planning and Restaurant Management Software',
-  '/about':                   'About PlanIt | Built for Event Planners and Venue Managers',
-  '/admin':                   'Admin Control Panel | PlanIt',
-  '/admin/security':          'Platform Security Dashboard | PlanIt Admin',
-  '/dashboard':               'Your White Label Dashboard | PlanIt',
-  '/discover':                'Discover Events Near You | PlanIt',
-  '/help':                    'Help Center and Frequently Asked Questions | PlanIt',
-  '/license':                 'Platform License Agreement | PlanIt',
-  '/privacy':                 'Privacy Policy | PlanIt',
-  '/status':                  'Platform Status and Live Uptime | PlanIt',
-  '/support':                 'Contact Support | PlanIt',
-  '/support/success':         'Support Request Successfully Submitted | PlanIt',
-  '/support/wall':            'Wall of Supporters | PlanIt',
-  '/terms':                   'Terms of Service | PlanIt',
-  '/blog':                    'PlanIt Blog | Ideas and Guides for Event Planners',
-  '/white-label':             'Launch Your Own Branded Event Platform | PlanIt White Label',
-  '/white-label/setup-fee':   'White Label Setup Payment | PlanIt White Label',
-  '/white-label/setup-success': 'Payment Confirmed, You Are Live | PlanIt White Label',
+  '/':                         'Event Planning and Restaurant Management Software · PlanIt',
+  '/about':                    'About PlanIt · Built for Event Planners and Venue Managers',
+  '/admin':                    'Admin Control Panel · PlanIt',
+  '/admin/security':           'Platform Security Dashboard · PlanIt Admin',
+  '/dashboard':                'Your White Label Dashboard · PlanIt',
+  '/discover':                 'Discover Events Near You · PlanIt',
+  '/help':                     'Help Center and Frequently Asked Questions · PlanIt',
+  '/license':                  'Platform License Agreement · PlanIt',
+  '/privacy':                  'Privacy Policy · PlanIt',
+  '/status':                   'Platform Status and Live Uptime · PlanIt',
+  '/support':                  'Contact Support · PlanIt',
+  '/support/success':          'Support Request Successfully Submitted · PlanIt',
+  '/support/wall':             'Wall of Supporters · PlanIt',
+  '/terms':                    'Terms of Service · PlanIt',
+  '/blog':                     'PlanIt Blog · Ideas and Guides for Event Planners',
+  '/white-label':              'Launch Your Own Branded Event Platform · PlanIt White Label',
+  '/white-label/setup-fee':    'White Label Setup Payment · PlanIt White Label',
+  '/white-label/setup-success': 'Payment Confirmed, You Are Live · PlanIt White Label',
 };
 
 // Titles for dynamic routes — matched by pattern in order (first match wins)
 const PATTERN_TITLES = [
-  [/^\/(e|event)\/[^/]+\/checkin$/,         'Live Attendee Check-In Dashboard | PlanIt'],
-  [/^\/(e|event)\/[^/]+\/floor$/,           'Floor Management and Table Service | PlanIt Venue'],
-  [/^\/(e|event)\/[^/]+\/server$/,          'Server and Table Assignment View | PlanIt Venue'],
-  [/^\/(e|event)\/[^/]+\/table\/[^/]+$/,   'Table Ordering Kiosk | PlanIt Venue'],
-  [/^\/(e|event)\/[^/]+\/(login|waitlist)$/, 'Organizer Sign In to Your Event | PlanIt'],
-  [/^\/(e|event)\/[^/]+\/wait$/,            'Live Waitlist Board | PlanIt Venue'],
-  [/^\/(e|event)\/[^/]+\/reserve$/,         'Reserve Your Spot at This Event | PlanIt'],
-  [/^\/(e|event)\/[^/]+/,                   'Your Event Workspace | PlanIt'],
-  [/^\/reserve\/cancel\//,                  'Cancel Your Reservation | PlanIt'],
-  [/^\/reservation\//,                      'Your Reservation Ticket | PlanIt'],
-  [/^\/invite\//,                           'You Have Been Personally Invited | PlanIt'],
-  [/^\/badge\//,                            'Your Event Entry Badge | PlanIt'],
-  [/^\/card\//,                             'Your Personal Invitation Card | PlanIt'],
-  [/^\/blog\//,                             null], // null = let Blog.jsx handle post titles
+  [/^\/(e|event)\/[^/]+\/checkin$/,          'Live Attendee Check-In Dashboard · PlanIt'],
+  [/^\/(e|event)\/[^/]+\/floor$/,            'Floor Management and Table Service · PlanIt Venue'],
+  [/^\/(e|event)\/[^/]+\/server$/,           'Server and Table Assignment View · PlanIt Venue'],
+  [/^\/(e|event)\/[^/]+\/table\/[^/]+$/,     'Table Ordering Kiosk · PlanIt Venue'],
+  [/^\/(e|event)\/[^/]+\/(login|waitlist)$/, 'Organizer Sign In to Your Event · PlanIt'],
+  [/^\/(e|event)\/[^/]+\/wait$/,             'Live Waitlist Board · PlanIt Venue'],
+  [/^\/(e|event)\/[^/]+\/reserve$/,          'Reserve Your Spot at This Event · PlanIt'],
+  [/^\/(e|event)\/[^/]+$/,                   'Your Event Workspace · PlanIt'],
+  [/^\/reserve\/cancel\//,                   'Cancel Your Reservation · PlanIt'],
+  [/^\/reservation\//,                       'Your Reservation Ticket · PlanIt'],
+  [/^\/invite\//,                            'You Were Personally Invited · PlanIt'],
+  [/^\/badge\//,                             'Your Event Entry Badge · PlanIt'],
+  [/^\/card\//,                              'Your Invitation Card · PlanIt'],
+  [/^\/blog\//,                              null],
 ];
 
 function PageTitle() {
@@ -436,7 +436,7 @@ function PageTitle() {
     }
 
     // Fallback for anything not listed (e.g. 404)
-    document.title = 'PlanIt';
+    document.title = ' 404 Page Not Found · PlanIt';
   }, [pathname, isWL]);
 
   return null;
