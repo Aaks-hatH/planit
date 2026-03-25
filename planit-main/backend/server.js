@@ -175,7 +175,14 @@ function maintenanceGuard(req, res, next) {
 // A numeric value (2, 3, 4) risks getting the wrong hop count and resolving
 // to a Cloudflare or Render internal IP instead of the real client IP,
 // which silently breaks all IP-based blocking, rate limiting, and banning.
-app.set('trust proxy', true);
+// Trust exactly one upstream proxy hop (the Render load balancer).
+// Using `true` would trust every entry in X-Forwarded-For, making it
+// trivially spoofable — an attacker could prepend any IP they like and
+// bypass all IP-based rate limits and bans. `1` tells Express to peel
+// off exactly one hop so req.ip resolves to the actual connecting IP
+// (the Render LB), while realIp() then uses X-Planit-Client-IP (signed
+// by the router) as the authoritative client address.
+app.set('trust proxy', 1);
 
 app.use(helmet({
   hsts: { maxAge: 63072000, includeSubDomains: true, preload: true },
