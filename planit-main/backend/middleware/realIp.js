@@ -1,5 +1,38 @@
 'use strict';
 
+const crypto      = require('crypto');
+const MESH_SECRET = process.env.MESH_SECRET || '';
+// Match the TTL used by the router mesh token (30 s) plus a 2 s clock-skew buffer.
+const MESH_IP_TTL_MS = 30_000;
+
+/**
+ * Verify the HMAC signature stamped on X-Planit-Client-IP-Sig by the router.
+ * Format: "<timestamp>:<ip>:<sha256-hex>"
+ * Returns true only when the signature is valid and the timestamp is fresh.
+ */
+function verifyClientIpSig(ip, sigHeader) {
+  if (!MESH_SECRET || !sigHeader) return false;
+  try {
+    const parts = sigHeader.split(':');
+    if (parts.length < 3) return false;
+    const sig     = parts[parts.length - 1];
+    const payload = parts.slice(0, -1).join(':'); // everything before the last ':'
+    const ts      = parseInt(parts[0], 10);
+    const age     = Date.now() - ts;
+    if (isNaN(age) || age < -2000 || age > MESH_IP_TTL_MS) return false;
+    const expected = crypto.createHmac('sha256', MESH_SECRET).update(payload).digest('hex');
+    const b1 = Buffer.from(expected, 'hex');
+    const b2 = Buffer.from(sig,      'hex');
+    if (b1.length !== b2.length) return false;
+    if (!crypto.timingSafeEqual(b1, b2)) return false;
+    // Ensure the IP in the signature matches the header value
+    const sigIp = parts[1];
+    return sigIp === ip.trim();
+  } catch {
+    return false;
+  }
+}
+
 /**
  * middleware/realIp.js
  *
@@ -107,20 +140,34 @@ function firstPublicFromXff(xff) {
 function realIp(req) {
   if (!req) return 'unknown';
 
-  // 0. Router-stamped real client IP (X-Planit-Client-IP).
+  // 0a. HMAC-signed X-Planit-Client-IP — trusted regardless of socket source.
   //
-  // Our router injects this header in every proxyReq callback after resolving
-  // the real client IP via Express trust-proxy:1 (Render LB hop stripped).
-  // We only trust it when the socket connection itself is from a private /
-  // internal address — meaning the request physically arrived from our router
-  // (Render private networking), not from the public internet.
+  // The router stamps every proxied request with:
+  //   X-Planit-Client-IP:     <real client IP>
+  //   X-Planit-Client-IP-Sig: <timestamp>:<ip>:<sha256-hmac(MESH_SECRET)>
   //
-  // This is the security invariant that prevents spoofing: an external attacker
-  // hitting the backend directly would have a PUBLIC socket address, so this
-  // branch is skipped and their X-Planit-Client-IP header is ignored entirely.
-  // Only requests whose TCP socket originates from a private Render-internal
-  // address (our router) can benefit from this header.
-  const rawSocket = req.socket?.remoteAddress || req.connection?.remoteAddress || '';
+  // Because the signature requires MESH_SECRET (only known to our services),
+  // an external attacker cannot forge it — even if they connect directly to the
+  // backend over a public IP. The timestamp makes replays expire after 30 s.
+  // This path works whether the router connects via private or public networking.
+  if (MESH_SECRET) {
+    const sigHeader = req.headers?.['x-planit-client-ip-sig'];
+    const claimedIp = req.headers?.['x-planit-client-ip'];
+    if (sigHeader && claimedIp) {
+      const cleaned = claimedIp.trim();
+      if (cleaned && !isPrivate(cleaned) && verifyClientIpSig(cleaned, sigHeader)) {
+        return cleaned;
+      }
+    }
+  }
+
+  // 0b. Unsigned X-Planit-Client-IP — fallback when MESH_SECRET is not set.
+  //
+  // Only trusted when the TCP socket itself is from a private/internal address,
+  // which means the request physically came from our router (Render private
+  // networking). An external attacker hitting the backend directly would have a
+  // public socket address so this branch is skipped and their header ignored.
+  const rawSocket  = req.socket?.remoteAddress || req.connection?.remoteAddress || '';
   const socketAddr = rawSocket.replace(/^::ffff:/, '');
   if (isPrivate(socketAddr) || socketAddr === '') {
     const routerIp = req.headers?.['x-planit-client-ip'];
