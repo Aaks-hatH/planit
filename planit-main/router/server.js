@@ -8,7 +8,28 @@ const { createProxyMiddleware } = require('http-proxy-middleware');
 const axios        = require('axios');
 const http         = require('http');
 const https        = require('https');
+const crypto       = require('crypto');
 const { meshAuth, meshGet, meshPost } = require('./mesh');
+
+// ── Real-IP header signing ─────────────────────────────────────────────────────
+// MESH_SECRET is the same shared secret used for mesh HMAC auth.
+// We sign X-Planit-Client-IP so the backend can trust it regardless of whether
+// the router connects over private or public networking — the signature proves
+// the header was set by us, not by an external attacker.
+const MESH_SECRET = process.env.MESH_SECRET || '';
+
+/**
+ * Returns the signed IP header value to set as X-Planit-Client-IP-Sig.
+ * Format: "<timestamp>:<ip>:<sha256-hmac-hex>"
+ * Expires in 30 s (backend enforces this).
+ */
+function signClientIp(ip) {
+  if (!MESH_SECRET) return null;
+  const ts      = Date.now().toString();
+  const payload = `${ts}:${ip}`;
+  const sig     = crypto.createHmac('sha256', MESH_SECRET).update(payload).digest('hex');
+  return `${payload}:${sig}`;
+}
 
 
 
@@ -454,8 +475,10 @@ function pickBackendIndex(req) {
     }
   }
 
-  // 3. IP hash
-  const ip = req.headers?.['x-forwarded-for']?.split(',')[0]?.trim()
+  // 3. IP hash — use req.ip (trust-proxy resolved) so we hash the real client
+  //    IP, not the raw XFF value which could include internal hops.
+  const ip = req.ip
+           || req.headers?.['x-forwarded-for']?.split(',')[0]?.trim()
            || req.socket?.remoteAddress || '0';
   return pickHealthyBackend(djb2(ip));
 }
@@ -1605,6 +1628,8 @@ app.post('/mesh/register', meshAuth(SERVICE_NAME), express.json(), (req, res) =>
           || '';
         if (clientIp && clientIp !== '::1' && clientIp !== '127.0.0.1') {
           _p.setHeader('X-Planit-Client-IP', clientIp);
+          const sig = signClientIp(clientIp);
+          if (sig) _p.setHeader('X-Planit-Client-IP-Sig', sig);
         }
 
         backendStatus[capturedIndex].activeConnections++;
@@ -1653,6 +1678,8 @@ const proxies = BACKENDS.map((target, index) =>
           || '';
         if (clientIp && clientIp !== '::1' && clientIp !== '127.0.0.1') {
           _p.setHeader('X-Planit-Client-IP', clientIp);
+          const sig = signClientIp(clientIp);
+          if (sig) _p.setHeader('X-Planit-Client-IP-Sig', sig);
         }
 
         backendStatus[index].activeConnections++;
