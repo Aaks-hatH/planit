@@ -212,9 +212,25 @@ const verifyOrganizer = async (req, res, next) => {
       const isOrganizerByJWT   = decoded.role === 'organizer';
       const participant        = event.participants.find(p => p.username === username);
       const isOrganizerByEvent = participant && participant.role === 'organizer';
-      const isOrganizerByName  = event.organizerName === username;
 
-      if (!isOrganizerByJWT && !isOrganizerByEvent && !isOrganizerByName) {
+      // SECURITY FIX: isOrganizerByName removed — it did not verify the JWT's
+      // eventId matched the current event, allowing cross-event privilege escalation
+      // (any organiser token for event A granted organiser access to event B, C, D…
+      // as long as organizerName matched). isOrganizerByJWT + isOrganizerByEvent are
+      // sufficient and do not have this flaw.
+
+      // Enforce that the JWT was issued for THIS event (unless it's an admin override)
+      const isAdminAccess = decoded.isAdminAccess === true;
+      const tokenEventId  = decoded.eventId;
+      const eventIdMatch  = isAdminAccess ||
+                            tokenEventId === eventId ||
+                            tokenEventId === eventId.toString();
+
+      if (!eventIdMatch) {
+        return res.status(403).json({ error: 'Only the event organizer can do that.' });
+      }
+
+      if (!isOrganizerByJWT && !isOrganizerByEvent) {
         return res.status(403).json({ error: 'Only the event organizer can do that.' });
       }
 
