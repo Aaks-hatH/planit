@@ -233,6 +233,11 @@ router.post('/verify-password/:eventId', authLimiter, eventPasswordLimiter,
             return res.status(403).json({
               requiresApproval: true,
               pending: true,
+              pollToken: jwt.sign(
+                { type: 'approval_poll', eventId: req.params.eventId.toString(), username: trimmedUsername },
+                secrets.jwt,
+                { expiresIn: '24h' }
+              ),
               message: 'Your request has been sent to the organizer. You will be able to join once approved.',
             });
           }
@@ -330,9 +335,19 @@ router.post('/join/:eventId',
           // Return 403 (NOT 202) so Axios treats it as an error and the frontend
           // catch block reliably intercepts it. HTTP 202 is 2xx — Axios resolves it
           // as success and the token-save + onJoined() call would run, bypassing the gate.
+          //
+          // SECURITY FIX: issue a short-lived poll token scoped to this user + event.
+          // The approval-status endpoint now requires this token, preventing anyone
+          // from polling for another user's approval status and harvesting a JWT.
+          const pollToken = jwt.sign(
+            { type: 'approval_poll', eventId: req.params.eventId.toString(), username: trimmedUsername },
+            secrets.jwt,
+            { expiresIn: '24h' }
+          );
           return res.status(403).json({
             requiresApproval: true,
             pending: true,
+            pollToken,
             message: 'Your request has been sent to the organizer. You will be able to join once approved.',
           });
         }
@@ -2797,15 +2812,42 @@ router.delete('/:eventId/webhooks/:webhookId', verifyOrganizer, async (req, res,
 // APPROVAL QUEUE — organizer approve/reject pending join requests
 // ═══════════════════════════════════════════════════════════════════════════
 
-// GET  /:eventId/approval-status — unauthenticated polling endpoint for pending users
-// A user waiting for approval polls this to learn when the organizer approves them.
-// Returns { pending: true } while in the queue, or { approved: true, token } once approved.
-// Rate-limited by the standard API limiter; username is required in query string.
+// GET  /:eventId/approval-status — polling endpoint for pending users
+// SECURITY FIX: now requires a poll token issued at queue-join time.
+// This prevents unauthenticated callers from supplying any username in the
+// event's participants array (e.g. the organiser) and receiving a real JWT.
 router.get('/:eventId/approval-status', async (req, res, next) => {
   try {
     const { eventId } = req.params;
     const username = (req.query.username || '').trim();
     if (!username) return res.status(400).json({ error: 'username query param required' });
+
+    // ── Require the poll token issued at queue-join time ───────────────────────
+    const rawPollToken =
+      req.headers['x-poll-token'] ||
+      req.query.pollToken ||
+      req.query.poll_token;
+
+    if (!rawPollToken) {
+      return res.status(401).json({ error: 'Poll token required. Please rejoin the event to obtain one.' });
+    }
+
+    let pollDecoded;
+    try {
+      pollDecoded = jwt.verify(rawPollToken, secrets.jwt);
+    } catch (e) {
+      return res.status(401).json({ error: 'Invalid or expired poll token.' });
+    }
+
+    // Token must be the right type AND scoped to this event AND this username
+    if (
+      pollDecoded.type !== 'approval_poll' ||
+      pollDecoded.eventId !== eventId.toString() ||
+      pollDecoded.username !== username
+    ) {
+      return res.status(403).json({ error: 'Poll token is not valid for this request.' });
+    }
+    // ── End poll token check ───────────────────────────────────────────────────
 
     const event = await Event.findById(eventId).select('approvalQueue participants settings title');
     if (!event) return res.status(404).json({ error: 'Event not found.' });
