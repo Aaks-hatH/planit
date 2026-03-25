@@ -5,6 +5,16 @@ const MESH_SECRET = process.env.MESH_SECRET || '';
 // Match the TTL used by the router mesh token (30 s) plus a 2 s clock-skew buffer.
 const MESH_IP_TTL_MS = 30_000;
 
+// IS_EDGE_SERVICE=true  → this service sits directly behind Cloudflare (the router).
+//                         CF-Connecting-IP is set by Cloudflare to the real client IP.
+// IS_EDGE_SERVICE=false → this is a backend behind the router.
+//                         CF-Connecting-IP is set by Cloudflare to the *router's* IP,
+//                         NOT the real client. Trusting it here would ban the router.
+//
+// Set IS_EDGE_SERVICE=true ONLY on the router service in Render env vars.
+// Leave it unset (or false) on all backend services.
+const IS_EDGE_SERVICE = process.env.IS_EDGE_SERVICE === 'true';
+
 /**
  * Verify the HMAC signature stamped on X-Planit-Client-IP-Sig by the router.
  * Format: "<timestamp>:<ip>:<sha256-hex>"
@@ -38,38 +48,42 @@ function verifyClientIpSig(ip, sigHeader) {
  *
  * Single source of truth for resolving the real client IP address.
  *
- * Priority order:
- *  1. cf-connecting-ip  — Set by Cloudflare; cannot be spoofed because
- *                         Cloudflare strips any user-sent CF-Connecting-IP
- *                         before adding its own. When traffic arrives via
- *                         Cloudflare, this is the only header to trust.
- *  2. x-forwarded-for   — Leftmost public IP, skipping any private/internal
- *                         ranges (10.x, 172.16-31.x, 192.168.x, loopback,
- *                         and IPv4-mapped IPv6 equivalents). Used when the
- *                         internal Render router preserves XFF.
- *  3. req.ip            — Express trust-proxy resolved value, again skipping
- *                         private ranges so a Render-internal hop address
- *                         (10.x.x.x / 172.x.x.x) never becomes the "client".
- *  4. socket address    — Last resort only (typically only reached on direct
- *                         local connections during development).
+ * Priority order (backend services, IS_EDGE_SERVICE=false):
+ *  0a. X-Planit-Client-IP + HMAC sig  — stamped and signed by the router.
+ *                                        Requires MESH_SECRET to be set on this
+ *                                        service. This is the authoritative path.
+ *  0b. X-Planit-Client-IP (unsigned)  — fallback when MESH_SECRET is missing,
+ *                                        only trusted when the socket is private
+ *                                        (Render internal hop = came from our router).
+ *  1.  x-forwarded-for                — Leftmost public IP, skipping private ranges.
+ *  2.  req.ip                         — Express trust-proxy resolved value.
+ *  3.  socket address                 — Last resort (dev/direct connections only).
  *
- * WHY THIS MATTERS
- * ────────────────
- * Without this, five different files each did their own ad-hoc IP extraction,
- * all disagreeing. The three concrete bugs that resulted:
+ * Priority order (router / edge service, IS_EDGE_SERVICE=true):
+ *  0a/0b. Same as above (not usually reached on the router itself).
+ *  1.  CF-Connecting-IP               — Cloudflare sets this to the real client IP
+ *                                        on the edge service. Safe to trust here.
+ *  2-3. Same fallback chain.
  *
- *   a) Spoofable headers (XFF, X-Real-IP) were used instead of CF-Connecting-IP.
- *      An attacker could set X-Forwarded-For: 1.2.3.4 and bypass IP-based
- *      rate limits / bans entirely.
+ * WHY CF-Connecting-IP is SKIPPED on backends
+ * ────────────────────────────────────────────
+ * Every *.onrender.com URL is proxied through Render's built-in Cloudflare CDN.
+ * When the router makes an internal HTTP call to a backend URL, Cloudflare sees
+ * the router as the connecting client and sets CF-Connecting-IP = router's IP.
  *
- *   b) The Render-internal router hop produces a private address (10.x / 172.x).
- *      Because nothing filtered out private ranges, that internal address was
- *      used as the "real client", causing everyone sharing that router to look
- *      like the same IP — and a ban on the attacker's real IP would never match
- *      the internal address stored during a legitimate user's session.
+ * If a backend trusts CF-Connecting-IP, every ban targets the router instead of
+ * the actual attacker — blocking ALL legitimate users simultaneously.
  *
- *   c) The blocklist was storing the real IP at ban time but comparing against
- *      the internal hop address at check time → bans had zero effect.
+ * CF-Connecting-IP is only trustworthy on the outermost edge service (the router),
+ * where Cloudflare truly sees the end user's IP as the connecting client.
+ * IS_EDGE_SERVICE=true gates this behaviour to the router only.
+ *
+ * WHY MESH_SECRET MUST BE SET ON ALL SERVICES
+ * ─────────────────────────────────────────────
+ * Without MESH_SECRET, step 0a is skipped. Step 0b then falls through when the
+ * socket is private but X-Planit-Client-IP is absent, and the code reaches the
+ * XFF/req.ip fallbacks — which may resolve to the router IP, not the real client.
+ * Set MESH_SECRET to the same value on every service in Render env vars.
  *
  * Usage:
  *   const { realIp } = require('../middleware/realIp');   // from routes/
@@ -175,12 +189,31 @@ function realIp(req) {
       const cleaned = routerIp.trim();
       if (cleaned && !isPrivate(cleaned)) return cleaned;
     }
+    // Socket is private (internal Render hop from our router) but
+    // X-Planit-Client-IP is absent. This almost always means MESH_SECRET
+    // is not set on the router — the signed header never gets stamped.
+    // Without it every ban will target the router IP, not the real client.
+    if (!MESH_SECRET) {
+      console.warn(
+        '[realIp] CRITICAL: private socket but X-Planit-Client-IP missing. ' +
+        'Ensure MESH_SECRET is set on ALL services in Render env vars. ' +
+        'Bans will target the router IP until this is fixed.'
+      );
+    }
   }
 
-  // 1. Cloudflare-guaranteed header — cannot be forged by end users.
-  const cf = req.headers?.['cf-connecting-ip'];
-  if (cf && typeof cf === 'string' && cf.trim() && !isPrivate(cf.trim())) {
-    return cf.trim();
+  // 1. Cloudflare-guaranteed header.
+  //
+  // ONLY trusted on the edge service (the router, IS_EDGE_SERVICE=true).
+  // On backends, Cloudflare sees the *router* as the connecting client and
+  // sets CF-Connecting-IP to the router's IP — NOT the real user's IP.
+  // Trusting it on a backend would cause every ban to hit the router,
+  // taking down the service for all users. Skip it entirely on backends.
+  if (IS_EDGE_SERVICE) {
+    const cf = req.headers?.['cf-connecting-ip'];
+    if (cf && typeof cf === 'string' && cf.trim() && !isPrivate(cf.trim())) {
+      return cf.trim();
+    }
   }
 
   // 2. X-Forwarded-For leftmost public entry.
