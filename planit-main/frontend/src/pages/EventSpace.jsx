@@ -73,6 +73,7 @@ function JoinGate({ eventId, onJoined }) {
   const [password, setPassword]         = useState('');       // event password
   const [accountPassword, setAccountPassword] = useState(''); // account password
   const [error, setError]               = useState('');
+  const [pollToken, setPollToken]       = useState('');   // approval poll token issued at join time
   const justSelectedRef                 = useRef(false);
   const accountPwdRef                   = useRef(null);
 
@@ -118,7 +119,7 @@ function JoinGate({ eventId, onJoined }) {
 
     const poll = async () => {
       try {
-        const res = await eventAPI.checkApprovalStatus(eventId, username);
+        const res = await eventAPI.checkApprovalStatus(eventId, username, pollToken);
         if (cancelled) return;
         if (res.data?.approved && res.data?.token) {
           localStorage.setItem('eventToken', res.data.token);
@@ -134,7 +135,7 @@ function JoinGate({ eventId, onJoined }) {
     poll(); // Immediate first check
     const interval = setInterval(poll, 4000);
     return () => { cancelled = true; clearInterval(interval); };
-  }, [step, eventId, username]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [step, eventId, username, pollToken]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const filteredParticipants = knownParticipants.filter(p =>
     username.trim() === '' || p.username.toLowerCase().includes(username.toLowerCase())
@@ -213,6 +214,7 @@ function JoinGate({ eventId, onJoined }) {
       // this guard ensures we never call onJoined() without a real token.
       if (res.data?.requiresApproval || !res.data?.token) {
         localStorage.setItem('username', name);
+        if (res.data?.pollToken) setPollToken(res.data.pollToken);
         setStep('pending-approval');
         setError('');
         setJoining(false);
@@ -227,6 +229,7 @@ function JoinGate({ eventId, onJoined }) {
       if (data?.requiresApproval) {
         // Store the username so the pending-approval polling can use it
         localStorage.setItem('username', name);
+        if (data.pollToken) setPollToken(data.pollToken);
         setStep('pending-approval');
         setError('');
       } else if (data?.requiresAccountPassword) {
