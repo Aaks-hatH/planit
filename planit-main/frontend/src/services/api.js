@@ -140,7 +140,10 @@ export const eventAPI = {
 
   // Waitlist
   joinWaitlist:  (eventId, data) => api.post(`/events/${eventId}/waitlist`, data),
-  checkApprovalStatus: (eventId, username) => api.get(`/events/${eventId}/approval-status`, { params: { username } }),
+  checkApprovalStatus: (eventId, username, pollToken) => api.get(`/events/${eventId}/approval-status`, {
+    params: { username },
+    ...(pollToken ? { headers: { 'X-Poll-Token': pollToken } } : {}),
+  }),
   getWaitlist:   (eventId)       => api.get(`/events/${eventId}/waitlist`),
   leaveWaitlist: (eventId, name) => api.delete(`/events/${eventId}/waitlist/${encodeURIComponent(name)}`),
 
