@@ -15,7 +15,8 @@ function realIp(req) {
     const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7, 47) : null;
     if (token) return `tok:${token}`;
     // Absolute last resort: let it through ungrouped
-    return `priv:${Math.random()}`;
+    // V-08 FIX: Use a FIXED internal bucket instead of random — random keys bypass rate limiting entirely
+    return 'internal:unknown';
   }
   return ip;
 }
