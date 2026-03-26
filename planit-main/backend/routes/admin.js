@@ -208,6 +208,15 @@ router.post(
         await redis.del(_failKey(ip, username)).catch(() => {});
       };
 
+      // ─── V-01 FIX: crash on default credentials in production ────────────
+      if (process.env.NODE_ENV === 'production') {
+        const _u = process.env.ADMIN_USERNAME || '';
+        const _p = process.env.ADMIN_PASSWORD || '';
+        if (!_u || !_p || _u === 'admin' || _p === 'admin123') {
+          console.error('[FATAL] ADMIN_USERNAME / ADMIN_PASSWORD must be set to non-default values in production.');
+          process.exit(1);
+        }
+      }
       const adminUsername = process.env.ADMIN_USERNAME || 'admin';
       const adminPassword = process.env.ADMIN_PASSWORD || 'admin123';
 
