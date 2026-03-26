@@ -30,7 +30,14 @@ const bcrypt     = require('bcryptjs');
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-const WL_SECRET = () => process.env.WL_LICENSE_SECRET || 'wl-dev-secret-change-in-prod';
+const WL_SECRET = () => {
+  const s = process.env.WL_LICENSE_SECRET;
+  if (!s && process.env.NODE_ENV === 'production') {
+    console.error('[FATAL] WL_LICENSE_SECRET not set in production!');
+    process.exit(1);
+  }
+  return s || 'wl-dev-secret-change-in-prod';
+};
 
 const TIER_PREFIX = { basic: 'BSC', pro: 'PRO', enterprise: 'ENT' };
 
