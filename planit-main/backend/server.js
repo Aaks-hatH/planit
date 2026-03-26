@@ -242,7 +242,10 @@ async function _isWLOrigin(origin) {
     return allowed;
   } catch (err) {
     console.error('[CORS] WL origin DB lookup failed:', err.message);
-    return true; // fail open — don’t lock out WL clients on a momentary DB blip
+    // V-02 FIX: Fail CLOSED on DB error. Stale cache or deny — never fail open.
+    const stale = _wlOriginCache.get(origin);
+    if (stale) return stale.allowed;
+    return false; // deny unknown origins when DB is unavailable
   }
 }
 
@@ -288,13 +291,19 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 // Health endpoints
 // --------------------------------------------------------------------------
 app.get('/api/health', (req, res) => {
+  // V-13 FIX: Internal details gated behind HEALTH_KEY header to prevent
+  // infrastructure enumeration (DB backend, Redis presence, storage config).
+  const internalKey = req.headers['x-health-key'];
+  const isInternal = internalKey && internalKey === process.env.HEALTH_KEY;
   res.json({
     status:    'ok',
     timestamp: new Date().toISOString(),
-    uptime:    process.uptime(),
-    mongodb:   mongoose.connection.readyState === 1 ? 'connected' : 'disconnected',
-    redis:     !!process.env.REDIS_URL,
-    features:  { cloudinaryStorage: !!process.env.CLOUDINARY_CLOUD_NAME, autoCleanup: true },
+    ...(isInternal ? {
+      uptime:  process.uptime(),
+      mongodb: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected',
+      redis:   !!process.env.REDIS_URL,
+      features: { cloudinaryStorage: !!process.env.CLOUDINARY_CLOUD_NAME, autoCleanup: true },
+    } : {}),
   });
 });
 
