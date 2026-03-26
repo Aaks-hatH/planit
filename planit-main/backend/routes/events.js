@@ -65,10 +65,20 @@ router.post('/',
         isPasswordProtected = true;
       }
 
-      // Tag with WL domain if the request originated from a custom domain.
-      // The frontend sends x-wl-domain when running on a WL host so events
-      // are scoped to that tenant's discovery feed.
-      const wlDomain = req.headers['x-wl-domain']?.toLowerCase().trim() || null;
+      // V-10 FIX: Validate x-wl-domain against actual WL record and request origin
+      let wlDomain = null;
+      const rawWlDomain = req.headers['x-wl-domain']?.toLowerCase().trim();
+      if (rawWlDomain) {
+        const origin = req.get('origin') || '';
+        try {
+          const originHost = origin ? new URL(origin).hostname : null;
+          if (originHost === rawWlDomain) {
+            const WhiteLabelModel = require('../models/WhiteLabel');
+            const wl = await WhiteLabelModel.findOne({ domain: rawWlDomain, status: { $in: ['active', 'trial'] } }, { _id: 1 }).lean();
+            if (wl) wlDomain = rawWlDomain;
+          }
+        } catch (_) {}
+      }
 
       const event = new Event({
         subdomain, title, description, date, location, organizerName, organizerEmail,
@@ -119,13 +129,15 @@ router.post('/',
 );
 
 // Get existing participant names for an event (for join gate dropdown)
-router.get('/participants/:eventId', async (req, res, next) => {
+// V-04 FIX: Require event access token; scrub roles from non-organizer tokens
+router.get('/participants/:eventId', verifyEventAccess, async (req, res, next) => {
   try {
     const participants = await EventParticipant.find({ eventId: req.params.eventId })
       .select('username hasPassword role')
       .sort({ lastSeenAt: -1 })
       .lean();
-    res.json({ participants: participants.map(p => ({ username: p.username, hasPassword: p.hasPassword, role: p.role })) });
+    const isOrganizer = req.eventAccess?.role === 'organizer' || req.eventAccess?.isAdminAccess;
+    res.json({ participants: participants.map(p => ({ username: p.username, hasPassword: p.hasPassword, role: isOrganizer ? p.role : undefined })) });
   } catch (error) { next(error); }
 });
 
@@ -294,7 +306,7 @@ router.post('/verify-password/:eventId', authLimiter, eventPasswordLimiter,
       const role = verifiedOrganizerByPassword ? 'organizer' : 'participant';
       const token = jwt.sign(
         { eventId: event._id.toString(), username, role },
-        secrets.jwt, { expiresIn: '7d' }
+        secrets.jwt, { expiresIn: '24h' } // V-09 FIX: was '7d' — 24h matches organizer token and reduces stolen-token window
       );
       res.json({ message: 'Access granted', token, event: { id: event._id, title: event.title } });
     } catch (error) { next(error); }
