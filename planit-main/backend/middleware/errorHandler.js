@@ -106,7 +106,8 @@ const errorHandler = (err, req, res, next) => {
     message: process.env.NODE_ENV === 'production' 
       ? (statusCode === 500 ? 'An unexpected error occurred.' : message)
       : message,
-    ...(process.env.NODE_ENV === 'development' && { stack: err.stack })
+    // V-16 FIX: Stack traces only in development — never expose internals in production
+    ...(process.env.NODE_ENV !== 'production' && { stack: err.stack })
   });
 };
 
