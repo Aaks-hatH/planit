@@ -25,12 +25,14 @@ const upload = multer({
     fileSize: 10 * 1024 * 1024, // 10MB limit
   },
   fileFilter: (req, file, cb) => {
+    // V-05 FIX: SVG removed — can contain <script> tags → stored XSS
+    // V-06 FIX: ZIP variants removed — zip bombs with no decompression safety
     const allowedMimes = [
       'image/jpeg',
       'image/png',
       'image/gif',
       'image/webp',
-      'image/svg+xml',
+      // 'image/svg+xml' REMOVED — SVGs execute JS in browser
       'application/pdf',
       'application/msword',
       'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
@@ -40,10 +42,7 @@ const upload = multer({
       'application/vnd.openxmlformats-officedocument.presentationml.presentation',
       'text/plain',
       'text/csv',
-      'application/zip',
-      'application/x-zip-compressed',
-      'application/x-zip',
-      'multipart/x-zip',
+      // ZIP variants REMOVED — zip bombs risk
     ];
     if (allowedMimes.includes(file.mimetype)) {
       cb(null, true);
@@ -52,6 +51,20 @@ const upload = multer({
     }
   }
 });
+
+// V-07 FIX: Magic byte map — validate actual file contents match declared MIME
+const MAGIC_BYTES = {
+  'image/jpeg': [[0xFF, 0xD8, 0xFF]],
+  'image/png':  [[0x89, 0x50, 0x4E, 0x47]],
+  'image/gif':  [[0x47, 0x49, 0x46, 0x38]],
+  'image/webp': [[0x52, 0x49, 0x46, 0x46]],
+  'application/pdf': [[0x25, 0x50, 0x44, 0x46]],
+};
+function checkMagicBytes(buffer, declaredMime) {
+  const patterns = MAGIC_BYTES[declaredMime];
+  if (!patterns) return true; // Office docs: complex magic, defer to Cloudinary
+  return patterns.some(magic => magic.every((byte, i) => buffer[i] === byte));
+}
 
 // Upload buffer to Cloudinary via a temporary file on disk.
 //
@@ -85,7 +98,8 @@ const uploadToCloudinary = async (buffer, filename) => {
     const result = await cloudinary.uploader.upload(tmpPath, {
       folder: 'planit-events',
       resource_type: 'auto', // Let Cloudinary detect type — avoids client-side validation errors
-      public_id: `${Date.now()}-${safeName}`,
+      // V-15 FIX: Add crypto random suffix so IDs are not predictable/enumerable
+      public_id: `${Date.now()}-${require('crypto').randomBytes(6).toString('hex')}-${safeName}`,
       secure: true,
     });
     return result;
@@ -152,6 +166,14 @@ router.post('/:eventId/upload',
       const scanResult = scanUpload(req.file);
       if (!scanResult.ok) {
         return res.status(400).json({ error: 'File rejected', message: scanResult.reason });
+      }
+
+      // V-07 FIX: Validate magic bytes match declared MIME type (catches MIME spoofing)
+      if (!checkMagicBytes(req.file.buffer, req.file.mimetype)) {
+        return res.status(400).json({
+          error: 'File rejected',
+          message: 'File contents do not match the declared file type.',
+        });
       }
 
       const cloudinaryResult = await uploadToCloudinary(
