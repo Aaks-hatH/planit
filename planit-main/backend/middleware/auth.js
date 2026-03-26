@@ -300,9 +300,13 @@ const verifyAdmin = async (req, res, next) => {
         }
       }
     } catch (redisErr) {
-      // Redis unavailable — fail OPEN to avoid locking everyone out on Redis downtime.
-      // Log the error so ops can investigate.
-      console.error('[auth] Redis revocation check failed (fail-open):', redisErr.message);
+      // V-03 FIX: Fail CLOSED — a brief Redis blip temporarily locks everyone out
+      // rather than permanently granting access to revoked (suspended/deleted) sessions.
+      console.error('[auth] Redis revocation check failed (fail-CLOSED):', redisErr.message);
+      return res.status(503).json({
+        error: 'Authentication service temporarily unavailable. Please try again in a moment.',
+        retryAfter: 10,
+      });
     }
   }
 
