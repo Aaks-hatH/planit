@@ -568,6 +568,15 @@ export default function Status() {
 
   const fetchUptimeHistory = useCallback(async () => {
     try {
+      // Try backend first — it includes admin overrides persisted in MongoDB
+      const res = await uptimeAPI.getServerHistory();
+      if (res?.data) {
+        // Shape matches watchdog: { services: { "Iceman": { days: [...], uptimePct: X } } }
+        setUptimeHistory(res.data);
+        return;
+      }
+    } catch { /* fall through to watchdog */ }
+    try {
       const res = await watchdogAPI.getUptimeHistory();
       if (res?.data) setUptimeHistory(res.data);
     } catch { /* leave stale */ }
