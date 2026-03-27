@@ -525,6 +525,14 @@ connectDB().then(async () => {
     console.log(`  CORS Origin: ${process.env.CORS_ORIGIN || 'http://localhost:5173'}`);
     console.log(`  Storage:     ${process.env.CLOUDINARY_CLOUD_NAME ? 'Cloudinary' : 'Local'}`);
     console.log(`  Redis:       ${process.env.REDIS_URL ? 'Adapter active' : 'In-memory'}`);
+    // One-time credential check at startup — informational only, never exits
+    const _au = (process.env.ADMIN_USERNAME || '').trim();
+    const _ap = (process.env.ADMIN_PASSWORD || '').trim();
+    if (!_au || !_ap || _au === 'admin' || _ap === 'admin123') {
+      console.log(`  Admin creds: ⚠  using defaults — set ADMIN_USERNAME / ADMIN_PASSWORD`);
+    } else {
+      console.log(`  Admin creds: ✓  configured`);
+    }
     console.log('='.repeat(70));
     setTimeout(announceToRouter, 4000);
   });
