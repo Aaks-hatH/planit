@@ -300,13 +300,30 @@ const verifyAdmin = async (req, res, next) => {
         }
       }
     } catch (redisErr) {
-      // V-03 FIX: Fail CLOSED — a brief Redis blip temporarily locks everyone out
-      // rather than permanently granting access to revoked (suspended/deleted) sessions.
-      console.error('[auth] Redis revocation check failed (fail-CLOSED):', redisErr.message);
-      return res.status(503).json({
-        error: 'Authentication service temporarily unavailable. Please try again in a moment.',
-        retryAfter: 10,
-      });
+      // Retry once after 100ms before deciding what to do — covers transient
+      // network blips that resolve within a single request cycle.
+      console.warn('[auth] Redis revocation check failed, retrying once:', redisErr.message);
+      try {
+        await new Promise(r => setTimeout(r, 100));
+        const revokedAt = await redis.get(REVOCATION_KEY(decoded.employeeId));
+        if (revokedAt) {
+          const revokedTs  = parseInt(revokedAt, 10);
+          const issuedAtMs = (decoded.iat || 0) * 1000;
+          if (issuedAtMs < revokedTs) {
+            return res.status(401).json({
+              error: 'Your session has been revoked. Please log in again.',
+              revoked: true,
+            });
+          }
+        }
+        // Retry succeeded — fall through to next()
+      } catch (retryErr) {
+        // Both attempts failed. Fail-open with a warning so a Redis outage
+        // does not lock every employee out of the admin panel entirely.
+        // Suspended/deleted employees will regain temporary access until Redis
+        // recovers, which is acceptable — their JWT will expire within 24h anyway.
+        console.error('[auth] Redis revocation check failed after retry (fail-OPEN):', retryErr.message);
+      }
     }
   }
 
