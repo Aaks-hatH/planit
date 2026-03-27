@@ -463,6 +463,635 @@ router.get('/public', async (req, res, next) => {
 });
 
 // Get full event details (authenticated)
+
+// ─── Public / unauthenticated routes ─────────────────────────────────────────
+// MUST be defined before the /:eventId wildcard route
+
+async function findWaitEvent(subdomainOrId, selectFields) {
+  const isObjectId = mongoose.Types.ObjectId.isValid(subdomainOrId);
+  const query = isObjectId
+    ? Event.findById(subdomainOrId)
+    : Event.findOne({ subdomain: subdomainOrId });
+  return query.select(selectFields).lean();
+}
+
+// GET /public/wait/:subdomain/info — static venue branding (infrequent)
+router.get('/public/wait/:subdomain/info', availabilityLimiter, async (req, res, next) => {
+  try {
+    const event = await findWaitEvent(
+      req.params.subdomain,
+      'title isTableServiceMode tableServiceSettings reservationPageSettings'
+    );
+    if (!event || !event.isTableServiceMode) return res.status(404).json({ error: 'Not found' });
+    const tss = event.tableServiceSettings  || {};
+    const rps = event.reservationPageSettings || {};
+    res.json({
+      name:             tss.restaurantName || event.title || '',
+      logoUrl:          rps.logoUrl || '',
+      accentColor:      rps.accentColor || '#f97316',
+      tagline:          rps.headerTagline || '',
+      waitBoardTitle:   rps.waitBoardTitle || '',
+      waitBoardMessage: rps.waitBoardMessage || '',
+      showPoweredBy:    rps.showPoweredBy !== false,
+      walkInOnlyMode:   rps.walkInOnlyMode || false,
+      publicWaitBoardEnabled: rps.publicWaitBoardEnabled !== false,
+    });
+  } catch (err) { next(err); }
+});
+
+// GET /public/wait/:subdomain/live — live data (polled every 20s)
+router.get('/public/wait/:subdomain/live', availabilityLimiter, async (req, res, next) => {
+  try {
+    const event = await findWaitEvent(
+      req.params.subdomain,
+      'title isTableServiceMode tableServiceSettings reservationPageSettings seatingMap tableStates tableServiceWaitlist'
+    );
+    if (!event || !event.isTableServiceMode) return res.status(404).json({ error: 'Not found' });
+
+    const tss     = event.tableServiceSettings    || {};
+    const rps     = event.reservationPageSettings || {};
+    const objects = event.seatingMap?.objects || [];
+    const states  = event.tableStates || [];
+    const waitlist = (event.tableServiceWaitlist || []).filter(w => w.status === 'waiting' || w.status === 'notified');
+
+    // Table stats — prefer seating map objects; fall back to tableStates if no
+    // floor plan has been drawn yet so the board shows real occupancy data.
+    const tables = objects.filter(o => o.type !== 'zone');
+    let tableStats;
+    if (tables.length > 0) {
+      tableStats = {
+        total:     tables.length,
+        available: tables.filter(t => { const s = states.find(st => st.tableId === t.id); return !s || s.status === 'available'; }).length,
+        occupied:  tables.filter(t => { const s = states.find(st => st.tableId === t.id); return s?.status === 'occupied'; }).length,
+        reserved:  tables.filter(t => { const s = states.find(st => st.tableId === t.id); return s?.status === 'reserved'; }).length,
+        cleaning:  tables.filter(t => { const s = states.find(st => st.tableId === t.id); return s?.status === 'cleaning'; }).length,
+      };
+    } else if (states.length > 0) {
+      // No seating map yet — derive stats from tableStates
+      const activeStates = states.filter(s => s.status !== 'unavailable');
+      tableStats = {
+        total:     activeStates.length,
+        available: activeStates.filter(s => !s.status || s.status === 'available').length,
+        occupied:  activeStates.filter(s => s.status === 'occupied').length,
+        reserved:  activeStates.filter(s => s.status === 'reserved').length,
+        cleaning:  activeStates.filter(s => s.status === 'cleaning').length,
+      };
+    } else {
+      tableStats = { total: 0, available: 0, occupied: 0, reserved: 0, cleaning: 0 };
+    }
+
+    // Is the venue currently open?
+    // Accept optional ?tz= (IANA timezone) from the client so the check uses the
+    // restaurant's local wall-clock time rather than the server's UTC clock.
+    let isOpen = true;
+    if (tss.operatingHoursOpen && tss.operatingHoursClose) {
+      try {
+        const tz = req.query.tz || 'UTC';
+        const now = new Date();
+        const localTimeStr = now.toLocaleTimeString('en-GB', { timeZone: tz, hour: '2-digit', minute: '2-digit', hour12: false });
+        const [lh, lm]  = localTimeStr.split(':').map(Number);
+        const nowMin    = lh * 60 + lm;
+        const [oh, om]  = tss.operatingHoursOpen.split(':').map(Number);
+        const [ch, cm]  = tss.operatingHoursClose.split(':').map(Number);
+        const openMin   = oh * 60 + om;
+        const closeMin  = ch * 60 + cm;
+        // Handle overnight spans (e.g. open 22:00, close 02:00)
+        if (closeMin > openMin) {
+          isOpen = nowMin >= openMin && nowMin < closeMin;
+        } else {
+          isOpen = nowMin >= openMin || nowMin < closeMin;
+        }
+      } catch (_) { isOpen = true; }
+    }
+
+    // Strip phones from public waitlist
+    const publicWaitlist = waitlist.map(w => ({
+      id:        w.id,
+      partyName: w.partyName,
+      partySize: w.partySize,
+      status:    w.status,
+      addedAt:   w.addedAt,
+    }));
+
+    res.json({
+      waitTimes:  calcWaitTimes(objects, states, tss, waitlist),
+      tableStats,
+      waitlist:   publicWaitlist,
+      isOpen,
+      queueLength: waitlist.length,
+      name:        tss.restaurantName || event.title || '',
+      logoUrl:     rps.logoUrl || '',
+      accentColor: rps.accentColor || '#f97316',
+      tagline:     rps.headerTagline || '',
+      waitBoardTitle:   rps.waitBoardTitle || '',
+      waitBoardMessage: rps.waitBoardMessage || '',
+      menus:            rps.menus || [],
+    });
+  } catch (err) { next(err); }
+});
+
+// POST /public/wait/:subdomain/join — public join waitlist (no auth)
+router.post('/public/wait/:subdomain/join', availabilityLimiter, async (req, res, next) => {
+  try {
+    const { partyName, partySize, phone } = req.body;
+    if (!partyName?.trim()) return res.status(400).json({ error: 'Party name is required' });
+    const sz = parseInt(partySize);
+    if (!sz || sz < 1 || sz > 50) return res.status(400).json({ error: 'Invalid party size' });
+
+    const isObjectId = mongoose.Types.ObjectId.isValid(req.params.subdomain);
+    const eventDoc = isObjectId
+      ? await Event.findById(req.params.subdomain).select('isTableServiceMode tableServiceSettings reservationPageSettings tableServiceWaitlist')
+      : await Event.findOne({ subdomain: req.params.subdomain }).select('isTableServiceMode tableServiceSettings reservationPageSettings tableServiceWaitlist');
+    if (!eventDoc || !eventDoc.isTableServiceMode) return res.status(404).json({ error: 'Not found' });
+
+    const rps = eventDoc.reservationPageSettings || {};
+    if (rps.publicWaitBoardEnabled === false) return res.status(403).json({ error: 'Wait board not active' });
+
+    const entry = {
+      id:        require('crypto').randomUUID(),
+      partyName: partyName.trim().slice(0, 80),
+      partySize: sz,
+      phone:     (phone || '').trim().slice(0, 30),
+      notes:     '',
+      addedAt:   new Date(),
+      status:    'waiting',
+      source:    'public_board',
+    };
+    if (!eventDoc.tableServiceWaitlist) eventDoc.tableServiceWaitlist = [];
+    eventDoc.tableServiceWaitlist.push(entry);
+    await eventDoc.save();
+
+    res.status(201).json({ success: true, entry });
+  } catch (err) { next(err); }
+});
+
+
+
+
+
+// ── UTILITIES ─────────────────────────────────────────────────────────────
+
+
+// Get invite by code (public)
+router.get('/invite/:inviteCode', async (req, res, next) => {
+  try {
+    const Invite = require('../models/Invite');
+    const invite = await Invite.findOne({ inviteCode: req.params.inviteCode });
+    if (!invite) return res.status(404).json({ error: 'Invite not found' });
+    
+    const event = await Event.findById(invite.eventId);
+    if (!event) return res.status(404).json({ error: 'Event not found' });
+    
+    res.json({ 
+      invite: {
+        code: invite.inviteCode,
+        inviteCode: invite.inviteCode,
+        guestName: invite.guestName,
+        guestEmail: invite.guestEmail,
+        guestPhone: invite.guestPhone,
+        adults: invite.adults,
+        children: invite.children,
+        groupSize: invite.groupSize,
+        plusOnes: invite.plusOnes,
+        checkedIn: invite.checkedIn,
+        checkedInAt: invite.checkedInAt,
+        status: invite.status,
+        notes: invite.notes,
+        email: invite.guestEmail
+      },
+      event: {
+        id: event._id,
+        title: event.title,
+        date: event.date,
+        location: event.location,
+        description: event.description,
+        organizerName: event.organizerName,
+        timezone: event.timezone || 'UTC'
+      }
+    });
+  } catch (error) { next(error); }
+});
+
+// ─── GET /invite/:inviteCode/qr.svg ──────────────────────────────────────────
+// Returns a branded PlanIt QR card for a specific guest invite.
+// No auth required — the invite code IS the credential (same as the invite page).
+// Matches the dark-card aesthetic of the event QR already used in EventSpace.
+router.get('/invite/:inviteCode/qr.svg', async (req, res, next) => {
+  try {
+    const QRCode = require('qrcode');
+    const Invite = require('../models/Invite');
+    const invite = await Invite.findOne({ inviteCode: req.params.inviteCode.toUpperCase() }).lean();
+    if (!invite) return res.status(404).send('Invite not found');
+
+    const event = await Event.findById(invite.eventId).select('title').lean();
+    if (!event) return res.status(404).send('Event not found');
+
+    // Use FRONTEND_URL - req.get('host') behind Render proxy returns backend hostname, not the frontend
+    const frontendBase = (process.env.FRONTEND_URL || process.env.BASE_DOMAIN || '').replace(/\/$/, '');
+    const inviteUrl = frontendBase
+      ? `${frontendBase}/invite/${invite.inviteCode}`
+      : `${req.protocol}://${req.get('host')}/invite/${invite.inviteCode}`;
+
+    // Clean QR - no center overlay. BarcodeDetector rejects QRs with anything layered on top.
+    // PLANIT branding goes below the QR area instead.
+    const dataUrl = await QRCode.toDataURL(inviteUrl, {
+      width: 260,
+      margin: 2,
+      color: { dark: '#000000', light: '#ffffff' },
+      errorCorrectionLevel: 'M',
+    });
+
+    const safeTitle    = (event.title || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').slice(0, 30);
+    const safeName     = (invite.guestName || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').slice(0, 28);
+    const safeCode     = invite.inviteCode.replace(/[^A-Z0-9]/g, '');
+
+    const W = 300, H = 430;
+    const QX = 20, QY = 20, QS = 260;
+
+    const svg = `<svg width="${W}" height="${H}" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+  <defs>
+    <filter id="glow" x="-5%" y="-5%" width="110%" height="110%">
+      <feDropShadow dx="0" dy="4" stdDeviation="10" flood-color="#000" flood-opacity="0.55"/>
+    </filter>
+    <clipPath id="qrclip"><rect x="${QX}" y="${QY}" width="${QS}" height="${QS}" rx="10"/></clipPath>
+  </defs>
+  <rect width="${W}" height="${H}" rx="20" fill="#0a0a0a" filter="url(#glow)"/>
+  <rect x="${QX - 4}" y="${QY - 4}" width="${QS + 8}" height="${QS + 8}" rx="14" fill="#ffffff"/>
+  <image x="${QX}" y="${QY}" width="${QS}" height="${QS}" href="${dataUrl}" clip-path="url(#qrclip)"/>
+  <line x1="20" y1="${QY + QS + 18}" x2="${W - 20}" y2="${QY + QS + 18}" stroke="#1f1f1f" stroke-width="1"/>
+  <text x="${W / 2}" y="${QY + QS + 40}" text-anchor="middle"
+        fill="#ffffff" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif"
+        font-size="13" font-weight="800" letter-spacing="5">PLANIT</text>
+  <text x="${W / 2}" y="${QY + QS + 62}" text-anchor="middle"
+        fill="#e5e5e5" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif"
+        font-size="12" font-weight="600">${safeTitle}</text>
+  <text x="${W / 2}" y="${QY + QS + 80}" text-anchor="middle"
+        fill="#888" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif"
+        font-size="11">${safeName}</text>
+  <text x="${W / 2}" y="${QY + QS + 100}" text-anchor="middle"
+        fill="#444" font-family="'Courier New',Courier,monospace"
+        font-size="11" font-weight="700" letter-spacing="3">${safeCode}</text>
+</svg>`;
+
+    res.setHeader('Content-Type', 'image/svg+xml');
+    res.setHeader('Cache-Control', 'public, max-age=86400');
+    res.send(svg);
+  } catch (err) { next(err); }
+});
+
+
+// ── GET /public/reserve/:subdomain ────────────────────────────────────────────
+// Returns public restaurant info and reservation config.
+router.get('/public/reserve/:subdomain', availabilityLimiter, async (req, res, next) => {
+  try {
+    const event = await Event.findOne({ subdomain: req.params.subdomain })
+      .select('title isTableServiceMode tableServiceSettings reservationPageSettings seatingMap tableStates tableServiceWaitlist')
+      .lean();
+    if (!event) return res.status(404).json({ error: 'Not found' });
+    if (!event.isTableServiceMode) return res.status(404).json({ error: 'Reservation pages are only available for restaurant events.' });
+
+    const rps = event.reservationPageSettings || {};
+    const tss = event.tableServiceSettings   || {};
+
+    // Live wait times per common party sizes (1-2, 3-4, 5-8)
+    let waitTimes = null;
+    if (rps.showLiveWaitTime !== false) {
+      try {
+        const objects = event.seatingMap?.objects || [];
+        const states  = event.tableStates || [];
+        const activeWait = (event.tableServiceWaitlist || []).filter(w => w.status === 'waiting' || w.status === 'notified');
+        waitTimes = calcWaitTimes(objects, states, tss, activeWait);
+      } catch (wtErr) {
+        console.error('[reserve] calcWaitTimes failed for', req.params.subdomain, wtErr.message);
+        // Non-fatal — proceed without wait time data rather than 500ing the whole page
+      }
+    }
+
+    res.json({
+      name:             tss.restaurantName || event.title,
+      tagline:          rps.headerTagline || '',
+      description:      rps.publicDescription || '',
+      cuisine:          rps.cuisine || '',
+      priceRange:       rps.priceRange || '',
+      dressCode:        rps.dressCode || '',
+      parkingInfo:      rps.parkingInfo || '',
+      accessibilityInfo:rps.accessibilityInfo || '',
+      address:          rps.address || '',
+      phone:            rps.phone || '',
+      websiteUrl:       rps.websiteUrl || '',
+      instagramHandle:  rps.instagramHandle || '',
+      facebookUrl:      rps.facebookUrl || '',
+      googleMapsUrl:    rps.googleMapsUrl || '',
+      heroImageUrl:     rps.heroImageUrl || '',
+      logoUrl:          rps.logoUrl || '',
+      accentColor:      rps.accentColor || '#f97316',
+      backgroundStyle:  rps.backgroundStyle || 'dark',
+      fontStyle:        rps.fontStyle || 'modern',
+      announcementBanner:        rps.announcementBannerEnabled ? rps.announcementBanner : '',
+      announcementBannerColor:   rps.announcementBannerColor || '#f59e0b',
+      operatingHoursOpen:  tss.operatingHoursOpen  || '11:00',
+      operatingHoursClose: tss.operatingHoursClose || '22:00',
+      operatingDays:    rps.operatingDays || {},
+      blackoutDates:    (rps.blackoutDates || []).filter(Boolean).map(b => b.date).filter(Boolean),
+      acceptingReservations: rps.acceptingReservations || false,
+      confirmationMode:      rps.confirmationMode || 'auto_confirm',
+      slotIntervalMinutes:   rps.slotIntervalMinutes || 30,
+      maxAdvanceDays:        rps.maxAdvanceDays || 30,
+      minAdvanceHours:       rps.minAdvanceHours ?? 1,
+      maxPartySizePublic:    rps.maxPartySizePublic || 12,
+      minPartySizePublic:    rps.minPartySizePublic || 1,
+      requirePhone:          rps.requirePhone !== false,
+      requireEmail:          rps.requireEmail || false,
+      allowSpecialRequests:  rps.allowSpecialRequests !== false,
+      allowDietaryNeeds:     rps.allowDietaryNeeds !== false,
+      allowOccasionSelect:   rps.allowOccasionSelect !== false,
+      occasionOptions:       rps.occasionOptions?.length ? rps.occasionOptions : ['Birthday','Anniversary','Business Dinner','Date Night','Family Gathering','Other'],
+      showLiveWaitTime:      rps.showLiveWaitTime !== false,
+      showAvailabilityStatus:rps.showAvailabilityStatus !== false,
+      showTableCount:        rps.showTableCount || false,
+      availabilityDisplayMode: rps.availabilityDisplayMode || 'slots',
+      confirmationMessage:   rps.confirmationMessage || '',
+      depositRequired:       rps.depositRequired || false,
+      depositAmount:         rps.depositAmount || 0,
+      depositNote:           rps.depositNote || '',
+      cancellationPolicy:    rps.cancellationPolicy || '',
+      cancelCutoffHours:     rps.cancelCutoffHours || 2,
+      faqItems:              rps.faqItems || [],
+      menus:                 rps.menus || [],
+      walkInOnlyMode:        rps.walkInOnlyMode || false,
+      termsUrl:              rps.termsUrl || '',
+      privacyUrl:            rps.privacyUrl || '',
+      showPoweredBy:         rps.showPoweredBy !== false,
+      metaTitle:             rps.metaTitle || '',
+      metaDescription:       rps.metaDescription || '',
+      waitTimes,
+    });
+  } catch (err) { next(err); }
+});
+
+// ── GET /public/reserve/:subdomain/availability ────────────────────────────────
+// ?date=YYYY-MM-DD&partySize=N
+router.get('/public/reserve/:subdomain/availability', availabilityLimiter, async (req, res, next) => {
+  try {
+    const { date, partySize, tz } = req.query;
+    if (!date || !partySize) return res.status(400).json({ error: 'date and partySize required' });
+
+    const sz = parseInt(partySize);
+    if (isNaN(sz) || sz < 1 || sz > 100) return res.status(400).json({ error: 'Invalid party size' });
+
+    const event = await Event.findOne({ subdomain: req.params.subdomain })
+      .select('isTableServiceMode tableServiceSettings reservationPageSettings seatingMap restaurantReservations')
+      .lean();
+    if (!event || !event.isTableServiceMode) return res.status(404).json({ error: 'Not found' });
+
+    const rps = event.reservationPageSettings || {};
+    if (!rps.acceptingReservations) return res.json({ slots: [], closed: true });
+
+    // Blackout / day closed
+    const dayKey = getDayKey(date + 'T12:00:00');
+    const dayConfig = rps.operatingDays?.[dayKey];
+    if (dayConfig && dayConfig.open === false) return res.json({ slots: [], closed: true });
+    if ((rps.blackoutDates || []).some(b => b.date === date)) {
+      return res.json({ slots: [], closed: true, reason: 'Closed this date' });
+    }
+
+    // Max per day cap
+    const maxPerDay = rps.maxReservationsPerDay || 0;
+    if (maxPerDay > 0) {
+      const dayStart = tz ? wallClockToUTC(date, '00:00', tz) : new Date(date + 'T00:00:00');
+      const dayEnd   = tz ? wallClockToUTC(date, '23:59', tz) : new Date(date + 'T23:59:59');
+      const dayCount = (event.restaurantReservations || []).filter(r =>
+        (r.status === 'confirmed' || r.status === 'pending') &&
+        new Date(r.dateTime) >= dayStart && new Date(r.dateTime) <= dayEnd
+      ).length;
+      if (dayCount >= maxPerDay) return res.json({ slots: [], closed: true, reason: 'Fully booked for this day' });
+    }
+
+    const slots = computeAvailability(date, sz, event, tz);
+    res.json({ slots });
+  } catch (err) { next(err); }
+});
+
+// ── POST /public/reserve/:subdomain ───────────────────────────────────────────
+// Create a public reservation. Rate limited.
+router.post('/public/reserve/:subdomain', reservationLimiter, async (req, res, next) => {
+  try {
+    const { partyName, partySize, phone, email, date, timeSlot, occasion, specialRequests, dietaryNeeds, tz } = req.body;
+
+    if (!partyName?.trim()) return res.status(400).json({ error: 'Name is required' });
+    if (!partySize || partySize < 1) return res.status(400).json({ error: 'Party size is required' });
+    if (!date || !timeSlot) return res.status(400).json({ error: 'Date and time are required' });
+
+    const event = await Event.findOne({ subdomain: req.params.subdomain })
+      .select('+restaurantReservations tableServiceSettings reservationPageSettings seatingMap isTableServiceMode');
+    if (!event || !event.isTableServiceMode) return res.status(404).json({ error: 'Not found' });
+
+    const rps = event.reservationPageSettings || {};
+    if (!rps.acceptingReservations) return res.status(403).json({ error: 'Online reservations are not currently being accepted.' });
+
+    if (rps.requirePhone && !phone?.trim()) return res.status(400).json({ error: 'Phone number is required' });
+    if (rps.requireEmail && !email?.trim()) return res.status(400).json({ error: 'Email address is required' });
+
+    const sz = parseInt(partySize);
+    if (sz < (rps.minPartySizePublic || 1)) return res.status(400).json({ error: `Minimum party size is ${rps.minPartySizePublic || 1}` });
+    if (sz > (rps.maxPartySizePublic || 12)) return res.status(400).json({ error: `Maximum party size for online bookings is ${rps.maxPartySizePublic || 12}` });
+
+    // Build datetime in guest's local timezone → store as correct UTC
+    const dateTime = tz ? wallClockToUTC(date, timeSlot, tz) : new Date(`${date}T${timeSlot}:00`);
+    if (isNaN(dateTime.getTime())) return res.status(400).json({ error: 'Invalid date/time' });
+
+    // Min advance check
+    const minAdvanceMs = (rps.minAdvanceHours ?? 1) * 3600000;
+    if (dateTime.getTime() - Date.now() < minAdvanceMs) {
+      return res.status(400).json({ error: `Reservations must be made at least ${rps.minAdvanceHours ?? 1} hour(s) in advance` });
+    }
+
+    // Max advance check
+    const maxAdvanceMs = (rps.maxAdvanceDays || 30) * 86400000;
+    if (dateTime.getTime() - Date.now() > maxAdvanceMs) {
+      return res.status(400).json({ error: `Reservations can only be made up to ${rps.maxAdvanceDays || 30} days in advance` });
+    }
+
+    // Re-check availability
+    const slots = computeAvailability(date, sz, event, tz);
+    const targetSlot = slots.find(s => s.time === timeSlot);
+    if (!targetSlot || targetSlot.status === 'full') {
+      return res.status(409).json({ error: 'This time slot is no longer available. Please choose another time.' });
+    }
+
+    // Per-day cap re-check
+    const maxPerDay = rps.maxReservationsPerDay || 0;
+    if (maxPerDay > 0) {
+      const dayStart = tz ? wallClockToUTC(date, '00:00', tz) : new Date(date + 'T00:00:00');
+      const dayEnd   = tz ? wallClockToUTC(date, '23:59', tz) : new Date(date + 'T23:59:59');
+      const dayCount = event.restaurantReservations.filter(r =>
+        (r.status === 'confirmed' || r.status === 'pending') &&
+        new Date(r.dateTime) >= dayStart && new Date(r.dateTime) <= dayEnd
+      ).length;
+      if (dayCount >= maxPerDay) return res.status(409).json({ error: 'Sorry, this day is now fully booked.' });
+    }
+
+    // Generate tokens
+    const resId      = `res_${Date.now().toString(36)}_${crypto.randomBytes(4).toString('hex')}`;
+    const qrToken    = crypto.randomBytes(24).toString('hex');
+    const cancelToken= crypto.randomBytes(24).toString('hex');
+
+    const tss = event.tableServiceSettings || {};
+    const qrExpiryMin = tss.reservationQrExpiryMinutes || 45;
+    const qrExpiresAt = new Date(dateTime.getTime() + qrExpiryMin * 60000);
+
+    const status = (rps.confirmationMode === 'manual') ? 'pending' : 'confirmed';
+
+    const reservation = {
+      id:              resId,
+      partyName:       partyName.trim(),
+      partySize:       sz,
+      phone:           phone?.trim() || '',
+      email:           email?.trim() || '',
+      dateTime,
+      tableId:         null,
+      qrToken,
+      qrExpiresAt,
+      cancelToken,
+      status,
+      source:          'public',
+      occasion:        occasion || '',
+      specialRequests: specialRequests?.trim() || '',
+      dietaryNeeds:    dietaryNeeds?.trim() || '',
+      notes:           '',
+      createdAt:       new Date(),
+    };
+
+    // Use findOneAndUpdate + $push to avoid Mongoose 8 partial-select validation errors
+    // (event was fetched with .select() so required fields like title/subdomain are absent
+    //  from the in-memory doc — calling event.save() throws ValidationError on those paths)
+    await Event.findOneAndUpdate(
+      { subdomain: req.params.subdomain },
+      { $push: { restaurantReservations: reservation }, $set: { keepForever: true } },
+      { runValidators: false }
+    );
+
+    // Fire confirmation email non-blocking
+    if (rps.sendConfirmationEmail !== false && email?.trim()) {
+      try {
+        const { sendReservationConfirmation } = require('../services/emailService');
+        sendReservationConfirmation(event, reservation).catch(() => {});
+      } catch (_) {}
+    }
+
+    const cancelUrl = `${process.env.FRONTEND_URL || 'https://planit.events'}/reserve/cancel/${cancelToken}`;
+
+    res.status(201).json({
+      reservationId: resId,
+      status,
+      partyName:     reservation.partyName,
+      partySize:     reservation.partySize,
+      dateTime:      reservation.dateTime,
+      qrToken,
+      qrExpiresAt,
+      cancelToken,   // frontend redirects to /reservation/:cancelToken ticket page
+      cancelUrl,
+      confirmationMessage: rps.confirmationMessage || '',
+      depositRequired:     rps.depositRequired || false,
+      depositAmount:       rps.depositAmount || 0,
+      depositNote:         rps.depositNote || '',
+      isPending: status === 'pending',
+    });
+  } catch (err) { next(err); }
+});
+
+
+// ── GET /public/reserve/confirmation/:cancelToken ────────────────────────────
+// Returns reservation details for the guest confirmation/ticket page.
+// Uses cancelToken (sent in POST response) — safe to expose publicly.
+router.get('/public/reserve/confirmation/:cancelToken', availabilityLimiter, async (req, res, next) => {
+  try {
+    const { cancelToken } = req.params;
+    if (!cancelToken || cancelToken.length < 10) return res.status(400).json({ error: 'Invalid token' });
+
+    const event = await Event.findOne({
+      isTableServiceMode: true,
+      'restaurantReservations.cancelToken': cancelToken,
+    }).select('title subdomain restaurantReservations reservationPageSettings');
+
+    if (!event) return res.status(404).json({ error: 'Reservation not found.' });
+
+    const r = event.restaurantReservations.find(x => x.cancelToken === cancelToken);
+    if (!r) return res.status(404).json({ error: 'Reservation not found.' });
+
+    const rps = event.reservationPageSettings || {};
+
+    res.json({
+      restaurantName: event.title,
+      subdomain: event.subdomain,
+      accentColor: rps.accentColor || '#f97316',
+      logoUrl: rps.logoUrl || '',
+      address: rps.address || '',
+      phone: rps.phone || '',
+      reservation: {
+        id: r.id,
+        partyName: r.partyName,
+        partySize: r.partySize,
+        dateTime: r.dateTime,
+        status: r.status,
+        qrToken: r.qrToken,
+        qrExpiresAt: r.qrExpiresAt,
+        occasion: r.occasion || '',
+        specialRequests: r.specialRequests || '',
+        dietaryNeeds: r.dietaryNeeds || '',
+      },
+      cancelUrl: `${process.env.FRONTEND_URL || 'https://planit.events'}/reservation/${cancelToken}`,
+      confirmationMessage: rps.confirmationMessage || '',
+      cancelCutoffHours: rps.cancelCutoffHours || 2,
+    });
+  } catch (err) { next(err); }
+});
+
+// ── DELETE /public/reserve/cancel/:cancelToken ────────────────────────────────
+// Self-service cancellation via the token in the confirmation email.
+router.delete('/public/reserve/cancel/:cancelToken', reservationLimiter, async (req, res, next) => {
+  try {
+    const { cancelToken } = req.params;
+    if (!cancelToken || cancelToken.length < 10) return res.status(400).json({ error: 'Invalid cancel token' });
+
+    // Search across all table-service events for this token
+    const event = await Event.findOne({
+      isTableServiceMode: true,
+      'restaurantReservations.cancelToken': cancelToken,
+    });
+    if (!event) return res.status(404).json({ error: 'Reservation not found or already cancelled.' });
+
+    const res_ = event.restaurantReservations.find(r => r.cancelToken === cancelToken);
+    if (!res_) return res.status(404).json({ error: 'Reservation not found.' });
+    if (res_.status === 'cancelled') return res.status(400).json({ error: 'This reservation is already cancelled.' });
+    if (res_.status === 'seated') return res.status(400).json({ error: 'This reservation cannot be cancelled — the party is already seated.' });
+
+    const rps = event.reservationPageSettings || {};
+    const cutoffMs = (rps.cancelCutoffHours || 2) * 3600000;
+    if (new Date(res_.dateTime).getTime() - Date.now() < cutoffMs) {
+      return res.status(403).json({
+        error: `Reservations can only be cancelled at least ${rps.cancelCutoffHours || 2} hour(s) before the booking time. Please call us directly.`,
+        phone: rps.phone || '',
+      });
+    }
+
+    res_.status = 'cancelled';
+    await event.save();
+
+    // Notify organizer
+    if (rps.notifyOrganizerOnCancel && rps.notifyOrganizerEmail) {
+      try {
+        const { sendReservationCancellation } = require('../services/emailService');
+        sendReservationCancellation(event, res_).catch(() => {});
+      } catch (_) {}
+    }
+
+    res.json({ success: true, message: 'Your reservation has been cancelled.' });
+  } catch (err) { next(err); }
+});
+
+// ─── End public routes ──────────────────────────────────────────────────────
+
 router.get('/:eventId', verifyEventAccess, async (req, res, next) => {
   try {
     const event = req.event;
@@ -1150,169 +1779,6 @@ function calcWaitTimes(objects, states, tss, waitlist = []) {
 
 // ── Helper: find event by subdomain OR eventId ─────────────────────────────
 const mongoose = require('mongoose');
-async function findWaitEvent(subdomainOrId, selectFields) {
-  const isObjectId = mongoose.Types.ObjectId.isValid(subdomainOrId);
-  const query = isObjectId
-    ? Event.findById(subdomainOrId)
-    : Event.findOne({ subdomain: subdomainOrId });
-  return query.select(selectFields).lean();
-}
-
-// GET /public/wait/:subdomain/info — static venue branding (infrequent)
-router.get('/public/wait/:subdomain/info', availabilityLimiter, async (req, res, next) => {
-  try {
-    const event = await findWaitEvent(
-      req.params.subdomain,
-      'title isTableServiceMode tableServiceSettings reservationPageSettings'
-    );
-    if (!event || !event.isTableServiceMode) return res.status(404).json({ error: 'Not found' });
-    const tss = event.tableServiceSettings  || {};
-    const rps = event.reservationPageSettings || {};
-    res.json({
-      name:             tss.restaurantName || event.title || '',
-      logoUrl:          rps.logoUrl || '',
-      accentColor:      rps.accentColor || '#f97316',
-      tagline:          rps.headerTagline || '',
-      waitBoardTitle:   rps.waitBoardTitle || '',
-      waitBoardMessage: rps.waitBoardMessage || '',
-      showPoweredBy:    rps.showPoweredBy !== false,
-      walkInOnlyMode:   rps.walkInOnlyMode || false,
-      publicWaitBoardEnabled: rps.publicWaitBoardEnabled !== false,
-    });
-  } catch (err) { next(err); }
-});
-
-// GET /public/wait/:subdomain/live — live data (polled every 20s)
-router.get('/public/wait/:subdomain/live', availabilityLimiter, async (req, res, next) => {
-  try {
-    const event = await findWaitEvent(
-      req.params.subdomain,
-      'title isTableServiceMode tableServiceSettings reservationPageSettings seatingMap tableStates tableServiceWaitlist'
-    );
-    if (!event || !event.isTableServiceMode) return res.status(404).json({ error: 'Not found' });
-
-    const tss     = event.tableServiceSettings    || {};
-    const rps     = event.reservationPageSettings || {};
-    const objects = event.seatingMap?.objects || [];
-    const states  = event.tableStates || [];
-    const waitlist = (event.tableServiceWaitlist || []).filter(w => w.status === 'waiting' || w.status === 'notified');
-
-    // Table stats — prefer seating map objects; fall back to tableStates if no
-    // floor plan has been drawn yet so the board shows real occupancy data.
-    const tables = objects.filter(o => o.type !== 'zone');
-    let tableStats;
-    if (tables.length > 0) {
-      tableStats = {
-        total:     tables.length,
-        available: tables.filter(t => { const s = states.find(st => st.tableId === t.id); return !s || s.status === 'available'; }).length,
-        occupied:  tables.filter(t => { const s = states.find(st => st.tableId === t.id); return s?.status === 'occupied'; }).length,
-        reserved:  tables.filter(t => { const s = states.find(st => st.tableId === t.id); return s?.status === 'reserved'; }).length,
-        cleaning:  tables.filter(t => { const s = states.find(st => st.tableId === t.id); return s?.status === 'cleaning'; }).length,
-      };
-    } else if (states.length > 0) {
-      // No seating map yet — derive stats from tableStates
-      const activeStates = states.filter(s => s.status !== 'unavailable');
-      tableStats = {
-        total:     activeStates.length,
-        available: activeStates.filter(s => !s.status || s.status === 'available').length,
-        occupied:  activeStates.filter(s => s.status === 'occupied').length,
-        reserved:  activeStates.filter(s => s.status === 'reserved').length,
-        cleaning:  activeStates.filter(s => s.status === 'cleaning').length,
-      };
-    } else {
-      tableStats = { total: 0, available: 0, occupied: 0, reserved: 0, cleaning: 0 };
-    }
-
-    // Is the venue currently open?
-    // Accept optional ?tz= (IANA timezone) from the client so the check uses the
-    // restaurant's local wall-clock time rather than the server's UTC clock.
-    let isOpen = true;
-    if (tss.operatingHoursOpen && tss.operatingHoursClose) {
-      try {
-        const tz = req.query.tz || 'UTC';
-        const now = new Date();
-        const localTimeStr = now.toLocaleTimeString('en-GB', { timeZone: tz, hour: '2-digit', minute: '2-digit', hour12: false });
-        const [lh, lm]  = localTimeStr.split(':').map(Number);
-        const nowMin    = lh * 60 + lm;
-        const [oh, om]  = tss.operatingHoursOpen.split(':').map(Number);
-        const [ch, cm]  = tss.operatingHoursClose.split(':').map(Number);
-        const openMin   = oh * 60 + om;
-        const closeMin  = ch * 60 + cm;
-        // Handle overnight spans (e.g. open 22:00, close 02:00)
-        if (closeMin > openMin) {
-          isOpen = nowMin >= openMin && nowMin < closeMin;
-        } else {
-          isOpen = nowMin >= openMin || nowMin < closeMin;
-        }
-      } catch (_) { isOpen = true; }
-    }
-
-    // Strip phones from public waitlist
-    const publicWaitlist = waitlist.map(w => ({
-      id:        w.id,
-      partyName: w.partyName,
-      partySize: w.partySize,
-      status:    w.status,
-      addedAt:   w.addedAt,
-    }));
-
-    res.json({
-      waitTimes:  calcWaitTimes(objects, states, tss, waitlist),
-      tableStats,
-      waitlist:   publicWaitlist,
-      isOpen,
-      queueLength: waitlist.length,
-      name:        tss.restaurantName || event.title || '',
-      logoUrl:     rps.logoUrl || '',
-      accentColor: rps.accentColor || '#f97316',
-      tagline:     rps.headerTagline || '',
-      waitBoardTitle:   rps.waitBoardTitle || '',
-      waitBoardMessage: rps.waitBoardMessage || '',
-      menus:            rps.menus || [],
-    });
-  } catch (err) { next(err); }
-});
-
-// POST /public/wait/:subdomain/join — public join waitlist (no auth)
-router.post('/public/wait/:subdomain/join', availabilityLimiter, async (req, res, next) => {
-  try {
-    const { partyName, partySize, phone } = req.body;
-    if (!partyName?.trim()) return res.status(400).json({ error: 'Party name is required' });
-    const sz = parseInt(partySize);
-    if (!sz || sz < 1 || sz > 50) return res.status(400).json({ error: 'Invalid party size' });
-
-    const isObjectId = mongoose.Types.ObjectId.isValid(req.params.subdomain);
-    const eventDoc = isObjectId
-      ? await Event.findById(req.params.subdomain).select('isTableServiceMode tableServiceSettings reservationPageSettings tableServiceWaitlist')
-      : await Event.findOne({ subdomain: req.params.subdomain }).select('isTableServiceMode tableServiceSettings reservationPageSettings tableServiceWaitlist');
-    if (!eventDoc || !eventDoc.isTableServiceMode) return res.status(404).json({ error: 'Not found' });
-
-    const rps = eventDoc.reservationPageSettings || {};
-    if (rps.publicWaitBoardEnabled === false) return res.status(403).json({ error: 'Wait board not active' });
-
-    const entry = {
-      id:        require('crypto').randomUUID(),
-      partyName: partyName.trim().slice(0, 80),
-      partySize: sz,
-      phone:     (phone || '').trim().slice(0, 30),
-      notes:     '',
-      addedAt:   new Date(),
-      status:    'waiting',
-      source:    'public_board',
-    };
-    if (!eventDoc.tableServiceWaitlist) eventDoc.tableServiceWaitlist = [];
-    eventDoc.tableServiceWaitlist.push(entry);
-    await eventDoc.save();
-
-    res.status(201).json({ success: true, entry });
-  } catch (err) { next(err); }
-});
-
-
-
-
-
-// ── UTILITIES ─────────────────────────────────────────────────────────────
 // Generate ICS calendar file
 router.get('/:eventId/calendar.ics', verifyEventAccess, async (req, res, next) => {
   try {
@@ -1601,46 +2067,6 @@ router.get('/:eventId/invites', verifyCheckinAccess, async (req, res, next) => {
     const Invite = require('../models/Invite');
     const invites = await Invite.find({ eventId: req.params.eventId }).sort({ createdAt: -1 });
     res.json({ invites });
-  } catch (error) { next(error); }
-});
-
-// Get invite by code (public)
-router.get('/invite/:inviteCode', async (req, res, next) => {
-  try {
-    const Invite = require('../models/Invite');
-    const invite = await Invite.findOne({ inviteCode: req.params.inviteCode });
-    if (!invite) return res.status(404).json({ error: 'Invite not found' });
-    
-    const event = await Event.findById(invite.eventId);
-    if (!event) return res.status(404).json({ error: 'Event not found' });
-    
-    res.json({ 
-      invite: {
-        code: invite.inviteCode,
-        inviteCode: invite.inviteCode,
-        guestName: invite.guestName,
-        guestEmail: invite.guestEmail,
-        guestPhone: invite.guestPhone,
-        adults: invite.adults,
-        children: invite.children,
-        groupSize: invite.groupSize,
-        plusOnes: invite.plusOnes,
-        checkedIn: invite.checkedIn,
-        checkedInAt: invite.checkedInAt,
-        status: invite.status,
-        notes: invite.notes,
-        email: invite.guestEmail
-      },
-      event: {
-        id: event._id,
-        title: event.title,
-        date: event.date,
-        location: event.location,
-        description: event.description,
-        organizerName: event.organizerName,
-        timezone: event.timezone || 'UTC'
-      }
-    });
   } catch (error) { next(error); }
 });
 
@@ -2948,72 +3374,6 @@ router.post('/:eventId/approval-queue/:username/reject', verifyOrganizer, async 
   } catch (err) { next(err); }
 });
 
-// ─── GET /invite/:inviteCode/qr.svg ──────────────────────────────────────────
-// Returns a branded PlanIt QR card for a specific guest invite.
-// No auth required — the invite code IS the credential (same as the invite page).
-// Matches the dark-card aesthetic of the event QR already used in EventSpace.
-router.get('/invite/:inviteCode/qr.svg', async (req, res, next) => {
-  try {
-    const QRCode = require('qrcode');
-    const Invite = require('../models/Invite');
-    const invite = await Invite.findOne({ inviteCode: req.params.inviteCode.toUpperCase() }).lean();
-    if (!invite) return res.status(404).send('Invite not found');
-
-    const event = await Event.findById(invite.eventId).select('title').lean();
-    if (!event) return res.status(404).send('Event not found');
-
-    // Use FRONTEND_URL - req.get('host') behind Render proxy returns backend hostname, not the frontend
-    const frontendBase = (process.env.FRONTEND_URL || process.env.BASE_DOMAIN || '').replace(/\/$/, '');
-    const inviteUrl = frontendBase
-      ? `${frontendBase}/invite/${invite.inviteCode}`
-      : `${req.protocol}://${req.get('host')}/invite/${invite.inviteCode}`;
-
-    // Clean QR - no center overlay. BarcodeDetector rejects QRs with anything layered on top.
-    // PLANIT branding goes below the QR area instead.
-    const dataUrl = await QRCode.toDataURL(inviteUrl, {
-      width: 260,
-      margin: 2,
-      color: { dark: '#000000', light: '#ffffff' },
-      errorCorrectionLevel: 'M',
-    });
-
-    const safeTitle    = (event.title || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').slice(0, 30);
-    const safeName     = (invite.guestName || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').slice(0, 28);
-    const safeCode     = invite.inviteCode.replace(/[^A-Z0-9]/g, '');
-
-    const W = 300, H = 430;
-    const QX = 20, QY = 20, QS = 260;
-
-    const svg = `<svg width="${W}" height="${H}" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
-  <defs>
-    <filter id="glow" x="-5%" y="-5%" width="110%" height="110%">
-      <feDropShadow dx="0" dy="4" stdDeviation="10" flood-color="#000" flood-opacity="0.55"/>
-    </filter>
-    <clipPath id="qrclip"><rect x="${QX}" y="${QY}" width="${QS}" height="${QS}" rx="10"/></clipPath>
-  </defs>
-  <rect width="${W}" height="${H}" rx="20" fill="#0a0a0a" filter="url(#glow)"/>
-  <rect x="${QX - 4}" y="${QY - 4}" width="${QS + 8}" height="${QS + 8}" rx="14" fill="#ffffff"/>
-  <image x="${QX}" y="${QY}" width="${QS}" height="${QS}" href="${dataUrl}" clip-path="url(#qrclip)"/>
-  <line x1="20" y1="${QY + QS + 18}" x2="${W - 20}" y2="${QY + QS + 18}" stroke="#1f1f1f" stroke-width="1"/>
-  <text x="${W / 2}" y="${QY + QS + 40}" text-anchor="middle"
-        fill="#ffffff" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif"
-        font-size="13" font-weight="800" letter-spacing="5">PLANIT</text>
-  <text x="${W / 2}" y="${QY + QS + 62}" text-anchor="middle"
-        fill="#e5e5e5" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif"
-        font-size="12" font-weight="600">${safeTitle}</text>
-  <text x="${W / 2}" y="${QY + QS + 80}" text-anchor="middle"
-        fill="#888" font-family="system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif"
-        font-size="11">${safeName}</text>
-  <text x="${W / 2}" y="${QY + QS + 100}" text-anchor="middle"
-        fill="#444" font-family="'Courier New',Courier,monospace"
-        font-size="11" font-weight="700" letter-spacing="3">${safeCode}</text>
-</svg>`;
-
-    res.setHeader('Content-Type', 'image/svg+xml');
-    res.setHeader('Cache-Control', 'public, max-age=86400');
-    res.send(svg);
-  } catch (err) { next(err); }
-});
 
 // ─── GET /:eventId/checkin-cache ─────────────────────────────────────────────
 // Returns a lightweight snapshot of all invites for offline PWA check-in.
@@ -3618,356 +3978,6 @@ function computeAvailability(dateStr, partySize, event, tz) {
     };
   });
 }
-
-// ── GET /public/reserve/:subdomain ────────────────────────────────────────────
-// Returns public restaurant info and reservation config.
-router.get('/public/reserve/:subdomain', availabilityLimiter, async (req, res, next) => {
-  try {
-    const event = await Event.findOne({ subdomain: req.params.subdomain })
-      .select('title isTableServiceMode tableServiceSettings reservationPageSettings seatingMap tableStates tableServiceWaitlist')
-      .lean();
-    if (!event) return res.status(404).json({ error: 'Not found' });
-    if (!event.isTableServiceMode) return res.status(404).json({ error: 'Reservation pages are only available for restaurant events.' });
-
-    const rps = event.reservationPageSettings || {};
-    const tss = event.tableServiceSettings   || {};
-
-    // Live wait times per common party sizes (1-2, 3-4, 5-8)
-    let waitTimes = null;
-    if (rps.showLiveWaitTime !== false) {
-      try {
-        const objects = event.seatingMap?.objects || [];
-        const states  = event.tableStates || [];
-        const activeWait = (event.tableServiceWaitlist || []).filter(w => w.status === 'waiting' || w.status === 'notified');
-        waitTimes = calcWaitTimes(objects, states, tss, activeWait);
-      } catch (wtErr) {
-        console.error('[reserve] calcWaitTimes failed for', req.params.subdomain, wtErr.message);
-        // Non-fatal — proceed without wait time data rather than 500ing the whole page
-      }
-    }
-
-    res.json({
-      name:             tss.restaurantName || event.title,
-      tagline:          rps.headerTagline || '',
-      description:      rps.publicDescription || '',
-      cuisine:          rps.cuisine || '',
-      priceRange:       rps.priceRange || '',
-      dressCode:        rps.dressCode || '',
-      parkingInfo:      rps.parkingInfo || '',
-      accessibilityInfo:rps.accessibilityInfo || '',
-      address:          rps.address || '',
-      phone:            rps.phone || '',
-      websiteUrl:       rps.websiteUrl || '',
-      instagramHandle:  rps.instagramHandle || '',
-      facebookUrl:      rps.facebookUrl || '',
-      googleMapsUrl:    rps.googleMapsUrl || '',
-      heroImageUrl:     rps.heroImageUrl || '',
-      logoUrl:          rps.logoUrl || '',
-      accentColor:      rps.accentColor || '#f97316',
-      backgroundStyle:  rps.backgroundStyle || 'dark',
-      fontStyle:        rps.fontStyle || 'modern',
-      announcementBanner:        rps.announcementBannerEnabled ? rps.announcementBanner : '',
-      announcementBannerColor:   rps.announcementBannerColor || '#f59e0b',
-      operatingHoursOpen:  tss.operatingHoursOpen  || '11:00',
-      operatingHoursClose: tss.operatingHoursClose || '22:00',
-      operatingDays:    rps.operatingDays || {},
-      blackoutDates:    (rps.blackoutDates || []).filter(Boolean).map(b => b.date).filter(Boolean),
-      acceptingReservations: rps.acceptingReservations || false,
-      confirmationMode:      rps.confirmationMode || 'auto_confirm',
-      slotIntervalMinutes:   rps.slotIntervalMinutes || 30,
-      maxAdvanceDays:        rps.maxAdvanceDays || 30,
-      minAdvanceHours:       rps.minAdvanceHours ?? 1,
-      maxPartySizePublic:    rps.maxPartySizePublic || 12,
-      minPartySizePublic:    rps.minPartySizePublic || 1,
-      requirePhone:          rps.requirePhone !== false,
-      requireEmail:          rps.requireEmail || false,
-      allowSpecialRequests:  rps.allowSpecialRequests !== false,
-      allowDietaryNeeds:     rps.allowDietaryNeeds !== false,
-      allowOccasionSelect:   rps.allowOccasionSelect !== false,
-      occasionOptions:       rps.occasionOptions?.length ? rps.occasionOptions : ['Birthday','Anniversary','Business Dinner','Date Night','Family Gathering','Other'],
-      showLiveWaitTime:      rps.showLiveWaitTime !== false,
-      showAvailabilityStatus:rps.showAvailabilityStatus !== false,
-      showTableCount:        rps.showTableCount || false,
-      availabilityDisplayMode: rps.availabilityDisplayMode || 'slots',
-      confirmationMessage:   rps.confirmationMessage || '',
-      depositRequired:       rps.depositRequired || false,
-      depositAmount:         rps.depositAmount || 0,
-      depositNote:           rps.depositNote || '',
-      cancellationPolicy:    rps.cancellationPolicy || '',
-      cancelCutoffHours:     rps.cancelCutoffHours || 2,
-      faqItems:              rps.faqItems || [],
-      menus:                 rps.menus || [],
-      walkInOnlyMode:        rps.walkInOnlyMode || false,
-      termsUrl:              rps.termsUrl || '',
-      privacyUrl:            rps.privacyUrl || '',
-      showPoweredBy:         rps.showPoweredBy !== false,
-      metaTitle:             rps.metaTitle || '',
-      metaDescription:       rps.metaDescription || '',
-      waitTimes,
-    });
-  } catch (err) { next(err); }
-});
-
-// ── GET /public/reserve/:subdomain/availability ────────────────────────────────
-// ?date=YYYY-MM-DD&partySize=N
-router.get('/public/reserve/:subdomain/availability', availabilityLimiter, async (req, res, next) => {
-  try {
-    const { date, partySize, tz } = req.query;
-    if (!date || !partySize) return res.status(400).json({ error: 'date and partySize required' });
-
-    const sz = parseInt(partySize);
-    if (isNaN(sz) || sz < 1 || sz > 100) return res.status(400).json({ error: 'Invalid party size' });
-
-    const event = await Event.findOne({ subdomain: req.params.subdomain })
-      .select('isTableServiceMode tableServiceSettings reservationPageSettings seatingMap restaurantReservations')
-      .lean();
-    if (!event || !event.isTableServiceMode) return res.status(404).json({ error: 'Not found' });
-
-    const rps = event.reservationPageSettings || {};
-    if (!rps.acceptingReservations) return res.json({ slots: [], closed: true });
-
-    // Blackout / day closed
-    const dayKey = getDayKey(date + 'T12:00:00');
-    const dayConfig = rps.operatingDays?.[dayKey];
-    if (dayConfig && dayConfig.open === false) return res.json({ slots: [], closed: true });
-    if ((rps.blackoutDates || []).some(b => b.date === date)) {
-      return res.json({ slots: [], closed: true, reason: 'Closed this date' });
-    }
-
-    // Max per day cap
-    const maxPerDay = rps.maxReservationsPerDay || 0;
-    if (maxPerDay > 0) {
-      const dayStart = tz ? wallClockToUTC(date, '00:00', tz) : new Date(date + 'T00:00:00');
-      const dayEnd   = tz ? wallClockToUTC(date, '23:59', tz) : new Date(date + 'T23:59:59');
-      const dayCount = (event.restaurantReservations || []).filter(r =>
-        (r.status === 'confirmed' || r.status === 'pending') &&
-        new Date(r.dateTime) >= dayStart && new Date(r.dateTime) <= dayEnd
-      ).length;
-      if (dayCount >= maxPerDay) return res.json({ slots: [], closed: true, reason: 'Fully booked for this day' });
-    }
-
-    const slots = computeAvailability(date, sz, event, tz);
-    res.json({ slots });
-  } catch (err) { next(err); }
-});
-
-// ── POST /public/reserve/:subdomain ───────────────────────────────────────────
-// Create a public reservation. Rate limited.
-router.post('/public/reserve/:subdomain', reservationLimiter, async (req, res, next) => {
-  try {
-    const { partyName, partySize, phone, email, date, timeSlot, occasion, specialRequests, dietaryNeeds, tz } = req.body;
-
-    if (!partyName?.trim()) return res.status(400).json({ error: 'Name is required' });
-    if (!partySize || partySize < 1) return res.status(400).json({ error: 'Party size is required' });
-    if (!date || !timeSlot) return res.status(400).json({ error: 'Date and time are required' });
-
-    const event = await Event.findOne({ subdomain: req.params.subdomain })
-      .select('+restaurantReservations tableServiceSettings reservationPageSettings seatingMap isTableServiceMode');
-    if (!event || !event.isTableServiceMode) return res.status(404).json({ error: 'Not found' });
-
-    const rps = event.reservationPageSettings || {};
-    if (!rps.acceptingReservations) return res.status(403).json({ error: 'Online reservations are not currently being accepted.' });
-
-    if (rps.requirePhone && !phone?.trim()) return res.status(400).json({ error: 'Phone number is required' });
-    if (rps.requireEmail && !email?.trim()) return res.status(400).json({ error: 'Email address is required' });
-
-    const sz = parseInt(partySize);
-    if (sz < (rps.minPartySizePublic || 1)) return res.status(400).json({ error: `Minimum party size is ${rps.minPartySizePublic || 1}` });
-    if (sz > (rps.maxPartySizePublic || 12)) return res.status(400).json({ error: `Maximum party size for online bookings is ${rps.maxPartySizePublic || 12}` });
-
-    // Build datetime in guest's local timezone → store as correct UTC
-    const dateTime = tz ? wallClockToUTC(date, timeSlot, tz) : new Date(`${date}T${timeSlot}:00`);
-    if (isNaN(dateTime.getTime())) return res.status(400).json({ error: 'Invalid date/time' });
-
-    // Min advance check
-    const minAdvanceMs = (rps.minAdvanceHours ?? 1) * 3600000;
-    if (dateTime.getTime() - Date.now() < minAdvanceMs) {
-      return res.status(400).json({ error: `Reservations must be made at least ${rps.minAdvanceHours ?? 1} hour(s) in advance` });
-    }
-
-    // Max advance check
-    const maxAdvanceMs = (rps.maxAdvanceDays || 30) * 86400000;
-    if (dateTime.getTime() - Date.now() > maxAdvanceMs) {
-      return res.status(400).json({ error: `Reservations can only be made up to ${rps.maxAdvanceDays || 30} days in advance` });
-    }
-
-    // Re-check availability
-    const slots = computeAvailability(date, sz, event, tz);
-    const targetSlot = slots.find(s => s.time === timeSlot);
-    if (!targetSlot || targetSlot.status === 'full') {
-      return res.status(409).json({ error: 'This time slot is no longer available. Please choose another time.' });
-    }
-
-    // Per-day cap re-check
-    const maxPerDay = rps.maxReservationsPerDay || 0;
-    if (maxPerDay > 0) {
-      const dayStart = tz ? wallClockToUTC(date, '00:00', tz) : new Date(date + 'T00:00:00');
-      const dayEnd   = tz ? wallClockToUTC(date, '23:59', tz) : new Date(date + 'T23:59:59');
-      const dayCount = event.restaurantReservations.filter(r =>
-        (r.status === 'confirmed' || r.status === 'pending') &&
-        new Date(r.dateTime) >= dayStart && new Date(r.dateTime) <= dayEnd
-      ).length;
-      if (dayCount >= maxPerDay) return res.status(409).json({ error: 'Sorry, this day is now fully booked.' });
-    }
-
-    // Generate tokens
-    const resId      = `res_${Date.now().toString(36)}_${crypto.randomBytes(4).toString('hex')}`;
-    const qrToken    = crypto.randomBytes(24).toString('hex');
-    const cancelToken= crypto.randomBytes(24).toString('hex');
-
-    const tss = event.tableServiceSettings || {};
-    const qrExpiryMin = tss.reservationQrExpiryMinutes || 45;
-    const qrExpiresAt = new Date(dateTime.getTime() + qrExpiryMin * 60000);
-
-    const status = (rps.confirmationMode === 'manual') ? 'pending' : 'confirmed';
-
-    const reservation = {
-      id:              resId,
-      partyName:       partyName.trim(),
-      partySize:       sz,
-      phone:           phone?.trim() || '',
-      email:           email?.trim() || '',
-      dateTime,
-      tableId:         null,
-      qrToken,
-      qrExpiresAt,
-      cancelToken,
-      status,
-      source:          'public',
-      occasion:        occasion || '',
-      specialRequests: specialRequests?.trim() || '',
-      dietaryNeeds:    dietaryNeeds?.trim() || '',
-      notes:           '',
-      createdAt:       new Date(),
-    };
-
-    // Use findOneAndUpdate + $push to avoid Mongoose 8 partial-select validation errors
-    // (event was fetched with .select() so required fields like title/subdomain are absent
-    //  from the in-memory doc — calling event.save() throws ValidationError on those paths)
-    await Event.findOneAndUpdate(
-      { subdomain: req.params.subdomain },
-      { $push: { restaurantReservations: reservation }, $set: { keepForever: true } },
-      { runValidators: false }
-    );
-
-    // Fire confirmation email non-blocking
-    if (rps.sendConfirmationEmail !== false && email?.trim()) {
-      try {
-        const { sendReservationConfirmation } = require('../services/emailService');
-        sendReservationConfirmation(event, reservation).catch(() => {});
-      } catch (_) {}
-    }
-
-    const cancelUrl = `${process.env.FRONTEND_URL || 'https://planit.events'}/reserve/cancel/${cancelToken}`;
-
-    res.status(201).json({
-      reservationId: resId,
-      status,
-      partyName:     reservation.partyName,
-      partySize:     reservation.partySize,
-      dateTime:      reservation.dateTime,
-      qrToken,
-      qrExpiresAt,
-      cancelToken,   // frontend redirects to /reservation/:cancelToken ticket page
-      cancelUrl,
-      confirmationMessage: rps.confirmationMessage || '',
-      depositRequired:     rps.depositRequired || false,
-      depositAmount:       rps.depositAmount || 0,
-      depositNote:         rps.depositNote || '',
-      isPending: status === 'pending',
-    });
-  } catch (err) { next(err); }
-});
-
-
-// ── GET /public/reserve/confirmation/:cancelToken ────────────────────────────
-// Returns reservation details for the guest confirmation/ticket page.
-// Uses cancelToken (sent in POST response) — safe to expose publicly.
-router.get('/public/reserve/confirmation/:cancelToken', availabilityLimiter, async (req, res, next) => {
-  try {
-    const { cancelToken } = req.params;
-    if (!cancelToken || cancelToken.length < 10) return res.status(400).json({ error: 'Invalid token' });
-
-    const event = await Event.findOne({
-      isTableServiceMode: true,
-      'restaurantReservations.cancelToken': cancelToken,
-    }).select('title subdomain restaurantReservations reservationPageSettings');
-
-    if (!event) return res.status(404).json({ error: 'Reservation not found.' });
-
-    const r = event.restaurantReservations.find(x => x.cancelToken === cancelToken);
-    if (!r) return res.status(404).json({ error: 'Reservation not found.' });
-
-    const rps = event.reservationPageSettings || {};
-
-    res.json({
-      restaurantName: event.title,
-      subdomain: event.subdomain,
-      accentColor: rps.accentColor || '#f97316',
-      logoUrl: rps.logoUrl || '',
-      address: rps.address || '',
-      phone: rps.phone || '',
-      reservation: {
-        id: r.id,
-        partyName: r.partyName,
-        partySize: r.partySize,
-        dateTime: r.dateTime,
-        status: r.status,
-        qrToken: r.qrToken,
-        qrExpiresAt: r.qrExpiresAt,
-        occasion: r.occasion || '',
-        specialRequests: r.specialRequests || '',
-        dietaryNeeds: r.dietaryNeeds || '',
-      },
-      cancelUrl: `${process.env.FRONTEND_URL || 'https://planit.events'}/reservation/${cancelToken}`,
-      confirmationMessage: rps.confirmationMessage || '',
-      cancelCutoffHours: rps.cancelCutoffHours || 2,
-    });
-  } catch (err) { next(err); }
-});
-
-// ── DELETE /public/reserve/cancel/:cancelToken ────────────────────────────────
-// Self-service cancellation via the token in the confirmation email.
-router.delete('/public/reserve/cancel/:cancelToken', reservationLimiter, async (req, res, next) => {
-  try {
-    const { cancelToken } = req.params;
-    if (!cancelToken || cancelToken.length < 10) return res.status(400).json({ error: 'Invalid cancel token' });
-
-    // Search across all table-service events for this token
-    const event = await Event.findOne({
-      isTableServiceMode: true,
-      'restaurantReservations.cancelToken': cancelToken,
-    });
-    if (!event) return res.status(404).json({ error: 'Reservation not found or already cancelled.' });
-
-    const res_ = event.restaurantReservations.find(r => r.cancelToken === cancelToken);
-    if (!res_) return res.status(404).json({ error: 'Reservation not found.' });
-    if (res_.status === 'cancelled') return res.status(400).json({ error: 'This reservation is already cancelled.' });
-    if (res_.status === 'seated') return res.status(400).json({ error: 'This reservation cannot be cancelled — the party is already seated.' });
-
-    const rps = event.reservationPageSettings || {};
-    const cutoffMs = (rps.cancelCutoffHours || 2) * 3600000;
-    if (new Date(res_.dateTime).getTime() - Date.now() < cutoffMs) {
-      return res.status(403).json({
-        error: `Reservations can only be cancelled at least ${rps.cancelCutoffHours || 2} hour(s) before the booking time. Please call us directly.`,
-        phone: rps.phone || '',
-      });
-    }
-
-    res_.status = 'cancelled';
-    await event.save();
-
-    // Notify organizer
-    if (rps.notifyOrganizerOnCancel && rps.notifyOrganizerEmail) {
-      try {
-        const { sendReservationCancellation } = require('../services/emailService');
-        sendReservationCancellation(event, res_).catch(() => {});
-      } catch (_) {}
-    }
-
-    res.json({ success: true, message: 'Your reservation has been cancelled.' });
-  } catch (err) { next(err); }
-});
 
 
 const Message = require('../models/Message');
