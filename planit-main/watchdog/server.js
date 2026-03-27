@@ -624,7 +624,7 @@ async function pingTarget(target) {
     });
     const ms = Date.now() - t0;
     if (pingResp.status === 429) {
-      console.warn(\`[\${ts()}] \${target.name} rate-limited (429) — treating as UP\`);
+      console.warn(`[${ts()}] ${target.name} rate-limited (429) — treating as UP`);
     }
 
     s.lastPingMs          = ms;
