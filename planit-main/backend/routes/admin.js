@@ -208,18 +208,6 @@ router.post(
         await redis.del(_failKey(ip, username)).catch(() => {});
       };
 
-      // ─── V-01 FIX: warn on default credentials in production ─────────────
-      // NOTE: We do NOT call process.exit() here — that would kill the entire
-      // server process and cause 502 errors on every login attempt.
-      // The startup check in server.js handles the hard enforcement at boot.
-      if (process.env.NODE_ENV === 'production') {
-        const _u = process.env.ADMIN_USERNAME || '';
-        const _p = process.env.ADMIN_PASSWORD || '';
-        if (!_u || !_p || _u === 'admin' || _p === 'admin123') {
-          console.error('[WARN] ADMIN_USERNAME / ADMIN_PASSWORD appear to be default or unset. Update your environment variables.');
-          return res.status(503).json({ error: 'Admin credentials not configured. Set ADMIN_USERNAME and ADMIN_PASSWORD environment variables.' });
-        }
-      }
       const adminUsername = process.env.ADMIN_USERNAME || 'admin';
       const adminPassword = process.env.ADMIN_PASSWORD || 'admin123';
 
