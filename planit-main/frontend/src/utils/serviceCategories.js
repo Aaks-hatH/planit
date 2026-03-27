@@ -96,8 +96,36 @@ export const SERVICE_CATEGORIES = [
     icon: '',
     services: [
       { name: 'MongoDB Database', key: 'database'     },
+      { name: 'Redis Cache',      key: 'redis'        },
       { name: 'File Storage',     key: 'file-storage' },
       { name: 'Media Processing', key: 'media'        },
+      { name: 'Backup Systems',   key: 'backups'      },
+    ],
+  },
+  {
+    id: 'table-service',
+    label: 'Table Service',
+    icon: '',
+    services: [
+      { name: 'Table Management',    key: 'table-management'    },
+      { name: 'Waitlist',            key: 'waitlist'            },
+      { name: 'QR Reservations',     key: 'qr-reservations'    },
+      { name: 'Floor Map',           key: 'floor-map'           },
+      { name: 'Server Assignment',   key: 'server-assignment'   },
+      { name: 'Public Wait Board',   key: 'wait-board'          },
+      { name: 'Reservation System',  key: 'reservation-system'  },
+      { name: 'Walk-in Management',  key: 'walkin-management'   },
+    ],
+  },
+  {
+    id: 'notifications',
+    label: 'Notifications & Alerts',
+    icon: '',
+    services: [
+      { name: 'Email Delivery',    key: 'email'        },
+      { name: 'Push Notifications',key: 'push'         },
+      { name: 'ntfy Alerts',       key: 'ntfy'         },
+      { name: 'SMS / Webhooks',    key: 'webhooks'     },
     ],
   },
 ];
