@@ -548,200 +548,140 @@ const tAgo = (d) => { const m = Math.floor((Date.now() - new Date(d)) / 60000); 
 // ═══════════════════════════════════════════════════════════════════════════════
 // SERVER HEALTH SPARKLINE — pure SVG, no external chart lib needed
 // ═══════════════════════════════════════════════════════════════════════════════
-function UptimeSparkline({ days, editMode, onPointEdit, service }) {
-  const svgRef = useRef(null);
-  const [dragging, setDragging] = useState(null); // { idx, liveY }
-  const [hovering, setHovering] = useState(null);
-  const [liveValues, setLiveValues] = useState(null); // array of pct overrides while dragging
+// UPTIME SPARKLINE — draggable SVG graph
+// ═══════════════════════════════════════════════════════════════════════════════
+function UptimeSparkline({ data, editMode, onPointEdit, service, height = 80, showLabels = true }) {
+  const svgRef   = useRef(null);
+  const [dragging,   setDragging]   = useState(null);
+  const [hovering,   setHovering]   = useState(null);
+  const [liveValues, setLiveValues] = useState(null);
 
-  if (!days || days.length === 0) return null;
+  if (!data || data.length === 0) return (
+    <div className="flex items-center justify-center bg-neutral-50 rounded-lg" style={{ height }}>
+      <span className="text-xs text-neutral-300">No data</span>
+    </div>
+  );
 
-  const W = 600, H = 90, PAD_X = 6, PAD_Y = 8;
-  const n = days.length;
+  const W = 600, H = height, PAD_X = 8, PAD_Y = 10;
+  const n = data.length;
   const stepX = (W - PAD_X * 2) / Math.max(n - 1, 1);
-  const workingDays = liveValues
-    ? days.map((d, i) => ({ ...d, pct: liveValues[i] ?? d.pct }))
-    : days;
 
-  const pts = workingDays.map((d, i) => ({
+  const workingData = liveValues
+    ? data.map((d, i) => ({ ...d, pct: liveValues[i] ?? d.pct }))
+    : data;
+
+  const pts = workingData.map((d, i) => ({
     x: PAD_X + i * stepX,
-    y: PAD_Y + (1 - d.pct / 100) * (H - PAD_Y * 2),
+    y: d.pct != null ? PAD_Y + (1 - d.pct / 100) * (H - PAD_Y * 2) : null,
     pct: d.pct,
-    date: d.date,
-    ts: d.timestamp,
+    label: d.label || d.date || d.bucket || '',
+    ts: d.ts || d.timestamp,
     override: d.override,
     idx: i,
+    latency: d.avgLatency,
   }));
 
-  const polyline = pts.map(p => `${p.x},${p.y}`).join(' ');
-  const area = `M${pts[0].x},${H} ` + pts.map(p => `L${p.x},${p.y}`).join(' ') + ` L${pts[pts.length - 1].x},${H} Z`;
+  const validPts = pts.filter(p => p.y != null);
+  const polyline = validPts.map(p => `${p.x},${p.y}`).join(' ');
+  const area = validPts.length > 1
+    ? `M${validPts[0].x},${H} ` + validPts.map(p => `L${p.x},${p.y}`).join(' ') + ` L${validPts[validPts.length-1].x},${H} Z`
+    : '';
 
-  const colorForPct = (pct) => {
-    if (pct >= 99.5) return '#22c55e';
-    if (pct >= 95)   return '#f59e0b';
-    return '#ef4444';
-  };
+  const colorForPct = (pct) => pct == null ? '#e5e7eb' : pct >= 99.5 ? '#22c55e' : pct >= 95 ? '#f59e0b' : '#ef4444';
 
-  // Convert svg Y coordinate → uptime %
   const yToPct = (rawY) => {
     const clamped = Math.max(PAD_Y, Math.min(H - PAD_Y, rawY));
     return parseFloat((((H - PAD_Y - clamped) / (H - PAD_Y * 2)) * 100).toFixed(2));
   };
 
   const getSvgY = (e) => {
-    const svg = svgRef.current;
-    if (!svg) return null;
+    const svg = svgRef.current; if (!svg) return null;
     const rect = svg.getBoundingClientRect();
-    const scaleY = H / rect.height;
     const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-    return (clientY - rect.top) * scaleY;
+    return (clientY - rect.top) * (H / rect.height);
   };
 
   const onMouseDown = (e, pt) => {
-    if (!editMode) return;
+    if (!editMode || pt.pct == null) return;
     e.preventDefault();
-    setDragging({ idx: pt.idx, liveY: pt.y });
-    setLiveValues(days.map(d => d.pct));
+    setDragging({ idx: pt.idx });
+    setLiveValues(data.map(d => d.pct));
   };
-
   const onMouseMove = (e) => {
     if (!dragging || !editMode) return;
     e.preventDefault();
-    const rawY = getSvgY(e);
-    if (rawY === null) return;
+    const rawY = getSvgY(e); if (rawY == null) return;
     const newPct = yToPct(rawY);
-    setDragging(d => ({ ...d, liveY: rawY }));
-    setLiveValues(prev => {
-      const next = [...prev];
-      next[dragging.idx] = newPct;
-      return next;
-    });
+    setLiveValues(prev => { const next = [...prev]; next[dragging.idx] = newPct; return next; });
   };
-
   const onMouseUp = (e) => {
     if (!dragging || !editMode) return;
     const rawY = getSvgY(e);
-    const finalPct = rawY !== null ? yToPct(rawY) : (liveValues?.[dragging.idx] ?? days[dragging.idx].pct);
-    const pt = days[dragging.idx];
-    onPointEdit && onPointEdit({ service, date: pt.date, ts: pt.timestamp, pct: finalPct });
-    setDragging(null);
-    setLiveValues(null);
+    const finalPct = rawY != null ? yToPct(rawY) : (liveValues?.[dragging.idx] ?? data[dragging.idx]?.pct);
+    const pt = data[dragging.idx];
+    if (pt && finalPct != null) onPointEdit && onPointEdit({ service, date: pt.date || pt.label, ts: pt.ts || pt.timestamp, pct: finalPct });
+    setDragging(null); setLiveValues(null);
   };
 
-  const gradId = `grad-${service.replace(/[^a-z0-9]/gi, '_')}`;
+  const gradId = `ug_${service.replace(/[^a-z0-9]/gi, '_')}`;
 
   return (
-    <svg
-      ref={svgRef}
-      viewBox={`0 0 ${W} ${H}`}
-      className="w-full"
-      style={{ height: 90, cursor: editMode ? (dragging ? 'ns-resize' : 'crosshair') : 'default', touchAction: 'none', userSelect: 'none' }}
-      onMouseMove={onMouseMove}
-      onMouseUp={onMouseUp}
+    <svg ref={svgRef} viewBox={`0 0 ${W} ${H}`} className="w-full"
+      style={{ height, cursor: editMode ? (dragging ? 'ns-resize' : 'crosshair') : 'default', touchAction: 'none', userSelect: 'none' }}
+      onMouseMove={onMouseMove} onMouseUp={onMouseUp}
       onMouseLeave={() => { if (dragging) onMouseUp({}); setHovering(null); }}
-      onTouchMove={onMouseMove}
-      onTouchEnd={onMouseUp}
+      onTouchMove={onMouseMove} onTouchEnd={onMouseUp}
     >
       <defs>
         <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#22c55e" stopOpacity="0.2" />
-          <stop offset="100%" stopColor="#22c55e" stopOpacity="0.01" />
-        </linearGradient>
-        <linearGradient id={`${gradId}_drag`} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#f59e0b" stopOpacity="0.25" />
-          <stop offset="100%" stopColor="#f59e0b" stopOpacity="0.01" />
+          <stop offset="0%" stopColor="#22c55e" stopOpacity="0.2"/>
+          <stop offset="100%" stopColor="#22c55e" stopOpacity="0.01"/>
         </linearGradient>
       </defs>
-
-      {/* Grid lines at 0%, 25%, 50%, 75%, 100% */}
-      {[0, 25, 50, 75, 100].map(pctLine => {
-        const y = PAD_Y + (1 - pctLine / 100) * (H - PAD_Y * 2);
-        return (
-          <g key={pctLine}>
-            <line x1={PAD_X} y1={y} x2={W - PAD_X} y2={y} stroke="#e5e7eb" strokeWidth="0.5" strokeDasharray="3,3" />
-            <text x={W - PAD_X + 2} y={y + 3} fontSize="6" fill="#9ca3af" fontFamily="monospace">{pctLine}%</text>
-          </g>
-        );
+      {[0,25,50,75,100].map(pL => {
+        const y = PAD_Y + (1 - pL/100) * (H - PAD_Y*2);
+        return <g key={pL}>
+          <line x1={PAD_X} y1={y} x2={W-PAD_X} y2={y} stroke="#e5e7eb" strokeWidth="0.5" strokeDasharray="3,3"/>
+          {showLabels && <text x={W-PAD_X+2} y={y+3} fontSize="6" fill="#d1d5db" fontFamily="monospace">{pL}%</text>}
+        </g>;
       })}
-
-      {/* Drag guideline */}
-      {dragging && editMode && (
-        <line
-          x1={pts[dragging.idx]?.x} y1={PAD_Y}
-          x2={pts[dragging.idx]?.x} y2={H - PAD_Y}
-          stroke="#f59e0b" strokeWidth="1" strokeDasharray="3,2" opacity="0.7"
-        />
+      {dragging != null && pts[dragging.idx]?.x != null && (
+        <line x1={pts[dragging.idx].x} y1={PAD_Y} x2={pts[dragging.idx].x} y2={H-PAD_Y} stroke="#f59e0b" strokeWidth="1" strokeDasharray="3,2" opacity="0.7"/>
       )}
-
-      {/* Area fill */}
-      <path d={area} fill={dragging ? `url(#${gradId}_drag)` : `url(#${gradId})`} />
-
-      {/* Line */}
-      <polyline
-        points={polyline}
-        fill="none"
-        stroke={dragging ? '#f59e0b' : '#22c55e'}
-        strokeWidth="1.8"
-        strokeLinejoin="round"
-        strokeLinecap="round"
-        style={{ transition: dragging ? 'none' : 'stroke 0.2s' }}
-      />
-
-      {/* Data points */}
+      {area && <path d={area} fill={`url(#${gradId})`}/>}
+      {validPts.length > 1 && (
+        <polyline points={polyline} fill="none" stroke={dragging ? '#f59e0b' : '#22c55e'} strokeWidth="1.8" strokeLinejoin="round" strokeLinecap="round"/>
+      )}
       {pts.map((p, i) => {
-        const isActive = dragging?.idx === i;
-        const isHover = hovering === i;
+        if (p.y == null) return null;
+        const isActive = dragging?.idx === i, isHover = hovering === i;
         const r = isActive ? 7 : (editMode ? (isHover ? 6 : 4) : 2.5);
         const col = isActive ? '#f59e0b' : (p.override ? '#8b5cf6' : colorForPct(p.pct));
         return (
           <g key={i}>
             {editMode && (
-              <circle
-                cx={p.x} cy={p.y} r={10}
-                fill="transparent"
-                style={{ cursor: 'ns-resize' }}
-                onMouseDown={e => onMouseDown(e, p)}
-                onTouchStart={e => onMouseDown(e, p)}
-                onMouseEnter={() => setHovering(i)}
-                onMouseLeave={() => setHovering(null)}
-              />
+              <circle cx={p.x} cy={p.y} r={12} fill="transparent" style={{cursor:'ns-resize'}}
+                onMouseDown={e => onMouseDown(e, p)} onTouchStart={e => onMouseDown(e, p)}
+                onMouseEnter={() => setHovering(i)} onMouseLeave={() => setHovering(null)}/>
             )}
-            <circle
-              cx={p.x} cy={p.y} r={r}
-              fill={col}
-              stroke="white"
-              strokeWidth={editMode ? 1.5 : 0.8}
-              style={{ transition: isActive ? 'none' : 'r 0.1s', pointerEvents: 'none' }}
-            />
-            {/* Tooltip on hover in edit mode */}
-            {editMode && (isActive || isHover) && (
+            <circle cx={p.x} cy={p.y} r={r} fill={col} stroke="white" strokeWidth={editMode ? 1.5 : 0.8} style={{pointerEvents:'none'}}/>
+            {(isActive || isHover) && (
               <g>
-                <rect
-                  x={Math.min(p.x - 24, W - 58)} y={p.y - 24}
-                  width={52} height={16}
-                  rx={3} fill="#1f2937"
-                />
-                <text
-                  x={Math.min(p.x, W - 32)} y={p.y - 13}
-                  fontSize="7.5" fill="white" textAnchor="middle"
-                  fontFamily="monospace" fontWeight="bold"
-                  style={{ pointerEvents: 'none' }}
-                >
-                  {p.pct.toFixed(2)}%
+                <rect x={Math.min(p.x-28, W-62)} y={p.y-28} width={56} height={18} rx={3} fill="#1f2937"/>
+                <text x={Math.min(p.x, W-34)} y={p.y-16} fontSize="8" fill="white" textAnchor="middle" fontFamily="monospace" fontWeight="bold" style={{pointerEvents:'none'}}>
+                  {p.pct != null ? `${p.pct.toFixed(2)}%` : 'N/A'}
                 </text>
-                <text
-                  x={Math.min(p.x, W - 32)} y={p.y - 30}
-                  fontSize="6" fill="#9ca3af" textAnchor="middle"
-                  fontFamily="sans-serif"
-                  style={{ pointerEvents: 'none' }}
-                >
-                  {p.date}
+                {p.latency != null && (
+                  <text x={Math.min(p.x, W-34)} y={p.y-36} fontSize="6" fill="#9ca3af" textAnchor="middle" fontFamily="sans-serif" style={{pointerEvents:'none'}}>
+                    {p.latency}ms
+                  </text>
+                )}
+                <text x={Math.min(p.x, W-34)} y={p.y-36} fontSize="6" fill="#9ca3af" textAnchor="middle" fontFamily="sans-serif" style={{pointerEvents:'none'}}>
+                  {p.label}
                 </text>
               </g>
             )}
-            {!editMode && (
-              <title>{p.date}: {p.pct.toFixed(2)}%{p.override ? ' (overridden)' : ''}</title>
-            )}
+            {!editMode && !isHover && <title>{p.label}: {p.pct != null ? `${p.pct.toFixed(2)}%` : 'N/A'}{p.override?' (overridden)':''}{p.latency?` · ${p.latency}ms`:''}</title>}
           </g>
         );
       })}
@@ -749,258 +689,287 @@ function UptimeSparkline({ days, editMode, onPointEdit, service }) {
   );
 }
 
+// ─── Mini bar strip ───────────────────────────────────────────────────────────
+function BarStrip({ data, editMode, onBarClick }) {
+  if (!data || data.length === 0) return null;
+  return (
+    <div className="flex gap-0.5">
+      {data.slice(-30).map((d, i) => {
+        const pct = d.pct;
+        const c = pct == null ? 'bg-neutral-200' : pct >= 99.5 ? 'bg-emerald-400' : pct >= 95 ? 'bg-amber-400' : 'bg-red-400';
+        return (
+          <div key={i} title={`${d.label || d.date}: ${pct != null ? pct.toFixed(2)+'%' : 'N/A'}${d.override?' (overridden)':''}`}
+            onClick={() => editMode && onBarClick && onBarClick(d)}
+            className={`flex-1 h-2 rounded-sm ${c} ${editMode ? 'cursor-pointer hover:opacity-60' : ''} ${d.override ? 'ring-1 ring-purple-400' : ''}`}
+          />
+        );
+      })}
+    </div>
+  );
+}
+
 // ═══════════════════════════════════════════════════════════════════════════════
-// UPTIME PANEL — admin-only, highly interactive
+// UPTIME PANEL
 // ═══════════════════════════════════════════════════════════════════════════════
 function UptimePanel() {
-  const [reports, setReports]     = useState([]);
+  const [reports,   setReports]   = useState([]);
   const [incidents, setIncidents] = useState([]);
-  const [tab, setTab]             = useState('graphs');
-  const [expanded, setExpanded]   = useState(null);
-  const [showCreate, setShowCreate]     = useState(false);
-  const [createForm, setCreateForm]     = useState({ title: '', description: '', severity: 'minor', initialMessage: '', reportIds: [] });
-  const [selServices, setSelServices]   = useState([]);
-  const [creating, setCreating]         = useState(false);
-  const [tlTarget, setTlTarget]         = useState(null);
-  const [tlForm, setTlForm]             = useState({ status: 'investigating', message: '' });
-  const [loading, setLoading]           = useState(true);
+  const [tab, setTab]             = useState('servers');
+  const [expanded,  setExpanded]  = useState(null);
 
-  // ── Server Health Graphs state ─────────────────────────────────────────────
-  const [healthHistory, setHealthHistory]         = useState(null);
-  const [healthLoading, setHealthLoading]         = useState(false);
-  const [editMode, setEditMode]                   = useState(false);
-  const [editingPoint, setEditingPoint]           = useState(null); // { service, date, ts, pct }
-  const [editPct, setEditPct]                     = useState('');
-  const [overrideService, setOverrideService]     = useState('');
-  const [overridePct, setOverridePct]             = useState('');
-  const [showOverrideModal, setShowOverrideModal] = useState(false);
-  const [nuclearLoading, setNuclearLoading]       = useState(false);
-  const [healthDays, setHealthDays]               = useState(30);
-  const [graphFilter, setGraphFilter]             = useState('all');
+  // Incident modals
+  const [showCreate, setShowCreate] = useState(false);
+  const [createForm, setCreateForm] = useState({ title: '', description: '', severity: 'minor', initialMessage: '', reportIds: [] });
+  const [selServices, setSelServices] = useState([]);
+  const [creating,  setCreating]  = useState(false);
+  const [tlTarget,  setTlTarget]  = useState(null);
+  const [tlForm,    setTlForm]    = useState({ status: 'investigating', message: '' });
+
+  // Graphs
+  const [window,       setWindow]       = useState('15d');   // 1h | 24h | 7d | 15d
+  const [graphSection, setGraphSection] = useState('servers'); // servers | services | category id
+  const [liveData,     setLiveData]     = useState(null);
+  const [fullData,     setFullData]     = useState(null);    // /admin/server-health-history
+  const [loading,      setLoading]      = useState(true);
+  const [graphLoading, setGraphLoading] = useState(false);
+  const [liveLoading,  setLiveLoading]  = useState(false);
+  const [editMode,     setEditMode]     = useState(false);
+  const [editingPoint, setEditingPoint] = useState(null);
+  const [editPct,      setEditPct]      = useState('');
+  const [showOverride, setShowOverride] = useState(false);
+  const [ovService,    setOvService]    = useState('');
+  const [ovPct,        setOvPct]        = useState('100');
+  const [nucLoading,   setNucLoading]   = useState(false);
   const [liveProcessUptime, setLiveProcessUptime] = useState(null);
-  const liveRef = useRef(null);
+
+  const liveTimer  = useRef(null);
   const uptimeTick = useRef(null);
 
-  // Flat list of ALL services for the Set % dropdown
-  const allServiceKeys = ALL_SERVICES_FLAT.map(s => s.key);
+  // ── Load base data ──────────────────────────────────────────────────────────
+  useEffect(() => { loadAll(); }, []);
 
-  useEffect(() => { load(); }, []);
-
-  // Auto-refresh graphs every 30 s
   useEffect(() => {
-    if (tab !== 'graphs') return;
-    loadHealth();
-    liveRef.current = setInterval(loadHealth, 30000);
-    return () => clearInterval(liveRef.current);
-  }, [tab, healthDays]);
+    loadLive();
+    clearInterval(liveTimer.current);
+    const ms = window === '1h' ? 30000 : window === '24h' ? 60000 : 120000;
+    liveTimer.current = setInterval(loadLive, ms);
+    return () => clearInterval(liveTimer.current);
+  }, [window]);
 
-  // Live process uptime ticker — update every second from the value fetched from API
+  // Live process uptime ticker
   useEffect(() => {
-    if (healthHistory?.processUptimeSeconds != null) {
-      let s = healthHistory.processUptimeSeconds;
+    if (fullData?.processUptimeSeconds != null) {
+      let s = fullData.processUptimeSeconds;
       setLiveProcessUptime(s);
+      clearInterval(uptimeTick.current);
       uptimeTick.current = setInterval(() => setLiveProcessUptime(x => (x || 0) + 1), 1000);
       return () => clearInterval(uptimeTick.current);
     }
-  }, [healthHistory?.processUptimeSeconds]);
+  }, [fullData?.processUptimeSeconds]);
 
-  const load = async () => {
+  const loadAll = async () => {
     setLoading(true);
     try {
-      const [r, i] = await Promise.all([
+      const [r, i, h] = await Promise.all([
         uptimeAPI.getReports().catch(() => ({ data: { reports: [] } })),
         uptimeAPI.getIncidents().catch(() => ({ data: { incidents: [] } })),
+        uptimeAPI.getServerHealthHistory(30).catch(() => null),
       ]);
       setReports(r.data.reports || []);
       setIncidents(i.data.incidents || []);
+      if (h?.data) setFullData(h.data);
     } catch {} finally { setLoading(false); }
   };
 
-  const loadHealth = async () => {
-    setHealthLoading(true);
+  const loadLive = async () => {
+    setLiveLoading(true);
     try {
-      const r = await uptimeAPI.getServerHealthHistory(healthDays);
-      setHealthHistory(r.data);
-    } catch (e) {
-      console.warn('[UptimePanel] health history fetch failed', e);
-    } finally { setHealthLoading(false); }
+      const r = await uptimeAPI.getLiveHistory(window);
+      if (r?.data) setLiveData(r.data);
+    } catch (e) { console.warn('live-history failed', e); }
+    finally { setLiveLoading(false); }
   };
 
+  const loadFull = async (days = 30) => {
+    setGraphLoading(true);
+    try {
+      const r = await uptimeAPI.getServerHealthHistory(days);
+      if (r?.data) setFullData(r.data);
+    } catch {} finally { setGraphLoading(false); }
+  };
+
+  // ── Derived ─────────────────────────────────────────────────────────────────
   const pending = reports.filter(r => r.status === 'pending').length;
   const active  = incidents.filter(i => i.status !== 'resolved').length;
 
-  // ── Nuclear: resolve all incidents & override everything to 100% ───────────
-  const handleNuclear = async () => {
-    if (!confirm('This will resolve ALL active incidents and mark all services as 100% operational. Continue?')) return;
-    setNuclearLoading(true);
-    try {
-      const r = await uptimeAPI.overrideAllUptime(100);
-      toast.success(`✅ ${r.data.incidentsResolved} incidents resolved, ${r.data.servicesOverridden.length} services set to 100%`);
-      await Promise.all([load(), loadHealth()]);
-    } catch { toast.error('Nuclear override failed'); }
-    finally { setNuclearLoading(false); }
+  const uptimeColor = (pct) => pct == null ? 'text-neutral-400' : pct >= 99.5 ? 'text-emerald-600' : pct >= 95 ? 'text-amber-500' : 'text-red-500';
+  const uptimeBg    = (pct) => pct == null ? 'bg-neutral-100 text-neutral-500' : pct >= 99.5 ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : pct >= 95 ? 'bg-amber-50 text-amber-700 border border-amber-200' : 'bg-red-50 text-red-700 border border-red-200';
+
+  const fmtSecs = (s) => {
+    if (!s && s !== 0) return '—';
+    const d = Math.floor(s/86400), h = Math.floor((s%86400)/3600), m = Math.floor((s%3600)/60), sec = Math.floor(s%60);
+    if (d > 0) return `${d}d ${h}h ${m}m`;
+    if (h > 0) return `${h}h ${m}m ${sec}s`;
+    return `${m}m ${sec}s`;
   };
 
-  // ── Set uptime % for one service ───────────────────────────────────────────
-  const handleSetOverride = async () => {
-    const n = parseFloat(overridePct);
-    if (isNaN(n) || n < 0 || n > 100) { toast.error('Enter a valid percentage (0–100)'); return; }
+  // Which data to use for graphs: live (UptimeCheck buckets) or full (day-level)
+  const isLiveWindow = window === '1h' || window === '24h';
+
+  // ── Actions ──────────────────────────────────────────────────────────────────
+  const handlePointEdit = async ({ service, date, ts, pct }) => {
+    const n = parseFloat(pct);
+    if (isNaN(n)) return;
     try {
-      await uptimeAPI.setUptimeOverride({ service: overrideService, pct: n });
-      toast.success(`Set ${overrideService} to ${n}%`);
-      setShowOverrideModal(false);
-      loadHealth();
-    } catch { toast.error('Failed to set override'); }
+      await uptimeAPI.patchHealthPoint(service, date || ts, n);
+      toast.success(`${service} · ${date} → ${n.toFixed(2)}%`);
+      loadLive(); loadFull(30);
+    } catch { toast.error('Failed to save'); }
+  };
+
+  const handlePointClick = (service, point) => {
+    setEditingPoint({ service, date: point.date || point.label, ts: point.ts });
+    setEditPct(String((point.pct ?? 100).toFixed(2)));
+  };
+
+  const handleSavePoint = async () => {
+    const n = parseFloat(editPct);
+    if (!editingPoint || isNaN(n)) { toast.error('Invalid'); return; }
+    try {
+      await uptimeAPI.patchHealthPoint(editingPoint.service, editingPoint.date || editingPoint.ts, n);
+      toast.success(`Saved ${editingPoint.date} → ${n}%`);
+      setEditingPoint(null); loadLive(); loadFull(30);
+    } catch { toast.error('Failed'); }
+  };
+
+  const handleSetOverride = async () => {
+    const n = parseFloat(ovPct);
+    if (isNaN(n) || n < 0 || n > 100) { toast.error('Invalid %'); return; }
+    try {
+      await uptimeAPI.setUptimeOverride({ service: ovService, pct: n });
+      toast.success(`Set ${ovService} → ${n}%`);
+      setShowOverride(false); loadLive(); loadFull(30);
+    } catch { toast.error('Failed'); }
   };
 
   const handleClearOverride = async (svc) => {
     try {
       await uptimeAPI.clearUptimeOverride(svc);
       toast.success(`Cleared override for ${svc}`);
-      loadHealth();
-    } catch { toast.error('Failed to clear override'); }
+      loadLive(); loadFull(30);
+    } catch { toast.error('Failed'); }
   };
 
-  // ── Drag-edit a graph point (fired from UptimeSparkline on mouseup) ────────
-  const handlePointEdit = async ({ service: svc, date, ts, pct }) => {
-    const n = parseFloat(pct);
-    if (isNaN(n) || n < 0 || n > 100) return;
+  const handleNuclear = async () => {
+    if (!confirm('Resolve ALL active incidents and set all affected services to 100%?')) return;
+    setNucLoading(true);
     try {
-      await uptimeAPI.patchHealthPoint(svc, ts, n);
-      toast.success(`${svc} · ${date} → ${n.toFixed(2)}%`);
-      loadHealth();
-    } catch { toast.error('Failed to save point'); }
+      const r = await uptimeAPI.overrideAllUptime(100);
+      toast.success(`✅ ${r.data.incidentsResolved} incidents resolved`);
+      loadAll(); loadLive();
+    } catch { toast.error('Failed'); }
+    finally { setNucLoading(false); }
   };
 
-  // ── Legacy click-to-edit (modal) ───────────────────────────────────────────
-  const handlePointClick = (svc, point) => {
-    setEditingPoint({ service: svc, date: point.date, ts: point.ts });
-    setEditPct(String(point.pct.toFixed(2)));
+  // ── Build graph data ─────────────────────────────────────────────────────────
+  // For server graphs: use live data (UptimeCheck) when window is 1h/24h,
+  // fallback to fullData (day-level) for 7d/15d.
+  const serverNames = isLiveWindow
+    ? (liveData?.serverNames || [])
+    : (fullData?.serverNames || []);
+
+  const getServerGraphData = (name) => {
+    if (isLiveWindow && liveData?.servers?.[name]) {
+      return liveData.servers[name].history;
+    }
+    if (fullData?.servers?.[name]) {
+      return fullData.servers[name].history.map(d => ({ ...d, label: d.date }));
+    }
+    return [];
   };
 
-  const handleSavePoint = async () => {
-    const n = parseFloat(editPct);
-    if (!editingPoint || isNaN(n) || n < 0 || n > 100) { toast.error('Invalid percentage'); return; }
-    try {
-      await uptimeAPI.patchHealthPoint(editingPoint.service, editingPoint.ts, n);
-      toast.success(`Updated ${editingPoint.date} → ${n}%`);
-      setEditingPoint(null);
-      loadHealth();
-    } catch { toast.error('Failed to save point'); }
+  const getServerAvgPct = (name) => {
+    if (isLiveWindow && liveData?.servers?.[name]) return liveData.servers[name].avgPct;
+    if (fullData?.servers?.[name]) return fullData.servers[name].avgPct;
+    return null;
   };
 
-  const services   = healthHistory ? healthHistory.services || [] : [];
-  const historyMap = healthHistory ? healthHistory.history  || {} : {};
+  const getServerOverride = (name) => fullData?.servers?.[name]?.override || null;
 
-  // ── Colour helpers ──────────────────────────────────────────────────────────
-  const uptimeColor = (pct) => {
-    if (pct == null) return 'text-neutral-400';
-    if (pct >= 99.5) return 'text-emerald-600';
-    if (pct >= 95)   return 'text-amber-500';
-    return 'text-red-500';
-  };
+  // Service graph data always comes from fullData (incident-derived, day level)
+  const serviceKeys  = fullData?.serviceKeys || [];
+  const serviceHist  = fullData?.services    || {};
+  const svcCategories = fullData?.serviceCategories || SERVICE_CATEGORIES;
 
-  const uptimeBg = (pct) => {
-    if (pct == null) return 'bg-neutral-100 text-neutral-500';
-    if (pct >= 99.5) return 'bg-emerald-50 text-emerald-700 border border-emerald-200';
-    if (pct >= 95)   return 'bg-amber-50 text-amber-700 border border-amber-200';
-    return 'bg-red-50 text-red-700 border border-red-200';
-  };
+  // Window labels
+  const WIN_LABEL = { '1h': 'Last Hour', '24h': 'Last 24h', '7d': 'Last 7 Days', '15d': 'Last 15 Days' };
 
-  const fmtUptimeSecs = (s) => {
-    if (!s && s !== 0) return '—';
-    const d = Math.floor(s / 86400);
-    const h = Math.floor((s % 86400) / 3600);
-    const m = Math.floor((s % 3600) / 60);
-    const sec = Math.floor(s % 60);
-    if (d > 0) return `${d}d ${h}h ${m}m`;
-    if (h > 0) return `${h}h ${m}m ${sec}s`;
-    return `${m}m ${sec}s`;
-  };
-
-  // ── Filtered services for graph tab ────────────────────────────────────────
-  const filteredServices = services.filter(svc => {
-    if (graphFilter === 'all')       return true;
-    if (graphFilter === 'degraded')  return (historyMap[svc]?.avgPct ?? 100) < 99.5;
-    if (graphFilter === 'overridden') return !!historyMap[svc]?.override;
-    // category filter
-    const entry = ALL_SERVICES_FLAT.find(s => s.key === svc);
-    return entry?.categoryId === graphFilter;
-  });
-
-  // Categories for the filter bar
-  const categoryFilters = [
-    { id: 'all', label: 'All Services' },
-    { id: 'degraded', label: '⚠ Degraded' },
-    { id: 'overridden', label: '✦ Overridden' },
+  // ── Full-page filter categories for sidebar ──────────────────────────────────
+  const catFilters = [
+    { id: 'servers',  label: 'Servers' },
+    { id: 'services', label: 'All Services' },
     ...SERVICE_CATEGORIES.map(c => ({ id: c.id, label: c.label })),
   ];
 
+  // Services to show in current category filter
+  const visibleServiceKeys = graphSection === 'services'
+    ? serviceKeys
+    : graphSection !== 'servers'
+      ? (SERVICE_CATEGORIES.find(c => c.id === graphSection)?.services.map(s => s.key) || [])
+      : [];
+
   return (
     <div className="space-y-5">
-      {/* ── Header ────────────────────────────────────────────────────────── */}
+      {/* ── Header ─────────────────────────────────────────────────────────── */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h2 className="text-lg font-bold">Uptime &amp; Server Health</h2>
-          <p className="text-sm text-neutral-500">
-            {active > 0 ? `${active} active incident${active !== 1 ? 's' : ''}` : 'All clear'}
-            {' · '}{pending} pending report{pending !== 1 ? 's' : ''}
+          <p className="text-sm text-neutral-500 flex items-center gap-2 flex-wrap">
+            {active > 0 ? <span className="text-red-500 font-medium">{active} active incident{active !== 1 ? 's' : ''}</span> : <span className="text-emerald-600 font-medium">All clear</span>}
+            <span>·</span><span>{pending} pending report{pending !== 1 ? 's' : ''}</span>
             {liveProcessUptime != null && (
-              <span className="ml-2 text-xs text-emerald-600 font-mono bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
-                ⬆ Process up {fmtUptimeSecs(liveProcessUptime)}
+              <span className="text-xs text-emerald-600 font-mono bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                ⬆ {fmtSecs(liveProcessUptime)}
               </span>
             )}
+            {liveLoading && <span className="w-3 h-3 rounded-full border-2 border-neutral-200 border-t-neutral-600 animate-spin inline-block"/>}
           </p>
         </div>
         <div className="flex gap-2 flex-wrap">
-          <a href="/status" target="_blank" className="btn btn-secondary gap-1 text-sm"><ExternalLink className="w-3.5 h-3.5" /> Status Page</a>
-          <button
-            onClick={() => {
-              const firstKey = allServiceKeys[0] || 'general';
-              setOverrideService(firstKey);
-              setOverridePct('100');
-              setShowOverrideModal(true);
-            }}
-            className="btn btn-secondary gap-1 text-sm text-purple-700 border-purple-200 hover:bg-purple-50"
-          >
-            <Gauge className="w-3.5 h-3.5" /> Set Uptime %
+          <a href="/status" target="_blank" className="btn btn-secondary gap-1 text-sm"><ExternalLink className="w-3.5 h-3.5"/> Status Page</a>
+          <button onClick={() => { setOvService(serverNames[0] || 'general'); setOvPct('100'); setShowOverride(true); }} className="btn btn-secondary gap-1 text-sm text-purple-700 border-purple-200 hover:bg-purple-50">
+            <Gauge className="w-3.5 h-3.5"/> Set Uptime %
           </button>
-          <button
-            onClick={handleNuclear}
-            disabled={nuclearLoading}
-            className="btn gap-1 text-sm bg-red-600 hover:bg-red-700 text-white border-red-600"
-          >
-            {nuclearLoading ? <span className="spinner w-3.5 h-3.5 border-2 border-white/30 border-t-white" /> : <Zap className="w-3.5 h-3.5" />}
-            All Systems Operational
+          <button onClick={handleNuclear} disabled={nucLoading} className="btn gap-1 text-sm bg-red-600 hover:bg-red-700 text-white border-red-600">
+            {nucLoading ? <span className="spinner w-3.5 h-3.5 border-2 border-white/30 border-t-white"/> : <Zap className="w-3.5 h-3.5"/>}
+            All Systems OK
           </button>
-          <button onClick={() => { setCreateForm({ title: '', description: '', severity: 'minor', initialMessage: '', reportIds: [] }); setSelServices([]); setShowCreate(true); }} className="btn btn-primary gap-1 text-sm"><Plus className="w-3.5 h-3.5" /> New Incident</button>
+          <button onClick={() => { setCreateForm({ title:'', description:'', severity:'minor', initialMessage:'', reportIds:[] }); setSelServices([]); setShowCreate(true); }} className="btn btn-primary gap-1 text-sm">
+            <Plus className="w-3.5 h-3.5"/> New Incident
+          </button>
         </div>
       </div>
 
-      {/* ── Admin-only uptime stats bar ────────────────────────────────────── */}
+      {/* ── Stats row ──────────────────────────────────────────────────────── */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {[
-          { label: 'Active Incidents', value: active, color: active > 0 ? 'text-red-600' : 'text-emerald-600', bg: active > 0 ? 'bg-red-50 border-red-200' : 'bg-emerald-50 border-emerald-200' },
-          { label: 'Pending Reports', value: pending, color: pending > 0 ? 'text-amber-600' : 'text-emerald-600', bg: pending > 0 ? 'bg-amber-50 border-amber-200' : 'bg-emerald-50 border-emerald-200' },
-          { label: 'Services Monitored', value: ALL_SERVICES_FLAT.length, color: 'text-blue-600', bg: 'bg-blue-50 border-blue-200' },
-          { label: 'Overridden Services', value: services.filter(s => historyMap[s]?.override).length, color: 'text-purple-600', bg: 'bg-purple-50 border-purple-200' },
-        ].map(({ label, value, color, bg }) => (
+          { label: 'Active Incidents',    value: active,                    col: active > 0 ? 'text-red-600' : 'text-emerald-600', bg: active > 0 ? 'bg-red-50 border-red-200' : 'bg-emerald-50 border-emerald-200' },
+          { label: 'Pending Reports',     value: pending,                   col: pending > 0 ? 'text-amber-600' : 'text-neutral-600', bg: pending > 0 ? 'bg-amber-50 border-amber-200' : 'bg-neutral-50 border-neutral-200' },
+          { label: 'Servers Monitored',   value: serverNames.length,        col: 'text-blue-600', bg: 'bg-blue-50 border-blue-200' },
+          { label: 'Services Monitored',  value: ALL_SERVICES_FLAT.length,  col: 'text-violet-600', bg: 'bg-violet-50 border-violet-200' },
+        ].map(({ label, value, col, bg }) => (
           <div key={label} className={`rounded-xl border p-3 ${bg}`}>
-            <p className="text-xs text-neutral-500 font-medium mb-0.5">{label}</p>
-            <p className={`text-2xl font-bold tabular-nums ${color}`}>{value}</p>
+            <p className="text-xs text-neutral-500 mb-0.5">{label}</p>
+            <p className={`text-2xl font-bold tabular-nums ${col}`}>{value}</p>
           </div>
         ))}
       </div>
 
-      {/* ── Tabs ──────────────────────────────────────────────────────────── */}
+      {/* ── Tabs ───────────────────────────────────────────────────────────── */}
       <div className="flex gap-1 bg-neutral-100 rounded-xl p-1 w-fit">
-        {[
-          ['graphs',    'Live Graphs', null],
-          ['reports',   'Reports',     pending],
-          ['incidents', 'Incidents',   active],
-        ].map(([id, l, c]) => (
+        {[['servers','Live Graphs',null],['reports','Reports',pending],['incidents','Incidents',active]].map(([id, l, c]) => (
           <button key={id} onClick={() => setTab(id)} className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-all flex items-center gap-1.5 ${tab === id ? 'bg-white shadow-sm text-neutral-900' : 'text-neutral-500'}`}>
-            {l} {c > 0 && <span className={`text-xs px-1.5 py-0.5 rounded-full font-bold ${tab === id ? 'bg-red-100 text-red-600' : 'bg-neutral-200 text-neutral-500'}`}>{c}</span>}
+            {l}{c > 0 && <span className={`text-xs px-1.5 py-0.5 rounded-full font-bold ${tab === id ? 'bg-red-100 text-red-600' : 'bg-neutral-200 text-neutral-500'}`}>{c}</span>}
           </button>
         ))}
       </div>
@@ -1008,198 +977,201 @@ function UptimePanel() {
       {/* ═══════════════════════════════════════════════════════════════════ */}
       {/* GRAPHS TAB                                                        */}
       {/* ═══════════════════════════════════════════════════════════════════ */}
-      {tab === 'graphs' && (
-        <div className="space-y-4">
-          {/* Controls row */}
-          <div className="flex items-center gap-3 flex-wrap">
-            <div className="flex gap-1 bg-neutral-100 rounded-lg p-1">
-              {[7, 30, 90].map(d => (
-                <button key={d} onClick={() => setHealthDays(d)} className={`px-3 py-1 rounded text-xs font-medium transition-all ${healthDays === d ? 'bg-white shadow-sm text-neutral-900' : 'text-neutral-500'}`}>{d}d</button>
-              ))}
-            </div>
-            <button onClick={loadHealth} className="btn btn-secondary gap-1 text-xs py-1.5">
-              <RefreshCw className={`w-3 h-3 ${healthLoading ? 'animate-spin' : ''}`} /> Refresh
-            </button>
-            <button
-              onClick={() => setEditMode(e => !e)}
-              className={`btn gap-1 text-xs py-1.5 ${editMode ? 'bg-amber-100 text-amber-800 border-amber-300 hover:bg-amber-200' : 'btn-secondary'}`}
-            >
-              <Edit2 className="w-3 h-3" /> {editMode ? 'Exit Edit Mode' : 'Edit Mode'}
-            </button>
-            {editMode && (
-              <span className="text-xs text-amber-600 font-medium flex items-center gap-1 bg-amber-50 px-2 py-1 rounded-lg border border-amber-200">
-                <AlertTriangle className="w-3.5 h-3.5" /> Drag any point on a graph to edit · Release to save
-              </span>
-            )}
-            <span className="ml-auto text-xs text-neutral-400 flex items-center gap-2">
-              <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-emerald-500 inline-block" /> ≥99.5%</span>
-              <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-amber-400 inline-block" /> 95–99.5%</span>
-              <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-red-500 inline-block" /> &lt;95%</span>
-              <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-purple-500 inline-block" /> Override</span>
-            </span>
-          </div>
-
-          {/* Category filter pills */}
-          <div className="flex gap-1.5 flex-wrap">
-            {categoryFilters.map(f => (
-              <button
-                key={f.id}
-                onClick={() => setGraphFilter(f.id)}
-                className={`text-xs px-2.5 py-1 rounded-full border font-medium transition-all ${graphFilter === f.id ? 'bg-neutral-900 text-white border-neutral-900' : 'border-neutral-200 text-neutral-500 hover:bg-neutral-50'}`}
-              >
+      {tab === 'servers' && (
+        <div className="flex gap-4">
+          {/* Sidebar — section nav */}
+          <div className="w-44 flex-shrink-0 space-y-0.5">
+            {catFilters.map(f => (
+              <button key={f.id} onClick={() => setGraphSection(f.id)}
+                className={`w-full text-left text-xs px-2.5 py-2 rounded-lg font-medium transition-all ${graphSection === f.id ? 'bg-neutral-900 text-white' : 'text-neutral-500 hover:bg-neutral-100'}`}>
                 {f.label}
               </button>
             ))}
           </div>
 
-          {healthLoading && !healthHistory && (
-            <div className="flex justify-center py-12"><span className="spinner w-6 h-6 border-2 border-neutral-200 border-t-neutral-600" /></div>
-          )}
-
-          {healthHistory && services.length === 0 && (
-            <div className="text-center py-12 text-neutral-400">
-              <Activity className="w-8 h-8 mx-auto mb-2 opacity-30" />
-              <p className="text-sm">No service history yet — incidents will populate this graph.</p>
-              <p className="text-xs mt-1 text-neutral-300">Use the Set Uptime % button to manually add data for any service.</p>
-            </div>
-          )}
-
-          {/* Service cards */}
-          {filteredServices.map(svc => {
-            const data  = historyMap[svc];
-            if (!data) return null;
-            const pct   = data.avgPct;
-            const hasOv = !!data.override;
-            // Try to find a human-readable name from ALL_SERVICES_FLAT
-            const meta  = ALL_SERVICES_FLAT.find(s => s.key === svc);
-            const label = meta?.name || svc;
-            const catLabel = meta?.category;
-
-            return (
-              <div key={svc} className={`card p-4 space-y-2 ${hasOv ? 'ring-1 ring-purple-200' : ''}`}>
-                <div className="flex items-center justify-between flex-wrap gap-2">
-                  <div className="flex items-center gap-2">
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className="font-semibold text-sm">{label}</span>
-                        {catLabel && <span className="text-xs text-neutral-400 bg-neutral-100 px-1.5 py-0.5 rounded-full">{catLabel}</span>}
-                      </div>
-                      <p className="text-xs text-neutral-400 font-mono mt-0.5">{svc}</p>
-                    </div>
-                    {hasOv && (
-                      <span className="text-xs px-2 py-0.5 rounded-full bg-purple-100 text-purple-700 font-medium flex items-center gap-1">
-                        <Edit3 className="w-2.5 h-2.5" /> overridden
-                      </span>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className={`text-sm font-bold tabular-nums px-2.5 py-1 rounded-lg ${uptimeBg(pct)}`}>
-                      {pct != null ? `${pct.toFixed(2)}%` : '—'}
-                    </span>
-                    <span className="text-xs text-neutral-400">{healthDays}d avg</span>
-                    <button
-                      onClick={() => { setOverrideService(svc); setOverridePct(String(pct?.toFixed(2) || '100')); setShowOverrideModal(true); }}
-                      className="text-xs px-2 py-1 rounded-lg border border-neutral-200 text-neutral-500 hover:bg-neutral-50 flex items-center gap-1"
-                    >
-                      <Gauge className="w-3 h-3" /> Set %
-                    </button>
-                    {hasOv && (
-                      <button onClick={() => handleClearOverride(svc)} className="text-xs px-2 py-1 rounded-lg border border-red-200 text-red-500 hover:bg-red-50 flex items-center gap-1">
-                        <X className="w-3 h-3" /> Clear
-                      </button>
-                    )}
-                  </div>
-                </div>
-
-                {/* Override info pill */}
-                {hasOv && (
-                  <p className="text-xs text-purple-600 bg-purple-50 px-2 py-1 rounded-lg border border-purple-100">
-                    Override active: <strong>{data.override.pct}%</strong>
-                    {data.override.label && ` · ${data.override.label}`}
-                    {' · Set '}{new Date(data.override.setAt).toLocaleString()}
-                  </p>
-                )}
-
-                {/* Interactive drag-to-edit sparkline */}
-                <div className="bg-neutral-50 rounded-xl overflow-hidden px-2 pt-2 pb-1 relative">
-                  {editMode && (
-                    <div className="absolute top-1.5 right-2 text-xs text-amber-600 font-medium bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200 z-10">
-                      ↕ drag points
-                    </div>
-                  )}
-                  <UptimeSparkline
-                    days={data.days}
-                    editMode={editMode}
-                    service={svc}
-                    onPointEdit={handlePointEdit}
-                  />
-                  <div className="flex justify-between text-xs text-neutral-400 px-1 pb-1">
-                    <span>{data.days?.[0]?.date}</span>
-                    <span className="text-neutral-300">{data.days?.length} data points</span>
-                    <span>{data.days?.[data.days.length - 1]?.date}</span>
-                  </div>
-                </div>
-
-                {/* Day-by-day bar strip (last 30 days) */}
-                <div className="flex gap-0.5 pt-1">
-                  {(data.days || []).slice(-30).map((d, i) => {
-                    const c = d.pct >= 99.5 ? 'bg-emerald-400' : d.pct >= 95 ? 'bg-amber-400' : 'bg-red-400';
-                    return (
-                      <div
-                        key={i}
-                        title={`${d.date}: ${d.pct.toFixed(2)}%${d.override ? ' (overridden)' : ''}`}
-                        onClick={() => editMode && handlePointClick(svc, { ...d, ts: d.timestamp })}
-                        className={`flex-1 h-2 rounded-sm ${c} ${editMode ? 'cursor-pointer hover:opacity-70' : ''} ${d.override ? 'ring-1 ring-purple-400' : ''}`}
-                      />
-                    );
-                  })}
-                </div>
+          {/* Main graph area */}
+          <div className="flex-1 min-w-0 space-y-4">
+            {/* Controls */}
+            <div className="flex items-center gap-2 flex-wrap">
+              {/* Time window */}
+              <div className="flex gap-1 bg-neutral-100 rounded-lg p-1">
+                {['1h','24h','7d','15d'].map(w => (
+                  <button key={w} onClick={() => setWindow(w)}
+                    className={`px-3 py-1 rounded text-xs font-medium transition-all ${window === w ? 'bg-white shadow-sm text-neutral-900' : 'text-neutral-500'}`}>
+                    {w}
+                  </button>
+                ))}
               </div>
-            );
-          })}
-
-          {/* All-services overview table (admin-only) */}
-          <div className="card overflow-hidden">
-            <div className="px-4 py-3 border-b flex items-center justify-between bg-neutral-50">
-              <h3 className="text-sm font-bold flex items-center gap-2">
-                <Activity className="w-4 h-4 text-blue-500" />
-                All Services Overview
-                <span className="text-xs text-neutral-400 font-normal">(admin-only · not shown on public status page)</span>
-              </h3>
+              <button onClick={() => { loadLive(); if (!isLiveWindow) loadFull(30); }}
+                className="btn btn-secondary gap-1 text-xs py-1.5">
+                <RefreshCw className={`w-3 h-3 ${(liveLoading||graphLoading) ? 'animate-spin' : ''}`}/> Refresh
+              </button>
+              <button onClick={() => setEditMode(e => !e)}
+                className={`btn gap-1 text-xs py-1.5 ${editMode ? 'bg-amber-100 text-amber-800 border-amber-300' : 'btn-secondary'}`}>
+                <Edit2 className="w-3 h-3"/> {editMode ? 'Exit Edit' : 'Edit Mode'}
+              </button>
+              {editMode && (
+                <span className="text-xs text-amber-600 bg-amber-50 border border-amber-200 px-2 py-1 rounded-lg flex items-center gap-1">
+                  <AlertTriangle className="w-3 h-3"/> Drag points or click bars to edit · saves to MongoDB
+                </span>
+              )}
+              <span className="ml-auto text-xs text-neutral-400 flex items-center gap-2">
+                <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-emerald-500 inline-block"/> ≥99.5%</span>
+                <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-amber-400 inline-block"/> 95–99.5%</span>
+                <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-red-500 inline-block"/> &lt;95%</span>
+                <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-purple-500 inline-block"/> Override</span>
+              </span>
             </div>
-            <div className="divide-y divide-neutral-50 max-h-96 overflow-y-auto">
-              {SERVICE_CATEGORIES.map(cat => (
-                <div key={cat.id}>
-                  <div className="px-4 py-2 bg-neutral-50 sticky top-0">
-                    <span className="text-xs font-bold text-neutral-500 uppercase tracking-wider">{cat.label}</span>
+
+            <p className="text-xs text-neutral-400">
+              {WIN_LABEL[window]}
+              {isLiveWindow ? ' · Data from real health checks (MongoDB UptimeCheck)' : ' · Day-level aggregates from health checks + incident data'}
+            </p>
+
+            {/* ── SERVER GRAPHS ─────────────────────────────────────────── */}
+            {graphSection === 'servers' && (
+              <>
+                {serverNames.length === 0 && !liveLoading && (
+                  <div className="text-center py-12 text-neutral-400">
+                    <Activity className="w-8 h-8 mx-auto mb-2 opacity-30"/>
+                    <p className="text-sm">No server data yet. Watchdog will start populating this once it pings backends.</p>
                   </div>
-                  {cat.services.map(svc => {
-                    const d = historyMap[svc.key];
-                    const pct = d?.avgPct;
-                    const hasOv = !!d?.override;
-                    return (
-                      <div key={svc.key} className="px-4 py-2.5 flex items-center justify-between hover:bg-neutral-50 group">
+                )}
+                {serverNames.map(name => {
+                  const gData  = getServerGraphData(name);
+                  const avgPct = getServerAvgPct(name);
+                  const ov     = getServerOverride(name);
+                  return (
+                    <div key={name} className={`card p-4 space-y-2 ${ov ? 'ring-1 ring-purple-200' : ''}`}>
+                      <div className="flex items-center justify-between flex-wrap gap-2">
                         <div className="flex items-center gap-2">
-                          <span className={`w-2 h-2 rounded-full flex-shrink-0 ${pct == null ? 'bg-neutral-300' : pct >= 99.5 ? 'bg-emerald-400' : pct >= 95 ? 'bg-amber-400' : 'bg-red-400'}`} />
-                          <span className="text-sm text-neutral-700">{svc.name}</span>
-                          <span className="text-xs text-neutral-400 font-mono hidden group-hover:inline">{svc.key}</span>
+                          <div className={`w-2.5 h-2.5 rounded-full ${avgPct == null ? 'bg-neutral-300' : avgPct >= 99.5 ? 'bg-emerald-400 animate-pulse' : avgPct >= 95 ? 'bg-amber-400' : 'bg-red-400 animate-pulse'}`}/>
+                          <span className="font-semibold text-sm">{name}</span>
+                          {ov && <span className="text-xs px-2 py-0.5 rounded-full bg-purple-100 text-purple-700 font-medium flex items-center gap-1"><Edit3 className="w-2.5 h-2.5"/> overridden</span>}
                         </div>
                         <div className="flex items-center gap-2">
-                          {hasOv && <span className="text-xs text-purple-600 bg-purple-50 px-1.5 py-0.5 rounded border border-purple-100">override</span>}
-                          <span className={`text-sm font-bold tabular-nums ${uptimeColor(pct)}`}>{pct != null ? `${pct.toFixed(2)}%` : 'no data'}</span>
-                          <button
-                            onClick={() => { setOverrideService(svc.key); setOverridePct(String(pct?.toFixed(2) || '100')); setShowOverrideModal(true); }}
-                            className="text-xs px-2 py-0.5 rounded border border-neutral-200 text-neutral-400 hover:bg-neutral-100 opacity-0 group-hover:opacity-100 transition-opacity"
-                          >
-                            Set %
+                          <span className={`text-sm font-bold tabular-nums px-2 py-0.5 rounded-lg ${uptimeBg(avgPct)}`}>
+                            {avgPct != null ? `${avgPct.toFixed(2)}%` : '—'}
+                          </span>
+                          <span className="text-xs text-neutral-400">{WIN_LABEL[window]} avg</span>
+                          <button onClick={() => { setOvService(name); setOvPct(String(avgPct?.toFixed(2) || '100')); setShowOverride(true); }}
+                            className="text-xs px-2 py-1 rounded-lg border border-neutral-200 text-neutral-500 hover:bg-neutral-50 flex items-center gap-1">
+                            <Gauge className="w-3 h-3"/> Set %
                           </button>
+                          {ov && <button onClick={() => handleClearOverride(name)} className="text-xs px-2 py-1 rounded-lg border border-red-200 text-red-500 hover:bg-red-50 flex items-center gap-1"><X className="w-3 h-3"/> Clear</button>}
                         </div>
                       </div>
-                    );
-                  })}
+                      {ov && <p className="text-xs text-purple-600 bg-purple-50 px-2 py-1 rounded-lg border border-purple-100">Override: <strong>{ov.pct}%</strong>{ov.label ? ` · ${ov.label}` : ''} · {new Date(ov.setAt).toLocaleString()}</p>}
+                      <div className="bg-neutral-50 rounded-xl px-2 pt-2 pb-1 relative">
+                        {editMode && <div className="absolute top-2 right-2 text-xs text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200 z-10">↕ drag</div>}
+                        <UptimeSparkline data={gData} editMode={editMode} service={name} onPointEdit={handlePointEdit} height={80}/>
+                        <div className="flex justify-between text-xs text-neutral-400 px-1 pb-1 mt-1">
+                          <span>{gData?.[0]?.label}</span>
+                          <span className="text-neutral-300">{gData?.length} points</span>
+                          <span>{gData?.[gData.length-1]?.label}</span>
+                        </div>
+                      </div>
+                      <BarStrip data={gData} editMode={editMode} onBarClick={(pt) => handlePointClick(name, pt)}/>
+                    </div>
+                  );
+                })}
+              </>
+            )}
+
+            {/* ── SERVICE GRAPHS (all or by category) ───────────────────── */}
+            {graphSection !== 'servers' && (
+              <>
+                {visibleServiceKeys.length === 0 && (
+                  <div className="text-center py-10 text-neutral-400 text-sm">No service data for this category yet.</div>
+                )}
+                {/* Group by category if showing "all" */}
+                {(graphSection === 'services' ? svcCategories : [svcCategories.find(c => c.id === graphSection)]).filter(Boolean).map(cat => {
+                  const catKeys = cat.services.map(s => s.key).filter(k => visibleServiceKeys.includes(k) || graphSection !== 'services');
+                  if (catKeys.length === 0) return null;
+                  return (
+                    <div key={cat.id} className="space-y-3">
+                      {graphSection === 'services' && (
+                        <div className="flex items-center gap-3">
+                          <span className="text-xs font-bold text-neutral-500 uppercase tracking-wider">{cat.label}</span>
+                          <div className="flex-1 h-px bg-neutral-100"/>
+                        </div>
+                      )}
+                      {cat.services.map(svc => {
+                        const d = serviceHist[svc.key];
+                        const pct = d?.avgPct;
+                        const ov  = d?.override;
+                        const gData = d?.history?.map(day => ({ ...day, label: day.date?.slice(5) })) || [];
+                        return (
+                          <div key={svc.key} className={`card p-3 space-y-2 ${ov ? 'ring-1 ring-purple-200' : ''}`}>
+                            <div className="flex items-center justify-between flex-wrap gap-2">
+                              <div className="flex items-center gap-2">
+                                <span className={`w-2 h-2 rounded-full flex-shrink-0 ${pct == null ? 'bg-neutral-300' : pct >= 99.5 ? 'bg-emerald-400' : pct >= 95 ? 'bg-amber-400' : 'bg-red-400'}`}/>
+                                <span className="text-sm font-medium">{svc.name}</span>
+                                <span className="text-xs text-neutral-400 font-mono hidden group-hover:inline">{svc.key}</span>
+                                {ov && <span className="text-xs px-1.5 py-0.5 rounded-full bg-purple-100 text-purple-700 flex items-center gap-1"><Edit3 className="w-2.5 h-2.5"/>override</span>}
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <span className={`text-xs font-bold tabular-nums px-2 py-0.5 rounded ${uptimeBg(pct)}`}>{pct != null ? `${pct.toFixed(2)}%` : 'no data'}</span>
+                                <button onClick={() => { setOvService(svc.key); setOvPct(String(pct?.toFixed(2)||'100')); setShowOverride(true); }}
+                                  className="text-xs px-1.5 py-0.5 rounded border border-neutral-200 text-neutral-400 hover:bg-neutral-50 flex items-center gap-1">
+                                  <Gauge className="w-2.5 h-2.5"/>Set %
+                                </button>
+                                {ov && <button onClick={() => handleClearOverride(svc.key)} className="text-xs px-1.5 py-0.5 rounded border border-red-200 text-red-400 hover:bg-red-50"><X className="w-2.5 h-2.5"/></button>}
+                              </div>
+                            </div>
+                            {gData.length > 0 && (
+                              <div className="bg-neutral-50 rounded-lg px-2 pt-1.5 pb-1">
+                                <UptimeSparkline data={gData} editMode={editMode} service={svc.key} onPointEdit={handlePointEdit} height={55} showLabels={false}/>
+                              </div>
+                            )}
+                            <BarStrip data={gData} editMode={editMode} onBarClick={(pt) => handlePointClick(svc.key, pt)}/>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  );
+                })}
+              </>
+            )}
+
+            {/* All-services table (admin-only reference) */}
+            {graphSection === 'servers' && serverNames.length > 0 && (
+              <details className="card overflow-hidden">
+                <summary className="px-4 py-3 cursor-pointer text-sm font-medium text-neutral-600 hover:bg-neutral-50 flex items-center gap-2">
+                  <Activity className="w-4 h-4 text-blue-500"/> All Services Quick Reference <span className="text-xs text-neutral-400 ml-1">(admin-only, not on public status page)</span>
+                </summary>
+                <div className="divide-y divide-neutral-50 max-h-80 overflow-y-auto">
+                  {SERVICE_CATEGORIES.map(cat => (
+                    <div key={cat.id}>
+                      <div className="px-4 py-1.5 bg-neutral-50 sticky top-0">
+                        <span className="text-xs font-bold text-neutral-400 uppercase tracking-wider">{cat.label}</span>
+                      </div>
+                      {cat.services.map(svc => {
+                        const d = serviceHist[svc.key];
+                        const pct = d?.avgPct;
+                        return (
+                          <div key={svc.key} className="px-4 py-2 flex items-center justify-between hover:bg-neutral-50 group">
+                            <div className="flex items-center gap-2">
+                              <span className={`w-1.5 h-1.5 rounded-full ${pct == null ? 'bg-neutral-200' : pct >= 99.5 ? 'bg-emerald-400' : pct >= 95 ? 'bg-amber-400' : 'bg-red-400'}`}/>
+                              <span className="text-xs text-neutral-700">{svc.name}</span>
+                              <span className="text-xs text-neutral-300 font-mono hidden group-hover:inline">{svc.key}</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              {d?.override && <span className="text-xs text-purple-500">override</span>}
+                              <span className={`text-xs font-bold ${uptimeColor(pct)}`}>{pct != null ? `${pct.toFixed(2)}%` : '—'}</span>
+                              <button onClick={() => { setOvService(svc.key); setOvPct(String(pct?.toFixed(2)||'100')); setShowOverride(true); }}
+                                className="text-xs px-1.5 py-0.5 rounded border border-neutral-200 text-neutral-400 hover:bg-neutral-50 opacity-0 group-hover:opacity-100 transition-opacity">
+                                Set %
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
+              </details>
+            )}
           </div>
         </div>
       )}
@@ -1208,934 +1180,260 @@ function UptimePanel() {
       {/* REPORTS TAB                                                       */}
       {/* ═══════════════════════════════════════════════════════════════════ */}
       {tab === 'reports' && (
-        <>
-          {loading ? <div className="flex justify-center py-12"><span className="spinner w-6 h-6 border-2 border-neutral-200 border-t-neutral-600" /></div> : (
-            <div className="space-y-2">
-              {/* Reports filter row */}
-              <div className="flex items-center gap-2 flex-wrap pb-1">
-                {['all','pending','confirmed','dismissed'].map(f => {
-                  const cnt = f === 'all' ? reports.length : reports.filter(r => r.status === f).length;
-                  return (
-                    <button
-                      key={f}
-                      onClick={() => {/* filter is handled inline below */}}
-                      className="text-xs px-2.5 py-1 rounded-full border border-neutral-200 text-neutral-500 hover:bg-neutral-50 font-medium capitalize"
-                    >
-                      {f} <span className="text-neutral-400">({cnt})</span>
-                    </button>
-                  );
-                })}
-                <button onClick={load} className="ml-auto btn btn-secondary text-xs py-1.5 gap-1">
-                  <RefreshCw className="w-3 h-3" /> Refresh
-                </button>
-              </div>
-              {reports.length === 0
-                ? <div className="text-center py-12 text-neutral-400"><Radio className="w-8 h-8 mx-auto mb-2 opacity-30" /><p className="text-sm">No reports</p></div>
-                : reports.map(r => {
-                  const svcMeta = ALL_SERVICES_FLAT.find(s => s.key === r.affectedService);
-                  return (
-                    <div key={r._id} className="card p-4 flex items-start gap-3">
-                      <div className={`w-2.5 h-2.5 rounded-full mt-1.5 flex-shrink-0 ${r.status === 'pending' ? 'bg-amber-400 animate-pulse' : r.status === 'confirmed' ? 'bg-red-400' : 'bg-neutral-300'}`} />
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap mb-1">
-                          <span className="text-xs font-medium bg-neutral-100 px-2 py-0.5 rounded-full">{svcMeta?.name || r.affectedService}</span>
-                          {svcMeta?.category && <span className="text-xs text-neutral-400">{svcMeta.category}</span>}
-                          <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${r.status === 'pending' ? 'bg-amber-100 text-amber-700' : r.status === 'confirmed' ? 'bg-red-100 text-red-700' : 'bg-neutral-100 text-neutral-500'}`}>
-                            {r.status}
-                          </span>
-                          <span className="text-xs text-neutral-400">{tAgo(r.createdAt)}</span>
-                          {r.email && <span className="text-xs text-neutral-400 font-mono">{r.email}</span>}
-                        </div>
-                        <p className="text-sm text-neutral-800">{r.description}</p>
-                        {r.incidentId && (
-                          <p className="text-xs text-blue-600 mt-1">Linked to incident: <span className="font-mono">{r.incidentId}</span></p>
-                        )}
-                      </div>
-                      {r.status === 'pending' && (
-                        <div className="flex gap-2 flex-shrink-0 flex-col sm:flex-row">
-                          <button
-                            onClick={() => {
-                              setCreateForm(f => ({ ...f, reportIds: [r._id], description: r.description, title: `Issue with ${svcMeta?.name || r.affectedService}` }));
-                              setSelServices(r.affectedService !== 'general' && r.affectedService !== 'General' ? [r.affectedService] : []);
-                              setShowCreate(true);
-                            }}
-                            className="text-xs px-2 py-1.5 rounded-lg bg-neutral-900 text-white hover:bg-neutral-800 font-medium"
-                          >
-                            → Incident
-                          </button>
-                          <button
-                            onClick={() => uptimeAPI.updateReport(r._id, { status: 'dismissed' }).then(() => setReports(x => x.map(y => y._id === r._id ? { ...y, status: 'dismissed' } : y))).catch(() => toast.error('Failed'))}
-                            className="text-xs px-2 py-1.5 rounded-lg border border-neutral-200 text-neutral-500"
-                          >
-                            Dismiss
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-            </div>
-          )}
-        </>
-      )}
-
-      {/* ═══════════════════════════════════════════════════════════════════ */}
-      {/* INCIDENTS TAB                                                     */}
-      {/* ═══════════════════════════════════════════════════════════════════ */}
-      {tab === 'incidents' && (
-        <>
-          {loading ? <div className="flex justify-center py-12"><span className="spinner w-6 h-6 border-2 border-neutral-200 border-t-neutral-600" /></div> : (
-            <div className="space-y-2">
-              {/* Incidents header */}
-              <div className="flex items-center justify-between flex-wrap gap-2 pb-1">
-                <div className="flex items-center gap-3 text-sm">
-                  <span className="font-medium">{incidents.length} total</span>
-                  <span className="text-red-500">{active} active</span>
-                  <span className="text-emerald-600">{incidents.length - active} resolved</span>
-                </div>
-                <div className="flex gap-2">
-                  <button onClick={load} className="btn btn-secondary text-xs py-1.5 gap-1"><RefreshCw className="w-3 h-3" /> Refresh</button>
-                  <button onClick={() => { setCreateForm({ title: '', description: '', severity: 'minor', initialMessage: '', reportIds: [] }); setSelServices([]); setShowCreate(true); }} className="btn btn-primary text-xs py-1.5 gap-1"><Plus className="w-3 h-3" /> New</button>
-                </div>
-              </div>
-              {incidents.length === 0
-                ? <div className="text-center py-12 text-neutral-400"><CheckCircle className="w-8 h-8 mx-auto mb-2 opacity-30" /><p className="text-sm">No incidents</p></div>
-                : incidents.map(inc => {
-                  const sm = STATUS_META[inc.status] || STATUS_META.investigating;
-                  const sv = SEVERITY_META[inc.severity] || SEVERITY_META.minor;
-                  const isEx = expanded === inc._id;
-                  const downtimeMin = inc.downtimeMinutes;
-                  const affectedNames = (inc.affectedServices || []).map(key => {
-                    const m = ALL_SERVICES_FLAT.find(s => s.key === key);
-                    return m?.name || key;
-                  });
-                  return (
-                    <div key={inc._id} className="card overflow-hidden">
-                      <button className="w-full px-5 py-4 flex items-start gap-3 text-left hover:bg-neutral-50" onClick={() => setExpanded(isEx ? null : inc._id)}>
-                        <span className={`w-2.5 h-2.5 rounded-full mt-1.5 flex-shrink-0 ${sm.dot} ${inc.status !== 'resolved' ? 'animate-pulse' : ''}`} />
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <p className="text-sm font-semibold">{inc.title}</p>
-                            <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${sv.bg} ${sv.text}`}>{sv.label}</span>
-                            <span className="text-xs text-neutral-400 font-medium">{sm.label}</span>
-                            {downtimeMin != null && inc.status === 'resolved' && (
-                              <span className="text-xs text-neutral-400">↓ {downtimeMin}m downtime</span>
-                            )}
-                          </div>
-                          <div className="flex flex-wrap gap-1 mt-1">
-                            {affectedNames.slice(0, 4).map(name => (
-                              <span key={name} className="text-xs bg-neutral-100 text-neutral-500 px-1.5 py-0.5 rounded">{name}</span>
-                            ))}
-                            {affectedNames.length > 4 && <span className="text-xs text-neutral-400">+{affectedNames.length - 4} more</span>}
-                          </div>
-                          <p className="text-xs text-neutral-400 mt-1">{tAgo(inc.createdAt)}</p>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          {inc.status !== 'resolved' && (
-                            <button onClick={e => { e.stopPropagation(); setTlTarget(inc._id); setTlForm({ status: 'investigating', message: '' }); }} className="text-xs px-2 py-1.5 rounded-lg bg-neutral-900 text-white hover:bg-neutral-800 font-medium">
-                              Update
-                            </button>
-                          )}
-                          <button
-                            onClick={e => { e.stopPropagation(); if (!confirm('Delete incident?')) return; uptimeAPI.deleteIncident(inc._id).then(() => setIncidents(x => x.filter(y => y._id !== inc._id))).catch(() => toast.error('Failed')); }}
-                            className="p-1.5 text-neutral-300 hover:text-red-500"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                          {isEx ? <ChevronUp className="w-4 h-4 text-neutral-400" /> : <ChevronDown className="w-4 h-4 text-neutral-400" />}
-                        </div>
-                      </button>
-                      {isEx && (
-                        <div className="px-5 pb-5 border-t border-neutral-100">
-                          {inc.description && <p className="text-sm text-neutral-600 mt-4 mb-3">{inc.description}</p>}
-                          {/* Affected services detail */}
-                          {affectedNames.length > 0 && (
-                            <div className="mb-3 flex flex-wrap gap-1">
-                              {affectedNames.map(name => (
-                                <span key={name} className="text-xs bg-red-50 text-red-600 border border-red-100 px-2 py-0.5 rounded-full">{name}</span>
-                              ))}
-                            </div>
-                          )}
-                          {inc.timeline?.length > 0 && (
-                            <div className="relative pl-4 mt-3">
-                              <div className="absolute left-0 top-0 bottom-0 w-px bg-neutral-200" />
-                              {[...inc.timeline].reverse().map((u, j) => {
-                                const usm = STATUS_META[u.status] || STATUS_META.investigating;
-                                return (
-                                  <div key={j} className="relative mb-3">
-                                    <span className={`absolute -left-[17px] w-2.5 h-2.5 rounded-full border-2 border-white ${usm.dot}`} />
-                                    <p className="text-xs font-semibold text-neutral-700">
-                                      {usm.label} <span className="font-normal text-neutral-400">{tAgo(u.createdAt)}</span>
-                                    </p>
-                                    <p className="text-sm text-neutral-600 mt-0.5">{u.message}</p>
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-            </div>
-          )}
-        </>
-      )}
-
-      {/* ═══════════════════════════════════════════════════════════════════ */}
-      {/* SET UPTIME % MODAL — all 40+ services in dropdown                 */}
-      {/* ═══════════════════════════════════════════════════════════════════ */}
-      {showOverrideModal && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 px-4" onClick={e => e.target === e.currentTarget && setShowOverrideModal(false)}>
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden">
-            <div className="px-5 py-4 border-b flex items-center justify-between">
-              <h3 className="font-bold flex items-center gap-2"><Gauge className="w-4 h-4 text-purple-600" /> Set Uptime %</h3>
-              <button onClick={() => setShowOverrideModal(false)} className="p-1 hover:bg-neutral-100 rounded-lg"><X className="w-4 h-4 text-neutral-400" /></button>
-            </div>
-            <div className="p-5 space-y-4">
-              <div>
-                <label className="block text-xs font-medium text-neutral-600 mb-1">Service <span className="text-neutral-400 font-normal">({ALL_SERVICES_FLAT.length} services)</span></label>
-                <select value={overrideService} onChange={e => setOverrideService(e.target.value)} className="input w-full text-sm" size={1}>
-                  <optgroup label="— Quick">
-                    <option value="general">general (all platforms)</option>
-                  </optgroup>
-                  {SERVICE_CATEGORIES.map(cat => (
-                    <optgroup key={cat.id} label={cat.label}>
-                      {cat.services.map(s => (
-                        <option key={s.key} value={s.key}>{s.name}</option>
-                      ))}
-                    </optgroup>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-neutral-600 mb-1">Uptime % (0 – 100)</label>
-                <input
-                  type="number" min="0" max="100" step="0.01"
-                  value={overridePct}
-                  onChange={e => setOverridePct(e.target.value)}
-                  className="input w-full text-sm font-mono"
-                  placeholder="e.g. 99.95"
-                />
-              </div>
-              {/* Quick presets */}
-              <div className="space-y-1">
-                <p className="text-xs text-neutral-400">Quick presets</p>
-                <div className="flex gap-2 flex-wrap">
-                  {['100', '99.99', '99.9', '99.5', '99', '95', '80', '50', '0'].map(p => (
-                    <button key={p} onClick={() => setOverridePct(p)} className={`text-xs px-2.5 py-1 rounded-lg border transition-all font-mono ${overridePct === p ? 'bg-neutral-900 text-white border-neutral-900' : 'border-neutral-200 text-neutral-600 hover:bg-neutral-50'}`}>{p}%</button>
-                  ))}
-                </div>
-              </div>
-              {overrideService && historyMap[overrideService] && (
-                <div className="bg-neutral-50 rounded-lg px-3 py-2 text-xs text-neutral-500">
-                  Current value: <strong className={uptimeColor(historyMap[overrideService]?.avgPct)}>{historyMap[overrideService]?.avgPct?.toFixed(2)}%</strong>
-                  {historyMap[overrideService]?.override && <span className="ml-1 text-purple-600">(currently overridden)</span>}
-                </div>
-              )}
-            </div>
-            <div className="px-5 py-4 border-t flex gap-3">
-              <button onClick={() => setShowOverrideModal(false)} className="flex-1 btn btn-secondary text-sm">Cancel</button>
-              <button onClick={handleSetOverride} className="flex-1 btn bg-purple-600 hover:bg-purple-700 text-white border-purple-600 text-sm gap-1">
-                <Check className="w-4 h-4" /> Apply Override
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Edit Point Modal (fallback for bar-strip clicks) */}
-      {editingPoint && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 px-4" onClick={e => e.target === e.currentTarget && setEditingPoint(null)}>
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden">
-            <div className="px-5 py-4 border-b flex items-center justify-between">
-              <h3 className="font-bold flex items-center gap-2"><Edit2 className="w-4 h-4 text-amber-600" /> Edit Data Point</h3>
-              <button onClick={() => setEditingPoint(null)} className="p-1 hover:bg-neutral-100 rounded-lg"><X className="w-4 h-4 text-neutral-400" /></button>
-            </div>
-            <div className="p-5 space-y-3">
-              <p className="text-sm text-neutral-600">
-                Service: <strong>{ALL_SERVICES_FLAT.find(s => s.key === editingPoint.service)?.name || editingPoint.service}</strong>
-                {' · '}Date: <strong>{editingPoint.date}</strong>
-              </p>
-              <div>
-                <label className="block text-xs font-medium text-neutral-600 mb-1">Uptime % for this day</label>
-                <input
-                  type="number" min="0" max="100" step="0.01"
-                  value={editPct}
-                  onChange={e => setEditPct(e.target.value)}
-                  className="input w-full text-sm font-mono"
-                  autoFocus
-                />
-              </div>
-              <div className="flex gap-2 flex-wrap">
-                {['100', '99.9', '95', '80', '50', '0'].map(p => (
-                  <button key={p} onClick={() => setEditPct(p)} className={`text-xs px-2 py-1 rounded-lg border transition-all font-mono ${editPct === p ? 'bg-neutral-900 text-white border-neutral-900' : 'border-neutral-200 text-neutral-600 hover:bg-neutral-50'}`}>{p}%</button>
-                ))}
-              </div>
-            </div>
-            <div className="px-5 py-4 border-t flex gap-3">
-              <button onClick={() => setEditingPoint(null)} className="flex-1 btn btn-secondary text-sm">Cancel</button>
-              <button onClick={handleSavePoint} className="flex-1 btn bg-amber-600 hover:bg-amber-700 text-white border-amber-600 text-sm gap-1">
-                <Save className="w-4 h-4" /> Save Point
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ── Create Incident Modal ──────────────────────────────────────────── */}
-      {showCreate && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 px-4" onClick={e => e.target === e.currentTarget && setShowCreate(false)}>
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden" style={{ maxHeight: '90vh', display: 'flex', flexDirection: 'column' }}>
-            <div className="px-5 py-4 border-b flex items-center justify-between flex-shrink-0">
-              <h3 className="font-bold">Create Incident</h3>
-              <button onClick={() => setShowCreate(false)} className="p-1 hover:bg-neutral-100 rounded-lg"><X className="w-4 h-4 text-neutral-400" /></button>
-            </div>
-            <div className="p-5 space-y-4 overflow-y-auto">
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <div className="col-span-2"><label className="block text-xs font-medium text-neutral-600 mb-1">Title *</label><input value={createForm.title} onChange={e => setCreateForm(f => ({ ...f, title: e.target.value }))} placeholder="e.g. API Delays" className="input w-full text-sm" /></div>
-                <div><label className="block text-xs font-medium text-neutral-600 mb-1">Severity</label><select value={createForm.severity} onChange={e => setCreateForm(f => ({ ...f, severity: e.target.value }))} className="input w-full text-sm">{['minor', 'major', 'critical'].map(s => <option key={s} value={s}>{s}</option>)}</select></div>
-              </div>
-              <div><label className="block text-xs font-medium text-neutral-600 mb-1">Description</label><textarea value={createForm.description} onChange={e => setCreateForm(f => ({ ...f, description: e.target.value }))} rows={2} className="input w-full text-sm resize-none" /></div>
-              <div><label className="block text-xs font-medium text-neutral-600 mb-1">Initial Message</label><textarea value={createForm.initialMessage} onChange={e => setCreateForm(f => ({ ...f, initialMessage: e.target.value }))} rows={2} className="input w-full text-sm resize-none" /></div>
-
-              {/* Affected Services — all 40+ */}
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <label className="text-xs font-medium text-neutral-600">
-                    Affected Services <span className="text-neutral-400 font-normal">({ALL_SERVICES_FLAT.length} total · leave blank = general banner)</span>
-                  </label>
-                  <div className="flex gap-3">
-                    <button type="button" onClick={() => setSelServices(ALL_SERVICES_FLAT.map(s => s.key))} className="text-xs text-blue-600 hover:text-blue-800 font-medium">Select all</button>
-                    <button type="button" onClick={() => setSelServices([])} className="text-xs text-neutral-500 hover:text-neutral-700 font-medium">Clear</button>
-                  </div>
-                </div>
-                {selServices.length > 0 && (
-                  <div className="flex flex-wrap gap-1 mb-2 p-2 bg-red-50 border border-red-100 rounded-lg">
-                    {selServices.map(key => {
-                      const svc = ALL_SERVICES_FLAT.find(s => s.key === key);
-                      return (
-                        <span key={key} className="inline-flex items-center gap-1 text-xs bg-red-500 text-white px-2 py-0.5 rounded-full font-medium">
-                          {svc?.name || key}
-                          <button type="button" onClick={() => setSelServices(p => p.filter(k => k !== key))} className="hover:opacity-70 ml-0.5"><X className="w-2.5 h-2.5" /></button>
-                        </span>
-                      );
-                    })}
-                  </div>
-                )}
-                <div className="border border-neutral-200 rounded-xl overflow-hidden" style={{ maxHeight: '300px', overflowY: 'auto' }}>
-                  {SERVICE_CATEGORIES.map(cat => {
-                    const catKeys = cat.services.map(s => s.key);
-                    const allCatSelected = catKeys.every(k => selServices.includes(k));
-                    const someCatSelected = catKeys.some(k => selServices.includes(k));
-                    return (
-                      <div key={cat.id} className="border-b border-neutral-100 last:border-0">
-                        <div className="flex items-center justify-between px-3 py-2 bg-neutral-50 sticky top-0">
-                          <button type="button" onClick={() => { if (allCatSelected) setSelServices(p => p.filter(k => !catKeys.includes(k))); else setSelServices(p => [...new Set([...p, ...catKeys])]); }} className="flex items-center gap-2 group">
-                            <div className={`w-4 h-4 rounded border-2 flex items-center justify-center flex-shrink-0 transition-all ${allCatSelected ? 'bg-neutral-800 border-neutral-800' : someCatSelected ? 'border-neutral-400 bg-neutral-200' : 'border-neutral-300'}`}>
-                              {allCatSelected && <svg width="8" height="8" viewBox="0 0 10 10"><polyline points="1.5 5 4 7.5 8.5 2" stroke="white" strokeWidth="1.8" fill="none" strokeLinecap="round" strokeLinejoin="round"/></svg>}
-                              {someCatSelected && !allCatSelected && <div className="w-1.5 h-1.5 bg-neutral-500 rounded-sm" />}
-                            </div>
-                            <span className="text-xs font-bold text-neutral-700 uppercase tracking-wide group-hover:text-neutral-900">{cat.label}</span>
-                          </button>
-                          <span className="text-xs text-neutral-400">{catKeys.filter(k => selServices.includes(k)).length}/{catKeys.length}</span>
-                        </div>
-                        <div className="grid grid-cols-2 sm:grid-cols-3">
-                          {cat.services.map(svc => {
-                            const selected = selServices.includes(svc.key);
-                            return (
-                              <label key={svc.key} className={`flex items-center gap-2 px-3 py-2 cursor-pointer transition-colors border-r border-b border-neutral-50 ${selected ? 'bg-red-50' : 'hover:bg-neutral-50'}`}>
-                                <div className={`w-3.5 h-3.5 rounded border-2 flex items-center justify-center flex-shrink-0 transition-all ${selected ? 'bg-red-500 border-red-500' : 'border-neutral-300'}`}>
-                                  {selected && <svg width="7" height="7" viewBox="0 0 10 10"><polyline points="1.5 5 4 7.5 8.5 2" stroke="white" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round"/></svg>}
-                                </div>
-                                <input type="checkbox" className="sr-only" checked={selected} onChange={() => setSelServices(p => selected ? p.filter(k => k !== svc.key) : [...p, svc.key])} />
-                                <span className={`text-xs ${selected ? 'text-red-700 font-medium' : 'text-neutral-600'}`}>{svc.name}</span>
-                              </label>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-                {selServices.length === 0 && (
-                  <p className="text-xs text-amber-600 mt-1.5 flex items-center gap-1"><AlertTriangle className="w-3 h-3 flex-shrink-0" /> No services selected — incident will appear in the status banner but won't mark any individual feature as disrupted.</p>
-                )}
-                {selServices.length > 0 && (
-                  <p className="text-xs text-red-600 mt-1.5 font-medium">{selServices.length} feature{selServices.length !== 1 ? 's' : ''} will be marked as disrupted on the public status page.</p>
-                )}
-              </div>
-            </div>
-            <div className="px-5 py-4 border-t flex gap-3 flex-shrink-0">
-              <button onClick={() => setShowCreate(false)} className="flex-1 btn btn-secondary text-sm">Cancel</button>
-              <button
-                onClick={async () => {
-                  if (!createForm.title.trim()) { toast.error('Title required'); return; }
-                  setCreating(true);
-                  try { await uptimeAPI.createIncident({ ...createForm, affectedServices: selServices }); toast.success('Created'); setShowCreate(false); load(); } catch { toast.error('Failed'); } finally { setCreating(false); }
-                }}
-                disabled={creating}
-                className="flex-1 btn bg-neutral-900 hover:bg-neutral-800 text-white text-sm gap-2"
-              >
-                {creating ? <span className="spinner w-4 h-4 border-2 border-white/30 border-t-white" /> : <Plus className="w-4 h-4" />} Create Incident
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ── Timeline update modal ──────────────────────────────────────────── */}
-      {tlTarget && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 px-4" onClick={e => e.target === e.currentTarget && setTlTarget(null)}>
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
-            <div className="px-5 py-4 border-b flex items-center justify-between">
-              <h3 className="font-bold">Post Update</h3>
-              <button onClick={() => setTlTarget(null)} className="p-1 hover:bg-neutral-100 rounded-lg"><X className="w-4 h-4 text-neutral-400" /></button>
-            </div>
-            <div className="p-5 space-y-4">
-              <div><label className="block text-xs font-medium text-neutral-600 mb-1">Status</label><select value={tlForm.status} onChange={e => setTlForm(f => ({ ...f, status: e.target.value }))} className="input w-full text-sm">{Object.entries(STATUS_META).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}</select></div>
-              <div><label className="block text-xs font-medium text-neutral-600 mb-1">Message *</label><textarea value={tlForm.message} onChange={e => setTlForm(f => ({ ...f, message: e.target.value }))} rows={3} className="input w-full text-sm resize-none" /></div>
-            </div>
-            <div className="px-5 py-4 border-t flex gap-3">
-              <button onClick={() => setTlTarget(null)} className="flex-1 btn btn-secondary text-sm">Cancel</button>
-              <button
-                onClick={async () => {
-                  if (!tlForm.message.trim()) { toast.error('Message required'); return; }
-                  try { const r = await uptimeAPI.addTimelineUpdate(tlTarget, tlForm); setIncidents(inc => inc.map(i => i._id === tlTarget ? r.data.incident : i)); setTlTarget(null); toast.success('Updated'); } catch { toast.error('Failed'); }
-                }}
-                className={`flex-1 btn text-white text-sm gap-2 ${tlForm.status === 'resolved' ? 'bg-emerald-600 hover:bg-emerald-700 border-emerald-600' : 'bg-neutral-900 hover:bg-neutral-800'}`}
-              >
-                {tlForm.status === 'resolved' ? 'Resolve' : 'Post Update'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-  useEffect(() => { load(); }, []);
-
-  // Auto-refresh graphs every 30 s
-  useEffect(() => {
-    if (tab !== 'graphs') return;
-    loadHealth();
-    liveRef.current = setInterval(loadHealth, 30000);
-    return () => clearInterval(liveRef.current);
-  }, [tab, healthDays]);
-
-  const load = async () => {
-    setLoading(true);
-    try {
-      const [r, i] = await Promise.all([
-        uptimeAPI.getReports().catch(() => ({ data: { reports: [] } })),
-        uptimeAPI.getIncidents().catch(() => ({ data: { incidents: [] } })),
-      ]);
-      setReports(r.data.reports || []);
-      setIncidents(i.data.incidents || []);
-    } catch {} finally { setLoading(false); }
-  };
-
-  const loadHealth = async () => {
-    setHealthLoading(true);
-    try {
-      const r = await uptimeAPI.getServerHealthHistory(healthDays);
-      setHealthHistory(r.data);
-    } catch (e) {
-      console.warn('[UptimePanel] health history fetch failed', e);
-    } finally { setHealthLoading(false); }
-  };
-
-  const pending = reports.filter(r => r.status === 'pending').length;
-  const active  = incidents.filter(i => i.status !== 'resolved').length;
-
-  // ── Nuclear: resolve all incidents & override everything to 100% ───────────
-  const handleNuclear = async () => {
-    if (!confirm('This will resolve ALL active incidents and mark all services as 100% operational. Continue?')) return;
-    setNuclearLoading(true);
-    try {
-      const r = await uptimeAPI.overrideAllUptime(100);
-      toast.success(`✅ ${r.data.incidentsResolved} incidents resolved, ${r.data.servicesOverridden.length} services set to 100%`);
-      await Promise.all([load(), loadHealth()]);
-    } catch { toast.error('Nuclear override failed'); }
-    finally { setNuclearLoading(false); }
-  };
-
-  // ── Set uptime % for one service ───────────────────────────────────────────
-  const handleSetOverride = async () => {
-    const n = parseFloat(overridePct);
-    if (isNaN(n) || n < 0 || n > 100) { toast.error('Enter a valid percentage (0–100)'); return; }
-    try {
-      await uptimeAPI.setUptimeOverride({ service: overrideService, pct: n });
-      toast.success(`Set ${overrideService} to ${n}%`);
-      setShowOverrideModal(false);
-      loadHealth();
-    } catch { toast.error('Failed to set override'); }
-  };
-
-  const handleClearOverride = async (svc) => {
-    try {
-      await uptimeAPI.clearUptimeOverride(svc);
-      toast.success(`Cleared override for ${svc}`);
-      loadHealth();
-    } catch { toast.error('Failed to clear override'); }
-  };
-
-  // ── Edit a single graph point ──────────────────────────────────────────────
-  const handlePointClick = (svc, point) => {
-    setEditingPoint({ service: svc, date: point.date, ts: point.ts });
-    setEditPct(String(point.pct.toFixed(2)));
-  };
-
-  const handleSavePoint = async () => {
-    const n = parseFloat(editPct);
-    if (!editingPoint || isNaN(n) || n < 0 || n > 100) { toast.error('Invalid percentage'); return; }
-    try {
-      await uptimeAPI.patchHealthPoint(editingPoint.service, editingPoint.ts, n);
-      toast.success(`Updated ${editingPoint.date} → ${n}%`);
-      setEditingPoint(null);
-      loadHealth();
-    } catch { toast.error('Failed to save point'); }
-  };
-
-  const services    = healthHistory ? healthHistory.services || [] : [];
-  const historyMap  = healthHistory ? healthHistory.history  || {} : {};
-
-  // ── Colour helper for uptime badge ────────────────────────────────────────
-  const uptimeColor = (pct) => {
-    if (pct == null) return 'text-neutral-400';
-    if (pct >= 99.5) return 'text-emerald-600';
-    if (pct >= 95)   return 'text-amber-500';
-    return 'text-red-500';
-  };
-
-  return (
-    <div className="space-y-5">
-      {/* Header */}
-      <div className="flex items-center justify-between flex-wrap gap-3">
-        <div>
-          <h2 className="text-lg font-bold">Uptime &amp; Server Health</h2>
-          <p className="text-sm text-neutral-500">{active > 0 ? `${active} active incident${active !== 1 ? 's' : ''}` : 'All clear'} · {pending} pending reports</p>
-        </div>
-        <div className="flex gap-2 flex-wrap">
-          <a href="/status" target="_blank" className="btn btn-secondary gap-1 text-sm"><ExternalLink className="w-3.5 h-3.5" /> Status Page</a>
-          <button onClick={() => { setShowOverrideModal(true); setOverrideService(services[0] || 'general'); setOverridePct('100'); }} className="btn btn-secondary gap-1 text-sm text-purple-700 border-purple-200 hover:bg-purple-50">
-            <Gauge className="w-3.5 h-3.5" /> Set Uptime %
-          </button>
-          <button
-            onClick={handleNuclear}
-            disabled={nuclearLoading}
-            className="btn gap-1 text-sm bg-red-600 hover:bg-red-700 text-white border-red-600"
-          >
-            {nuclearLoading ? <span className="spinner w-3.5 h-3.5 border-2 border-white/30 border-t-white" /> : <Zap className="w-3.5 h-3.5" />}
-            All Systems Operational
-          </button>
-          <button onClick={() => { setCreateForm({ title: '', description: '', severity: 'minor', initialMessage: '', reportIds: [] }); setSelServices([]); setShowCreate(true); }} className="btn btn-primary gap-1 text-sm"><Plus className="w-3.5 h-3.5" /> New Incident</button>
-        </div>
-      </div>
-
-      {/* Tabs */}
-      <div className="flex gap-1 bg-neutral-100 rounded-xl p-1 w-fit">
-        {[
-          ['graphs',    'Live Graphs', null],
-          ['reports',   'Reports', pending],
-          ['incidents', 'Incidents', active],
-        ].map(([id, l, c]) => (
-          <button key={id} onClick={() => setTab(id)} className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-all flex items-center gap-1.5 ${tab === id ? 'bg-white shadow-sm text-neutral-900' : 'text-neutral-500'}`}>
-            {l} {c > 0 && <span className={`text-xs px-1.5 py-0.5 rounded-full font-bold ${tab === id ? 'bg-red-100 text-red-600' : 'bg-neutral-200 text-neutral-500'}`}>{c}</span>}
-          </button>
-        ))}
-      </div>
-
-      {/* ── GRAPHS TAB ──────────────────────────────────────────────────────── */}
-      {tab === 'graphs' && (
-        <div className="space-y-4">
-          {/* Graph controls */}
-          <div className="flex items-center gap-3 flex-wrap">
-            <div className="flex gap-1 bg-neutral-100 rounded-lg p-1">
-              {[7, 30, 90].map(d => (
-                <button key={d} onClick={() => setHealthDays(d)} className={`px-3 py-1 rounded text-xs font-medium transition-all ${healthDays === d ? 'bg-white shadow-sm text-neutral-900' : 'text-neutral-500'}`}>{d}d</button>
+        <div className="space-y-2">
+          <div className="flex items-center justify-between gap-2 pb-1">
+            <div className="flex gap-2 text-xs text-neutral-500">
+              {['all','pending','confirmed','dismissed'].map(f => (
+                <span key={f} className="capitalize">{f}: {f==='all'?reports.length:reports.filter(r=>r.status===f).length}</span>
               ))}
             </div>
-            <button onClick={loadHealth} className="btn btn-secondary gap-1 text-xs py-1.5">
-              <RefreshCw className={`w-3 h-3 ${healthLoading ? 'animate-spin' : ''}`} /> Refresh
-            </button>
-            <button
-              onClick={() => setEditMode(e => !e)}
-              className={`btn gap-1 text-xs py-1.5 ${editMode ? 'bg-amber-100 text-amber-800 border-amber-300 hover:bg-amber-200' : 'btn-secondary'}`}
-            >
-              <Edit2 className="w-3 h-3" /> {editMode ? 'Exit Edit Mode' : 'Edit Mode'}
-            </button>
-            {editMode && (
-              <span className="text-xs text-amber-600 font-medium flex items-center gap-1">
-                <AlertTriangle className="w-3.5 h-3.5" /> Click any dot on a graph to edit that data point
-              </span>
-            )}
-            <span className="ml-auto text-xs text-neutral-400 flex items-center gap-1">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block" /> OK
-              <span className="w-2 h-2 rounded-full bg-amber-400 inline-block ml-2" /> Degraded
-              <span className="w-2 h-2 rounded-full bg-red-500 inline-block ml-2" /> Outage
-              <span className="w-2 h-2 rounded-full bg-purple-500 inline-block ml-2" /> Overridden
-            </span>
+            <button onClick={loadAll} className="btn btn-secondary text-xs py-1.5 gap-1"><RefreshCw className="w-3 h-3"/> Refresh</button>
           </div>
-
-          {healthLoading && !healthHistory && (
-            <div className="flex justify-center py-12"><span className="spinner w-6 h-6 border-2 border-neutral-200 border-t-neutral-600" /></div>
-          )}
-
-          {healthHistory && services.length === 0 && (
-            <div className="text-center py-12 text-neutral-400">
-              <Activity className="w-8 h-8 mx-auto mb-2 opacity-30" />
-              <p className="text-sm">No service history yet — incidents will populate this graph.</p>
-            </div>
-          )}
-
-          {services.map(svc => {
-            const data    = historyMap[svc];
-            if (!data) return null;
-            const pct     = data.avgPct;
-            const hasOv   = !!data.override;
-
+          {loading ? <div className="flex justify-center py-12"><span className="spinner w-6 h-6 border-2 border-neutral-200 border-t-neutral-600"/></div>
+          : reports.length === 0 ? <div className="text-center py-12 text-neutral-400"><Radio className="w-8 h-8 mx-auto mb-2 opacity-30"/><p className="text-sm">No reports</p></div>
+          : reports.map(r => {
+            const svcMeta = ALL_SERVICES_FLAT.find(s => s.key === r.affectedService);
             return (
-              <div key={svc} className={`card p-4 space-y-2 ${hasOv ? 'ring-1 ring-purple-200' : ''}`}>
-                <div className="flex items-center justify-between flex-wrap gap-2">
-                  <div className="flex items-center gap-2">
-                    <span className="font-semibold text-sm capitalize">{svc}</span>
-                    {hasOv && (
-                      <span className="text-xs px-2 py-0.5 rounded-full bg-purple-100 text-purple-700 font-medium flex items-center gap-1">
-                        <Edit3 className="w-2.5 h-2.5" /> overridden
-                      </span>
-                    )}
+              <div key={r._id} className="card p-4 flex items-start gap-3">
+                <div className={`w-2.5 h-2.5 rounded-full mt-1.5 flex-shrink-0 ${r.status==='pending'?'bg-amber-400 animate-pulse':r.status==='confirmed'?'bg-red-400':'bg-neutral-300'}`}/>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap mb-1">
+                    <span className="text-xs font-medium bg-neutral-100 px-2 py-0.5 rounded-full">{svcMeta?.name||r.affectedService}</span>
+                    {svcMeta?.category && <span className="text-xs text-neutral-400">{svcMeta.category}</span>}
+                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${r.status==='pending'?'bg-amber-100 text-amber-700':r.status==='confirmed'?'bg-red-100 text-red-700':'bg-neutral-100 text-neutral-500'}`}>{r.status}</span>
+                    <span className="text-xs text-neutral-400">{tAgo(r.createdAt)}</span>
+                    {r.email && <span className="text-xs text-neutral-400 font-mono">{r.email}</span>}
                   </div>
-                  <div className="flex items-center gap-3">
-                    <span className={`text-sm font-bold tabular-nums ${uptimeColor(pct)}`}>
-                      {pct != null ? `${pct.toFixed(2)}%` : '—'}
-                    </span>
-                    <span className="text-xs text-neutral-400">{healthDays}d avg</span>
-                    <button
-                      onClick={() => { setOverrideService(svc); setOverridePct(String(pct?.toFixed(2) || '100')); setShowOverrideModal(true); }}
-                      className="text-xs px-2 py-1 rounded-lg border border-neutral-200 text-neutral-500 hover:bg-neutral-50 flex items-center gap-1"
-                    >
-                      <Gauge className="w-3 h-3" /> Set %
-                    </button>
-                    {hasOv && (
-                      <button onClick={() => handleClearOverride(svc)} className="text-xs px-2 py-1 rounded-lg border border-red-200 text-red-500 hover:bg-red-50">
-                        Clear Override
-                      </button>
-                    )}
+                  <p className="text-sm text-neutral-800">{r.description}</p>
+                </div>
+                {r.status === 'pending' && (
+                  <div className="flex gap-2 flex-shrink-0">
+                    <button onClick={() => { setCreateForm(f=>({...f,reportIds:[r._id],description:r.description,title:`Issue with ${svcMeta?.name||r.affectedService}`})); setSelServices(r.affectedService&&r.affectedService!=='general'?[r.affectedService]:[]); setShowCreate(true); }}
+                      className="text-xs px-2 py-1.5 rounded-lg bg-neutral-900 text-white hover:bg-neutral-800 font-medium">→ Incident</button>
+                    <button onClick={() => uptimeAPI.updateReport(r._id,{status:'dismissed'}).then(()=>setReports(x=>x.map(y=>y._id===r._id?{...y,status:'dismissed'}:y))).catch(()=>toast.error('Failed'))}
+                      className="text-xs px-2 py-1.5 rounded-lg border border-neutral-200 text-neutral-500">Dismiss</button>
                   </div>
-                </div>
-
-                {/* Sparkline */}
-                <div className="bg-neutral-50 rounded-xl overflow-hidden px-2 pt-1 pb-0.5">
-                  <UptimeSparkline
-                    days={data.days}
-                    editMode={editMode}
-                    service={svc}
-                    onPointClick={(pt) => handlePointClick(svc, pt)}
-                  />
-                  <div className="flex justify-between text-xs text-neutral-400 px-1 pb-1">
-                    <span>{data.days?.[0]?.date}</span>
-                    <span>{data.days?.[data.days.length - 1]?.date}</span>
-                  </div>
-                </div>
-
-                {/* Day-by-day tooltip row (last 15 days condensed) */}
-                <div className="flex gap-0.5 pt-1">
-                  {(data.days || []).slice(-30).map((d, i) => {
-                    const c = d.pct >= 99.5 ? 'bg-emerald-400' : d.pct >= 95 ? 'bg-amber-400' : 'bg-red-400';
-                    return (
-                      <div
-                        key={i}
-                        title={`${d.date}: ${d.pct.toFixed(2)}%${d.override ? ' (overridden)' : ''}`}
-                        onClick={() => editMode && handlePointClick(svc, { ...d, ts: d.timestamp })}
-                        className={`flex-1 h-2 rounded-sm ${c} ${editMode ? 'cursor-pointer hover:opacity-70' : ''} ${d.override ? 'ring-1 ring-purple-400' : ''}`}
-                      />
-                    );
-                  })}
-                </div>
+                )}
               </div>
             );
           })}
         </div>
       )}
 
-      {/* ── REPORTS TAB ─────────────────────────────────────────────────────── */}
-      {tab === 'reports' && (
-        <>
-          {loading ? <div className="flex justify-center py-12"><span className="spinner w-6 h-6 border-2 border-neutral-200 border-t-neutral-600" /></div> : (
-            <div className="space-y-2">
-              {reports.length === 0 ? <div className="text-center py-12 text-neutral-400"><Radio className="w-8 h-8 mx-auto mb-2 opacity-30" /><p className="text-sm">No reports</p></div> : reports.map(r => (
-                <div key={r._id} className="card p-4 flex items-start gap-3">
-                  <div className={`w-2 h-2 rounded-full mt-1.5 flex-shrink-0 ${r.status === 'pending' ? 'bg-amber-400 animate-pulse' : 'bg-neutral-300'}`} />
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap mb-1">
-                      <span className="text-xs font-medium bg-neutral-100 px-2 py-0.5 rounded-full">{r.affectedService}</span>
-                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${r.status === 'pending' ? 'bg-amber-100 text-amber-700' : 'bg-neutral-100 text-neutral-500'}`}>{r.status}</span>
-                      <span className="text-xs text-neutral-400">{tAgo(r.createdAt)}</span>
-                    </div>
-                    <p className="text-sm text-neutral-800">{r.description}</p>
-                  </div>
-                  {r.status === 'pending' && (
-                    <div className="flex gap-2 flex-shrink-0">
-                      <button onClick={() => { setCreateForm(f => ({ ...f, reportIds: [r._id], description: r.description, title: `Issue with ${r.affectedService}` })); setSelServices([]); setShowCreate(true); }} className="text-xs px-2 py-1.5 rounded-lg bg-neutral-900 text-white hover:bg-neutral-800 font-medium">Make Incident</button>
-                      <button onClick={() => uptimeAPI.updateReport(r._id, { status: 'dismissed' }).then(() => setReports(x => x.map(y => y._id === r._id ? { ...y, status: 'dismissed' } : y))).catch(() => toast.error('Failed'))} className="text-xs px-2 py-1.5 rounded-lg border border-neutral-200 text-neutral-500">Dismiss</button>
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
-        </>
-      )}
-
-      {/* ── INCIDENTS TAB ───────────────────────────────────────────────────── */}
+      {/* ═══════════════════════════════════════════════════════════════════ */}
+      {/* INCIDENTS TAB                                                     */}
+      {/* ═══════════════════════════════════════════════════════════════════ */}
       {tab === 'incidents' && (
-        <>
-          {loading ? <div className="flex justify-center py-12"><span className="spinner w-6 h-6 border-2 border-neutral-200 border-t-neutral-600" /></div> : (
-            <div className="space-y-2">
-              {incidents.length === 0 ? <div className="text-center py-12 text-neutral-400"><CheckCircle className="w-8 h-8 mx-auto mb-2 opacity-30" /><p className="text-sm">No incidents</p></div> : incidents.map(inc => {
-                const sm = STATUS_META[inc.status] || STATUS_META.investigating;
-                const sv = SEVERITY_META[inc.severity] || SEVERITY_META.minor;
-                const isEx = expanded === inc._id;
-                return (
-                  <div key={inc._id} className="card overflow-hidden">
-                    <button className="w-full px-5 py-4 flex items-start gap-3 text-left hover:bg-neutral-50" onClick={() => setExpanded(isEx ? null : inc._id)}>
-                      <span className={`w-2.5 h-2.5 rounded-full mt-1.5 flex-shrink-0 ${sm.dot} ${inc.status !== 'resolved' ? 'animate-pulse' : ''}`} />
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <p className="text-sm font-semibold">{inc.title}</p>
-                          <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${sv.bg} ${sv.text}`}>{sv.label}</span>
-                          <span className="text-xs text-neutral-400 font-medium">{sm.label}</span>
-                        </div>
-                        <p className="text-xs text-neutral-400 mt-0.5">{tAgo(inc.createdAt)}</p>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        {inc.status !== 'resolved' && <button onClick={e => { e.stopPropagation(); setTlTarget(inc._id); setTlForm({ status: 'investigating', message: '' }); }} className="text-xs px-2 py-1.5 rounded-lg bg-neutral-900 text-white hover:bg-neutral-800 font-medium">Update</button>}
-                        <button onClick={e => { e.stopPropagation(); if (!confirm('Delete incident?')) return; uptimeAPI.deleteIncident(inc._id).then(() => setIncidents(x => x.filter(y => y._id !== inc._id))).catch(() => toast.error('Failed')); }} className="p-1.5 text-neutral-300 hover:text-red-500"><Trash2 className="w-3.5 h-3.5" /></button>
-                        {isEx ? <ChevronUp className="w-4 h-4 text-neutral-400" /> : <ChevronDown className="w-4 h-4 text-neutral-400" />}
-                      </div>
-                    </button>
-                    {isEx && (
-                      <div className="px-5 pb-5 border-t border-neutral-100">
-                        {inc.description && <p className="text-sm text-neutral-600 mt-4 mb-3">{inc.description}</p>}
-                        {inc.timeline?.length > 0 && (
-                          <div className="relative pl-4 mt-3">
-                            <div className="absolute left-0 top-0 bottom-0 w-px bg-neutral-200" />
-                            {[...inc.timeline].reverse().map((u, j) => { const usm = STATUS_META[u.status] || STATUS_META.investigating; return (
-                              <div key={j} className="relative mb-3">
-                                <span className={`absolute -left-[17px] w-2.5 h-2.5 rounded-full border-2 border-white ${usm.dot}`} />
-                                <p className="text-xs font-semibold text-neutral-700">{usm.label} <span className="font-normal text-neutral-400">{tAgo(u.createdAt)}</span></p>
-                                <p className="text-sm text-neutral-600 mt-0.5">{u.message}</p>
-                              </div>
-                            ); })}
-                          </div>
-                        )}
+        <div className="space-y-2">
+          <div className="flex items-center justify-between gap-2 pb-1">
+            <div className="flex gap-3 text-sm text-neutral-500">
+              <span>{incidents.length} total</span>
+              <span className="text-red-500">{active} active</span>
+              <span className="text-emerald-600">{incidents.length-active} resolved</span>
+            </div>
+            <div className="flex gap-2">
+              <button onClick={loadAll} className="btn btn-secondary text-xs py-1.5 gap-1"><RefreshCw className="w-3 h-3"/> Refresh</button>
+              <button onClick={() => { setCreateForm({title:'',description:'',severity:'minor',initialMessage:'',reportIds:[]}); setSelServices([]); setShowCreate(true); }} className="btn btn-primary text-xs py-1.5 gap-1"><Plus className="w-3 h-3"/> New</button>
+            </div>
+          </div>
+          {loading ? <div className="flex justify-center py-12"><span className="spinner w-6 h-6 border-2 border-neutral-200 border-t-neutral-600"/></div>
+          : incidents.length === 0 ? <div className="text-center py-12 text-neutral-400"><CheckCircle className="w-8 h-8 mx-auto mb-2 opacity-30"/><p className="text-sm">No incidents</p></div>
+          : incidents.map(inc => {
+            const sm = STATUS_META[inc.status] || STATUS_META.investigating;
+            const sv = SEVERITY_META[inc.severity] || SEVERITY_META.minor;
+            const isEx = expanded === inc._id;
+            const affNames = (inc.affectedServices||[]).map(k=>ALL_SERVICES_FLAT.find(s=>s.key===k)?.name||k);
+            return (
+              <div key={inc._id} className="card overflow-hidden">
+                <button className="w-full px-5 py-4 flex items-start gap-3 text-left hover:bg-neutral-50" onClick={()=>setExpanded(isEx?null:inc._id)}>
+                  <span className={`w-2.5 h-2.5 rounded-full mt-1.5 flex-shrink-0 ${sm.dot} ${inc.status!=='resolved'?'animate-pulse':''}`}/>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <p className="text-sm font-semibold">{inc.title}</p>
+                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${sv.bg} ${sv.text}`}>{sv.label}</span>
+                      <span className="text-xs text-neutral-400 font-medium">{sm.label}</span>
+                      {inc.downtimeMinutes!=null && inc.status==='resolved' && <span className="text-xs text-neutral-400">↓ {inc.downtimeMinutes}m</span>}
+                    </div>
+                    <div className="flex flex-wrap gap-1 mt-1">
+                      {affNames.slice(0,5).map(n=><span key={n} className="text-xs bg-neutral-100 text-neutral-500 px-1.5 py-0.5 rounded">{n}</span>)}
+                      {affNames.length>5 && <span className="text-xs text-neutral-400">+{affNames.length-5}</span>}
+                    </div>
+                    <p className="text-xs text-neutral-400 mt-1">{tAgo(inc.createdAt)}</p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {inc.status!=='resolved' && <button onClick={e=>{e.stopPropagation();setTlTarget(inc._id);setTlForm({status:'investigating',message:''}); }} className="text-xs px-2 py-1.5 rounded-lg bg-neutral-900 text-white hover:bg-neutral-800 font-medium">Update</button>}
+                    <button onClick={e=>{e.stopPropagation();if(!confirm('Delete?'))return;uptimeAPI.deleteIncident(inc._id).then(()=>setIncidents(x=>x.filter(y=>y._id!==inc._id))).catch(()=>toast.error('Failed'));}} className="p-1.5 text-neutral-300 hover:text-red-500"><Trash2 className="w-3.5 h-3.5"/></button>
+                    {isEx?<ChevronUp className="w-4 h-4 text-neutral-400"/>:<ChevronDown className="w-4 h-4 text-neutral-400"/>}
+                  </div>
+                </button>
+                {isEx && (
+                  <div className="px-5 pb-5 border-t border-neutral-100">
+                    {inc.description && <p className="text-sm text-neutral-600 mt-4 mb-3">{inc.description}</p>}
+                    {affNames.length>0 && <div className="mb-3 flex flex-wrap gap-1">{affNames.map(n=><span key={n} className="text-xs bg-red-50 text-red-600 border border-red-100 px-2 py-0.5 rounded-full">{n}</span>)}</div>}
+                    {inc.timeline?.length>0 && (
+                      <div className="relative pl-4 mt-3">
+                        <div className="absolute left-0 top-0 bottom-0 w-px bg-neutral-200"/>
+                        {[...inc.timeline].reverse().map((u,j)=>{
+                          const usm=STATUS_META[u.status]||STATUS_META.investigating;
+                          return <div key={j} className="relative mb-3">
+                            <span className={`absolute -left-[17px] w-2.5 h-2.5 rounded-full border-2 border-white ${usm.dot}`}/>
+                            <p className="text-xs font-semibold text-neutral-700">{usm.label} <span className="font-normal text-neutral-400">{tAgo(u.createdAt)}</span></p>
+                            <p className="text-sm text-neutral-600 mt-0.5">{u.message}</p>
+                          </div>;
+                        })}
                       </div>
                     )}
                   </div>
-                );
-              })}
-            </div>
-          )}
-        </>
+                )}
+              </div>
+            );
+          })}
+        </div>
       )}
 
-      {/* ── Set Uptime % Modal ─────────────────────────────────────────────── */}
-      {showOverrideModal && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 px-4" onClick={e => e.target === e.currentTarget && setShowOverrideModal(false)}>
+      {/* ═══ SET UPTIME % MODAL ═══════════════════════════════════════════ */}
+      {showOverride && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 px-4" onClick={e=>e.target===e.currentTarget&&setShowOverride(false)}>
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden">
             <div className="px-5 py-4 border-b flex items-center justify-between">
-              <h3 className="font-bold flex items-center gap-2"><Gauge className="w-4 h-4 text-purple-600" /> Set Uptime %</h3>
-              <button onClick={() => setShowOverrideModal(false)} className="p-1 hover:bg-neutral-100 rounded-lg"><X className="w-4 h-4 text-neutral-400" /></button>
+              <h3 className="font-bold flex items-center gap-2"><Gauge className="w-4 h-4 text-purple-600"/> Set Uptime %</h3>
+              <button onClick={()=>setShowOverride(false)} className="p-1 hover:bg-neutral-100 rounded-lg"><X className="w-4 h-4 text-neutral-400"/></button>
             </div>
             <div className="p-5 space-y-4">
               <div>
-                <label className="block text-xs font-medium text-neutral-600 mb-1">Service</label>
-                <select value={overrideService} onChange={e => setOverrideService(e.target.value)} className="input w-full text-sm">
-                  {services.length > 0 ? services.map(s => <option key={s} value={s}>{s}</option>) : <option value="general">general</option>}
+                <label className="block text-xs font-medium text-neutral-600 mb-1">Service <span className="text-neutral-400">({ALL_SERVICES_FLAT.length + serverNames.length} options)</span></label>
+                <select value={ovService} onChange={e=>setOvService(e.target.value)} className="input w-full text-sm">
+                  <optgroup label="— Servers (real health check data)">
+                    {serverNames.map(n=><option key={n} value={n}>{n}</option>)}
+                    <option value="general">general</option>
+                  </optgroup>
+                  {SERVICE_CATEGORIES.map(cat=>(
+                    <optgroup key={cat.id} label={cat.label}>
+                      {cat.services.map(s=><option key={s.key} value={s.key}>{s.name}</option>)}
+                    </optgroup>
+                  ))}
                 </select>
               </div>
               <div>
-                <label className="block text-xs font-medium text-neutral-600 mb-1">Uptime % (0 – 100)</label>
-                <input
-                  type="number" min="0" max="100" step="0.01"
-                  value={overridePct}
-                  onChange={e => setOverridePct(e.target.value)}
-                  className="input w-full text-sm"
-                  placeholder="e.g. 99.95"
-                />
+                <label className="block text-xs font-medium text-neutral-600 mb-1">Uptime %</label>
+                <input type="number" min="0" max="100" step="0.01" value={ovPct} onChange={e=>setOvPct(e.target.value)} className="input w-full text-sm font-mono" placeholder="99.95"/>
               </div>
-              {/* Quick presets */}
               <div className="flex gap-2 flex-wrap">
-                {['100', '99.99', '99.9', '99.5', '99', '95'].map(p => (
-                  <button key={p} onClick={() => setOverridePct(p)} className={`text-xs px-2 py-1 rounded-lg border transition-all ${overridePct === p ? 'bg-neutral-900 text-white border-neutral-900' : 'border-neutral-200 text-neutral-600 hover:bg-neutral-50'}`}>{p}%</button>
+                {['100','99.99','99.9','99.5','99','95','80','0'].map(p=>(
+                  <button key={p} onClick={()=>setOvPct(p)} className={`text-xs px-2.5 py-1 rounded-lg border font-mono transition-all ${ovPct===p?'bg-neutral-900 text-white border-neutral-900':'border-neutral-200 text-neutral-600 hover:bg-neutral-50'}`}>{p}%</button>
                 ))}
               </div>
+              <p className="text-xs text-neutral-400 bg-neutral-50 rounded-lg px-3 py-2">
+                This override is saved to MongoDB and will persist across deploys. It affects both the admin graphs and the public status page.
+              </p>
             </div>
             <div className="px-5 py-4 border-t flex gap-3">
-              <button onClick={() => setShowOverrideModal(false)} className="flex-1 btn btn-secondary text-sm">Cancel</button>
-              <button onClick={handleSetOverride} className="flex-1 btn bg-purple-600 hover:bg-purple-700 text-white border-purple-600 text-sm gap-1">
-                <Check className="w-4 h-4" /> Apply Override
-              </button>
+              <button onClick={()=>setShowOverride(false)} className="flex-1 btn btn-secondary text-sm">Cancel</button>
+              <button onClick={handleSetOverride} className="flex-1 btn bg-purple-600 hover:bg-purple-700 text-white border-purple-600 text-sm gap-1"><Check className="w-4 h-4"/> Apply</button>
             </div>
           </div>
         </div>
       )}
 
-      {/* ── Edit Point Modal ───────────────────────────────────────────────── */}
+      {/* ═══ EDIT POINT MODAL ════════════════════════════════════════════ */}
       {editingPoint && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 px-4" onClick={e => e.target === e.currentTarget && setEditingPoint(null)}>
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 px-4" onClick={e=>e.target===e.currentTarget&&setEditingPoint(null)}>
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden">
             <div className="px-5 py-4 border-b flex items-center justify-between">
-              <h3 className="font-bold flex items-center gap-2"><Edit2 className="w-4 h-4 text-amber-600" /> Edit Data Point</h3>
-              <button onClick={() => setEditingPoint(null)} className="p-1 hover:bg-neutral-100 rounded-lg"><X className="w-4 h-4 text-neutral-400" /></button>
+              <h3 className="font-bold flex items-center gap-2"><Edit2 className="w-4 h-4 text-amber-600"/> Edit Data Point</h3>
+              <button onClick={()=>setEditingPoint(null)} className="p-1 hover:bg-neutral-100 rounded-lg"><X className="w-4 h-4 text-neutral-400"/></button>
             </div>
             <div className="p-5 space-y-3">
               <p className="text-sm text-neutral-600">
-                Service: <strong>{editingPoint.service}</strong> · Date: <strong>{editingPoint.date}</strong>
+                <strong>{ALL_SERVICES_FLAT.find(s=>s.key===editingPoint.service)?.name||editingPoint.service}</strong> · <strong>{editingPoint.date}</strong>
               </p>
-              <div>
-                <label className="block text-xs font-medium text-neutral-600 mb-1">Uptime % for this day</label>
-                <input
-                  type="number" min="0" max="100" step="0.01"
-                  value={editPct}
-                  onChange={e => setEditPct(e.target.value)}
-                  className="input w-full text-sm"
-                  autoFocus
-                />
-              </div>
+              <input type="number" min="0" max="100" step="0.01" value={editPct} onChange={e=>setEditPct(e.target.value)} className="input w-full text-sm font-mono" autoFocus/>
               <div className="flex gap-2 flex-wrap">
-                {['100', '99.9', '95', '80', '50', '0'].map(p => (
-                  <button key={p} onClick={() => setEditPct(p)} className={`text-xs px-2 py-1 rounded-lg border transition-all ${editPct === p ? 'bg-neutral-900 text-white border-neutral-900' : 'border-neutral-200 text-neutral-600 hover:bg-neutral-50'}`}>{p}%</button>
-                ))}
+                {['100','99.9','95','80','50','0'].map(p=><button key={p} onClick={()=>setEditPct(p)} className={`text-xs px-2 py-1 rounded-lg border font-mono ${editPct===p?'bg-neutral-900 text-white border-neutral-900':'border-neutral-200 text-neutral-600'}`}>{p}%</button>)}
               </div>
             </div>
             <div className="px-5 py-4 border-t flex gap-3">
-              <button onClick={() => setEditingPoint(null)} className="flex-1 btn btn-secondary text-sm">Cancel</button>
-              <button onClick={handleSavePoint} className="flex-1 btn bg-amber-600 hover:bg-amber-700 text-white border-amber-600 text-sm gap-1">
-                <Save className="w-4 h-4" /> Save Point
-              </button>
+              <button onClick={()=>setEditingPoint(null)} className="flex-1 btn btn-secondary text-sm">Cancel</button>
+              <button onClick={handleSavePoint} className="flex-1 btn bg-amber-600 hover:bg-amber-700 text-white border-amber-600 text-sm gap-1"><Save className="w-4 h-4"/> Save to DB</button>
             </div>
           </div>
         </div>
       )}
 
-      {/* ── Create Incident Modal ──────────────────────────────────────────── */}
+      {/* ═══ CREATE INCIDENT MODAL ═══════════════════════════════════════ */}
       {showCreate && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 px-4" onClick={e => e.target === e.currentTarget && setShowCreate(false)}>
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden" style={{ maxHeight: '90vh', display: 'flex', flexDirection: 'column' }}>
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 px-4" onClick={e=>e.target===e.currentTarget&&setShowCreate(false)}>
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden" style={{maxHeight:'90vh',display:'flex',flexDirection:'column'}}>
             <div className="px-5 py-4 border-b flex items-center justify-between flex-shrink-0">
               <h3 className="font-bold">Create Incident</h3>
-              <button onClick={() => setShowCreate(false)} className="p-1 hover:bg-neutral-100 rounded-lg"><X className="w-4 h-4 text-neutral-400" /></button>
+              <button onClick={()=>setShowCreate(false)} className="p-1 hover:bg-neutral-100 rounded-lg"><X className="w-4 h-4 text-neutral-400"/></button>
             </div>
             <div className="p-5 space-y-4 overflow-y-auto">
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <div className="col-span-2"><label className="block text-xs font-medium text-neutral-600 mb-1">Title *</label><input value={createForm.title} onChange={e => setCreateForm(f => ({ ...f, title: e.target.value }))} placeholder="e.g. API Delays" className="input w-full text-sm" /></div>
-                <div><label className="block text-xs font-medium text-neutral-600 mb-1">Severity</label><select value={createForm.severity} onChange={e => setCreateForm(f => ({ ...f, severity: e.target.value }))} className="input w-full text-sm">{['minor', 'major', 'critical'].map(s => <option key={s} value={s}>{s}</option>)}</select></div>
+                <div className="col-span-2"><label className="block text-xs font-medium text-neutral-600 mb-1">Title *</label><input value={createForm.title} onChange={e=>setCreateForm(f=>({...f,title:e.target.value}))} placeholder="e.g. API Delays" className="input w-full text-sm"/></div>
+                <div><label className="block text-xs font-medium text-neutral-600 mb-1">Severity</label><select value={createForm.severity} onChange={e=>setCreateForm(f=>({...f,severity:e.target.value}))} className="input w-full text-sm">{['minor','major','critical'].map(s=><option key={s} value={s}>{s}</option>)}</select></div>
               </div>
-              <div><label className="block text-xs font-medium text-neutral-600 mb-1">Description</label><textarea value={createForm.description} onChange={e => setCreateForm(f => ({ ...f, description: e.target.value }))} rows={2} className="input w-full text-sm resize-none" /></div>
-              <div><label className="block text-xs font-medium text-neutral-600 mb-1">Initial Message</label><textarea value={createForm.initialMessage} onChange={e => setCreateForm(f => ({ ...f, initialMessage: e.target.value }))} rows={2} className="input w-full text-sm resize-none" /></div>
-
+              <div><label className="block text-xs font-medium text-neutral-600 mb-1">Description</label><textarea value={createForm.description} onChange={e=>setCreateForm(f=>({...f,description:e.target.value}))} rows={2} className="input w-full text-sm resize-none"/></div>
+              <div><label className="block text-xs font-medium text-neutral-600 mb-1">Initial Message</label><textarea value={createForm.initialMessage} onChange={e=>setCreateForm(f=>({...f,initialMessage:e.target.value}))} rows={2} className="input w-full text-sm resize-none"/></div>
               <div>
                 <div className="flex items-center justify-between mb-2">
-                  <label className="text-xs font-medium text-neutral-600">
-                    Affected Services
-                    <span className="ml-1 text-neutral-400 font-normal">(leave blank = general banner only)</span>
-                  </label>
+                  <label className="text-xs font-medium text-neutral-600">Affected Services <span className="text-neutral-400 font-normal">({ALL_SERVICES_FLAT.length} total)</span></label>
                   <div className="flex gap-3">
-                    <button type="button" onClick={() => setSelServices(ALL_SERVICES_FLAT.map(s => s.key))} className="text-xs text-blue-600 hover:text-blue-800 font-medium">Select all</button>
-                    <button type="button" onClick={() => setSelServices([])} className="text-xs text-neutral-500 hover:text-neutral-700 font-medium">Clear</button>
+                    <button type="button" onClick={()=>setSelServices(ALL_SERVICES_FLAT.map(s=>s.key))} className="text-xs text-blue-600 hover:text-blue-800 font-medium">All</button>
+                    <button type="button" onClick={()=>setSelServices([])} className="text-xs text-neutral-500 font-medium">Clear</button>
                   </div>
                 </div>
-                {selServices.length > 0 && (
-                  <div className="flex flex-wrap gap-1 mb-2 p-2 bg-red-50 border border-red-100 rounded-lg">
-                    {selServices.map(key => {
-                      const svc = ALL_SERVICES_FLAT.find(s => s.key === key);
-                      return (
-                        <span key={key} className="inline-flex items-center gap-1 text-xs bg-red-500 text-white px-2 py-0.5 rounded-full font-medium">
-                          {svc?.name || key}
-                          <button type="button" onClick={() => setSelServices(p => p.filter(k => k !== key))} className="hover:opacity-70 ml-0.5"><X className="w-2.5 h-2.5" /></button>
-                        </span>
-                      );
-                    })}
-                  </div>
-                )}
-                <div className="border border-neutral-200 rounded-xl overflow-hidden" style={{ maxHeight: '260px', overflowY: 'auto' }}>
-                  {SERVICE_CATEGORIES.map(cat => {
-                    const catKeys = cat.services.map(s => s.key);
-                    const allCatSelected = catKeys.every(k => selServices.includes(k));
-                    const someCatSelected = catKeys.some(k => selServices.includes(k));
-                    return (
-                      <div key={cat.id} className="border-b border-neutral-100 last:border-0">
-                        <div className="flex items-center justify-between px-3 py-2 bg-neutral-50 sticky top-0">
-                          <button type="button" onClick={() => { if (allCatSelected) setSelServices(p => p.filter(k => !catKeys.includes(k))); else setSelServices(p => [...new Set([...p, ...catKeys])]); }} className="flex items-center gap-2 group">
-                            <div className={`w-4 h-4 rounded border-2 flex items-center justify-center flex-shrink-0 transition-all ${allCatSelected ? 'bg-neutral-800 border-neutral-800' : someCatSelected ? 'border-neutral-400 bg-neutral-200' : 'border-neutral-300'}`}>
-                              {allCatSelected && <svg width="8" height="8" viewBox="0 0 10 10"><polyline points="1.5 5 4 7.5 8.5 2" stroke="white" strokeWidth="1.8" fill="none" strokeLinecap="round" strokeLinejoin="round"/></svg>}
-                              {someCatSelected && !allCatSelected && <div className="w-1.5 h-1.5 bg-neutral-500 rounded-sm" />}
-                            </div>
-                            <span className="text-xs font-bold text-neutral-700 uppercase tracking-wide group-hover:text-neutral-900">{cat.label}</span>
-                          </button>
-                          <span className="text-xs text-neutral-400">{catKeys.filter(k => selServices.includes(k)).length}/{catKeys.length}</span>
-                        </div>
-                        <div className="grid grid-cols-2 sm:grid-cols-3">
-                          {cat.services.map(svc => {
-                            const selected = selServices.includes(svc.key);
-                            return (
-                              <label key={svc.key} className={`flex items-center gap-2 px-3 py-2 cursor-pointer transition-colors border-r border-b border-neutral-50 ${selected ? 'bg-red-50' : 'hover:bg-neutral-50'}`}>
-                                <div className={`w-3.5 h-3.5 rounded border-2 flex items-center justify-center flex-shrink-0 transition-all ${selected ? 'bg-red-500 border-red-500' : 'border-neutral-300'}`}>
-                                  {selected && <svg width="7" height="7" viewBox="0 0 10 10"><polyline points="1.5 5 4 7.5 8.5 2" stroke="white" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round"/></svg>}
-                                </div>
-                                <input type="checkbox" className="sr-only" checked={selected} onChange={() => setSelServices(p => selected ? p.filter(k => k !== svc.key) : [...p, svc.key])} />
-                                <span className={`text-xs ${selected ? 'text-red-700 font-medium' : 'text-neutral-600'}`}>{svc.name}</span>
-                              </label>
-                            );
-                          })}
-                        </div>
+                {selServices.length>0 && <div className="flex flex-wrap gap-1 mb-2 p-2 bg-red-50 border border-red-100 rounded-lg">{selServices.map(key=>{const svc=ALL_SERVICES_FLAT.find(s=>s.key===key);return<span key={key} className="inline-flex items-center gap-1 text-xs bg-red-500 text-white px-2 py-0.5 rounded-full font-medium">{svc?.name||key}<button type="button" onClick={()=>setSelServices(p=>p.filter(k=>k!==key))} className="hover:opacity-70"><X className="w-2.5 h-2.5"/></button></span>;})}</div>}
+                <div className="border border-neutral-200 rounded-xl overflow-hidden" style={{maxHeight:'280px',overflowY:'auto'}}>
+                  {SERVICE_CATEGORIES.map(cat=>{
+                    const catKeys=cat.services.map(s=>s.key);
+                    const allSel=catKeys.every(k=>selServices.includes(k)), someSel=catKeys.some(k=>selServices.includes(k));
+                    return <div key={cat.id} className="border-b border-neutral-100 last:border-0">
+                      <div className="flex items-center justify-between px-3 py-2 bg-neutral-50 sticky top-0">
+                        <button type="button" onClick={()=>{if(allSel)setSelServices(p=>p.filter(k=>!catKeys.includes(k)));else setSelServices(p=>[...new Set([...p,...catKeys])]);}} className="flex items-center gap-2 group">
+                          <div className={`w-4 h-4 rounded border-2 flex items-center justify-center flex-shrink-0 ${allSel?'bg-neutral-800 border-neutral-800':someSel?'border-neutral-400 bg-neutral-200':'border-neutral-300'}`}>
+                            {allSel&&<svg width="8" height="8" viewBox="0 0 10 10"><polyline points="1.5 5 4 7.5 8.5 2" stroke="white" strokeWidth="1.8" fill="none" strokeLinecap="round" strokeLinejoin="round"/></svg>}
+                            {someSel&&!allSel&&<div className="w-1.5 h-1.5 bg-neutral-500 rounded-sm"/>}
+                          </div>
+                          <span className="text-xs font-bold text-neutral-700 uppercase tracking-wide">{cat.label}</span>
+                        </button>
+                        <span className="text-xs text-neutral-400">{catKeys.filter(k=>selServices.includes(k)).length}/{catKeys.length}</span>
                       </div>
-                    );
+                      <div className="grid grid-cols-2 sm:grid-cols-3">
+                        {cat.services.map(svc=>{const sel=selServices.includes(svc.key);return<label key={svc.key} className={`flex items-center gap-2 px-3 py-2 cursor-pointer transition-colors ${sel?'bg-red-50':'hover:bg-neutral-50'}`}>
+                          <div className={`w-3.5 h-3.5 rounded border-2 flex items-center justify-center flex-shrink-0 ${sel?'bg-red-500 border-red-500':'border-neutral-300'}`}>{sel&&<svg width="7" height="7" viewBox="0 0 10 10"><polyline points="1.5 5 4 7.5 8.5 2" stroke="white" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round"/></svg>}</div>
+                          <input type="checkbox" className="sr-only" checked={sel} onChange={()=>setSelServices(p=>sel?p.filter(k=>k!==svc.key):[...p,svc.key])}/>
+                          <span className={`text-xs ${sel?'text-red-700 font-medium':'text-neutral-600'}`}>{svc.name}</span>
+                        </label>;})}
+                      </div>
+                    </div>;
                   })}
                 </div>
-                {selServices.length === 0 && (
-                  <p className="text-xs text-amber-600 mt-1.5 flex items-center gap-1"><AlertTriangle className="w-3 h-3 flex-shrink-0" /> No services selected — incident will appear in the status banner but won't mark any individual feature as disrupted.</p>
-                )}
-                {selServices.length > 0 && (
-                  <p className="text-xs text-red-600 mt-1.5 font-medium">{selServices.length} feature{selServices.length !== 1 ? 's' : ''} will be marked as disrupted on the public status page.</p>
-                )}
               </div>
             </div>
             <div className="px-5 py-4 border-t flex gap-3 flex-shrink-0">
-              <button onClick={() => setShowCreate(false)} className="flex-1 btn btn-secondary text-sm">Cancel</button>
-              <button onClick={async () => {
-                if (!createForm.title.trim()) { toast.error('Title required'); return; }
-                setCreating(true);
-                try { await uptimeAPI.createIncident({ ...createForm, affectedServices: selServices }); toast.success('Created'); setShowCreate(false); load(); } catch { toast.error('Failed'); } finally { setCreating(false); }
-              }} disabled={creating} className="flex-1 btn bg-neutral-900 hover:bg-neutral-800 text-white text-sm gap-2">
-                {creating ? <span className="spinner w-4 h-4 border-2 border-white/30 border-t-white" /> : <Plus className="w-4 h-4" />} Create Incident
+              <button onClick={()=>setShowCreate(false)} className="flex-1 btn btn-secondary text-sm">Cancel</button>
+              <button onClick={async()=>{if(!createForm.title.trim()){toast.error('Title required');return;}setCreating(true);try{await uptimeAPI.createIncident({...createForm,affectedServices:selServices});toast.success('Created');setShowCreate(false);loadAll();}catch{toast.error('Failed');}finally{setCreating(false);}}} disabled={creating} className="flex-1 btn bg-neutral-900 hover:bg-neutral-800 text-white text-sm gap-2">
+                {creating?<span className="spinner w-4 h-4 border-2 border-white/30 border-t-white"/>:<Plus className="w-4 h-4"/>} Create Incident
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* ── Timeline update modal ──────────────────────────────────────────── */}
+      {/* ═══ TIMELINE UPDATE MODAL ══════════════════════════════════════ */}
       {tlTarget && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 px-4" onClick={e => e.target === e.currentTarget && setTlTarget(null)}>
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 px-4" onClick={e=>e.target===e.currentTarget&&setTlTarget(null)}>
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
-            <div className="px-5 py-4 border-b flex items-center justify-between"><h3 className="font-bold">Post Update</h3><button onClick={() => setTlTarget(null)} className="p-1 hover:bg-neutral-100 rounded-lg"><X className="w-4 h-4 text-neutral-400" /></button></div>
+            <div className="px-5 py-4 border-b flex items-center justify-between"><h3 className="font-bold">Post Update</h3><button onClick={()=>setTlTarget(null)} className="p-1 hover:bg-neutral-100 rounded-lg"><X className="w-4 h-4 text-neutral-400"/></button></div>
             <div className="p-5 space-y-4">
-              <div><label className="block text-xs font-medium text-neutral-600 mb-1">Status</label><select value={tlForm.status} onChange={e => setTlForm(f => ({ ...f, status: e.target.value }))} className="input w-full text-sm">{Object.entries(STATUS_META).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}</select></div>
-              <div><label className="block text-xs font-medium text-neutral-600 mb-1">Message *</label><textarea value={tlForm.message} onChange={e => setTlForm(f => ({ ...f, message: e.target.value }))} rows={3} className="input w-full text-sm resize-none" /></div>
+              <div><label className="block text-xs font-medium text-neutral-600 mb-1">Status</label><select value={tlForm.status} onChange={e=>setTlForm(f=>({...f,status:e.target.value}))} className="input w-full text-sm">{Object.entries(STATUS_META).map(([k,v])=><option key={k} value={k}>{v.label}</option>)}</select></div>
+              <div><label className="block text-xs font-medium text-neutral-600 mb-1">Message *</label><textarea value={tlForm.message} onChange={e=>setTlForm(f=>({...f,message:e.target.value}))} rows={3} className="input w-full text-sm resize-none"/></div>
             </div>
             <div className="px-5 py-4 border-t flex gap-3">
-              <button onClick={() => setTlTarget(null)} className="flex-1 btn btn-secondary text-sm">Cancel</button>
-              <button onClick={async () => {
-                if (!tlForm.message.trim()) { toast.error('Message required'); return; }
-                try { const r = await uptimeAPI.addTimelineUpdate(tlTarget, tlForm); setIncidents(inc => inc.map(i => i._id === tlTarget ? r.data.incident : i)); setTlTarget(null); toast.success('Updated'); } catch { toast.error('Failed'); }
-              }} className={`flex-1 btn text-white text-sm gap-2 ${tlForm.status === 'resolved' ? 'bg-emerald-600 hover:bg-emerald-700 border-emerald-600' : 'bg-neutral-900 hover:bg-neutral-800'}`}>
-                {tlForm.status === 'resolved' ? 'Resolve' : 'Post Update'}
+              <button onClick={()=>setTlTarget(null)} className="flex-1 btn btn-secondary text-sm">Cancel</button>
+              <button onClick={async()=>{if(!tlForm.message.trim()){toast.error('Required');return;}try{const r=await uptimeAPI.addTimelineUpdate(tlTarget,tlForm);setIncidents(inc=>inc.map(i=>i._id===tlTarget?r.data.incident:i));setTlTarget(null);toast.success('Updated');}catch{toast.error('Failed');}}} className={`flex-1 btn text-white text-sm gap-2 ${tlForm.status==='resolved'?'bg-emerald-600 hover:bg-emerald-700 border-emerald-600':'bg-neutral-900 hover:bg-neutral-800'}`}>
+                {tlForm.status==='resolved'?'Resolve':'Post Update'}
               </button>
             </div>
           </div>
