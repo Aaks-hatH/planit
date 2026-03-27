@@ -41,12 +41,22 @@ const skipInternal = (req) => {
 };
 
 // General API rate limiter — applied to all /api/* except internal paths above.
+// V-08 FIX: Skip ALL internal/private traffic (watchdog pings, mesh calls, Render-to-Render
+// hops) so they never count against any shared bucket. This mirrors the logic in security.js
+// step 4 — internal RFC-1918 IPs are let through without rate counting.
 const apiLimiter = rateLimit({
   windowMs: (process.env.RATE_LIMIT_WINDOW || 15) * 60 * 1000,
   max:      process.env.RATE_LIMIT_MAX || 10000,
   standardHeaders: true,
   legacyHeaders:   false,
-  skip:            skipInternal,
+  skip: (req) => {
+    if (skipInternal(req)) return true;
+    const ip = resolveRealIp(req);
+    // All private/unknown IPs are internal Render mesh hops — never rate-limit them.
+    // Previously these collapsed into a single 'internal:unknown' bucket which caused
+    // the watchdog to receive 429s and log healthy backends as down.
+    return isPrivate(ip) || ip === 'unknown';
+  },
   keyGenerator:    realIp,
   handler: (req, res) => {
     res.status(429).json({
