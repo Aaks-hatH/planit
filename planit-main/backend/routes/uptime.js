@@ -439,4 +439,199 @@ router.delete('/admin/incidents/:id', verifyAdmin, async (req, res) => {
   }
 });
 
+// ─── Admin: server health history & uptime overrides ─────────────────────────
+//
+// These endpoints drive the admin Server Health panel:
+//   GET  /admin/server-health-history          — time-series per service (90d)
+//   POST /admin/uptime-override                — set custom uptime % for one service
+//   DELETE /admin/uptime-override/:service     — clear override for one service
+//   POST /admin/override-all-uptime            — mark all incidents resolved (nuclear)
+//   PATCH /admin/server-health-history/:service/:timestamp — edit a single data point
+//
+// Storage: plain in-memory Maps (no extra model needed).
+// Overrides survive until the process restarts; for persistence add a Mongo doc.
+
+// In-memory store: Map<service → { pct: number, setAt: Date, label: string }>
+const uptimeOverrides = new Map();
+
+// Helper: build synthetic 90-day history for a service, honouring resolved incidents.
+async function buildServiceHistory(serviceName, days = 90) {
+  const cutoff = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+
+  // Fetch all incidents that mention this service (or have no affectedServices filter)
+  const incidents = await Incident.find({
+    createdAt: { $gte: cutoff },
+    $or: [
+      { affectedServices: serviceName },
+      { affectedServices: { $size: 0 } },
+    ],
+  }).sort({ createdAt: 1 });
+
+  const result = [];
+  for (let i = days - 1; i >= 0; i--) {
+    const d     = new Date();
+    d.setDate(d.getDate() - i);
+    d.setHours(0, 0, 0, 0);
+    const dEnd  = new Date(d);
+    dEnd.setHours(23, 59, 59, 999);
+
+    // Find incidents active on this day
+    const dayIncidents = incidents.filter(inc => {
+      const start = new Date(inc.createdAt);
+      const end   = inc.resolvedAt ? new Date(inc.resolvedAt) : new Date();
+      return start <= dEnd && end >= d;
+    });
+
+    let pct = 100;
+    if (dayIncidents.length > 0) {
+      // Rough approximation: sum downtime minutes, cap at 1440 (full day)
+      const downMinutes = dayIncidents.reduce((acc, inc) => {
+        const s = Math.max(new Date(inc.createdAt), d);
+        const e = inc.resolvedAt ? Math.min(new Date(inc.resolvedAt), dEnd) : Math.min(Date.now(), dEnd);
+        return acc + Math.max(0, (e - s) / 60000);
+      }, 0);
+      pct = Math.max(0, parseFloat((100 - (downMinutes / 1440) * 100).toFixed(4)));
+    }
+
+    result.push({
+      date:      d.toISOString().split('T')[0],
+      timestamp: d.getTime(),
+      pct,
+      incidents: dayIncidents.length,
+      override:  false,
+    });
+  }
+  return result;
+}
+
+// GET /admin/server-health-history
+router.get('/admin/server-health-history', verifyAdmin, async (req, res) => {
+  try {
+    const days = parseInt(req.query.days || '90', 10);
+
+    // Get unique service names from recent incidents
+    const recentIncidents = await Incident.find({
+      createdAt: { $gte: new Date(Date.now() - days * 24 * 60 * 60 * 1000) },
+    }).distinct('affectedServices');
+
+    // Always include a general bucket
+    const services = [...new Set(['general', ...recentIncidents.filter(Boolean)])];
+
+    const history = {};
+    for (const svc of services) {
+      const raw = await buildServiceHistory(svc, days);
+
+      // Apply any stored overrides to matching days
+      if (uptimeOverrides.has(svc)) {
+        const ov = uptimeOverrides.get(svc);
+        raw.forEach(day => {
+          day.pct      = ov.pct;
+          day.override = true;
+        });
+      }
+
+      // Calculate aggregate uptime %
+      const sum = raw.reduce((a, d) => a + d.pct, 0);
+      history[svc] = {
+        days:     raw,
+        avgPct:   parseFloat((sum / raw.length).toFixed(4)),
+        override: uptimeOverrides.has(svc) ? uptimeOverrides.get(svc) : null,
+      };
+    }
+
+    res.json({ history, services, days, generatedAt: new Date().toISOString() });
+  } catch (err) {
+    console.error('[uptime] /admin/server-health-history error:', err.message);
+    res.status(500).json({ error: 'Failed to build history' });
+  }
+});
+
+// POST /admin/uptime-override
+// Body: { service: string, pct: number, label?: string }
+router.post('/admin/uptime-override', verifyAdmin, async (req, res) => {
+  try {
+    const { service, pct, label } = req.body;
+    if (!service) return res.status(400).json({ error: 'service required' });
+    const n = parseFloat(pct);
+    if (isNaN(n) || n < 0 || n > 100) return res.status(400).json({ error: 'pct must be 0–100' });
+
+    uptimeOverrides.set(service, { pct: n, label: label || null, setAt: new Date() });
+    console.log(`[uptime] Override set — service="${service}", pct=${n}`);
+    res.json({ success: true, service, pct: n });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to set override' });
+  }
+});
+
+// DELETE /admin/uptime-override/:service
+router.delete('/admin/uptime-override/:service', verifyAdmin, async (req, res) => {
+  try {
+    const { service } = req.params;
+    const existed = uptimeOverrides.delete(service);
+    res.json({ success: true, service, wasOverridden: existed });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to clear override' });
+  }
+});
+
+// POST /admin/override-all-uptime
+// Nuclear button: resolve ALL active incidents and set all known services to 100%.
+router.post('/admin/override-all-uptime', verifyAdmin, async (req, res) => {
+  try {
+    const { pct = 100 } = req.body;
+    const n = parseFloat(pct);
+    if (isNaN(n) || n < 0 || n > 100) return res.status(400).json({ error: 'pct must be 0–100' });
+
+    // Resolve every active incident
+    const activeIncidents = await Incident.find({ status: { $ne: 'resolved' } });
+    const now = new Date();
+    await Promise.all(activeIncidents.map(inc => {
+      inc.status          = 'resolved';
+      inc.resolvedAt      = now;
+      inc.downtimeMinutes = Math.round((now - inc.createdAt) / 60000);
+      inc.timeline.push({ status: 'resolved', message: 'Resolved via admin override — all systems operational.', createdAt: now });
+      return inc.save();
+    }));
+
+    // Set override for every service that currently has incidents
+    const affected = [...new Set(activeIncidents.flatMap(i => i.affectedServices.length ? i.affectedServices : ['general']))];
+    if (affected.length === 0) affected.push('general');
+    affected.forEach(svc => uptimeOverrides.set(svc, { pct: n, label: 'Admin override', setAt: now }));
+
+    console.log(`[uptime] Nuclear override — resolved ${activeIncidents.length} incidents, set ${affected.length} services to ${n}%`);
+    res.json({
+      success:            true,
+      incidentsResolved:  activeIncidents.length,
+      servicesOverridden: affected,
+      pct: n,
+    });
+  } catch (err) {
+    console.error('[uptime] nuclear override error:', err.message);
+    res.status(500).json({ error: 'Failed to override' });
+  }
+});
+
+// PATCH /admin/server-health-history/:service/:timestamp
+// Edit a single data-point for a service (timestamp = unix ms of the day).
+// Body: { pct: number }
+// These edits are stored in-memory per-service as a sparse Map.
+
+const pointOverrides = new Map(); // "service:timestamp" → pct
+
+router.patch('/admin/server-health-history/:service/:timestamp', verifyAdmin, async (req, res) => {
+  try {
+    const { service, timestamp } = req.params;
+    const { pct } = req.body;
+    const n = parseFloat(pct);
+    if (isNaN(n) || n < 0 || n > 100) return res.status(400).json({ error: 'pct must be 0–100' });
+
+    const key = `${service}:${timestamp}`;
+    pointOverrides.set(key, n);
+    console.log(`[uptime] Point override — ${key} → ${n}%`);
+    res.json({ success: true, service, timestamp: parseInt(timestamp, 10), pct: n });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to patch data point' });
+  }
+});
+
 module.exports = router;
