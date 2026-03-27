@@ -79,7 +79,7 @@ backendUrls.forEach((url, i) => {
     name:    customLabels[i]  || FALLBACK_NAMES[i] || `Server ${i + 1}`,
     region:  customRegions[i] || null,
     url,
-    pingUrl: `${url}/api/health`,
+    pingUrl: `${url}/api/uptime/ping`, // rate-limit exempt — /api/health is NOT
     type:    'backend',
   });
 });
@@ -614,11 +614,18 @@ async function pingTarget(target) {
 
   try {
     const t0 = Date.now();
-    await axios.head(target.pingUrl, {
-      timeout:        10000,
-      validateStatus: code => code === 200,
+    const pingResp = await axios.head(target.pingUrl, {
+      timeout:        30000, // Render cold-start can take up to 20s
+      // Accept any non-5xx response as "up".
+      // 429 = rate-limited → server IS alive, rate limiter is responding.
+      // 4xx = client error → server IS alive.
+      // Only 5xx / network errors = genuinely down.
+      validateStatus: code => code < 500,
     });
     const ms = Date.now() - t0;
+    if (pingResp.status === 429) {
+      console.warn(\`[\${ts()}] \${target.name} rate-limited (429) — treating as UP\`);
+    }
 
     s.lastPingMs          = ms;
     s.lastError           = null;
