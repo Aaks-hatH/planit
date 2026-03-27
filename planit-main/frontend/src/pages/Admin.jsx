@@ -545,56 +545,346 @@ const SEVERITY_META = { minor: { label: 'Minor', bg: 'bg-amber-100', text: 'text
 const STATUS_META = { investigating: { label: 'Investigating', dot: 'bg-red-500' }, identified: { label: 'Identified', dot: 'bg-orange-400' }, monitoring: { label: 'Monitoring', dot: 'bg-amber-400' }, resolved: { label: 'Resolved', dot: 'bg-emerald-500' } };
 const tAgo = (d) => { const m = Math.floor((Date.now() - new Date(d)) / 60000); if (m < 1) return 'just now'; if (m < 60) return `${m}m ago`; const h = Math.floor(m / 60); return h < 24 ? `${h}h ago` : `${Math.floor(h / 24)}d ago`; };
 
+// ═══════════════════════════════════════════════════════════════════════════════
+// SERVER HEALTH SPARKLINE — pure SVG, no external chart lib needed
+// ═══════════════════════════════════════════════════════════════════════════════
+function UptimeSparkline({ days, editMode, onPointClick, service }) {
+  if (!days || days.length === 0) return null;
+  const W = 560, H = 72, PAD = 4;
+  const n = days.length;
+  const stepX = (W - PAD * 2) / Math.max(n - 1, 1);
+
+  const pts = days.map((d, i) => ({
+    x: PAD + i * stepX,
+    y: PAD + (1 - d.pct / 100) * (H - PAD * 2),
+    pct: d.pct,
+    date: d.date,
+    ts: d.timestamp,
+    override: d.override,
+  }));
+
+  const polyline = pts.map(p => `${p.x},${p.y}`).join(' ');
+  const area = `M${pts[0].x},${H} ` + pts.map(p => `L${p.x},${p.y}`).join(' ') + ` L${pts[pts.length - 1].x},${H} Z`;
+
+  const colorForPct = (pct) => {
+    if (pct >= 99.5) return '#22c55e';
+    if (pct >= 95)   return '#f59e0b';
+    return '#ef4444';
+  };
+
+  return (
+    <svg viewBox={`0 0 ${W} ${H}`} className="w-full" style={{ height: 72 }}>
+      <defs>
+        <linearGradient id={`grad-${service}`} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#22c55e" stopOpacity="0.18" />
+          <stop offset="100%" stopColor="#22c55e" stopOpacity="0.01" />
+        </linearGradient>
+      </defs>
+      {/* Grid lines */}
+      {[0, 25, 50, 75, 100].map(pctLine => {
+        const y = PAD + (1 - pctLine / 100) * (H - PAD * 2);
+        return <line key={pctLine} x1={PAD} y1={y} x2={W - PAD} y2={y} stroke="#e5e7eb" strokeWidth="0.5" strokeDasharray="3,3" />;
+      })}
+      {/* Area fill */}
+      <path d={area} fill={`url(#grad-${service})`} />
+      {/* Line */}
+      <polyline points={polyline} fill="none" stroke="#22c55e" strokeWidth="1.5" strokeLinejoin="round" strokeLinecap="round" />
+      {/* Data points */}
+      {pts.map((p, i) => (
+        <circle
+          key={i}
+          cx={p.x} cy={p.y} r={editMode ? 5 : 2.5}
+          fill={p.override ? '#8b5cf6' : colorForPct(p.pct)}
+          stroke="white" strokeWidth={editMode ? 1.5 : 1}
+          className={editMode ? 'cursor-pointer hover:r-7' : ''}
+          onClick={() => editMode && onPointClick && onPointClick(p)}
+        >
+          <title>{p.date}: {p.pct.toFixed(2)}%{p.override ? ' (overridden)' : ''}</title>
+        </circle>
+      ))}
+    </svg>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// UPTIME PANEL — main component
+// ═══════════════════════════════════════════════════════════════════════════════
 function UptimePanel() {
-  const [reports, setReports] = useState([]);
+  const [reports, setReports]     = useState([]);
   const [incidents, setIncidents] = useState([]);
-  const [tab, setTab] = useState('reports');
-  const [expanded, setExpanded] = useState(null);
-  const [showCreate, setShowCreate] = useState(false);
-  const [createForm, setCreateForm] = useState({ title: '', description: '', severity: 'minor', initialMessage: '', reportIds: [] });
-  const [selServices, setSelServices] = useState([]);
-  const [creating, setCreating] = useState(false);
-  const [tlTarget, setTlTarget] = useState(null);
-  const [tlForm, setTlForm] = useState({ status: 'investigating', message: '' });
-  const [loading, setLoading] = useState(true);
+  const [tab, setTab]             = useState('graphs');
+  const [expanded, setExpanded]   = useState(null);
+  const [showCreate, setShowCreate]     = useState(false);
+  const [createForm, setCreateForm]     = useState({ title: '', description: '', severity: 'minor', initialMessage: '', reportIds: [] });
+  const [selServices, setSelServices]   = useState([]);
+  const [creating, setCreating]         = useState(false);
+  const [tlTarget, setTlTarget]         = useState(null);
+  const [tlForm, setTlForm]             = useState({ status: 'investigating', message: '' });
+  const [loading, setLoading]           = useState(true);
+
+  // ── Server Health Graphs state ─────────────────────────────────────────────
+  const [healthHistory, setHealthHistory]         = useState(null);
+  const [healthLoading, setHealthLoading]         = useState(false);
+  const [editMode, setEditMode]                   = useState(false);
+  const [editingPoint, setEditingPoint]           = useState(null); // { service, date, ts, pct }
+  const [editPct, setEditPct]                     = useState('');
+  const [overrideService, setOverrideService]     = useState('');
+  const [overridePct, setOverridePct]             = useState('');
+  const [showOverrideModal, setShowOverrideModal] = useState(false);
+  const [nuclearLoading, setNuclearLoading]       = useState(false);
+  const [healthDays, setHealthDays]               = useState(30);
+  const liveRef = useRef(null);
 
   useEffect(() => { load(); }, []);
+
+  // Auto-refresh graphs every 30 s
+  useEffect(() => {
+    if (tab !== 'graphs') return;
+    loadHealth();
+    liveRef.current = setInterval(loadHealth, 30000);
+    return () => clearInterval(liveRef.current);
+  }, [tab, healthDays]);
+
   const load = async () => {
     setLoading(true);
     try {
-      const [r, i] = await Promise.all([uptimeAPI.getReports().catch(() => ({ data: { reports: [] } })), uptimeAPI.getIncidents().catch(() => ({ data: { incidents: [] } }))]);
+      const [r, i] = await Promise.all([
+        uptimeAPI.getReports().catch(() => ({ data: { reports: [] } })),
+        uptimeAPI.getIncidents().catch(() => ({ data: { incidents: [] } })),
+      ]);
       setReports(r.data.reports || []);
       setIncidents(i.data.incidents || []);
     } catch {} finally { setLoading(false); }
   };
 
+  const loadHealth = async () => {
+    setHealthLoading(true);
+    try {
+      const r = await uptimeAPI.getServerHealthHistory(healthDays);
+      setHealthHistory(r.data);
+    } catch (e) {
+      console.warn('[UptimePanel] health history fetch failed', e);
+    } finally { setHealthLoading(false); }
+  };
+
   const pending = reports.filter(r => r.status === 'pending').length;
   const active  = incidents.filter(i => i.status !== 'resolved').length;
 
+  // ── Nuclear: resolve all incidents & override everything to 100% ───────────
+  const handleNuclear = async () => {
+    if (!confirm('This will resolve ALL active incidents and mark all services as 100% operational. Continue?')) return;
+    setNuclearLoading(true);
+    try {
+      const r = await uptimeAPI.overrideAllUptime(100);
+      toast.success(`✅ ${r.data.incidentsResolved} incidents resolved, ${r.data.servicesOverridden.length} services set to 100%`);
+      await Promise.all([load(), loadHealth()]);
+    } catch { toast.error('Nuclear override failed'); }
+    finally { setNuclearLoading(false); }
+  };
+
+  // ── Set uptime % for one service ───────────────────────────────────────────
+  const handleSetOverride = async () => {
+    const n = parseFloat(overridePct);
+    if (isNaN(n) || n < 0 || n > 100) { toast.error('Enter a valid percentage (0–100)'); return; }
+    try {
+      await uptimeAPI.setUptimeOverride({ service: overrideService, pct: n });
+      toast.success(`Set ${overrideService} to ${n}%`);
+      setShowOverrideModal(false);
+      loadHealth();
+    } catch { toast.error('Failed to set override'); }
+  };
+
+  const handleClearOverride = async (svc) => {
+    try {
+      await uptimeAPI.clearUptimeOverride(svc);
+      toast.success(`Cleared override for ${svc}`);
+      loadHealth();
+    } catch { toast.error('Failed to clear override'); }
+  };
+
+  // ── Edit a single graph point ──────────────────────────────────────────────
+  const handlePointClick = (svc, point) => {
+    setEditingPoint({ service: svc, date: point.date, ts: point.ts });
+    setEditPct(String(point.pct.toFixed(2)));
+  };
+
+  const handleSavePoint = async () => {
+    const n = parseFloat(editPct);
+    if (!editingPoint || isNaN(n) || n < 0 || n > 100) { toast.error('Invalid percentage'); return; }
+    try {
+      await uptimeAPI.patchHealthPoint(editingPoint.service, editingPoint.ts, n);
+      toast.success(`Updated ${editingPoint.date} → ${n}%`);
+      setEditingPoint(null);
+      loadHealth();
+    } catch { toast.error('Failed to save point'); }
+  };
+
+  const services    = healthHistory ? healthHistory.services || [] : [];
+  const historyMap  = healthHistory ? healthHistory.history  || {} : {};
+
+  // ── Colour helper for uptime badge ────────────────────────────────────────
+  const uptimeColor = (pct) => {
+    if (pct == null) return 'text-neutral-400';
+    if (pct >= 99.5) return 'text-emerald-600';
+    if (pct >= 95)   return 'text-amber-500';
+    return 'text-red-500';
+  };
+
   return (
     <div className="space-y-5">
+      {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h2 className="text-lg font-bold">Uptime & Incidents</h2>
-          <p className="text-sm text-neutral-500">{active > 0 ? `${active} active` : 'All clear'} · {pending} pending reports</p>
+          <h2 className="text-lg font-bold">Uptime &amp; Server Health</h2>
+          <p className="text-sm text-neutral-500">{active > 0 ? `${active} active incident${active !== 1 ? 's' : ''}` : 'All clear'} · {pending} pending reports</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
           <a href="/status" target="_blank" className="btn btn-secondary gap-1 text-sm"><ExternalLink className="w-3.5 h-3.5" /> Status Page</a>
+          <button onClick={() => { setShowOverrideModal(true); setOverrideService(services[0] || 'general'); setOverridePct('100'); }} className="btn btn-secondary gap-1 text-sm text-purple-700 border-purple-200 hover:bg-purple-50">
+            <Gauge className="w-3.5 h-3.5" /> Set Uptime %
+          </button>
+          <button
+            onClick={handleNuclear}
+            disabled={nuclearLoading}
+            className="btn gap-1 text-sm bg-red-600 hover:bg-red-700 text-white border-red-600"
+          >
+            {nuclearLoading ? <span className="spinner w-3.5 h-3.5 border-2 border-white/30 border-t-white" /> : <Zap className="w-3.5 h-3.5" />}
+            All Systems Operational
+          </button>
           <button onClick={() => { setCreateForm({ title: '', description: '', severity: 'minor', initialMessage: '', reportIds: [] }); setSelServices([]); setShowCreate(true); }} className="btn btn-primary gap-1 text-sm"><Plus className="w-3.5 h-3.5" /> New Incident</button>
         </div>
       </div>
 
+      {/* Tabs */}
       <div className="flex gap-1 bg-neutral-100 rounded-xl p-1 w-fit">
-        {[['reports', 'Reports', pending], ['incidents', 'Incidents', active]].map(([id, l, c]) => (
+        {[
+          ['graphs',    'Live Graphs', null],
+          ['reports',   'Reports', pending],
+          ['incidents', 'Incidents', active],
+        ].map(([id, l, c]) => (
           <button key={id} onClick={() => setTab(id)} className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-all flex items-center gap-1.5 ${tab === id ? 'bg-white shadow-sm text-neutral-900' : 'text-neutral-500'}`}>
             {l} {c > 0 && <span className={`text-xs px-1.5 py-0.5 rounded-full font-bold ${tab === id ? 'bg-red-100 text-red-600' : 'bg-neutral-200 text-neutral-500'}`}>{c}</span>}
           </button>
         ))}
       </div>
 
-      {loading ? <div className="flex justify-center py-12"><span className="spinner w-6 h-6 border-2 border-neutral-200 border-t-neutral-600" /></div> : (
+      {/* ── GRAPHS TAB ──────────────────────────────────────────────────────── */}
+      {tab === 'graphs' && (
+        <div className="space-y-4">
+          {/* Graph controls */}
+          <div className="flex items-center gap-3 flex-wrap">
+            <div className="flex gap-1 bg-neutral-100 rounded-lg p-1">
+              {[7, 30, 90].map(d => (
+                <button key={d} onClick={() => setHealthDays(d)} className={`px-3 py-1 rounded text-xs font-medium transition-all ${healthDays === d ? 'bg-white shadow-sm text-neutral-900' : 'text-neutral-500'}`}>{d}d</button>
+              ))}
+            </div>
+            <button onClick={loadHealth} className="btn btn-secondary gap-1 text-xs py-1.5">
+              <RefreshCw className={`w-3 h-3 ${healthLoading ? 'animate-spin' : ''}`} /> Refresh
+            </button>
+            <button
+              onClick={() => setEditMode(e => !e)}
+              className={`btn gap-1 text-xs py-1.5 ${editMode ? 'bg-amber-100 text-amber-800 border-amber-300 hover:bg-amber-200' : 'btn-secondary'}`}
+            >
+              <Edit2 className="w-3 h-3" /> {editMode ? 'Exit Edit Mode' : 'Edit Mode'}
+            </button>
+            {editMode && (
+              <span className="text-xs text-amber-600 font-medium flex items-center gap-1">
+                <AlertTriangle className="w-3.5 h-3.5" /> Click any dot on a graph to edit that data point
+              </span>
+            )}
+            <span className="ml-auto text-xs text-neutral-400 flex items-center gap-1">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block" /> OK
+              <span className="w-2 h-2 rounded-full bg-amber-400 inline-block ml-2" /> Degraded
+              <span className="w-2 h-2 rounded-full bg-red-500 inline-block ml-2" /> Outage
+              <span className="w-2 h-2 rounded-full bg-purple-500 inline-block ml-2" /> Overridden
+            </span>
+          </div>
+
+          {healthLoading && !healthHistory && (
+            <div className="flex justify-center py-12"><span className="spinner w-6 h-6 border-2 border-neutral-200 border-t-neutral-600" /></div>
+          )}
+
+          {healthHistory && services.length === 0 && (
+            <div className="text-center py-12 text-neutral-400">
+              <Activity className="w-8 h-8 mx-auto mb-2 opacity-30" />
+              <p className="text-sm">No service history yet — incidents will populate this graph.</p>
+            </div>
+          )}
+
+          {services.map(svc => {
+            const data    = historyMap[svc];
+            if (!data) return null;
+            const pct     = data.avgPct;
+            const hasOv   = !!data.override;
+
+            return (
+              <div key={svc} className={`card p-4 space-y-2 ${hasOv ? 'ring-1 ring-purple-200' : ''}`}>
+                <div className="flex items-center justify-between flex-wrap gap-2">
+                  <div className="flex items-center gap-2">
+                    <span className="font-semibold text-sm capitalize">{svc}</span>
+                    {hasOv && (
+                      <span className="text-xs px-2 py-0.5 rounded-full bg-purple-100 text-purple-700 font-medium flex items-center gap-1">
+                        <Edit3 className="w-2.5 h-2.5" /> overridden
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <span className={`text-sm font-bold tabular-nums ${uptimeColor(pct)}`}>
+                      {pct != null ? `${pct.toFixed(2)}%` : '—'}
+                    </span>
+                    <span className="text-xs text-neutral-400">{healthDays}d avg</span>
+                    <button
+                      onClick={() => { setOverrideService(svc); setOverridePct(String(pct?.toFixed(2) || '100')); setShowOverrideModal(true); }}
+                      className="text-xs px-2 py-1 rounded-lg border border-neutral-200 text-neutral-500 hover:bg-neutral-50 flex items-center gap-1"
+                    >
+                      <Gauge className="w-3 h-3" /> Set %
+                    </button>
+                    {hasOv && (
+                      <button onClick={() => handleClearOverride(svc)} className="text-xs px-2 py-1 rounded-lg border border-red-200 text-red-500 hover:bg-red-50">
+                        Clear Override
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {/* Sparkline */}
+                <div className="bg-neutral-50 rounded-xl overflow-hidden px-2 pt-1 pb-0.5">
+                  <UptimeSparkline
+                    days={data.days}
+                    editMode={editMode}
+                    service={svc}
+                    onPointClick={(pt) => handlePointClick(svc, pt)}
+                  />
+                  <div className="flex justify-between text-xs text-neutral-400 px-1 pb-1">
+                    <span>{data.days?.[0]?.date}</span>
+                    <span>{data.days?.[data.days.length - 1]?.date}</span>
+                  </div>
+                </div>
+
+                {/* Day-by-day tooltip row (last 15 days condensed) */}
+                <div className="flex gap-0.5 pt-1">
+                  {(data.days || []).slice(-30).map((d, i) => {
+                    const c = d.pct >= 99.5 ? 'bg-emerald-400' : d.pct >= 95 ? 'bg-amber-400' : 'bg-red-400';
+                    return (
+                      <div
+                        key={i}
+                        title={`${d.date}: ${d.pct.toFixed(2)}%${d.override ? ' (overridden)' : ''}`}
+                        onClick={() => editMode && handlePointClick(svc, { ...d, ts: d.timestamp })}
+                        className={`flex-1 h-2 rounded-sm ${c} ${editMode ? 'cursor-pointer hover:opacity-70' : ''} ${d.override ? 'ring-1 ring-purple-400' : ''}`}
+                      />
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* ── REPORTS TAB ─────────────────────────────────────────────────────── */}
+      {tab === 'reports' && (
         <>
-          {tab === 'reports' && (
+          {loading ? <div className="flex justify-center py-12"><span className="spinner w-6 h-6 border-2 border-neutral-200 border-t-neutral-600" /></div> : (
             <div className="space-y-2">
               {reports.length === 0 ? <div className="text-center py-12 text-neutral-400"><Radio className="w-8 h-8 mx-auto mb-2 opacity-30" /><p className="text-sm">No reports</p></div> : reports.map(r => (
                 <div key={r._id} className="card p-4 flex items-start gap-3">
@@ -617,8 +907,13 @@ function UptimePanel() {
               ))}
             </div>
           )}
+        </>
+      )}
 
-          {tab === 'incidents' && (
+      {/* ── INCIDENTS TAB ───────────────────────────────────────────────────── */}
+      {tab === 'incidents' && (
+        <>
+          {loading ? <div className="flex justify-center py-12"><span className="spinner w-6 h-6 border-2 border-neutral-200 border-t-neutral-600" /></div> : (
             <div className="space-y-2">
               {incidents.length === 0 ? <div className="text-center py-12 text-neutral-400"><CheckCircle className="w-8 h-8 mx-auto mb-2 opacity-30" /><p className="text-sm">No incidents</p></div> : incidents.map(inc => {
                 const sm = STATUS_META[inc.status] || STATUS_META.investigating;
@@ -667,7 +962,87 @@ function UptimePanel() {
         </>
       )}
 
-      {/* Create Incident Modal */}
+      {/* ── Set Uptime % Modal ─────────────────────────────────────────────── */}
+      {showOverrideModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 px-4" onClick={e => e.target === e.currentTarget && setShowOverrideModal(false)}>
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden">
+            <div className="px-5 py-4 border-b flex items-center justify-between">
+              <h3 className="font-bold flex items-center gap-2"><Gauge className="w-4 h-4 text-purple-600" /> Set Uptime %</h3>
+              <button onClick={() => setShowOverrideModal(false)} className="p-1 hover:bg-neutral-100 rounded-lg"><X className="w-4 h-4 text-neutral-400" /></button>
+            </div>
+            <div className="p-5 space-y-4">
+              <div>
+                <label className="block text-xs font-medium text-neutral-600 mb-1">Service</label>
+                <select value={overrideService} onChange={e => setOverrideService(e.target.value)} className="input w-full text-sm">
+                  {services.length > 0 ? services.map(s => <option key={s} value={s}>{s}</option>) : <option value="general">general</option>}
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-neutral-600 mb-1">Uptime % (0 – 100)</label>
+                <input
+                  type="number" min="0" max="100" step="0.01"
+                  value={overridePct}
+                  onChange={e => setOverridePct(e.target.value)}
+                  className="input w-full text-sm"
+                  placeholder="e.g. 99.95"
+                />
+              </div>
+              {/* Quick presets */}
+              <div className="flex gap-2 flex-wrap">
+                {['100', '99.99', '99.9', '99.5', '99', '95'].map(p => (
+                  <button key={p} onClick={() => setOverridePct(p)} className={`text-xs px-2 py-1 rounded-lg border transition-all ${overridePct === p ? 'bg-neutral-900 text-white border-neutral-900' : 'border-neutral-200 text-neutral-600 hover:bg-neutral-50'}`}>{p}%</button>
+                ))}
+              </div>
+            </div>
+            <div className="px-5 py-4 border-t flex gap-3">
+              <button onClick={() => setShowOverrideModal(false)} className="flex-1 btn btn-secondary text-sm">Cancel</button>
+              <button onClick={handleSetOverride} className="flex-1 btn bg-purple-600 hover:bg-purple-700 text-white border-purple-600 text-sm gap-1">
+                <Check className="w-4 h-4" /> Apply Override
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Edit Point Modal ───────────────────────────────────────────────── */}
+      {editingPoint && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 px-4" onClick={e => e.target === e.currentTarget && setEditingPoint(null)}>
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden">
+            <div className="px-5 py-4 border-b flex items-center justify-between">
+              <h3 className="font-bold flex items-center gap-2"><Edit2 className="w-4 h-4 text-amber-600" /> Edit Data Point</h3>
+              <button onClick={() => setEditingPoint(null)} className="p-1 hover:bg-neutral-100 rounded-lg"><X className="w-4 h-4 text-neutral-400" /></button>
+            </div>
+            <div className="p-5 space-y-3">
+              <p className="text-sm text-neutral-600">
+                Service: <strong>{editingPoint.service}</strong> · Date: <strong>{editingPoint.date}</strong>
+              </p>
+              <div>
+                <label className="block text-xs font-medium text-neutral-600 mb-1">Uptime % for this day</label>
+                <input
+                  type="number" min="0" max="100" step="0.01"
+                  value={editPct}
+                  onChange={e => setEditPct(e.target.value)}
+                  className="input w-full text-sm"
+                  autoFocus
+                />
+              </div>
+              <div className="flex gap-2 flex-wrap">
+                {['100', '99.9', '95', '80', '50', '0'].map(p => (
+                  <button key={p} onClick={() => setEditPct(p)} className={`text-xs px-2 py-1 rounded-lg border transition-all ${editPct === p ? 'bg-neutral-900 text-white border-neutral-900' : 'border-neutral-200 text-neutral-600 hover:bg-neutral-50'}`}>{p}%</button>
+                ))}
+              </div>
+            </div>
+            <div className="px-5 py-4 border-t flex gap-3">
+              <button onClick={() => setEditingPoint(null)} className="flex-1 btn btn-secondary text-sm">Cancel</button>
+              <button onClick={handleSavePoint} className="flex-1 btn bg-amber-600 hover:bg-amber-700 text-white border-amber-600 text-sm gap-1">
+                <Save className="w-4 h-4" /> Save Point
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Create Incident Modal ──────────────────────────────────────────── */}
       {showCreate && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 px-4" onClick={e => e.target === e.currentTarget && setShowCreate(false)}>
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden" style={{ maxHeight: '90vh', display: 'flex', flexDirection: 'column' }}>
@@ -683,20 +1058,17 @@ function UptimePanel() {
               <div><label className="block text-xs font-medium text-neutral-600 mb-1">Description</label><textarea value={createForm.description} onChange={e => setCreateForm(f => ({ ...f, description: e.target.value }))} rows={2} className="input w-full text-sm resize-none" /></div>
               <div><label className="block text-xs font-medium text-neutral-600 mb-1">Initial Message</label><textarea value={createForm.initialMessage} onChange={e => setCreateForm(f => ({ ...f, initialMessage: e.target.value }))} rows={2} className="input w-full text-sm resize-none" /></div>
 
-              {/* ── Affected Services Picker ── */}
               <div>
                 <div className="flex items-center justify-between mb-2">
                   <label className="text-xs font-medium text-neutral-600">
                     Affected Services
-                    <span className="ml-1 text-neutral-400 font-normal">(leave blank = general banner only, no individual features marked down)</span>
+                    <span className="ml-1 text-neutral-400 font-normal">(leave blank = general banner only)</span>
                   </label>
                   <div className="flex gap-3">
                     <button type="button" onClick={() => setSelServices(ALL_SERVICES_FLAT.map(s => s.key))} className="text-xs text-blue-600 hover:text-blue-800 font-medium">Select all</button>
                     <button type="button" onClick={() => setSelServices([])} className="text-xs text-neutral-500 hover:text-neutral-700 font-medium">Clear</button>
                   </div>
                 </div>
-
-                {/* Selected chips */}
                 {selServices.length > 0 && (
                   <div className="flex flex-wrap gap-1 mb-2 p-2 bg-red-50 border border-red-100 rounded-lg">
                     {selServices.map(key => {
@@ -704,16 +1076,12 @@ function UptimePanel() {
                       return (
                         <span key={key} className="inline-flex items-center gap-1 text-xs bg-red-500 text-white px-2 py-0.5 rounded-full font-medium">
                           {svc?.name || key}
-                          <button type="button" onClick={() => setSelServices(p => p.filter(k => k !== key))} className="hover:opacity-70 ml-0.5">
-                            <X className="w-2.5 h-2.5" />
-                          </button>
+                          <button type="button" onClick={() => setSelServices(p => p.filter(k => k !== key))} className="hover:opacity-70 ml-0.5"><X className="w-2.5 h-2.5" /></button>
                         </span>
                       );
                     })}
                   </div>
                 )}
-
-                {/* Category grid */}
                 <div className="border border-neutral-200 rounded-xl overflow-hidden" style={{ maxHeight: '260px', overflowY: 'auto' }}>
                   {SERVICE_CATEGORIES.map(cat => {
                     const catKeys = cat.services.map(s => s.key);
@@ -722,14 +1090,7 @@ function UptimePanel() {
                     return (
                       <div key={cat.id} className="border-b border-neutral-100 last:border-0">
                         <div className="flex items-center justify-between px-3 py-2 bg-neutral-50 sticky top-0">
-                          <button
-                            type="button"
-                            onClick={() => {
-                              if (allCatSelected) setSelServices(p => p.filter(k => !catKeys.includes(k)));
-                              else setSelServices(p => [...new Set([...p, ...catKeys])]);
-                            }}
-                            className="flex items-center gap-2 group"
-                          >
+                          <button type="button" onClick={() => { if (allCatSelected) setSelServices(p => p.filter(k => !catKeys.includes(k))); else setSelServices(p => [...new Set([...p, ...catKeys])]); }} className="flex items-center gap-2 group">
                             <div className={`w-4 h-4 rounded border-2 flex items-center justify-center flex-shrink-0 transition-all ${allCatSelected ? 'bg-neutral-800 border-neutral-800' : someCatSelected ? 'border-neutral-400 bg-neutral-200' : 'border-neutral-300'}`}>
                               {allCatSelected && <svg width="8" height="8" viewBox="0 0 10 10"><polyline points="1.5 5 4 7.5 8.5 2" stroke="white" strokeWidth="1.8" fill="none" strokeLinecap="round" strokeLinejoin="round"/></svg>}
                               {someCatSelected && !allCatSelected && <div className="w-1.5 h-1.5 bg-neutral-500 rounded-sm" />}
@@ -756,17 +1117,11 @@ function UptimePanel() {
                     );
                   })}
                 </div>
-
                 {selServices.length === 0 && (
-                  <p className="text-xs text-amber-600 mt-1.5 flex items-center gap-1">
-                    <AlertTriangle className="w-3 h-3 flex-shrink-0" />
-                    No services selected — incident will appear in the status banner but won't mark any individual feature as disrupted.
-                  </p>
+                  <p className="text-xs text-amber-600 mt-1.5 flex items-center gap-1"><AlertTriangle className="w-3 h-3 flex-shrink-0" /> No services selected — incident will appear in the status banner but won't mark any individual feature as disrupted.</p>
                 )}
                 {selServices.length > 0 && (
-                  <p className="text-xs text-red-600 mt-1.5 font-medium">
-                    {selServices.length} feature{selServices.length !== 1 ? 's' : ''} will be marked as disrupted on the public status page.
-                  </p>
+                  <p className="text-xs text-red-600 mt-1.5 font-medium">{selServices.length} feature{selServices.length !== 1 ? 's' : ''} will be marked as disrupted on the public status page.</p>
                 )}
               </div>
             </div>
@@ -784,7 +1139,7 @@ function UptimePanel() {
         </div>
       )}
 
-      {/* Timeline update modal */}
+      {/* ── Timeline update modal ──────────────────────────────────────────── */}
       {tlTarget && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 px-4" onClick={e => e.target === e.currentTarget && setTlTarget(null)}>
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
