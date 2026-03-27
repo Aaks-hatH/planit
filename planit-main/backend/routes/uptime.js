@@ -521,6 +521,15 @@ router.get('/admin/server-health-history', verifyAdmin, async (req, res) => {
     for (const svc of services) {
       const raw = await buildServiceHistory(svc, days);
 
+      // Apply point-level overrides (from drag-edit in admin)
+      raw.forEach(day => {
+        const key = `${svc}:${day.timestamp}`;
+        if (pointOverrides.has(key)) {
+          day.pct      = pointOverrides.get(key);
+          day.override = true;
+        }
+      });
+
       // Apply any stored overrides to matching days
       if (uptimeOverrides.has(svc)) {
         const ov = uptimeOverrides.get(svc);
@@ -539,7 +548,7 @@ router.get('/admin/server-health-history', verifyAdmin, async (req, res) => {
       };
     }
 
-    res.json({ history, services, days, generatedAt: new Date().toISOString() });
+    res.json({ history, services, days, generatedAt: new Date().toISOString(), processUptimeSeconds: Math.floor(process.uptime()) });
   } catch (err) {
     console.error('[uptime] /admin/server-health-history error:', err.message);
     res.status(500).json({ error: 'Failed to build history' });
