@@ -422,6 +422,7 @@ export const uptimeAPI = {
   ping:         ()     => api.get('/uptime/ping'),
   getStatus:    ()     => api.get('/uptime/status'),
   submitReport: (data) => api.post('/uptime/report', data),
+  getServerHistory: () => api.get('/uptime/server-history'), // public, for Status.jsx
 
   // Admin
   getReports:        ()         => api.get('/uptime/admin/reports'),
@@ -433,12 +434,18 @@ export const uptimeAPI = {
   deleteIncident:    (id)       => api.delete(`/uptime/admin/incidents/${id}`),
 
   // Server health history & overrides
-  getServerHealthHistory:  (days = 90) => api.get(`/uptime/admin/server-health-history?days=${days}`),
-  setUptimeOverride:       (data)      => api.post('/uptime/admin/uptime-override', data),
-  clearUptimeOverride:     (service)   => api.delete(`/uptime/admin/uptime-override/${encodeURIComponent(service)}`),
-  overrideAllUptime:       (pct = 100) => api.post('/uptime/admin/override-all-uptime', { pct }),
-  patchHealthPoint:        (service, timestamp, pct) =>
-    api.patch(`/uptime/admin/server-health-history/${encodeURIComponent(service)}/${timestamp}`, { pct }),
+  getServerHealthHistory: (days = 30) => api.get(`/uptime/admin/server-health-history?days=${days}`),
+  getLiveHistory:         (win = '15d') => api.get(`/uptime/admin/live-history?window=${win}`),
+  setUptimeOverride:      (data)       => api.post('/uptime/admin/uptime-override', data),
+  clearUptimeOverride:    (service)    => api.delete(`/uptime/admin/uptime-override/${encodeURIComponent(service)}`),
+  overrideAllUptime:      (pct = 100)  => api.post('/uptime/admin/override-all-uptime', { pct }),
+  patchHealthPoint:       (service, dateStr, pct) => {
+    // Accept YYYY-MM-DD or unix-ms timestamp
+    const date = /^\d{13}$/.test(String(dateStr))
+      ? new Date(parseInt(dateStr, 10)).toISOString().slice(0, 10)
+      : String(dateStr);
+    return api.patch(`/uptime/admin/server-health-history/${encodeURIComponent(service)}/${date}`, { pct });
+  },
 };
 
 // ─── Watchdog API ─────────────────────────────────────────────────────────────
