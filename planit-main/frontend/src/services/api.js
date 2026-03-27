@@ -431,6 +431,14 @@ export const uptimeAPI = {
   addTimelineUpdate: (id, data) => api.post(`/uptime/admin/incidents/${id}/timeline`, data),
   updateIncident:    (id, data) => api.patch(`/uptime/admin/incidents/${id}`, data),
   deleteIncident:    (id)       => api.delete(`/uptime/admin/incidents/${id}`),
+
+  // Server health history & overrides
+  getServerHealthHistory:  (days = 90) => api.get(`/uptime/admin/server-health-history?days=${days}`),
+  setUptimeOverride:       (data)      => api.post('/uptime/admin/uptime-override', data),
+  clearUptimeOverride:     (service)   => api.delete(`/uptime/admin/uptime-override/${encodeURIComponent(service)}`),
+  overrideAllUptime:       (pct = 100) => api.post('/uptime/admin/override-all-uptime', { pct }),
+  patchHealthPoint:        (service, timestamp, pct) =>
+    api.patch(`/uptime/admin/server-health-history/${encodeURIComponent(service)}/${timestamp}`, { pct }),
 };
 
 // ─── Watchdog API ─────────────────────────────────────────────────────────────
