@@ -150,7 +150,7 @@ async function buildServerHistory(serverName, days) {
 
 async function buildServiceHistory(serviceKey, days) {
   const cutoff    = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
-  const incidents = await Incident.find({ createdAt: { $gte: cutoff }, $or: [{ affectedServices: serviceKey }, { affectedServices: { $size: 0 } }] }).sort({ createdAt: 1 });
+  const incidents = await Incident.find({ createdAt: { $gte: cutoff }, affectedServices: serviceKey }).sort({ createdAt: 1 });
   const result = [];
   for (let i = days - 1; i >= 0; i--) {
     const d = new Date(); d.setDate(d.getDate() - i); d.setHours(0,0,0,0);
@@ -195,7 +195,7 @@ router.get('/admin/server-health-history', verifyAdmin, async (req, res) => {
     const serverNames = await UptimeCheck.distinct('service', { createdAt: { $gte: checkSince } });
 
     // All 40+ logical service keys (always show all, even if no incidents)
-    const incidentKeys = await Incident.find({ createdAt: { $gte: checkSince } }).distinct('affectedServices');
+    const incidentKeys = await Incident.distinct('affectedServices', { createdAt: { $gte: checkSince } });
     const serviceKeys  = [...new Set(['general', ...ALL_SERVICE_KEYS, ...incidentKeys.filter(Boolean)])];
 
     const overrideMap = await loadOverrides([...serverNames, ...serviceKeys]);
