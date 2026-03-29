@@ -1168,6 +1168,7 @@ function EnterpriseDemo() {
 }
 
 import StarBackground from '../components/StarBackground';
+import CrossPlatformAd from '../components/CrossPlatformAd';
 
 
 
@@ -1198,6 +1199,7 @@ export default function Home() {
   });
   const [loading, setLoading] = useState(false);
   const [created, setCreated] = useState(null);
+  const [showAd, setShowAd] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showAccountPassword, setShowAccountPassword] = useState(false);
   const [fieldErrors, setFieldErrors] = useState({});
@@ -1275,6 +1277,7 @@ export default function Home() {
       localStorage.setItem('eventToken', response.data.token);
       localStorage.setItem('username', sanitize(formData.organizerName));
       setCreated(response.data.event);
+      setShowAd(true);
     } catch (error) {
       const data = error.response?.data;
 
@@ -1328,6 +1331,7 @@ export default function Home() {
   return (
     <div className="min-h-screen text-white relative" style={{ background: 'var(--bg-base)', overflowX: 'clip', maxWidth: '100vw', isolation: 'isolate' }}>
       <InjectGlobalCSS />
+      {showAd && <CrossPlatformAd trigger="post_event_create" onClose={() => setShowAd(false)} />}
       {!isWL && !loadingDone && <LoadingScreen onDone={() => setLoadingDone(true)} />}
       <ScrollProgressBar />
 
