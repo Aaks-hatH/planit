@@ -198,7 +198,7 @@ export default function ReferralWelcome() {
                 fontSize: 10, color: '#36364e',
                 letterSpacing: '.05em', textTransform: 'uppercase',
               }}>
-                Creator, PlanIT &amp; PrivyNotes
+                Founder &amp; CEO, PrivyNotes &amp; PlanIT
               </div>
             </div>
           </div>
