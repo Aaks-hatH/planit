@@ -260,7 +260,7 @@ export default function CrossPlatformAd({ trigger = 'casual', onClose }) {
         style={{
           position:'fixed',top:'50%',left:'50%',
           zIndex:9999,
-          width:'min(620px,94vw)',
+          width:'min(700px,95vw)',
           background:'#ffffff',
           border:'1px solid #e8e8ed',
           borderRadius:18,
