@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, createElement } from 'react';
 
 const ADS = {
   post_event_create: {
@@ -431,4 +431,48 @@ export default function CrossPlatformAd({ trigger = 'casual', onClose }) {
       </div>
     </>
   );
+}
+
+/* ── Dev / QA console helpers ────────────────────────────────────────────────
+ *
+ *  Open the browser console and run:
+ *
+ *    __xpb.show()                       → show a random casual variant
+ *    __xpb.show('post_event_create')    → show the post-event-create variant
+ *    __xpb.show('casual_c')             → show a specific casual variant
+ *    __xpb.reset()                      → clear "don't show again" flag
+ *    __xpb.variants                     → list all available variant keys
+ *
+ * ─────────────────────────────────────────────────────────────────────────── */
+if (typeof window !== 'undefined') {
+  window.__xpb = {
+    variants: Object.keys(ADS),
+
+    show(variant) {
+      localStorage.removeItem('xpa_planit_hidden');
+
+      const key = variant && ADS[variant] ? variant : pick();
+
+      let el = document.getElementById('_xpb_dev_mount');
+      if (el) el.remove();
+      el = document.createElement('div');
+      el.id = '_xpb_dev_mount';
+      document.body.appendChild(el);
+
+      import('react-dom/client').then(({ createRoot }) => {
+        const root = createRoot(el);
+        const cleanup = () => { root.unmount(); el.remove(); };
+        root.render(
+          createElement(CrossPlatformAd, { trigger: key, onClose: cleanup })
+        );
+      });
+
+      console.info(`[__xpb] Showing variant: "${key}"`);
+    },
+
+    reset() {
+      localStorage.removeItem('xpa_planit_hidden');
+      console.info('[__xpb] Suppression cleared. Call __xpb.show() or reload the page.');
+    },
+  };
 }
