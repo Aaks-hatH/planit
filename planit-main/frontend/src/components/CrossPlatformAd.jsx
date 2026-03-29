@@ -348,7 +348,7 @@ export default function CrossPlatformAd({ trigger = 'casual', onClose }) {
 
           {/* CTA */}
           <a
-            href="https://privyweb.onrender.com"
+            href="https://privyweb.onrender.com?from=planit"
             target="_blank"
             rel="noopener noreferrer"
             style={{
