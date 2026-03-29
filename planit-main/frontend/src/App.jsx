@@ -25,6 +25,7 @@ import Help from './pages/Help';
 import License from './pages/License';
 import InviteBadge from './pages/InviteBadge';
 import InviteCard from './pages/InviteCard';
+import ReferralWelcome from './components/ReferralWelcome';
 import ReservePage, { ReserveCancelPage } from './pages/ReservePage';
 import ReservationTicket from './pages/ReservationTicket';
 import GuestTablet from './pages/GuestTablet';
@@ -449,6 +450,7 @@ function App() {
         <MaintenanceGate>
           <Router>
             <PageTitle />
+            <ReferralWelcome />
             <Routes>
         <Route path="/" element={<HomeRoute />} />
 
