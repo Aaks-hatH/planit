@@ -27,6 +27,7 @@ import Countdown from '../components/Countdown';
 import DeletionWarningBanner from '../components/DeletionWarningBanner';
 import OrganizerSettings from '../components/OrganizerSettings';
 import Onboarding from '../components/Onboarding';
+import CrossPlatformAd from '../components/CrossPlatformAd';
 
 /* ─── QR Modal ───────────────────────────────────────────────────────────── */
 function QRModal({ eventId, onClose }) {
@@ -868,6 +869,7 @@ export default function EventSpace() {
   const [copied, setCopied]               = useState(false);
   const [showQR, setShowQR]               = useState(false);
   const [showSettings, setShowSettings]   = useState(false);
+  const [showCasualAd, setShowCasualAd]   = useState(false);
   const [pendingApprovals, setPendingApprovals] = useState(0); // live count of pending join requests
   const [waitlistCount, setWaitlistCount] = useState(0);
 
@@ -889,6 +891,14 @@ export default function EventSpace() {
       setShowOnboarding(true);
     }
   }, [event, isOrganizer, searchParams, eventId]);
+
+  // Show casual cross-platform ad 60s after landing in an event space
+  useEffect(() => {
+    if (!event) return;
+    if (localStorage.getItem('xpa_planit_hidden')) return;
+    const t = setTimeout(() => setShowCasualAd(true), 60000);
+    return () => clearTimeout(t);
+  }, [event]);
 
   useEffect(() => {
     if (isOrganizer && eventId) {
@@ -1287,6 +1297,7 @@ export default function EventSpace() {
 
   return (
     <>
+    {showCasualAd && <CrossPlatformAd trigger="casual" onClose={() => setShowCasualAd(false)} />}
     <div className="min-h-screen flex flex-col" style={{ background: '#f7f7f9' }}>
       <DeletionWarningBanner eventId={eventId} />
 
