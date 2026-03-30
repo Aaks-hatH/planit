@@ -98,7 +98,107 @@ const QUICK_REQUESTS = [
   { id: 'dessert', label: 'Dessert Menu' },
 ];
 
-function DiningScreen({ tableState, tableObj, onSignal, onSaveDietary, saving, pendingAlertCount, menus, accentColor }) {
+// Dietary abbreviation display map for menu items
+const DIETARY_DISPLAY = { V:'Veg', VG:'Vegan', GF:'GF', NF:'No Nuts', DF:'Dairy-Free', H:'Halal', K:'Kosher' };
+const COURSE_ICONS = { appetizer:'🥗', main:'🍽️', side:'🥄', dessert:'🍰', drink:'🥤', other:'✨' };
+
+function MenuBrowser({ restaurantMenu, accent, tableOrders }) {
+  const [activeCat, setActiveCat] = useState(0);
+  const cats = restaurantMenu?.categories || [];
+  if (cats.length === 0) return null;
+
+  // Count placed items for badge
+  const placedMap = {};
+  (tableOrders || []).forEach(o => { if (o.status !== 'cancelled') placedMap[o.itemId] = (placedMap[o.itemId] || 0) + o.qty; });
+
+  const cat = cats[activeCat] || cats[0];
+
+  return (
+    <div style={S.card}>
+      <div style={{ fontSize: 11, fontWeight: 700, color: '#a8a29e', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 12 }}>Menu</div>
+
+      {/* Category tabs */}
+      {cats.length > 1 && (
+        <div style={{ display: 'flex', gap: 6, overflowX: 'auto', marginBottom: 12, paddingBottom: 2 }}>
+          {cats.map((c, i) => (
+            <button key={c.id} onPointerDown={() => setActiveCat(i)}
+              style={{ flexShrink: 0, padding: '5px 11px', borderRadius: 20, fontSize: 12, fontWeight: 700, cursor: 'pointer', border: `1px solid ${i === activeCat ? accent : '#e7e5e4'}`, background: i === activeCat ? accent + '18' : '#fafaf9', color: i === activeCat ? accent : '#78716c' }}>
+              {c.name}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Items */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        {(cat.items || []).filter(it => it.available !== false).sort((a,b) => a.ord - b.ord).map(item => {
+          const placed = placedMap[item.id] || 0;
+          return (
+            <div key={item.id} style={{ borderRadius: 10, border: `1px solid ${placed ? accent + '55' : '#e7e5e4'}`, background: placed ? accent + '08' : '#fff', padding: '10px 12px', display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+              <div style={{ flex: 1 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                  <span style={{ fontSize: 13, fontWeight: 700, color: '#1c1917' }}>{item.name}</span>
+                  <span style={{ fontSize: 12 }}>{COURSE_ICONS[item.courseType] || ''}</span>
+                </div>
+                {item.desc && <div style={{ fontSize: 12, color: '#78716c', marginTop: 3, lineHeight: 1.4 }}>{item.desc}</div>}
+                {item.dietary?.length > 0 && (
+                  <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginTop: 5 }}>
+                    {item.dietary.map(d => (
+                      <span key={d} style={{ background: '#fef3c7', border: '1px solid #fde68a', color: '#92400e', fontSize: 10, fontWeight: 700, padding: '1px 6px', borderRadius: 4 }}>
+                        {DIETARY_DISPLAY[d] || d}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <div style={{ flexShrink: 0, textAlign: 'right' }}>
+                <div style={{ fontSize: 14, fontWeight: 800, color: '#1c1917' }}>${(item.priceCents / 100).toFixed(2)}</div>
+                {placed > 0 && (
+                  <div style={{ fontSize: 10, fontWeight: 700, color: accent, marginTop: 3 }}>×{placed} ordered</div>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      <div style={{ marginTop: 10, padding: '8px 10px', borderRadius: 8, background: '#fafaf9', border: '1px solid #e7e5e4', fontSize: 11, color: '#a8a29e', textAlign: 'center' }}>
+        Your server will take your order at the table
+      </div>
+    </div>
+  );
+}
+
+// Orders summary for guest — shows what the server has placed
+function OrdersSummary({ tableOrders, accent }) {
+  const active = (tableOrders || []).filter(o => o.status !== 'cancelled');
+  if (active.length === 0) return null;
+  const STATUS_GUEST = { pending:'Sent to kitchen', acknowledged:'Kitchen received', preparing:'Being prepared 🔥', ready:'Ready — server bringing it!', delivered:'Served ✓' };
+  return (
+    <div style={S.card}>
+      <div style={{ fontSize: 11, fontWeight: 700, color: '#a8a29e', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 10 }}>Your Order</div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+        {active.map(o => (
+          <div key={o.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 0', borderBottom: '1px solid #f5f5f4' }}>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 13, fontWeight: 700, color: '#1c1917' }}>{o.qty > 1 ? `×${o.qty} ` : ''}{o.itemName}</div>
+              <div style={{ fontSize: 11, color: o.status === 'preparing' ? '#d97706' : o.status === 'ready' ? '#16a34a' : '#a8a29e', marginTop: 2 }}>
+                {STATUS_GUEST[o.status] || o.status}
+              </div>
+            </div>
+            <div style={{ fontSize: 13, fontWeight: 700, color: '#78716c' }}>${((o.priceCents * o.qty) / 100).toFixed(2)}</div>
+          </div>
+        ))}
+        <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: 6, fontWeight: 800, color: '#1c1917' }}>
+          <span>Subtotal</span>
+          <span>${(active.reduce((s,o) => s + o.priceCents * o.qty, 0) / 100).toFixed(2)}</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function DiningScreen({ tableState, tableObj, onSignal, onSaveDietary, saving, pendingAlertCount, menus, accentColor, restaurantMenu, tableOrders }) {
   const [diet, setDiet]           = useState(tableState?.guestDietary || []);
   const [notes, setNotes]         = useState(tableState?.guestDietaryNotes || '');
   const [dietOpen, setDietOpen]   = useState(false);
@@ -286,8 +386,13 @@ function DiningScreen({ tableState, tableObj, onSignal, onSaveDietary, saving, p
           </div>
         )}
       </div>
-      {/* Menus */}
-      {menus && menus.length > 0 && (
+      {/* Orders placed by server */}
+      <OrdersSummary tableOrders={tableOrders} accent={accent} />
+
+      {/* Interactive menu browser */}
+      {restaurantMenu?.categories?.length > 0
+        ? <MenuBrowser restaurantMenu={restaurantMenu} accent={accent} tableOrders={tableOrders} />
+        : menus && menus.length > 0 && (
         <div style={S.card}>
           <div style={{ fontSize: 11, fontWeight: 700, color: '#a8a29e', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 10 }}>Menus</div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -699,6 +804,8 @@ export default function GuestTablet() {
   const [tableObj, setTableObj]   = useState(null);
   const [venueName, setVenueName] = useState('');
   const [menus, setMenus]         = useState([]);
+  const [restaurantMenu, setRestaurantMenu] = useState(null);
+  const [tableOrders, setTableOrders]       = useState([]);
   const [accentColor, setAccentColor] = useState('#f97316');
   const [error, setError]         = useState(null);
   const [saving, setSaving]       = useState(false);
@@ -743,6 +850,7 @@ export default function GuestTablet() {
       setTableObj(d.table);
       if (d.menus)      setMenus(d.menus);
       if (d.accentColor) setAccentColor(d.accentColor);
+      if (d.orders)      setTableOrders(d.orders);
       // Map flat guest response back into the shape the screens expect
       setTableState({
         guestScreen:       d.guestScreen,
@@ -758,6 +866,12 @@ export default function GuestTablet() {
       // Silently retry on poll failure
     }
   }, [eid, tableId]);
+
+  // Fetch menu once on load (not every poll — menu changes infrequently)
+  useEffect(() => {
+    if (!eid) return;
+    eventAPI.getMenu(eid).then(res => setRestaurantMenu(res.data.menu)).catch(() => {});
+  }, [eid]);
 
   // Initial load + polling
   useEffect(() => {
@@ -878,6 +992,8 @@ export default function GuestTablet() {
             pendingAlertCount={pendingAlertCount}
             menus={menus}
             accentColor={accentColor}
+            restaurantMenu={restaurantMenu}
+            tableOrders={tableOrders}
           />
         )}
         {screen === 'bill' && (
