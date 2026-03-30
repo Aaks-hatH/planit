@@ -302,6 +302,34 @@ const eventSchema = new mongoose.Schema({
       id:   { type: String },
       name: { type: String, trim: true, maxlength: 60 },
     }],
+    // Billing defaults — used by auto-calculate bill
+    taxRate:              { type: Number, default: 8.875, min: 0, max: 100 },
+    autoGratuityPct:      { type: Number, default: 18,   min: 0, max: 100 },
+    autoGratuityMinParty: { type: Number, default: 6,    min: 1, max: 99  },
+    paymentNote:          { type: String, default: '', maxlength: 200 },
+  },
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // RESTAURANT MENU — orderable items shown on guest & server tablets
+  // priceCents stores price as integer cents to avoid float rounding.
+  // ─────────────────────────────────────────────────────────────────────────
+  restaurantMenu: {
+    categories: [{
+      id:   { type: String, required: true },
+      name: { type: String, required: true, trim: true, maxlength: 60 },
+      ord:  { type: Number, default: 0 },
+      items: [{
+        id:         { type: String, required: true },
+        name:       { type: String, required: true, trim: true, maxlength: 100 },
+        desc:       { type: String, default: '', trim: true, maxlength: 300 },
+        priceCents: { type: Number, required: true, min: 0 },
+        dietary:    [{ type: String, maxlength: 20 }],
+        available:  { type: Boolean, default: true },
+        ord:        { type: Number, default: 0 },
+        courseType: { type: String, enum: ['appetizer','main','side','dessert','drink','other'], default: 'main' },
+      }],
+    }],
+    updatedAt: { type: Date, default: null },
   },
 
   // Live table occupancy state — one entry per seatingMap object id
@@ -338,6 +366,22 @@ const eventSchema = new mongoose.Schema({
       comment:     { type: String, default: '', maxlength: 300 },
       submittedAt: { type: Date,   default: null },
     },
+    // Orders placed by server for this table (cleared on table reset)
+    orders: [{
+      id:             { type: String, required: true },
+      itemId:         { type: String, required: true },
+      itemName:       { type: String, required: true, maxlength: 100 },
+      priceCents:     { type: Number, required: true, min: 0 },
+      qty:            { type: Number, default: 1, min: 1 },
+      courseType:     { type: String, default: 'main' },
+      dietary:        [{ type: String, maxlength: 20 }],
+      specialRequest: { type: String, default: '', maxlength: 200 },
+      serverName:     { type: String, default: '' },
+      // pending→acknowledged→preparing→ready→delivered | cancelled
+      status:         { type: String, enum: ['pending','acknowledged','preparing','ready','delivered','cancelled'], default: 'pending' },
+      placedAt:       { type: Date, default: Date.now },
+      updatedAt:      { type: Date, default: Date.now },
+    }],
   }],
 
   // Reservation queue — QR-based time-slotted bookings
