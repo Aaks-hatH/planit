@@ -871,10 +871,10 @@ function WaitlistPanel({ waitlist, tableStates, objects, settings, forecast, onA
                     <Clock className="w-3 h-3 flex-shrink-0" />
                     <span>
                       {canNow
-                        ? `Table available now${asgn.tableLabel ? \` — ${asgn.tableLabel}\` : ''}`
+                        ? `Table available now${asgn.tableLabel ? ' — ' + asgn.tableLabel : ''}`
                         : noTable
                           ? 'No table can fit this party'
-                          : `Est. wait ${fmtWait(minsWait)}${asgn?.tableLabel ? \` — ${asgn.tableLabel}\` : ''}`
+                          : `Est. wait ${fmtWait(minsWait)}${asgn?.tableLabel ? ' — ' + asgn.tableLabel : ''}`
                       }
                     </span>
                   </div>
