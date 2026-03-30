@@ -7,6 +7,7 @@ import EventSpace from './pages/EventSpace';
 import EnterpriseCheckin from './pages/EnterpriseCheckin';
 import TableService from './pages/TableService';
 import ServerView from './pages/ServerView';
+import KitchenView from './pages/KitchenView';
 import GuestInvite from './pages/GuestInvite';
 import OrganizerLogin from './pages/OrganizerLogin';
 import Admin from './pages/Admin';
@@ -25,7 +26,6 @@ import Help from './pages/Help';
 import License from './pages/License';
 import InviteBadge from './pages/InviteBadge';
 import InviteCard from './pages/InviteCard';
-import ReferralWelcome from './components/ReferralWelcome';
 import ReservePage, { ReserveCancelPage } from './pages/ReservePage';
 import ReservationTicket from './pages/ReservationTicket';
 import GuestTablet from './pages/GuestTablet';
@@ -450,7 +450,6 @@ function App() {
         <MaintenanceGate>
           <Router>
             <PageTitle />
-            <ReferralWelcome />
             <Routes>
         <Route path="/" element={<HomeRoute />} />
 
@@ -462,6 +461,8 @@ function App() {
         <Route path="/e/:subdomain/floor"        element={<TableService />} />
         <Route path="/event/:eventId/server"     element={<ServerView />} />
         <Route path="/e/:subdomain/server"       element={<ServerView />} />
+        <Route path="/event/:eventId/kitchen"    element={<KitchenView />} />
+        <Route path="/e/:subdomain/kitchen"      element={<KitchenView />} />
         <Route path="/event/:eventId/table/:tableId" element={<GuestTablet />} />
         <Route path="/e/:subdomain/table/:tableId"   element={<GuestTablet />} />
         <Route path="/event/:eventId/login"      element={<OrganizerLogin />} />
