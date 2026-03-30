@@ -3546,6 +3546,15 @@ router.get('/:eventId/table-service/guest/:tableId', availabilityLimiter, async 
       hasRating:         !!(state.guestRating?.food),
       accentColor:       rps.accentColor || '#f97316',
       menus:             rps.menus || [],
+      // Active orders for this table (read-only for guest — shows what server placed)
+      orders: (state.orders || []).filter(o => o.status !== 'cancelled').map(o => ({
+        id:         o.id,
+        itemId:     o.itemId,
+        itemName:   o.itemName,
+        priceCents: o.priceCents,
+        qty:        o.qty,
+        status:     o.status,
+      })),
     });
   } catch (err) { next(err); }
 });
@@ -4170,4 +4179,342 @@ router.get('/:eventId/backup-info', verifyEventAccess, async (req, res, next) =>
   } catch (error) {
     next(error);
   }
+});
+// ═══════════════════════════════════════════════════════════════════════════
+// RESTAURANT MENU ROUTES
+// ═══════════════════════════════════════════════════════════════════════════
+
+// GET /:eventId/table-service/menu — all roles can read
+router.get('/:eventId/table-service/menu', verifyCheckinAccess, async (req, res, next) => {
+  try {
+    const event = await Event.findById(req.params.eventId)
+      .select('restaurantMenu isTableServiceMode').lean();
+    if (!event) return res.status(404).json({ error: 'Event not found' });
+    if (!event.isTableServiceMode) return res.status(403).json({ error: 'Not a table service event' });
+    res.json({ menu: event.restaurantMenu || { categories: [] } });
+  } catch (err) { next(err); }
+});
+
+// PUT /:eventId/table-service/menu — organizer/manager only
+router.put('/:eventId/table-service/menu', verifyOrganizer, async (req, res, next) => {
+  try {
+    const { categories } = req.body;
+    if (!Array.isArray(categories)) return res.status(400).json({ error: 'categories must be an array' });
+    const crypto = require('crypto');
+    // Sanitise + ensure IDs
+    const safeCategories = categories.slice(0, 30).map((cat, ci) => ({
+      id:   cat.id || crypto.randomUUID(),
+      name: String(cat.name || '').trim().slice(0, 60),
+      ord:  Number(cat.ord) || ci,
+      items: (Array.isArray(cat.items) ? cat.items : []).slice(0, 100).map((item, ii) => ({
+        id:            item.id || crypto.randomUUID(),
+        name:          String(item.name || '').trim().slice(0, 100),
+        desc:          String(item.desc || '').trim().slice(0, 300),
+        priceCents:    Math.max(0, Math.round(Number(item.priceCents) || 0)),
+        dietary:       (Array.isArray(item.dietary) ? item.dietary : []).slice(0, 10).map(d => String(d).slice(0, 20)),
+        available:     item.available !== false,
+        ord:           Number(item.ord) || ii,
+        courseType:    ['appetizer','main','side','dessert','drink','other'].includes(item.courseType) ? item.courseType : 'main',
+      })),
+    }));
+    const event = await Event.findById(req.params.eventId);
+    if (!event) return res.status(404).json({ error: 'Event not found' });
+    event.restaurantMenu = { categories: safeCategories, updatedAt: new Date() };
+    await event.save();
+    res.json({ success: true, menu: event.restaurantMenu });
+  } catch (err) { next(err); }
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// ORDER ROUTES — server places/updates orders per table
+// ═══════════════════════════════════════════════════════════════════════════
+
+// POST /:eventId/table-service/table/:tableId/orders — server places order items
+router.post('/:eventId/table-service/table/:tableId/orders', verifyCheckinAccess, async (req, res, next) => {
+  try {
+    const { items, serverName } = req.body; // items: [{itemId, qty, specialRequest}]
+    if (!Array.isArray(items) || items.length === 0)
+      return res.status(400).json({ error: 'items array required' });
+    const event = await Event.findById(req.params.eventId);
+    if (!event) return res.status(404).json({ error: 'Event not found' });
+    const crypto = require('crypto');
+    // Build lookup map for menu items
+    const menuMap = {};
+    for (const cat of (event.restaurantMenu?.categories || [])) {
+      for (const item of (cat.items || [])) menuMap[item.id] = item;
+    }
+    // Find or create tableState
+    let ts = event.tableStates.find(s => s.tableId === req.params.tableId);
+    if (!ts) {
+      event.tableStates.push({ tableId: req.params.tableId, status: 'available', orders: [] });
+      ts = event.tableStates[event.tableStates.length - 1];
+    }
+    if (!ts.orders) ts.orders = [];
+    const placed = [];
+    for (const req_item of items.slice(0, 50)) {
+      const menuItem = menuMap[req_item.itemId];
+      if (!menuItem) continue;
+      const order = {
+        id:             crypto.randomUUID(),
+        itemId:         menuItem.id,
+        itemName:       menuItem.name,
+        priceCents:     menuItem.priceCents,
+        qty:            Math.max(1, Math.min(99, parseInt(req_item.qty) || 1)),
+        courseType:     menuItem.courseType || 'main',
+        dietary:        menuItem.dietary || [],
+        specialRequest: String(req_item.specialRequest || '').trim().slice(0, 200),
+        serverName:     String(serverName || '').trim().slice(0, 60),
+        status:         'pending',
+        placedAt:       new Date(),
+        updatedAt:      new Date(),
+      };
+      ts.orders.push(order);
+      placed.push(order);
+    }
+    await event.save();
+    const io = req.app.get('io');
+    if (io) io.to(`event_${req.params.eventId}`).emit('kitchen_update', { tableId: req.params.tableId });
+    res.status(201).json({ success: true, placed, tableId: req.params.tableId });
+  } catch (err) { next(err); }
+});
+
+// PATCH /:eventId/table-service/table/:tableId/orders/:orderId — update order item status
+router.patch('/:eventId/table-service/table/:tableId/orders/:orderId', verifyCheckinAccess, async (req, res, next) => {
+  try {
+    const { status } = req.body;
+    const validStatuses = ['pending','acknowledged','preparing','ready','delivered','cancelled'];
+    if (!validStatuses.includes(status)) return res.status(400).json({ error: 'Invalid status' });
+    const event = await Event.findById(req.params.eventId);
+    if (!event) return res.status(404).json({ error: 'Event not found' });
+    const ts = event.tableStates.find(s => s.tableId === req.params.tableId);
+    if (!ts) return res.status(404).json({ error: 'Table not found' });
+    const order = (ts.orders || []).find(o => o.id === req.params.orderId);
+    if (!order) return res.status(404).json({ error: 'Order item not found' });
+    order.status = status;
+    order.updatedAt = new Date();
+    await event.save();
+    const io = req.app.get('io');
+    if (io) io.to(`event_${req.params.eventId}`).emit('kitchen_update', { tableId: req.params.tableId, orderId: req.params.orderId, status });
+    res.json({ success: true, order });
+  } catch (err) { next(err); }
+});
+
+// DELETE /:eventId/table-service/table/:tableId/orders — clear delivered/cancelled orders
+router.delete('/:eventId/table-service/table/:tableId/orders', verifyCheckinAccess, async (req, res, next) => {
+  try {
+    const event = await Event.findById(req.params.eventId);
+    if (!event) return res.status(404).json({ error: 'Event not found' });
+    const ts = event.tableStates.find(s => s.tableId === req.params.tableId);
+    if (ts) ts.orders = [];
+    await event.save();
+    res.json({ success: true });
+  } catch (err) { next(err); }
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// KITCHEN VIEW — all active orders across all tables
+// ═══════════════════════════════════════════════════════════════════════════
+
+router.get('/:eventId/table-service/kitchen', verifyCheckinAccess, async (req, res, next) => {
+  try {
+    const event = await Event.findById(req.params.eventId)
+      .select('isTableServiceMode seatingMap tableStates tableServiceSettings restaurantName title')
+      .lean();
+    if (!event) return res.status(404).json({ error: 'Event not found' });
+    if (!event.isTableServiceMode) return res.status(403).json({ error: 'Not a table service event' });
+    const objects = (event.seatingMap?.objects || []);
+    const objMap  = {};
+    for (const o of objects) objMap[o.id] = o;
+    // Build kitchen tickets: only tables with active (non-delivered, non-cancelled) orders
+    const tickets = [];
+    for (const ts of (event.tableStates || [])) {
+      const activeOrders = (ts.orders || []).filter(o =>
+        !['delivered','cancelled'].includes(o.status)
+      );
+      if (activeOrders.length === 0) continue;
+      const tableObj = objMap[ts.tableId] || {};
+      // Flag if any order has dietary restrictions or special requests
+      const hasDietary = activeOrders.some(o => o.dietary?.length > 0);
+      const hasSpecial = activeOrders.some(o => o.specialRequest?.trim());
+      const guestDietary = ts.guestDietary || [];
+      const guestDietaryNotes = ts.guestDietaryNotes || '';
+      tickets.push({
+        tableId:          ts.tableId,
+        tableLabel:       tableObj.label || ts.tableId,
+        partyName:        ts.partyName || '',
+        partySize:        ts.partySize || 0,
+        serverName:       ts.serverName || '',
+        guestDietary,
+        guestDietaryNotes,
+        hasDietary:       hasDietary || guestDietary.length > 0,
+        hasSpecial,
+        orders:           activeOrders,
+        earliestPlacedAt: activeOrders.reduce((min, o) =>
+          o.placedAt < min ? o.placedAt : min, activeOrders[0].placedAt
+        ),
+      });
+    }
+    // Sort: oldest ticket first (FIFO kitchen queue)
+    tickets.sort((a, b) => new Date(a.earliestPlacedAt) - new Date(b.earliestPlacedAt));
+    res.json({
+      restaurantName: event.restaurantName || event.title || '',
+      tickets,
+      settings: {
+        avgDiningMinutes: event.tableServiceSettings?.avgDiningMinutes || 75,
+      },
+    });
+  } catch (err) { next(err); }
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// AUTO BILL CALCULATION
+// Computes subtotal from active orders, applies tax + auto-gratuity, sends
+// to guest tablet in one call. Returns breakdown for Clover / any POS.
+// ═══════════════════════════════════════════════════════════════════════════
+
+router.post('/:eventId/table-service/table/:tableId/bill/calculate', verifyCheckinAccess, async (req, res, next) => {
+  try {
+    const event = await Event.findById(req.params.eventId);
+    if (!event) return res.status(404).json({ error: 'Event not found' });
+    const tss = event.tableServiceSettings || {};
+    const ts  = event.tableStates.find(s => s.tableId === req.params.tableId);
+    if (!ts) return res.status(404).json({ error: 'Table state not found' });
+
+    // Sum all non-cancelled order items (include delivered)
+    const billableOrders = (ts.orders || []).filter(o => o.status !== 'cancelled');
+    const subtotalCents  = billableOrders.reduce((sum, o) => sum + (o.priceCents * o.qty), 0);
+
+    const taxRate     = Number(tss.taxRate ?? 8.875) / 100;
+    const gratuityPct = Number(tss.autoGratuityPct ?? 18) / 100;
+    const gratuityMin = Number(tss.autoGratuityMinParty ?? 6);
+    const partySize   = ts.partySize || 0;
+
+    const taxCents       = Math.round(subtotalCents * taxRate);
+    const applyGratuity  = partySize >= gratuityMin;
+    const gratuityCents  = applyGratuity ? Math.round(subtotalCents * gratuityPct) : 0;
+    const totalCents     = subtotalCents + taxCents + gratuityCents;
+
+    const fmt = cents => (cents / 100).toFixed(2);
+
+    // Build per-item line items for POS entry
+    const lineItems = billableOrders.map(o => ({
+      name:       o.itemName,
+      qty:        o.qty,
+      unitPrice:  fmt(o.priceCents),
+      lineTotal:  fmt(o.priceCents * o.qty),
+      courseType: o.courseType,
+    }));
+
+    // Send bill screen to guest tablet
+    const subtotalDollars = subtotalCents / 100;
+    const taxDollars      = (taxCents + gratuityCents) / 100; // roll gratuity into "tax" line for guest simplicity
+    ts.guestScreen   = 'bill';
+    ts.billSubtotal  = subtotalDollars;
+    ts.billTax       = taxDollars;
+    ts.billPaid      = false;
+
+    await event.save();
+
+    res.json({
+      success: true,
+      breakdown: {
+        lineItems,
+        subtotal:       fmt(subtotalCents),
+        taxRate:        `${tss.taxRate ?? 8.875}%`,
+        taxAmount:      fmt(taxCents),
+        autoGratuity:   applyGratuity ? { pct: `${tss.autoGratuityPct ?? 18}%`, amount: fmt(gratuityCents) } : null,
+        total:          fmt(totalCents),
+        partySize,
+        paymentNote:    tss.paymentNote || '',
+        orderCount:     billableOrders.length,
+      },
+      // Sent to guest tablet
+      billSubtotal: subtotalDollars,
+      billTax:      taxDollars,
+    });
+  } catch (err) { next(err); }
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// SMART QUEUE FORECAST — per-party-in-line wait time estimation
+// Returns expected seat time for each waiting party + auto-seat suggestion
+// ═══════════════════════════════════════════════════════════════════════════
+
+router.get('/:eventId/table-service/queue-forecast', verifyCheckinAccess, async (req, res, next) => {
+  try {
+    const event = await Event.findById(req.params.eventId)
+      .select('isTableServiceMode seatingMap tableStates tableServiceWaitlist tableServiceSettings').lean();
+    if (!event) return res.status(404).json({ error: 'Event not found' });
+    const tss     = event.tableServiceSettings || {};
+    const objects = (event.seatingMap?.objects || []).filter(o => o.type !== 'zone' && (o.capacity || 0) > 0);
+    const states  = event.tableStates || [];
+    const queue   = (event.tableServiceWaitlist || [])
+      .filter(w => w.status === 'waiting' || w.status === 'notified')
+      .sort((a, b) => new Date(a.addedAt) - new Date(b.addedAt));
+
+    const now       = Date.now();
+    const avgDining = tss.avgDiningMinutes || 75;
+    const buffer    = tss.cleaningBufferMinutes || 10;
+    const getDining = (sz) => {
+      const ov = (tss.sizeOverrides || []).find(o =>
+        (!o.minParty || sz >= o.minParty) && (!o.maxParty || sz <= o.maxParty)
+      );
+      return ov?.avgMinutes || avgDining;
+    };
+
+    // Build mutable timeline of tables
+    let timeline = objects.map(t => {
+      const s = states.find(st => st.tableId === t.id);
+      const status = s?.status || 'available';
+      let minsUntilFree = 0;
+      switch (status) {
+        case 'available':   minsUntilFree = 0; break;
+        case 'cleaning':    minsUntilFree = buffer; break;
+        case 'occupied': {
+          const dm = getDining(s?.partySize || 2);
+          const seated = s?.occupiedAt ? now - new Date(s.occupiedAt).getTime() : 0;
+          minsUntilFree = Math.max(0, Math.round((dm * 60000 - seated) / 60000)) + buffer;
+          break;
+        }
+        case 'reserved':    minsUntilFree = (tss.reservationDurationMinutes || 90) + buffer; break;
+        default:            minsUntilFree = Infinity;
+      }
+      return { id: t.id, label: t.label || '', capacity: t.capacity, minsUntilFree };
+    });
+
+    // Simulate queue: assign each party to the soonest available fitting table
+    const assignments = [];
+    const simTimeline = timeline.map(t => ({ ...t }));
+
+    for (const party of queue) {
+      const sz = party.partySize || 1;
+      const eligible = simTimeline
+        .filter(t => t.capacity >= sz && t.minsUntilFree !== Infinity)
+        .sort((a, b) => a.minsUntilFree - b.minsUntilFree);
+
+      if (!eligible.length) {
+        assignments.push({ partyId: party.id, partyName: party.partyName, partySize: sz,
+          minsWait: null, tableId: null, tableLabel: null, canSeatNow: false });
+        continue;
+      }
+      const best = eligible[0];
+      const minsWait = best.minsUntilFree;
+      assignments.push({
+        partyId:    party.id,
+        partyName:  party.partyName,
+        partySize:  sz,
+        minsWait,
+        tableId:    best.id,
+        tableLabel: best.label,
+        canSeatNow: minsWait === 0,
+      });
+      // Advance this table's availability by this party's dining time
+      best.minsUntilFree = minsWait + getDining(sz) + buffer;
+    }
+
+    // autoSeat suggestion: the first party that can be seated RIGHT NOW
+    const autoSeatSuggestion = assignments.find(a => a.canSeatNow) || null;
+
+    res.json({ assignments, autoSeatSuggestion });
+  } catch (err) { next(err); }
 });
