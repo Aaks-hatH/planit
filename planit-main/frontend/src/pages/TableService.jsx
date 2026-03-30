@@ -739,7 +739,7 @@ function SeatNextModal({ party, objects, tableStates, settings, onConfirm, onClo
 
 // ── Waitlist Panel ────────────────────────────────────────────────────────────
 
-function WaitlistPanel({ waitlist, tableStates, objects, settings, onAdd, onUpdate, onRemove, onSeatNext }) {
+function WaitlistPanel({ waitlist, tableStates, objects, settings, forecast, onAdd, onUpdate, onRemove, onSeatNext }) {
   const [showAdd, setShowAdd] = useState(false);
   const [form, setForm]       = useState({ partyName: '', partySize: 2, phone: '', notes: '' });
   const [adding, setAdding]   = useState(false);
@@ -751,15 +751,19 @@ function WaitlistPanel({ waitlist, tableStates, objects, settings, onAdd, onUpda
     finally { setAdding(false); }
   };
 
-  // First waiting party + whether a table is available for them
+  const assignmentMap = {};
+  (forecast?.assignments || []).forEach(a => { assignmentMap[a.partyId] = a; });
+
   const nextParty = waitlist.find(w => w.status === 'waiting' || w.status === 'notified');
-  const nextPartyHasTable = nextParty
-    ? (objects || []).some(o => {
-        if (o.type === 'zone' || (o.capacity || 0) < nextParty.partySize) return false;
-        const s = (tableStates || []).find(st => st.tableId === o.id);
-        return !s || s.status === 'available';
-      })
-    : false;
+  const nextAssignment = nextParty ? assignmentMap[nextParty.id] : null;
+  const nextCanSeatNow = nextAssignment?.canSeatNow === true;
+
+  const fmtWait = (mins) => {
+    if (mins === 0) return 'Ready now';
+    if (mins == null) return 'No table fits';
+    if (mins < 60) return `~${mins} min`;
+    return `~${Math.floor(mins / 60)}h ${mins % 60}m`;
+  };
 
   return (
     <div className="flex flex-col h-full">
@@ -774,25 +778,28 @@ function WaitlistPanel({ waitlist, tableStates, objects, settings, onAdd, onUpda
         </button>
       </div>
 
-      {/* One-tap Seat Next Party button */}
       {nextParty && (
         <button
           onClick={() => onSeatNext(nextParty)}
-          disabled={!nextPartyHasTable}
+          disabled={!nextCanSeatNow}
           className="mx-3 mt-3 py-2.5 rounded-xl text-sm font-black flex items-center justify-center gap-2 transition-all disabled:opacity-40 disabled:cursor-not-allowed border"
           style={{
-            background: nextPartyHasTable ? '#22c55e15' : 'transparent',
-            borderColor: nextPartyHasTable ? '#22c55e60' : '#333',
-            color: nextPartyHasTable ? '#22c55e' : '#555',
+            background: nextCanSeatNow ? '#22c55e15' : 'transparent',
+            borderColor: nextCanSeatNow ? '#22c55e60' : '#333',
+            color: nextCanSeatNow ? '#22c55e' : '#555',
           }}
         >
           <ArrowRight className="w-4 h-4" />
           Seat Next — {nextParty.partyName}
-          {!nextPartyHasTable && <span className="text-xs font-medium opacity-70">(no table free)</span>}
+          {!nextCanSeatNow && nextAssignment && (
+            <span className="text-xs font-medium opacity-70">({fmtWait(nextAssignment.minsWait)})</span>
+          )}
+          {!nextCanSeatNow && !nextAssignment && (
+            <span className="text-xs font-medium opacity-70">(no table free)</span>
+          )}
         </button>
       )}
 
-      {/* Add form */}
       {showAdd && (
         <div className="p-4 border-b border-neutral-800 bg-neutral-950/50 space-y-3">
           <div className="grid grid-cols-2 gap-3">
@@ -827,7 +834,12 @@ function WaitlistPanel({ waitlist, tableStates, objects, settings, onAdd, onUpda
         ) : (
           <div className="divide-y divide-neutral-800">
             {waitlist.map((party, idx) => {
-              const estWait = estimateWaitMinutes(party.partySize, tableStates, objects, settings);
+              const asgn     = assignmentMap[party.id];
+              const minsWait = asgn ? asgn.minsWait : null;
+              const canNow   = asgn?.canSeatNow === true;
+              const noTable  = asgn?.tableId === null && minsWait === null;
+              const waitColor = canNow ? 'text-emerald-400' : noTable ? 'text-neutral-600' : minsWait != null && minsWait <= 15 ? 'text-amber-400' : 'text-rose-400';
+
               return (
                 <div key={party.id} className="p-4 hover:bg-neutral-800/30 transition-colors">
                   <div className="flex items-start justify-between gap-3">
@@ -851,13 +863,20 @@ function WaitlistPanel({ waitlist, tableStates, objects, settings, onAdd, onUpda
                       {party.status === 'notified' && (
                         <span className="text-xs text-amber-400 font-semibold px-2 py-0.5 bg-amber-500/10 rounded-full border border-amber-500/20">Notified</span>
                       )}
-                      <button onClick={() => onSeatNext(party)} title="Seat party — choose table" className="p-1.5 hover:bg-emerald-500/20 text-neutral-500 hover:text-emerald-400 rounded-lg transition-colors"><CheckCircle className="w-3.5 h-3.5" /></button>
+                      <button onClick={() => onSeatNext(party)} title="Seat party" className="p-1.5 hover:bg-emerald-500/20 text-neutral-500 hover:text-emerald-400 rounded-lg transition-colors"><CheckCircle className="w-3.5 h-3.5" /></button>
                       <button onClick={() => onRemove(party.id)} title="Remove" className="p-1.5 hover:bg-rose-500/20 text-neutral-500 hover:text-rose-400 rounded-lg transition-colors"><X className="w-3.5 h-3.5" /></button>
                     </div>
                   </div>
-                  {/* Est wait time */}
-                  <div className={`mt-2 ml-10 text-xs font-semibold ${estWait === 0 ? 'text-emerald-400' : estWait === null ? 'text-neutral-600' : estWait <= 15 ? 'text-amber-400' : 'text-rose-400'}`}>
-                    {estWait === 0 ? 'Table available now' : estWait === null ? 'No suitable table' : `Est. wait ~${estWait} min`}
+                  <div className={`mt-2 ml-10 flex items-center gap-1.5 text-xs font-semibold ${waitColor}`}>
+                    <Clock className="w-3 h-3 flex-shrink-0" />
+                    <span>
+                      {canNow
+                        ? `Table available now${asgn.tableLabel ? \` — ${asgn.tableLabel}\` : ''}`
+                        : noTable
+                          ? 'No table can fit this party'
+                          : `Est. wait ${fmtWait(minsWait)}${asgn?.tableLabel ? \` — ${asgn.tableLabel}\` : ''}`
+                      }
+                    </span>
                   </div>
                 </div>
               );
@@ -1514,6 +1533,283 @@ function Toggle({ checked, onChange }) {
   );
 }
 
+// ── Menu Editor — full CRUD for orderable restaurant menu ────────────────────
+// Self-contained: loads and saves via eventAPI, no parent state needed.
+const COURSE_TYPES = ['appetizer','main','side','dessert','drink','other'];
+const DIETARY_OPTIONS_MENU = [
+  {code:'V',  label:'Vegetarian'},
+  {code:'VG', label:'Vegan'},
+  {code:'GF', label:'Gluten-Free'},
+  {code:'NF', label:'Nut-Free'},
+  {code:'DF', label:'Dairy-Free'},
+  {code:'H',  label:'Halal'},
+  {code:'K',  label:'Kosher'},
+];
+
+function MenuEditor({ eventId }) {
+  const [menu, setMenu]         = useState({ categories: [] });
+  const [loading, setLoading]   = useState(true);
+  const [saving, setSaving]     = useState(false);
+  const [activeCat, setActiveCat] = useState(0);
+  const [editingItem, setEditingItem] = useState(null); // null | 'new' | item object
+  const [catName, setCatName]   = useState('');
+  const [addingCat, setAddingCat] = useState(false);
+
+  useEffect(() => {
+    if (!eventId) return;
+    eventAPI.getMenu(eventId)
+      .then(r => { setMenu(r.data.menu || { categories: [] }); setLoading(false); })
+      .catch(() => setLoading(false));
+  }, [eventId]);
+
+  const saveMenu = async (updated) => {
+    setSaving(true);
+    try {
+      await eventAPI.saveMenu(eventId, updated.categories);
+      setMenu(updated);
+      toast.success('Menu saved');
+    } catch { toast.error('Failed to save menu'); }
+    finally { setSaving(false); }
+  };
+
+  const addCategory = () => {
+    if (!catName.trim()) return;
+    const newCat = { id: crypto.randomUUID(), name: catName.trim(), ord: menu.categories.length, items: [] };
+    const updated = { ...menu, categories: [...menu.categories, newCat] };
+    saveMenu(updated);
+    setActiveCat(updated.categories.length - 1);
+    setCatName('');
+    setAddingCat(false);
+  };
+
+  const deleteCategory = (catId) => {
+    const updated = { ...menu, categories: menu.categories.filter(c => c.id !== catId) };
+    saveMenu(updated);
+    setActiveCat(0);
+  };
+
+  const saveItem = (item) => {
+    const cats = menu.categories.map((c, i) => {
+      if (i !== activeCat) return c;
+      const exists = c.items.find(it => it.id === item.id);
+      return {
+        ...c,
+        items: exists
+          ? c.items.map(it => it.id === item.id ? item : it)
+          : [...c.items, item],
+      };
+    });
+    saveMenu({ ...menu, categories: cats });
+    setEditingItem(null);
+  };
+
+  const deleteItem = (itemId) => {
+    const cats = menu.categories.map((c, i) => {
+      if (i !== activeCat) return c;
+      return { ...c, items: c.items.filter(it => it.id !== itemId) };
+    });
+    saveMenu({ ...menu, categories: cats });
+  };
+
+  const toggleAvailable = (itemId) => {
+    const cats = menu.categories.map((c, i) => {
+      if (i !== activeCat) return c;
+      return { ...c, items: c.items.map(it => it.id === itemId ? { ...it, available: !it.available } : it) };
+    });
+    saveMenu({ ...menu, categories: cats });
+  };
+
+  if (loading) return <div className="flex items-center justify-center py-16"><Loader2 className="w-5 h-5 animate-spin text-neutral-500" /></div>;
+
+  const cat = menu.categories[activeCat];
+
+  return (
+    <div>
+      <div className="mb-4 flex items-center justify-between">
+        <div>
+          <div className="text-sm font-bold text-white">Orderable Menu</div>
+          <p className="text-xs text-neutral-500 mt-0.5">Items here appear on guest tablets and the server order panel. Prices in dollars.</p>
+        </div>
+        {saving && <Loader2 className="w-4 h-4 animate-spin text-neutral-500" />}
+      </div>
+
+      {/* Category bar */}
+      <div className="flex items-center gap-2 mb-4 flex-wrap">
+        {menu.categories.map((c, i) => (
+          <div key={c.id} className="flex items-center gap-1">
+            <button
+              onClick={() => { setActiveCat(i); setEditingItem(null); }}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-all ${i === activeCat ? 'bg-orange-500 border-orange-500 text-black' : 'bg-neutral-800 border-neutral-700 text-neutral-300 hover:border-neutral-500'}`}
+            >
+              {c.name} <span className="opacity-60 font-normal">({c.items.length})</span>
+            </button>
+            {i === activeCat && (
+              <button onClick={() => deleteCategory(c.id)} className="p-1 hover:bg-rose-500/20 text-neutral-600 hover:text-rose-400 rounded transition-colors">
+                <X className="w-3 h-3" />
+              </button>
+            )}
+          </div>
+        ))}
+        {addingCat ? (
+          <div className="flex items-center gap-2">
+            <input
+              autoFocus
+              type="text"
+              value={catName}
+              onChange={e => setCatName(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter') addCategory(); if (e.key === 'Escape') setAddingCat(false); }}
+              placeholder="Category name"
+              className="bg-neutral-800 border border-orange-500/60 text-white text-xs rounded-lg px-2 py-1.5 outline-none w-36"
+            />
+            <button onClick={addCategory} className="px-2 py-1.5 bg-orange-500 text-black text-xs font-bold rounded-lg">Add</button>
+            <button onClick={() => setAddingCat(false)} className="px-2 py-1.5 bg-neutral-800 text-neutral-400 text-xs rounded-lg">Cancel</button>
+          </div>
+        ) : (
+          <button onClick={() => setAddingCat(true)} className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold border border-dashed border-neutral-600 text-neutral-500 hover:border-neutral-400 hover:text-neutral-300 transition-all">
+            <Plus className="w-3 h-3" /> Add Category
+          </button>
+        )}
+      </div>
+
+      {/* Item list */}
+      {!cat ? (
+        <div className="text-center py-12 text-neutral-600 text-sm">Add a category to start building your menu.</div>
+      ) : (
+        <>
+          <div className="space-y-2 mb-4">
+            {cat.items.length === 0 && (
+              <div className="text-center py-8 text-neutral-600 text-xs">No items in this category yet.</div>
+            )}
+            {cat.items.sort((a,b) => a.ord - b.ord).map(item => (
+              <div key={item.id}
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-xl border transition-all ${item.available === false ? 'opacity-40 border-neutral-800 bg-neutral-900/40' : 'border-neutral-700 bg-neutral-800/40'}`}>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-sm font-bold text-white">{item.name}</span>
+                    <span className="text-xs text-neutral-500">{item.courseType}</span>
+                    {item.dietary?.map(d => (
+                      <span key={d} className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-950/60 border border-amber-800/40 text-amber-400">{d}</span>
+                    ))}
+                    {item.available === false && (
+                      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-neutral-800 border border-neutral-700 text-neutral-500">86'd</span>
+                    )}
+                  </div>
+                  {item.desc && <p className="text-xs text-neutral-500 mt-0.5 truncate">{item.desc}</p>}
+                </div>
+                <span className="text-sm font-bold text-white flex-shrink-0">${(item.priceCents/100).toFixed(2)}</span>
+                <div className="flex items-center gap-1 flex-shrink-0">
+                  <button onClick={() => toggleAvailable(item.id)} title={item.available === false ? 'Mark available' : "86 item (mark unavailable)"}
+                    className={`p-1.5 rounded-lg transition-colors text-xs font-bold ${item.available === false ? 'bg-emerald-950/40 text-emerald-500 hover:bg-emerald-950/60' : 'text-neutral-500 hover:bg-amber-500/20 hover:text-amber-400'}`}>
+                    {item.available === false ? <CheckCircle className="w-3.5 h-3.5" /> : <XCircle className="w-3.5 h-3.5" />}
+                  </button>
+                  <button onClick={() => setEditingItem(item)} className="p-1.5 rounded-lg text-neutral-500 hover:bg-neutral-700 hover:text-white transition-colors">
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                  </button>
+                  <button onClick={() => deleteItem(item.id)} className="p-1.5 rounded-lg text-neutral-500 hover:bg-rose-500/20 hover:text-rose-400 transition-colors">
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+          <button onClick={() => setEditingItem({ id: crypto.randomUUID(), name: '', desc: '', priceCents: 0, dietary: [], available: true, ord: cat.items.length, courseType: 'main' })}
+            className="w-full py-2.5 rounded-xl border border-dashed border-neutral-600 text-neutral-400 hover:border-orange-500/60 hover:text-orange-400 text-sm font-semibold transition-all flex items-center justify-center gap-2">
+            <Plus className="w-4 h-4" /> Add Item to {cat.name}
+          </button>
+        </>
+      )}
+
+      {/* Item edit modal */}
+      {editingItem && <ItemEditModal item={editingItem} onSave={saveItem} onClose={() => setEditingItem(null)} />}
+    </div>
+  );
+}
+
+function ItemEditModal({ item, onSave, onClose }) {
+  const [form, setForm] = useState({
+    ...item,
+    priceStr: item.priceCents ? (item.priceCents / 100).toFixed(2) : '',
+  });
+
+  const handleSave = () => {
+    if (!form.name.trim()) { toast.error('Item name required'); return; }
+    const cents = Math.round(parseFloat(form.priceStr || '0') * 100);
+    if (isNaN(cents) || cents < 0) { toast.error('Invalid price'); return; }
+    onSave({ ...form, name: form.name.trim(), priceCents: cents });
+  };
+
+  const toggleDietary = (code) => {
+    setForm(p => ({
+      ...p,
+      dietary: p.dietary.includes(code) ? p.dietary.filter(d => d !== code) : [...p.dietary, code],
+    }));
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4"
+      style={{ background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(6px)' }}>
+      <div className="w-full sm:max-w-md rounded-t-2xl sm:rounded-2xl border border-neutral-700 overflow-hidden"
+        style={{ background: '#111' }}>
+        <div className="flex items-center justify-between px-4 py-3 border-b border-neutral-800">
+          <span className="text-sm font-bold text-white">{item.name ? `Edit: ${item.name}` : 'New Item'}</span>
+          <button onClick={onClose} className="p-1.5 hover:bg-neutral-800 rounded-lg text-neutral-600 hover:text-white"><X className="w-4 h-4" /></button>
+        </div>
+        <div className="p-4 space-y-3 overflow-y-auto" style={{ maxHeight: '70dvh' }}>
+          <div>
+            <label className="block text-xs text-neutral-400 mb-1">Name *</label>
+            <input autoFocus type="text" maxLength={100} value={form.name}
+              onChange={e => setForm(p => ({ ...p, name: e.target.value }))}
+              className="w-full bg-neutral-900 border border-neutral-700 text-white text-sm rounded-lg px-3 py-2 outline-none focus:border-orange-500/60" />
+          </div>
+          <div>
+            <label className="block text-xs text-neutral-400 mb-1">Description</label>
+            <textarea rows={2} maxLength={300} value={form.desc}
+              onChange={e => setForm(p => ({ ...p, desc: e.target.value }))}
+              className="w-full bg-neutral-900 border border-neutral-700 text-white text-sm rounded-lg px-3 py-2 outline-none focus:border-orange-500/60 resize-none" />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs text-neutral-400 mb-1">Price ($)</label>
+              <input type="number" min="0" step="0.01" value={form.priceStr}
+                onChange={e => setForm(p => ({ ...p, priceStr: e.target.value }))}
+                className="w-full bg-neutral-900 border border-neutral-700 text-white text-sm rounded-lg px-3 py-2 outline-none focus:border-orange-500/60" />
+            </div>
+            <div>
+              <label className="block text-xs text-neutral-400 mb-1">Course</label>
+              <select value={form.courseType} onChange={e => setForm(p => ({ ...p, courseType: e.target.value }))}
+                className="w-full bg-neutral-900 border border-neutral-700 text-white text-sm rounded-lg px-3 py-2 outline-none focus:border-orange-500/60">
+                {COURSE_TYPES.map(c => <option key={c} value={c}>{c}</option>)}
+              </select>
+            </div>
+          </div>
+          <div>
+            <label className="block text-xs text-neutral-400 mb-2">Dietary Tags</label>
+            <div className="flex flex-wrap gap-2">
+              {DIETARY_OPTIONS_MENU.map(d => (
+                <button key={d.code} onClick={() => toggleDietary(d.code)}
+                  className={`px-2.5 py-1 rounded-lg text-xs font-bold border transition-all ${form.dietary.includes(d.code) ? 'bg-amber-950/60 border-amber-600/60 text-amber-400' : 'bg-neutral-800 border-neutral-700 text-neutral-500 hover:border-neutral-500'}`}>
+                  {d.label}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="flex items-center gap-3 pt-1">
+            <span className="text-xs text-neutral-400">Available</span>
+            <button onClick={() => setForm(p => ({ ...p, available: !p.available }))}
+              className={`relative w-10 h-5 rounded-full transition-colors ${form.available ? 'bg-emerald-600' : 'bg-neutral-700'}`}>
+              <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-transform ${form.available ? 'translate-x-5' : 'translate-x-0.5'}`} />
+            </button>
+          </div>
+        </div>
+        <div className="flex gap-3 p-4 border-t border-neutral-800">
+          <button onClick={onClose} className="flex-1 py-2.5 bg-neutral-800 text-neutral-400 rounded-xl text-sm font-semibold hover:bg-neutral-700">Cancel</button>
+          <button onClick={handleSave} className="flex-1 py-2.5 bg-white text-neutral-900 rounded-xl text-sm font-bold hover:bg-neutral-100">Save Item</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function SettingsModal({ settings, reservationSettings, onSave, onSaveReserve, onClose, eventId, subdomain, isTableService = true }) {
   const [tab, setTab]       = useState('general');
   const [form, setForm]     = useState({ ...settings });
@@ -1627,11 +1923,13 @@ function SettingsModal({ settings, reservationSettings, onSave, onSaveReserve, o
   const ALL_TABS = [
     { id: 'general',   label: 'Floor' },
     { id: 'servers',   label: 'Servers',        tsOnly: true },
+    { id: 'billing',   label: 'Billing',        tsOnly: true },
+    { id: 'ordermenu', label: 'Menu',            tsOnly: true },
     { id: 'staff',     label: 'Staff',          tsOnly: true },
     { id: 'reserve',   label: 'Reserve Page',   tsOnly: true },
     { id: 'content',   label: 'Content',        tsOnly: true },
     { id: 'booking',   label: 'Booking Rules',  tsOnly: true },
-    { id: 'menus',     label: 'Menus',          tsOnly: true },
+    { id: 'menus',     label: 'Link Menus',     tsOnly: true },
     { id: 'waitboard', label: 'Live Wait Board', tsOnly: true },
   ];
   const TABS = ALL_TABS.filter(t => !t.tsOnly || isTableService);
@@ -1804,6 +2102,50 @@ function SettingsModal({ settings, reservationSettings, onSave, onSaveReserve, o
               );
             })()}
           </>)}
+
+
+          {/* ── BILLING TAB ── */}
+          {tab === 'billing' && (<>
+            <SectionHead title="Tax and Auto-Gratuity" desc="Used by the auto-calculate bill button on the server tablet. Auto-gratuity is added for parties at or above the minimum size." />
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs text-neutral-400 mb-1">Tax Rate (%)</label>
+                  <input type="number" min="0" max="30" step="0.001"
+                    value={form.taxRate ?? 8.875}
+                    onChange={e => setForm(p => ({ ...p, taxRate: parseFloat(e.target.value) || 0 }))}
+                    className="w-full bg-neutral-800 border border-neutral-700 text-white text-sm rounded-lg px-3 py-2 outline-none focus:border-orange-500/60" />
+                  <p className="text-xs text-neutral-600 mt-1">e.g. 8.875 for NYC</p>
+                </div>
+                <div>
+                  <label className="block text-xs text-neutral-400 mb-1">Auto-Gratuity (%)</label>
+                  <input type="number" min="0" max="50" step="1"
+                    value={form.autoGratuityPct ?? 18}
+                    onChange={e => setForm(p => ({ ...p, autoGratuityPct: parseInt(e.target.value) || 0 }))}
+                    className="w-full bg-neutral-800 border border-neutral-700 text-white text-sm rounded-lg px-3 py-2 outline-none focus:border-orange-500/60" />
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs text-neutral-400 mb-1">Apply Auto-Gratuity for Parties of This Size or Larger</label>
+                <input type="number" min="1" max="99"
+                  value={form.autoGratuityMinParty ?? 6}
+                  onChange={e => setForm(p => ({ ...p, autoGratuityMinParty: parseInt(e.target.value) || 6 }))}
+                  className="w-full bg-neutral-800 border border-neutral-700 text-white text-sm rounded-lg px-3 py-2 outline-none focus:border-orange-500/60" />
+              </div>
+              <div>
+                <label className="block text-xs text-neutral-400 mb-1">Payment Note (shown on bill breakdown to server)</label>
+                <input type="text" maxLength={200}
+                  value={form.paymentNote ?? ''}
+                  placeholder="e.g. Use Clover terminal at table"
+                  onChange={e => setForm(p => ({ ...p, paymentNote: e.target.value }))}
+                  className="w-full bg-neutral-800 border border-neutral-700 text-white text-sm rounded-lg px-3 py-2 outline-none focus:border-orange-500/60" />
+              </div>
+            </div>
+            <button onClick={() => onSave(form)} className="mt-6 w-full py-2.5 bg-white text-neutral-900 rounded-xl text-sm font-bold hover:bg-neutral-100 transition-colors">Save Billing Settings</button>
+          </>)}
+
+          {/* ── ORDERABLE MENU TAB ── */}
+          {tab === 'ordermenu' && <MenuEditor eventId={eventId} />}
 
           {/* ── RESERVE PAGE TAB ── */}
           {tab === 'reserve' && (<>
@@ -2418,7 +2760,7 @@ export default function TableService() {
   const [sideTab, setSideTab]           = useState('waitlist');
   const [showSettings, setShowSettings] = useState(false);
   const [showQRScanner, setShowQRScanner] = useState(false);
-  const [seatNextParty, setSeatNextParty] = useState(null); // party being seated via one-tap
+  const [seatNextParty, setSeatNextParty] = useState(null);
   const [reservationSettings, setReservationSettings] = useState({});
   const [showFloorEditor, setShowFloorEditor] = useState(false);
   const [seatingData, setSeatingData]   = useState(null);
@@ -2426,6 +2768,9 @@ export default function TableService() {
   const [zoom, setZoom] = useState(1);
   const [pan,  setPan]  = useState({ x: 0, y: 0 });
   const [alertQueue, setAlertQueue]     = useState([]);
+  const [restaurantMenu, setRestaurantMenu] = useState({ categories: [] });
+  const [menuSaving, setMenuSaving]     = useState(false);
+  const [queueForecast, setQueueForecast] = useState(null);
   const seenAlerts                      = useRef(new Set());
 
   // Resolve subdomain → eventId when routed via /e/:subdomain/floor
@@ -2524,6 +2869,18 @@ export default function TableService() {
     }, 5000);
     return () => clearInterval(interval);
   }, [loadFloor, eid, showFloorEditor]);
+
+  // Load restaurant menu once (reload when settings tab opened)
+  useEffect(() => {
+    if (!eid) return;
+    eventAPI.getMenu(eid).then(r => setRestaurantMenu(r.data.menu || { categories: [] })).catch(() => {});
+  }, [eid]);
+
+  // Refresh queue forecast whenever waitlist or floor data changes
+  useEffect(() => {
+    if (!eid || !floorData.isTableServiceMode) return;
+    eventAPI.getQueueForecast(eid).then(r => setQueueForecast(r.data)).catch(() => {});
+  }, [eid, floorData.waitlist, floorData.tableStates]);
 
   // Centre the floor on load when objects available
   useEffect(() => {
@@ -2823,6 +3180,16 @@ export default function TableService() {
               <Users className="w-3.5 h-3.5" />Servers
             </a>
           )}
+          {isTableService && (subdomain || eid) && (
+            <a
+              href={subdomain ? `/e/${subdomain}/kitchen` : `/event/${eid}/kitchen`}
+              target="_blank" rel="noopener noreferrer"
+              title="Kitchen Display"
+              className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 bg-neutral-800 border border-neutral-700 text-neutral-300 rounded-lg text-xs font-semibold hover:bg-neutral-700 transition-colors"
+            >
+              <Utensils className="w-3.5 h-3.5" />Kitchen
+            </a>
+          )}
           <button onClick={() => setShowQRScanner(true)} title="Scan Guest QR" className="flex items-center gap-1.5 px-3 py-1.5 bg-orange-500/20 border border-orange-500/40 text-orange-400 rounded-lg text-xs font-semibold hover:bg-orange-500/30 transition-colors">
             <ScanLine className="w-3.5 h-3.5" />Scan QR
           </button>
@@ -2912,6 +3279,7 @@ export default function TableService() {
                 tableStates={tableStates}
                 objects={objects}
                 settings={settings}
+                forecast={queueForecast}
                 onAdd={handleAddToWaitlist}
                 onUpdate={handleUpdateWaitlist}
                 onRemove={handleRemoveWaitlist}
