@@ -176,6 +176,19 @@ export const eventAPI = {
   updateTableReservation:   (eventId, resId, data)     => api.patch(`/events/${eventId}/table-service/reservations/${resId}`, data),
   verifyReservationQR:      (eventId, token)           => api.get(`/events/${eventId}/table-service/reservations/verify/${token}`),
   updateTableServiceSettings:(eventId, data)           => api.patch(`/events/${eventId}/table-service/settings`, data),
+  // Menu
+  getMenu:                  (eventId)                  => api.get(`/events/${eventId}/table-service/menu`),
+  saveMenu:                 (eventId, categories)      => api.put(`/events/${eventId}/table-service/menu`, { categories }),
+  // Orders
+  placeOrder:               (eventId, tableId, items, serverName) => api.post(`/events/${eventId}/table-service/table/${tableId}/orders`, { items, serverName }),
+  updateOrderStatus:        (eventId, tableId, orderId, status)   => api.patch(`/events/${eventId}/table-service/table/${tableId}/orders/${orderId}`, { status }),
+  clearTableOrders:         (eventId, tableId)         => api.delete(`/events/${eventId}/table-service/table/${tableId}/orders`),
+  // Kitchen
+  getKitchenView:           (eventId)                  => api.get(`/events/${eventId}/table-service/kitchen`),
+  // Bill
+  calculateBill:            (eventId, tableId)         => api.post(`/events/${eventId}/table-service/table/${tableId}/bill/calculate`, {}),
+  // Queue forecast
+  getQueueForecast:         (eventId)                  => api.get(`/events/${eventId}/table-service/queue-forecast`),
   // Public wait board (no auth)
   getPublicWaitBoardInfo:   (subdomain)                => api.get(`/events/public/wait/${subdomain}/info`),
   getPublicWaitBoardLive:   (subdomain)                => api.get(`/events/public/wait/${subdomain}/live`),
