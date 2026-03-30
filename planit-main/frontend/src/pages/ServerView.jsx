@@ -15,6 +15,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import {
   Users, Clock, CheckCircle, XCircle, RefreshCw, Lock,
   Utensils, Loader2, X, ChevronDown, Bell, DollarSign, Star, Copy, Check, Tablet,
+  ShoppingCart, Plus, Minus, ClipboardList, Calculator, ChefHat,
 } from 'lucide-react';
 import { eventAPI } from '../services/api';
 import toast from 'react-hot-toast';
@@ -284,12 +285,207 @@ function FloorMapReadOnly({ objects, tableStates, myServerName, selectedId, onSe
   );
 }
 
+// ── Take Order Modal (server uses this to enter items from the menu) ──────────
+
+const DIETARY_LABELS = { V:'Veg', VG:'Vegan', GF:'GF', NF:'No Nuts', DF:'Dairy-Free', H:'Halal', K:'Kosher' };
+const COURSE_ICONS   = { appetizer:'🥗', main:'🍽️', side:'🥄', dessert:'🍰', drink:'🥤', other:'✨' };
+
+function TakeOrderModal({ obj, state, serverName, restaurantMenu, eventId, onClose, onPlaced }) {
+  const [activeCat, setActiveCat]   = useState(0);
+  const [cart, setCart]             = useState([]); // [{item, qty, specialRequest}]
+  const [editingReq, setEditingReq] = useState(null); // itemId being edited
+  const [placing, setPlacing]       = useState(false);
+  const cats = restaurantMenu?.categories || [];
+
+  const addToCart = (item) => {
+    setCart(prev => {
+      const ex = prev.find(c => c.item.id === item.id);
+      if (ex) return prev.map(c => c.item.id === item.id ? { ...c, qty: c.qty + 1 } : c);
+      return [...prev, { item, qty: 1, specialRequest: '' }];
+    });
+  };
+
+  const setQty = (itemId, delta) => {
+    setCart(prev => prev.map(c => c.item.id === itemId
+      ? { ...c, qty: Math.max(0, c.qty + delta) }
+      : c
+    ).filter(c => c.qty > 0));
+  };
+
+  const setReq = (itemId, val) => {
+    setCart(prev => prev.map(c => c.item.id === itemId ? { ...c, specialRequest: val } : c));
+  };
+
+  const cartTotal = cart.reduce((s, c) => s + c.item.priceCents * c.qty, 0);
+
+  const placeOrder = async () => {
+    if (cart.length === 0) return;
+    setPlacing(true);
+    try {
+      await eventAPI.placeOrder(eventId, obj.id,
+        cart.map(c => ({ itemId: c.item.id, qty: c.qty, specialRequest: c.specialRequest })),
+        serverName
+      );
+      toast.success(`Order placed for ${obj.label || 'table'} — kitchen notified`);
+      onPlaced();
+      onClose();
+    } catch {
+      toast.error('Failed to place order');
+    } finally {
+      setPlacing(false);
+    }
+  };
+
+  const cat = cats[activeCat] || cats[0];
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4"
+      style={{ background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(6px)' }}>
+      <div className="w-full sm:max-w-lg rounded-t-2xl sm:rounded-2xl border border-neutral-700 shadow-2xl overflow-hidden flex flex-col"
+        style={{ background: '#111', maxHeight: '90dvh' }}>
+
+        {/* Header */}
+        <div className="flex items-center gap-3 px-4 py-3 border-b border-neutral-800 flex-shrink-0">
+          <div className="w-8 h-8 rounded-lg bg-orange-950/60 border border-orange-500/30 flex items-center justify-center flex-shrink-0">
+            <ShoppingCart className="w-4 h-4 text-orange-400" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-xs font-bold uppercase tracking-widest text-orange-400">Take Order</p>
+            <p className="text-sm font-black text-white">{obj.label} {state?.partyName ? `· ${state.partyName}` : ''}</p>
+          </div>
+          <button onClick={onClose} className="p-1.5 hover:bg-neutral-800 rounded-lg text-neutral-600 hover:text-white"><X className="w-4 h-4" /></button>
+        </div>
+
+        {/* Category tabs */}
+        {cats.length > 0 && (
+          <div className="flex gap-2 px-4 pt-3 pb-2 overflow-x-auto flex-shrink-0" style={{ scrollbarWidth: 'none' }}>
+            {cats.map((c, i) => (
+              <button key={c.id} onClick={() => setActiveCat(i)}
+                className="flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-bold transition-all border"
+                style={{ background: i === activeCat ? '#f97316' : '#1a1a1a', borderColor: i === activeCat ? '#f97316' : '#333', color: i === activeCat ? '#000' : '#888' }}>
+                {c.name}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* Items list */}
+        <div className="flex-1 overflow-y-auto px-4 py-2" style={{ scrollbarWidth: 'thin', scrollbarColor: '#333 transparent' }}>
+          {cats.length === 0 ? (
+            <div className="text-center py-10 text-neutral-600 text-sm">No menu configured yet.</div>
+          ) : (
+            (cat?.items || []).filter(it => it.available !== false).sort((a,b) => a.ord - b.ord).map(item => {
+              const cartEntry = cart.find(c => c.item.id === item.id);
+              const inCart    = cartEntry ? cartEntry.qty : 0;
+              return (
+                <div key={item.id} className="flex items-start gap-3 py-2.5 border-b border-neutral-800/60 last:border-0">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <span className="text-sm font-bold text-white">{item.name}</span>
+                      <span className="text-sm">{COURSE_ICONS[item.courseType]||''}</span>
+                    </div>
+                    {item.desc && <p className="text-xs text-neutral-500 mt-0.5 leading-relaxed">{item.desc}</p>}
+                    {item.dietary?.length > 0 && (
+                      <div className="flex gap-1 mt-1 flex-wrap">
+                        {item.dietary.map(d => (
+                          <span key={d} className="text-[10px] font-bold px-1.5 py-0.5 rounded"
+                            style={{ background: '#451a03', color: '#fde68a', border: '1px solid #92400e' }}>
+                            {DIETARY_LABELS[d]||d}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                    {/* Special request field — shown when in cart */}
+                    {inCart > 0 && (
+                      <div className="mt-2">
+                        {editingReq === item.id ? (
+                          <input
+                            autoFocus
+                            type="text"
+                            maxLength={200}
+                            placeholder="Special request (optional)"
+                            value={cartEntry?.specialRequest || ''}
+                            onChange={e => setReq(item.id, e.target.value)}
+                            onBlur={() => setEditingReq(null)}
+                            className="w-full bg-neutral-900 border border-amber-800/60 text-white text-xs rounded-lg px-2 py-1.5 outline-none"
+                          />
+                        ) : (
+                          <button onClick={() => setEditingReq(item.id)}
+                            className="text-xs text-amber-500 hover:text-amber-400 flex items-center gap-1">
+                            {cartEntry?.specialRequest
+                              ? <><span>⚠️</span><span className="underline">{cartEntry.specialRequest}</span></>
+                              : '+ Add special request'}
+                          </button>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex-shrink-0 flex flex-col items-end gap-2">
+                    <span className="text-sm font-bold text-white">${(item.priceCents/100).toFixed(2)}</span>
+                    {inCart === 0 ? (
+                      <button onClick={() => addToCart(item)}
+                        className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all"
+                        style={{ background: '#1a1a1a', border: '1px solid #333', color: '#888' }}>
+                        <Plus className="w-3 h-3" /> Add
+                      </button>
+                    ) : (
+                      <div className="flex items-center gap-1.5">
+                        <button onClick={() => setQty(item.id, -1)} className="w-6 h-6 rounded-md bg-neutral-800 hover:bg-neutral-700 text-white flex items-center justify-center">
+                          <Minus className="w-3 h-3" />
+                        </button>
+                        <span className="text-sm font-black text-orange-400 w-5 text-center">{inCart}</span>
+                        <button onClick={() => setQty(item.id, +1)} className="w-6 h-6 rounded-md bg-neutral-800 hover:bg-neutral-700 text-white flex items-center justify-center">
+                          <Plus className="w-3 h-3" />
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+
+        {/* Cart summary + send */}
+        <div className="flex-shrink-0 border-t border-neutral-800 p-4">
+          {cart.length === 0 ? (
+            <p className="text-center text-xs text-neutral-600 py-1">No items added yet</p>
+          ) : (
+            <>
+              <div className="space-y-1 mb-3 max-h-24 overflow-y-auto" style={{ scrollbarWidth: 'none' }}>
+                {cart.map(c => (
+                  <div key={c.item.id} className="flex justify-between text-xs">
+                    <span className="text-neutral-400">×{c.qty} {c.item.name}{c.specialRequest ? ' ⚠️' : ''}</span>
+                    <span className="text-white font-semibold">${((c.item.priceCents * c.qty)/100).toFixed(2)}</span>
+                  </div>
+                ))}
+                <div className="flex justify-between text-sm font-black pt-1 border-t border-neutral-800">
+                  <span className="text-white">Subtotal</span>
+                  <span className="text-orange-400">${(cartTotal/100).toFixed(2)}</span>
+                </div>
+              </div>
+              <button onClick={placeOrder} disabled={placing}
+                className="w-full py-3 rounded-xl font-black text-sm flex items-center justify-center gap-2 transition-all disabled:opacity-50"
+                style={{ background: '#22c55e', color: '#000' }}>
+                {placing ? <Loader2 className="w-4 h-4 animate-spin" /> : <><ChefHat className="w-4 h-4" />Send to Kitchen</>}
+              </button>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Table Detail Card (server's view — can update status) ─────────────────────
 
-function ServerTableCard({ obj, state, settings, onUpdate, onClose, eventId, subdomain }) {
+function ServerTableCard({ obj, state, settings, onUpdate, onClose, eventId, subdomain, myServer, restaurantMenu, onFloorRefresh }) {
   const [saving, setSaving] = useState(false);
   const [billSub, setBillSub] = useState(state?.billSubtotal ?? '');
   const [billTax, setBillTax] = useState(state?.billTax ?? '');
+  const [calcWorking, setCalcWorking] = useState(false);
+  const [showOrderModal, setShowOrderModal] = useState(false);
+  const [billBreakdown, setBillBreakdown] = useState(null);
   const sm        = STATUS_META[state?.status || 'available'];
   const occupiedMs = state?.occupiedAt ? Date.now() - new Date(state.occupiedAt).getTime() : null;
   const remaining  = state?.status === 'occupied' ? estimateRemaining(state, settings) : null;
@@ -317,6 +513,23 @@ function ServerTableCard({ obj, state, settings, onUpdate, onClose, eventId, sub
       if (label) toast.success(label);
     } catch { toast.error('Failed'); }
     finally { setSaving(false); }
+  };
+
+  const autoCalcBill = async () => {
+    setCalcWorking(true);
+    try {
+      const res = await eventAPI.calculateBill(eventId, obj.id);
+      const bd = res.data.breakdown;
+      setBillBreakdown(bd);
+      setBillSub(res.data.billSubtotal);
+      setBillTax(res.data.billTax);
+      toast.success('Bill calculated and sent to table');
+      if (onFloorRefresh) onFloorRefresh();
+    } catch {
+      toast.error('Could not calculate bill — no orders on this table?');
+    } finally {
+      setCalcWorking(false);
+    }
   };
 
   const sendBill = () => {
@@ -408,6 +621,55 @@ function ServerTableCard({ obj, state, settings, onUpdate, onClose, eventId, sub
           </div>
         )}
 
+        {/* Active orders for this table */}
+        {(state?.orders?.length > 0) && (() => {
+          const active = state.orders.filter(o => o.status !== 'cancelled');
+          if (!active.length) return null;
+          const STATUS_COLOR = { pending:'text-amber-400', acknowledged:'text-blue-400', preparing:'text-orange-400', ready:'text-emerald-400', delivered:'text-neutral-500' };
+          const STATUS_LABEL = { pending:'NEW', acknowledged:'Seen', preparing:'Cooking 🔥', ready:'READY ✓', delivered:'Served' };
+          return (
+            <div>
+              <div className="text-xs font-bold text-neutral-500 uppercase tracking-wider mb-2 flex items-center gap-2">
+                <ClipboardList className="w-3.5 h-3.5" /> Current Order
+                <span className="ml-auto font-normal text-neutral-600">
+                  ${(active.reduce((s,o)=>s+o.priceCents*o.qty,0)/100).toFixed(2)} subtotal
+                </span>
+              </div>
+              <div className="space-y-1.5">
+                {active.map(o => (
+                  <div key={o.id} className="flex items-center gap-2 px-3 py-2 rounded-lg bg-neutral-800/40 border border-neutral-800">
+                    <div className="flex-1 min-w-0">
+                      <div className="text-xs font-semibold text-white">
+                        {o.qty > 1 && <span className="text-amber-400 mr-1">×{o.qty}</span>}{o.itemName}
+                      </div>
+                      {o.specialRequest && (
+                        <div className="text-[10px] text-amber-400 mt-0.5">⚠️ {o.specialRequest}</div>
+                      )}
+                    </div>
+                    <span className={`text-[10px] font-bold uppercase ${STATUS_COLOR[o.status]||'text-neutral-500'}`}>
+                      {STATUS_LABEL[o.status]||o.status}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          );
+        })()}
+
+        {/* Take Order button */}
+        {restaurantMenu?.categories?.length > 0 && (
+          <div>
+            <div className="text-xs font-bold text-neutral-500 uppercase tracking-wider mb-2">Take Order</div>
+            <button
+              onClick={() => setShowOrderModal(true)}
+              className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-sm font-bold border transition-all"
+              style={{ background: '#1a0a00', border: '1px solid #f9731650', color: '#f97316' }}>
+              <ShoppingCart className="w-4 h-4" />
+              Open Menu &amp; Place Order
+            </button>
+          </div>
+        )}
+
         {/* Guest screen controls */}
         <div>
           <div className="text-xs font-bold text-neutral-500 uppercase tracking-wider mb-2">Guest Tablet</div>
@@ -430,7 +692,49 @@ function ServerTableCard({ obj, state, settings, onUpdate, onClose, eventId, sub
 
           {/* Bill inputs */}
           <div className="p-3 rounded-xl bg-neutral-800/60 border border-neutral-700 space-y-2">
-            <div className="text-xs font-bold text-neutral-500 uppercase tracking-wider mb-1">Send Bill to Table</div>
+            <div className="text-xs font-bold text-neutral-500 uppercase tracking-wider mb-1 flex items-center gap-2">
+              <DollarSign className="w-3.5 h-3.5" /> Send Bill to Table
+            </div>
+
+            {/* Auto-calc from orders */}
+            <button onClick={autoCalcBill} disabled={calcWorking}
+              className="w-full flex items-center justify-center gap-2 py-2 rounded-lg text-xs font-bold border transition-all disabled:opacity-40"
+              style={{ background: '#052e16', borderColor: '#15803d', color: '#4ade80' }}>
+              {calcWorking ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Calculator className="w-3.5 h-3.5" />}
+              Auto-Calculate from Orders + Tax + Gratuity
+            </button>
+
+            {/* Show breakdown if calculated */}
+            {billBreakdown && (
+              <div className="rounded-lg bg-neutral-900 border border-neutral-700 p-2 text-[10px] space-y-1">
+                {billBreakdown.lineItems?.slice(0,4).map((li,i) => (
+                  <div key={i} className="flex justify-between text-neutral-400">
+                    <span>×{li.qty} {li.name}</span><span>${li.lineTotal}</span>
+                  </div>
+                ))}
+                {billBreakdown.lineItems?.length > 4 && <div className="text-neutral-600">+ {billBreakdown.lineItems.length-4} more…</div>}
+                <div className="flex justify-between text-neutral-400 pt-1 border-t border-neutral-800">
+                  <span>Subtotal</span><span>${billBreakdown.subtotal}</span>
+                </div>
+                <div className="flex justify-between text-neutral-400">
+                  <span>Tax ({billBreakdown.taxRate})</span><span>${billBreakdown.taxAmount}</span>
+                </div>
+                {billBreakdown.autoGratuity && (
+                  <div className="flex justify-between text-amber-400/80">
+                    <span>Auto-grat ({billBreakdown.autoGratuity.pct})</span><span>${billBreakdown.autoGratuity.amount}</span>
+                  </div>
+                )}
+                <div className="flex justify-between text-white font-black pt-1 border-t border-neutral-800">
+                  <span>Total</span><span>${billBreakdown.total}</span>
+                </div>
+                {billBreakdown.paymentNote && (
+                  <div className="text-amber-400/80 pt-1 border-t border-neutral-800">{billBreakdown.paymentNote}</div>
+                )}
+              </div>
+            )}
+
+            {/* Manual override */}
+            <div className="text-[10px] text-neutral-600 text-center">— or enter manually —</div>
             <div className="grid grid-cols-2 gap-2">
               <div>
                 <label className="text-xs text-neutral-500 block mb-1">Subtotal ($)</label>
@@ -443,7 +747,7 @@ function ServerTableCard({ obj, state, settings, onUpdate, onClose, eventId, sub
                 />
               </div>
               <div>
-                <label className="text-xs text-neutral-500 block mb-1">Tax ($)</label>
+                <label className="text-xs text-neutral-500 block mb-1">Tax + Grat ($)</label>
                 <input
                   type="number" min="0" step="0.01"
                   value={billTax}
@@ -498,6 +802,17 @@ function ServerTableCard({ obj, state, settings, onUpdate, onClose, eventId, sub
               <div className="text-xs text-neutral-400 break-all font-mono">{guestUrl}</div>
             </div>
           )}
+          {showOrderModal && (
+            <TakeOrderModal
+              obj={obj}
+              state={state}
+              serverName={myServer || ''}
+              restaurantMenu={restaurantMenu}
+              eventId={eventId}
+              onClose={() => setShowOrderModal(false)}
+              onPlaced={() => { if (onFloorRefresh) onFloorRefresh(); }}
+            />
+          )}
         </div>
 
         {/* Status buttons */}
@@ -547,7 +862,8 @@ export default function ServerView() {
   const [zoom]                        = useState(0.85);
   const [copiedUrl, setCopiedUrl]     = useState(null);
   const [urlPanelOpen, setUrlPanelOpen] = useState(false);
-  const [alertQueue, setAlertQueue]   = useState([]); // [{ tableId, tableLabel, partyName, partySize, serverName, alertType, arrivedAt }]
+  const [alertQueue, setAlertQueue]   = useState([]);
+  const [restaurantMenu, setRestaurantMenu] = useState(null);
   const seenAlerts                    = useRef(new Set()); // tracks "tableId::alertType" already queued
 
   // Resolve subdomain → eventId
@@ -624,6 +940,12 @@ export default function ServerView() {
   useEffect(() => {
     if (eid) loadFloor();
   }, [loadFloor, eid]);
+
+  // Load menu once — it changes infrequently, no need to re-poll
+  useEffect(() => {
+    if (!eid) return;
+    eventAPI.getMenu(eid).then(r => setRestaurantMenu(r.data.menu)).catch(() => {});
+  }, [eid]);
 
   // Auto-refresh every 5s for near-instant alert detection
   useEffect(() => {
@@ -744,6 +1066,15 @@ export default function ServerView() {
           <RefreshCw className="w-4 h-4" />
         </button>
 
+        {/* Kitchen display link */}
+        <button
+          onClick={() => navigate(subdomain ? `/e/${subdomain}/kitchen` : `/event/${eid}/kitchen`)}
+          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-bold border border-neutral-700 bg-neutral-800 hover:bg-neutral-700 text-neutral-400 hover:text-white transition-all flex-shrink-0"
+        >
+          <ChefHat className="w-3.5 h-3.5" />
+          Kitchen
+        </button>
+
         {/* Active alert count */}
         {tableStates.filter(s => s.guestAlert).length > 0 && (
           <div className="relative flex-shrink-0">
@@ -791,6 +1122,9 @@ export default function ServerView() {
               onClose={() => setSelectedId(null)}
               eventId={eid}
               subdomain={subdomain}
+              myServer={myServer}
+              restaurantMenu={restaurantMenu}
+              onFloorRefresh={loadFloor}
             />
           )}
         </div>
