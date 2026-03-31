@@ -15,7 +15,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import {
   Users, Clock, CheckCircle, XCircle, RefreshCw, Lock,
   Utensils, Loader2, X, ChevronDown, Bell, DollarSign, Star, Copy, Check, Tablet,
-  ShoppingCart, Plus, Minus, ClipboardList, Calculator, ChefHat,
+  ShoppingCart, Plus, Minus, ClipboardList, Calculator, ChefHat, RotateCcw, AlertTriangle,
 } from 'lucide-react';
 import { eventAPI } from '../services/api';
 import toast from 'react-hot-toast';
@@ -288,7 +288,7 @@ function FloorMapReadOnly({ objects, tableStates, myServerName, selectedId, onSe
 // ── Take Order Modal (server uses this to enter items from the menu) ──────────
 
 const DIETARY_LABELS = { V:'Veg', VG:'Vegan', GF:'GF', NF:'No Nuts', DF:'Dairy-Free', H:'Halal', K:'Kosher' };
-const COURSE_ICONS   = { appetizer:'', main:'', side:'', dessert:'', drink:'', other:'' };
+const COURSE_ICONS   = { appetizer:'🥗', main:'🍽️', side:'🥄', dessert:'🍰', drink:'🥤', other:'✨' };
 
 function TakeOrderModal({ obj, state, serverName, restaurantMenu, eventId, onClose, onPlaced }) {
   const [activeCat, setActiveCat]   = useState(0);
@@ -486,6 +486,8 @@ function ServerTableCard({ obj, state, settings, onUpdate, onClose, eventId, sub
   const [calcWorking, setCalcWorking] = useState(false);
   const [showOrderModal, setShowOrderModal] = useState(false);
   const [billBreakdown, setBillBreakdown] = useState(null);
+  const [resetting, setResetting] = useState(false);
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
   const sm        = STATUS_META[state?.status || 'available'];
   const occupiedMs = state?.occupiedAt ? Date.now() - new Date(state.occupiedAt).getTime() : null;
   const remaining  = state?.status === 'occupied' ? estimateRemaining(state, settings) : null;
@@ -537,6 +539,36 @@ function ServerTableCard({ obj, state, settings, onUpdate, onClose, eventId, sub
     const tax = parseFloat(billTax);
     if (isNaN(sub) || sub < 0) { toast.error('Enter a valid subtotal'); return; }
     guestAction({ guestScreen: 'bill', billSubtotal: sub, billTax: isNaN(tax) ? 0 : tax, billPaid: false }, 'Bill sent to table');
+  };
+
+  const resetTable = async () => {
+    setResetting(true);
+    try {
+      await eventAPI.clearTableOrders(eventId, obj.id);
+      await onUpdate(obj.id, {
+        status: 'available',
+        partyName: '',
+        partySize: 0,
+        serverName: '',
+        notes: '',
+        guestAlert: null,
+        guestScreen: 'idle',
+        billSubtotal: 0,
+        billTax: 0,
+        billPaid: false,
+        occupiedAt: null,
+      });
+      setBillSub('');
+      setBillTax('');
+      setBillBreakdown(null);
+      setShowResetConfirm(false);
+      toast.success(`Table ${obj.label || obj.id.slice(-3)} reset — ready for next party`);
+      if (onFloorRefresh) onFloorRefresh();
+    } catch {
+      toast.error('Failed to reset table');
+    } finally {
+      setResetting(false);
+    }
   };
 
   const alert = state?.guestAlert;
@@ -840,6 +872,45 @@ function ServerTableCard({ obj, state, settings, onUpdate, onClose, eventId, sub
               );
             })}
           </div>
+        </div>
+
+        {/* Reset Table */}
+        <div>
+          <div className="text-xs font-bold text-neutral-500 uppercase tracking-wider mb-2">Reset Table</div>
+          {!showResetConfirm ? (
+            <button
+              onClick={() => setShowResetConfirm(true)}
+              className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-sm font-bold border transition-all"
+              style={{ background: '#1a0000', borderColor: '#ef444450', color: '#ef4444' }}
+            >
+              <RotateCcw className="w-4 h-4" />
+              Reset Table for Next Party
+            </button>
+          ) : (
+            <div className="p-3 rounded-xl border space-y-2.5" style={{ background: '#1a050505', borderColor: '#ef444440' }}>
+              <div className="flex items-start gap-2 text-xs text-rose-300">
+                <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5 text-rose-400" />
+                <span>This clears <strong className="text-rose-200">all orders, bill info, and party details</strong> and marks the table Available. This cannot be undone.</span>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  onClick={() => setShowResetConfirm(false)}
+                  className="py-2 text-xs font-semibold rounded-lg bg-neutral-800 border border-neutral-700 text-neutral-400 hover:bg-neutral-700 hover:text-white transition-all"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={resetTable}
+                  disabled={resetting}
+                  className="py-2 text-xs font-semibold rounded-lg border transition-all disabled:opacity-40 flex items-center justify-center gap-1.5"
+                  style={{ background: '#7f1d1d', borderColor: '#ef4444', color: '#fca5a5' }}
+                >
+                  {resetting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RotateCcw className="w-3.5 h-3.5" />}
+                  {resetting ? 'Resetting…' : 'Yes, Reset'}
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>
