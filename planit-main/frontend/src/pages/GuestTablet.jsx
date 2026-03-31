@@ -100,7 +100,7 @@ const QUICK_REQUESTS = [
 
 // Dietary abbreviation display map for menu items
 const DIETARY_DISPLAY = { V:'Veg', VG:'Vegan', GF:'GF', NF:'No Nuts', DF:'Dairy-Free', H:'Halal', K:'Kosher' };
-const COURSE_ICONS = { appetizer:'🥗', main:'🍽️', side:'🥄', dessert:'🍰', drink:'🥤', other:'✨' };
+const COURSE_ICONS = { appetizer:'', main:'', side:'', dessert:'', drink:'', other:'' };
 
 function MenuBrowser({ restaurantMenu, accent, tableOrders }) {
   const [activeCat, setActiveCat] = useState(0);
