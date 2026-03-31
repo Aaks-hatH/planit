@@ -288,7 +288,7 @@ function FloorMapReadOnly({ objects, tableStates, myServerName, selectedId, onSe
 // ── Take Order Modal (server uses this to enter items from the menu) ──────────
 
 const DIETARY_LABELS = { V:'Veg', VG:'Vegan', GF:'GF', NF:'No Nuts', DF:'Dairy-Free', H:'Halal', K:'Kosher' };
-const COURSE_ICONS   = { appetizer:'🥗', main:'🍽️', side:'🥄', dessert:'🍰', drink:'🥤', other:'✨' };
+const COURSE_ICONS   = { appetizer:'', main:'', side:'', dessert:'', drink:'', other:'' };
 
 function TakeOrderModal({ obj, state, serverName, restaurantMenu, eventId, onClose, onPlaced }) {
   const [activeCat, setActiveCat]   = useState(0);
