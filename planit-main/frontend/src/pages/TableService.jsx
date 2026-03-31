@@ -15,7 +15,7 @@ import {
   RefreshCw, QrCode, Trash2, Edit2, ChevronRight, Bell, MapPin,
   Coffee, Utensils, Star, LayoutGrid, List, X, Save, Check,
   ArrowRight, ArrowLeft, Phone, ScanLine, Calendar, Timer, Loader2, Lock,
-  ExternalLink, UtensilsCrossed, CameraOff, Copy,
+  ExternalLink, UtensilsCrossed, CameraOff, Copy, RotateCcw,
 } from 'lucide-react';
 import { eventAPI } from '../services/api';
 import toast from 'react-hot-toast';
@@ -332,9 +332,11 @@ function FloorMap({ objects, tableStates, selectedId, onSelect, zoom, onZoomChan
 
 // ── Table Management Panel ─────────────────────────────────────────────────
 
-function TablePanel({ obj, state, settings, servers, onUpdate, onClose }) {
+function TablePanel({ obj, state, settings, servers, onUpdate, onClose, eventId }) {
   const [localState, setLocalState] = useState({ partyName: state?.partyName || '', partySize: state?.partySize || 1, serverName: state?.serverName || '', notes: state?.notes || '' });
   const [saving, setSaving] = useState(false);
+  const [resetting, setResetting] = useState(false);
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
 
   const handleStatusChange = async (status) => {
     setSaving(true);
@@ -344,6 +346,33 @@ function TablePanel({ obj, state, settings, servers, onUpdate, onClose }) {
   const handleSaveDetails = async () => {
     setSaving(true);
     try { await onUpdate(obj.id, { ...localState, status: state?.status || 'occupied' }); } finally { setSaving(false); }
+  };
+
+  const resetTable = async () => {
+    setResetting(true);
+    try {
+      if (eventId) await eventAPI.clearTableOrders(eventId, obj.id);
+      await onUpdate(obj.id, {
+        status: 'available',
+        partyName: '',
+        partySize: 0,
+        serverName: '',
+        notes: '',
+        guestAlert: null,
+        guestScreen: 'idle',
+        billSubtotal: 0,
+        billTax: 0,
+        billPaid: false,
+        occupiedAt: null,
+      });
+      setLocalState({ partyName: '', partySize: 1, serverName: '', notes: '' });
+      setShowResetConfirm(false);
+      toast.success(`${obj.label || 'Table'} reset — ready for next party`);
+    } catch {
+      toast.error('Failed to reset table');
+    } finally {
+      setResetting(false);
+    }
   };
 
   const sm         = STATUS_META[state?.status || 'available'];
@@ -473,6 +502,45 @@ function TablePanel({ obj, state, settings, servers, onUpdate, onClose }) {
               );
             })}
           </div>
+        </div>
+
+        {/* Reset Table */}
+        <div>
+          <div className="text-xs font-semibold text-neutral-400 mb-3 uppercase tracking-wider">Reset Table</div>
+          {!showResetConfirm ? (
+            <button
+              onClick={() => setShowResetConfirm(true)}
+              className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-sm font-bold border transition-all"
+              style={{ background: '#1a0000', borderColor: '#ef444450', color: '#ef4444' }}
+            >
+              <RotateCcw className="w-4 h-4" />
+              Reset Table for Next Party
+            </button>
+          ) : (
+            <div className="p-3 rounded-xl border space-y-2.5" style={{ background: '#1a050505', borderColor: '#ef444440' }}>
+              <div className="flex items-start gap-2 text-xs text-rose-300">
+                <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5 text-rose-400" />
+                <span>This clears <strong className="text-rose-200">all orders, bill info, and party details</strong> and marks the table Available. This cannot be undone.</span>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  onClick={() => setShowResetConfirm(false)}
+                  className="py-2 text-xs font-semibold rounded-lg bg-neutral-800 border border-neutral-700 text-neutral-400 hover:bg-neutral-700 hover:text-white transition-all"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={resetTable}
+                  disabled={resetting}
+                  className="py-2 text-xs font-semibold rounded-lg border transition-all disabled:opacity-40 flex items-center justify-center gap-1.5"
+                  style={{ background: '#7f1d1d', borderColor: '#ef4444', color: '#fca5a5' }}
+                >
+                  {resetting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RotateCcw className="w-3.5 h-3.5" />}
+                  {resetting ? 'Resetting…' : 'Yes, Reset'}
+                </button>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Guest tablet section */}
@@ -3244,6 +3312,7 @@ export default function TableService() {
                 servers={settings?.servers || []}
                 onUpdate={handleTableUpdate}
                 onClose={() => setSelectedTableId(null)}
+                eventId={eid}
               />
             </div>
           )}
