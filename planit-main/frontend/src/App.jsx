@@ -400,6 +400,7 @@ const PATTERN_TITLES = [
   [/^\/(e|event)\/[^/]+\/checkin$/,          'Live Attendee Check-In Dashboard · PlanIt'],
   [/^\/(e|event)\/[^/]+\/floor$/,            'Floor Management and Table Service · PlanIt Venue'],
   [/^\/(e|event)\/[^/]+\/server$/,           'Server and Table Assignment View · PlanIt Venue'],
+  [/^\/(e|event)\/[^/]+\/kitchen$/,          'Kitchen Display · PlanIt Venue'],
   [/^\/(e|event)\/[^/]+\/table\/[^/]+$/,     'Table Ordering Kiosk · PlanIt Venue'],
   [/^\/(e|event)\/[^/]+\/(login|waitlist)$/, 'Organizer Sign In to Your Event · PlanIt'],
   [/^\/(e|event)\/[^/]+\/wait$/,             'Live Waitlist Board · PlanIt Venue'],
@@ -437,7 +438,7 @@ function PageTitle() {
     }
 
     // Fallback for anything not listed (e.g. 404)
-    document.title = ' 404 Page Not Found · PlanIt';
+    document.title = '404 Page Not Found · PlanIt';
   }, [pathname, isWL]);
 
   return null;
