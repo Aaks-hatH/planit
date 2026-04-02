@@ -2,11 +2,77 @@ import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Calendar, MapPin, Users, Search, ArrowRight, Compass,
-  Zap, Clock, ChevronLeft, ChevronRight, X, Sparkles, Share2, Tag
+  Zap, Clock, ChevronLeft, ChevronRight, X, Sparkles, Share2, Tag, CornerDownRight, Lock
 } from 'lucide-react';
 import { discoverAPI } from '../services/api';
 import { useWhiteLabel } from '../context/WhiteLabelContext';
 import StarBackground from '../components/StarBackground';
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SLUG FINDER — exact-match redirect, no enumeration
+// ─────────────────────────────────────────────────────────────────────────────
+function SlugFinder() {
+  const navigate = useNavigate();
+  const [value, setValue] = useState('');
+  const [shaking, setShaking] = useState(false);
+
+  const handleGo = () => {
+    const raw = value.trim();
+    if (!raw) return;
+
+    let slug = raw;
+    try {
+      const url = new URL(raw.startsWith('http') ? raw : `https://x.com/${raw}`);
+      const match = url.pathname.match(/\/e\/([^/?#]+)/);
+      if (match) slug = match[1];
+      else slug = url.pathname.replace(/^\/+|\/+$/g, '');
+    } catch { /* bare slug */ }
+
+    slug = slug.replace(/^\/?(e\/)?/, '').replace(/\/+$/, '');
+
+    if (!slug) {
+      setShaking(true);
+      setTimeout(() => setShaking(false), 500);
+      return;
+    }
+    navigate(`/e/${slug}`);
+  };
+
+  return (
+    <div
+      className="p-6 rounded-2xl border border-neutral-800 mt-8"
+      style={{ background: 'rgba(255,255,255,0.02)' }}
+    >
+      <div className="flex items-center gap-2 mb-3">
+        <Lock className="w-4 h-4 text-neutral-500" />
+        <span className="text-sm font-bold text-white">Find a private event</span>
+      </div>
+      <p className="text-xs text-neutral-500 mb-4 leading-relaxed">
+        If you have an event link or slug, paste it below to go directly — no browsing needed.
+      </p>
+      <div className={`flex items-center gap-2 ${shaking ? 'animate-shake' : ''}`}>
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-500 pointer-events-none" />
+          <input
+            type="text"
+            value={value}
+            onChange={e => setValue(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && handleGo()}
+            placeholder="Paste link or type a slug…"
+            className="w-full h-10 pl-10 pr-4 rounded-xl text-sm text-white placeholder-neutral-600 border border-neutral-800 focus:border-neutral-600 focus:outline-none transition-colors"
+            style={{ background: 'rgba(255,255,255,0.04)' }}
+          />
+        </div>
+        <button
+          onClick={handleGo}
+          className="flex-shrink-0 flex items-center gap-1.5 h-10 px-4 rounded-xl text-sm font-bold bg-white text-neutral-900 hover:bg-neutral-100 hover:scale-105 transition-all"
+        >
+          Go <CornerDownRight className="w-3.5 h-3.5" />
+        </button>
+      </div>
+    </div>
+  );
+}
 
 function formatDate(d) {
   if (!d) return '';
@@ -267,6 +333,12 @@ export default function Discover() {
       <style>{`
         @keyframes fade-up { from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)} }
         .card-in { animation: fade-up 0.38s ease-out both; }
+        @keyframes shake {
+          0%,100% { transform: translateX(0); }
+          20%,60%  { transform: translateX(-6px); }
+          40%,80%  { transform: translateX(6px); }
+        }
+        .animate-shake { animation: shake 0.45s ease-in-out; }
       `}</style>
 
       <header className="sticky top-0 z-50 border-b border-neutral-800/60" style={{ background: 'rgba(6,6,12,0.96)', backdropFilter: 'blur(12px)' }}>
@@ -416,6 +488,9 @@ export default function Discover() {
             </button>
           </div>
         )}
+
+        {/* Private event finder — exact slug redirect, no enumeration */}
+        <SlugFinder />
       </main>
     </div>
   );
