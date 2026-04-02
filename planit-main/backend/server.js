@@ -8,20 +8,20 @@ const { verifyIntegrity, scheduleReverification } = require('./keys');
 verifyIntegrity();
 scheduleReverification();
 
-const express      = require('express');
-const mongoose     = require('mongoose');
-const cors         = require('cors');
+const express       = require('express');
+const mongoose      = require('mongoose');
+const cors          = require('cors');
 const mongoSanitize = require('express-mongo-sanitize');
-const helmet       = require('helmet');
-const compression  = require('compression');
-const cookieParser = require('cookie-parser');
-const http         = require('http');
-const socketIo     = require('socket.io');
-const path         = require('path');
+const helmet        = require('helmet');
+const compression   = require('compression');
+const cookieParser  = require('cookie-parser');
+const http          = require('http');
+const socketIo      = require('socket.io');
+const path          = require('path');
 
-const supportRoutes   = require('./routes/support');
-const bugReportRoutes = require('./routes/bug-reports');
-const uptimeRoutes    = require('./routes/uptime');
+const supportRoutes       = require('./routes/support');
+const bugReportRoutes     = require('./routes/bug-reports');
+const uptimeRoutes        = require('./routes/uptime');
 const { startCleanupScheduler } = require('./jobs/cleanupJob');
 const { seedBlogPosts }         = require('./services/blogSeeder');
 
@@ -34,47 +34,47 @@ const io = socketIo(server, {
     credentials: true,
     methods:     ['GET', 'POST', 'PUT', 'DELETE'],
   },
-  transports:     ['polling', 'websocket'],
-  allowUpgrades:  true,
-  upgradeTimeout: 15000,
-  pingTimeout:    20000,
-  pingInterval:   10000,
+  transports:      ['polling', 'websocket'],
+  allowUpgrades:   true,
+  upgradeTimeout:  15000,
+  pingTimeout:     20000,
+  pingInterval:    10000,
   httpCompression: true,
 });
 
 app.set('io', io);
 
-const eventRoutes       = require('./routes/events');
-const chatRoutes        = require('./routes/chat');
-const pollRoutes        = require('./routes/polls');
-const fileRoutes        = require('./routes/files');
-const adminRoutes       = require('./routes/admin');
-const publicRoutes      = require('./routes/public');
-const blogRoutes        = require('./routes/blog');
-const checkinRoutes     = require('./routes/checkin-with-override');
+const eventRoutes         = require('./routes/events');
+const chatRoutes          = require('./routes/chat');
+const pollRoutes          = require('./routes/polls');
+const fileRoutes          = require('./routes/files');
+const adminRoutes         = require('./routes/admin');
+const publicRoutes        = require('./routes/public');
+const blogRoutes          = require('./routes/blog');
+const checkinRoutes       = require('./routes/checkin-with-override');
 const dataRetentionRoutes = require('./routes/dataRetention7Days');
-const meshRoutes        = require('./routes/mesh');
-const seatingRoutes     = require('./routes/seating');   // NEW
-const whiteLabelRoutes  = require('./routes/whitelabel');
+const meshRoutes          = require('./routes/mesh');
+const seatingRoutes       = require('./routes/seating');
+const whiteLabelRoutes    = require('./routes/whitelabel');
 const { router: wlPortalRoutes } = require('./routes/wl-portal');
 
-const { apiLimiter }             = require('./middleware/rateLimiter');
-const { errorHandler }           = require('./middleware/errorHandler');
-const { attachResponseSignature } = require('./middleware/responseSigning');
-const { trafficGuard }           = require('./middleware/security');
+// ── Cat-4: New routes ─────────────────────────────────────────────────────────
+const honeypotRoutes = require('./routes/honeypot');
 
-// ─── Maintenance state cache ───────────────────────────────────────────────────
-// Polls router GET /maintenance every 15s.
-// On each request, blocks non-exempt paths when active.
-// This is a defence-in-depth layer — the router already blocks at the edge,
-// but if a request somehow bypasses the router (direct backend hit, internal
-// tool, etc.) the backend refuses it too.
+const { apiLimiter }              = require('./middleware/rateLimiter');
+const { errorHandler }            = require('./middleware/errorHandler');
+const { attachResponseSignature } = require('./middleware/responseSigning');
+const { trafficGuard }            = require('./middleware/security');
+
+// ── Cat-4: Tarpit middleware ──────────────────────────────────────────────────
+const { tarpit } = require('./middleware/tarpit');
+
+// ─── Maintenance state cache ──────────────────────────────────────────────────
 let _backendMaintenance = { active: false, message: '', eta: null };
 
 async function _pollMaintenanceState() {
   const routerUrl = process.env.ROUTER_URL;
 
-  // ── Auto-promote upcoming → active when start time has passed ───────────────
   try {
     const Mnt = require('./models/Mnt');
     const { meshPost } = require('./middleware/mesh');
@@ -96,9 +96,7 @@ async function _pollMaintenanceState() {
     console.warn('[maintenance] Auto-promote check failed:', err.message);
   }
 
-  // ── Poll router for current state ─────────────────────────────────────────
-  if (!routerUrl) {
-    // No router configured — read DB directly so the guard still works
+  if (!process.env.ROUTER_URL) {
     try {
       const Mnt = require('./models/Mnt');
       const rec = await Mnt.findOne({ s: 'active' }).sort({ ca: -1 }).lean();
@@ -110,15 +108,13 @@ async function _pollMaintenanceState() {
   }
   try {
     const axios = require('axios');
-    const r = await axios.get(`${routerUrl}/maintenance`, { timeout: 5000 });
+    const r = await axios.get(`${process.env.ROUTER_URL}/maintenance`, { timeout: 5000 });
     _backendMaintenance = r.data || { active: false };
   } catch (_) {
     // Router unreachable — stay in last known state
   }
 }
 
-// On boot: load any active/upcoming record from DB and sync to router
-// so state survives router restarts without needing env vars.
 async function _syncDbStateToRouter() {
   try {
     const Mnt = require('./models/Mnt');
@@ -126,10 +122,6 @@ async function _syncDbStateToRouter() {
     const routerUrl = process.env.ROUTER_URL;
     if (!routerUrl) return;
     const rec = await Mnt.findOne({ s: { $in: ['upcoming','active'] } }).sort({ ca: -1 }).lean();
-    // Always explicitly push state to router — even if no active record.
-    // Without this, a backend restart after resolve would leave the router
-    // in whatever state it was last set to (possibly still active from a
-    // previous boot-sync), never clearing it.
     const payload = rec
       ? { active: rec.s === 'active', upcoming: rec.s === 'upcoming', message: rec.msg || '', eta: rec.eta ? rec.eta.toISOString() : null, type: rec.t }
       : { active: false, upcoming: false, message: '', eta: null, type: null };
@@ -138,7 +130,7 @@ async function _syncDbStateToRouter() {
       `${routerUrl}/mesh/maintenance`,
       payload,
     );
-    console.log(`[maintenance] Synced DB state to router → active=${payload.active} (${rec ? `s=${rec.s} t=${rec.t}` : 'no active record in DB'})`);
+    console.log(`[maintenance] Synced DB state to router → active=${payload.active}`);
   } catch (err) {
     console.warn('[maintenance] Could not sync DB state to router:', err.message);
   }
@@ -147,19 +139,12 @@ async function _syncDbStateToRouter() {
 function maintenanceGuard(req, res, next) {
   if (!_backendMaintenance.active) return next();
   const p = req.path;
-  // Always let through: health checks, mesh routes, admin routes, socket.io
   if (p === '/api/health' || p.startsWith('/api/mesh') || p.startsWith('/api/admin') || p.startsWith('/socket.io')) return next();
-  // White-label resolve, heartbeat, cors-domains, and client portal must always
-  // be reachable so WL custom domains keep working during PlanIt maintenance.
   if (p.startsWith('/api/whitelabel/resolve'))   return next();
   if (p.startsWith('/api/whitelabel/heartbeat')) return next();
   if (p.startsWith('/api/whitelabel/cors'))      return next();
   if (p.startsWith('/api/wl-portal'))            return next();
-  // Status page — keep /api/uptime/* live so the public status page shows
-  // real data during maintenance rather than a wall of 503s.
   if (p.startsWith('/api/uptime'))               return next();
-  // HEAD / and GET / — UptimeRobot and other monitors ping this to check
-  // reachability. Blocking it causes false-positive downtime alerts.
   if (p === '/' && (req.method === 'HEAD' || req.method === 'GET')) return next();
   return res.status(503).json({
     maintenance: true,
@@ -168,47 +153,86 @@ function maintenanceGuard(req, res, next) {
   });
 }
 
-// Full chain: Client → Cloudflare → Render LB → Router → Backend.
-// Using true tells Express to trust the full X-Forwarded-For chain and
-// use the leftmost IP (the real client). This is safe because all traffic
-// enters through Cloudflare — we control every proxy in the chain.
-// A numeric value (2, 3, 4) risks getting the wrong hop count and resolving
-// to a Cloudflare or Render internal IP instead of the real client IP,
-// which silently breaks all IP-based blocking, rate limiting, and banning.
 // Trust exactly one upstream proxy hop (the Render load balancer).
-// Using `true` would trust every entry in X-Forwarded-For, making it
-// trivially spoofable — an attacker could prepend any IP they like and
-// bypass all IP-based rate limits and bans. `1` tells Express to peel
-// off exactly one hop so req.ip resolves to the actual connecting IP
-// (the Render LB), while realIp() then uses X-Planit-Client-IP (signed
-// by the router) as the authoritative client address.
 app.set('trust proxy', 1);
 
+// ─── Helmet — complete security header configuration ──────────────────────────
+// The backend is a pure JSON API — it never serves HTML to end users.
+// These headers are maximally restrictive because of that.
 app.use(helmet({
-  hsts: { maxAge: 63072000, includeSubDomains: true, preload: true },
+  // ── HSTS ─────────────────────────────────────────────────────────────────
+  // 2-year max-age. includeSubDomains and preload are set for when you move
+  // to a custom domain. They are harmless on .onrender.com.
+  hsts: {
+    maxAge:            63072000,
+    includeSubDomains: true,
+    preload:           true,
+  },
+
+  // ── Content Security Policy ──────────────────────────────────────────────
+  // The backend serves JSON only. No HTML, no scripts, no styles.
+  // defaultSrc: 'none' means "block everything not explicitly allowed".
+  // Since the backend never intentionally serves page content, all these
+  // are set to 'none'. The one exception is connectSrc 'self' for health
+  // check pages if you ever add an HTML status page.
   contentSecurityPolicy: {
     directives: {
-      defaultSrc:  ["'self'"],
-      scriptSrc:   ["'none'"],   // Backend serves JSON only — no scripts needed
-      styleSrc:    ["'none'"],   // Backend serves JSON only — no styles needed
-      imgSrc:      ["'self'", 'data:', 'https:', 'http:'],
-      connectSrc:  ["'self'", 'wss:', 'ws:', 'https:', 'http:'],
-      fontSrc:     ["'self'", 'data:'],
-      objectSrc:   ["'none'"],
-      mediaSrc:    ["'self'", 'https:'],
-      frameSrc:    ["'none'"],
+      defaultSrc:     ["'none'"],
+      scriptSrc:      ["'none'"],
+      styleSrc:       ["'none'"],
+      imgSrc:         ["'none'"],
+      connectSrc:     ["'self'"],
+      fontSrc:        ["'none'"],
+      objectSrc:      ["'none'"],
+      mediaSrc:       ["'none'"],
+      frameSrc:       ["'none'"],
+      frameAncestors: ["'none'"],   // No site can embed a backend response in an iframe
+      formAction:     ["'none'"],   // No forms can submit to/from the backend
+      baseUri:        ["'none'"],   // No <base> tag overrides
     },
   },
+
+  // ── Cross-Origin Policies ────────────────────────────────────────────────
+  // crossOriginResourcePolicy 'cross-origin': required for the API to be
+  // callable from the React frontend on a different origin.
   crossOriginResourcePolicy: { policy: 'cross-origin' },
+
+  // crossOriginOpenerPolicy 'same-origin': prevents attackers from opening
+  // your backend in a popup and accessing its window object.
+  // This is a Spectre/cross-site leak mitigation.
+  crossOriginOpenerPolicy: { policy: 'same-origin' },
+
+  // crossOriginEmbedderPolicy false: would require every resource the
+  // frontend loads to opt-in with CORP headers. Too restrictive for
+  // Cloudinary CDN images — leave off.
   crossOriginEmbedderPolicy: false,
+
+  // ── Other headers ────────────────────────────────────────────────────────
   referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
-  noSniff:     true,
-  hidePoweredBy: true,
-  frameguard:  { action: 'deny' },
+  noSniff:        true,       // X-Content-Type-Options: nosniff
+  hidePoweredBy:  true,       // Remove X-Powered-By: Express
+  frameguard:     { action: 'deny' }, // X-Frame-Options: DENY
+  xssFilter:      true,       // X-XSS-Protection: 1; mode=block (legacy IE)
+  permittedCrossDomainPolicies: { permittedPolicies: 'none' },
 }));
+
+// ── Permissions-Policy — not yet in Helmet 7, added manually ─────────────────
+// Disables browser APIs your backend never needs:
+// camera, microphone, geolocation, payment, USB, interest-cohort (FLoC).
+// This header only has an effect if the backend ever serves an HTML page,
+// but it's cheap to set and correct to include.
+app.use((_req, res, next) => {
+  res.setHeader(
+    'Permissions-Policy',
+    'accelerometer=(), camera=(), geolocation=(), gyroscope=(), ' +
+    'magnetometer=(), microphone=(), payment=(), usb=(), interest-cohort=()'
+  );
+  next();
+});
 
 app.use(compression());
 
+// ─── CORS ─────────────────────────────────────────────────────────────────────
 const _corsAllowedOrigins = (process.env.CORS_ORIGIN || '')
   .split(',').map(o => o.trim()).filter(Boolean);
 
@@ -221,16 +245,14 @@ const _localhostOrigins = [
   'http://127.0.0.1:5173', 'http://127.0.0.1:3000',
 ];
 
-// In-process WL origin cache — avoids a DB hit on every preflight.
-// Falls back to DB when origin isn’t in the static CORS_ORIGIN list.
 const _wlOriginCache = new Map();
-const _WL_CACHE_TTL  = 5 * 60 * 1000; // 5 minutes
+const _WL_CACHE_TTL  = 5 * 60 * 1000;
 
 async function _isWLOrigin(origin) {
   const cached = _wlOriginCache.get(origin);
   if (cached && (Date.now() - cached.ts) < _WL_CACHE_TTL) return cached.allowed;
   try {
-    const hostname = new URL(origin).hostname;
+    const hostname   = new URL(origin).hostname;
     const WhiteLabel = require('./models/WhiteLabel');
     const wl = await WhiteLabel.findOne(
       { domain: hostname, status: { $in: ['active', 'trial', 'suspended', 'cancelled'] } },
@@ -242,10 +264,9 @@ async function _isWLOrigin(origin) {
     return allowed;
   } catch (err) {
     console.error('[CORS] WL origin DB lookup failed:', err.message);
-    // V-02 FIX: Fail CLOSED on DB error. Stale cache or deny — never fail open.
     const stale = _wlOriginCache.get(origin);
     if (stale) return stale.allowed;
-    return false; // deny unknown origins when DB is unavailable
+    return false;
   }
 }
 
@@ -256,7 +277,6 @@ const corsOptions = {
     if (process.env.NODE_ENV !== 'production' && _localhostOrigins.includes(origin)) {
       return callback(null, true);
     }
-    // Dynamic DB check for white-label domains — no static list needed
     _isWLOrigin(origin)
       .then(allowed => {
         if (allowed) return callback(null, true);
@@ -265,36 +285,93 @@ const corsOptions = {
       })
       .catch(() => callback(new Error('Not allowed by CORS')));
   },
-  credentials:      true,
-  methods:          ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
-  allowedHeaders:   ['Content-Type', 'Authorization', 'x-event-token'],
-  exposedHeaders:   ['Content-Type', 'Authorization'],
-  preflightContinue: false,
+  credentials:          true,
+  methods:              ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+  allowedHeaders:       ['Content-Type', 'Authorization', 'x-event-token'],
+  exposedHeaders:       ['Content-Type', 'Authorization'],
+  preflightContinue:    false,
   optionsSuccessStatus: 204,
 };
 
 app.use(cors(corsOptions));
-// Stripe webhook needs the raw body before JSON parsing
+
+// ─── Body parsers — per-route size limits (Cat-4) ────────────────────────────
+//
+// WHY: The previous global '2mb' limit lets attackers send 2MB JSON bodies
+// to login endpoints, crashing the body parser with an OOM spike.
+// A login body is {"email":"x","password":"y"} — about 50 bytes.
+// 50KB is already 1000x more than needed. 2MB on auth routes is negligent.
+//
+// Express applies the FIRST matching parser and skips subsequent ones once
+// req.body is populated, so specific routes must come BEFORE the general one.
+//
+// Stripe webhooks: raw body required for signature verification — no JSON parser.
 app.use('/api/whitelabel/webhooks/stripe', express.raw({ type: 'application/json' }));
 
-app.use(express.json({ limit: '2mb' }));
-app.use(express.urlencoded({ extended: true, limit: '2mb' }));
+// Auth / login routes: 50KB max
+// Covers staff login, event password verify, WL portal login, password changes.
+app.use(
+  [
+    '/api/wl-portal/login',
+    '/api/wl-portal/change-password',
+  ],
+  express.json({ limit: '50kb' })
+);
+
+// File metadata routes: 512KB
+// Actual file bytes go via multipart; JSON here is metadata only.
+app.use('/api/files', express.json({ limit: '512kb' }));
+
+// Admin routes: 500KB
+// May send configuration objects, employee lists, etc.
+app.use('/api/admin', express.json({ limit: '500kb' }));
+
+// Seating maps: 1MB
+// Large events can have complex seating JSON with hundreds of objects.
+app.use('/api/events', express.json({ limit: '1mb' }));
+
+// White-label management routes: 500KB
+app.use(['/api/whitelabel', '/api/wl-portal'], express.json({ limit: '500kb' }));
+
+// Everything else: 100KB
+// Generous for normal API payloads, restrictive for attack bodies.
+app.use(express.json({ limit: '100kb' }));
+app.use(express.urlencoded({ extended: true, limit: '100kb' }));
+
 app.use(cookieParser());
 app.use(mongoSanitize());
-app.use(trafficGuard);
-app.use(maintenanceGuard);       // blocks all non-exempt paths during maintenance
+
+// ─── Security middleware stack ────────────────────────────────────────────────
+//
+// Order matters:
+//
+//   1. tarpit      — Silently delays suspicious IPs BEFORE trafficGuard runs.
+//                    Level-0 IPs (all normal traffic) exit in ~0ms — no overhead.
+//                    Tarpitted IPs are slowed, then trafficGuard still processes them.
+//
+//   2. trafficGuard — Detects and bans malicious traffic. Now also calls
+//                    tarpitIncrement on every warn and AbuseIPDB on every ban.
+//
+//   3. maintenanceGuard — Blocks traffic during maintenance windows.
+//
+//   4. honeypotRoutes — 30 trap endpoints. Mounted AFTER trafficGuard (so
+//                    already-banned IPs hit the ban check first) and BEFORE
+//                    /api/* routes (so fake /api/debug, /api/config etc. are caught).
+//
+//   5. apiLimiter — Rate limiting on real /api/ routes.
+//
+app.use(tarpit);          // Cat-4: exponential delay for suspicious IPs
+app.use(trafficGuard);    // existing: UA/path/rapid/oversized detection
+app.use(maintenanceGuard);
+app.use(honeypotRoutes);  // Cat-4: 30 trap routes → instant ban + alert
 app.use('/api/', apiLimiter);
 app.use('/api/', attachResponseSignature);
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-// --------------------------------------------------------------------------
-// Health endpoints
-// --------------------------------------------------------------------------
+// ─── Health endpoints ─────────────────────────────────────────────────────────
 app.get('/api/health', (req, res) => {
-  // V-13 FIX: Internal details gated behind HEALTH_KEY header to prevent
-  // infrastructure enumeration (DB backend, Redis presence, storage config).
   const internalKey = req.headers['x-health-key'];
-  const isInternal = internalKey && internalKey === process.env.HEALTH_KEY;
+  const isInternal  = internalKey && internalKey === process.env.HEALTH_KEY;
   res.json({
     status:    'ok',
     timestamp: new Date().toISOString(),
@@ -325,31 +402,27 @@ app.head('/', (req, res) => {
   res.sendStatus(200);
 });
 
-// --------------------------------------------------------------------------
-// Routes
-// --------------------------------------------------------------------------
-app.use('/api/events',    eventRoutes);
-app.use('/api/chat',      chatRoutes);
-app.use('/api/polls',     pollRoutes);
-app.use('/api/files',     fileRoutes);
-app.use('/api/admin',     adminRoutes);
-app.use('/api/blog',      blogRoutes);
-app.use('/api/support',   supportRoutes);
+// ─── Routes ───────────────────────────────────────────────────────────────────
+app.use('/api/events',      eventRoutes);
+app.use('/api/chat',        chatRoutes);
+app.use('/api/polls',       pollRoutes);
+app.use('/api/files',       fileRoutes);
+app.use('/api/admin',       adminRoutes);
+app.use('/api/blog',        blogRoutes);
+app.use('/api/support',     supportRoutes);
 app.use('/api/bug-reports', bugReportRoutes);
-app.use('/api/uptime',    uptimeRoutes);
-app.use('/api/mesh',      meshRoutes);
-app.use('/api',           publicRoutes);
-app.use('/api/events',    checkinRoutes);
-app.use('/api/events',    dataRetentionRoutes);
-app.use('/api/events',    seatingRoutes);     // NEW: seating map CRUD
-app.use('/api/whitelabel', whiteLabelRoutes);  // White label tenant management
-app.use('/api/wl-portal', wlPortalRoutes);     // WL client self-service portal
+app.use('/api/uptime',      uptimeRoutes);
+app.use('/api/mesh',        meshRoutes);
+app.use('/api',             publicRoutes);
+app.use('/api/events',      checkinRoutes);
+app.use('/api/events',      dataRetentionRoutes);
+app.use('/api/events',      seatingRoutes);
+app.use('/api/whitelabel',  whiteLabelRoutes);
+app.use('/api/wl-portal',   wlPortalRoutes);
 
 const frontendUrls = (process.env.FRONTEND_URL || '')
   .split(',').map(u => u.trim()).filter(Boolean);
 
-// /qr/:inviteCode — direct image URL shorthand for invite QR codes
-// Works as a plain <img src="..."> in emails, PDFs, and external pages
 app.get('/qr/:inviteCode', (req, res) => {
   const code = req.params.inviteCode.toUpperCase().replace(/[^A-Z0-9]/g, '');
   if (!code) return res.status(400).send('Invalid code');
@@ -369,100 +442,46 @@ app.get('*', (req, res) => {
 
 app.use(errorHandler);
 
-// --------------------------------------------------------------------------
-// Redis adapter for Socket.IO
-//
-// Set REDIS_URL in your environment to route signaling across all 5 backend
-// instances. Upstash provides a native Redis URL in the format:
-//   rediss://default:<token>@<host>:<port>
-//
-// Without REDIS_URL the server operates correctly in single-instance mode;
-// walkie-talkie still works as long as all staff connect to the same instance.
-//
-// Required packages (add to package.json):
-//   "ioredis": "^5.3.2"
-//   "@socket.io/redis-adapter": "^8.3.0"
-// --------------------------------------------------------------------------
+// ─── Redis adapter for Socket.IO ──────────────────────────────────────────────
 async function initRedisAdapter() {
   const redisUrl = process.env.REDIS_URL;
-
   if (!redisUrl) {
     console.log('[io] No REDIS_URL — in-memory adapter (single-instance mode)');
     return;
   }
-
   try {
-    const Redis            = require('ioredis');
+    const Redis             = require('ioredis');
     const { createAdapter } = require('@socket.io/redis-adapter');
-
-    const tlsOptions = redisUrl.startsWith('rediss://')
-      ? { tls: { rejectUnauthorized: false } }
-      : {};
-
-    const pubClient = new Redis(redisUrl, {
-      ...tlsOptions,
-      maxRetriesPerRequest: 3,
-      enableReadyCheck:     false,
-      lazyConnect:          false,
-    });
-
-    const subClient = pubClient.duplicate();
-
-    // Wait for both connections before attaching
+    const tlsOptions = redisUrl.startsWith('rediss://') ? { tls: { rejectUnauthorized: false } } : {};
+    const pubClient  = new Redis(redisUrl, { ...tlsOptions, maxRetriesPerRequest: 3, enableReadyCheck: false, lazyConnect: false });
+    const subClient  = pubClient.duplicate();
     await Promise.all([
-      new Promise((resolve, reject) => {
-        pubClient.once('ready', resolve);
-        pubClient.once('error', reject);
-        setTimeout(() => reject(new Error('pub timeout')), 10_000);
-      }),
-      new Promise((resolve, reject) => {
-        subClient.once('ready', resolve);
-        subClient.once('error', reject);
-        setTimeout(() => reject(new Error('sub timeout')), 10_000);
-      }),
+      new Promise((resolve, reject) => { pubClient.once('ready', resolve); pubClient.once('error', reject); setTimeout(() => reject(new Error('pub timeout')), 10_000); }),
+      new Promise((resolve, reject) => { subClient.once('ready', resolve); subClient.once('error', reject); setTimeout(() => reject(new Error('sub timeout')), 10_000); }),
     ]);
-
     io.adapter(createAdapter(pubClient, subClient));
-
     console.log('[io] Redis adapter active — all 5 instances share signaling bus');
-
-    // Graceful shutdown
-    const shutdown = async () => {
-      await pubClient.quit().catch(() => {});
-      await subClient.quit().catch(() => {});
-    };
+    const shutdown = async () => { await pubClient.quit().catch(() => {}); await subClient.quit().catch(() => {}); };
     process.once('SIGTERM', shutdown);
     process.once('SIGINT',  shutdown);
-
   } catch (err) {
     console.error('[io] Redis adapter init failed, using in-memory fallback:', err.message);
   }
 }
 
-// --------------------------------------------------------------------------
-// MongoDB + server startup
-// --------------------------------------------------------------------------
+// ─── MongoDB + server startup ──────────────────────────────────────────────────
 const connectDB = async () => {
   try {
     if (!process.env.MONGODB_URI) throw new Error('MONGODB_URI not defined');
-
     if (process.env.NODE_ENV === 'development') mongoose.set('debug', true);
-
-    await mongoose.connect(process.env.MONGODB_URI, {
-      useNewUrlParser:    true,
-      useUnifiedTopology: true,
-    });
-
+    await mongoose.connect(process.env.MONGODB_URI, { useNewUrlParser: true, useUnifiedTopology: true });
     console.log('MongoDB connected');
     console.log(`  Database: ${mongoose.connection.name}`);
-
     startCleanupScheduler();
-    seedBlogPosts(); // no-op if posts already exist; populates fresh DB on first boot
-
-    mongoose.connection.on('error',       err  => console.error('MongoDB error:', err));
-    mongoose.connection.on('disconnected', ()   => console.warn('MongoDB disconnected'));
-    mongoose.connection.on('reconnected',  ()   => console.log('MongoDB reconnected'));
-
+    seedBlogPosts();
+    mongoose.connection.on('error',        err => console.error('MongoDB error:', err));
+    mongoose.connection.on('disconnected', ()  => console.warn('MongoDB disconnected'));
+    mongoose.connection.on('reconnected',  ()  => console.log('MongoDB reconnected'));
   } catch (err) {
     console.error('MongoDB connection failed:', err.message);
     process.exit(1);
@@ -472,46 +491,27 @@ const connectDB = async () => {
 async function announceToRouter() {
   const routerUrl = process.env.ROUTER_URL;
   if (!routerUrl) return;
-
   const { meshPost } = require('./middleware/mesh');
-  const name    = process.env.BACKEND_LABEL  || 'Backend';
-  const selfUrl = process.env.SELF_URL       || '';
-
-  if (!selfUrl) {
-    console.warn(`[${name}] [mesh] SELF_URL not set — skipping announcement`);
-    return;
-  }
-
+  const name    = process.env.BACKEND_LABEL || 'Backend';
+  const selfUrl = process.env.SELF_URL      || '';
+  if (!selfUrl) { console.warn(`[${name}] [mesh] SELF_URL not set — skipping announcement`); return; }
   for (let i = 1; i <= 4; i++) {
-    const result = await meshPost(name, `${routerUrl}/mesh/register`, {
-      url: selfUrl, name, region: process.env.BACKEND_REGION || null,
-    });
-    if (result.ok) {
-      console.log(`[${name}] [mesh] Announced to router (attempt ${i})`);
-      return;
-    }
+    const result = await meshPost(name, `${routerUrl}/mesh/register`, { url: selfUrl, name, region: process.env.BACKEND_REGION || null });
+    if (result.ok) { console.log(`[${name}] [mesh] Announced to router (attempt ${i})`); return; }
     if (i < 4) await new Promise(r => setTimeout(r, i * 3000));
   }
   console.warn(`[${process.env.BACKEND_LABEL || 'Backend'}] [mesh] Could not announce to router`);
 }
 
 connectDB().then(async () => {
-  // Pull shared env vars (Upstash Redis creds etc.) from router FIRST,
-  // before any service that depends on them is initialised.
   const { syncConfigFromRouter } = require('./services/configSync');
   await syncConfigFromRouter();
-
-  // Attach Redis adapter before any connection is accepted
   await initRedisAdapter();
-
-  // Start polling router for maintenance state (defence-in-depth)
-  await _syncDbStateToRouter();          // restore any persisted state into router
+  await _syncDbStateToRouter();
   await _pollMaintenanceState();
   setInterval(_pollMaintenanceState, 5_000);
-
-  // Register all Socket.IO handlers
   require('./socket/chatSocket')(io);
-  require('./socket/walkieTalkieSocket')(io);  // NEW
+  require('./socket/walkieTalkieSocket')(io);
 
   const PORT = process.env.PORT || 5000;
   server.listen(PORT, () => {
@@ -525,7 +525,9 @@ connectDB().then(async () => {
     console.log(`  CORS Origin: ${process.env.CORS_ORIGIN || 'http://localhost:5173'}`);
     console.log(`  Storage:     ${process.env.CLOUDINARY_CLOUD_NAME ? 'Cloudinary' : 'Local'}`);
     console.log(`  Redis:       ${process.env.REDIS_URL ? 'Adapter active' : 'In-memory'}`);
-    // One-time credential check at startup — informational only, never exits
+    console.log(`  Tarpit:      ${process.env.TARPIT_ENABLED !== 'false' ? 'enabled' : 'disabled'}`);
+    console.log(`  AbuseIPDB:   ${process.env.ABUSEIPDB_API_KEY ? 'enabled' : 'disabled (set ABUSEIPDB_API_KEY)'}`);
+    console.log(`  Honeypots:   30 trap routes active`);
     const _au = (process.env.ADMIN_USERNAME || '').trim();
     const _ap = (process.env.ADMIN_PASSWORD || '').trim();
     if (!_au || !_ap || _au === 'admin' || _ap === 'admin123') {
@@ -538,24 +540,9 @@ connectDB().then(async () => {
   });
 });
 
-process.on('SIGTERM', () => {
-  server.close(() => {
-    mongoose.connection.close(false, () => process.exit(0));
-  });
-});
-
-process.on('SIGINT', () => {
-  server.close(() => {
-    mongoose.connection.close(false, () => process.exit(0));
-  });
-});
-
-process.on('unhandledRejection', err => {
-  console.error('[PlanIt] Unhandled Rejection:', err?.stack || err);
-});
-
-process.on('uncaughtException', err => {
-  console.error('[PlanIt] Uncaught Exception:', err?.stack || err);
-});
+process.on('SIGTERM', () => { server.close(() => { mongoose.connection.close(false, () => process.exit(0)); }); });
+process.on('SIGINT',  () => { server.close(() => { mongoose.connection.close(false, () => process.exit(0)); }); });
+process.on('unhandledRejection', err => { console.error('[PlanIt] Unhandled Rejection:', err?.stack || err); });
+process.on('uncaughtException',  err => { console.error('[PlanIt] Uncaught Exception:',  err?.stack || err); });
 
 module.exports = { app, server, io };
