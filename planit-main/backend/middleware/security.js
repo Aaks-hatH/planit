@@ -1,4 +1,8 @@
 'use strict';
+/*
+ * PLANIT PROPRIETARY LICENSE
+ * Copyright (c) 2026 Aakshat Hariharan. All rights reserved.
+ */
 
 /**
  * middleware/security.js
@@ -17,12 +21,22 @@
  *       - Path fuzzing              (/etc/passwd, /../.., /.env, etc.)
  *       - Suspicious user-agents    (sqlmap, nikto, masscan, etc.)
  *       - Oversized payload probe   (Content-Length > limit without a file upload)
+ *       - AbuseIPDB pre-check       (score >= threshold → immediate ban)
  *
  * 2.  scanUpload(file) — call before every Cloudinary upload.
  *     Returns { ok: true } or { ok: false, reason: string }.
  *     Blocks:
  *       - Executable / scripting extensions
  *       - MIME type mismatches
+ *
+ * Cat-4 additions (2026):
+ *   - tarpitIncrement() called on every warn and ban so suspicious IPs
+ *     get progressively slower responses even before the hard ban fires.
+ *   - checkAbuseIPDB() called after the ban-list check so known-malicious
+ *     IPs are pre-banned before they do anything on the platform.
+ *   - reportToAbuseIPDB() called inside ban() so every ban contributes
+ *     to the community threat database.
+ *   - ban() and isBanned() now exported so honeypot.js can call them directly.
  *
  * Env vars (all optional, safe defaults):
  *   SECURITY_ENABLED        'true' (set to 'false' to disable entirely)
@@ -32,11 +46,18 @@
  *   SECURITY_BAN_THRESHOLD   5    (WARNs before temporary BAN)
  *   SECURITY_WHITELIST_IPS        Comma-separated IPs to bypass all checks
  *   SECURITY_MONITOR_PATHS        Comma-separated extra paths that skip ALL checks
+ *   ABUSEIPDB_API_KEY             API key — if unset, pre-check is a no-op
+ *   ABUSEIPDB_BLOCK_SCORE         Confidence % to pre-ban on (default: 75)
  */
 
 const redis     = require('../services/redisClient');
 const Blocklist = require('../models/Blocklist');
 const { realIp: resolveRealIp, isPrivate } = require('./realIp');
+
+// ── Cat-4 integrations ────────────────────────────────────────────────────────
+// Both modules degrade gracefully if their env vars are not set.
+const { tarpitIncrement, tarpitReset }          = require('./tarpit');
+const { checkAbuseIPDB, reportToAbuseIPDB, reasonToCategories } = require('./abuseipdb');
 
 const ENABLED        = process.env.SECURITY_ENABLED !== 'false';
 const WHITELIST_IPS  = new Set(
@@ -122,7 +143,7 @@ const BAD_UA_PATTERNS = [
 //
 const FUZZ_PATTERNS = [
   // traversal
-  /\.\.(\/|\\)/,
+  /\.\.(\\/|\\)/,
   /%2e%2e|%252e%252e/i,
 
   // sensitive dotfiles / dirs
@@ -221,6 +242,7 @@ function _memClean() {
 setInterval(_memClean, 60_000).unref?.();
 
 // ─── Ban helpers ──────────────────────────────────────────────────────────────
+
 async function isBanned(ip) {
   // 1. Redis
   const v = await redis.get(`sec:ban:${ip}`);
@@ -245,6 +267,22 @@ async function ban(ip, reason) {
   await redis.set(`sec:ban:${ip}`, '1', BAN_TTL);
   _mem.bans.set(ip, Date.now() + BAN_TTL * 1000);
   console.warn(`[security] BANNED ${ip} for ${BAN_MINUTES}min — ${reason}`);
+
+  // ── Cat-4: Push tarpit to max level ─────────────────────────────────────────
+  // Even if somehow the ban check is bypassed (Redis outage, etc.), the
+  // attacker's requests are slowed to 120s each. Increment multiple times
+  // to guarantee reaching level 4 regardless of starting state.
+  tarpitIncrement(ip).catch(() => {});
+  tarpitIncrement(ip).catch(() => {});
+
+  // ── Cat-4: Report to AbuseIPDB ──────────────────────────────────────────────
+  // Fire-and-forget — never let this block or delay the ban.
+  const cats = reasonToCategories(reason);
+  reportToAbuseIPDB(
+    ip,
+    cats,
+    `PlanIT TrafficGuard ban: ${reason.slice(0, 300)}`
+  ).catch(() => {});
 }
 
 // ─── Warn counter ─────────────────────────────────────────────────────────────
@@ -254,6 +292,13 @@ async function addWarn(ip, reason) {
   prev.count++;
   _mem.warns.set(ip, prev);
   console.warn(`[security] WARN (${cnt}/${BAN_THRESHOLD}) ${ip} — ${reason}`);
+
+  // ── Cat-4: Increment tarpit on every warn ───────────────────────────────────
+  // This makes suspicious IPs progressively slower BEFORE the hard ban fires.
+  // At warn 1: +1s delay. At warn 3: +5s. At warn 6: +30s.
+  // A normal user never gets a single warn, so they never get any delay.
+  tarpitIncrement(ip).catch(() => {});
+
   if (cnt >= BAN_THRESHOLD) {
     await ban(ip, `${reason} (warn limit reached)`);
     return true;
@@ -300,6 +345,24 @@ async function trafficGuard(req, res, next) {
       message:           'Your IP has been temporarily blocked. Please try again later.',
       retryAfterMinutes: BAN_MINUTES,
     });
+  }
+
+  // ── 7b. AbuseIPDB pre-check (Cat-4) ──────────────────────────────────────
+  // Runs only on the first request from any new IP (result cached 1 hour).
+  // For all subsequent requests from the same IP, this resolves from Redis
+  // cache in ~5ms with no external API call and no quota consumed.
+  // If ABUSEIPDB_API_KEY is not set, checkAbuseIPDB returns {skip:true}
+  // immediately and this entire block is a no-op.
+  {
+    const abuse = await checkAbuseIPDB(ip);
+    if (!abuse.skip && abuse.blocked) {
+      await ban(ip, `abuseipdb:score=${abuse.score}:reports=${abuse.totalReports}:isp=${abuse.isp}`);
+      return res.status(429).json({
+        error:             'Too many requests',
+        message:           'Your IP has been temporarily blocked. Please try again later.',
+        retryAfterMinutes: BAN_MINUTES,
+      });
+    }
   }
 
   const ua = (req.headers['user-agent'] || '').toLowerCase();
@@ -442,10 +505,17 @@ async function unbanIp(ip) {
     _mem.bans.delete(ip);
     await redis.del(`sec:warn:${ip}`).catch(() => {});
     _mem.warns.delete(ip);
+    // ── Cat-4: Reset tarpit on unban ─────────────────────────────────────────
+    // When an admin unbans someone, reset their tarpit level too.
+    // Otherwise an unbanned IP still gets 120s delays on every request.
+    await tarpitReset(ip).catch(() => {});
     return { ok: true };
   } catch (err) {
     return { ok: false, error: err.message };
   }
 }
 
-module.exports = { trafficGuard, scanUpload, unbanIp, listActiveBans };
+// ─── Exports ──────────────────────────────────────────────────────────────────
+// ban and isBanned are now exported so honeypot.js can call them directly
+// without duplicating the ban logic.
+module.exports = { trafficGuard, scanUpload, unbanIp, listActiveBans, ban, isBanned };
