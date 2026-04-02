@@ -361,8 +361,10 @@ export const adminAPI = {
   deleteBlock:     (id)           => api.delete(`/admin/blocklist/${id}`),
 
   // trafficGuard active bans (Redis / in-memory, separate from the permanent Blocklist)
-  getBans:  ()     => api.get('/admin/security/bans'),
-  unbanIp:  (ip)   => api.post('/admin/security/unban', { ip }),
+  getBans:    ()                            => api.get('/admin/security/bans'),
+  unbanIp:    (ip)                          => api.post('/admin/security/unban', { ip }),
+  getSocData: ()                            => api.get('/admin/security/soc'),
+  banIp:      (ip, reason, minutes)        => api.post('/admin/security/ban', { ip, reason, minutes }),
   updateBlock:     (id, data)     => api.patch(`/admin/blocklist/${id}`, data),
 
   // Root TOTP management
