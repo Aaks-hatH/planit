@@ -5217,10 +5217,96 @@ function BlocklistPanel() {
 // ─── Security Panel ───────────────────────────────────────────────────────────
 function SecurityPanel() {
   const isDemo = useContext(DemoContext);
-  const [emailTest, setEmailTest]   = useState({ to: '', loading: false, result: null });
-  const [emailCfg, setEmailCfg]     = useState(null);
 
-  const handleTestEmail = async (e) => {
+  // Tab state
+  const [tab, setTab] = useState('soc'); // 'soc' | 'config'
+
+  // SOC state
+  const [socData, setSocData]               = useState(null);
+  const [socLoading, setSocLoading]         = useState(true);
+  const [feed, setFeed]                     = useState([]);
+  const [liveConnected, setLiveConnected]   = useState(false);
+  const [unbanning, setUnbanning]           = useState(null);
+  const [banning, setBanning]               = useState(false);
+  const [confirmIp, setConfirmIp]           = useState(null);
+  const [manualBan, setManualBan]           = useState({ ip: '', reason: '', minutes: 1440, show: false });
+  const esRef = useRef(null);
+
+  // Config tab state
+  const [emailTest, setEmailTest] = useState({ to: '', loading: false, result: null });
+
+  const loadSoc = useCallback(async () => {
+    if (isDemo) { setSocLoading(false); return; }
+    setSocLoading(true);
+    try {
+      const r = await adminAPI.getSocData();
+      setSocData(r.data);
+      if (r.data.recentEvents?.length) setFeed(r.data.recentEvents.slice(0, 150));
+    } catch {
+      toast.error('Failed to load SOC data');
+    } finally { setSocLoading(false); }
+  }, [isDemo]);
+
+  useEffect(() => { if (tab === 'soc') loadSoc(); }, [tab, loadSoc]);
+
+  // SSE live feed — connect when on SOC tab, disconnect on leave
+  const startLive = useCallback(() => {
+    if (esRef.current || isDemo) return;
+    const token  = localStorage.getItem('adminToken');
+    const apiUrl = import.meta.env?.VITE_API_URL || '';
+    const es = new EventSource(`${apiUrl}/api/admin/security/stream?token=${encodeURIComponent(token)}`);
+    esRef.current = es;
+    es.onopen  = () => setLiveConnected(true);
+    es.onerror = () => setLiveConnected(false);
+    es.onmessage = (ev) => {
+      try {
+        const entry = JSON.parse(ev.data);
+        setFeed(prev => [entry, ...prev].slice(0, 300));
+      } catch {}
+    };
+  }, [isDemo]);
+
+  const stopLive = useCallback(() => {
+    esRef.current?.close();
+    esRef.current = null;
+    setLiveConnected(false);
+  }, []);
+
+  useEffect(() => {
+    if (tab === 'soc') { startLive(); }
+    return stopLive;
+  }, [tab]);
+
+  const handleUnban = async (ip) => {
+    setUnbanning(ip);
+    try {
+      await adminAPI.unbanIp(ip);
+      toast.success(`${ip} unbanned`);
+      setSocData(prev => prev ? {
+        ...prev,
+        bans: prev.bans.filter(b => b.ip !== ip),
+        stats: { ...prev.stats, activeBans: Math.max(0, (prev.stats.activeBans || 1) - 1) },
+      } : prev);
+    } catch (err) {
+      toast.error(err?.response?.data?.error || `Failed to unban ${ip}`);
+    } finally { setUnbanning(null); setConfirmIp(null); }
+  };
+
+  const handleManualBan = async () => {
+    const ip = manualBan.ip.trim();
+    if (!ip) { toast.error('IP address required'); return; }
+    setBanning(true);
+    try {
+      await adminAPI.banIp(ip, manualBan.reason || 'Manual ban (SOC)', manualBan.minutes);
+      toast.success(`${ip} banned`);
+      setManualBan(p => ({ ...p, ip: '', reason: '', show: false }));
+      await loadSoc();
+    } catch (err) {
+      toast.error(err?.response?.data?.error || `Failed to ban ${ip}`);
+    } finally { setBanning(false); }
+  };
+
+  const handleEmailTest = async (e) => {
     e.preventDefault();
     if (isDemo) { toast.success('Test email sent successfully.'); return; }
     if (!emailTest.to) return;
@@ -5228,141 +5314,450 @@ function SecurityPanel() {
     try {
       await routerAPI.testEmail(emailTest.to);
       setEmailTest(p => ({ ...p, loading: false, result: { ok: true } }));
-      toast.success('Test email sent — check your inbox');
+      toast.success('Test email sent');
     } catch (err) {
       setEmailTest(p => ({ ...p, loading: false, result: { ok: false, msg: err.response?.data?.reason || err.message } }));
       toast.error('Test email failed');
     }
   };
 
+  // Feed entry tag styling
+  const TAG_STYLE = {
+    honeypot:     'bg-red-900/80 text-red-300 border border-red-700/50',
+    tarpit:       'bg-amber-900/70 text-amber-300 border border-amber-700/40',
+    abuseipdb:    'bg-purple-900/80 text-purple-300 border border-purple-700/50',
+    trafficguard: 'bg-blue-900/80 text-blue-300 border border-blue-700/40',
+    security:     'bg-neutral-800 text-neutral-400 border border-neutral-700',
+  };
+  const TAG_LABEL = {
+    honeypot: 'HONEYPOT', tarpit: 'TARPIT', abuseipdb: 'ABUSEIPDB',
+    trafficguard: 'TRAFFICGUARD', security: 'SECURITY',
+  };
+
+  const TARPIT_COLOR = ['', 'text-yellow-400', 'text-orange-400', 'text-red-400', 'text-red-600'];
+  const TARPIT_LABEL = ['', 'L1 1s', 'L2 5s', 'L3 30s', 'L4 120s'];
+
+  const fmtTs = (ts) => {
+    if (!ts) return '';
+    return new Date(ts).toLocaleTimeString(undefined, { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  };
+
+  const fmtTtl = (s) => {
+    if (s == null) return 'Permanent';
+    if (s <= 0)    return 'Expiring';
+    const m = Math.floor(s / 60);
+    if (m >= 60)   return `${Math.floor(m / 60)}h ${m % 60}m`;
+    return m > 0 ? `${m}m ${s % 60}s` : `${s}s`;
+  };
+
+  const s           = socData?.stats      || {};
+  const bans        = socData?.bans        || [];
+  const tpLevels    = socData?.tarpitLevels || {};
+
   return (
-    <div className="p-6 space-y-6 max-w-3xl">
-      <div>
-        <h2 className="text-xl font-bold text-neutral-900 flex items-center gap-2">
-          <Shield className="w-5 h-5 text-indigo-600" /> Security
-        </h2>
-        <p className="text-sm text-neutral-500 mt-0.5">Traffic protection, email system status, and configuration reference.</p>
-      </div>
+    <div className="h-full flex flex-col">
 
-      {/* Email system */}
-      <div className="card p-5 space-y-4">
-        <h3 className="text-sm font-bold text-neutral-700 flex items-center gap-2">
-          <Mail className="w-4 h-4 text-violet-500" /> Transactional Email
-        </h3>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
-          <div className="bg-neutral-50 rounded-xl p-3">
-            <p className="text-xs text-neutral-500 mb-1">Provider</p>
-            <p className="font-semibold text-neutral-900">Resend (HTTP API)</p>
-          </div>
-          <div className="bg-neutral-50 rounded-xl p-3">
-            <p className="text-xs text-neutral-500 mb-1">Daily limit per address</p>
-            <p className="font-semibold text-neutral-900">3 emails / day (UTC reset)</p>
-          </div>
-          <div className="bg-neutral-50 rounded-xl p-3">
-            <p className="text-xs text-neutral-500 mb-1">Triggers</p>
-            <p className="font-semibold text-neutral-900">Create event, Guest invite, Reminder, Thank-you</p>
-          </div>
-          <div className="bg-neutral-50 rounded-xl p-3">
-            <p className="text-xs text-neutral-500 mb-1">Counter store</p>
-            <p className="font-semibold text-neutral-900">Redis (or in-memory fallback)</p>
-          </div>
-        </div>
-        <div className="border-t border-neutral-100 pt-3">
-          <p className="text-xs font-semibold text-neutral-600 mb-2">Send test email</p>
-          <form onSubmit={handleTestEmail} className="flex gap-2">
-            <input
-              type="email"
-              placeholder="recipient@example.com"
-              value={emailTest.to}
-              onChange={e => setEmailTest(p => ({ ...p, to: e.target.value }))}
-              className="input text-sm flex-1"
-              required
-            />
+      {/* Tab bar */}
+      <div className="border-b border-neutral-200 px-6 pt-4 flex items-center justify-between shrink-0">
+        <div className="flex gap-1">
+          {[['soc', 'Threat Center'], ['config', 'Configuration']].map(([id, label]) => (
             <button
-              type="submit"
-              disabled={emailTest.loading || !import.meta.env.VITE_ROUTER_URL}
-              className="btn bg-violet-600 hover:bg-violet-700 text-white text-sm gap-2 disabled:opacity-50"
+              key={id}
+              onClick={() => setTab(id)}
+              className={`px-4 py-2 text-sm font-medium rounded-t-lg border-b-2 transition-colors ${
+                tab === id
+                  ? 'border-indigo-500 text-indigo-600 bg-indigo-50/50'
+                  : 'border-transparent text-neutral-500 hover:text-neutral-700'
+              }`}
             >
-              {emailTest.loading
-                ? <span className="spinner w-4 h-4 border-2 border-white/30 border-t-white" />
-                : <Send className="w-4 h-4" />}
-              Send test
+              {label}
             </button>
-          </form>
-          {!import.meta.env.VITE_ROUTER_URL && (
-            <p className="text-xs text-neutral-400 mt-1">VITE_ROUTER_URL is not set — cannot reach router mesh.</p>
+          ))}
+        </div>
+
+        {tab === 'soc' && (
+          <div className="flex items-center gap-3 pb-1">
+            <span className={`flex items-center gap-1.5 text-xs font-medium ${liveConnected ? 'text-emerald-600' : 'text-neutral-400'}`}>
+              <span className={`w-1.5 h-1.5 rounded-full ${liveConnected ? 'bg-emerald-500 animate-pulse' : 'bg-neutral-300'}`} />
+              {liveConnected ? 'Live' : 'Offline'}
+            </span>
+            <button
+              onClick={loadSoc}
+              disabled={socLoading}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium border border-neutral-200 rounded-lg text-neutral-600 hover:bg-neutral-50 transition-colors disabled:opacity-50"
+            >
+              <RefreshCw className={`w-3 h-3 ${socLoading ? 'animate-spin' : ''}`} />
+              Refresh
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* SOC tab */}
+      {tab === 'soc' && (
+        <div className="flex-1 overflow-auto p-6 space-y-5">
+
+          {/* Stat cards */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+            {[
+              { label: 'Active Bans',         value: s.activeBans,         icon: Ban,        color: 'red'    },
+              { label: 'Threats Blocked 24h', value: s.threatsBlocked24h,  icon: ShieldAlert, color: 'orange' },
+              { label: 'Honeypot Hits 24h',   value: s.honeypotHits24h,    icon: AlertCircle, color: 'amber'  },
+              { label: 'AbuseIPDB Today',     value: s.abuseipdbChecks != null ? `${s.abuseipdbChecks}/900` : null, icon: Shield, color: 'purple' },
+            ].map(({ label, value, icon: Icon, color }) => (
+              <div key={label} className="card p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-xs font-semibold text-neutral-500 uppercase tracking-wide leading-tight">{label}</p>
+                  <Icon className={`w-4 h-4 text-${color}-500 shrink-0`} />
+                </div>
+                <p className="text-2xl font-bold text-neutral-900 font-mono tabular-nums">
+                  {socLoading ? '…' : (value ?? '—')}
+                </p>
+              </div>
+            ))}
+          </div>
+
+          {/* Live feed + Active bans */}
+          <div className="grid grid-cols-1 xl:grid-cols-5 gap-5">
+
+            {/* Live threat feed */}
+            <div className="xl:col-span-3 flex flex-col min-h-0">
+              <div className="flex items-center justify-between mb-2 shrink-0">
+                <h3 className="text-sm font-bold text-neutral-700 flex items-center gap-2">
+                  <Terminal className="w-4 h-4 text-indigo-500" />
+                  Live Threat Feed
+                </h3>
+                <span className="text-xs text-neutral-400 tabular-nums">{feed.length} events</span>
+              </div>
+              <div
+                className="flex-1 bg-neutral-950 rounded-xl border border-neutral-800 overflow-y-auto font-mono text-xs leading-relaxed"
+                style={{ minHeight: 380, maxHeight: 520 }}
+              >
+                {socLoading && (
+                  <div className="flex items-center justify-center h-32 text-neutral-600">
+                    <Loader2 className="w-4 h-4 animate-spin mr-2" />Loading…
+                  </div>
+                )}
+                {!socLoading && feed.length === 0 && (
+                  <div className="flex flex-col items-center justify-center h-32 text-neutral-700">
+                    <Shield className="w-6 h-6 mb-2" />
+                    <p>No security events recorded</p>
+                  </div>
+                )}
+                {feed.map((e, i) => (
+                  <div
+                    key={i}
+                    className={`px-4 py-1.5 border-b border-neutral-900 flex items-start gap-3 hover:bg-neutral-900/60 transition-colors ${i === 0 && liveConnected ? 'bg-neutral-900/50' : ''}`}
+                  >
+                    <span className="text-neutral-600 shrink-0 pt-px tabular-nums">{fmtTs(e.ts)}</span>
+                    <span className={`shrink-0 text-[10px] font-bold px-1.5 py-px rounded leading-tight ${TAG_STYLE[e.tag] || TAG_STYLE.security}`}>
+                      {TAG_LABEL[e.tag] || 'SEC'}
+                    </span>
+                    <span className={`flex-1 break-all ${
+                      e.level === 'error' ? 'text-red-400' :
+                      e.level === 'warn'  ? 'text-amber-300' : 'text-neutral-400'
+                    }`}>
+                      {e.msg}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Active bans */}
+            <div className="xl:col-span-2 flex flex-col min-h-0">
+              <div className="flex items-center justify-between mb-2 shrink-0">
+                <h3 className="text-sm font-bold text-neutral-700 flex items-center gap-2">
+                  <Ban className="w-4 h-4 text-red-500" />
+                  Active Bans
+                  {bans.length > 0 && (
+                    <span className="px-1.5 py-px rounded-full text-[10px] font-bold bg-red-100 text-red-700 tabular-nums">{bans.length}</span>
+                  )}
+                </h3>
+                <button
+                  onClick={() => setManualBan(p => ({ ...p, show: !p.show }))}
+                  className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+                >
+                  <Plus className="w-3 h-3" />
+                  Ban IP
+                </button>
+              </div>
+
+              {/* Manual ban form */}
+              {manualBan.show && (
+                <div className="mb-3 p-3 bg-red-50 border border-red-200 rounded-xl space-y-2 shrink-0">
+                  <input
+                    type="text"
+                    value={manualBan.ip}
+                    onChange={e => setManualBan(p => ({ ...p, ip: e.target.value }))}
+                    onKeyDown={e => e.key === 'Enter' && handleManualBan()}
+                    placeholder="IP address (e.g. 203.0.113.42)"
+                    className="w-full px-3 py-2 text-xs border border-red-200 rounded-lg bg-white focus:outline-none focus:ring-1 focus:ring-red-400 font-mono"
+                    autoFocus
+                  />
+                  <input
+                    type="text"
+                    value={manualBan.reason}
+                    onChange={e => setManualBan(p => ({ ...p, reason: e.target.value }))}
+                    placeholder="Reason (optional)"
+                    className="w-full px-3 py-2 text-xs border border-red-200 rounded-lg bg-white focus:outline-none focus:ring-1 focus:ring-red-400"
+                  />
+                  <div className="flex gap-2 items-center">
+                    <select
+                      value={manualBan.minutes}
+                      onChange={e => setManualBan(p => ({ ...p, minutes: parseInt(e.target.value) }))}
+                      className="flex-1 px-2 py-2 text-xs border border-red-200 rounded-lg bg-white focus:outline-none"
+                    >
+                      <option value={60}>1 hour</option>
+                      <option value={360}>6 hours</option>
+                      <option value={1440}>24 hours</option>
+                      <option value={10080}>7 days</option>
+                      <option value={43200}>30 days</option>
+                    </select>
+                    <button
+                      onClick={handleManualBan}
+                      disabled={banning || !manualBan.ip.trim()}
+                      className="px-3 py-2 text-xs font-bold bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 transition-colors"
+                    >
+                      {banning ? 'Banning…' : 'Ban'}
+                    </button>
+                    <button
+                      onClick={() => setManualBan(p => ({ ...p, show: false, ip: '', reason: '' }))}
+                      className="text-neutral-400 hover:text-neutral-600 transition-colors"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Unban confirmation */}
+              {confirmIp && (
+                <div className="mb-3 p-3 bg-amber-50 border border-amber-200 rounded-xl shrink-0">
+                  <p className="text-xs text-amber-800 mb-2">
+                    Unban <strong className="font-mono">{confirmIp}</strong>? Clears the Redis key and warn counter immediately.
+                  </p>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => setConfirmIp(null)}
+                      className="flex-1 px-2 py-1.5 text-xs border border-neutral-300 rounded-lg text-neutral-600 hover:bg-neutral-50 transition-colors"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={() => handleUnban(confirmIp)}
+                      disabled={unbanning === confirmIp}
+                      className="flex-1 px-2 py-1.5 text-xs font-semibold bg-amber-500 text-white rounded-lg hover:bg-amber-600 disabled:opacity-50 transition-colors"
+                    >
+                      {unbanning === confirmIp ? 'Unbanning…' : 'Confirm Unban'}
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              <div
+                className="flex-1 border border-neutral-200 rounded-xl overflow-hidden bg-white"
+                style={{ minHeight: 300, maxHeight: 480, overflowY: 'auto' }}
+              >
+                {socLoading && (
+                  <div className="flex items-center justify-center h-24 text-neutral-400">
+                    <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                    <span className="text-xs">Loading…</span>
+                  </div>
+                )}
+                {!socLoading && bans.length === 0 && (
+                  <div className="flex flex-col items-center justify-center h-24 text-neutral-400">
+                    <ShieldCheck className="w-6 h-6 mb-2 text-emerald-400" />
+                    <p className="text-xs text-neutral-500">No active bans</p>
+                  </div>
+                )}
+                {bans.map((ban) => (
+                  <div key={ban.ip} className="border-b border-neutral-100 last:border-0 px-3 py-2.5 hover:bg-neutral-50 transition-colors">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="min-w-0 flex-1">
+                        <p className="font-mono text-xs font-semibold text-neutral-800 truncate">{ban.ip}</p>
+                        <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                          <span className={`text-[10px] font-medium ${
+                            ban.source === 'redis' ? 'text-blue-600' : 'text-violet-600'
+                          }`}>
+                            {ban.source}
+                          </span>
+                          <span className="text-[10px] text-neutral-400 font-mono tabular-nums">
+                            {fmtTtl(ban.ttlSeconds)}
+                          </span>
+                          {tpLevels[ban.ip] > 0 && (
+                            <span className={`text-[10px] font-bold ${TARPIT_COLOR[tpLevels[ban.ip]] || ''}`}>
+                              tarpit {TARPIT_LABEL[tpLevels[ban.ip]]}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => setConfirmIp(ban.ip)}
+                        disabled={unbanning === ban.ip || confirmIp === ban.ip}
+                        className="shrink-0 flex items-center gap-1 px-2 py-1 text-[10px] font-semibold rounded border border-emerald-200 text-emerald-700 hover:bg-emerald-50 disabled:opacity-40 transition-colors"
+                      >
+                        {unbanning === ban.ip
+                          ? <Loader2 className="w-3 h-3 animate-spin" />
+                          : <ShieldCheck className="w-3 h-3" />}
+                        Unban
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* AbuseIPDB quota meters */}
+          {(s.abuseipdbChecks != null || s.abuseipdbReports != null) && (
+            <div className="card p-4">
+              <h3 className="text-xs font-bold text-neutral-500 uppercase tracking-wider mb-3">AbuseIPDB Daily Quota</h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                {[
+                  { label: 'IP Checks',  used: s.abuseipdbChecks,  limit: s.abuseipdbCheckLimit  },
+                  { label: 'Reports',    used: s.abuseipdbReports, limit: s.abuseipdbReportLimit },
+                ].map(({ label, used, limit }) => {
+                  const pct = limit > 0 ? Math.round(((used || 0) / limit) * 100) : 0;
+                  return (
+                    <div key={label}>
+                      <div className="flex justify-between text-xs mb-1.5">
+                        <span className="font-medium text-neutral-600">{label}</span>
+                        <span className="font-mono text-neutral-500 tabular-nums">{used ?? 0} / {limit}</span>
+                      </div>
+                      <div className="h-1.5 bg-neutral-100 rounded-full overflow-hidden">
+                        <div
+                          className={`h-full rounded-full transition-all duration-500 ${
+                            pct > 80 ? 'bg-red-500' : pct > 60 ? 'bg-amber-400' : 'bg-emerald-500'
+                          }`}
+                          style={{ width: `${pct}%` }}
+                        />
+                      </div>
+                      <p className="text-[10px] text-neutral-400 mt-1">{pct}% used — resets at UTC midnight</p>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
           )}
-          {emailTest.result && (
-            <p className={`text-xs mt-1 font-medium ${emailTest.result.ok ? 'text-emerald-600' : 'text-red-600'}`}>
-              {emailTest.result.ok ? 'Sent successfully' : `Failed: ${emailTest.result.msg}`}
-            </p>
-          )}
         </div>
-      </div>
+      )}
 
-      {/* Traffic guard */}
-      <div className="card p-5 space-y-3">
-        <h3 className="text-sm font-bold text-neutral-700 flex items-center gap-2">
-          <ShieldOff className="w-4 h-4 text-red-500" /> Traffic Guard
-        </h3>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
-          <div className="bg-neutral-50 rounded-xl p-3">
-            <p className="text-xs text-neutral-500 mb-1">Detects</p>
-            <p className="text-xs text-neutral-700 leading-5">Rapid identical requests, path fuzzing, known scanner user-agents, oversized payload probes</p>
-          </div>
-          <div className="bg-neutral-50 rounded-xl p-3">
-            <p className="text-xs text-neutral-500 mb-1">Enforcement</p>
-            <p className="text-xs text-neutral-700 leading-5">Progressive: warn threshold logged silently, ban threshold = temporary IP block</p>
-          </div>
-          <div className="bg-neutral-50 rounded-xl p-3">
-            <p className="text-xs text-neutral-500 mb-1">Defaults</p>
-            <p className="text-xs font-mono text-neutral-700">warn: 25 req/10s · ban: 5 warns · block: 30 min</p>
-          </div>
-          <div className="bg-neutral-50 rounded-xl p-3">
-            <p className="text-xs text-neutral-500 mb-1">Storage</p>
-            <p className="text-xs text-neutral-700">Redis (Upstash) with in-memory fallback</p>
-          </div>
-        </div>
-        <div className="text-xs text-neutral-400 bg-neutral-50 rounded-xl p-3 space-y-0.5">
-          <p className="font-semibold text-neutral-500 mb-1">Configurable env vars on each backend:</p>
-          <p><code className="font-mono">SECURITY_ENABLED</code> — true / false (default: true)</p>
-          <p><code className="font-mono">SECURITY_BAN_MINUTES</code> — ban duration (default: 30)</p>
-          <p><code className="font-mono">SECURITY_WARN_THRESHOLD</code> — identical req count before warn (default: 25)</p>
-          <p><code className="font-mono">SECURITY_BAN_THRESHOLD</code> — warn count before ban (default: 5)</p>
-        </div>
-      </div>
+      {/* Configuration tab */}
+      {tab === 'config' && (
+        <div className="flex-1 overflow-auto p-6 space-y-6 max-w-3xl">
 
-      {/* Upload scanner */}
-      <div className="card p-5 space-y-3">
-        <h3 className="text-sm font-bold text-neutral-700 flex items-center gap-2">
-          <FileUp className="w-4 h-4 text-amber-500" /> Upload Security
-        </h3>
-        <p className="text-sm text-neutral-600">All file uploads are scanned before reaching Cloudinary.</p>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-          <div className="bg-neutral-50 rounded-xl p-3">
-            <p className="font-semibold text-neutral-600 mb-1">Blocked extensions</p>
-            <p className="font-mono text-neutral-500 leading-5">.exe .bat .sh .ps1 .php .asp .jsp .py .rb .js (as upload) .jar .dll …and 30+ more</p>
+          {/* Transactional email */}
+          <div className="card p-5 space-y-4">
+            <h3 className="text-sm font-bold text-neutral-700 flex items-center gap-2">
+              <Mail className="w-4 h-4 text-violet-500" /> Transactional Email
+            </h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {[
+                ['Provider',                'Resend (HTTP API)'],
+                ['Daily limit per address', '3 emails / day (UTC reset)'],
+                ['Triggers',               'Create event, Guest invite, Reminder, Thank-you'],
+                ['Counter store',          'Redis (or in-memory fallback)'],
+              ].map(([k, v]) => (
+                <div key={k} className="bg-neutral-50 rounded-xl p-3">
+                  <p className="text-xs text-neutral-500 mb-1">{k}</p>
+                  <p className="text-xs font-semibold text-neutral-900">{v}</p>
+                </div>
+              ))}
+            </div>
+            <div className="border-t border-neutral-100 pt-3">
+              <p className="text-xs font-semibold text-neutral-600 mb-2">Send test email</p>
+              <form onSubmit={handleEmailTest} className="flex gap-2">
+                <input
+                  type="email"
+                  placeholder="recipient@example.com"
+                  value={emailTest.to}
+                  onChange={e => setEmailTest(p => ({ ...p, to: e.target.value }))}
+                  className="input text-sm flex-1"
+                  required
+                />
+                <button
+                  type="submit"
+                  disabled={emailTest.loading || !import.meta.env.VITE_ROUTER_URL}
+                  className="btn bg-violet-600 hover:bg-violet-700 text-white text-sm gap-2 disabled:opacity-50"
+                >
+                  {emailTest.loading
+                    ? <span className="spinner w-4 h-4 border-2 border-white/30 border-t-white" />
+                    : <Send className="w-4 h-4" />}
+                  Send test
+                </button>
+              </form>
+              {!import.meta.env.VITE_ROUTER_URL && (
+                <p className="text-xs text-neutral-400 mt-1">VITE_ROUTER_URL is not set — cannot reach router mesh.</p>
+              )}
+              {emailTest.result && (
+                <p className={`text-xs mt-1 font-medium ${emailTest.result.ok ? 'text-emerald-600' : 'text-red-600'}`}>
+                  {emailTest.result.ok ? 'Sent successfully' : `Failed: ${emailTest.result.msg}`}
+                </p>
+              )}
+            </div>
           </div>
-          <div className="bg-neutral-50 rounded-xl p-3">
-            <p className="font-semibold text-neutral-600 mb-1">MIME mismatch detection</p>
-            <p className="text-neutral-500 leading-5">Extension vs Content-Type cross-checked. A file claiming to be a JPEG but sending HTML is rejected.</p>
-          </div>
-        </div>
-      </div>
 
-      {/* Redis status */}
-      <div className="card p-5 space-y-3">
-        <h3 className="text-sm font-bold text-neutral-700 flex items-center gap-2">
-          <Database className="w-4 h-4 text-emerald-500" /> Redis (Upstash)
-        </h3>
-        <p className="text-sm text-neutral-600">Used for email counters, IP ban store, and rate limiting across all features.</p>
-        <div className="text-xs text-neutral-400 bg-neutral-50 rounded-xl p-3 space-y-0.5">
-          <p className="font-semibold text-neutral-500 mb-1">Set on each backend (and router for email counters):</p>
-          <p><code className="font-mono">UPSTASH_REDIS_URL</code> — your Upstash REST endpoint</p>
-          <p><code className="font-mono">UPSTASH_REDIS_TOKEN</code> — your Upstash REST token</p>
-          <p className="text-neutral-400 mt-1">If not set, the system falls back to in-memory storage automatically. No crash, no error.</p>
+          {/* Traffic guard */}
+          <div className="card p-5 space-y-3">
+            <h3 className="text-sm font-bold text-neutral-700 flex items-center gap-2">
+              <ShieldOff className="w-4 h-4 text-red-500" /> Traffic Guard
+            </h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {[
+                ['Detects',     'Rapid identical requests, path fuzzing, known scanner user-agents, oversized payload probes'],
+                ['Enforcement', 'Progressive: warn threshold logged silently, ban threshold = temporary IP block'],
+                ['Defaults',    'warn: 25 req/10s · ban: 5 warns · block: 30 min'],
+                ['Storage',     'Redis (Upstash) with in-memory fallback'],
+              ].map(([k, v]) => (
+                <div key={k} className="bg-neutral-50 rounded-xl p-3">
+                  <p className="text-xs text-neutral-500 mb-1">{k}</p>
+                  <p className="text-xs text-neutral-700 leading-5">{v}</p>
+                </div>
+              ))}
+            </div>
+            <div className="text-xs text-neutral-400 bg-neutral-50 rounded-xl p-3 space-y-0.5">
+              <p className="font-semibold text-neutral-500 mb-1">Configurable env vars on each backend:</p>
+              <p><code className="font-mono">SECURITY_ENABLED</code> — true / false (default: true)</p>
+              <p><code className="font-mono">SECURITY_BAN_MINUTES</code> — ban duration (default: 30)</p>
+              <p><code className="font-mono">SECURITY_WARN_THRESHOLD</code> — identical req count before warn (default: 25)</p>
+              <p><code className="font-mono">SECURITY_BAN_THRESHOLD</code> — warn count before ban (default: 5)</p>
+            </div>
+          </div>
+
+          {/* Upload scanner */}
+          <div className="card p-5 space-y-3">
+            <h3 className="text-sm font-bold text-neutral-700 flex items-center gap-2">
+              <FileUp className="w-4 h-4 text-amber-500" /> Upload Security
+            </h3>
+            <p className="text-sm text-neutral-600">All file uploads are scanned before reaching Cloudinary.</p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+              <div className="bg-neutral-50 rounded-xl p-3">
+                <p className="font-semibold text-neutral-600 mb-1">Blocked extensions</p>
+                <p className="font-mono text-neutral-500 leading-5">.exe .bat .sh .ps1 .php .asp .jsp .py .rb .js (as upload) .jar .dll …and 30+ more</p>
+              </div>
+              <div className="bg-neutral-50 rounded-xl p-3">
+                <p className="font-semibold text-neutral-600 mb-1">MIME mismatch detection</p>
+                <p className="text-neutral-500 leading-5">Extension vs Content-Type cross-checked. A file claiming to be a JPEG but sending HTML is rejected.</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Redis */}
+          <div className="card p-5 space-y-3">
+            <h3 className="text-sm font-bold text-neutral-700 flex items-center gap-2">
+              <Database className="w-4 h-4 text-emerald-500" /> Redis (Upstash)
+            </h3>
+            <p className="text-sm text-neutral-600">Used for email counters, IP ban store, and rate limiting across all features.</p>
+            <div className="text-xs text-neutral-400 bg-neutral-50 rounded-xl p-3 space-y-0.5">
+              <p className="font-semibold text-neutral-500 mb-1">Set on each backend (and router for email counters):</p>
+              <p><code className="font-mono">UPSTASH_REDIS_URL</code> — your Upstash REST endpoint</p>
+              <p><code className="font-mono">UPSTASH_REDIS_TOKEN</code> — your Upstash REST token</p>
+              <p className="text-neutral-400 mt-1">If not set, the system falls back to in-memory storage automatically. No crash, no error.</p>
+            </div>
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }
