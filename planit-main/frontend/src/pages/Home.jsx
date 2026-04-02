@@ -5,7 +5,7 @@ import {
   Calendar, Users, MessageSquare, BarChart3, FileText, Shield, Copy, Check, Lock,
   ArrowRight, Link, Eye, EyeOff, ChevronRight, Zap, Clock,
   CheckCircle2, TrendingUp, ListChecks, Timer,
-  Brain, ArrowUpRight, AlertCircle, UtensilsCrossed, MapPin, QrCode, Layers
+  Brain, ArrowUpRight, AlertCircle, UtensilsCrossed, MapPin, QrCode, Layers, Search, CornerDownRight
 } from 'lucide-react';
 import { eventAPI } from '../services/api';
 import toast from 'react-hot-toast';
@@ -366,6 +366,12 @@ const GLOBAL_CSS = `
     --border-subtle: rgba(255,255,255,0.06);
   }
 
+  @keyframes shake {
+    0%,100% { transform: translateX(0); }
+    20%,60%  { transform: translateX(-6px); }
+    40%,80%  { transform: translateX(6px); }
+  }
+  .animate-shake { animation: shake 0.45s ease-in-out; }
   @keyframes loader-bar {
     0%   { transform: scaleX(0);   }
     60%  { transform: scaleX(0.85);}
@@ -663,6 +669,91 @@ function SectionHeader({ eyebrow, title, subtitle }) {
       <h2 className="font-syne text-3xl sm:text-5xl md:text-7xl font-black text-white mb-5 leading-tight">{title}</h2>
       {subtitle && <p className="text-xl text-neutral-400 max-w-2xl mx-auto leading-relaxed">{subtitle}</p>}
     </Reveal>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SLUG FINDER — lets users jump directly to an event by its link/slug
+// ─────────────────────────────────────────────────────────────────────────────
+function SlugFinder({ compact = false }) {
+  const navigate = useNavigate();
+  const [value, setValue] = useState('');
+  const [shaking, setShaking] = useState(false);
+
+  const handleGo = () => {
+    const raw = value.trim();
+    if (!raw) return;
+
+    // Accept full URL (e.g. https://planitapp.onrender.com/e/my-slug) or bare slug
+    let slug = raw;
+    try {
+      const url = new URL(raw.startsWith('http') ? raw : `https://x.com/${raw}`);
+      const match = url.pathname.match(/\/e\/([^/?#]+)/);
+      if (match) slug = match[1];
+      else slug = url.pathname.replace(/^\/+|\/+$/g, '');
+    } catch {
+      // not a URL — use raw as slug
+    }
+    // Strip leading /e/ if someone typed it manually
+    slug = slug.replace(/^\/?(e\/)?/, '').replace(/\/+$/, '');
+
+    if (!slug) {
+      setShaking(true);
+      setTimeout(() => setShaking(false), 500);
+      return;
+    }
+    navigate(`/e/${slug}`);
+  };
+
+  const handleKey = (e) => { if (e.key === 'Enter') handleGo(); };
+
+  if (compact) {
+    return (
+      <div className={`flex items-center gap-2 ${shaking ? 'animate-shake' : ''}`}>
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-500 pointer-events-none" />
+          <input
+            type="text"
+            value={value}
+            onChange={e => setValue(e.target.value)}
+            onKeyDown={handleKey}
+            placeholder="Paste an event link or slug…"
+            className="w-full h-10 pl-10 pr-4 rounded-xl text-sm text-white placeholder-neutral-600 border border-neutral-800 focus:border-neutral-600 focus:outline-none transition-colors"
+            style={{ background: 'rgba(255,255,255,0.04)' }}
+          />
+        </div>
+        <button
+          onClick={handleGo}
+          className="flex-shrink-0 flex items-center gap-1.5 h-10 px-4 rounded-xl text-sm font-bold bg-white text-neutral-900 hover:bg-neutral-100 hover:scale-105 transition-all"
+        >
+          Go <CornerDownRight className="w-3.5 h-3.5" />
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className={`mt-4 flex items-center gap-2 max-w-sm mx-auto ${shaking ? 'animate-shake' : ''}`}>
+      <div className="relative flex-1">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-500 pointer-events-none" />
+        <input
+          type="text"
+          value={value}
+          onChange={e => setValue(e.target.value)}
+          onKeyDown={handleKey}
+          placeholder="Have a link? Paste it here…"
+          className="w-full h-10 pl-10 pr-4 rounded-xl text-sm text-white placeholder-neutral-600 border border-neutral-800/80 focus:border-neutral-600 focus:outline-none transition-colors"
+          style={{ background: 'rgba(255,255,255,0.04)' }}
+        />
+      </div>
+      <button
+        onClick={handleGo}
+        className="flex-shrink-0 flex items-center gap-1.5 h-10 px-4 rounded-xl text-sm font-bold border border-neutral-700 text-neutral-300 hover:border-neutral-500 hover:text-white transition-all"
+        style={{ background: 'rgba(255,255,255,0.04)' }}
+      >
+        Go <CornerDownRight className="w-3.5 h-3.5" />
+      </button>
+    </div>
   );
 }
 
@@ -1551,6 +1642,13 @@ export default function Home() {
                   Explore Venue
                   <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform duration-300" />
                 </a>
+              </motion.div>
+
+              {/* Slug finder — jump to a private event */}
+              <motion.div initial={{ opacity:0, y:12 }} animate={{ opacity:1, y:0 }} transition={{ duration:0.6, delay:1.15 }}
+                className="mb-10">
+                <p className="text-xs text-neutral-600 uppercase tracking-widest mb-2">Already have an event link?</p>
+                <SlugFinder />
               </motion.div>
 
               {/* Trust stats */}
