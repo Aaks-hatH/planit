@@ -2828,4 +2828,173 @@ router.get('/maintenance/history', verifyAdmin, async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
+// ═══════════════════════════════════════════════════════════════════════════════
+// SECURITY OPERATIONS CENTER
+// ═══════════════════════════════════════════════════════════════════════════════
+
+// SOC SSE client registry — receives security-filtered log events only.
+// Set up once per process; idempotent via global flag.
+if (!global.__socClients) {
+  global.__socClients = [];
+  // Tap into the main log broadcast pipe with a security filter so new events
+  // are forwarded to connected SOC SSE clients with zero polling overhead.
+  global.__adminLogClients.push((entry) => {
+    const m = entry.msg || '';
+    const relevant =
+      m.includes('[honeypot]') || m.includes('[tarpit]') ||
+      m.includes('[abuseipdb]') || m.includes('[trafficGuard]') ||
+      (entry.level !== 'info' && (
+        m.includes('bad UA') || m.includes('path fuzz') || m.includes('rapid:') ||
+        m.includes('oversized') || m.includes('pre-ban') || m.includes('sec:ban')
+      ));
+    if (relevant) {
+      global.__socClients.forEach(fn => { try { fn(entry); } catch {} });
+    }
+  });
+}
+
+function _isSecurityEntry(e) {
+  const m = e.msg || '';
+  return (
+    m.includes('[honeypot]') || m.includes('[tarpit]') ||
+    m.includes('[abuseipdb]') || m.includes('[trafficGuard]') ||
+    (e.level !== 'info' && (
+      m.includes('bad UA') || m.includes('path fuzz') || m.includes('rapid:') ||
+      m.includes('oversized') || m.includes('pre-ban') || m.includes('sec:ban')
+    ))
+  );
+}
+
+function _tagEntry(e) {
+  const m = e.msg || '';
+  if (m.includes('[honeypot]'))     return 'honeypot';
+  if (m.includes('[tarpit]'))       return 'tarpit';
+  if (m.includes('[abuseipdb]'))    return 'abuseipdb';
+  if (m.includes('[trafficGuard]')) return 'trafficguard';
+  return 'security';
+}
+
+// GET /admin/security/soc  —  aggregated SOC snapshot
+router.get('/security/soc', verifyAdmin, requirePermission('canManageBlocklist'), async (req, res, next) => {
+  try {
+    const logs = global.__adminLogBuffer || [];
+    const now  = Date.now();
+    const h24  = now - 86400000;
+
+    const secLogs = logs.filter(_isSecurityEntry);
+    const ts24    = (e) => new Date(e.ts).getTime() > h24;
+
+    const honeypotHits24h   = secLogs.filter(e => e.msg.includes('[honeypot]') && e.msg.includes('HIT')       && ts24(e)).length;
+    const honeypotHitsTotal = secLogs.filter(e => e.msg.includes('[honeypot]') && e.msg.includes('HIT')).length;
+    const tarpit24h         = secLogs.filter(e => e.msg.includes('[tarpit]')                                   && ts24(e)).length;
+    const abuseipdbBans24h  = secLogs.filter(e => e.msg.includes('[abuseipdb]') && e.msg.includes('Pre-ban')  && ts24(e)).length;
+    const trafficBans24h    = secLogs.filter(e => e.msg.includes('[trafficGuard]') && e.msg.includes('BAN')   && ts24(e)).length;
+    const threatsBlocked24h = honeypotHits24h + abuseipdbBans24h + trafficBans24h;
+
+    const bans = await listActiveBans();
+
+    // AbuseIPDB daily quota counters from Redis
+    const today = new Date().toISOString().slice(0, 10);
+    let abuseipdbChecks = 0, abuseipdbReports = 0;
+    try {
+      const [ck, rk] = await Promise.all([
+        redis.get(`abuseipdb:quota:check:${today}`).catch(() => null),
+        redis.get(`abuseipdb:quota:report:${today}`).catch(() => null),
+      ]);
+      abuseipdbChecks  = parseInt(ck  || '0', 10);
+      abuseipdbReports = parseInt(rk || '0', 10);
+    } catch {}
+
+    // Tarpit levels for currently-banned IPs (cap to 30 to avoid Redis fan-out)
+    let tarpitLevels = {};
+    try {
+      const { getTarpitLevel } = require('../middleware/tarpit');
+      const pairs = await Promise.all(
+        bans.slice(0, 30).map(async b => [b.ip, await getTarpitLevel(b.ip).catch(() => 0)])
+      );
+      pairs.forEach(([ip, lv]) => { tarpitLevels[ip] = lv; });
+    } catch {}
+
+    const recentEvents = secLogs.slice(-150).reverse().map(e => ({
+      ts:    e.ts,
+      level: e.level,
+      msg:   e.msg,
+      tag:   _tagEntry(e),
+    }));
+
+    res.json({
+      stats: {
+        activeBans:          bans.length,
+        honeypotHits24h,
+        honeypotHitsTotal,
+        tarpit24h,
+        abuseipdbBans24h,
+        trafficBans24h,
+        threatsBlocked24h,
+        abuseipdbChecks,
+        abuseipdbReports,
+        abuseipdbCheckLimit:  900,
+        abuseipdbReportLimit: 900,
+      },
+      bans,
+      tarpitLevels,
+      recentEvents,
+      generatedAt: new Date().toISOString(),
+    });
+  } catch (err) { next(err); }
+});
+
+// GET /admin/security/stream  —  SSE stream of security events only
+router.get('/security/stream', verifyAdmin, requirePermission('canManageBlocklist'), (req, res) => {
+  res.setHeader('Content-Type',  'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection',    'keep-alive');
+  res.flushHeaders();
+
+  // Replay the last 75 security events immediately so the client has context
+  const logs = global.__adminLogBuffer || [];
+  logs.filter(_isSecurityEntry).slice(-75).forEach(e =>
+    res.write(`data: ${JSON.stringify({ ts: e.ts, level: e.level, msg: e.msg, tag: _tagEntry(e) })}\n\n`)
+  );
+
+  const send = (e) => {
+    if (!res.destroyed)
+      res.write(`data: ${JSON.stringify({ ts: e.ts, level: e.level, msg: e.msg, tag: _tagEntry(e) })}\n\n`);
+  };
+  global.__socClients.push(send);
+  const hb = setInterval(() => { if (!res.destroyed) res.write(': heartbeat\n\n'); }, 20000);
+
+  req.on('close', () => {
+    clearInterval(hb);
+    const i = global.__socClients.indexOf(send);
+    if (i !== -1) global.__socClients.splice(i, 1);
+  });
+});
+
+// POST /admin/security/ban  —  manual IP ban from SOC console
+router.post('/security/ban', verifyAdmin, requirePermission('canManageBlocklist'), async (req, res, next) => {
+  try {
+    const { ip, reason = 'Manual ban (SOC)', minutes = 1440 } = req.body;
+    if (!ip || typeof ip !== 'string' || ip.trim().length < 2 || ip.trim().length > 100) {
+      return res.status(400).json({ error: 'ip required' });
+    }
+    const cleanIp = ip.trim();
+    // Clamp duration: minimum 1 minute, maximum 30 days
+    const ttl = Math.max(60, Math.min(parseInt(minutes, 10) || 1440, 43200) * 60);
+    await redis.set(`sec:ban:${cleanIp}`, reason.slice(0, 200), ttl);
+    console.warn(`[trafficGuard] SOC manual ban: ${cleanIp} — "${reason}" (${Math.round(ttl / 60)}m)`);
+    audit('security_manual_ban', {
+      req,
+      actor: { employeeId: req.user?.employeeId, email: req.user?.email || req.user?.username, role: req.user?.role },
+      details: { ip: cleanIp, reason, ttlSeconds: ttl, ttlMinutes: Math.round(ttl / 60) },
+    });
+    res.json({
+      ok:        true,
+      ip:        cleanIp,
+      ttlSeconds: ttl,
+      expiresAt: new Date(Date.now() + ttl * 1000).toISOString(),
+    });
+  } catch (err) { next(err); }
+});
+
 module.exports = router;
