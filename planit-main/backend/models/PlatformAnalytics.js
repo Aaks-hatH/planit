@@ -405,7 +405,10 @@ async function getDashboardData(windowDays = 30) {
 
     // Scroll depth averages
     Model.aggregate([
-      { $match: { eventType: 'scroll_depth', ts: { $gte: since } } },
+      // NOTE: the frontend tracker repurposes timeOnPageMs to carry the max
+      // scroll percentage (0-100) for scroll_depth events. This is intentional
+      // and must stay in sync with tracker.js -> enqueue('scroll_depth', ...).
+      { $match: { eventType: 'scroll_depth', ts: { $gte: since }, timeOnPageMs: { $gte: 0, $lte: 100 } } },
       { $group: { _id: '$page', avgDepth: { $avg: '$timeOnPageMs' }, samples: { $sum: 1 } } },
       { $sort: { samples: -1 } },
       { $limit: 10 },
