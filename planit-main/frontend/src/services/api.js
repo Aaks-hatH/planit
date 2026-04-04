@@ -547,6 +547,11 @@ export const utilityAPI = {
   generateQRCode: (eventId) => `${API_URL}/events/${eventId}/qr.svg`,
 };
 
+// ─── Platform Analytics API (admin dashboard) ─────────────────────────────────
+export const platformAnalyticsAPI = {
+  getDashboard: (windowDays = 30) => api.get(`/platform-analytics/dashboard?window=${windowDays}`),
+};
+
 // ─── Bug Report API ───────────────────────────────────────────────────────────
 export const bugReportAPI = {
   submit: (data)     => api.post('/bug-reports', data),
