@@ -161,6 +161,8 @@ const auditSchema = new mongoose.Schema(
         'data_exported',
         // System
         'maintenance_toggled', 'blocklist_updated',
+        // Platform Analytics
+        'analytics_viewed', 'analytics_exported',
       ],
     },
 
