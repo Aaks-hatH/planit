@@ -1,6 +1,7 @@
 import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import { WhiteLabelProvider, useWhiteLabel } from './context/WhiteLabelContext';
+import { usePageTracker } from './hooks/usePageTracker';
 import LiveWaitBoard from './pages/LiveWaitBoard';
 import Home from './pages/Home';
 import EventSpace from './pages/EventSpace';
@@ -414,6 +415,12 @@ const PATTERN_TITLES = [
   [/^\/blog\//,                              null],
 ];
 
+// Renders nothing — just mounts the background analytics tracker inside <Router>
+function PageTrackerMount() {
+  usePageTracker();
+  return null;
+}
+
 function PageTitle() {
   const { pathname } = useLocation();
   const { isWL } = useWhiteLabel();
@@ -451,6 +458,7 @@ function App() {
         <MaintenanceGate>
           <Router>
             <PageTitle />
+            <PageTrackerMount />
             <Routes>
         <Route path="/" element={<HomeRoute />} />
 
