@@ -241,7 +241,7 @@ function onPageExit(nextPath) {
   if (!nextPath) {
     // True browser exit
     enqueue('session_end', {
-      page: currentPath,
+      page: currentPage,
       timeOnPageMs: Date.now() - sessionStart,
     });
   }
