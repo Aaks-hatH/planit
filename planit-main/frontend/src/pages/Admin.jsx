@@ -33,6 +33,7 @@ import {
   BookOpen, Edit3, Tag, Check, Star, ShieldAlert, ShieldCheck, Loader2,
 } from 'lucide-react';
 import api, { adminAPI, uptimeAPI, watchdogAPI, routerAPI, bugReportAPI, blogAPI } from '../services/api';
+import PlatformAnalyticsDashboard from '../components/PlatformAnalyticsDashboard';
 import { SERVICE_CATEGORIES, ALL_SERVICES_FLAT } from '../utils/serviceCategories';
 import { formatNumber, formatFileSize } from '../utils/formatters';
 import { DateTime } from 'luxon';
@@ -7279,26 +7280,27 @@ function AuditLogsPanel() {
 
 // ─── Nav Items ────────────────────────────────────────────────────────────────
 const NAV_ITEMS = [
-  { id: 'dashboard',      label: 'Dashboard',    icon: Monitor    },
-  { id: 'events',         label: 'Events',       icon: Calendar   },
-  { id: 'users',          label: 'Users',        icon: Users      },
-  { id: 'organizers',     label: 'Organizers',   icon: Building2  },
-  { id: 'staff',          label: 'Staff',        icon: UserCheck  },
-  { id: 'employees',      label: 'Team',         icon: Briefcase  },
-  { id: 'audit-logs',    label: 'Audit Logs',   icon: FileText   },
-  { id: 'fleet',          label: 'Fleet',        icon: Rocket     },
-  { id: 'marketing',      label: 'Marketing',    icon: Send       },
-  { id: 'analytics',      label: 'Analytics',    icon: BarChart3  },
-  { id: 'security',       label: 'Security',     icon: Shield     },
-  { id: 'blocklist',      label: 'Blocklist',    icon: Ban        },
-  { id: 'banned-ips',     label: 'Banned IPs',   icon: ShieldAlert },
-  { id: 'reports',        label: 'Reports',      icon: Inbox      },
-  { id: 'uptime',         label: 'Uptime',       icon: Radio      },
-  { id: 'system',         label: 'System',       icon: Server     },
-  { id: 'command-center', label: 'Command',      icon: Crosshair  },
-  { id: 'whitelabel',     label: 'White Label',  icon: Layers     },
-  { id: 'blog',           label: 'Blog CMS',     icon: BookOpen   },
-  { id: 'account',        label: 'My Account',   icon: User       },
+  { id: 'dashboard',          label: 'Dashboard',          icon: Monitor    },
+  { id: 'events',             label: 'Events',             icon: Calendar   },
+  { id: 'users',              label: 'Users',              icon: Users      },
+  { id: 'organizers',         label: 'Organizers',         icon: Building2  },
+  { id: 'staff',              label: 'Staff',              icon: UserCheck  },
+  { id: 'employees',          label: 'Team',               icon: Briefcase  },
+  { id: 'audit-logs',         label: 'Audit Logs',         icon: FileText   },
+  { id: 'fleet',              label: 'Fleet',              icon: Rocket     },
+  { id: 'marketing',          label: 'Marketing',          icon: Send       },
+  { id: 'analytics',          label: 'Analytics',          icon: BarChart3  },
+  { id: 'platform-analytics', label: 'Platform Analytics', icon: Activity   },
+  { id: 'security',           label: 'Security',           icon: Shield     },
+  { id: 'blocklist',          label: 'Blocklist',          icon: Ban        },
+  { id: 'banned-ips',         label: 'Banned IPs',         icon: ShieldAlert },
+  { id: 'reports',            label: 'Reports',            icon: Inbox      },
+  { id: 'uptime',             label: 'Uptime',             icon: Radio      },
+  { id: 'system',             label: 'System',             icon: Server     },
+  { id: 'command-center',     label: 'Command',            icon: Crosshair  },
+  { id: 'whitelabel',         label: 'White Label',        icon: Layers     },
+  { id: 'blog',               label: 'Blog CMS',           icon: BookOpen   },
+  { id: 'account',            label: 'My Account',         icon: User       },
 ];
 
 // ─── Employee Account Panel ───────────────────────────────────────────────────
@@ -10966,6 +10968,7 @@ export default function Admin() {
           {activeSection === 'employees'      && !selectedEvent && <div className="max-w-5xl mx-auto"><EmployeesPanel currentUser={currentUser} /></div>}
           {activeSection === 'audit-logs'    && !selectedEvent && <div className="max-w-5xl mx-auto"><AuditLogsPanel /></div>}
           {activeSection === 'analytics'      && !selectedEvent && <div className="max-w-5xl mx-auto"><AnalyticsPanel stats={stats} /></div>}
+          {activeSection === 'platform-analytics' && !selectedEvent && <div className="max-w-6xl mx-auto"><PlatformAnalyticsDashboard /></div>}
           {activeSection === 'fleet'          && !selectedEvent && <FleetControl />}
           {activeSection === 'security'       && !selectedEvent && <SecurityPanel />}
           {activeSection === 'blocklist'      && !selectedEvent && <BlocklistPanel />}
