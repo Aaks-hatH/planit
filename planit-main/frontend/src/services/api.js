@@ -28,7 +28,7 @@ api.interceptors.request.use((config) => {
   const url = config.url || '';
   const isBlogAdminUrl = url.includes('/blog/admin/') ||
     (url.match(/\/blog(\/[^/]+)?$/) && config.method && config.method.toLowerCase() !== 'get');
-  const isAdminRequest = url.includes('/admin') || url.includes('/whitelabel') || isBlogAdminUrl;
+  const isAdminRequest = url.includes('/admin') || url.includes('/whitelabel') || url.includes('/platform-analytics') || isBlogAdminUrl;
 
   if (isAdminRequest) {
     const adminToken = localStorage.getItem('adminToken');
@@ -55,7 +55,7 @@ api.interceptors.response.use(
       // Blog admin routes: /blog/admin/all or any non-GET /blog write
       const isBlogAdmin = url.includes('/blog/admin/') ||
         (url.match(/\/blog(\/[^/]+)?$/) && method !== 'get');
-      const isAdminRequest = url.includes('/admin') || isBlogAdmin;
+      const isAdminRequest = url.includes('/admin') || url.includes('/platform-analytics') || isBlogAdmin;
       const isCoreAdminAuth = isAdminRequest && !url.includes('/bug-reports');
 
       if (isCoreAdminAuth) {
