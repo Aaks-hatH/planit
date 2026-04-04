@@ -57,6 +57,7 @@ const meshRoutes          = require('./routes/mesh');
 const seatingRoutes       = require('./routes/seating');
 const whiteLabelRoutes    = require('./routes/whitelabel');
 const { router: wlPortalRoutes } = require('./routes/wl-portal');
+const platformAnalyticsRoutes  = require('./routes/platform-analytics');
 
 // ── Cat-4: New routes ─────────────────────────────────────────────────────────
 const honeypotRoutes = require('./routes/honeypot');
@@ -419,6 +420,7 @@ app.use('/api/events',      dataRetentionRoutes);
 app.use('/api/events',      seatingRoutes);
 app.use('/api/whitelabel',  whiteLabelRoutes);
 app.use('/api/wl-portal',   wlPortalRoutes);
+app.use('/api/platform-analytics', express.json({ limit: '200kb' }), platformAnalyticsRoutes);
 
 const frontendUrls = (process.env.FRONTEND_URL || '')
   .split(',').map(u => u.trim()).filter(Boolean);
