@@ -212,7 +212,7 @@ export default function Privacy() {
                 PlanIt operates a strict seven-day data retention policy. All data associated with an event —
                 including messages, files, polls, tasks, expenses, notes, participant records, and invite data —
                 is automatically and permanently deleted seven days after the event date. This deletion process
-                runs automatically every day at 2:00 AM.
+                runs automatically on a daily schedule.
               </p>
               <p>
                 Files stored on Cloudinary are also deleted as part of this process. There is no recovery of data
@@ -247,8 +247,6 @@ export default function Privacy() {
             <ul className="list-disc list-inside space-y-2 ml-3 mt-2">
               <li><strong>localStorage (event token):</strong> When you join or create an event, an authentication token is stored in your browser's localStorage. This token allows you to re-access the event from the same browser without re-entering your credentials. It is scoped to the specific event and expires when the event is deleted.</li>
               <li><strong>localStorage (username):</strong> Your chosen username is stored in localStorage so it can be pre-filled on subsequent visits to the same event.</li>
-              <li><strong>localStorage (analytics &mdash; visitor ID):</strong> A randomly generated, opaque identifier (<code>planit_vid</code>) is stored in your browser to distinguish unique visitors in our platform analytics. This identifier contains no personal information and cannot be linked back to you. It persists across sessions on the same browser so we can measure returning visitor rates.</li>
-              <li><strong>localStorage (analytics &mdash; session ID and last active):</strong> A randomly generated session identifier (<code>planit_sid</code>) and a last-active timestamp (<code>planit_last_active</code>) are stored to group your page interactions into sessions for aggregate traffic analysis. Sessions automatically expire after 30 minutes of inactivity. No personal information is stored in these values.</li>
             </ul>
             <p className="mt-3">
               You can clear these at any time through your browser settings. Doing so will require you to re-enter
@@ -356,7 +354,7 @@ export default function Privacy() {
                 <strong>Render (Render Services, Inc.):</strong> Hosts the PlanIt backend and frontend application servers. Server logs, including request logs containing IP addresses, may be generated and retained by Render's infrastructure for operational purposes. Data processing is governed by Render's Data Processing Agreement.
               </li>
               <li>
-                <strong>Upstash, Inc.:</strong> Provides Redis-compatible caching and rate-limiting services. Rate-limiting counters keyed to IP addresses are transiently stored on Upstash's infrastructure. No personally identifiable information beyond IP address is stored in this layer.
+                <strong>Upstash, Inc.:</strong> Provides Redis-compatible caching and rate-limiting services. Rate-limiting data is transiently processed on Upstash's infrastructure. No personally identifiable information beyond what is strictly necessary for rate-limiting is stored in this layer.
               </li>
             </ul>
             <p className="mt-3">
