@@ -1,8 +1,8 @@
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, FileText } from 'lucide-react';
 
-const LAST_UPDATED = 'February 26, 2026';
-const EFFECTIVE_DATE = 'February 26, 2026';
+const LAST_UPDATED = 'April 3, 2026';
+const EFFECTIVE_DATE = 'April 3, 2026';
 
 function Section({ number, title, children }) {
   return (
@@ -204,7 +204,7 @@ export default function Terms() {
             <Sub number="6.3" title="Prohibited Conduct">
               <p>You shall not, directly or indirectly:</p>
               <ul className="list-disc list-inside space-y-2 ml-3 mt-2">
-                <li>Attempt to gain unauthorised access to the Service, the Platform, or any system, network, or data associated therewith, through brute force, credential stuffing, or any other means;</li>
+                <li>Attempt to gain unauthorised access to the Service, the Platform, or any system, network, or data associated therewith, through any means;</li>
                 <li>Probe, scan, or test the vulnerability of any system underlying the Service, or circumvent any security, authentication, or rate-limiting mechanism;</li>
                 <li>Reverse engineer, decompile, disassemble, or derive the source code, algorithms, or architecture of the Service;</li>
                 <li>Scrape, crawl, or harvest data from the Service using automated means;</li>
@@ -275,7 +275,7 @@ export default function Terms() {
             </Sub>
             <Sub number="8.5" title="Technical Licence Enforcement">
               <p>
-                The Platform incorporates a cryptographic licence integrity verification system operating at backend server initialisation and at periodic intervals thereafter, utilising HMAC-SHA256 proof chains derived from a deployment-specific licence key to verify authorised deployment. Deployments failing verification will refuse to initialise. This constitutes a technical enforcement mechanism and is not subject to circumvention or challenge.
+                The Platform incorporates a cryptographic licence integrity verification system operating at backend server initialisation and at periodic intervals thereafter, verifying authorised deployment. Deployments failing verification will refuse to initialise. This constitutes a technical enforcement mechanism and is not subject to circumvention or challenge.
               </p>
             </Sub>
           </Section>
@@ -526,7 +526,7 @@ export default function Terms() {
             </Sub>
             <Sub number="21.3" title="Denial-of-Service and Cyberattack Disclaimer">
               <p>
-                PlanIt implements commercially reasonable technical safeguards against distributed denial-of-service attacks, credential stuffing, and other malicious network activity; however, PlanIt makes no guarantee that such safeguards will be effective against all attacks. PlanIt expressly disclaims all liability for any loss of data, service outage, data exposure, or other harm arising from any cyberattack, including without limitation denial-of-service attacks, brute force attacks, man-in-the-middle attacks, or any other form of malicious interference with the Service or its underlying infrastructure.
+                PlanIt implements commercially reasonable technical safeguards against malicious network activity; however, PlanIt makes no guarantee that such safeguards will be effective against all attacks. PlanIt expressly disclaims all liability for any loss of data, service outage, data exposure, or other harm arising from any cyberattack or other form of malicious interference with the Service or its underlying infrastructure.
               </p>
             </Sub>
             <Sub number="21.4" title="Technical Vulnerabilities">
