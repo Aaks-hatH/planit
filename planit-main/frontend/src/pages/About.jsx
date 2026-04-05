@@ -269,10 +269,10 @@ export default function About() {
               This page is a complete reference for every design decision, every feature, every security layer, and every small detail in PlanIt. Nothing is here by accident, and nothing is left unexplained.
             </p>
             <div className="mt-6 flex flex-wrap gap-2">
-              <Badge color="neutral">React + Vite frontend</Badge>
-              <Badge color="neutral">Node.js + Express backend</Badge>
-              <Badge color="neutral">Socket.IO real-time</Badge>
-              <Badge color="neutral">MongoDB data layer</Badge>
+              <Badge color="neutral">Modern web frontend</Badge>
+              <Badge color="neutral">Node.js backend</Badge>
+              <Badge color="neutral">Real-time layer</Badge>
+              <Badge color="neutral">NoSQL data layer</Badge>
               <Badge color="emerald">No account required</Badge>
               <Badge color="blue">Walkie-talkie PTT</Badge>
               <Badge color="blue">Visual seating map</Badge>
@@ -295,14 +295,14 @@ export default function About() {
               The frontend does not talk directly to a backend server. Every API request goes through a dedicated load-balancing router that sits in front of a fleet of identical backend instances. The router knows about every backend in the fleet, tracks their health in real time, and decides which backend should handle each incoming request.
             </p>
             <p className="text-neutral-500 leading-relaxed mb-4">
-              The fleet is auto-scaling. The router monitors request rate per backend on a rolling 30-second window. When load exceeds a configurable threshold, the router activates additional backends from a standby pool. When load drops, it scales back down. The scaling logic uses a Holt-Winters exponential smoothing model to predict demand rather than reacting to it — it smooths out spikes and avoids thrashing the fleet up and down on short bursts.
+              The fleet is auto-scaling. The router monitors request rate per backend and activates additional backends from a standby pool when load exceeds a configurable threshold. When load drops, it scales back down. The scaling logic uses predictive smoothing to anticipate demand rather than reacting to it — avoiding thrashing the fleet up and down on short bursts.
             </p>
             <div className="border border-neutral-200 rounded-2xl overflow-hidden my-6">
               <TechDetail label="Routing algorithm" value="Least-connections with health weighting. The router favours backends with fewer active connections and deprioritises backends that are in a cold-start window (first 90 seconds after restart), have high memory usage, or have a degraded database connection." />
               <TechDetail label="Sticky routing" value="Requests to the same event room are routed to the same backend instance using consistent hashing on the event ID. This ensures that all WebSocket connections and HTTP requests for a live event land on the same server, keeping the real-time room state coherent." />
               <TechDetail label="Circuit breakers" value="Each backend has an independent circuit breaker. After a configurable number of consecutive errors, the router trips the circuit and stops sending traffic to that backend while continuing to probe it for recovery. When the backend starts responding cleanly again, the circuit closes automatically." />
               <TechDetail label="Backend codenames" value="Each backend instance is assigned a codename (examples: Maverick, Slider) via an environment variable. These appear in admin logs and monitoring alerts for quick identification without exposing infrastructure hostnames publicly." />
-              <TechDetail label="Mesh authentication" value="All internal communication between the router, backends, and watchdog is authenticated using HMAC-SHA256 signed tokens with a 30-second TTL and replay attack protection. No internal endpoint accepts unauthenticated requests from another service." />
+              <TechDetail label="Mesh authentication" value="All internal communication between the router, backends, and watchdog is authenticated using cryptographically signed tokens with short TTLs and replay attack protection. No internal endpoint accepts unauthenticated requests from another service." />
               <TechDetail label="Config propagation" value="Shared environment variables (Redis credentials, feature flags, service URLs) are set once on the router and automatically propagated to all backends at startup via the /mesh/config endpoint. No manual synchronisation across instances required." />
             </div>
 
@@ -319,21 +319,21 @@ export default function About() {
 
             <SubHeading>The status page: automated incident management</SubHeading>
             <p className="text-neutral-500 leading-relaxed mb-4">
-              The public status page at <code className="text-xs bg-neutral-100 px-1.5 py-0.5 rounded font-mono">/status</code> reflects real-time platform health. Incidents are created automatically when 3 or more user reports target the same service within 10 minutes, or when the watchdog detects a failure. The status page updates immediately — no admin action required for the platform to self-report a problem.
+              The public status page at <code className="text-xs bg-neutral-100 px-1.5 py-0.5 rounded font-mono">/status</code> reflects real-time platform health. Incidents are created automatically when sufficient user reports target the same service in a short window, or when the watchdog detects a failure. The status page updates immediately — no admin action required for the platform to self-report a problem.
             </p>
 
             <SubHeading>Response signing: API integrity</SubHeading>
             <p className="text-neutral-500 leading-relaxed mb-4">
-              Every API response carries an HMAC-SHA256 cryptographic signature derived from the response body, the request path, and a key derived from the server's licence key. This makes it cryptographically infeasible for a proxy, man-in-the-middle, or tampered replica to forge a valid API response. This matters specifically for the check-in system, where forged responses could admit unauthorised people.
+              Every API response carries a cryptographic signature derived from the response body and the request path. This makes it infeasible for a proxy, man-in-the-middle, or tampered replica to forge a valid API response. This matters specifically for the check-in system, where forged responses could admit unauthorised people.
             </p>
 
             <SubHeading>Fleet log console</SubHeading>
             <p className="text-neutral-500 leading-relaxed mb-4">
-              The admin panel's Logs tab pulls logs from every service in the fleet simultaneously — router, every backend, and the watchdog — sorted by timestamp into a single unified view. You can filter by source, level, or search term, and go live on the backend's log stream in real time. No SSH required. No jumping between Render dashboards.
+              The admin panel's Logs tab pulls logs from every service in the fleet simultaneously — router, every backend, and the watchdog — sorted by timestamp into a single unified view. You can filter by source, level, or search term. No SSH required. No jumping between Render dashboards.
             </p>
 
             <Callout accent>
-              All of this infrastructure — the router, the fleet, the watchdog, the mesh auth, the status system, the admin log console — was designed, built, and is maintained by one person. Every system described on this page exists because it solves a specific problem that would otherwise require manual intervention on event day.
+              All of this infrastructure — the router, the fleet, the watchdog, the mesh auth, the status system, the admin log console — was purpose-built for PlanIt. Every system described on this page exists because it solves a specific problem that would otherwise require manual intervention on event day.
             </Callout>
           </Section>
 
@@ -1411,7 +1411,7 @@ export default function About() {
               subtitle="Every API response sent by the PlanIt backend carries a cryptographic signature that allows the client to verify the response came from the real server — not a proxy, a man-in-the-middle, or a tampered replica."
             />
             <p className="text-neutral-500 leading-relaxed mb-4">
-              When the server sends an API response, a middleware running on every route computes an HMAC-SHA256 digest of the response body and the request path, using a key derived from the server's license key. This signature is attached as a custom response header. The client can independently verify the signature before trusting the response content.
+              When the server sends an API response, a middleware running on every route computes a cryptographic digest of the response body and the request path. This signature is attached as a custom response header. The client can independently verify the signature before trusting the response content.
             </p>
             <p className="text-neutral-500 leading-relaxed mb-4">
               The signing key is never stored directly. It is derived on-demand from the master license key using a one-way HMAC derivation function with a purpose-specific label. This means that even if an attacker intercepted a request, they could not forge a valid signature without possessing the original license key — which lives only in the server's environment variables and is never transmitted or logged.
@@ -1480,7 +1480,7 @@ export default function About() {
             <FeatureRow
               icon={Zap}
               title="Automatic incident creation"
-              description="If 3 or more reports targeting the same service arrive within a 10-minute window, the system automatically creates an incident without requiring any admin action. The incident is marked as 'investigating', all triggering reports are linked to it, and the status page reflects the degradation immediately. A push notification fires to the admin at 'urgent' priority."
+              description="If sufficient reports targeting the same service arrive within a short window, the system automatically creates an incident without requiring any admin action. The incident is marked as 'investigating', all triggering reports are linked to it, and the status page reflects the degradation immediately. A push notification fires to the admin at 'urgent' priority."
             />
             <FeatureRow
               icon={Bell}
