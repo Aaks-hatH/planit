@@ -52,7 +52,7 @@ const ARTICLES = [
       {
         type: 'callout',
         variant: 'info',
-        text: 'The event URL follows the format planitapp.onrender.com/e/your-slug. If you didn\'t set a custom slug, the fallback is planitapp.onrender.com/event/[database-id].'
+        text: 'The event URL follows the format planitapp.onrender.com/e/your-slug. A unique permanent link is also generated for every event.'
       }
     ]
   },
@@ -70,7 +70,7 @@ const ARTICLES = [
       {
         type: 'steps',
         items: [
-          { title: 'Open the event link', body: 'Click or paste the link the organizer shared with you. It looks like planitapp.onrender.com/e/event-name or planitapp.onrender.com/event/[id].' },
+          { title: 'Open the event link', body: 'Click or paste the link the organizer shared with you. It looks like planitapp.onrender.com/e/event-name.' },
           { title: 'Enter the event password (if required)', body: 'If the organizer set an event password, you\'ll see a password prompt before you can enter. Enter the password they gave you. This is separate from the organizer account password.' },
           { title: 'Choose a display name', body: 'Pick a username that your team will recognise you by. This name appears in the chat, on tasks you create or complete, in polls, and in the people list.' },
           { title: 'You\'re in', body: 'You\'ll land directly in the workspace. The chat tab opens by default. Use the tab bar to navigate between Chat, Polls, Files, Agenda, People, Tasks, Bulletin, Budget, Notes, Share, and (if it\'s an Enterprise event and you\'re the organizer) Analytics.' }
@@ -200,7 +200,7 @@ const ARTICLES = [
       {
         type: 'callout',
         variant: 'info',
-        text: 'The chat rate limiter allows up to 30 messages per minute. If you hit this limit, you\'ll see a brief error. It resets automatically after a minute.'
+        text: 'A rate limit applies to prevent spam. If you hit it, you\'ll see a brief error and it resets automatically.'
       },
       {
         type: 'faq',
@@ -728,7 +728,7 @@ const ARTICLES = [
           { title: 'Hard refresh the page', body: 'Press Ctrl+Shift+R (Windows/Linux) or Cmd+Shift+R (Mac) to force a full reload bypassing cache. Wait 10–15 seconds for the backend to respond, especially if the server was recently restarted.' },
           { title: 'Check the status page', body: 'Go to planitapp.onrender.com/status to see if there\'s a known incident or outage. If a backend is marked as degraded or down, that\'s why the workspace isn\'t loading.' },
           { title: 'Wait for cold-start', body: 'PlanIt runs on Render\'s free tier. Servers spin down after 15 minutes of inactivity and take 30–60 seconds to cold-start. If the first load is slow, wait a minute and try again.' },
-          { title: 'Check your event link', body: 'Make sure the URL is correct. An incorrect slug or event ID will show a "not found" error. The correct format is planitapp.onrender.com/e/your-slug or planitapp.onrender.com/event/[id].' },
+          { title: 'Check your event link', body: 'Make sure the URL is correct. An incorrect slug or event ID will show a "not found" error. The correct format is planitapp.onrender.com/e/your-slug.' },
           { title: 'Try a different browser', body: 'If the issue persists on one browser, try Chrome, Firefox, or Safari. Clear localStorage on your current browser (DevTools → Application → Local Storage → Clear).' },
           { title: 'Still broken?', body: 'Email planit.userhelp@gmail.com with your event link, the browser you\'re using, and a screenshot of any error messages. We\'ll investigate.' }
         ]
@@ -1191,7 +1191,7 @@ const ARTICLES_EXTRA = [
     content: [
       { type: 'intro', text: 'An "Event not found" error means the workspace could not be located. Here are the most common causes.' },
       { type: 'steps', items: [
-        { title: 'Check the URL carefully', body: 'Paste the event link fresh into your browser address bar. A single typo in the slug or ID causes a 404. Correct formats: planitapp.onrender.com/e/your-slug or planitapp.onrender.com/event/[id].' },
+        { title: 'Check the URL carefully', body: 'Paste the event link fresh into your browser address bar. A single typo in the slug causes a 404.' },
         { title: 'The event may have been deleted', body: 'All events are permanently deleted 7 days after the event date. If the event ended more than 7 days ago, it no longer exists and cannot be recovered.' },
         { title: 'Wrong link version', body: 'There are two URL formats (slug and database ID). Both work, but confirm you have the one the organizer shared. Both resolve to the same workspace.' },
         { title: 'Ask the organizer', body: 'If the event is still active, ask the organizer to copy the link directly from their workspace Share tab and send it again.' },
@@ -1298,7 +1298,7 @@ const ARTICLES_EXTRA = [
         { title: 'Custom slug', body: 'Edit the "Event URL" field in the creation form. Use lowercase letters, numbers, and hyphens only. Example: winter-gala.' },
         { title: 'Uniqueness check', body: 'When you finish typing the slug, PlanIt immediately checks if it is taken. A red error appears if it is — choose something different.' },
         { title: 'Slug is permanent', body: 'The slug cannot be changed after creation. Choose carefully.' },
-        { title: 'Fallback URL always works', body: 'Every event also has a permanent fallback URL: planitapp.onrender.com/event/[database-id]. This works regardless of any slug.' },
+        { title: 'Fallback URL always works', body: 'Every event has a permanent link that works regardless of any slug changes.' },
       ]},
     ],
   },
@@ -2711,7 +2711,7 @@ const ARTICLES_EXTRA = [
       {
         type: 'callout',
         variant: 'info',
-        text: 'The event URL follows the format planitapp.onrender.com/e/your-slug. If you didn\'t set a custom slug, the fallback is planitapp.onrender.com/event/[database-id].'
+        text: 'The event URL follows the format planitapp.onrender.com/e/your-slug. A unique permanent link is also generated for every event.'
       }
     ]
   },
@@ -2729,7 +2729,7 @@ const ARTICLES_EXTRA = [
       {
         type: 'steps',
         items: [
-          { title: 'Open the event link', body: 'Click or paste the link the organizer shared with you. It looks like planitapp.onrender.com/e/event-name or planitapp.onrender.com/event/[id].' },
+          { title: 'Open the event link', body: 'Click or paste the link the organizer shared with you. It looks like planitapp.onrender.com/e/event-name.' },
           { title: 'Enter the event password (if required)', body: 'If the organizer set an event password, you\'ll see a password prompt before you can enter. Enter the password they gave you. This is separate from the organizer account password.' },
           { title: 'Choose a display name', body: 'Pick a username that your team will recognise you by. This name appears in the chat, on tasks you create or complete, in polls, and in the people list.' },
           { title: 'You\'re in', body: 'You\'ll land directly in the workspace. The chat tab opens by default. Use the tab bar to navigate between Chat, Polls, Files, Agenda, People, Tasks, Bulletin, Budget, Notes, Share, and (if it\'s an Enterprise event and you\'re the organizer) Analytics.' }
@@ -2859,7 +2859,7 @@ const ARTICLES_EXTRA = [
       {
         type: 'callout',
         variant: 'info',
-        text: 'The chat rate limiter allows up to 30 messages per minute. If you hit this limit, you\'ll see a brief error. It resets automatically after a minute.'
+        text: 'A rate limit applies to prevent spam. If you hit it, you\'ll see a brief error and it resets automatically.'
       },
       {
         type: 'faq',
@@ -3387,7 +3387,7 @@ const ARTICLES_EXTRA = [
           { title: 'Hard refresh the page', body: 'Press Ctrl+Shift+R (Windows/Linux) or Cmd+Shift+R (Mac) to force a full reload bypassing cache. Wait 10–15 seconds for the backend to respond, especially if the server was recently restarted.' },
           { title: 'Check the status page', body: 'Go to planitapp.onrender.com/status to see if there\'s a known incident or outage. If a backend is marked as degraded or down, that\'s why the workspace isn\'t loading.' },
           { title: 'Wait for cold-start', body: 'PlanIt runs on Render\'s free tier. Servers spin down after 15 minutes of inactivity and take 30–60 seconds to cold-start. If the first load is slow, wait a minute and try again.' },
-          { title: 'Check your event link', body: 'Make sure the URL is correct. An incorrect slug or event ID will show a "not found" error. The correct format is planitapp.onrender.com/e/your-slug or planitapp.onrender.com/event/[id].' },
+          { title: 'Check your event link', body: 'Make sure the URL is correct. An incorrect slug or event ID will show a "not found" error. The correct format is planitapp.onrender.com/e/your-slug.' },
           { title: 'Try a different browser', body: 'If the issue persists on one browser, try Chrome, Firefox, or Safari. Clear localStorage on your current browser (DevTools → Application → Local Storage → Clear).' },
           { title: 'Still broken?', body: 'Email planit.userhelp@gmail.com with your event link, the browser you\'re using, and a screenshot of any error messages. We\'ll investigate.' }
         ]
