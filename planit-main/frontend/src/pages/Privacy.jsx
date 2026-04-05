@@ -1,7 +1,8 @@
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Shield } from 'lucide-react';
 
-const LAST_UPDATED = 'February 17, 2026';
+const LAST_UPDATED = 'April 3, 2026';
+const EFFECTIVE_DATE = 'April 3, 2026';
 
 function Section({ number, title, children }) {
   return (
