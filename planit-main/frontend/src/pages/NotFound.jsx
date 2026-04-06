@@ -56,9 +56,9 @@ export default function NotFound() {
           <div style={{ borderTop:"1px solid #e5e5e5", paddingTop:40 }}>
             <p style={{ fontSize:12, fontWeight:700, color:"#aaa", letterSpacing:"0.1em", textTransform:"uppercase", marginBottom:20 }}>Still need help?</p>
             <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(160px, 1fr))", gap:12 }}>
-              <SupportCard icon="✉️" title="Email support" desc="planit.userhelp@gmail.com" href="mailto:planit.userhelp@gmail.com" />
-              <SupportCard icon="📖" title="Help center" desc="Guides & documentation" href="/help" />
-              <SupportCard icon="🏠" title="Home page" desc="Create or join an event" href="/" />
+              <SupportCard icon="" title="Email support" desc="planit.userhelp@gmail.com" href="mailto:planit.userhelp@gmail.com" />
+              <SupportCard icon="" title="Help center" desc="Guides & documentation" href="/help" />
+              <SupportCard icon="" title="Home page" desc="Create or join an event" href="/" />
             </div>
           </div>
 
