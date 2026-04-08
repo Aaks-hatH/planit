@@ -10,7 +10,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 - Self-hosting, forking, modifying, or redistributing the code is **not permitted**
 - Use only through the official hosted service at planitapp.onrender.com
-- See `planit-main/planit-main/LICENSE` for full license terms
+- See `LICENSE` for full license terms
 
 ---
 
@@ -18,19 +18,19 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ```
 planit-main/
-└── planit-main/
-    ├── backend/     # Node.js 24.x Express API server
-    ├── frontend/    # React 18 + Vite SPA
-    ├── router/      # Node.js 20.x sticky load balancer
-    ├── watchdog/    # Node.js 20.x uptime monitoring service
-    └── docs/        # Static documentation (Netlify)
+├── backend/     # Node.js 24.x Express API server
+├── frontend/    # React 18 + Vite SPA
+├── router/      # Node.js 20.x sticky load balancer
+├── watchdog/    # Node.js 20.x uptime monitoring service
+├── docs/        # Static documentation (Netlify)
+└── .github/     # CI/CD workflows
 ```
 
 ## Commands
 
 ### Backend
 ```bash
-cd planit-main/planit-main/backend
+cd backend
 npm install          # Install dependencies
 npm start            # Run production server
 npm run dev          # Run with nodemon (development)
@@ -40,7 +40,7 @@ npx eslint . --ext .js --fix     # Auto-fix lint issues
 
 ### Frontend
 ```bash
-cd planit-main/planit-main/frontend
+cd frontend
 npm install          # Install dependencies
 npm run dev          # Vite dev server
 npm run build        # Production build
@@ -50,7 +50,7 @@ npm run lint         # ESLint
 
 ### Router
 ```bash
-cd planit-main/planit-main/router
+cd router
 npm install
 npm start
 npm run dev
@@ -58,7 +58,7 @@ npm run dev
 
 ### Watchdog
 ```bash
-cd planit-main/planit-main/watchdog
+cd watchdog
 npm install
 npm start
 npm run dev
