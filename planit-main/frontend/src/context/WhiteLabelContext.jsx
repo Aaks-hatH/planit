@@ -26,6 +26,7 @@ const NATIVE_HOSTS = [
   '127.0.0.1',
   'planitapp.onrender.com',
   'planit-router.onrender.com',
+  'planitapp.vercel.app',
   ...(import.meta.env.VITE_MAIN_DOMAIN ? [import.meta.env.VITE_MAIN_DOMAIN] : []),
 ];
 
