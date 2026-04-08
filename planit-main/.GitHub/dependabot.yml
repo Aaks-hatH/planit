@@ -1,0 +1,67 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# PlanIT — Dependabot Configuration
+
+
+version: 2
+
+updates:
+  # ── Backend (Express / Node.js) ───────────────────────────────────────────
+  - package-ecosystem: "npm"
+    directory: "/backend"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "America/New_York"
+    # Only open PRs for security fixes, not every available update.
+    # "security" = only when there's a known CVE. This keeps noise low.
+    open-pull-requests-limit: 10
+    labels:
+      - "dependencies"
+      - "security"
+      - "backend"
+    reviewers:
+      - "your-github-username"   # ← replace with your actual username
+    commit-message:
+      prefix: "fix(deps)"
+    # Group all patch-level updates into one weekly PR to reduce noise.
+    # Security updates always get their own PR regardless of this grouping.
+    groups:
+      backend-patch-updates:
+        update-types:
+          - "patch"
+
+  # ── Frontend (React / Vite) ───────────────────────────────────────────────
+  - package-ecosystem: "npm"
+    directory: "/frontend"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "America/New_York"
+    open-pull-requests-limit: 10
+    labels:
+      - "dependencies"
+      - "security"
+      - "frontend"
+    reviewers:
+      - "your-github-username"   # ← replace with your actual username
+    commit-message:
+      prefix: "fix(deps)"
+    groups:
+      frontend-patch-updates:
+        update-types:
+          - "patch"
+
+  # ── GitHub Actions workflows ──────────────────────────────────────────────
+  # Keeps the Actions themselves (actions/checkout, etc.) up to date.
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    labels:
+      - "dependencies"
+      - "github-actions"
+    reviewers:
+      - "your-github-username"   # ← replace with your actual username

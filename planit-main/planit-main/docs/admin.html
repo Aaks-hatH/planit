@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin Panel — PlanIt Docs</title>
+  <link rel="stylesheet" href="style.css" />
+  <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+  <script>window.CURRENT_PAGE = 'admin';</script>
+</head>
+<body>
+  <div class="sidebar-overlay"></div>
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="sidebar-logo"><a href="index.html"><div class="logo-mark">P</div><div><div class="logo-text">PLANIT</div><div class="logo-sub">Docs</div></div></a></div>
+      <div class="sidebar-search"><div class="sidebar-search-wrap"><svg class="sidebar-search-icon" width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="7" cy="7" r="5"/><path d="M11 11l3 3"/></svg><input class="sidebar-search-input" type="text" placeholder="Search docs..." autocomplete="off" /><span class="search-kbd">/</span></div></div>
+      <nav class="sidebar-nav"></nav>
+      <div class="sidebar-status"><div class="status-dot"></div>All systems operational</div>
+      <div class="sidebar-footer"><a href="https://planitapp.onrender.com" class="sidebar-footer-link" target="_blank">Open PlanIt App →</a></div>
+    </aside>
+    <div class="main">
+      <div class="topbar">
+        <div class="topbar-left">
+          <button class="menu-toggle" aria-label="Toggle menu"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><line x1="2" y1="5" x2="16" y2="5"/><line x1="2" y1="9" x2="16" y2="9"/><line x1="2" y1="13" x2="16" y2="13"/></svg></button>
+          <div class="topbar-breadcrumb">Docs <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M4 2l4 4-4 4"/></svg> <span>Admin Panel</span></div>
+        </div>
+        <div class="topbar-right"><a href="https://planitapp.onrender.com" class="topbar-btn" target="_blank">Open App →</a></div>
+      </div>
+      <div class="inner-layout">
+        <div class="content">
+
+          <div class="page-header">
+            <div class="page-tag">Reference</div>
+            <h1 class="page-title">Admin Panel</h1>
+            <p class="page-desc">System-wide oversight for PlanIt platform administrators — events, users, analytics, marketing, system health, security, logs, and the command centre.</p>
+          </div>
+
+          <div class="callout danger">
+            <div class="callout-icon"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#ef4444" stroke-width="1.5" stroke-linecap="round"><path d="M8 2l5 2.5V9c0 2.5-2 4.5-5 5-3-1-5-2.5-5-5V4.5L8 2z"/></svg></div>
+            <div class="callout-body">
+              <div class="callout-title">Platform administrators only</div>
+              <p>The admin panel at <code>/admin</code> is for PlanIt platform administrators, not event organisers. If you are an event organiser, you do not have access to the admin panel and do not need this section.</p>
+            </div>
+          </div>
+
+          <h2 id="overview">Overview</h2>
+          <p>The admin panel provides a global view of all events running on the PlanIt platform. It is accessed at <code>/admin</code> and requires a separate admin credential distinct from any organiser account. The panel is a React SPA with a sidebar navigation and 15 distinct sections.</p>
+
+          <h2 id="nav-sections">Panel sections</h2>
+          <div class="table-wrap"><table>
+            <thead><tr><th>Section</th><th>Purpose</th></tr></thead>
+            <tbody>
+              <tr><td>Dashboard</td><td>Summary stats: total events, active events, total guests, admission rate, new events today, platform health snapshot</td></tr>
+              <tr><td>Events</td><td>Full list of all events with search, filter by mode/date/organiser; view, force-close, or delete any event</td></tr>
+              <tr><td>Users</td><td>Organiser accounts: join date, event count, last active; ability to suspend or delete an organiser</td></tr>
+              <tr><td>Organisers</td><td>Detailed per-organiser view: all their events, guest totals, activity log</td></tr>
+              <tr><td>Staff</td><td>Platform staff management: staff accounts, roles, and access levels</td></tr>
+              <tr><td>Employees</td><td>Internal team management (distinct from platform staff)</td></tr>
+              <tr><td>Analytics</td><td>Platform-wide aggregated stats: events over time, check-in rates, feature usage, geographic distribution</td></tr>
+              <tr><td>Fleet</td><td>Infrastructure overview: server instances, resource utilisation</td></tr>
+              <tr><td>Security</td><td>Fraud reports, suspicious activity log, IP bans, security configuration settings</td></tr>
+              <tr><td>Marketing</td><td>Announcements, email campaigns, waitlist management</td></tr>
+              <tr><td>System</td><td>Environment configuration, feature flags, maintenance mode</td></tr>
+              <tr><td>Logs</td><td>Server logs, error logs, audit trail for admin actions</td></tr>
+              <tr><td>Uptime</td><td>Historical uptime chart, incident log, watchdog status</td></tr>
+              <tr><td>Reports</td><td>User-submitted bug reports and support tickets</td></tr>
+              <tr><td>Command Centre</td><td>Direct server commands: trigger data retention cleanup, restart services, flush caches, run diagnostics</td></tr>
+            </tbody>
+          </table></div>
+
+          <h2 id="events-management">Events management</h2>
+          <p>The events table shows every active and recent event on the platform with:</p>
+          <ul>
+            <li>Event name, slug, and mode (Standard / Enterprise / Table Service)</li>
+            <li>Organiser identity and join date</li>
+            <li>Participant count and guest count (Enterprise)</li>
+            <li>Check-in rate and last activity timestamp</li>
+            <li>Days until deletion countdown (non-Table Service events)</li>
+          </ul>
+          <p>Administrators can search by event name or slug, filter by mode or date range, view full event details and guest lists, and in exceptional cases force-close or immediately delete events.</p>
+
+          <h2 id="analytics">Analytics</h2>
+          <p>The analytics section provides platform-wide aggregate metrics including:</p>
+          <ul>
+            <li>Total events created per day/week/month (chart)</li>
+            <li>Total invites sent and admission rates across all events</li>
+            <li>Mode distribution: what fraction of events use Standard vs Enterprise vs Table Service</li>
+            <li>Most active features: which workspace tools see the most engagement</li>
+            <li>Peak usage times: which days and hours see the most check-in activity</li>
+            <li>Returning organiser rate: what fraction of organisers have created more than one event</li>
+          </ul>
+          <p>Analytics are anonymised at the individual guest level — no personally identifiable information is surfaced in aggregated views.</p>
+
+          <h2 id="security-panel">Security panel</h2>
+          <p>The security section exposes platform-level security controls:</p>
+
+          <h3 id="env-vars">Security environment variables</h3>
+          <div class="table-wrap"><table>
+            <thead><tr><th>Variable</th><th>Default</th><th>Effect</th></tr></thead>
+            <tbody>
+              <tr><td><code>SECURITY_ENABLED</code></td><td><code>true</code></td><td>Enables or disables the entire anti-fraud middleware system</td></tr>
+              <tr><td><code>SECURITY_BAN_MINUTES</code></td><td><code>60</code></td><td>How long a banned IP or session remains blocked</td></tr>
+              <tr><td><code>SECURITY_MAX_ATTEMPTS</code></td><td><code>10</code></td><td>Maximum failed auth attempts before a session is locked</td></tr>
+              <tr><td><code>SECURITY_TRUST_THRESHOLD</code></td><td><code>50</code></td><td>Trust score below which auto-block triggers (if enabled per-event)</td></tr>
+              <tr><td><code>SECURITY_WINDOW_BEFORE_HOURS</code></td><td><code>2</code></td><td>Hours before event start that check-in window opens</td></tr>
+              <tr><td><code>SECURITY_WINDOW_AFTER_MINUTES</code></td><td><code>30</code></td><td>Minutes after event start that check-in window closes</td></tr>
+            </tbody>
+          </table></div>
+
+          <h3 id="ip-bans">IP bans and session blocks</h3>
+          <p>Administrators can view all active IP bans and session blocks, see which security events triggered them, and manually unblock any entry. Bans are stored in Redis with TTL equal to <code>SECURITY_BAN_MINUTES</code>.</p>
+
+          <h2 id="marketing-tools">Marketing tools</h2>
+          <p>The marketing section provides tools for communicating with the platform's organiser base.</p>
+          <ul>
+            <li><strong>Platform announcements</strong> — publish notices visible to all organisers when they log in. Used for downtime warnings, feature releases, policy changes.</li>
+            <li><strong>Email campaigns</strong> — send targeted emails via the configured transactional email provider (Brevo or Mailjet) to organiser segments. All emails comply with applicable anti-spam laws and operate only on contacts who have used PlanIt.</li>
+            <li><strong>Waitlist management</strong> — view, approve, or reject entries on the platform access waitlist (if waitlist mode is active).</li>
+          </ul>
+
+          <h2 id="system-health">System health</h2>
+          <p>The system view shows real-time health for all platform components:</p>
+          <ul>
+            <li>API server response times and error rate over the last hour</li>
+            <li>MongoDB connection pool status and query latency</li>
+            <li>Redis connection status and memory usage</li>
+            <li>Socket.IO WebSocket server connection count and throughput</li>
+            <li>Cloudinary storage usage and API quota remaining</li>
+            <li>Uptime history and incident log for the past 30 days</li>
+          </ul>
+
+          <h2 id="logs">Logs</h2>
+          <p>The logs section provides access to:</p>
+          <ul>
+            <li><strong>Server logs</strong> — Node.js application logs with level filtering (info, warn, error)</li>
+            <li><strong>Access logs</strong> — HTTP request log with endpoint, method, response code, latency, and IP</li>
+            <li><strong>Audit log</strong> — every admin action with who performed it, what was changed, and the before/after state</li>
+            <li><strong>Security event log</strong> — all anti-fraud triggers, IP bans, failed auth attempts, and manual overrides</li>
+          </ul>
+
+          <h2 id="data-retention">Data retention management</h2>
+          <p>PlanIt's retention policy deletes all event data seven days after the event date. The deletion job runs automatically at 2 AM daily. From the admin panel, administrators can:</p>
+          <ul>
+            <li>View which events are scheduled for deletion in the next 24 hours</li>
+            <li>See a full list of events deleted in the last 30 days</li>
+            <li>In exceptional circumstances, manually trigger or defer deletion of a specific event</li>
+          </ul>
+
+          <div class="callout warn">
+            <div class="callout-icon"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#f59e0b" stroke-width="1.5" stroke-linecap="round"><path d="M8 2L2 13h12L8 2z"/><line x1="8" y1="7" x2="8" y2="10"/><circle cx="8" cy="12" r=".6" fill="#f59e0b" stroke="none"/></svg></div>
+            <div class="callout-body">
+              <div class="callout-title">Deletion is permanent — for everyone</div>
+              <p>Once event data is deleted by the retention policy or manually, it cannot be recovered by admins, organisers, or support staff. There are no backups that restore individual event data. This is by design to protect guest privacy.</p>
+            </div>
+          </div>
+
+          <h2 id="bug-reports">Bug reports &amp; support tickets</h2>
+          <p>User-submitted reports from <code>/support</code> are routed to the admin panel. Each report shows:</p>
+          <ul>
+            <li>Submitted timestamp and user browser/OS info (auto-collected)</li>
+            <li>User-written description of the issue</li>
+            <li>Category (bug, feature request, account issue, other)</li>
+            <li>Status: Open, In Progress, Resolved, Closed</li>
+          </ul>
+          <p>Administrators can change status, add internal notes, and mark reports as resolved.</p>
+
+          <h2 id="command-centre">Command Centre</h2>
+          <p>The Command Centre provides direct server operations for platform maintenance:</p>
+          <ul>
+            <li><strong>Run retention cleanup now</strong> — immediately execute the deletion job rather than waiting for the 2 AM cron</li>
+            <li><strong>Flush Redis cache</strong> — clear all rate-limit counters and session caches (use with caution — this resets all active rate windows)</li>
+            <li><strong>Restart WebSocket server</strong> — gracefully restart the Socket.IO layer and re-connect all clients</li>
+            <li><strong>Force reconnect watchdog</strong> — re-initialize the watchdog monitoring ping loop</li>
+            <li><strong>Run database diagnostics</strong> — execute a suite of read/write tests and report latency</li>
+          </ul>
+
+          <div class="page-nav">
+            <a href="integrations.html" class="page-nav-link">
+              <span class="page-nav-label">← Previous</span>
+              <span class="page-nav-title">Integrations &amp; QR</span>
+            </a>
+            <a href="troubleshooting.html" class="page-nav-link page-nav-next">
+              <span class="page-nav-label">Next →</span>
+              <span class="page-nav-title">Troubleshooting</span>
+            </a>
+          </div>
+        </div>
+        <div class="toc-right"></div>
+      </div>
+    </div>
+  </div>
+  <script src="nav.js"></script>
+</body>
+</html>
