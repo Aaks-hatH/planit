@@ -1,90 +1,97 @@
 # PlanIt
 
-**Professional event management. Free to use.**
+**Professional event management. Free.**
 
-PlanIt is a hosted event management platform for organisers who need professional check-in, guest management, seating, and real-time staff tools without subscription fees or enterprise overhead.
+PlanIt is an all-in-one hosted platform for running events — from intimate gatherings to large-scale multi-staff operations. Guest lists, check-in, seating, real-time coordination, table service, and more, all in one place. No installs, no subscriptions, no setup.
 
 ---
 
-## Using PlanIt
+## Get started
 
 PlanIt is available at **[planitapp.onrender.com](https://planitapp.onrender.com)**.
 
-Create an organiser account, set up an event, add guests, and share invite links. No configuration, no server setup, no deployment required.
-
-Full documentation is available at the docs site.
+Create an organiser account, build your event, and you're ready. Share invite links with guests, add staff with a PIN, and go.
 
 ---
 
-## What PlanIt does
+## What you can do
 
-**For organisers**
-- Create and manage events with a full guest list
-- Add guests individually or via CSV bulk import
-- Assign seating with a drag-and-drop visual map
-- Set security levels and anti-fraud rules
-- View real-time check-in statistics and activity logs
+### Organisers
+- Build a full guest list — add individually or import via CSV
+- Assign seating with a drag-and-drop visual floor map
+- Set per-event security levels, entry rules, and anti-fraud controls
+- Track check-ins live with real-time statistics and activity logs
+- Run countdown timers, announcements, and event utilities
+- Export attendance reports and event data at any time
 
-**For check-in staff**
-- PIN-based staff login — no organiser access required
-- QR code scanning via device camera
-- Boarding-pass review before admitting guests
-- Offline mode with automatic sync on reconnect
-- Walkie-talkie (WebRTC push-to-talk) for team communication
+### Check-in staff
+- PIN-based login — no organiser credentials needed
+- Scan guest QR codes directly from any device camera
+- Review guest boarding passes before granting entry
+- Offline mode — keeps working if signal drops, syncs automatically when back online
+- Built-in walkie-talkie (push-to-talk) for staff coordination during the event
 
-**For guests**
-- Personal invite link with QR code — no account required
-- Mobile wallet card view (`/card/CODE`)
-- Print-ready name badge (`/badge/CODE`)
-- Direct QR image embed URL (`/qr/CODE`)
+### Guests
+- Personal invite link with a unique QR code — no account required
+- Mobile wallet-style card view
+- Print-ready name badge
+- Direct QR image link for embedding in other systems
+
+### Table service (restaurant & hospitality)
+- Live wait board with queue positions
+- QR-based table reservations and walk-in management
+- Floor map with real-time table occupancy
+- Server assignment and waitlist controls
+
+---
+
+## Enterprise & white-label
+
+Organisations that need a branded experience can apply for a white-label arrangement. This gives you a custom domain, your own branding, and a dedicated client portal.
+
+Contact **[planit.userhelp@gmail.com](mailto:planit.userhelp@gmail.com)** with your organisation name and intended use to enquire.
+
+---
+
+## Pricing
+
+PlanIt is **free to use** through the official hosted service. There are no per-event fees, no guest limits charged, and no feature tiers. Enterprise and white-label arrangements are available separately.
+
+---
+
+## Status & uptime
+
+Live platform status is available at **[planitapp.onrender.com/status](https://planitapp.onrender.com/status)**.
+
+The status page shows real-time health for all platform components, active incidents, and historical uptime. Subscribe to incident notifications via the page if you want to be alerted automatically.
+
+---
+
+## Support
+
+- **Help & bug reports:** [planitapp.onrender.com/help](https://planitapp.onrender.com/help)
+- **Email:** [planit.userhelp@gmail.com](mailto:planit.userhelp@gmail.com)
+
+Please use the in-app help form for support requests. Do not open GitHub issues for support — issues in this repository are for tracking acknowledged defects only.
+
+---
+
+## Data & privacy
+
+PlanIt stores only what is needed to operate your event. All event data — guest lists, messages, files, and check-in records — is automatically and permanently deleted **seven days after the event date**. There is no manual step required.
+
+Full details are in the [Privacy Policy](https://planitapp.onrender.com/privacy).
 
 ---
 
 ## Licence
 
-**PlanIt is proprietary freeware.**
+PlanIt is **proprietary freeware**. The source code is published here for transparency — it is not open-source software and no open-source licence applies.
 
-This repository is published for transparency. It is **not open-source software**.
+You may not self-host, fork, redistribute, or build on this codebase. The software is free to use exclusively through the official hosted service at [planitapp.onrender.com](https://planitapp.onrender.com).
 
-The following are **not permitted**:
-
-- Self-hosting or operating your own instance of PlanIt
-- Forking, modifying, or redistributing the source code
-- Using PlanIt's codebase as the basis for another product
-- Removing or altering copyright notices
-
-The software is free to use through the official hosted service at [planitapp.onrender.com](https://planitapp.onrender.com). No fee is charged for use of the hosted service.
-
-For the full licence terms, see [LICENSE](./planit-main/LICENSE).
+For the full licence terms, see [LICENSE](./planit-main/LICENSE). For permissions enquiries, contact [planit.userhelp@gmail.com](mailto:planit.userhelp@gmail.com).
 
 ---
 
-## Technology
-
-PlanIt is built with:
-
-- **Backend:** Node.js, Express, MongoDB, Redis, Socket.IO
-- **Frontend:** React, Vite, Tailwind CSS
-- **Real-time:** WebSocket mesh for check-in sync and walkie-talkie
-- **QR:** `qrcode` library, `html5-qrcode` for scanning
-- **Deployment:** Render (backend + frontend), Netlify (docs)
-
-This information is provided for transparency. It does not constitute permission to reproduce the architecture or implementation.
-
----
-
-## Reporting issues
-
-Use the support form at [planitapp.onrender.com/help](https://planitapp.onrender.com/help) to report bugs or request help.
-
-Do not open GitHub issues for support requests. Issues in this repository are for tracking acknowledged defects only.
-
----
-
-## Data and privacy
-
-PlanIt stores the minimum data necessary to operate. All event data is automatically deleted seven days after the event date. See the [Privacy Policy](https://planitapp.onrender.com/privacy) for full details.
-
----
-
-&copy; PlanIt. All rights reserved.
+&copy; PlanIt — All rights reserved.
