@@ -1,6 +1,8 @@
 'use strict';
 
 require('dotenv').config();
+
+const VERSION = '1.1.0'; // bump on every deploy — appears in all ntfy alerts
 const express  = require('express');
 const mongoose = require('mongoose');
 const axios    = require('axios');
@@ -102,6 +104,7 @@ if (!MONGO_URI) {
 
 console.log(`\n[${ts()}] +==================================================+`);
 console.log(`[${ts()}] |     PlanIt Watchdog - ENTERPRISE - STARTING     |`);
+console.log(`[${ts()}] |     Version: ${VERSION.padEnd(37)}|`);
 console.log(`[${ts()}] +==================================================+`);
 console.log(`[${ts()}]   Monitoring ${targets.length} target(s):`);
 targets.forEach(t => console.log(`[${ts()}]     [${t.type}] ${t.name} -> ${t.pingUrl}`));
@@ -437,7 +440,9 @@ async function sendNtfy({ title, message, priority = 'high', tags = [] }) {
     };
     if (NTFY_TOKEN)   headers['Authorization'] = `Bearer ${NTFY_TOKEN}`;
     if (FRONTEND_URL) headers['Actions'] = `view, Open Status Page, ${FRONTEND_URL}/status`;
-    const res = await axios.post(NTFY_URL, message, { headers, timeout: 10000 });
+    // Append watchdog version to every message so you can tell which build sent the alert
+    const body = message + `\n\n— watchdog v${VERSION}`;
+    const res = await axios.post(NTFY_URL, body, { headers, timeout: 10000 });
     console.log(`[${ts()}] [ntfy] Sent: "${title}" (HTTP ${res.status})`);
   } catch (err) {
     const status = err.response?.status;
@@ -879,6 +884,7 @@ app.get('/mesh/logs', meshAuth(SERVICE_NAME), (_req, res) => {
 app.get('/mesh/status', meshAuth(SERVICE_NAME), (_req, res) => {
   res.json({
     service: SERVICE_NAME,
+    version: VERSION,
     uptime:  Math.floor(process.uptime()),
     targets: Object.entries(states).map(([name, s]) => ({
       name,
@@ -969,7 +975,7 @@ async function boot() {
 
   await sendNtfy({
     title:    'Monitoring Active',
-    message:  `PlanIt automated monitoring is online.\nChecking ${targets.length} service(s) every ${PING_MS / 1000}s:\n${targets.map(t => `* ${t.name}`).join('\n')}\n\nYou will be notified immediately of any service disruptions.`,
+    message:  `PlanIt automated monitoring is online (v${VERSION}).\nChecking ${targets.length} service(s) every ${PING_MS / 1000}s:\n${targets.map(t => `* ${t.name}`).join('\n')}\n\nYou will be notified immediately of any service disruptions.`,
     priority: 'default',
     tags:     ['monitoring'],
   });
