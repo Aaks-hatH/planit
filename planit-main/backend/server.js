@@ -4,6 +4,8 @@
  */
 
 require('dotenv').config();
+
+const VERSION = '1.1.0'; // bump this on every deploy so ntfy alerts show which build is running
 const { verifyIntegrity, scheduleReverification } = require('./keys');
 verifyIntegrity();
 scheduleReverification();
@@ -539,8 +541,9 @@ connectDB().then(async () => {
     const name   = process.env.BACKEND_LABEL  || 'Backend';
     const region = process.env.BACKEND_REGION ? ` — ${process.env.BACKEND_REGION}` : '';
     console.log('\n' + '='.repeat(70));
-    console.log(` PlanIt Backend — ${name}${region}`);
+    console.log(` PlanIt Backend — ${name}${region}  [v${VERSION}]`);
     console.log('='.repeat(70));
+    console.log(`  Version:     ${VERSION}`);
     console.log(`  Port:        ${PORT}`);
     console.log(`  Environment: ${process.env.NODE_ENV || 'development'}`);
     console.log(`  CORS Origin: ${process.env.CORS_ORIGIN || 'http://localhost:5173'}`);
