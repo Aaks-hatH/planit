@@ -451,23 +451,30 @@ async function initRedisAdapter() {
     console.log('[io] No REDIS_URL — in-memory adapter (single-instance mode)');
     return;
   }
+  let pubClient, subClient;
   try {
     const Redis             = require('ioredis');
     const { createAdapter } = require('@socket.io/redis-adapter');
     const tlsOptions = redisUrl.startsWith('rediss://') ? { tls: { rejectUnauthorized: false } } : {};
-    const pubClient  = new Redis(redisUrl, { ...tlsOptions, maxRetriesPerRequest: 3, enableReadyCheck: false, lazyConnect: false });
-    const subClient  = pubClient.duplicate();
-    await Promise.all([
-      new Promise((resolve, reject) => { pubClient.once('ready', resolve); pubClient.once('error', reject); setTimeout(() => reject(new Error('pub timeout')), 10_000); }),
-      new Promise((resolve, reject) => { subClient.once('ready', resolve); subClient.once('error', reject); setTimeout(() => reject(new Error('sub timeout')), 10_000); }),
-    ]);
-    // Persistent error handlers — MUST be attached after the ready handshake.
-    // ioredis emits 'error' on any subsequent connection drop (network blip,
-    // Upstash idle eviction, TLS reset, etc.). Without these listeners Node.js
+    pubClient = new Redis(redisUrl, { ...tlsOptions, maxRetriesPerRequest: 3, enableReadyCheck: false, lazyConnect: false });
+    subClient = pubClient.duplicate();
+
+    // Persistent error handlers — attached IMMEDIATELY after client creation,
+    // BEFORE any await. ioredis emits 'error' on connection drops (network
+    // blip, Upstash idle eviction, TLS reset, etc.). Without these, Node.js
     // treats the emitted error as an unhandled EventEmitter error and crashes
-    // the entire process — which is what was causing the 502s on Iceman.
+    // the process → Render 502.
+    //
+    // Previously these were attached AFTER the ready handshake await, which
+    // meant a timeout or early error could orphan the clients with no handler—
+    // the next reconnect attempt would then crash the process.
     pubClient.on('error', err => console.error('[io] Redis pub error (non-fatal):', err.message));
     subClient.on('error', err => console.error('[io] Redis sub error (non-fatal):', err.message));
+
+    await Promise.all([
+      new Promise((resolve, reject) => { pubClient.once('ready', resolve); setTimeout(() => reject(new Error('pub timeout')), 10_000); }),
+      new Promise((resolve, reject) => { subClient.once('ready', resolve); setTimeout(() => reject(new Error('sub timeout')), 10_000); }),
+    ]);
 
     io.adapter(createAdapter(pubClient, subClient));
     console.log('[io] Redis adapter active — all 5 instances share signaling bus');
@@ -476,6 +483,10 @@ async function initRedisAdapter() {
     process.once('SIGINT',  shutdown);
   } catch (err) {
     console.error('[io] Redis adapter init failed, using in-memory fallback:', err.message);
+    // Disconnect orphaned clients so they stop retrying and cannot emit
+    // errors with no listener after we have fallen back to in-memory mode.
+    if (pubClient) pubClient.disconnect().catch(() => {});
+    if (subClient) subClient.disconnect().catch(() => {});
   }
 }
 
