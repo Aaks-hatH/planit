@@ -461,6 +461,14 @@ async function initRedisAdapter() {
       new Promise((resolve, reject) => { pubClient.once('ready', resolve); pubClient.once('error', reject); setTimeout(() => reject(new Error('pub timeout')), 10_000); }),
       new Promise((resolve, reject) => { subClient.once('ready', resolve); subClient.once('error', reject); setTimeout(() => reject(new Error('sub timeout')), 10_000); }),
     ]);
+    // Persistent error handlers — MUST be attached after the ready handshake.
+    // ioredis emits 'error' on any subsequent connection drop (network blip,
+    // Upstash idle eviction, TLS reset, etc.). Without these listeners Node.js
+    // treats the emitted error as an unhandled EventEmitter error and crashes
+    // the entire process — which is what was causing the 502s on Iceman.
+    pubClient.on('error', err => console.error('[io] Redis pub error (non-fatal):', err.message));
+    subClient.on('error', err => console.error('[io] Redis sub error (non-fatal):', err.message));
+
     io.adapter(createAdapter(pubClient, subClient));
     console.log('[io] Redis adapter active — all 5 instances share signaling bus');
     const shutdown = async () => { await pubClient.quit().catch(() => {}); await subClient.quit().catch(() => {}); };
