@@ -493,21 +493,49 @@ async function initRedisAdapter() {
 }
 
 // ─── MongoDB + server startup ──────────────────────────────────────────────────
+// IMPORTANT: connectDB must never call process.exit(). If the DB is temporarily
+// unreachable on startup (Atlas hiccup, network blip, connection-limit spike),
+// killing the process creates a Render restart loop where the service never
+// reaches server.listen() — Render's own load-balancer returns 503 for every
+// request including the watchdog's /api/uptime/ping health check.  This makes
+// the backend appear fully down even though the problem is transient.
+//
+// Instead: start the HTTP server first (so ping/health checks always respond),
+// then connect to MongoDB with exponential-backoff retries in the background.
+// Routes that need the DB will naturally fail with 503 until the connection is
+// established, but the health/ping endpoints return 200 the whole time.
+const MAX_DB_RETRIES  = 10;
+const DB_RETRY_BASE_MS = 2000; // doubles each attempt: 2s, 4s, 8s … capped at 60s
+
 const connectDB = async () => {
-  try {
-    if (!process.env.MONGODB_URI) throw new Error('MONGODB_URI not defined');
-    if (process.env.NODE_ENV === 'development') mongoose.set('debug', true);
-    await mongoose.connect(process.env.MONGODB_URI, { useNewUrlParser: true, useUnifiedTopology: true });
-    console.log('MongoDB connected');
-    console.log(`  Database: ${mongoose.connection.name}`);
-    startCleanupScheduler();
-    seedBlogPosts();
-    mongoose.connection.on('error',        err => console.error('MongoDB error:', err));
-    mongoose.connection.on('disconnected', ()  => console.warn('MongoDB disconnected'));
-    mongoose.connection.on('reconnected',  ()  => console.log('MongoDB reconnected'));
-  } catch (err) {
-    console.error('MongoDB connection failed:', err.message);
-    process.exit(1);
+  if (!process.env.MONGODB_URI) {
+    console.error('FATAL: MONGODB_URI is not defined — database features will be unavailable.');
+    return; // do not exit; let ping/health keep the service marked UP
+  }
+  if (process.env.NODE_ENV === 'development') mongoose.set('debug', true);
+
+  mongoose.connection.on('error',        err => console.error('MongoDB error:', err));
+  mongoose.connection.on('disconnected', ()  => console.warn('MongoDB disconnected'));
+  mongoose.connection.on('reconnected',  ()  => console.log('MongoDB reconnected'));
+
+  for (let attempt = 1; attempt <= MAX_DB_RETRIES; attempt++) {
+    try {
+      await mongoose.connect(process.env.MONGODB_URI, { useNewUrlParser: true, useUnifiedTopology: true });
+      console.log('MongoDB connected');
+      console.log(`  Database: ${mongoose.connection.name}`);
+      startCleanupScheduler();
+      seedBlogPosts();
+      return; // success
+    } catch (err) {
+      const delayMs = Math.min(DB_RETRY_BASE_MS * Math.pow(2, attempt - 1), 60_000);
+      console.error(`MongoDB connection failed (attempt ${attempt}/${MAX_DB_RETRIES}): ${err.message}`);
+      if (attempt === MAX_DB_RETRIES) {
+        console.error('MongoDB: all retry attempts exhausted — running without DB. Ping/health endpoints remain operational.');
+        return; // still do not exit
+      }
+      console.log(`  Retrying in ${delayMs / 1000}s…`);
+      await new Promise(r => setTimeout(r, delayMs));
+    }
   }
 };
 
@@ -526,43 +554,53 @@ async function announceToRouter() {
   console.warn(`[${process.env.BACKEND_LABEL || 'Backend'}] [mesh] Could not announce to router`);
 }
 
-connectDB().then(async () => {
+// Start the HTTP server immediately — before the DB connection attempt.
+// This ensures Render's health check and the watchdog's /api/uptime/ping
+// always get a response, even if MongoDB is slow to come up.  Without this,
+// a failed connectDB() that called process.exit() would prevent server.listen()
+// from ever running, making Render return 503 for every request and triggering
+// a false "backend down" incident.
+const PORT = process.env.PORT || 5000;
+server.listen(PORT, () => {
+  const name   = process.env.BACKEND_LABEL  || 'Backend';
+  const region = process.env.BACKEND_REGION ? ` — ${process.env.BACKEND_REGION}` : '';
+  console.log('\n' + '='.repeat(70));
+  console.log(` PlanIt Backend — ${name}${region}  [v${VERSION}]`);
+  console.log('='.repeat(70));
+  console.log(`  Version:     ${VERSION}`);
+  console.log(`  Port:        ${PORT}`);
+  console.log(`  Environment: ${process.env.NODE_ENV || 'development'}`);
+  console.log(`  CORS Origin: ${process.env.CORS_ORIGIN || 'http://localhost:5173'}`);
+  console.log(`  Storage:     ${process.env.CLOUDINARY_CLOUD_NAME ? 'Cloudinary' : 'Local'}`);
+  console.log(`  Redis:       ${process.env.REDIS_URL ? 'Adapter active' : 'In-memory'}`);
+  console.log(`  Tarpit:      ${process.env.TARPIT_ENABLED !== 'false' ? 'enabled' : 'disabled'}`);
+  console.log(`  AbuseIPDB:   ${process.env.ABUSEIPDB_API_KEY ? 'enabled' : 'disabled (set ABUSEIPDB_API_KEY)'}`);
+  console.log(`  Honeypots:   30 trap routes active`);
+  const _au = (process.env.ADMIN_USERNAME || '').trim();
+  const _ap = (process.env.ADMIN_PASSWORD || '').trim();
+  if (!_au || !_ap || _au === 'admin' || _ap === 'admin123') {
+    console.log(`  Admin creds: ⚠  using defaults — set ADMIN_USERNAME / ADMIN_PASSWORD`);
+  } else {
+    console.log(`  Admin creds: ✓  configured`);
+  }
+  console.log('='.repeat(70));
+});
+
+// Connect to MongoDB after the server is already listening.
+// Socket.IO and mesh routes are initialised here too because they depend
+// on the DB-backed models being registered first.
+(async () => {
   const { syncConfigFromRouter } = require('./services/configSync');
   await syncConfigFromRouter();
+  await connectDB();
   await initRedisAdapter();
   await _syncDbStateToRouter();
   await _pollMaintenanceState();
   setInterval(_pollMaintenanceState, 5_000);
   require('./socket/chatSocket')(io);
   require('./socket/walkieTalkieSocket')(io);
-
-  const PORT = process.env.PORT || 5000;
-  server.listen(PORT, () => {
-    const name   = process.env.BACKEND_LABEL  || 'Backend';
-    const region = process.env.BACKEND_REGION ? ` — ${process.env.BACKEND_REGION}` : '';
-    console.log('\n' + '='.repeat(70));
-    console.log(` PlanIt Backend — ${name}${region}  [v${VERSION}]`);
-    console.log('='.repeat(70));
-    console.log(`  Version:     ${VERSION}`);
-    console.log(`  Port:        ${PORT}`);
-    console.log(`  Environment: ${process.env.NODE_ENV || 'development'}`);
-    console.log(`  CORS Origin: ${process.env.CORS_ORIGIN || 'http://localhost:5173'}`);
-    console.log(`  Storage:     ${process.env.CLOUDINARY_CLOUD_NAME ? 'Cloudinary' : 'Local'}`);
-    console.log(`  Redis:       ${process.env.REDIS_URL ? 'Adapter active' : 'In-memory'}`);
-    console.log(`  Tarpit:      ${process.env.TARPIT_ENABLED !== 'false' ? 'enabled' : 'disabled'}`);
-    console.log(`  AbuseIPDB:   ${process.env.ABUSEIPDB_API_KEY ? 'enabled' : 'disabled (set ABUSEIPDB_API_KEY)'}`);
-    console.log(`  Honeypots:   30 trap routes active`);
-    const _au = (process.env.ADMIN_USERNAME || '').trim();
-    const _ap = (process.env.ADMIN_PASSWORD || '').trim();
-    if (!_au || !_ap || _au === 'admin' || _ap === 'admin123') {
-      console.log(`  Admin creds: ⚠  using defaults — set ADMIN_USERNAME / ADMIN_PASSWORD`);
-    } else {
-      console.log(`  Admin creds: ✓  configured`);
-    }
-    console.log('='.repeat(70));
-    setTimeout(announceToRouter, 4000);
-  });
-});
+  setTimeout(announceToRouter, 4000);
+})();
 
 process.on('SIGTERM', () => { server.close(() => { mongoose.connection.close(false, () => process.exit(0)); }); });
 process.on('SIGINT',  () => { server.close(() => { mongoose.connection.close(false, () => process.exit(0)); }); });
