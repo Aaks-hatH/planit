@@ -89,6 +89,9 @@ const errorHandler = (err, req, res, next) => {
   // Now we surface a meaningful response and the correct HTTP status.
   if (err.http_code) {
     const status = err.http_code >= 400 && err.http_code < 600 ? err.http_code : 502;
+    if (status === 502 || status === 503) {
+      console.error(`[${status}] errorHandler — Cloudinary error: ${err.message}`);
+    }
     return res.status(status).json({
       error: 'Storage Error',
       // Cloudinary error messages are their API errors (invalid params, auth
@@ -100,6 +103,10 @@ const errorHandler = (err, req, res, next) => {
   // Default error
   const statusCode = err.statusCode || 500;
   const message = err.message || 'Internal Server Error';
+
+  if (statusCode === 502 || statusCode === 503) {
+    console.error(`[${statusCode}] errorHandler — ${err.stack || err.message}`);
+  }
 
   res.status(statusCode).json({
     error: statusCode === 500 ? 'Server Error' : 'Error',
