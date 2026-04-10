@@ -5,7 +5,7 @@
 
 require('dotenv').config();
 
-const VERSION = '1.1.0'; // bump this on every deploy so ntfy alerts show which build is running
+const VERSION = '1.3.1'; // bump this on every deploy so ntfy alerts show which build is running
 const { verifyIntegrity, scheduleReverification } = require('./keys');
 verifyIntegrity();
 scheduleReverification();
@@ -74,8 +74,19 @@ const { tarpit } = require('./middleware/tarpit');
 
 // ─── Maintenance state cache ──────────────────────────────────────────────────
 let _backendMaintenance = { active: false, message: '', eta: null };
+let _maintenancePollRunning = false; // concurrency guard — prevents DB calls stacking up
 
 async function _pollMaintenanceState() {
+  if (_maintenancePollRunning) return; // skip if previous poll hasn't finished
+  _maintenancePollRunning = true;
+  try {
+    await _doPollMaintenanceState();
+  } finally {
+    _maintenancePollRunning = false;
+  }
+}
+
+async function _doPollMaintenanceState() {
   const routerUrl = process.env.ROUTER_URL;
 
   try {
@@ -149,12 +160,32 @@ function maintenanceGuard(req, res, next) {
   if (p.startsWith('/api/wl-portal'))            return next();
   if (p.startsWith('/api/uptime'))               return next();
   if (p === '/' && (req.method === 'HEAD' || req.method === 'GET')) return next();
+  console.error(`[503] maintenanceGuard blocked ${req.method} ${req.originalUrl}`);
   return res.status(503).json({
     maintenance: true,
     message: _backendMaintenance.message || 'Maintenance in progress.',
     eta:     _backendMaintenance.eta || null,
   });
 }
+
+// ── 502/503 response logger ───────────────────────────────────────────────────
+// Attached BEFORE any other middleware so every response (from routes,
+// errorHandler, trafficGuard, maintenance guard, etc.) is captured.
+// Uses the 'finish' event so we log the final status code, not an intermediate
+// one, and never blocks the response.
+app.use((req, res, next) => {
+  res.on('finish', () => {
+    const s = res.statusCode;
+    if (s === 502 || s === 503) {
+      console.error(
+        `[${s}] ${req.method} ${req.originalUrl}` +
+        ` | ip=${req.ip}` +
+        ` | ua=${(req.headers['user-agent'] || '').slice(0, 80)}`
+      );
+    }
+  });
+  next();
+});
 
 // Trust exactly one upstream proxy hop (the Render load balancer).
 app.set('trust proxy', 1);
@@ -520,7 +551,7 @@ const connectDB = async () => {
 
   for (let attempt = 1; attempt <= MAX_DB_RETRIES; attempt++) {
     try {
-      await mongoose.connect(process.env.MONGODB_URI, { useNewUrlParser: true, useUnifiedTopology: true });
+      await mongoose.connect(process.env.MONGODB_URI);
       console.log('MongoDB connected');
       console.log(`  Database: ${mongoose.connection.name}`);
       startCleanupScheduler();
@@ -604,7 +635,32 @@ server.listen(PORT, () => {
 
 process.on('SIGTERM', () => { server.close(() => { mongoose.connection.close(false, () => process.exit(0)); }); });
 process.on('SIGINT',  () => { server.close(() => { mongoose.connection.close(false, () => process.exit(0)); }); });
-process.on('unhandledRejection', err => { console.error('[PlanIt] Unhandled Rejection:', err?.stack || err); });
-process.on('uncaughtException',  err => { console.error('[PlanIt] Uncaught Exception:',  err?.stack || err); });
+
+// ── FIX: Always exit after logging fatal errors ───────────────────────────────
+//
+// PREVIOUS BUG (root cause of 502inf):
+//   These handlers logged the error but did NOT call process.exit(). After an
+//   uncaughtException the Node.js process is in an undefined state — the docs
+//   explicitly say you MUST exit. By staying alive the process became a zombie:
+//   still listening on the port (so Render marked it healthy) but silently
+//   failing to handle requests. Render's load-balancer timed out on every
+//   request → 502 — forever, until a manual restart.
+//
+//   For unhandledRejection: Node 15+ crashes the process by default for exactly
+//   this reason. Swallowing it without exiting re-creates the zombie problem on
+//   every unhandled promise rejection.
+//
+// FIX: log the error, give stdout 200ms to flush, then exit(1) so Render
+// immediately restarts a clean instance. The 200ms delay is enough for the
+// log line to reach Render's log collector on the current write but short
+// enough that Render restarts before the health-check timeout fires.
+process.on('unhandledRejection', err => {
+  console.error('[PlanIt] FATAL — Unhandled Rejection (process will exit):', err?.stack || err);
+  setTimeout(() => process.exit(1), 200);
+});
+process.on('uncaughtException', err => {
+  console.error('[PlanIt] FATAL — Uncaught Exception (process will exit):', err?.stack || err);
+  setTimeout(() => process.exit(1), 200);
+});
 
 module.exports = { app, server, io };
