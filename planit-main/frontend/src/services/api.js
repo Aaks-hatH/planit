@@ -452,14 +452,13 @@ export const uptimeAPI = {
   getServerHealthHistory: (days = 30) => api.get(`/uptime/admin/server-health-history?days=${days}`),
   getLiveHistory:         (win = '15d') => api.get(`/uptime/admin/live-history?window=${win}`),
   setUptimeOverride:      (data)       => api.post('/uptime/admin/uptime-override', data),
-  clearUptimeOverride:    (service)    => api.delete(`/uptime/admin/uptime-override/${encodeURIComponent(service)}`),
-  overrideAllUptime:      (pct = 100)  => api.post('/uptime/admin/override-all-uptime', { pct }),
-  patchHealthPoint:       (service, dateStr, pct) => {
+  overrideAllUptime:      ()           => api.post('/uptime/admin/override-all-uptime', {}),
+  patchHealthPoint:       (service, dateStr) => {
     // Accept YYYY-MM-DD or unix-ms timestamp
     const date = /^\d{13}$/.test(String(dateStr))
       ? new Date(parseInt(dateStr, 10)).toISOString().slice(0, 10)
       : String(dateStr);
-    return api.patch(`/uptime/admin/server-health-history/${encodeURIComponent(service)}/${date}`, { pct });
+    return api.patch(`/uptime/admin/server-health-history/${encodeURIComponent(service)}/${date}`, {});
   },
 };
 
