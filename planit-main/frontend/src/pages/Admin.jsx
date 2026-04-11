@@ -736,10 +736,8 @@ function UptimePanel() {
   const [liveLoading,  setLiveLoading]  = useState(false);
   const [editMode,     setEditMode]     = useState(false);
   const [editingPoint, setEditingPoint] = useState(null);
-  const [editPct,      setEditPct]      = useState('');
   const [showOverride, setShowOverride] = useState(false);
   const [ovService,    setOvService]    = useState('');
-  const [ovPct,        setOvPct]        = useState('100');
   const [nucLoading,   setNucLoading]   = useState(false);
   const [liveProcessUptime, setLiveProcessUptime] = useState(null);
 
@@ -818,55 +816,41 @@ function UptimePanel() {
   const isLiveWindow = window === '1h' || window === '24h';
 
   // ── Actions ──────────────────────────────────────────────────────────────────
-  const handlePointEdit = async ({ service, date, ts, pct }) => {
-    const n = parseFloat(pct);
-    if (isNaN(n)) return;
+  const handlePointEdit = async ({ service, date, ts }) => {
     try {
-      await uptimeAPI.patchHealthPoint(service, date || ts, n);
-      toast.success(`${service} · ${date} → ${n.toFixed(2)}%`);
+      await uptimeAPI.patchHealthPoint(service, date || ts);
+      toast.success(`Fixed downtime records for ${service} · ${date}`);
       loadLive(); loadFull(30);
-    } catch { toast.error('Failed to save'); }
+    } catch { toast.error('Failed to fix'); }
   };
 
   const handlePointClick = (service, point) => {
     setEditingPoint({ service, date: point.date || point.label, ts: point.ts });
-    setEditPct(String((point.pct ?? 100).toFixed(2)));
   };
 
   const handleSavePoint = async () => {
-    const n = parseFloat(editPct);
-    if (!editingPoint || isNaN(n)) { toast.error('Invalid'); return; }
+    if (!editingPoint) { toast.error('No point selected'); return; }
     try {
-      await uptimeAPI.patchHealthPoint(editingPoint.service, editingPoint.date || editingPoint.ts, n);
-      toast.success(`Saved ${editingPoint.date} → ${n}%`);
+      await uptimeAPI.patchHealthPoint(editingPoint.service, editingPoint.date || editingPoint.ts);
+      toast.success(`Fixed downtime records for ${editingPoint.date}`);
       setEditingPoint(null); loadLive(); loadFull(30);
     } catch { toast.error('Failed'); }
   };
 
   const handleSetOverride = async () => {
-    const n = parseFloat(ovPct);
-    if (isNaN(n) || n < 0 || n > 100) { toast.error('Invalid %'); return; }
     try {
-      await uptimeAPI.setUptimeOverride({ service: ovService, pct: n });
-      toast.success(`Set ${ovService} → ${n}%`);
+      await uptimeAPI.setUptimeOverride({ service: ovService });
+      toast.success(`Fixed downtime records for ${ovService}`);
       setShowOverride(false); loadLive(); loadFull(30);
     } catch { toast.error('Failed'); }
   };
 
-  const handleClearOverride = async (svc) => {
-    try {
-      await uptimeAPI.clearUptimeOverride(svc);
-      toast.success(`Cleared override for ${svc}`);
-      loadLive(); loadFull(30);
-    } catch { toast.error('Failed'); }
-  };
-
   const handleNuclear = async () => {
-    if (!confirm('Resolve ALL active incidents and set all affected services to 100%?')) return;
+    if (!confirm('Resolve ALL active incidents and permanently fix all down checks for affected services?')) return;
     setNucLoading(true);
     try {
       const r = await uptimeAPI.overrideAllUptime(100);
-      toast.success(`✅ ${r.data.incidentsResolved} incidents resolved`);
+      toast.success(`✅ ${r.data.incidentsResolved} incidents resolved, ${r.data.checksFixed ?? 0} records fixed`);
       loadAll(); loadLive();
     } catch { toast.error('Failed'); }
     finally { setNucLoading(false); }
@@ -938,12 +922,12 @@ function UptimePanel() {
         </div>
         <div className="flex gap-2 flex-wrap">
           <a href="/status" target="_blank" className="btn btn-secondary gap-1 text-sm"><ExternalLink className="w-3.5 h-3.5"/> Status Page</a>
-          <button onClick={() => { setOvService(serverNames[0] || 'general'); setOvPct('100'); setShowOverride(true); }} className="btn btn-secondary gap-1 text-sm text-purple-700 border-purple-200 hover:bg-purple-50">
-            <Gauge className="w-3.5 h-3.5"/> Set Uptime %
+          <button onClick={() => { setOvService(serverNames[0] || 'general'); setShowOverride(true); }} className="btn btn-secondary gap-1 text-sm text-emerald-700 border-emerald-200 hover:bg-emerald-50">
+            <Gauge className="w-3.5 h-3.5"/> Fix Downtime
           </button>
-          <button onClick={handleNuclear} disabled={nucLoading} className="btn gap-1 text-sm bg-red-600 hover:bg-red-700 text-white border-red-600">
+          <button onClick={handleNuclear} disabled={nucLoading} className="btn gap-1 text-sm bg-emerald-600 hover:bg-emerald-700 text-white border-emerald-600">
             {nucLoading ? <span className="spinner w-3.5 h-3.5 border-2 border-white/30 border-t-white"/> : <Zap className="w-3.5 h-3.5"/>}
-            All Systems OK
+            Fix All Downtime
           </button>
           <button onClick={() => { setCreateForm({ title:'', description:'', severity:'minor', initialMessage:'', reportIds:[] }); setSelServices([]); setShowCreate(true); }} className="btn btn-primary gap-1 text-sm">
             <Plus className="w-3.5 h-3.5"/> New Incident
@@ -1020,7 +1004,6 @@ function UptimePanel() {
                 <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-emerald-500 inline-block"/> ≥99.5%</span>
                 <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-amber-400 inline-block"/> 95–99.5%</span>
                 <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-red-500 inline-block"/> &lt;95%</span>
-                <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-purple-500 inline-block"/> Override</span>
               </span>
             </div>
 
@@ -1048,21 +1031,18 @@ function UptimePanel() {
                         <div className="flex items-center gap-2">
                           <div className={`w-2.5 h-2.5 rounded-full ${avgPct == null ? 'bg-neutral-300' : avgPct >= 99.5 ? 'bg-emerald-400 animate-pulse' : avgPct >= 95 ? 'bg-amber-400' : 'bg-red-400 animate-pulse'}`}/>
                           <span className="font-semibold text-sm">{name}</span>
-                          {ov && <span className="text-xs px-2 py-0.5 rounded-full bg-purple-100 text-purple-700 font-medium flex items-center gap-1"><Edit3 className="w-2.5 h-2.5"/> overridden</span>}
                         </div>
                         <div className="flex items-center gap-2">
                           <span className={`text-sm font-bold tabular-nums px-2 py-0.5 rounded-lg ${uptimeBg(avgPct)}`}>
                             {avgPct != null ? `${avgPct.toFixed(2)}%` : '—'}
                           </span>
                           <span className="text-xs text-neutral-400">{WIN_LABEL[window]} avg</span>
-                          <button onClick={() => { setOvService(name); setOvPct(String(avgPct?.toFixed(2) || '100')); setShowOverride(true); }}
-                            className="text-xs px-2 py-1 rounded-lg border border-neutral-200 text-neutral-500 hover:bg-neutral-50 flex items-center gap-1">
-                            <Gauge className="w-3 h-3"/> Set %
+                          <button onClick={() => { setOvService(name); setShowOverride(true); }}
+                            className="text-xs px-2 py-1 rounded-lg border border-emerald-200 text-emerald-600 hover:bg-emerald-50 flex items-center gap-1">
+                            <Gauge className="w-3 h-3"/> Fix Downtime
                           </button>
-                          {ov && <button onClick={() => handleClearOverride(name)} className="text-xs px-2 py-1 rounded-lg border border-red-200 text-red-500 hover:bg-red-50 flex items-center gap-1"><X className="w-3 h-3"/> Clear</button>}
                         </div>
                       </div>
-                      {ov && <p className="text-xs text-purple-600 bg-purple-50 px-2 py-1 rounded-lg border border-purple-100">Override: <strong>{ov.pct}%</strong>{ov.label ? ` · ${ov.label}` : ''} · {new Date(ov.setAt).toLocaleString()}</p>}
                       <div className="bg-neutral-50 rounded-xl px-2 pt-2 pb-1 relative">
                         {editMode && <div className="absolute top-2 right-2 text-xs text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200 z-10">↕ drag</div>}
                         <UptimeSparkline data={gData} editMode={editMode} service={name} onPointEdit={handlePointEdit} height={80}/>
@@ -1109,15 +1089,14 @@ function UptimePanel() {
                                 <span className={`w-2 h-2 rounded-full flex-shrink-0 ${pct == null ? 'bg-neutral-300' : pct >= 99.5 ? 'bg-emerald-400' : pct >= 95 ? 'bg-amber-400' : 'bg-red-400'}`}/>
                                 <span className="text-sm font-medium">{svc.name}</span>
                                 <span className="text-xs text-neutral-400 font-mono hidden group-hover:inline">{svc.key}</span>
-                                {ov && <span className="text-xs px-1.5 py-0.5 rounded-full bg-purple-100 text-purple-700 flex items-center gap-1"><Edit3 className="w-2.5 h-2.5"/>override</span>}
+                                {ov && <span className="text-xs px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-700 flex items-center gap-1"><Edit3 className="w-2.5 h-2.5"/>fixed</span>}
                               </div>
                               <div className="flex items-center gap-2">
                                 <span className={`text-xs font-bold tabular-nums px-2 py-0.5 rounded ${uptimeBg(pct)}`}>{pct != null ? `${pct.toFixed(2)}%` : 'no data'}</span>
-                                <button onClick={() => { setOvService(svc.key); setOvPct(String(pct?.toFixed(2)||'100')); setShowOverride(true); }}
-                                  className="text-xs px-1.5 py-0.5 rounded border border-neutral-200 text-neutral-400 hover:bg-neutral-50 flex items-center gap-1">
-                                  <Gauge className="w-2.5 h-2.5"/>Set %
+                                <button onClick={() => { setOvService(svc.key); setShowOverride(true); }}
+                                  className="text-xs px-1.5 py-0.5 rounded border border-emerald-200 text-emerald-600 hover:bg-emerald-50 flex items-center gap-1">
+                                  <Gauge className="w-2.5 h-2.5"/>Fix
                                 </button>
-                                {ov && <button onClick={() => handleClearOverride(svc.key)} className="text-xs px-1.5 py-0.5 rounded border border-red-200 text-red-400 hover:bg-red-50"><X className="w-2.5 h-2.5"/></button>}
                               </div>
                             </div>
                             {gData.length > 0 && (
@@ -1158,11 +1137,10 @@ function UptimePanel() {
                               <span className="text-xs text-neutral-300 font-mono hidden group-hover:inline">{svc.key}</span>
                             </div>
                             <div className="flex items-center gap-2">
-                              {d?.override && <span className="text-xs text-purple-500">override</span>}
                               <span className={`text-xs font-bold ${uptimeColor(pct)}`}>{pct != null ? `${pct.toFixed(2)}%` : '—'}</span>
-                              <button onClick={() => { setOvService(svc.key); setOvPct(String(pct?.toFixed(2)||'100')); setShowOverride(true); }}
-                                className="text-xs px-1.5 py-0.5 rounded border border-neutral-200 text-neutral-400 hover:bg-neutral-50 opacity-0 group-hover:opacity-100 transition-opacity">
-                                Set %
+                              <button onClick={() => { setOvService(svc.key); setShowOverride(true); }}
+                                className="text-xs px-1.5 py-0.5 rounded border border-emerald-200 text-emerald-600 hover:bg-emerald-50 opacity-0 group-hover:opacity-100 transition-opacity">
+                                Fix
                               </button>
                             </div>
                           </div>
@@ -1297,7 +1275,7 @@ function UptimePanel() {
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 px-4" onClick={e=>e.target===e.currentTarget&&setShowOverride(false)}>
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden">
             <div className="px-5 py-4 border-b flex items-center justify-between">
-              <h3 className="font-bold flex items-center gap-2"><Gauge className="w-4 h-4 text-purple-600"/> Set Uptime %</h3>
+              <h3 className="font-bold flex items-center gap-2"><Gauge className="w-4 h-4 text-emerald-600"/> Fix Downtime Records</h3>
               <button onClick={()=>setShowOverride(false)} className="p-1 hover:bg-neutral-100 rounded-lg"><X className="w-4 h-4 text-neutral-400"/></button>
             </div>
             <div className="p-5 space-y-4">
@@ -1315,47 +1293,40 @@ function UptimePanel() {
                   ))}
                 </select>
               </div>
-              <div>
-                <label className="block text-xs font-medium text-neutral-600 mb-1">Uptime %</label>
-                <input type="number" min="0" max="100" step="0.01" value={ovPct} onChange={e=>setOvPct(e.target.value)} className="input w-full text-sm font-mono" placeholder="99.95"/>
-              </div>
-              <div className="flex gap-2 flex-wrap">
-                {['100','99.99','99.9','99.5','99','95','80','0'].map(p=>(
-                  <button key={p} onClick={()=>setOvPct(p)} className={`text-xs px-2.5 py-1 rounded-lg border font-mono transition-all ${ovPct===p?'bg-neutral-900 text-white border-neutral-900':'border-neutral-200 text-neutral-600 hover:bg-neutral-50'}`}>{p}%</button>
-                ))}
-              </div>
-              <p className="text-xs text-neutral-400 bg-neutral-50 rounded-lg px-3 py-2">
-                This override is saved to MongoDB and will persist across deploys. It affects both the admin graphs and the public status page.
+              <p className="text-xs text-neutral-500 bg-emerald-50 border border-emerald-100 rounded-lg px-3 py-2.5">
+                All <code className="font-mono bg-white px-1 rounded border border-neutral-200">down</code> health check records for this service will be permanently updated to <code className="font-mono bg-white px-1 rounded border border-neutral-200">up</code> in MongoDB. This corrects false downtime caused by 502s or transient errors — not a display override.
               </p>
             </div>
             <div className="px-5 py-4 border-t flex gap-3">
               <button onClick={()=>setShowOverride(false)} className="flex-1 btn btn-secondary text-sm">Cancel</button>
-              <button onClick={handleSetOverride} className="flex-1 btn bg-purple-600 hover:bg-purple-700 text-white border-purple-600 text-sm gap-1"><Check className="w-4 h-4"/> Apply</button>
+              <button onClick={handleSetOverride} className="flex-1 btn bg-emerald-600 hover:bg-emerald-700 text-white border-emerald-600 text-sm gap-1"><Check className="w-4 h-4"/> Fix Records</button>
             </div>
           </div>
         </div>
       )}
 
-      {/* ═══ EDIT POINT MODAL ════════════════════════════════════════════ */}
+      {/* ═══ FIX DAY MODAL ════════════════════════════════════════════ */}
       {editingPoint && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 px-4" onClick={e=>e.target===e.currentTarget&&setEditingPoint(null)}>
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden">
             <div className="px-5 py-4 border-b flex items-center justify-between">
-              <h3 className="font-bold flex items-center gap-2"><Edit2 className="w-4 h-4 text-amber-600"/> Edit Data Point</h3>
+              <h3 className="font-bold flex items-center gap-2"><Edit2 className="w-4 h-4 text-emerald-600"/> Fix Day's Records</h3>
               <button onClick={()=>setEditingPoint(null)} className="p-1 hover:bg-neutral-100 rounded-lg"><X className="w-4 h-4 text-neutral-400"/></button>
             </div>
             <div className="p-5 space-y-3">
-              <p className="text-sm text-neutral-600">
-                <strong>{ALL_SERVICES_FLAT.find(s=>s.key===editingPoint.service)?.name||editingPoint.service}</strong> · <strong>{editingPoint.date}</strong>
+              <p className="text-sm text-neutral-700">
+                Permanently fix all <code className="font-mono text-xs bg-neutral-100 px-1 rounded">down</code> health check records to <code className="font-mono text-xs bg-neutral-100 px-1 rounded">up</code> for:
               </p>
-              <input type="number" min="0" max="100" step="0.01" value={editPct} onChange={e=>setEditPct(e.target.value)} className="input w-full text-sm font-mono" autoFocus/>
-              <div className="flex gap-2 flex-wrap">
-                {['100','99.9','95','80','50','0'].map(p=><button key={p} onClick={()=>setEditPct(p)} className={`text-xs px-2 py-1 rounded-lg border font-mono ${editPct===p?'bg-neutral-900 text-white border-neutral-900':'border-neutral-200 text-neutral-600'}`}>{p}%</button>)}
+              <div className="bg-neutral-50 border border-neutral-200 rounded-lg px-3 py-2.5 text-sm font-medium">
+                <span className="text-neutral-800">{ALL_SERVICES_FLAT.find(s=>s.key===editingPoint.service)?.name||editingPoint.service}</span>
+                <span className="text-neutral-400 mx-2">·</span>
+                <span className="text-neutral-600 font-mono">{editingPoint.date}</span>
               </div>
+              <p className="text-xs text-neutral-400">This updates the actual MongoDB records — not a display override. The uptime percentage will recalculate naturally.</p>
             </div>
             <div className="px-5 py-4 border-t flex gap-3">
               <button onClick={()=>setEditingPoint(null)} className="flex-1 btn btn-secondary text-sm">Cancel</button>
-              <button onClick={handleSavePoint} className="flex-1 btn bg-amber-600 hover:bg-amber-700 text-white border-amber-600 text-sm gap-1"><Save className="w-4 h-4"/> Save to DB</button>
+              <button onClick={handleSavePoint} className="flex-1 btn bg-emerald-600 hover:bg-emerald-700 text-white border-emerald-600 text-sm gap-1"><Save className="w-4 h-4"/> Fix Records</button>
             </div>
           </div>
         </div>
