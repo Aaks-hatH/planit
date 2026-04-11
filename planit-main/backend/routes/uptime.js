@@ -236,17 +236,25 @@ router.get('/admin/server-health-history', verifyAdmin, async (req, res) => {
 });
 
 // ─── POST /admin/uptime-override ─────────────────────────────────────────────
+// Permanently fixes 'down' UptimeCheck records to 'up' for the given service.
+// Optionally scoped to a date range via startDate / endDate (ISO strings).
 
 router.post('/admin/uptime-override', verifyAdmin, async (req, res) => {
   try {
-    const { service, pct, label } = req.body;
+    const { service, startDate, endDate } = req.body;
     if (!service) return res.status(400).json({ error: 'service required' });
-    const n = parseFloat(pct);
-    if (isNaN(n) || n < 0 || n > 100) return res.status(400).json({ error: 'pct must be 0–100' });
-    await UptimeOverride.findOneAndUpdate({ service, date: null }, { pct: n, label: label||null, setAt: new Date() }, { upsert: true, new: true });
-    console.log(`[uptime] Override → DB: service="${service}", pct=${n}`);
-    res.json({ success: true, service, pct: n });
-  } catch (err) { res.status(500).json({ error: 'Failed to set override' }); }
+
+    const filter = { service, status: 'down' };
+    if (startDate || endDate) {
+      filter.createdAt = {};
+      if (startDate) filter.createdAt.$gte = new Date(startDate);
+      if (endDate)   filter.createdAt.$lte = new Date(endDate);
+    }
+
+    const result = await UptimeCheck.updateMany(filter, { $set: { status: 'up', error: null } });
+    console.log(`[uptime] Fixed ${result.modifiedCount} down checks permanently: service="${service}"`);
+    res.json({ success: true, service, fixed: result.modifiedCount });
+  } catch (err) { res.status(500).json({ error: 'Failed to fix uptime records' }); }
 });
 
 // ─── DELETE /admin/uptime-override/:service ───────────────────────────────────
@@ -260,50 +268,66 @@ router.delete('/admin/uptime-override/:service', verifyAdmin, async (req, res) =
 });
 
 // ─── POST /admin/override-all-uptime ─────────────────────────────────────────
+// Resolves all active incidents AND permanently fixes every 'down' UptimeCheck
+// record for those services to 'up'. No override documents are created.
 
 router.post('/admin/override-all-uptime', verifyAdmin, async (req, res) => {
   try {
-    const { pct = 100 } = req.body;
-    const n = parseFloat(pct);
-    if (isNaN(n) || n < 0 || n > 100) return res.status(400).json({ error: 'pct must be 0–100' });
-
     const activeIncidents = await Incident.find({ status: { $ne: 'resolved' } });
     const now = new Date();
+
+    // Resolve all active incidents
     await Promise.all(activeIncidents.map(inc => {
       inc.status = 'resolved'; inc.resolvedAt = now;
       inc.downtimeMinutes = Math.round((now - inc.createdAt) / 60000);
-      inc.timeline.push({ status: 'resolved', message: 'Resolved via admin override — all systems operational.', createdAt: now });
+      inc.timeline.push({ status: 'resolved', message: 'Resolved via admin fix — all systems operational.', createdAt: now });
       return inc.save();
     }));
 
+    // Collect affected service keys
     const affectedSvcs = [...new Set(['general', ...activeIncidents.flatMap(i => i.affectedServices.length ? i.affectedServices : ['general'])])];
+
+    // Permanently flip all 'down' checks to 'up' for every affected service
+    let totalFixed = 0;
     if (affectedSvcs.length > 0) {
-      await UptimeOverride.bulkWrite(affectedSvcs.map(svc => ({
-        updateOne: { filter: { service: svc, date: null }, update: { $set: { pct: n, label: 'Admin override', setAt: now } }, upsert: true }
-      })));
+      const result = await UptimeCheck.updateMany(
+        { service: { $in: affectedSvcs }, status: 'down' },
+        { $set: { status: 'up', error: null } }
+      );
+      totalFixed = result.modifiedCount;
     }
 
-    console.log(`[uptime] Nuclear override: ${activeIncidents.length} incidents resolved, ${affectedSvcs.length} services → ${n}%`);
-    res.json({ success: true, incidentsResolved: activeIncidents.length, servicesOverridden: affectedSvcs, pct: n });
-  } catch (err) { res.status(500).json({ error: 'Failed to override' }); }
+    console.log(`[uptime] Fix-all: ${activeIncidents.length} incidents resolved, ${totalFixed} down checks fixed across ${affectedSvcs.length} services`);
+    res.json({ success: true, incidentsResolved: activeIncidents.length, servicesFixed: affectedSvcs, checksFixed: totalFixed });
+  } catch (err) { res.status(500).json({ error: 'Failed to fix uptime' }); }
 });
 
 // ─── PATCH /admin/server-health-history/:service/:date ───────────────────────
-// Edit a single day. :date = YYYY-MM-DD. Persists to MongoDB.
+// Permanently fixes all 'down' UptimeCheck records to 'up' for a service on a
+// given day. :date = YYYY-MM-DD (or unix-ms for legacy callers).
 
 router.patch('/admin/server-health-history/:service/:date', verifyAdmin, async (req, res) => {
   try {
     const service = decodeURIComponent(req.params.service);
     const date    = req.params.date;
-    const n       = parseFloat(req.body.pct);
-    if (isNaN(n) || n < 0 || n > 100) return res.status(400).json({ error: 'pct must be 0–100' });
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(date) && !/^\d{13}$/.test(date)) return res.status(400).json({ error: 'date must be YYYY-MM-DD' });
-    // Accept both YYYY-MM-DD and unix-ms (legacy)
-    const normalizedDate = /^\d{13}$/.test(date) ? new Date(parseInt(date,10)).toISOString().slice(0,10) : date;
-    await UptimeOverride.findOneAndUpdate({ service, date: normalizedDate }, { pct: n, label: req.body.label||null, setAt: new Date() }, { upsert: true, new: true });
-    console.log(`[uptime] Point override → DB: ${service} / ${normalizedDate} → ${n}%`);
-    res.json({ success: true, service, date: normalizedDate, pct: n });
-  } catch (err) { res.status(500).json({ error: 'Failed to save point override' }); }
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date) && !/^\d{13}$/.test(date))
+      return res.status(400).json({ error: 'date must be YYYY-MM-DD' });
+
+    const normalizedDate = /^\d{13}$/.test(date)
+      ? new Date(parseInt(date, 10)).toISOString().slice(0, 10)
+      : date;
+
+    const dayStart = new Date(normalizedDate + 'T00:00:00.000Z');
+    const dayEnd   = new Date(normalizedDate + 'T23:59:59.999Z');
+
+    const result = await UptimeCheck.updateMany(
+      { service, status: 'down', createdAt: { $gte: dayStart, $lte: dayEnd } },
+      { $set: { status: 'up', error: null } }
+    );
+
+    console.log(`[uptime] Fixed ${result.modifiedCount} down checks permanently: ${service} / ${normalizedDate}`);
+    res.json({ success: true, service, date: normalizedDate, fixed: result.modifiedCount });
+  } catch (err) { res.status(500).json({ error: 'Failed to fix uptime records' }); }
 });
 
 // ─── GET /admin/live-history ──────────────────────────────────────────────────
