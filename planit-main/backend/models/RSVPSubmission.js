@@ -104,6 +104,7 @@ const rsvpSubmissionSchema = new mongoose.Schema(
     // ── Security / audit ─────────────────────────────────────────────────────
     ipAddress:   { type: String, default: '' },
     userAgent:   { type: String, default: '' },
+    duplicateFlag: { type: Boolean, default: false }, // true when warn_organizer policy detected a duplicate email
     submittedAt: { type: Date, default: Date.now, index: true },
     updatedAt:   { type: Date, default: Date.now },
 
