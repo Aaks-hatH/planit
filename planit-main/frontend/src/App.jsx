@@ -36,6 +36,8 @@ import SetupFeeSuccess from './pages/SetupFeeSuccess';
 import ClientPortal from './pages/ClientPortal';
 import WLHome from './pages/WLHome';
 import Blog from './pages/Blog';
+import RSVPPage from './pages/RSVPPage';
+import RSVPManage from './pages/RSVPManage';
 
 // ─── Maintenance page ─────────────────────────────────────────────────────────
 // t = 's' scheduled | 'i' incident | 'd' degraded
@@ -462,6 +464,11 @@ function App() {
             <Routes>
         <Route path="/" element={<HomeRoute />} />
 
+        {/* ── RSVP pages — the primary shared link goes here ── */}
+        <Route path="/rsvp/:slug"                element={<RSVPPage />} />
+        <Route path="/rsvp/manage/:editToken"    element={<RSVPManage />} />
+
+        {/* ── Event space — full planning workspace ── */}
         <Route path="/e/:subdomain"              element={<EventSpace />} />
         <Route path="/event/:eventId"            element={<EventSpace />} />
         <Route path="/event/:eventId/checkin"    element={<EnterpriseCheckin />} />
