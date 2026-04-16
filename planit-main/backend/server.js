@@ -47,6 +47,7 @@ const io = socketIo(server, {
 app.set('io', io);
 
 const eventRoutes         = require('./routes/events');
+const rsvpRoutes          = require('./routes/rsvp');
 const chatRoutes          = require('./routes/chat');
 const pollRoutes          = require('./routes/polls');
 const fileRoutes          = require('./routes/files');
@@ -438,6 +439,7 @@ app.head('/', (req, res) => {
 
 // ─── Routes ───────────────────────────────────────────────────────────────────
 app.use('/api/events',      eventRoutes);
+app.use('/api/rsvp',        rsvpRoutes);
 app.use('/api/chat',        chatRoutes);
 app.use('/api/polls',       pollRoutes);
 app.use('/api/files',       fileRoutes);
