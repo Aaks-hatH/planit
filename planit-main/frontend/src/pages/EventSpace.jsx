@@ -1059,13 +1059,21 @@ export default function EventSpace() {
 
   useEffect(() => {
     if (!event || !eventId) return;
-    const interval = setInterval(() => {
+    let delay = 10000;
+    let timer;
+    const poll = () => {
       if (!socketService.isConnected()) {
         chatAPI.getMessages(eventId).then(res => setMessages(res.data.messages || [])).catch(() => {});
         pollAPI.getAll(eventId).then(res => setPolls(res.data.polls || [])).catch(() => {});
+        // back off up to 60s while disconnected to avoid hammering the API
+        delay = Math.min(delay * 1.5, 60000);
+      } else {
+        delay = 10000; // reset when reconnected
       }
-    }, 5000);
-    return () => clearInterval(interval);
+      timer = setTimeout(poll, delay);
+    };
+    timer = setTimeout(poll, delay);
+    return () => clearTimeout(timer);
   }, [event, eventId]);
 
   useEffect(() => {
