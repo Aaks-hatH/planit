@@ -567,4 +567,27 @@ export const discoverAPI = {
   }),
 };
 
+// ─── RSVP API ─────────────────────────────────────────────────────────────────
+export const rsvpAPI = {
+  // Public
+  getPage:          (idOrSlug)           => api.get(`/rsvp/${idOrSlug}/page`),
+  verifyPassword:   (eventId, password)  => api.post(`/rsvp/${eventId}/verify-password`, { password }),
+  submit:           (idOrSlug, data)     => api.post(`/rsvp/${idOrSlug}/submit`, data),
+  getSubmission:    (editToken)          => api.get(`/rsvp/submission/${editToken}`),
+  editSubmission:   (editToken, data)    => api.patch(`/rsvp/submission/${editToken}`, data),
+
+  // Organizer
+  getSettings:      (eventId)            => api.get(`/rsvp/${eventId}/settings`),
+  updateSettings:   (eventId, data)      => api.patch(`/rsvp/${eventId}/settings`, data),
+  getSubmissions:   (eventId, params)    => api.get(`/rsvp/${eventId}/submissions`, { params }),
+  updateSubmission: (eventId, id, data)  => api.patch(`/rsvp/${eventId}/submissions/${id}`, data),
+  deleteSubmission: (eventId, id)        => api.delete(`/rsvp/${eventId}/submissions/${id}`),
+  checkinSubmission:(eventId, id)        => api.post(`/rsvp/${eventId}/submissions/${id}/checkin`),
+  undoCheckin:      (eventId, id)        => api.post(`/rsvp/${eventId}/submissions/${id}/undo-checkin`),
+  bulkApprove:      (eventId, ids)       => api.post(`/rsvp/${eventId}/submissions/bulk-approve`, { ids }),
+  bulkDecline:      (eventId, ids)       => api.post(`/rsvp/${eventId}/submissions/bulk-decline`, { ids }),
+  getStats:         (eventId)            => api.get(`/rsvp/${eventId}/stats`),
+  exportCsv:        (eventId)            => `${API_URL}/rsvp/${eventId}/export.csv`,
+};
+
 export default api;
