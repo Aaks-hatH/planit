@@ -725,8 +725,8 @@ function SlugFinder({ compact = false }) {
       // not a URL — use raw as slug
     }
     // Strip leading prefixes if typed manually
-    slug = slug.replace(/^\/?(?:rsvp\/|e\/)?/, '').replace(/\/+$/, '');
-    
+    slug = slug.replace(/^\/?(rsvp\/|e\/)?/, '').replace(/\/+$/, '');
+
     if (!slug) {
       setShaking(true);
       setTimeout(() => setShaking(false), 500);
