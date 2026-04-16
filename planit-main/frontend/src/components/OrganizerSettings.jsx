@@ -599,11 +599,45 @@ export default function OrganizerSettings({ eventId, event, onClose, onUpdated, 
 
  {/* ── RSVP Page tab ── */}
  {activeTab === 'rsvp-page' && (
-   <RSVPSettings
-     event={event}
-     eventId={event?._id || event?.id}
-     onSettingsChanged={() => {}}
-   />
+   <div className="space-y-4">
+     <div className="p-5 bg-indigo-50 border border-indigo-200 rounded-2xl flex flex-col gap-4">
+       <div className="flex items-start gap-3">
+         <div className="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center flex-shrink-0">
+           <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+             <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+           </svg>
+         </div>
+         <div>
+           <p className="text-sm font-bold text-indigo-900">Full-Page RSVP Builder</p>
+           <p className="text-xs text-indigo-700 mt-1 leading-relaxed">
+             Design your RSVP page in a dedicated editor with a live preview. Customize colors, fonts, images, form fields, questions, notifications, capacity limits, and more — everything is fully explained in plain English.
+           </p>
+         </div>
+       </div>
+       <a
+         href={event?.subdomain ? `/e/${event.subdomain}/rsvp-builder` : `/event/${event?._id || event?.id}/rsvp-builder`}
+         target="_blank"
+         rel="noreferrer"
+         className="flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold bg-indigo-600 text-white hover:bg-indigo-700 transition-colors"
+       >
+         <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+           <path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+         </svg>
+         Open RSVP Page Builder
+       </a>
+     </div>
+     <div className="p-4 bg-white border border-neutral-200 rounded-xl space-y-2">
+       <p className="text-xs font-bold text-neutral-500 uppercase tracking-wide">What you can customize in the builder</p>
+       <div className="grid grid-cols-2 gap-1.5">
+         {['Colors & accent color','Fonts & typography','Cover image + logo','Background image','Custom welcome text','RSVP button labels','Form fields to collect','Custom questions','Capacity & waitlist','RSVP deadline','Email notifications','Access & password','Confirmation screen','Add-to-calendar','Spam protection','Branding options'].map(item => (
+           <div key={item} className="flex items-center gap-1.5 text-xs text-neutral-600">
+             <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 flex-shrink-0" />
+             {item}
+           </div>
+         ))}
+       </div>
+     </div>
+   </div>
  )}
 
  {/* ── RSVP Guests tab ── */}
