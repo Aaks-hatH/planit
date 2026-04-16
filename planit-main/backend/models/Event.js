@@ -553,6 +553,113 @@ const eventSchema = new mongoose.Schema({
     status:    { type: String, enum: ['waiting', 'notified', 'seated', 'left'], default: 'waiting' },
   }],
 
+  // ─────────────────────────────────────────────────────────────────────────
+  // RSVP PAGE SETTINGS
+  // Full configuration for the public-facing /e/:subdomain RSVP landing page.
+  // Available in Enterprise and Standard event modes.
+  // ─────────────────────────────────────────────────────────────────────────
+  rsvpPage: {
+
+    // ── Master toggles ────────────────────────────────────────────────────────
+    enabled:          { type: Boolean, default: false },
+    accessMode:       { type: String, enum: ['open', 'password', 'closed'], default: 'open' },
+    rsvpPassword:     { type: String, default: '' },
+    confirmationMode: { type: String, enum: ['auto_confirm', 'approval'], default: 'auto_confirm' },
+
+    // ── Branding & appearance ─────────────────────────────────────────────────
+    coverImageUrl:    { type: String, default: '' },
+    logoUrl:          { type: String, default: '' },
+    accentColor:      { type: String, default: '#6366f1' },
+    backgroundStyle:  { type: String, enum: ['dark', 'light', 'gradient', 'frosted'], default: 'dark' },
+    fontStyle:        { type: String, enum: ['modern', 'classic', 'elegant', 'bold'], default: 'modern' },
+    bannerText:       { type: String, default: '', maxlength: 200 },
+    bannerColor:      { type: String, default: '#f59e0b' },
+    bannerEnabled:    { type: Boolean, default: false },
+    hideBranding:     { type: Boolean, default: false },
+
+    // ── Hero content ─────────────────────────────────────────────────────────
+    heroTagline:      { type: String, default: '', maxlength: 200 },
+    welcomeTitle:     { type: String, default: '', maxlength: 200 },
+    welcomeMessage:   { type: String, default: '', maxlength: 3000 },
+
+    // ── Deadline & capacity ───────────────────────────────────────────────────
+    deadline:             { type: Date, default: null },
+    deadlineMessage:      { type: String, default: '', maxlength: 200 },
+    capacityLimit:        { type: Number, default: 0, min: 0 },
+    enableWaitlist:       { type: Boolean, default: true },
+    waitlistMessage:      { type: String, default: '', maxlength: 300 },
+
+    // ── Response options ──────────────────────────────────────────────────────
+    allowYes:             { type: Boolean, default: true },
+    allowMaybe:           { type: Boolean, default: true },
+    allowNo:              { type: Boolean, default: true },
+    yesButtonLabel:       { type: String, default: 'Attending', maxlength: 50 },
+    maybeButtonLabel:     { type: String, default: 'Maybe', maxlength: 50 },
+    noButtonLabel:        { type: String, default: 'Not Attending', maxlength: 50 },
+
+    // ── Guest information fields ──────────────────────────────────────────────
+    requireFirstName:      { type: Boolean, default: true },
+    requireLastName:       { type: Boolean, default: false },
+    collectEmail:          { type: Boolean, default: true },
+    requireEmail:          { type: Boolean, default: true },
+    collectPhone:          { type: Boolean, default: false },
+    requirePhone:          { type: Boolean, default: false },
+
+    // ── Plus-ones ─────────────────────────────────────────────────────────────
+    allowPlusOnes:         { type: Boolean, default: false },
+    maxPlusOnes:           { type: Number, default: 5, min: 0, max: 50 },
+    requirePlusOneNames:   { type: Boolean, default: false },
+    collectPlusOneDietary: { type: Boolean, default: false },
+
+    // ── Extra guest fields ────────────────────────────────────────────────────
+    collectDietary:        { type: Boolean, default: false },
+    dietaryLabel:          { type: String, default: 'Dietary requirements', maxlength: 100 },
+    collectAccessibility:  { type: Boolean, default: false },
+    accessibilityLabel:    { type: String, default: 'Accessibility needs', maxlength: 100 },
+    allowGuestNote:        { type: Boolean, default: false },
+    guestNoteLabel:        { type: String, default: 'Additional notes', maxlength: 100 },
+    guestNotePlaceholder:  { type: String, default: '', maxlength: 200 },
+
+    // ── Custom questions (stored as array of objects) ─────────────────────────
+    // Schema per item: { id, label, type, required, options[], placeholder, helpText, order }
+    customQuestions:       { type: mongoose.Schema.Types.Mixed, default: [] },
+
+    // ── Confirmation screen ───────────────────────────────────────────────────
+    confirmationTitle:       { type: String, default: '', maxlength: 200 },
+    confirmationMessage:     { type: String, default: '', maxlength: 2000 },
+    confirmationImageUrl:    { type: String, default: '' },
+    showEventSpaceButton:    { type: Boolean, default: false },
+    eventSpaceButtonLabel:   { type: String, default: 'View Event Details', maxlength: 80 },
+    showAddToCalendar:        { type: Boolean, default: true },
+    showShareButton:          { type: Boolean, default: true },
+
+    // ── Email notifications ───────────────────────────────────────────────────
+    sendGuestConfirmation:    { type: Boolean, default: false },
+    confirmationEmailSubject: { type: String, default: '', maxlength: 200 },
+    confirmationEmailBody:    { type: String, default: '', maxlength: 3000 },
+    notifyOrganizerOnRsvp:    { type: Boolean, default: true },
+    organizerNotifyEmail:     { type: String, default: '', maxlength: 200 },
+
+    // ── Display options ───────────────────────────────────────────────────────
+    showGuestCount:        { type: Boolean, default: true },
+    showEventDate:         { type: Boolean, default: true },
+    showEventLocation:     { type: Boolean, default: true },
+    showEventDescription:  { type: Boolean, default: true },
+    showHostName:          { type: Boolean, default: true },
+    showCountdown:         { type: Boolean, default: false },
+    allowGuestEdit:        { type: Boolean, default: true },
+    editCutoffHours:       { type: Number, default: 24, min: 0 },
+
+    // ── Security ──────────────────────────────────────────────────────────────
+    rateLimitPerIp:        { type: Number, default: 5, min: 1, max: 100 },
+    duplicateEmailPolicy:  { type: String, enum: ['allow', 'block', 'warn_organizer'], default: 'warn_organizer' },
+    enableHoneypot:        { type: Boolean, default: true },
+
+    // ── Metadata ─────────────────────────────────────────────────────────────
+    updatedAt: { type: Date, default: null },
+    updatedBy: { type: String, default: null },
+  },
+
 }, { timestamps: true });
 
 eventSchema.index({ subdomain: 1 });
