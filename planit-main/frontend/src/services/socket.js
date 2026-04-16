@@ -25,11 +25,11 @@ class SocketService {
       // waiting for a WebSocket attempt to time out before falling back.
       transports: ['polling', 'websocket'],
       reconnection: true,
-      reconnectionDelay: 1000,
-      reconnectionDelayMax: 5000,
+      reconnectionDelay: 2000,
+      reconnectionDelayMax: 30000,
       reconnectionAttempts: Infinity,
-      // Faster timeout so failed connections are detected and retried sooner
-      timeout: 10000,
+      timeout: 20000,
+      randomizationFactor: 0.5,
     });
 
     this.socket.on('connect', () => {
