@@ -38,10 +38,11 @@ const io = socketIo(server, {
   },
   transports:      ['polling', 'websocket'],
   allowUpgrades:   true,
-  upgradeTimeout:  15000,
-  pingTimeout:     20000,
-  pingInterval:    10000,
+  upgradeTimeout:  30000,
+  pingTimeout:     60000,
+  pingInterval:    25000,
   httpCompression: true,
+  maxHttpBufferSize: 1e6,
 });
 
 app.set('io', io);
