@@ -450,20 +450,26 @@ export default function RSVPPageBuilder() {
   useEffect(() => {
     const load = async () => {
       try {
-        let eid = paramEventId;
-        if (!eid && subdomain) {
-          // Resolve subdomain → eventId via public info
-          const r = await eventAPI.getPublicInfo(subdomain);
-          eid = r.data.eventId || r.data._id;
-        }
+        // Use rsvpAPI.getPage — handles both ObjectId and subdomain slug
+        // (avoids the Mongoose CastError caused by passing a subdomain string
+        //  to Event.findById in the old eventAPI.getPublicInfo path)
+        const pageRes = await rsvpAPI.getPage(paramEventId || subdomain);
+        const eid = pageRes.data.eventId;
         if (!eid) { toast.error('Event not found'); return; }
         setEventId(eid);
 
-        const res = await eventAPI.getById(eid);
-        const ev  = res.data.event;
-        setEvent(ev);
-        if (ev.rsvpPage) {
-          setSettings({ ...DEFAULT_SETTINGS, ...ev.rsvpPage });
+        setEvent({
+          title:     pageRes.data.rawTitle || pageRes.data.title,
+          date:      pageRes.data.date,
+          timezone:  pageRes.data.timezone,
+          location:  pageRes.data.location,
+          subdomain: pageRes.data.subdomain,
+        });
+
+        // Fetch organizer-level settings (includes full rsvpPage config)
+        const settingsRes = await rsvpAPI.getSettings(eid);
+        if (settingsRes.data.rsvpPage) {
+          setSettings({ ...DEFAULT_SETTINGS, ...settingsRes.data.rsvpPage });
         }
       } catch (err) {
         toast.error('Could not load event settings.');
@@ -745,6 +751,7 @@ export default function RSVPPageBuilder() {
                 <Toggle label="Require guest names" checked={settings.requirePlusOneNames===true} onChange={v => set('requirePlusOneNames',v)} />
               </div>
             </div>
+            <Toggle label="Collect dietary for plus-ones" hint="Add a dietary restrictions field for each additional guest." checked={settings.collectPlusOneDietary===true} onChange={v => set('collectPlusOneDietary',v)} />
           )}
         </div>
 
@@ -771,9 +778,15 @@ export default function RSVPPageBuilder() {
         <div className="border-t border-neutral-100 pt-3">
           <Toggle label="Add a free-text notes box" hint="Lets guests write any extra message to you." checked={settings.allowGuestNote===true} onChange={v => set('allowGuestNote',v)} />
           {settings.allowGuestNote && (
-            <div className="mt-2">
-              <Label tip="(optional)">Field label</Label>
-              <Input value={settings.guestNoteLabel||'Additional notes'} onChange={v => set('guestNoteLabel',v)} placeholder="Additional notes" />
+            <div className="mt-2 space-y-3">
+              <div>
+                <Label tip="(optional)">Field label</Label>
+                <Input value={settings.guestNoteLabel||'Additional notes'} onChange={v => set('guestNoteLabel',v)} placeholder="Additional notes" />
+              </div>
+              <div>
+                <Label tip="(optional)">Placeholder text</Label>
+                <Input value={settings.guestNotePlaceholder||''} onChange={v => set('guestNotePlaceholder',v)} placeholder="e.g. Any other info we should know?" />
+              </div>
             </div>
           )}
         </div>
@@ -985,7 +998,7 @@ export default function RSVPPageBuilder() {
 
         <button
           onClick={save}
-          disabled={!dirty || saving}
+          disabled={!dirty || saving || !eventId}
           className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all"
           style={{ background: dirty ? accent : '#e5e7eb', color: dirty ? '#fff' : '#9ca3af', cursor: dirty ? 'pointer' : 'not-allowed' }}
         >
