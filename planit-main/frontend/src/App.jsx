@@ -38,6 +38,7 @@ import WLHome from './pages/WLHome';
 import Blog from './pages/Blog';
 import RSVPPage from './pages/RSVPPage';
 import RSVPManage from './pages/RSVPManage';
+import RSVPPageBuilder from './pages/RSVPPageBuilder';
 
 // ─── Maintenance page ─────────────────────────────────────────────────────────
 // t = 's' scheduled | 'i' incident | 'd' degraded
@@ -400,6 +401,9 @@ const PAGE_TITLES = {
 
 // Titles for dynamic routes — matched by pattern in order (first match wins)
 const PATTERN_TITLES = [
+  [/^\/rsvp\/[^/]+$/,                        'RSVP · PlanIt'],
+  [/^\/rsvp\/manage\//,                      'Manage Your RSVP · PlanIt'],
+  [/^\/(e|event)\/[^/]+\/rsvp-builder$/,    'RSVP Page Builder · PlanIt'],
   [/^\/(e|event)\/[^/]+\/checkin$/,          'Live Attendee Check-In Dashboard · PlanIt'],
   [/^\/(e|event)\/[^/]+\/floor$/,            'Floor Management and Table Service · PlanIt Venue'],
   [/^\/(e|event)\/[^/]+\/server$/,           'Server and Table Assignment View · PlanIt Venue'],
@@ -467,6 +471,10 @@ function App() {
         {/* ── RSVP pages — the primary shared link goes here ── */}
         <Route path="/rsvp/:slug"                element={<RSVPPage />} />
         <Route path="/rsvp/manage/:editToken"    element={<RSVPManage />} />
+
+        {/* ── RSVP Page Builder ── */}
+        <Route path="/e/:subdomain/rsvp-builder"   element={<RSVPPageBuilder />} />
+        <Route path="/event/:eventId/rsvp-builder" element={<RSVPPageBuilder />} />
 
         {/* ── Event space — full planning workspace ── */}
         <Route path="/e/:subdomain"              element={<EventSpace />} />
