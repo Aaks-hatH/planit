@@ -84,7 +84,13 @@ export default function RSVPManage() {
   const rsvpPage = event?.rsvpPage || {};
   const accent   = rsvpPage.accentColor || '#6366f1';
   const status   = STATUS_COLORS[submission.status] || STATUS_COLORS.confirmed;
-  const canEdit  = rsvpPage.allowGuestEdit !== false && submission.status !== 'declined';
+  const cutoffHours = rsvpPage.editCutoffHours ?? 24;
+  let canEdit = rsvpPage.allowGuestEdit !== false && submission.status !== 'declined';
+  if (canEdit && event?.date && cutoffHours > 0) {
+    const cutoff = new Date(event.date);
+    cutoff.setHours(cutoff.getHours() - cutoffHours);
+    if (new Date() > cutoff) canEdit = false;
+  }
 
   const inputCls = "w-full px-4 py-3 rounded-xl text-sm border outline-none transition-all bg-white/[0.06] border-white/10 focus:border-white/30 text-white placeholder-white/30";
 
