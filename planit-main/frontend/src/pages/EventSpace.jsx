@@ -9,7 +9,7 @@ import {
   CheckCircle2, Megaphone, DollarSign, StickyNote, Share2, UserCheck, XCircle, ClipboardList,
   Star, Shield, LogIn, UserPlus, HelpCircle
 } from 'lucide-react';
-import { eventAPI, chatAPI, pollAPI, fileAPI } from '../services/api';
+import { eventAPI, chatAPI, pollAPI, fileAPI, rsvpAPI } from '../services/api';
 import socketService from '../services/socket';
 import SecurityAlerts, { useSecurityAlerts } from '../components/SecurityAlerts';
 import { formatDate, formatRelativeTime, formatFileSize } from '../utils/formatters';
@@ -861,6 +861,8 @@ export default function EventSpace() {
   const [onlineUsers, setOnlineUsers]     = useState([]);
   const [rsvps, setRsvps]                 = useState([]);
   const [rsvpSummary, setRsvpSummary]     = useState({ yes: 0, maybe: 0, no: 0 });
+  const [rsvpGuests, setRsvpGuests]       = useState([]);   // RSVP form submissions (external guests)
+  const [rsvpGuestsLoaded, setRsvpGuestsLoaded] = useState(false);
 
   const [agenda, setAgenda]               = useState([]);
   const [showAddAgenda, setShowAddAgenda] = useState(false);
@@ -1092,6 +1094,18 @@ export default function EventSpace() {
     return () => clearInterval(interval);
   }, [event?.date]);
 
+  // Load RSVP form submissions (external guests who signed up via the public RSVP link)
+  const loadRsvpGuests = async (eid) => {
+    try {
+      const r = await rsvpAPI.getSubmissions(eid || eventId, { limit: 500 });
+      setRsvpGuests(r.data.submissions || []);
+      setRsvpGuestsLoaded(true);
+    } catch {
+      // If organizer token isn't available (regular guest viewing), silently skip
+      setRsvpGuestsLoaded(true);
+    }
+  };
+
   const loadEvent = async () => {
     try {
       const res = await eventAPI.getById(eventId);
@@ -1108,7 +1122,7 @@ export default function EventSpace() {
       setRsvps(ev.rsvps || []);
       setRsvpSummary(ev.rsvpSummary || { yes: 0, maybe: 0, no: 0 });
       setAgenda(ev.agenda ? [...ev.agenda].sort((a, b) => a.order - b.order) : []);
-      await Promise.all([loadMessages(), loadPolls(), loadFiles()]);
+      await Promise.all([loadMessages(), loadPolls(), loadFiles(), loadRsvpGuests(eventId)]);
     } catch (err) {
       if (err.response?.status === 401 || err.response?.status === 403) {
         localStorage.removeItem('eventToken'); localStorage.removeItem('username');
@@ -1276,7 +1290,7 @@ export default function EventSpace() {
     ...(settings.allowPolls !== false       ? [{ id: 'polls',         label: 'Polls',   icon: BarChart3,     count: polls.length       }] : []),
     ...(settings.allowFileSharing !== false ? [{ id: 'files',         label: 'Files',   icon: FileText,      count: files.length       }] : []),
     { id: 'agenda',        label: 'Agenda',   icon: Clock,       count: agenda.length   },
-    ...(wlShowGuestList ? [{ id: 'people', label: 'People', icon: Users, count: participants.length }] : []),
+    ...(wlShowGuestList ? [{ id: 'people', label: 'People', icon: Users, count: participants.length + rsvpGuests.filter(g => g.response === 'yes' && g.status === 'confirmed').length }] : []),
     { id: 'tasks',         label: 'Tasks',    icon: CheckCircle2 },
     { id: 'announcements', label: 'Bulletin', icon: Megaphone    },
     { id: 'expenses',      label: 'Budget',   icon: DollarSign   },
@@ -1785,23 +1799,62 @@ export default function EventSpace() {
             )}
 
             {/* ── People ── */}
-            {activeTab === 'people' && (
-              <div className="flex-1 overflow-y-auto p-5">
-                <div className="flex items-center gap-2 mb-5 flex-wrap">
+            {activeTab === 'people' && (() => {
+              // Merge both attendance sources into one live count
+              const rsvpGoing    = rsvpGuests.filter(g => g.response === 'yes' && g.status === 'confirmed');
+              const rsvpMaybe    = rsvpGuests.filter(g => g.response === 'maybe');
+              const rsvpDeclined = rsvpGuests.filter(g => g.response === 'no');
+              const rsvpPending  = rsvpGuests.filter(g => g.status === 'pending');
+              const rsvpWaiting  = rsvpGuests.filter(g => g.status === 'waitlisted');
+
+              // Combined "going" = confirmed RSVP guests + event-space participants who RSVPd yes
+              const spaceGoingCount = rsvpSummary.yes || 0;
+              const totalGoing      = rsvpGoing.length + spaceGoingCount;
+              const totalMaybe      = rsvpMaybe.length + (rsvpSummary.maybe || 0);
+
+              return (
+              <div className="flex-1 overflow-y-auto p-4">
+
+                {/* ── Live totals bar ── */}
+                <div className="flex flex-wrap gap-2 mb-4">
                   <div className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 border border-emerald-200 rounded-lg">
-                    <span className="w-2 h-2 rounded-full bg-emerald-500" />
-                    <span className="text-xs font-bold text-emerald-700">{rsvpSummary.yes} going</span>
+                    <span className="w-2 h-2 rounded-full bg-emerald-500 flex-shrink-0" />
+                    <span className="text-xs font-bold text-emerald-700">{totalGoing} going</span>
                   </div>
                   <div className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 border border-amber-200 rounded-lg">
-                    <span className="text-xs font-bold text-amber-700">{rsvpSummary.maybe} maybe</span>
+                    <span className="text-xs font-bold text-amber-700">{totalMaybe} maybe</span>
                   </div>
-                  <div className="flex items-center gap-1.5 px-3 py-1.5 bg-neutral-100 border border-neutral-200 rounded-lg">
-                    <span className="text-xs font-bold text-neutral-500">{rsvpSummary.no} can't go</span>
+                  {rsvpDeclined.length + (rsvpSummary.no || 0) > 0 && (
+                    <div className="flex items-center gap-1.5 px-3 py-1.5 bg-neutral-100 border border-neutral-200 rounded-lg">
+                      <span className="text-xs font-bold text-neutral-500">{rsvpDeclined.length + (rsvpSummary.no || 0)} can't go</span>
+                    </div>
+                  )}
+                  {rsvpPending.length > 0 && (
+                    <div className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-50 border border-indigo-200 rounded-lg">
+                      <span className="text-xs font-bold text-indigo-600">{rsvpPending.length} pending</span>
+                    </div>
+                  )}
+                  {rsvpWaiting.length > 0 && (
+                    <div className="flex items-center gap-1.5 px-3 py-1.5 bg-orange-50 border border-orange-200 rounded-lg">
+                      <span className="text-xs font-bold text-orange-600">{rsvpWaiting.length} waitlisted</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* ── How it works info banner ── */}
+                <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-xl flex gap-2.5">
+                  <HelpCircle className="w-4 h-4 text-blue-500 flex-shrink-0 mt-0.5" />
+                  <div className="text-xs text-blue-700 leading-relaxed space-y-0.5">
+                    <p className="font-bold text-blue-800">Two ways people join this event</p>
+                    <p><span className="font-semibold">Event Space Members</span> — joined via invite link or code, can chat and collaborate in real time.</p>
+                    <p><span className="font-semibold">RSVP Form Guests</span> — signed up via the public RSVP page link, shown with their form response below.</p>
+                    <p className="text-blue-600 mt-1">The "going" total above combines both groups.</p>
                   </div>
                 </div>
 
-                <div className="mb-5 p-4 bg-white border border-neutral-200 rounded-xl">
-                  <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest mb-2.5">Your RSVP</p>
+                {/* ── Your RSVP ── */}
+                <div className="mb-4 p-3.5 bg-white border border-neutral-200 rounded-xl">
+                  <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest mb-2.5">Your RSVP (in this event space)</p>
                   <div className="flex gap-2">
                     {[
                       ['yes',   'Going',    myRsvp === 'yes'   ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white text-neutral-600 border-neutral-200 hover:border-emerald-300'],
@@ -1816,45 +1869,146 @@ export default function EventSpace() {
                   </div>
                 </div>
 
-                <div className="space-y-2">
-                  {participants.map(p => {
-                    const isOnline = onlineUsers.includes(p.username);
-                    const isOrg    = p.role === 'organizer';
-                    const pRsvp    = rsvps.find(r => r.username === p.username);
-                    return (
-                      <div key={p.username} className="flex items-center gap-3 p-3.5 bg-white border border-neutral-200 rounded-xl hover:border-neutral-300 transition-colors">
-                        <div className="relative flex-shrink-0">
-                          <Avatar name={p.username} size="md" />
-                          {isOnline && <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-emerald-500 rounded-full border-2 border-white" />}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-1.5 flex-wrap">
-                            <p className="text-sm font-bold text-neutral-900 truncate">{p.username}</p>
-                            {isOrg && (
-                              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-neutral-900 text-white text-[10px] font-bold">
-                                <Star className="w-2.5 h-2.5" />Organizer
-                              </span>
-                            )}
-                            {pRsvp && (
-                              <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-md ${
-                                pRsvp.status === 'yes'   ? 'bg-emerald-50 text-emerald-700' :
-                                pRsvp.status === 'maybe' ? 'bg-amber-50 text-amber-700'     :
-                                'bg-neutral-100 text-neutral-500'
-                              }`}>
-                                {pRsvp.status === 'yes' ? 'Going' : pRsvp.status === 'maybe' ? 'Maybe' : "Can't go"}
-                              </span>
-                            )}
+                {/* ── Event Space Members section ── */}
+                <div className="mb-1">
+                  <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest mb-2 px-0.5">
+                    Event Space Members
+                    <span className="ml-1.5 normal-case font-normal text-neutral-400">({participants.length})</span>
+                  </p>
+                  <div className="space-y-1.5">
+                    {participants.map(p => {
+                      const isOnline = onlineUsers.includes(p.username);
+                      const isOrg    = p.role === 'organizer';
+                      const isGuest  = p.role === 'guest' || !p.role || p.role === 'member';
+                      const isPlanner = p.role === 'planner' || p.role === 'co-organizer';
+                      const pRsvp    = rsvps.find(r => r.username === p.username);
+                      return (
+                        <div key={p.username} className="flex items-center gap-3 p-3 bg-white border border-neutral-200 rounded-xl hover:border-neutral-300 transition-colors">
+                          <div className="relative flex-shrink-0">
+                            <Avatar name={p.username} size="md" />
+                            {isOnline && <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-emerald-500 rounded-full border-2 border-white" />}
                           </div>
-                          <p className="text-xs text-neutral-400 mt-0.5">
-                            {isOnline ? <span className="text-emerald-600 font-semibold">● Online</span> : `Joined ${formatRelativeTime(p.joinedAt)}`}
-                          </p>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <p className="text-sm font-bold text-neutral-900 truncate">{p.username}</p>
+
+                              {/* Role badge */}
+                              {isOrg && (
+                                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-neutral-900 text-white text-[10px] font-bold">
+                                  <Star className="w-2.5 h-2.5" />Organizer
+                                </span>
+                              )}
+                              {isPlanner && (
+                                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-indigo-100 text-indigo-700 text-[10px] font-bold">
+                                  Planner
+                                </span>
+                              )}
+                              {!isOrg && !isPlanner && (
+                                <span className="inline-flex items-center px-1.5 py-0.5 rounded-md bg-neutral-100 text-neutral-500 text-[10px] font-bold">
+                                  Guest
+                                </span>
+                              )}
+
+                              {/* RSVP status for this space */}
+                              {pRsvp ? (
+                                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-md ${
+                                  pRsvp.status === 'yes'   ? 'bg-emerald-50 text-emerald-700' :
+                                  pRsvp.status === 'maybe' ? 'bg-amber-50 text-amber-700'     :
+                                  'bg-neutral-100 text-neutral-500'
+                                }`}>
+                                  {pRsvp.status === 'yes' ? '✓ Going' : pRsvp.status === 'maybe' ? '? Maybe' : '✗ Can't go'}
+                                </span>
+                              ) : (
+                                <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-neutral-50 text-neutral-400">No response</span>
+                              )}
+                            </div>
+                            <p className="text-xs text-neutral-400 mt-0.5">
+                              {isOnline ? <span className="text-emerald-600 font-semibold">● Online now</span> : `Joined ${formatRelativeTime(p.joinedAt)}`}
+                            </p>
+                          </div>
                         </div>
-                      </div>
-                    );
-                  })}
+                      );
+                    })}
+                    {participants.length === 0 && (
+                      <p className="text-xs text-neutral-400 text-center py-4">No members yet</p>
+                    )}
+                  </div>
                 </div>
+
+                {/* ── RSVP Form Guests section ── */}
+                <div className="mt-4">
+                  <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest mb-2 px-0.5">
+                    RSVP Form Guests
+                    <span className="ml-1.5 normal-case font-normal text-neutral-400">({rsvpGuests.length} via public RSVP page)</span>
+                  </p>
+                  {!rsvpGuestsLoaded ? (
+                    <div className="flex items-center justify-center py-8">
+                      <div className="w-5 h-5 border-2 border-neutral-200 border-t-indigo-500 rounded-full animate-spin" />
+                    </div>
+                  ) : rsvpGuests.length === 0 ? (
+                    <div className="p-4 bg-neutral-50 border border-dashed border-neutral-200 rounded-xl text-center">
+                      <p className="text-xs text-neutral-400 leading-relaxed">
+                        No one has signed up via the RSVP page yet.<br />
+                        Share your RSVP link to start collecting responses.
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="space-y-1.5">
+                      {rsvpGuests.map(g => {
+                        const name = [g.firstName, g.lastName].filter(Boolean).join(' ') || 'Anonymous';
+                        const initials = [g.firstName?.[0], g.lastName?.[0]].filter(Boolean).join('') || '?';
+                        const statusCfg = {
+                          confirmed:  { dot: 'bg-emerald-500', badge: 'bg-emerald-50 text-emerald-700', label: 'Confirmed' },
+                          pending:    { dot: 'bg-indigo-400',  badge: 'bg-indigo-50 text-indigo-700',   label: 'Pending approval' },
+                          waitlisted: { dot: 'bg-orange-400',  badge: 'bg-orange-50 text-orange-700',   label: 'Waitlisted' },
+                          declined:   { dot: 'bg-red-400',     badge: 'bg-red-50 text-red-700',         label: 'Declined' },
+                        }[g.status] || { dot: 'bg-neutral-300', badge: 'bg-neutral-100 text-neutral-500', label: g.status };
+
+                        const respCfg = {
+                          yes:   { bg: 'bg-emerald-50 text-emerald-700', label: '✓ Attending' },
+                          maybe: { bg: 'bg-amber-50 text-amber-700',     label: '? Maybe' },
+                          no:    { bg: 'bg-neutral-100 text-neutral-500', label: '✗ Not attending' },
+                        }[g.response] || { bg: 'bg-neutral-100 text-neutral-500', label: g.response };
+
+                        return (
+                          <div key={g._id} className="flex items-center gap-3 p-3 bg-white border border-neutral-200 rounded-xl hover:border-neutral-300 transition-colors">
+                            {/* Avatar */}
+                            <div className="w-9 h-9 rounded-full bg-gradient-to-br from-violet-400 to-indigo-500 flex items-center justify-center flex-shrink-0">
+                              <span className="text-xs font-bold text-white">{initials}</span>
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                <p className="text-sm font-bold text-neutral-900 truncate">{name}</p>
+                                {/* RSVP form guest role tag */}
+                                <span className="inline-flex items-center px-1.5 py-0.5 rounded-md bg-violet-50 text-violet-700 text-[10px] font-bold border border-violet-100">
+                                  RSVP Guest
+                                </span>
+                                {/* Their response */}
+                                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-md ${respCfg.bg}`}>
+                                  {respCfg.label}
+                                </span>
+                                {/* Approval status */}
+                                <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-md ${statusCfg.badge}`}>
+                                  {statusCfg.label}
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-2 mt-0.5">
+                                {g.email && <p className="text-xs text-neutral-400 truncate">{g.email}</p>}
+                                {g.plusOnes > 0 && (
+                                  <span className="text-[10px] text-neutral-400">+{g.plusOnes} guest{g.plusOnes > 1 ? 's' : ''}</span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+
               </div>
-            )}
+              );
+            })()}
 
             {/* ── Feature tabs ── */}
             {activeTab === 'tasks'         && <div className="flex-1 overflow-hidden"><Tasks        eventId={eventId} socket={socketService} /></div>}
@@ -1906,14 +2060,24 @@ export default function EventSpace() {
                 </div>
               )}
               <div className="flex items-center justify-between py-3 px-4 rounded-xl bg-neutral-50 border border-neutral-100">
-                <span className="text-[10px] font-bold text-neutral-500 uppercase tracking-wide">Attendees</span>
+                <span className="text-[10px] font-bold text-neutral-500 uppercase tracking-wide">Members</span>
                 <span className="text-sm font-bold text-neutral-900">
                   {participants.length}<span className="text-xs text-neutral-400 font-medium"> / {event?.maxParticipants || 100}</span>
                 </span>
               </div>
+              {rsvpGuests.length > 0 && (
+                <div className="flex items-center justify-between py-2 px-4 rounded-xl bg-violet-50 border border-violet-100">
+                  <span className="text-[10px] font-bold text-violet-600 uppercase tracking-wide">RSVP Guests</span>
+                  <span className="text-sm font-bold text-violet-700">{rsvpGuests.length}</span>
+                </div>
+              )}
               <div className="flex items-center gap-2 flex-wrap">
-                <span className="text-xs font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-lg">{rsvpSummary.yes} going</span>
-                <span className="text-xs font-bold text-amber-700 bg-amber-50 border border-amber-200 px-2.5 py-1 rounded-lg">{rsvpSummary.maybe} maybe</span>
+                <span className="text-xs font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-lg">
+                  {(rsvpSummary.yes || 0) + rsvpGuests.filter(g => g.response === 'yes' && g.status === 'confirmed').length} going
+                </span>
+                <span className="text-xs font-bold text-amber-700 bg-amber-50 border border-amber-200 px-2.5 py-1 rounded-lg">
+                  {(rsvpSummary.maybe || 0) + rsvpGuests.filter(g => g.response === 'maybe').length} maybe
+                </span>
               </div>
             </div>
 
