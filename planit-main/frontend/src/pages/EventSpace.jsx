@@ -1916,7 +1916,7 @@ export default function EventSpace() {
                                   pRsvp.status === 'maybe' ? 'bg-amber-50 text-amber-700'     :
                                   'bg-neutral-100 text-neutral-500'
                                 }`}>
-                                  {pRsvp.status === 'yes' ? '✓ Going' : pRsvp.status === 'maybe' ? '? Maybe' : '✗ Can't go'}
+                                  {pRsvp.status === 'yes' ? '✓ Going' : pRsvp.status === 'maybe' ? '? Maybe' : '✗ Can\'t go'}
                                 </span>
                               ) : (
                                 <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-neutral-50 text-neutral-400">No response</span>
