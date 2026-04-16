@@ -622,23 +622,51 @@ function AnimatedCounter({ end, duration = 2000, suffix = '' }) {
   return <span ref={ref} className="tabular-nums">{count}{suffix}</span>;
 }
 
-function CopyLinkBox({ eventId, subdomain }) {
-  const [copied, setCopied] = useState(false);
-  const link = subdomain ? `${window.location.origin}/e/${subdomain}` : `${window.location.origin}/event/${eventId}`;
-  const handleCopy = () => {
-    navigator.clipboard.writeText(link);
-    setCopied(true); toast.success('Link copied');
-    setTimeout(() => setCopied(false), 2000);
+function CopyLinkBox({ eventId, subdomain, mode }) {
+  const [copiedRsvp, setCopiedRsvp] = useState(false);
+  const [copiedEvent, setCopiedEvent] = useState(false);
+
+  const rsvpLink  = subdomain ? `${window.location.origin}/rsvp/${subdomain}` : null;
+  const eventLink = subdomain ? `${window.location.origin}/e/${subdomain}` : `${window.location.origin}/event/${eventId}`;
+
+  const showRsvp = mode !== 'table-service' && rsvpLink;
+
+  const copyRsvp = () => {
+    navigator.clipboard.writeText(rsvpLink);
+    setCopiedRsvp(true); toast.success('RSVP link copied');
+    setTimeout(() => setCopiedRsvp(false), 2000);
   };
+  const copyEvent = () => {
+    navigator.clipboard.writeText(eventLink);
+    setCopiedEvent(true); toast.success('Event link copied');
+    setTimeout(() => setCopiedEvent(false), 2000);
+  };
+
   return (
-    <div className="mt-3 rounded-2xl border border-neutral-700 overflow-hidden bg-neutral-900 hover:border-neutral-600 transition-all duration-300">
-      <div className="flex items-center gap-3 px-5 py-4">
-        <Link className="w-4 h-4 text-neutral-500 flex-shrink-0" />
-        <span className="flex-1 text-sm text-neutral-300 font-mono truncate">{link}</span>
-        <button onClick={handleCopy} className={`flex-shrink-0 flex items-center gap-2 px-5 py-2.5 text-xs font-medium rounded-xl transition-all duration-300 ${copied ? 'bg-emerald-500 text-white' : 'bg-white text-neutral-900 hover:bg-neutral-100'}`}>
-          {copied ? <><Check className="w-3.5 h-3.5" />Copied</> : <><Copy className="w-3.5 h-3.5" />Copy</>}
-        </button>
+    <div className="mt-3 space-y-2">
+      {showRsvp && (
+        <div className="rounded-2xl border border-indigo-700/50 overflow-hidden bg-indigo-950/40 hover:border-indigo-600/60 transition-all duration-300">
+          <div className="flex items-center gap-3 px-4 py-3">
+            <div className="flex-shrink-0 text-xs font-bold text-indigo-400 uppercase tracking-wider w-14">RSVP</div>
+            <span className="flex-1 text-xs text-indigo-300 font-mono truncate">{rsvpLink}</span>
+            <button onClick={copyRsvp} className={`flex-shrink-0 flex items-center gap-1.5 px-3 py-2 text-xs font-medium rounded-xl transition-all duration-300 ${copiedRsvp ? 'bg-emerald-500 text-white' : 'bg-indigo-600 text-white hover:bg-indigo-500'}`}>
+              {copiedRsvp ? <><Check className="w-3 h-3" />Copied</> : <><Copy className="w-3 h-3" />Copy</>}
+            </button>
+          </div>
+        </div>
+      )}
+      <div className="rounded-2xl border border-neutral-700 overflow-hidden bg-neutral-900 hover:border-neutral-600 transition-all duration-300">
+        <div className="flex items-center gap-3 px-4 py-3">
+          <div className="flex-shrink-0 text-xs font-bold text-neutral-500 uppercase tracking-wider w-14">Space</div>
+          <span className="flex-1 text-xs text-neutral-300 font-mono truncate">{eventLink}</span>
+          <button onClick={copyEvent} className={`flex-shrink-0 flex items-center gap-1.5 px-3 py-2 text-xs font-medium rounded-xl transition-all duration-300 ${copiedEvent ? 'bg-emerald-500 text-white' : 'bg-white text-neutral-900 hover:bg-neutral-100'}`}>
+            {copiedEvent ? <><Check className="w-3 h-3" />Copied</> : <><Copy className="w-3 h-3" />Copy</>}
+          </button>
+        </div>
       </div>
+      {showRsvp && (
+        <p className="text-xs text-neutral-600 px-1">The RSVP link is the primary shareable link. Enable the RSVP page in Event Settings to activate it.</p>
+      )}
     </div>
   );
 }
@@ -688,21 +716,23 @@ function SlugFinder({ compact = false }) {
     let slug = raw;
     try {
       const url = new URL(raw.startsWith('http') ? raw : `https://x.com/${raw}`);
-      const match = url.pathname.match(/\/e\/([^/?#]+)/);
-      if (match) slug = match[1];
-      else slug = url.pathname.replace(/^\/+|\/+$/g, '');
+      const rsvpMatch  = url.pathname.match(/\/rsvp\/([^/?#]+)/);
+      const eventMatch = url.pathname.match(/\/e\/([^/?#]+)/);
+      if (rsvpMatch)       slug = rsvpMatch[1];
+      else if (eventMatch) slug = eventMatch[1];
+      else                 slug = url.pathname.replace(/^\/+|\/+$/g, '');
     } catch {
       // not a URL — use raw as slug
     }
-    // Strip leading /e/ if someone typed it manually
-    slug = slug.replace(/^\/?(e\/)?/, '').replace(/\/+$/, '');
+    // Strip leading prefixes if typed manually
+    slug = slug.replace(/^\\/?(rsvp\\/|e\\/)?/, '').replace(/\\/+$/, '');
 
     if (!slug) {
       setShaking(true);
       setTimeout(() => setShaking(false), 500);
       return;
     }
-    navigate(`/e/${slug}`);
+    navigate(`/rsvp/${slug}`);
   };
 
   const handleKey = (e) => { if (e.key === 'Enter') handleGo(); };
@@ -2387,7 +2417,7 @@ export default function Home() {
                       ) : (
                         <div>
                           <p className="text-sm font-bold text-neutral-300 mb-3">Your event link:</p>
-                          <CopyLinkBox eventId={created.id} subdomain={created.subdomain} />
+                          <CopyLinkBox eventId={created.id} subdomain={created.subdomain} mode={mode} />
                           <p className="text-xs text-neutral-600 mt-3">Share this link with your planning team to get started</p>
                         </div>
                       )}
