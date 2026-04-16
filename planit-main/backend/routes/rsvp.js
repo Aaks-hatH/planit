@@ -53,6 +53,32 @@ function generateEditToken() {
   return crypto.randomBytes(32).toString('hex');
 }
 
+// ─── Per-IP-per-event rate limiter ────────────────────────────────────────────
+// Tracks submission timestamps keyed on `${eventId}:${ip}`.
+// Entries older than RATE_WINDOW_MS are pruned every PRUNE_INTERVAL_MS.
+const RATE_WINDOW_MS    = 60 * 60 * 1000; // 1 hour
+const PRUNE_INTERVAL_MS =  5 * 60 * 1000; // 5 minutes
+const _rateLimitMap = new Map(); // key → number[] (timestamps)
+
+function checkRateLimit(eventId, ip, maxPerWindow) {
+  const key  = `${eventId}:${ip}`;
+  const now  = Date.now();
+  const hits = (_rateLimitMap.get(key) || []).filter(t => now - t < RATE_WINDOW_MS);
+  if (hits.length >= maxPerWindow) return false;
+  hits.push(now);
+  _rateLimitMap.set(key, hits);
+  return true;
+}
+
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, hits] of _rateLimitMap) {
+    const fresh = hits.filter(t => now - t < RATE_WINDOW_MS);
+    if (fresh.length === 0) _rateLimitMap.delete(key);
+    else _rateLimitMap.set(key, fresh);
+  }
+}, PRUNE_INTERVAL_MS).unref();
+
 // ─────────────────────────────────────────────────────────────────────────────
 // GET /api/rsvp/:eventIdOrSlug/page
 // Public — returns all info needed to render the RSVP page
@@ -161,6 +187,13 @@ router.post('/:eventIdOrSlug/submit', async (req, res, next) => {
       return res.json({ success: true, editToken: generateEditToken() });
     }
 
+    // Per-IP rate limit
+    const ip         = getClientIp(req);
+    const maxPerHour = rsvpPage.rateLimitPerIp ?? 5;
+    if (maxPerHour > 0 && !checkRateLimit(event._id.toString(), ip, maxPerHour)) {
+      return res.status(429).json({ error: 'Too many RSVP submissions from your network. Please try again later.' });
+    }
+
     const {
       response,
       firstName,
@@ -247,6 +280,7 @@ router.post('/:eventIdOrSlug/submit', async (req, res, next) => {
     }
 
     // Duplicate email check
+    let isDuplicateSubmission = false;
     if (email && rsvpPage.duplicateEmailPolicy !== 'allow') {
       const existing = await RSVPSubmission.findOne({
         eventId: event._id,
@@ -260,12 +294,15 @@ router.post('/:eventIdOrSlug/submit', async (req, res, next) => {
             existingToken: existing.editToken,
           });
         }
-        // warn_organizer — continue, but flag it
+        // warn_organizer — continue but flag the submission as a duplicate
+        isDuplicateSubmission = true;
       }
     }
 
     // Determine initial status
-    const status = rsvpPage.confirmationMode === 'approval' ? 'pending' : 'confirmed';
+    // Accept both legacy 'approval' and current UI value 'manual_approval'
+    const requiresApproval = rsvpPage.confirmationMode === 'approval' || rsvpPage.confirmationMode === 'manual_approval';
+    const status = requiresApproval ? 'pending' : 'confirmed';
 
     const editToken = generateEditToken();
     const submission = await RSVPSubmission.create({
@@ -283,6 +320,7 @@ router.post('/:eventIdOrSlug/submit', async (req, res, next) => {
       guestNote:           guestNote?.trim() || '',
       status,
       editToken,
+      duplicateFlag: isDuplicateSubmission,
       ipAddress: getClientIp(req),
       userAgent: req.headers['user-agent'] || '',
     });
@@ -434,7 +472,7 @@ router.patch('/:eventId/settings', verifyOrganizer, async (req, res, next) => {
 
     const ALLOWED = [
       'enabled', 'accessMode', 'rsvpPassword', 'confirmationMode',
-      'coverImageUrl', 'logoUrl', 'accentColor', 'backgroundStyle', 'fontStyle',
+      'coverImageUrl', 'logoUrl', 'backgroundImageUrl', 'accentColor', 'backgroundStyle', 'fontStyle',
       'bannerText', 'bannerColor', 'bannerEnabled', 'hideBranding',
       'heroTagline', 'welcomeTitle', 'welcomeMessage',
       'deadline', 'deadlineMessage', 'capacityLimit', 'enableWaitlist', 'waitlistMessage',
