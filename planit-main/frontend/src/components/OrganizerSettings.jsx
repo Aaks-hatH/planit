@@ -7,6 +7,8 @@ import {
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { eventAPI, fileAPI } from '../services/api';
+import RSVPSettings from './RSVPSettings';
+import RSVPDashboard from './RSVPDashboard';
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
@@ -308,6 +310,8 @@ export default function OrganizerSettings({ eventId, event, onClose, onUpdated, 
  { id: 'features', label: 'Features' },
      { id: 'approvals', label: 'Approvals', badge: pendingCount },
  { id: 'rsvp', label: 'RSVP' },
+ { id: 'rsvp-page', label: 'RSVP Page' },
+ { id: 'rsvp-guests', label: 'RSVP Guests' },
  { id: 'theme', label: 'Theme' },
  { id: 'integrations', label: 'Integrations' },
  ].map(tab => (
@@ -591,6 +595,23 @@ export default function OrganizerSettings({ eventId, event, onClose, onUpdated, 
  </div>
  </div>
  </div>
+ )}
+
+ {/* ── RSVP Page tab ── */}
+ {activeTab === 'rsvp-page' && (
+   <RSVPSettings
+     event={event}
+     eventId={event?._id || event?.id}
+     onSettingsChanged={() => {}}
+   />
+ )}
+
+ {/* ── RSVP Guests tab ── */}
+ {activeTab === 'rsvp-guests' && (
+   <RSVPDashboard
+     event={event}
+     eventId={event?._id || event?.id}
+   />
  )}
 
  {/* ── Theme tab ── */}
