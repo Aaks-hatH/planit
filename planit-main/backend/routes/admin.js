@@ -113,13 +113,25 @@ if (!global.__adminLogBuffer) {
   global.__adminLogClients = [];
 
   const MAX = 10000;
+  const safeStr = (a) => {
+    if (typeof a !== 'object' || a === null) return String(a);
+    try {
+      const seen = new WeakSet();
+      return JSON.stringify(a, (_k, v) => {
+        if (typeof v === 'object' && v !== null) {
+          if (seen.has(v)) return '[Circular]';
+          seen.add(v);
+        }
+        return v;
+      }, 0);
+    } catch { return String(a); }
+  };
+
   const push = (level, args) => {
     const entry = {
       ts:    new Date().toISOString(),
       level,
-      msg:   args
-        .map(a => (typeof a === 'object' ? JSON.stringify(a, null, 0) : String(a)))
-        .join(' '),
+      msg:   args.map(safeStr).join(' '),
       pid:   process.pid,
     };
     global.__adminLogBuffer.push(entry);
