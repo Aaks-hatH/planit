@@ -742,17 +742,19 @@ export default function RSVPPageBuilder() {
         <div className="border-t border-neutral-100 pt-3">
           <Toggle label="Allow plus-ones / extra guests" hint="Guests can bring additional people. You set the max number below." checked={settings.allowPlusOnes===true} onChange={v => set('allowPlusOnes',v)} />
           {settings.allowPlusOnes && (
-            <div className="mt-2 grid grid-cols-2 gap-3">
-              <div>
-                <Label>Max guests per RSVP</Label>
-                <Input type="number" value={settings.maxPlusOnes||5} onChange={v => set('maxPlusOnes', Number(v))} placeholder="5" />
-              </div>
-              <div className="pt-6">
-                <Toggle label="Require guest names" checked={settings.requirePlusOneNames===true} onChange={v => set('requirePlusOneNames',v)} />
-              </div>
-            </div>
-            <Toggle label="Collect dietary for plus-ones" hint="Add a dietary restrictions field for each additional guest." checked={settings.collectPlusOneDietary===true} onChange={v => set('collectPlusOneDietary',v)} />
-          )}
+  <>
+    <div className="mt-2 grid grid-cols-2 gap-3">
+      <div>
+        <Label>Max guests per RSVP</Label>
+        <Input type="number" value={settings.maxPlusOnes||5} onChange={v => set('maxPlusOnes', Number(v))} placeholder="5" />
+      </div>
+      <div className="pt-6">
+        <Toggle label="Require guest names" checked={settings.requirePlusOneNames===true} onChange={v => set('requirePlusOneNames',v)} />
+      </div>
+    </div>
+    <Toggle label="Collect dietary for plus-ones" hint="Add a dietary restrictions field for each additional guest." checked={settings.collectPlusOneDietary===true} onChange={v => set('collectPlusOneDietary',v)} />
+  </>
+)}
         </div>
 
         <div className="border-t border-neutral-100 pt-3">
