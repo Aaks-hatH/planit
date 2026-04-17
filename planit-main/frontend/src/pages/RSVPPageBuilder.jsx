@@ -446,6 +446,13 @@ export default function RSVPPageBuilder() {
   const [dirty,    setDirty]    = useState(false);
   const [viewMode, setViewMode] = useState('desktop'); // 'desktop' | 'mobile'
 
+  const [gmailConnected,      setGmailConnected]      = useState(false);
+  const [gmailEmail,          setGmailEmail]          = useState('');
+  const [gmailConnecting,     setGmailConnecting]     = useState(false);
+  const [gmailDisconnecting,  setGmailDisconnecting]  = useState(false);
+
+  const ROUTER_URL = import.meta.env.VITE_ROUTER_URL || '';
+
   /* load event + settings */
   useEffect(() => {
     const load = async () => {
@@ -471,6 +478,13 @@ export default function RSVPPageBuilder() {
         if (settingsRes.data.rsvpPage) {
           setSettings({ ...DEFAULT_SETTINGS, ...settingsRes.data.rsvpPage });
         }
+
+        // Load Gmail connection status
+        try {
+          const gmailRes = await rsvpAPI.getGmailStatus(eid);
+          setGmailConnected(gmailRes.data.connected === true);
+          setGmailEmail(gmailRes.data.email || '');
+        } catch { /* non-fatal */ }
       } catch (err) {
         toast.error('Could not load event settings.');
       } finally { setLoading(false); }
@@ -482,6 +496,51 @@ export default function RSVPPageBuilder() {
     setSettings(prev => ({ ...prev, [key]: value }));
     setDirty(true);
   }, []);
+
+  const connectGmail = () => {
+    if (!eventId || !ROUTER_URL) return;
+    setGmailConnecting(true);
+    const popup = window.open(
+      `${ROUTER_URL}/gmail/connect?eventId=${eventId}`,
+      'gmail-oauth',
+      'width=520,height=640,left=200,top=100'
+    );
+    const onMessage = (e) => {
+      if (e.data?.type === 'GMAIL_OAUTH_SUCCESS') {
+        setGmailConnected(true);
+        setGmailEmail(e.data.message || '');
+        setGmailConnecting(false);
+        toast.success('Gmail connected.');
+        window.removeEventListener('message', onMessage);
+      } else if (e.data?.type === 'GMAIL_OAUTH_ERROR') {
+        setGmailConnecting(false);
+        toast.error('Gmail connection failed.');
+        window.removeEventListener('message', onMessage);
+      }
+    };
+    window.addEventListener('message', onMessage);
+    // Fallback if popup closed without postMessage
+    const pollClosed = setInterval(() => {
+      if (popup?.closed) {
+        clearInterval(pollClosed);
+        window.removeEventListener('message', onMessage);
+        setGmailConnecting(false);
+      }
+    }, 800);
+  };
+
+  const disconnectGmail = async () => {
+    if (!eventId) return;
+    setGmailDisconnecting(true);
+    try {
+      await rsvpAPI.disconnectGmail(eventId);
+      setGmailConnected(false);
+      setGmailEmail('');
+      toast.success('Gmail disconnected.');
+    } catch {
+      toast.error('Failed to disconnect Gmail.');
+    } finally { setGmailDisconnecting(false); }
+  };
 
   const save = async () => {
     if (!dirty || !eventId) return;
@@ -878,21 +937,62 @@ export default function RSVPPageBuilder() {
 
       {/* ── Notifications ── */}
       <SectionCard icon={Mail} title="Email Notifications" description="Who gets notified and when" accent={accent}>
-        <Toggle label="Notify me when someone RSVPs" hint="You'll get an email every time a new RSVP comes in." checked={settings.notifyOrganizerOnRsvp!==false} onChange={v => set('notifyOrganizerOnRsvp',v)} />
+        <Toggle label="Notify me when someone RSVPs" hint="You will get an email every time a new RSVP comes in." checked={settings.notifyOrganizerOnRsvp!==false} onChange={v => set('notifyOrganizerOnRsvp',v)} />
+
         {settings.notifyOrganizerOnRsvp !== false && (
-          <div>
-            <Label>Send notifications to this email</Label>
-            <Hint>Leave blank to use the organizer account email.</Hint>
-            <Input value={settings.organizerNotifyEmail||''} onChange={v => set('organizerNotifyEmail',v)} placeholder="you@example.com" />
+          <div className="space-y-3 mt-1">
+            <div>
+              <Label>Send notifications to this email</Label>
+              <p className="text-[11px] text-neutral-400 mb-1">Leave blank to use the organizer account email.</p>
+              <Input value={settings.organizerNotifyEmail||''} onChange={v => set('organizerNotifyEmail',v)} placeholder="you@example.com" />
+            </div>
+
+            <div className="border border-neutral-200 rounded-xl p-3 bg-neutral-50">
+              <p className="text-xs font-semibold text-neutral-700 mb-0.5">Send notifications from your Gmail</p>
+              <p className="text-[11px] text-neutral-400 mb-3">Connect your Gmail account and RSVP notifications will be sent from your own address instead of a shared platform address.</p>
+
+              {gmailConnected ? (
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <div className="w-2 h-2 rounded-full bg-green-500 shrink-0" />
+                    <span className="text-xs font-medium text-neutral-700 truncate">{gmailEmail || 'Gmail connected'}</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={disconnectGmail}
+                    disabled={gmailDisconnecting}
+                    className="text-[11px] text-red-500 hover:text-red-700 font-medium shrink-0 disabled:opacity-50"
+                  >
+                    {gmailDisconnecting ? 'Disconnecting...' : 'Disconnect'}
+                  </button>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={connectGmail}
+                  disabled={gmailConnecting || !ROUTER_URL}
+                  className="flex items-center gap-2 px-3 py-2 rounded-lg border border-neutral-300 bg-white text-xs font-semibold text-neutral-700 hover:border-neutral-400 hover:bg-neutral-50 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+                    <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+                    <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/>
+                    <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+                  </svg>
+                  {gmailConnecting ? 'Opening...' : 'Connect Gmail'}
+                </button>
+              )}
+            </div>
           </div>
         )}
+
         <div className="border-t border-neutral-100 pt-3">
           <Toggle label="Send confirmation email to guests" hint="Guests get an email receipt right after they RSVP." checked={settings.sendGuestConfirmation===true} onChange={v => set('sendGuestConfirmation',v)} />
           {settings.sendGuestConfirmation && (
             <div className="space-y-3 mt-2">
               <div>
                 <Label>Email subject line</Label>
-                <Input value={settings.confirmationEmailSubject||''} onChange={v => set('confirmationEmailSubject',v)} placeholder="Your RSVP is confirmed — see you there!" />
+                <Input value={settings.confirmationEmailSubject||''} onChange={v => set('confirmationEmailSubject',v)} placeholder="Your RSVP is confirmed - see you there!" />
               </div>
               <div>
                 <Label>Email body</Label>
@@ -906,9 +1006,9 @@ export default function RSVPPageBuilder() {
 
         <div className="border-t border-neutral-100 pt-3">
           <Label>How to handle RSVPs</Label>
-          <Hint>Auto-confirm instantly confirms everyone. Manual approval means you approve each RSVP before they're marked as coming.</Hint>
+          <Hint>Auto-confirm instantly confirms everyone. Manual approval means you approve each RSVP before they are marked as coming.</Hint>
           <div className="grid grid-cols-2 gap-2 mt-2">
-            {[['auto_confirm', 'Auto-confirm', 'Instant ✓'], ['manual_approval', 'Manual approval', 'You review each']].map(([val, lbl, sub]) => (
+            {[['auto_confirm', 'Auto-confirm', 'Instant confirmed'], ['manual_approval', 'Manual approval', 'You review each']].map(([val, lbl, sub]) => (
               <button key={val} type="button" onClick={() => set('confirmationMode', val)}
                 className={`p-3 rounded-xl border-2 text-left transition-all ${settings.confirmationMode===val ? 'border-indigo-500 bg-indigo-50' : 'border-neutral-200 hover:border-neutral-300'}`}>
                 <p className="text-xs font-bold text-neutral-800">{lbl}</p>
