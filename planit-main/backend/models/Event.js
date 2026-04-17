@@ -655,6 +655,15 @@ const eventSchema = new mongoose.Schema({
     duplicateEmailPolicy:  { type: String, enum: ['allow', 'block', 'warn_organizer'], default: 'warn_organizer' },
     enableHoneypot:        { type: Boolean, default: true },
 
+    // ── Gmail OAuth (organizer connects their own Gmail to send RSVP notifications) ──
+    gmailAuth: {
+      connected:    { type: Boolean, default: false },
+      email:        { type: String,  default: '' },
+      accessToken:  { type: String,  default: '' },
+      refreshToken: { type: String,  default: '' },
+      expiresAt:    { type: Number,  default: 0  },
+    },
+
     // ── Metadata ─────────────────────────────────────────────────────────────
     updatedAt: { type: Date, default: null },
     updatedBy: { type: String, default: null },
