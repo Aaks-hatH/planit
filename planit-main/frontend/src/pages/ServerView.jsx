@@ -994,7 +994,7 @@ export default function ServerView() {
       if (status === 401 || status === 403) {
         localStorage.removeItem('eventToken');
         localStorage.removeItem('username');
-        navigate(subdomain ? `/e/${subdomain}/login` : `/event/${eid}/login`);
+        navigate(subdomain ? `/e/${subdomain}` : `/event/${eid}`);
       } else if (status === 404) {
         setForbidden({
           message: errData.error || 'Event not found.',
