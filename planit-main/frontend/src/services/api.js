@@ -88,6 +88,7 @@ export const eventAPI = {
   getById:        (id)                => api.get(`/events/${id}`),
   getPublicInfo:  (id)                => api.get(`/events/public/${id}`),
   getParticipants:(id)                => api.get(`/events/participants/${id}`),
+  getPublicParticipants:(id)          => api.get(`/events/public-participants/${id}`),
   verifyPassword: (id, data)          => api.post(`/events/verify-password/${id}`, data),
   join:           (id, data)          => api.post(`/events/join/${id}`, data),
   setPassword:    (id, data)          => api.post(`/events/set-password/${id}`, data),
