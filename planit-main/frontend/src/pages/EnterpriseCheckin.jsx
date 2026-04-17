@@ -1417,7 +1417,7 @@ function ActivityLogDialog({ eventId, onClose }) {
 // MAIN COMPONENT
 // ═══════════════════════════════════════════════════════════════════════════
 export default function EnterpriseCheckin() {
-  const { eventId } = useParams();
+  const { eventId, subdomain } = useParams();
   const navigate = useNavigate();
   
   // Auth / staff gate
@@ -2121,15 +2121,12 @@ export default function EnterpriseCheckin() {
     return 0;
   });
 
-  // Staff login gate
+  // Staff login gate — redirect to the event join gate instead of inline login
   if (!authState.ready) {
-    return (
-      <StaffLoginScreen
-        eventId={eventId}
-        eventTitle={event?.title}
-        onLogin={handleStaffLogin}
-      />
-    );
+    if (subdomain) navigate(`/e/${subdomain}`, { replace: true });
+    else if (eventId) navigate(`/event/${eventId}`, { replace: true });
+    else navigate('/', { replace: true });
+    return null;
   }
 
   if (loading) {
