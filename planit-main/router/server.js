@@ -1469,6 +1469,318 @@ app.get('/mesh/email/pool', meshAuth(SERVICE_NAME), (_req, res) => {
   res.json({ ok: true, pool: _keyPoolStats(), fetchedAt: new Date().toISOString() });
 });
 
+// ─── Gmail OAuth ──────────────────────────────────────────────────────────────
+// All three routes live only in the router so Google credentials never touch backends.
+
+function _gmailRequest(method, path, accessToken, body) {
+  return new Promise((resolve, reject) => {
+    const bodyStr = body ? JSON.stringify(body) : '';
+    const opts = {
+      hostname: 'www.googleapis.com',
+      path,
+      method,
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+        'Content-Type': 'application/json',
+        'Content-Length': Buffer.byteLength(bodyStr),
+      },
+    };
+    const req = https.request(opts, (res) => {
+      let raw = '';
+      res.on('data', d => { raw += d; });
+      res.on('end', () => {
+        try { resolve({ status: res.statusCode, body: JSON.parse(raw) }); }
+        catch { resolve({ status: res.statusCode, body: raw }); }
+      });
+    });
+    req.on('error', reject);
+    if (bodyStr) req.write(bodyStr);
+    req.end();
+  });
+}
+
+async function _gmailRefreshToken(refreshToken) {
+  const clientId     = process.env.GOOGLE_CLIENT_ID     || '';
+  const clientSecret = process.env.GOOGLE_CLIENT_SECRET || '';
+  const body = new URLSearchParams({
+    client_id:     clientId,
+    client_secret: clientSecret,
+    refresh_token: refreshToken,
+    grant_type:    'refresh_token',
+  }).toString();
+  return new Promise((resolve, reject) => {
+    const opts = {
+      hostname: 'oauth2.googleapis.com',
+      path:     '/token',
+      method:   'POST',
+      headers:  { 'Content-Type': 'application/x-www-form-urlencoded', 'Content-Length': Buffer.byteLength(body) },
+    };
+    const req = https.request(opts, (res) => {
+      let raw = '';
+      res.on('data', d => { raw += d; });
+      res.on('end', () => {
+        try { resolve({ status: res.statusCode, body: JSON.parse(raw) }); }
+        catch { resolve({ status: res.statusCode, body: raw }); }
+      });
+    });
+    req.on('error', reject);
+    req.write(body);
+    req.end();
+  });
+}
+
+function _buildRsvpNotificationHtml(data) {
+  const { guestName, guestEmail, guestPhone, response, status, plusOnes, eventTitle, eventDate } = data;
+  const h = s => String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  const responseLabel = response === 'yes' ? 'Attending' : response === 'maybe' ? 'Maybe' : 'Not Attending';
+  const statusLabel   = status === 'pending' ? 'Pending Approval' : status === 'waitlisted' ? 'Waitlisted' : 'Confirmed';
+  const dateStr = eventDate ? (() => { try { return new Date(eventDate).toLocaleString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'UTC' }) + ' UTC'; } catch { return String(eventDate); } })() : '';
+
+  const rows = [
+    ['Name',     guestName],
+    ['Response', responseLabel],
+    ['Status',   statusLabel],
+    guestEmail ? ['Email', guestEmail] : null,
+    guestPhone ? ['Phone', guestPhone] : null,
+    plusOnes   ? ['Plus Ones', String(plusOnes)] : null,
+    dateStr    ? ['Event Date', dateStr] : null,
+  ].filter(Boolean);
+
+  const rowHtml = rows.map(([k, v]) => `
+    <tr>
+      <td style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.6px;color:#9CA3AF;padding:8px 12px 8px 0;white-space:nowrap;vertical-align:top;font-family:system-ui,sans-serif;">${h(k)}</td>
+      <td style="font-size:14px;color:#374151;padding:8px 0;font-family:system-ui,sans-serif;">${h(String(v))}</td>
+    </tr>`).join('');
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>New RSVP: ${h(eventTitle)}</title>
+</head>
+<body style="margin:0;padding:0;background:#F3F4F6;font-family:system-ui,sans-serif;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#F3F4F6;">
+    <tr>
+      <td align="center" style="padding:32px 16px;">
+        <table role="presentation" width="560" cellpadding="0" cellspacing="0" style="max-width:560px;width:100%;background:#ffffff;border-radius:8px;overflow:hidden;">
+          <tr>
+            <td style="background:#111827;padding:20px 28px;">
+              <span style="font-size:16px;font-weight:800;color:#ffffff;font-family:system-ui,sans-serif;">PlanIt</span>
+              <span style="font-size:11px;color:rgba(255,255,255,0.4);margin-left:10px;font-family:system-ui,sans-serif;">RSVP Notification</span>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:24px 28px 8px 28px;">
+              <p style="margin:0 0 6px 0;font-size:18px;font-weight:700;color:#111827;font-family:system-ui,sans-serif;">New RSVP for ${h(eventTitle)}</p>
+              <p style="margin:0;font-size:13px;color:#6B7280;font-family:system-ui,sans-serif;">Someone just submitted an RSVP for your event.</p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:16px 28px 24px 28px;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-top:1px solid #E5E7EB;margin-top:8px;">
+                ${rowHtml}
+              </table>
+            </td>
+          </tr>
+          <tr>
+            <td style="background:#F9FAFB;border-top:1px solid #E5E7EB;padding:14px 28px;">
+              <p style="margin:0;font-size:11px;color:#9CA3AF;font-family:system-ui,sans-serif;">Sent via PlanIt. Log in to your event dashboard to manage RSVPs.</p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
+}
+
+// GET /gmail/connect?eventId=...
+// Opens in a popup — redirects the organizer's browser to Google OAuth consent screen.
+app.get('/gmail/connect', (req, res) => {
+  const eventId      = req.query.eventId || '';
+  const clientId     = process.env.GOOGLE_CLIENT_ID    || '';
+  const redirectUri  = process.env.GOOGLE_REDIRECT_URI || '';
+
+  if (!clientId || !redirectUri) {
+    return res.status(503).send('<p style="font-family:system-ui;padding:24px">Gmail OAuth is not configured on this server.</p>');
+  }
+  if (!eventId) {
+    return res.status(400).send('<p style="font-family:system-ui;padding:24px">Missing eventId.</p>');
+  }
+
+  const params = new URLSearchParams({
+    client_id:     clientId,
+    redirect_uri:  redirectUri,
+    response_type: 'code',
+    scope:         'https://www.googleapis.com/auth/gmail.send https://www.googleapis.com/auth/userinfo.email',
+    access_type:   'offline',
+    prompt:        'consent',
+    state:         eventId,
+  });
+
+  res.redirect(`https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`);
+});
+
+// GET /gmail/callback
+// Google redirects here after consent. Exchanges code, saves tokens to backend, closes popup.
+app.get('/gmail/callback', async (req, res) => {
+  const { code, state: eventId, error } = req.query;
+  const frontendUrl = (process.env.FRONTEND_URL || '').split(',')[0].trim().replace(/\/$/, '');
+
+  function closePopup(success, message) {
+    const safeMsg = String(message || '').replace(/'/g, "\\'");
+    return res.send(`<!DOCTYPE html><html><head><meta charset="UTF-8"/><title>Gmail Connected</title></head>
+<body style="font-family:system-ui;padding:32px;text-align:center;">
+  <p style="font-size:15px;color:${success ? '#111827' : '#dc2626'};">${success ? 'Gmail connected. You can close this window.' : 'Connection failed: ' + safeMsg}</p>
+  <script>
+    try {
+      if (window.opener) {
+        window.opener.postMessage({ type: 'GMAIL_OAUTH_${success ? 'SUCCESS' : 'ERROR'}', message: '${safeMsg}' }, '${frontendUrl || '*'}');
+      }
+    } catch(e) {}
+    setTimeout(() => window.close(), 1500);
+  </script>
+</body></html>`);
+  }
+
+  if (error) return closePopup(false, error);
+  if (!code || !eventId) return closePopup(false, 'Missing code or eventId');
+
+  const clientId     = process.env.GOOGLE_CLIENT_ID     || '';
+  const clientSecret = process.env.GOOGLE_CLIENT_SECRET || '';
+  const redirectUri  = process.env.GOOGLE_REDIRECT_URI  || '';
+
+  try {
+    // Exchange code for tokens
+    const tokenBody = new URLSearchParams({
+      code, client_id: clientId, client_secret: clientSecret,
+      redirect_uri: redirectUri, grant_type: 'authorization_code',
+    }).toString();
+
+    const tokenRes = await new Promise((resolve, reject) => {
+      const opts = {
+        hostname: 'oauth2.googleapis.com', path: '/token', method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'Content-Length': Buffer.byteLength(tokenBody) },
+      };
+      const r = https.request(opts, (res) => {
+        let raw = '';
+        res.on('data', d => { raw += d; });
+        res.on('end', () => { try { resolve(JSON.parse(raw)); } catch { resolve({}); } });
+      });
+      r.on('error', reject);
+      r.write(tokenBody);
+      r.end();
+    });
+
+    if (!tokenRes.access_token) {
+      console.error('[gmail-oauth] Token exchange failed:', tokenRes.error_description || tokenRes.error);
+      return closePopup(false, tokenRes.error_description || 'Token exchange failed');
+    }
+
+    // Fetch the authenticated user's email address
+    const profileRes = await _gmailRequest('GET', '/oauth2/v2/userinfo', tokenRes.access_token, null);
+    const gmailEmail = profileRes.body?.email || '';
+
+    // Save tokens to backend via mesh
+    const backends = BACKENDS.filter(Boolean);
+    if (backends.length === 0) return closePopup(false, 'No backend available');
+
+    const saveResult = await meshPost(SERVICE_NAME, `${backends[0]}/api/rsvp/mesh/gmail-save`, {
+      eventId,
+      email:        gmailEmail,
+      accessToken:  tokenRes.access_token,
+      refreshToken: tokenRes.refresh_token || '',
+      expiresAt:    tokenRes.expires_in ? Date.now() + tokenRes.expires_in * 1000 : 0,
+    }, { timeout: 10000 });
+
+    if (!saveResult.ok) {
+      console.error('[gmail-oauth] Failed to save tokens to backend:', saveResult.error);
+      return closePopup(false, 'Failed to save connection');
+    }
+
+    console.log(`[gmail-oauth] Connected Gmail ${gmailEmail} for event ${eventId}`);
+    closePopup(true, gmailEmail);
+
+  } catch (err) {
+    console.error('[gmail-oauth] Callback error:', err.message);
+    closePopup(false, 'Internal error');
+  }
+});
+
+// POST /mesh/gmail-send
+// Backend calls this (via mesh) to send an RSVP notification email via the organizer's Gmail.
+// Handles token refresh and saves updated access token back to backend.
+app.post('/mesh/gmail-send', meshAuth(SERVICE_NAME), express.json({ limit: '64kb' }), async (req, res) => {
+  const {
+    eventId, to, fromEmail,
+    accessToken: rawAccessToken, refreshToken, expiresAt,
+    guestName, guestEmail, guestPhone, response, status, plusOnes,
+    eventTitle, eventDate,
+  } = req.body || {};
+
+  if (!refreshToken || !to || !eventId) {
+    return res.status(400).json({ ok: false, reason: 'missing required fields' });
+  }
+
+  try {
+    // Refresh access token if expired (with 60s buffer)
+    let accessToken = rawAccessToken;
+    let newExpiresAt = expiresAt;
+
+    if (!accessToken || !expiresAt || Date.now() > expiresAt - 60000) {
+      const refreshed = await _gmailRefreshToken(refreshToken);
+      if (!refreshed.body?.access_token) {
+        console.error('[gmail-send] Token refresh failed:', refreshed.body?.error);
+        return res.status(502).json({ ok: false, reason: 'token_refresh_failed' });
+      }
+      accessToken  = refreshed.body.access_token;
+      newExpiresAt = refreshed.body.expires_in ? Date.now() + refreshed.body.expires_in * 1000 : 0;
+
+      // Save refreshed token back to backend (fire-and-forget)
+      const backends = BACKENDS.filter(Boolean);
+      if (backends.length > 0) {
+        meshPost(SERVICE_NAME, `${backends[0]}/api/rsvp/mesh/gmail-save`, {
+          eventId, email: fromEmail || '', accessToken, refreshToken, expiresAt: newExpiresAt,
+        }, { timeout: 8000 }).catch(() => {});
+      }
+    }
+
+    // Build email
+    const html    = _buildRsvpNotificationHtml({ guestName, guestEmail, guestPhone, response, status, plusOnes, eventTitle, eventDate });
+    const subject = `New RSVP: ${guestName || 'Someone'} for ${eventTitle || 'your event'}`;
+    const from    = fromEmail ? `"${(eventTitle || 'PlanIt').replace(/"/g, '')}" <${fromEmail}>` : fromEmail || '';
+
+    // Construct RFC 2822 message
+    const messageParts = [
+      `From: ${from}`,
+      `To: ${to}`,
+      `Subject: ${subject}`,
+      'MIME-Version: 1.0',
+      'Content-Type: text/html; charset=UTF-8',
+      '',
+      html,
+    ];
+    const rawMessage = Buffer.from(messageParts.join('\r\n')).toString('base64url');
+
+    // Send via Gmail API
+    const sendRes = await _gmailRequest('POST', '/gmail/v1/users/me/messages/send', accessToken, { raw: rawMessage });
+
+    if (sendRes.status >= 200 && sendRes.status < 300) {
+      console.log(`[gmail-send] Sent RSVP notification to ${to} for event ${eventId}`);
+      return res.json({ ok: true });
+    }
+
+    console.error(`[gmail-send] Gmail API error ${sendRes.status}:`, sendRes.body?.error?.message || sendRes.body);
+    res.status(502).json({ ok: false, reason: sendRes.body?.error?.message || 'gmail_api_error' });
+
+  } catch (err) {
+    console.error('[gmail-send] Unexpected error:', err.message);
+    res.status(500).json({ ok: false, reason: 'internal_error' });
+  }
+});
+
 // ─── Turnstile verification ───────────────────────────────────────────────────
 // POST /mesh/turnstile — verify a Cloudflare Turnstile challenge response.
 // The Turnstile SECRET KEY lives ONLY in the router (never in any backend env).
