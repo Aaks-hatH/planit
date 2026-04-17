@@ -588,6 +588,8 @@ export const rsvpAPI = {
   bulkDecline:      (eventId, ids)       => api.post(`/rsvp/${eventId}/submissions/bulk-decline`, { ids }),
   getStats:         (eventId)            => api.get(`/rsvp/${eventId}/stats`),
   exportCsv:        (eventId)            => `${API_URL}/rsvp/${eventId}/export.csv`,
+  getGmailStatus:   (eventId)            => api.get(`/rsvp/${eventId}/gmail/status`),
+  disconnectGmail:  (eventId)            => api.delete(`/rsvp/${eventId}/gmail/disconnect`),
 };
 
 export default api;
