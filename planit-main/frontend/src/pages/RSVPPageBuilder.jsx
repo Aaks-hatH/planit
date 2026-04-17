@@ -456,13 +456,14 @@ export default function RSVPPageBuilder() {
   /* load event + settings */
   useEffect(() => {
     const load = async () => {
+      let eventSubdomain = subdomain || null;
+      let eventObjId = paramEventId || null;
       try {
-        // Use rsvpAPI.getPage — handles both ObjectId and subdomain slug
-        // (avoids the Mongoose CastError caused by passing a subdomain string
-        //  to Event.findById in the old eventAPI.getPublicInfo path)
         const pageRes = await rsvpAPI.getPage(paramEventId || subdomain);
         const eid = pageRes.data.eventId;
-        if (!eid) { toast.error('Event not found'); return; }
+        if (!eid) { toast.error('Event not found'); setLoading(false); return; }
+        eventSubdomain = pageRes.data.subdomain || eventSubdomain;
+        eventObjId = eid;
         setEventId(eid);
 
         setEvent({
@@ -485,9 +486,20 @@ export default function RSVPPageBuilder() {
           setGmailConnected(gmailRes.data.connected === true);
           setGmailEmail(gmailRes.data.email || '');
         } catch { /* non-fatal */ }
+
+        setLoading(false);
       } catch (err) {
-        toast.error('Could not load event settings.');
-      } finally { setLoading(false); }
+        const status = err?.response?.status;
+        if (status === 401 || status === 403) {
+          // Not logged in or not organizer — send to join gate
+          if (eventSubdomain) navigate(`/e/${eventSubdomain}`, { replace: true });
+          else if (eventObjId) navigate(`/event/${eventObjId}`, { replace: true });
+          else navigate('/', { replace: true });
+        } else {
+          toast.error('Could not load event settings.');
+          setLoading(false);
+        }
+      }
     };
     load();
   }, [paramEventId, subdomain]);
