@@ -90,17 +90,19 @@ function JoinGate({ eventId, onJoined }) {
 
   useEffect(() => {
     if (!eventId) return;
+    let didNavigate = false;
     eventAPI.getPublicInfo(eventId)
       .then((infoRes) => {
-        const info = infoRes.data.event;
+        const info = infoRes?.data?.event;
+        if (!info) { didNavigate = true; navigate('/'); return; }
         setPublicInfo(info);
-        setIsFull(info.participantCount >= info.maxParticipants);
+        setIsFull((info.participantCount ?? 0) >= (info.maxParticipants ?? Infinity));
         return eventAPI.getPublicParticipants(eventId)
-          .then(partRes => setKnownParticipants(partRes.data.participants || []))
+          .then(partRes => setKnownParticipants(partRes?.data?.participants || []))
           .catch(() => setKnownParticipants([]));
       })
-      .catch(() => navigate('/'))
-      .finally(() => setLoading(false));
+      .catch(() => { didNavigate = true; navigate('/'); })
+      .finally(() => { if (!didNavigate) setLoading(false); });
   }, [eventId]);
 
   // Focus account password field when we switch to that step
@@ -271,7 +273,7 @@ function JoinGate({ eventId, onJoined }) {
       </div>
     </div>
   );
-  if (!publicInfo) return null;
+  if (!publicInfo) { navigate('/'); return null; }
 
   const { yes = 0, maybe = 0, no: noCount = 0 } = publicInfo.rsvpSummary || {};
   const fillPct = publicInfo.maxParticipants
