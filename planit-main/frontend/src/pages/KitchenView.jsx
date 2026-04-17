@@ -586,7 +586,7 @@ export default function KitchenView() {
       if (err?.response?.status === 403) {
         setError('Not a table service event.');
       } else if (err?.response?.status === 401) {
-        navigate(subdomain ? `/e/${subdomain}/login` : `/event/${eid}/login`);
+        navigate(subdomain ? `/e/${subdomain}` : `/event/${eid}`);
       } else {
         setError('Could not load kitchen data.');
       }
