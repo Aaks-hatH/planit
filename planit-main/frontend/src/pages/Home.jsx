@@ -732,7 +732,7 @@ function SlugFinder({ compact = false }) {
       setTimeout(() => setShaking(false), 500);
       return;
     }
-    navigate(`/rsvp/${slug}`);
+    navigate(`/e/${slug}`);
   };
 
   const handleKey = (e) => { if (e.key === 'Enter') handleGo(); };
