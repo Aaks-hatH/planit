@@ -90,12 +90,14 @@ function JoinGate({ eventId, onJoined }) {
 
   useEffect(() => {
     if (!eventId) return;
-    Promise.all([eventAPI.getPublicInfo(eventId), eventAPI.getParticipants(eventId)])
-      .then(([infoRes, partRes]) => {
+    eventAPI.getPublicInfo(eventId)
+      .then((infoRes) => {
         const info = infoRes.data.event;
         setPublicInfo(info);
-        setKnownParticipants(partRes.data.participants || []);
         setIsFull(info.participantCount >= info.maxParticipants);
+        return eventAPI.getPublicParticipants(eventId)
+          .then(partRes => setKnownParticipants(partRes.data.participants || []))
+          .catch(() => setKnownParticipants([]));
       })
       .catch(() => navigate('/'))
       .finally(() => setLoading(false));
