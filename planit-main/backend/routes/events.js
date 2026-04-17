@@ -128,6 +128,17 @@ router.post('/',
   }
 );
 
+// Public (no-auth) participant list — only username + hasPassword, no roles
+router.get('/public-participants/:eventId', async (req, res, next) => {
+  try {
+    const participants = await EventParticipant.find({ eventId: req.params.eventId })
+      .select('username hasPassword')
+      .sort({ lastSeenAt: -1 })
+      .lean();
+    res.json({ participants: participants.map(p => ({ username: p.username, hasPassword: p.hasPassword })) });
+  } catch (error) { next(error); }
+});
+
 // Get existing participant names for an event (for join gate dropdown)
 // V-04 FIX: Require event access token; scrub roles from non-organizer tokens
 router.get('/participants/:eventId', verifyEventAccess, async (req, res, next) => {
