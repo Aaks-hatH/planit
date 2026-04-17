@@ -25,6 +25,10 @@ const crypto   = require('crypto');
 const Event    = require('../models/Event');
 const RSVPSubmission = require('../models/RSVPSubmission');
 const { verifyOrganizer } = require('../middleware/auth');
+const { meshPost } = require('../middleware/mesh');
+
+const CALLER     = process.env.BACKEND_LABEL || 'Backend';
+const ROUTER_URL = () => process.env.ROUTER_URL || '';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -335,6 +339,33 @@ router.post('/:eventIdOrSlug/submit', async (req, res, next) => {
         ? 'Your RSVP has been submitted and is awaiting approval.'
         : (rsvpPage.confirmationMessage || 'Your RSVP has been confirmed.'),
     });
+
+    // Fire-and-forget: send Gmail RSVP notification to organizer if connected
+    if (rsvpPage.notifyOrganizerOnRsvp !== false) {
+      const routerUrl = ROUTER_URL();
+      const gmailAuth = event.rsvpPage?.gmailAuth;
+      if (routerUrl && gmailAuth?.connected && gmailAuth.refreshToken) {
+        const notifyTo = rsvpPage.organizerNotifyEmail?.trim() || event.organizerEmail || '';
+        if (notifyTo) {
+          meshPost(CALLER, `${routerUrl}/mesh/gmail-send`, {
+            eventId:      String(event._id),
+            to:           notifyTo,
+            fromEmail:    gmailAuth.email,
+            accessToken:  gmailAuth.accessToken,
+            refreshToken: gmailAuth.refreshToken,
+            expiresAt:    gmailAuth.expiresAt,
+            guestName:    `${firstName.trim()}${lastName?.trim() ? ' ' + lastName.trim() : ''}`,
+            guestEmail:   email?.trim() || '',
+            guestPhone:   phone?.trim() || '',
+            response:     submission.response,
+            status:       submission.status,
+            plusOnes:     Number(plusOnes) || 0,
+            eventTitle:   event.title,
+            eventDate:    event.date || null,
+          }, { timeout: 15000 }).catch(() => {});
+        }
+      }
+    }
   } catch (err) { next(err); }
 });
 
@@ -851,6 +882,54 @@ router.get('/:eventId/stats', verifyOrganizer, async (req, res, next) => {
       byDay:   byDay.map(d => ({ date: d._id, count: d.count })),
       byTag:   byTag.map(t => ({ tag: t._id, count: t.count })),
     });
+  } catch (err) { next(err); }
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// GET /api/rsvp/:eventId/gmail/status
+// Organizer — returns whether Gmail is connected for this event's RSVP notifications
+// ─────────────────────────────────────────────────────────────────────────────
+router.get('/:eventId/gmail/status', verifyOrganizer, async (req, res, next) => {
+  try {
+    const event = await Event.findById(req.params.eventId).select('rsvpPage.gmailAuth').lean();
+    if (!event) return res.status(404).json({ error: 'Event not found.' });
+    const g = event.rsvpPage?.gmailAuth || {};
+    res.json({ connected: g.connected === true, email: g.connected ? g.email : '' });
+  } catch (err) { next(err); }
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// DELETE /api/rsvp/:eventId/gmail/disconnect
+// Organizer — removes stored Gmail OAuth tokens for this event
+// ─────────────────────────────────────────────────────────────────────────────
+router.delete('/:eventId/gmail/disconnect', verifyOrganizer, async (req, res, next) => {
+  try {
+    const event = await Event.findById(req.params.eventId);
+    if (!event) return res.status(404).json({ error: 'Event not found.' });
+    if (!event.rsvpPage) event.rsvpPage = {};
+    event.rsvpPage.gmailAuth = { connected: false, email: '', accessToken: '', refreshToken: '', expiresAt: 0 };
+    event.markModified('rsvpPage');
+    await event.save();
+    res.json({ success: true });
+  } catch (err) { next(err); }
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// POST /api/mesh/rsvp-gmail-save
+// Mesh-only — called by the router after Gmail OAuth callback to persist tokens
+// ─────────────────────────────────────────────────────────────────────────────
+router.post('/mesh/gmail-save', require('../middleware/mesh').meshAuth(process.env.BACKEND_LABEL || 'Backend'), async (req, res, next) => {
+  try {
+    const { eventId, email, accessToken, refreshToken, expiresAt } = req.body;
+    if (!eventId || !refreshToken) return res.status(400).json({ error: 'Missing required fields.' });
+    const event = await Event.findById(eventId);
+    if (!event) return res.status(404).json({ error: 'Event not found.' });
+    if (!event.rsvpPage) event.rsvpPage = {};
+    event.rsvpPage.gmailAuth = { connected: true, email: email || '', accessToken, refreshToken, expiresAt: expiresAt || 0 };
+    event.markModified('rsvpPage');
+    await event.save();
+    console.log(`[rsvp-gmail] Saved OAuth tokens for event ${eventId} (${email})`);
+    res.json({ success: true });
   } catch (err) { next(err); }
 });
 
