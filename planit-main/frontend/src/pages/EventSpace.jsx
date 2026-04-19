@@ -61,6 +61,7 @@ function QRModal({ eventId, onClose }) {
 
 /* ─── Join Gate ──────────────────────────────────────────────────────────── */
 function JoinGate({ eventId, onJoined }) {
+  const { wl, isWL } = useWhiteLabel();
   const [publicInfo, setPublicInfo]               = useState(null);
   const [knownParticipants, setKnownParticipants] = useState([]);
   const [loading, setLoading]                     = useState(true);
