@@ -2535,7 +2535,7 @@ export default function Home() {
               <div>
                 <h3 style={{ fontSize: 9, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.2em', color: 'rgba(255,255,255,0.25)', marginBottom: 16 }}>Connect</h3>
                 <ul style={{ listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 10 }}>
-                  {[['Contact / Support', '/support'], ['Wall of Supporters', '/support/wall'], ['System Status', '/status'], ['Help Center', '/help']].map(([label, href]) => (
+                  {[['Contact / Support us', '/support'], ['Wall of Supporters', '/support/wall'], ['System Status', '/status'], ['Help Center', '/help']].map(([label, href]) => (
                     <li key={label}>
                       <a href={href} style={{ fontSize: 12, color: 'rgba(255,255,255,0.32)', textDecoration: 'none', transition: 'color 0.2s' }}
                         onMouseEnter={e => e.currentTarget.style.color = 'rgba(255,255,255,0.8)'}
