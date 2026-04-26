@@ -1126,7 +1126,7 @@ export default function RSVPPageBuilder() {
 
         {/* Left — settings */}
         <div className="w-[440px] xl:w-[520px] flex-shrink-0 overflow-y-auto bg-neutral-100 px-4 py-5 scrollbar-thin scrollbar-thumb-neutral-300">
-          <SettingsPanel />
+          {SettingsPanel()}
         </div>
 
         {/* Divider */}
