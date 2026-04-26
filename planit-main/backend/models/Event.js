@@ -696,10 +696,13 @@ eventSchema.methods.addParticipant = function (username, role = 'participant') {
       throw err;
     }
   }
+  // Use a filter condition instead of $addToSet so that the `joinedAt` default
+  // on the subdocument does not make every insertion look unique to MongoDB,
+  // which would cause duplicate participant entries for returning users.
   return this.constructor.updateOne(
-    { _id: this._id },
+    { _id: this._id, 'participants.username': { $ne: username } },
     {
-      $addToSet: { participants: { username, role } },
+      $push: { participants: { username, role } },
       $set: { 'metadata.lastActivity': new Date() },
     }
   );
