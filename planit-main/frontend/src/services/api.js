@@ -8,7 +8,9 @@ const api = axios.create({
   baseURL: API_URL,
   headers: { 'Content-Type': 'application/json' },
   withCredentials: true,
-  timeout: 15000,
+  // 30 s — Render free-tier cold starts can take 20–25 s. The frontend retries
+  // on timeout so 30 s is a reasonable single-attempt ceiling before retrying.
+  timeout: 30000,
 });
 
 // Native PlanIt hosts — requests from these should NOT set x-wl-domain
