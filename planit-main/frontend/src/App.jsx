@@ -16,6 +16,7 @@ import SecurityDashboard from './pages/SecurityDashboard';
 import Terms from './pages/Terms';
 import Privacy from './pages/Privacy';
 import NotFound from './pages/NotFound';
+import TooManyRequests from './pages/TooManyRequests';
 import Support from './pages/Support';
 import SupportSuccess from './pages/SupportSuccess';
 import WallOfSupporters from './pages/WallOfSupporters';
@@ -380,6 +381,7 @@ function WhiteLabelTheme({ children }) {
 // see the WL title section in WhiteLabelTheme above (line ~322).
 const PAGE_TITLES = {
   '/':                         'Event Planning and Restaurant Management Software · PlanIt',
+  '/429':                        'Too Many Requests · PlanIt',
   '/about':                    'About PlanIt · Built for Event Planners and Venue Managers',
   '/admin':                    'Admin Control Panel · PlanIt',
   '/admin/security':           'Platform Security Dashboard · PlanIt Admin',
@@ -520,6 +522,7 @@ function App() {
         <Route path="/white-label"              element={<WhiteLabelSignup />} />
         <Route path="/white-label/setup-fee"      element={<SetupFee />} />
         <Route path="/white-label/setup-success"  element={<SetupFeeSuccess />} />
+        <Route path="/429"             element={<TooManyRequests />} />
         <Route path="*"                element={<NotFound />} />
       </Routes>
     </Router>
