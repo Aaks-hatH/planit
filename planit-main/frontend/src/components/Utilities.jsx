@@ -13,7 +13,7 @@ export default function Utilities({ eventId, subdomain, isOrganizer, isEnterpris
     ? `${window.location.origin}/e/${subdomain}`
     : `${window.location.origin}/event/${eventId}`;
 
-  const qrCodeUrl = utilityAPI.generateQRCode(eventUrl);
+  const qrCodeUrl = utilityAPI.generateQRCode(eventId);
 
   const copyLink = () => {
     navigator.clipboard.writeText(eventUrl);
