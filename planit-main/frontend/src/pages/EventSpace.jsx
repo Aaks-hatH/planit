@@ -127,6 +127,13 @@ function JoinGate({ eventId, onJoined }) {
           if (err.response?.status === 404) {
             didNavigate = true; navigate('/'); return;
           }
+          // Rate limited → navigate to the 429 page with countdown
+          if (err.response?.status === 429) {
+            const retryAfter = err.response.headers?.['retry-after'];
+            const delay = retryAfter ? parseInt(retryAfter) : 60;
+            navigate('/429', { state: { retryAfter: delay, returnTo: window.location.pathname } });
+            return;
+          }
           // Timeout / network error / 5xx → retry on cold-start, don't redirect
           if (!err.response && retries < 2) {
             retries++;
@@ -975,6 +982,12 @@ export default function EventSpace() {
               navigate('/not-found', { replace: true });
               return;
             }
+            if (err.response?.status === 429) {
+              const retryAfter = err.response.headers?.['retry-after'];
+              const delay = retryAfter ? parseInt(retryAfter) * 1000 : 5000;
+              navigate('/429', { replace: true, state: { retryAfter: Math.ceil(delay / 1000), returnTo: window.location.pathname } });
+              return;
+            }
             attempts++;
             if (attempts < 3) {
               // Exponential back-off: 2s, 4s
@@ -1193,6 +1206,11 @@ export default function EventSpace() {
         // Event truly does not exist
         toast.error('Event not found');
         navigate('/');
+      } else if (err.response?.status === 429) {
+        // Rate limited — navigate to the 429 page with a countdown
+        const retryAfter = err.response.headers?.['retry-after'];
+        navigate('/429', { state: { retryAfter: retryAfter ? parseInt(retryAfter) : 60, returnTo: window.location.pathname } });
+        return; // Keep spinner visible until navigation completes
       } else if (!err.response && attempt < 2) {
         // Network error or timeout (Render cold-start). Retry up to 2 times
         // with back-off before giving up. Do NOT navigate — the URL is correct.
