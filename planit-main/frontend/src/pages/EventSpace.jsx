@@ -33,6 +33,7 @@ import CrossPlatformAd from '../components/CrossPlatformAd';
 function QRModal({ eventId, onClose }) {
   const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
   const qrSrc  = `${apiUrl}/events/${eventId}/qr.svg`;
+  const [imgError, setImgError] = useState(false);
   const handleDownload = () => {
     const a = document.createElement('a');
     a.href = qrSrc; a.download = `planit-qr-${eventId}.svg`;
@@ -48,7 +49,23 @@ function QRModal({ eventId, onClose }) {
           </button>
         </div>
         <div className="flex justify-center mb-3 bg-neutral-50 rounded-xl p-4 border border-neutral-100">
-          <img src={qrSrc} alt="PlanIt QR Code" className="w-52 h-auto" />
+          {imgError ? (
+            <div className="w-52 h-52 flex flex-col items-center justify-center gap-2 text-neutral-400">
+              <QrCode className="w-8 h-8 opacity-30" />
+              <p className="text-xs text-center">QR unavailable — try refreshing</p>
+              <button
+                onClick={() => setImgError(false)}
+                className="text-xs text-blue-500 hover:underline"
+              >Retry</button>
+            </div>
+          ) : (
+            <img
+              src={qrSrc}
+              alt="PlanIt QR Code"
+              className="w-52 h-auto"
+              onError={() => setImgError(true)}
+            />
+          )}
         </div>
         <p className="text-xs text-neutral-400 text-center mb-3">Scan to join · branded for sharing</p>
         <button onClick={handleDownload} className="btn btn-secondary w-full text-xs gap-1.5 rounded-xl">
@@ -92,18 +109,36 @@ function JoinGate({ eventId, onJoined }) {
   useEffect(() => {
     if (!eventId) return;
     let didNavigate = false;
-    eventAPI.getPublicInfo(eventId)
-      .then((infoRes) => {
-        const info = infoRes?.data?.event;
-        if (!info) { didNavigate = true; navigate('/'); return; }
-        setPublicInfo(info);
-        setIsFull((info.participantCount ?? 0) >= (info.maxParticipants ?? Infinity));
-        return eventAPI.getPublicParticipants(eventId)
-          .then(partRes => setKnownParticipants(partRes?.data?.participants || []))
-          .catch(() => setKnownParticipants([]));
-      })
-      .catch(() => { didNavigate = true; navigate('/'); })
-      .finally(() => { if (!didNavigate) setLoading(false); });
+    let retries = 0;
+
+    const tryLoad = () => {
+      eventAPI.getPublicInfo(eventId)
+        .then((infoRes) => {
+          const info = infoRes?.data?.event;
+          if (!info) { didNavigate = true; navigate('/'); return; }
+          setPublicInfo(info);
+          setIsFull((info.participantCount ?? 0) >= (info.maxParticipants ?? Infinity));
+          return eventAPI.getPublicParticipants(eventId)
+            .then(partRes => setKnownParticipants(partRes?.data?.participants || []))
+            .catch(() => setKnownParticipants([]));
+        })
+        .catch((err) => {
+          // True 404 → event doesn't exist, go home
+          if (err.response?.status === 404) {
+            didNavigate = true; navigate('/'); return;
+          }
+          // Timeout / network error / 5xx → retry on cold-start, don't redirect
+          if (!err.response && retries < 2) {
+            retries++;
+            setTimeout(tryLoad, retries * 2500);
+            return;
+          }
+          didNavigate = true; navigate('/');
+        })
+        .finally(() => { if (!didNavigate) setLoading(false); });
+    };
+
+    tryLoad();
   }, [eventId]);
 
   // Focus account password field when we switch to that step
@@ -274,7 +309,9 @@ function JoinGate({ eventId, onJoined }) {
       </div>
     </div>
   );
-  if (!publicInfo) { navigate('/'); return null; }
+  // publicInfo is null only when the event genuinely doesn't exist (navigate
+  // already called inside the catch handler). Return null to avoid a flash.
+  if (!publicInfo) { return null; }
 
   const { yes = 0, maybe = 0, no: noCount = 0 } = publicInfo.rsvpSummary || {};
   const fillPct = publicInfo.maxParticipants
@@ -918,18 +955,38 @@ export default function EventSpace() {
     if (paramEventId) { setEventId(paramEventId); setResolving(false); }
     else if (subdomain) {
       setResolving(true);
-      eventAPI.getBySubdomain(subdomain)
-        .then(res => {
-          const ev = res.data.event;
-          // Table service venues: skip the event space entirely
-          if (ev.isTableServiceMode) {
-            navigate(`/e/${subdomain}/floor`, { replace: true });
-            return;
-          }
-          setEventId(ev.id);
-          setResolving(false);
-        })
-        .catch(() => { navigate('/not-found', { replace: true }); });
+      let attempts = 0;
+      const tryResolve = () => {
+        eventAPI.getBySubdomain(subdomain)
+          .then(res => {
+            const ev = res.data.event;
+            if (ev.isTableServiceMode) {
+              navigate(`/e/${subdomain}/floor`, { replace: true });
+              return;
+            }
+            setEventId(ev.id);
+            setResolving(false);
+          })
+          .catch((err) => {
+            // Only send to /not-found on a definitive 404 from the server.
+            // Timeouts (no err.response), 429s, 5xx, or network drops should
+            // retry so a Render cold-start doesn't bounce the user.
+            if (err.response?.status === 404) {
+              navigate('/not-found', { replace: true });
+              return;
+            }
+            attempts++;
+            if (attempts < 3) {
+              // Exponential back-off: 2s, 4s
+              setTimeout(tryResolve, attempts * 2000);
+            } else {
+              // Three strikes — server is truly unreachable; show not-found
+              // rather than spinning forever.
+              navigate('/not-found', { replace: true });
+            }
+          });
+      };
+      tryResolve();
     } else { navigate('/'); }
   }, [paramEventId, subdomain]);
 
@@ -1111,7 +1168,7 @@ export default function EventSpace() {
     }
   };
 
-  const loadEvent = async () => {
+  const loadEvent = async (attempt = 0) => {
     try {
       const res = await eventAPI.getById(eventId);
       const ev  = res.data.event;
@@ -1132,7 +1189,18 @@ export default function EventSpace() {
       if (err.response?.status === 401 || err.response?.status === 403) {
         localStorage.removeItem('eventToken'); localStorage.removeItem('username');
         setNeedsJoin(true);
-      } else { toast.error('Failed to load event'); navigate('/'); }
+      } else if (err.response?.status === 404) {
+        // Event truly does not exist
+        toast.error('Event not found');
+        navigate('/');
+      } else if (!err.response && attempt < 2) {
+        // Network error or timeout (Render cold-start). Retry up to 2 times
+        // with back-off before giving up. Do NOT navigate — the URL is correct.
+        setTimeout(() => loadEvent(attempt + 1), (attempt + 1) * 3000);
+        return; // Don't call setLoading(false) — keep spinner visible
+      } else {
+        toast.error('Failed to load event — please refresh the page');
+      }
     } finally { setLoading(false); }
   };
 
