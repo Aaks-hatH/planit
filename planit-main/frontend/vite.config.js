@@ -135,15 +135,57 @@ export default defineConfig({
   build: {
     outDir: 'dist',
     sourcemap: false,
+    // Target modern browsers — smaller output, no legacy polyfills
+    target: 'es2020',
+    // Raise the chunk-size warning threshold; our lazy chunks are intentionally large
+    chunkSizeWarningLimit: 800,
     rollupOptions: {
       output: {
-        manualChunks: {
-          'react-vendor': ['react', 'react-dom', 'react-router-dom'],
-          'socket': ['socket.io-client'],
-          'utils': ['axios', 'crypto-js', 'date-fns'],
-          'admin': ['./src/pages/Admin.jsx']
-        }
-      }
-    }
+        // Split vendor code into stable, long-cacheable chunks.
+        // Named chunks get deterministic filenames so a CDN/browser can cache
+        // them across deploys when the underlying library hasn't changed.
+        manualChunks(id) {
+          // Core React runtime — almost never changes, should be cached forever
+          if (id.includes('node_modules/react/') ||
+              id.includes('node_modules/react-dom/') ||
+              id.includes('node_modules/react-router-dom/') ||
+              id.includes('node_modules/react-router/')) {
+            return 'react-vendor';
+          }
+          // Socket.IO — changes rarely; separate chunk avoids invalidating React cache
+          if (id.includes('node_modules/socket.io-client') ||
+              id.includes('node_modules/engine.io-client')) {
+            return 'socket';
+          }
+          // Utility libs
+          if (id.includes('node_modules/axios') ||
+              id.includes('node_modules/crypto-js') ||
+              id.includes('node_modules/date-fns')) {
+            return 'utils';
+          }
+          // Admin panel is large and only ever used by organizers — keep it isolated
+          if (id.includes('/src/pages/Admin') ||
+              id.includes('/src/pages/SecurityDashboard') ||
+              id.includes('/src/components/PlatformAnalyticsDashboard')) {
+            return 'admin';
+          }
+          // Venue/restaurant views — only tablet/kiosk users hit these
+          if (id.includes('/src/pages/TableService') ||
+              id.includes('/src/pages/ServerView') ||
+              id.includes('/src/pages/KitchenView') ||
+              id.includes('/src/pages/GuestTablet') ||
+              id.includes('/src/pages/LiveWaitBoard')) {
+            return 'venue';
+          }
+          // White-label portal chunks
+          if (id.includes('/src/pages/WhiteLabel') ||
+              id.includes('/src/pages/ClientPortal') ||
+              id.includes('/src/pages/WLHome') ||
+              id.includes('/src/pages/SetupFee')) {
+            return 'whitelabel';
+          }
+        },
+      },
+    },
   }
 })
