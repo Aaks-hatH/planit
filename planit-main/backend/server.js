@@ -36,7 +36,7 @@ const io = socketIo(server, {
     credentials: true,
     methods:     ['GET', 'POST', 'PUT', 'DELETE'],
   },
-  transports:      ['polling', 'websocket'],
+  transports:      ['websocket', 'polling'],
   allowUpgrades:   true,
   upgradeTimeout:  30000,
   pingTimeout:     60000,
@@ -282,7 +282,7 @@ const _localhostOrigins = [
 ];
 
 const _wlOriginCache = new Map();
-const _WL_CACHE_TTL  = 5 * 60 * 1000;
+const _WL_CACHE_TTL  = 15 * 60 * 1000;
 
 async function _isWLOrigin(origin) {
   const cached = _wlOriginCache.get(origin);
@@ -554,7 +554,17 @@ const connectDB = async () => {
 
   for (let attempt = 1; attempt <= MAX_DB_RETRIES; attempt++) {
     try {
-      await mongoose.connect(process.env.MONGODB_URI);
+      await mongoose.connect(process.env.MONGODB_URI, {
+        // Increase pool size for multi-instance deployments so each instance
+        // can run concurrent queries without waiting for a free socket.
+        maxPoolSize: 20,
+        minPoolSize: 5,
+        // Don't wait more than 5 s for a free connection from the pool.
+        waitQueueTimeoutMS: 5000,
+        // Fail fast on initial connect (retried above) and on socket-level ops.
+        serverSelectionTimeoutMS: 10000,
+        socketTimeoutMS: 45000,
+      });
       console.log('MongoDB connected');
       console.log(`  Database: ${mongoose.connection.name}`);
       startCleanupScheduler();
@@ -630,7 +640,7 @@ server.listen(PORT, () => {
   await initRedisAdapter();
   await _syncDbStateToRouter();
   await _pollMaintenanceState();
-  setInterval(_pollMaintenanceState, 5_000);
+  setInterval(_pollMaintenanceState, 30_000);
   require('./socket/chatSocket')(io);
   require('./socket/walkieTalkieSocket')(io);
   setTimeout(announceToRouter, 4000);
