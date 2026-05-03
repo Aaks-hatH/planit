@@ -1,6 +1,13 @@
-# PlanIt
+<div align="center">
+  <img src="media/icon_v2.png" alt="Aurelius Icon" width="128" height="128">
+  <h1>PlanIt</h1>
+  <p><b>Professional event management. Free.</b></p>
+  
+ 
+</div>
 
-**Professional event management. Free.**
+
+
 
 PlanIt is an all-in-one hosted platform for running events — from intimate gatherings to large-scale multi-staff operations. Guest lists, check-in, seating, real-time coordination, table service, and more, all in one place. No installs, no subscriptions, no setup.
 
