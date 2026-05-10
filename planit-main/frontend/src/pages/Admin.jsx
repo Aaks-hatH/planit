@@ -9931,6 +9931,7 @@ export default function Admin() {
   const [activeSection, setActiveSection] = activeSection_state;
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
   // Explicitly render (and re-render on key bump) the Cloudflare Turnstile widget.
   //
@@ -10698,6 +10699,61 @@ export default function Admin() {
   return (
     <DemoContext.Provider value={isDemo}>
     <div className="min-h-screen bg-neutral-100 flex">
+
+      {/* Mobile nav drawer */}
+      {mobileNavOpen && (
+        <div className="fixed inset-0 z-50 md:hidden">
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setMobileNavOpen(false)} />
+          <aside className="absolute left-0 top-0 bottom-0 w-64 bg-neutral-950 flex flex-col overflow-y-auto shadow-2xl">
+            <div className="h-14 flex items-center gap-3 px-3 border-b border-white/5">
+              <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center flex-shrink-0">
+                <Shield className="w-4 h-4 text-white" />
+              </div>
+              <span className="text-sm font-bold text-white">Admin Panel</span>
+              <button onClick={() => setMobileNavOpen(false)} className="ml-auto text-neutral-500 hover:text-white transition-colors">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+              </button>
+            </div>
+            <nav className="flex-1 py-3 px-2 space-y-0.5">
+              {NAV_ITEMS.map(({ id, label, icon: I }) => {
+                const isCc  = id === 'command-center';
+                const isSec = id === 'security';
+                const isWl  = id === 'whitelabel';
+                const isAcc = id === 'account';
+                return (
+                  <React.Fragment key={id}>
+                    {isCc  && <div className="mx-2 my-2 border-t border-white/10" />}
+                    {isWl  && <div className="mx-2 my-2 border-t border-white/10" />}
+                    {isAcc && <div className="mx-2 my-2 border-t border-white/10" />}
+                    <button onClick={() => {
+                      if (isSec) { window.location.href = '/admin/security'; return; }
+                      setActiveSection(id); setSelectedEvent(null); setMobileNavOpen(false);
+                    }}
+                      className={`w-full flex items-center gap-3 px-2.5 py-2.5 rounded-xl text-sm font-medium transition-all group ${
+                        activeSection === id
+                          ? isCc ? 'bg-violet-900/60 text-violet-300' : 'bg-white/10 text-white'
+                          : isCc ? 'text-violet-500 hover:bg-violet-900/30 hover:text-violet-300' : 'text-neutral-400 hover:bg-white/5 hover:text-white'
+                      }`}>
+                      <I className="w-4 h-4 flex-shrink-0" />
+                      <span>{label}</span>
+                      {isSec && <span className="ml-auto text-xs opacity-30">↗</span>}
+                    </button>
+                  </React.Fragment>
+                );
+              })}
+            </nav>
+            <div className="p-2 border-t border-white/5 space-y-0.5">
+              <button onClick={() => { setCleanupResult(null); setShowCleanup(true); setMobileNavOpen(false); }} className="w-full flex items-center gap-3 px-2.5 py-2.5 rounded-xl text-sm font-medium text-red-400 hover:bg-red-900/30 hover:text-red-300 transition-all">
+                <Trash className="w-4 h-4 flex-shrink-0" /> Cleanup
+              </button>
+              <button onClick={logout} className="w-full flex items-center gap-3 px-2.5 py-2.5 rounded-xl text-sm font-medium text-neutral-400 hover:bg-white/5 hover:text-white transition-all">
+                <LogOut className="w-4 h-4 flex-shrink-0" /> Logout
+              </button>
+            </div>
+          </aside>
+        </div>
+      )}
+
       {/* Sidebar */}
       <aside className={`hidden md:flex bg-neutral-950 flex-shrink-0 flex-col transition-all duration-300 ${sidebarOpen ? 'w-56' : 'w-14'}`} style={{ position: 'sticky', top: 0, height: '100vh', overflowY: 'auto' }}>
         {/* Logo */}
@@ -10757,6 +10813,10 @@ export default function Admin() {
       <div className="flex-1 flex flex-col min-w-0">
         {/* Top bar */}
         <header className="h-14 bg-white border-b border-neutral-200 flex items-center gap-4 px-6 sticky top-0 z-40 shadow-sm">
+          {/* Hamburger — mobile only */}
+          <button onClick={() => setMobileNavOpen(true)} className="md:hidden -ml-2 p-2 rounded-lg text-neutral-500 hover:bg-neutral-100 transition-colors">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" /></svg>
+          </button>
           <div className="flex-1 min-w-0">
             <h1 className="text-sm font-bold text-neutral-900 truncate">
               {selectedEvent ? selectedEvent.title : NAV_ITEMS.find(n => n.id === activeSection)?.label || 'Dashboard'}
