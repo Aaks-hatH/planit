@@ -64,7 +64,7 @@ const COMPONENTS = [
     letter: 'B',
     legalName: 'PlanIt Backend Application',
     codeName: 'PlanIT',
-    packageVersion: '4.2.26',       // from package.json → "version": "4.2.26"
+    packageVersion: '5.20.26',       // from package.json → "version": "4.2.26"
     licenseTitle: 'PlanIt Backend Services License Agreement',
     licenseVersion: 'Version 5.20.26',
     licenseDate: 'January 2026',
