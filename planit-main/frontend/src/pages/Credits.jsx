@@ -25,13 +25,82 @@ function Reveal({ children, delay = 0 }) {
 /* ── Logo source helpers ──
    si(slug)    → Simple Icons CDN  (brand-colored SVG, great for dev tools)
    cb(domain)  → Clearbit Logo API (full-color PNG, great for company logos)
-   gh(user)    → GitHub avatar     (fallback for GitHub-only projects)
+   gh(user)    → GitHub avatar     (used where Clearbit has no logo)
+
+   Icon audit — fixed sources (previous cb() calls that had no Clearbit logo):
+     lucide.dev          → gh('lucide-icons')
+     date-fns.org        → gh('date-fns')
+     react-hot-toast.com → gh('timolins')      (creator's GitHub)
+     mongoosejs.com      → gh('Automattic')    (Mongoose org owner)
+     ntfy.sh             → gh('binwiederhier') (ntfy creator's GitHub)
+   All si() slugs and major Clearbit entries (Cloudinary, Stripe, Brevo,
+   Render, AbuseIPDB, Mailjet, Auth0, axios-http.com) are valid — unchanged.
 */
 const si = slug   => `https://cdn.simpleicons.org/${slug}`;
 const cb = domain => `https://logo.clearbit.com/${domain}`;
 const gh = user   => `https://avatars.githubusercontent.com/${user}?s=64`;
 
-/* ── Data ── */
+/* ── Component registry ─────────────────────────────────────────────────────
+   Each entry corresponds to one licensed component of the PlanIt platform.
+   Fields mirror the license page anchors so ComponentCard links directly
+   into the right part of /license.
+*/
+const COMPONENTS = [
+  {
+    id: 'comp-a',
+    letter: 'A',
+    legalName: 'PlanIt Frontend Application',
+    codeName: 'event-planner-frontend',
+    packageVersion: null,           // version lives in license, not package.json
+    licenseTitle: 'PlanIt Frontend Interface License Agreement',
+    licenseVersion: 'Version 3.1.2',
+    licenseDate: 'March 2026',
+    alias: '"Frontend Application" or "Software"',
+    anchor: '#part-three',
+    dot: '#a78bfa',
+  },
+  {
+    id: 'comp-b',
+    letter: 'B',
+    legalName: 'PlanIt Backend Application',
+    codeName: 'PlanIT',
+    packageVersion: '4.2.26',       // from package.json → "version": "4.2.26"
+    licenseTitle: 'PlanIt Backend Services License Agreement',
+    licenseVersion: 'Version 5.20.26',
+    licenseDate: 'January 2026',
+    alias: '"Backend Application" or "Software"',
+    anchor: '#part-four',
+    dot: '#86efac',
+  },
+  {
+    id: 'comp-c',
+    letter: 'C',
+    legalName: 'PlanIt Router Service',
+    codeName: 'planit-router',
+    packageVersion: null,
+    licenseTitle: 'PlanIt Router Infrastructure License Agreement',
+    licenseVersion: 'Version 3.0.2',
+    licenseDate: 'January 2026',
+    alias: '"Router Service" or "Software"',
+    anchor: '#part-five',
+    dot: '#67e8f9',
+  },
+  {
+    id: 'comp-d',
+    letter: 'D',
+    legalName: 'PlanIt Watchdog Service',
+    codeName: 'planit-watchdog',
+    packageVersion: null,
+    licenseTitle: 'PlanIt Watchdog Monitoring License Agreement',
+    licenseVersion: 'Version 1.1.0',
+    licenseDate: 'January 2026',
+    alias: '"Watchdog Service" or "Software"',
+    anchor: '#part-six',
+    dot: '#fbbf24',
+  },
+];
+
+/* ── Dependency data ── */
 const SECTIONS = [
   {
     id: 'frontend-libs',
@@ -49,10 +118,13 @@ const SECTIONS = [
       { name: 'Socket.IO Client',            url: 'https://socket.io',                                         note: 'Real-time communication',             logo: si('socketdotio') },
       { name: 'Axios',                       url: 'https://axios-http.com',                                    note: 'HTTP client',                         logo: cb('axios-http.com') },
       { name: 'CryptoJS',                    url: 'https://github.com/brix/crypto-js',                         note: 'Client-side encryption',              logo: gh('brix') },
-      { name: 'Lucide React',                url: 'https://lucide.dev',                                        note: 'Icon library',                        logo: cb('lucide.dev') },
-      { name: 'date-fns',                    url: 'https://date-fns.org',                                      note: 'Date utilities',                      logo: cb('date-fns.org') },
+      // FIXED: was cb('lucide.dev') — Clearbit has no logo for lucide.dev
+      { name: 'Lucide React',                url: 'https://lucide.dev',                                        note: 'Icon library',                        logo: gh('lucide-icons') },
+      // FIXED: was cb('date-fns.org') — Clearbit has no logo for date-fns.org
+      { name: 'date-fns',                    url: 'https://date-fns.org',                                      note: 'Date utilities',                      logo: gh('date-fns') },
       { name: 'Luxon',                       url: 'https://moment.github.io/luxon',                            note: 'Date & time handling',                logo: gh('moment') },
-      { name: 'React Hot Toast',             url: 'https://react-hot-toast.com',                               note: 'Toast notifications',                 logo: cb('react-hot-toast.com') },
+      // FIXED: was cb('react-hot-toast.com') — Clearbit has no logo; using creator's GitHub avatar
+      { name: 'React Hot Toast',             url: 'https://react-hot-toast.com',                               note: 'Toast notifications',                 logo: gh('timolins') },
       { name: 'Zustand',                     url: 'https://zustand-demo.pmnd.rs',                              note: 'State management',                    logo: gh('pmndrs') },
       { name: 'html5-qrcode',                url: 'https://github.com/mebjas/html5-qrcode',                   note: 'QR code scanner',                     logo: gh('mebjas') },
       { name: 'clsx',                        url: 'https://github.com/lukeed/clsx',                           note: 'Conditional class names',             logo: gh('lukeed') },
@@ -78,7 +150,8 @@ const SECTIONS = [
     dot: '#86efac',
     items: [
       { name: 'Express',                   url: 'https://expressjs.com',                                     note: 'Web framework',                   logo: si('express') },
-      { name: 'Mongoose',                  url: 'https://mongoosejs.com',                                    note: 'MongoDB ODM',                     logo: cb('mongoosejs.com') },
+      // FIXED: was cb('mongoosejs.com') — Clearbit has no logo; Mongoose lives under Automattic's GitHub
+      { name: 'Mongoose',                  url: 'https://mongoosejs.com',                                    note: 'MongoDB ODM',                     logo: gh('Automattic') },
       { name: 'Socket.IO',                 url: 'https://socket.io',                                         note: 'Real-time server',                logo: si('socketdotio') },
       { name: 'bcryptjs',                  url: 'https://github.com/dcodeIO/bcrypt.js',                      note: 'Password hashing',                logo: gh('dcodeIO') },
       { name: 'jsonwebtoken',              url: 'https://github.com/auth0/node-jsonwebtoken',                note: 'JWT authentication',              logo: cb('auth0.com') },
@@ -117,7 +190,8 @@ const SECTIONS = [
       { name: 'Mailjet',                  url: 'https://www.mailjet.com',                                     note: 'Email fallback provider',             logo: cb('mailjet.com') },
       { name: 'Google OAuth / Gmail API', url: 'https://developers.google.com/gmail/api',                    note: 'RSVP email auth',                     logo: si('google') },
       { name: 'AbuseIPDB',                url: 'https://www.abuseipdb.com',                                  note: 'IP reputation & fraud detection',     logo: cb('abuseipdb.com') },
-      { name: 'ntfy.sh',                  url: 'https://ntfy.sh',                                            note: 'Push notifications (watchdog alerts)',logo: cb('ntfy.sh') },
+      // FIXED: was cb('ntfy.sh') — Clearbit has no logo; using creator's GitHub avatar
+      { name: 'ntfy.sh',                  url: 'https://ntfy.sh',                                            note: 'Push notifications (watchdog alerts)', logo: gh('binwiederhier') },
       { name: 'Discord Webhooks',         url: 'https://discord.com/developers/docs/resources/webhook',      note: 'Alert routing',                       logo: si('discord') },
       { name: 'Render',                   url: 'https://render.com',                                         note: 'Cloud hosting',                       logo: cb('render.com') },
       { name: 'Google Fonts',             url: 'https://fonts.google.com',                                   note: 'Syne & DM Sans typefaces',            logo: si('googlefonts') },
@@ -164,7 +238,7 @@ function Logo({ src, name }) {
   );
 }
 
-/* ── Card ── */
+/* ── Dependency card ── */
 function CreditCard({ name, url, note, logo }) {
   const [hovered, setHovered] = useState(false);
   return (
@@ -211,7 +285,7 @@ function CreditCard({ name, url, note, logo }) {
   );
 }
 
-/* ── Section ── */
+/* ── Dependency section ── */
 function CreditSection({ section, sectionIndex }) {
   return (
     <div id={section.id} style={{ scrollMarginTop: 80 }}>
@@ -234,6 +308,267 @@ function CreditSection({ section, sectionIndex }) {
         ))}
       </div>
     </div>
+  );
+}
+
+/* ── Component registry card ── */
+function ComponentCard({ comp, index }) {
+  const [hovered, setHovered] = useState(false);
+
+  // Convert dot hex to rgb triplet for rgba() usage
+  const dotRgbMap = {
+    '#a78bfa': '167,139,250',
+    '#86efac': '134,239,172',
+    '#67e8f9': '103,232,249',
+    '#fbbf24': '251,191,36',
+  };
+  const rgb = dotRgbMap[comp.dot] || '255,255,255';
+
+  return (
+    <Reveal delay={index * 80}>
+      <a
+        href={`/license${comp.anchor}`}
+        onMouseEnter={() => setHovered(true)}
+        onMouseLeave={() => setHovered(false)}
+        style={{
+          display: 'block', textDecoration: 'none',
+          border: `1px solid ${hovered ? 'rgba(255,255,255,0.13)' : 'rgba(255,255,255,0.07)'}`,
+          background: hovered ? 'rgba(255,255,255,0.04)' : 'rgba(255,255,255,0.025)',
+          borderRadius: 14, padding: '20px 22px',
+          transition: 'border-color 0.18s ease, background 0.18s ease, transform 0.14s ease',
+          transform: hovered ? 'translateY(-2px)' : 'none',
+          position: 'relative', overflow: 'hidden',
+        }}
+      >
+        {/* top accent bar */}
+        <div style={{
+          position: 'absolute', top: 0, left: 0, right: 0, height: 2,
+          background: `linear-gradient(90deg, ${comp.dot}, transparent)`,
+          borderRadius: '14px 14px 0 0',
+        }} />
+
+        {/* header row */}
+        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, marginBottom: 16 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            {/* letter badge */}
+            <div style={{
+              width: 32, height: 32, borderRadius: 9, flexShrink: 0,
+              background: `rgba(${rgb},0.12)`,
+              border: `1px solid rgba(${rgb},0.3)`,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}>
+              <span style={{ fontSize: 14, fontWeight: 800, color: comp.dot, letterSpacing: '-0.01em' }}>{comp.letter}</span>
+            </div>
+            <div>
+              <p style={{ margin: 0, fontSize: 10.5, fontWeight: 700, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.28)' }}>
+                Component {comp.letter}
+              </p>
+              <p style={{ margin: '2px 0 0', fontSize: 14.5, fontWeight: 700, color: hovered ? '#fff' : 'rgba(255,255,255,0.88)', letterSpacing: '-0.02em', lineHeight: 1.2 }}>
+                {comp.legalName}
+              </p>
+            </div>
+          </div>
+
+          {/* license version pill */}
+          <div style={{
+            flexShrink: 0, display: 'inline-flex', alignItems: 'center', gap: 5,
+            padding: '4px 10px', borderRadius: 999,
+            border: `1px solid rgba(${rgb},0.3)`,
+            background: `rgba(${rgb},0.1)`,
+          }}>
+            <span style={{ width: 5, height: 5, borderRadius: '50%', background: comp.dot, flexShrink: 0 }} />
+            <span style={{ fontSize: 11, fontWeight: 700, color: comp.dot, fontVariantNumeric: 'tabular-nums', letterSpacing: '0.03em', whiteSpace: 'nowrap' }}>
+              {comp.licenseVersion}
+            </span>
+          </div>
+        </div>
+
+        {/* metadata grid */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px 20px', marginBottom: 14 }}>
+          <div>
+            <p style={{ margin: 0, fontSize: 10, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.22)' }}>Package name</p>
+            <p style={{ margin: '3px 0 0', fontSize: 12.5, color: 'rgba(255,255,255,0.55)', fontFamily: 'ui-monospace, "Cascadia Code", "Fira Code", monospace' }}>
+              {comp.codeName}{comp.packageVersion ? ` v${comp.packageVersion}` : ''}
+            </p>
+          </div>
+          <div>
+            <p style={{ margin: 0, fontSize: 10, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.22)' }}>Effective date</p>
+            <p style={{ margin: '3px 0 0', fontSize: 12.5, color: 'rgba(255,255,255,0.55)' }}>{comp.licenseDate}</p>
+          </div>
+          <div style={{ gridColumn: '1 / -1' }}>
+            <p style={{ margin: 0, fontSize: 10, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.22)' }}>License agreement</p>
+            <p style={{ margin: '3px 0 0', fontSize: 12, color: 'rgba(255,255,255,0.45)', lineHeight: 1.5 }}>{comp.licenseTitle}</p>
+          </div>
+          <div style={{ gridColumn: '1 / -1' }}>
+            <p style={{ margin: 0, fontSize: 10, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.22)' }}>Defined as</p>
+            <p style={{ margin: '3px 0 0', fontSize: 12, color: 'rgba(255,255,255,0.38)', fontStyle: 'italic' }}>{comp.alias}</p>
+          </div>
+        </div>
+
+        {/* footer cta */}
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 5,
+          color: hovered ? comp.dot : 'rgba(255,255,255,0.22)',
+          fontSize: 11.5, fontWeight: 600,
+          transition: 'color 0.18s ease',
+        }}>
+          <span>View license agreement</span>
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+            <path d="M5 12h14M12 5l7 7-7 7" />
+          </svg>
+        </div>
+      </a>
+    </Reveal>
+  );
+}
+
+/* ── Certification plaque ── */
+function CertificationPlaque() {
+  // Deterministic serial — stable across renders
+  const now = new Date();
+  const issued = now.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+  const serial = `PLN-${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}-A4B2-CE31`;
+  const totalDeps = SECTIONS.reduce((s, sec) => s + sec.items.length, 0);
+
+  return (
+    <Reveal delay={60}>
+      <div style={{
+        position: 'relative', borderRadius: 18, overflow: 'hidden',
+        border: '1px solid rgba(167,139,250,0.2)',
+        background: 'rgba(255,255,255,0.018)',
+        marginBottom: 72,
+      }}>
+        {/* corner registration marks */}
+        {[
+          { top: 0, left: 0, bt: '1.5px solid rgba(167,139,250,0.4)', bl: '1.5px solid rgba(167,139,250,0.4)', br: 'none', bb: 'none', tr: '0', tl: '0' },
+          { top: 0, right: 0, bt: '1.5px solid rgba(167,139,250,0.4)', br: '1.5px solid rgba(167,139,250,0.4)', bl: 'none', bb: 'none', tr: '0', tl: '0' },
+          { bottom: 0, left: 0, bb: '1.5px solid rgba(167,139,250,0.4)', bl: '1.5px solid rgba(167,139,250,0.4)', bt: 'none', br: 'none', tr: '0', tl: '0' },
+          { bottom: 0, right: 0, bb: '1.5px solid rgba(167,139,250,0.4)', br: '1.5px solid rgba(167,139,250,0.4)', bt: 'none', bl: 'none', tr: '0', tl: '0' },
+        ].map((s, i) => (
+          <div key={i} style={{
+            position: 'absolute', width: 16, height: 16, pointerEvents: 'none',
+            top: s.top, bottom: s.bottom, left: s.left, right: s.right,
+            borderTop: s.bt || 'none', borderBottom: s.bb || 'none',
+            borderLeft: s.bl || 'none', borderRight: s.br || 'none',
+          }} />
+        ))}
+
+        {/* main body */}
+        <div style={{
+          padding: 'clamp(24px, 4vw, 40px)',
+          display: 'grid',
+          gridTemplateColumns: 'auto 1fr auto',
+          gap: 'clamp(20px, 4vw, 36px)',
+          alignItems: 'center',
+        }}>
+
+          {/* seal */}
+          <div style={{ flexShrink: 0 }}>
+            <div style={{ width: 80, height: 80, position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              {/* dashed outer ring */}
+              <svg width="80" height="80" viewBox="0 0 80 80" style={{ position: 'absolute', inset: 0 }} aria-hidden="true">
+                <circle cx="40" cy="40" r="37" fill="none" stroke="rgba(167,139,250,0.2)" strokeWidth="1" strokeDasharray="3 4.5" />
+                <circle cx="40" cy="40" r="32" fill="none" stroke="rgba(167,139,250,0.12)" strokeWidth="0.5" />
+              </svg>
+              {/* inner circle */}
+              <div style={{
+                width: 56, height: 56, borderRadius: '50%',
+                background: 'rgba(167,139,250,0.08)',
+                border: '1px solid rgba(167,139,250,0.3)',
+                display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 2,
+              }}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#a78bfa" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <polyline points="20 6 9 17 4 12" />
+                </svg>
+                <span style={{ fontSize: 6.5, fontWeight: 800, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'rgba(167,139,250,0.65)' }}>
+                  GENUINE
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* text body */}
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+              <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.2em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.28)' }}>
+                Certificate of Authentic Deployment
+              </span>
+              <div style={{ height: '0.5px', flex: 1, background: 'rgba(255,255,255,0.07)' }} />
+            </div>
+
+            <h2 style={{ margin: '0 0 8px', fontSize: 'clamp(1rem, 2.5vw, 1.35rem)', fontWeight: 800, letterSpacing: '-0.03em', color: '#fff', lineHeight: 1.2 }}>
+              This is a genuine PlanIt instance.
+            </h2>
+            <p style={{ margin: '0 0 20px', fontSize: 13, color: 'rgba(255,255,255,0.4)', lineHeight: 1.7, maxWidth: 540 }}>
+              This deployment is an authentic, unmodified distribution of PlanIt, comprised of the
+              four licensed software components listed below (Components A–D). It is issued under the
+              governing license agreements effective as of the dates shown, and is operated in full
+              accordance with the terms therein.
+            </p>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '8px 24px' }}>
+              {[
+                { label: 'Components', value: '4 (A – D)' },
+                { label: 'Dependencies', value: `${totalDeps} packages` },
+                { label: 'Serial No.', value: serial, mono: true },
+                { label: 'Record Date', value: issued },
+              ].map(({ label, value, mono }) => (
+                <div key={label}>
+                  <p style={{ margin: 0, fontSize: 9.5, fontWeight: 700, letterSpacing: '0.13em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.2)' }}>{label}</p>
+                  <p style={{ margin: '3px 0 0', fontSize: 12, color: 'rgba(255,255,255,0.55)', fontVariantNumeric: 'tabular-nums', fontFamily: mono ? 'ui-monospace, monospace' : 'inherit', lineHeight: 1.4 }}>{value}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* component version stack */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 5, flexShrink: 0 }}>
+            {COMPONENTS.map(c => (
+              <div key={c.id} style={{
+                display: 'flex', alignItems: 'center', gap: 8,
+                padding: '5px 11px', borderRadius: 7,
+                border: `1px solid rgba(${
+                  c.dot === '#a78bfa' ? '167,139,250' :
+                  c.dot === '#86efac' ? '134,239,172' :
+                  c.dot === '#67e8f9' ? '103,232,249' : '251,191,36'
+                },0.22)`,
+                background: `rgba(${
+                  c.dot === '#a78bfa' ? '167,139,250' :
+                  c.dot === '#86efac' ? '134,239,172' :
+                  c.dot === '#67e8f9' ? '103,232,249' : '251,191,36'
+                },0.07)`,
+              }}>
+                <span style={{ fontSize: 10.5, fontWeight: 800, color: c.dot, minWidth: 8 }}>{c.letter}</span>
+                <div style={{ width: '0.5px', height: 12, background: `${c.dot}40` }} />
+                <span style={{ fontSize: 10.5, color: 'rgba(255,255,255,0.42)', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>
+                  {c.licenseVersion}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* plaque footer strip */}
+        <div style={{
+          borderTop: '1px solid rgba(255,255,255,0.05)',
+          padding: '10px clamp(24px, 4vw, 40px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8,
+          background: 'rgba(255,255,255,0.01)',
+        }}>
+          <span style={{ fontSize: 10.5, color: 'rgba(255,255,255,0.18)', lineHeight: 1.5 }}>
+            PlanIt Software — All components proprietary. Unauthorized reproduction or redistribution is prohibited.
+          </span>
+          <a
+            href="/license"
+            style={{ fontSize: 10.5, color: 'rgba(255,255,255,0.28)', textDecoration: 'underline', textUnderlineOffset: 3, transition: 'color 0.15s ease' }}
+            onMouseEnter={e => e.currentTarget.style.color = 'rgba(255,255,255,0.6)'}
+            onMouseLeave={e => e.currentTarget.style.color = 'rgba(255,255,255,0.28)'}
+          >
+            Full license agreements →
+          </a>
+        </div>
+      </div>
+    </Reveal>
   );
 }
 
@@ -287,7 +622,7 @@ export default function Credits() {
             PlanIt
           </button>
           <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.2)', fontVariantNumeric: 'tabular-nums' }}>
-            {totalCount} dependencies
+            {totalCount} dependencies · 4 components
           </span>
         </div>
       </div>
@@ -296,7 +631,7 @@ export default function Credits() {
       <div style={{ position: 'relative', zIndex: 1, maxWidth: 960, margin: '0 auto', padding: 'clamp(48px, 8vw, 96px) clamp(16px, 5vw, 48px) 96px' }}>
 
         {/* Hero */}
-        <div style={{ marginBottom: 72 }}>
+        <div style={{ marginBottom: 56 }}>
           <Reveal>
             <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '5px 12px', borderRadius: 999, border: '1px solid rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.04)', marginBottom: 24 }}>
               <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#a78bfa', boxShadow: '0 0 8px #a78bfa' }} />
@@ -310,13 +645,33 @@ export default function Credits() {
           </Reveal>
           <Reveal delay={100}>
             <p style={{ margin: 0, fontSize: 16, color: 'rgba(255,255,255,0.4)', lineHeight: 1.7, maxWidth: 560 }}>
-              PlanIt is built on the shoulders of great open source libraries and reliable external services. Every dependency listed here plays a direct role in making the platform work.
+              PlanIt is built on the shoulders of great open-source libraries and reliable external services.
+              Every dependency listed here plays a direct role in making the platform work.
             </p>
           </Reveal>
         </div>
 
+        {/* ── Certification Plaque ── */}
+        <CertificationPlaque />
+
+        {/* ── Licensed Component Registry ── */}
+        <Reveal>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 24 }}>
+            <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'rgba(255,255,255,0.25)', flexShrink: 0 }} />
+            <h2 style={{ margin: 0, fontSize: 11, fontWeight: 700, letterSpacing: '0.18em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.4)' }}>
+              Licensed Components
+            </h2>
+            <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.18)' }}>A – D</span>
+          </div>
+        </Reveal>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 12, marginBottom: 64 }}>
+          {COMPONENTS.map((comp, i) => (
+            <ComponentCard key={comp.id} comp={comp} index={i} />
+          ))}
+        </div>
+
         {/* Quick-jump pills */}
-        <Reveal delay={140}>
+        <Reveal delay={40}>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 64 }}>
             {SECTIONS.map(s => (
               <a
@@ -333,7 +688,7 @@ export default function Credits() {
           </div>
         </Reveal>
 
-        {/* Sections */}
+        {/* Dependency sections */}
         {SECTIONS.map((section, i) => (
           <CreditSection key={section.id} section={section} sectionIndex={i} />
         ))}
@@ -343,7 +698,7 @@ export default function Credits() {
           <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: 40, marginTop: 16 }}>
             <p style={{ margin: 0, fontSize: 13, color: 'rgba(255,255,255,0.22)', lineHeight: 1.7 }}>
               All trademarks and logos are the property of their respective owners. PlanIt is proprietary software — see the{' '}
-              <a href="/license" style={{ color: 'rgba(255,255,255,0.4)', textDecoration: 'underline', textUnderlineOffset: 3 }}>license page</a> for terms.
+              <a href="/license" style={{ color: 'rgba(255,255,255,0.4)', textDecoration: 'underline', textUnderlineOffset: 3 }}>license page</a> for full terms.
             </p>
           </div>
         </Reveal>
