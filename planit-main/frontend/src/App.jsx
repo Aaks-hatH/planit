@@ -50,6 +50,7 @@ const Blog              = lazy(() => import('./pages/Blog'));
 const RSVPPage          = lazy(() => import('./pages/RSVPPage'));
 const RSVPManage        = lazy(() => import('./pages/RSVPManage'));
 const RSVPPageBuilder   = lazy(() => import('./pages/RSVPPageBuilder'));
+const Credits           = lazy(() => import('./pages/Credits'));
 
 // Minimal spinner shown during chunk loads (usually <200ms on a warm CDN)
 function PageLoader() {
@@ -411,6 +412,7 @@ const PAGE_TITLES = {
   '/discover':                 'Discover Events Near You · PlanIt',
   '/help':                     'Help Center and Frequently Asked Questions · PlanIt',
   '/license':                  'Platform License Agreement · PlanIt',
+  '/credits':                  'Credits & Open Source Acknowledgements · PlanIt',
   '/privacy':                  'Privacy Policy · PlanIt',
   '/status':                   'Platform Status and Live Uptime · PlanIt',
   '/support':                  'Contact Support · PlanIt',
@@ -542,6 +544,7 @@ function App() {
         <Route path="/blog"            element={<Blog />} />
         <Route path="/blog/:slug"      element={<Blog />} />
         <Route path="/license"         element={<License />} />
+        <Route path="/credits"         element={<Credits />} />
         <Route path="/white-label"              element={<WhiteLabelSignup />} />
         <Route path="/white-label/setup-fee"      element={<SetupFee />} />
         <Route path="/white-label/setup-success"  element={<SetupFeeSuccess />} />
