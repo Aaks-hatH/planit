@@ -2840,6 +2840,7 @@ export default function TableService() {
   const [menuSaving, setMenuSaving]     = useState(false);
   const [queueForecast, setQueueForecast] = useState(null);
   const seenAlerts                      = useRef(new Set());
+  const isRedirecting                   = useRef(false); // prevents interval re-firing after a 401
 
   // Resolve subdomain → eventId when routed via /e/:subdomain/floor
   useEffect(() => {
@@ -2873,7 +2874,7 @@ export default function TableService() {
   const selectedState = tableStates.find(s => s.tableId === selectedTableId) || null;
 
   const loadFloor = useCallback(async () => {
-    if (!eid) return;
+    if (!eid || isRedirecting.current) return;
     try {
       const res = await eventAPI.getTableServiceFloor(eid);
       const data = res.data;
@@ -2908,9 +2909,12 @@ export default function TableService() {
     } catch (err) {
       const status = err?.response?.status;
       if (status === 401 || status === 403) {
+        isRedirecting.current = true; // stop the interval retrying before unmount
         localStorage.removeItem('eventToken');
         localStorage.removeItem('username');
-        navigate(subdomain ? `/e/${subdomain}` : `/event/${eid}`);
+        // Navigate to /login, NOT to /e/:subdomain — EventSpace unconditionally
+        // redirects table-service venues back to /floor, which would loop forever.
+        navigate(subdomain ? `/e/${subdomain}/login` : `/event/${eid}/login`);
       } else if (status === 404) {
         const errData = err?.response?.data || {};
         setFloorData(prev => ({
