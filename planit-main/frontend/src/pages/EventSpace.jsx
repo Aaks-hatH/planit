@@ -968,7 +968,14 @@ export default function EventSpace() {
           .then(res => {
             const ev = res.data.event;
             if (ev.isTableServiceMode) {
-              navigate(`/e/${subdomain}/floor`, { replace: true });
+              // Only go straight to the floor dashboard if the staff token is
+              // present. If not, send to the login page so we don't create a
+              // redirect loop: floor→401→EventSpace→floor→401→…
+              if (localStorage.getItem('eventToken')) {
+                navigate(`/e/${subdomain}/floor`, { replace: true });
+              } else {
+                navigate(`/e/${subdomain}/login`, { replace: true });
+              }
               return;
             }
             setEventId(ev.id);
@@ -1186,9 +1193,12 @@ export default function EventSpace() {
       const res = await eventAPI.getById(eventId);
       const ev  = res.data.event;
 
-      // Table service venues have no event space — redirect straight to floor
+      // Table service venues have no event space — redirect to floor (or login
+      // if no staff token, to avoid a 401 bounce-loop back here).
       if (ev.isTableServiceMode) {
-        navigate(ev.subdomain ? `/e/${ev.subdomain}/floor` : `/event/${eventId}/floor`, { replace: true });
+        const floorPath = ev.subdomain ? `/e/${ev.subdomain}/floor` : `/event/${eventId}/floor`;
+        const loginPath = ev.subdomain ? `/e/${ev.subdomain}/login` : `/event/${eventId}/login`;
+        navigate(localStorage.getItem('eventToken') ? floorPath : loginPath, { replace: true });
         return;
       }
 
