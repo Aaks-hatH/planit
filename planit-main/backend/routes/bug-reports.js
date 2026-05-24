@@ -66,62 +66,48 @@ bugReportSchema.pre('save', function (next) {
 const BugReport = mongoose.model('BugReport', bugReportSchema);
 
 // ══════════════════════════════════════════════════════════════════════════
-// NTFY NOTIFICATION
-// Set NTFY_TOPIC in your environment (e.g. "planit-bug-reports").
-// Optionally set NTFY_TOKEN if your topic requires auth.
-// Subscribe to your topic at https://ntfy.sh/<your-topic> or in the
-// ntfy app (iOS / Android).
+// CENTRALIZED ALERT DISPATCH
+// All alert channels (Discord, ntfy, Slack) are configured on the router
+// only. This backend calls POST /mesh/alert on the router and returns
+// immediately — the router handles fan-out to every channel.
+//
+// Required router env vars (set once, never on backends):
+//   DISCORD_WEBHOOK_URL
+//   NTFY_URL  +  NTFY_TOKEN  (optional)
+//   SLACK_WEBHOOK_URL
 // ══════════════════════════════════════════════════════════════════════════
-// TODO fix
-async function sendNtfyNotification(report) {
-  const ntfyEnv = process.env.NTFY_URL;
-  if (!ntfyEnv) {
-    console.warn('[bug-reports] NTFY_URL not set — skipping push notification');
+
+async function sendAlert(report) {
+  const routerUrl = process.env.ROUTER_URL;
+  if (!routerUrl) {
+    console.warn('[bug-reports] ROUTER_URL not set — skipping centralized alert');
     return;
   }
-  // NTFY_URL can be either a full URL (https://ntfy.sh/my-topic) or a bare
-  // topic name (my-topic). Handle both so a 404 isn't silently swallowed.
-  const ntfyEndpoint = ntfyEnv.startsWith('http') ? ntfyEnv : `https://ntfy.sh/${ntfyEnv}`;
-
-  const severityPrefix = {
-    low: '[LOW]', medium: '[MEDIUM]', high: '[HIGH]', critical: '[CRITICAL]',
-  };
-  const categoryLabel = {
-    bug: 'Bug', error: 'Error', feature: 'Feature Request',
-    account: 'Account Issue', checkin: 'Check-in Issue', other: 'Other',
-  };
-
-  // Title must be ASCII-safe — emoji in HTTP headers causes "Illegal header value" errors
-  const title = `${severityPrefix[report.severity] || '[REPORT]'} ${report.summary}`.slice(0, 150);
-  const body  = [
-    `From: ${report.name} <${report.email}>`,
-    `Category: ${categoryLabel[report.category] || report.category}`,
-    `Severity: ${report.severity}`,
-    report.eventLink ? `Event: ${report.eventLink}` : null,
-    report.browser   ? `Browser: ${report.browser}`   : null,
-    '',
-    report.description.slice(0, 400),
-  ].filter(v => v !== null).join('\n');
-
-  const headers = {
-    'Title':    title,
-    'Priority': report.severity === 'critical' ? 'urgent'
-               : report.severity === 'high'    ? 'high'
-               : 'default',
-    'Tags':     `bug,${report.category}`,
-    'Content-Type': 'text/plain',
-  };
-
-  if (process.env.NTFY_TOKEN) {
-    headers['Authorization'] = `Bearer ${process.env.NTFY_TOKEN}`;
-  }
-
   try {
-    await axios.post(ntfyEndpoint, body, { headers, timeout: 8000 });
-    console.log(`[bug-reports] ntfy notification sent for report from ${report.email}`);
+    const { meshPost } = require('../middleware/mesh');
+    await meshPost(
+      process.env.BACKEND_LABEL || 'Backend',
+      `${routerUrl}/mesh/alert`,
+      {
+        type: 'bug_report',
+        payload: {
+          _id:         report._id?.toString(),
+          name:        report.name,
+          email:       report.email,
+          category:    report.category,
+          summary:     report.summary,
+          description: report.description,
+          eventLink:   report.eventLink,
+          browser:     report.browser,
+          severity:    report.severity,
+          ip:          report.ip,
+        },
+      },
+      { timeout: 5000 },
+    );
   } catch (err) {
-    // Never let notification failure break the user's submission
-    console.error('[bug-reports] ntfy notification failed:', err.message);
+    // Never let alert failure affect the user's submission response
+    console.error('[bug-reports] Centralized alert dispatch failed:', err.message);
   }
 }
 
@@ -197,8 +183,8 @@ router.post('/',
 
       await report.save();
 
-      // Fire and forget — don't await so user gets instant response
-      sendNtfyNotification(report);
+      // Fire and forget — router handles all alert channels in background
+      sendAlert(report);
 
       res.status(201).json({
         success: true,
