@@ -105,7 +105,9 @@ async function _sendNtfy({ title, body, priority, tags, actions }) {
 
   const endpoint = rawUrl.startsWith('http') ? rawUrl : `https://ntfy.sh/${rawUrl}`;
   const headers  = {
-    'Title':        String(title).slice(0, 150),
+    // ntfy supports percent-encoded UTF-8 in the Title header.
+    // Raw emoji exceed the Latin-1 ByteString limit (max 255) and crash fetch().
+    'Title':        encodeURIComponent(String(title).slice(0, 150)),
     'Priority':     priority || 'default',
     'Tags':         Array.isArray(tags) ? tags.join(',') : (tags || ''),
     'Content-Type': 'text/plain',
@@ -219,6 +221,9 @@ async function alertBugReport(report) {
   await _sendDiscord({
     username:   `${BRAND_NAME} Alerts`,
     avatar_url: APP_ICON_URL,
+    // Discord only fires a push notification when `content` is present;
+    // embed-only messages render in the channel but are silent on mobile.
+    content:    `${emoji} **[${severity.toUpperCase()}] Bug Report** — ${(report.summary || '').slice(0, 100)}`,
     embeds: [{
       title:     `${emoji} Bug Report — ${(report.summary || '').slice(0, 100)}`,
       color,
@@ -360,6 +365,7 @@ async function alertStatusReport({ report, count, service, type }) {
   await _sendDiscord({
     username:   `${BRAND_NAME} Alerts`,
     avatar_url: APP_ICON_URL,
+    content:    `${emoji} **${title.slice(0, 130)}**`,
     embeds: [{
       title:     `${emoji} ${title}`,
       color,
@@ -494,6 +500,7 @@ async function alertIncident({ incident, update, type = 'created' }) {
   await _sendDiscord({
     username:   `${BRAND_NAME} Alerts`,
     avatar_url: APP_ICON_URL,
+    content:    `${emoji} **${fullTitle.slice(0, 150)}**`,
     embeds: [{
       title:     `${emoji} ${fullTitle}`,
       color,
