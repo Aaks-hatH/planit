@@ -26,14 +26,35 @@ const SERVICE_CATEGORIES = [
 ];
 const ALL_SERVICE_KEYS = SERVICE_CATEGORIES.flatMap(c => c.services);
 
-async function sendNtfy({ title, message, priority = 'high', tags = [] }) {
-  const url = process.env.NTFY_URL;
-  if (!url) return;
+// ══════════════════════════════════════════════════════════════════════════
+// CENTRALIZED ALERT DISPATCH
+// All alert channels (Discord, ntfy, Slack) are configured on the router
+// only. Backends call POST /mesh/alert and get an instant ack — the router
+// fans out to every channel in the background.
+//
+// Required router env vars (set once, never on backends):
+//   DISCORD_WEBHOOK_URL
+//   NTFY_URL  +  NTFY_TOKEN  (optional)
+//   SLACK_WEBHOOK_URL
+// ══════════════════════════════════════════════════════════════════════════
+
+async function _meshAlert(type, payload) {
+  const routerUrl = process.env.ROUTER_URL;
+  if (!routerUrl) {
+    console.warn(`[uptime] ROUTER_URL not set — skipping ${type} alert`);
+    return;
+  }
   try {
-    const headers = { 'Title': title, 'Priority': priority, 'Tags': tags.join(','), 'Content-Type': 'text/plain' };
-    if (process.env.FRONTEND_URL) headers['Actions'] = `view, Open Status Page, ${process.env.FRONTEND_URL}/status`;
-    await axios.post(url, message, { headers, timeout: 6000 });
-  } catch (err) { console.error('[ntfy] Failed:', err.response?.status || err.message); }
+    const { meshPost } = require('../middleware/mesh');
+    await meshPost(
+      process.env.BACKEND_LABEL || 'Backend',
+      `${routerUrl}/mesh/alert`,
+      { type, payload },
+      { timeout: 5000 },
+    );
+  } catch (err) {
+    console.error(`[uptime] Centralized alert dispatch failed (${type}):`, err.message);
+  }
 }
 
 const reportRateLimit = rateLimit({
@@ -88,8 +109,21 @@ router.post('/report', reportRateLimit, async (req, res) => {
     if (isDuplicate(service, clientIp)) return res.json({ success: true, duplicate: true, message: "Report already recorded for this service." });
     const report = await UptimeReport.create({ description: description.trim().slice(0,500), email: (email||'').trim().slice(0,200), affectedService: service, status: 'pending' });
     const cnt = getReporterCount(service), isAuto = description.startsWith('[AUTO]');
-    sendNtfy({ title: isAuto ? 'AUTO-DETECT: API unreachable' : `Report #${cnt} — ${service}`, message: `${description.trim().slice(0,300)}\n\nUnique reporters this hour: ${cnt}`, priority: isAuto ? 'urgent' : 'default', tags: isAuto ? ['rotating_light'] : ['bar_chart'] }).catch(()=>{});
-    if (shouldFireThresholdAlert(service)) sendNtfy({ title: `⚠️ ${cnt} users reporting "${service}"`, message: `${cnt} users reported issues with "${service}" in the last hour.\n\nReview: ${process.env.FRONTEND_URL||''}/admin`, priority: 'high', tags: ['warning'] }).catch(()=>{});
+    // Fire centralized alert — router fans out to Discord, ntfy, Slack
+    _meshAlert('status_report', {
+      report: { description: description.trim().slice(0, 300), email: (email || '').trim() },
+      count:  cnt,
+      service,
+      type:   isAuto ? 'auto' : 'report',
+    }).catch(() => {});
+    if (shouldFireThresholdAlert(service)) {
+      _meshAlert('status_report', {
+        report: { description: `${cnt} users reported issues with "${service}" in the last hour.`, email: '' },
+        count:  cnt,
+        service,
+        type:   'threshold',
+      }).catch(() => {});
+    }
     res.status(201).json({ success: true, reportId: report._id });
   } catch (err) { res.status(500).json({ error: 'Failed to submit report' }); }
 });
@@ -106,7 +140,7 @@ router.post('/admin/incidents', verifyAdmin, async (req, res) => {
     const timeline = initialMessage ? [{ status: 'investigating', message: initialMessage.trim() }] : [];
     const incident = await Incident.create({ title: title.trim(), description: (description||'').trim(), severity: severity||'minor', affectedServices: affectedServices||[], timeline, reportIds: reportIds||[] });
     if (reportIds?.length > 0) await UptimeReport.updateMany({ _id: { $in: reportIds } }, { status: 'confirmed', incidentId: incident._id });
-    sendNtfy({ title: `Incident Created: ${incident.title}`, message: `Severity: ${incident.severity}\nServices: ${(affectedServices||[]).join(', ')||'General'}\n${initialMessage||''}`, priority: incident.severity==='critical'?'urgent':'high', tags:['memo'] }).catch(()=>{});
+    _meshAlert('incident', { incident: { ...incident.toObject(), _id: incident._id.toString() }, type: 'created' }).catch(() => {});
     res.status(201).json({ incident });
   } catch(e){ res.status(500).json({error:'Failed to create incident'}); }
 });
@@ -120,7 +154,7 @@ router.post('/admin/incidents/:id/timeline', verifyAdmin, async (req, res) => {
     inc.status = status;
     if (status === 'resolved') { inc.resolvedAt = new Date(); inc.downtimeMinutes = Math.round((inc.resolvedAt - inc.createdAt) / 60000); }
     await inc.save();
-    sendNtfy({ title: `Incident Update: ${status.toUpperCase()}`, message: `${inc.title}\n\n${message.trim()}`, priority: status==='resolved'?'default':'high', tags: status==='resolved'?['white_check_mark']:['memo'] }).catch(()=>{});
+    _meshAlert('incident', { incident: inc.toObject(), update: { status, message: message.trim() }, type: 'update' }).catch(() => {});
     res.json({ incident: inc });
   } catch(e){ res.status(500).json({error:'Failed'}); }
 });
