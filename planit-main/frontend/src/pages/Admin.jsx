@@ -3006,7 +3006,7 @@ function AnalyticsPanel({ stats }) {
 // MAIN ADMIN COMPONENT
 // ═══════════════════════════════════════════════════════════════════════════════
 // ─── Bug Reports Panel ────────────────────────────────────────────────────────
-function BugReportsPanel() {
+function BugReportsPanel({ isReadOnly = false, quickReportId = null, onNeedLogin }) {
   const [reports, setReports]     = useState([]);
   const [total, setTotal]         = useState(0);
   const [counts, setCounts]       = useState({ open: 0, in_progress: 0, resolved: 0, closed: 0 });
@@ -3016,6 +3016,11 @@ function BugReportsPanel() {
   const [noteText, setNoteText]   = useState('');
   const [saving, setSaving]       = useState(false);
 
+  // When arriving via a quick-access alert link, auto-open the linked report
+  // once the list has loaded. Runs once — the ref prevents re-triggering on
+  // subsequent filter-driven reloads.
+  const didAutoSelect = useRef(false);
+
   async function load() {
     setLoading(true);
     try {
@@ -3024,9 +3029,16 @@ function BugReportsPanel() {
       if (filter.category) params.category = filter.category;
       if (filter.severity) params.severity = filter.severity;
       const { data } = await bugReportAPI.getAll(params);
-      setReports(data.reports || []);
+      const loaded = data.reports || [];
+      setReports(loaded);
       setTotal(data.total || 0);
       setCounts(data.statusCounts || {});
+      // Auto-select the report from the alert link on first load
+      if (quickReportId && !didAutoSelect.current) {
+        didAutoSelect.current = true;
+        const target = loaded.find(r => r._id === quickReportId);
+        if (target) openDetail(target);
+      }
     } catch (err) {
       console.error('Failed to load bug reports:', err);
     } finally {
@@ -3036,14 +3048,25 @@ function BugReportsPanel() {
 
   useEffect(() => { load(); }, [filter]);
 
+  // Handles a 403 READ_ONLY_SESSION error from any write operation.
+  // Shows a toast and surfaces the login prompt.
+  function handleReadOnlyError(err) {
+    const code = err?.response?.data?.code;
+    if (code === 'READ_ONLY_SESSION' || err?.response?.status === 403) {
+      toast.error('Read-only session — log in to make changes.');
+      onNeedLogin?.();
+    } else {
+      console.error(err);
+    }
+  }
+
   async function updateStatus(id, status) {
     try {
       await bugReportAPI.update(id, { status });
       setReports(r => r.map(x => x._id === id ? { ...x, status } : x));
       if (selected?._id === id) setSelected(s => ({ ...s, status }));
-      // Refresh counts
       load();
-    } catch (err) { console.error(err); }
+    } catch (err) { handleReadOnlyError(err); }
   }
 
   async function saveNote() {
@@ -3053,7 +3076,7 @@ function BugReportsPanel() {
       await bugReportAPI.update(selected._id, { adminNotes: noteText });
       setSelected(s => ({ ...s, adminNotes: noteText }));
       setReports(r => r.map(x => x._id === selected._id ? { ...x, adminNotes: noteText } : x));
-    } catch (err) { console.error(err); }
+    } catch (err) { handleReadOnlyError(err); }
     setSaving(false);
   }
 
@@ -3064,7 +3087,7 @@ function BugReportsPanel() {
       setReports(r => r.filter(x => x._id !== id));
       if (selected?._id === id) setSelected(null);
       load();
-    } catch (err) { console.error(err); }
+    } catch (err) { handleReadOnlyError(err); }
   }
 
   function openDetail(report) {
@@ -3079,6 +3102,28 @@ function BugReportsPanel() {
 
   return (
     <div className="space-y-6 py-6 px-4">
+
+      {/* ── Read-only quick-access banner ──────────────────────────────────────
+          Shown when the user arrived via an alert link. Makes the session
+          status obvious and surfaces the login CTA before they hit a 403. */}
+      {isReadOnly && (
+        <div className="flex items-start gap-3 rounded-2xl border-2 border-amber-400 bg-amber-50 px-4 py-3">
+          <span className="text-xl leading-none mt-0.5">🔒</span>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-amber-900">Quick-access mode — read only</p>
+            <p className="text-xs text-amber-700 mt-0.5">
+              This session was opened from an alert link and expires in 30 minutes.
+              You can view reports but any changes require a full login.
+            </p>
+          </div>
+          <button
+            onClick={onNeedLogin}
+            className="flex-shrink-0 text-xs font-semibold bg-amber-900 text-amber-50 hover:bg-amber-800 transition-colors rounded-lg px-3 py-1.5"
+          >
+            Log In
+          </button>
+        </div>
+      )}
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold text-neutral-900 flex items-center gap-2">
@@ -9902,6 +9947,10 @@ function WhiteLabelPanel() {
 export default function Admin() {
   const [auth, setAuth] = useState(false);
   const [isDemo, setIsDemo] = useState(false);
+  // true when logged in via a quick-access alert link (read-only JWT, 30 min TTL)
+  const [isReadOnly,     setIsReadOnly]     = useState(false);
+  // report _id to auto-open when arriving via an alert link
+  const [quickReportId,  setQuickReportId]  = useState(null);
   // Who is currently logged in — populated by /admin/me after auth.
   // null = root admin (no employeeId), object = employee record subset.
   const [currentUser, setCurrentUser] = useState(null);
@@ -10043,6 +10092,33 @@ export default function Admin() {
   const [showCleanup, setShowCleanup] = useState(false);
 
   useEffect(() => {
+    // ── Quick-access flow (alert link with ?authToken=...&report=...) ─────────
+    // The alerting service embeds a signed 30-min read-only JWT in every bug
+    // report alert. When the user clicks it, the backend validates the HMAC
+    // token and redirects here with authToken + report in the URL.
+    const urlParams  = new URLSearchParams(window.location.search);
+    const authToken  = urlParams.get('authToken');
+    const reportId   = urlParams.get('report');
+
+    if (authToken) {
+      // Store the short-lived token and mark session as read-only
+      localStorage.setItem('adminToken', authToken);
+      localStorage.removeItem('adminIsDemo');
+      api.defaults.headers.common['Authorization'] = `Bearer ${authToken}`;
+      setIsReadOnly(true);
+      setAuth(true);
+      setLoading(false);
+      // Navigate to the bug reports section and auto-open the linked report
+      setActiveSection('reports');
+      if (reportId) setQuickReportId(reportId);
+      // Strip URL params so the token isn't visible or shareable from the address bar
+      window.history.replaceState({}, '', window.location.pathname);
+      const fn = () => { setAuth(false); setStats(null); setEvents([]); setCurrentUser(null); };
+      window.addEventListener('planit:admin-logout', fn);
+      return () => window.removeEventListener('planit:admin-logout', fn);
+    }
+
+    // ── Normal flow (persisted token in localStorage) ─────────────────────────
     const token = localStorage.getItem('adminToken');
     if (token) {
       api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
@@ -10148,7 +10224,28 @@ export default function Admin() {
     } finally { setLoggingIn(false); }
   };
 
-  const logout = () => { localStorage.removeItem('adminToken'); localStorage.removeItem('adminIsDemo'); delete api.defaults.headers.common['Authorization']; setAuth(false); setIsDemo(false); setCurrentUser(null); toast.success('Logged out'); };
+  const logout = () => {
+    localStorage.removeItem('adminToken');
+    localStorage.removeItem('adminIsDemo');
+    delete api.defaults.headers.common['Authorization'];
+    setAuth(false);
+    setIsDemo(false);
+    setIsReadOnly(false);
+    setQuickReportId(null);
+    setCurrentUser(null);
+    toast.success('Logged out');
+  };
+
+  // Called by the read-only banner's "Log In" button — drops the alert-session
+  // token and returns to the login screen without a page refresh.
+  const exitReadOnlyMode = () => {
+    localStorage.removeItem('adminToken');
+    delete api.defaults.headers.common['Authorization'];
+    setAuth(false);
+    setIsReadOnly(false);
+    setQuickReportId(null);
+    setCurrentUser(null);
+  };
 
   const deleteEvent = async (id) => {
     if (isDemo) { toast.success('Event deleted.'); return; }
@@ -10811,6 +10908,23 @@ export default function Admin() {
 
       {/* Main content */}
       <div className="flex-1 flex flex-col min-w-0">
+        {/* ── Global read-only alert bar ──────────────────────────────────────
+            Shown when the admin session was opened from an alert link.
+            Stays pinned above the header so it's always visible. */}
+        {isReadOnly && (
+          <div className="sticky top-0 z-50 flex items-center justify-between gap-3 bg-amber-400 px-4 py-2 text-amber-950 text-xs font-medium shadow-md">
+            <span className="flex items-center gap-2">
+              <span>🔒</span>
+              <span><strong>Quick-access session — read only.</strong> Opened from an alert link. Write actions require full login.</span>
+            </span>
+            <button
+              onClick={exitReadOnlyMode}
+              className="flex-shrink-0 bg-amber-950 text-amber-50 hover:bg-amber-900 transition-colors rounded-md px-3 py-1 font-semibold"
+            >
+              Log In
+            </button>
+          </div>
+        )}
         {/* Top bar */}
         <header className="h-14 bg-white border-b border-neutral-200 flex items-center gap-4 px-6 sticky top-0 z-40 shadow-sm">
           {/* Hamburger — mobile only */}
@@ -11008,7 +11122,7 @@ export default function Admin() {
           {activeSection === 'system'         && !selectedEvent && <div className="max-w-5xl mx-auto"><SystemPanel /></div>}
           {activeSection === 'logs'           && !selectedEvent && <div className="max-w-6xl mx-auto"><LogsPanel /></div>}
           {activeSection === 'uptime'         && !selectedEvent && <div className="max-w-4xl mx-auto"><UptimePanel /></div>}
-          {activeSection === 'reports'        && !selectedEvent && <div className="max-w-5xl mx-auto"><BugReportsPanel /></div>}
+          {activeSection === 'reports'        && !selectedEvent && <div className="max-w-5xl mx-auto"><BugReportsPanel isReadOnly={isReadOnly} quickReportId={quickReportId} onNeedLogin={exitReadOnlyMode} /></div>}
           {activeSection === 'command-center' && !selectedEvent && <CommandCenterPanel />}
           {activeSection === 'whitelabel'     && !selectedEvent && <div className="max-w-7xl mx-auto"><WhiteLabelPanel /></div>}
           {activeSection === 'blog'           && !selectedEvent && <div className="max-w-6xl mx-auto"><BlogCMSPanel /></div>}
