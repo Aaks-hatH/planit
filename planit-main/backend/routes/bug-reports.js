@@ -115,7 +115,8 @@ async function sendAlert(report) {
 // ADMIN AUTH — reuse the same JWT verify from admin route
 // ══════════════════════════════════════════════════════════════════════════
 
-const jwt = require('jsonwebtoken');
+const jwt    = require('jsonwebtoken');
+const crypto = require('crypto');
 const { secrets } = require('../keys');
 
 function verifyAdmin(req, res, next) {
@@ -127,11 +128,107 @@ function verifyAdmin(req, res, next) {
     const decoded = jwt.verify(token, secrets.jwt);
     if (!decoded.isAdmin) return res.status(403).json({ error: 'Admin access required' });
     req.admin = decoded;
+
+    // Alert quick-access tokens are read-only — block mutations so the admin
+    // panel always requires a full login before making any changes.
+    if (decoded.readOnly && req.method !== 'GET') {
+      return res.status(403).json({
+        error:   'This quick-access session is read-only. Log in to the admin panel to make changes.',
+        code:    'READ_ONLY_SESSION',
+        readOnly: true,
+      });
+    }
+
     next();
   } catch {
     return res.status(401).json({ error: 'Invalid or expired token' });
   }
 }
+
+// ══════════════════════════════════════════════════════════════════════════
+// ALERT QUICK-ACCESS — exchange HMAC token for a read-only JWT
+// GET /api/bug-reports/admin/quick-access?token=...&report=...
+//
+// The alerting service embeds a signed 30-min link in every bug report alert.
+// When clicked, this endpoint validates the HMAC token (signed with MESH_SECRET,
+// shared between the router and backend) and redirects to the admin panel
+// with a short-lived read-only JWT in the URL.
+//
+// The read-only JWT lets you VIEW the report without logging in.
+// Any write action (status change, notes, delete) returns 403 READ_ONLY_SESSION
+// — the admin panel should detect this and prompt for a full login.
+// ══════════════════════════════════════════════════════════════════════════
+
+router.get('/admin/quick-access', async (req, res) => {
+  const { token, report: reportId } = req.query;
+
+  if (!token || !reportId) {
+    return res.status(400).json({ error: 'token and report params are required' });
+  }
+
+  // Decode base64url → "reportId:expUnixSec:hmac32hex"
+  let rawPayload;
+  try {
+    rawPayload = Buffer.from(token, 'base64url').toString('utf8');
+  } catch {
+    return res.status(401).json({ error: 'Invalid token format' });
+  }
+
+  const parts = rawPayload.split(':');
+  if (parts.length !== 3) {
+    return res.status(401).json({ error: 'Invalid token structure' });
+  }
+  const [tokenReportId, expStr, sig] = parts;
+
+  // Confirm the token is for the requested report
+  if (tokenReportId !== reportId) {
+    return res.status(401).json({ error: 'Token does not match report' });
+  }
+
+  // Check expiry
+  const exp = parseInt(expStr, 10);
+  if (isNaN(exp) || Math.floor(Date.now() / 1000) > exp) {
+    return res.status(401).json({ error: 'Quick-access link has expired. Check the alert for a newer one.', expired: true });
+  }
+
+  // Verify HMAC signature (MESH_SECRET shared between router and backend)
+  const meshSecret = process.env.MESH_SECRET;
+  if (!meshSecret) {
+    console.error('[quick-access] MESH_SECRET not set — cannot validate quick-access token');
+    return res.status(503).json({ error: 'Server not configured for quick access' });
+  }
+
+  const expectedSig = crypto
+    .createHmac('sha256', meshSecret)
+    .update(`${tokenReportId}:${expStr}`)
+    .digest('hex')
+    .slice(0, 32);
+
+  if (sig !== expectedSig) {
+    return res.status(401).json({ error: 'Invalid token signature' });
+  }
+
+  // Issue a short-lived read-only JWT (30 min, matches token expiry)
+  const minsLeft    = Math.max(1, Math.floor((exp - Date.now() / 1000) / 60));
+  const readOnlyJwt = jwt.sign(
+    { isAdmin: true, readOnly: true, reportId, alertAccess: true },
+    secrets.jwt,
+    { expiresIn: `${minsLeft}m` },
+  );
+
+  // Redirect to the admin panel — frontend reads authToken from the URL
+  const frontendUrl = (process.env.FRONTEND_URL || '').split(',')[0].trim().replace(/\/$/, '');
+  const destination = frontendUrl
+    ? `${frontendUrl}/admin/bug-reports?report=${encodeURIComponent(reportId)}&authToken=${encodeURIComponent(readOnlyJwt)}`
+    : null;
+
+  if (!destination) {
+    // No frontend URL configured — just return the token so the caller can use it
+    return res.json({ ok: true, token: readOnlyJwt, reportId, readOnly: true });
+  }
+
+  res.redirect(302, destination);
+});
 
 // ══════════════════════════════════════════════════════════════════════════
 // PUBLIC — SUBMIT BUG REPORT
