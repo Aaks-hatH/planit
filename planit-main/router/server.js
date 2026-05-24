@@ -1877,6 +1877,56 @@ app.post('/mesh/exec', meshAuth(SERVICE_NAME), express.json(), (req, res) => {
   }
 });
 
+// ─── Centralized alerting ─────────────────────────────────────────────────────
+// POST /mesh/alert
+//
+// Backends call this (via mesh auth) instead of firing their own ntfy/Discord
+// calls. ALL alert channel configuration lives here in the router env only:
+//
+//   DISCORD_WEBHOOK_URL   — Discord webhook for the team channel
+//   NTFY_URL              — ntfy topic URL (e.g. https://ntfy.sh/my-topic)
+//   NTFY_TOKEN            — Optional bearer token if your ntfy topic is private
+//   SLACK_WEBHOOK_URL     — Slack Incoming Webhook URL
+//
+// Body: { type: 'bug_report' | 'status_report' | 'incident', payload: { ... } }
+//
+// Returns 200 immediately — alerts fire in the background so the backend
+// caller gets an instant response and never waits on downstream channels.
+
+const { alertBugReport, alertStatusReport, alertIncident } = require('./services/alerting');
+
+app.post('/mesh/alert', meshAuth(SERVICE_NAME), express.json({ limit: '32kb' }), (req, res) => {
+  const { type, payload } = req.body || {};
+
+  if (!type || !payload || typeof payload !== 'object') {
+    return res.status(400).json({ error: 'type and payload are required' });
+  }
+
+  // Acknowledge instantly — don't await alerts so we never block the backend
+  res.json({ ok: true, type });
+
+  // Fire alerts in background — all channels in parallel, errors logged only
+  setImmediate(async () => {
+    try {
+      switch (type) {
+        case 'bug_report':
+          await alertBugReport(payload);
+          break;
+        case 'status_report':
+          await alertStatusReport(payload);
+          break;
+        case 'incident':
+          await alertIncident(payload);
+          break;
+        default:
+          console.warn(`[alert] Unknown alert type from ${req.meshCaller}: ${type}`);
+      }
+    } catch (err) {
+      console.error('[alert] Dispatch error:', err.message);
+    }
+  });
+});
+
 // ─── Mesh config relay ───────────────────────────────────────────────────────
 // GET /mesh/config
 // Backends call this once on startup to pull shared env vars so you only need
