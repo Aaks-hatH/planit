@@ -25,17 +25,29 @@
  *
  * All three channels fire in parallel (Promise.allSettled) — one channel
  * failing never blocks the others.
+ *
+ * QUICK-ACCESS LINKS
+ *   Bug report alerts include a signed 30-minute link that auto-authenticates
+ *   you into a read-only view of that specific report, no login required.
+ *   The link is HMAC-SHA256 signed using MESH_SECRET (shared with backend).
+ *   The backend validates the token and issues a short-lived read-only JWT.
+ *   Write actions (status changes, notes) require full admin login.
+ *   Requires MESH_SECRET to be set on both router and backend.
  */
+
+const crypto = require('crypto');
 
 // ─── Severity mappings ────────────────────────────────────────────────────────
 
 const SEVERITY_COLOR = {
-  critical:    0xEF4444,  // red
-  high:        0xF97316,  // orange
-  medium:      0xEAB308,  // yellow
-  low:         0x3B82F6,  // blue
-  info:        0x6366F1,  // indigo (used for maintenance / resolved)
-  resolved:    0x22C55E,  // green
+  // Black/white PlanIt brand theme — severity shown via emoji + text, not color alone.
+  // Discord embed color is the left sidebar strip.
+  critical:    0x000000,  // pure black — maximum urgency
+  high:        0x1A1A1A,  // near-black
+  medium:      0x3D3D3D,  // dark grey
+  low:         0x6B6B6B,  // mid grey
+  info:        0x9B9B9B,  // light grey
+  resolved:    0xFFFFFF,  // white — it's over
 };
 
 const SEVERITY_EMOJI = {
@@ -56,6 +68,9 @@ const NTFY_PRIORITY = {
   resolved: 'default',
 };
 
+// Discord user to mention on every alert — set this to your Discord user ID
+const DISCORD_ALERT_USER = '1168575437723680850';
+
 // ─── Deduplication ────────────────────────────────────────────────────────────
 
 const _dedupMap = new Map();      // dedupKey → timestamp last fired
@@ -75,6 +90,24 @@ setInterval(() => {
     if (v < cutoff) _dedupMap.delete(k);
   }
 }, 15 * 60 * 1000).unref?.();
+
+// ─── Quick-access token ───────────────────────────────────────────────────────
+// Generates a short-lived HMAC-signed token embedded in alert links.
+// The backend validates the token at GET /api/bug-reports/admin/quick-access
+// and issues a read-only JWT — no full login required for 30 minutes.
+//
+// Format (base64url): {reportId}:{expUnixSec}:{hmac32hex}
+// Secret: MESH_SECRET (already shared between router and backend)
+// TTL: 30 minutes
+
+function _generateQuickToken(reportId) {
+  const secret = process.env.MESH_SECRET;
+  if (!secret || !reportId) return null;
+  const exp     = Math.floor(Date.now() / 1000) + 30 * 60;
+  const payload = `${reportId}:${exp}`;
+  const sig     = crypto.createHmac('sha256', secret).update(payload).digest('hex').slice(0, 32);
+  return Buffer.from(`${payload}:${sig}`).toString('base64url');
+}
 
 // ─── Discord ──────────────────────────────────────────────────────────────────
 
@@ -98,28 +131,61 @@ async function _sendDiscord(payload) {
 }
 
 // ─── ntfy ─────────────────────────────────────────────────────────────────────
+// Uses the ntfy JSON publishing API so emoji are fully supported in the title
+// and body — no HTTP header encoding restrictions. Sends to the base URL with
+// the topic name extracted from NTFY_URL and included in the JSON body.
+//
+// NTFY_URL formats accepted:
+//   "my-topic"                       → https://ntfy.sh/  topic=my-topic
+//   "https://ntfy.sh/my-topic"       → https://ntfy.sh/  topic=my-topic
+//   "https://self.example.com/topic" → https://self.example.com/  topic=topic
 
-async function _sendNtfy({ title, body, priority, tags, actions }) {
+function _parseNtfyUrl(rawUrl) {
+  try {
+    const full   = rawUrl.startsWith('http') ? rawUrl : `https://ntfy.sh/${rawUrl}`;
+    const parsed = new URL(full);
+    const topic  = parsed.pathname.replace(/^\/+|\/+$/g, '') || rawUrl.replace(/^https?:\/\/[^/]+\/?/, '') || rawUrl;
+    const base   = `${parsed.protocol}//${parsed.host}`;
+    return { topic, base };
+  } catch {
+    return { topic: rawUrl, base: 'https://ntfy.sh' };
+  }
+}
+
+async function _sendNtfy({ title, body, priority, tags, actions, iconUrl }) {
   const rawUrl = process.env.NTFY_URL;
   if (!rawUrl) return;
 
-  const endpoint = rawUrl.startsWith('http') ? rawUrl : `https://ntfy.sh/${rawUrl}`;
-  const headers  = {
-    // ntfy supports percent-encoded UTF-8 in the Title header.
-    // Raw emoji exceed the Latin-1 ByteString limit (max 255) and crash fetch().
-    'Title':        encodeURIComponent(String(title).slice(0, 150)),
-    'Priority':     priority || 'default',
-    'Tags':         Array.isArray(tags) ? tags.join(',') : (tags || ''),
-    'Content-Type': 'text/plain',
+  const { topic, base } = _parseNtfyUrl(rawUrl);
+
+  // Build JSON payload — supports full UTF-8, emoji, and rich actions natively
+  const ntfyPayload = {
+    topic,
+    title,
+    message:  String(body).slice(0, 4096),
+    priority: priority || 'default',
   };
-  if (actions)                   headers['Actions']       = actions;
-  if (process.env.NTFY_TOKEN)    headers['Authorization'] = `Bearer ${process.env.NTFY_TOKEN}`;
+
+  if (tags)    ntfyPayload.tags    = Array.isArray(tags) ? tags : tags.split(',').map(t => t.trim());
+  if (iconUrl) ntfyPayload.icon    = iconUrl;
+
+  // Parse action string "view, Label, URL; view, Label2, URL2" → array of objects
+  if (actions) {
+    const actionList = actions.split(';').map(a => {
+      const [type, label, url] = a.split(',').map(s => s.trim());
+      return { action: type || 'view', label: label || 'Open', url: url || '' };
+    }).filter(a => a.url);
+    if (actionList.length) ntfyPayload.actions = actionList;
+  }
+
+  const headers = { 'Content-Type': 'application/json' };
+  if (process.env.NTFY_TOKEN) headers['Authorization'] = `Bearer ${process.env.NTFY_TOKEN}`;
 
   try {
-    const res = await fetch(endpoint, {
+    const res = await fetch(base, {
       method:  'POST',
       headers,
-      body:    String(body).slice(0, 1000),
+      body:    JSON.stringify(ntfyPayload),
       signal:  AbortSignal.timeout(8000),
     });
     if (!res.ok) {
@@ -154,6 +220,7 @@ async function _sendSlack(payload) {
 
 // ─── Shared helpers ───────────────────────────────────────────────────────────
 
+// PlanIt branding — black/white theme
 const APP_ICON_URL  = 'https://planitapp.onrender.com/favicon.ico';
 const BRAND_NAME    = 'PlanIt';
 
@@ -169,11 +236,6 @@ function _adminUrl() {
 function _statusUrl() {
   const fe = (process.env.FRONTEND_URL || '').split(',')[0].trim().replace(/\/$/, '');
   return fe ? `${fe}/status` : null;
-}
-
-// Safe HTML escape for ntfy body text (not needed for ntfy but used in logs)
-function _esc(str) {
-  return String(str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
 // ─── Bug Report Alert ─────────────────────────────────────────────────────────
@@ -193,7 +255,12 @@ async function alertBugReport(report) {
   const emoji    = SEVERITY_EMOJI[severity] || '🔵';
   const color    = SEVERITY_COLOR[severity]  || SEVERITY_COLOR.medium;
   const adminUrl = _adminUrl();
-  const statusUrl = _statusUrl();
+
+  // Generate a signed 30-min quick-access link directly to this report
+  const quickToken  = _generateQuickToken(report._id);
+  const reportUrl   = quickToken && adminUrl
+    ? `${adminUrl}/bug-reports?report=${report._id}&quickAccess=${quickToken}`
+    : adminUrl;
 
   const categoryLabel = {
     bug:     'Bug',
@@ -204,7 +271,10 @@ async function alertBugReport(report) {
     other:   'Other',
   }[report.category] || (report.category || 'Unknown');
 
-  // ── Discord embed ─────────────────────────────────────────────────────────
+  // ── Discord — branded black/white PlanIt embed ─────────────────────────────
+  // content pings the alert user so Discord fires a push notification.
+
+  const isCritical = severity === 'critical' || severity === 'high';
 
   const discordFields = [
     { name: '⚡ Severity',  value: `\`${severity.toUpperCase()}\``,  inline: true  },
@@ -214,43 +284,71 @@ async function alertBugReport(report) {
     { name: '📝 Summary',   value: report.summary || '—',            inline: false },
     { name: '🔍 Description', value: (report.description || '—').slice(0, 400), inline: false },
   ];
-  if (report.browser)    discordFields.push({ name: '🌐 Browser',    value: report.browser,    inline: true });
-  if (report.eventLink)  discordFields.push({ name: '🔗 Event Link', value: report.eventLink,  inline: false });
+  if (report.browser)    discordFields.push({ name: '🌐 Browser',    value: report.browser,     inline: true });
+  if (report.eventLink)  discordFields.push({ name: '🔗 Event Link', value: report.eventLink,   inline: false });
   if (report.ip)         discordFields.push({ name: '🖥️ IP',         value: `\`${report.ip}\``, inline: true });
 
+  const discordComponents = reportUrl ? [{
+    type: 1, // action row
+    components: [{
+      type: 2,       // button
+      style: 5,      // link button
+      label: '🔓 Open Report (30 min)',
+      url: reportUrl,
+    }],
+  }] : [];
+
   await _sendDiscord({
-    username:   `${BRAND_NAME} Alerts`,
+    username:   BRAND_NAME,
     avatar_url: APP_ICON_URL,
-    // Discord only fires a push notification when `content` is present;
-    // embed-only messages render in the channel but are silent on mobile.
-    content:    `${emoji} **[${severity.toUpperCase()}] Bug Report** — ${(report.summary || '').slice(0, 100)}`,
+    // Ping the alert user so Discord fires a push notification.
+    // For critical/high, also prepend an @here so the whole channel sees it.
+    content: isCritical
+      ? `<@${DISCORD_ALERT_USER}> 🚨 **URGENT — ${severity.toUpperCase()} BUG REPORT**`
+      : `<@${DISCORD_ALERT_USER}>`,
     embeds: [{
-      title:     `${emoji} Bug Report — ${(report.summary || '').slice(0, 100)}`,
+      // PlanIt black/white brand theme — severity conveyed through emoji + text
       color,
+      author: {
+        name:     `${BRAND_NAME} Bug Reports`,
+        icon_url: APP_ICON_URL,
+      },
+      title: `${emoji} ${(report.summary || 'New Bug Report').slice(0, 100)}`,
+      description: isCritical
+        ? `> ⚠️ **This requires immediate attention.**\n> Severity: **${severity.toUpperCase()}** · Category: **${categoryLabel}**`
+        : `Severity: **${severity.toUpperCase()}** · Category: **${categoryLabel}**`,
       fields:    discordFields,
-      footer:    { text: `${BRAND_NAME}  ·  Bug Reports  ·  ID: ${report._id || 'N/A'}` },
+      thumbnail: { url: APP_ICON_URL },
+      footer:    { text: `${BRAND_NAME}  ·  Bug Reports  ·  ID: ${report._id || 'N/A'}`, icon_url: APP_ICON_URL },
       timestamp: _ts(),
     }],
+    components: discordComponents,
   });
 
-  // ── ntfy push ─────────────────────────────────────────────────────────────
+  // ── ntfy — JSON push with icon branding ───────────────────────────────────
+  // Sent via JSON body so emoji in title/body are fully supported.
 
   const ntfyBody = [
     `From: ${report.name || 'Anonymous'} <${report.email}>`,
     `Category: ${categoryLabel}`,
-    `Severity: ${severity}`,
-    report.browser   ? `Browser: ${report.browser}`   : null,
-    report.eventLink ? `Event: ${report.eventLink}`   : null,
+    `Severity: ${severity.toUpperCase()}`,
+    report.browser   ? `Browser: ${report.browser}`  : null,
+    report.eventLink ? `Event: ${report.eventLink}`  : null,
     '',
     (report.description || '').slice(0, 400),
   ].filter(v => v !== null).join('\n');
+
+  const ntfyActions = [];
+  if (reportUrl) ntfyActions.push(`view, 🔓 Open Report (30 min), ${reportUrl}`);
+  else if (adminUrl) ntfyActions.push(`view, Open Admin, ${adminUrl}`);
 
   await _sendNtfy({
     title:    `${emoji} [${severity.toUpperCase()}] ${(report.summary || '').slice(0, 100)}`,
     body:     ntfyBody,
     priority: NTFY_PRIORITY[severity] || 'default',
-    tags:     `bug,${report.category || 'bug'}`,
-    actions:  adminUrl ? `view, Open Admin, ${adminUrl}` : undefined,
+    tags:     ['bug', report.category || 'bug'],
+    actions:  ntfyActions.join('; ') || undefined,
+    iconUrl:  APP_ICON_URL,
   });
 
   // ── Slack Block Kit ───────────────────────────────────────────────────────
@@ -279,17 +377,10 @@ async function alertBugReport(report) {
     },
   ];
 
-  if (adminUrl) {
-    slackBlocks.push({
-      type: 'actions',
-      elements: [{
-        type:  'button',
-        text:  { type: 'plain_text', text: '🛠 Open Admin Panel', emoji: true },
-        url:   adminUrl,
-        style: 'primary',
-      }],
-    });
-  }
+  const slackActions = [];
+  if (reportUrl) slackActions.push({ type: 'button', text: { type: 'plain_text', text: '🔓 Open Report (30 min)', emoji: true }, url: reportUrl, style: 'primary' });
+  else if (adminUrl) slackActions.push({ type: 'button', text: { type: 'plain_text', text: '🛠 Open Admin Panel', emoji: true }, url: adminUrl, style: 'primary' });
+  if (slackActions.length) slackBlocks.push({ type: 'actions', elements: slackActions });
 
   slackBlocks.push({
     type: 'divider',
@@ -332,13 +423,13 @@ async function alertStatusReport({ report, count, service, type }) {
   let title, ntfyTags;
   if (isAuto) {
     title    = `AUTO-DETECT: Service unreachable — ${service}`;
-    ntfyTags = 'rotating_light,warning';
+    ntfyTags = ['rotating_light', 'warning'];
   } else if (isThreshold) {
     title    = `${count} users reporting issues — ${service}`;
-    ntfyTags = 'warning,bar_chart';
+    ntfyTags = ['warning', 'bar_chart'];
   } else {
     title    = `Status Report #${count} — ${service}`;
-    ntfyTags = 'bar_chart';
+    ntfyTags = ['bar_chart'];
   }
 
   // Different dedup windows per type
@@ -351,8 +442,9 @@ async function alertStatusReport({ report, count, service, type }) {
 
   const description = (report?.description || '').slice(0, 400);
   const reporter    = report?.email || '';
+  const isCritical  = isAuto || isThreshold;
 
-  // ── Discord embed ─────────────────────────────────────────────────────────
+  // ── Discord ───────────────────────────────────────────────────────────────
 
   const discordFields = [
     { name: '🔧 Service',           value: `\`${service}\``, inline: true  },
@@ -362,20 +454,32 @@ async function alertStatusReport({ report, count, service, type }) {
   ];
   if (reporter) discordFields.push({ name: '📧 Reporter', value: reporter, inline: true });
 
+  const discordComponents = [];
+  const btnActions = [];
+  if (statusUrl) btnActions.push({ type: 2, style: 5, label: '📊 Status Page', url: statusUrl });
+  if (adminUrl)  btnActions.push({ type: 2, style: 5, label: '🛠 Admin',        url: adminUrl  });
+  if (btnActions.length) discordComponents.push({ type: 1, components: btnActions });
+
   await _sendDiscord({
-    username:   `${BRAND_NAME} Alerts`,
+    username:   BRAND_NAME,
     avatar_url: APP_ICON_URL,
-    content:    `${emoji} **${title.slice(0, 130)}**`,
+    content: isCritical
+      ? `<@${DISCORD_ALERT_USER}> 🚨 **${title.slice(0, 130)}**`
+      : `<@${DISCORD_ALERT_USER}> ${emoji} ${title.slice(0, 130)}`,
     embeds: [{
-      title:     `${emoji} ${title}`,
       color,
+      author: { name: `${BRAND_NAME} Status`, icon_url: APP_ICON_URL },
+      title:     `${emoji} ${title}`,
+      description: isCritical ? `> ⚠️ **Immediate attention may be required.**` : undefined,
       fields:    discordFields,
-      footer:    { text: `${BRAND_NAME}  ·  Status Page` },
+      thumbnail: { url: APP_ICON_URL },
+      footer:    { text: `${BRAND_NAME}  ·  Status Page`, icon_url: APP_ICON_URL },
       timestamp: _ts(),
     }],
+    components: discordComponents,
   });
 
-  // ── ntfy push ─────────────────────────────────────────────────────────────
+  // ── ntfy ──────────────────────────────────────────────────────────────────
 
   const ntfyBody = [
     `Service: ${service}`,
@@ -385,19 +489,20 @@ async function alertStatusReport({ report, count, service, type }) {
     reporter ? `\nReporter: ${reporter}` : '',
   ].join('\n').trim();
 
-  const ntfyActions = [];
-  if (statusUrl) ntfyActions.push(`view, Status Page, ${statusUrl}`);
-  if (adminUrl)  ntfyActions.push(`view, Admin, ${adminUrl}`);
+  const ntfyActionParts = [];
+  if (statusUrl) ntfyActionParts.push(`view, Status Page, ${statusUrl}`);
+  if (adminUrl)  ntfyActionParts.push(`view, Admin, ${adminUrl}`);
 
   await _sendNtfy({
     title:    `${emoji} ${title.slice(0, 130)}`,
     body:     ntfyBody,
     priority: NTFY_PRIORITY[severity],
     tags:     ntfyTags,
-    actions:  ntfyActions.length ? ntfyActions.join('; ') : undefined,
+    actions:  ntfyActionParts.join('; ') || undefined,
+    iconUrl:  APP_ICON_URL,
   });
 
-  // ── Slack Block Kit ───────────────────────────────────────────────────────
+  // ── Slack ─────────────────────────────────────────────────────────────────
 
   const slackBlocks = [
     {
@@ -418,10 +523,10 @@ async function alertStatusReport({ report, count, service, type }) {
     }] : []),
   ];
 
-  const slackActions = [];
-  if (statusUrl) slackActions.push({ type: 'button', text: { type: 'plain_text', text: '📊 Status Page', emoji: true }, url: statusUrl, style: 'danger' });
-  if (adminUrl)  slackActions.push({ type: 'button', text: { type: 'plain_text', text: '🛠 Admin Panel',  emoji: true }, url: adminUrl  });
-  if (slackActions.length) slackBlocks.push({ type: 'actions', elements: slackActions });
+  const slackBtns = [];
+  if (statusUrl) slackBtns.push({ type: 'button', text: { type: 'plain_text', text: '📊 Status Page', emoji: true }, url: statusUrl, style: 'danger' });
+  if (adminUrl)  slackBtns.push({ type: 'button', text: { type: 'plain_text', text: '🛠 Admin Panel',  emoji: true }, url: adminUrl  });
+  if (slackBtns.length) slackBlocks.push({ type: 'actions', elements: slackBtns });
 
   slackBlocks.push({ type: 'divider' }, {
     type: 'context',
@@ -452,7 +557,7 @@ async function alertIncident({ incident, update, type = 'created' }) {
     critical:    SEVERITY_COLOR.critical,
     major:       SEVERITY_COLOR.high,
     minor:       SEVERITY_COLOR.medium,
-    maintenance: 0x6366F1,
+    maintenance: 0x4B4B4B,
   };
 
   const severity = incident.severity || 'minor';
@@ -464,15 +569,15 @@ async function alertIncident({ incident, update, type = 'created' }) {
   if (isCreated) {
     emoji       = '🚨';
     titlePrefix = 'Incident Created';
-    ntfyTags    = 'rotating_light,memo';
+    ntfyTags    = ['rotating_light', 'memo'];
   } else if (isResolved) {
     emoji       = '✅';
     titlePrefix = 'Incident Resolved';
-    ntfyTags    = 'white_check_mark';
+    ntfyTags    = ['white_check_mark'];
   } else {
     emoji       = '📋';
     titlePrefix = `Incident ${(update?.status || 'Updated').toUpperCase()}`;
-    ntfyTags    = 'memo';
+    ntfyTags    = ['memo'];
   }
 
   const fullTitle = `${titlePrefix}: ${incident.title}`;
@@ -486,8 +591,9 @@ async function alertIncident({ incident, update, type = 'created' }) {
 
   const services = (incident.affectedServices || []).join(', ') || 'General';
   const message  = (update?.message || incident.description || '').slice(0, 400);
+  const isCritical = isCreated && (severity === 'critical' || severity === 'major');
 
-  // ── Discord embed ─────────────────────────────────────────────────────────
+  // ── Discord ───────────────────────────────────────────────────────────────
 
   const discordFields = [
     { name: '⚡ Severity',          value: `\`${severity.toUpperCase()}\``, inline: true  },
@@ -497,20 +603,32 @@ async function alertIncident({ incident, update, type = 'created' }) {
     ...(isResolved && incident.downtimeMinutes ? [{ name: '⏱ Downtime', value: `${incident.downtimeMinutes} minutes`, inline: true }] : []),
   ];
 
+  const discordComponents = [];
+  const incBtns = [];
+  if (statusUrl) incBtns.push({ type: 2, style: 5, label: '📊 Status Page', url: statusUrl });
+  if (adminUrl)  incBtns.push({ type: 2, style: 5, label: '🛠 Admin',        url: adminUrl  });
+  if (incBtns.length) discordComponents.push({ type: 1, components: incBtns });
+
   await _sendDiscord({
-    username:   `${BRAND_NAME} Alerts`,
+    username:   BRAND_NAME,
     avatar_url: APP_ICON_URL,
-    content:    `${emoji} **${fullTitle.slice(0, 150)}**`,
+    content: isCritical
+      ? `<@${DISCORD_ALERT_USER}> 🚨 **INCIDENT — ${severity.toUpperCase()}**`
+      : `<@${DISCORD_ALERT_USER}> ${emoji} ${fullTitle.slice(0, 100)}`,
     embeds: [{
-      title:     `${emoji} ${fullTitle}`,
       color,
+      author: { name: `${BRAND_NAME} Incidents`, icon_url: APP_ICON_URL },
+      title:     `${emoji} ${fullTitle}`,
+      description: isCritical ? `> ⚠️ **A critical incident has been declared.**` : undefined,
       fields:    discordFields,
-      footer:    { text: `${BRAND_NAME}  ·  Incident Management  ·  ID: ${incident._id || 'N/A'}` },
+      thumbnail: { url: APP_ICON_URL },
+      footer:    { text: `${BRAND_NAME}  ·  Incident Management  ·  ID: ${incident._id || 'N/A'}`, icon_url: APP_ICON_URL },
       timestamp: _ts(),
     }],
+    components: discordComponents,
   });
 
-  // ── ntfy push ─────────────────────────────────────────────────────────────
+  // ── ntfy ──────────────────────────────────────────────────────────────────
 
   const ntfyBody = [
     `Severity: ${severity}`,
@@ -519,9 +637,9 @@ async function alertIncident({ incident, update, type = 'created' }) {
     isResolved && incident.downtimeMinutes ? `\nTotal downtime: ${incident.downtimeMinutes} min` : '',
   ].join('\n').trim();
 
-  const ntfyActions = [];
-  if (statusUrl) ntfyActions.push(`view, Status Page, ${statusUrl}`);
-  if (adminUrl)  ntfyActions.push(`view, Admin, ${adminUrl}`);
+  const incNtfyActions = [];
+  if (statusUrl) incNtfyActions.push(`view, Status Page, ${statusUrl}`);
+  if (adminUrl)  incNtfyActions.push(`view, Admin, ${adminUrl}`);
 
   await _sendNtfy({
     title:    `${emoji} ${fullTitle.slice(0, 130)}`,
@@ -530,10 +648,11 @@ async function alertIncident({ incident, update, type = 'created' }) {
       ? (severity === 'critical' ? 'urgent' : severity === 'major' ? 'high' : 'default')
       : (isResolved ? 'default' : 'high'),
     tags:    ntfyTags,
-    actions: ntfyActions.length ? ntfyActions.join('; ') : undefined,
+    actions: incNtfyActions.join('; ') || undefined,
+    iconUrl: APP_ICON_URL,
   });
 
-  // ── Slack Block Kit ───────────────────────────────────────────────────────
+  // ── Slack ─────────────────────────────────────────────────────────────────
 
   const slackFields = [
     { type: 'mrkdwn', text: `*Severity:*\n\`${severity.toUpperCase()}\`` },
@@ -555,10 +674,10 @@ async function alertIncident({ incident, update, type = 'created' }) {
     }] : []),
   ];
 
-  const slackActions = [];
-  if (statusUrl) slackActions.push({ type: 'button', text: { type: 'plain_text', text: '📊 Status Page', emoji: true }, url: statusUrl, style: isResolved ? 'primary' : 'danger' });
-  if (adminUrl)  slackActions.push({ type: 'button', text: { type: 'plain_text', text: '🛠 Admin Panel',  emoji: true }, url: adminUrl });
-  if (slackActions.length) slackBlocks.push({ type: 'actions', elements: slackActions });
+  const slackBtns2 = [];
+  if (statusUrl) slackBtns2.push({ type: 'button', text: { type: 'plain_text', text: '📊 Status Page', emoji: true }, url: statusUrl, style: isResolved ? 'primary' : 'danger' });
+  if (adminUrl)  slackBtns2.push({ type: 'button', text: { type: 'plain_text', text: '🛠 Admin Panel',  emoji: true }, url: adminUrl });
+  if (slackBtns2.length) slackBlocks.push({ type: 'actions', elements: slackBtns2 });
 
   slackBlocks.push({ type: 'divider' }, {
     type: 'context',
