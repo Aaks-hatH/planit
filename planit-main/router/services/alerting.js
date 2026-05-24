@@ -140,36 +140,40 @@ async function _sendDiscord(payload) {
 //   "https://ntfy.sh/my-topic"       → https://ntfy.sh/  topic=my-topic
 //   "https://self.example.com/topic" → https://self.example.com/  topic=topic
 
-function _parseNtfyUrl(rawUrl) {
-  try {
-    const full   = rawUrl.startsWith('http') ? rawUrl : `https://ntfy.sh/${rawUrl}`;
-    const parsed = new URL(full);
-    const topic  = parsed.pathname.replace(/^\/+|\/+$/g, '') || rawUrl.replace(/^https?:\/\/[^/]+\/?/, '') || rawUrl;
-    const base   = `${parsed.protocol}//${parsed.host}`;
-    return { topic, base };
-  } catch {
-    return { topic: rawUrl, base: 'https://ntfy.sh' };
-  }
+// Resolves NTFY_URL to the full topic endpoint.
+// ntfy's JSON API works on the topic URL directly — posting to the root
+// causes a redirect that Node's fetch drops the body on, giving a 400.
+//
+// Accepts:  "my-topic"  |  "https://ntfy.sh/my-topic"  |  "https://self.example.com/topic"
+// Returns:  "https://ntfy.sh/my-topic"  (always the full topic URL, no trailing slash)
+function _buildNtfyUrl(rawUrl) {
+  if (!rawUrl) return null;
+  const full = rawUrl.startsWith('http') ? rawUrl : `https://ntfy.sh/${rawUrl}`;
+  return full.replace(/\/$/, ''); // strip any trailing slash
 }
 
-async function _sendNtfy({ title, body, priority, tags, actions, iconUrl }) {
+async function _sendNtfy({ title, body, priority, tags, actions, iconUrl, clickUrl }) {
   const rawUrl = process.env.NTFY_URL;
   if (!rawUrl) return;
 
-  const { topic, base } = _parseNtfyUrl(rawUrl);
+  // Post to the topic URL directly — avoids the root-URL redirect that drops
+  // the JSON body and causes ntfy to return 400 "invalid request body".
+  const ntfyUrl = _buildNtfyUrl(rawUrl);
 
-  // Build JSON payload — supports full UTF-8, emoji, and rich actions natively
+  // Build JSON payload — full UTF-8 supported natively (no header encoding issues)
   const ntfyPayload = {
-    topic,
     title,
     message:  String(body).slice(0, 4096),
     priority: priority || 'default',
   };
 
-  if (tags)    ntfyPayload.tags    = Array.isArray(tags) ? tags : tags.split(',').map(t => t.trim());
-  if (iconUrl) ntfyPayload.icon    = iconUrl;
+  // topic is already in the URL — only add it for cross-topic publishing (not needed here)
+  if (tags)     ntfyPayload.tags  = Array.isArray(tags) ? tags : tags.split(',').map(t => t.trim());
+  if (iconUrl)  ntfyPayload.icon  = iconUrl;
+  // click makes the whole notification tappable — opens this URL when tapped
+  if (clickUrl) ntfyPayload.click = clickUrl;
 
-  // Parse action string "view, Label, URL; view, Label2, URL2" → array of objects
+  // Parse "view, Label, URL; view, Label2, URL2" → action button objects
   if (actions) {
     const actionList = actions.split(';').map(a => {
       const [type, label, url] = a.split(',').map(s => s.trim());
@@ -182,7 +186,7 @@ async function _sendNtfy({ title, body, priority, tags, actions, iconUrl }) {
   if (process.env.NTFY_TOKEN) headers['Authorization'] = `Bearer ${process.env.NTFY_TOKEN}`;
 
   try {
-    const res = await fetch(base, {
+    const res = await fetch(ntfyUrl, {
       method:  'POST',
       headers,
       body:    JSON.stringify(ntfyPayload),
@@ -271,84 +275,76 @@ async function alertBugReport(report) {
     other:   'Other',
   }[report.category] || (report.category || 'Unknown');
 
-  // ── Discord — branded black/white PlanIt embed ─────────────────────────────
-  // content pings the alert user so Discord fires a push notification.
+  // ── Discord ────────────────────────────────────────────────────────────────
+  // Regular incoming webhooks do NOT support `components` (link buttons) —
+  // they are silently dropped. Use markdown hyperlinks in embed fields instead.
 
   const isCritical = severity === 'critical' || severity === 'high';
 
   const discordFields = [
-    { name: '⚡ Severity',  value: `\`${severity.toUpperCase()}\``,  inline: true  },
-    { name: '🏷️ Category',  value: categoryLabel,                    inline: true  },
-    { name: '📋 Status',    value: '`OPEN`',                         inline: true  },
-    { name: '👤 Reporter',  value: `${report.name || 'Anonymous'}\n${report.email}`, inline: false },
-    { name: '📝 Summary',   value: report.summary || '—',            inline: false },
-    { name: '🔍 Description', value: (report.description || '—').slice(0, 400), inline: false },
+    { name: 'Severity',    value: `\`${severity.toUpperCase()}\``, inline: true  },
+    { name: 'Category',    value: categoryLabel,                     inline: true  },
+    { name: 'Status',      value: '`OPEN`',                          inline: true  },
+    { name: 'Reporter',    value: `${report.name || 'Anonymous'} · ${report.email}`, inline: false },
+    { name: 'Summary',     value: report.summary || '—',             inline: false },
+    { name: 'Description', value: (report.description || '—').slice(0, 400), inline: false },
   ];
-  if (report.browser)    discordFields.push({ name: '🌐 Browser',    value: report.browser,     inline: true });
-  if (report.eventLink)  discordFields.push({ name: '🔗 Event Link', value: report.eventLink,   inline: false });
-  if (report.ip)         discordFields.push({ name: '🖥️ IP',         value: `\`${report.ip}\``, inline: true });
-
-  const discordComponents = reportUrl ? [{
-    type: 1, // action row
-    components: [{
-      type: 2,       // button
-      style: 5,      // link button
-      label: '🔓 Open Report (30 min)',
-      url: reportUrl,
-    }],
-  }] : [];
+  if (report.browser)   discordFields.push({ name: 'Browser',    value: report.browser,        inline: true  });
+  if (report.eventLink) discordFields.push({ name: 'Event Link', value: report.eventLink,       inline: false });
+  if (report.ip)        discordFields.push({ name: 'IP',         value: `\`${report.ip}\``,   inline: true  });
+  // Markdown hyperlinks work in embed field values — the correct way to add links on regular webhooks
+  if (reportUrl)        discordFields.push({ name: 'Admin Access', value: `[Open Report — 30 min access](${reportUrl})`, inline: false });
 
   await _sendDiscord({
     username:   BRAND_NAME,
     avatar_url: APP_ICON_URL,
-    // Ping the alert user so Discord fires a push notification.
-    // For critical/high, also prepend an @here so the whole channel sees it.
     content: isCritical
-      ? `<@${DISCORD_ALERT_USER}> 🚨 **URGENT — ${severity.toUpperCase()} BUG REPORT**`
-      : `<@${DISCORD_ALERT_USER}>`,
+      ? `<@${DISCORD_ALERT_USER}> **URGENT — ${severity.toUpperCase()} BUG REPORT**`
+      : `<@${DISCORD_ALERT_USER}> New bug report — ${severity.toUpperCase()}`,
     embeds: [{
-      // PlanIt black/white brand theme — severity conveyed through emoji + text
       color,
       author: {
-        name:     `${BRAND_NAME} Bug Reports`,
+        name:     `${BRAND_NAME} · Bug Reports`,
         icon_url: APP_ICON_URL,
       },
-      title: `${emoji} ${(report.summary || 'New Bug Report').slice(0, 100)}`,
+      title: (report.summary || 'New Bug Report').slice(0, 100),
       description: isCritical
-        ? `> ⚠️ **This requires immediate attention.**\n> Severity: **${severity.toUpperCase()}** · Category: **${categoryLabel}**`
-        : `Severity: **${severity.toUpperCase()}** · Category: **${categoryLabel}**`,
+        ? `**This requires immediate attention.**\nSeverity: \`${severity.toUpperCase()}\` · Category: ${categoryLabel}`
+        : `Severity: \`${severity.toUpperCase()}\` · Category: ${categoryLabel}`,
       fields:    discordFields,
       thumbnail: { url: APP_ICON_URL },
       footer:    { text: `${BRAND_NAME}  ·  Bug Reports  ·  ID: ${report._id || 'N/A'}`, icon_url: APP_ICON_URL },
       timestamp: _ts(),
     }],
-    components: discordComponents,
   });
 
-  // ── ntfy — JSON push with icon branding ───────────────────────────────────
-  // Sent via JSON body so emoji in title/body are fully supported.
+  // ── ntfy ──────────────────────────────────────────────────────────────────
+  // clickUrl makes the notification itself tappable — opens the admin link directly.
+  // The action button provides a secondary labelled tap target.
 
   const ntfyBody = [
     `From: ${report.name || 'Anonymous'} <${report.email}>`,
     `Category: ${categoryLabel}`,
     `Severity: ${severity.toUpperCase()}`,
-    report.browser   ? `Browser: ${report.browser}`  : null,
-    report.eventLink ? `Event: ${report.eventLink}`  : null,
+    report.browser   ? `Browser: ${report.browser}` : null,
+    report.eventLink ? `Event: ${report.eventLink}` : null,
     '',
     (report.description || '').slice(0, 400),
   ].filter(v => v !== null).join('\n');
 
   const ntfyActions = [];
-  if (reportUrl) ntfyActions.push(`view, 🔓 Open Report (30 min), ${reportUrl}`);
+  if (reportUrl) ntfyActions.push(`view, Open Report (30 min), ${reportUrl}`);
   else if (adminUrl) ntfyActions.push(`view, Open Admin, ${adminUrl}`);
 
   await _sendNtfy({
-    title:    `${emoji} [${severity.toUpperCase()}] ${(report.summary || '').slice(0, 100)}`,
+    title:    `[${severity.toUpperCase()}] ${(report.summary || '').slice(0, 100)}`,
     body:     ntfyBody,
     priority: NTFY_PRIORITY[severity] || 'default',
     tags:     ['bug', report.category || 'bug'],
     actions:  ntfyActions.join('; ') || undefined,
     iconUrl:  APP_ICON_URL,
+    // tap the notification → goes straight to the report
+    clickUrl: reportUrl || adminUrl || undefined,
   });
 
   // ── Slack Block Kit ───────────────────────────────────────────────────────
@@ -454,29 +450,26 @@ async function alertStatusReport({ report, count, service, type }) {
   ];
   if (reporter) discordFields.push({ name: '📧 Reporter', value: reporter, inline: true });
 
-  const discordComponents = [];
-  const btnActions = [];
-  if (statusUrl) btnActions.push({ type: 2, style: 5, label: '📊 Status Page', url: statusUrl });
-  if (adminUrl)  btnActions.push({ type: 2, style: 5, label: '🛠 Admin',        url: adminUrl  });
-  if (btnActions.length) discordComponents.push({ type: 1, components: btnActions });
+  // Links via markdown hyperlinks in fields — components not supported on regular webhooks
+  if (statusUrl) discordFields.push({ name: 'Status Page', value: `[View Status Page](${statusUrl})`, inline: true });
+  if (adminUrl)  discordFields.push({ name: 'Admin',       value: `[Open Admin Panel](${adminUrl})`,  inline: true });
 
   await _sendDiscord({
     username:   BRAND_NAME,
     avatar_url: APP_ICON_URL,
     content: isCritical
-      ? `<@${DISCORD_ALERT_USER}> 🚨 **${title.slice(0, 130)}**`
-      : `<@${DISCORD_ALERT_USER}> ${emoji} ${title.slice(0, 130)}`,
+      ? `<@${DISCORD_ALERT_USER}> **${title.slice(0, 130)}**`
+      : `<@${DISCORD_ALERT_USER}> ${title.slice(0, 130)}`,
     embeds: [{
       color,
-      author: { name: `${BRAND_NAME} Status`, icon_url: APP_ICON_URL },
-      title:     `${emoji} ${title}`,
-      description: isCritical ? `> ⚠️ **Immediate attention may be required.**` : undefined,
+      author: { name: `${BRAND_NAME} · Status`, icon_url: APP_ICON_URL },
+      title,
+      description: isCritical ? '**Immediate attention may be required.**' : undefined,
       fields:    discordFields,
       thumbnail: { url: APP_ICON_URL },
       footer:    { text: `${BRAND_NAME}  ·  Status Page`, icon_url: APP_ICON_URL },
       timestamp: _ts(),
     }],
-    components: discordComponents,
   });
 
   // ── ntfy ──────────────────────────────────────────────────────────────────
@@ -494,12 +487,13 @@ async function alertStatusReport({ report, count, service, type }) {
   if (adminUrl)  ntfyActionParts.push(`view, Admin, ${adminUrl}`);
 
   await _sendNtfy({
-    title:    `${emoji} ${title.slice(0, 130)}`,
+    title:    title.slice(0, 130),
     body:     ntfyBody,
     priority: NTFY_PRIORITY[severity],
     tags:     ntfyTags,
     actions:  ntfyActionParts.join('; ') || undefined,
     iconUrl:  APP_ICON_URL,
+    clickUrl: statusUrl || adminUrl || undefined,
   });
 
   // ── Slack ─────────────────────────────────────────────────────────────────
@@ -603,29 +597,25 @@ async function alertIncident({ incident, update, type = 'created' }) {
     ...(isResolved && incident.downtimeMinutes ? [{ name: '⏱ Downtime', value: `${incident.downtimeMinutes} minutes`, inline: true }] : []),
   ];
 
-  const discordComponents = [];
-  const incBtns = [];
-  if (statusUrl) incBtns.push({ type: 2, style: 5, label: '📊 Status Page', url: statusUrl });
-  if (adminUrl)  incBtns.push({ type: 2, style: 5, label: '🛠 Admin',        url: adminUrl  });
-  if (incBtns.length) discordComponents.push({ type: 1, components: incBtns });
+  if (statusUrl) discordFields.push({ name: 'Status Page', value: `[View Status Page](${statusUrl})`, inline: true });
+  if (adminUrl)  discordFields.push({ name: 'Admin',       value: `[Open Admin Panel](${adminUrl})`,  inline: true });
 
   await _sendDiscord({
     username:   BRAND_NAME,
     avatar_url: APP_ICON_URL,
     content: isCritical
-      ? `<@${DISCORD_ALERT_USER}> 🚨 **INCIDENT — ${severity.toUpperCase()}**`
-      : `<@${DISCORD_ALERT_USER}> ${emoji} ${fullTitle.slice(0, 100)}`,
+      ? `<@${DISCORD_ALERT_USER}> **INCIDENT — ${severity.toUpperCase()}**`
+      : `<@${DISCORD_ALERT_USER}> ${fullTitle.slice(0, 100)}`,
     embeds: [{
       color,
-      author: { name: `${BRAND_NAME} Incidents`, icon_url: APP_ICON_URL },
-      title:     `${emoji} ${fullTitle}`,
-      description: isCritical ? `> ⚠️ **A critical incident has been declared.**` : undefined,
+      author: { name: `${BRAND_NAME} · Incidents`, icon_url: APP_ICON_URL },
+      title: fullTitle,
+      description: isCritical ? '**A critical incident has been declared.**' : undefined,
       fields:    discordFields,
       thumbnail: { url: APP_ICON_URL },
       footer:    { text: `${BRAND_NAME}  ·  Incident Management  ·  ID: ${incident._id || 'N/A'}`, icon_url: APP_ICON_URL },
       timestamp: _ts(),
     }],
-    components: discordComponents,
   });
 
   // ── ntfy ──────────────────────────────────────────────────────────────────
@@ -642,7 +632,7 @@ async function alertIncident({ incident, update, type = 'created' }) {
   if (adminUrl)  incNtfyActions.push(`view, Admin, ${adminUrl}`);
 
   await _sendNtfy({
-    title:    `${emoji} ${fullTitle.slice(0, 130)}`,
+    title:    fullTitle.slice(0, 130),
     body:     ntfyBody,
     priority: isCreated
       ? (severity === 'critical' ? 'urgent' : severity === 'major' ? 'high' : 'default')
@@ -650,6 +640,7 @@ async function alertIncident({ incident, update, type = 'created' }) {
     tags:    ntfyTags,
     actions: incNtfyActions.join('; ') || undefined,
     iconUrl: APP_ICON_URL,
+    clickUrl: statusUrl || adminUrl || undefined,
   });
 
   // ── Slack ─────────────────────────────────────────────────────────────────
