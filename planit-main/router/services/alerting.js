@@ -29,10 +29,11 @@
  * QUICK-ACCESS LINKS
  *   Bug report alerts include a signed 30-minute link that auto-authenticates
  *   you into a read-only view of that specific report, no login required.
- *   The link is HMAC-SHA256 signed using MESH_SECRET (shared with backend).
- *   The backend validates the token and issues a short-lived read-only JWT.
+ *   The link points to the backend quick-access endpoint which validates the
+ *   HMAC token and redirects to the frontend with a short-lived read-only JWT.
  *   Write actions (status changes, notes) require full admin login.
  *   Requires MESH_SECRET to be set on both router and backend.
+ *   Requires BACKEND_URLS to be set on the router (uses the first URL).
  */
 
 const crypto = require('crypto');
@@ -132,42 +133,58 @@ async function _sendDiscord(payload) {
 
 // ─── ntfy ─────────────────────────────────────────────────────────────────────
 // Uses the ntfy JSON publishing API so emoji are fully supported in the title
-// and body — no HTTP header encoding restrictions. Sends to the base URL with
-// the topic name extracted from NTFY_URL and included in the JSON body.
+// and body — no HTTP header encoding restrictions.
+//
+// The JSON API requires posting to the SERVER ROOT with "topic" in the body:
+//   POST https://ntfy.sh
+//   { "topic": "mytopic", "title": "...", "message": "...", ... }
+//
+// Posting JSON to the topic URL (https://ntfy.sh/mytopic) makes ntfy treat
+// the whole JSON blob as raw message text — that's the bug this fixes.
 //
 // NTFY_URL formats accepted:
-//   "my-topic"                       → https://ntfy.sh/  topic=my-topic
-//   "https://ntfy.sh/my-topic"       → https://ntfy.sh/  topic=my-topic
-//   "https://self.example.com/topic" → https://self.example.com/  topic=topic
+//   "my-topic"                       → server=https://ntfy.sh  topic=my-topic
+//   "https://ntfy.sh/my-topic"       → server=https://ntfy.sh  topic=my-topic
+//   "https://self.example.com/topic" → server=https://self.example.com  topic=topic
 
-// Resolves NTFY_URL to the full topic endpoint.
-// ntfy's JSON API works on the topic URL directly — posting to the root
-// causes a redirect that Node's fetch drops the body on, giving a 400.
-//
-// Accepts:  "my-topic"  |  "https://ntfy.sh/my-topic"  |  "https://self.example.com/topic"
-// Returns:  "https://ntfy.sh/my-topic"  (always the full topic URL, no trailing slash)
-function _buildNtfyUrl(rawUrl) {
+function _parseNtfyUrl(rawUrl) {
   if (!rawUrl) return null;
-  const full = rawUrl.startsWith('http') ? rawUrl : `https://ntfy.sh/${rawUrl}`;
-  return full.replace(/\/$/, ''); // strip any trailing slash
+  if (!rawUrl.startsWith('http')) {
+    // Plain topic name — use ntfy.sh as the server
+    const topic = rawUrl.replace(/\/$/, '');
+    return { serverUrl: 'https://ntfy.sh', topic };
+  }
+  try {
+    const u     = new URL(rawUrl);
+    const topic = u.pathname.replace(/^\//, '').replace(/\/$/, '');
+    if (!topic) {
+      console.error('[alert:ntfy] NTFY_URL has no topic path — e.g. https://ntfy.sh/my-topic');
+      return null;
+    }
+    return { serverUrl: u.origin, topic };
+  } catch {
+    console.error('[alert:ntfy] NTFY_URL is not a valid URL:', rawUrl);
+    return null;
+  }
 }
 
 async function _sendNtfy({ title, body, priority, tags, actions, iconUrl, clickUrl }) {
-  const rawUrl = process.env.NTFY_URL;
-  if (!rawUrl) return;
+  const parsed = _parseNtfyUrl(process.env.NTFY_URL);
+  if (!parsed) return;
 
-  // Post to the topic URL directly — avoids the root-URL redirect that drops
-  // the JSON body and causes ntfy to return 400 "invalid request body".
-  const ntfyUrl = _buildNtfyUrl(rawUrl);
+  const { serverUrl, topic } = parsed;
 
-  // Build JSON payload — full UTF-8 supported natively (no header encoding issues)
+  // Build the JSON payload.
+  // POST to the SERVER ROOT with "topic" in the body — this is the correct
+  // ntfy JSON API. Posting to the topic URL causes ntfy to display the raw
+  // JSON blob as the notification message instead of parsing the fields.
   const ntfyPayload = {
+    topic,
     title,
     message:  String(body).slice(0, 4096),
     priority: priority || 'default',
   };
 
-  // topic is already in the URL — only add it for cross-topic publishing (not needed here)
   if (tags)     ntfyPayload.tags  = Array.isArray(tags) ? tags : tags.split(',').map(t => t.trim());
   if (iconUrl)  ntfyPayload.icon  = iconUrl;
   // click makes the whole notification tappable — opens this URL when tapped
@@ -186,7 +203,7 @@ async function _sendNtfy({ title, body, priority, tags, actions, iconUrl, clickU
   if (process.env.NTFY_TOKEN) headers['Authorization'] = `Bearer ${process.env.NTFY_TOKEN}`;
 
   try {
-    const res = await fetch(ntfyUrl, {
+    const res = await fetch(serverUrl, {
       method:  'POST',
       headers,
       body:    JSON.stringify(ntfyPayload),
@@ -242,6 +259,14 @@ function _statusUrl() {
   return fe ? `${fe}/status` : null;
 }
 
+// Returns the first backend API base URL from BACKEND_URLS.
+// Used to build the quick-access link — the link goes to the backend endpoint
+// which validates the HMAC token then redirects to the frontend with a JWT.
+function _backendUrl() {
+  const be = (process.env.BACKEND_URLS || '').split(',')[0].trim().replace(/\/$/, '');
+  return be || null;
+}
+
 // ─── Bug Report Alert ─────────────────────────────────────────────────────────
 //
 // Called when a user submits a new bug report via POST /api/bug-reports.
@@ -260,10 +285,15 @@ async function alertBugReport(report) {
   const color    = SEVERITY_COLOR[severity]  || SEVERITY_COLOR.medium;
   const adminUrl = _adminUrl();
 
-  // Generate a signed 30-min quick-access link directly to this report
-  const quickToken  = _generateQuickToken(report._id);
-  const reportUrl   = quickToken && adminUrl
-    ? `${adminUrl}/bug-reports?report=${report._id}&quickAccess=${quickToken}`
+  // Build a signed 30-min quick-access link.
+  // The link points to the BACKEND quick-access endpoint, which validates the
+  // HMAC token and 302-redirects to the frontend admin panel with a read-only
+  // JWT in the URL. This is the correct flow — the frontend URL alone cannot
+  // exchange the HMAC token; only the backend endpoint can.
+  const quickToken = _generateQuickToken(report._id);
+  const backendUrl = _backendUrl();
+  const reportUrl  = quickToken && backendUrl
+    ? `${backendUrl}/api/bug-reports/admin/quick-access?token=${encodeURIComponent(quickToken)}&report=${encodeURIComponent(report._id)}`
     : adminUrl;
 
   const categoryLabel = {
@@ -293,7 +323,7 @@ async function alertBugReport(report) {
   if (report.eventLink) discordFields.push({ name: 'Event Link', value: report.eventLink,       inline: false });
   if (report.ip)        discordFields.push({ name: 'IP',         value: `\`${report.ip}\``,   inline: true  });
   // Markdown hyperlinks work in embed field values — the correct way to add links on regular webhooks
-  if (reportUrl)        discordFields.push({ name: 'Admin Access', value: `[Open Report — 30 min access](${reportUrl})`, inline: false });
+  if (reportUrl)        discordFields.push({ name: '🔓 Quick Access', value: `[Open Report (30 min read-only)](${reportUrl})`, inline: false });
 
   await _sendDiscord({
     username:   BRAND_NAME,
@@ -319,8 +349,9 @@ async function alertBugReport(report) {
   });
 
   // ── ntfy ──────────────────────────────────────────────────────────────────
-  // clickUrl makes the notification itself tappable — opens the admin link directly.
-  // The action button provides a secondary labelled tap target.
+  // clickUrl makes the notification itself tappable — opens the quick-access
+  // link directly. Tapping the notification → backend validates token → frontend
+  // opens with read-only JWT already set. No manual login needed for 30 min.
 
   const ntfyBody = [
     `From: ${report.name || 'Anonymous'} <${report.email}>`,
@@ -343,7 +374,7 @@ async function alertBugReport(report) {
     tags:     ['bug', report.category || 'bug'],
     actions:  ntfyActions.join('; ') || undefined,
     iconUrl:  APP_ICON_URL,
-    // tap the notification → goes straight to the report
+    // tap the notification → backend quick-access → frontend with read-only JWT
     clickUrl: reportUrl || adminUrl || undefined,
   });
 
