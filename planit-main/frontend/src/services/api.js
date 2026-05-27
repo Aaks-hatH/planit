@@ -107,6 +107,9 @@ export const eventAPI = {
   addAgendaItem:   (eventId, data)    => api.post(`/events/${eventId}/agenda`, data),
   deleteAgendaItem:(eventId, itemId)  => api.delete(`/events/${eventId}/agenda/${itemId}`),
 
+  // Participant roles
+  updateParticipantRole: (eventId, username, role) => api.patch(`/events/${eventId}/participants/${encodeURIComponent(username)}/role`, { role }),
+
   // Enterprise Check-in & Invites
   getInvites:      (eventId)               => api.get(`/events/${eventId}/invites`),
   createInvite:    (eventId, data)         => api.post(`/events/${eventId}/invites`, { guests: [data] }),
