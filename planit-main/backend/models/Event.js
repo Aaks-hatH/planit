@@ -144,7 +144,8 @@ const eventSchema = new mongoose.Schema({
   settings: {
     allowChat:        { type: Boolean, default: true  },
     allowPolls:       { type: Boolean, default: true  },
-    allowFileSharing: { type: Boolean, default: true  },
+    allowFileSharing:       { type: Boolean, default: true  },
+    allowParticipantAgenda: { type: Boolean, default: false }, // allow non-organizers to add/remove agenda items
     requireApproval:  { type: Boolean, default: false },
     isPublic:         { type: Boolean, default: false },
     rsvpEnabled:      { type: Boolean, default: true  },
