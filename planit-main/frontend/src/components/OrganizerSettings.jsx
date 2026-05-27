@@ -78,6 +78,7 @@ export default function OrganizerSettings({ eventId, event, onClose, onUpdated, 
  const [allowChat, setAllowChat] = useState(event?.settings?.allowChat !== false);
  const [allowPolls, setAllowPolls] = useState(event?.settings?.allowPolls !== false);
  const [allowFileSharing, setAllowFileSharing] = useState(event?.settings?.allowFileSharing !== false);
+ const [allowParticipantAgenda, setAllowParticipantAgenda] = useState(event?.settings?.allowParticipantAgenda === true);
  const [requireApproval, setRequireApproval] = useState(event?.settings?.requireApproval === true);
  const [isPublic, setIsPublic] = useState(event?.settings?.isPublic === true);
 
@@ -256,6 +257,7 @@ export default function OrganizerSettings({ eventId, event, onClose, onUpdated, 
  allowChat,
  allowPolls,
  allowFileSharing,
+ allowParticipantAgenda,
  requireApproval,
  isPublic,
  },
@@ -421,6 +423,12 @@ export default function OrganizerSettings({ eventId, event, onClose, onUpdated, 
  description="Upload and download files"
  checked={allowFileSharing}
  onChange={setAllowFileSharing}
+ />
+ <Toggle
+ label="Participant Agenda Editing"
+ description="Allow all participants (not just organizers) to add and remove agenda items"
+ checked={allowParticipantAgenda}
+ onChange={setAllowParticipantAgenda}
  />
  </Section>
 
