@@ -925,7 +925,10 @@ export default function EventSpace() {
   const [waitlistCount, setWaitlistCount] = useState(0);
 
   const currentUser = localStorage.getItem('username');
-  const isOrganizer = event?.organizerName === currentUser;
+  // Check both the original organizerName field AND the participants array role —
+  // the latter handles co-organizers promoted after event creation.
+  const isOrganizer = event?.organizerName === currentUser ||
+    participants.some(p => p.username === currentUser && p.role === 'organizer');
   const myRsvp      = rsvps.find(r => r.username === currentUser)?.status || null;
 
   const [searchParams]    = useSearchParams();
@@ -968,14 +971,7 @@ export default function EventSpace() {
           .then(res => {
             const ev = res.data.event;
             if (ev.isTableServiceMode) {
-              // Only go straight to the floor dashboard if the staff token is
-              // present. If not, send to the login page so we don't create a
-              // redirect loop: floor→401→EventSpace→floor→401→…
-              if (localStorage.getItem('eventToken')) {
-                navigate(`/e/${subdomain}/floor`, { replace: true });
-              } else {
-                navigate(`/e/${subdomain}/login`, { replace: true });
-              }
+              navigate(`/e/${subdomain}/floor`, { replace: true });
               return;
             }
             setEventId(ev.id);
@@ -1113,6 +1109,9 @@ export default function EventSpace() {
     socketService.on('user_joined',   ({ username }) => setOnlineUsers(prev => [...new Set([...prev, username])]));
     socketService.on('user_left',     ({ username }) => setOnlineUsers(prev => prev.filter(u => u !== username)));
     socketService.on('participant_joined', ({ participants }) => setParticipants(participants));
+    socketService.on('participant_role_changed', ({ username, role }) => {
+      setParticipants(prev => prev.map(p => p.username === username ? { ...p, role } : p));
+    });
     socketService.on('rsvp_updated', ({ rsvps, summary }) => {
       if (rsvps) setRsvps(rsvps);
       if (summary) setRsvpSummary(summary);
@@ -1193,12 +1192,9 @@ export default function EventSpace() {
       const res = await eventAPI.getById(eventId);
       const ev  = res.data.event;
 
-      // Table service venues have no event space — redirect to floor (or login
-      // if no staff token, to avoid a 401 bounce-loop back here).
+      // Table service venues have no event space — redirect straight to floor
       if (ev.isTableServiceMode) {
-        const floorPath = ev.subdomain ? `/e/${ev.subdomain}/floor` : `/event/${eventId}/floor`;
-        const loginPath = ev.subdomain ? `/e/${ev.subdomain}/login` : `/event/${eventId}/login`;
-        navigate(localStorage.getItem('eventToken') ? floorPath : loginPath, { replace: true });
+        navigate(ev.subdomain ? `/e/${ev.subdomain}/floor` : `/event/${eventId}/floor`, { replace: true });
         return;
       }
 
@@ -1350,6 +1346,16 @@ export default function EventSpace() {
   const handleDeleteAgendaItem = async (itemId) => {
     try { await eventAPI.deleteAgendaItem(eventId, itemId); await loadEvent(); }
     catch { toast.error('Failed to remove item'); }
+  };
+
+  const handleRoleChange = async (username, newRole) => {
+    try {
+      await eventAPI.updateParticipantRole(eventId, username, newRole);
+      setParticipants(prev => prev.map(p => p.username === username ? { ...p, role: newRole } : p));
+      toast.success(`${username} is now ${newRole === 'organizer' ? 'an organizer' : 'a participant'}`);
+    } catch (err) {
+      toast.error(err?.response?.data?.error || 'Failed to update role');
+    }
   };
 
   const handleCalendarExport = () => {
@@ -1823,7 +1829,7 @@ export default function EventSpace() {
             {/* ── Agenda ── */}
             {activeTab === 'agenda' && (
               <div className="flex-1 overflow-y-auto p-5">
-                {isOrganizer && (
+                {(isOrganizer || event?.settings?.allowParticipantAgenda) && (
                   <div className="mb-5">
                     {!showAddAgenda ? (
                       <button onClick={() => setShowAddAgenda(true)} className="btn btn-secondary text-sm gap-1.5 rounded-xl">
@@ -1886,7 +1892,7 @@ export default function EventSpace() {
                           <p className="text-sm font-semibold text-neutral-900">{item.title}</p>
                           {item.description && <p className="text-xs text-neutral-500 mt-0.5">{item.description}</p>}
                         </div>
-                        {isOrganizer && (
+                        {(isOrganizer || event?.settings?.allowParticipantAgenda) && (
                           <button onClick={() => handleDeleteAgendaItem(item.id)}
                             className="w-7 h-7 rounded-lg hover:bg-red-50 flex items-center justify-center transition-colors flex-shrink-0">
                             <Trash2 className="w-3.5 h-3.5 text-neutral-400 hover:text-red-500 transition-colors" />
@@ -2027,6 +2033,19 @@ export default function EventSpace() {
                               {isOnline ? <span className="text-emerald-600 font-semibold">● Online now</span> : `Joined ${formatRelativeTime(p.joinedAt)}`}
                             </p>
                           </div>
+                          {isOrganizer && p.username !== currentUser && (
+                            <button
+                              onClick={() => handleRoleChange(p.username, isOrg ? 'participant' : 'organizer')}
+                              className={`text-[10px] font-bold px-2 py-1 rounded-lg border transition-colors flex-shrink-0 ${
+                                isOrg
+                                  ? 'border-neutral-200 text-neutral-500 hover:border-red-200 hover:text-red-500 hover:bg-red-50'
+                                  : 'border-neutral-200 text-neutral-500 hover:border-indigo-200 hover:text-indigo-600 hover:bg-indigo-50'
+                              }`}
+                              title={isOrg ? 'Remove organizer role' : 'Promote to organizer'}
+                            >
+                              {isOrg ? 'Demote' : 'Make organizer'}
+                            </button>
+                          )}
                         </div>
                       );
                     })}
