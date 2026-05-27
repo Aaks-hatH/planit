@@ -31,6 +31,16 @@ const validate = (req, res, next) => {
   next();
 };
 
+// Returns true if the user can add/delete agenda items.
+// Organizers always can; participants can if the event setting is enabled.
+function canEditAgenda(event, username) {
+  const isOrg = event.participants.some(p => p.username === username && p.role === 'organizer');
+  if (isOrg) return true;
+  const participantsAllowed = event.settings?.allowParticipantAgenda === true;
+  const isParticipant = event.participants.some(p => p.username === username);
+  return participantsAllowed && isParticipant;
+}
+
 // Create event
 router.post('/',
   createEventLimiter,
@@ -1869,10 +1879,8 @@ router.post('/:eventId/agenda',
   async (req, res, next) => {
     try {
       const event = req.event;
-      // Only organizer can manage agenda
       const username = req.eventAccess?.username;
-      const isOrg = event.participants.some(p => p.username === username && p.role === 'organizer');
-      if (!isOrg) return res.status(403).json({ error: 'Only organizers can manage the agenda' });
+      if (!canEditAgenda(event, username)) return res.status(403).json({ error: 'You do not have permission to manage the agenda' });
 
       const { title, time, description, duration } = req.body;
       const item = {
@@ -1900,8 +1908,7 @@ router.delete('/:eventId/agenda/:itemId',
     try {
       const event = req.event;
       const username = req.eventAccess?.username;
-      const isOrg = event.participants.some(p => p.username === username && p.role === 'organizer');
-      if (!isOrg) return res.status(403).json({ error: 'Only organizers can manage the agenda' });
+      if (!canEditAgenda(event, username)) return res.status(403).json({ error: 'You do not have permission to manage the agenda' });
 
       event.agenda = event.agenda.filter(a => a.id !== req.params.itemId);
       await event.save();
@@ -1910,6 +1917,51 @@ router.delete('/:eventId/agenda/:itemId',
       if (io) io.to(`event_${req.params.eventId}`).emit('agenda_updated', { agenda: event.agenda });
 
       res.json({ message: 'Agenda item removed' });
+    } catch (error) { next(error); }
+  }
+);
+
+// Promote or demote a participant (organizer only)
+router.patch('/:eventId/participants/:username/role',
+  verifyOrganizer,
+  [
+    body('role').isIn(['organizer', 'participant']).withMessage('Role must be "organizer" or "participant"'),
+    validate,
+  ],
+  async (req, res, next) => {
+    try {
+      const event = req.event;
+      const { username } = req.params;
+      const { role } = req.body;
+      const callerUsername = req.eventAccess?.username;
+
+      // Prevent the last organizer from demoting themselves
+      if (role === 'participant' && callerUsername === username) {
+        const organizerCount = event.participants.filter(p => p.role === 'organizer').length;
+        if (organizerCount <= 1) {
+          return res.status(400).json({ error: 'Cannot demote yourself — you are the only organizer.' });
+        }
+      }
+
+      const target = event.participants.find(p => p.username === username);
+      if (!target) return res.status(404).json({ error: 'Participant not found in this event.' });
+
+      await Event.updateOne(
+        { _id: event._id, 'participants.username': username },
+        { $set: { 'participants.$.role': role } }
+      );
+
+      await EventParticipant.updateOne(
+        { eventId: event._id.toString(), username },
+        { $set: { role } }
+      );
+
+      const io = req.app.get('io');
+      if (io) {
+        io.to(`event_${req.params.eventId}`).emit('participant_role_changed', { username, role, changedBy: callerUsername });
+      }
+
+      res.json({ message: `${username} is now ${role === 'organizer' ? 'an organizer' : 'a participant'}.`, username, role });
     } catch (error) { next(error); }
   }
 );
