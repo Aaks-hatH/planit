@@ -416,6 +416,23 @@ export default function RSVPPage() {
   return (
     <div className="min-h-screen" style={bg}>
 
+      {/* Background image overlay */}
+      {rsvpPage.backgroundImageUrl && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 0,
+            backgroundImage: `url(${rsvpPage.backgroundImageUrl})`,
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+            backgroundAttachment: 'fixed',
+            opacity: 0.15,
+            pointerEvents: 'none',
+          }}
+        />
+      )}
+
       {/* Announcement banner */}
       {rsvpPage.bannerEnabled && rsvpPage.bannerText && (
         <div className="sticky top-0 z-20 text-center text-xs font-semibold py-2.5 px-4"
@@ -424,7 +441,7 @@ export default function RSVPPage() {
         </div>
       )}
 
-      <div className="max-w-2xl mx-auto px-4 py-10 space-y-6">
+      <div className="max-w-2xl mx-auto px-4 py-10 space-y-6 relative z-10">
 
         {/* Header */}
         <div className="text-center space-y-4 pb-2">
