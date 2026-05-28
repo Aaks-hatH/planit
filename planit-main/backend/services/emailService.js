@@ -342,15 +342,102 @@ function buildThankyou(event) {
   );
 }
 
+function buildRsvpGuestConfirmation({ guestName, guestEmail, eventTitle, eventDate, eventLocation, response, status, plusOnes, editToken, customSubject, customBody }) {
+  const base      = (process.env.FRONTEND_URL || '').split(',')[0].trim().replace(/\/$/, '');
+  const editUrl   = editToken && base ? `${base}/rsvp/edit/${editToken}` : null;
+
+  const responseLabel = response === 'yes' ? 'Attending' : response === 'no' ? 'Not Attending' : 'Maybe';
+  const statusLabel   = status === 'waitlisted' ? 'Waitlisted' : status === 'pending' ? 'Pending Approval' : 'Confirmed';
+  const accentColor   = status === 'waitlisted' ? '#D97706' : status === 'pending' ? '#6366F1' : '#059669';
+
+  const pillLabel = status === 'waitlisted' ? 'Waitlist' : status === 'pending' ? 'Pending' : 'RSVP Confirmed';
+
+  // If the organizer provided a custom body, render it with simple variable substitution
+  let bodyContent;
+  if (customBody && customBody.trim()) {
+    const interpolated = customBody
+      .replace(/\{\{name\}\}/gi, h(guestName))
+      .replace(/\{\{firstName\}\}/gi, h(guestName))
+      .replace(/\{\{event\}\}/gi, h(eventTitle))
+      .replace(/\{\{eventName\}\}/gi, h(eventTitle))
+      .replace(/\{\{response\}\}/gi, responseLabel)
+      .replace(/\{\{status\}\}/gi, statusLabel)
+      .replace(/\{\{date\}\}/gi, eventDate ? h(fmtDate(eventDate)) : '')
+      .replace(/\{\{eventDate\}\}/gi, eventDate ? h(fmtDate(eventDate)) : '')
+      .replace(/\{\{location\}\}/gi, eventLocation ? h(eventLocation) : '');
+    bodyContent = `<p style="margin:0 0 16px 0;font-size:15px;color:${MID};line-height:1.78;white-space:pre-line;font-family:${FONT};">${interpolated}</p>`;
+  } else {
+    const detailTableRows = [
+      ['Event',    eventTitle],
+      ['Date',     eventDate ? fmtDate(eventDate) : null],
+      ['Location', eventLocation || null],
+      ['Response', responseLabel],
+      ['Status',   statusLabel],
+      plusOnes > 0 ? ['Plus-ones', String(plusOnes)] : null,
+    ].filter(Boolean).filter(([, v]) => v).map(([k, v]) => `
+      <tr>
+        <td style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:${FAINT};width:90px;padding:8px 0;vertical-align:top;font-family:${FONT};">${h(k)}</td>
+        <td style="font-size:15px;color:${MID};padding:8px 0 8px 12px;line-height:1.45;font-family:${FONT};">${h(String(v))}</td>
+      </tr>`).join('');
+
+    const pendingNote = status === 'pending'
+      ? `<p style="margin:16px 0 0 0;font-size:14px;color:#4B5563;line-height:1.7;font-family:${FONT};">Your RSVP is awaiting approval from the organiser. You will receive a follow-up once it has been reviewed.</p>`
+      : status === 'waitlisted'
+      ? `<p style="margin:16px 0 0 0;font-size:14px;color:#4B5563;line-height:1.7;font-family:${FONT};">You have been added to the waitlist. The organiser will be in touch if a spot opens up.</p>`
+      : '';
+
+    const editNote = editUrl
+      ? `${hrule()}<p style="margin:24px 0 10px 0;font-size:14px;color:${MUTED};line-height:1.65;font-family:${FONT};">Need to make a change? You can update your RSVP at any time using the button below.</p>${ctaButton('Manage My RSVP', editUrl)}`
+      : '';
+
+    bodyContent = `
+      ${sectionCap('Your RSVP Details')}
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+        ${detailTableRows}
+      </table>
+      ${pendingNote}
+      ${editNote}`;
+  }
+
+  const headerRow = `
+    <tr>
+      <td class="ep" style="padding:36px 40px 30px 40px;border-bottom:1px solid ${RULE};">
+        <span style="display:inline-block;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#fff;background:${accentColor};padding:5px 12px;border-radius:5px;margin-bottom:16px;font-family:${FONT};">${h(pillLabel)}</span>
+        <h1 style="margin:0 0 12px 0;font-size:24px;font-weight:800;color:${DARK};letter-spacing:-0.5px;line-height:1.2;font-family:${FONT};">
+          ${status === 'waitlisted' ? "You're on the waitlist." : status === 'pending' ? "We've received your RSVP." : "You're all set!"}
+        </h1>
+        <p style="margin:0;font-size:15px;color:${MUTED};line-height:1.65;font-family:${FONT};">
+          Hi ${h(guestName)}, thanks for responding to <strong>${h(eventTitle)}</strong>.
+        </p>
+      </td>
+    </tr>`;
+
+  const subject = customSubject?.trim() || `RSVP ${statusLabel}: ${eventTitle}`;
+
+  return {
+    subject,
+    html: emailShell(
+      subject,
+      `Your RSVP for ${eventTitle} is ${statusLabel.toLowerCase()}.`,
+      pillLabel,
+      headerRow,
+      bodyContent,
+      `You received this because you submitted an RSVP for ${eventTitle}. This is an automated confirmation.`
+    ),
+  };
+}
+
 // ─── Core send ────────────────────────────────────────────────────────────────
 
-async function _send(to, subject, html) {
+async function _send(to, subject, html, { replyTo } = {}) {
   const routerUrl = process.env.ROUTER_URL;
   if (!routerUrl) {
     console.warn('[email] ROUTER_URL not set - cannot relay email');
     return false;
   }
-  const r = await meshPost(CALLER, `${routerUrl}/mesh/email`, { to, subject, html }, { timeout: 15000 });
+  const payload = { to, subject, html };
+  if (replyTo) payload.replyTo = replyTo;
+  const r = await meshPost(CALLER, `${routerUrl}/mesh/email`, payload, { timeout: 15000 });
   if (r.ok) {
     console.log(`[email] Sent "${subject}" -> ${to}`);
     return true;
@@ -383,8 +470,33 @@ async function sendEventThankyou(event) {
   await _send(to, `Thank you for using PlanIt: ${event.title}`, buildThankyou(event));
 }
 
+/**
+ * Send an RSVP confirmation email to the guest who just signed up.
+ *
+ * @param {object} opts
+ * @param {string} opts.guestEmail      - Recipient address
+ * @param {string} opts.guestName       - Guest display name
+ * @param {string} opts.eventTitle      - Event title
+ * @param {Date|string|null} opts.eventDate - Event date (optional)
+ * @param {string|null} opts.eventLocation  - Event location (optional)
+ * @param {string} opts.response        - 'yes' | 'maybe' | 'no'
+ * @param {string} opts.status          - 'confirmed' | 'pending' | 'waitlisted'
+ * @param {number} [opts.plusOnes]      - Number of plus-ones
+ * @param {string|null} [opts.editToken]- Token for guest self-edit link
+ * @param {string|null} [opts.customSubject] - Organizer-defined subject
+ * @param {string|null} [opts.customBody]    - Organizer-defined body (supports {{name}}, {{event}}, etc.)
+ */
+async function sendRsvpGuestConfirmation(opts) {
+  const { guestEmail } = opts;
+  if (!guestEmail) return;
+  if (!(await checkLimit(guestEmail))) return;
+  const { subject, html } = buildRsvpGuestConfirmation(opts);
+  await _send(guestEmail, subject, html, { replyTo: guestEmail });
+}
+
 module.exports = {
   sendEventConfirmation,
   sendEventReminder,
   sendEventThankyou,
+  sendRsvpGuestConfirmation,
 };
