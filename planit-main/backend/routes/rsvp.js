@@ -26,6 +26,7 @@ const Event    = require('../models/Event');
 const RSVPSubmission = require('../models/RSVPSubmission');
 const { verifyOrganizer } = require('../middleware/auth');
 const { meshPost } = require('../middleware/mesh');
+const { sendRsvpGuestConfirmation } = require('../services/emailService');
 
 const CALLER     = process.env.BACKEND_LABEL || 'Backend';
 const ROUTER_URL = () => process.env.ROUTER_URL || '';
@@ -277,6 +278,23 @@ router.post('/:eventIdOrSlug/submit', async (req, res, next) => {
               editToken,
               submissionId: submission._id,
             });
+
+            // Fire-and-forget: send waitlist confirmation to guest
+            if (rsvpPage.sendGuestConfirmation && email?.trim()) {
+              sendRsvpGuestConfirmation({
+                guestEmail:    email.trim().toLowerCase(),
+                guestName:     `${firstName.trim()}${lastName?.trim() ? ' ' + lastName.trim() : ''}`,
+                eventTitle:    event.title,
+                eventDate:     event.date || null,
+                eventLocation: event.location || null,
+                response,
+                status:        'waitlisted',
+                plusOnes:      Number(plusOnes) || 0,
+                editToken,
+                customSubject: rsvpPage.confirmationEmailSubject || null,
+                customBody:    rsvpPage.confirmationEmailBody    || null,
+              }).catch(() => {});
+            }
           }
           return res.status(409).json({ error: 'This event has reached capacity.' });
         }
@@ -339,6 +357,23 @@ router.post('/:eventIdOrSlug/submit', async (req, res, next) => {
         ? 'Your RSVP has been submitted and is awaiting approval.'
         : (rsvpPage.confirmationMessage || 'Your RSVP has been confirmed.'),
     });
+
+    // Fire-and-forget: send confirmation email to the guest
+    if (rsvpPage.sendGuestConfirmation && email?.trim()) {
+      sendRsvpGuestConfirmation({
+        guestEmail:    email.trim().toLowerCase(),
+        guestName:     `${firstName.trim()}${lastName?.trim() ? ' ' + lastName.trim() : ''}`,
+        eventTitle:    event.title,
+        eventDate:     event.date || null,
+        eventLocation: event.location || null,
+        response,
+        status,
+        plusOnes:      Number(plusOnes) || 0,
+        editToken,
+        customSubject: rsvpPage.confirmationEmailSubject || null,
+        customBody:    rsvpPage.confirmationEmailBody    || null,
+      }).catch(() => {});
+    }
 
     // Fire-and-forget: send Gmail RSVP notification to organizer if connected
     if (rsvpPage.notifyOrganizerOnRsvp !== false) {
