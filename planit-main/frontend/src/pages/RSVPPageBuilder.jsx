@@ -82,12 +82,14 @@ const DEFAULT_SETTINGS = {
   allowPlusOnes: false,
   maxPlusOnes: 5,
   requirePlusOneNames: false,
+  collectPlusOneDietary: false,
   collectDietary: false,
   dietaryLabel: 'Dietary requirements',
   collectAccessibility: false,
   accessibilityLabel: 'Accessibility needs',
   allowGuestNote: false,
   guestNoteLabel: 'Additional notes',
+  guestNotePlaceholder: '',
   customQuestions: [],
   confirmationTitle: '',
   confirmationMessage: '',
@@ -1009,8 +1011,8 @@ export default function RSVPPageBuilder() {
               <div>
                 <Label>Email body</Label>
                 <Textarea value={settings.confirmationEmailBody||''} onChange={v => set('confirmationEmailBody',v)}
-                  placeholder="Hi {{firstName}}, thanks for RSVPing to {{eventName}}! We'll see you on {{eventDate}}." rows={4} />
-                <Hint>You can use: <code className="font-mono bg-neutral-100 px-1 rounded text-neutral-600">{`{{firstName}}`}</code>, <code className="font-mono bg-neutral-100 px-1 rounded text-neutral-600">{`{{eventName}}`}</code>, <code className="font-mono bg-neutral-100 px-1 rounded text-neutral-600">{`{{eventDate}}`}</code></Hint>
+                  placeholder="Hi {{name}}, thanks for RSVPing to {{event}}! We'll see you on {{date}}." rows={4} />
+                <Hint>You can use: <code className="font-mono bg-neutral-100 px-1 rounded text-neutral-600">{`{{name}}`}</code>, <code className="font-mono bg-neutral-100 px-1 rounded text-neutral-600">{`{{event}}`}</code>, <code className="font-mono bg-neutral-100 px-1 rounded text-neutral-600">{`{{date}}`}</code>, <code className="font-mono bg-neutral-100 px-1 rounded text-neutral-600">{`{{location}}`}</code>, <code className="font-mono bg-neutral-100 px-1 rounded text-neutral-600">{`{{status}}`}</code></Hint>
               </div>
             </div>
           )}
@@ -1020,7 +1022,7 @@ export default function RSVPPageBuilder() {
           <Label>How to handle RSVPs</Label>
           <Hint>Auto-confirm instantly confirms everyone. Manual approval means you approve each RSVP before they are marked as coming.</Hint>
           <div className="grid grid-cols-2 gap-2 mt-2">
-            {[['auto_confirm', 'Auto-confirm', 'Instant confirmed'], ['manual_approval', 'Manual approval', 'You review each']].map(([val, lbl, sub]) => (
+            {[['auto_confirm', 'Auto-confirm', 'Instant confirmed'], ['approval', 'Manual approval', 'You review each']].map(([val, lbl, sub]) => (
               <button key={val} type="button" onClick={() => set('confirmationMode', val)}
                 className={`p-3 rounded-xl border-2 text-left transition-all ${settings.confirmationMode===val ? 'border-indigo-500 bg-indigo-50' : 'border-neutral-200 hover:border-neutral-300'}`}>
                 <p className="text-xs font-bold text-neutral-800">{lbl}</p>
