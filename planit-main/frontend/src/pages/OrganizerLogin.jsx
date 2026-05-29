@@ -492,7 +492,15 @@ export default function OrganizerLogin() {
                   <AlertCircle className="w-3.5 h-3.5" />{fieldErrors.accountPassword}
                 </p>
               ) : (
-                <p className="text-xs text-neutral-400 mt-1.5">The personal password you set when creating the event</p>
+                <p className="text-xs text-neutral-400 mt-1.5">
+                  The personal password you set when creating the event.{' '}
+                  <a
+                    href={`/forgot-password?event=${subdomain || ''}`}
+                    className="text-neutral-500 hover:text-neutral-700 underline"
+                  >
+                    Forgot it?
+                  </a>
+                </p>
               )}
             </div>
 
@@ -513,7 +521,12 @@ export default function OrganizerLogin() {
 
           <div className="mt-6 pt-6 border-t border-neutral-100 text-center">
             <p className="text-xs text-neutral-400">
-              Don't remember your password? Access from the original device or contact support.
+              <a
+                href={`/forgot-password?event=${subdomain || ''}`}
+                className="text-neutral-500 hover:text-neutral-700 underline transition-colors"
+              >
+                Forgot your account password?
+              </a>
             </p>
           </div>
         </div>
