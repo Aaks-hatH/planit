@@ -103,9 +103,15 @@ router.post('/',
       await event.save();
 
       const participantData = { eventId: event._id, username: organizerName, role: 'organizer' };
+      let organizerRecoveryCode = null;
       if (accountPassword) {
         participantData.password = await bcrypt.hash(accountPassword, 10);
         participantData.hasPassword = true;
+        // Generate recovery code — shown once, never stored in plaintext
+        const segs = Array.from({ length: 5 }, () => crypto.randomBytes(2).toString('hex').toUpperCase());
+        organizerRecoveryCode = segs.join('-');
+        participantData.recoveryCodeHash = await bcrypt.hash(organizerRecoveryCode.replace(/-/g, '').toLowerCase(), 10);
+        participantData.recoveryCodeGeneratedAt = new Date();
       }
       await EventParticipant.create(participantData);
 
@@ -132,7 +138,9 @@ router.post('/',
       res.status(201).json({
         message: 'Event created successfully',
         event: { id: event._id, subdomain: event.subdomain, title: event.title, isPasswordProtected: event.isPasswordProtected },
-        token
+        token,
+        // Only present when organizer set an account password — shown once on the frontend, never again
+        recoveryCode: organizerRecoveryCode || undefined,
       });
     } catch (error) { next(error); }
   }
@@ -286,7 +294,8 @@ router.post('/verify-password/:eventId', authLimiter, eventPasswordLimiter,
       const pwNameBanned = await Blocklist.findOne({ type: 'name', value: { $regex: new RegExp(`^${username.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') }, $or: [{ expiresAt: null }, { expiresAt: { $gt: new Date() } }] }).lean();
       if (pwNameBanned) return res.status(403).json({ error: 'This display name is not allowed.' });
 
-      const existing = await EventParticipant.findOne({ eventId: req.params.eventId, username }).select('+password');
+      const existing = await EventParticipant.findOne({ eventId: req.params.eventId, username }).select('+password +recoveryCodeHash +recoveryCodeGeneratedAt');
+      let vpRecoveryCode = null;
       if (existing && existing.hasPassword) {
         if (!accountPassword) return res.status(400).json({ error: 'This name has an account — enter your account password.', requiresAccountPassword: true });
         const accountMatch = await bcrypt.compare(accountPassword, existing.password);
@@ -297,6 +306,11 @@ router.post('/verify-password/:eventId', authLimiter, eventPasswordLimiter,
         if (accountPassword) {
           updateData.password = await bcrypt.hash(accountPassword, 10);
           updateData.hasPassword = true;
+          // Generate a recovery code when a participant first sets a password
+          const segs = Array.from({ length: 5 }, () => crypto.randomBytes(2).toString('hex').toUpperCase());
+          vpRecoveryCode = segs.join('-');
+          updateData.recoveryCodeHash = await bcrypt.hash(vpRecoveryCode.replace(/-/g, '').toLowerCase(), 10);
+          updateData.recoveryCodeGeneratedAt = new Date();
         }
         await EventParticipant.findOneAndUpdate(
           { eventId: req.params.eventId, username },
@@ -329,7 +343,7 @@ router.post('/verify-password/:eventId', authLimiter, eventPasswordLimiter,
         { eventId: event._id.toString(), username, role },
         secrets.jwt, { expiresIn: '24h' } // V-09 FIX: was '7d' — 24h matches organizer token and reduces stolen-token window
       );
-      res.json({ message: 'Access granted', token, event: { id: event._id, title: event.title } });
+      res.json({ message: 'Access granted', token, event: { id: event._id, title: event.title }, recoveryCode: vpRecoveryCode || undefined });
     } catch (error) { next(error); }
   }
 );
@@ -400,7 +414,8 @@ router.post('/join/:eventId',
       const joinNameBanned = await Blocklist.findOne({ type: 'name', value: { $regex: new RegExp(`^${username.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') }, $or: [{ expiresAt: null }, { expiresAt: { $gt: new Date() } }] }).lean();
       if (joinNameBanned) return res.status(403).json({ error: 'This display name is not allowed.' });
 
-      const existing = await EventParticipant.findOne({ eventId: req.params.eventId, username }).select('+password');
+      const existing = await EventParticipant.findOne({ eventId: req.params.eventId, username }).select('+password +recoveryCodeHash +recoveryCodeGeneratedAt');
+      let joinRecoveryCode = null;
       if (existing && existing.hasPassword) {
         if (!accountPassword) return res.status(400).json({ error: 'This name has an account — enter your account password.', requiresAccountPassword: true });
         const accountMatch = await bcrypt.compare(accountPassword, existing.password);
@@ -411,6 +426,11 @@ router.post('/join/:eventId',
         if (accountPassword) {
           updateData.password = await bcrypt.hash(accountPassword, 10);
           updateData.hasPassword = true;
+          // Generate a recovery code when a participant first sets a password
+          const segs = Array.from({ length: 5 }, () => crypto.randomBytes(2).toString('hex').toUpperCase());
+          joinRecoveryCode = segs.join('-');
+          updateData.recoveryCodeHash = await bcrypt.hash(joinRecoveryCode.replace(/-/g, '').toLowerCase(), 10);
+          updateData.recoveryCodeGeneratedAt = new Date();
         }
         await EventParticipant.findOneAndUpdate(
           { eventId: req.params.eventId, username },
@@ -443,10 +463,192 @@ router.post('/join/:eventId',
         { eventId: event._id.toString(), username, role: joinRole },
         secrets.jwt, { expiresIn: '7d' }
       );
-      res.json({ message: 'Joined successfully', token, event: { id: event._id, title: event.title } });
+      res.json({ message: 'Joined successfully', token, event: { id: event._id, title: event.title }, recoveryCode: joinRecoveryCode || undefined });
     } catch (error) { next(error); }
   }
 );
+
+// ── RECOVERY CODE: Generate for any authenticated participant with a password ──
+// Available to ALL participants (organizer, participant, staff) who have a password
+// set but no recovery code yet. Requires a valid event token (verifyEventAccess).
+router.post('/generate-recovery-code/:eventId', verifyEventAccess, async (req, res, next) => {
+  try {
+    const username = req.eventAccess?.username;
+    if (!username) return res.status(401).json({ error: 'Not authenticated.' });
+
+    const participant = await EventParticipant.findOne({ eventId: req.params.eventId, username })
+      .select('+password +recoveryCodeHash +recoveryCodeGeneratedAt');
+
+    if (!participant) return res.status(404).json({ error: 'Participant record not found.' });
+    if (!participant.hasPassword) return res.status(400).json({ error: 'No account password is set on this account.' });
+
+    // Generate a XXXX-XXXX-XXXX-XXXX-XXXX recovery code
+    const segments = Array.from({ length: 5 }, () =>
+      crypto.randomBytes(2).toString('hex').toUpperCase()
+    );
+    const plainCode = segments.join('-');
+    const codeHash  = await bcrypt.hash(plainCode.replace(/-/g, '').toLowerCase(), 10);
+
+    await EventParticipant.updateOne(
+      { _id: participant._id },
+      { $set: { recoveryCodeHash: codeHash, recoveryCodeGeneratedAt: new Date() } }
+    );
+
+    // Return the plaintext code ONCE — never stored or returned again
+    res.json({ recoveryCode: plainCode });
+  } catch (error) { next(error); }
+});
+
+// -- RECOVERY CODE STATUS: Check if current participant has a recovery code ----
+// Used by the frontend banner to decide whether to show the "generate" prompt.
+router.get('/recovery-code-status/:eventId', verifyEventAccess, async (req, res, next) => {
+  try {
+    const username = req.eventAccess?.username;
+    if (!username) return res.status(401).json({ error: 'Not authenticated.' });
+
+    const participant = await EventParticipant.findOne({ eventId: req.params.eventId, username })
+      .select('+recoveryCodeHash recoveryCodeGeneratedAt hasPassword');
+
+    if (!participant) return res.status(404).json({ error: 'Participant record not found.' });
+
+    const hasCode = !!participant.recoveryCodeHash;
+    const expired = hasCode && participant.recoveryCodeGeneratedAt &&
+      Date.now() - new Date(participant.recoveryCodeGeneratedAt).getTime() > 365 * 24 * 60 * 60 * 1000;
+
+    res.json({
+      hasPassword: participant.hasPassword,
+      hasRecoveryCode: hasCode && !expired,
+      participantId: participant._id.toString(),
+    });
+  } catch (error) { next(error); }
+});
+
+// ── FORGOT PASSWORD: Find event by slug or URL (public, no auth) ──────────────
+router.get('/by-slug/:slug', async (req, res, next) => {
+  try {
+    const slug = req.params.slug.trim().toLowerCase();
+    const event = await Event.findOne({ subdomain: slug }).select('_id subdomain title').lean();
+    if (!event) return res.status(404).json({ error: 'No event found with that link.' });
+    res.json({ event: { id: event._id, subdomain: event.subdomain, title: event.title } });
+  } catch (error) { next(error); }
+});
+
+// ── PASSWORD RESET: Rate-limited, verifies recovery code, resets password ────
+// Rate limit: max 3 attempts per IP per event per hour, 24-hour lockout after that.
+const resetAttemptStore = new Map(); // { key: { count, windowStart, lockedUntil } }
+
+function getResetKey(ip, eventId) { return `reset:${ip}:${eventId}`; }
+
+function checkResetRateLimit(ip, eventId) {
+  const key   = getResetKey(ip, eventId);
+  const now   = Date.now();
+  const entry = resetAttemptStore.get(key) || { count: 0, windowStart: now, lockedUntil: null };
+
+  if (entry.lockedUntil && now < entry.lockedUntil) {
+    const minutesLeft = Math.ceil((entry.lockedUntil - now) / 60000);
+    return { allowed: false, locked: true, minutesLeft };
+  }
+
+  // Reset window if it's been more than an hour
+  if (now - entry.windowStart > 60 * 60 * 1000) {
+    entry.count = 0; entry.windowStart = now; entry.lockedUntil = null;
+  }
+
+  if (entry.count >= 3) {
+    entry.lockedUntil = now + 24 * 60 * 60 * 1000;
+    resetAttemptStore.set(key, entry);
+    return { allowed: false, locked: true, minutesLeft: 24 * 60 };
+  }
+
+  return { allowed: true, entry, key };
+}
+
+function recordResetAttempt(key, entry) {
+  entry.count++;
+  resetAttemptStore.set(key, entry);
+  if (entry.count >= 3) {
+    entry.lockedUntil = Date.now() + 24 * 60 * 60 * 1000;
+    resetAttemptStore.set(key, entry);
+  }
+}
+
+router.post('/reset-password', async (req, res, next) => {
+  const ip = realIp(req);
+  try {
+    const { slug, username, recoveryCode, newPassword } = req.body;
+
+    if (!slug || !username || !recoveryCode || !newPassword) {
+      return res.status(400).json({ error: 'All fields are required.' });
+    }
+    if (newPassword.length < 4) {
+      return res.status(400).json({ error: 'New password must be at least 4 characters.' });
+    }
+
+    const event = await Event.findOne({ subdomain: slug.trim().toLowerCase() }).select('_id subdomain title').lean();
+    if (!event) return res.status(404).json({ error: 'Event not found.' });
+
+    // Rate limit check
+    const limitCheck = checkResetRateLimit(ip, event._id.toString());
+    if (!limitCheck.allowed) {
+      console.warn(`[reset-password] LOCKED ip=${ip} event=${event._id}`);
+      return res.status(429).json({
+        error: `Too many reset attempts. Locked out for ${limitCheck.minutesLeft} minutes.`,
+        locked: true,
+        minutesLeft: limitCheck.minutesLeft,
+      });
+    }
+
+    const participant = await EventParticipant.findOne({
+      eventId: event._id,
+      username: username.trim(),
+    }).select('+password +recoveryCodeHash +recoveryCodeGeneratedAt');
+
+    // Log attempt regardless of outcome
+    console.log(`[reset-password] attempt ip=${ip} event=${slug} username=${username.trim()} found=${!!participant}`);
+
+    if (!participant || !participant.hasPassword) {
+      recordResetAttempt(limitCheck.key, limitCheck.entry);
+      return res.status(404).json({ error: 'No account found with that name in this event.' });
+    }
+
+    if (!participant.recoveryCodeHash) {
+      recordResetAttempt(limitCheck.key, limitCheck.entry);
+      return res.status(400).json({ error: 'This account has no recovery code on file. Log in and generate one from your event workspace.' });
+    }
+
+    // Check expiry — 365 days
+    const generated = participant.recoveryCodeGeneratedAt;
+    if (!generated || Date.now() - new Date(generated).getTime() > 365 * 24 * 60 * 60 * 1000) {
+      recordResetAttempt(limitCheck.key, limitCheck.entry);
+      return res.status(400).json({
+        error: 'Recovery code has expired (codes expire after 365 days). Log back in to generate a new one.',
+        expired: true,
+      });
+    }
+
+    // Verify recovery code — strip dashes and lowercase
+    const normalised = recoveryCode.replace(/-/g, '').toLowerCase().trim();
+    const match = await bcrypt.compare(normalised, participant.recoveryCodeHash);
+    if (!match) {
+      recordResetAttempt(limitCheck.key, limitCheck.entry);
+      return res.status(401).json({ error: 'Incorrect recovery code.' });
+    }
+
+    // Valid — hash new password, clear recovery code (one-time use)
+    const newHash = await bcrypt.hash(newPassword, 10);
+    await EventParticipant.updateOne(
+      { _id: participant._id },
+      {
+        $set: { password: newHash, hasPassword: true },
+        $unset: { recoveryCodeHash: '', recoveryCodeGeneratedAt: '' },
+      }
+    );
+
+    console.log(`[reset-password] SUCCESS ip=${ip} event=${slug} username=${username.trim()}`);
+
+    res.json({ message: 'Password reset successfully. Your recovery code has been invalidated.', eventSubdomain: event.subdomain });
+  } catch (error) { next(error); }
+});
 
 // ── PUBLIC EVENTS LISTING ──────────────────────────────────────────────────
 // IMPORTANT: This MUST appear before router.get('/:eventId', ...) otherwise
