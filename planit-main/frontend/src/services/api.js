@@ -97,6 +97,12 @@ export const eventAPI = {
   update:         (id, data)          => api.put(`/events/${id}`, data),
   delete:         (id)                => api.delete(`/events/${id}`),
 
+  // Recovery code
+  generateRecoveryCode:  (eventId)        => api.post(`/events/generate-recovery-code/${eventId}`),
+  getRecoveryCodeStatus: (eventId)        => api.get(`/events/recovery-code-status/${eventId}`),
+  getEventBySlug:        (slug)           => api.get(`/events/by-slug/${encodeURIComponent(slug)}`),
+  resetPassword:         (data)           => api.post('/events/reset-password', data),
+
   // RSVP
   rsvp:               (eventId, data)     => api.post(`/events/${eventId}/rsvp`, data),
   updateRsvpSettings: (eventId, settings) => api.patch(`/events/${eventId}/rsvp-settings`, settings),
