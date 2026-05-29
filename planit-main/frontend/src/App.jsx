@@ -51,6 +51,7 @@ const RSVPPage          = lazy(() => import('./pages/RSVPPage'));
 const RSVPManage        = lazy(() => import('./pages/RSVPManage'));
 const RSVPPageBuilder   = lazy(() => import('./pages/RSVPPageBuilder'));
 const Credits           = lazy(() => import('./pages/Credits'));
+const ForgotPassword    = lazy(() => import('./pages/ForgotPassword'));
 
 // Minimal spinner shown during chunk loads (usually <200ms on a warm CDN)
 function PageLoader() {
@@ -405,6 +406,7 @@ function WhiteLabelTheme({ children }) {
 const PAGE_TITLES = {
   '/':                         'Event Planning and Restaurant Management Software · PlanIt',
   '/429':                        'Too Many Requests · PlanIt',
+  '/forgot-password':            'Reset Your Account Password · PlanIt',
   '/about':                    'About PlanIt · Built for Event Planners and Venue Managers',
   '/admin':                    'Admin Control Panel · PlanIt',
   '/admin/security':           'Platform Security Dashboard · PlanIt Admin',
@@ -549,6 +551,7 @@ function App() {
         <Route path="/white-label/setup-fee"      element={<SetupFee />} />
         <Route path="/white-label/setup-success"  element={<SetupFeeSuccess />} />
         <Route path="/429"             element={<TooManyRequests />} />
+        <Route path="/forgot-password"  element={<ForgotPassword />} />
         <Route path="*"                element={<NotFound />} />
       </Routes>
             </Suspense>
