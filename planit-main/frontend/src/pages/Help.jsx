@@ -38,7 +38,7 @@ const ARTICLES = [
           { title: 'Set the date, time, and timezone', body: 'Pick the date and time your event starts. PlanIt automatically detects and pre-selects your browser\'s timezone, but you can change it to any timezone from the dropdown. This ensures the countdown and all timestamps display correctly for everyone.' },
           { title: 'Add a location (optional)', body: 'Type the venue address or name. This appears on the guest invite page and powers the "Get Directions" button that opens Google Maps. Leave it blank if your event is virtual or the location isn\'t set yet.' },
           { title: 'Customise your event URL (optional)', body: 'The slug field auto-fills from your title. You can edit it to anything you like — something shorter and easier to share by voice. Once you type in this field manually, auto-generation from the title stops so your custom value is never overwritten. If your chosen slug is taken, PlanIt tells you before you submit.' },
-          { title: 'Set your account password', body: 'This is required. It\'s your organizer identity credential — the password you\'ll need to claim organizer access from any new browser or device. Store it somewhere safe. It cannot be reset or recovered, because PlanIt has no email on file to send a reset link to.' },
+          { title: 'Set your account password', body: 'This is required. It\'s your organizer identity credential — the password you\'ll need to claim organizer access from any new browser or device. Store it somewhere safe. A recovery code is shown once immediately after you set it — save it, as it lets you reset your password at /forgot-password.' },
           { title: 'Set an event password (optional)', body: 'This gates entry to the workspace for everyone — guests, team members, and organizers. Anyone navigating to the event URL must enter this password. Use it if your event is confidential. If left blank, anyone with the link can join.' },
           { title: 'Choose Standard or Enterprise mode', body: 'Standard mode is for team planning without a formal guest list. Enterprise mode adds the full guest management and QR check-in system. You cannot change the mode after creation, so choose deliberately.' },
           { title: 'Click "Create Event"', body: 'PlanIt creates your workspace and drops you straight in. Your event link is shown in the workspace header and in the Share tab. Copy it and send it to your team.' }
@@ -47,7 +47,7 @@ const ARTICLES = [
       {
         type: 'callout',
         variant: 'warning',
-        text: 'Write down your account password before you share the event link. If you share the link with your team and later forget the password, you cannot reclaim organizer access. There is no password recovery flow.'
+        text: 'Write down your account password before you share the event link. If you share the link with your team and later forget the password, you can reset it at /forgot-password using the recovery code shown when you set your password.'
       },
       {
         type: 'callout',
@@ -171,7 +171,7 @@ const ARTICLES = [
       {
         type: 'callout',
         variant: 'warning',
-        text: 'If you forget your account password, there is no recovery option. PlanIt stores no email address and has no reset flow. The only resolution is to contact support — but recovery is not guaranteed. Always store your password somewhere safe before sharing your event link.'
+        text: 'If you forget your account password, use the recovery code shown when you set it — go to /forgot-password. If you no longer have your recovery code, log back in to generate a new one from the workspace.'
       }
     ]
   },
@@ -593,7 +593,7 @@ const ARTICLES = [
               'Proves you are the organizer',
               'Needed to claim organizer role from any new browser/device',
               'Needed for manager override in Enterprise mode',
-              'Cannot be reset or recovered',
+              'Resettable via recovery code at /forgot-password',
               'Hashed with bcrypt — not stored in readable form',
             ],
             best: 'Store this somewhere you can always access it — a password manager, a note, anywhere secure.'
@@ -698,7 +698,7 @@ const ARTICLES = [
             color: 'neutral',
             desc: 'What you give up without an account:',
             features: [
-              'No password reset — if you forget, it\'s gone',
+              'Reset via recovery code at /forgot-password if forgotten',
               'Sessions don\'t sync across devices',
               'No persistent history after 7 days',
               'The event link is effectively the key — protect it',
@@ -777,21 +777,21 @@ const ARTICLES = [
     content: [
       {
         type: 'intro',
-        text: 'There is no automated password reset in PlanIt because no email address is collected. If you\'ve lost your organizer password, here\'s what you can and cannot do.'
+        text: 'If you have your recovery code, reset your password at /forgot-password. The recovery code was shown once when you set your account password. If you do not have it, here are your options.'
       },
       {
         type: 'steps',
         items: [
-          { title: 'Check everywhere you might have saved it', body: 'Password managers, browser-saved passwords, notes apps, messages to yourself, email drafts. The password was set during event creation — did you write it somewhere?' },
+          { title: 'Use your recovery code', body: 'Go to /forgot-password. Enter your event link, your display name, your recovery code, and a new password. The code looks like XXXX-XXXX-XXXX-XXXX-XXXX and was shown once when you first set your password.' },
           { title: 'Try common variations', body: 'Check for capitalisation differences, spaces, or symbols you might have typed slightly differently. The login form allows unlimited attempts before rate limiting kicks in (20 failed attempts per 15 minutes).' },
-          { title: 'Contact support', body: 'Email planit.userhelp@gmail.com with your event link, your name, and any details that confirm you created the event (e.g. the event title, date, approximate creation time). We may be able to provide limited assistance, but password recovery is not guaranteed.' },
-          { title: 'Create a new event', body: 'If recovery isn\'t possible, the practical solution for a future event is to create a new one and store the password properly this time. Use a password manager.' }
+          { title: 'Generate a new recovery code', body: 'If you are still logged in, go to the event workspace. A banner will appear if you have no recovery code. Click Generate Recovery Code to create one.' },
+          { title: 'Contact support as a last resort', body: 'Email planit.userhelp@gmail.com with your event link and details confirming you created it. If you have no recovery code and are locked out, support may be able to assist.' }
         ]
       },
       {
         type: 'callout',
         variant: 'warning',
-        text: 'This is not a bug — it is an intentional design tradeoff of the no-account model. The same system that requires no email for signup means there\'s no email to send a reset link to. Please store your organizer password before sharing the event link.'
+        text: 'Recovery codes exist for exactly this situation. Every user who sets an account password is shown a recovery code once — save it in a password manager or secure note. Use /forgot-password to reset with your recovery code.'
       }
     ]
   },
@@ -1228,7 +1228,7 @@ const ARTICLES_EXTRA = [
         { title: 'What requires organizer access', body: 'Posting announcements, deleting other participants\' messages, accessing check-in, configuring settings, managing the guest list, and viewing analytics all require organizer login.' },
         { title: 'Log in as organizer', body: 'Click the shield or lock icon in the workspace header. Enter the account password set when the event was created.' },
         { title: 'Session may have expired', body: 'JWT tokens expire after a set duration. If you were organizer but now see permission errors, log out and log back in.' },
-        { title: 'Don\'t have the password?', body: 'Ask the event creator. There is no bypass or recovery without the account password.' },
+        { title: 'Forgot your password?', body: 'Go to /forgot-password and use the recovery code shown when you set your account password. If you have not generated one, log in first and look for the recovery code banner in the workspace.' },
       ]},
     ],
   },
@@ -2697,7 +2697,7 @@ const ARTICLES_EXTRA = [
           { title: 'Set the date, time, and timezone', body: 'Pick the date and time your event starts. PlanIt automatically detects and pre-selects your browser\'s timezone, but you can change it to any timezone from the dropdown. This ensures the countdown and all timestamps display correctly for everyone.' },
           { title: 'Add a location (optional)', body: 'Type the venue address or name. This appears on the guest invite page and powers the "Get Directions" button that opens Google Maps. Leave it blank if your event is virtual or the location isn\'t set yet.' },
           { title: 'Customise your event URL (optional)', body: 'The slug field auto-fills from your title. You can edit it to anything you like — something shorter and easier to share by voice. Once you type in this field manually, auto-generation from the title stops so your custom value is never overwritten. If your chosen slug is taken, PlanIt tells you before you submit.' },
-          { title: 'Set your account password', body: 'This is required. It\'s your organizer identity credential — the password you\'ll need to claim organizer access from any new browser or device. Store it somewhere safe. It cannot be reset or recovered, because PlanIt has no email on file to send a reset link to.' },
+          { title: 'Set your account password', body: 'This is required. It\'s your organizer identity credential — the password you\'ll need to claim organizer access from any new browser or device. Store it somewhere safe. A recovery code is shown once immediately after you set it — save it, as it lets you reset your password at /forgot-password.' },
           { title: 'Set an event password (optional)', body: 'This gates entry to the workspace for everyone — guests, team members, and organizers. Anyone navigating to the event URL must enter this password. Use it if your event is confidential. If left blank, anyone with the link can join.' },
           { title: 'Choose Standard or Enterprise mode', body: 'Standard mode is for team planning without a formal guest list. Enterprise mode adds the full guest management and QR check-in system. You cannot change the mode after creation, so choose deliberately.' },
           { title: 'Click "Create Event"', body: 'PlanIt creates your workspace and drops you straight in. Your event link is shown in the workspace header and in the Share tab. Copy it and send it to your team.' }
@@ -2706,7 +2706,7 @@ const ARTICLES_EXTRA = [
       {
         type: 'callout',
         variant: 'warning',
-        text: 'Write down your account password before you share the event link. If you share the link with your team and later forget the password, you cannot reclaim organizer access. There is no password recovery flow.'
+        text: 'Write down your account password before you share the event link. If you share the link with your team and later forget the password, you can reset it at /forgot-password using the recovery code shown when you set your password.'
       },
       {
         type: 'callout',
@@ -2830,7 +2830,7 @@ const ARTICLES_EXTRA = [
       {
         type: 'callout',
         variant: 'warning',
-        text: 'If you forget your account password, there is no recovery option. PlanIt stores no email address and has no reset flow. The only resolution is to contact support — but recovery is not guaranteed. Always store your password somewhere safe before sharing your event link.'
+        text: 'If you forget your account password, use the recovery code shown when you set it — go to /forgot-password. If you no longer have your recovery code, log back in to generate a new one from the workspace.'
       }
     ]
   },
@@ -3252,7 +3252,7 @@ const ARTICLES_EXTRA = [
               'Proves you are the organizer',
               'Needed to claim organizer role from any new browser/device',
               'Needed for manager override in Enterprise mode',
-              'Cannot be reset or recovered',
+              'Resettable via recovery code at /forgot-password',
               'Hashed with bcrypt — not stored in readable form',
             ],
             best: 'Store this somewhere you can always access it — a password manager, a note, anywhere secure.'
@@ -3357,7 +3357,7 @@ const ARTICLES_EXTRA = [
             color: 'neutral',
             desc: 'What you give up without an account:',
             features: [
-              'No password reset — if you forget, it\'s gone',
+              'Reset via recovery code at /forgot-password if forgotten',
               'Sessions don\'t sync across devices',
               'No persistent history after 7 days',
               'The event link is effectively the key — protect it',
@@ -3436,21 +3436,21 @@ const ARTICLES_EXTRA = [
     content: [
       {
         type: 'intro',
-        text: 'There is no automated password reset in PlanIt because no email address is collected. If you\'ve lost your organizer password, here\'s what you can and cannot do.'
+        text: 'If you have your recovery code, reset your password at /forgot-password. The recovery code was shown once when you set your account password. If you do not have it, here are your options.'
       },
       {
         type: 'steps',
         items: [
-          { title: 'Check everywhere you might have saved it', body: 'Password managers, browser-saved passwords, notes apps, messages to yourself, email drafts. The password was set during event creation — did you write it somewhere?' },
+          { title: 'Use your recovery code', body: 'Go to /forgot-password. Enter your event link, your display name, your recovery code, and a new password. The code looks like XXXX-XXXX-XXXX-XXXX-XXXX and was shown once when you first set your password.' },
           { title: 'Try common variations', body: 'Check for capitalisation differences, spaces, or symbols you might have typed slightly differently. The login form allows unlimited attempts before rate limiting kicks in (20 failed attempts per 15 minutes).' },
-          { title: 'Contact support', body: 'Email planit.userhelp@gmail.com with your event link, your name, and any details that confirm you created the event (e.g. the event title, date, approximate creation time). We may be able to provide limited assistance, but password recovery is not guaranteed.' },
-          { title: 'Create a new event', body: 'If recovery isn\'t possible, the practical solution for a future event is to create a new one and store the password properly this time. Use a password manager.' }
+          { title: 'Generate a new recovery code', body: 'If you are still logged in, go to the event workspace. A banner will appear if you have no recovery code. Click Generate Recovery Code to create one.' },
+          { title: 'Contact support as a last resort', body: 'Email planit.userhelp@gmail.com with your event link and details confirming you created it. If you have no recovery code and are locked out, support may be able to assist.' }
         ]
       },
       {
         type: 'callout',
         variant: 'warning',
-        text: 'This is not a bug — it is an intentional design tradeoff of the no-account model. The same system that requires no email for signup means there\'s no email to send a reset link to. Please store your organizer password before sharing the event link.'
+        text: 'Recovery codes exist for exactly this situation. Every user who sets an account password is shown a recovery code once — save it in a password manager or secure note. Use /forgot-password to reset with your recovery code.'
       }
     ]
   },
