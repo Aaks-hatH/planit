@@ -13,6 +13,11 @@ const eventParticipantSchema = new mongoose.Schema({
   role:         { type: String, enum: ['organizer', 'participant', 'staff'], default: 'participant' },
   joinedAt:     { type: Date, default: Date.now },
   lastSeenAt:   { type: Date, default: Date.now },
+  // Recovery code — bcrypt hash of a XXXX-XXXX-XXXX-XXXX-XXXX code shown once at password creation.
+  // Never stored or returned in plaintext after initial display.
+  // Expires 365 days after generation. Nulled out after a successful reset.
+  recoveryCodeHash:        { type: String, select: false, default: null },
+  recoveryCodeGeneratedAt: { type: Date, default: null },
 }, { timestamps: true });
 
 // username must be unique per event
