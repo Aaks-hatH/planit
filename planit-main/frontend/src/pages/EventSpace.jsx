@@ -25,6 +25,8 @@ import Analytics from '../components/Analytics';
 import Utilities from '../components/Utilities';
 import Countdown from '../components/Countdown';
 import DeletionWarningBanner from '../components/DeletionWarningBanner';
+import RecoveryCodeModal from '../components/RecoveryCodeModal';
+import RecoveryCodeBanner from '../components/RecoveryCodeBanner';
 import OrganizerSettings from '../components/OrganizerSettings';
 import Onboarding from '../components/Onboarding';
 import CrossPlatformAd from '../components/CrossPlatformAd';
@@ -95,6 +97,10 @@ function JoinGate({ eventId, onJoined }) {
   const [pollToken, setPollToken]       = useState('');   // approval poll token issued at join time
   const justSelectedRef                 = useRef(false);
   const accountPwdRef                   = useRef(null);
+
+  // Recovery code returned when a new account password is set at join time
+  const [joinRecoveryCode, setJoinRecoveryCode] = useState(null);
+  const [pendingJoinCallback, setPendingJoinCallback] = useState(null);
 
   // Full-event state
   const [isFull, setIsFull]         = useState(false);
@@ -271,7 +277,14 @@ function JoinGate({ eventId, onJoined }) {
 
       localStorage.setItem('eventToken', res.data.token);
       localStorage.setItem('username', name);
-      onJoined();
+      // If the backend returned a recovery code (first-time password set), show the modal
+      // before calling onJoined so the user sees it while still on this screen.
+      if (res.data.recoveryCode) {
+        setPendingJoinCallback(() => onJoined);
+        setJoinRecoveryCode(res.data.recoveryCode);
+      } else {
+        onJoined();
+      }
     } catch (err) {
       const data = err.response?.data;
       if (data?.requiresApproval) {
@@ -469,6 +482,12 @@ function JoinGate({ eventId, onJoined }) {
               onChange={e => { setAccountPassword(e.target.value); setError(''); }}
               autoComplete="current-password"
             />
+            <a
+              href={`/forgot-password?event=${publicInfo?.subdomain || ''}`}
+              className="text-[11px] text-neutral-400 hover:text-neutral-600 transition-colors mt-1 inline-block"
+            >
+              Forgot password?
+            </a>
           </div>
 
           {error && step === 'account-password' && (
@@ -811,6 +830,20 @@ function JoinGate({ eventId, onJoined }) {
         </div>
       </div>
     </div>
+
+    {/* Recovery code modal — shown once when a new account password is first set */}
+    {joinRecoveryCode && (
+      <RecoveryCodeModal
+        code={joinRecoveryCode}
+        onDismiss={() => {
+          const cb = pendingJoinCallback;
+          setJoinRecoveryCode(null);
+          setPendingJoinCallback(null);
+          if (cb) cb();
+        }}
+        eventSlug={publicInfo?.subdomain}
+      />
+    )}
   );
 }
 
@@ -1430,6 +1463,13 @@ export default function EventSpace() {
     {showCasualAd && <CrossPlatformAd trigger="casual" onClose={() => setShowCasualAd(false)} />}
     <div className="min-h-screen flex flex-col" style={{ background: '#f7f7f9' }}>
       <DeletionWarningBanner eventId={eventId} />
+      {/* Recovery code banner — shown to any authenticated user with a password but no recovery code */}
+      {eventId && currentUser && (
+        <RecoveryCodeBanner
+          eventId={eventId}
+          participantId={participants.find(p => p.username === currentUser)?._id || currentUser}
+        />
+      )}
 
       {showQR && <QRModal eventId={eventId} onClose={() => setShowQR(false)} />}
       {showSettings && isOrganizer && (
