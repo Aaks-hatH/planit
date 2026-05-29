@@ -591,6 +591,7 @@ function JoinGate({ eventId, onJoined }) {
   );
 
   return (
+    <>
     <div className="min-h-screen flex flex-col" style={{ background: 'linear-gradient(150deg,#06060c 0%,#0d0d1a 45%,#060610 100%)' }}>
       {/* Ambient background glows */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden" aria-hidden>
@@ -844,6 +845,7 @@ function JoinGate({ eventId, onJoined }) {
         eventSlug={publicInfo?.subdomain}
       />
     )}
+    </>
   );
 }
 
