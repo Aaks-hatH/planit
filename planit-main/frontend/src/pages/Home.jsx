@@ -8,6 +8,7 @@ import {
   Brain, ArrowUpRight, AlertCircle, UtensilsCrossed, MapPin, QrCode, Layers, Search, CornerDownRight
 } from 'lucide-react';
 import { eventAPI } from '../services/api';
+import RecoveryCodeModal from '../components/RecoveryCodeModal';
 import toast from 'react-hot-toast';
 import { motion } from 'framer-motion';
 import { useWhiteLabel } from '../context/WhiteLabelContext';
@@ -1321,6 +1322,7 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const [created, setCreated] = useState(null);
   const [showAd, setShowAd] = useState(false);
+  const [organizerRecoveryCode, setOrganizerRecoveryCode] = useState(null); // shown once after event creation
   const [showPassword, setShowPassword] = useState(false);
   const [showAccountPassword, setShowAccountPassword] = useState(false);
   const [fieldErrors, setFieldErrors] = useState({});
@@ -1398,6 +1400,9 @@ export default function Home() {
       localStorage.setItem('eventToken', response.data.token);
       localStorage.setItem('username', sanitize(formData.organizerName));
       setCreated(response.data.event);
+      if (response.data.recoveryCode) {
+        setOrganizerRecoveryCode(response.data.recoveryCode);
+      }
       setShowAd(true);
     } catch (error) {
       const data = error.response?.data;
@@ -1453,6 +1458,21 @@ export default function Home() {
     <div className="min-h-screen text-white relative" style={{ background: 'var(--bg-base)', overflowX: 'clip', maxWidth: '100vw', isolation: 'isolate' }}>
       <InjectGlobalCSS />
       {showAd && <CrossPlatformAd trigger="post_event_create" onClose={() => setShowAd(false)} />}
+      {/* Recovery code modal — shown once when organizer sets an account password at creation */}
+      {organizerRecoveryCode && (
+        <RecoveryCodeModal
+          code={organizerRecoveryCode}
+          onDismiss={() => {
+            setOrganizerRecoveryCode(null);
+            // Navigate to the event after dismissing the modal
+            if (created) {
+              const base = created.subdomain ? `/e/${created.subdomain}` : `/event/${created.id}`;
+              // Don't auto-navigate — let them read the screen first
+            }
+          }}
+          eventSlug={created?.subdomain}
+        />
+      )}
       {!isWL && !loadingDone && <LoadingScreen onDone={() => setLoadingDone(true)} />}
       <ScrollProgressBar />
 
