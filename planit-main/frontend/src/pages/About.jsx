@@ -467,7 +467,7 @@ export default function About() {
             <FeatureRow
               icon={Lock}
               title="Account password (required)"
-              description="This password is required. It is tied to your identity as the event organizer. When you or a team member with organizer access tries to open the event from a new browser or device, this password is what confirms their identity. Without it, the event link alone is not sufficient to claim organizer access. Store this password somewhere accessible — it currently cannot be reset or changed after the event is created."
+              description="This password is required. It is tied to your identity as the event organizer. When you or a team member with organizer access tries to open the event from a new browser or device, this password is what confirms their identity. Without it, the event link alone is not sufficient to claim organizer access. A recovery code is shown once when you first set it — save it, because you can use it to reset your password at /forgot-password."
             />
             <FeatureRow
               icon={Shield}
@@ -475,7 +475,7 @@ export default function About() {
               description="This password is optional and serves a completely different purpose from the account password. If set, it gates entry to the entire event workspace for everyone: guests, team members, and organizers alike. Anyone navigating to the event URL must enter this password before they can see anything. Use it when the event is confidential and you want to prevent people who received the link secondhand from entering the workspace."
             />
             <Callout accent>
-              Both passwords are set at creation time and cannot be changed after the event is created. Choose them deliberately. The account password should be something you can remember or store securely. The event password should be something you are willing to share with your entire planning team if you set one. If you forget the account password, there is currently no recovery mechanism — this is an intentional tradeoff that keeps the system simple and avoids requiring email addresses.
+              Both passwords are set at creation time. Choose them deliberately. The account password should be something you can remember or store securely, and you will also receive a recovery code when you set it — save that code, as it lets you reset the password at /forgot-password. The event password should be something you are willing to share with your entire planning team if you set one.
             </Callout>
           </Section>
 
@@ -1436,8 +1436,8 @@ export default function About() {
             </p>
             <FeatureRow
               icon={Key}
-              title="Passwords cannot be reset"
-              description="The account password — the one that proves your identity as the organizer — cannot be changed or recovered after the event is created. There is no 'forgot my password' flow because there is no email address on file to send a reset link to. If you forget the account password, you cannot reclaim the organizer role. Store it somewhere safe before you share your event link with your team."
+              title="Account passwords can be reset via recovery code"
+              description="The account password — the one that proves your identity as the organizer — can be reset using the recovery code shown when you first set it. Go to /forgot-password, enter your event link, your display name, your recovery code, and a new password. If you no longer have your recovery code, log back in to generate a new one from the workspace. Store your recovery code somewhere safe."
             />
             <FeatureRow
               icon={Link}
