@@ -1698,7 +1698,7 @@ function OnboardingWizard({ mode, formData, setFormData, fieldErrors, setFieldEr
                 {isEnt && <span style={{ marginLeft:'auto', fontSize:10, background:'rgba(99,102,241,0.2)', borderRadius:6, padding:'2px 6px', color:'#a5b4fc', fontWeight:600 }}>Selected</span>}
               </div>
               <ul style={{ fontSize:12, color: isEnt ? 'rgba(165,180,252,0.6)' : 'rgba(99,102,241,0.4)', lineHeight:1.7, listStyle:'none', padding:0, margin:0 }}>
-                {['Personalized QR invites', 'Check-in dashboard', 'Real-time analytics', 'Table assignments + groups'].map(f => (
+                {['Personalized QR invites', 'Check-in dashboard', 'Everything in Standard', 'Table assignments + groups'].map(f => (
                   <li key={f} style={{ display:'flex', alignItems:'center', gap:5 }}>
                     <span style={{ color: isEnt ? 'rgba(99,102,241,0.6)' : 'rgba(99,102,241,0.25)', fontSize:10 }}>✦</span>{f}
                   </li>
