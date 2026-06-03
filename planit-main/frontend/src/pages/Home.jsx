@@ -496,6 +496,10 @@ const GLOBAL_CSS = `
   }
   .nav-link:hover::after { left:10%; right:10%; }
 
+  @keyframes wiz-overlay-in {
+    from { opacity:0; }
+    to   { opacity:1; }
+  }
   /* ── Onboarding Wizard ─────────────────────────────────────────── */
   @keyframes spin {
     to { transform: rotate(360deg); }
@@ -1386,20 +1390,20 @@ import CrossPlatformAd from '../components/CrossPlatformAd';
 // ONBOARDING WIZARD
 // ─────────────────────────────────────────────────────────────────────────────
 const EVENT_TYPES = [
-  { id:'wedding',    emoji:'💍', label:'Wedding',          hint:'Ceremony, reception, the works' },
-  { id:'birthday',   emoji:'🎂', label:'Birthday',         hint:'Milestone or casual celebration' },
-  { id:'conference', emoji:'🎤', label:'Conference',       hint:'Speakers, sessions, networking' },
-  { id:'corporate',  emoji:'🏢', label:'Corporate',        hint:'Retreat, offsite, team event' },
-  { id:'festival',   emoji:'🎪', label:'Festival',         hint:'Multi-stage, outdoor, crowd' },
-  { id:'other',      emoji:'✨', label:'Other',            hint:'Something totally unique' },
+  { id:'wedding',    label:'Wedding',          hint:'Ceremony, reception, the works' },
+  { id:'birthday',   label:'Birthday',         hint:'Milestone or casual celebration' },
+  { id:'conference', label:'Conference',       hint:'Speakers, sessions, networking' },
+  { id:'corporate',  label:'Corporate',        hint:'Retreat, offsite, team event' },
+  { id:'festival',   label:'Festival',         hint:'Multi-stage, outdoor, crowd' },
+  { id:'other',      label:'Other',            hint:'Something totally unique' },
 ];
 const VENUE_TYPES = [
-  { id:'restaurant', emoji:'🍽️', label:'Restaurant',       hint:'Full-service dining floor' },
-  { id:'cafe',       emoji:'☕', label:'Café',             hint:'Counter service & tables' },
-  { id:'bar',        emoji:'🍸', label:'Bar / Pub',        hint:'Drinks-led with seating' },
-  { id:'popup',      emoji:'🏕️', label:'Pop-up',           hint:'Temporary or market stall' },
-  { id:'hotel',      emoji:'🏨', label:'Hotel dining',     hint:'In-house restaurant or lounge' },
-  { id:'other',      emoji:'🏠', label:'Other venue',      hint:'Something different entirely' },
+  { id:'restaurant', label:'Restaurant',       hint:'Full-service dining floor' },
+  { id:'cafe',       label:'Cafe',             hint:'Counter service and tables' },
+  { id:'bar',        label:'Bar / Pub',        hint:'Drinks-led with seating' },
+  { id:'popup',      label:'Pop-up',           hint:'Temporary or market stall' },
+  { id:'hotel',      label:'Hotel dining',     hint:'In-house restaurant or lounge' },
+  { id:'other',      label:'Other venue',      hint:'Something different entirely' },
 ];
 
 function OnboardingWizard({ mode, formData, setFormData, fieldErrors, setFieldErrors, onSubmit, loading }) {
@@ -1504,24 +1508,24 @@ function OnboardingWizard({ mode, formData, setFormData, fieldErrors, setFieldEr
                 <button key={t.id} type="button"
                   className={`wiz-type-card${active ? ' active' : ''}`}
                   style={{
-                    background: active ? (isVenue ? 'rgba(249,115,22,0.15)' : 'rgba(99,102,241,0.15)') : 'rgba(255,255,255,0.03)',
-                    border: `1.5px solid ${active ? accent : 'rgba(255,255,255,0.08)'}`,
-                    borderRadius:14, padding:'14px 10px', textAlign:'center',
-                    boxShadow: active ? `0 0 24px ${accent}30` : 'none',
+                    background: active ? (isVenue ? 'rgba(249,115,22,0.12)' : 'rgba(99,102,241,0.12)') : 'rgba(255,255,255,0.03)',
+                    border: `1.5px solid ${active ? accent : 'rgba(255,255,255,0.07)'}`,
+                    borderRadius:12, padding:'14px 10px', textAlign:'center',
+                    boxShadow: active ? `0 0 20px ${accent}28` : 'none',
                     animationDelay:`${i*0.04}s`,
                   }}
                   onClick={() => { setSelected(t.id); }}
                 >
-                  <div style={{ fontSize:26, marginBottom:6 }}>{t.emoji}</div>
-                  <div style={{ fontSize:13, fontWeight:700, color: active ? '#fff' : 'rgba(255,255,255,0.6)', marginBottom:3 }}>{t.label}</div>
-                  <div style={{ fontSize:11, color:'rgba(255,255,255,0.3)', lineHeight:1.3 }}>{t.hint}</div>
+                  <div style={{ fontSize:13, fontWeight:700, color: active ? '#fff' : 'rgba(255,255,255,0.55)', marginBottom:4, letterSpacing:'-0.01em' }}>{t.label}</div>
+                  <div style={{ fontSize:11, color:'rgba(255,255,255,0.28)', lineHeight:1.3 }}>{t.hint}</div>
                 </button>
               );
             })}
           </div>
           {selected && (
-            <p style={{ fontSize:12, color: isVenue ? '#fb923c' : '#818cf8', marginTop:12 }}>
-              ✓ Great choice — let's name it.
+            <p style={{ fontSize:12, color: isVenue ? '#fb923c' : '#818cf8', marginTop:12, display:'flex', alignItems:'center', gap:6 }}>
+              <CheckCircle2 style={{ width:13, height:13 }} />
+              Selection confirmed — continue when ready.
             </p>
           )}
         </div>
@@ -1866,8 +1870,16 @@ export default function Home() {
   const [selectedBranch, setSelectedBranch] = useState(null); // null | 'events' | 'venue'
   const [loadingDone, setLoadingDone] = useState(false);
   const [wizardKey, setWizardKey] = useState(0); // increment to hard-reset the wizard
+  const [wizardOpen, setWizardOpen] = useState(false); // fullscreen wizard overlay
   // On white-label domains, skip the branch selector and go straight to event creation
   useEffect(() => { if (isWL) { setSelectedBranch('events'); setLoadingDone(true); } }, [isWL]);
+
+  // Close wizard on Escape key
+  useEffect(() => {
+    const handler = (e) => { if (e.key === 'Escape') setWizardOpen(false); };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, []);
 
   const selectBranch = (branch) => {
     setSelectedBranch(branch);
@@ -2997,10 +3009,10 @@ export default function Home() {
 
               {!created && (
                 <Reveal delay={80}>
-                  <div className="bg-neutral-900/60 rounded-3xl border border-neutral-800 p-6 sm:p-10 hover:border-neutral-700 transition-all duration-500 sticky top-24">
-                    {/* Mode selector — compact pill row */}
+                  <div className="sticky top-24">
+                    {/* Mode selector */}
                     {selectedBranch !== 'venue' && (
-                      <div style={{ display:'flex', gap:6, marginBottom:28, padding:'6px', background:'rgba(255,255,255,0.03)', borderRadius:14, border:'1px solid rgba(255,255,255,0.06)' }}>
+                      <div style={{ display:'flex', gap:6, marginBottom:20, padding:'6px', background:'rgba(255,255,255,0.03)', borderRadius:14, border:'1px solid rgba(255,255,255,0.06)' }}>
                         {[
                           { val:'standard',   label:'Standard',   sub:'Team planning'  },
                           { val:'enterprise', label:'Enterprise', sub:'Large + QR'     },
@@ -3020,6 +3032,183 @@ export default function Home() {
                       </div>
                     )}
 
+                    {/* Launch wizard CTA */}
+                    <div
+                      style={{
+                        background:'rgba(255,255,255,0.02)',
+                        border:'1px solid rgba(255,255,255,0.07)',
+                        borderRadius:24,
+                        padding:'48px 40px',
+                        textAlign:'center',
+                        position:'relative',
+                        overflow:'hidden',
+                      }}
+                    >
+                      {/* Ambient glow */}
+                      <div aria-hidden="true" style={{
+                        position:'absolute', inset:0, pointerEvents:'none',
+                        background: mode === 'table-service'
+                          ? 'radial-gradient(ellipse at 50% 0%, rgba(249,115,22,0.07) 0%, transparent 70%)'
+                          : 'radial-gradient(ellipse at 50% 0%, rgba(99,102,241,0.08) 0%, transparent 70%)',
+                      }} />
+
+                      {/* Icon */}
+                      <div style={{
+                        width:56, height:56, borderRadius:16, margin:'0 auto 24px',
+                        background: mode === 'table-service' ? 'rgba(249,115,22,0.1)' : 'rgba(99,102,241,0.1)',
+                        border: mode === 'table-service' ? '1px solid rgba(249,115,22,0.2)' : '1px solid rgba(99,102,241,0.2)',
+                        display:'flex', alignItems:'center', justifyContent:'center',
+                        boxShadow: mode === 'table-service' ? '0 0 32px rgba(249,115,22,0.12)' : '0 0 32px rgba(99,102,241,0.12)',
+                      }}>
+                        {mode === 'table-service'
+                          ? <UtensilsCrossed style={{ width:26, height:26, color:'#f97316' }} />
+                          : <Calendar style={{ width:26, height:26, color:'#818cf8' }} />
+                        }
+                      </div>
+
+                      <p style={{
+                        fontFamily:'Syne,sans-serif', fontSize:'clamp(1.4rem,3vw,1.75rem)',
+                        fontWeight:800, color:'#fff', lineHeight:1.2, marginBottom:10,
+                      }}>
+                        {mode === 'table-service' ? 'Launch your venue' : 'Create your event'}
+                      </p>
+                      <p style={{ fontSize:14, color:'rgba(255,255,255,0.35)', marginBottom:36, lineHeight:1.6, maxWidth:260, margin:'0 auto 36px' }}>
+                        {mode === 'table-service'
+                          ? 'Set up your floor plan and start managing tables in under 60 seconds.'
+                          : 'Build your planning workspace in under 60 seconds. No credit card required.'}
+                      </p>
+
+                      <button
+                        onClick={() => { setWizardKey(k => k + 1); setWizardOpen(true); }}
+                        style={{
+                          width:'100%', padding:'16px 28px', borderRadius:14, border:'none', cursor:'pointer',
+                          background: mode === 'table-service'
+                            ? 'linear-gradient(135deg, #f97316, #fb923c)'
+                            : 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+                          color:'#fff', fontSize:15, fontWeight:700,
+                          display:'flex', alignItems:'center', justifyContent:'center', gap:10,
+                          transition:'transform 0.2s ease, box-shadow 0.2s ease',
+                          boxShadow: mode === 'table-service'
+                            ? '0 8px 28px rgba(249,115,22,0.35)'
+                            : '0 8px 28px rgba(99,102,241,0.35)',
+                          fontFamily:'DM Sans,sans-serif',
+                        }}
+                        onMouseEnter={e => { e.currentTarget.style.transform='translateY(-2px)'; e.currentTarget.style.boxShadow = mode === 'table-service' ? '0 14px 36px rgba(249,115,22,0.45)' : '0 14px 36px rgba(99,102,241,0.45)'; }}
+                        onMouseLeave={e => { e.currentTarget.style.transform=''; e.currentTarget.style.boxShadow = mode === 'table-service' ? '0 8px 28px rgba(249,115,22,0.35)' : '0 8px 28px rgba(99,102,241,0.35)'; }}
+                      >
+                        {mode === 'table-service' ? 'Set up your venue' : 'Start building'}
+                        <ArrowRight style={{ width:18, height:18 }} />
+                      </button>
+
+                      {/* Trust signals */}
+                      <div style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:20, marginTop:24 }}>
+                        {[
+                          { icon: Clock, text:'~60 seconds' },
+                          { icon: Shield, text:'Encrypted' },
+                          { icon: CheckCircle2, text:'Free forever' },
+                        ].map(({ icon: Icon, text }) => (
+                          <div key={text} style={{ display:'flex', alignItems:'center', gap:5, fontSize:12, color:'rgba(255,255,255,0.28)' }}>
+                            <Icon style={{ width:12, height:12 }} />
+                            {text}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </Reveal>
+              )}
+
+              {/* Fullscreen wizard overlay */}
+              {wizardOpen && !created && (
+                <div
+                  style={{
+                    position:'fixed', inset:0, zIndex:1000,
+                    background:'rgba(5,5,10,0.96)',
+                    backdropFilter:'blur(20px)',
+                    display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center',
+                    animation:'wiz-overlay-in 0.35s cubic-bezier(0.22,1,0.36,1) both',
+                    padding:'24px',
+                  }}
+                >
+                  {/* Ambient orb */}
+                  <div aria-hidden="true" style={{
+                    position:'absolute', top:'-10%', left:'50%', transform:'translateX(-50%)',
+                    width:600, height:600, borderRadius:'50%', pointerEvents:'none',
+                    background: mode === 'table-service'
+                      ? 'radial-gradient(circle, rgba(249,115,22,0.07) 0%, transparent 65%)'
+                      : 'radial-gradient(circle, rgba(99,102,241,0.08) 0%, transparent 65%)',
+                    filter:'blur(40px)',
+                  }} />
+
+                  {/* Close button */}
+                  <button
+                    onClick={() => setWizardOpen(false)}
+                    style={{
+                      position:'absolute', top:24, right:24,
+                      width:40, height:40, borderRadius:12,
+                      background:'rgba(255,255,255,0.05)',
+                      border:'1px solid rgba(255,255,255,0.08)',
+                      color:'rgba(255,255,255,0.5)',
+                      cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center',
+                      transition:'background 0.2s, color 0.2s',
+                      fontFamily:'DM Sans,sans-serif',
+                      fontSize:20, lineHeight:1,
+                    }}
+                    onMouseEnter={e => { e.currentTarget.style.background='rgba(255,255,255,0.1)'; e.currentTarget.style.color='#fff'; }}
+                    onMouseLeave={e => { e.currentTarget.style.background='rgba(255,255,255,0.05)'; e.currentTarget.style.color='rgba(255,255,255,0.5)'; }}
+                    aria-label="Close"
+                  >
+                    ×
+                  </button>
+
+                  {/* Wordmark */}
+                  <div style={{ position:'absolute', top:26, left:28, display:'flex', alignItems:'center', gap:10 }}>
+                    <div style={{
+                      width:32, height:32, borderRadius:9,
+                      background: mode === 'table-service' ? 'rgba(249,115,22,0.1)' : 'rgba(99,102,241,0.1)',
+                      border: mode === 'table-service' ? '1px solid rgba(249,115,22,0.25)' : '1px solid rgba(99,102,241,0.25)',
+                      display:'flex', alignItems:'center', justifyContent:'center',
+                    }}>
+                      {mode === 'table-service'
+                        ? <UtensilsCrossed style={{ width:15, height:15, color:'#f97316' }} />
+                        : <Calendar style={{ width:15, height:15, color:'#818cf8' }} />
+                      }
+                    </div>
+                    <span style={{ fontFamily:'Syne,sans-serif', fontWeight:800, fontSize:17, color:'rgba(255,255,255,0.7)', letterSpacing:'-0.02em' }}>PlanIt</span>
+                  </div>
+
+                  {/* Wizard card */}
+                  <div style={{
+                    width:'100%', maxWidth:520,
+                    background:'rgba(12,12,20,0.9)',
+                    border:'1px solid rgba(255,255,255,0.08)',
+                    borderRadius:28,
+                    padding:'clamp(28px,6vw,52px)',
+                    boxShadow:'0 40px 100px rgba(0,0,0,0.7)',
+                    position:'relative',
+                  }}>
+                    {/* Mode tabs (events only) */}
+                    {selectedBranch !== 'venue' && (
+                      <div style={{ display:'flex', gap:6, marginBottom:32, padding:'6px', background:'rgba(255,255,255,0.03)', borderRadius:14, border:'1px solid rgba(255,255,255,0.06)' }}>
+                        {[
+                          { val:'standard',   label:'Standard',   sub:'Team planning'  },
+                          { val:'enterprise', label:'Enterprise', sub:'Large + QR'     },
+                        ].map(({ val, label, sub }) => (
+                          <button key={val} type="button" onClick={() => { setMode(val); setWizardKey(k => k + 1); }}
+                            style={{
+                              flex:1, padding:'9px 12px', borderRadius:10, border:'none', cursor:'pointer',
+                              background: mode === val ? '#fff' : 'transparent',
+                              color: mode === val ? '#111' : 'rgba(255,255,255,0.4)',
+                              fontWeight:700, fontSize:13, transition:'all 0.2s ease',
+                              fontFamily:'DM Sans,sans-serif',
+                            }}>
+                            <div>{label}</div>
+                            <div style={{ fontSize:11, opacity:0.6, fontWeight:400, marginTop:1 }}>{sub}</div>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+
                     <OnboardingWizard
                       key={wizardKey}
                       mode={mode}
@@ -3028,10 +3217,14 @@ export default function Home() {
                       fieldErrors={fieldErrors}
                       setFieldErrors={setFieldErrors}
                       loading={loading}
-                      onSubmit={handleSubmit}
+                      onSubmit={async () => { await handleSubmit(); setWizardOpen(false); }}
                     />
                   </div>
-                </Reveal>
+
+                  <p style={{ marginTop:20, fontSize:12, color:'rgba(255,255,255,0.18)', letterSpacing:'0.05em' }}>
+                    Press Esc to close
+                  </p>
+                </div>
               )}
             </div>
           </div>
