@@ -1427,7 +1427,7 @@ function OnboardingWizard({ mode, formData, setFormData, fieldErrors, setFieldEr
     return () => clearTimeout(t);
   }, [step]);
 
-  const totalSteps = isVenue ? 4 : 5;
+  const totalSteps = isVenue ? 4 : 6;
 
   const go = (delta) => {
     setDir(delta > 0 ? 'forward' : 'back');
@@ -1445,13 +1445,13 @@ function OnboardingWizard({ mode, formData, setFormData, fieldErrors, setFieldEr
       if (!formData.date)     e.date     = 'Date and time is required.';
       if (!formData.timezone) e.timezone = 'Timezone is required.';
     }
-    const nameStep = isVenue ? 2 : 3;
+    const nameStep = isVenue ? 2 : 4;
     if (step === nameStep) {
       if (!formData.organizerName.trim()) e.organizerName = isVenue ? 'Manager name is required.' : 'Your name is required.';
       if (!formData.organizerEmail.trim()) e.organizerEmail = 'Email is required.';
       else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.organizerEmail.trim())) e.organizerEmail = 'Please enter a valid email.';
     }
-    const pwStep = isVenue ? 3 : 4;
+    const pwStep = isVenue ? 3 : 5;
     if (step === pwStep) {
       if (!formData.accountPassword) e.accountPassword = 'Password is required.';
       else if (formData.accountPassword.length < 4) e.accountPassword = 'Must be at least 4 characters.';
@@ -1636,41 +1636,101 @@ function OnboardingWizard({ mode, formData, setFormData, fieldErrors, setFieldEr
               />
             </div>
           </div>
-          {/* Enterprise toggle */}
-          <div
-            onClick={() => setFormData(p => ({ ...p, isEnterpriseMode: !p.isEnterpriseMode }))}
-            style={{
-              background: formData.isEnterpriseMode ? 'rgba(99,102,241,0.1)' : 'rgba(255,255,255,0.03)',
-              border: `1.5px solid ${formData.isEnterpriseMode ? 'rgba(99,102,241,0.4)' : 'rgba(255,255,255,0.07)'}`,
-              borderRadius:14, padding:'14px 16px', cursor:'pointer',
-              display:'flex', alignItems:'center', justifyContent:'space-between',
-              transition:'all 0.2s ease',
-            }}
-          >
-            <div>
-              <p style={{ fontSize:14, fontWeight:700, color: formData.isEnterpriseMode ? '#a5b4fc' : 'rgba(255,255,255,0.6)', marginBottom:2 }}>
-                <Zap style={{ width:14, height:14, display:'inline', marginRight:6, verticalAlign:'middle' }} />Enterprise mode
-              </p>
-              <p style={{ fontSize:12, color:'rgba(255,255,255,0.3)' }}>Personalized QR invites, check-in dashboard, real-time analytics</p>
-            </div>
-            <div style={{
-              width:44, height:24, borderRadius:12,
-              background: formData.isEnterpriseMode ? '#6366f1' : 'rgba(255,255,255,0.1)',
-              transition:'background 0.2s ease', flexShrink:0, position:'relative',
-            }}>
-              <div style={{
-                width:18, height:18, borderRadius:'50%', background:'#fff',
-                position:'absolute', top:3, transition:'left 0.2s ease',
-                left: formData.isEnterpriseMode ? 23 : 3,
-              }} />
-            </div>
+        </div>
+      );
+    }
+
+    // Events Step 3: Enterprise decision slide
+    if (!isVenue && step === 3) {
+      const isEnt = formData.isEnterpriseMode;
+      return (
+        <div style={{ display:'flex', flexDirection:'column', gap:0 }}>
+          <p className="wiz-question" style={{ fontSize:'clamp(1.3rem,3.5vw,2rem)', fontFamily:'Syne,sans-serif', fontWeight:800, color:'#fff', lineHeight:1.15, marginBottom:8 }}>
+            Choose your event mode.
+          </p>
+          <p style={{ fontSize:14, color:'rgba(255,255,255,0.35)', marginBottom:24 }}>
+            This setting <span style={{ color:'rgba(239,68,68,0.85)', fontWeight:700 }}>cannot be changed</span> after your event is created. Choose carefully.
+          </p>
+
+          {/* Mode cards */}
+          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10, marginBottom:20 }}>
+            {/* Standard */}
+            <button type="button"
+              onClick={() => setFormData(p => ({ ...p, isEnterpriseMode: false }))}
+              style={{
+                background: !isEnt ? 'rgba(255,255,255,0.06)' : 'rgba(255,255,255,0.02)',
+                border: `1.5px solid ${!isEnt ? 'rgba(255,255,255,0.3)' : 'rgba(255,255,255,0.07)'}`,
+                borderRadius:14, padding:'16px 14px', cursor:'pointer', textAlign:'left',
+                transition:'all 0.2s ease',
+                boxShadow: !isEnt ? '0 0 24px rgba(255,255,255,0.06)' : 'none',
+              }}>
+              <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:8 }}>
+                <div style={{ width:28, height:28, borderRadius:8, background:'rgba(255,255,255,0.06)', border:'1px solid rgba(255,255,255,0.12)', display:'flex', alignItems:'center', justifyContent:'center' }}>
+                  <Calendar style={{ width:14, height:14, color:'rgba(255,255,255,0.6)' }} />
+                </div>
+                <span style={{ fontSize:13, fontWeight:700, color: !isEnt ? '#fff' : 'rgba(255,255,255,0.4)' }}>Standard</span>
+                {!isEnt && <span style={{ marginLeft:'auto', fontSize:10, background:'rgba(255,255,255,0.1)', borderRadius:6, padding:'2px 6px', color:'rgba(255,255,255,0.5)', fontWeight:600 }}>Selected</span>}
+              </div>
+              <ul style={{ fontSize:12, color:'rgba(255,255,255,0.35)', lineHeight:1.7, listStyle:'none', padding:0, margin:0 }}>
+                {['Open RSVP link', 'Team chat & tasks', 'Polls & budget', 'Unlimited members'].map(f => (
+                  <li key={f} style={{ display:'flex', alignItems:'center', gap:5 }}>
+                    <span style={{ color:'rgba(255,255,255,0.2)', fontSize:10 }}>✓</span>{f}
+                  </li>
+                ))}
+              </ul>
+            </button>
+
+            {/* Enterprise */}
+            <button type="button"
+              onClick={() => setFormData(p => ({ ...p, isEnterpriseMode: true }))}
+              style={{
+                background: isEnt ? 'rgba(99,102,241,0.12)' : 'rgba(99,102,241,0.03)',
+                border: `1.5px solid ${isEnt ? 'rgba(99,102,241,0.55)' : 'rgba(99,102,241,0.15)'}`,
+                borderRadius:14, padding:'16px 14px', cursor:'pointer', textAlign:'left',
+                transition:'all 0.2s ease',
+                boxShadow: isEnt ? '0 0 28px rgba(99,102,241,0.15)' : 'none',
+              }}>
+              <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:8 }}>
+                <div style={{ width:28, height:28, borderRadius:8, background:'rgba(99,102,241,0.15)', border:'1px solid rgba(99,102,241,0.3)', display:'flex', alignItems:'center', justifyContent:'center' }}>
+                  <Zap style={{ width:14, height:14, color:'#818cf8' }} />
+                </div>
+                <span style={{ fontSize:13, fontWeight:700, color: isEnt ? '#a5b4fc' : 'rgba(99,102,241,0.5)' }}>Enterprise</span>
+                {isEnt && <span style={{ marginLeft:'auto', fontSize:10, background:'rgba(99,102,241,0.2)', borderRadius:6, padding:'2px 6px', color:'#a5b4fc', fontWeight:600 }}>Selected</span>}
+              </div>
+              <ul style={{ fontSize:12, color: isEnt ? 'rgba(165,180,252,0.6)' : 'rgba(99,102,241,0.4)', lineHeight:1.7, listStyle:'none', padding:0, margin:0 }}>
+                {['Personalized QR invites', 'Check-in dashboard', 'Real-time analytics', 'Table assignments + groups'].map(f => (
+                  <li key={f} style={{ display:'flex', alignItems:'center', gap:5 }}>
+                    <span style={{ color: isEnt ? 'rgba(99,102,241,0.6)' : 'rgba(99,102,241,0.25)', fontSize:10 }}>✦</span>{f}
+                  </li>
+                ))}
+              </ul>
+            </button>
+          </div>
+
+          {/* When to use Enterprise — description block */}
+          <div style={{
+            background:'rgba(99,102,241,0.05)', border:'1px solid rgba(99,102,241,0.12)',
+            borderRadius:14, padding:'14px 16px',
+          }}>
+            <p style={{ fontSize:12, fontWeight:700, color:'rgba(99,102,241,0.7)', marginBottom:8, textTransform:'uppercase', letterSpacing:'0.08em' }}>When to use Enterprise mode</p>
+            <p style={{ fontSize:13, color:'rgba(255,255,255,0.35)', lineHeight:1.65, margin:0 }}>
+              Enterprise is built for <strong style={{ color:'rgba(255,255,255,0.55)' }}>large, ticketed, or access-controlled events</strong> where every guest gets a unique QR invite — galas, conferences, award nights, corporate parties with 50+ attendees. If your event is open RSVP or team-only, Standard is all you need.
+            </p>
+          </div>
+
+          {/* Immutable warning */}
+          <div style={{ display:'flex', alignItems:'flex-start', gap:8, marginTop:14, padding:'10px 14px', background:'rgba(239,68,68,0.07)', border:'1px solid rgba(239,68,68,0.18)', borderRadius:10 }}>
+            <AlertCircle style={{ width:14, height:14, color:'#f87171', flexShrink:0, marginTop:1 }} />
+            <p style={{ fontSize:12, color:'rgba(239,68,68,0.75)', lineHeight:1.5, margin:0 }}>
+              <strong>This cannot be changed later.</strong> Once your event is created, switching between Standard and Enterprise modes is not possible.
+            </p>
           </div>
         </div>
       );
     }
 
-    // Name step (events: 3, venue: 2)
-    const nameStep = isVenue ? 2 : 3;
+    // Name step (events: 4, venue: 2)
+    const nameStep = isVenue ? 2 : 4;
     if (step === nameStep) {
       return (
         <div style={{ display:'flex', flexDirection:'column', gap:18 }}>
@@ -1713,8 +1773,8 @@ function OnboardingWizard({ mode, formData, setFormData, fieldErrors, setFieldEr
       );
     }
 
-    // Password step (events: 4, venue: 3)
-    const pwStep = isVenue ? 3 : 4;
+    // Password step (events: 5, venue: 3)
+    const pwStep = isVenue ? 3 : 5;
     if (step === pwStep) {
       const secondPwLabel = isVenue ? 'Staff password' : 'Event password';
       const secondPwHint  = isVenue ? 'PIN your floor staff enter to log in (optional)' : 'Restrict who can join your event (optional)';
@@ -2233,6 +2293,14 @@ export default function Home() {
                   className="cta-primary group inline-flex items-center justify-center gap-3 w-full sm:w-auto px-8 py-4 bg-white text-neutral-900 text-sm font-bold rounded-2xl shadow-2xl">
                   <Calendar className="w-4 h-4" />
                   {(isWL && heroCta) ? heroCta : 'Start with Events'}
+                  <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform duration-300" />
+                </a>
+                <a href="#create"
+                  onClick={(e) => { e.preventDefault(); setSelectedBranch('events'); setMode('enterprise'); setWizardKey(k => k + 1); setTimeout(() => document.getElementById('planit-events')?.scrollIntoView({ behavior:'smooth', block:'start' }), 50); }}
+                  className="group inline-flex items-center justify-center gap-3 w-full sm:w-auto px-8 py-4 border border-indigo-500/40 text-indigo-300 text-sm font-bold rounded-2xl transition-all duration-300 hover:border-indigo-400/70 hover:bg-indigo-500/10"
+                  style={{ background: 'rgba(99,102,241,0.07)' }}>
+                  <Zap className="w-4 h-4" />
+                  Enterprise
                   <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform duration-300" />
                 </a>
                 <a href="#planit-venue"
@@ -2878,7 +2946,7 @@ export default function Home() {
                     <h2 className="font-syne text-5xl font-black text-white mb-6 tracking-tight leading-tight">
                       {created
                         ? mode === 'table-service' ? 'Venue created!' : 'Event created!'
-                        : mode === 'table-service' ? 'Set up your venue' : 'Start planning your event'}
+                        : mode === 'table-service' ? 'Set up your venue' : mode === 'enterprise' ? 'Launch an enterprise event' : 'Start planning your event'}
                     </h2>
                     <p className="text-xl text-neutral-400 leading-relaxed">
                       {created
@@ -2887,7 +2955,9 @@ export default function Home() {
                           : 'Your planning hub is ready. Share the link with your team and get started.'
                         : mode === 'table-service'
                           ? 'Create your restaurant workspace in 60 seconds. Your data never expires.'
-                          : 'Create your event workspace in 60 seconds. No credit card, no hassle, just start planning.'}
+                          : mode === 'enterprise'
+                            ? 'Built for large-scale, ticketed events. Every guest gets a personalized QR invite and seamless check-in.'
+                            : 'Create your event workspace in 60 seconds. No credit card, no hassle, just start planning.'}
                     </p>
                   </div>
                 </Reveal>
@@ -2911,6 +2981,43 @@ export default function Home() {
                             <span className="leading-relaxed">{item}</span>
                           </div>
                         ))}
+                      </div>
+                    ) : mode === 'enterprise' ? (
+                      <div className="rounded-3xl border border-indigo-500/20 overflow-hidden" style={{ background: 'rgba(8,8,20,0.7)' }}>
+                        {/* Enterprise vs Standard comparison header */}
+                        <div className="grid grid-cols-2 border-b border-indigo-500/15">
+                          <div className="px-5 py-3 border-r border-indigo-500/10">
+                            <span className="text-xs font-bold text-neutral-500 uppercase tracking-widest">Standard</span>
+                          </div>
+                          <div className="px-5 py-3 flex items-center gap-2" style={{ background: 'rgba(99,102,241,0.06)' }}>
+                            <Zap className="w-3 h-3 text-indigo-400" />
+                            <span className="text-xs font-bold text-indigo-400 uppercase tracking-widest">Enterprise</span>
+                          </div>
+                        </div>
+                        {[
+                          ['Open RSVP link', 'Personalized QR invite per guest'],
+                          ['Basic attendance count', 'Real-time check-in dashboard'],
+                          ['No guest tracking', 'Group sizes + table assignments'],
+                          ['No trust scoring', 'Security flags + override tools'],
+                          ['No entry verification', 'Duplicate & fraud detection'],
+                          ['Chat, tasks, polls, budget', 'All Standard features included'],
+                        ].map(([std, ent], i) => (
+                          <div key={i} className="grid grid-cols-2 border-b border-white/[0.04] last:border-b-0">
+                            <div className="px-5 py-3 border-r border-white/[0.04] flex items-start gap-2.5">
+                              <span className="mt-0.5 text-neutral-600 text-xs flex-shrink-0">✕</span>
+                              <span className="text-xs text-neutral-600 leading-relaxed">{std}</span>
+                            </div>
+                            <div className="px-5 py-3 flex items-start gap-2.5" style={{ background: 'rgba(99,102,241,0.03)' }}>
+                              <CheckCircle2 className="w-3.5 h-3.5 text-indigo-400 flex-shrink-0 mt-0.5" />
+                              <span className="text-xs text-indigo-300/70 leading-relaxed">{ent}</span>
+                            </div>
+                          </div>
+                        ))}
+                        {/* Warning */}
+                        <div className="px-5 py-3 flex items-center gap-2" style={{ background: 'rgba(239,68,68,0.06)', borderTop: '1px solid rgba(239,68,68,0.12)' }}>
+                          <AlertCircle className="w-3.5 h-3.5 text-red-400/70 flex-shrink-0" />
+                          <span className="text-xs text-red-400/60">Mode cannot be changed after creation</span>
+                        </div>
                       </div>
                     ) : (
                       <div className="space-y-3 p-5 sm:p-8 bg-neutral-900/50 rounded-3xl border border-neutral-800">
@@ -3017,13 +3124,14 @@ export default function Home() {
                           { val:'standard',   label:'Standard',   sub:'Team planning'  },
                           { val:'enterprise', label:'Enterprise', sub:'Large + QR'     },
                         ].map(({ val, label, sub }) => (
-                          <button key={val} type="button" onClick={() => { setMode(val); setWizardKey(k => k + 1); }}
+                          <button key={val} type="button" onClick={() => { setMode(val); setFormData(p => ({ ...p, isEnterpriseMode: val === 'enterprise' })); setWizardKey(k => k + 1); }}
                             data-mode={val}
                             style={{
                               flex:1, padding:'9px 12px', borderRadius:10, border:'none', cursor:'pointer',
-                              background: mode === val ? '#fff' : 'transparent',
-                              color: mode === val ? '#111' : 'rgba(255,255,255,0.4)',
+                              background: mode === val ? (val === 'enterprise' ? 'rgba(99,102,241,0.9)' : '#fff') : 'transparent',
+                              color: mode === val ? (val === 'enterprise' ? '#fff' : '#111') : 'rgba(255,255,255,0.4)',
                               fontWeight:700, fontSize:13, transition:'all 0.2s ease',
+                              boxShadow: mode === val && val === 'enterprise' ? '0 0 20px rgba(99,102,241,0.3)' : 'none',
                             }}>
                             <div>{label}</div>
                             <div style={{ fontSize:11, opacity:0.6, fontWeight:400, marginTop:1 }}>{sub}</div>
@@ -3049,20 +3157,24 @@ export default function Home() {
                         position:'absolute', inset:0, pointerEvents:'none',
                         background: mode === 'table-service'
                           ? 'radial-gradient(ellipse at 50% 0%, rgba(249,115,22,0.07) 0%, transparent 70%)'
-                          : 'radial-gradient(ellipse at 50% 0%, rgba(99,102,241,0.08) 0%, transparent 70%)',
+                          : mode === 'enterprise'
+                            ? 'radial-gradient(ellipse at 50% 0%, rgba(99,102,241,0.12) 0%, transparent 70%)'
+                            : 'radial-gradient(ellipse at 50% 0%, rgba(99,102,241,0.08) 0%, transparent 70%)',
                       }} />
 
                       {/* Icon */}
                       <div style={{
                         width:56, height:56, borderRadius:16, margin:'0 auto 24px',
-                        background: mode === 'table-service' ? 'rgba(249,115,22,0.1)' : 'rgba(99,102,241,0.1)',
-                        border: mode === 'table-service' ? '1px solid rgba(249,115,22,0.2)' : '1px solid rgba(99,102,241,0.2)',
+                        background: mode === 'table-service' ? 'rgba(249,115,22,0.1)' : mode === 'enterprise' ? 'rgba(99,102,241,0.15)' : 'rgba(99,102,241,0.1)',
+                        border: mode === 'table-service' ? '1px solid rgba(249,115,22,0.2)' : mode === 'enterprise' ? '1px solid rgba(99,102,241,0.35)' : '1px solid rgba(99,102,241,0.2)',
                         display:'flex', alignItems:'center', justifyContent:'center',
-                        boxShadow: mode === 'table-service' ? '0 0 32px rgba(249,115,22,0.12)' : '0 0 32px rgba(99,102,241,0.12)',
+                        boxShadow: mode === 'table-service' ? '0 0 32px rgba(249,115,22,0.12)' : mode === 'enterprise' ? '0 0 40px rgba(99,102,241,0.25)' : '0 0 32px rgba(99,102,241,0.12)',
                       }}>
                         {mode === 'table-service'
                           ? <UtensilsCrossed style={{ width:26, height:26, color:'#f97316' }} />
-                          : <Calendar style={{ width:26, height:26, color:'#818cf8' }} />
+                          : mode === 'enterprise'
+                            ? <Zap style={{ width:26, height:26, color:'#a5b4fc' }} />
+                            : <Calendar style={{ width:26, height:26, color:'#818cf8' }} />
                         }
                       </div>
 
@@ -3070,33 +3182,39 @@ export default function Home() {
                         fontFamily:'Syne,sans-serif', fontSize:'clamp(1.4rem,3vw,1.75rem)',
                         fontWeight:800, color:'#fff', lineHeight:1.2, marginBottom:10,
                       }}>
-                        {mode === 'table-service' ? 'Launch your venue' : 'Create your event'}
+                        {mode === 'table-service' ? 'Launch your venue' : mode === 'enterprise' ? 'Launch enterprise event' : 'Create your event'}
                       </p>
                       <p style={{ fontSize:14, color:'rgba(255,255,255,0.35)', marginBottom:36, lineHeight:1.6, maxWidth:260, margin:'0 auto 36px' }}>
                         {mode === 'table-service'
                           ? 'Set up your floor plan and start managing tables in under 60 seconds.'
-                          : 'Build your planning workspace in under 60 seconds. No credit card required.'}
+                          : mode === 'enterprise'
+                            ? 'Personalized QR invites, check-in dashboard, and real-time analytics for large events.'
+                            : 'Build your planning workspace in under 60 seconds. No credit card required.'}
                       </p>
 
                       <button
-                        onClick={() => { setWizardKey(k => k + 1); setWizardOpen(true); }}
+                        onClick={() => { setFormData(p => ({ ...p, isEnterpriseMode: mode === 'enterprise' })); setWizardKey(k => k + 1); setWizardOpen(true); }}
                         style={{
                           width:'100%', padding:'16px 28px', borderRadius:14, border:'none', cursor:'pointer',
                           background: mode === 'table-service'
                             ? 'linear-gradient(135deg, #f97316, #fb923c)'
-                            : 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+                            : mode === 'enterprise'
+                              ? 'linear-gradient(135deg, #4f46e5, #7c3aed)'
+                              : 'linear-gradient(135deg, #6366f1, #8b5cf6)',
                           color:'#fff', fontSize:15, fontWeight:700,
                           display:'flex', alignItems:'center', justifyContent:'center', gap:10,
                           transition:'transform 0.2s ease, box-shadow 0.2s ease',
                           boxShadow: mode === 'table-service'
                             ? '0 8px 28px rgba(249,115,22,0.35)'
-                            : '0 8px 28px rgba(99,102,241,0.35)',
+                            : mode === 'enterprise'
+                              ? '0 8px 32px rgba(79,70,229,0.5)'
+                              : '0 8px 28px rgba(99,102,241,0.35)',
                           fontFamily:'DM Sans,sans-serif',
                         }}
-                        onMouseEnter={e => { e.currentTarget.style.transform='translateY(-2px)'; e.currentTarget.style.boxShadow = mode === 'table-service' ? '0 14px 36px rgba(249,115,22,0.45)' : '0 14px 36px rgba(99,102,241,0.45)'; }}
-                        onMouseLeave={e => { e.currentTarget.style.transform=''; e.currentTarget.style.boxShadow = mode === 'table-service' ? '0 8px 28px rgba(249,115,22,0.35)' : '0 8px 28px rgba(99,102,241,0.35)'; }}
+                        onMouseEnter={e => { e.currentTarget.style.transform='translateY(-2px)'; e.currentTarget.style.boxShadow = mode === 'table-service' ? '0 14px 36px rgba(249,115,22,0.45)' : mode === 'enterprise' ? '0 16px 40px rgba(79,70,229,0.6)' : '0 14px 36px rgba(99,102,241,0.45)'; }}
+                        onMouseLeave={e => { e.currentTarget.style.transform=''; e.currentTarget.style.boxShadow = mode === 'table-service' ? '0 8px 28px rgba(249,115,22,0.35)' : mode === 'enterprise' ? '0 8px 32px rgba(79,70,229,0.5)' : '0 8px 28px rgba(99,102,241,0.35)'; }}
                       >
-                        {mode === 'table-service' ? 'Set up your venue' : 'Start building'}
+                        {mode === 'table-service' ? 'Set up your venue' : mode === 'enterprise' ? 'Set up enterprise event' : 'Start building'}
                         <ArrowRight style={{ width:18, height:18 }} />
                       </button>
 
@@ -3194,13 +3312,14 @@ export default function Home() {
                           { val:'standard',   label:'Standard',   sub:'Team planning'  },
                           { val:'enterprise', label:'Enterprise', sub:'Large + QR'     },
                         ].map(({ val, label, sub }) => (
-                          <button key={val} type="button" onClick={() => { setMode(val); setWizardKey(k => k + 1); }}
+                          <button key={val} type="button" onClick={() => { setMode(val); setFormData(p => ({ ...p, isEnterpriseMode: val === 'enterprise' })); setWizardKey(k => k + 1); }}
                             style={{
                               flex:1, padding:'9px 12px', borderRadius:10, border:'none', cursor:'pointer',
-                              background: mode === val ? '#fff' : 'transparent',
-                              color: mode === val ? '#111' : 'rgba(255,255,255,0.4)',
+                              background: mode === val ? (val === 'enterprise' ? 'rgba(99,102,241,0.9)' : '#fff') : 'transparent',
+                              color: mode === val ? (val === 'enterprise' ? '#fff' : '#111') : 'rgba(255,255,255,0.4)',
                               fontWeight:700, fontSize:13, transition:'all 0.2s ease',
                               fontFamily:'DM Sans,sans-serif',
+                              boxShadow: mode === val && val === 'enterprise' ? '0 0 20px rgba(99,102,241,0.35)' : 'none',
                             }}>
                             <div>{label}</div>
                             <div style={{ fontSize:11, opacity:0.6, fontWeight:400, marginTop:1 }}>{sub}</div>
