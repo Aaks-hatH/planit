@@ -495,6 +495,90 @@ const GLOBAL_CSS = `
     transition: left 0.3s ease, right 0.3s ease;
   }
   .nav-link:hover::after { left:10%; right:10%; }
+
+  /* ── Onboarding Wizard ─────────────────────────────────────────── */
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+  @keyframes wiz-in-right {
+    from { opacity:0; transform:translateX(36px); }
+    to   { opacity:1; transform:translateX(0); }
+  }
+  @keyframes wiz-in-left {
+    from { opacity:0; transform:translateX(-36px); }
+    to   { opacity:1; transform:translateX(0); }
+  }
+  @keyframes wiz-q-in {
+    from { opacity:0; transform:translateY(14px); }
+    to   { opacity:1; transform:translateY(0); }
+  }
+  @keyframes wiz-pop {
+    0%   { opacity:0; transform:scale(0.88); }
+    70%  { transform:scale(1.04); }
+    100% { opacity:1; transform:scale(1); }
+  }
+  @keyframes wiz-check {
+    0%   { opacity:0; transform:scale(0.5) rotate(-15deg); }
+    60%  { transform:scale(1.2) rotate(6deg); }
+    100% { opacity:1; transform:scale(1) rotate(0deg); }
+  }
+  .wiz-forward  { animation: wiz-in-right 0.34s cubic-bezier(0.22,1,0.36,1) both; }
+  .wiz-back     { animation: wiz-in-left  0.34s cubic-bezier(0.22,1,0.36,1) both; }
+  .wiz-question { animation: wiz-q-in 0.4s cubic-bezier(0.22,1,0.36,1) both; }
+  .wiz-card-pop { animation: wiz-pop 0.28s cubic-bezier(0.22,1,0.36,1) both; }
+  .wiz-type-card {
+    transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+    cursor: pointer;
+  }
+  .wiz-type-card:hover  { transform: translateY(-3px) scale(1.02); }
+  .wiz-type-card.active { transform: translateY(-2px) scale(1.04); }
+  .wiz-input {
+    width:100%; background:rgba(10,10,20,0.7); border:1px solid rgba(255,255,255,0.1);
+    border-radius:14px; color:#fff; font-size:16px; padding:14px 18px;
+    outline:none; transition:border-color 0.2s ease, box-shadow 0.2s ease;
+    font-family:'DM Sans',sans-serif;
+  }
+  .wiz-input::placeholder { color:rgba(255,255,255,0.25); }
+  .wiz-input:focus { border-color:rgba(255,255,255,0.3); box-shadow:0 0 0 3px rgba(99,102,241,0.12); }
+  .wiz-input.error { border-color:rgba(239,68,68,0.6); box-shadow:0 0 0 3px rgba(239,68,68,0.1); }
+  .wiz-input-venue:focus { border-color:rgba(249,115,22,0.4); box-shadow:0 0 0 3px rgba(249,115,22,0.1); }
+  .wiz-btn-next {
+    background:#fff; color:#111; border:none; border-radius:14px;
+    font-size:15px; font-weight:700; padding:14px 28px; cursor:pointer;
+    transition:transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+    display:flex; align-items:center; gap:8px; white-space:nowrap;
+  }
+  .wiz-btn-next:hover:not(:disabled) { transform:translateY(-2px); box-shadow:0 12px 32px rgba(0,0,0,0.35); }
+  .wiz-btn-next:disabled { opacity:0.45; cursor:not-allowed; }
+  .wiz-btn-next.venue { background:#f97316; color:#fff; }
+  .wiz-btn-next.venue:hover:not(:disabled) { background:#fb923c; box-shadow:0 12px 32px rgba(249,115,22,0.3); }
+  .wiz-btn-back {
+    background:transparent; color:rgba(255,255,255,0.4); border:1px solid rgba(255,255,255,0.1);
+    border-radius:14px; font-size:14px; font-weight:600; padding:14px 20px; cursor:pointer;
+    transition:color 0.2s ease, border-color 0.2s ease, background 0.2s ease;
+    display:flex; align-items:center; gap:6px;
+  }
+  .wiz-btn-back:hover { color:rgba(255,255,255,0.8); border-color:rgba(255,255,255,0.25); background:rgba(255,255,255,0.04); }
+  .wiz-pill {
+    width:28px; height:6px; border-radius:99px;
+    transition:background 0.3s ease, width 0.3s ease;
+  }
+  .wiz-select {
+    width:100%; background:rgba(10,10,20,0.7); border:1px solid rgba(255,255,255,0.1);
+    border-radius:14px; color:#fff; font-size:15px; padding:13px 18px;
+    outline:none; appearance:none; cursor:pointer;
+    font-family:'DM Sans',sans-serif;
+    transition:border-color 0.2s ease;
+  }
+  .wiz-select:focus { border-color:rgba(255,255,255,0.3); }
+  .dark-input {
+    width:100%; background:rgba(10,10,20,0.7); border:1px solid rgba(255,255,255,0.1);
+    border-radius:10px; color:#fff; font-size:14px; padding:11px 14px;
+    outline:none; transition:border-color 0.2s ease;
+    font-family:'DM Sans',sans-serif;
+  }
+  .dark-input::placeholder { color:rgba(255,255,255,0.25); }
+  .dark-input:focus { border-color:rgba(255,255,255,0.28); }
 `;
 
 function InjectGlobalCSS() {
@@ -1298,6 +1382,459 @@ import CrossPlatformAd from '../components/CrossPlatformAd';
 // MAIN
 // 
 
+// ─────────────────────────────────────────────────────────────────────────────
+// ONBOARDING WIZARD
+// ─────────────────────────────────────────────────────────────────────────────
+const EVENT_TYPES = [
+  { id:'wedding',    emoji:'💍', label:'Wedding',          hint:'Ceremony, reception, the works' },
+  { id:'birthday',   emoji:'🎂', label:'Birthday',         hint:'Milestone or casual celebration' },
+  { id:'conference', emoji:'🎤', label:'Conference',       hint:'Speakers, sessions, networking' },
+  { id:'corporate',  emoji:'🏢', label:'Corporate',        hint:'Retreat, offsite, team event' },
+  { id:'festival',   emoji:'🎪', label:'Festival',         hint:'Multi-stage, outdoor, crowd' },
+  { id:'other',      emoji:'✨', label:'Other',            hint:'Something totally unique' },
+];
+const VENUE_TYPES = [
+  { id:'restaurant', emoji:'🍽️', label:'Restaurant',       hint:'Full-service dining floor' },
+  { id:'cafe',       emoji:'☕', label:'Café',             hint:'Counter service & tables' },
+  { id:'bar',        emoji:'🍸', label:'Bar / Pub',        hint:'Drinks-led with seating' },
+  { id:'popup',      emoji:'🏕️', label:'Pop-up',           hint:'Temporary or market stall' },
+  { id:'hotel',      emoji:'🏨', label:'Hotel dining',     hint:'In-house restaurant or lounge' },
+  { id:'other',      emoji:'🏠', label:'Other venue',      hint:'Something different entirely' },
+];
+
+function OnboardingWizard({ mode, formData, setFormData, fieldErrors, setFieldErrors, onSubmit, loading }) {
+  const isVenue = mode === 'table-service';
+  const accent  = isVenue ? '#f97316' : '#6366f1';
+  const accentHover = isVenue ? '#fb923c' : '#818cf8';
+
+  const [step, setStep]           = useState(0);
+  const [dir, setDir]             = useState('forward');
+  const [stepKey, setStepKey]     = useState(0);
+  const [eventType, setEventType] = useState('');
+  const [venueType, setVenueType] = useState('');
+  const [showPw, setShowPw]       = useState(false);
+  const [showPw2, setShowPw2]     = useState(false);
+  const [localErr, setLocalErr]   = useState({});
+  const firstInputRef             = useRef(null);
+
+  // Focus first input on step change
+  useEffect(() => {
+    const t = setTimeout(() => firstInputRef.current?.focus(), 360);
+    return () => clearTimeout(t);
+  }, [step]);
+
+  const totalSteps = isVenue ? 4 : 5;
+
+  const go = (delta) => {
+    setDir(delta > 0 ? 'forward' : 'back');
+    setStep(s => s + delta);
+    setStepKey(k => k + 1);
+    setLocalErr({});
+  };
+
+  const validate = () => {
+    const e = {};
+    if (step === 1) {
+      if (!formData.title.trim()) e.title = isVenue ? 'Venue name is required.' : 'Event title is required.';
+    }
+    if (!isVenue && step === 2) {
+      if (!formData.date)     e.date     = 'Date and time is required.';
+      if (!formData.timezone) e.timezone = 'Timezone is required.';
+    }
+    const nameStep = isVenue ? 2 : 3;
+    if (step === nameStep) {
+      if (!formData.organizerName.trim()) e.organizerName = isVenue ? 'Manager name is required.' : 'Your name is required.';
+      if (!formData.organizerEmail.trim()) e.organizerEmail = 'Email is required.';
+      else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.organizerEmail.trim())) e.organizerEmail = 'Please enter a valid email.';
+    }
+    const pwStep = isVenue ? 3 : 4;
+    if (step === pwStep) {
+      if (!formData.accountPassword) e.accountPassword = 'Password is required.';
+      else if (formData.accountPassword.length < 4) e.accountPassword = 'Must be at least 4 characters.';
+    }
+    setLocalErr(e);
+    return Object.keys(e).length === 0;
+  };
+
+  const next = () => {
+    if (!validate()) return;
+    if (step < totalSteps - 1) { go(1); }
+    else { onSubmit(); }
+  };
+
+  const update = (field) => (e) => {
+    setFormData(p => ({ ...p, [field]: e.target.value }));
+    if (localErr[field]) setLocalErr(p => ({ ...p, [field]: '' }));
+    if (fieldErrors[field]) setFieldErrors(p => ({ ...p, [field]: '' }));
+  };
+
+  const handleTitleChange = (e) => {
+    const title = e.target.value;
+    setFormData(prev => ({
+      ...prev, title,
+      subdomain: prev._subdomainTouched ? prev.subdomain : makeSubdomain(title),
+    }));
+    if (localErr.title) setLocalErr(p => ({ ...p, title: '' }));
+  };
+
+  // Merge server-side errors into localErr
+  const err = { ...localErr, ...fieldErrors };
+
+  // ── Step content factory ────────────────────────────────────────────────────
+  const renderStep = () => {
+    // Step 0: type picker
+    if (step === 0) {
+      const types = isVenue ? VENUE_TYPES : EVENT_TYPES;
+      const selected = isVenue ? venueType : eventType;
+      const setSelected = isVenue
+        ? (id) => { setVenueType(id); }
+        : (id) => { setEventType(id); };
+      return (
+        <div>
+          <p className="wiz-question" style={{ fontSize:'clamp(1.5rem,4vw,2.2rem)', fontFamily:'Syne,sans-serif', fontWeight:800, color:'#fff', lineHeight:1.15, marginBottom:8 }}>
+            {isVenue ? 'What kind of venue?' : 'What are you planning?'}
+          </p>
+          <p style={{ fontSize:14, color:'rgba(255,255,255,0.35)', marginBottom:28 }}>
+            This helps us personalise your setup — you can change anything later.
+          </p>
+          <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(140px,1fr))', gap:10, marginBottom:4 }}>
+            {types.map((t, i) => {
+              const active = selected === t.id;
+              return (
+                <button key={t.id} type="button"
+                  className={`wiz-type-card${active ? ' active' : ''}`}
+                  style={{
+                    background: active ? (isVenue ? 'rgba(249,115,22,0.15)' : 'rgba(99,102,241,0.15)') : 'rgba(255,255,255,0.03)',
+                    border: `1.5px solid ${active ? accent : 'rgba(255,255,255,0.08)'}`,
+                    borderRadius:14, padding:'14px 10px', textAlign:'center',
+                    boxShadow: active ? `0 0 24px ${accent}30` : 'none',
+                    animationDelay:`${i*0.04}s`,
+                  }}
+                  onClick={() => { setSelected(t.id); }}
+                >
+                  <div style={{ fontSize:26, marginBottom:6 }}>{t.emoji}</div>
+                  <div style={{ fontSize:13, fontWeight:700, color: active ? '#fff' : 'rgba(255,255,255,0.6)', marginBottom:3 }}>{t.label}</div>
+                  <div style={{ fontSize:11, color:'rgba(255,255,255,0.3)', lineHeight:1.3 }}>{t.hint}</div>
+                </button>
+              );
+            })}
+          </div>
+          {selected && (
+            <p style={{ fontSize:12, color: isVenue ? '#fb923c' : '#818cf8', marginTop:12 }}>
+              ✓ Great choice — let's name it.
+            </p>
+          )}
+        </div>
+      );
+    }
+
+    // Step 1: Name
+    if (step === 1) {
+      return (
+        <div style={{ display:'flex', flexDirection:'column', gap:18 }}>
+          <div>
+            <p className="wiz-question" style={{ fontSize:'clamp(1.5rem,4vw,2.2rem)', fontFamily:'Syne,sans-serif', fontWeight:800, color:'#fff', lineHeight:1.15, marginBottom:8 }}>
+              {isVenue ? 'What\'s your venue called?' : 'What\'s your event called?'}
+            </p>
+            <p style={{ fontSize:14, color:'rgba(255,255,255,0.35)', marginBottom:24 }}>
+              {isVenue ? 'Your restaurant name — guests will see this.' : 'Give it a name your team will recognise.'}
+            </p>
+          </div>
+          <div>
+            <input
+              ref={firstInputRef}
+              type="text"
+              className={`wiz-input${isVenue ? ' wiz-input-venue' : ''}${err.title ? ' error' : ''}`}
+              placeholder={isVenue ? 'Taverna Roma, The Oak Room…' : 'Summer Company Retreat 2025'}
+              value={formData.title}
+              onChange={handleTitleChange}
+              onKeyDown={e => e.key === 'Enter' && next()}
+              autoComplete="off"
+            />
+            {err.title && <p style={{ fontSize:12, color:'#f87171', marginTop:6, display:'flex', alignItems:'center', gap:5 }}><AlertCircle style={{ width:12, height:12 }} />{err.title}</p>}
+          </div>
+          {formData.title && (
+            <div style={{ background:'rgba(255,255,255,0.03)', border:'1px solid rgba(255,255,255,0.07)', borderRadius:12, padding:'10px 14px' }}>
+              <p style={{ fontSize:11, color:'rgba(255,255,255,0.3)', marginBottom:4, textTransform:'uppercase', letterSpacing:'0.12em' }}>Your URL</p>
+              <div style={{ display:'flex', alignItems:'center', gap:0 }}>
+                <span style={{ fontSize:13, color:'rgba(255,255,255,0.25)', fontFamily:'monospace' }}>/e/</span>
+                <input
+                  type="text"
+                  value={formData.subdomain}
+                  onChange={(e) => {
+                    const cleaned = e.target.value.toLowerCase().replace(/[^a-z0-9-]/g,'-').replace(/-{2,}/g,'-');
+                    setFormData(p => ({ ...p, subdomain: cleaned, _subdomainTouched: true }));
+                  }}
+                  style={{ flex:1, background:'transparent', border:'none', outline:'none', color:'rgba(255,255,255,0.7)', fontFamily:'monospace', fontSize:13 }}
+                  spellCheck={false}
+                />
+              </div>
+            </div>
+          )}
+          {!isVenue && (
+            <div>
+              <textarea
+                className={`wiz-input${err.description ? ' error' : ''}`}
+                style={{ resize:'none', minHeight:80 }}
+                placeholder="A short description (optional)"
+                value={formData.description}
+                onChange={update('description')}
+                rows={3}
+              />
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    // Events Step 2: Date + location + enterprise
+    if (!isVenue && step === 2) {
+      return (
+        <div style={{ display:'flex', flexDirection:'column', gap:18 }}>
+          <div>
+            <p className="wiz-question" style={{ fontSize:'clamp(1.5rem,4vw,2.2rem)', fontFamily:'Syne,sans-serif', fontWeight:800, color:'#fff', lineHeight:1.15, marginBottom:8 }}>
+              When and where?
+            </p>
+            <p style={{ fontSize:14, color:'rgba(255,255,255,0.35)', marginBottom:24 }}>
+              Set the date and location — guests see this on their invite.
+            </p>
+          </div>
+          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 }}>
+            <div style={{ gridColumn:'1/-1' }}>
+              <label style={{ fontSize:12, color:'rgba(255,255,255,0.4)', display:'block', marginBottom:6, textTransform:'uppercase', letterSpacing:'0.1em' }}>Date & time *</label>
+              <input
+                ref={firstInputRef}
+                type="datetime-local"
+                className={`wiz-input${err.date ? ' error' : ''}`}
+                value={formData.date}
+                onChange={update('date')}
+                style={{ colorScheme:'dark' }}
+              />
+              {err.date && <p style={{ fontSize:12, color:'#f87171', marginTop:5 }}>{err.date}</p>}
+            </div>
+            <div style={{ gridColumn:'1/-1' }}>
+              <label style={{ fontSize:12, color:'rgba(255,255,255,0.4)', display:'block', marginBottom:6, textTransform:'uppercase', letterSpacing:'0.1em' }}>Timezone *</label>
+              <div style={{ position:'relative' }}>
+                <select className="wiz-select" value={formData.timezone} onChange={update('timezone')}>
+                  {getTimezoneOptions().map(tz => <option key={tz.value} value={tz.value}>{tz.label}</option>)}
+                </select>
+                <ChevronRight style={{ position:'absolute', right:14, top:'50%', transform:'translateY(-50%) rotate(90deg)', width:16, height:16, color:'rgba(255,255,255,0.3)', pointerEvents:'none' }} />
+              </div>
+            </div>
+            <div style={{ gridColumn:'1/-1' }}>
+              <label style={{ fontSize:12, color:'rgba(255,255,255,0.4)', display:'block', marginBottom:6, textTransform:'uppercase', letterSpacing:'0.1em' }}>Location</label>
+              <input
+                type="text"
+                className="wiz-input"
+                placeholder="Central Park, NYC"
+                value={formData.location}
+                onChange={update('location')}
+              />
+            </div>
+          </div>
+          {/* Enterprise toggle */}
+          <div
+            onClick={() => setFormData(p => ({ ...p, isEnterpriseMode: !p.isEnterpriseMode }))}
+            style={{
+              background: formData.isEnterpriseMode ? 'rgba(99,102,241,0.1)' : 'rgba(255,255,255,0.03)',
+              border: `1.5px solid ${formData.isEnterpriseMode ? 'rgba(99,102,241,0.4)' : 'rgba(255,255,255,0.07)'}`,
+              borderRadius:14, padding:'14px 16px', cursor:'pointer',
+              display:'flex', alignItems:'center', justifyContent:'space-between',
+              transition:'all 0.2s ease',
+            }}
+          >
+            <div>
+              <p style={{ fontSize:14, fontWeight:700, color: formData.isEnterpriseMode ? '#a5b4fc' : 'rgba(255,255,255,0.6)', marginBottom:2 }}>
+                <Zap style={{ width:14, height:14, display:'inline', marginRight:6, verticalAlign:'middle' }} />Enterprise mode
+              </p>
+              <p style={{ fontSize:12, color:'rgba(255,255,255,0.3)' }}>Personalized QR invites, check-in dashboard, real-time analytics</p>
+            </div>
+            <div style={{
+              width:44, height:24, borderRadius:12,
+              background: formData.isEnterpriseMode ? '#6366f1' : 'rgba(255,255,255,0.1)',
+              transition:'background 0.2s ease', flexShrink:0, position:'relative',
+            }}>
+              <div style={{
+                width:18, height:18, borderRadius:'50%', background:'#fff',
+                position:'absolute', top:3, transition:'left 0.2s ease',
+                left: formData.isEnterpriseMode ? 23 : 3,
+              }} />
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // Name step (events: 3, venue: 2)
+    const nameStep = isVenue ? 2 : 3;
+    if (step === nameStep) {
+      return (
+        <div style={{ display:'flex', flexDirection:'column', gap:18 }}>
+          <div>
+            <p className="wiz-question" style={{ fontSize:'clamp(1.5rem,4vw,2.2rem)', fontFamily:'Syne,sans-serif', fontWeight:800, color:'#fff', lineHeight:1.15, marginBottom:8 }}>
+              {isVenue ? 'Who manages this venue?' : 'Who\'s organizing this?'}
+            </p>
+            <p style={{ fontSize:14, color:'rgba(255,255,255,0.35)', marginBottom:24 }}>
+              {isVenue ? 'We\'ll send important updates here and you\'ll use this to log back in.' : 'This is your organizer account — keep these details safe.'}
+            </p>
+          </div>
+          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 }}>
+            <div style={{ gridColumn:'1/-1' }}>
+              <label style={{ fontSize:12, color:'rgba(255,255,255,0.4)', display:'block', marginBottom:6, textTransform:'uppercase', letterSpacing:'0.1em' }}>{isVenue ? 'Manager name' : 'Your name'} *</label>
+              <input
+                ref={firstInputRef}
+                type="text"
+                className={`wiz-input${isVenue ? ' wiz-input-venue' : ''}${err.organizerName ? ' error' : ''}`}
+                placeholder={isVenue ? 'Head Manager' : 'Alex Smith'}
+                value={formData.organizerName}
+                onChange={update('organizerName')}
+                onKeyDown={e => e.key === 'Enter' && next()}
+              />
+              {err.organizerName && <p style={{ fontSize:12, color:'#f87171', marginTop:5 }}>{err.organizerName}</p>}
+            </div>
+            <div style={{ gridColumn:'1/-1' }}>
+              <label style={{ fontSize:12, color:'rgba(255,255,255,0.4)', display:'block', marginBottom:6, textTransform:'uppercase', letterSpacing:'0.1em' }}>{isVenue ? 'Manager email' : 'Your email'} *</label>
+              <input
+                type="email"
+                className={`wiz-input${isVenue ? ' wiz-input-venue' : ''}${err.organizerEmail ? ' error' : ''}`}
+                placeholder={isVenue ? 'manager@restaurant.com' : 'alex@company.com'}
+                value={formData.organizerEmail}
+                onChange={update('organizerEmail')}
+                onKeyDown={e => e.key === 'Enter' && next()}
+              />
+              {err.organizerEmail && <p style={{ fontSize:12, color:'#f87171', marginTop:5 }}>{err.organizerEmail}</p>}
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // Password step (events: 4, venue: 3)
+    const pwStep = isVenue ? 3 : 4;
+    if (step === pwStep) {
+      const secondPwLabel = isVenue ? 'Staff password' : 'Event password';
+      const secondPwHint  = isVenue ? 'PIN your floor staff enter to log in (optional)' : 'Restrict who can join your event (optional)';
+      return (
+        <div style={{ display:'flex', flexDirection:'column', gap:18 }}>
+          <div>
+            <p className="wiz-question" style={{ fontSize:'clamp(1.5rem,4vw,2.2rem)', fontFamily:'Syne,sans-serif', fontWeight:800, color:'#fff', lineHeight:1.15, marginBottom:8 }}>
+              {isVenue ? 'Secure your venue.' : 'Secure your event.'}
+            </p>
+            <p style={{ fontSize:14, color:'rgba(255,255,255,0.35)', marginBottom:24 }}>
+              {isVenue
+                ? 'Set a password to manage the venue. Share a staff PIN with your team.'
+                : 'Your account password gets you back in from any device.'}
+            </p>
+          </div>
+          <div>
+            <label style={{ fontSize:12, color:'rgba(255,255,255,0.4)', display:'block', marginBottom:6, textTransform:'uppercase', letterSpacing:'0.1em' }}>
+              <Lock style={{ width:12, height:12, display:'inline', marginRight:5, verticalAlign:'middle' }} />
+              {isVenue ? 'Organizer password' : 'Account password'} *
+            </label>
+            <div style={{ position:'relative' }}>
+              <input
+                ref={firstInputRef}
+                type={showPw ? 'text' : 'password'}
+                className={`wiz-input${isVenue ? ' wiz-input-venue' : ''}${err.accountPassword ? ' error' : ''}`}
+                style={{ paddingRight:48 }}
+                placeholder="Minimum 4 characters"
+                value={formData.accountPassword}
+                onChange={update('accountPassword')}
+                minLength={4}
+                onKeyDown={e => e.key === 'Enter' && next()}
+              />
+              <button type="button" onClick={() => setShowPw(p => !p)}
+                style={{ position:'absolute', right:14, top:'50%', transform:'translateY(-50%)', background:'none', border:'none', cursor:'pointer', color:'rgba(255,255,255,0.35)', display:'flex', alignItems:'center' }}>
+                {showPw ? <EyeOff style={{ width:18, height:18 }} /> : <Eye style={{ width:18, height:18 }} />}
+              </button>
+            </div>
+            {err.accountPassword && <p style={{ fontSize:12, color:'#f87171', marginTop:5, display:'flex', alignItems:'center', gap:5 }}><AlertCircle style={{ width:12, height:12 }} />{err.accountPassword}</p>}
+          </div>
+          <div>
+            <label style={{ fontSize:12, color:'rgba(255,255,255,0.4)', display:'block', marginBottom:6, textTransform:'uppercase', letterSpacing:'0.1em' }}>
+              <Shield style={{ width:12, height:12, display:'inline', marginRight:5, verticalAlign:'middle' }} />
+              {secondPwLabel} <span style={{ color:'rgba(255,255,255,0.2)', textTransform:'none', letterSpacing:'normal', fontSize:11 }}>— optional</span>
+            </label>
+            <div style={{ position:'relative' }}>
+              <input
+                type={showPw2 ? 'text' : 'password'}
+                className={`wiz-input${isVenue ? ' wiz-input-venue' : ''}`}
+                style={{ paddingRight:48 }}
+                placeholder={isVenue ? 'Staff PIN or password' : 'Leave empty for open access'}
+                value={isVenue ? formData.staffPassword : formData.password}
+                onChange={update(isVenue ? 'staffPassword' : 'password')}
+              />
+              <button type="button" onClick={() => setShowPw2(p => !p)}
+                style={{ position:'absolute', right:14, top:'50%', transform:'translateY(-50%)', background:'none', border:'none', cursor:'pointer', color:'rgba(255,255,255,0.35)', display:'flex', alignItems:'center' }}>
+                {showPw2 ? <EyeOff style={{ width:18, height:18 }} /> : <Eye style={{ width:18, height:18 }} />}
+              </button>
+            </div>
+            <p style={{ fontSize:12, color:'rgba(255,255,255,0.25)', marginTop:6 }}>{secondPwHint}</p>
+          </div>
+        </div>
+      );
+    }
+
+    return null;
+  };
+
+  const isLastStep = step === totalSteps - 1;
+  const canSkipType = step === 0; // type picker: can proceed without selection
+
+  return (
+    <div style={{ display:'flex', flexDirection:'column', gap:0 }}>
+      {/* Progress bar */}
+      <div style={{ display:'flex', alignItems:'center', gap:6, marginBottom:36 }}>
+        {Array.from({ length: totalSteps }).map((_, i) => (
+          <div key={i} className="wiz-pill" style={{
+            background: i < step ? accent : i === step ? accent : 'rgba(255,255,255,0.1)',
+            width: i === step ? 40 : 28,
+            opacity: i > step ? 0.4 : 1,
+          }} />
+        ))}
+        <span style={{ marginLeft:'auto', fontSize:12, color:'rgba(255,255,255,0.3)', whiteSpace:'nowrap' }}>
+          Step {step + 1} of {totalSteps}
+        </span>
+      </div>
+
+      {/* Animated step content */}
+      <div key={stepKey} className={dir === 'forward' ? 'wiz-forward' : 'wiz-back'}
+        style={{ minHeight:260 }}>
+        {renderStep()}
+      </div>
+
+      {/* Nav */}
+      <div style={{ display:'flex', gap:10, marginTop:36 }}>
+        {step > 0 && (
+          <button className="wiz-btn-back" type="button" onClick={() => go(-1)}>
+            <ArrowRight style={{ width:14, height:14, transform:'rotate(180deg)' }} /> Back
+          </button>
+        )}
+        <button
+          className={`wiz-btn-next${isVenue ? ' venue' : ''}`}
+          type="button"
+          onClick={next}
+          disabled={loading}
+          style={{ flex:1, justifyContent:'center' }}
+        >
+          {loading ? (
+            <><div style={{ width:16, height:16, border:`2px solid ${isVenue ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.3)'}`, borderTop:`2px solid ${isVenue ? '#fff' : '#111'}`, borderRadius:'50%', animation:'spin 0.7s linear infinite' }} />Creating…</>
+          ) : isLastStep ? (
+            <>{isVenue ? 'Launch venue' : 'Create event'} <ArrowRight style={{ width:16, height:16 }} /></>
+          ) : (
+            <>Continue <ArrowRight style={{ width:16, height:16 }} /></>
+          )}
+        </button>
+      </div>
+
+      {/* Keyboard hint */}
+      <p style={{ fontSize:11, color:'rgba(255,255,255,0.18)', textAlign:'center', marginTop:12 }}>
+        Press Enter to continue · Esc to go back
+      </p>
+    </div>
+  );
+}
+
 export default function Home() {
   const { wl, isWL } = useWhiteLabel();
   const wlName    = isWL ? (wl?.branding?.companyName || wl?.clientName || '') : '';
@@ -1328,12 +1865,14 @@ export default function Home() {
   const [fieldErrors, setFieldErrors] = useState({});
   const [selectedBranch, setSelectedBranch] = useState(null); // null | 'events' | 'venue'
   const [loadingDone, setLoadingDone] = useState(false);
+  const [wizardKey, setWizardKey] = useState(0); // increment to hard-reset the wizard
   // On white-label domains, skip the branch selector and go straight to event creation
   useEffect(() => { if (isWL) { setSelectedBranch('events'); setLoadingDone(true); } }, [isWL]);
 
   const selectBranch = (branch) => {
     setSelectedBranch(branch);
     setMode(branch === 'venue' ? 'table-service' : 'standard');
+    setWizardKey(k => k + 1); // reset wizard to step 0
     setTimeout(() => {
       document.getElementById(branch === 'venue' ? 'planit-venue' : 'planit-events')
         ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -1351,7 +1890,7 @@ export default function Home() {
   const sanitize = (str) => (str || '').trim().replace(/\s+/g, ' ');
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
+    if (e && e.preventDefault) e.preventDefault();
 
     //  Client-side field validation 
     const errs = {};
@@ -1391,7 +1930,7 @@ export default function Home() {
       password:       formData.password || undefined,
       staffPassword:  (isTS && formData.staffPassword) ? formData.staffPassword : undefined,
       subdomain:      formData.subdomain || makeSubdomain(formData.title) || `event-${Date.now()}`,
-      isEnterpriseMode: mode === 'enterprise',
+      isEnterpriseMode: mode === 'enterprise' || formData.isEnterpriseMode,
       isTableServiceMode: isTS,
       maxParticipants: formData.maxParticipants,
     };
@@ -2458,193 +2997,39 @@ export default function Home() {
 
               {!created && (
                 <Reveal delay={80}>
-                  <div className="bg-neutral-900/60 rounded-3xl border border-neutral-800 p-5 sm:p-10 hover:border-neutral-700 transition-all duration-500 sticky top-24">
-                    <div className="mb-8 p-5 bg-neutral-950/80 rounded-2xl border border-neutral-800">
-                      <label className="block text-xs font-bold text-neutral-500 uppercase tracking-wider mb-4">Mode</label>
-                      <div className={`grid gap-2 ${selectedBranch === 'venue' ? 'grid-cols-1' : 'grid-cols-2'}`}>
+                  <div className="bg-neutral-900/60 rounded-3xl border border-neutral-800 p-6 sm:p-10 hover:border-neutral-700 transition-all duration-500 sticky top-24">
+                    {/* Mode selector — compact pill row */}
+                    {selectedBranch !== 'venue' && (
+                      <div style={{ display:'flex', gap:6, marginBottom:28, padding:'6px', background:'rgba(255,255,255,0.03)', borderRadius:14, border:'1px solid rgba(255,255,255,0.06)' }}>
                         {[
-                          { val: 'standard',      label: 'Standard',      sub: 'Team planning',     branch: 'events' },
-                          { val: 'enterprise',    label: 'Enterprise',    sub: 'Large events + QR', branch: 'events' },
-                          { val: 'table-service', label: isWL ? 'Venue' : 'PlanIt Venue', sub: 'Restaurant floor', branch: 'venue' },
-                        ].filter(({ branch }) => !selectedBranch || branch === selectedBranch).map(({ val, label, sub }) => (
-                          <button key={val} type="button" onClick={() => setMode(val)}
+                          { val:'standard',   label:'Standard',   sub:'Team planning'  },
+                          { val:'enterprise', label:'Enterprise', sub:'Large + QR'     },
+                        ].map(({ val, label, sub }) => (
+                          <button key={val} type="button" onClick={() => { setMode(val); setWizardKey(k => k + 1); }}
                             data-mode={val}
-                            className={`px-3 py-4 text-sm font-bold rounded-2xl border-2 transition-all duration-300 ${mode === val ? 'bg-white text-neutral-900 border-white shadow-lg scale-[1.03]' : 'bg-neutral-900 text-neutral-400 border-neutral-700 hover:border-neutral-500 hover:scale-[1.02]'}`}>
-                            <div className="font-bold mb-1 text-xs sm:text-sm">{label}</div>
-                            <div className="text-xs opacity-70 hidden sm:block">{sub}</div>
+                            style={{
+                              flex:1, padding:'9px 12px', borderRadius:10, border:'none', cursor:'pointer',
+                              background: mode === val ? '#fff' : 'transparent',
+                              color: mode === val ? '#111' : 'rgba(255,255,255,0.4)',
+                              fontWeight:700, fontSize:13, transition:'all 0.2s ease',
+                            }}>
+                            <div>{label}</div>
+                            <div style={{ fontSize:11, opacity:0.6, fontWeight:400, marginTop:1 }}>{sub}</div>
                           </button>
                         ))}
                       </div>
-                      {mode === 'table-service' && (
-                        <div className="mt-3 flex items-start gap-2 p-3 bg-orange-500/10 border border-orange-500/20 rounded-xl">
-                          <UtensilsCrossed className="w-4 h-4 text-orange-400 flex-shrink-0 mt-0.5" />
-                          <p className="text-xs text-orange-300/80 leading-relaxed">Restaurant & venue mode. Your floor plan and data are <strong className="text-orange-300">never auto-deleted</strong> — they persist until you choose to clear them.</p>
-                        </div>
-                      )}
-                    </div>
+                    )}
 
-                    <form onSubmit={handleSubmit} className="space-y-6">
-                      <div>
-                        <label className="block text-sm font-bold text-neutral-300 mb-2">{mode === 'table-service' ? 'Restaurant name' : 'Event title'} <span className="text-red-400">*</span></label>
-                        <input type="text" required
-                          className={`dark-input ${fieldErrors.title ? 'border-red-500 focus:border-red-400' : ''}`}
-                          placeholder={mode === 'table-service' ? 'Taverna Roma, The Oak Room...' : 'Summer Company Retreat 2025'}
-                          value={formData.title}
-                          onChange={(e) => { handleTitleChange(e); if (fieldErrors.title) setFieldErrors(p => ({...p, title: ''})); }}
-                        />
-                        {fieldErrors.title && <p className="field-error text-xs text-red-400 mt-1.5 flex items-center gap-1"><AlertCircle className="w-3 h-3" />{fieldErrors.title}</p>}
-                      </div>
-
-                      {/* URL field — always rendered, fades in when title is present */}
-                      <div className={`transition-all duration-300 ${formData.title ? 'opacity-100' : 'opacity-0 pointer-events-none h-0 overflow-hidden'}`}>
-                        <label className="block text-xs font-semibold text-neutral-500 uppercase tracking-widest mb-1.5">
-                          {mode === 'table-service' ? 'Venue' : 'Event'} URL{formData._subdomainTouched && <span className="ml-2 text-neutral-600 normal-case tracking-normal font-normal">· custom</span>}
-                        </label>
-                        <div className="flex items-center bg-neutral-950/60 border border-neutral-800 rounded-lg overflow-hidden focus-within:border-neutral-600 transition-colors">
-                          <span className="pl-3 pr-1 text-xs text-neutral-600 font-mono whitespace-nowrap flex-shrink-0">/e/</span>
-                          <input
-                            type="text"
-                            value={formData.subdomain}
-                            onChange={(e) => {
-                              const cleaned = e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '-').replace(/-{2,}/g, '-');
-                              setFormData(prev => ({ ...prev, subdomain: cleaned, _subdomainTouched: true }));
-                            }}
-                            className="flex-1 bg-transparent text-xs text-neutral-300 font-mono font-bold py-2 pr-3 outline-none min-w-0"
-                            spellCheck={false}
-                            autoComplete="off"
-                          />
-                          {formData._subdomainTouched && (
-                            <button
-                              type="button"
-                              onClick={() => setFormData(prev => ({ ...prev, subdomain: makeSubdomain(prev.title), _subdomainTouched: false }))}
-                              className="px-3 py-2 text-xs text-neutral-600 hover:text-neutral-400 transition-colors border-l border-neutral-800 flex-shrink-0"
-                              title="Reset to auto-generated"
-                            >
-                              Reset
-                            </button>
-                          )}
-                        </div>
-                        <p className="text-xs text-neutral-700 mt-1">Lowercase letters, numbers, and hyphens only.</p>
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-bold text-neutral-300 mb-2">Description</label>
-                        <textarea className="dark-input resize-none" rows="3" placeholder={mode === 'table-service' ? 'A short description of your venue (optional)' : "What's this event about?"} value={formData.description} onChange={update('description')} />
-                      </div>
-                      {mode !== 'table-service' && (
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div>
-                          <label className="block text-sm font-bold text-neutral-300 mb-2">Date and time <span className="text-red-400">*</span></label>
-                          <input type="datetime-local" required
-                            className={`dark-input ${fieldErrors.date ? 'border-red-500 focus:border-red-400' : ''}`}
-                            value={formData.date}
-                            onChange={(e) => { update('date')(e); setFieldErrors(p => ({...p, date: ''})); }}
-                          />
-                          {fieldErrors.date && <p className="field-error text-xs text-red-400 mt-1">{fieldErrors.date}</p>}
-                        </div>
-                        <div>
-                          <label className="block text-sm font-bold text-neutral-300 mb-2">Timezone <span className="text-red-400">*</span></label>
-                          <select required className="dark-input" value={formData.timezone} onChange={update('timezone')}>
-                            {getTimezoneOptions().map(tz => (
-                              <option key={tz.value} value={tz.value}>{tz.label}</option>
-                            ))}
-                          </select>
-                        </div>
-                      </div>
-                      )}
-                      {mode !== 'table-service' && (
-                      <div>
-                        <label className="block text-sm font-bold text-neutral-300 mb-2">Location</label>
-                        <input type="text" className="dark-input" placeholder="Central Park, NYC" value={formData.location} onChange={update('location')} />
-                      </div>
-                      )}
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div>
-                          <label className="block text-sm font-bold text-neutral-300 mb-2">{mode === 'table-service' ? 'Manager name' : 'Your name'} <span className="text-red-400">*</span></label>
-                          <input type="text" required
-                            className={`dark-input ${fieldErrors.organizerName ? 'border-red-500 focus:border-red-400' : ''}`}
-                            placeholder={mode === 'table-service' ? 'Head Manager' : 'Alex Smith'}
-                            value={formData.organizerName}
-                            onChange={(e) => { update('organizerName')(e); setFieldErrors(p => ({...p, organizerName: ''})); }}
-                          />
-                          {fieldErrors.organizerName && <p className="field-error text-xs text-red-400 mt-1">{fieldErrors.organizerName}</p>}
-                        </div>
-                        <div>
-                          <label className="block text-sm font-bold text-neutral-300 mb-2">{mode === 'table-service' ? 'Manager email' : 'Your email'} <span className="text-red-400">*</span></label>
-                          <input type="email" required
-                            className={`dark-input ${fieldErrors.organizerEmail ? 'border-red-500 focus:border-red-400' : ''}`}
-                            placeholder={mode === 'table-service' ? 'manager@restaurant.com' : 'alex@company.com'}
-                            value={formData.organizerEmail}
-                            onChange={(e) => { update('organizerEmail')(e); setFieldErrors(p => ({...p, organizerEmail: ''})); }}
-                          />
-                          {fieldErrors.organizerEmail && <p className="field-error text-xs text-red-400 mt-1">{fieldErrors.organizerEmail}</p>}
-                        </div>
-                      </div>
-                      <div>
-                        <label className="block text-sm font-bold text-neutral-300 mb-2">
-                          <span className="flex items-center gap-2"><Lock className="w-4 h-4 text-neutral-500" />{mode === 'table-service' ? 'Organizer Password' : 'Account Password'} <span className="text-red-400">*</span></span>
-                        </label>
-                        <div className="relative">
-                          <input type={showAccountPassword ? 'text' : 'password'} required
-                            className={`dark-input pr-12 ${fieldErrors.accountPassword ? 'border-red-500 focus:border-red-400' : ''}`}
-                            placeholder="Create a secure password (min 4 characters)"
-                            value={formData.accountPassword}
-                            onChange={(e) => { update('accountPassword')(e); setFieldErrors(p => ({...p, accountPassword: ''})); }}
-                            minLength={4}
-                          />
-                          <button type="button" onClick={() => setShowAccountPassword(!showAccountPassword)} className="absolute right-4 top-1/2 -translate-y-1/2 text-neutral-500 hover:text-neutral-300 transition-colors">
-                            {showAccountPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                          </button>
-                        </div>
-                        {fieldErrors.accountPassword
-                          ? <p className="field-error text-xs text-red-400 mt-2 flex items-center gap-1"><AlertCircle className="w-3 h-3" />{fieldErrors.accountPassword}</p>
-                          : <p className="text-xs text-neutral-600 mt-2">{mode === 'table-service' ? 'Your personal password to manage the venue settings' : 'Required to access this event from other devices or browsers'}</p>
-                        }
-                      </div>
-                      {mode === 'table-service' && (
-                      <div>
-                        <label className="block text-sm font-bold text-neutral-300 mb-2">
-                          <span className="flex items-center gap-2"><Shield className="w-4 h-4 text-neutral-500" />Staff Password <span className="text-neutral-600 font-normal text-xs">(optional — shared with floor staff)</span></span>
-                        </label>
-                        <div className="relative">
-                          <input type={showPassword ? 'text' : 'password'} className={`dark-input pr-12 ${fieldErrors.staffPassword ? 'border-red-500 focus:border-red-400' : ''}`}
-                            placeholder="PIN or password staff use to log in to the floor"
-                            value={formData.staffPassword}
-                            onChange={(e) => { update('staffPassword')(e); setFieldErrors(p => ({...p, staffPassword: ''})); }}
-                          />
-                          <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-4 top-1/2 -translate-y-1/2 text-neutral-500 hover:text-neutral-300 transition-colors">
-                            {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                          </button>
-                        </div>
-                        {fieldErrors.staffPassword
-                          ? <p className="field-error text-xs text-red-400 mt-2 flex items-center gap-1"><AlertCircle className="w-3 h-3" />{fieldErrors.staffPassword}</p>
-                          : <p className="text-xs text-neutral-600 mt-2">Leave empty if you'll create individual staff accounts from the floor settings</p>
-                        }
-                      </div>
-                      )}
-                      {mode !== 'table-service' && (
-                      <div>
-                        <label className="block text-sm font-bold text-neutral-300 mb-2">
-                          <span className="flex items-center gap-2"><Shield className="w-4 h-4 text-neutral-500" />Event Password <span className="text-neutral-600 font-normal text-xs">(optional)</span></span>
-                        </label>
-                        <div className="relative">
-                          <input type={showPassword ? 'text' : 'password'} className="dark-input pr-12" placeholder={mode === 'enterprise' ? 'Add layer of security' : 'Leave empty for open access'} value={formData.password} onChange={update('password')} />
-                          <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-4 top-1/2 -translate-y-1/2 text-neutral-500 hover:text-neutral-300 transition-colors">
-                            {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                          </button>
-                        </div>
-                      </div>
-                      )}
-                      <button type="submit" disabled={loading}
-                        className="w-full px-8 py-5 bg-white text-neutral-900 rounded-2xl font-bold hover:scale-105 hover:bg-neutral-100 transition-all duration-300 shadow-xl disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 flex items-center justify-center gap-3 text-lg">
-                        {loading
-                          ? <><div className="w-5 h-5 border-2 border-neutral-400 border-t-neutral-900 rounded-full animate-spin" />Creating...</>
-                          : mode === 'table-service'
-                            ? <>Create venue <UtensilsCrossed className="w-5 h-5" /></>
-                            : <>Create event <ArrowRight className="w-5 h-5" /></>
-                        }
-                      </button>
-                    </form>
+                    <OnboardingWizard
+                      key={wizardKey}
+                      mode={mode}
+                      formData={formData}
+                      setFormData={setFormData}
+                      fieldErrors={fieldErrors}
+                      setFieldErrors={setFieldErrors}
+                      loading={loading}
+                      onSubmit={handleSubmit}
+                    />
                   </div>
                 </Reveal>
               )}
