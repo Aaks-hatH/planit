@@ -4,7 +4,7 @@
  * Left side  → settings (spacious, plain-English, always visible)
  * Right side → live preview that updates in real time as you type
  */
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   ArrowLeft, Save, Eye, EyeOff, ExternalLink, Copy,
@@ -13,7 +13,8 @@ import {
   ChevronDown, ChevronUp, Info, Sparkles, Monitor,
   Smartphone, Globe, Lock, Users, Calendar, MapPin,
   User, Star, AlertTriangle, X, Clock, RefreshCw,
-  ToggleLeft, FileText
+  ToggleLeft, FileText, Link, QrCode, ArrowRight,
+  CheckCircle2, Zap
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { eventAPI, rsvpAPI } from '../services/api';
@@ -435,6 +436,384 @@ function LivePreview({ settings, event, viewMode }) {
   );
 }
 
+/* ─── Setup Wizard ────────────────────────────────────────────────────────── */
+
+function WizardCopyBox({ link }) {
+  const [copied, setCopied] = useState(false);
+  const handle = () => {
+    navigator.clipboard.writeText(link);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+  return (
+    <div className="flex items-center gap-2 p-3 bg-neutral-900 rounded-xl border border-neutral-700 mt-3">
+      <Link className="w-4 h-4 text-neutral-500 flex-shrink-0" />
+      <span className="flex-1 text-sm text-neutral-300 font-mono truncate">{link}</span>
+      <button
+        onClick={handle}
+        className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition-all flex-shrink-0 ${
+          copied ? 'bg-emerald-500 text-white' : 'bg-white text-neutral-900 hover:bg-neutral-100'
+        }`}
+      >
+        {copied ? <><Check className="w-3 h-3" /> Copied</> : <><Copy className="w-3 h-3" /> Copy</>}
+      </button>
+    </div>
+  );
+}
+
+function WizardProgressDots({ total, current }) {
+  return (
+    <div className="flex items-center gap-2 justify-center mb-8">
+      {Array.from({ length: total }).map((_, i) => (
+        <div
+          key={i}
+          className={`rounded-full transition-all duration-300 ${
+            i === current
+              ? 'w-6 h-2 bg-white'
+              : i < current
+              ? 'w-2 h-2 bg-neutral-400'
+              : 'w-2 h-2 bg-neutral-700'
+          }`}
+        />
+      ))}
+    </div>
+  );
+}
+
+function RSVPSetupWizard({ eventId, event, settings, set, save, gmailConnected, gmailEmail, connectGmail, gmailConnecting, onClose }) {
+  const [step, setStep]       = useState(0);
+  const [visible, setVisible] = useState(false);
+  const TOTAL_STEPS = 4;
+
+  // Compute the public RSVP URL matching the spec logic
+  const publicUrl = event?.subdomain
+    ? `${window.location.origin}/e/${event.subdomain}/rsvp`
+    : `${window.location.origin}/rsvp/${eventId}`;
+
+  // Violet gradient — matches Enterprise accent from Onboarding.jsx
+  const accentGradient = 'linear-gradient(90deg, #7c3aed, #8b5cf6, #a78bfa)';
+
+  useEffect(() => {
+    const t = setTimeout(() => setVisible(true), 50);
+    return () => clearTimeout(t);
+  }, []);
+
+  // Auto-advance step 2 → 3 once Gmail connects
+  const prevGmailConnected = useRef(gmailConnected);
+  useEffect(() => {
+    if (!prevGmailConnected.current && gmailConnected && step === 1) {
+      setTimeout(() => setStep(2), 600);
+    }
+    prevGmailConnected.current = gmailConnected;
+  }, [gmailConnected, step]);
+
+  const handleClose = (markDone = true) => {
+    if (markDone) localStorage.setItem(`rsvp_setup_done_${eventId}`, 'true');
+    setVisible(false);
+    setTimeout(onClose, 300);
+  };
+
+  const next = () => step < TOTAL_STEPS - 1 ? setStep(s => s + 1) : handleFinish();
+  const back = () => setStep(s => s - 1);
+  const skipToEnd = () => setStep(TOTAL_STEPS - 1);
+
+  const handleFinish = async () => {
+    await save();
+    handleClose(true);
+  };
+
+  /* ── Step 1: What is this page? ── */
+  const Step1 = () => (
+    <div>
+      <div className="w-16 h-16 rounded-2xl border border-violet-500/25 bg-violet-500/15 flex items-center justify-center mx-auto mb-5">
+        <Globe className="w-8 h-8 text-violet-400" />
+      </div>
+      <p className="text-sm text-neutral-400 text-center mb-2 leading-relaxed">
+        This is a public URL guests visit to confirm their attendance. Share it anywhere — or embed it in your invitation.
+      </p>
+      <WizardCopyBox link={publicUrl} />
+      <a
+        href={publicUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="flex items-center justify-center gap-2 mt-3 px-4 py-2.5 rounded-xl border border-neutral-700 text-sm font-semibold text-neutral-300 hover:bg-neutral-800 transition-all"
+      >
+        <ExternalLink className="w-4 h-4" /> Open preview
+      </a>
+    </div>
+  );
+
+  /* ── Step 2: Connect Gmail ── */
+  const Step2 = () => (
+    <div>
+      <div className="w-16 h-16 rounded-2xl border border-blue-500/25 bg-blue-500/15 flex items-center justify-center mx-auto mb-5">
+        <Mail className="w-8 h-8 text-blue-400" />
+      </div>
+      {gmailConnected ? (
+        <div>
+          <div className="flex items-center gap-2 justify-center mb-4">
+            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-500/15 border border-emerald-500/25 text-emerald-400 text-sm font-semibold">
+              <Check className="w-4 h-4" /> Connected
+            </span>
+          </div>
+          {gmailEmail && (
+            <p className="text-sm text-neutral-400 text-center mb-4">
+              Sending from <span className="text-white font-medium">{gmailEmail}</span>
+            </p>
+          )}
+          <p className="text-sm text-neutral-400 text-center leading-relaxed">
+            Confirmation emails will arrive from your own Gmail address — guests are much more likely to open them.
+          </p>
+        </div>
+      ) : (
+        <div>
+          <p className="text-sm text-neutral-400 text-center mb-5 leading-relaxed">
+            Without Gmail connected, confirmation emails come from a shared PlanIt address. Connect your own to build trust with guests.
+          </p>
+          <button
+            onClick={connectGmail}
+            disabled={gmailConnecting}
+            className="w-full flex items-center justify-center gap-2.5 py-3 rounded-xl bg-white text-neutral-900 text-sm font-bold hover:bg-neutral-100 transition-all disabled:opacity-60"
+          >
+            {gmailConnecting ? (
+              <RefreshCw className="w-4 h-4 animate-spin" />
+            ) : (
+              <svg className="w-4 h-4" viewBox="0 0 24 24">
+                <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+                <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+              </svg>
+            )}
+            {gmailConnecting ? 'Connecting…' : 'Connect Gmail'}
+          </button>
+          <p className="text-xs text-neutral-600 text-center mt-3">You can also do this later from Settings → Email</p>
+        </div>
+      )}
+    </div>
+  );
+
+  /* ── Step 3: Customize your page ── */
+  const Step3 = () => (
+    <div className="space-y-4">
+      <div className="w-16 h-16 rounded-2xl border border-violet-500/25 bg-violet-500/15 flex items-center justify-center mx-auto mb-1">
+        <Palette className="w-8 h-8 text-violet-400" />
+      </div>
+      <p className="text-sm text-neutral-400 text-center mb-2">
+        These appear live in the preview behind this dialog.
+      </p>
+
+      {/* Welcome title */}
+      <div>
+        <label className="block text-xs font-semibold text-neutral-400 uppercase tracking-widest mb-1.5">
+          Page heading
+        </label>
+        <input
+          type="text"
+          value={settings.welcomeTitle || ''}
+          onChange={e => set('welcomeTitle', e.target.value)}
+          placeholder="e.g. You're invited!"
+          className="w-full px-3.5 py-2.5 rounded-xl text-sm border border-neutral-700 bg-neutral-900 text-white placeholder-neutral-600 focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 outline-none transition-all"
+        />
+      </div>
+
+      {/* Welcome message */}
+      <div>
+        <label className="block text-xs font-semibold text-neutral-400 uppercase tracking-widest mb-1.5">
+          Subheading / description
+        </label>
+        <textarea
+          value={settings.welcomeMessage || ''}
+          onChange={e => set('welcomeMessage', e.target.value)}
+          placeholder="A short message guests see when they land on the page…"
+          rows={3}
+          className="w-full px-3.5 py-2.5 rounded-xl text-sm border border-neutral-700 bg-neutral-900 text-white placeholder-neutral-600 focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 outline-none transition-all resize-none"
+        />
+      </div>
+
+      {/* Accent color */}
+      <div>
+        <label className="block text-xs font-semibold text-neutral-400 uppercase tracking-widest mb-1.5">
+          Accent color
+        </label>
+        <div className="flex flex-wrap gap-2 mb-2">
+          {PRESET_COLORS.map(c => (
+            <button
+              key={c}
+              type="button"
+              onClick={() => set('accentColor', c)}
+              className="w-7 h-7 rounded-lg border-2 transition-all flex-shrink-0"
+              style={{
+                background: c,
+                borderColor: settings.accentColor === c ? '#fff' : 'transparent',
+                boxShadow: settings.accentColor === c ? `0 0 0 1px ${c}` : 'none',
+              }}
+            />
+          ))}
+          <input
+            type="color"
+            value={settings.accentColor || '#6366f1'}
+            onChange={e => set('accentColor', e.target.value)}
+            className="w-7 h-7 rounded-lg border border-neutral-700 cursor-pointer p-0.5 bg-neutral-900 flex-shrink-0"
+            title="Custom color"
+          />
+        </div>
+      </div>
+    </div>
+  );
+
+  /* ── Step 4: You're ready ── */
+  const Step4 = () => (
+    <div>
+      <div className="w-16 h-16 rounded-2xl border border-emerald-500/25 bg-emerald-500/15 flex items-center justify-center mx-auto mb-5">
+        <CheckCircle2 className="w-8 h-8 text-emerald-400" />
+      </div>
+      <p className="text-sm text-neutral-400 text-center mb-4">Your RSVP page is configured and ready to share.</p>
+
+      <WizardCopyBox link={publicUrl} />
+
+      {/* Checklist */}
+      <div className="mt-4 space-y-2">
+        <div className="flex items-center gap-3 p-3 bg-neutral-900/60 rounded-xl border border-neutral-800">
+          <div className={`w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 ${gmailConnected ? 'bg-emerald-500/15' : 'bg-neutral-800'}`}>
+            <Mail className={`w-3.5 h-3.5 ${gmailConnected ? 'text-emerald-400' : 'text-neutral-500'}`} />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-white">Gmail</p>
+            <p className="text-xs text-neutral-500 leading-snug">
+              {gmailConnected
+                ? `Sending from ${gmailEmail || 'your Gmail account'}`
+                : 'Not connected — you can do this anytime in Settings → Email'}
+            </p>
+          </div>
+          {gmailConnected
+            ? <Check className="w-4 h-4 text-emerald-400 flex-shrink-0" />
+            : <span className="text-xs text-neutral-600 flex-shrink-0">optional</span>
+          }
+        </div>
+
+        <div className="flex items-center gap-3 p-3 bg-neutral-900/60 rounded-xl border border-neutral-800">
+          <div className={`w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 ${settings.welcomeTitle ? 'bg-emerald-500/15' : 'bg-neutral-800'}`}>
+            <Type className={`w-3.5 h-3.5 ${settings.welcomeTitle ? 'text-emerald-400' : 'text-neutral-500'}`} />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-white">Page heading</p>
+            <p className="text-xs text-neutral-500 leading-snug">
+              {settings.welcomeTitle || 'Not set — the event name will be used'}
+            </p>
+          </div>
+          {settings.welcomeTitle
+            ? <Check className="w-4 h-4 text-emerald-400 flex-shrink-0" />
+            : <span className="text-xs text-neutral-600 flex-shrink-0">optional</span>
+          }
+        </div>
+      </div>
+    </div>
+  );
+
+  const STEP_META = [
+    { title: 'Your RSVP page',         subtitle: 'A public link where guests confirm attendance.' },
+    { title: 'Send from your own address', subtitle: 'Connect Gmail for personalised confirmation emails.' },
+    { title: 'Make it yours',           subtitle: 'Customise the look — changes preview live behind this dialog.' },
+    { title: 'RSVP page is ready',      subtitle: 'Everything is set. Save and start collecting RSVPs.' },
+  ];
+
+  const renderStep = () => {
+    if (step === 0) return <Step1 />;
+    if (step === 1) return <Step2 />;
+    if (step === 2) return <Step3 />;
+    return <Step4 />;
+  };
+
+  const isLastStep = step === TOTAL_STEPS - 1;
+
+  return (
+    <div
+      className={`fixed inset-0 z-[100] flex items-center justify-center p-4 transition-all duration-300 ${visible ? 'opacity-100' : 'opacity-0'}`}
+      style={{ background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(4px)' }}
+    >
+      <div
+        className={`relative w-full max-w-md rounded-3xl border border-neutral-800 shadow-2xl overflow-hidden transition-all duration-300 ${visible ? 'scale-100 translate-y-0' : 'scale-95 translate-y-4'}`}
+        style={{ background: '#0f0f17' }}
+        onClick={e => e.stopPropagation()}
+      >
+        {/* Violet accent bar */}
+        <div className="h-1 w-full" style={{ background: accentGradient }} />
+
+        {/* Enterprise badge */}
+        <div className="absolute top-4 left-4">
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest bg-violet-500/10 border border-violet-500/20 text-violet-400">
+            <Zap className="w-3 h-3" /> Setup
+          </span>
+        </div>
+
+        {/* Close button */}
+        <button
+          onClick={() => handleClose(false)}
+          className="absolute top-4 right-4 p-2 rounded-xl text-neutral-600 hover:text-neutral-300 hover:bg-neutral-800 transition-all z-10"
+          aria-label="Close setup wizard"
+        >
+          <X className="w-4 h-4" />
+        </button>
+
+        <div className="p-8 pt-10">
+          <WizardProgressDots total={TOTAL_STEPS} current={step} />
+
+          {/* Step heading */}
+          <div className="text-center mb-6">
+            <h2 className="text-2xl font-black text-white mb-2">{STEP_META[step].title}</h2>
+            <p className="text-neutral-400 text-sm">{STEP_META[step].subtitle}</p>
+          </div>
+
+          {/* Step content */}
+          <div className="transition-all duration-200">
+            {renderStep()}
+          </div>
+
+          {/* Navigation */}
+          <div className="flex items-center justify-between mt-8">
+            <div className="flex items-center gap-3">
+              {step > 0 ? (
+                <button
+                  onClick={back}
+                  className="text-sm text-neutral-500 hover:text-neutral-300 transition-colors"
+                >
+                  ← Back
+                </button>
+              ) : null}
+              {!isLastStep && (
+                <button
+                  onClick={skipToEnd}
+                  className="text-sm text-neutral-600 hover:text-neutral-400 transition-colors"
+                >
+                  Skip
+                </button>
+              )}
+            </div>
+
+            {isLastStep ? (
+              <button
+                onClick={handleFinish}
+                className="flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold transition-all bg-white text-neutral-900 hover:bg-neutral-100 hover:scale-105 duration-200"
+              >
+                Save and open editor <ArrowRight className="w-4 h-4" />
+              </button>
+            ) : (
+              <button
+                onClick={next}
+                className="flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold transition-all"
+                style={{ background: accentGradient, color: '#fff' }}
+              >
+                {step === 1 && gmailConnected ? 'Continue' : 'Next'} <ArrowRight className="w-4 h-4" />
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /* ─── Main Builder ────────────────────────────────────────────────────────── */
 export default function RSVPPageBuilder() {
   const { subdomain, eventId: paramEventId } = useParams();
@@ -452,6 +831,7 @@ export default function RSVPPageBuilder() {
   const [gmailEmail,          setGmailEmail]          = useState('');
   const [gmailConnecting,     setGmailConnecting]     = useState(false);
   const [gmailDisconnecting,  setGmailDisconnecting]  = useState(false);
+  const [showWizard,          setShowWizard]          = useState(false);
 
   const ROUTER_URL = import.meta.env.VITE_ROUTER_URL || '';
 
@@ -490,6 +870,11 @@ export default function RSVPPageBuilder() {
         } catch { /* non-fatal */ }
 
         setLoading(false);
+
+        // First-run wizard: show if organizer hasn't dismissed it for this event
+        if (!localStorage.getItem(`rsvp_setup_done_${eid}`)) {
+          setShowWizard(true);
+        }
       } catch (err) {
         const status = err?.response?.status;
         if (status === 401 || status === 403) {
@@ -1079,6 +1464,22 @@ export default function RSVPPageBuilder() {
   /* ── Render ─────────────────────────────────────────────────────────────── */
   return (
     <div className="h-screen flex flex-col bg-neutral-100 overflow-hidden" style={{ fontFamily: 'system-ui, -apple-system, sans-serif' }}>
+
+      {/* ── Setup wizard (first-run only) ── */}
+      {showWizard && !loading && (
+        <RSVPSetupWizard
+          eventId={eventId}
+          event={event}
+          settings={settings}
+          set={set}
+          save={save}
+          gmailConnected={gmailConnected}
+          gmailEmail={gmailEmail}
+          connectGmail={connectGmail}
+          gmailConnecting={gmailConnecting}
+          onClose={() => setShowWizard(false)}
+        />
+      )}
 
       {/* ── Top bar ── */}
       <div className="flex items-center gap-3 px-5 py-3 bg-white border-b border-neutral-200 flex-shrink-0 shadow-sm">
