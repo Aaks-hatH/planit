@@ -17,6 +17,7 @@ import SecurityAlerts, { useSecurityAlerts } from '../components/SecurityAlerts'
 import WalkieTalkieButton from '../components/WalkieTalkieButton';
 import SeatingMap from '../components/SeatingMap';
 import { useWalkieTalkie } from '../hooks/useWalkieTalkie';
+import SetupWizard from '../components/SetupWizard';
 
 // Simple JWT decode (not for security — only for reading role/username from stored token)
 function decodeJWT(token) {
@@ -1467,6 +1468,7 @@ export default function EnterpriseCheckin() {
   const [showActivityLog, setShowActivityLog] = useState(false);
   
   const [showSettingsPanel, setShowSettingsPanel] = useState(false);
+  const [showSetupWizard, setShowSetupWizard] = useState(false);
   const { alerts: secAlerts, addAlert: addSecAlert, addConflicts, dismissAlert: dismissSecAlert, dismissAll: dismissAllSecAlerts } = useSecurityAlerts();
   const [isOffline, setIsOffline]     = useState(!navigator.onLine);
   const [pendingSync, setPendingSync] = useState(0);
@@ -1497,6 +1499,18 @@ export default function EnterpriseCheckin() {
       loadAllData();
     }
   }, [eventId, authState.ready]);
+
+  // ── Setup wizard: show on first run for organizers with no guests ──────────
+  useEffect(() => {
+    if (
+      !loading &&
+      authState.role === 'organizer' &&
+      invites.length === 0 &&
+      localStorage.getItem(`checkin_setup_done_${eventId}`) !== 'true'
+    ) {
+      setShowSetupWizard(true);
+    }
+  }, [loading, authState.role, invites.length, eventId]);
 
   // Real-time socket updates + offline cache bootstrap
   useEffect(() => {
@@ -2261,6 +2275,18 @@ export default function EnterpriseCheckin() {
         <ActivityLogDialog
           eventId={eventId}
           onClose={() => setShowActivityLog(false)}
+        />
+      )}
+
+      {/* ── First-run setup wizard (organizer only, no guests, key not set) ── */}
+      {showSetupWizard && (
+        <SetupWizard
+          eventId={eventId}
+          event={event}
+          invites={invites}
+          onClose={() => setShowSetupWizard(false)}
+          onOpenAddGuest={() => setShowInviteDialog(true)}
+          onOpenCsvImport={() => setShowCsvImport(true)}
         />
       )}
 
