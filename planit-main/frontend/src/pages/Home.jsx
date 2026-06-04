@@ -8,6 +8,7 @@ import {
   Brain, ArrowUpRight, AlertCircle, UtensilsCrossed, MapPin, QrCode, Layers, Search, CornerDownRight
 } from 'lucide-react';
 import { eventAPI } from '../services/api';
+import { trackFeature, flushTracker } from '../services/tracker';
 import RecoveryCodeModal from '../components/RecoveryCodeModal';
 import toast from 'react-hot-toast';
 import { motion } from 'framer-motion';
@@ -1406,7 +1407,7 @@ const VENUE_TYPES = [
   { id:'other',      label:'Other venue',      hint:'Something different entirely' },
 ];
 
-function OnboardingWizard({ mode, formData, setFormData, fieldErrors, setFieldErrors, onSubmit, loading }) {
+function OnboardingWizard({ mode, formData, setFormData, fieldErrors, setFieldErrors, onSubmit, loading, submittedRef }) {
   const isVenue = mode === 'table-service';
   const accent  = isVenue ? '#f97316' : '#6366f1';
   const accentHover = isVenue ? '#fb923c' : '#818cf8';
@@ -1420,6 +1421,64 @@ function OnboardingWizard({ mode, formData, setFormData, fieldErrors, setFieldEr
   const [showPw2, setShowPw2]     = useState(false);
   const [localErr, setLocalErr]   = useState({});
   const firstInputRef             = useRef(null);
+
+  // ── Draft persistence state ────────────────────────────────────────────────
+  const [pendingDraft, setPendingDraft]           = useState(null);
+  const [draftBannerVisible, setDraftBannerVisible] = useState(false);
+  const debounceRef = useRef(null);
+  const stepRef     = useRef(step);
+
+  // Keep stepRef in sync for beforeunload closure
+  useEffect(() => { stepRef.current = step; }, [step]);
+
+  // Mount effect: track feature start, detect saved draft, register abandon listener
+  useEffect(() => {
+    trackFeature('event_creation_start');
+
+    try {
+      const raw = localStorage.getItem('planit_event_draft');
+      if (raw) {
+        const draft = JSON.parse(raw);
+        const SEVENTY_TWO_HOURS = 72 * 60 * 60 * 1000;
+        if (draft.timestamp && (Date.now() - draft.timestamp) < SEVENTY_TWO_HOURS) {
+          setPendingDraft(draft);
+          setDraftBannerVisible(true);
+        }
+      }
+    } catch { /* ignore */ }
+
+    const handleBeforeUnload = () => {
+      if (!submittedRef?.current) {
+        trackFeature('event_creation_abandon', { step: stepRef.current });
+        flushTracker();
+      }
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Auto-save draft on formData/step change (debounced 1.2s)
+  useEffect(() => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      try {
+        const vid = localStorage.getItem('planit_vid');
+        localStorage.setItem('planit_event_draft', JSON.stringify({
+          formData,
+          step,
+          timestamp: Date.now(),
+          visitorId: vid,
+        }));
+      } catch { /* ignore */ }
+    }, 1200);
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+  }, [formData, step]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Focus first input on step change
   useEffect(() => {
@@ -1861,6 +1920,63 @@ function OnboardingWizard({ mode, formData, setFormData, fieldErrors, setFieldEr
         </span>
       </div>
 
+      {/* Draft recovery banner */}
+      {draftBannerVisible && pendingDraft && (
+        <div style={{
+          background: 'rgba(99,102,241,0.08)',
+          border: '1px solid rgba(99,102,241,0.2)',
+          borderRadius: 12,
+          padding: '14px 16px',
+          marginBottom: 24,
+          display: 'flex',
+          alignItems: 'center',
+          gap: 12,
+          flexWrap: 'wrap',
+        }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <p style={{ fontSize: 14, fontWeight: 600, color: '#a5b4fc', margin: 0 }}>
+              You were in the middle of creating an event.
+            </p>
+            <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)', margin: '3px 0 0' }}>
+              Want to continue where you left off?
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              setFormData(pendingDraft.formData);
+              setStep(pendingDraft.step);
+              setStepKey(k => k + 1);
+              setPendingDraft(null);
+              setDraftBannerVisible(false);
+            }}
+            style={{
+              background: '#6366f1', color: '#fff', border: 'none',
+              borderRadius: 8, padding: '8px 16px',
+              fontSize: 13, fontWeight: 700, cursor: 'pointer', flexShrink: 0,
+            }}
+          >
+            Continue
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              localStorage.removeItem('planit_event_draft');
+              setPendingDraft(null);
+              setDraftBannerVisible(false);
+            }}
+            style={{
+              background: 'transparent', color: 'rgba(255,255,255,0.4)',
+              border: '1px solid rgba(255,255,255,0.1)',
+              borderRadius: 8, padding: '8px 16px',
+              fontSize: 13, fontWeight: 600, cursor: 'pointer', flexShrink: 0,
+            }}
+          >
+            Start Fresh
+          </button>
+        </div>
+      )}
+
       {/* Animated step content */}
       <div key={stepKey} className={dir === 'forward' ? 'wiz-forward' : 'wiz-back'}
         style={{ minHeight:260 }}>
@@ -1931,6 +2047,7 @@ export default function Home() {
   const [loadingDone, setLoadingDone] = useState(false);
   const [wizardKey, setWizardKey] = useState(0); // increment to hard-reset the wizard
   const [wizardOpen, setWizardOpen] = useState(false); // fullscreen wizard overlay
+  const wizardSubmittedRef = useRef(false); // flipped true on successful event creation
   // On white-label domains, skip the branch selector and go straight to event creation
   useEffect(() => { if (isWL) { setSelectedBranch('events'); setLoadingDone(true); } }, [isWL]);
 
@@ -2014,6 +2131,10 @@ export default function Home() {
       if (response.data.recoveryCode) {
         setOrganizerRecoveryCode(response.data.recoveryCode);
       }
+      // Draft cleanup and completion tracking
+      wizardSubmittedRef.current = true;
+      localStorage.removeItem('planit_event_draft');
+      trackFeature('event_creation_complete');
       setShowAd(true);
     } catch (error) {
       const data = error.response?.data;
@@ -3336,6 +3457,7 @@ export default function Home() {
                       fieldErrors={fieldErrors}
                       setFieldErrors={setFieldErrors}
                       loading={loading}
+                      submittedRef={wizardSubmittedRef}
                       onSubmit={async () => { await handleSubmit(); setWizardOpen(false); }}
                     />
                   </div>
