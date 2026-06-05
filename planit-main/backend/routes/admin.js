@@ -1193,6 +1193,110 @@ router.delete('/events/:eventId/invites/:inviteId', verifyAdmin, requirePermissi
   } catch (error) { next(error); }
 });
 
+// ─── GET /events/:eventId/full ─────────────────────────────────────────────────
+// Returns all event data in a single round-trip for the admin event detail panel.
+router.get('/events/:eventId/full', verifyAdmin, async (req, res, next) => {
+  try {
+    const { getModel: getAnalyticsModel } = require('../models/PlatformAnalytics');
+    const { eventId } = req.params;
+
+    // Fetch event with admin-only fields explicitly included
+    const event = await Event.findById(eventId)
+      .select('+adminNotes +spamScore +spamFlags +spamVerdict +creatorIp +creatorUserAgent +creatorFingerprint')
+      .lean();
+    if (!event) return res.status(404).json({ error: 'Event not found' });
+
+    // Analytics summary
+    let analytics = null;
+    try {
+      const AM = getAnalyticsModel();
+      if (AM) {
+        const [byEventType, uniqueVisitorIds, suspectedCount] = await Promise.all([
+          AM.aggregate([
+            { $match: { linkedEventId: String(event._id) } },
+            { $group: { _id: '$eventType', count: { $sum: 1 } } },
+            { $sort: { count: -1 } },
+          ]),
+          AM.distinct('visitorId', { linkedEventId: String(event._id) }),
+          AM.countDocuments({ linkedEventId: String(event._id), isSuspected: true }),
+        ]);
+        analytics = { byEventType, uniqueVisitors: uniqueVisitorIds.length, suspectedCount };
+      }
+    } catch { /* analytics unavailable */ }
+
+    // Live connection count
+    let liveConnections = 0;
+    try {
+      const { io } = require('../server');
+      if (io) {
+        const rooms = io.sockets.adapter.rooms;
+        const room = rooms?.get(`event_${event._id}`);
+        liveConnections = room ? room.size : 0;
+      }
+    } catch { /* socket unavailable */ }
+
+    // RSVP breakdown from embedded array
+    const rsvpBreakdown = { yes: 0, maybe: 0, no: 0 };
+    (event.rsvps || []).forEach(r => { if (rsvpBreakdown[r.status] !== undefined) rsvpBreakdown[r.status]++; });
+
+    const [participants, invites, polls, files, messages, auditLogs] = await Promise.all([
+      EventParticipant.find({ eventId: event._id })
+        .select('username role joinedAt lastSeenAt hasPassword recoveryCodeGeneratedAt')
+        .lean(),
+      Invite ? Invite.find({ eventId: event._id })
+        .select('guestName guestEmail inviteCode checkedIn checkedInAt blocked blockedReason securityFlags trustScore')
+        .lean() : Promise.resolve([]),
+      Poll.find({ eventId: event._id }).lean(),
+      File.find({ eventId: event._id, isDeleted: false }).lean(),
+      Message.find({ eventId: event._id, isDeleted: false }).sort({ createdAt: -1 }).limit(50).lean(),
+      getAuditLogs({ targetId: String(event._id), limit: 100 }),
+    ]);
+
+    res.json({
+      event,
+      participants,
+      invites,
+      polls,
+      files,
+      messages: messages.reverse(),
+      auditLogs,
+      rsvpBreakdown,
+      analytics,
+      liveConnections,
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// ─── PATCH /events/:eventId/admin-notes ───────────────────────────────────────
+router.patch('/events/:eventId/admin-notes', verifyAdmin, async (req, res, next) => {
+  try {
+    const { adminNotes } = req.body || {};
+    if (typeof adminNotes !== 'string') return res.status(400).json({ error: 'adminNotes must be a string' });
+    if (adminNotes.length > 5000) return res.status(400).json({ error: 'adminNotes exceeds 5000 characters' });
+
+    const event = await Event.findByIdAndUpdate(
+      req.params.eventId,
+      { $set: { adminNotes } },
+      { new: true, select: '+adminNotes' }
+    ).lean();
+    if (!event) return res.status(404).json({ error: 'Event not found' });
+
+    await audit({
+      action:   'admin_notes_updated',
+      actorId:  req.admin?.id,
+      actorName: req.admin?.username,
+      targetId: String(event._id),
+      details:  { length: adminNotes.length },
+    });
+
+    res.json({ adminNotes: event.adminNotes, updatedAt: new Date() });
+  } catch (err) {
+    next(err);
+  }
+});
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // SEARCH & ACTIVITY
 // ═══════════════════════════════════════════════════════════════════════════════
