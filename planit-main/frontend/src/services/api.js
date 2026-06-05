@@ -267,10 +267,16 @@ export const adminAPI = {
   // Event Management
   getEvents:         (params)     => api.get('/admin/events', { params }),
   getEvent:          (id)         => api.get(`/admin/events/${id}`),
+  getEventFull:      (id)         => api.get(`/admin/events/${id}/full`),
   getEventAccess:    (id)         => api.post(`/admin/events/${id}/access`),
   updateEvent:       (id, data)   => api.patch(`/admin/events/${id}`, data),
   updateEventStatus: (id, status) => api.patch(`/admin/events/${id}/status`, { status }),
   deleteEvent:       (id)         => api.delete(`/admin/events/${id}`),
+  saveAdminNotes:    (id, adminNotes) => api.patch(`/admin/events/${id}/admin-notes`, { adminNotes }),
+
+  // Per-event analytics (platform-analytics routes)
+  getEventAnalytics: (id, sort) => api.get(`/platform-analytics/by-event/${id}`, { params: sort ? { sort } : {} }),
+  flagVisitor:       (data)     => api.post('/platform-analytics/flag-visitor', data),
 
   // Messages Management
   getMessages:        (eventId)              => api.get(`/admin/events/${eventId}/messages`),
