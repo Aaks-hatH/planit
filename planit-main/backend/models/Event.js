@@ -672,6 +672,20 @@ const eventSchema = new mongoose.Schema({
 
 }, { timestamps: true });
 
+// ── Admin-only fields (select: false — never returned by public routes) ────────
+// These are added as top-level fields, not nested, so they are cleanly excluded
+// by default from any query that does not explicitly select them.
+const adminOnlySchema = {
+  adminNotes:         { type: String, trim: true, maxlength: 5000, default: '', select: false },
+  spamScore:          { type: Number, default: 0, select: false },
+  spamFlags:          { type: [String], default: [], select: false },
+  spamVerdict:        { type: String, enum: ['clean', 'review', 'block'], default: 'clean', select: false },
+  creatorIp:          { type: String, default: null, select: false },
+  creatorUserAgent:   { type: String, default: null, select: false },
+  creatorFingerprint: { type: String, default: null, select: false },
+};
+Object.entries(adminOnlySchema).forEach(([k, v]) => eventSchema.add({ [k]: v }));
+
 eventSchema.index({ subdomain: 1 });
 eventSchema.index({ organizerEmail: 1 });
 eventSchema.index({ createdAt: -1 });
