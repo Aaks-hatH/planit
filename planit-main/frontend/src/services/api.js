@@ -566,7 +566,10 @@ export const utilityAPI = {
 
 // ─── Platform Analytics API (admin dashboard) ─────────────────────────────────
 export const platformAnalyticsAPI = {
-  getDashboard: (windowDays = 30) => api.get(`/platform-analytics/dashboard?window=${windowDays}`),
+  getDashboard:     (windowDays = 30) => api.get(`/platform-analytics/dashboard?window=${windowDays}`),
+  getEventAnalytics:(id, sort)        => api.get(`/platform-analytics/by-event/${id}`, { params: sort ? { sort } : {} }),
+  getGuestProfile:  (visitorId)       => api.get(`/platform-analytics/guest/${visitorId}`),
+  flagVisitor:      (data)            => api.post('/platform-analytics/flag-visitor', data),
 };
 
 // ─── Bug Report API ───────────────────────────────────────────────────────────
