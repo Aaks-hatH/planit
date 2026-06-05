@@ -125,6 +125,24 @@ const analyticsSchema = new mongoose.Schema(
     deviceType:   { type: String, enum: ['desktop', 'tablet', 'mobile', 'unknown'], default: 'unknown' },
     browser:      { type: String, default: null },
 
+    // ── Per-event guest analytics fields ─────────────────────────────────────
+    linkedEventId:        { type: String, default: null },
+    linkedEventSubdomain: { type: String, default: null },
+    rsvpStatus:           { type: String, enum: ['yes', 'maybe', 'no', 'waitlist'], default: null },
+    checkedIn:            { type: Boolean, default: false },
+    checkedInAt:          { type: Date,    default: null },
+    // pii: always encryptPayload({ email, name, phone }) — never raw
+    pii:                  { type: mongoose.Schema.Types.Mixed, default: null },
+    // ipHash: SHA-256(rawIp + YYYY-MM-DD), first 32 hex chars — daily-rotating, non-reversible
+    ipHash:               { type: String, default: null },
+    ipCountry:            { type: String, maxlength: 2, default: null },
+    ipCity:               { type: String, maxlength: 100, default: null },
+    guestReturnCount:     { type: Number, default: 0 },
+    formDropStep:         { type: Number, default: null },
+    spamRiskSignal:       { type: Number, min: 0, max: 100, default: null },
+    isSuspected:          { type: Boolean, default: false },
+    adminFlagReason:      { type: String, default: null },
+
     // TTL
     createdAt: { type: Date, default: Date.now },
   },
@@ -136,6 +154,10 @@ analyticsSchema.index({ page: 1, ts: -1 });
 analyticsSchema.index({ visitorId: 1, ts: -1 });
 analyticsSchema.index({ eventType: 1, ts: -1 });
 analyticsSchema.index({ pageGroup: 1, ts: -1 });
+analyticsSchema.index({ linkedEventId: 1, ts: -1 });
+analyticsSchema.index({ linkedEventId: 1, visitorId: 1 });
+analyticsSchema.index({ isSuspected: 1, ts: -1 });
+analyticsSchema.index({ ipHash: 1, ts: -1 });
 
 // ─── Model ─────────────────────────────────────────────────────────────────────
 let _Model = null;
@@ -204,23 +226,63 @@ async function ingestBatch(events = [], req) {
 
     const browser = detectBrowser(ua);
 
-    const docs = events.map(ev => ({
-      sessionId:    (ev.sessionId  || '').slice(0, 64),
-      visitorId:    (ev.visitorId  || '').slice(0, 64),
-      eventType:    ev.eventType,
-      page:         (ev.page       || '/').slice(0, 500),
-      pageGroup:    pageGroup(ev.page || '/'),
-      ts:           ev.ts ? new Date(ev.ts) : new Date(),
-      timeOnPageMs: ev.timeOnPageMs ?? null,
-      payload:      encryptPayload(ev.payload || null),
-      referrer:     ev.referrer    ? ev.referrer.slice(0, 500)   : null,
-      utmSource:    ev.utmSource   ? ev.utmSource.slice(0, 100)  : null,
-      utmMedium:    ev.utmMedium   ? ev.utmMedium.slice(0, 100)  : null,
-      utmCampaign:  ev.utmCampaign ? ev.utmCampaign.slice(0, 100): null,
-      deviceType:   device,
-      browser,
-      createdAt:    new Date(),
-    }));
+    const docs = events.map(ev => {
+      // Build ipHash: SHA-256(rawIp + YYYY-MM-DD), first 32 hex chars
+      let ipHash = null;
+      if (ev.ipAddress) {
+        const dateStr = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+        ipHash = crypto.createHash('sha256').update(String(ev.ipAddress) + dateStr).digest('hex').slice(0, 32);
+      }
+
+      // Sanitise PII to only the three permitted keys, then encrypt
+      let piiStored = null;
+      if (ev.pii && typeof ev.pii === 'object') {
+        piiStored = encryptPayload({
+          email: ev.pii.email  ? String(ev.pii.email).slice(0, 200)  : null,
+          name:  ev.pii.name   ? String(ev.pii.name).slice(0, 200)   : null,
+          phone: ev.pii.phone  ? String(ev.pii.phone).slice(0, 50)   : null,
+        });
+      }
+
+      return {
+        sessionId:    (ev.sessionId  || '').slice(0, 64),
+        visitorId:    (ev.visitorId  || '').slice(0, 64),
+        eventType:    ev.eventType,
+        page:         (ev.page       || '/').slice(0, 500),
+        pageGroup:    pageGroup(ev.page || '/'),
+        ts:           ev.ts ? new Date(ev.ts) : new Date(),
+        timeOnPageMs: ev.timeOnPageMs ?? null,
+        payload:      encryptPayload(ev.payload || null),
+        referrer:     ev.referrer    ? ev.referrer.slice(0, 500)   : null,
+        utmSource:    ev.utmSource   ? ev.utmSource.slice(0, 100)  : null,
+        utmMedium:    ev.utmMedium   ? ev.utmMedium.slice(0, 100)  : null,
+        utmCampaign:  ev.utmCampaign ? ev.utmCampaign.slice(0, 100): null,
+        deviceType:   device,
+        browser,
+        // New per-event fields
+        linkedEventId:        ev.linkedEventId        ? String(ev.linkedEventId).slice(0, 64)        : null,
+        linkedEventSubdomain: ev.linkedEventSubdomain ? String(ev.linkedEventSubdomain).slice(0, 64) : null,
+        rsvpStatus:           ['yes','maybe','no','waitlist'].includes(ev.rsvpStatus) ? ev.rsvpStatus : null,
+        checkedIn:            ev.checkedIn === true,
+        checkedInAt:          ev.checkedInAt ? new Date(ev.checkedInAt) : null,
+        pii:                  piiStored,
+        ipHash,
+        ipCountry: req?.headers?.['cf-ipcountry']
+                   ? String(req.headers['cf-ipcountry']).slice(0, 2)
+                   : (ev.ipCountry ? String(ev.ipCountry).slice(0, 2) : null),
+        ipCity:    req?.headers?.['cf-ipcity']
+                   ? String(req.headers['cf-ipcity']).slice(0, 100)
+                   : (ev.ipCity ? String(ev.ipCity).slice(0, 100) : null),
+        guestReturnCount: typeof ev.guestReturnCount === 'number'
+                          ? Math.max(0, Math.floor(ev.guestReturnCount)) : 0,
+        formDropStep:    typeof ev.formDropStep    === 'number' ? Math.floor(ev.formDropStep) : null,
+        spamRiskSignal:  typeof ev.spamRiskSignal  === 'number'
+                         ? Math.max(0, Math.min(100, Math.floor(ev.spamRiskSignal))) : null,
+        isSuspected:     ev.isSuspected === true,
+        adminFlagReason: ev.adminFlagReason ? String(ev.adminFlagReason).slice(0, 500) : null,
+        createdAt:       new Date(),
+      };
+    });
 
     await Model.insertMany(docs, { ordered: false });
   } catch (err) {
@@ -261,6 +323,10 @@ async function getDashboardData(windowDays = 30) {
     recentErrors,
     scrollDepths,
     searchQueries,
+    guestsByEvent,
+    suspectedFakes,
+    formDropAnalysis,
+    ipHeatmap,
   ] = await Promise.all([
     // Total page views this window
     Model.countDocuments({ eventType: 'page_view', ts: { $gte: since } }),
@@ -416,6 +482,60 @@ async function getDashboardData(windowDays = 30) {
 
     // Search query count
     Model.countDocuments({ eventType: 'search', ts: { $gte: since } }),
+
+    // ── NEW: guests grouped by linked event ──────────────────────────────────
+    Model.aggregate([
+      { $match: { linkedEventId: { $exists: true, $ne: null }, ts: { $gte: since } } },
+      { $group: {
+        _id: '$linkedEventId',
+        sessionCount:    { $sum: 1 },
+        uniqueVisitorIds: { $addToSet: '$visitorId' },
+        checkedInCount:  { $sum: { $cond: ['$checkedIn', 1, 0] } },
+        rsvpYesCount:    { $sum: { $cond: [{ $eq: ['$rsvpStatus', 'yes'] }, 1, 0] } },
+        suspectedCount:  { $sum: { $cond: ['$isSuspected', 1, 0] } },
+        withPii:         { $sum: { $cond: [{ $ne: ['$pii', null] }, 1, 0] } },
+      }},
+      { $project: {
+        eventId:            '$_id',
+        sessionCount:       1,
+        uniqueVisitorCount: { $size: '$uniqueVisitorIds' },
+        checkedInCount:     1,
+        rsvpYesCount:       1,
+        suspectedCount:     1,
+        withPii:            1,
+      }},
+      { $sort: { sessionCount: -1 } },
+      { $limit: 50 },
+    ]),
+
+    // ── NEW: suspected fake visitors within window ────────────────────────────
+    Model.find({ isSuspected: true, ts: { $gte: since } })
+      .limit(200)
+      .lean()
+      .then(rows => rows.map(r => ({ ...r, pii: r.pii ? decryptPayload(r.pii) : null }))),
+
+    // ── NEW: form drop-off analysis ───────────────────────────────────────────
+    Model.aggregate([
+      { $match: { formDropStep: { $exists: true, $ne: null }, ts: { $gte: since } } },
+      { $group: { _id: '$formDropStep', count: { $sum: 1 } } },
+      { $project: { step: '$_id', count: 1 } },
+      { $sort: { step: 1 } },
+    ]),
+
+    // ── NEW: IP heatmap — hashes with 8+ sessions in last 24h ────────────────
+    Model.aggregate([
+      { $match: { ipHash: { $exists: true, $ne: null }, ts: { $gte: new Date(Date.now() - 86400_000) } } },
+      { $group: {
+        _id:        '$ipHash',
+        count:      { $sum: 1 },
+        countries:  { $addToSet: '$ipCountry' },
+        visitorIds: { $addToSet: '$visitorId' },
+        eventIds:   { $addToSet: '$linkedEventId' },
+      }},
+      { $match: { count: { $gte: 8 } } },
+      { $sort: { count: -1 } },
+      { $limit: 100 },
+    ]),
   ]);
 
   // Compute session count
@@ -458,7 +578,11 @@ async function getDashboardData(windowDays = 30) {
     topClickPages:    clickTargets.map(r => ({ page: r._id, clicks: r.clicks })),
     recentErrors,
     scrollDepths:     scrollDepths.map(r => ({ page: r._id, avgDepth: Math.round(r.avgDepth ?? 0), samples: r.samples })),
+    guestsByEvent:    guestsByEvent.map(r => ({ eventId: r.eventId, sessionCount: r.sessionCount, uniqueVisitorCount: r.uniqueVisitorCount, checkedInCount: r.checkedInCount, rsvpYesCount: r.rsvpYesCount, suspectedCount: r.suspectedCount, withPii: r.withPii })),
+    suspectedFakes,
+    formDropAnalysis: formDropAnalysis.map(r => ({ step: r.step, count: r.count })),
+    ipHeatmap:        ipHeatmap.map(r => ({ ipHash: r._id, count: r.count, countries: r.countries, visitorIds: r.visitorIds, eventIds: r.eventIds })),
   };
 }
 
-module.exports = { ingestBatch, getDashboardData, decryptPayload };
+module.exports = { ingestBatch, getDashboardData, decryptPayload, getModel };
