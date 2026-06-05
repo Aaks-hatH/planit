@@ -30,7 +30,7 @@ import {
   WifiOff, AlertOctagon, TrendingDown, GitBranch, Boxes,
   Rocket, Timer, Wifi as WifiOn, Cpu as CpuIcon,
   Command, Key, Play, Crosshair, Ban, MoreHorizontal, CreditCard,
-  BookOpen, Edit3, Tag, Check, Star, ShieldAlert, ShieldCheck, Loader2,
+  BookOpen, Edit3, Tag, Check, Star, ShieldAlert, ShieldCheck, Loader2, Copy,
 } from 'lucide-react';
 import api, { adminAPI, uptimeAPI, watchdogAPI, routerAPI, bugReportAPI, blogAPI } from '../services/api';
 import PlatformAnalyticsDashboard from '../components/PlatformAnalyticsDashboard';
@@ -167,6 +167,52 @@ const LogLine = ({ entry }) => {
 // ═══════════════════════════════════════════════════════════════════════════════
 // EVENT DETAIL (existing, slightly enhanced)
 // ═══════════════════════════════════════════════════════════════════════════════
+// ── Inline blocklist form used inside EventDetail Admin tab ───────────────────
+function BlocklistInlineForm({ event }) {
+  const [open, setOpen]     = useState(false);
+  const [type, setType]     = useState('email');
+  const [value, setValue]   = useState('');
+  const [saving, setSaving] = useState(false);
+
+  const defaultVal = type === 'email' ? (event.organizerEmail || '') : (event.subdomain || '');
+
+  if (!open) {
+    return (
+      <button onClick={() => { setOpen(true); setValue(defaultVal); }} className="btn btn-secondary text-sm h-fit self-end">
+        Add to Blocklist
+      </button>
+    );
+  }
+
+  return (
+    <div className="col-span-full border rounded-lg p-3 bg-red-50 border-red-100 space-y-2">
+      <p className="text-xs font-semibold text-red-700">Add to Blocklist</p>
+      <div className="flex gap-2 flex-wrap">
+        <select value={type} onChange={e => { setType(e.target.value); setValue(e.target.value === 'email' ? (event.organizerEmail || '') : (event.subdomain || '')); }} className="input text-xs w-28">
+          {['email','subdomain','ip','fingerprint'].map(t => <option key={t} value={t}>{t}</option>)}
+        </select>
+        <input className="input text-xs flex-1 min-w-40" value={value} onChange={e => setValue(e.target.value)} placeholder={`Enter ${type}…`} />
+        <button
+          disabled={saving || !value.trim()}
+          onClick={async () => {
+            setSaving(true);
+            try {
+              await adminAPI.addBlock({ type, value: value.trim(), reason: `Blocked from event ${event._id} (admin)`, eventId: event._id });
+              toast.success('Added to blocklist');
+              setOpen(false); setValue('');
+            } catch { toast.error('Blocklist add failed'); }
+            finally { setSaving(false); }
+          }}
+          className="btn btn-primary text-xs px-3"
+        >
+          {saving ? '…' : 'Block'}
+        </button>
+        <button onClick={() => setOpen(false)} className="btn btn-ghost text-xs px-2"><X className="w-3 h-3" /></button>
+      </div>
+    </div>
+  );
+}
+
 function EventDetail({ event: initialEvent, onBack, onDelete, onUpdate }) {
   const [tab, setTab] = useState('overview');
   const [event, setEvent] = useState(initialEvent);
@@ -180,25 +226,76 @@ function EventDetail({ event: initialEvent, onBack, onDelete, onUpdate }) {
   const [editForm, setEditForm] = useState({});
   const [search, setSearch] = useState('');
 
-  useEffect(() => { load(); }, [event._id]);
+  // ── New state for full detail ──────────────────────────────────────────────
+  const [fullEventData, setFullEventData]       = useState(null);
+  const [liveConnections, setLiveConnections]   = useState(0);
+  const [auditLogs, setAuditLogs]               = useState([]);
+  const [analyticsSummary, setAnalyticsSummary] = useState(null);
+  const [adminNotes, setAdminNotes]             = useState('');
+  const [adminNotesSavedAt, setAdminNotesSavedAt] = useState(null);
+  const [spamScore, setSpamScore]               = useState(0);
+  const [spamVerdict, setSpamVerdict]           = useState('clean');
+  const [spamFlags, setSpamFlags]               = useState([]);
+
+  // ── Analytics tab (lazy) ──────────────────────────────────────────────────
+  const [analyticsData, setAnalyticsData]       = useState(null);
+  const [analyticsLoading, setAnalyticsLoading] = useState(false);
+  const [analyticsLoaded, setAnalyticsLoaded]   = useState(false);
+  const [analyticsSort, setAnalyticsSort]       = useState('firstSeen');
+  const [expandedVisitor, setExpandedVisitor]   = useState(null);
+
+  // ── Admin tab state ────────────────────────────────────────────────────────
+  const [spamEditScore, setSpamEditScore]       = useState('');
+  const [spamEditVerdict, setSpamEditVerdict]   = useState('clean');
+  const [spamEditFlag, setSpamEditFlag]         = useState('');
+  const [lockdownReason, setLockdownReason]     = useState('');
+  const [showLockdownInput, setShowLockdownInput] = useState(false);
+  const [rawJsonOpen, setRawJsonOpen]           = useState(false);
+  const [adminNotesSaving, setAdminNotesSaving] = useState(false);
+
+  useEffect(() => { load(); }, [event._id]); // eslint-disable-line
 
   const load = async () => {
     setLoading(true);
     try {
-      const [a, b, c, d, e] = await Promise.all([
-        adminAPI.getMessages(event._id).catch(() => ({ data: { messages: [] } })),
-        adminAPI.getParticipants(event._id).catch(() => ({ data: { participants: [] } })),
-        adminAPI.getPolls(event._id).catch(() => ({ data: { polls: [] } })),
-        adminAPI.getFiles(event._id).catch(() => ({ data: { files: [] } })),
-        adminAPI.getInvites(event._id).catch(() => ({ data: { invites: [] } })),
-      ]);
-      setMessages(a.data.messages || []);
-      setParticipants(b.data.participants || []);
-      setPolls(c.data.polls || []);
-      setFiles(d.data.files || []);
-      setInvites(e.data.invites || []);
+      const r = await adminAPI.getEventFull(event._id);
+      const d = r.data;
+      setMessages(d.messages || []);
+      setParticipants(d.participants || []);
+      setPolls(d.polls || []);
+      setFiles(d.files || []);
+      setInvites(d.invites || []);
+      if (d.event) {
+        setEvent(d.event);
+        setAdminNotes(d.event.adminNotes || '');
+        setSpamScore(d.event.spamScore ?? 0);
+        setSpamVerdict(d.event.spamVerdict || 'clean');
+        setSpamFlags(d.event.spamFlags || []);
+        setSpamEditScore(String(d.event.spamScore ?? 0));
+        setSpamEditVerdict(d.event.spamVerdict || 'clean');
+      }
+      setFullEventData(d);
+      setLiveConnections(d.liveConnections || 0);
+      setAuditLogs(d.auditLogs || []);
+      setAnalyticsSummary(d.analytics || null);
     } catch { toast.error('Load error'); }
     finally { setLoading(false); }
+  };
+
+  const loadAnalytics = async (sort = analyticsSort) => {
+    if (analyticsLoading) return;
+    setAnalyticsLoading(true);
+    try {
+      const r = await adminAPI.getEventAnalytics(event._id, sort);
+      setAnalyticsData(r.data);
+      setAnalyticsLoaded(true);
+    } catch { toast.error('Analytics load failed'); }
+    finally { setAnalyticsLoading(false); }
+  };
+
+  const handleTabClick = (id) => {
+    setTab(id);
+    if (id === 'analytics' && !analyticsLoaded) loadAnalytics();
   };
 
   const save = async () => {
@@ -221,12 +318,14 @@ function EventDetail({ event: initialEvent, onBack, onDelete, onUpdate }) {
   const fp = participants.filter(p => !search || p.username?.toLowerCase().includes(search.toLowerCase()));
 
   const tabs = [
-    { id: 'overview', label: 'Overview', icon: Info },
-    { id: 'messages', label: 'Chat', icon: MessageSquare, count: messages.length },
-    { id: 'participants', label: 'Participants', icon: Users, count: participants.length },
-    { id: 'polls', label: 'Polls', icon: BarChart3, count: polls.length },
-    { id: 'files', label: 'Files', icon: FileText, count: files.length },
-    { id: 'invites', label: 'Invites', icon: Mail, count: invites.length },
+    { id: 'overview',      label: 'Overview',      icon: Info },
+    { id: 'messages',      label: 'Chat',           icon: MessageSquare, count: messages.length },
+    { id: 'participants',  label: 'Participants',   icon: Users, count: participants.length },
+    { id: 'polls',         label: 'Polls',          icon: BarChart3, count: polls.length },
+    { id: 'files',         label: 'Files',          icon: FileText, count: files.length },
+    { id: 'invites',       label: 'Invites',        icon: Mail, count: invites.length },
+    { id: 'analytics',     label: 'Analytics',      icon: Activity },
+    { id: 'admin',         label: 'Admin',          icon: Shield },
   ];
 
   return (
@@ -327,7 +426,7 @@ function EventDetail({ event: initialEvent, onBack, onDelete, onUpdate }) {
       <div className="card overflow-hidden">
         <div className="flex border-b border-neutral-200 overflow-x-auto">
           {tabs.map(({ id, label, icon: I, count }) => (
-            <button key={id} onClick={() => setTab(id)} className={`flex items-center gap-2 px-4 py-3 text-sm font-medium whitespace-nowrap transition-colors ${tab === id ? 'border-b-2 border-neutral-900 text-neutral-900' : 'text-neutral-400 hover:text-neutral-700'}`}>
+            <button key={id} onClick={() => handleTabClick(id)} className={`flex items-center gap-2 px-4 py-3 text-sm font-medium whitespace-nowrap transition-colors ${tab === id ? 'border-b-2 border-neutral-900 text-neutral-900' : 'text-neutral-400 hover:text-neutral-700'}`}>
               <I className="w-3.5 h-3.5" />{label}
               {count !== undefined && <span className="text-xs bg-neutral-100 rounded-full px-1.5">{count}</span>}
             </button>
@@ -530,6 +629,380 @@ function EventDetail({ event: initialEvent, onBack, onDelete, onUpdate }) {
                     </div>
                   </div>
                 ))}
+              </div>
+            )}
+
+            {/* ── ANALYTICS TAB (lazy load) ─────────────────────────────────── */}
+            {tab === 'analytics' && (
+              <div>
+                {analyticsLoading && <div className="flex justify-center py-16"><div className="spinner w-6 h-6 border-2 border-neutral-300 border-t-indigo-500" /></div>}
+                {!analyticsLoaded && !analyticsLoading && (
+                  <div className="text-center py-16">
+                    <p className="text-sm text-neutral-400 mb-3">Visitor analytics for this event</p>
+                    <button onClick={() => loadAnalytics()} className="btn btn-primary text-sm">Load Analytics</button>
+                  </div>
+                )}
+                {analyticsLoaded && analyticsData && (
+                  <div>
+                    {/* Aggregates bar */}
+                    <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-5">
+                      {[
+                        ['Unique Visitors',  analyticsData.aggregates?.uniqueVisitors ?? 0],
+                        ['Total Sessions',   analyticsData.aggregates?.totalSessions ?? 0],
+                        ['Checked In',       analyticsData.aggregates?.totalCheckedIn ?? 0],
+                        ['RSVP Yes',         analyticsData.aggregates?.rsvpBreakdown?.yes ?? 0],
+                        ['Suspected',        analyticsData.aggregates?.suspectedCount ?? 0],
+                      ].map(([l, v]) => (
+                        <div key={l} className="card p-3 text-center">
+                          <p className="text-xl font-bold">{v}</p>
+                          <p className="text-xs text-neutral-500">{l}</p>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Sort toolbar */}
+                    <div className="flex items-center gap-2 mb-4 flex-wrap">
+                      <span className="text-xs text-neutral-500">Sort:</span>
+                      {[['firstSeen','First Seen'],['spamRiskSignal','Spam Risk'],['guestReturnCount','Return Count'],['checkedIn','Checked In']].map(([v, l]) => (
+                        <button key={v} onClick={() => { setAnalyticsSort(v); loadAnalytics(v); }}
+                          className={`text-xs px-3 py-1 rounded-full border transition-colors ${analyticsSort === v ? 'bg-neutral-900 text-white border-neutral-900' : 'border-neutral-200 hover:border-neutral-400'}`}>
+                          {l}
+                        </button>
+                      ))}
+                      <button onClick={() => loadAnalytics(analyticsSort)} className="ml-auto btn btn-ghost p-1.5 text-xs gap-1"><RefreshCw className="w-3 h-3" /> Refresh</button>
+                    </div>
+
+                    {/* Visitor profile rows */}
+                    {(analyticsData.profiles || []).length === 0
+                      ? <p className="text-sm text-neutral-400 text-center py-12">No visitor data yet</p>
+                      : (analyticsData.profiles || []).map(profile => {
+                        const spam = profile.spamRiskSignal ?? 0;
+                        const spamColor = spam >= 70 ? '#ef4444' : spam >= 40 ? '#f97316' : spam >= 20 ? '#eab308' : '#22c55e';
+                        const isExpanded = expandedVisitor === profile.visitorId;
+                        return (
+                          <div key={profile.visitorId} className={`border rounded-lg mb-2 overflow-hidden ${profile.isSuspected ? 'border-red-200 bg-red-50' : 'border-neutral-100'}`}>
+                            <div className="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-neutral-50 transition-colors" onClick={() => setExpandedVisitor(isExpanded ? null : profile.visitorId)}>
+                              <div className="flex-1 min-w-0 grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
+                                <div>
+                                  <p className="font-mono text-neutral-400 truncate">{profile.visitorId.slice(-10)}</p>
+                                  <p className="font-medium truncate">{profile.pii?.name || profile.pii?.email || '—'}</p>
+                                  {profile.pii?.email && profile.pii?.name && <p className="text-neutral-400 truncate">{profile.pii.email}</p>}
+                                </div>
+                                <div>
+                                  <p className="text-neutral-400">First: {profile.firstSeen ? new Date(profile.firstSeen).toLocaleDateString() : '—'}</p>
+                                  <p className="text-neutral-400">Last: {profile.lastSeen ? new Date(profile.lastSeen).toLocaleDateString() : '—'}</p>
+                                  <p className="text-neutral-500">{profile.sessionCount} sessions</p>
+                                </div>
+                                <div>
+                                  <p className="text-neutral-500">RSVP: <span className="font-medium">{profile.rsvpStatus || '—'}</span></p>
+                                  <p className="text-neutral-500">{profile.checkedIn ? '✓ Checked in' : 'Not checked in'}</p>
+                                  {profile.ipCountry && <p className="text-neutral-400">{profile.ipCountry}{profile.ipCity ? ` · ${profile.ipCity}` : ''}</p>}
+                                </div>
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <span className="px-2 py-0.5 rounded-full text-white text-xs font-bold" style={{ background: spamColor }}>{spam}</span>
+                                  {profile.isSuspected && <span className="px-2 py-0.5 rounded-full bg-red-100 text-red-700 text-xs font-semibold">⚑ Suspected</span>}
+                                </div>
+                              </div>
+                              <button
+                                onClick={e => {
+                                  e.stopPropagation();
+                                  adminAPI.flagVisitor({ visitorId: profile.visitorId, isSuspected: !profile.isSuspected, reason: profile.isSuspected ? 'Cleared by admin' : 'Manually flagged' })
+                                    .then(() => { toast.success(profile.isSuspected ? 'Unflagged' : 'Flagged'); loadAnalytics(analyticsSort); })
+                                    .catch(() => toast.error('Flag failed'));
+                                }}
+                                className={`btn text-xs px-3 py-1 flex-shrink-0 ${profile.isSuspected ? 'btn-secondary text-green-700' : 'btn-secondary text-red-600'}`}
+                              >
+                                {profile.isSuspected ? 'Unflag' : 'Flag'}
+                              </button>
+                            </div>
+                            {isExpanded && (
+                              <div className="px-4 pb-3 pt-1 bg-neutral-50 border-t border-neutral-100">
+                                <p className="text-xs font-semibold text-neutral-500 mb-2">Event Type Timeline</p>
+                                <div className="flex flex-wrap gap-1.5">
+                                  {(profile.eventTypes || []).map((et, i) => (
+                                    <span key={i} className="text-xs px-2 py-0.5 rounded-full bg-neutral-200 text-neutral-700 font-mono">{et}</span>
+                                  ))}
+                                </div>
+                                {profile.pii && (
+                                  <div className="mt-2 text-xs text-neutral-500 grid grid-cols-3 gap-2">
+                                    <span>Email: {profile.pii.email || '—'}</span>
+                                    <span>Name: {profile.pii.name || '—'}</span>
+                                    <span>Phone: {profile.pii.phone || '—'}</span>
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })
+                    }
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* ── ADMIN TAB ─────────────────────────────────────────────────── */}
+            {tab === 'admin' && (
+              <div className="space-y-6">
+
+                {/* Debug Section */}
+                <div className="card p-4">
+                  <h3 className="text-xs font-bold text-neutral-400 uppercase tracking-widest mb-3 flex items-center gap-2">
+                    <Terminal className="w-3.5 h-3.5" /> Debug
+                  </h3>
+                  <dl className="grid grid-cols-2 gap-2 text-xs font-mono">
+                    {[
+                      ['MongoDB ID',       event._id],
+                      ['Created',          event.createdAt ? new Date(event.createdAt).toISOString() : '—'],
+                      ['Updated',          event.updatedAt ? new Date(event.updatedAt).toISOString() : '—'],
+                      ['Creator IP',       event.creatorIp || '—'],
+                      ['Creator UA',       event.creatorUserAgent || '—'],
+                      ['Fingerprint',      event.creatorFingerprint || '—'],
+                      ['Live Connections', liveConnections],
+                    ].map(([k, v]) => (
+                      <div key={k} className="bg-neutral-50 rounded p-2">
+                        <dt className="text-neutral-400 mb-0.5">{k}</dt>
+                        <dd className="text-neutral-800 truncate">{String(v)}</dd>
+                      </div>
+                    ))}
+                  </dl>
+                  <button onClick={load} className="mt-3 btn btn-secondary text-xs gap-1"><RefreshCw className="w-3 h-3" /> Refresh All</button>
+                </div>
+
+                {/* Spam Section */}
+                <div className="card p-4">
+                  <h3 className="text-xs font-bold text-neutral-400 uppercase tracking-widest mb-3 flex items-center gap-2">
+                    <AlertTriangle className="w-3.5 h-3.5" /> Spam
+                  </h3>
+                  <div className="flex items-center gap-4 mb-4">
+                    <div className="text-4xl font-black" style={{ color: spamScore >= 70 ? '#ef4444' : spamScore >= 40 ? '#f97316' : '#22c55e' }}>{spamScore}</div>
+                    <div>
+                      <span className={`px-3 py-1 rounded-full text-sm font-semibold ${spamVerdict === 'block' ? 'bg-red-100 text-red-700' : spamVerdict === 'review' ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'}`}>
+                        {spamVerdict}
+                      </span>
+                      <div className="flex gap-1 mt-2 flex-wrap">
+                        {spamFlags.map((f, i) => <span key={i} className="text-xs px-2 py-0.5 bg-red-50 text-red-600 rounded-full border border-red-100">{f}</span>)}
+                        {spamFlags.length === 0 && <span className="text-xs text-neutral-400">No flags</span>}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="border-t pt-3 space-y-2">
+                    <p className="text-xs text-neutral-400 font-medium mb-2">Manual Override <span className="text-amber-600">(logged)</span></p>
+                    <div className="flex gap-2 flex-wrap">
+                      <input type="number" min={0} max={100} value={spamEditScore} onChange={e => setSpamEditScore(e.target.value)} className="input text-sm w-24" placeholder="Score 0-100" />
+                      <select value={spamEditVerdict} onChange={e => setSpamEditVerdict(e.target.value)} className="input text-sm w-32">
+                        {['clean','review','block'].map(v => <option key={v} value={v}>{v}</option>)}
+                      </select>
+                      <input type="text" value={spamEditFlag} onChange={e => setSpamEditFlag(e.target.value)} className="input text-sm flex-1 min-w-32" placeholder="Add flag (enter to add)" onKeyDown={e => { if (e.key === 'Enter' && spamEditFlag.trim()) { setSpamFlags(f => [...f, spamEditFlag.trim()]); setSpamEditFlag(''); }}} />
+                      <button onClick={async () => {
+                        try {
+                          const score = Math.max(0, Math.min(100, parseInt(spamEditScore) || 0));
+                          await adminAPI.updateEvent(event._id, { spamScore: score, spamVerdict: spamEditVerdict, spamFlags });
+                          setSpamScore(score); setSpamVerdict(spamEditVerdict);
+                          toast.success('Spam fields updated');
+                        } catch { toast.error('Update failed'); }
+                      }} className="btn btn-primary text-sm">Save</button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Security Section */}
+                <div className="card p-4">
+                  <h3 className="text-xs font-bold text-neutral-400 uppercase tracking-widest mb-3 flex items-center gap-2">
+                    <Shield className="w-3.5 h-3.5" /> Security
+                  </h3>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                    {/* Force status change */}
+                    <div>
+                      <p className="text-xs text-neutral-500 mb-1">Force Status</p>
+                      <select defaultValue="" onChange={async e => {
+                        if (!e.target.value) return;
+                        try { await adminAPI.updateEventStatus(event._id, e.target.value); setEvent(ev => ({ ...ev, status: e.target.value })); toast.success('Status updated'); onUpdate?.(); } catch { toast.error('Failed'); }
+                        e.target.value = '';
+                      }} className="input text-sm w-full">
+                        <option value="">Choose…</option>
+                        {['active','completed','cancelled','draft'].map(s => <option key={s} value={s}>{s}</option>)}
+                      </select>
+                    </div>
+                    {/* Emergency lockdown */}
+                    <div>
+                      <p className="text-xs text-neutral-500 mb-1">Emergency Lockdown</p>
+                      <button onClick={() => setShowLockdownInput(v => !v)} className={`btn w-full text-sm ${event.checkinSettings?.emergencyLockdown ? 'btn-primary' : 'btn-secondary'}`}>
+                        {event.checkinSettings?.emergencyLockdown ? '🔴 Active — Unlock' : '🔒 Activate'}
+                      </button>
+                      {showLockdownInput && (
+                        <div className="mt-1 flex gap-1">
+                          <input value={lockdownReason} onChange={e => setLockdownReason(e.target.value)} className="input text-xs flex-1" placeholder="Reason…" />
+                          <button onClick={async () => {
+                            try {
+                              const next = !event.checkinSettings?.emergencyLockdown;
+                              await adminAPI.updateEvent(event._id, { settings: { ...event.settings, checkinSettings: { ...event.checkinSettings, emergencyLockdown: next } } });
+                              setEvent(ev => ({ ...ev, checkinSettings: { ...ev.checkinSettings, emergencyLockdown: next } }));
+                              setShowLockdownInput(false); setLockdownReason('');
+                              toast.success(next ? 'Lockdown activated' : 'Lockdown lifted');
+                            } catch { toast.error('Failed'); }
+                          }} className="btn btn-primary text-xs px-3">OK</button>
+                        </div>
+                      )}
+                    </div>
+                    {/* View analytics */}
+                    <button onClick={() => handleTabClick('analytics')} className="btn btn-secondary text-sm h-fit self-end">View Analytics</button>
+                    {/* Force logout — TODO: needs Redis revocation endpoint */}
+                    <button disabled title="TODO: needs Redis revocation endpoint" className="btn btn-secondary text-sm opacity-40 cursor-not-allowed">Force Logout All</button>
+                    {/* Add to blocklist */}
+                    <BlocklistInlineForm event={event} />
+                  </div>
+                </div>
+
+                {/* Participants Section */}
+                <div className="card p-4">
+                  <h3 className="text-xs font-bold text-neutral-400 uppercase tracking-widest mb-3 flex items-center gap-2">
+                    <Users className="w-3.5 h-3.5" /> Participants
+                  </h3>
+                  <div className="flex justify-end mb-3">
+                    <button onClick={() => {
+                      const cols = ['username','role','joinedAt','lastSeenAt','hasPassword'];
+                      const csv = [cols.join(','), ...participants.map(p => cols.map(c => JSON.stringify(p[c] ?? '')).join(','))].join('\n');
+                      const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([csv], { type:'text/csv' }));
+                      a.download = `participants-${event.subdomain}.csv`; a.click();
+                    }} className="btn btn-secondary text-xs gap-1"><Download className="w-3 h-3" /> Export CSV</button>
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-xs">
+                      <thead><tr className="border-b border-neutral-100">
+                        {['Username','Role','Joined','Last Seen','Pwd','Actions'].map(h => <th key={h} className="text-left pb-2 font-medium text-neutral-500 pr-3">{h}</th>)}
+                      </tr></thead>
+                      <tbody>
+                        {participants.map(p => (
+                          <tr key={p.username} className="border-b border-neutral-50 hover:bg-neutral-50">
+                            <td className="py-2 pr-3 font-mono">{p.username}</td>
+                            <td className="py-2 pr-3"><span className="px-2 py-0.5 rounded-full bg-neutral-100 capitalize">{p.role}</span></td>
+                            <td className="py-2 pr-3 text-neutral-400">{p.joinedAt ? new Date(p.joinedAt).toLocaleDateString() : '—'}</td>
+                            <td className="py-2 pr-3 text-neutral-400">{p.lastSeenAt ? new Date(p.lastSeenAt).toLocaleDateString() : '—'}</td>
+                            <td className="py-2 pr-3">{p.hasPassword ? <Lock className="w-3 h-3 text-neutral-400" /> : <span className="text-neutral-200">—</span>}</td>
+                            <td className="py-2 flex gap-1">
+                              <button onClick={() => adminAPI.resetParticipantPassword(event._id, p.username).then(() => toast.success('Password reset')).catch(() => toast.error('Failed'))} className="btn btn-secondary text-xs px-2 py-0.5">Reset Pw</button>
+                              <button onClick={() => { if (window.confirm(`Remove ${p.username}?`)) adminAPI.removeParticipant(event._id, p.username).then(() => { setParticipants(pp => pp.filter(x => x.username !== p.username)); toast.success('Removed'); }).catch(() => toast.error('Failed')); }} className="btn btn-secondary text-xs px-2 py-0.5 text-red-600">Remove</button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                    {participants.length === 0 && <p className="text-xs text-neutral-400 text-center py-6">No participants</p>}
+                  </div>
+                </div>
+
+                {/* Data Section */}
+                <div className="card p-4">
+                  <h3 className="text-xs font-bold text-neutral-400 uppercase tracking-widest mb-3 flex items-center gap-2">
+                    <FileText className="w-3.5 h-3.5" /> Data
+                  </h3>
+                  <div className="mb-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <p className="text-xs font-medium text-neutral-600">Raw Event Document</p>
+                      <div className="flex gap-2">
+                        <button onClick={() => { navigator.clipboard.writeText(JSON.stringify(fullEventData, null, 2)); toast.success('Copied'); }} className="btn btn-ghost text-xs gap-1"><Copy className="w-3 h-3" /> Copy</button>
+                        <button onClick={() => setRawJsonOpen(v => !v)} className="btn btn-ghost text-xs">{rawJsonOpen ? 'Collapse' : 'Expand'}</button>
+                      </div>
+                    </div>
+                    {rawJsonOpen && (
+                      <pre className="bg-neutral-900 text-neutral-100 rounded-lg p-3 text-xs font-mono overflow-auto max-h-80">
+                        {JSON.stringify(fullEventData?.event, null, 2)}
+                      </pre>
+                    )}
+                  </div>
+                  <div>
+                    <p className="text-xs font-medium text-neutral-600 mb-2">Audit Log ({auditLogs.length} entries)</p>
+                    <div className="space-y-1 max-h-60 overflow-y-auto">
+                      {auditLogs.length === 0 && <p className="text-xs text-neutral-400">No audit log entries</p>}
+                      {auditLogs.map((log, i) => (
+                        <div key={i} className="flex items-center gap-2 text-xs text-neutral-600 border-b border-neutral-50 pb-1">
+                          <span className="text-neutral-400 flex-shrink-0">{log.createdAt ? new Date(log.createdAt).toLocaleString() : '—'}</span>
+                          <span className="font-medium flex-shrink-0">{log.actorName || '—'}</span>
+                          <span className="font-mono text-indigo-600">{log.action}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Admin Notes Section */}
+                <div className="card p-4">
+                  <h3 className="text-xs font-bold text-neutral-400 uppercase tracking-widest mb-1 flex items-center gap-2">
+                    <Edit2 className="w-3.5 h-3.5" /> Admin Notes
+                  </h3>
+                  <p className="text-xs text-neutral-400 mb-3">Never visible to the organizer or event participants.</p>
+                  <textarea
+                    className="input text-sm w-full font-mono"
+                    rows={5}
+                    value={adminNotes}
+                    onChange={e => setAdminNotes(e.target.value)}
+                    placeholder="Internal notes about this event…"
+                    maxLength={5000}
+                  />
+                  <div className="flex items-center justify-between mt-2">
+                    <span className="text-xs text-neutral-400">{adminNotesSavedAt ? `Saved ${new Date(adminNotesSavedAt).toLocaleTimeString()}` : 'Unsaved'}</span>
+                    <button
+                      onClick={async () => {
+                        setAdminNotesSaving(true);
+                        try {
+                          await adminAPI.saveAdminNotes(event._id, adminNotes);
+                          setAdminNotesSavedAt(new Date());
+                          toast.success('Notes saved');
+                        } catch { toast.error('Save failed'); }
+                        finally { setAdminNotesSaving(false); }
+                      }}
+                      disabled={adminNotesSaving}
+                      className="btn btn-primary text-sm gap-1"
+                    >
+                      {adminNotesSaving ? <span className="spinner w-3 h-3 border border-white border-t-transparent" /> : <Save className="w-3 h-3" />} Save
+                    </button>
+                  </div>
+                </div>
+
+                {/* Feature Overrides Section */}
+                <div className="card p-4">
+                  <h3 className="text-xs font-bold text-neutral-400 uppercase tracking-widest mb-3 flex items-center gap-2">
+                    <Settings className="w-3.5 h-3.5" /> Feature Overrides
+                  </h3>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                    {[
+                      ['Enterprise Mode',     'isEnterpriseMode',                   event.isEnterpriseMode],
+                      ['Table Service',        'isTableServiceMode',                 event.isTableServiceMode],
+                      ['Password Protected',   'isPasswordProtected',               event.isPasswordProtected],
+                      ['Require Approval',     'settings.requireApproval',          event.settings?.requireApproval],
+                      ['Public Listing',       'settings.isPublic',                 event.settings?.isPublic],
+                      ['Allow Chat',           'settings.chatEnabled',              event.settings?.chatEnabled],
+                    ].map(([label, field, currentVal]) => (
+                      <label key={field} className="flex items-center justify-between bg-neutral-50 rounded-lg p-3 cursor-pointer hover:bg-neutral-100 transition-colors">
+                        <span className="text-sm font-medium">{label}</span>
+                        <input type="checkbox" checked={!!currentVal} onChange={async e => {
+                          const val = e.target.checked;
+                          const isNested = field.includes('.');
+                          const update = isNested
+                            ? { settings: { ...event.settings, [field.split('.')[1]]: val } }
+                            : { [field]: val };
+                          // Optimistic update
+                          setEvent(ev => isNested
+                            ? { ...ev, settings: { ...ev.settings, [field.split('.')[1]]: val } }
+                            : { ...ev, [field]: val }
+                          );
+                          try {
+                            await adminAPI.updateEvent(event._id, update);
+                          } catch {
+                            toast.error('Update failed, reverting');
+                            // Revert
+                            setEvent(ev => isNested
+                              ? { ...ev, settings: { ...ev.settings, [field.split('.')[1]]: !val } }
+                              : { ...ev, [field]: !val }
+                            );
+                          }
+                        }} className="w-4 h-4 accent-indigo-600" />
+                      </label>
+                    ))}
+                  </div>
+                </div>
+
               </div>
             )}
           </div>
