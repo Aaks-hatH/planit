@@ -48,6 +48,10 @@ const visitorId  = getId('planit_vid', 'v');
 let   sessionId  = getId('planit_sid', 's');
 let   sessionStart = Date.now();
 
+// ─── Event context (set by EventSpace / RSVPPage when a specific event loads) ─
+let _linkedEventId        = null;
+let _linkedEventSubdomain = null;
+
 // Refresh session if inactive > 30 min
 function refreshSession() {
   try {
@@ -99,6 +103,8 @@ function enqueue(eventType, extra = {}) {
     referrer: getReferrer(),
     ...getUtm(),
     ts: new Date().toISOString(),
+    // Attach event context when the user is on an event page
+    ...(_linkedEventId ? { linkedEventId: _linkedEventId, linkedEventSubdomain: _linkedEventSubdomain } : {}),
     ...extra,
   };
   queue.push(ev);
@@ -269,6 +275,17 @@ export function initTracker() {
  */
 export function trackFeature(feature, meta = {}) {
   enqueue('feature_use', { payload: { feature, ...meta } });
+}
+
+/**
+ * Call from EventSpace / RSVPPage once the event ID is known.
+ * Every tracking event fired after this will carry linkedEventId so it gets
+ * attributed to the correct event in the analytics database.
+ * Pass (null, null) when navigating away from an event page.
+ */
+export function setEventContext(eventId, subdomain) {
+  _linkedEventId        = eventId   ? String(eventId)   : null;
+  _linkedEventSubdomain = subdomain ? String(subdomain) : null;
 }
 
 /** Flush remaining events immediately (e.g. on error boundary) */
