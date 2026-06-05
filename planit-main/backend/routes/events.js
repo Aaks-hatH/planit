@@ -90,6 +90,19 @@ router.post('/',
         } catch (_) {}
       }
 
+      // Capture creator metadata for admin debug / spam detection
+      const creatorIpAddr      = realIp(req);
+      const creatorUserAgent   = (req.headers['user-agent'] || '').slice(0, 500);
+      // Fingerprint: prefer client-supplied value (from browser fingerprinting lib on frontend),
+      // fall back to a deterministic hash of IP + UA so the field is never blank.
+      const _crypto = require('crypto');
+      const creatorFingerprint = req.body.fingerprint
+        ? String(req.body.fingerprint).slice(0, 200)
+        : _crypto.createHash('sha256')
+            .update(`${creatorIpAddr}::${creatorUserAgent}`)
+            .digest('hex')
+            .slice(0, 32);
+
       const event = new Event({
         subdomain, title, description, date, location, organizerName, organizerEmail,
         password: hashedPassword, isPasswordProtected,
@@ -98,6 +111,9 @@ router.post('/',
         settings: settings || {}, maxParticipants: maxParticipants || 100,
         participants: [{ username: organizerName, role: 'organizer' }],
         wlDomain,
+        creatorIp:          creatorIpAddr,
+        creatorUserAgent,
+        creatorFingerprint,
       });
 
       await event.save();
