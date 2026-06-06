@@ -243,11 +243,13 @@ function PropsPanel({ obj, onChange, onDelete, onDuplicate, guestsByTable, allGu
     </div>
   );
 
-  const isZone   = obj.type === 'zone';
-  const seated   = guestsByTable?.[obj.id] || [];
-  const unseated = (allGuests || []).filter(g => !g.tableId && g.guestName.toLowerCase().includes(guestSearch.toLowerCase()));
-  const isOver   = !isZone && seated.length > (obj.capacity || 0);
-  const inp      = "w-full border border-neutral-700 rounded-lg px-3 py-2 text-sm bg-neutral-800 text-white focus:outline-none focus:border-neutral-500";
+  const isZone      = obj.type === 'zone';
+  const seated      = guestsByTable?.[obj.id] || [];
+  const unseated    = (allGuests || []).filter(g => !g.tableId && g.guestName.toLowerCase().includes(guestSearch.toLowerCase()));
+  // Sum actual people (adults + children) per invite, not just invite count
+  const seatedPeople = seated.reduce((sum, g) => sum + (g.peopleCount ?? 1), 0);
+  const isOver      = !isZone && seatedPeople > (obj.capacity || 0);
+  const inp         = "w-full border border-neutral-700 rounded-lg px-3 py-2 text-sm bg-neutral-800 text-white focus:outline-none focus:border-neutral-500";
 
   return (
     <div className="p-4 space-y-4 overflow-y-auto flex-1">
@@ -296,7 +298,7 @@ function PropsPanel({ obj, onChange, onDelete, onDuplicate, guestsByTable, allGu
       {!isZone && (
         <div>
           <label className="block text-xs font-bold text-neutral-500 uppercase tracking-wider mb-1">
-            Capacity {isOver && <span className="text-amber-400 normal-case font-normal"> — over by {seated.length - obj.capacity}!</span>}
+            Capacity {isOver && <span className="text-amber-400 normal-case font-normal"> — over by {seatedPeople - obj.capacity}!</span>}
           </label>
           <input type="number" min={1} max={999} value={obj.capacity}
             onChange={e => onChange({ ...obj, capacity: parseInt(e.target.value) || 1 })} className={inp} />
@@ -327,7 +329,7 @@ function PropsPanel({ obj, onChange, onDelete, onDuplicate, guestsByTable, allGu
         <div>
           <button onClick={() => setShowGuests(v => !v)}
             className="w-full flex items-center justify-between text-xs font-bold text-neutral-400 uppercase tracking-wider mb-2 hover:text-white transition-colors">
-            <span>Guests ({seated.length}{obj.capacity ? `/${obj.capacity}` : ''} seated){isOver ? ' ⚠' : ''}</span>
+            <span>Guests ({seatedPeople}{obj.capacity ? `/${obj.capacity}` : ''} people){isOver ? ' ⚠' : ''}</span>
             <ChevronDown className={`w-3.5 h-3.5 transition-transform ${showGuests ? 'rotate-180' : ''}`} />
           </button>
           {showGuests && (
@@ -398,8 +400,10 @@ function PropsPanel({ obj, onChange, onDelete, onDuplicate, guestsByTable, allGu
 function StatsBar({ objs, guestsByTable }) {
   const tables    = objs.filter(o => o.type !== 'zone');
   const totalCap  = tables.reduce((s, o) => s + (o.capacity || 0), 0);
-  const totalAss  = Object.values(guestsByTable || {}).reduce((s, a) => s + a.length, 0);
-  const totalIn   = Object.values(guestsByTable || {}).flat().filter(g => g?.checkedIn).length;
+  // Count total people seated (adults + children), not just invite entries
+  const allGuests = Object.values(guestsByTable || {}).flat();
+  const totalAss  = allGuests.reduce((s, g) => s + (g?.peopleCount ?? 1), 0);
+  const totalIn   = allGuests.filter(g => g?.checkedIn).reduce((s, g) => s + (g?.peopleCount ?? 1), 0);
   const fillPct   = totalCap ? Math.round((totalAss / totalCap) * 100) : 0;
   return (
     <div className="px-4 py-2.5 border-b border-neutral-800 grid grid-cols-3 gap-2 text-center">
@@ -783,14 +787,15 @@ export default function SeatingMap({
 
               {/* Render table objects on top */}
               {objs.filter(o => o && o.type !== 'zone').map(obj => {
-                const guests = guestsByTable[obj.id] || [];
-                const isOver = guests.length > (obj.capacity || Infinity);
+                const guests      = guestsByTable[obj.id] || [];
+                const peopleSeat  = guests.reduce((s, g) => s + (g?.peopleCount ?? 1), 0);
+                const isOver      = peopleSeat > (obj.capacity || Infinity);
                 return (
                   <g key={obj.id}>
-                    <OccupancyArc obj={obj} assigned={guests.length} capacity={obj.capacity || 0} />
+                    <OccupancyArc obj={obj} assigned={peopleSeat} capacity={obj.capacity || 0} />
                     {!isEditor && <LiveGuestDots obj={obj} guests={guests} capacity={obj.capacity || 0} />}
                     <TableShape obj={obj} selected={selected === obj.id} pulsing={pulsing === obj.id}
-                      guestCount={guests.length} capacity={obj.capacity} isEditor={isEditor} isOverCapacity={isOver}
+                      guestCount={peopleSeat} capacity={obj.capacity} isEditor={isEditor} isOverCapacity={isOver}
                       onPointerDown={e => startDrag(e, obj.id)} onClick={() => setSelected(obj.id === selected ? null : obj.id)} />
                     {isEditor && selected === obj.id && <ResizeHandle obj={obj} onStartResize={(e, dir) => startResize(e, obj.id, dir)} />}
                   </g>
@@ -863,7 +868,7 @@ export default function SeatingMap({
                 <p className="text-xs font-bold text-neutral-400 uppercase tracking-wider">{objs.find(o => o.id === selected)?.label || 'Table'}</p>
                 {objs.find(o => o.id === selected)?.type !== 'zone' && (
                   <p className="text-xs text-neutral-500 mt-0.5">
-                    {(guestsByTable[selected] || []).filter(g => g?.checkedIn).length} / {(guestsByTable[selected] || []).length} checked in
+                    {(guestsByTable[selected] || []).filter(g => g?.checkedIn).reduce((s, g) => s + (g?.peopleCount ?? 1), 0)} / {(guestsByTable[selected] || []).reduce((s, g) => s + (g?.peopleCount ?? 1), 0)} checked in
                     {objs.find(o => o.id === selected)?.capacity ? ` · ${objs.find(o => o.id === selected).capacity} seats` : ''}
                   </p>
                 )}
