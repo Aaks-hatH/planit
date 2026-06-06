@@ -2342,6 +2342,157 @@ router.post('/:eventId/invites', verifyOrganizer,
   }
 );
 
+// ── Bulk CSV import ──────────────────────────────────────────────────────────
+// POST /:eventId/invites/import-csv
+// Body: { csv: string }  — raw CSV text including header row
+// Returns: { imported, skipped, errors: [{ row, guestName, reason }] }
+router.post('/:eventId/invites/import-csv', verifyOrganizer, async (req, res, next) => {
+  try {
+    const Invite = require('../models/Invite');
+    const { csv } = req.body;
+
+    if (!csv || typeof csv !== 'string' || !csv.trim()) {
+      return res.status(400).json({ error: 'csv field is required' });
+    }
+
+    // ── Parse CSV ────────────────────────────────────────────────────────────
+    // Split on newlines, skip blank lines
+    const lines = csv.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+    if (lines.length < 2) {
+      return res.status(400).json({ error: 'CSV must have a header row and at least one data row' });
+    }
+
+    // Parse a single CSV line respecting double-quoted fields
+    const parseLine = (line) => {
+      const fields = [];
+      let field = '';
+      let inQuotes = false;
+      for (let i = 0; i < line.length; i++) {
+        const ch = line[i];
+        if (ch === '"') {
+          if (inQuotes && line[i + 1] === '"') { field += '"'; i++; }
+          else { inQuotes = !inQuotes; }
+        } else if (ch === ',' && !inQuotes) {
+          fields.push(field.trim());
+          field = '';
+        } else {
+          field += ch;
+        }
+      }
+      fields.push(field.trim());
+      return fields;
+    };
+
+    // Map header names to column indices (case-insensitive, strip BOM)
+    const rawHeader = lines[0].replace(/^\uFEFF/, '');
+    const headers = parseLine(rawHeader).map(h => h.toLowerCase().replace(/\s+/g, ''));
+    const col = (name) => headers.indexOf(name);
+
+    const iName     = col('guestname');
+    const iEmail    = col('guestemail');
+    const iRole     = col('guestrole');
+    const iAdults   = col('adults');
+    const iChildren = col('children');
+    const iPin      = col('securitypin');
+    const iNotes    = col('notes');
+
+    if (iName === -1) {
+      return res.status(400).json({ error: 'CSV is missing required column: guestName' });
+    }
+    if (iEmail === -1) {
+      return res.status(400).json({ error: 'CSV is missing required column: guestEmail' });
+    }
+
+    // Pre-load existing emails for this event to detect duplicates
+    const existing = await Invite.find({ eventId: req.params.eventId }).select('guestEmail').lean();
+    const existingEmails = new Set(existing.map(i => (i.guestEmail || '').toLowerCase().trim()));
+
+    // Track emails added in this batch to catch in-batch duplicates
+    const batchEmails = new Set();
+
+    const VALID_ROLES = new Set(['GUEST', 'VIP', 'SPEAKER']);
+    const EMAIL_RE    = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+    let imported = 0;
+    let skipped  = 0;
+    const errors = [];
+
+    for (let i = 1; i < lines.length; i++) {
+      const rowNum = i + 1; // 1-based, header = row 1
+      const cells  = parseLine(lines[i]);
+
+      const guestName  = (cells[iName]  || '').trim();
+      const guestEmail = (cells[iEmail] || '').trim();
+      const roleRaw    = (cells[iRole]  || '').trim().toUpperCase();
+      const guestRole  = VALID_ROLES.has(roleRaw) ? roleRaw : 'GUEST';
+      const adults     = Math.max(0, parseInt(cells[iAdults],   10) || 0) || 1; // default 1
+      const children   = Math.max(0, parseInt(cells[iChildren], 10) || 0);
+      const securityPin = iPin   !== -1 ? (cells[iPin]   || '').trim().slice(0, 6) : '';
+      const notes       = iNotes !== -1 ? (cells[iNotes] || '').trim().slice(0, 500) : '';
+
+      // ── Validation ────────────────────────────────────────────────────────
+      if (!guestName) {
+        errors.push({ row: rowNum, guestName: guestName || '(empty)', reason: 'guestName is required' });
+        skipped++;
+        continue;
+      }
+      if (guestName.length > 100) {
+        errors.push({ row: rowNum, guestName, reason: 'guestName exceeds 100 characters' });
+        skipped++;
+        continue;
+      }
+      if (!guestEmail) {
+        errors.push({ row: rowNum, guestName, reason: 'guestEmail is required' });
+        skipped++;
+        continue;
+      }
+      if (!EMAIL_RE.test(guestEmail)) {
+        errors.push({ row: rowNum, guestName, reason: `Invalid email address: ${guestEmail}` });
+        skipped++;
+        continue;
+      }
+
+      const emailKey = guestEmail.toLowerCase();
+
+      if (existingEmails.has(emailKey)) {
+        errors.push({ row: rowNum, guestName, reason: `${guestEmail} already has an invite for this event` });
+        skipped++;
+        continue;
+      }
+      if (batchEmails.has(emailKey)) {
+        errors.push({ row: rowNum, guestName, reason: `Duplicate email in this import: ${guestEmail}` });
+        skipped++;
+        continue;
+      }
+
+      // ── Create invite ─────────────────────────────────────────────────────
+      const inviteCode = Math.random().toString(36).substring(2, 10).toUpperCase();
+      await Invite.create({
+        eventId:     req.params.eventId,
+        inviteCode,
+        guestName,
+        guestEmail,
+        guestPhone:  '',
+        guestRole,
+        adults,
+        children,
+        groupSize:   adults + children,
+        plusOnes:    0,
+        securityPin,
+        notes,
+      });
+
+      existingEmails.add(emailKey);
+      batchEmails.add(emailKey);
+      imported++;
+    }
+
+    res.status(201).json({ imported, skipped, errors });
+  } catch (error) {
+    next(error);
+  }
+});
+
 // Get all invites for event
 router.get('/:eventId/invites', verifyCheckinAccess, async (req, res, next) => {
   try {
@@ -2512,6 +2663,11 @@ router.get('/:eventId/verify-scan/:inviteCode',
         plusOnes:    invite.plusOnes,
         status:      invite.status,
         notes:       invite.notes,
+        tableId:     invite.tableId   || null,
+        tableLabel:  invite.tableLabel || null,
+        seatNumber:  invite.seatNumber || null,
+        tableType:   invite.tableType  || null,
+        guestRole:   invite.guestRole  || 'GUEST',
         // Only expose PIN hint — never the actual PIN value over the wire
         hasPin:      !!(invite.securityPin),
       },
