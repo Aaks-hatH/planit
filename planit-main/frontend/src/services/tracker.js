@@ -278,6 +278,25 @@ export function trackFeature(feature, meta = {}) {
 }
 
 /**
+ * Track a guest-level action that carries PII and/or RSVP status.
+ * These fields are stored at the top level of the analytics document so they
+ * can be queried and aggregated — NOT buried inside the encrypted payload.
+ *
+ * @param {string} feature          e.g. 'rsvp_submitted', 'rsvp_updated'
+ * @param {object} [opts]
+ * @param {object} [opts.pii]        { email, name, phone } — encrypted AES-256-GCM server-side
+ * @param {string} [opts.rsvpStatus] 'yes' | 'maybe' | 'no' | 'waitlist'
+ * @param {object} [opts.meta]       any extra non-PII payload fields
+ */
+export function trackGuestAction(feature, { pii, rsvpStatus, ...meta } = {}) {
+  enqueue('feature_use', {
+    payload: { feature, ...meta },
+    ...(pii        ? { pii }        : {}),
+    ...(rsvpStatus ? { rsvpStatus } : {}),
+  });
+}
+
+/**
  * Call from EventSpace / RSVPPage once the event ID is known.
  * Every tracking event fired after this will carry linkedEventId so it gets
  * attributed to the correct event in the analytics database.
