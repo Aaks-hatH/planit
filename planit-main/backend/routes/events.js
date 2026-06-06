@@ -1747,8 +1747,10 @@ router.delete('/:eventId/notes/:noteId', verifyEventAccess, async (req, res, nex
 // Get analytics (organizer only) - UPDATED WITH CHECK-IN STATS
 router.get('/:eventId/analytics', verifyEventAccess, async (req, res, next) => {
   try {
-    const isOrg = req.event.participants.some(p => 
-      p.username === req.eventAccess.username && p.role === 'organizer'
+    const username = req.eventAccess?.username;
+    if (!username) return res.status(403).json({ error: 'Only organizers can view analytics' });
+    const isOrg = req.event.participants.some(p =>
+      p.username === username && p.role === 'organizer'
     );
     if (!isOrg) return res.status(403).json({ error: 'Only organizers can view analytics' });
 
