@@ -396,22 +396,24 @@ export default function SetupWizard({
   onOpenAddGuest,
   onOpenCsvImport,
 }) {
-  const [step, setStep] = useState(0);
+  const savedStep = parseInt(localStorage.getItem(`checkin_wizard_step_${eventId}`) || '0', 10);
+  const [step, setStep] = useState(invites.length > 0 && savedStep >= 1 ? 1 : 0);
   const [savedSettings, setSavedSettings] = useState(null);
 
   const markDone = () => {
     localStorage.setItem(`checkin_setup_done_${eventId}`, 'true');
   };
 
-  // Step 1 actions
+  // Step 1 actions — close wizard WITHOUT marking done so it can re-open at
+  // step 2 once the user has finished adding their first guest.
   const handleAddManually = () => {
-    markDone();
+    localStorage.setItem(`checkin_wizard_step_${eventId}`, '1');
     onClose();
     onOpenAddGuest();
   };
 
   const handleImportCsv = () => {
-    markDone();
+    localStorage.setItem(`checkin_wizard_step_${eventId}`, '1');
     onClose();
     onOpenCsvImport();
   };
@@ -427,6 +429,7 @@ export default function SetupWizard({
   // Step 4: close
   const handleDone = () => {
     markDone();
+    localStorage.removeItem(`checkin_wizard_step_${eventId}`);
     onClose();
   };
 
