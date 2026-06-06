@@ -1500,14 +1500,15 @@ export default function EnterpriseCheckin() {
     }
   }, [eventId, authState.ready]);
 
-  // ── Setup wizard: show on first run for organizers with no guests ──────────
+  // ── Setup wizard: show on first run for organizers, or when they've just
+  // added their first guest and the wizard step key indicates they should
+  // continue to the QR / settings steps.
   useEffect(() => {
-    if (
-      !loading &&
-      authState.role === 'organizer' &&
-      invites.length === 0 &&
-      localStorage.getItem(`checkin_setup_done_${eventId}`) !== 'true'
-    ) {
+    if (loading || authState.role !== 'organizer') return;
+    if (localStorage.getItem(`checkin_setup_done_${eventId}`) === 'true') return;
+    const pendingStep = localStorage.getItem(`checkin_wizard_step_${eventId}`);
+    // Show if no guests yet, OR if they added guests and should continue
+    if (invites.length === 0 || pendingStep !== null) {
       setShowSetupWizard(true);
     }
   }, [loading, authState.role, invites.length, eventId]);
