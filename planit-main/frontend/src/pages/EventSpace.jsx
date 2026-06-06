@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { eventAPI, chatAPI, pollAPI, fileAPI, rsvpAPI } from '../services/api';
 import socketService from '../services/socket';
+import { setEventContext } from '../services/tracker';
 import SecurityAlerts, { useSecurityAlerts } from '../components/SecurityAlerts';
 import { formatDate, formatRelativeTime, formatFileSize } from '../utils/formatters';
 import { MAX_MESSAGE_LENGTH, MAX_FILE_SIZE, ALLOWED_FILE_TYPES } from '../utils/constants';
@@ -995,6 +996,18 @@ export default function EventSpace() {
       eventAPI.getWaitlist(eventId).then(r => setWaitlistCount(r.data.count || 0)).catch(() => {});
     }
   }, [event, isOrganizer, eventId]);
+
+  // ── Platform analytics: attach this session to the event ─────────────────
+  // Every tracking event fired while the user is in the event space will
+  // carry linkedEventId so it gets attributed correctly in the analytics DB.
+  useEffect(() => {
+    if (event && eventId) {
+      setEventContext(String(eventId), event.subdomain || null);
+    }
+    return () => {
+      setEventContext(null, null);
+    };
+  }, [event, eventId]);
 
   useEffect(() => {
     if (paramEventId) { setEventId(paramEventId); setResolving(false); }
