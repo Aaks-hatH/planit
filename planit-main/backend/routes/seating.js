@@ -45,17 +45,21 @@ router.get('/:eventId/seating', verifyCheckinAccess, async (req, res, next) => {
     // Attach guest counts per table so the viewer can show seat-fill indicators
     const invites = await Invite
       .find({ eventId: req.params.eventId, tableId: { $ne: null } })
-      .select('tableId tableLabel guestName checkedIn guestRole')
+      .select('tableId tableLabel guestName checkedIn guestRole adults children')
       .lean();
 
     const guestsByTable = {};
     for (const inv of invites) {
       if (!guestsByTable[inv.tableId]) guestsByTable[inv.tableId] = [];
       guestsByTable[inv.tableId].push({
-        id:         inv._id,
-        guestName:  inv.guestName,
-        guestRole:  inv.guestRole,
-        checkedIn:  inv.checkedIn,
+        id:          inv._id,
+        guestName:   inv.guestName,
+        guestRole:   inv.guestRole,
+        checkedIn:   inv.checkedIn,
+        adults:      inv.adults   ?? 1,
+        children:    inv.children ?? 0,
+        // Total people this invite represents — used for capacity math
+        peopleCount: (inv.adults ?? 1) + (inv.children ?? 0),
       });
     }
 
