@@ -1,8 +1,8 @@
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, FileText } from 'lucide-react';
 
-const LAST_UPDATED = 'April 3, 2026';
-const EFFECTIVE_DATE = 'April 3, 2026';
+const LAST_UPDATED = 'June 6, 2026';
+const EFFECTIVE_DATE = 'June 6, 2026';
 
 function Section({ number, title, children }) {
   return (
@@ -82,6 +82,7 @@ export default function Terms() {
             </p>
             <div className="mt-4 border border-neutral-200 rounded-xl overflow-hidden">
               <DefItem term="Agreement">These Terms of Service together with the Privacy Policy, any Supplemental Terms, and all other policies, notices, or guidelines published by PlanIt from time to time, each of which is incorporated herein by reference and forms an integral part of this Agreement.</DefItem>
+              <DefItem term="Analytics Data">Session identifiers, visitor identifiers, page view data, interaction event records, device and browser signals, UTM parameters, anonymised IP signals, and all associated metadata collected by the Platform Analytics System as described in Section 12 of these Terms and Section 2.3 of the Privacy Policy.</DefItem>
               <DefItem term="Authorised Use">Use of the Service strictly within the scope of the permissions expressly granted in Section 6 hereof and consistent with the features and functionalities made available through PlanIt's standard user interface, as modified from time to time.</DefItem>
               <DefItem term="Content">Any and all data, text, messages, materials, files, images, graphics, audio, video, metadata, and information of whatever nature or kind that is uploaded, submitted, transmitted, posted, stored, or otherwise made available through the Service by any User or by PlanIt.</DefItem>
               <DefItem term="Enterprise Mode">The operational configuration of the Service enabling advanced Guest management, QR-code-based invitation issuance and cryptographic validation, anti-fraud middleware, real-time check-in administration, and attendance analytics, as further described in the Service documentation.</DefItem>
@@ -92,11 +93,13 @@ export default function Terms() {
               <DefItem term="Organizer">A User who creates an Event and is thereby vested with elevated administrative privileges with respect to that Event, including the ability to manage Participants and Guests, post Announcements, configure security and Enterprise Mode settings, and administer the Guest list.</DefItem>
               <DefItem term="Participant">Any User accessing an Event workspace in a capacity other than Organizer, regardless of the means by which access was obtained.</DefItem>
               <DefItem term="Personal Data">Information relating to an identified or identifiable natural person, as further defined and governed by the Privacy Policy.</DefItem>
-              <DefItem term="Platform">The entirety of PlanIt's technical infrastructure, including the frontend application, backend application servers, load balancing router, watchdog monitoring service, database systems, real-time communication layer, mesh authentication infrastructure, and all associated APIs, microservices, and third-party integrations.</DefItem>
+              <DefItem term="Platform">The entirety of PlanIt's technical infrastructure, including the frontend application, backend application servers, load balancing router, watchdog monitoring service, database systems, real-time communication layer, mesh authentication infrastructure, Platform Analytics System, and all associated APIs, microservices, and third-party integrations.</DefItem>
+              <DefItem term="Platform Analytics System">The server-side analytics infrastructure operated by PlanIt that collects, stores, encrypts, and processes Analytics Data as described in Section 12 of these Terms.</DefItem>
               <DefItem term="Prohibited Content">Content falling within the categories enumerated in Section 6.2 of these Terms.</DefItem>
               <DefItem term="Service">The PlanIt event planning platform accessible at planitapp.onrender.com and any successor domains, subdomains, or applications, including all features, functionalities, and services available therethrough, accessed via web browser, progressive web application, or any other means.</DefItem>
               <DefItem term="User">Any individual or entity that accesses, browses, uses, or interacts with the Service in any capacity, including Organizers, Participants, and Guests.</DefItem>
               <DefItem term="User Content">Content uploaded, submitted, transmitted, or made available through the Service by a User, including messages, tasks, poll responses, notes, announcements, expense records, and uploaded files.</DefItem>
+              <DefItem term="Visitor ID">A randomly generated opaque identifier stored in a User's browser local storage by the Platform Analytics System, used to distinguish repeat visits from the same browser across sessions for aggregate analytics purposes.</DefItem>
             </div>
           </Section>
 
@@ -211,7 +214,8 @@ export default function Terms() {
                 <li>Introduce any harmful code, denial-of-service attack, or other interference with the Service's proper operation;</li>
                 <li>Engage in any activity placing an unreasonable burden on PlanIt's infrastructure;</li>
                 <li>Use the Service to collect Personal Data of other Users without their knowledge and consent;</li>
-                <li>Circumvent or interfere with the Service's anti-fraud middleware, rate limiting systems, or technical protection measures;</li>
+                <li>Circumvent or interfere with the Service's anti-fraud middleware, Platform Analytics System, rate limiting systems, or technical protection measures;</li>
+                <li>Attempt to manipulate, falsify, or otherwise interfere with Analytics Data, including by generating artificial page views, spoofing visitor identifiers, or injecting false analytics events;</li>
                 <li>Assign, transfer, or sell your access rights to any third party.</li>
               </ul>
             </Sub>
@@ -250,7 +254,7 @@ export default function Terms() {
           <Section number="8" title="Intellectual Property Rights, Proprietary Technology, and Restrictions">
             <Sub number="8.1" title="PlanIt's Proprietary Rights">
               <p>
-                The Service, the Platform, and all components thereof — including the software, source code, object code, application architecture, design, visual assets, user interface elements, database schemas, API structures, security systems, anti-fraud middleware, load balancing algorithms, monitoring infrastructure, documentation, trademarks, logos, and trade names — are and shall remain the exclusive proprietary property of the Operator, protected by applicable copyright, trademark, patent, trade secret, and other Intellectual Property Rights laws and international conventions.
+                The Service, the Platform, and all components thereof — including the software, source code, object code, application architecture, design, visual assets, user interface elements, database schemas, API structures, security systems, Platform Analytics System, anti-fraud middleware, load balancing algorithms, monitoring infrastructure, documentation, trademarks, logos, and trade names — are and shall remain the exclusive proprietary property of the Operator, protected by applicable copyright, trademark, patent, trade secret, and other Intellectual Property Rights laws and international conventions.
               </p>
             </Sub>
             <Sub number="8.2" title="No Open Source Licence">
@@ -281,31 +285,36 @@ export default function Terms() {
           </Section>
 
           <Section number="9" title="Data Retention, Automated Deletion, and Recovery">
-            <Sub number="9.1" title="Automatic Seven-Day Deletion Policy">
+            <Sub number="9.1" title="Automatic Seven-Day Event Deletion Policy">
               <p>
-                All Event data — including the Event record, all messages, tasks, polls, notes, announcements, expenses, uploaded files, Participant records, Guest invitation records, check-in logs, and analytics — is subject to permanent, irreversible automated deletion seven (7) calendar days following the Event's scheduled date. This policy applies universally to all Events and cannot be waived, extended, or suspended except as otherwise expressly stated by PlanIt in writing.
+                All Event data — including the Event record, all messages, tasks, polls, notes, announcements, expenses, uploaded files, Participant records, Guest invitation records, RSVP submissions, check-in logs, and event-level analytics — is subject to permanent, irreversible automated deletion seven (7) calendar days following the Event's scheduled date. This policy applies universally to all Events and cannot be waived, extended, or suspended except as otherwise expressly stated by PlanIt in writing.
               </p>
             </Sub>
-            <Sub number="9.2" title="Irrecoverability">
+            <Sub number="9.2" title="Platform Analytics Retention and Deletion">
               <p>
-                Following execution of the automated deletion process, all deleted data is permanently and irrecoverably removed. PlanIt has no capability to restore, recover, or reconstitute deleted data. You acknowledge that PlanIt bears no liability for any loss or consequence resulting from deletion pursuant to this policy.
+                All platform Analytics Data — including session identifiers, visitor identifiers, page view records, interaction events, device signals, anonymised IP hashes, and all associated encrypted payloads — is retained for ninety (90) calendar days from the date of collection and thereafter permanently and irreversibly deleted by an automated TTL process at the database level. Analytics Data is not exempt from deletion requests submitted under applicable data protection law; such requests should be directed to planit.userhelp@gmail.com.
               </p>
             </Sub>
-            <Sub number="9.3" title="Organizer Export Obligation">
+            <Sub number="9.3" title="Irrecoverability">
+              <p>
+                Following execution of any automated deletion process — whether the seven-day event deletion or the ninety-day analytics deletion — all deleted data is permanently and irrecoverably removed. PlanIt has no capability to restore, recover, or reconstitute deleted data. You acknowledge that PlanIt bears no liability for any loss or consequence resulting from deletion pursuant to this policy.
+              </p>
+            </Sub>
+            <Sub number="9.4" title="Organizer Export Obligation">
               <p>
                 It is the sole responsibility of the Organizer to export or preserve any Event data required for any purpose prior to expiration of the retention window. PlanIt's provision of export functionality does not impose any obligation to preserve data beyond the window and shall not be construed as a warranty that data will be available for export at any particular time.
               </p>
             </Sub>
-            <Sub number="9.4" title="Early Deletion Requests">
+            <Sub number="9.5" title="Early Deletion Requests">
               <p>
-                Organizers may request early deletion of Event data by contacting PlanIt via the details in Section 17. PlanIt will endeavour to action such requests within a reasonable timeframe but makes no binding commitment. PlanIt may decline requests where doing so would conflict with applicable legal obligations.
+                Organizers may request early deletion of Event data by contacting PlanIt via the details in Section 24. Any User may request early deletion of their Analytics Data by contacting PlanIt at planit.userhelp@gmail.com with sufficient information to identify their records. PlanIt will endeavour to action such requests within a reasonable timeframe but makes no binding commitment. PlanIt may decline requests where doing so would conflict with applicable legal obligations.
               </p>
             </Sub>
           </Section>
 
           <Section number="10" title="Third-Party Services and External Links">
             <p>
-              The Service integrates with third-party services including Cloudinary, Upstash Redis, MongoDB Atlas, Render, and Socket.IO. Your use of such services may be subject to their own terms and policies. PlanIt makes no warranty regarding any third-party service's availability, reliability, or security, and expressly disclaims all liability arising from your use of or reliance on any third-party service or external link provided through or accessed via the Service.
+              The Service integrates with third-party services including Cloudinary, Upstash Redis, MongoDB Atlas, Render, Cloudflare, and Socket.IO. Your use of such services may be subject to their own terms and policies. PlanIt makes no warranty regarding any third-party service's availability, reliability, or security, and expressly disclaims all liability arising from your use of or reliance on any third-party service or external link provided through or accessed via the Service.
             </p>
           </Section>
 
@@ -315,122 +324,158 @@ export default function Terms() {
             </p>
           </Section>
 
-          <Section number="12" title="Disclaimers and Exclusions of Warranties">
+          <Section number="12" title="Platform Analytics — Scope, Consent, and User Rights">
+            <Sub number="12.1" title="Operation of the Platform Analytics System">
+              <p>
+                PlanIt operates a Platform Analytics System that automatically collects Analytics Data when you access or interact with the Service. The Platform Analytics System is designed to help PlanIt understand aggregate usage patterns, identify and resolve technical errors, detect and prevent fraudulent or abusive activity, and improve the reliability, safety, and performance of the platform. The full scope of data collected is set out in Section 2.3 of the Privacy Policy, which is incorporated into these Terms by reference.
+              </p>
+            </Sub>
+            <Sub number="12.2" title="Analytics Consent Mechanism">
+              <p>
+                On your first visit to the Service, PlanIt displays a consent banner giving you the choice to accept or decline Analytics Data collection. By clicking "Accept," you consent to the collection, storage, and processing of Analytics Data as described in the Privacy Policy. By clicking "Decline," no Visitor ID will be created and no analytics events will be transmitted to PlanIt's analytics infrastructure. Essential browser storage items (authentication tokens, username preferences) continue to function regardless of your analytics choice, as these are operationally necessary to provide the Service.
+              </p>
+              <p className="mt-2">
+                Your consent choice is stored in your browser's local storage. You may withdraw or change your choice at any time by clearing your browser's local storage for this site, which will cause the consent banner to reappear on your next visit. Withdrawal of consent does not affect the lawfulness of Analytics Data collected prior to withdrawal.
+              </p>
+            </Sub>
+            <Sub number="12.3" title="Analytics Data Security">
+              <p>
+                All Analytics Data payloads — including click interaction details, feature names, error messages, and any personal information collected in connection with Enterprise Mode guest analytics — are encrypted at rest using AES-256-GCM encryption before being written to the database. Raw IP addresses are never stored; only a daily-rotating, non-reversible SHA-256 hash (truncated to 32 hexadecimal characters) is retained, which cannot be reversed to recover the original address and changes with each calendar day.
+              </p>
+            </Sub>
+            <Sub number="12.4" title="Analytics Data Retention">
+              <p>
+                All Analytics Data is automatically and permanently deleted ninety (90) days after collection via a TTL (time-to-live) index applied at the database level. No manual action is required for this deletion to occur. Users wishing to request earlier deletion of Analytics Data associated with their visit may contact PlanIt at planit.userhelp@gmail.com.
+              </p>
+            </Sub>
+            <Sub number="12.5" title="No Advertising Use">
+              <p>
+                Analytics Data is used exclusively for the purposes described in Section 12.1 and the Privacy Policy. PlanIt does not use Analytics Data for targeted advertising, cross-site tracking, data brokerage, or sale to third parties. PlanIt does not share Visitor IDs or Analytics Data with advertising networks, data brokers, or any third party for commercial purposes.
+              </p>
+            </Sub>
+            <Sub number="12.6" title="Data Subject Rights in Analytics Data">
+              <p>
+                To the extent Analytics Data constitutes Personal Data under applicable law, Users retain all data subject rights described in Section 13 of the Privacy Policy with respect to such data, including the rights of access, erasure, and restriction of processing. Requests should be directed to planit.userhelp@gmail.com. PlanIt will respond within 30 days.
+              </p>
+            </Sub>
+          </Section>
+
+          <Section number="13" title="Disclaimers and Exclusions of Warranties">
             <LegalCallout>
               THE FOLLOWING DISCLAIMERS APPLY TO THE MAXIMUM EXTENT PERMITTED BY APPLICABLE LAW.
             </LegalCallout>
-            <Sub number="12.1" title="As-Is Basis">
+            <Sub number="13.1" title="As-Is Basis">
               <p>
                 THE SERVICE IS PROVIDED ON AN "AS IS," "AS AVAILABLE," AND "WITH ALL FAULTS" BASIS WITHOUT ANY REPRESENTATION, WARRANTY, GUARANTEE, OR CONDITION OF ANY KIND, WHETHER EXPRESS, IMPLIED, STATUTORY, OR OTHERWISE. PLANIT EXPRESSLY DISCLAIMS ALL WARRANTIES INCLUDING BUT NOT LIMITED TO THE IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, TITLE, ACCURACY, AND NON-INFRINGEMENT, AND ANY WARRANTIES ARISING FROM COURSE OF DEALING OR USAGE OF TRADE.
               </p>
             </Sub>
-            <Sub number="12.2" title="No Warranty of Availability">
+            <Sub number="13.2" title="No Warranty of Availability">
               <p>
                 PLANIT MAKES NO WARRANTY THAT: (A) THE SERVICE WILL BE AVAILABLE ON A CONTINUOUS, UNINTERRUPTED, OR ERROR-FREE BASIS; (B) DEFECTS WILL BE CORRECTED; (C) THE SERVICE WILL MEET YOUR REQUIREMENTS; (D) THE SERVICE OR ITS SERVERS ARE FREE FROM VIRUSES OR HARMFUL ELEMENTS; (E) ANY DATA OBTAINED THROUGH THE SERVICE WILL BE ACCURATE OR RELIABLE.
               </p>
             </Sub>
-            <Sub number="12.3" title="Right to Modify and Discontinue">
+            <Sub number="13.3" title="Right to Modify and Discontinue">
               <p>
                 PlanIt reserves the absolute right to modify, suspend, interrupt, or discontinue the Service or any feature thereof at any time without notice and without liability. PlanIt shall not be liable for any loss resulting from any such action.
               </p>
             </Sub>
           </Section>
 
-          <Section number="13" title="Limitation of Liability">
+          <Section number="14" title="Limitation of Liability">
             <LegalCallout>
               THE FOLLOWING LIMITATIONS APPLY TO THE MAXIMUM EXTENT PERMITTED BY APPLICABLE LAW.
             </LegalCallout>
-            <Sub number="13.1" title="Exclusion of Indirect Damages">
+            <Sub number="14.1" title="Exclusion of Indirect Damages">
               <p>
                 TO THE FULLEST EXTENT PERMITTED BY LAW, IN NO EVENT SHALL PLANIT, ITS OPERATOR, OR THEIR RESPECTIVE AGENTS BE LIABLE FOR ANY INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL, PUNITIVE, OR EXEMPLARY DAMAGES, INCLUDING LOSS OF PROFITS, REVENUE, DATA, GOODWILL, OR BUSINESS INTERRUPTION, ARISING OUT OF OR IN CONNECTION WITH YOUR USE OF OR INABILITY TO USE THE SERVICE, REGARDLESS OF THE THEORY OF LIABILITY, EVEN IF PLANIT HAS BEEN ADVISED OF THE POSSIBILITY OF SUCH DAMAGES.
               </p>
             </Sub>
-            <Sub number="13.2" title="Aggregate Cap">
+            <Sub number="14.2" title="Aggregate Cap">
               <p>
                 PLANIT'S TOTAL AGGREGATE LIABILITY FOR ALL CLAIMS ARISING UNDER THIS AGREEMENT SHALL NOT EXCEED THE GREATER OF: (A) THE TOTAL AMOUNTS YOU HAVE PAID PLANIT IN THE TWELVE MONTHS PRECEDING THE CLAIM; OR (B) ZERO UNITED STATES DOLLARS (USD $0.00). AS PLANIT IS A FREE SERVICE, THIS MEANS AGGREGATE LIABILITY IS EFFECTIVELY ZERO.
               </p>
             </Sub>
-            <Sub number="13.3" title="Essential Basis">
+            <Sub number="14.3" title="Essential Basis">
               <p>
-                You acknowledge that the disclaimers and limitations of liability in Sections 12 and 13 reflect a reasonable and fair allocation of risk and are an essential element of the basis of the bargain between you and PlanIt.
+                You acknowledge that the disclaimers and limitations of liability in Sections 13 and 14 reflect a reasonable and fair allocation of risk and are an essential element of the basis of the bargain between you and PlanIt.
               </p>
             </Sub>
           </Section>
 
-          <Section number="14" title="Indemnification">
+          <Section number="15" title="Indemnification">
             <p>
               To the fullest extent permitted by law, you shall indemnify, defend, and hold harmless PlanIt, its Operator, and their respective agents from and against all claims, liabilities, damages, costs, and expenses — including reasonable legal fees — arising out of or relating to: (a) your access to or use of the Service; (b) your User Content; (c) your breach of any representation, warranty, or obligation herein; (d) your violation of any applicable law or third party's rights; (e) any dispute between you and any other User or third party; or (f) your operation of an Event.
             </p>
           </Section>
 
-          <Section number="15" title="Termination and Effect">
-            <Sub number="15.1" title="Termination by PlanIt">
+          <Section number="16" title="Termination and Effect">
+            <Sub number="16.1" title="Termination by PlanIt">
               <p>
                 PlanIt reserves the right to immediately suspend or permanently terminate your access to the Service at any time, without notice or liability, including but not limited to your breach of these Terms, conduct harmful to other Users or the Service, or any legal, regulatory, or business reason PlanIt deems sufficient.
               </p>
             </Sub>
-            <Sub number="15.2" title="Termination by You">
+            <Sub number="16.2" title="Termination by You">
               <p>
-                You may terminate use of the Service at any time by ceasing access. All Event data remains subject to the seven-day deletion policy in Section 9.
+                You may terminate use of the Service at any time by ceasing access. All Event data remains subject to the seven-day deletion policy in Section 9. Analytics Data continues to be retained and automatically deleted on the 90-day schedule described in Section 12.4 unless you request earlier deletion.
               </p>
             </Sub>
-            <Sub number="15.3" title="Survival">
+            <Sub number="16.3" title="Survival">
               <p>
-                Sections 1, 7, 8, 9, 11, 12, 13, 14, 15.3, 16, 17, 18, and 19 survive termination of this Agreement for any reason.
+                Sections 1, 7, 8, 9, 11, 12, 13, 14, 15, 16.3, 17, 18, 19, 20, and 21 survive termination of this Agreement for any reason.
               </p>
             </Sub>
           </Section>
 
-          <Section number="16" title="Governing Law and Dispute Resolution">
-            <Sub number="16.1" title="Governing Law">
+          <Section number="17" title="Governing Law and Dispute Resolution">
+            <Sub number="17.1" title="Governing Law">
               <p>
                 These Terms and all disputes arising hereunder shall be governed by and construed in accordance with applicable law, without regard to conflict of law principles.
               </p>
             </Sub>
-            <Sub number="16.2" title="Informal Resolution">
+            <Sub number="17.2" title="Informal Resolution">
               <p>
-                Prior to initiating any formal proceeding, you agree to contact PlanIt at the address in Section 17 and make a good-faith effort to resolve the dispute informally. PlanIt will endeavour to respond within thirty (30) days. This process is a condition precedent to initiating any formal proceeding.
+                Prior to initiating any formal proceeding, you agree to contact PlanIt at the address in Section 24 and make a good-faith effort to resolve the dispute informally. PlanIt will endeavour to respond within thirty (30) days. This process is a condition precedent to initiating any formal proceeding.
               </p>
             </Sub>
-            <Sub number="16.3" title="Limitation Period">
+            <Sub number="17.3" title="Limitation Period">
               <p>
                 Any cause of action arising out of or related to these Terms or the Service must be commenced within one (1) year after it accrues; otherwise it is permanently barred to the fullest extent permitted by law.
               </p>
             </Sub>
           </Section>
 
-          <Section number="17" title="Miscellaneous Provisions">
-            <Sub number="17.1" title="Entire Agreement">
+          <Section number="18" title="Miscellaneous Provisions">
+            <Sub number="18.1" title="Entire Agreement">
               <p>These Terms and incorporated policies constitute the entire agreement between you and PlanIt and supersede all prior negotiations, representations, and agreements relating to the subject matter hereof.</p>
             </Sub>
-            <Sub number="17.2" title="Waiver">
+            <Sub number="18.2" title="Waiver">
               <p>No failure by PlanIt to exercise any right or remedy shall constitute a waiver thereof. No waiver is effective unless in writing and signed by an authorised representative of PlanIt.</p>
             </Sub>
-            <Sub number="17.3" title="Severability">
+            <Sub number="18.3" title="Severability">
               <p>If any provision is held invalid or unenforceable, it shall be severed and the remaining provisions shall continue in full force and effect.</p>
             </Sub>
-            <Sub number="17.4" title="Assignment">
+            <Sub number="18.4" title="Assignment">
               <p>You may not assign any rights or obligations hereunder without PlanIt's prior written consent. PlanIt may freely assign this Agreement in connection with a merger, acquisition, or sale of assets.</p>
             </Sub>
-            <Sub number="17.5" title="Force Majeure">
+            <Sub number="18.5" title="Force Majeure">
               <p>PlanIt shall not be liable for failure or delay in performance arising from circumstances beyond its reasonable control, including acts of God, pandemic, war, cyberattacks, infrastructure failures, or internet service provider outages.</p>
             </Sub>
-            <Sub number="17.6" title="No Third-Party Beneficiaries">
+            <Sub number="18.6" title="No Third-Party Beneficiaries">
               <p>These Terms are for the sole benefit of the parties hereto. Nothing herein confers any right or benefit on any other person or entity.</p>
             </Sub>
           </Section>
 
-          <Section number="18" title="Changes to the Service and These Terms">
+          <Section number="19" title="Changes to the Service and These Terms">
             <p>
               PlanIt reserves the right at any time to modify, restrict, suspend, or discontinue any aspect of the Service and to amend these Terms in its sole discretion. The most current version governs your use. Continued use following posting of revised Terms constitutes binding acceptance thereof.
             </p>
           </Section>
 
-          <Section number="19" title="DMCA Copyright Policy and Notice-and-Takedown Procedures">
+          <Section number="20" title="DMCA Copyright Policy and Notice-and-Takedown Procedures">
             <p>
               PlanIt respects the intellectual property rights of others and expects all Users to do the same. PlanIt complies with the Digital Millennium Copyright Act of 1998 (17 U.S.C. § 512) ("DMCA") and will respond to notices of alleged copyright infringement that comply with the DMCA and other applicable intellectual property laws.
             </p>
-            <Sub number="19.1" title="Designation of Copyright Agent">
+            <Sub number="20.1" title="Designation of Copyright Agent">
               <p>
                 PlanIt's designated agent for receiving notifications of claimed copyright infringement is:
               </p>
@@ -440,139 +485,94 @@ export default function Terms() {
                 <p><strong className="text-neutral-900">Subject line:</strong> DMCA Copyright Notice</p>
               </div>
             </Sub>
-            <Sub number="19.2" title="Filing a DMCA Takedown Notice">
+            <Sub number="20.2" title="Filing a DMCA Takedown Notice">
               <p>
                 If you believe that Content available on or through the Service infringes a copyright you own or control, you may submit a written notice of claimed infringement to the designated agent above. To be valid under the DMCA, your notice must include ALL of the following:
               </p>
               <ul className="list-disc list-inside space-y-2 ml-3 mt-2">
                 <li>A physical or electronic signature of a person authorised to act on behalf of the copyright owner;</li>
-                <li>Identification of the copyrighted work(s) claimed to have been infringed, or, if multiple works at a single site are covered by a single notification, a representative list of such works;</li>
-                <li>Identification of the material claimed to be infringing, with sufficient specificity to permit PlanIt to locate the material on the Service (including the event URL, feature, and description of the Content);</li>
+                <li>Identification of the copyrighted work(s) claimed to have been infringed;</li>
+                <li>Identification of the material claimed to be infringing, with sufficient specificity to permit PlanIt to locate the material on the Service;</li>
                 <li>Adequate information by which PlanIt may contact you (name, address, telephone number, and email address);</li>
                 <li>A statement by you that you have a good-faith belief that the disputed use is not authorised by the copyright owner, its agent, or the law;</li>
                 <li>A statement by you, made under penalty of perjury, that the information in the notification is accurate and that you are authorised to act on behalf of the copyright owner.</li>
               </ul>
-              <p className="mt-3">
-                Incomplete or deficient notices will not be actioned. Submitting a knowingly false or misleading DMCA notice may expose you to civil liability and criminal prosecution.
+            </Sub>
+            <Sub number="20.3" title="Counter-Notice Procedures">
+              <p>
+                If you believe that Content you submitted was removed or disabled as a result of a mistake or misidentification, you may submit a counter-notice to the designated agent. PlanIt may, in its sole and absolute discretion, restore the removed Content no sooner than ten (10) and no later than fourteen (14) business days after receiving a valid counter-notice, unless the copyright owner files an action seeking a court order against the User before that time.
               </p>
             </Sub>
-            <Sub number="19.3" title="Counter-Notice Procedures">
+            <Sub number="20.4" title="Repeat Infringer Policy">
               <p>
-                If you believe that Content you submitted was removed or disabled as a result of a mistake or misidentification, you may submit a counter-notice to the designated agent. To be valid, your counter-notice must include:
-              </p>
-              <ul className="list-disc list-inside space-y-2 ml-3 mt-2">
-                <li>Your physical or electronic signature;</li>
-                <li>Identification of the Content that has been removed and the location at which it appeared before removal;</li>
-                <li>A statement under penalty of perjury that you have a good-faith belief that the Content was removed as a result of a mistake or misidentification;</li>
-                <li>Your name, address, telephone number, and a statement that you consent to the jurisdiction of the federal district court in which your address is located (or the Northern District of California if your address is outside the United States), and that you will accept service of process from the person who submitted the original notice.</li>
-              </ul>
-              <p className="mt-3">
-                Upon receipt of a valid counter-notice, PlanIt will notify the original complainant. PlanIt may, in its sole and absolute discretion, restore the removed Content no sooner than ten (10) and no later than fourteen (14) business days after receiving a valid counter-notice, unless the copyright owner files an action seeking a court order against the User before that time.
-              </p>
-            </Sub>
-            <Sub number="19.4" title="Repeat Infringer Policy">
-              <p>
-                In accordance with the DMCA and other applicable laws, PlanIt maintains a policy of terminating, in appropriate circumstances and in its sole and absolute discretion, the access rights of Users who are deemed to be repeat infringers. PlanIt reserves the right to determine, in its sole discretion, whether a User is a repeat infringer. A User may be designated a repeat infringer upon receiving two or more substantiated DMCA notices involving Content within that User's events, without prejudice to PlanIt's right to act on the first valid notice where circumstances warrant.
+                In accordance with the DMCA and other applicable laws, PlanIt maintains a policy of terminating, in appropriate circumstances and in its sole and absolute discretion, the access rights of Users who are deemed to be repeat infringers.
               </p>
             </Sub>
           </Section>
 
-          <Section number="20" title="Dispute Resolution, Arbitration, Class Action Waiver, and Jury Trial Waiver">
+          <Section number="21" title="Dispute Resolution, Arbitration, Class Action Waiver, and Jury Trial Waiver">
             <LegalCallout>
               PLEASE READ THIS SECTION CAREFULLY. IT AFFECTS YOUR LEGAL RIGHTS, INCLUDING YOUR RIGHT TO FILE A LAWSUIT IN COURT, YOUR RIGHT TO A JURY TRIAL, AND YOUR RIGHT TO PARTICIPATE IN A CLASS ACTION.
             </LegalCallout>
-            <Sub number="20.1" title="Informal Resolution as Condition Precedent">
+            <Sub number="21.1" title="Informal Resolution as Condition Precedent">
               <p>
-                Before initiating any formal legal proceeding of any kind against PlanIt, you agree to first contact PlanIt at planit.userhelp@gmail.com and provide a written description of the dispute, the relief sought, and your contact information. The parties shall negotiate in good faith for a period of not less than thirty (30) days following notice. Satisfaction of this informal resolution process is a mandatory condition precedent to initiating any arbitration or litigation, and any proceeding commenced without satisfaction of this condition shall be subject to dismissal.
+                Before initiating any formal legal proceeding of any kind against PlanIt, you agree to first contact PlanIt at planit.userhelp@gmail.com and provide a written description of the dispute, the relief sought, and your contact information. The parties shall negotiate in good faith for a period of not less than thirty (30) days following notice. Satisfaction of this informal resolution process is a mandatory condition precedent to initiating any arbitration or litigation.
               </p>
             </Sub>
-            <Sub number="20.2" title="Binding Arbitration">
+            <Sub number="21.2" title="Binding Arbitration">
               <p>
-                To the maximum extent permitted by applicable law, any dispute, controversy, or claim arising out of or relating to these Terms, your use of the Service, or any relationship between you and PlanIt — whether based in contract, tort, statute, fraud, misrepresentation, or any other legal theory — shall be submitted to and finally resolved by binding individual arbitration rather than in court. The arbitration shall be conducted on a confidential basis. This agreement to arbitrate is intended to be broadly interpreted, including without limitation disputes about the interpretation, scope, validity, or enforceability of these Terms. Any arbitral award shall be in writing and shall be final and binding on both parties.
+                To the maximum extent permitted by applicable law, any dispute, controversy, or claim arising out of or relating to these Terms, your use of the Service, or any relationship between you and PlanIt — whether based in contract, tort, statute, fraud, misrepresentation, or any other legal theory — shall be submitted to and finally resolved by binding individual arbitration rather than in court.
               </p>
             </Sub>
-            <Sub number="20.3" title="Class Action and Representative Action Waiver">
+            <Sub number="21.3" title="Class Action and Representative Action Waiver">
               <p>
-                YOU AND PLANIT EACH EXPRESSLY AND IRREVOCABLY WAIVE ANY RIGHT TO PURSUE OR PARTICIPATE IN ANY CLASS ACTION, COLLECTIVE ACTION, CONSOLIDATED ACTION, PRIVATE ATTORNEY GENERAL ACTION, OR REPRESENTATIVE ACTION IN CONNECTION WITH ANY DISPUTE ARISING UNDER THESE TERMS OR YOUR USE OF THE SERVICE. All disputes shall be resolved solely on an individual basis. You may not bring a claim as a plaintiff or class member in any class or representative proceeding. The arbitrator shall have no authority to consolidate more than one person's claims, conduct any class or representative proceeding, or award any relief to any person other than you individually. This waiver is an essential element of the agreement to arbitrate in Section 21.2.
+                YOU AND PLANIT EACH EXPRESSLY AND IRREVOCABLY WAIVE ANY RIGHT TO PURSUE OR PARTICIPATE IN ANY CLASS ACTION, COLLECTIVE ACTION, CONSOLIDATED ACTION, PRIVATE ATTORNEY GENERAL ACTION, OR REPRESENTATIVE ACTION IN CONNECTION WITH ANY DISPUTE ARISING UNDER THESE TERMS OR YOUR USE OF THE SERVICE.
               </p>
             </Sub>
-            <Sub number="20.4" title="Jury Trial Waiver">
+            <Sub number="21.4" title="Jury Trial Waiver">
               <p>
-                TO THE FULLEST EXTENT PERMITTED BY APPLICABLE LAW, EACH PARTY HEREBY IRREVOCABLY AND UNCONDITIONALLY WAIVES ANY AND ALL RIGHTS TO A JURY TRIAL IN CONNECTION WITH ANY ACTION, PROCEEDING, CLAIM, OR COUNTERCLAIM ARISING OUT OF OR RELATING TO THESE TERMS OR THE SERVICE. Either party may enforce this waiver to the maximum extent permitted by law.
+                TO THE FULLEST EXTENT PERMITTED BY APPLICABLE LAW, EACH PARTY HEREBY IRREVOCABLY AND UNCONDITIONALLY WAIVES ANY AND ALL RIGHTS TO A JURY TRIAL IN CONNECTION WITH ANY ACTION, PROCEEDING, CLAIM, OR COUNTERCLAIM ARISING OUT OF OR RELATING TO THESE TERMS OR THE SERVICE.
               </p>
             </Sub>
-            <Sub number="20.5" title="Injunctive Relief Exception">
+            <Sub number="21.5" title="Injunctive Relief Exception">
               <p>
-                Notwithstanding any provision of this Section to the contrary, each party retains the right to seek and obtain emergency injunctive or other equitable relief from any court of competent jurisdiction, without bond, without notice, and without awaiting the conclusion of informal resolution or arbitration proceedings, where such relief is necessary to prevent irreparable harm. Seeking such relief shall not waive the right to arbitrate other disputes.
-              </p>
-            </Sub>
-            <Sub number="20.6" title="Severability of Arbitration Provisions">
-              <p>
-                If any part of the arbitration agreement in this Section is found to be invalid or unenforceable, the remainder shall continue in full force and effect, except that if the class action waiver in Section 21.3 is found invalid, the entire arbitration agreement shall be null and void as to that dispute only, and such dispute shall proceed in a court of competent jurisdiction.
+                Notwithstanding any provision of this Section to the contrary, each party retains the right to seek and obtain emergency injunctive or other equitable relief from any court of competent jurisdiction, without bond, without notice, and without awaiting the conclusion of informal resolution or arbitration proceedings, where such relief is necessary to prevent irreparable harm.
               </p>
             </Sub>
           </Section>
 
-          <Section number="21" title="Security, Infrastructure, and Technical Disclaimers">
-            <Sub number="21.1" title="Third-Party Infrastructure Dependency">
+          <Section number="22" title="Security, Infrastructure, and Technical Disclaimers">
+            <Sub number="22.1" title="Third-Party Infrastructure Dependency">
               <p>
-                The Service is hosted on and depends entirely upon third-party infrastructure providers, including without limitation Render (application hosting), MongoDB Atlas (database services), Cloudinary (media storage and delivery), and Upstash Redis (caching and rate-limiting). PlanIt has no control over the operations, uptime, data practices, security posture, or terms of service of any such provider. Any disruption, failure, breach, or change to any third-party provider may directly affect the availability, performance, or security of the Service. PlanIt expressly disclaims all liability arising from the acts, omissions, security failures, or service interruptions of any third-party infrastructure provider.
+                The Service is hosted on and depends entirely upon third-party infrastructure providers, including without limitation Render (application hosting), MongoDB Atlas (database services), Cloudinary (media storage and delivery), Cloudflare (network routing and geolocation signals), and Upstash Redis (caching and rate-limiting). PlanIt has no control over the operations, uptime, data practices, security posture, or terms of service of any such provider. PlanIt expressly disclaims all liability arising from the acts, omissions, security failures, or service interruptions of any third-party infrastructure provider.
               </p>
             </Sub>
-            <Sub number="21.2" title="No Guarantee of Availability">
+            <Sub number="22.2" title="No Guarantee of Availability">
               <p>
-                THE SERVICE IS PROVIDED ON A BEST-EFFORTS BASIS ONLY. PLANIT MAKES NO REPRESENTATION, WARRANTY, OR GUARANTEE THAT THE SERVICE WILL BE AVAILABLE ON A CONTINUOUS, UNINTERRUPTED, TIMELY, SECURE, OR ERROR-FREE BASIS. The Service may be unavailable due to, without limitation: scheduled or unscheduled maintenance; provider outages; network failures; infrastructure upgrades; cyberattacks; software bugs; capacity constraints; or any other technical or non-technical cause. PlanIt shall not be liable for any damages, losses, or costs arising from any period of unavailability, however caused.
+                THE SERVICE IS PROVIDED ON A BEST-EFFORTS BASIS ONLY. PLANIT MAKES NO REPRESENTATION, WARRANTY, OR GUARANTEE THAT THE SERVICE WILL BE AVAILABLE ON A CONTINUOUS, UNINTERRUPTED, TIMELY, SECURE, OR ERROR-FREE BASIS.
               </p>
             </Sub>
-            <Sub number="21.3" title="Denial-of-Service and Cyberattack Disclaimer">
+            <Sub number="22.3" title="Technical Vulnerabilities">
               <p>
-                PlanIt implements commercially reasonable technical safeguards against malicious network activity; however, PlanIt makes no guarantee that such safeguards will be effective against all attacks. PlanIt expressly disclaims all liability for any loss of data, service outage, data exposure, or other harm arising from any cyberattack or other form of malicious interference with the Service or its underlying infrastructure.
+                No software system is free from technical vulnerabilities. PlanIt uses commercially reasonable practices to identify and remediate known vulnerabilities but makes no warranty that the Service is free from all vulnerabilities at any given time. Any discovered vulnerability must be reported immediately and exclusively to planit.userhelp@gmail.com and must not be publicly disclosed or exploited.
               </p>
             </Sub>
-            <Sub number="21.4" title="Technical Vulnerabilities">
+            <Sub number="22.4" title="Data Loss Risk">
               <p>
-                No software system is free from technical vulnerabilities. PlanIt uses commercially reasonable practices to identify and remediate known vulnerabilities but makes no warranty that the Service is free from all vulnerabilities at any given time. You acknowledge and agree that PlanIt shall not be liable for any harm arising from technical vulnerabilities in the Service or in any third-party dependency. You are prohibited from testing or probing for vulnerabilities without express written authorisation from PlanIt. Any discovered vulnerability must be reported immediately and exclusively to planit.userhelp@gmail.com and must not be publicly disclosed or exploited.
-              </p>
-            </Sub>
-            <Sub number="21.5" title="Data Loss Risk">
-              <p>
-                You acknowledge that all data stored in connection with the Service is subject to loss, corruption, or unavailability for reasons including without limitation hardware failure, software error, network disruption, Automatic Deletion pursuant to Section 9, third-party provider failure, and malicious activity. You are solely responsible for maintaining independent backups of any Content or data you require. PlanIt shall have no liability whatsoever for any loss of data, whether arising from Automatic Deletion, accidental loss, technical failure, or any other cause.
+                You acknowledge that all data stored in connection with the Service is subject to loss, corruption, or unavailability. You are solely responsible for maintaining independent backups of any Content or data you require. PlanIt shall have no liability whatsoever for any loss of data, whether arising from Automatic Deletion, accidental loss, technical failure, or any other cause.
               </p>
             </Sub>
           </Section>
 
-          <Section number="22" title="Beta Features, Experimental Functionality, and Feature Modifications">
-            <Sub number="22.1" title="Beta and Experimental Features">
+          <Section number="23" title="Beta Features, Experimental Functionality, and Feature Modifications">
+            <Sub number="23.1" title="Beta and Experimental Features">
               <p>
-                PlanIt may, from time to time, make available features, modules, or functionality that are in beta, pre-release, experimental, or preview stage ("Beta Features"). Beta Features are provided strictly "as is" and "as available" without any warranty of any kind. Beta Features may be incomplete, subject to change, contain errors, behave unexpectedly, or be discontinued entirely without notice. Your use of any Beta Feature constitutes your express acknowledgement and acceptance of the elevated risk and instability associated with such features. PlanIt shall bear no liability for any damages, data loss, or adverse outcomes arising from your use of Beta Features.
+                PlanIt may, from time to time, make available features, modules, or functionality that are in beta, pre-release, experimental, or preview stage. Beta Features are provided strictly "as is" and "as available" without any warranty of any kind and may be discontinued entirely without notice.
               </p>
             </Sub>
-            <Sub number="22.2" title="Feature Modification and Removal">
+            <Sub number="23.2" title="Feature Modification and Removal">
               <p>
-                PlanIt reserves the right, in its sole and absolute discretion and without prior notice or liability, to modify, redesign, replace, restrict, suspend, or permanently remove any feature or aspect of the Service at any time. This includes without limitation features that you currently use and rely upon. PlanIt's obligation is to provide access to the Service as it exists at any given time, not to preserve any particular feature set. You have no vested right in the continuity of any feature.
-              </p>
-            </Sub>
-            <Sub number="22.3" title="No Reliance on Feature Continuity">
-              <p>
-                You represent, warrant, and covenant that you shall not make any business, financial, operational, or personal decision based on reliance upon the continued availability, pricing, performance, or form of any specific feature of the Service. PlanIt shall bear no liability for any damages arising from the modification, removal, or discontinuation of any feature.
-              </p>
-            </Sub>
-          </Section>
-
-          <Section number="23" title="No Reliance; No Third-Party Representations; Reservation of Rights">
-            <Sub number="23.1" title="No Reliance">
-              <p>
-                You acknowledge and agree that you have not relied upon any statement, representation, warranty, promise, assurance, or undertaking made or given by or on behalf of PlanIt, whether orally or in writing, other than as expressly set out in these Terms, in deciding to access or use the Service. No marketing materials, sales communications, website copy, blog posts, documentation, or verbal statements shall constitute representations or warranties by PlanIt and shall not give rise to any cause of action unless expressly incorporated in writing into these Terms by a duly authorised representative of PlanIt.
-              </p>
-            </Sub>
-            <Sub number="23.2" title="Reservation of Rights">
-              <p>
-                All rights not expressly granted in these Terms are reserved by PlanIt. Nothing in these Terms shall be construed as granting by implication, estoppel, laches, or otherwise any licence, right, or permission to use any of PlanIt's Intellectual Property Rights or proprietary assets, other than as expressly stated herein. The exercise of PlanIt's rights under these Terms shall not constitute a waiver of any other rights available at law or in equity, all of which are expressly reserved.
-              </p>
-            </Sub>
-            <Sub number="23.3" title="No Agency or Partnership">
-              <p>
-                Nothing in these Terms shall be construed to create any agency, partnership, joint venture, employment relationship, or franchise between you and PlanIt. You have no authority to bind PlanIt in any manner whatsoever, and you shall not represent to any third party that any such relationship exists.
+                PlanIt reserves the right, in its sole and absolute discretion and without prior notice or liability, to modify, redesign, replace, restrict, suspend, or permanently remove any feature or aspect of the Service at any time. You have no vested right in the continuity of any feature.
               </p>
             </Sub>
           </Section>
@@ -589,14 +589,14 @@ export default function Terms() {
                 <a href="/support" className="text-neutral-900 font-medium underline underline-offset-2">planitapp.onrender.com/support</a>
               </p>
               <p><strong className="text-neutral-900">Response time:</strong> PlanIt endeavours to respond within 48 business hours. Complex legal or technical matters may take longer.</p>
-              <p><strong className="text-neutral-900">Scope:</strong> Legal notices, Terms inquiries, privacy requests, DMCA notices, bug reports, early deletion requests, abuse reports.</p>
+              <p><strong className="text-neutral-900">Scope:</strong> Legal notices, Terms inquiries, privacy requests, analytics opt-out, DMCA notices, bug reports, early deletion requests, abuse reports.</p>
             </div>
           </Section>
 
           <div className="mt-10 p-6 bg-neutral-900 rounded-xl">
             <p className="text-xs font-bold text-neutral-400 uppercase tracking-widest mb-3">Plain-Language Summary (non-binding)</p>
             <p className="text-sm text-neutral-300 leading-relaxed">
-              By using PlanIt you agree to use it lawfully, to own what you submit, and to understand that all event data is permanently deleted seven days after the event — so export anything you need first. PlanIt is free, provided as-is, with no guarantees of uptime or fitness for any purpose. We can remove your access for any reason at any time. Disputes come to us directly first. All rights to PlanIt's software, design, and architecture are reserved. If something is unclear, contact us.
+              By using PlanIt you agree to use it lawfully, to own what you submit, and to understand that all event data is permanently deleted seven days after the event — so export anything you need first. When you first visit, we ask your permission before running platform analytics (page views, clicks, session data). You can say no and the site still works fully; the analytics just won't run. We use analytics to understand how the platform is used, fix bugs, and catch abuse — never for ads or profiling. All analytics records are automatically deleted after 90 days. PlanIt is free, provided as-is, with no guarantees of uptime or fitness for any purpose. We can remove your access for any reason at any time. Disputes come to us directly first. All rights to PlanIt's software, design, and architecture are reserved. If something is unclear, contact us.
             </p>
           </div>
 
