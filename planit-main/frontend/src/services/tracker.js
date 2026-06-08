@@ -5,11 +5,19 @@
  * ───────────────────────────────────
  * Silently tracks all user interactions across the platform and sends them
  * to the backend in batches. 100% first-party — no third-party scripts,
- * no Set-Cookie headers, no document.cookie (uses localStorage instead
- * so browser privacy settings never block it).
+ * no Set-Cookie headers, no document.cookie (uses localStorage instead).
  *
- * WHAT IT TRACKS
- * ──────────────
+ * CONSENT
+ * ───────
+ * Tracking ONLY starts after the user accepts the consent banner.
+ * If the user declines — or has not yet decided — nothing is tracked.
+ * This is enforced by:
+ *   1. A `_trackingEnabled` flag gating every enqueue() call.
+ *   2. `initTracker()` reading localStorage before attaching any listeners.
+ *   3. Listening for the `planit:consent` DOM event fired by ConsentBanner.
+ *
+ * WHAT IT TRACKS (only if consented)
+ * ──────────────────────────────────
  * • Page views (pathname, referrer, UTM params)
  * • Time spent on each page (via visibilitychange + beforeunload)
  * • Click events (element tag, id snippet, text snippet) — event delegation
@@ -18,16 +26,30 @@
  * • Session start/end
  * • JS errors (unhandled)
  * • Outbound link clicks
- *
- * PRIVACY
- * ───────
- * No PII is ever collected. Visitor/session IDs are random opaque strings
- * stored in localStorage. All sensitive payload fields are encrypted
- * server-side (AES-256-GCM).
  */
 
 const API_BASE = (import.meta.env.VITE_API_URL || 'http://localhost:5000/api').replace(/\/$/, '');
 const TRACK_URL = `${API_BASE}/platform-analytics/track`;
+
+// ─── Consent check ────────────────────────────────────────────────────────────
+const CONSENT_KEY     = 'planit_cookie_consent';
+const CONSENT_VERSION = '1';
+
+function getStoredConsent() {
+  try {
+    const raw = localStorage.getItem(CONSENT_KEY);
+    if (!raw) return null; // no decision yet
+    const parsed = JSON.parse(raw);
+    if (parsed.v !== CONSENT_VERSION) return null;
+    return parsed.accepted === true; // true = accepted, false = declined
+  } catch { return null; }
+}
+
+// ─── Tracking gate ────────────────────────────────────────────────────────────
+// ALL event recording is gated behind this flag.
+// It defaults to false — nothing is ever tracked without explicit consent.
+let _trackingEnabled  = false;
+let _listenersAttached = false;
 
 // ─── Identity ─────────────────────────────────────────────────────────────────
 function getId(key, prefix) {
@@ -39,7 +61,6 @@ function getId(key, prefix) {
     }
     return id;
   } catch {
-    // localStorage blocked (private browsing or strict settings)
     return `${prefix}_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 10)}`;
   }
 }
@@ -81,9 +102,8 @@ function getReferrer() {
   try {
     const ref = document.referrer;
     if (!ref) return null;
-    // Only return the origin+pathname, strip query params from referrer for privacy
     const u = new URL(ref);
-    if (u.hostname === window.location.hostname) return null; // internal nav — not a true referrer
+    if (u.hostname === window.location.hostname) return null;
     return `${u.hostname}${u.pathname}`.slice(0, 200);
   } catch { return null; }
 }
@@ -94,6 +114,9 @@ let flushTimer = null;
 let isFlushing = false;
 
 function enqueue(eventType, extra = {}) {
+  // ► CONSENT GATE — nothing is tracked if the user has not accepted
+  if (!_trackingEnabled) return;
+
   refreshSession();
   const ev = {
     eventType,
@@ -103,13 +126,11 @@ function enqueue(eventType, extra = {}) {
     referrer: getReferrer(),
     ...getUtm(),
     ts: new Date().toISOString(),
-    // Attach event context when the user is on an event page
     ...(_linkedEventId ? { linkedEventId: _linkedEventId, linkedEventSubdomain: _linkedEventSubdomain } : {}),
     ...extra,
   };
   queue.push(ev);
 
-  // Schedule flush in 5s (debounced) — or flush immediately for exits
   if (eventType === 'page_exit' || eventType === 'session_end') {
     flush(true);
   } else {
@@ -130,7 +151,6 @@ async function flush(sync = false) {
 
   try {
     if (sync && navigator.sendBeacon) {
-      // sendBeacon survives page unload — the only reliable method on exit
       navigator.sendBeacon(TRACK_URL, new Blob([body], { type: 'application/json' }));
     } else {
       await fetch(TRACK_URL, {
@@ -148,31 +168,27 @@ async function flush(sync = false) {
 
 // ─── Scroll depth tracking ─────────────────────────────────────────────────────
 let maxScroll  = 0;
-let scrollPage = window.location.pathname;
+let scrollPage = typeof window !== 'undefined' ? window.location.pathname : '/';
 
 function onScroll() {
   try {
-    const el     = document.documentElement;
-    const pct    = Math.round((el.scrollTop / (el.scrollHeight - el.clientHeight || 1)) * 100);
+    const el  = document.documentElement;
+    const pct = Math.round((el.scrollTop / (el.scrollHeight - el.clientHeight || 1)) * 100);
     if (pct > maxScroll) maxScroll = pct;
   } catch { /* ignore */ }
 }
 
 function flushScroll() {
   if (maxScroll > 0 && scrollPage === window.location.pathname) {
-    enqueue('scroll_depth', {
-      page: scrollPage,
-      timeOnPageMs: maxScroll, // reuse timeOnPageMs field to store scroll %
-    });
+    enqueue('scroll_depth', { page: scrollPage, timeOnPageMs: maxScroll });
   }
 }
 
-// ─── Click tracking (event delegation) ───────────────────────────────────────
+// ─── Click tracking ───────────────────────────────────────────────────────────
 function onDocClick(e) {
   try {
     const target = e.target?.closest('a,button,[role="button"],[data-track]') || e.target;
     if (!target) return;
-
     const tag  = target.tagName?.toLowerCase() || 'unknown';
     const id   = (target.id || '').slice(0, 50);
     const text = (target.innerText || target.value || target.getAttribute('aria-label') || '')
@@ -180,8 +196,6 @@ function onDocClick(e) {
     const cls  = (target.className && typeof target.className === 'string')
       ? target.className.split(' ').filter(Boolean).slice(0, 3).join(' ')
       : '';
-
-    // Detect outbound links
     if (tag === 'a') {
       const href = target.getAttribute('href') || '';
       if (href.startsWith('http') && !href.includes(window.location.hostname)) {
@@ -189,7 +203,6 @@ function onDocClick(e) {
         return;
       }
     }
-
     enqueue('click', { payload: { tag, id, text, cls } });
   } catch { /* ignore */ }
 }
@@ -203,7 +216,6 @@ function onInput(e) {
     const type = el.type?.toLowerCase();
     if (!['text', 'search', ''].includes(type || '')) return;
     if (!(el.placeholder || el.id || el.name || '').toLowerCase().match(/search|filter|find|query/)) return;
-
     clearTimeout(searchTimer);
     searchTimer = setTimeout(() => {
       enqueue('search', { payload: { query_length: (el.value || '').length } });
@@ -227,7 +239,7 @@ function onError(e) {
 
 // ─── Page lifecycle ───────────────────────────────────────────────────────────
 let pageEnterTime = Date.now();
-let currentPage   = window.location.pathname;
+let currentPage   = typeof window !== 'undefined' ? window.location.pathname : '/';
 
 function onPageEnter(path, isFirst = false) {
   currentPage   = path;
@@ -245,7 +257,6 @@ function onPageExit(nextPath) {
   flushScroll();
   enqueue('page_exit', { page: currentPage, timeOnPageMs });
   if (!nextPath) {
-    // True browser exit
     enqueue('session_end', {
       page: currentPage,
       timeOnPageMs: Date.now() - sessionStart,
@@ -253,19 +264,89 @@ function onPageExit(nextPath) {
   }
 }
 
+// ─── Attach DOM/window listeners ──────────────────────────────────────────────
+// Called once, only after consent is confirmed.
+function attachListeners() {
+  if (_listenersAttached) return;
+  _listenersAttached = true;
+
+  document.addEventListener('click', onDocClick, { capture: true, passive: true });
+  window.addEventListener('scroll', onScroll, { passive: true });
+  document.addEventListener('input', onInput, { passive: true });
+  window.addEventListener('error', onError);
+
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') {
+      onPageExit(null);
+      flush(true);
+    } else if (document.visibilityState === 'visible') {
+      refreshSession();
+    }
+  });
+
+  window.addEventListener('beforeunload', () => {
+    onPageExit(null);
+    flush(true);
+  });
+
+  setInterval(() => flush(), 30_000);
+}
+
+// ─── Start tracking (after consent confirmed) ─────────────────────────────────
+function startTracking(isFirstSession = true) {
+  _trackingEnabled = true;
+  attachListeners();
+  onPageEnter(window.location.pathname, isFirstSession);
+}
+
 // ─── Public API ───────────────────────────────────────────────────────────────
 
-/** Call this from the App.jsx useEffect whenever the pathname changes */
+/**
+ * initTracker — call once from usePageTracker (inside <Router>).
+ *
+ * Behaviour:
+ *  • Consent already accepted → start tracking immediately.
+ *  • Consent already declined → do nothing. Ever.
+ *  • No decision yet         → wait for the `planit:consent` DOM event
+ *                              fired by ConsentBanner when the user clicks.
+ */
+export function initTracker() {
+  if (typeof window === 'undefined') return;
+
+  const consent = getStoredConsent();
+
+  if (consent === true) {
+    // User already accepted in a previous session — start immediately.
+    startTracking(true);
+    return;
+  }
+
+  if (consent === false) {
+    // User already declined — never track them.
+    return;
+  }
+
+  // consent === null: user hasn't decided yet. Wait for their choice.
+  // ConsentBanner dispatches `planit:consent` with { detail: { accepted: bool } }.
+  document.addEventListener('planit:consent', (e) => {
+    if (e.detail?.accepted === true) {
+      // User just accepted — start tracking from this moment.
+      startTracking(false); // false = this is not a brand-new session_start
+      enqueue('session_start', { page: window.location.pathname }); // record it now
+    }
+    // If declined, _trackingEnabled stays false — zero tracking, forever.
+  }, { once: true }); // only fire once per page load
+}
+
+/** Call whenever the pathname changes (already called by usePageTracker). */
 export function trackPageChange(pathname) {
+  // enqueue() guards on _trackingEnabled — safe to call unconditionally.
   if (pathname !== currentPage) {
     onPageExit(pathname);
   }
-  onPageEnter(pathname);
-}
-
-/** Call this when the tracker first initialises (once) */
-export function initTracker() {
-  onPageEnter(window.location.pathname, true);
+  if (_trackingEnabled) {
+    onPageEnter(pathname);
+  }
 }
 
 /**
@@ -281,12 +362,6 @@ export function trackFeature(feature, meta = {}) {
  * Track a guest-level action that carries PII and/or RSVP status.
  * These fields are stored at the top level of the analytics document so they
  * can be queried and aggregated — NOT buried inside the encrypted payload.
- *
- * @param {string} feature          e.g. 'rsvp_submitted', 'rsvp_updated'
- * @param {object} [opts]
- * @param {object} [opts.pii]        { email, name, phone } — encrypted AES-256-GCM server-side
- * @param {string} [opts.rsvpStatus] 'yes' | 'maybe' | 'no' | 'waitlist'
- * @param {object} [opts.meta]       any extra non-PII payload fields
  */
 export function trackGuestAction(feature, { pii, rsvpStatus, ...meta } = {}) {
   enqueue('feature_use', {
@@ -297,9 +372,8 @@ export function trackGuestAction(feature, { pii, rsvpStatus, ...meta } = {}) {
 }
 
 /**
- * Call from EventSpace / RSVPPage once the event ID is known.
- * Every tracking event fired after this will carry linkedEventId so it gets
- * attributed to the correct event in the analytics database.
+ * Set the current event context. Call from EventSpace/RSVPPage once the
+ * event ID is known. Every event fired after this carries linkedEventId.
  * Pass (null, null) when navigating away from an event page.
  */
 export function setEventContext(eventId, subdomain) {
@@ -307,42 +381,23 @@ export function setEventContext(eventId, subdomain) {
   _linkedEventSubdomain = subdomain ? String(subdomain) : null;
 }
 
-/** Flush remaining events immediately (e.g. on error boundary) */
+/** Flush remaining events immediately (e.g. on error boundary). */
 export function flushTracker() {
   flush(true);
 }
 
-// ─── Wire up global listeners ─────────────────────────────────────────────────
-(function bootstrap() {
-  if (typeof window === 'undefined') return;
+/**
+ * Returns whether tracking is currently active (consent given + listeners up).
+ * Useful for debugging or showing a "tracking active" indicator.
+ */
+export function isTrackingActive() {
+  return _trackingEnabled;
+}
 
-  // Click delegation
-  document.addEventListener('click', onDocClick, { capture: true, passive: true });
-
-  // Scroll depth
-  window.addEventListener('scroll', onScroll, { passive: true });
-
-  // Search / input
-  document.addEventListener('input', onInput, { passive: true });
-
-  // JS errors
-  window.addEventListener('error', onError);
-
-  // Page exit / unload
-  document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'hidden') {
-      onPageExit(null);
-      flush(true);
-    } else if (document.visibilityState === 'visible') {
-      refreshSession();
-    }
-  });
-
-  window.addEventListener('beforeunload', () => {
-    onPageExit(null);
-    flush(true);
-  });
-
-  // Flush every 30s regardless
-  setInterval(() => flush(), 30_000);
-})();
+// ─── NO auto-bootstrap ────────────────────────────────────────────────────────
+// The original tracker.js ran bootstrap() immediately on import, attaching all
+// DOM listeners before any consent check. That meant tracking started the
+// instant the module loaded, regardless of what the user chose.
+//
+// The fix: nothing runs until initTracker() is explicitly called (from
+// usePageTracker), and initTracker() gates everything on consent.
