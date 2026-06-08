@@ -287,7 +287,7 @@ function EventsTab({ data }) {
           {[
             { label: 'Event ID',        desc: 'Last 8 chars of MongoDB ObjectId. Hover for full ID.' },
             { label: 'Sessions',        desc: 'All tracking records (views, clicks, scrolls) linked to this event.' },
-            { label: 'Unique Visitors', desc: 'Distinct localStorage visitorIds seen on this event's pages.' },
+            { label: 'Unique Visitors', desc: "Distinct localStorage visitorIds seen on this event's pages." },
             { label: 'RSVP Yes',        desc: 'Visitors whose RSVP submission had status "yes".' },
           ].map(({ label, desc }) => (
             <div key={label} className="bg-neutral-50 rounded-lg p-2.5">
