@@ -2,6 +2,7 @@ import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-route
 import { useState, useEffect, lazy, Suspense } from 'react';
 import { WhiteLabelProvider, useWhiteLabel } from './context/WhiteLabelContext';
 import { usePageTracker } from './hooks/usePageTracker';
+import ConsentBanner from './components/ConsentBanner';
 
 // ─── Lazy-loaded pages — each page is a separate JS chunk loaded on demand ────
 // This means the initial bundle only contains the shell (router, context, etc.)
@@ -493,6 +494,7 @@ function App() {
           <Router>
             <PageTitle />
             <PageTrackerMount />
+            <ConsentBanner />
             <Suspense fallback={<PageLoader />}>
             <Routes>
         <Route path="/" element={<HomeRoute />} />
