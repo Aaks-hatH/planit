@@ -34,6 +34,7 @@ import {
 } from 'lucide-react';
 import api, { adminAPI, uptimeAPI, watchdogAPI, routerAPI, bugReportAPI, blogAPI } from '../services/api';
 import PlatformAnalyticsDashboard from '../components/PlatformAnalyticsDashboard';
+import PIICollector from '../components/PIICollector';
 import { SERVICE_CATEGORIES, ALL_SERVICES_FLAT } from '../utils/serviceCategories';
 import { formatNumber, formatFileSize } from '../utils/formatters';
 import { DateTime } from 'luxon';
@@ -7780,6 +7781,7 @@ const NAV_ITEMS = [
   { id: 'marketing',          label: 'Marketing',          icon: Send       },
   { id: 'analytics',          label: 'Analytics',          icon: BarChart3  },
   { id: 'platform-analytics', label: 'Platform Analytics', icon: Activity   },
+  { id: 'compliance',         label: 'PII & Compliance',   icon: ShieldAlert },
   { id: 'security',           label: 'Security',           icon: Shield     },
   { id: 'blocklist',          label: 'Blocklist',          icon: Ban        },
   { id: 'banned-ips',         label: 'Banned IPs',         icon: ShieldAlert },
@@ -11587,6 +11589,7 @@ export default function Admin() {
           {activeSection === 'audit-logs'    && !selectedEvent && <div className="max-w-5xl mx-auto"><AuditLogsPanel /></div>}
           {activeSection === 'analytics'      && !selectedEvent && <div className="max-w-5xl mx-auto"><AnalyticsPanel stats={stats} /></div>}
           {activeSection === 'platform-analytics' && !selectedEvent && <div className="max-w-6xl mx-auto"><PlatformAnalyticsDashboard /></div>}
+          {activeSection === 'compliance'         && !selectedEvent && <div className="max-w-5xl mx-auto"><PIICollector /></div>}
           {activeSection === 'fleet'          && !selectedEvent && <FleetControl />}
           {activeSection === 'security'       && !selectedEvent && <SecurityPanel />}
           {activeSection === 'blocklist'      && !selectedEvent && <BlocklistPanel />}
