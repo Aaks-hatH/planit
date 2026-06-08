@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { Shield, X, Check } from 'lucide-react';
 
 const CONSENT_KEY = 'planit_cookie_consent';
 const CONSENT_VERSION = '1';
@@ -42,7 +41,6 @@ export function waitForConsent(cb) {
     }
   };
   window.addEventListener('storage', handler);
-  // Also poll via custom event dispatched by ConsentBanner
   const domHandler = (e) => {
     document.removeEventListener('planit:consent', domHandler);
     cb(e.detail?.accepted === true);
@@ -52,29 +50,21 @@ export function waitForConsent(cb) {
 
 export default function ConsentBanner() {
   const [visible, setVisible] = useState(false);
-  const [dismissed, setDismissed] = useState(false);
+  const [out, setOut] = useState(false);
 
   useEffect(() => {
     const stored = getStoredConsent();
     if (stored === null) {
-      // Short delay so the page content loads first
-      const t = setTimeout(() => setVisible(true), 800);
+      const t = setTimeout(() => setVisible(true), 600);
       return () => clearTimeout(t);
     }
   }, []);
 
-  function accept() {
-    storeConsent(true);
-    document.dispatchEvent(new CustomEvent('planit:consent', { detail: { accepted: true } }));
-    setDismissed(true);
-    setTimeout(() => setVisible(false), 400);
-  }
-
-  function decline() {
-    storeConsent(false);
-    document.dispatchEvent(new CustomEvent('planit:consent', { detail: { accepted: false } }));
-    setDismissed(true);
-    setTimeout(() => setVisible(false), 400);
+  function dismiss(accepted) {
+    storeConsent(accepted);
+    document.dispatchEvent(new CustomEvent('planit:consent', { detail: { accepted } }));
+    setOut(true);
+    setTimeout(() => setVisible(false), 300);
   }
 
   if (!visible) return null;
@@ -82,113 +72,93 @@ export default function ConsentBanner() {
   return (
     <div
       aria-live="polite"
-      aria-label="Cookie consent"
+      aria-label="Cookie preferences"
       style={{
         position: 'fixed',
-        bottom: 0,
-        left: 0,
-        right: 0,
+        bottom: 16,
+        left: '50%',
+        transform: out
+          ? 'translateX(-50%) translateY(20px)'
+          : 'translateX(-50%) translateY(0)',
+        opacity: out ? 0 : 1,
+        transition: 'opacity 0.25s ease, transform 0.25s ease',
         zIndex: 9999,
-        display: 'flex',
-        justifyContent: 'center',
-        padding: '0 16px 20px',
-        pointerEvents: 'none',
-        transform: dismissed ? 'translateY(120%)' : 'translateY(0)',
-        transition: 'transform 0.35s cubic-bezier(0.4,0,0.2,1)',
+        pointerEvents: out ? 'none' : 'auto',
+        width: 'calc(100% - 32px)',
+        maxWidth: 520,
       }}
     >
       <div
         style={{
-          pointerEvents: 'auto',
-          background: '#ffffff',
-          border: '1px solid #e5e7eb',
-          borderRadius: '14px',
-          boxShadow: '0 8px 32px rgba(0,0,0,0.10), 0 2px 8px rgba(0,0,0,0.06)',
-          maxWidth: '640px',
-          width: '100%',
-          padding: '16px 20px',
-          display: 'flex',
-          alignItems: 'flex-start',
-          gap: '14px',
-        }}
-      >
-        {/* Icon */}
-        <div style={{
-          flexShrink: 0,
-          width: 36,
-          height: 36,
-          borderRadius: 9,
-          background: '#f3f4f6',
+          background: 'rgba(255,255,255,0.96)',
+          backdropFilter: 'blur(12px)',
+          WebkitBackdropFilter: 'blur(12px)',
+          border: '1px solid rgba(0,0,0,0.08)',
+          borderRadius: 10,
+          boxShadow: '0 2px 16px rgba(0,0,0,0.07)',
+          padding: '10px 14px',
           display: 'flex',
           alignItems: 'center',
-          justifyContent: 'center',
-          marginTop: 1,
-        }}>
-          <Shield size={17} style={{ color: '#374151' }} />
-        </div>
-
+          gap: 10,
+        }}
+      >
         {/* Text */}
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <p style={{
-            margin: 0,
-            fontSize: 13,
-            color: '#374151',
-            lineHeight: 1.55,
-          }}>
-            We use cookies and local storage to keep you signed in and to understand how PlanIt is used — helping us improve reliability and security.{' '}
-            <a
-              href="/privacy"
-              style={{ color: '#111827', fontWeight: 600, textDecoration: 'underline', textUnderlineOffset: 2 }}
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Privacy Policy
-            </a>
-          </p>
-        </div>
+        <p style={{
+          flex: 1,
+          margin: 0,
+          fontSize: 12,
+          color: '#6b7280',
+          lineHeight: 1.5,
+        }}>
+          We use cookies to keep you signed in and improve the platform.{' '}
+          <a
+            href="/privacy"
+            style={{ color: '#9ca3af', textDecoration: 'underline', textUnderlineOffset: 2 }}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Learn more
+          </a>
+        </p>
 
         {/* Buttons */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0, paddingTop: 1 }}>
+        <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
           <button
-            onClick={decline}
+            onClick={() => dismiss(false)}
             style={{
               background: 'none',
-              border: '1px solid #d1d5db',
-              borderRadius: 8,
-              padding: '7px 14px',
-              fontSize: 13,
+              border: '1px solid #e5e7eb',
+              borderRadius: 6,
+              padding: '5px 10px',
+              fontSize: 11,
               fontWeight: 600,
-              color: '#6b7280',
+              color: '#9ca3af',
               cursor: 'pointer',
-              lineHeight: 1,
               whiteSpace: 'nowrap',
+              lineHeight: 1,
             }}
-            onMouseEnter={e => { e.currentTarget.style.background = '#f9fafb'; e.currentTarget.style.color = '#374151'; }}
-            onMouseLeave={e => { e.currentTarget.style.background = 'none'; e.currentTarget.style.color = '#6b7280'; }}
+            onMouseEnter={e => { e.currentTarget.style.color = '#6b7280'; e.currentTarget.style.borderColor = '#d1d5db'; }}
+            onMouseLeave={e => { e.currentTarget.style.color = '#9ca3af'; e.currentTarget.style.borderColor = '#e5e7eb'; }}
           >
             Decline
           </button>
           <button
-            onClick={accept}
+            onClick={() => dismiss(true)}
             style={{
               background: '#111827',
               border: '1px solid #111827',
-              borderRadius: 8,
-              padding: '7px 14px',
-              fontSize: 13,
+              borderRadius: 6,
+              padding: '5px 12px',
+              fontSize: 11,
               fontWeight: 600,
-              color: '#ffffff',
+              color: '#fff',
               cursor: 'pointer',
-              lineHeight: 1,
-              display: 'flex',
-              alignItems: 'center',
-              gap: 5,
               whiteSpace: 'nowrap',
+              lineHeight: 1,
             }}
-            onMouseEnter={e => { e.currentTarget.style.background = '#1f2937'; }}
+            onMouseEnter={e => { e.currentTarget.style.background = '#374151'; }}
             onMouseLeave={e => { e.currentTarget.style.background = '#111827'; }}
           >
-            <Check size={13} strokeWidth={2.5} />
             Accept
           </button>
         </div>
