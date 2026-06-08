@@ -34,7 +34,6 @@ import {
 } from 'lucide-react';
 import api, { adminAPI, uptimeAPI, watchdogAPI, routerAPI, bugReportAPI, blogAPI } from '../services/api';
 import PlatformAnalyticsDashboard from '../components/PlatformAnalyticsDashboard';
-import PIICollector from '../components/PIICollector';
 import { SERVICE_CATEGORIES, ALL_SERVICES_FLAT } from '../utils/serviceCategories';
 import { formatNumber, formatFileSize } from '../utils/formatters';
 import { DateTime } from 'luxon';
@@ -11589,7 +11588,6 @@ export default function Admin() {
           {activeSection === 'audit-logs'    && !selectedEvent && <div className="max-w-5xl mx-auto"><AuditLogsPanel /></div>}
           {activeSection === 'analytics'      && !selectedEvent && <div className="max-w-5xl mx-auto"><AnalyticsPanel stats={stats} /></div>}
           {activeSection === 'platform-analytics' && !selectedEvent && <div className="max-w-6xl mx-auto"><PlatformAnalyticsDashboard /></div>}
-          {activeSection === 'compliance'         && !selectedEvent && <div className="max-w-5xl mx-auto"><PIICollector /></div>}
           {activeSection === 'fleet'          && !selectedEvent && <FleetControl />}
           {activeSection === 'security'       && !selectedEvent && <SecurityPanel />}
           {activeSection === 'blocklist'      && !selectedEvent && <BlocklistPanel />}
