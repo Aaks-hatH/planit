@@ -1,8 +1,8 @@
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Shield } from 'lucide-react';
 
-const LAST_UPDATED = 'April 3, 2026';
-const EFFECTIVE_DATE = 'April 3, 2026';
+const LAST_UPDATED = 'June 6, 2026';
+const EFFECTIVE_DATE = 'June 6, 2026';
 
 function Section({ number, title, children }) {
   return (
@@ -105,13 +105,86 @@ export default function Privacy() {
               </ul>
             </Sub>
 
-            <Sub title="2.3 Information We Do Not Collect">
+            <Sub title="2.3 Platform Analytics — Automatic Collection">
+              <p>
+                PlanIt operates a platform analytics system that collects information about how visitors interact
+                with the Service. This data helps us understand overall usage patterns, improve reliability, detect
+                abuse, and make the platform safer and faster for everyone. The analytics system collects the
+                following categories of information automatically when you visit or use the Service:
+              </p>
+              <ul className="list-disc list-inside space-y-1.5 ml-3 mt-2">
+                <li>
+                  <strong>Session and visitor identifiers:</strong> A randomly generated <em>session ID</em> representing
+                  your current browsing session, and a <em>visitor ID</em> stored in your browser's local storage that
+                  persists across sessions on the same device. These are opaque random strings and are not linked to
+                  your name, email, or any other directly identifying information unless you are a guest in an
+                  Enterprise Mode event and have provided contact details.
+                </li>
+                <li>
+                  <strong>Page views and navigation:</strong> The pages you visit within PlanIt, including timestamps,
+                  time spent on each page, scroll depth reached, and which page group each page belongs to (for
+                  example: home, event workspace, admin, invite, or reservation).
+                </li>
+                <li>
+                  <strong>Interaction events:</strong> Click interactions (recording the general area of the page
+                  where a click occurred), feature usage (which named features are used, such as check-in or
+                  event creation), outbound link clicks, and search or filter input actions.
+                </li>
+                <li>
+                  <strong>Session lifecycle:</strong> When a new browsing session begins and ends, and the total
+                  duration of each session.
+                </li>
+                <li>
+                  <strong>Device and browser context:</strong> Device type (desktop, mobile, or tablet) and
+                  browser name, derived from your browser's user agent string at the time of ingestion.
+                </li>
+                <li>
+                  <strong>Referrer and UTM parameters:</strong> The referring URL (the page you navigated from)
+                  and any UTM campaign parameters present in the URL when you first arrive on a page.
+                </li>
+                <li>
+                  <strong>Error events:</strong> Unhandled JavaScript errors that occur in your browser while
+                  using the Service, collected to help us identify and fix bugs.
+                </li>
+                <li>
+                  <strong>IP-derived signals (anonymised):</strong> A daily-rotating, non-reversible hash of your
+                  IP address (SHA-256 of your IP combined with the current date, truncated to 32 characters) is
+                  stored alongside country and city geolocation derived from Cloudflare's infrastructure headers.
+                  The raw IP address is never stored by the analytics system. The hash cannot be reversed to
+                  recover your IP address, and it changes each calendar day, preventing long-term tracking by IP.
+                </li>
+                <li>
+                  <strong>Per-event guest analytics (Enterprise Mode only):</strong> For guests accessing events
+                  that use Enterprise Mode, additional data points may be recorded: the linked event identifier,
+                  your RSVP status, check-in timestamp, number of return visits to the event, and anti-fraud
+                  signals including a spam risk score and whether your activity has been flagged as suspected
+                  inauthentic. Where you have submitted your name, email, or phone number as part of the RSVP
+                  or check-in flow, that personal information is stored encrypted using AES-256-GCM encryption
+                  within the analytics record and is used solely for event administration purposes by the event
+                  organizer.
+                </li>
+              </ul>
+              <p className="mt-3">
+                All analytics event payloads (click details, feature names, error messages) are encrypted at
+                rest using AES-256-GCM before storage. Analytics data is retained for <strong>90 days</strong> by
+                default, after which it is automatically and permanently deleted.
+              </p>
+              <p className="mt-2">
+                The analytics system is designed to prioritise aggregate understanding of platform usage over
+                individual identification. The visitor ID, while persistent on your device, is not linked to any
+                PlanIt account and cannot be used to identify you across devices or outside of the platform.
+                We do not sell, share, or use analytics data for advertising or profiling purposes.
+              </p>
+            </Sub>
+
+            <Sub title="2.4 Information We Do Not Collect">
               <p>PlanIt does not collect:</p>
               <ul className="list-disc list-inside space-y-1.5 ml-3 mt-2">
                 <li>Payment or financial information of any kind. PlanIt is a free service and does not process payments.</li>
                 <li>Government-issued identification numbers or biometric data.</li>
                 <li>Precise geolocation data from your device.</li>
                 <li>Contact lists or address books from your device.</li>
+                <li>Your raw IP address in the analytics system (only a daily-rotating anonymised hash is stored, as described above).</li>
               </ul>
             </Sub>
           </Section>
@@ -124,7 +197,8 @@ export default function Privacy() {
               <li><strong>Real-time communication:</strong> To transmit chat messages, poll updates, task changes, and other collaborative content between participants within an event in real time via WebSocket connections.</li>
               <li><strong>Security and anti-abuse:</strong> To detect and prevent fraudulent activity, automated abuse, spam, and misuse of the platform through rate limiting, IP monitoring, and anti-fraud middleware.</li>
               <li><strong>File storage and delivery:</strong> Uploaded files are stored via Cloudinary and served to participants within the same event. Files are not shared across events or accessible to external parties.</li>
-              <li><strong>Automated data cleanup:</strong> To delete all event data automatically seven days after the event date, as described in Section 6.</li>
+              <li><strong>Platform analytics:</strong> To understand how the Service is used in aggregate, identify and fix errors, measure feature adoption, detect potentially fraudulent guest activity, and improve the reliability, security, and performance of the platform. Analytics data is not used for advertising, cross-site tracking, or profiling of individual users for commercial purposes.</li>
+              <li><strong>Automated data cleanup:</strong> To delete all event data automatically seven days after the event date, and all platform analytics data automatically after 90 days, as described in Section 6.</li>
               <li><strong>Support:</strong> To respond to enquiries submitted through our support contact form.</li>
               <li><strong>Service improvement:</strong> To understand how the platform is used in aggregate and improve its features and reliability.</li>
             </ul>
@@ -140,22 +214,22 @@ export default function Privacy() {
                 <strong>Performance of a contract (Article 6(1)(b)):</strong> Processing your data to provide you with the Service, including creating and operating event workspaces, enabling real-time collaboration, authenticating your identity, transmitting messages, and delivering all features of the platform. This is the primary legal basis for the majority of processing activities.
               </li>
               <li>
-                <strong>Legitimate interests (Article 6(1)(f)):</strong> Where processing is necessary for our legitimate interests (or those of a third party), and where such interests are not overridden by your interests or fundamental rights. Our legitimate interests include: detecting and preventing fraud and abuse; securing and monitoring our infrastructure; improving the reliability, performance, and functionality of the Service; enforcing our Terms of Service; and protecting the rights of other Users. We have conducted and maintain legitimate interest assessments (LIAs) for processing under this basis.
+                <strong>Legitimate interests (Article 6(1)(f)):</strong> Where processing is necessary for our legitimate interests (or those of a third party), and where such interests are not overridden by your interests or fundamental rights. Our legitimate interests include: detecting and preventing fraud and abuse; securing and monitoring our infrastructure; operating our platform analytics system to understand aggregate usage, identify bugs, and improve reliability and security; improving the performance and functionality of the Service; enforcing our Terms of Service; and protecting the rights of other Users. We have conducted and maintain legitimate interest assessments (LIAs) for processing under this basis.
               </li>
               <li>
                 <strong>Compliance with legal obligations (Article 6(1)(c)):</strong> Where processing is necessary to comply with applicable legal obligations, including responding to lawful requests from courts, regulators, and law enforcement authorities.
               </li>
               <li>
-                <strong>Consent (Article 6(1)(a)):</strong> Where you have given specific, freely given, informed, and unambiguous consent to processing for a particular purpose. You may withdraw consent at any time; withdrawal will not affect the lawfulness of processing carried out prior to withdrawal.
+                <strong>Consent (Article 6(1)(a)):</strong> Where you have given specific, freely given, informed, and unambiguous consent to processing for a particular purpose — including your consent to non-essential platform analytics tracking collected via the cookie/storage consent banner presented on your first visit. You may withdraw consent at any time; withdrawal will not affect the lawfulness of processing carried out prior to withdrawal.
               </li>
             </ul>
             <p className="mt-3">
-              Where we process special categories of personal data (Article 9 GDPR), we rely on the applicable condition under Article 9(2). PlanIt does not intentionally solicit or process special category data. If such data is included in User Content, it is processed on the basis of explicit consent by the individual or because the individual has manifestly made the data public.
+              Where we process special categories of personal data (Article 9 GDPR), we rely on the applicable condition under Article 9(2). PlanIt does not intentionally solicit or process special category data. If such data is included in User Content, it is processed on the basis of explicit consent by the individual or because the individual has manifestly made the data public. Dietary restrictions and accessibility information collected as part of RSVP submissions may constitute sensitive data under certain interpretations; we store this information with the same encryption and access controls applied to all RSVP data and delete it as part of the standard seven-day event lifecycle.
             </p>
           </Section>
 
           <Section number="5" title="How Your Information Is Shared">
-            <Sub title="4.1 Within an Event">
+            <Sub title="5.1 Within an Event">
               <p>
                 Information you submit within an event — including your username, messages, poll votes, RSVP status,
                 tasks, expenses, and any files you upload — is visible to all other participants of that same event.
@@ -166,12 +240,13 @@ export default function Privacy() {
                 of a different event.
               </p>
             </Sub>
-            <Sub title="4.2 Third-Party Service Providers">
+            <Sub title="5.2 Third-Party Service Providers">
               <p>We use the following third-party services to operate the platform:</p>
               <ul className="list-disc list-inside space-y-1.5 ml-3 mt-2">
                 <li><strong>Cloudinary:</strong> Used to store and serve files that participants upload within event spaces. Files uploaded to PlanIt are transferred to and stored on Cloudinary's infrastructure. Cloudinary's own privacy policy governs their handling of that data.</li>
-                <li><strong>MongoDB Atlas:</strong> Our database provider. All event data, messages, participants, polls, and related records are stored in a MongoDB database hosted on MongoDB Atlas infrastructure.</li>
+                <li><strong>MongoDB Atlas:</strong> Our database provider. All event data, messages, participants, polls, analytics records, and related records are stored in MongoDB databases hosted on MongoDB Atlas infrastructure.</li>
                 <li><strong>Render:</strong> Our cloud hosting provider. The PlanIt backend and frontend are deployed on Render's infrastructure.</li>
+                <li><strong>Cloudflare:</strong> Cloudflare infrastructure is used for network routing and provides IP-derived country and city signals used by our analytics system. No raw IP addresses are stored by PlanIt; only an anonymised daily-rotating hash is retained.</li>
                 <li><strong>Google Fonts:</strong> Font files are loaded from Google's CDN for display purposes. This involves your browser making a request to Google's servers. No personally identifiable information beyond standard HTTP headers (including IP address) is sent as part of this request.</li>
               </ul>
               <p className="mt-2">
@@ -179,7 +254,7 @@ export default function Privacy() {
                 advertising, or commercial purposes.
               </p>
             </Sub>
-            <Sub title="4.3 Legal Requirements">
+            <Sub title="5.3 Legal Requirements">
               <p>
                 We may disclose your information if required to do so by law, regulation, court order, or governmental
                 authority, or where we believe in good faith that disclosure is necessary to protect our rights, protect
@@ -194,11 +269,13 @@ export default function Privacy() {
             </p>
             <ul className="list-disc list-inside space-y-2 ml-3 mt-2">
               <li><strong>Password hashing:</strong> All passwords (event passwords and participant account passwords) are hashed using bcrypt before being stored. Plaintext passwords are never stored or logged.</li>
+              <li><strong>AES-256-GCM encryption at rest:</strong> Platform analytics payloads and any personal information stored within analytics records (such as guest contact details in Enterprise Mode) are encrypted at rest using AES-256-GCM before storage. Decryption keys are managed server-side and are not accessible to the database layer in isolation.</li>
               <li><strong>JWT authentication:</strong> Access to event spaces is controlled through JSON Web Tokens scoped to the specific event and participant. Organizer tokens carry elevated permissions and are issued separately.</li>
               <li><strong>HTTPS enforcement:</strong> All data in transit is encrypted using TLS. HTTP Strict Transport Security (HSTS) is enforced with a two-year max age and preload enabled.</li>
               <li><strong>Security headers:</strong> We apply Content Security Policy, X-Frame-Options, X-Content-Type-Options, and referrer policy headers to protect against common web attacks.</li>
               <li><strong>Rate limiting:</strong> Event creation and authentication endpoints are rate-limited to prevent brute-force and automated abuse.</li>
               <li><strong>Anti-fraud middleware:</strong> Sensitive routes are protected by anti-fraud middleware to detect and block suspicious activity.</li>
+              <li><strong>IP anonymisation in analytics:</strong> Raw IP addresses are never stored by the analytics system. Only a daily-rotating SHA-256 hash (truncated to 32 characters) is retained, which cannot be reversed to recover the original IP.</li>
             </ul>
             <p className="mt-3">
               No method of transmission over the internet and no method of electronic storage is completely secure.
@@ -208,10 +285,10 @@ export default function Privacy() {
           </Section>
 
           <Section number="7" title="Data Retention and Deletion">
-            <Sub title="6.1 Automatic Event Deletion">
+            <Sub title="7.1 Automatic Event Deletion">
               <p>
-                PlanIt operates a strict seven-day data retention policy. All data associated with an event —
-                including messages, files, polls, tasks, expenses, notes, participant records, and invite data —
+                PlanIt operates a strict seven-day data retention policy for event data. All data associated with an event —
+                including messages, files, polls, tasks, expenses, notes, participant records, RSVP submissions, and invite data —
                 is automatically and permanently deleted seven days after the event date. This deletion process
                 runs automatically on a daily schedule.
               </p>
@@ -221,13 +298,23 @@ export default function Privacy() {
                 deletion date approaches.
               </p>
             </Sub>
-            <Sub title="6.2 Organizer Email Address">
+            <Sub title="7.2 Platform Analytics Retention">
+              <p>
+                Platform analytics records — including session identifiers, visitor identifiers, event type records,
+                page view data, device and browser signals, and all associated encrypted payloads — are retained
+                for <strong>90 days</strong> from the date of collection. After 90 days, analytics records are
+                automatically and permanently deleted via a TTL index applied at the database level. The retention
+                period may be adjusted via server configuration; the currently active retention period is disclosed
+                in this Privacy Policy and will be updated if changed.
+              </p>
+            </Sub>
+            <Sub title="7.3 Organizer Email Address">
               <p>
                 The organizer's email address is stored in the event record. It is deleted along with the rest of
                 the event data at the end of the seven-day retention window.
               </p>
             </Sub>
-            <Sub title="6.3 Requesting Early Deletion">
+            <Sub title="7.4 Requesting Early Deletion">
               <p>
                 If you are an event organizer and wish to have your event and all associated data deleted before
                 the automatic seven-day window, you may contact us at{' '}
@@ -237,25 +324,51 @@ export default function Privacy() {
                 with the event name and the email address used to create it. We will process the deletion request
                 within 48 hours.
               </p>
+              <p className="mt-2">
+                To request deletion of your platform analytics records prior to the automatic 90-day deletion, or
+                to exercise any other data subject right with respect to analytics data, contact us at the same
+                address with sufficient information to identify your records (for example, the approximate date
+                of your visit and the event context, if applicable). We will respond within 30 days.
+              </p>
             </Sub>
           </Section>
 
           <Section number="8" title="Cookies and Local Storage">
             <p>
               PlanIt does not use third-party advertising or tracking cookies. We use the following browser storage
-              mechanisms solely to operate the Service:
+              mechanisms to operate the Service and, with your consent, to collect platform analytics:
             </p>
             <ul className="list-disc list-inside space-y-2 ml-3 mt-2">
               <li><strong>localStorage (event token):</strong> When you join or create an event, an authentication token is stored in your browser's localStorage. This token allows you to re-access the event from the same browser without re-entering your credentials. It is scoped to the specific event and expires when the event is deleted.</li>
               <li><strong>localStorage (username):</strong> Your chosen username is stored in localStorage so it can be pre-filled on subsequent visits to the same event.</li>
+              <li><strong>localStorage (visitor ID — analytics):</strong> A randomly generated visitor identifier is stored in localStorage and used by the platform analytics system to distinguish repeat visits from the same browser across sessions. This identifier is an opaque random string with no inherent connection to your identity. It is used solely for aggregate analytics purposes and is not shared with third parties. If you decline analytics via the consent banner, this identifier is not created or used for tracking. You can delete it at any time by clearing your browser's localStorage for this site.</li>
+              <li><strong>localStorage (consent preference):</strong> Your analytics consent decision (accept or decline) is stored in localStorage so that the consent banner is not shown on every visit.</li>
             </ul>
             <p className="mt-3">
-              You can clear these at any time through your browser settings. Doing so will require you to re-enter
-              your details the next time you access an event. We do not use session cookies for tracking purposes.
+              You can clear all of these at any time through your browser settings. Clearing localStorage will
+              require you to re-enter your event credentials on next access and will reset your consent preference.
+              We do not use session cookies for tracking purposes.
             </p>
           </Section>
 
-          <Section number="9" title="Camera Access">
+          <Section number="9" title="Your Consent Choices — Platform Analytics">
+            <p>
+              When you first visit PlanIt, a consent banner is displayed giving you the choice to accept or decline
+              platform analytics tracking. Your choice is respected as follows:
+            </p>
+            <ul className="list-disc list-inside space-y-2 ml-3 mt-2">
+              <li><strong>If you accept:</strong> The platform analytics system will collect the data described in Section 2.3 for the purposes described in Section 3. A visitor ID is stored in your browser's localStorage to enable session continuity in the analytics data.</li>
+              <li><strong>If you decline:</strong> No visitor ID will be created and no analytics events will be transmitted to our analytics system. Essential functional cookies and localStorage items (authentication tokens, username) continue to operate as these are necessary to provide the Service.</li>
+              <li><strong>Changing your choice:</strong> You can change your analytics preference at any time by clearing your browser's localStorage for this site (which will cause the consent banner to reappear on your next visit) or by contacting us.</li>
+            </ul>
+            <p className="mt-3">
+              Note that even if you decline platform analytics, certain server-side logging (including IP-based rate
+              limiting and security monitoring) continues to operate as a necessary security measure on a legitimate
+              interests basis, as described in Section 4.
+            </p>
+          </Section>
+
+          <Section number="10" title="Camera Access">
             <p>
               Certain features of PlanIt, specifically the QR code scanning functionality used in Enterprise mode
               check-in, require access to your device's camera. Camera access is requested only when you navigate
@@ -265,7 +378,7 @@ export default function Privacy() {
             </p>
           </Section>
 
-          <Section number="10" title="Children's Privacy">
+          <Section number="11" title="Children's Privacy">
             <p>
               PlanIt is not directed to children under the age of 13 and we do not knowingly collect personal
               information from children under 13. If you are a parent or guardian and believe that your child has
@@ -277,7 +390,7 @@ export default function Privacy() {
             </p>
           </Section>
 
-          <Section number="11" title="International Users and Data Transfers">
+          <Section number="12" title="International Users and Data Transfers">
             <p>
               PlanIt is operated from infrastructure hosted by Render and MongoDB Atlas, which may be located in
               the United States or other jurisdictions. If you access the Service from outside the United States,
@@ -291,34 +404,34 @@ export default function Privacy() {
             </p>
           </Section>
 
-          <Section number="12" title="Your Rights Under Applicable Data Protection Law">
+          <Section number="13" title="Your Rights Under Applicable Data Protection Law">
             <p>
-              Depending on your location and applicable law, you may have the following rights with respect to your personal information. Because all event data is automatically and permanently deleted within seven (7) days of the event date, many rights can be satisfied simply through the passage of time. However, we will respond to valid requests regardless.
+              Depending on your location and applicable law, you may have the following rights with respect to your personal information. Because all event data is automatically and permanently deleted within seven (7) days of the event date, and all analytics data is deleted within 90 days, many rights can be satisfied simply through the passage of time. However, we will respond to valid requests regardless.
             </p>
 
-            <Sub title="12.1 Rights Under GDPR (EEA, UK, and Switzerland Users)">
+            <Sub title="13.1 Rights Under GDPR (EEA, UK, and Switzerland Users)">
               <p>If you are located in the EEA, United Kingdom, or Switzerland, you have the following rights under the GDPR or equivalent legislation:</p>
               <ul className="list-disc list-inside space-y-2 ml-3 mt-2">
                 <li><strong>Right of access (Article 15):</strong> The right to obtain confirmation of whether we process your personal data and, if so, to receive a copy of that data together with supplementary information about the processing.</li>
                 <li><strong>Right to rectification (Article 16):</strong> The right to obtain rectification of inaccurate personal data and, taking into account the purposes of the processing, the right to have incomplete personal data completed.</li>
-                <li><strong>Right to erasure / "right to be forgotten" (Article 17):</strong> The right to obtain erasure of your personal data where: the data is no longer necessary for the purpose for which it was collected; you withdraw consent and there is no other legal basis for processing; you object to processing under Article 21 and there are no overriding legitimate grounds; or the data has been unlawfully processed. Note that our automatic seven-day deletion policy ordinarily satisfies this right without action on your part.</li>
+                <li><strong>Right to erasure / "right to be forgotten" (Article 17):</strong> The right to obtain erasure of your personal data where: the data is no longer necessary for the purpose for which it was collected; you withdraw consent and there is no other legal basis for processing; you object to processing under Article 21 and there are no overriding legitimate grounds; or the data has been unlawfully processed. Note that our automatic seven-day event deletion policy and 90-day analytics deletion policy ordinarily satisfy this right without action on your part. You may also request early deletion by contacting us.</li>
                 <li><strong>Right to restriction of processing (Article 18):</strong> The right to obtain restriction of processing in certain circumstances, including where the accuracy of the data is contested or where processing is unlawful.</li>
                 <li><strong>Right to data portability (Article 20):</strong> Where processing is based on consent or contract and carried out by automated means, the right to receive your personal data in a structured, commonly used, machine-readable format, and to transmit that data to another controller.</li>
                 <li><strong>Right to object (Article 21):</strong> The right to object at any time to processing of your personal data where that processing is based on our legitimate interests, including profiling based on those interests. We shall cease processing unless we can demonstrate compelling legitimate grounds overriding your interests, or processing is necessary for the establishment, exercise, or defence of legal claims.</li>
                 <li><strong>Rights related to automated decision-making (Article 22):</strong> The right not to be subject to a decision based solely on automated processing that produces legal or similarly significant effects concerning you. PlanIt does not engage in automated decision-making of this nature.</li>
-                <li><strong>Right to withdraw consent:</strong> Where processing is based on consent, the right to withdraw that consent at any time without affecting the lawfulness of processing based on consent before withdrawal.</li>
+                <li><strong>Right to withdraw consent:</strong> Where processing is based on consent (including analytics consent), the right to withdraw that consent at any time without affecting the lawfulness of processing based on consent before withdrawal. To withdraw analytics consent, clear your browser's localStorage for this site or contact us.</li>
               </ul>
               <p className="mt-3">
                 To exercise any of these rights, please contact us at <a href="mailto:planit.userhelp@gmail.com" className="text-neutral-900 font-medium underline underline-offset-2">planit.userhelp@gmail.com</a>. We will respond within 30 days. You also have the right to lodge a complaint with the supervisory authority in your Member State of habitual residence, place of work, or place of the alleged infringement.
               </p>
             </Sub>
 
-            <Sub title="12.2 Rights Under CCPA / CPRA (California Residents)">
+            <Sub title="13.2 Rights Under CCPA / CPRA (California Residents)">
               <p>
                 If you are a California resident, you have the following rights under the California Consumer Privacy Act of 2018 as amended by the California Privacy Rights Act of 2020 ("CCPA/CPRA"):
               </p>
               <ul className="list-disc list-inside space-y-2 ml-3 mt-2">
-                <li><strong>Right to know:</strong> The right to request that we disclose the categories and specific pieces of personal information we have collected about you, the categories of sources from which we collected it, the business or commercial purposes for collecting it, the categories of third parties with whom we share it, and the categories shared for business purposes.</li>
+                <li><strong>Right to know:</strong> The right to request that we disclose the categories and specific pieces of personal information we have collected about you, the categories of sources from which we collected it, the business or commercial purposes for collecting it, the categories of third parties with whom we share it, and the categories shared for business purposes. This includes platform analytics data collected about your visits.</li>
                 <li><strong>Right to delete:</strong> The right to request deletion of personal information we have collected from you, subject to certain exceptions permitted by law.</li>
                 <li><strong>Right to correct:</strong> The right to request correction of inaccurate personal information we maintain about you.</li>
                 <li><strong>Right to opt out of sale or sharing:</strong> PlanIt does not sell, rent, or share your personal information with third parties for cross-context behavioural advertising. You therefore have no reason to opt out under this right, but you may submit such a request and we will confirm our non-sale status.</li>
@@ -333,20 +446,20 @@ export default function Privacy() {
               </p>
             </Sub>
 
-            <Sub title="12.3 Verification of Identity">
+            <Sub title="13.3 Verification of Identity">
               <p>
                 When you submit a request to exercise any data subject right, we may ask you to verify your identity before processing the request. Because PlanIt does not maintain a global persistent user account, verification may involve confirming your role in a specific event (by reference to the event name, organizer email, or other identifying details). We cannot process requests where identity cannot be reasonably verified.
               </p>
             </Sub>
           </Section>
 
-          <Section number="13" title="Data Processor Relationships and Third-Party Processor Disclosures">
+          <Section number="14" title="Data Processor Relationships and Third-Party Processor Disclosures">
             <p>
               PlanIt acts as a data controller with respect to personal data it collects and processes in connection with operating the Service. Where we engage third-party service providers to process personal data on our behalf, such providers act as data processors (within the meaning of the GDPR) or service providers (within the meaning of the CCPA/CPRA). The following describes our processor relationships:
             </p>
             <ul className="list-disc list-inside space-y-3 ml-3 mt-3">
               <li>
-                <strong>MongoDB Atlas (MongoDB, Inc.):</strong> Processes personal data as our primary database. All event records, messages, participant data, guest lists, and associated content are stored in MongoDB Atlas. MongoDB Atlas is certified under ISO 27001 and SOC 2 Type II and may process data in data centres located in the United States and other jurisdictions. Data processing is governed by MongoDB's Data Processing Addendum.
+                <strong>MongoDB Atlas (MongoDB, Inc.):</strong> Processes personal data as our primary database. All event records, messages, participant data, guest lists, platform analytics records, and associated content are stored in MongoDB Atlas. MongoDB Atlas is certified under ISO 27001 and SOC 2 Type II and may process data in data centres located in the United States and other jurisdictions. Data processing is governed by MongoDB's Data Processing Addendum.
               </li>
               <li>
                 <strong>Cloudinary (Cloudinary Ltd.):</strong> Processes uploaded media files (images, documents, and other files shared within event workspaces). Files are transferred to and stored on Cloudinary's infrastructure upon upload. Cloudinary maintains ISO 27001 certification. Data processing is governed by Cloudinary's Data Processing Agreement.
@@ -363,25 +476,28 @@ export default function Privacy() {
             </p>
           </Section>
 
-          <Section number="14" title="Logging, Monitoring, and Automated Processing">
-            <Sub title="14.1 Server and Application Logs">
+          <Section number="15" title="Logging, Monitoring, and Automated Processing">
+            <Sub title="15.1 Server and Application Logs">
               <p>
                 PlanIt and its infrastructure providers generate and retain application logs, server access logs, error logs, security event logs, and performance logs in the ordinary course of operating the Service. These logs may contain personal data including IP addresses, request URLs, user agents, timestamps, event identifiers, and error context. Logs are used exclusively for: diagnosing and resolving technical issues; detecting and investigating security incidents and abuse; monitoring system performance and availability; and compliance with legal obligations. Logs are not used for commercial profiling or marketing.
               </p>
             </Sub>
-            <Sub title="14.2 Anti-Fraud and Security Monitoring">
+            <Sub title="15.2 Anti-Fraud and Security Monitoring">
               <p>
                 The Service operates automated anti-fraud middleware and rate-limiting systems that process request metadata — including IP address, request frequency, behavioural patterns, and response signing data — to detect and prevent abuse, credential stuffing, automated scraping, and other malicious activity. This processing is carried out on the basis of our legitimate interests in securing the Service and is necessary for the performance of our contract with you. Automated decisions may result in rate-limiting, request blocking, or access suspension where thresholds indicative of abuse are exceeded. You may contact us to dispute any automated restriction applied to your access.
               </p>
+              <p className="mt-2">
+                The platform analytics system contributes to anti-fraud monitoring by recording spam risk signals and flagging visitor sessions that exhibit patterns consistent with automated or inauthentic activity. Suspected sessions may be reviewed by administrators and, where appropriate, blocked. This processing is carried out on a legitimate interests basis.
+              </p>
             </Sub>
-            <Sub title="14.3 Automated Deletion">
+            <Sub title="15.3 Automated Deletion">
               <p>
-                A scheduled automated cleanup process runs daily and permanently and irreversibly deletes all event data — including all associated personal data — seven (7) days after the event's scheduled date. This automated process is a core architectural feature of the Service. The deletion process covers all database records, Cloudinary-hosted files, cached data, and all other data stores containing event-associated information. Deletion is confirmed and logged. No human intervention is required or involved in routine deletion cycles.
+                A scheduled automated cleanup process runs daily and permanently and irreversibly deletes all event data — including all associated personal data — seven (7) days after the event's scheduled date. A separate TTL-based deletion process permanently removes all platform analytics records 90 days after they are created. These automated processes are core architectural features of the Service. Deletion is confirmed and logged. No human intervention is required or involved in routine deletion cycles.
               </p>
             </Sub>
           </Section>
 
-          <Section number="15" title="Security Incident and Data Breach Response">
+          <Section number="16" title="Security Incident and Data Breach Response">
             <p>
               In the event of a personal data breach within the meaning of Article 4(12) GDPR or equivalent applicable law, PlanIt will:
             </p>
@@ -396,7 +512,7 @@ export default function Privacy() {
             </p>
           </Section>
 
-          <Section number="16" title="Changes to This Policy">
+          <Section number="17" title="Changes to This Policy">
             <p>
               We may update this Privacy Policy from time to time to reflect changes in our practices, the Service,
               or applicable law. When we make material changes, we will update the "Last updated" date at the top
@@ -405,7 +521,7 @@ export default function Privacy() {
             </p>
           </Section>
 
-          <Section number="17" title="Contact Us">
+          <Section number="18" title="Contact Us">
             <p>
               If you have any questions, concerns, or requests regarding this Privacy Policy or how we handle your
               personal information, please contact us:
