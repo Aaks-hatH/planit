@@ -207,12 +207,32 @@ function DonutChart({ data, colorFn }) {
 // ─── Events by event table ─────────────────────────────────────────────────────
 function EventsTab({ data }) {
   const rows = data?.guestsByEvent ?? [];
-  if (rows.length === 0)
-    return <p className="text-sm text-neutral-400 text-center py-16">No event analytics data yet.<br /><span className="text-xs">Events need visitor sessions with a linkedEventId attached.</span></p>;
+
+  if (rows.length === 0) {
+    return (
+      <div className="text-center py-16 space-y-3">
+        <p className="text-sm font-medium text-neutral-500">No event analytics data yet</p>
+        <p className="text-xs text-neutral-400 max-w-md mx-auto leading-relaxed">
+          This table fills in when visitors land on an event page (
+          <code className="bg-neutral-100 px-1 rounded font-mono">/e/:subdomain</code> or{' '}
+          <code className="bg-neutral-100 px-1 rounded font-mono">/rsvp/:slug</code>).
+          EventSpace and RSVPPage call{' '}
+          <code className="bg-neutral-100 px-1 rounded font-mono">setEventContext(eventId)</code>{' '}
+          which tags every tracking event with that event&#39;s ID. If this is empty, verify
+          that EventSpace is calling <code className="bg-neutral-100 px-1 rounded font-mono">setEventContext</code> after
+          the event loads.
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-5">
-      <Section title="Events — Visitor Activity Leaderboard" icon={BarChart3}
-        action={<span className="text-xs text-neutral-400">{rows.length} events tracked</span>}>
+      <Section
+        title="Events — Visitor Activity Leaderboard"
+        icon={BarChart3}
+        action={<span className="text-xs text-neutral-400">{rows.length} event{rows.length !== 1 ? 's' : ''} tracked</span>}
+      >
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
@@ -226,7 +246,17 @@ function EventsTab({ data }) {
               {rows.map((r, i) => (
                 <tr key={i} className="hover:bg-neutral-50 transition-colors">
                   <td className="py-2.5 pr-4">
-                    <span className="font-mono text-xs text-indigo-600 truncate block max-w-[140px]" title={r.eventId}>{r.eventId?.slice(-8) || '—'}</span>
+                    {/* The full MongoDB ObjectId is 24 hex chars. We show last 8 for
+                        compactness. The full ID appears on hover (title attribute). */}
+                    <div className="flex flex-col gap-0.5">
+                      <span
+                        className="font-mono text-xs text-indigo-600 cursor-help select-all"
+                        title={`Full event ID: ${r.eventId || '—'}`}
+                      >
+                        {r.eventId ? `…${r.eventId.slice(-8)}` : '—'}
+                      </span>
+                      <span className="text-[9px] text-neutral-300 font-mono leading-none">hover = full ID</span>
+                    </div>
                   </td>
                   <td className="py-2.5 pr-4 font-semibold tabular-nums">{fmtNum(r.sessionCount)}</td>
                   <td className="py-2.5 pr-4 tabular-nums text-neutral-600">{fmtNum(r.uniqueVisitorCount)}</td>
@@ -250,6 +280,21 @@ function EventsTab({ data }) {
               ))}
             </tbody>
           </table>
+        </div>
+
+        {/* Column legend */}
+        <div className="mt-4 pt-4 border-t border-neutral-100 grid grid-cols-2 lg:grid-cols-4 gap-2">
+          {[
+            { label: 'Event ID',        desc: 'Last 8 chars of MongoDB ObjectId. Hover for full ID.' },
+            { label: 'Sessions',        desc: 'All tracking records (views, clicks, scrolls) linked to this event.' },
+            { label: 'Unique Visitors', desc: 'Distinct localStorage visitorIds seen on this event's pages.' },
+            { label: 'RSVP Yes',        desc: 'Visitors whose RSVP submission had status "yes".' },
+          ].map(({ label, desc }) => (
+            <div key={label} className="bg-neutral-50 rounded-lg p-2.5">
+              <p className="text-[10px] font-bold text-neutral-700 mb-0.5 uppercase tracking-wide">{label}</p>
+              <p className="text-[10px] text-neutral-400 leading-relaxed">{desc}</p>
+            </div>
+          ))}
         </div>
       </Section>
 
