@@ -24,6 +24,7 @@ const eventPasswordLimiter = rateLimit({
 const { secrets } = require('../keys');
 const crypto = require('crypto');
 const Blocklist = require('../models/Blocklist');
+const { analyzeEvent, applyEventSpamResult } = require('../services/spamDetector');
 
 const validate = (req, res, next) => {
   const errors = validationResult(req);
@@ -117,6 +118,24 @@ router.post('/',
       });
 
       await event.save();
+
+      // ── Spam analysis (fire-and-forget — never delays the response) ────────
+      // Run async so the creator gets their token immediately. If the verdict
+      // is 'block' we do NOT prevent creation here — that would let spammers
+      // probe the detection boundary. Instead we flag it silently and let
+      // admins review. The event is created but hidden from public discovery
+      // if spamVerdict becomes 'block'.
+      analyzeEvent({
+        title,
+        description:    description || '',
+        subdomain,
+        organizerEmail,
+        organizerName,
+        ip:             creatorIpAddr,
+        userAgent:      creatorUserAgent,
+        fingerprint:    creatorFingerprint,
+        honeypot:       req.body._hp || '',  // hidden honeypot field
+      }).then(result => applyEventSpamResult(event._id, result)).catch(() => {});
 
       const participantData = { eventId: event._id, username: organizerName, role: 'organizer' };
       let organizerRecoveryCode = null;
