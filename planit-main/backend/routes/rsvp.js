@@ -27,6 +27,7 @@ const RSVPSubmission = require('../models/RSVPSubmission');
 const { verifyOrganizer } = require('../middleware/auth');
 const { meshPost } = require('../middleware/mesh');
 const { sendRsvpGuestConfirmation } = require('../services/emailService');
+const { analyzeRsvp } = require('../services/spamDetector');
 
 const CALLER     = process.env.BACKEND_LABEL || 'Backend';
 const ROUTER_URL = () => process.env.ROUTER_URL || '';
@@ -324,7 +325,32 @@ router.post('/:eventIdOrSlug/submit', async (req, res, next) => {
     // Determine initial status
     // Accept both legacy 'approval' and current UI value 'manual_approval'
     const requiresApproval = rsvpPage.confirmationMode === 'approval' || rsvpPage.confirmationMode === 'manual_approval';
-    const status = requiresApproval ? 'pending' : 'confirmed';
+
+    // ── Spam analysis ───────────────────────────────────────────────────────
+    // Run before saving so we can block outright (score >= 60) or force-pending
+    // (score 30–59) without creating a submission at all if it's a hard block.
+    const submitterIp = getClientIp(req);
+    const spamResult = await analyzeRsvp({
+      eventId:   String(event._id),
+      firstName: firstName?.trim() || '',
+      lastName:  lastName?.trim()  || '',
+      email:     email?.trim()     || '',
+      phone:     phone?.trim()     || '',
+      guestNote: guestNote?.trim() || '',
+      plusOnes:  Number(plusOnes)  || 0,
+      ip:        submitterIp,
+      userAgent: req.headers['user-agent'] || '',
+      honeypot:  req.body._hp || '',
+    }).catch(() => ({ score: 0, flags: [], verdict: 'clean', shouldBlock: false }));
+
+    // Hard block: return a generic validation error (don't reveal detection)
+    if (spamResult.shouldBlock) {
+      return res.status(400).json({ error: 'We could not process your RSVP. Please try again later.' });
+    }
+
+    // Soft flag: force to pending review for organizer
+    const isSpamSuspect = spamResult.verdict === 'review';
+    const status = (requiresApproval || isSpamSuspect) ? 'pending' : 'confirmed';
 
     const editToken = generateEditToken();
     const submission = await RSVPSubmission.create({
@@ -343,8 +369,10 @@ router.post('/:eventIdOrSlug/submit', async (req, res, next) => {
       status,
       editToken,
       duplicateFlag: isDuplicateSubmission,
-      ipAddress: getClientIp(req),
+      ipAddress: submitterIp,
       userAgent: req.headers['user-agent'] || '',
+      // Spam metadata stored on the submission for organizer visibility
+      ...(isSpamSuspect ? { organizerNotes: `[Auto-flagged] Spam score ${spamResult.score}/100. Signals: ${spamResult.flags.join(', ')}` } : {}),
     });
 
     res.status(201).json({
