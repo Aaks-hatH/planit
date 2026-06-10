@@ -1,47 +1,41 @@
 import { useEffect, useRef } from 'react';
 import { useLocation }      from 'react-router-dom';
-import { initTracker, trackPageChange, flushTracker } from '../services/tracker';
+import { initGA, trackPageView } from '../services/analytics';
+// trackFeature / trackGuestAction for business events still go to the backend
+import { trackPageChange, flushTracker } from '../services/tracker';
 
 let _initialised = false;
 
 /**
  * usePageTracker
  *
- * Drop this hook into a component that lives inside <Router> (e.g. the
- * PageTrackerMount component in App.jsx). It:
- *  - Initialises the tracker once on mount (tracker checks consent internally)
- *  - Fires a page_view every time the pathname changes — but only if consent
- *    was granted (enqueue() is a no-op when _trackingEnabled is false)
- *  - Flushes the queue on unmount (good hygiene)
+ * Initialises Google Analytics 4 (consent-gated) and fires a page_view on
+ * every SPA route change. Backend feature-event tracking (trackFeature) is
+ * unchanged — only the page/session tracking has moved to GA4.
  *
- * Returns nothing — purely a side-effect hook.
- *
- * CONSENT NOTE
- * ────────────
- * This hook does NOT need to check consent itself. The tracker service
- * handles consent internally:
- *   • initTracker() reads localStorage and either starts tracking or waits
- *     for the `planit:consent` event fired by ConsentBanner.
- *   • All enqueue() calls in tracker.js are gated on _trackingEnabled.
- *   • Calling trackPageChange() when tracking is disabled is a safe no-op.
+ * CONSENT
+ * ───────
+ * initGA() reads the stored consent decision (or waits for planit:consent).
+ * Neither GA nor the backend tracker fires anything without explicit consent.
  */
 export function usePageTracker() {
   const { pathname } = useLocation();
   const prevPath = useRef(null);
 
-  // Initialise once — tracker.js handles the consent logic internally
+  // Initialise both analytics sinks once on mount
   useEffect(() => {
     if (_initialised) return;
     _initialised = true;
-    initTracker();
+    initGA();          // Google Analytics 4 — consent-gated
+    trackPageChange(pathname); // backend tracker — also consent-gated
     return () => { flushTracker(); };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Track every navigation — safe to call even if tracking is disabled,
-  // because trackPageChange() → enqueue() → returns early if !_trackingEnabled
+  // Fire page_view on every navigation
   useEffect(() => {
-    if (prevPath.current === pathname) return; // same page, no-op
-    trackPageChange(pathname);
+    if (prevPath.current === pathname) return;
+    trackPageView(pathname);   // → GA4
+    trackPageChange(pathname); // → backend (feature events only)
     prevPath.current = pathname;
   }, [pathname]);
 }
