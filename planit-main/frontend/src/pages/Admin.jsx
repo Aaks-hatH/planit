@@ -38,6 +38,7 @@ import { SERVICE_CATEGORIES, ALL_SERVICES_FLAT } from '../utils/serviceCategorie
 import { formatNumber, formatFileSize } from '../utils/formatters';
 import { DateTime } from 'luxon';
 import toast from 'react-hot-toast';
+import TurnstileWidget from '../components/TurnstileWidget';
 import socketService from '../services/socket';
 import { getDemoStats, getDemoEvents, getDemoOrganizers, getDemoStaff, DEMO_EMPLOYEES, getDemoParticipants, getDemoAnalytics, getDemoSystem, getDemoFleet } from '../services/demoData';
 
@@ -10604,92 +10605,13 @@ export default function Admin() {
   const [totpCode, setTotpCode] = useState('');
   const [turnstileToken, setTurnstileToken] = useState('');
   const [turnstileKey, setTurnstileKey] = useState(0); // increment to force widget re-render
-  const turnstileRef    = useRef(null); // DOM node that Turnstile mounts into
-  const turnstileWidget = useRef(null); // widget ID from window.turnstile.render()
   const activeSection_state = useState('dashboard');
   const [activeSection, setActiveSection] = activeSection_state;
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
-  // Explicitly render (and re-render on key bump) the Cloudflare Turnstile widget.
-  //
-  // The old approach used data-callback="__planitTurnstileCallback" on a
-  // .cf-turnstile div and relied on Cloudflare's MutationObserver to detect it.
-  // In a React SPA this is unreliable: when turnstileKey increments, React
-  // destroys and recreates the node — the observer fires but Cloudflare's
-  // internal state for the old widget is already torn down, leaving the new
-  // div silently empty. The submit button stayed permanently disabled because
-  // the token callback never fired into React state.
-  //
-  // Explicit render() gives full control: we remove the old widget first, then
-  // mount a fresh one into the stable ref node — widget always appears.
-  useEffect(() => {
-    if (loading) return;                          // login screen not rendered yet, ref is null
-    if (auth) return;                             // already logged in
-    if (forceResetToken) return;                  // force-reset wall is showing, not login screen
-    if (loginStep !== 'credentials') return;      // TOTP step has no widget
-    if (!'0x4AAAAAACvGuW0fbNIYbAiK') return;
-
-    const mount = () => {
-      if (!turnstileRef.current || !window.turnstile) return;
-      // Tear down any previous widget in this container
-      if (turnstileWidget.current !== null) {
-        try { window.turnstile.remove(turnstileWidget.current); } catch (_) {}
-        turnstileWidget.current = null;
-      }
-      turnstileWidget.current = window.turnstile.render(turnstileRef.current, {
-        sitekey:            '0x4AAAAAACvGuW0fbNIYbAiK',
-        theme:              'dark',
-        callback:           (token) => setTurnstileToken(token),
-        'expired-callback': ()      => setTurnstileToken(''),
-        'error-callback':   ()      => setTurnstileToken(''),
-      });
-    };
-
-    if (window.turnstile) {
-      mount();
-      return () => {
-        if (turnstileWidget.current !== null) {
-          try { window.turnstile.remove(turnstileWidget.current); } catch (_) {}
-          turnstileWidget.current = null;
-        }
-      };
-    }
-
-    // Script may already be in the DOM but window.turnstile not yet assigned
-    // (fires before the global is set on cached/fast loads). Poll until ready
-    // instead of relying on the load event which may have already fired.
-    let pollInterval = null;
-    const scriptEl = document.querySelector('script[src*="turnstile"]');
-
-    const startPolling = () => {
-      pollInterval = setInterval(() => {
-        if (window.turnstile) {
-          clearInterval(pollInterval);
-          pollInterval = null;
-          mount();
-        }
-      }, 50);
-    };
-
-    // Whether or not the <script> tag exists, always poll for window.turnstile.
-    // The old approach registered a 'load' listener on the script element, but
-    // in a React SPA the component often mounts *after* the async script has
-    // already fired its load event — the listener is never called, polling
-    // never starts, and the widget silently stays blank.
-    // Polling is cheap (50 ms ticks, stops immediately on resolution) so there
-    // is no downside to always using it regardless of script state.
-    startPolling();
-
-    return () => {
-      if (pollInterval !== null) clearInterval(pollInterval);
-      if (turnstileWidget.current !== null) {
-        try { window.turnstile.remove(turnstileWidget.current); } catch (_) {}
-        turnstileWidget.current = null;
-      }
-    };
-  }, [auth, loading, forceResetToken, loginStep, turnstileKey]);
+  // Shared TurnstileWidget handles explicit render/remove/poll behavior.
 
   // Watchdog state — polled top-level so outage banner shows on any tab
   const [outageStatus, setOutageStatus] = useState(null); // null | 'operational' | 'degraded' | 'outage'
@@ -11308,11 +11230,9 @@ export default function Admin() {
                 </div>
 
                 {/* Turnstile */}
-                {'0x4AAAAAACvGuW0fbNIYbAiK' && (
-                  <div style={{ marginBottom: 22, display: 'flex', justifyContent: 'center' }}>
-                    <div ref={turnstileRef} />
-                  </div>
-                )}
+                <div style={{ marginBottom: 22, display: 'flex', justifyContent: 'center' }}>
+                  <TurnstileWidget onToken={setTurnstileToken} resetKey={turnstileKey} theme="dark" />
+                </div>
 
               </>) : (
                 /* ── TOTP step ── */

@@ -10,6 +10,7 @@ import {
 import toast from 'react-hot-toast';
 import { rsvpAPI } from '../services/api';
 import { formatDateInTimezone } from '../utils/timezoneUtils';
+import TurnstileWidget from '../components/TurnstileWidget';
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
@@ -249,6 +250,11 @@ export default function RSVPPage() {
   const [customAnswers, setCustomAnswers] = useState({});
   const [fieldErrors, setFieldErrors] = useState({});
   const [expandedSection, setExpandedSection] = useState('info');
+  const [abuseStatus, setAbuseStatus] = useState(null);
+  const [requiresVerification, setRequiresVerification] = useState(false);
+  const [turnstileToken, setTurnstileToken] = useState('');
+  const [captchaResetKey, setCaptchaResetKey] = useState(0);
+  const timingRef = useRef({ pageLoadedAt: Date.now(), formStartedAt: 0, firstInputAt: 0, largestPasteChars: 0, largestPasteElapsedMs: 0 });
 
   useEffect(() => { loadPage(); }, [slug]);
 
@@ -342,6 +348,15 @@ export default function RSVPPage() {
     );
   }
 
+  const noteInput = () => { if (!timingRef.current.firstInputAt) timingRef.current.firstInputAt = Date.now(); };
+  const notePaste = (e) => {
+    const len = e.clipboardData?.getData('text')?.length || 0;
+    if (len > timingRef.current.largestPasteChars) {
+      timingRef.current.largestPasteChars = len;
+      timingRef.current.largestPasteElapsedMs = Date.now() - (timingRef.current.firstInputAt || timingRef.current.pageLoadedAt);
+    }
+  };
+
   // ── Validation + submit ──────────────────────────────────────────────────
   const validate = () => {
     const errs = {};
@@ -384,12 +399,39 @@ export default function RSVPPage() {
         guestNote,
         pagePassword: unlockedPw || undefined,
         _hp: '',  // honeypot field — bots fill this, humans don't
+        ...(turnstileToken ? { turnstileToken } : {}),
+        behavior: { ...timingRef.current, submittedAt: Date.now(), formStartedAt: timingRef.current.formStartedAt || timingRef.current.pageLoadedAt },
+        browserMeta: {
+          webdriver: navigator.webdriver === true,
+          language: navigator.language || '',
+          platform: navigator.platform || '',
+          timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || '',
+          hardwareConcurrency: navigator.hardwareConcurrency || 0,
+          deviceMemory: navigator.deviceMemory || 0,
+          plugins: navigator.plugins ? Array.from(navigator.plugins).slice(0, 5).map(p => p.name) : [],
+          userAgent: navigator.userAgent || '',
+        },
       });
       setSubmitResult(res.data);
       setSubmitted(true);
+      setRequiresVerification(false);
+      setAbuseStatus(null);
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (err) {
-      const msg = err.response?.data?.error || 'Failed to submit. Please try again.';
+      const data = err.response?.data || {};
+      if (data.requiresVerification || data.code === 'VERIFICATION_REQUIRED' || data.code === 'INVALID_VERIFICATION') {
+        setRequiresVerification(true);
+        setCaptchaResetKey(k => k + 1);
+        setTurnstileToken('');
+        setAbuseStatus({ title: data.code === 'INVALID_VERIFICATION' ? 'Invalid Verification' : 'Verification Required', message: data.userMessage || 'Please complete the verification step to continue.' });
+        return;
+      }
+      if (['TRY_AGAIN_LATER', 'ADDITIONAL_REVIEW_REQUIRED', 'SUBMISSION_RECEIVED'].includes(data.code)) {
+        setAbuseStatus({ title: 'Please Try Again', message: data.userMessage || 'We couldn’t complete your request right now. Please try again shortly.' });
+        return;
+      }
+      const msg = data.error || 'Failed to submit. Please try again.';
+      setAbuseStatus({ title: 'Please Try Again', message: msg });
       toast.error(msg);
     } finally { setSubmitting(false); }
   };
@@ -551,7 +593,7 @@ export default function RSVPPage() {
                   <ResponseButton
                     active={response === 'yes'}
                     disabled={(isFull && rsvpPage.enableWaitlist === false)}
-                    onClick={() => { setResponse('yes'); if (fieldErrors.response) setFieldErrors(p => ({...p, response: ''})); }}
+                    onClick={() => { noteInput(); setResponse('yes'); if (fieldErrors.response) setFieldErrors(p => ({...p, response: ''})); }}
                     icon={<Check className="w-4 h-4" />}
                     label={rsvpPage.yesButtonLabel || 'Attending'}
                     activeColor={accent}
@@ -562,7 +604,7 @@ export default function RSVPPage() {
                 {rsvpPage.allowMaybe !== false && (
                   <ResponseButton
                     active={response === 'maybe'}
-                    onClick={() => { setResponse('maybe'); if (fieldErrors.response) setFieldErrors(p => ({...p, response: ''})); }}
+                    onClick={() => { noteInput(); setResponse('maybe'); if (fieldErrors.response) setFieldErrors(p => ({...p, response: ''})); }}
                     icon={<HelpCircle className="w-4 h-4" />}
                     label={rsvpPage.maybeButtonLabel || 'Maybe'}
                     activeColor="#f59e0b"
@@ -572,7 +614,7 @@ export default function RSVPPage() {
                 {rsvpPage.allowNo !== false && (
                   <ResponseButton
                     active={response === 'no'}
-                    onClick={() => { setResponse('no'); if (fieldErrors.response) setFieldErrors(p => ({...p, response: ''})); }}
+                    onClick={() => { noteInput(); setResponse('no'); if (fieldErrors.response) setFieldErrors(p => ({...p, response: ''})); }}
                     icon={<X className="w-4 h-4" />}
                     label={rsvpPage.noButtonLabel || 'Not Attending'}
                     activeColor="#ef4444"
@@ -600,14 +642,14 @@ export default function RSVPPage() {
                         <label className={`block text-xs font-medium mb-1.5 ${textMuted}`}>
                           First Name {rsvpPage.requireFirstName !== false && <span className="text-red-400">*</span>}
                         </label>
-                        <input type="text" value={firstName} onChange={e => { setFirstName(e.target.value); setFieldErrors(p => ({...p, firstName: ''})); }}
+                        <input type="text" value={firstName} onChange={e => { noteInput(); setFirstName(e.target.value); setFieldErrors(p => ({...p, firstName: ''})); }}
                           placeholder="First name" className={inputCls} style={fieldErrors.firstName ? { borderColor: '#ef4444' } : {}} />
                         {fieldErrors.firstName && <p className="text-xs text-red-400 mt-1">{fieldErrors.firstName}</p>}
                       </div>
                       {rsvpPage.requireLastName && (
                         <div>
                           <label className={`block text-xs font-medium mb-1.5 ${textMuted}`}>Last Name <span className="text-red-400">*</span></label>
-                          <input type="text" value={lastName} onChange={e => { setLastName(e.target.value); setFieldErrors(p => ({...p, lastName: ''})); }}
+                          <input type="text" value={lastName} onChange={e => { noteInput(); setLastName(e.target.value); setFieldErrors(p => ({...p, lastName: ''})); }}
                             placeholder="Last name" className={inputCls} style={fieldErrors.lastName ? { borderColor: '#ef4444' } : {}} />
                           {fieldErrors.lastName && <p className="text-xs text-red-400 mt-1">{fieldErrors.lastName}</p>}
                         </div>
@@ -620,7 +662,7 @@ export default function RSVPPage() {
                         <label className={`block text-xs font-medium mb-1.5 ${textMuted}`}>
                           Email {rsvpPage.requireEmail && <span className="text-red-400">*</span>}
                         </label>
-                        <input type="email" value={email} onChange={e => { setEmail(e.target.value); setFieldErrors(p => ({...p, email: ''})); }}
+                        <input type="email" value={email} onChange={e => { noteInput(); setEmail(e.target.value); setFieldErrors(p => ({...p, email: ''})); }}
                           placeholder="your@email.com" className={inputCls} style={fieldErrors.email ? { borderColor: '#ef4444' } : {}} />
                         {fieldErrors.email && <p className="text-xs text-red-400 mt-1">{fieldErrors.email}</p>}
                       </div>
@@ -632,7 +674,7 @@ export default function RSVPPage() {
                         <label className={`block text-xs font-medium mb-1.5 ${textMuted}`}>
                           Phone {rsvpPage.requirePhone && <span className="text-red-400">*</span>}
                         </label>
-                        <input type="tel" value={phone} onChange={e => { setPhone(e.target.value); setFieldErrors(p => ({...p, phone: ''})); }}
+                        <input type="tel" value={phone} onChange={e => { noteInput(); setPhone(e.target.value); setFieldErrors(p => ({...p, phone: ''})); }}
                           placeholder="+1 (555) 000-0000" className={inputCls} style={fieldErrors.phone ? { borderColor: '#ef4444' } : {}} />
                         {fieldErrors.phone && <p className="text-xs text-red-400 mt-1">{fieldErrors.phone}</p>}
                       </div>
@@ -710,21 +752,21 @@ export default function RSVPPage() {
                     {rsvpPage.collectDietary && (
                       <div>
                         <label className={`block text-xs font-medium mb-1.5 ${textMuted}`}>{rsvpPage.dietaryLabel || 'Dietary requirements'}</label>
-                        <textarea value={dietary} onChange={e => setDietary(e.target.value)} rows={2}
+                        <textarea value={dietary} onChange={e => { noteInput(); setDietary(e.target.value); }} onPaste={notePaste} rows={2}
                           placeholder="e.g. vegetarian, gluten-free, nut allergy" className={`${inputCls} resize-none`} />
                       </div>
                     )}
                     {rsvpPage.collectAccessibility && (
                       <div>
                         <label className={`block text-xs font-medium mb-1.5 ${textMuted}`}>{rsvpPage.accessibilityLabel || 'Accessibility needs'}</label>
-                        <textarea value={accessibility} onChange={e => setAccessibility(e.target.value)} rows={2}
+                        <textarea value={accessibility} onChange={e => { noteInput(); setAccessibility(e.target.value); }} onPaste={notePaste} rows={2}
                           placeholder="e.g. wheelchair access, hearing loop" className={`${inputCls} resize-none`} />
                       </div>
                     )}
                     {rsvpPage.allowGuestNote && (
                       <div>
                         <label className={`block text-xs font-medium mb-1.5 ${textMuted}`}>{rsvpPage.guestNoteLabel || 'Additional notes'}</label>
-                        <textarea value={guestNote} onChange={e => setGuestNote(e.target.value)} rows={3}
+                        <textarea value={guestNote} onChange={e => { noteInput(); setGuestNote(e.target.value); }} onPaste={notePaste} rows={3}
                           placeholder={rsvpPage.guestNotePlaceholder || ''}
                           className={`${inputCls} resize-none`} />
                       </div>
@@ -761,6 +803,20 @@ export default function RSVPPage() {
                     ))}
                   </div>
                 )}
+              </div>
+            )}
+
+            {abuseStatus && (
+              <div className={`rounded-2xl p-4 ${isLight ? 'bg-indigo-50 border border-indigo-100 text-indigo-900' : 'bg-indigo-500/10 border border-indigo-400/20 text-indigo-100'}`}>
+                <p className="text-sm font-bold mb-1">{abuseStatus.title}</p>
+                <p className="text-sm opacity-80">{abuseStatus.message}</p>
+              </div>
+            )}
+
+            {requiresVerification && (
+              <div className={`rounded-2xl p-4 flex flex-col items-center gap-3 ${cardBg}`}>
+                <p className={`text-sm ${textMuted}`}>Please complete the verification step to continue.</p>
+                <TurnstileWidget onToken={setTurnstileToken} resetKey={captchaResetKey} theme={isLight ? 'light' : 'dark'} />
               </div>
             )}
 

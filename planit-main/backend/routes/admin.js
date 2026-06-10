@@ -23,37 +23,8 @@ const redis     = require('../services/redisClient');
 const { audit, getAuditLogs } = require('../models/AuditLog');
 const speakeasy  = require('speakeasy');
 const QRCode     = require('qrcode');
-const { meshPost } = require('../middleware/mesh');
+const { verifyTurnstile } = require('../services/captchaService');
 const { unbanIp, listActiveBans } = require('../middleware/security');
-
-// ─── Turnstile verification (via router mesh) ─────────────────────────────────
-// The Turnstile SECRET KEY lives only in the router env — never here.
-// We call /mesh/turnstile over the authenticated mesh channel.
-// Returns true if the challenge passed (or if no secret is configured in dev).
-async function verifyTurnstile(token, ip) {
-  // Turnstile is only enforced when explicitly opted in via TURNSTILE_ENABLED=true.
-  // ROUTER_URL may be set for other mesh purposes (fleet, email pool, etc.) without
-  // Turnstile being configured — so we guard on its own flag rather than ROUTER_URL.
-  if (process.env.TURNSTILE_ENABLED !== 'true') {
-    return { ok: true, skipped: true };
-  }
-  const routerUrl = (process.env.ROUTER_URL || '').replace(/\/$/, '');
-  if (!routerUrl) {
-    // Turnstile enabled but no router to validate against — fail open so a
-    // misconfiguration never permanently locks admins out.
-    console.warn('[admin] TURNSTILE_ENABLED=true but ROUTER_URL is not set — skipping');
-    return { ok: true, skipped: true };
-  }
-  if (!token) return { ok: false, error: 'Turnstile token required' };
-  const result = await meshPost('backend', `${routerUrl}/mesh/turnstile`, { token, ip });
-  // Mesh/network error — fail OPEN so an infrastructure blip never locks admins out.
-  // Only fail closed when the router explicitly says the challenge was invalid.
-  if (!result.ok) {
-    console.warn('[admin] Turnstile router unreachable — failing open:', result.error);
-    return { ok: true, skipped: true };
-  }
-  return result.data; // { ok: true } or { ok: false, error: '...' }
-}
 
 // ─── TOTP helpers ─────────────────────────────────────────────────────────────
 // Encrypt a TOTP secret before storing it so the DB field is not plaintext.
@@ -170,7 +141,7 @@ router.post(
       // Checked first, before any credential work, so bots can't even attempt
       // brute-force without solving a challenge. Fails open when router is
       // unreachable (network error) so a router outage never locks admins out.
-      const tsResult = await verifyTurnstile(turnstileToken, ip);
+      const tsResult = await verifyTurnstile(turnstileToken, ip, { failOpen: true, context: 'admin' });
       if (!tsResult.ok) {
         return res.status(400).json({ error: 'Human verification failed. Please try again.' });
       }
@@ -2655,7 +2626,7 @@ router.get('/cc/router/status', verifyAdmin, requireSuperAdmin, async (req, res)
 
 // POST /admin/cc/router/boost
 router.post('/cc/router/boost', verifyAdmin, requireSuperAdmin, async (req, res) => {
-  const { meshPost } = require('../middleware/mesh');
+  const { verifyTurnstile } = require('../services/captchaService');
   const CALLER    = process.env.BACKEND_LABEL || 'Backend';
   const routerUrl = (process.env.ROUTER_URL || '').replace(/\/$/, '');
   if (!routerUrl) return res.status(503).json({ error: 'ROUTER_URL not set' });
@@ -2677,7 +2648,7 @@ router.delete('/cc/router/boost', verifyAdmin, requireSuperAdmin, async (req, re
 
 // POST /admin/cc/router/scale
 router.post('/cc/router/scale', verifyAdmin, requireSuperAdmin, async (req, res) => {
-  const { meshPost } = require('../middleware/mesh');
+  const { verifyTurnstile } = require('../services/captchaService');
   const CALLER    = process.env.BACKEND_LABEL || 'Backend';
   const routerUrl = (process.env.ROUTER_URL || '').replace(/\/$/, '');
   if (!routerUrl) return res.status(503).json({ error: 'ROUTER_URL not set' });
@@ -2688,7 +2659,7 @@ router.post('/cc/router/scale', verifyAdmin, requireSuperAdmin, async (req, res)
 
 // POST /admin/cc/router/email/test
 router.post('/cc/router/email/test', verifyAdmin, requireSuperAdmin, async (req, res) => {
-  const { meshPost } = require('../middleware/mesh');
+  const { verifyTurnstile } = require('../services/captchaService');
   const CALLER    = process.env.BACKEND_LABEL || 'Backend';
   const routerUrl = (process.env.ROUTER_URL || '').replace(/\/$/, '');
   if (!routerUrl) return res.status(503).json({ error: 'ROUTER_URL not set' });

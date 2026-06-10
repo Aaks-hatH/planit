@@ -43,6 +43,7 @@
 const Event = require('../models/Event');
 const RSVPSubmission = require('../models/RSVPSubmission');
 const redis = require('./redisClient');
+const crypto = require('crypto');
 
 // ─── Configuration ────────────────────────────────────────────────────────────
 
@@ -64,6 +65,46 @@ const FP_EVENT_HARD_LIMIT  = 12;
 const IP_RSVP_WINDOW_S    = 60 * 60; // 1 hour
 const IP_RSVP_SOFT_LIMIT  = 3;
 const IP_RSVP_HARD_LIMIT  = 8;
+
+// Short-lived behavioral windows. These counters intentionally expire quickly so
+// they prevent abuse bursts without building permanent user profiles.
+const BEHAVIOR = {
+  pageLoadTooFastMs: 1200,
+  eventCreateTooFastMs: 3500,
+  rsvpSubmitTooFastMs: 1800,
+  largePasteChars: 500,
+  pasteSpeedCharsPerMs: 0.55,
+  repeatWindowS: 10 * 60,
+  repeatSoftLimit: 3,
+  repeatHardLimit: 7,
+  campaignWindowS: 6 * 60 * 60,
+  duplicateSoftLimit: 4,
+  duplicateHardLimit: 10,
+  abuseMemoryTtlS: 30 * 60,
+  recentBlockTtlS: 60 * 60,
+};
+
+// Content-quality thresholds are deliberately broad. Single mild signals only
+// nudge the score; combinations or high-volume behavior are required to block.
+const CONTENT_QUALITY = {
+  minTitleLength: 4,
+  maxTitleLength: 140,
+  maxLinksEvent: 5,
+  maxLinksRsvp: 2,
+  maxUrlDensity: 0.28,
+  maxEmojiRatio: 0.18,
+  repeatedWordLimit: 5,
+  repeatedPunctuationLimit: 5,
+  lowContentWords: 3,
+  repetitiveRatio: 0.55,
+};
+
+const BROWSER_INTEGRITY = {
+  webdriverPenalty: 30,
+  automationPenalty: 25,
+  missingCharacteristicsPenalty: 12,
+  suspiciousConfigPenalty: 10,
+};
 
 // ─── Disposable / throwaway email domains ─────────────────────────────────────
 // Curated list of the most common temp/throwaway domains. Not exhaustive,
@@ -218,6 +259,95 @@ async function getCounter(key) {
   }
 }
 
+
+async function rememberAbuse(key, ttlSeconds = BEHAVIOR.abuseMemoryTtlS) {
+  return incrWithExpiry(`spam:memory:${key}`, ttlSeconds);
+}
+
+function stableHash(value) {
+  const normalized = String(value || '').toLowerCase().replace(/\s+/g, ' ').trim().slice(0, 4000);
+  if (!normalized) return '';
+  return crypto.createHash('sha256').update(normalized).digest('hex').slice(0, 32);
+}
+
+function countUrls(text) {
+  return (String(text || '').match(/https?:\/\/|www\.|\b[a-z0-9-]+\.(com|net|org|io|co|app|dev|info|biz)\b/gi) || []).length;
+}
+
+function countEmojis(text) {
+  return (String(text || '').match(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/gu) || []).length;
+}
+
+function wordStats(text) {
+  const words = String(text || '').toLowerCase().match(/[a-z0-9']{2,}/g) || [];
+  const counts = new Map();
+  let maxRepeat = 0;
+  for (const w of words) {
+    const next = (counts.get(w) || 0) + 1;
+    counts.set(w, next);
+    if (next > maxRepeat) maxRepeat = next;
+  }
+  const uniqueRatio = words.length ? counts.size / words.length : 1;
+  return { words, maxRepeat, uniqueRatio };
+}
+
+function browserMetaSignals(meta = {}) {
+  const flags = [];
+  const m = (meta && typeof meta === 'object') ? meta : {};
+  // Detect navigator.webdriver when the browser explicitly exposes automation.
+  if (m.webdriver === true) flags.push(['browser_webdriver', BROWSER_INTEGRITY.webdriverPenalty, 'Browser automation flag present']);
+  const ua = String(m.userAgent || '').toLowerCase();
+  // Detect obvious automation environments reported by browser metadata.
+  if (/headless|phantom|selenium|playwright|puppeteer/.test(ua)) flags.push(['browser_automation_env', BROWSER_INTEGRITY.automationPenalty, 'Browser metadata suggests automation']);
+  const missing = ['language', 'platform', 'timezone'].filter(k => !m[k]).length;
+  // Missing common browser characteristics is weak alone but useful with other signals.
+  if (missing >= 2) flags.push(['browser_missing_characteristics', BROWSER_INTEGRITY.missingCharacteristicsPenalty, 'Common browser characteristics missing']);
+  const hw = Number(m.hardwareConcurrency || 0);
+  const mem = Number(m.deviceMemory || 0);
+  // Suspicious configurations such as zero CPU with no plugins are common in scripts.
+  if ((hw === 0 && m.hardwareConcurrency !== undefined) || (Array.isArray(m.plugins) && m.plugins.length === 0 && !/mobile/.test(ua))) {
+    flags.push(['browser_suspicious_config', BROWSER_INTEGRITY.suspiciousConfigPenalty, 'Browser configuration is unusual']);
+  }
+  return flags;
+}
+
+function addContentQualitySignals({ title = '', description = '', note = '', isRsvp = false }, add) {
+  const text = `${title} ${description} ${note}`.trim();
+  const titleLen = String(title || '').trim().length;
+  const linkCount = countUrls(text);
+  const textLen = Math.max(String(text || '').length, 1);
+  const emojiCount = countEmojis(text);
+  const { words, maxRepeat, uniqueRatio } = wordStats(text);
+  // Extremely short or long titles often indicate low-effort automation or stuffing.
+  if (!isRsvp && titleLen > 0 && titleLen < CONTENT_QUALITY.minTitleLength) add(8, 'title_too_short', 'Title is extremely short');
+  if (!isRsvp && titleLen > CONTENT_QUALITY.maxTitleLength) add(10, 'title_too_long', 'Title is unusually long');
+  // Excessive links and URL density catch campaign pages while allowing normal event links.
+  if (linkCount > (isRsvp ? CONTENT_QUALITY.maxLinksRsvp : CONTENT_QUALITY.maxLinksEvent)) add(18, 'excessive_links', 'Submission contains too many links');
+  if (linkCount && (linkCount * 24) / textLen > CONTENT_QUALITY.maxUrlDensity) add(16, 'url_heavy_content', 'Submission is heavily URL-oriented');
+  // Emoji flooding is a common bot lure; penalize only high ratios.
+  if (emojiCount >= 6 && emojiCount / textLen > CONTENT_QUALITY.maxEmojiRatio) add(10, 'excessive_emoji', 'Submission contains excessive emoji density');
+  // Repeated words and punctuation identify generated spam without reading identity.
+  if (maxRepeat > CONTENT_QUALITY.repeatedWordLimit) add(14, 'repeated_words', 'Submission repeats the same words excessively');
+  if (/(.)\1{5,}/.test(text) || /[!?.,]{6,}/.test(text)) add(12, 'repeated_punctuation', 'Submission contains repeated punctuation or characters');
+  // Very low-content submissions are weak signals to avoid false positives.
+  if (words.length > 0 && words.length <= CONTENT_QUALITY.lowContentWords && textLen > 12) add(6, 'very_low_content', 'Submission has very little meaningful content');
+  if (words.length >= 12 && uniqueRatio < CONTENT_QUALITY.repetitiveRatio) add(14, 'repetitive_content', 'Submission content is excessively repetitive');
+}
+
+function behavioralTimings(behavior = {}) {
+  const b = (behavior && typeof behavior === 'object') ? behavior : {};
+  const now = Date.now();
+  const pageLoadedAt = Number(b.pageLoadedAt || 0);
+  const formStartedAt = Number(b.formStartedAt || 0);
+  const firstInputAt = Number(b.firstInputAt || 0);
+  const submittedAt = Number(b.submittedAt || now);
+  const elapsedSinceLoad = pageLoadedAt ? submittedAt - pageLoadedAt : 0;
+  const elapsedSinceStart = formStartedAt ? submittedAt - formStartedAt : (firstInputAt ? submittedAt - firstInputAt : 0);
+  const largestPaste = Number(b.largestPasteChars || 0);
+  const pasteElapsed = Number(b.largestPasteElapsedMs || 0);
+  return { elapsedSinceLoad, elapsedSinceStart, largestPaste, pasteElapsed };
+}
+
 // ─── Utility ──────────────────────────────────────────────────────────────────
 
 function domainOf(email) {
@@ -266,6 +396,8 @@ async function analyzeEvent(data) {
     userAgent      = '',
     fingerprint    = '',
     honeypot       = '',   // hidden field — bots fill it, humans don't
+    browserMeta    = {},
+    behavior       = {},
   } = data;
 
   let score = 0;
@@ -288,7 +420,21 @@ async function analyzeEvent(data) {
     add(30, 'bot_ua', `User-agent pattern matches known bot/script: "${(userAgent || 'empty').slice(0, 80)}"`);
   }
 
-  // ── 3. Missing fingerprint (strong signal when UA is also generic) ─────────
+  // ── 3. Browser integrity signals (not stored; request-local only) ─────────
+  for (const [flag, pts, reason] of browserMetaSignals({ ...browserMeta, userAgent })) {
+    add(pts, flag, reason);
+  }
+
+  // ── 4. Behavioral timing signals ──────────────────────────────────────────
+  const timing = behavioralTimings(behavior);
+  // Submission immediately after page load indicates scripted form posting.
+  if (timing.elapsedSinceLoad > 0 && timing.elapsedSinceLoad < BEHAVIOR.pageLoadTooFastMs) add(18, 'page_load_too_fast', 'Submission occurred immediately after page load');
+  // Unrealistically fast event creation catches bots while allowing fast typists.
+  if (timing.elapsedSinceStart > 0 && timing.elapsedSinceStart < BEHAVIOR.eventCreateTooFastMs) add(18, 'event_create_too_fast', 'Event creation completed unrealistically quickly');
+  // Large pasted fields instantly are a campaign automation signal.
+  if (timing.largestPaste >= BEHAVIOR.largePasteChars && (!timing.pasteElapsed || timing.largestPaste / Math.max(timing.pasteElapsed, 1) > BEHAVIOR.pasteSpeedCharsPerMs)) add(12, 'large_instant_paste', 'Large field appears to have been pasted instantly');
+
+  // ── 5. Missing fingerprint (strong signal when UA is also generic) ─────────
   if (!fingerprint || fingerprint.trim().length < 8) {
     add(10, 'no_fingerprint', 'No browser fingerprint — possible headless browser or scripted request');
   }
@@ -314,6 +460,23 @@ async function analyzeEvent(data) {
       add(18, 'fingerprint_velocity_medium', `Fingerprint created ${fpCount} events in 72 hours`);
     }
   }
+
+  // ── Duplicate campaign detection hashes normalized title and description only.
+  const eventCampaignHash = stableHash(`${title} ${description}`);
+  if (eventCampaignHash) {
+    const campaignCount = await incrWithExpiry(`spam:campaign:event:${eventCampaignHash}`, BEHAVIOR.campaignWindowS);
+    if (campaignCount > BEHAVIOR.duplicateHardLimit) add(38, 'duplicate_event_campaign_high', 'Many events share the same normalized content temporarily');
+    else if (campaignCount > BEHAVIOR.duplicateSoftLimit) add(18, 'duplicate_event_campaign_medium', 'Repeated event content observed temporarily');
+  }
+  if (ip) {
+    const repeatCount = await incrWithExpiry(`spam:repeat:event:${ip}`, BEHAVIOR.repeatWindowS);
+    // Rapid repeated event creation catches bursts independent of 24-hour velocity.
+    if (repeatCount > BEHAVIOR.repeatHardLimit) add(35, 'rapid_event_repeat_high', 'Rapid repeated event creation observed');
+    else if (repeatCount > BEHAVIOR.repeatSoftLimit) add(16, 'rapid_event_repeat_medium', 'Repeated event creation in a short window');
+  }
+
+  // ── Content quality analysis ───────────────────────────────────────────────
+  addContentQualitySignals({ title, description }, add);
 
   // ── 6. Disposable email ────────────────────────────────────────────────────
   if (isDisposable(organizerEmail)) {
@@ -386,8 +549,9 @@ async function analyzeEvent(data) {
     } catch { /* DB check best-effort */ }
   }
 
+  if (ip && score >= THRESHOLDS.review) await rememberAbuse(`event:${ip}`);
   score = clamp(Math.round(score), 0, 100);
-  return { score, flags, verdict: verdictFor(score), details };
+  return { score, flags, verdict: verdictFor(score), details, shouldBlock: verdictFor(score) === 'block' };
 }
 
 // ─── Core: analyze RSVP submission ────────────────────────────────────────────
@@ -413,6 +577,8 @@ async function analyzeRsvp(data) {
     ip         = '',
     userAgent  = '',
     honeypot   = '',
+    browserMeta= {},
+    behavior   = {},
   } = data;
 
   let score = 0;
@@ -435,7 +601,21 @@ async function analyzeRsvp(data) {
     add(25, 'bot_ua', `User-agent matches bot pattern: "${(userAgent || 'empty').slice(0, 80)}"`);
   }
 
-  // ── 3. IP velocity per event ───────────────────────────────────────────────
+  // ── 3. Browser integrity signals (request-local only, never stored) ───────
+  for (const [flag, pts, reason] of browserMetaSignals({ ...browserMeta, userAgent })) {
+    add(pts, flag, reason);
+  }
+
+  // ── 4. Behavioral timing signals ──────────────────────────────────────────
+  const timing = behavioralTimings(behavior);
+  // Immediate post-load submission strongly suggests automation.
+  if (timing.elapsedSinceLoad > 0 && timing.elapsedSinceLoad < BEHAVIOR.pageLoadTooFastMs) add(16, 'page_load_too_fast', 'RSVP submitted immediately after page load');
+  // Unrealistically fast RSVP submission catches scripted posts.
+  if (timing.elapsedSinceStart > 0 && timing.elapsedSinceStart < BEHAVIOR.rsvpSubmitTooFastMs) add(16, 'rsvp_submit_too_fast', 'RSVP completed unrealistically quickly');
+  // Large note/custom-answer paste instantly is a weak automation signal.
+  if (timing.largestPaste >= BEHAVIOR.largePasteChars && (!timing.pasteElapsed || timing.largestPaste / Math.max(timing.pasteElapsed, 1) > BEHAVIOR.pasteSpeedCharsPerMs)) add(10, 'large_instant_paste', 'Large RSVP field appears pasted instantly');
+
+  // ── 5. IP velocity per event ───────────────────────────────────────────────
   if (ip && eventId) {
     const key = `spam:rsvp:ip:${ip}:${eventId}`;
     const count = await incrWithExpiry(key, IP_RSVP_WINDOW_S);
@@ -445,6 +625,23 @@ async function analyzeRsvp(data) {
       add(20, 'rsvp_ip_velocity_medium', `IP submitted ${count} RSVPs to this event in 1 hour`);
     }
   }
+
+  // ── RSVP abuse bursts across events from the same network ─────────────────
+  if (ip) {
+    const globalBurst = await incrWithExpiry(`spam:rsvp:ip:${ip}:global`, IP_RSVP_WINDOW_S);
+    if (globalBurst > IP_RSVP_HARD_LIMIT * 2) add(34, 'rsvp_global_burst_high', 'Excessive RSVP activity across events');
+    else if (globalBurst > IP_RSVP_SOFT_LIMIT * 2) add(14, 'rsvp_global_burst_medium', 'Elevated RSVP activity across events');
+  }
+  const noteHash = stableHash(guestNote || `${firstName} ${lastName} ${email}`);
+  if (noteHash) {
+    const campaignCount = await incrWithExpiry(`spam:campaign:rsvp:${noteHash}`, BEHAVIOR.campaignWindowS);
+    // Duplicated RSVP campaigns catch same-note floods without storing raw notes.
+    if (campaignCount > BEHAVIOR.duplicateHardLimit) add(34, 'duplicate_rsvp_campaign_high', 'Repeated RSVP campaign content observed temporarily');
+    else if (campaignCount > BEHAVIOR.duplicateSoftLimit) add(16, 'duplicate_rsvp_campaign_medium', 'Repeated RSVP content observed temporarily');
+  }
+
+  // ── Content quality analysis for RSVP notes ────────────────────────────────
+  addContentQualitySignals({ note: guestNote, isRsvp: true }, add);
 
   // ── 4. Disposable email ────────────────────────────────────────────────────
   if (isDisposable(email)) {
@@ -491,6 +688,9 @@ async function analyzeRsvp(data) {
   if (plusOnes > 20) {
     add(25, 'plusone_excessive', `${plusOnes} plus-ones is abnormally high`);
   }
+  if (plusOnes < 0 || plusOnes > 50) {
+    add(35, 'plusone_abnormal_count', 'Plus-one count is outside normal RSVP bounds');
+  }
 
   // ── 9. Duplicate burst: same IP, many RSVPs to same event in last minute ──
   if (ip && eventId) {
@@ -501,6 +701,7 @@ async function analyzeRsvp(data) {
     }
   }
 
+  if (ip && score >= THRESHOLDS.review) await rememberAbuse(`rsvp:${ip}`);
   score = clamp(Math.round(score), 0, 100);
   const verdict = verdictFor(score);
 

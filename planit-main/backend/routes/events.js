@@ -25,6 +25,8 @@ const { secrets } = require('../keys');
 const crypto = require('crypto');
 const Blocklist = require('../models/Blocklist');
 const { analyzeEvent, applyEventSpamResult } = require('../services/spamDetector');
+const { verifyTurnstile } = require('../services/captchaService');
+const { sendAntiAbuse } = require('../services/antiAbuseResponses');
 
 const validate = (req, res, next) => {
   const errors = validationResult(req);
@@ -104,6 +106,30 @@ router.post('/',
             .digest('hex')
             .slice(0, 32);
 
+      const initialSpamResult = await analyzeEvent({
+        title,
+        description:    description || '',
+        subdomain,
+        organizerEmail,
+        organizerName,
+        ip:             creatorIpAddr,
+        userAgent:      creatorUserAgent,
+        fingerprint:    creatorFingerprint,
+        honeypot:       req.body._hp || '',
+        browserMeta:    req.body.browserMeta || {},
+        behavior:       req.body.behavior || {},
+      }).catch(() => ({ score: 0, flags: [], verdict: 'clean', shouldBlock: false }));
+
+      if (initialSpamResult.shouldBlock) {
+        return sendAntiAbuse(res, 'tryAgainLater');
+      }
+
+      if (initialSpamResult.verdict === 'review') {
+        const tsResult = await verifyTurnstile(req.body.turnstileToken, creatorIpAddr, { failOpen: false, context: 'event-create' });
+        if (!req.body.turnstileToken) return sendAntiAbuse(res, 'verificationRequired', { requiresVerification: true });
+        if (!tsResult.ok) return sendAntiAbuse(res, 'invalidVerification', { requiresVerification: true });
+      }
+
       const event = new Event({
         subdomain, title, description, date, location, organizerName, organizerEmail,
         password: hashedPassword, isPasswordProtected,
@@ -119,23 +145,10 @@ router.post('/',
 
       await event.save();
 
-      // ── Spam analysis (fire-and-forget — never delays the response) ────────
-      // Run async so the creator gets their token immediately. If the verdict
-      // is 'block' we do NOT prevent creation here — that would let spammers
-      // probe the detection boundary. Instead we flag it silently and let
-      // admins review. The event is created but hidden from public discovery
-      // if spamVerdict becomes 'block'.
-      analyzeEvent({
-        title,
-        description:    description || '',
-        subdomain,
-        organizerEmail,
-        organizerName,
-        ip:             creatorIpAddr,
-        userAgent:      creatorUserAgent,
-        fingerprint:    creatorFingerprint,
-        honeypot:       req.body._hp || '',  // hidden honeypot field
-      }).then(result => applyEventSpamResult(event._id, result)).catch(() => {});
+      // ── Spam analysis result ────────────────────────────────────────────────
+      // The scoring details remain internal. We persist only admin-facing fields
+      // already supported by the event model and never expose them to creators.
+      applyEventSpamResult(event._id, initialSpamResult).catch(() => {});
 
       const participantData = { eventId: event._id, username: organizerName, role: 'organizer' };
       let organizerRecoveryCode = null;
