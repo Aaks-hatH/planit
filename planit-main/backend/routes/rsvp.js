@@ -28,6 +28,8 @@ const { verifyOrganizer } = require('../middleware/auth');
 const { meshPost } = require('../middleware/mesh');
 const { sendRsvpGuestConfirmation } = require('../services/emailService');
 const { analyzeRsvp } = require('../services/spamDetector');
+const { verifyTurnstile } = require('../services/captchaService');
+const { sendAntiAbuse } = require('../services/antiAbuseResponses');
 
 const CALLER     = process.env.BACKEND_LABEL || 'Backend';
 const ROUTER_URL = () => process.env.ROUTER_URL || '';
@@ -341,11 +343,21 @@ router.post('/:eventIdOrSlug/submit', async (req, res, next) => {
       ip:        submitterIp,
       userAgent: req.headers['user-agent'] || '',
       honeypot:  req.body._hp || '',
+      browserMeta: req.body.browserMeta || {},
+      behavior: req.body.behavior || {},
     }).catch(() => ({ score: 0, flags: [], verdict: 'clean', shouldBlock: false }));
 
-    // Hard block: return a generic validation error (don't reveal detection)
+    // Hard block: generic response only; do not disclose which internal control fired.
     if (spamResult.shouldBlock) {
-      return res.status(400).json({ error: 'We could not process your RSVP. Please try again later.' });
+      return sendAntiAbuse(res, 'tryAgainLater');
+    }
+
+    // Moderate risk requires the shared CAPTCHA. The response says only that
+    // verification is needed, never why it was requested.
+    if (spamResult.verdict === 'review') {
+      const tsResult = await verifyTurnstile(req.body.turnstileToken, submitterIp, { failOpen: false, context: 'rsvp-submit' });
+      if (!req.body.turnstileToken) return sendAntiAbuse(res, 'verificationRequired', { requiresVerification: true });
+      if (!tsResult.ok) return sendAntiAbuse(res, 'invalidVerification', { requiresVerification: true });
     }
 
     // Soft flag: force to pending review for organizer
@@ -371,8 +383,8 @@ router.post('/:eventIdOrSlug/submit', async (req, res, next) => {
       duplicateFlag: isDuplicateSubmission,
       ipAddress: submitterIp,
       userAgent: req.headers['user-agent'] || '',
-      // Spam metadata stored on the submission for organizer visibility
-      ...(isSpamSuspect ? { organizerNotes: `[Auto-flagged] Spam score ${spamResult.score}/100. Signals: ${spamResult.flags.join(', ')}` } : {}),
+      // Keep organizer-facing notes generic so internal anti-abuse details are not exposed.
+      ...(isSpamSuspect ? { organizerNotes: 'Additional review was requested before confirmation.' } : {}),
     });
 
     res.status(201).json({

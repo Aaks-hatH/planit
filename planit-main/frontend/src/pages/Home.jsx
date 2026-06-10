@@ -1380,6 +1380,7 @@ function EnterpriseDemo() {
 
 import StarBackground from '../components/StarBackground';
 import CrossPlatformAd from '../components/CrossPlatformAd';
+import TurnstileWidget from '../components/TurnstileWidget';
 
 
 
@@ -1407,7 +1408,7 @@ const VENUE_TYPES = [
   { id:'other',      label:'Other venue',      hint:'Something different entirely' },
 ];
 
-function OnboardingWizard({ mode, formData, setFormData, fieldErrors, setFieldErrors, onSubmit, loading, submittedRef }) {
+function OnboardingWizard({ mode, formData, setFormData, fieldErrors, setFieldErrors, onSubmit, loading, submittedRef, abuseStatus, requiresVerification, onCaptchaToken, captchaResetKey, onUserInput, onUserPaste }) {
   const isVenue = mode === 'table-service';
   const accent  = isVenue ? '#f97316' : '#6366f1';
   const accentHover = isVenue ? '#fb923c' : '#818cf8';
@@ -1526,12 +1527,14 @@ function OnboardingWizard({ mode, formData, setFormData, fieldErrors, setFieldEr
   };
 
   const update = (field) => (e) => {
+    onUserInput?.();
     setFormData(p => ({ ...p, [field]: e.target.value }));
     if (localErr[field]) setLocalErr(p => ({ ...p, [field]: '' }));
     if (fieldErrors[field]) setFieldErrors(p => ({ ...p, [field]: '' }));
   };
 
   const handleTitleChange = (e) => {
+    onUserInput?.();
     const title = e.target.value;
     setFormData(prev => ({
       ...prev, title,
@@ -1542,6 +1545,13 @@ function OnboardingWizard({ mode, formData, setFormData, fieldErrors, setFieldEr
 
   // Merge server-side errors into localErr
   const err = { ...localErr, ...fieldErrors };
+
+  const renderStatusCard = () => abuseStatus ? (
+    <div style={{ background:'rgba(99,102,241,0.10)', border:'1px solid rgba(129,140,248,0.35)', borderRadius:14, padding:'12px 14px', marginBottom:18, color:'#e0e7ff', fontSize:13, lineHeight:1.5 }}>
+      <strong style={{ display:'block', marginBottom:4 }}>{abuseStatus.title}</strong>
+      <span>{abuseStatus.message}</span>
+    </div>
+  ) : null;
 
   // ── Step content factory ────────────────────────────────────────────────────
   const renderStep = () => {
@@ -1979,8 +1989,16 @@ function OnboardingWizard({ mode, formData, setFormData, fieldErrors, setFieldEr
 
       {/* Animated step content */}
       <div key={stepKey} className={dir === 'forward' ? 'wiz-forward' : 'wiz-back'}
+        onPaste={onUserPaste}
         style={{ minHeight:260 }}>
-        {renderStep()}
+        {renderStatusCard()}
+            {renderStep()}
+            {requiresVerification && (
+              <div style={{ marginTop:18, display:'flex', flexDirection:'column', alignItems:'center', gap:10 }}>
+                <p style={{ color:'rgba(255,255,255,0.65)', fontSize:13, textAlign:'center' }}>Please complete the verification step to continue.</p>
+                <TurnstileWidget onToken={onCaptchaToken} resetKey={captchaResetKey} theme="dark" />
+              </div>
+            )}
       </div>
 
       {/* Nav */}
@@ -2048,6 +2066,11 @@ export default function Home() {
   const [wizardKey, setWizardKey] = useState(0); // increment to hard-reset the wizard
   const [wizardOpen, setWizardOpen] = useState(false); // fullscreen wizard overlay
   const wizardSubmittedRef = useRef(false); // flipped true on successful event creation
+  const [abuseStatus, setAbuseStatus] = useState(null);
+  const [requiresVerification, setRequiresVerification] = useState(false);
+  const [turnstileToken, setTurnstileToken] = useState('');
+  const [captchaResetKey, setCaptchaResetKey] = useState(0);
+  const eventFormTimingRef = useRef({ pageLoadedAt: Date.now(), formStartedAt: 0, firstInputAt: 0, largestPasteChars: 0, largestPasteElapsedMs: 0 });
   // On white-label domains, skip the branch selector and go straight to event creation
   useEffect(() => { if (isWL) { setSelectedBranch('events'); setLoadingDone(true); } }, [isWL]);
 
@@ -2069,11 +2092,14 @@ export default function Home() {
   };
 
   const handleTitleChange = (e) => {
+    onUserInput?.();
     const title = e.target.value;
     setFormData(prev => ({ ...prev, title, subdomain: prev._subdomainTouched ? prev.subdomain : makeSubdomain(title) }));
   };
-  const update = (field) => (e) =>
+  const update = (field) => (e) => {
+    if (!eventFormTimingRef.current.firstInputAt) eventFormTimingRef.current.firstInputAt = Date.now();
     setFormData(prev => ({ ...prev, [field]: e.target.value, ...(field === 'subdomain' ? { _subdomainTouched: true } : {}) }));
+  };
 
   // Sanitise a string: trim whitespace, collapse internal whitespace
   const sanitize = (str) => (str || '').trim().replace(/\s+/g, ' ');
@@ -2122,6 +2148,18 @@ export default function Home() {
       isEnterpriseMode: mode === 'enterprise' || formData.isEnterpriseMode,
       isTableServiceMode: isTS,
       maxParticipants: formData.maxParticipants,
+      ...(turnstileToken ? { turnstileToken } : {}),
+      behavior: { ...eventFormTimingRef.current, submittedAt: Date.now(), formStartedAt: eventFormTimingRef.current.formStartedAt || eventFormTimingRef.current.pageLoadedAt },
+      browserMeta: {
+        webdriver: navigator.webdriver === true,
+        language: navigator.language || '',
+        platform: navigator.platform || '',
+        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || '',
+        hardwareConcurrency: navigator.hardwareConcurrency || 0,
+        deviceMemory: navigator.deviceMemory || 0,
+        plugins: navigator.plugins ? Array.from(navigator.plugins).slice(0, 5).map(p => p.name) : [],
+        userAgent: navigator.userAgent || '',
+      },
     };
     try {
       const response = await eventAPI.create(payload);
@@ -2135,7 +2173,10 @@ export default function Home() {
       wizardSubmittedRef.current = true;
       localStorage.removeItem('planit_event_draft');
       trackFeature('event_creation_complete');
+      setRequiresVerification(false);
+      setAbuseStatus(null);
       setShowAd(true);
+      return true;
     } catch (error) {
       const data = error.response?.data;
 
@@ -2150,6 +2191,18 @@ export default function Home() {
         password:        mode === 'table-service' ? 'Staff PIN' : 'Event password',
         subdomain:       mode === 'table-service' ? 'Restaurant URL' : 'Event URL',
       };
+
+      if (data?.requiresVerification || data?.code === 'VERIFICATION_REQUIRED' || data?.code === 'INVALID_VERIFICATION') {
+        setRequiresVerification(true);
+        setCaptchaResetKey(k => k + 1);
+        setTurnstileToken('');
+        setAbuseStatus({ title: data?.code === 'INVALID_VERIFICATION' ? 'Invalid Verification' : 'Verification Required', message: data?.userMessage || 'Please complete the verification step to continue.' });
+        return;
+      }
+      if (['TRY_AGAIN_LATER', 'ADDITIONAL_REVIEW_REQUIRED', 'SUBMISSION_RECEIVED'].includes(data?.code)) {
+        setAbuseStatus({ title: 'Please Try Again', message: data?.userMessage || 'We couldn’t complete your request right now. Please try again shortly.' });
+        return;
+      }
 
       if (data?.errors && Array.isArray(data.errors)) {
         const serverErrs = {};
@@ -2183,6 +2236,7 @@ export default function Home() {
           toast.error(msg || 'Something went wrong. Please check your details and try again.');
         }
       }
+      return false;
     } finally { setLoading(false); }
   };
 
@@ -3458,7 +3512,13 @@ export default function Home() {
                       setFieldErrors={setFieldErrors}
                       loading={loading}
                       submittedRef={wizardSubmittedRef}
-                      onSubmit={async () => { await handleSubmit(); setWizardOpen(false); }}
+                      abuseStatus={abuseStatus}
+                      requiresVerification={requiresVerification}
+                      onCaptchaToken={setTurnstileToken}
+                      captchaResetKey={captchaResetKey}
+                      onUserInput={() => { if (!eventFormTimingRef.current.firstInputAt) eventFormTimingRef.current.firstInputAt = Date.now(); }}
+                      onUserPaste={(e) => { const len = e.clipboardData?.getData('text')?.length || 0; if (len > eventFormTimingRef.current.largestPasteChars) { eventFormTimingRef.current.largestPasteChars = len; eventFormTimingRef.current.largestPasteElapsedMs = Date.now() - (eventFormTimingRef.current.firstInputAt || eventFormTimingRef.current.pageLoadedAt); } }}
+                      onSubmit={async () => { const ok = await handleSubmit(); if (ok) setWizardOpen(false); }}
                     />
                   </div>
 
