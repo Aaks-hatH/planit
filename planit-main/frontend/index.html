@@ -1481,6 +1481,25 @@ By accessing any component of the PlanIt platform, You acknowledge that:
     ═══════════════════════════════════════════════════ -->
     <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 
+    <!-- ═══════════════════════════════════════════════════
+         GOOGLE ANALYTICS 4 — G-4H00MP64BG
+         dataLayer is bootstrapped here so the script is ready.
+         gtag('config') is called ONLY after the user accepts the
+         consent banner (handled by src/services/analytics.js).
+         No data is sent to Google before consent.
+    ═══════════════════════════════════════════════════ -->
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('consent', 'default', {
+        analytics_storage: 'denied',
+        ad_storage: 'denied',
+        wait_for_update: 2000
+      });
+      gtag('js', new Date());
+    </script>
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-4H00MP64BG"></script>
+
     <!-- Cloudflare Turnstile — loaded only when the site key is configured -->
     <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
 
