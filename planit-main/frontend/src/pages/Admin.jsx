@@ -326,6 +326,7 @@ function EventDetail({ event: initialEvent, onBack, onDelete, onUpdate }) {
     { id: 'invites',       label: 'Invites',        icon: Mail, count: invites.length },
     { id: 'analytics',     label: 'Analytics',      icon: Activity },
     { id: 'admin',         label: 'Admin',          icon: Shield },
+    { id: 'pii',           label: 'PII & Compliance', icon: Fingerprint },
   ];
 
   return (
@@ -1001,6 +1002,161 @@ function EventDetail({ event: initialEvent, onBack, onDelete, onUpdate }) {
                       </label>
                     ))}
                   </div>
+                </div>
+
+              </div>
+            )}
+
+            {/* ── PII & COMPLIANCE TAB ──────────────────────────────────── */}
+            {tab === 'pii' && (
+              <div className="space-y-6">
+
+                {/* Spam Detector */}
+                <div className="card p-5 border-2 border-amber-100">
+                  <h3 className="text-xs font-bold text-neutral-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+                    <AlertTriangle className="w-3.5 h-3.5 text-amber-500" /> Spam Detector
+                  </h3>
+                  <div className="flex items-start gap-6 mb-5">
+                    <div className="text-center">
+                      <div className="text-5xl font-black mb-1" style={{ color: spamScore >= 70 ? '#ef4444' : spamScore >= 40 ? '#f97316' : '#22c55e' }}>
+                        {spamScore}
+                      </div>
+                      <div className="text-xs text-neutral-400">Spam Score</div>
+                    </div>
+                    <div className="flex-1">
+                      <span className={`inline-flex px-3 py-1 rounded-full text-sm font-semibold mb-3 ${spamVerdict === 'block' ? 'bg-red-100 text-red-700' : spamVerdict === 'review' ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'}`}>
+                        {spamVerdict}
+                      </span>
+                      <div className="flex gap-1 flex-wrap">
+                        {spamFlags.map((f, i) => <span key={i} className="text-xs px-2 py-0.5 bg-red-50 text-red-600 rounded-full border border-red-100">{f}</span>)}
+                        {spamFlags.length === 0 && <span className="text-xs text-neutral-400">No active flags</span>}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="border-t border-neutral-100 pt-4">
+                    <p className="text-xs font-medium text-neutral-500 mb-3">Manual Override <span className="text-amber-600 font-semibold">(audit-logged)</span></p>
+                    <div className="flex gap-2 flex-wrap items-end">
+                      <div>
+                        <label className="block text-xs text-neutral-400 mb-1">Score (0–100)</label>
+                        <input type="number" min={0} max={100} value={spamEditScore} onChange={e => setSpamEditScore(e.target.value)} className="input text-sm w-24" placeholder="0–100" />
+                      </div>
+                      <div>
+                        <label className="block text-xs text-neutral-400 mb-1">Verdict</label>
+                        <select value={spamEditVerdict} onChange={e => setSpamEditVerdict(e.target.value)} className="input text-sm w-32">
+                          {['clean','review','block'].map(v => <option key={v} value={v}>{v}</option>)}
+                        </select>
+                      </div>
+                      <div className="flex-1 min-w-40">
+                        <label className="block text-xs text-neutral-400 mb-1">Add flag (Enter to add)</label>
+                        <input type="text" value={spamEditFlag} onChange={e => setSpamEditFlag(e.target.value)} className="input text-sm w-full" placeholder="e.g. duplicate_ip" onKeyDown={e => { if (e.key === 'Enter' && spamEditFlag.trim()) { setSpamFlags(f => [...f, spamEditFlag.trim()]); setSpamEditFlag(''); }}} />
+                      </div>
+                      <button onClick={async () => {
+                        try {
+                          const score = Math.max(0, Math.min(100, parseInt(spamEditScore) || 0));
+                          await adminAPI.updateEvent(event._id, { spamScore: score, spamVerdict: spamEditVerdict, spamFlags });
+                          setSpamScore(score); setSpamVerdict(spamEditVerdict);
+                          toast.success('Spam fields updated');
+                        } catch { toast.error('Update failed'); }
+                      }} className="btn btn-primary text-sm">Save Override</button>
+                    </div>
+                    {spamFlags.length > 0 && (
+                      <div className="mt-3">
+                        <p className="text-xs text-neutral-400 mb-1.5">Current flags — click to remove</p>
+                        <div className="flex gap-1 flex-wrap">
+                          {spamFlags.map((f, i) => (
+                            <button key={i} onClick={() => setSpamFlags(fs => fs.filter((_, idx) => idx !== i))} className="text-xs px-2 py-0.5 bg-red-50 text-red-600 rounded-full border border-red-100 hover:bg-red-100 transition-colors">
+                              {f} ×
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Creator Fingerprint & PII signals */}
+                <div className="card p-5">
+                  <h3 className="text-xs font-bold text-neutral-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+                    <Fingerprint className="w-3.5 h-3.5" /> Creator Fingerprint & Origin Signals
+                  </h3>
+                  <dl className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs font-mono">
+                    {[
+                      ['MongoDB ID',     event._id],
+                      ['Creator IP',     event.creatorIp || '—'],
+                      ['User-Agent',     event.creatorUserAgent || '—'],
+                      ['Fingerprint',    event.creatorFingerprint || '—'],
+                      ['Created At',     event.createdAt ? new Date(event.createdAt).toISOString() : '—'],
+                      ['Last Updated',   event.updatedAt ? new Date(event.updatedAt).toISOString() : '—'],
+                    ].map(([k, v]) => (
+                      <div key={k} className="bg-neutral-50 rounded-lg p-3">
+                        <dt className="text-neutral-400 mb-0.5 uppercase tracking-wide text-[10px]">{k}</dt>
+                        <dd className="text-neutral-800 break-all leading-relaxed">{String(v)}</dd>
+                      </div>
+                    ))}
+                  </dl>
+                </div>
+
+                {/* Analytics PII — participant profiles (Enterprise Mode) */}
+                {analyticsData && analyticsData.visitorProfiles && analyticsData.visitorProfiles.length > 0 && (
+                  <div className="card p-5">
+                    <h3 className="text-xs font-bold text-neutral-400 uppercase tracking-widest mb-2 flex items-center gap-2">
+                      <ShieldAlert className="w-3.5 h-3.5 text-rose-500" /> PII in Analytics Records
+                      <span className="text-[10px] bg-rose-50 text-rose-600 border border-rose-100 px-1.5 py-0.5 rounded-full font-semibold">Sensitive</span>
+                    </h3>
+                    <p className="text-xs text-neutral-400 mb-4">Guest-level PII attached to Enterprise Mode analytics records. Platform admin only — not shared externally.</p>
+                    <div className="space-y-2 max-h-80 overflow-y-auto">
+                      {analyticsData.visitorProfiles.map((profile, i) => {
+                        const spam = profile.spamRiskSignal ?? 0;
+                        const spamColor = spam >= 70 ? '#ef4444' : spam >= 40 ? '#f97316' : spam >= 20 ? '#eab308' : '#22c55e';
+                        return (
+                          <div key={i} className="flex items-center gap-3 p-3 rounded-xl bg-neutral-50 border border-neutral-100">
+                            <div className="w-8 h-8 rounded-full bg-neutral-200 flex items-center justify-center text-xs font-bold text-neutral-600 flex-shrink-0">
+                              {(profile.pii?.name || profile.pii?.email || '?')[0].toUpperCase()}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium text-neutral-800 truncate">{profile.pii?.name || profile.pii?.email || '—'}</p>
+                              {profile.pii?.email && profile.pii?.name && <p className="text-xs text-neutral-400 truncate">{profile.pii.email}</p>}
+                              {profile.pii?.phone && <p className="text-xs text-neutral-400">{profile.pii.phone}</p>}
+                            </div>
+                            <div className="text-center flex-shrink-0">
+                              <span className="text-sm font-bold" style={{ color: spamColor }}>{spam}</span>
+                              <p className="text-[10px] text-neutral-400">risk</p>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* Data Subject Rights */}
+                <div className="card p-5 bg-blue-50 border-blue-100">
+                  <h3 className="text-xs font-bold text-neutral-400 uppercase tracking-widest mb-3 flex items-center gap-2">
+                    <ShieldCheck className="w-3.5 h-3.5 text-blue-500" /> Data Subject Rights
+                  </h3>
+                  <p className="text-xs text-neutral-500 mb-4 leading-relaxed">
+                    Fulfil GDPR/CCPA data subject requests for this event. All export operations are logged.
+                  </p>
+                  <div className="flex gap-2 flex-wrap">
+                    <button onClick={() => {
+                      const cols = ['username','role','joinedAt','lastSeenAt','hasPassword','rsvp'];
+                      const csv = [cols.join(','), ...participants.map(p => cols.map(c => JSON.stringify(p[c] ?? '')).join(','))].join('\n');
+                      const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([csv], { type:'text/csv' }));
+                      a.download = `pii-export-${event.subdomain}-${Date.now()}.csv`; a.click();
+                    }} className="btn btn-secondary text-xs gap-1">
+                      <Download className="w-3 h-3" /> Export Participant PII (CSV)
+                    </button>
+                    <button onClick={() => {
+                      const data = { event: { id: event._id, subdomain: event.subdomain, creatorIp: event.creatorIp, creatorFingerprint: event.creatorFingerprint, createdAt: event.createdAt }, participants, spamScore, spamVerdict, spamFlags };
+                      const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], { type:'application/json' }));
+                      a.download = `full-pii-export-${event.subdomain}-${Date.now()}.json`; a.click();
+                    }} className="btn btn-secondary text-xs gap-1">
+                      <Download className="w-3 h-3" /> Full PII Export (JSON)
+                    </button>
+                  </div>
+                  <p className="text-[11px] text-neutral-400 mt-3">
+                    Event data auto-deletes 7 days after the event date; analytics records after 90 days. See <a href="/privacy" target="_blank" rel="noopener noreferrer" className="underline">Privacy Policy</a>.
+                  </p>
                 </div>
 
               </div>
