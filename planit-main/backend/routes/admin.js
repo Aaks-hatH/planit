@@ -907,9 +907,20 @@ router.get('/events', verifyAdmin, async (req, res, next) => {
         { organizerName:  { $regex: req.query.search, $options: 'i' } },
       ];
     }
+    // Spam verdict filter — allows the admin events list to be scoped to flagged events
+    if (req.query.spamVerdict && req.query.spamVerdict !== 'all') {
+      filter.spamVerdict = req.query.spamVerdict;
+    }
+
+    const selectFields = req.query.spamVerdict
+      ? '+spamScore +spamFlags +spamVerdict'
+      : '';
+
+    const query = Event.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit);
+    if (selectFields) query.select(selectFields);
 
     const [events, total] = await Promise.all([
-      Event.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit).lean(),
+      query.lean(),
       Event.countDocuments(filter),
     ]);
 
@@ -1295,6 +1306,414 @@ router.patch('/events/:eventId/admin-notes', verifyAdmin, async (req, res, next)
   } catch (err) {
     next(err);
   }
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// SPAM DETECTION & MANAGEMENT
+// ═══════════════════════════════════════════════════════════════════════════════
+
+// ─── GET /admin/spam/events ────────────────────────────────────────────────────
+// List events flagged by the spam detector.
+// Query params:
+//   verdict   'review' | 'block' | 'all'  (default: 'all' flagged)
+//   page      int  (default 1)
+//   limit     int  (default 25)
+//   sort      'score_desc' | 'score_asc' | 'newest' | 'oldest'
+router.get('/spam/events', verifyAdmin, async (req, res, next) => {
+  try {
+    const { analyzeEvent: _ae, reAnalyzeEvent: _rae } = require('../services/spamDetector');
+    const page    = Math.max(1, parseInt(req.query.page)  || 1);
+    const limit   = Math.min(100, parseInt(req.query.limit) || 25);
+    const skip    = (page - 1) * limit;
+    const verdict = req.query.verdict || 'all';
+
+    const filter = {};
+    if (verdict === 'review')      filter.spamVerdict = 'review';
+    else if (verdict === 'block')  filter.spamVerdict = 'block';
+    else                           filter.spamVerdict = { $in: ['review', 'block'] };
+
+    const sortMap = {
+      score_desc: { spamScore: -1 },
+      score_asc:  { spamScore:  1 },
+      oldest:     { createdAt:  1 },
+      newest:     { createdAt: -1 },
+    };
+    const sort = sortMap[req.query.sort] || { spamScore: -1 };
+
+    const [events, total] = await Promise.all([
+      Event.find(filter)
+        .select('+spamScore +spamFlags +spamVerdict +adminNotes +creatorIp +creatorUserAgent +creatorFingerprint')
+        .sort(sort)
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+      Event.countDocuments(filter),
+    ]);
+
+    // Aggregate summary counts
+    const [reviewCount, blockCount] = await Promise.all([
+      Event.countDocuments({ spamVerdict: 'review' }),
+      Event.countDocuments({ spamVerdict: 'block'  }),
+    ]);
+
+    res.json({
+      events,
+      summary: { review: reviewCount, block: blockCount, total: reviewCount + blockCount },
+      pagination: { page, limit, total, pages: Math.ceil(total / limit) },
+    });
+  } catch (err) { next(err); }
+});
+
+// ─── GET /admin/spam/events/:eventId ──────────────────────────────────────────
+// Full spam detail for a single event (flags, score breakdown, creator metadata).
+router.get('/spam/events/:eventId', verifyAdmin, async (req, res, next) => {
+  try {
+    const event = await Event.findById(req.params.eventId)
+      .select('+spamScore +spamFlags +spamVerdict +adminNotes +creatorIp +creatorUserAgent +creatorFingerprint')
+      .lean();
+    if (!event) return res.status(404).json({ error: 'Event not found' });
+
+    // Count other events from same IP or fingerprint
+    const [ipEventCount, fpEventCount] = await Promise.all([
+      event.creatorIp
+        ? Event.countDocuments({ creatorIp: event.creatorIp, _id: { $ne: event._id } })
+        : Promise.resolve(0),
+      event.creatorFingerprint
+        ? Event.countDocuments({ creatorFingerprint: event.creatorFingerprint, _id: { $ne: event._id } })
+        : Promise.resolve(0),
+    ]);
+
+    res.json({
+      event,
+      creatorHistory: {
+        eventsFromSameIp:          ipEventCount,
+        eventsFromSameFingerprint: fpEventCount,
+      },
+    });
+  } catch (err) { next(err); }
+});
+
+// ─── POST /admin/spam/events/:eventId/reanalyze ────────────────────────────────
+// Re-run spam analysis on an existing event (useful after content edits).
+router.post('/spam/events/:eventId/reanalyze', verifyAdmin, async (req, res, next) => {
+  try {
+    const { reAnalyzeEvent } = require('../services/spamDetector');
+    const result = await reAnalyzeEvent(req.params.eventId);
+
+    await audit({
+      action:    'spam_reanalyzed',
+      actorId:   req.admin?.id,
+      actorName: req.admin?.username,
+      targetId:  req.params.eventId,
+      details:   { score: result.score, verdict: result.verdict, flags: result.flags },
+    });
+
+    res.json({ ok: true, ...result });
+  } catch (err) {
+    if (err.message === 'Event not found') return res.status(404).json({ error: 'Event not found' });
+    next(err);
+  }
+});
+
+// ─── PATCH /admin/spam/events/:eventId/verdict ────────────────────────────────
+// Manually override the spam verdict for an event.
+// body: { verdict: 'clean' | 'review' | 'block', reason?: string }
+router.patch('/spam/events/:eventId/verdict', verifyAdmin, requirePermission('canEditEvents'), async (req, res, next) => {
+  try {
+    const { verdict, reason = '' } = req.body;
+    if (!['clean', 'review', 'block'].includes(verdict)) {
+      return res.status(400).json({ error: 'verdict must be clean, review, or block' });
+    }
+
+    const event = await Event.findByIdAndUpdate(
+      req.params.eventId,
+      { $set: { spamVerdict: verdict } },
+      { new: true, select: '+spamScore +spamFlags +spamVerdict +adminNotes' }
+    ).lean();
+    if (!event) return res.status(404).json({ error: 'Event not found' });
+
+    await audit({
+      action:    'spam_verdict_override',
+      actorId:   req.admin?.id,
+      actorName: req.admin?.username,
+      targetId:  String(event._id),
+      details:   { verdict, reason, previousVerdict: event.spamVerdict },
+    });
+
+    res.json({ ok: true, eventId: event._id, verdict, spamScore: event.spamScore, spamFlags: event.spamFlags });
+  } catch (err) { next(err); }
+});
+
+// ─── POST /admin/spam/events/bulk-action ──────────────────────────────────────
+// Apply a bulk action to multiple spam-flagged events.
+// body: { eventIds: string[], action: 'clear' | 'block' | 'delete' | 'block-and-ban-ip' }
+router.post('/spam/events/bulk-action', verifyAdmin, requirePermission('canDeleteEvents'), async (req, res, next) => {
+  try {
+    const { eventIds, action } = req.body;
+    if (!Array.isArray(eventIds) || eventIds.length === 0) {
+      return res.status(400).json({ error: 'eventIds must be a non-empty array' });
+    }
+    if (eventIds.length > 100) {
+      return res.status(400).json({ error: 'Maximum 100 events per bulk action' });
+    }
+    if (!['clear', 'block', 'delete', 'block-and-ban-ip'].includes(action)) {
+      return res.status(400).json({ error: 'action must be clear, block, delete, or block-and-ban-ip' });
+    }
+
+    const events = await Event.find({ _id: { $in: eventIds } })
+      .select('+spamVerdict +creatorIp')
+      .lean();
+
+    let result = {};
+
+    if (action === 'clear') {
+      const r = await Event.updateMany(
+        { _id: { $in: eventIds } },
+        { $set: { spamVerdict: 'clean', spamScore: 0, spamFlags: [] } }
+      );
+      result = { modified: r.modifiedCount };
+    } else if (action === 'block') {
+      const r = await Event.updateMany(
+        { _id: { $in: eventIds } },
+        { $set: { spamVerdict: 'block', status: 'cancelled' } }
+      );
+      result = { modified: r.modifiedCount };
+    } else if (action === 'delete') {
+      const ids = events.map(e => e._id);
+      await Promise.all([
+        Event.deleteMany({ _id: { $in: ids } }),
+        Message.deleteMany({ eventId: { $in: ids } }),
+        Poll.deleteMany({ eventId: { $in: ids } }),
+        File.deleteMany({ eventId: { $in: ids } }),
+        EventParticipant.deleteMany({ eventId: { $in: ids } }),
+      ]);
+      result = { deleted: ids.length };
+    } else if (action === 'block-and-ban-ip') {
+      // Block the events
+      await Event.updateMany(
+        { _id: { $in: eventIds } },
+        { $set: { spamVerdict: 'block', status: 'cancelled' } }
+      );
+      // Ban unique IPs
+      const ips = [...new Set(events.map(e => e.creatorIp).filter(Boolean))];
+      const banResults = [];
+      for (const ip of ips) {
+        try {
+          const { ban } = require('../middleware/security');
+          await ban(ip, 'Spam event bulk action', 24 * 60); // 24-hour ban
+          // Also write to Blocklist for persistence
+          const existing = await Blocklist.findOne({ type: 'ip', value: ip });
+          if (!existing) {
+            await Blocklist.create({
+              type: 'ip', value: ip, reason: 'Spam event bulk ban',
+              permanent: false, expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+              addedBy: req.admin?.username || 'admin',
+            });
+          }
+          banResults.push(ip);
+        } catch { /* best-effort per IP */ }
+      }
+      result = { eventsBocked: eventIds.length, ipsBanned: banResults.length, ips: banResults };
+    }
+
+    await audit({
+      action:    'spam_bulk_action',
+      actorId:   req.admin?.id,
+      actorName: req.admin?.username,
+      details:   { action, eventCount: eventIds.length, result },
+    });
+
+    res.json({ ok: true, action, result });
+  } catch (err) { next(err); }
+});
+
+// ─── GET /admin/spam/rsvps ─────────────────────────────────────────────────────
+// List RSVP submissions that were auto-flagged as spam suspects
+// (identified by the presence of "[Auto-flagged]" in organizerNotes).
+router.get('/spam/rsvps', verifyAdmin, async (req, res, next) => {
+  try {
+    const RSVPSubmission = require('../models/RSVPSubmission');
+    const page  = Math.max(1, parseInt(req.query.page)  || 1);
+    const limit = Math.min(100, parseInt(req.query.limit) || 25);
+    const skip  = (page - 1) * limit;
+
+    const filter = { organizerNotes: /^\[Auto-flagged\]/, deletedAt: null };
+    if (req.query.eventId) filter.eventId = req.query.eventId;
+
+    const [submissions, total] = await Promise.all([
+      RSVPSubmission.find(filter)
+        .sort({ submittedAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+      RSVPSubmission.countDocuments(filter),
+    ]);
+
+    res.json({ submissions, pagination: { page, limit, total, pages: Math.ceil(total / limit) } });
+  } catch (err) { next(err); }
+});
+
+// ─── POST /admin/spam/rsvps/bulk-action ────────────────────────────────────────
+// Bulk action on flagged RSVP submissions.
+// body: { submissionIds: string[], action: 'approve' | 'decline' | 'delete' | 'ban-ip' }
+router.post('/spam/rsvps/bulk-action', verifyAdmin, requirePermission('canDeleteEvents'), async (req, res, next) => {
+  try {
+    const RSVPSubmission = require('../models/RSVPSubmission');
+    const { submissionIds, action } = req.body;
+    if (!Array.isArray(submissionIds) || submissionIds.length === 0) {
+      return res.status(400).json({ error: 'submissionIds must be a non-empty array' });
+    }
+    if (submissionIds.length > 200) {
+      return res.status(400).json({ error: 'Maximum 200 submissions per bulk action' });
+    }
+    if (!['approve', 'decline', 'delete', 'ban-ip'].includes(action)) {
+      return res.status(400).json({ error: 'action must be approve, decline, delete, or ban-ip' });
+    }
+
+    let result = {};
+
+    if (action === 'approve') {
+      const r = await RSVPSubmission.updateMany(
+        { _id: { $in: submissionIds } },
+        { $set: { status: 'confirmed' } }
+      );
+      result = { modified: r.modifiedCount };
+    } else if (action === 'decline') {
+      const r = await RSVPSubmission.updateMany(
+        { _id: { $in: submissionIds } },
+        { $set: { status: 'declined' } }
+      );
+      result = { modified: r.modifiedCount };
+    } else if (action === 'delete') {
+      const r = await RSVPSubmission.updateMany(
+        { _id: { $in: submissionIds } },
+        { $set: { deletedAt: new Date() } }
+      );
+      result = { deleted: r.modifiedCount };
+    } else if (action === 'ban-ip') {
+      const subs = await RSVPSubmission.find({ _id: { $in: submissionIds } })
+        .select('ipAddress')
+        .lean();
+      const ips = [...new Set(subs.map(s => s.ipAddress).filter(Boolean))];
+      const banned = [];
+      for (const ip of ips) {
+        try {
+          const existing = await Blocklist.findOne({ type: 'ip', value: ip });
+          if (!existing) {
+            await Blocklist.create({
+              type: 'ip', value: ip,
+              reason: 'Spam RSVP bulk ban',
+              permanent: false,
+              expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+              addedBy: req.admin?.username || 'admin',
+            });
+          }
+          banned.push(ip);
+        } catch { /* best-effort */ }
+      }
+      // Decline the submissions too
+      await RSVPSubmission.updateMany(
+        { _id: { $in: submissionIds } },
+        { $set: { status: 'declined' } }
+      );
+      result = { ipsBanned: banned.length, submissionsDeclined: submissionIds.length };
+    }
+
+    await audit({
+      action:    'spam_rsvp_bulk_action',
+      actorId:   req.admin?.id,
+      actorName: req.admin?.username,
+      details:   { action, count: submissionIds.length, result },
+    });
+
+    res.json({ ok: true, action, result });
+  } catch (err) { next(err); }
+});
+
+// ─── GET /admin/spam/stats ────────────────────────────────────────────────────
+// Platform-wide spam statistics for the admin dashboard.
+router.get('/spam/stats', verifyAdmin, async (req, res, next) => {
+  try {
+    const RSVPSubmission = require('../models/RSVPSubmission');
+    const since7d  = new Date(Date.now() - 7  * 24 * 60 * 60 * 1000);
+    const since30d = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+
+    const [
+      totalEvents,
+      eventsReview,
+      eventsBlock,
+      eventsClean,
+      eventsReview7d,
+      eventsBlock7d,
+      topSpamFlags,
+      rsvpFlagged,
+      rsvpFlagged7d,
+      topSpamIPs,
+    ] = await Promise.all([
+      Event.countDocuments({}),
+      Event.countDocuments({ spamVerdict: 'review' }),
+      Event.countDocuments({ spamVerdict: 'block' }),
+      Event.countDocuments({ spamVerdict: 'clean' }),
+      Event.countDocuments({ spamVerdict: 'review', createdAt: { $gte: since7d } }),
+      Event.countDocuments({ spamVerdict: 'block',  createdAt: { $gte: since7d } }),
+      // Top spam flags across all flagged events
+      Event.aggregate([
+        { $match: { spamVerdict: { $in: ['review', 'block'] } } },
+        { $unwind: '$spamFlags' },
+        { $group: { _id: '$spamFlags', count: { $sum: 1 } } },
+        { $sort: { count: -1 } },
+        { $limit: 15 },
+      ]).allowDiskUse(false).exec().catch(() => []),
+      // RSVP spam counts
+      RSVPSubmission.countDocuments({ organizerNotes: /^\[Auto-flagged\]/, deletedAt: null }),
+      RSVPSubmission.countDocuments({ organizerNotes: /^\[Auto-flagged\]/, deletedAt: null, submittedAt: { $gte: since7d } }),
+      // Top IPs creating spam events
+      Event.aggregate([
+        { $match: { spamVerdict: { $in: ['review', 'block'] }, creatorIp: { $exists: true, $ne: null } } },
+        { $group: { _id: '$creatorIp', count: { $sum: 1 }, avgScore: { $avg: '$spamScore' } } },
+        { $sort: { count: -1 } },
+        { $limit: 10 },
+      ]).allowDiskUse(false).exec().catch(() => []),
+    ]);
+
+    res.json({
+      events: {
+        total: totalEvents,
+        clean:  eventsClean,
+        review: eventsReview,
+        block:  eventsBlock,
+        flaggedPercent: totalEvents > 0 ? +(((eventsReview + eventsBlock) / totalEvents) * 100).toFixed(2) : 0,
+        last7d: { review: eventsReview7d, block: eventsBlock7d },
+      },
+      rsvps: {
+        flagged:  rsvpFlagged,
+        last7d:   rsvpFlagged7d,
+      },
+      topFlags: topSpamFlags.map(f => ({ flag: f._id, count: f.count })),
+      topIPs:   topSpamIPs.map(r => ({ ip: r._id, count: r.count, avgScore: Math.round(r.avgScore) })),
+    });
+  } catch (err) { next(err); }
+});
+
+// ─── POST /admin/spam/analyze-text ────────────────────────────────────────────
+// Dry-run spam analysis on arbitrary text (for admin testing/investigation).
+// body: { title?, description?, email?, subdomain?, name? }
+router.post('/spam/analyze-text', verifyAdmin, async (req, res, next) => {
+  try {
+    const { analyzeEvent } = require('../services/spamDetector');
+    const result = await analyzeEvent({
+      title:          req.body.title          || '',
+      description:    req.body.description    || '',
+      subdomain:      req.body.subdomain      || '',
+      organizerEmail: req.body.email          || '',
+      organizerName:  req.body.name           || '',
+      ip:             '',
+      userAgent:      req.body.userAgent      || '',
+      fingerprint:    '',
+      honeypot:       '',
+    });
+    res.json(result);
+  } catch (err) { next(err); }
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════
