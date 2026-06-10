@@ -3472,51 +3472,70 @@ export default function Home() {
         </section>
 
         {/* FOOTER */}
-        <footer className="border-t border-neutral-800/50" style={{ background: 'rgba(6,6,12,0.95)' }}>
-          <div className="max-w-screen-xl mx-auto px-4 sm:px-8 py-14 sm:py-20">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-8 sm:gap-12 mb-12">
-              <div>
-                <div className="flex items-center gap-3 mb-5">
-                  {isWL && wlLogo
-                    ? <img src={wlLogo} alt={wlName} className="h-8 object-contain" />
-                    : <><div className="w-10 h-10 rounded-2xl bg-neutral-800 border border-neutral-700 flex items-center justify-center"><Calendar className="w-5 h-5 text-neutral-300" /></div>
-                       <span className="font-black text-xl text-white">{isWL ? wlName : 'PlanIt'}</span></>
-                  }
+<footer className="border-t border-neutral-800/50" style={{ background: 'rgba(6,6,12,0.97)' }}>
+  <div className="max-w-screen-xl mx-auto px-4 sm:px-8 pt-14 pb-0">
+    <div className="grid grid-cols-2 md:grid-cols-5 gap-10 pb-12">
+
+      {/* Brand */}
+      <div className="col-span-2">
+        <div className="flex items-center gap-3 mb-4">
+          {isWL && wlLogo
+            ? <img src={wlLogo} alt={wlName} className="h-8 object-contain" />
+            : <>
+                <div className="w-8 h-8 rounded-xl bg-neutral-900 border border-neutral-800 flex items-center justify-center">
+                  <Calendar className="w-4 h-4 text-neutral-400" />
                 </div>
-                <p className="text-sm text-neutral-500 leading-relaxed mb-4">{isWL ? '' : 'The ultimate planning hub for event teams. Plan smart, execute flawlessly.'}</p>
-                <p className="text-xs text-neutral-600">Built by Aakshat Hariharan</p>
-              </div>
-              <div>
-                <h3 className="text-xs font-bold text-neutral-500 mb-5 uppercase tracking-wider">Product</h3>
-                <ul className="space-y-3 text-sm text-neutral-500">
-                  {[['Features', '#features'], ['Discover', '/discover'], ['Blog', '/blog'], ['Status', '/status'], ['Help', '/help'], ['Get Started', '#create'], ['License', '/license'], ['Credits', '/credits']].map(([l, h]) => (
-                    <li key={l}><a href={h} className="hover:text-neutral-200 transition-colors">{l}</a></li>
-                  ))}
-                </ul>
-              </div>
-              <div>
-                <h3 className="text-xs font-bold text-neutral-500 mb-5 uppercase tracking-wider">Company</h3>
-                <ul className="space-y-3 text-sm text-neutral-500">
-                  {[['About PlanIt', '/about'], ['Blog & Guides', '/blog'], ['Terms of Service', '/terms'], ['Privacy Policy', '/privacy'], ['License', '/license'], ['Credits', '/credits']].map(([l, h]) => (
-                    <li key={l}><a href={h} className="hover:text-neutral-200 transition-colors">{l}</a></li>
-                  ))}
-                </ul>
-              </div>
-              <div>
-                <h3 className="text-xs font-bold text-neutral-500 mb-5 uppercase tracking-wider">Connect</h3>
-                <ul className="space-y-3 text-sm text-neutral-500">
-                  {[['Contact / Support', '/support'], ['Wall of Supporters', '/support/wall'], ['System Status', '/status'], ['Help Center', '/help']].map(([l, h]) => (
-                    <li key={l}><a href={h} className="hover:text-neutral-200 transition-colors">{l}</a></li>
-                  ))}
-                </ul>
-              </div>
-            </div>
-            <div className="pt-8 border-t border-neutral-800 flex flex-col md:flex-row items-center justify-between gap-4 text-sm text-neutral-600">
-              <span>© 2026 PlanIt. All rights reserved.</span>
-              <span className="font-medium">By Aakshat Hariharan</span>
-            </div>
-          </div>
-        </footer>
+                <span className="font-black text-lg tracking-tight text-white">
+                  {isWL ? wlName : 'PlanIt'}
+                </span>
+              </>
+          }
+        </div>
+        {!isWL && (
+          <p className="text-sm text-neutral-600 leading-relaxed max-w-[220px]">
+            The ultimate planning hub for event teams. Plan smart, execute flawlessly.
+          </p>
+        )}
+      </div>
+
+      {/* Product */}
+      <div>
+        <h3 className="text-[11px] font-medium text-neutral-600 mb-4 uppercase tracking-widest">Product</h3>
+        <ul className="space-y-2.5 text-sm text-neutral-600">
+          {['Features', 'Discover', 'Get started', 'Help center', 'System status'].map(l => (
+            <li key={l}>{l}</li>
+          ))}
+        </ul>
+      </div>
+
+      {/* Company */}
+      <div>
+        <h3 className="text-[11px] font-medium text-neutral-600 mb-4 uppercase tracking-widest">Company</h3>
+        <ul className="space-y-2.5 text-sm text-neutral-600">
+          {['About', 'Blog & guides', 'Contact', 'Wall of supporters'].map(l => (
+            <li key={l}>{l}</li>
+          ))}
+        </ul>
+      </div>
+
+      {/* Legal */}
+      <div>
+        <h3 className="text-[11px] font-medium text-neutral-600 mb-4 uppercase tracking-widest">Legal</h3>
+        <ul className="space-y-2.5 text-sm text-neutral-600">
+          {['Terms of service', 'Privacy policy', 'License', 'Credits'].map(l => (
+            <li key={l}>{l}</li>
+          ))}
+        </ul>
+      </div>
+    </div>
+
+    {/* Bottom bar */}
+    <div className="border-t border-neutral-800/70 py-5 flex flex-col sm:flex-row items-center justify-between gap-3">
+      <span className="text-xs text-neutral-700">© 2026 PlanIt · Built by Aakshat Hariharan</span>
+      <span className="text-xs text-neutral-700">Privacy · Terms · Status</span>
+    </div>
+  </div>
+</footer>
 
       </main>
     </div>
