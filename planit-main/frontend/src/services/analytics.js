@@ -7,15 +7,16 @@
  *
  * CONSENT MODEL
  * ─────────────
- * gtag.js is loaded via index.html with:
- *   • analytics_storage='denied' by default (no data sent before consent)
- *   • gtag('config', GA_ID, { send_page_view: false }) called unconditionally
- *     so GA4 recognises the stream as installed without sending any hits.
+ * gtag.js is loaded via index.html with analytics_storage='denied' by default.
+ * No hits are sent to Google until the user accepts the consent banner.
  *
- * When the user accepts the consent banner:
- *   1. We update the GA consent state to 'granted'.
- *   2. We fire an initial page_view for the current page.
- * When declined: analytics_storage stays 'denied'; gtag is a no-op for hits.
+ * CRITICAL ORDERING — gtag('config') MUST come AFTER gtag('consent','update').
+ * If config fires before the consent update, GA4 stamps the session as G100
+ * (consent granted but not through proper consent mode flow) and hits are
+ * discarded from standard reports. Correct flow:
+ *   1. consent update → analytics_storage: 'granted'
+ *   2. config         → registers the stream with consent already granted
+ *   3. page_view      → first hit, now stamped G111 (fully valid)
  *
  * PAGE TRACKING
  * ─────────────
@@ -53,10 +54,13 @@ function activateGA() {
   if (_gaInitialised) return;
   _gaInitialised = true;
 
-  // Upgrade consent state in the GA consent API.
-  // gtag('config', ...) is already called unconditionally in index.html with
-  // send_page_view:false — no need to repeat it here.
+  // Step 1 — upgrade consent FIRST. Must come before config so GA4
+  // stamps all subsequent hits as G111 (fully consent-mode compliant).
   gtag('consent', 'update', { analytics_storage: 'granted' });
+
+  // Step 2 — register the stream AFTER consent is granted.
+  // send_page_view:false so the SPA router controls page_view timing.
+  gtag('config', GA_ID, { send_page_view: false });
 }
 
 // ─── Public API ───────────────────────────────────────────────────────────────
