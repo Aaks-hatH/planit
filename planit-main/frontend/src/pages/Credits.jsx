@@ -114,6 +114,7 @@ const SECTIONS = [
       {name:'Discord Webhooks',logo:si('discord'),url:'https://discord.com/developers/docs/resources/webhook',note:'Alert routing'},
       {name:'Render',logo:si('render'),url:'https://render.com',note:'Cloud hosting'},
       {name:'Google Fonts',logo:si('googlefonts'),url:'https://fonts.google.com',note:'Syne & DM Sans typefaces'},
+      {name:'Google Analytics 4',logo:si('googleanalytics'),url:'https://analytics.google.com',note:'Web analytics (consent-gated)'},
     ],
   },
 ];
