@@ -7,12 +7,14 @@
  *
  * CONSENT MODEL
  * ─────────────
- * gtag.js is loaded via index.html with analytics_storage='denied' by default.
- * No hits are sent to Google until the user accepts the consent banner.
- * When accepted:
+ * gtag.js is loaded via index.html with:
+ *   • analytics_storage='denied' by default (no data sent before consent)
+ *   • gtag('config', GA_ID, { send_page_view: false }) called unconditionally
+ *     so GA4 recognises the stream as installed without sending any hits.
+ *
+ * When the user accepts the consent banner:
  *   1. We update the GA consent state to 'granted'.
- *   2. We call gtag('config', ...) which activates the measurement stream.
- *   3. We fire an initial page_view for the current page.
+ *   2. We fire an initial page_view for the current page.
  * When declined: analytics_storage stays 'denied'; gtag is a no-op for hits.
  *
  * PAGE TRACKING
@@ -51,11 +53,10 @@ function activateGA() {
   if (_gaInitialised) return;
   _gaInitialised = true;
 
-  // Upgrade consent state in the GA consent API
+  // Upgrade consent state in the GA consent API.
+  // gtag('config', ...) is already called unconditionally in index.html with
+  // send_page_view:false — no need to repeat it here.
   gtag('consent', 'update', { analytics_storage: 'granted' });
-
-  // Configure the stream — disable auto page_view so the SPA router controls it
-  gtag('config', GA_ID, { send_page_view: false });
 }
 
 // ─── Public API ───────────────────────────────────────────────────────────────
