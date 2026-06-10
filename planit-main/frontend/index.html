@@ -1483,11 +1483,11 @@ By accessing any component of the PlanIt platform, You acknowledge that:
 
     <!-- ═══════════════════════════════════════════════════
          GOOGLE ANALYTICS 4 — G-4H00MP64BG
-         Consent default is 'denied' — no data sent to Google
-         until the user accepts the consent banner.
-         gtag('config') is called here with send_page_view:false
-         so GA4 recognises the stream is installed. Actual hits
-         are only fired after consent (src/services/analytics.js).
+         Consent defaults to 'denied' — no data sent to Google
+         until the user accepts the banner.
+         gtag('config') is intentionally NOT called here.
+         It fires in analytics.js AFTER the consent update,
+         ensuring hits are stamped G111 (fully valid) not G100.
     ═══════════════════════════════════════════════════ -->
     <script>
       window.dataLayer = window.dataLayer || [];
@@ -1498,7 +1498,6 @@ By accessing any component of the PlanIt platform, You acknowledge that:
         wait_for_update: 2000
       });
       gtag('js', new Date());
-      gtag('config', 'G-4H00MP64BG', { send_page_view: false });
     </script>
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-4H00MP64BG"></script>
 
