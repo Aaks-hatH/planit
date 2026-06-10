@@ -1408,7 +1408,7 @@ const VENUE_TYPES = [
   { id:'other',      label:'Other venue',      hint:'Something different entirely' },
 ];
 
-function OnboardingWizard({ mode, formData, setFormData, fieldErrors, setFieldErrors, onSubmit, loading, submittedRef, abuseStatus, requiresVerification, onCaptchaToken, captchaResetKey, onUserInput, onUserPaste }) {
+function OnboardingWizard({ mode, formData, setFormData, fieldErrors, setFieldErrors, onSubmit, loading, submittedRef, stepControlRef, abuseStatus, requiresVerification, onCaptchaToken, captchaResetKey, onUserInput, onUserPaste }) {
   const isVenue = mode === 'table-service';
   const accent  = isVenue ? '#f97316' : '#6366f1';
   const accentHover = isVenue ? '#fb923c' : '#818cf8';
@@ -1422,6 +1422,21 @@ function OnboardingWizard({ mode, formData, setFormData, fieldErrors, setFieldEr
   const [showPw2, setShowPw2]     = useState(false);
   const [localErr, setLocalErr]   = useState({});
   const firstInputRef             = useRef(null);
+
+  // Expose step navigation to the parent so it can redirect back after a server error
+  useEffect(() => {
+    if (stepControlRef) {
+      stepControlRef.current = {
+        goTo: (n) => {
+          setDir(n < step ? 'back' : 'forward');
+          setStep(n);
+          setStepKey(k => k + 1);
+          setLocalErr({});
+        },
+        getStep: () => step,
+      };
+    }
+  });
 
   // ── Draft persistence state ────────────────────────────────────────────────
   const [pendingDraft, setPendingDraft]           = useState(null);
@@ -1627,8 +1642,8 @@ function OnboardingWizard({ mode, formData, setFormData, fieldErrors, setFieldEr
             {err.title && <p style={{ fontSize:12, color:'#f87171', marginTop:6, display:'flex', alignItems:'center', gap:5 }}><AlertCircle style={{ width:12, height:12 }} />{err.title}</p>}
           </div>
           {formData.title && (
-            <div style={{ background:'rgba(255,255,255,0.03)', border:'1px solid rgba(255,255,255,0.07)', borderRadius:12, padding:'10px 14px' }}>
-              <p style={{ fontSize:11, color:'rgba(255,255,255,0.3)', marginBottom:4, textTransform:'uppercase', letterSpacing:'0.12em' }}>Your URL</p>
+            <div style={{ background: err.subdomain ? 'rgba(248,113,113,0.06)' : 'rgba(255,255,255,0.03)', border: err.subdomain ? '1px solid rgba(248,113,113,0.5)' : '1px solid rgba(255,255,255,0.07)', borderRadius:12, padding:'10px 14px' }}>
+              <p style={{ fontSize:11, color: err.subdomain ? '#f87171' : 'rgba(255,255,255,0.3)', marginBottom:4, textTransform:'uppercase', letterSpacing:'0.12em' }}>Your URL</p>
               <div style={{ display:'flex', alignItems:'center', gap:0 }}>
                 <span style={{ fontSize:13, color:'rgba(255,255,255,0.25)', fontFamily:'monospace' }}>/e/</span>
                 <input
@@ -1637,11 +1652,13 @@ function OnboardingWizard({ mode, formData, setFormData, fieldErrors, setFieldEr
                   onChange={(e) => {
                     const cleaned = e.target.value.toLowerCase().replace(/[^a-z0-9-]/g,'-').replace(/-{2,}/g,'-');
                     setFormData(p => ({ ...p, subdomain: cleaned, _subdomainTouched: true }));
+                    if (fieldErrors.subdomain) setFieldErrors(p => ({ ...p, subdomain: '' }));
                   }}
-                  style={{ flex:1, background:'transparent', border:'none', outline:'none', color:'rgba(255,255,255,0.7)', fontFamily:'monospace', fontSize:13 }}
+                  style={{ flex:1, background:'transparent', border:'none', outline:'none', color: err.subdomain ? '#fca5a5' : 'rgba(255,255,255,0.7)', fontFamily:'monospace', fontSize:13 }}
                   spellCheck={false}
                 />
               </div>
+              {err.subdomain && <p style={{ fontSize:12, color:'#f87171', marginTop:6, display:'flex', alignItems:'center', gap:5 }}><AlertCircle style={{ width:12, height:12 }} />{err.subdomain}</p>}
             </div>
           )}
           {!isVenue && (
@@ -2066,6 +2083,7 @@ export default function Home() {
   const [wizardKey, setWizardKey] = useState(0); // increment to hard-reset the wizard
   const [wizardOpen, setWizardOpen] = useState(false); // fullscreen wizard overlay
   const wizardSubmittedRef = useRef(false); // flipped true on successful event creation
+  const wizardStepRef = useRef(null);       // populated by OnboardingWizard with { goTo(n), getStep() }
   const [abuseStatus, setAbuseStatus] = useState(null);
   const [requiresVerification, setRequiresVerification] = useState(false);
   const [turnstileToken, setTurnstileToken] = useState('');
@@ -2224,14 +2242,26 @@ export default function Home() {
         }
       } else {
         const msg = data?.error || 'Failed to create';
+        const isTS2 = mode === 'table-service';
+        const nameStepNum = isTS2 ? 2 : 4;
+
         if (msg.includes('already taken')) {
-          setFieldErrors({ subdomain: 'This URL is already taken — try a different name.' });
-          toast.error('That URL is already in use. We\'ve generated a new one — feel free to customise it.');
-          setFormData(prev => ({ ...prev, subdomain: makeSubdomain(prev.title) }));
+          // Taken slug — show inline error and navigate back to the URL step
+          setFieldErrors({ subdomain: 'This URL is already taken — please choose a different one.' });
+          wizardStepRef.current?.goTo(1);
+        } else if (msg.includes('not available')) {
+          // Banned slug — show inline error and navigate back to the URL step
+          setFieldErrors({ subdomain: 'This URL is not available — please choose a different one.' });
+          wizardStepRef.current?.goTo(1);
+        } else if (msg.includes('not allowed') || msg.toLowerCase().includes('display name')) {
+          // Banned organizer/display name — navigate back to the name step
+          setFieldErrors({ organizerName: 'This display name is not allowed — please choose a different one.' });
+          wizardStepRef.current?.goTo(nameStepNum);
         } else if (msg.includes('email')) {
-          toast.error('Please enter a valid email address.');
+          setFieldErrors({ organizerEmail: 'Please enter a valid email address.' });
+          wizardStepRef.current?.goTo(nameStepNum);
         } else if (msg.includes('password')) {
-          toast.error('Password must be at least 6 characters.');
+          setFieldErrors({ accountPassword: 'Password must be at least 6 characters.' });
         } else {
           toast.error(msg || 'Something went wrong. Please check your details and try again.');
         }
@@ -3512,6 +3542,7 @@ export default function Home() {
                       setFieldErrors={setFieldErrors}
                       loading={loading}
                       submittedRef={wizardSubmittedRef}
+                      stepControlRef={wizardStepRef}
                       abuseStatus={abuseStatus}
                       requiresVerification={requiresVerification}
                       onCaptchaToken={setTurnstileToken}
