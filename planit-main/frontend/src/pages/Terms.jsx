@@ -1,8 +1,8 @@
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, FileText } from 'lucide-react';
 
-const LAST_UPDATED = 'June 6, 2026';
-const EFFECTIVE_DATE = 'June 6, 2026';
+const LAST_UPDATED = 'June 9, 2026';
+const EFFECTIVE_DATE = 'June 9, 2026';
 
 function Section({ number, title, children }) {
   return (
@@ -94,7 +94,7 @@ export default function Terms() {
               <DefItem term="Participant">Any User accessing an Event workspace in a capacity other than Organizer, regardless of the means by which access was obtained.</DefItem>
               <DefItem term="Personal Data">Information relating to an identified or identifiable natural person, as further defined and governed by the Privacy Policy.</DefItem>
               <DefItem term="Platform">The entirety of PlanIt's technical infrastructure, including the frontend application, backend application servers, load balancing router, watchdog monitoring service, database systems, real-time communication layer, mesh authentication infrastructure, Platform Analytics System, and all associated APIs, microservices, and third-party integrations.</DefItem>
-              <DefItem term="Platform Analytics System">The server-side analytics infrastructure operated by PlanIt that collects, stores, encrypts, and processes Analytics Data as described in Section 12 of these Terms.</DefItem>
+              <DefItem term="Platform Analytics System">The analytics infrastructure operated by PlanIt, comprising (a) the server-side backend analytics pipeline that collects, stores, encrypts, and processes business-event Analytics Data as described in Section 12 of these Terms, and (b) Google Analytics 4 (GA4), a third-party web analytics service operated by Google LLC, which collects page-view and session data under the consent framework described in Section 12.</DefItem>
               <DefItem term="Prohibited Content">Content falling within the categories enumerated in Section 6.2 of these Terms.</DefItem>
               <DefItem term="Service">The PlanIt event planning platform accessible at planitapp.onrender.com and any successor domains, subdomains, or applications, including all features, functionalities, and services available therethrough, accessed via web browser, progressive web application, or any other means.</DefItem>
               <DefItem term="User">Any individual or entity that accesses, browses, uses, or interacts with the Service in any capacity, including Organizers, Participants, and Guests.</DefItem>
@@ -314,7 +314,7 @@ export default function Terms() {
 
           <Section number="10" title="Third-Party Services and External Links">
             <p>
-              The Service integrates with third-party services including Cloudinary, Upstash Redis, MongoDB Atlas, Render, Cloudflare, and Socket.IO. Your use of such services may be subject to their own terms and policies. PlanIt makes no warranty regarding any third-party service's availability, reliability, or security, and expressly disclaims all liability arising from your use of or reliance on any third-party service or external link provided through or accessed via the Service.
+              The Service integrates with third-party services including Cloudinary, Upstash Redis, MongoDB Atlas, Render, Cloudflare, Socket.IO, and Google Analytics 4 (operated by Google LLC, measurement ID G-4H00MP64BG). Google Analytics collects page-view and session data subject to Google's own Privacy Policy (policies.google.com/privacy) and Terms of Service. Your use of all third-party services may be subject to their own terms and policies. PlanIt makes no warranty regarding any third-party service's availability, reliability, or security, and expressly disclaims all liability arising from your use of or reliance on any third-party service or external link provided through or accessed via the Service.
             </p>
           </Section>
 
@@ -327,12 +327,12 @@ export default function Terms() {
           <Section number="12" title="Platform Analytics — Scope, Consent, and User Rights">
             <Sub number="12.1" title="Operation of the Platform Analytics System">
               <p>
-                PlanIt operates a Platform Analytics System that automatically collects Analytics Data when you access or interact with the Service. The Platform Analytics System is designed to help PlanIt understand aggregate usage patterns, identify and resolve technical errors, detect and prevent fraudulent or abusive activity, and improve the reliability, safety, and performance of the platform. The full scope of data collected is set out in Section 2.3 of the Privacy Policy, which is incorporated into these Terms by reference.
+                PlanIt operates a Platform Analytics System comprising two complementary components. The first is PlanIt's own server-side backend analytics pipeline, which records named business events (such as feature usage and guest interactions) to help PlanIt understand aggregate platform usage, identify and resolve technical errors, detect and prevent fraudulent or abusive activity, and improve the reliability, safety, and performance of the platform. The second is Google Analytics 4 (GA4), a web analytics service operated by Google LLC, which collects page-view and session data on PlanIt's behalf using measurement ID G-4H00MP64BG. The full scope of data collected is set out in Section 2.3 of the Privacy Policy, which is incorporated into these Terms by reference. Both components are subject to the consent mechanism in Section 12.2.
               </p>
             </Sub>
             <Sub number="12.2" title="Analytics Consent Mechanism">
               <p>
-                On your first visit to the Service, PlanIt displays a consent banner giving you the choice to accept or decline Analytics Data collection. By clicking "Accept," you consent to the collection, storage, and processing of Analytics Data as described in the Privacy Policy. By clicking "Decline," no Visitor ID will be created and no analytics events will be transmitted to PlanIt's analytics infrastructure. Essential browser storage items (authentication tokens, username preferences) continue to function regardless of your analytics choice, as these are operationally necessary to provide the Service.
+                On your first visit to the Service, PlanIt displays a consent banner giving you the choice to accept or decline Analytics Data collection. By clicking "Accept," you consent to the collection, storage, and processing of Analytics Data as described in the Privacy Policy — including the transmission of page-view and session data to Google Analytics 4 (operated by Google LLC) and business-event data to PlanIt's backend analytics pipeline. By clicking "Decline," no Visitor ID will be created, no analytics events will be transmitted to PlanIt's analytics infrastructure, and the GA4 consent state will remain denied, meaning no data is sent to Google. Essential browser storage items (authentication tokens, username preferences) continue to function regardless of your analytics choice, as these are operationally necessary to provide the Service.
               </p>
               <p className="mt-2">
                 Your consent choice is stored in your browser's local storage. You may withdraw or change your choice at any time by clearing your browser's local storage for this site, which will cause the consent banner to reappear on your next visit. Withdrawal of consent does not affect the lawfulness of Analytics Data collected prior to withdrawal.
