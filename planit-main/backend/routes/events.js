@@ -124,10 +124,20 @@ router.post('/',
         return sendAntiAbuse(res, 'tryAgainLater');
       }
 
+      // IMPORTANT: verify the token before anything else when verdict is 'review'.
+      // Do NOT re-run analyzeEvent after a valid solve — velocity counters increment
+      // on every request, so a resubmission scores higher than the first attempt and
+      // could block a user who just correctly passed the CAPTCHA challenge.
+      let captchaCleared = false;
       if (initialSpamResult.verdict === 'review') {
+        if (!req.body.turnstileToken) {
+          return sendAntiAbuse(res, 'verificationRequired', { requiresVerification: true });
+        }
         const tsResult = await verifyTurnstile(req.body.turnstileToken, creatorIpAddr, { failOpen: false, context: 'event-create' });
-        if (!req.body.turnstileToken) return sendAntiAbuse(res, 'verificationRequired', { requiresVerification: true });
-        if (!tsResult.ok) return sendAntiAbuse(res, 'invalidVerification', { requiresVerification: true });
+        if (!tsResult.ok) {
+          return sendAntiAbuse(res, 'invalidVerification', { requiresVerification: true });
+        }
+        captchaCleared = true;
       }
 
       const event = new Event({
