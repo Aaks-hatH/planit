@@ -352,16 +352,26 @@ router.post('/:eventIdOrSlug/submit', async (req, res, next) => {
       return sendAntiAbuse(res, 'tryAgainLater');
     }
 
-    // Moderate risk requires the shared CAPTCHA. The response says only that
-    // verification is needed, never why it was requested.
+    // Moderate risk requires CAPTCHA verification.
+    // IMPORTANT: if a token is present, verify it BEFORE checking verdict again.
+    // Do NOT re-evaluate the spam score after a valid CAPTCHA solve — the velocity
+    // counters increment on every request, so a resubmission would score higher
+    // than the first attempt and could block a user who just passed the challenge.
+    let captchaCleared = false;
     if (spamResult.verdict === 'review') {
+      if (!req.body.turnstileToken) {
+        return sendAntiAbuse(res, 'verificationRequired', { requiresVerification: true });
+      }
       const tsResult = await verifyTurnstile(req.body.turnstileToken, submitterIp, { failOpen: false, context: 'rsvp-submit' });
-      if (!req.body.turnstileToken) return sendAntiAbuse(res, 'verificationRequired', { requiresVerification: true });
-      if (!tsResult.ok) return sendAntiAbuse(res, 'invalidVerification', { requiresVerification: true });
+      if (!tsResult.ok) {
+        return sendAntiAbuse(res, 'invalidVerification', { requiresVerification: true });
+      }
+      // Token verified — CAPTCHA passed, treat submission as cleared
+      captchaCleared = true;
     }
 
-    // Soft flag: force to pending review for organizer
-    const isSpamSuspect = spamResult.verdict === 'review';
+    // Soft flag: force to pending review — but not if CAPTCHA was passed
+    const isSpamSuspect = spamResult.verdict === 'review' && !captchaCleared;
     const status = (requiresApproval || isSpamSuspect) ? 'pending' : 'confirmed';
 
     const editToken = generateEditToken();
