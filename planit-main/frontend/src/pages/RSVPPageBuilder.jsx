@@ -487,8 +487,8 @@ function RSVPSetupWizard({ eventId, event, settings, set, save, gmailConnected, 
 
   // Compute the public RSVP URL matching the spec logic
   const publicUrl = event?.subdomain
-    ? `${window.location.origin}/e/${event.subdomain}/rsvp`
-    : `${window.location.origin}/rsvp/${eventId}`;
+    ? `${window.location.origin}/rsvp/${event.subdomain}`
+    : `${window.location.origin}/rsvp/${event.subdomain}`;
 
   // Violet gradient — matches Enterprise accent from Onboarding.jsx
   const accentGradient = 'linear-gradient(90deg, #7c3aed, #8b5cf6, #a78bfa)';
