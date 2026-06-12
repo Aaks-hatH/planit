@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { trackGAEvent } from '../services/analytics';
 
 const CONSENT_KEY = 'planit_cookie_consent';
 const CONSENT_VERSION = '1';
@@ -63,6 +64,10 @@ export default function ConsentBanner() {
   function dismiss(accepted) {
     storeConsent(accepted);
     document.dispatchEvent(new CustomEvent('planit:consent', { detail: { accepted } }));
+    if (accepted) {
+      // Small delay so analytics.js activateGA() runs first from the same event
+      setTimeout(() => trackGAEvent('consent_granted'), 100);
+    }
     setOut(true);
     setTimeout(() => setVisible(false), 300);
   }
