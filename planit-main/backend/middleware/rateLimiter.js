@@ -93,7 +93,7 @@ const uploadLimiter = rateLimit({
 // Event creation limiter
 const createEventLimiter = rateLimit({
   windowMs:        60 * 60 * 1000,
-  max:             10,
+  max:             3,
   standardHeaders: true,
   legacyHeaders:   false,
   keyGenerator:    realIp,
