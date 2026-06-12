@@ -25,6 +25,7 @@ const crypto   = require('crypto');
 const Event    = require('../models/Event');
 const RSVPSubmission = require('../models/RSVPSubmission');
 const { verifyOrganizer } = require('../middleware/auth');
+const { authLimiter } = require('../middleware/rateLimiter');
 const { meshPost } = require('../middleware/mesh');
 const { sendRsvpGuestConfirmation } = require('../services/emailService');
 const { analyzeRsvp } = require('../services/spamDetector');
@@ -536,8 +537,10 @@ router.patch('/submission/:editToken', async (req, res, next) => {
 // ─────────────────────────────────────────────────────────────────────────────
 // POST /api/rsvp/:eventId/verify-password
 // Public — verify RSVP page password
+// FIX: Added authLimiter — this route was unprotected, allowing unlimited brute-force
+// attempts against RSVP page passwords.
 // ─────────────────────────────────────────────────────────────────────────────
-router.post('/:eventId/verify-password', async (req, res, next) => {
+router.post('/:eventId/verify-password', authLimiter, async (req, res, next) => {
   try {
     const event = await Event.findById(req.params.eventId)
       .select('+rsvpPage.rsvpPassword rsvpPage.accessMode')
