@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { rsvpAPI } from '../services/api';
+import { trackGAEvent } from '../services/analytics';
 import { formatDateInTimezone } from '../utils/timezoneUtils';
 import TurnstileWidget from '../components/TurnstileWidget';
 
@@ -416,6 +417,7 @@ export default function RSVPPage() {
       setSubmitted(true);
       setRequiresVerification(false);
       setAbuseStatus(null);
+      trackGAEvent('rsvp_submitted');
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (err) {
       const data = err.response?.data || {};
