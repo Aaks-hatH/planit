@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { eventAPI } from '../services/api';
 import { trackFeature, flushTracker } from '../services/tracker';
+import { trackGAEvent } from '../services/analytics';
 import RecoveryCodeModal from '../components/RecoveryCodeModal';
 import toast from 'react-hot-toast';
 import { motion } from 'framer-motion';
@@ -1450,6 +1451,7 @@ function OnboardingWizard({ mode, formData, setFormData, fieldErrors, setFieldEr
   // Mount effect: track feature start, detect saved draft, register abandon listener
   useEffect(() => {
     trackFeature('event_creation_start');
+    trackGAEvent('event_creation_started');
 
     try {
       const raw = localStorage.getItem('planit_event_draft');
@@ -2191,6 +2193,7 @@ export default function Home() {
       wizardSubmittedRef.current = true;
       localStorage.removeItem('planit_event_draft');
       trackFeature('event_creation_complete');
+      trackGAEvent('event_created', { event_type: formData.isEnterpriseMode ? 'enterprise' : 'standard' });
       setRequiresVerification(false);
       setAbuseStatus(null);
       setShowAd(true);
@@ -3398,7 +3401,7 @@ export default function Home() {
                       </p>
 
                       <button
-                        onClick={() => { setFormData(p => ({ ...p, isEnterpriseMode: mode === 'enterprise' })); setWizardKey(k => k + 1); setWizardOpen(true); }}
+                        onClick={() => { setFormData(p => ({ ...p, isEnterpriseMode: mode === 'enterprise' })); setWizardKey(k => k + 1); eventFormTimingRef.current.formStartedAt = Date.now(); setWizardOpen(true); }}
                         style={{
                           width:'100%', padding:'16px 28px', borderRadius:14, border:'none', cursor:'pointer',
                           background: mode === 'table-service'
