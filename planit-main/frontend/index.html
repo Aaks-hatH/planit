@@ -1488,18 +1488,30 @@ By accessing any component of the PlanIt platform, You acknowledge that:
          gtag('config') is intentionally NOT called here.
          It fires in analytics.js AFTER the consent update,
          ensuring hits are stamped G111 (fully valid) not G100.
+
+         ORDER MATTERS:
+         1. Inline script sets consent defaults + dataLayer before the
+            library loads. No wait_for_update — that was blocking all
+            hits by making GA wait 2s then stamp denied permanently.
+         2. gtag.js library loads async.
+         3. gtag('js', new Date()) goes AFTER the library src tag so
+            GA initialises its clock after the script is present,
+            not before it exists.
+         4. gtag('config') fires in analytics.js after user accepts
+            the consent banner, stamping hits G111 (fully valid).
     ═══════════════════════════════════════════════════ -->
     <script>
       window.dataLayer = window.dataLayer || [];
       function gtag(){dataLayer.push(arguments);}
       gtag('consent', 'default', {
         analytics_storage: 'denied',
-        ad_storage: 'denied',
-        wait_for_update: 2000
+        ad_storage: 'denied'
       });
-      gtag('js', new Date());
     </script>
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-4H00MP64BG"></script>
+    <script>
+      gtag('js', new Date());
+    </script>
 
     <!-- Cloudflare Turnstile — loaded only when the site key is configured -->
     <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
