@@ -3,6 +3,7 @@ const router = express.Router();
 const multer = require('multer');
 const cloudinary = require('cloudinary').v2;
 const { verifyEventAccess: verifyEventToken } = require('../middleware/auth');
+const { uploadLimiter } = require('../middleware/rateLimiter');
 const File = require('../models/File');
 const fs = require('fs');
 const os = require('os');
@@ -110,7 +111,9 @@ const uploadToCloudinary = async (buffer, filename) => {
 };
 
 // Upload file
+// FIX: Added uploadLimiter — this route had no rate limiting, allowing unlimited uploads.
 router.post('/:eventId/upload',
+  uploadLimiter,
   verifyEventToken,
   (req, res, next) => {
     upload.single('files')(req, res, (err) => {
