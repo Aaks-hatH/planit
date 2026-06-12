@@ -9,7 +9,7 @@ const axios = require('axios');
 const Event = require('../models/Event');
 const EventParticipant = require('../models/EventParticipant');
 const { verifyEventAccess, verifyOrganizer, verifyCheckinAccess } = require('../middleware/auth');
-const { createEventLimiter, authLimiter, reservationLimiter, availabilityLimiter } = require('../middleware/rateLimiter');
+const { createEventLimiter, authLimiter, joinLimiter, reservationLimiter, availabilityLimiter } = require('../middleware/rateLimiter');
 const rateLimit = require('express-rate-limit');
 
 // M4: Per-event password brute-force limiter (keyed on ip:eventId, not just ip)
@@ -408,6 +408,7 @@ router.post('/verify-password/:eventId', authLimiter, eventPasswordLimiter,
 
 // Join (no password)
 router.post('/join/:eventId',
+  joinLimiter,
   [body('username').trim().isLength({ min: 1, max: 100 }), body('accountPassword').optional(), validate],
   async (req, res, next) => {
     try {
