@@ -68,15 +68,20 @@ const apiLimiter = rateLimit({
 });
 
 // Stricter limiter for authentication endpoints
+// FIX: Removed skipSuccessfulRequests — it caused successful logins to not count
+// toward the limit, allowing unlimited successful logins. All attempts (successful
+// or not) must be counted to prevent credential-stuffing and session-farming attacks.
 const authLimiter = rateLimit({
-  windowMs:              15 * 60 * 1000,
-  max:                   20,
-  skipSuccessfulRequests: true,
-  standardHeaders:        true,
-  legacyHeaders:          false,
-  keyGenerator:           realIp,
-  message: {
-    error: 'Too many authentication attempts, please try again in 15 minutes.',
+  windowMs:        15 * 60 * 1000,
+  max:             20,
+  standardHeaders: true,
+  legacyHeaders:   false,
+  keyGenerator:    realIp,
+  handler: (req, res) => {
+    res.status(429).json({
+      error:      'Too many authentication attempts, please try again in 15 minutes.',
+      retryAfter: res.getHeader('Retry-After'),
+    });
   },
 });
 
@@ -173,10 +178,10 @@ const availabilityLimiter = rateLimit({
 module.exports = {
   apiLimiter,
   authLimiter,
-  uploadLimiter,
+  uploadLimiter,      // Apply to: POST /api/files/:eventId/upload
   createEventLimiter,
   chatLimiter,
-  joinLimiter,
+  joinLimiter,        // Apply to: POST /api/events/join/:eventId
   honeypotCheck,
   reservationLimiter,
   availabilityLimiter,
