@@ -194,6 +194,82 @@ export default function ClaudeConnect() {
         </p>
       </div>
 
+      {/* How to get started card */}
+      <div style={styles.howToCard}>
+        <h2 style={styles.howToTitle}>New here? How to get started</h2>
+
+        <div style={styles.howToStep}>
+          <span style={styles.howToNum}>1</span>
+          <div>
+            <p style={styles.howToStepTitle}>Add PlanIt to Claude</p>
+            <p style={styles.howToStepBody}>
+              Go to{' '}
+              <a href="https://claude.ai" target="_blank" rel="noopener noreferrer" style={styles.link}>
+                claude.ai
+              </a>{' '}
+              and click the{' '}
+              <span style={styles.code}>Connect</span> button on the PlanIt site,
+              or visit the link below to install the PlanIt tools into Claude:
+            </p>
+            <a
+              href="https://claude.ai/add-mcp?url=https://mcp.planitapp.onrender.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              style={styles.mcpLink}
+            >
+              Add PlanIt to Claude →
+            </a>
+          </div>
+        </div>
+
+        <div style={styles.howToStep}>
+          <span style={styles.howToNum}>2</span>
+          <div>
+            <p style={styles.howToStepTitle}>Tell Claude to connect your event</p>
+            <p style={styles.howToStepBody}>
+              In Claude, type:
+            </p>
+            <span style={styles.codeBlock}>"Connect my PlanIt event"</span>
+            <p style={styles.howToStepBody}>
+              Claude will generate a one-time link and send it to you.
+            </p>
+          </div>
+        </div>
+
+        <div style={styles.howToStep}>
+          <span style={styles.howToNum}>3</span>
+          <div>
+            <p style={styles.howToStepTitle}>Open the link and enter your details</p>
+            <p style={styles.howToStepBody}>
+              Click the link Claude gives you — it brings you to this page.
+              Enter your <strong style={{ color: '#c4b5fd' }}>Event ID</strong> and{' '}
+              <strong style={{ color: '#c4b5fd' }}>Organiser Password</strong> to authorise Claude.
+            </p>
+          </div>
+        </div>
+
+        <div style={styles.howToStep}>
+          <span style={styles.howToNum}>4</span>
+          <div>
+            <p style={styles.howToStepTitle}>Start managing your event</p>
+            <p style={styles.howToStepBody}>
+              Once connected, go back to Claude and start talking. Try:
+            </p>
+            <div style={styles.examplePrompts}>
+              <span style={styles.prompt}>"How many guests have checked in?"</span>
+              <span style={styles.prompt}>"Add Sarah Jones to the guest list"</span>
+              <span style={styles.prompt}>"Send an announcement to all staff"</span>
+              <span style={styles.prompt}>"Show me the seating map"</span>
+            </div>
+          </div>
+        </div>
+
+        <p style={styles.howToFooter}>
+          Your Event ID is shown on your event dashboard. Your Organiser Password was set when you
+          created the event.
+        </p>
+      </div>
+
       {/* Spin keyframe */}
       <style>{`
         @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
@@ -208,6 +284,7 @@ const styles = {
     minHeight: '100vh',
     backgroundColor: '#0f172a',
     display: 'flex',
+    flexDirection: 'column',
     alignItems: 'center',
     justifyContent: 'center',
     padding: '1.5rem',
@@ -397,5 +474,103 @@ const styles = {
     fontSize: '0.8125rem',
     fontFamily: 'monospace',
     color: '#c4b5fd',
+  },
+  // How to get started section
+  howToCard: {
+    backgroundColor: '#1e293b',
+    border: '1px solid #334155',
+    borderRadius: '1rem',
+    padding: '2rem',
+    width: '100%',
+    maxWidth: '420px',
+    marginTop: '1.25rem',
+    boxShadow: '0 25px 50px -12px rgba(0,0,0,0.5)',
+  },
+  howToTitle: {
+    fontSize: '1rem',
+    fontWeight: 700,
+    color: '#f1f5f9',
+    margin: '0 0 1.5rem 0',
+  },
+  howToStep: {
+    display: 'flex',
+    gap: '0.875rem',
+    marginBottom: '1.25rem',
+    alignItems: 'flex-start',
+  },
+  howToNum: {
+    flexShrink: 0,
+    width: 24,
+    height: 24,
+    borderRadius: '50%',
+    backgroundColor: '#312e81',
+    color: '#c4b5fd',
+    fontSize: '0.75rem',
+    fontWeight: 700,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: '0.125rem',
+  },
+  howToStepTitle: {
+    fontSize: '0.875rem',
+    fontWeight: 600,
+    color: '#e2e8f0',
+    margin: '0 0 0.25rem 0',
+  },
+  howToStepBody: {
+    fontSize: '0.8125rem',
+    color: '#94a3b8',
+    margin: '0 0 0.5rem 0',
+    lineHeight: 1.6,
+  },
+  link: {
+    color: '#a78bfa',
+    textDecoration: 'none',
+  },
+  mcpLink: {
+    display: 'inline-block',
+    backgroundColor: '#312e81',
+    color: '#c4b5fd',
+    borderRadius: '0.375rem',
+    padding: '0.375rem 0.75rem',
+    fontSize: '0.8125rem',
+    fontWeight: 600,
+    textDecoration: 'none',
+    marginTop: '0.25rem',
+  },
+  codeBlock: {
+    display: 'inline-block',
+    backgroundColor: '#0f172a',
+    border: '1px solid #334155',
+    borderRadius: '0.375rem',
+    padding: '0.375rem 0.75rem',
+    fontSize: '0.8125rem',
+    fontFamily: 'monospace',
+    color: '#c4b5fd',
+    margin: '0.25rem 0 0.5rem 0',
+  },
+  examplePrompts: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '0.375rem',
+    marginTop: '0.375rem',
+  },
+  prompt: {
+    backgroundColor: '#0f172a',
+    border: '1px solid #1e3a5f',
+    borderRadius: '0.375rem',
+    padding: '0.375rem 0.75rem',
+    fontSize: '0.8rem',
+    fontFamily: 'monospace',
+    color: '#7dd3fc',
+  },
+  howToFooter: {
+    fontSize: '0.75rem',
+    color: '#475569',
+    marginTop: '1rem',
+    lineHeight: 1.5,
+    borderTop: '1px solid #1e293b',
+    paddingTop: '1rem',
   },
 };
