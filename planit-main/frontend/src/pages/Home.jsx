@@ -3104,7 +3104,7 @@ export default function Home() {
                   </div>
                   <div className="flex flex-col sm:flex-row gap-3">
                     <a
-                      href="https://claude.ai/settings/connectors?modal=add-custom-connector&mcpName=PlanIt&mcpServerUrl=https://planit-mcp.onrender.com/sse"
+                      href="https://claude.ai/customize/connectors?modal=add-custom-connector&mcpName=PlanIt&mcpServerUrl=https://planit-mcp.onrender.com/mcp"
                       target="_blank"
                       rel="noopener noreferrer"
                       className="inline-flex items-center gap-2 px-5 py-3 rounded-xl text-white font-semibold text-sm transition-colors"
