@@ -152,7 +152,6 @@ router.post('/connect/init', verifySecret, initLimiter, async (req, res) => {
 
 router.post(
   '/connect/verify',
-  verifySecret,
   verifyIpLimiter,
   verifyEventIdLimiter,
   async (req, res) => {
