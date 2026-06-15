@@ -156,6 +156,7 @@ function maintenanceGuard(req, res, next) {
   if (!_backendMaintenance.active) return next();
   const p = req.path;
   if (p === '/api/health' || p.startsWith('/api/mesh') || p.startsWith('/api/admin') || p.startsWith('/socket.io')) return next();
+  if (p.startsWith('/mcp'))                             return next(); // MCP must always be reachable
   if (p.startsWith('/api/whitelabel/resolve'))   return next();
   if (p.startsWith('/api/whitelabel/heartbeat')) return next();
   if (p.startsWith('/api/whitelabel/cors'))      return next();
@@ -323,7 +324,7 @@ const corsOptions = {
   },
   credentials:          true,
   methods:              ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
-  allowedHeaders:       ['Content-Type', 'Authorization', 'x-event-token'],
+  allowedHeaders:       ['Content-Type', 'Authorization', 'x-event-token', 'X-MCP-Secret', 'X-MCP-Session-ID'],
   exposedHeaders:       ['Content-Type', 'Authorization'],
   preflightContinue:    false,
   optionsSuccessStatus: 204,
@@ -457,6 +458,9 @@ app.use('/api/events',      seatingRoutes);
 app.use('/api/whitelabel',  whiteLabelRoutes);
 app.use('/api/wl-portal',   wlPortalRoutes);
 app.use('/api/platform-analytics', express.json({ limit: '200kb' }), platformAnalyticsRoutes);
+
+// ── MCP integration — single proxy endpoint, own rate limiting, no /api/ prefix ──
+app.use('/mcp', require('./routes/mcp'));
 
 const frontendUrls = (process.env.FRONTEND_URL || '')
   .split(',').map(u => u.trim()).filter(Boolean);

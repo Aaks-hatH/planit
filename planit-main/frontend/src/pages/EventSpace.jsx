@@ -7,7 +7,7 @@ import {
   ChevronRight, Clock, QrCode,
   Smile,
   CheckCircle2, Megaphone, DollarSign, StickyNote, Share2, UserCheck, XCircle, ClipboardList,
-  Star, Shield, LogIn, UserPlus, HelpCircle
+  Star, Shield, LogIn, UserPlus, HelpCircle, Bot
 } from 'lucide-react';
 import { eventAPI, chatAPI, pollAPI, fileAPI, rsvpAPI } from '../services/api';
 import socketService from '../services/socket';
@@ -928,6 +928,9 @@ export default function EventSpace() {
   const [event, setEvent]         = useState(null);
   const [loading, setLoading]     = useState(true);
   const [activeTab, setActiveTab] = useState('chat');
+  const [claudeBannerDismissed, setClaudeBannerDismissed] = useState(() => {
+    try { return localStorage.getItem('planit_claude_banner_dismissed') === '1'; } catch { return false; }
+  });
   const [countdown, setCountdown] = useState(null);
 
   const [messages, setMessages]           = useState([]);
@@ -1618,6 +1621,47 @@ export default function EventSpace() {
                 <UserCheck className="w-3.5 h-3.5" />Manage
               </button>
             </div>
+          )}
+
+          {/* Claude AI banner — shown to organizers who haven't dismissed it */}
+          {isOrganizer && !claudeBannerDismissed && (
+              <div className="p-4 rounded-2xl flex items-start sm:items-center justify-between gap-3 relative overflow-hidden"
+                style={{ background: 'linear-gradient(135deg, rgba(109,40,217,0.15), rgba(139,92,246,0.08))', border: '1px solid rgba(139,92,246,0.25)' }}>
+                <div className="absolute inset-0 pointer-events-none" style={{ backgroundImage: 'radial-gradient(circle at 80% 50%, rgba(139,92,246,0.08) 0%, transparent 60%)' }} />
+                <div className="relative flex items-center gap-3 min-w-0">
+                  <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: 'rgba(139,92,246,0.2)', border: '1px solid rgba(139,92,246,0.3)' }}>
+                    <Bot className="w-4 h-4 text-violet-400" />
+                  </div>
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2 mb-0.5">
+                      <h3 className="text-sm font-bold text-white">Manage this event with Claude</h3>
+                      <span className="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold text-violet-300" style={{ background: 'rgba(139,92,246,0.2)', border: '1px solid rgba(139,92,246,0.25)' }}>NEW</span>
+                    </div>
+                    <p className="text-xs text-neutral-400 truncate">Add guests, check-ins, announcements — just by talking to Claude.</p>
+                  </div>
+                </div>
+                <div className="relative flex items-center gap-2 flex-shrink-0">
+                  <a
+                    href="https://claude.ai/settings/connectors?modal=add-custom-connector&mcpName=PlanIt&mcpServerUrl=https://mcp.planitapp.onrender.com/sse"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-white text-xs font-bold transition-colors"
+                    style={{ background: 'rgba(139,92,246,0.7)' }}
+                    onMouseEnter={e => e.currentTarget.style.background = 'rgba(139,92,246,0.9)'}
+                    onMouseLeave={e => e.currentTarget.style.background = 'rgba(139,92,246,0.7)'}
+                  >
+                    <Bot className="w-3 h-3" /> Connect
+                  </a>
+                  <button
+                    onClick={() => { try { localStorage.setItem('planit_claude_banner_dismissed', '1'); } catch {} setClaudeBannerDismissed(true); }}
+                    className="w-7 h-7 rounded-lg flex items-center justify-center transition-colors text-neutral-500 hover:text-neutral-300"
+                    style={{ background: 'rgba(255,255,255,0.05)' }}
+                    title="Dismiss"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              </div>
           )}
 
           {/* Status banners */}

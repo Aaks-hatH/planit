@@ -5,7 +5,7 @@ import {
   Calendar, Users, MessageSquare, BarChart3, FileText, Shield, Copy, Check, Lock,
   ArrowRight, Link, Eye, EyeOff, ChevronRight, Zap, Clock,
   CheckCircle2, TrendingUp, ListChecks, Timer,
-  Brain, ArrowUpRight, AlertCircle, UtensilsCrossed, MapPin, QrCode, Layers, Search, CornerDownRight
+  Brain, ArrowUpRight, AlertCircle, UtensilsCrossed, MapPin, QrCode, Layers, Search, CornerDownRight, Bot
 } from 'lucide-react';
 import { eventAPI } from '../services/api';
 import { trackFeature, flushTracker } from '../services/tracker';
@@ -2846,6 +2846,7 @@ export default function Home() {
                   { icon: FileText,      label: 'File sharing',           desc: 'Contracts, floor plans, schedules — all in one place.' },
                   { icon: Users,         label: 'Unlimited team',         desc: 'No caps. Every organizer, vendor, and volunteer included.' },
                   { icon: QrCode,        label: 'QR check-in',           desc: 'Professional guest check-in with real-time attendance.' },
+                  { icon: Bot,           label: 'Claude AI co-pilot',    desc: 'Manage your whole event by talking to Claude. Add guests, check-ins, announcements — conversationally.' },
                 ].map((f, i) => (
                   <Reveal key={f.label} delay={i * 60}>
                     <div className="feature-card group p-5 rounded-2xl" style={{ background: 'rgba(255,255,255,0.02)' }}>
@@ -3083,6 +3084,137 @@ export default function Home() {
               <TestimonialCard quote="PlanIt transformed how we coordinated our annual company conference. The task management kept our 15-person planning team organized for 6 months of prep. The QR check-in on event day was seamless for 300 attendees." author="Michael Chen" role="Senior Event Coordinator" event="Tech Summit 2025" delay={0} />
               <TestimonialCard quote="As a wedding planner, I've used every tool out there. PlanIt stands out because it doesn't require my couples or vendors to create accounts. We used it for 4 months of planning." author="Sarah Williams" role="Lead Wedding Planner" event="Williams-Martinez Wedding" delay={120} />
               <TestimonialCard quote="Our nonprofit used PlanIt to coordinate a 500-person fundraising gala. The unlimited participant feature meant we could include our entire board, 30 volunteers, all vendors, and staff." author="David Martinez" role="Development Director" event="Charity Gala 2025" delay={240} />
+            </div>
+          </div>
+        </section>
+
+        {/* CLAUDE INTEGRATION */}
+        <section className="py-28 border-t border-neutral-800/40" style={{ display: selectedBranch ? 'block' : 'none' }}>
+          <div className="max-w-screen-xl mx-auto px-4 sm:px-8">
+            <div className="flex flex-col lg:flex-row items-center gap-16">
+              {/* Left: copy */}
+              <div className="flex-1">
+                <Reveal>
+                  <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full mb-6"
+                    style={{ border: '1px solid rgba(139,92,246,0.3)', background: 'rgba(139,92,246,0.08)' }}>
+                    <Bot size={13} className="text-violet-400" />
+                    <span className="text-violet-400 text-xs font-semibold">Now available · Claude Integration</span>
+                  </div>
+                  <h2 className="font-syne font-black text-white mb-4 leading-tight" style={{ fontSize: 'clamp(1.8rem,4vw,3rem)' }}>
+                    Manage your event<br />by talking to Claude.
+                  </h2>
+                  <p className="text-neutral-400 text-lg leading-relaxed mb-8 max-w-lg">
+                    Add PlanIt to Claude once. Then just have a conversation — build your guest list, set up seating,
+                    send announcements, and monitor check-ins without touching the dashboard.
+                  </p>
+                  <div className="space-y-3 mb-8">
+                    {[
+                      '"Add Sarah Jones, email sarah@example.com"',
+                      '"How many people have checked in so far?"',
+                      '"Send an announcement: doors open in 10 minutes"',
+                      '"Create 15 round tables of 10"',
+                    ].map((q, i) => (
+                      <div key={i} className="flex items-center gap-3">
+                        <Bot size={14} className="text-violet-500 flex-shrink-0" />
+                        <span className="text-sm text-neutral-400 font-mono">{q}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="flex flex-col sm:flex-row gap-3">
+                    <a
+                      href="https://claude.ai/settings/connectors?modal=add-custom-connector&mcpName=PlanIt&mcpServerUrl=https://mcp.planitapp.onrender.com/sse"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-2 px-5 py-3 rounded-xl text-white font-semibold text-sm transition-colors"
+                      style={{ background: '#7c3aed' }}
+                      onMouseEnter={e => e.currentTarget.style.background = '#6d28d9'}
+                      onMouseLeave={e => e.currentTarget.style.background = '#7c3aed'}
+                    >
+                      <Bot size={16} /> Add to Claude <ArrowUpRight size={14} />
+                    </a>
+                    <a href="/help#claude"
+                      className="inline-flex items-center gap-2 px-5 py-3 rounded-xl text-neutral-300 text-sm transition-colors hover:text-white"
+                      style={{ border: '1px solid rgba(255,255,255,0.1)' }}>
+                      How it works
+                    </a>
+                  </div>
+                </Reveal>
+              </div>
+
+              {/* Right: chat mockup */}
+              <Reveal delay={120} className="flex-1 max-w-md w-full">
+                <div className="rounded-2xl overflow-hidden" style={{ border: '1px solid rgba(255,255,255,0.08)', background: 'rgba(14,14,22,0.9)' }}>
+                  {/* Chrome */}
+                  <div className="flex items-center gap-2 px-4 py-3" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)', background: 'rgba(10,10,18,0.95)' }}>
+                    <div className="flex gap-1.5">
+                      <div className="w-2.5 h-2.5 rounded-full bg-neutral-700" />
+                      <div className="w-2.5 h-2.5 rounded-full bg-neutral-700" />
+                      <div className="w-2.5 h-2.5 rounded-full bg-neutral-700" />
+                    </div>
+                    <div className="flex items-center gap-2 mx-auto">
+                      <div className="w-4 h-4 rounded-md bg-violet-600/30 flex items-center justify-center">
+                        <Bot size={9} className="text-violet-300" />
+                      </div>
+                      <span className="text-[11px] text-neutral-500 font-medium">Claude + PlanIt</span>
+                    </div>
+                  </div>
+                  {/* Messages */}
+                  <div className="p-4 space-y-3 text-sm">
+                    <div className="flex justify-end">
+                      <div className="px-3 py-2 rounded-2xl rounded-tr-sm text-neutral-200 text-xs max-w-xs"
+                        style={{ background: 'rgba(124,58,237,0.25)', border: '1px solid rgba(124,58,237,0.2)' }}>
+                        Add Sarah Jones to the guest list, sarah@example.com
+                      </div>
+                    </div>
+                    <div className="flex gap-2 items-start">
+                      <div className="w-6 h-6 rounded-full flex-shrink-0 mt-0.5 flex items-center justify-center" style={{ background: 'rgba(124,58,237,0.2)' }}>
+                        <Bot size={11} className="text-violet-300" />
+                      </div>
+                      <div className="px-3 py-2 rounded-2xl rounded-tl-sm text-neutral-300 text-xs max-w-xs"
+                        style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.07)' }}>
+                        Done — Sarah Jones has been added. Her invite link is ready to share.
+                      </div>
+                    </div>
+                    <div className="flex justify-end">
+                      <div className="px-3 py-2 rounded-2xl rounded-tr-sm text-neutral-200 text-xs max-w-xs"
+                        style={{ background: 'rgba(124,58,237,0.25)', border: '1px solid rgba(124,58,237,0.2)' }}>
+                        How many people have checked in?
+                      </div>
+                    </div>
+                    <div className="flex gap-2 items-start">
+                      <div className="w-6 h-6 rounded-full flex-shrink-0 mt-0.5 flex items-center justify-center" style={{ background: 'rgba(124,58,237,0.2)' }}>
+                        <Bot size={11} className="text-violet-300" />
+                      </div>
+                      <div className="px-3 py-2 rounded-2xl rounded-tl-sm text-neutral-300 text-xs max-w-xs"
+                        style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.07)' }}>
+                        87 of 150 guests checked in — 58%. Last scan 2 minutes ago.
+                      </div>
+                    </div>
+                    <div className="flex justify-end">
+                      <div className="px-3 py-2 rounded-2xl rounded-tr-sm text-neutral-200 text-xs max-w-xs"
+                        style={{ background: 'rgba(124,58,237,0.25)', border: '1px solid rgba(124,58,237,0.2)' }}>
+                        Send an announcement: doors open in 10 minutes
+                      </div>
+                    </div>
+                    <div className="flex gap-2 items-start">
+                      <div className="w-6 h-6 rounded-full flex-shrink-0 mt-0.5 flex items-center justify-center" style={{ background: 'rgba(124,58,237,0.2)' }}>
+                        <Bot size={11} className="text-violet-300" />
+                      </div>
+                      <div className="px-3 py-2 rounded-2xl rounded-tl-sm text-neutral-300 text-xs max-w-xs"
+                        style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.07)' }}>
+                        Announcement sent to all guests and staff ✓
+                      </div>
+                    </div>
+                  </div>
+                  {/* Footer */}
+                  <div className="px-4 pb-4">
+                    <div className="flex items-center gap-2 px-3 py-2 rounded-xl" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}>
+                      <span className="text-[11px] text-neutral-600 flex-1">Message Claude…</span>
+                      <Bot size={12} className="text-neutral-700" />
+                    </div>
+                  </div>
+                </div>
+              </Reveal>
             </div>
           </div>
         </section>
@@ -3583,7 +3715,7 @@ export default function Home() {
               <div>
                 <h3 className="text-xs font-bold text-neutral-500 mb-5 uppercase tracking-wider">Product</h3>
                 <ul className="space-y-3 text-sm text-neutral-500">
-                  {[['Features', '#features'], ['Discover', '/discover'], ['Blog', '/blog'], ['Status', '/status'], ['Help', '/help'], ['Get Started', '#create'], ['License', '/license'], ['Credits', '/credits']].map(([l, h]) => (
+                  {[['Features', '#features'], ['Claude Integration', '/help#claude'], ['Discover', '/discover'], ['Blog', '/blog'], ['Status', '/status'], ['Help', '/help'], ['Get Started', '#create'], ['License', '/license'], ['Credits', '/credits']].map(([l, h]) => (
                     <li key={l}><a href={h} className="hover:text-neutral-200 transition-colors">{l}</a></li>
                   ))}
                 </ul>
