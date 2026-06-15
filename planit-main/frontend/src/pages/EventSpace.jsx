@@ -1642,7 +1642,7 @@ export default function EventSpace() {
                 </div>
                 <div className="relative flex items-center gap-2 flex-shrink-0">
                   <a
-                    href="https://claude.ai/settings/connectors?modal=add-custom-connector&mcpName=PlanIt&mcpServerUrl=https://mcp.planitapp.onrender.com/sse"
+                    href="https://claude.ai/settings/connectors?modal=add-custom-connector&mcpName=PlanIt&mcpServerUrl=https://planit-mcp.onrender.com/sse"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-white text-xs font-bold transition-colors"
