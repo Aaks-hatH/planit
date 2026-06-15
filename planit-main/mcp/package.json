@@ -1,7 +1,7 @@
 {
   "name": "planit-mcp",
-  "version": "1.0.0",
-  "description": "Claude MCP server for PlanIt event management \u2014 hosted remote MCP server (SSE transport)",
+  "version": "2.0.0",
+  "description": "Claude MCP server for PlanIt event management \u2014 hosted remote MCP server (Streamable HTTP transport)",
   "private": true,
   "main": "server.js",
   "scripts": {
