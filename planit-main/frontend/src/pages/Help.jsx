@@ -12,7 +12,7 @@ import {
   TrendingUp, Ban, Phone, CheckSquare, List, Hash,
   LifeBuoy, Cpu, Globe, Filter, ChevronUp, ArrowRight,
   LogOut, Copy, Navigation, Timer, PieChart, ClipboardList, Send, CheckCircle, Loader,
-  MapPin, Volume2, Radio, Mic, UtensilsCrossed, LayoutGrid, ShieldAlert
+  MapPin, Volume2, Radio, Mic, UtensilsCrossed, LayoutGrid, ShieldAlert, Bot
 } from 'lucide-react';
 
 /* ─── DATA ─────────────────────────────────────────────────────────────────── */
@@ -3687,7 +3687,122 @@ const ARTICLES_EXTRA = [
 
 ARTICLES.push(...ARTICLES_EXTRA);
 
-const POPULAR = ['gs-create', 'err-service-crash', 'err-loading', 'err-password', 'ent-checkin', 'data-retention', 'ts-overview', 'ts-waitlist'];
+// ── CLAUDE INTEGRATION ────────────────────────────────────────────────────
+const CLAUDE_ARTICLE = {
+  id: 'claude-integration',
+  category: 'Getting Started',
+  title: 'Using Claude AI to manage your event',
+  icon: Bot,
+  tags: ['claude', 'ai', 'mcp', 'connect', 'integration', 'assistant', 'conversation', 'chatbot', 'manage event'],
+  content: [
+    {
+      type: 'intro',
+      text: 'PlanIt integrates with Claude AI — Anthropic\'s AI assistant — so you can manage your entire event by having a conversation. Add guests, check attendance, send announcements, and more, all without opening the dashboard.',
+    },
+    {
+      type: 'steps',
+      items: [
+        {
+          title: 'Step 1 — Add PlanIt to Claude',
+          body: 'Go to claude.ai and click the link below (or paste it into your browser). This installs the PlanIt tools into Claude so it knows how to talk to your event:\n\nhttps://claude.ai/add-mcp?url=https://mcp.planitapp.onrender.com\n\nYou only need to do this once — PlanIt stays connected to Claude until you remove it.',
+        },
+        {
+          title: 'Step 2 — Tell Claude to connect your event',
+          body: 'Open a new conversation in Claude and say:\n\n"Connect my PlanIt event"\n\nClaude will generate a one-time link for you. Click it — it opens the PlanIt connect page.',
+        },
+        {
+          title: 'Step 3 — Enter your Event ID and Organiser Password',
+          body: 'On the connect page, enter your Event ID (the slug in your event URL — e.g. "summer-gala-2026") and your Organiser Password (the account password you set when you created the event). Click Connect.',
+        },
+        {
+          title: 'Step 4 — Start managing your event by talking',
+          body: 'Once connected, go back to Claude and start a conversation. Claude now has full organiser access to your event. Try asking it anything — it will take action directly.',
+        },
+      ],
+    },
+    {
+      type: 'callout',
+      variant: 'info',
+      text: 'The one-time connection link expires in 10 minutes and can only be used once. If it expires before you use it, ask Claude for a new link by saying "Give me a new connection link".',
+    },
+    {
+      type: 'compare',
+      items: [
+        {
+          label: 'What you can ask Claude',
+          color: 'neutral',
+          desc: 'Examples of things Claude can do once connected:',
+          features: [
+            '"Add Sarah Jones to the guest list, email sarah@example.com"',
+            '"How many guests have checked in so far?"',
+            '"Send an announcement: doors open in 10 minutes"',
+            '"Create 15 round tables of 10 and set up seating"',
+            '"Which guests haven\'t checked in yet?"',
+            '"What\'s our current budget situation?"',
+            '"Move table 4 to cleaning status"',
+            '"Show me the seating map"',
+            '"Set the RSVP deadline to June 30th"',
+          ],
+          best: '',
+        },
+        {
+          label: 'What Claude can manage',
+          color: 'neutral',
+          desc: 'Tools available to Claude in your event:',
+          features: [
+            'Guest list — add, update, search, remove guests',
+            'Check-in — live stats, manual check-in, recent activity',
+            'Seating — create tables, assign guests, view map',
+            'Announcements — send to guests, staff, or everyone',
+            'RSVP — configure your page, view responses',
+            'Table service — waitlist, walk-ins, table status',
+            'Tasks and budget — track planning and expenses',
+            'Polls — create polls, see results',
+            'Security — view alerts, handle flagged check-ins',
+          ],
+          best: '',
+        },
+      ],
+    },
+    {
+      type: 'callout',
+      variant: 'warning',
+      text: 'Claude\'s access is scoped to one event at a time. It cannot see other PlanIt events — only the one you connected it to. To switch events, ask Claude for a new connection link and connect a different event.',
+    },
+    {
+      type: 'faq',
+      items: [
+        {
+          q: 'Do I need a Claude subscription?',
+          a: 'You need a Claude.ai account. The free tier works, but paid plans (Claude Pro) give you more messages per day and access to more powerful models, which is useful for complex event management tasks.',
+        },
+        {
+          q: 'How long does the connection last?',
+          a: 'Claude\'s access to your event expires automatically 7 days after your event date — the same time your event data is deleted. You can also revoke access at any time by asking Claude for a new connection link; this immediately invalidates the previous session.',
+        },
+        {
+          q: 'Is my event data secure when Claude accesses it?',
+          a: 'Yes. Claude\'s session is scoped to only your event — it cannot access any other event or any part of PlanIt\'s database outside your event\'s data. All communication between Claude and PlanIt is authenticated with a signed session token.',
+        },
+        {
+          q: 'Can more than one person use Claude with my event at the same time?',
+          a: 'Only one Claude session can be connected to an event at a time. Generating a new connection link invalidates the previous one. If two people need to manage the event via Claude simultaneously, they would need to take turns reconnecting.',
+        },
+        {
+          q: 'What is MCP?',
+          a: 'MCP stands for Model Context Protocol — it\'s an open standard that lets AI assistants like Claude connect to external tools and data sources. PlanIt runs an MCP server that Claude connects to, which is how Claude gains the ability to take actions in your event.',
+        },
+        {
+          q: 'The connect page says "Invalid Link" — what do I do?',
+          a: 'The one-time link expired (10 minute limit) or was already used. Go back to Claude and say "Give me a new connection link" to generate a fresh one.',
+        },
+      ],
+    },
+  ],
+};
+ARTICLES.push(CLAUDE_ARTICLE);
+
+const POPULAR = ['gs-create', 'claude-integration', 'err-service-crash', 'err-loading', 'err-password', 'ent-checkin', 'data-retention', 'ts-overview'];
 
 /* ─── SUB-COMPONENTS ────────────────────────────────────────────────────────── */
 
@@ -4057,6 +4172,15 @@ export default function Help() {
   const searchRef = useRef(null);
   const articleRef = useRef(null);
 
+  // Auto-open article from URL hash (e.g. /help#claude)
+  useEffect(() => {
+    const hash = window.location.hash.replace('#', '');
+    if (hash) {
+      const article = ARTICLES.find(a => a.id === hash || a.id === `${hash}-integration` || a.tags.includes(hash));
+      if (article) setActiveArticle(article.id);
+    }
+  }, []);
+
   const filtered = useMemo(() => {
     let base = ARTICLES;
     if (activeCategory !== 'all') base = base.filter(a => a.category === activeCategory);
@@ -4176,7 +4300,7 @@ export default function Help() {
                 <span className="text-neutral-600 font-medium truncate">{currentArticle.title}</span>
               </nav>
 
-              <div className="bg-white rounded-2xl border border-neutral-200 p-8">
+              <div className="bg-white rounded-2xl border border-neutral-200 p-8" id={currentArticle.id === 'claude-integration' ? 'claude' : undefined}>
                 <div className="flex items-center gap-3 mb-6">
                   <div className="w-11 h-11 rounded-xl bg-neutral-100 flex items-center justify-center flex-shrink-0">
                     <ArticleIcon className="w-5 h-5 text-neutral-700" />
