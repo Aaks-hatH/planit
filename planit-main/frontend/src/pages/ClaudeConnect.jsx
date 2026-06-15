@@ -1,42 +1,39 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Bot, Lock, Hash, CheckCircle, AlertCircle, Eye, EyeOff, Loader2, ShieldCheck } from 'lucide-react';
+import { Bot, Lock, Hash, CheckCircle, AlertCircle, Eye, EyeOff, Loader2, ShieldCheck, Zap, Users, MessageSquare, ArrowRight, ChevronDown } from 'lucide-react';
 
 export default function ClaudeConnect() {
   const [searchParams] = useSearchParams();
   const token = searchParams.get('token');
-  const MCP_BASE_URL = import.meta.env.VITE_MCP_BASE_URL || 'https://planit-mcp.onrender.com';
+  const API_BASE = (import.meta.env.VITE_API_URL || 'http://localhost:5000/api').replace(/\/api$/, '');
 
-  const [eventId, setEventId]         = useState('');
-  const [password, setPassword]       = useState('');
+  const [eventId, setEventId]           = useState('');
+  const [password, setPassword]         = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [loading, setLoading]         = useState(false);
-  const [error, setError]             = useState('');
-  const [success, setSuccess]         = useState(null); // { eventName }
+  const [loading, setLoading]           = useState(false);
+  const [error, setError]               = useState('');
+  const [success, setSuccess]           = useState(null);
+  const [mounted, setMounted]           = useState(false);
+  const [focused, setFocused]           = useState('');
+  const eventIdRef                      = useRef(null);
 
-  // If no token in URL, show error immediately
+  useEffect(() => { setMounted(true); }, []);
+  useEffect(() => { if (error) setError(''); }, [eventId, password]);
+
   const noToken = !token;
 
   async function handleSubmit(e) {
     e.preventDefault();
     if (!eventId.trim() || !password) return;
-
     setError('');
     setLoading(true);
-
     try {
-      const res = await fetch(`${MCP_BASE_URL}/mcp/connect/verify`, {
+      const res = await fetch(`${API_BASE}/mcp/connect/verify`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          token,
-          eventId: eventId.trim().toLowerCase(),
-          organizerPassword: password,
-        }),
+        body: JSON.stringify({ token, eventId: eventId.trim().toLowerCase(), organizerPassword: password }),
       });
-
       const data = await res.json();
-
       if (res.ok && data.success) {
         setSuccess({ eventName: data.eventName });
       } else if (res.status === 429) {
@@ -51,406 +48,519 @@ export default function ClaudeConnect() {
     }
   }
 
-  // ─── Success screen ───────────────────────────────────────────────────────
+  // ─── Success screen ───────────────────────────────────────────────────────────
   if (success) {
     return (
-      <div style={styles.root}>
-        <div style={styles.card}>
-          <div style={styles.successIcon}>
-            <CheckCircle size={48} color="#10b981" />
+      <div style={s.root}>
+        <style>{keyframes}</style>
+        <div style={{ ...s.successWrap, ...(mounted ? s.fadeIn : {}) }}>
+          <div style={s.successRing}>
+            <CheckCircle size={32} color="#10b981" strokeWidth={2} />
           </div>
-          <h1 style={styles.successTitle}>Connected!</h1>
-          <p style={styles.successEventName}>{success.eventName}</p>
-          <p style={styles.successBody}>
-            Claude now has access to your event. You can return to Claude and start managing your
-            event through conversation.
+          <h1 style={s.successTitle}>You're connected</h1>
+          {success.eventName && <p style={s.successEvent}>{success.eventName}</p>}
+          <p style={s.successBody}>
+            Claude now has access to your event. Head back to Claude and start managing in plain English.
           </p>
-          <div style={styles.successHint}>
-            <Bot size={16} color="#6b7280" />
-            <span style={styles.successHintText}>You can close this tab.</span>
+          <div style={s.successPill}>
+            <Bot size={13} />
+            <span>You can close this tab</span>
           </div>
         </div>
       </div>
     );
   }
 
-  // ─── Invalid / missing token ──────────────────────────────────────────────
+  // ─── Invalid token screen ─────────────────────────────────────────────────────
   if (noToken) {
     return (
-      <div style={styles.root}>
-        <div style={styles.card}>
-          <div style={styles.errorIcon}>
-            <AlertCircle size={40} color="#f87171" />
+      <div style={s.root}>
+        <style>{keyframes}</style>
+        <div style={{ ...s.successWrap, ...(mounted ? s.fadeIn : {}) }}>
+          <div style={{ ...s.successRing, background: 'rgba(239,68,68,0.1)' }}>
+            <AlertCircle size={32} color="#ef4444" strokeWidth={2} />
           </div>
-          <h1 style={styles.title}>Invalid Link</h1>
-          <p style={styles.subtitle}>
-            This connection link is invalid or has already been used.
+          <h1 style={s.successTitle}>Invalid link</h1>
+          <p style={s.successBody}>
+            This connection link is invalid or has already been used. Return to Claude and ask for a new link.
           </p>
-          <p style={styles.body}>
-            Return to Claude and ask for a new connection link by typing{' '}
-            <span style={styles.code}>"Connect my PlanIt event"</span>.
-          </p>
+          <div style={{ ...s.successPill, background: 'rgba(239,68,68,0.07)', color: '#ef4444' }}>
+            <MessageSquare size={13} />
+            <span>Type "Connect my PlanIt event" in Claude</span>
+          </div>
         </div>
       </div>
     );
   }
 
-  // ─── Main form ────────────────────────────────────────────────────────────
+  // ─── Main form ────────────────────────────────────────────────────────────────
   return (
-    <div style={styles.root}>
-      <div style={styles.shell}>
-        <div style={styles.heroPanel}>
-          <div style={styles.kicker}>PlanIt connector</div>
-          <h1 style={styles.heroTitle}>Connect one event to Claude, then manage it in plain English.</h1>
-          <p style={styles.heroCopy}>Use Claude to add guests, check live attendance, send announcements, review RSVPs, and work through event-day operations without digging through tabs.</p>
-          <div style={styles.trustGrid}>
-            <span style={styles.trustPill}><ShieldCheck size={14} /> One-event scoped</span>
-            <span style={styles.trustPill}><Lock size={14} /> Organizer password required</span>
-            <span style={styles.trustPill}><Bot size={14} /> MCP tools for Claude</span>
+    <div style={s.root}>
+      <style>{keyframes}</style>
+
+      <div style={{ ...s.shell, ...(mounted ? s.fadeIn : {}) }}>
+
+        {/* ── Left hero panel ── */}
+        <div style={s.hero}>
+          <div style={s.heroInner}>
+            <div style={s.badge}>
+              <span style={s.badgeDot} />
+              PlanIt connector
+            </div>
+
+            <h1 style={s.heroTitle}>
+              Manage your event<br />
+              <span style={s.heroAccent}>through conversation.</span>
+            </h1>
+
+            <p style={s.heroCopy}>
+              Connect once, then control guest lists, announcements, check-ins, seating, and more — all in plain English inside Claude.
+            </p>
+
+            <div style={s.featureList}>
+              {[
+                { icon: <ShieldCheck size={15} strokeWidth={2} />, label: 'Scoped to one event only' },
+                { icon: <Lock size={15} strokeWidth={2} />,       label: 'Organizer password required' },
+                { icon: <Zap size={15} strokeWidth={2} />,        label: 'Expires in 10 minutes' },
+              ].map(({ icon, label }) => (
+                <div key={label} style={s.featureItem}>
+                  <span style={s.featureIcon}>{icon}</span>
+                  <span style={s.featureLabel}>{label}</span>
+                </div>
+              ))}
+            </div>
           </div>
-          <a href="#instructions" style={styles.secondaryLink}>Need setup instructions?</a>
+
+          <a href="#setup" style={s.heroFooterLink}>
+            Setup instructions
+            <ChevronDown size={13} strokeWidth={2.5} style={{ marginLeft: 4, opacity: 0.6 }} />
+          </a>
         </div>
 
-        <div style={styles.card}>
-        {/* Header */}
-        <div style={styles.logoRow}>
-          <div style={styles.logoBox}>
-            <Bot size={22} color="#a78bfa" />
+        {/* ── Right form card ── */}
+        <div style={s.card}>
+          {/* Card header */}
+          <div style={s.cardHeader}>
+            <div style={s.logoMark}>
+              <Bot size={18} color="#a78bfa" strokeWidth={2} />
+            </div>
+            <div>
+              <p style={s.cardEyebrow}>PlanIt × Claude</p>
+              <h2 style={s.cardTitle}>Connect your event</h2>
+            </div>
           </div>
-          <span style={styles.logoText}>PlanIt × Claude</span>
-        </div>
 
-        <h1 style={styles.title}>Connect PlanIt to Claude</h1>
-        <p style={styles.subtitle}>
-          Enter your Event ID and Organiser Password to give Claude access to manage your event.
-        </p>
+          <p style={s.cardSubtitle}>
+            Enter your Event ID and Organizer Password to authorize Claude.
+          </p>
 
-        {/* Form */}
-        <form onSubmit={handleSubmit} style={styles.form}>
-          {/* Event ID */}
-          <label style={styles.label}>
-            <span style={styles.labelText}>
-              <Hash size={14} style={{ marginRight: 5 }} />
-              Event ID
-            </span>
-            <input
-              type="text"
-              placeholder="e.g. summer-gala-2026"
-              value={eventId}
-              onChange={e => setEventId(e.target.value)}
-              disabled={loading}
-              autoComplete="off"
-              autoCapitalize="off"
-              spellCheck={false}
-              style={styles.input}
-            />
-          </label>
-
-          {/* Organiser Password */}
-          <label style={styles.label}>
-            <span style={styles.labelText}>
-              <Lock size={14} style={{ marginRight: 5 }} />
-              Organiser Password
-            </span>
-            <div style={styles.passwordWrapper}>
-              <input
-                type={showPassword ? 'text' : 'password'}
-                placeholder="Your organiser password"
-                value={password}
-                onChange={e => setPassword(e.target.value)}
-                disabled={loading}
-                autoComplete="current-password"
-                style={{ ...styles.input, paddingRight: '2.75rem' }}
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(p => !p)}
-                style={styles.eyeBtn}
-                tabIndex={-1}
-              >
-                {showPassword ? <EyeOff size={16} color="#9ca3af" /> : <Eye size={16} color="#9ca3af" />}
-              </button>
+          {/* Form */}
+          <div style={s.form}>
+            {/* Event ID */}
+            <div style={s.fieldWrap}>
+              <label style={s.label} htmlFor="eventId">
+                <Hash size={12} strokeWidth={2.5} />
+                Event ID
+              </label>
+              <div style={{ ...s.inputWrap, ...(focused === 'eventId' ? s.inputFocused : {}) }}>
+                <input
+                  id="eventId"
+                  type="text"
+                  placeholder="e.g. summer-gala-2026"
+                  value={eventId}
+                  onChange={e => setEventId(e.target.value)}
+                  onFocus={() => setFocused('eventId')}
+                  onBlur={() => setFocused('')}
+                  disabled={loading}
+                  autoComplete="off"
+                  autoCapitalize="none"
+                  spellCheck={false}
+                  style={s.input}
+                  ref={eventIdRef}
+                />
+              </div>
             </div>
-          </label>
 
-          {/* Error message */}
-          {error && (
-            <div style={styles.errorBox}>
-              <AlertCircle size={15} color="#f87171" style={{ flexShrink: 0 }} />
-              <span>{error}</span>
+            {/* Password */}
+            <div style={s.fieldWrap}>
+              <label style={s.label} htmlFor="password">
+                <Lock size={12} strokeWidth={2.5} />
+                Organizer Password
+              </label>
+              <div style={{ ...s.inputWrap, ...(focused === 'password' ? s.inputFocused : {}) }}>
+                <input
+                  id="password"
+                  type={showPassword ? 'text' : 'password'}
+                  placeholder="Your organizer password"
+                  value={password}
+                  onChange={e => setPassword(e.target.value)}
+                  onFocus={() => setFocused('password')}
+                  onBlur={() => setFocused('')}
+                  disabled={loading}
+                  autoComplete="current-password"
+                  style={{ ...s.input, paddingRight: '2.75rem' }}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(p => !p)}
+                  style={s.eyeBtn}
+                  tabIndex={-1}
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                >
+                  {showPassword
+                    ? <EyeOff size={15} strokeWidth={2} />
+                    : <Eye size={15} strokeWidth={2} />}
+                </button>
+              </div>
             </div>
-          )}
 
-          {/* Submit */}
-          <button
-            type="submit"
-            disabled={loading || !eventId.trim() || !password}
-            style={{
-              ...styles.submitBtn,
-              ...(loading || !eventId.trim() || !password ? styles.submitBtnDisabled : {}),
-            }}
-          >
-            {loading ? (
-              <>
-                <Loader2 size={16} style={{ animation: 'spin 1s linear infinite' }} />
-                Connecting…
-              </>
-            ) : (
-              'Connect'
+            {/* Error */}
+            {error && (
+              <div style={s.errorBox}>
+                <AlertCircle size={14} strokeWidth={2} style={{ flexShrink: 0, marginTop: 1 }} />
+                <span>{error}</span>
+              </div>
             )}
-          </button>
-        </form>
 
-        {/* Footer note */}
-        <p style={styles.footerNote}>
-          This link expires in 10 minutes and can only be used once.
-          If it has expired, ask Claude for a new link.
-        </p>
-        </div>
-      </div>
-
-      {/* How to get started card */}
-      <div id="instructions" style={styles.howToCard}>
-        <h2 style={styles.howToTitle}>Setup instructions</h2>
-
-        <div style={styles.howToStep}>
-          <span style={styles.howToNum}>1</span>
-          <div>
-            <p style={styles.howToStepTitle}>Add PlanIt to Claude</p>
-            <p style={styles.howToStepBody}>
-              Go to{' '}
-              <a href="https://claude.ai" target="_blank" rel="noopener noreferrer" style={styles.link}>
-                claude.ai
-              </a>{' '}
-              and click the{' '}
-              <span style={styles.code}>Connect</span> button on the PlanIt site,
-              or visit the link below to install the PlanIt tools into Claude:
-            </p>
-            <a
-              href="https://claude.ai/customize/connectors?modal=add-custom-connector&mcpName=PlanIt&mcpServerUrl=https://planit-mcp.onrender.com/mcp"
-              target="_blank"
-              rel="noopener noreferrer"
-              style={styles.mcpLink}
+            {/* Submit */}
+            <button
+              onClick={handleSubmit}
+              disabled={loading || !eventId.trim() || !password}
+              style={{
+                ...s.submitBtn,
+                ...(loading || !eventId.trim() || !password ? s.submitDisabled : {}),
+              }}
             >
-              Add PlanIt to Claude →
-            </a>
-            <p style={{ ...styles.howToStepBody, marginTop: '0.5rem' }}>
-              If that link opens an empty "Add custom connector" form instead of
-              pre-filling, just paste this URL into the <strong style={{ color: '#111827' }}>Remote MCP server URL</strong>{' '}
-              field: <span style={styles.code}>https://planit-mcp.onrender.com/mcp</span>
-            </p>
+              {loading ? (
+                <>
+                  <Loader2 size={15} strokeWidth={2} style={{ animation: 'spin 0.8s linear infinite' }} />
+                  Connecting…
+                </>
+              ) : (
+                <>
+                  Connect
+                  <ArrowRight size={15} strokeWidth={2.5} style={{ marginLeft: 4, transition: 'transform 0.2s' }} />
+                </>
+              )}
+            </button>
           </div>
-        </div>
 
-        <div style={styles.howToStep}>
-          <span style={styles.howToNum}>2</span>
-          <div>
-            <p style={styles.howToStepTitle}>Tell Claude to connect your event</p>
-            <p style={styles.howToStepBody}>
-              In Claude, type:
-            </p>
-            <span style={styles.codeBlock}>"Connect my PlanIt event"</span>
-            <p style={styles.howToStepBody}>
-              Claude will generate a one-time link and send it to you.
-            </p>
-          </div>
+          <p style={s.cardFooter}>
+            Link expires in 10 min · single use only
+          </p>
         </div>
-
-        <div style={styles.howToStep}>
-          <span style={styles.howToNum}>3</span>
-          <div>
-            <p style={styles.howToStepTitle}>Open the link and enter your details</p>
-            <p style={styles.howToStepBody}>
-              Click the link Claude gives you — it brings you to this page.
-              Enter your <strong style={{ color: '#111827' }}>Event ID</strong> and{' '}
-              <strong style={{ color: '#111827' }}>Organiser Password</strong> to authorise Claude.
-            </p>
-          </div>
-        </div>
-
-        <div style={styles.howToStep}>
-          <span style={styles.howToNum}>4</span>
-          <div>
-            <p style={styles.howToStepTitle}>Start managing your event</p>
-            <p style={styles.howToStepBody}>
-              Once connected, go back to Claude and start talking. Try:
-            </p>
-            <div style={styles.examplePrompts}>
-              <span style={styles.prompt}>"How many guests have checked in?"</span>
-              <span style={styles.prompt}>"Add Sarah Jones to the guest list"</span>
-              <span style={styles.prompt}>"Send an announcement to all staff"</span>
-              <span style={styles.prompt}>"Show me the seating map"</span>
-            </div>
-          </div>
-        </div>
-
-        <p style={styles.howToFooter}>
-          Tip: your Event ID is the slug in your event URL, for example planitapp.onrender.com/e/summer-gala-2026 uses summer-gala-2026. Your organiser password is the account password set when the event was created.
-        </p>
       </div>
 
-      {/* Spin keyframe */}
-      <style>{`
-        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-      `}</style>
+      {/* ── Setup instructions ── */}
+      <div id="setup" style={{ ...s.setupCard, ...(mounted ? s.fadeInDelay : {}) }}>
+        <h2 style={s.setupTitle}>Setup instructions</h2>
+        <div style={s.setupGrid}>
+          {[
+            {
+              num: '1',
+              title: 'Add PlanIt to Claude',
+              body: (
+                <>
+                  Go to{' '}
+                  <a href="https://claude.ai" target="_blank" rel="noopener noreferrer" style={s.link}>claude.ai</a>
+                  {' '}and install the PlanIt connector, or paste{' '}
+                  <span style={s.inlineCode}>https://planit-mcp.onrender.com/mcp</span>
+                  {' '}into the Remote MCP server URL field.
+                </>
+              ),
+              cta: (
+                <a
+                  href="https://claude.ai/customize/connectors?modal=add-custom-connector&mcpName=PlanIt&mcpServerUrl=https://planit-mcp.onrender.com/mcp"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={s.ctaLink}
+                >
+                  Add PlanIt to Claude <ArrowRight size={12} strokeWidth={2.5} style={{ marginLeft: 3 }} />
+                </a>
+              ),
+            },
+            {
+              num: '2',
+              title: 'Ask Claude for a link',
+              body: 'In Claude, say:',
+              code: '"Connect my PlanIt event"',
+              codeNote: 'Claude generates a one-time link and sends it to you.',
+            },
+            {
+              num: '3',
+              title: 'Enter your credentials',
+              body: 'Open the link, enter your Event ID and Organizer Password. Your Event ID is the slug from your event URL — e.g. summer-gala-2026.',
+            },
+            {
+              num: '4',
+              title: 'Start managing',
+              body: 'Once connected, talk to Claude naturally:',
+              prompts: [
+                '"How many guests have checked in?"',
+                '"Add Sarah Jones to the guest list"',
+                '"Send a staff announcement"',
+                '"Show me the seating map"',
+              ],
+            },
+          ].map(step => (
+            <div key={step.num} style={s.step}>
+              <div style={s.stepNum}>{step.num}</div>
+              <div style={s.stepContent}>
+                <p style={s.stepTitle}>{step.title}</p>
+                <p style={s.stepBody}>{step.body}</p>
+                {step.cta && step.cta}
+                {step.code && (
+                  <>
+                    <div style={s.codeBlock}>{step.code}</div>
+                    <p style={{ ...s.stepBody, marginTop: 6 }}>{step.codeNote}</p>
+                  </>
+                )}
+                {step.prompts && (
+                  <div style={s.promptList}>
+                    {step.prompts.map(p => (
+                      <div key={p} style={s.prompt}>{p}</div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+        <p style={s.setupNote}>
+          Tip: Your organizer password is the account password set when the event was created.
+        </p>
+      </div>
     </div>
   );
 }
 
-// ─── Inline styles — dark aesthetic matching PlanIt ──────────────────────────
-const styles = {
+// ─── Keyframes ────────────────────────────────────────────────────────────────
+const keyframes = `
+  @keyframes spin { to { transform: rotate(360deg); } }
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(16px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+`;
+
+// ─── Styles ───────────────────────────────────────────────────────────────────
+const s = {
   root: {
     minHeight: '100vh',
-    backgroundColor: '#f5f5f4',
+    backgroundColor: '#f8f7f5',
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center',
-    justifyContent: 'center',
-    padding: '1.5rem',
-    fontFamily: "'Inter', system-ui, -apple-system, sans-serif",
+    justifyContent: 'flex-start',
+    padding: 'clamp(1.5rem, 4vw, 3rem) 1.25rem',
+    fontFamily: "'DM Sans', 'Helvetica Neue', Arial, sans-serif",
+    WebkitFontSmoothing: 'antialiased',
   },
+
+  // Animations
+  fadeIn: {
+    animation: 'fadeUp 0.5s cubic-bezier(0.22,1,0.36,1) both',
+  },
+  fadeInDelay: {
+    animation: 'fadeUp 0.5s cubic-bezier(0.22,1,0.36,1) 0.15s both',
+  },
+
+  // ── Shell / two-column layout
   shell: {
     width: '100%',
-    maxWidth: '1040px',
+    maxWidth: 960,
     display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 360px), 1fr))',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 340px), 1fr))',
     gap: '1rem',
     alignItems: 'stretch',
   },
-  heroPanel: {
-    backgroundColor: '#111827',
-    color: '#fff',
+
+  // ── Hero panel
+  hero: {
+    background: '#0f1117',
     borderRadius: '1.25rem',
-    padding: '2.25rem',
+    padding: 'clamp(1.75rem, 4vw, 2.5rem)',
     display: 'flex',
     flexDirection: 'column',
-    justifyContent: 'center',
-    boxShadow: '0 24px 60px rgba(17,24,39,0.16)',
+    justifyContent: 'space-between',
+    minHeight: 420,
+    position: 'relative',
+    overflow: 'hidden',
   },
-  kicker: {
-    fontSize: '0.75rem',
-    fontWeight: 800,
-    letterSpacing: '0.12em',
+  heroInner: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '1.25rem',
+  },
+  badge: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: 7,
+    background: 'rgba(255,255,255,0.07)',
+    border: '1px solid rgba(255,255,255,0.1)',
+    borderRadius: 999,
+    padding: '5px 12px',
+    fontSize: 11,
+    fontWeight: 600,
+    letterSpacing: '0.08em',
     textTransform: 'uppercase',
-    color: '#d6d3d1',
-    marginBottom: '1rem',
+    color: 'rgba(255,255,255,0.55)',
+    width: 'fit-content',
+  },
+  badgeDot: {
+    width: 6,
+    height: 6,
+    borderRadius: '50%',
+    background: '#10b981',
+    display: 'inline-block',
+    boxShadow: '0 0 6px #10b981',
   },
   heroTitle: {
     margin: 0,
-    fontSize: 'clamp(2rem, 5vw, 3.65rem)',
-    lineHeight: 0.96,
-    letterSpacing: '-0.06em',
-    fontWeight: 900,
+    fontSize: 'clamp(1.85rem, 4vw, 2.75rem)',
+    fontWeight: 800,
+    lineHeight: 1.1,
+    letterSpacing: '-0.04em',
+    color: '#ffffff',
+  },
+  heroAccent: {
+    color: '#a78bfa',
   },
   heroCopy: {
-    color: '#d6d3d1',
-    fontSize: '1rem',
-    lineHeight: 1.7,
-    margin: '1.25rem 0',
-    maxWidth: '34rem',
+    margin: 0,
+    fontSize: '0.9375rem',
+    lineHeight: 1.65,
+    color: 'rgba(255,255,255,0.5)',
+    maxWidth: '34ch',
   },
-  trustGrid: {
+  featureList: {
     display: 'flex',
-    flexWrap: 'wrap',
-    gap: '0.5rem',
-    marginBottom: '1rem',
+    flexDirection: 'column',
+    gap: 10,
+    marginTop: 4,
   },
-  trustPill: {
+  featureItem: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 10,
+  },
+  featureIcon: {
+    display: 'flex',
+    alignItems: 'center',
+    color: 'rgba(255,255,255,0.35)',
+    flexShrink: 0,
+  },
+  featureLabel: {
+    fontSize: '0.825rem',
+    color: 'rgba(255,255,255,0.45)',
+    fontWeight: 450,
+  },
+  heroFooterLink: {
     display: 'inline-flex',
     alignItems: 'center',
-    gap: '0.4rem',
-    border: '1px solid rgba(255,255,255,0.18)',
-    borderRadius: '999px',
-    color: '#f5f5f4',
-    padding: '0.45rem 0.7rem',
-    fontSize: '0.78rem',
-    fontWeight: 700,
+    fontSize: '0.8125rem',
+    fontWeight: 600,
+    color: 'rgba(255,255,255,0.35)',
+    textDecoration: 'none',
+    marginTop: '2rem',
+    transition: 'color 0.15s',
   },
-  secondaryLink: {
-    color: '#fff',
-    fontWeight: 800,
-    textUnderlineOffset: '4px',
-  },
+
+  // ── Form card
   card: {
-    backgroundColor: '#ffffff',
-    border: '1px solid #d6d3d1',
-    borderRadius: '1rem',
-    padding: '2rem',
-    width: '100%',
-    maxWidth: 'none',
-    boxShadow: '0 24px 60px rgba(17,24,39,0.08)',
+    background: '#ffffff',
+    border: '1px solid rgba(0,0,0,0.07)',
+    borderRadius: '1.25rem',
+    padding: 'clamp(1.75rem, 4vw, 2.25rem)',
+    boxShadow: '0 4px 24px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04)',
+    display: 'flex',
+    flexDirection: 'column',
   },
-  logoRow: {
+  cardHeader: {
     display: 'flex',
     alignItems: 'center',
-    gap: '0.625rem',
-    marginBottom: '1.5rem',
+    gap: '0.875rem',
+    marginBottom: '1.25rem',
   },
-  logoBox: {
-    width: 36,
-    height: 36,
-    borderRadius: '0.5rem',
-    backgroundColor: '#f5f5f4',
+  logoMark: {
+    width: 40,
+    height: 40,
+    borderRadius: '0.625rem',
+    background: '#faf5ff',
+    border: '1px solid rgba(167,139,250,0.25)',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
+    flexShrink: 0,
   },
-  logoText: {
-    fontSize: '0.875rem',
-    fontWeight: 600,
-    color: '#111827',
-    letterSpacing: '0.02em',
-  },
-  title: {
-    fontSize: '1.375rem',
+  cardEyebrow: {
+    margin: 0,
+    fontSize: '0.6875rem',
     fontWeight: 700,
-    color: '#111827',
-    margin: '0 0 0.5rem 0',
-    lineHeight: 1.3,
+    letterSpacing: '0.09em',
+    textTransform: 'uppercase',
+    color: '#a78bfa',
   },
-  subtitle: {
+  cardTitle: {
+    margin: 0,
+    fontSize: '1.1875rem',
+    fontWeight: 700,
+    letterSpacing: '-0.02em',
+    color: '#0f1117',
+    lineHeight: 1.2,
+  },
+  cardSubtitle: {
+    margin: '0 0 1.5rem 0',
     fontSize: '0.875rem',
-    color: '#57534e',
-    margin: '0 0 1.75rem 0',
-    lineHeight: 1.6,
-  },
-  body: {
-    fontSize: '0.9rem',
-    color: '#57534e',
-    lineHeight: 1.6,
-    margin: '0',
+    color: '#6b7280',
+    lineHeight: 1.55,
   },
   form: {
     display: 'flex',
     flexDirection: 'column',
-    gap: '1.125rem',
+    gap: '1rem',
+    flex: 1,
   },
-  label: {
+
+  // ── Fields
+  fieldWrap: {
     display: 'flex',
     flexDirection: 'column',
     gap: '0.375rem',
   },
-  labelText: {
-    display: 'flex',
+  label: {
+    display: 'inline-flex',
     alignItems: 'center',
-    fontSize: '0.8125rem',
-    fontWeight: 500,
-    color: '#57534e',
+    gap: 5,
+    fontSize: '0.75rem',
+    fontWeight: 600,
+    letterSpacing: '0.04em',
+    color: '#374151',
+    textTransform: 'uppercase',
+  },
+  inputWrap: {
+    position: 'relative',
+    border: '1.5px solid #e5e7eb',
+    borderRadius: '0.625rem',
+    background: '#fafafa',
+    transition: 'border-color 0.15s, box-shadow 0.15s',
+  },
+  inputFocused: {
+    borderColor: '#a78bfa',
+    boxShadow: '0 0 0 3px rgba(167,139,250,0.12)',
+    background: '#ffffff',
   },
   input: {
-    backgroundColor: '#f5f5f4',
-    border: '1px solid #d6d3d1',
-    borderRadius: '0.5rem',
-    padding: '0.625rem 0.875rem',
-    fontSize: '0.9375rem',
-    color: '#111827',
-    outline: 'none',
     width: '100%',
+    border: 'none',
+    background: 'transparent',
+    outline: 'none',
+    padding: '0.6875rem 0.875rem',
+    fontSize: '0.9375rem',
+    color: '#0f1117',
     boxSizing: 'border-box',
-    transition: 'border-color 0.15s',
-  },
-  passwordWrapper: {
-    position: 'relative',
+    fontFamily: 'inherit',
+    letterSpacing: '-0.01em',
   },
   eyeBtn: {
     position: 'absolute',
@@ -460,198 +570,236 @@ const styles = {
     background: 'none',
     border: 'none',
     cursor: 'pointer',
-    padding: 0,
+    padding: 4,
+    color: '#9ca3af',
     display: 'flex',
     alignItems: 'center',
+    borderRadius: 4,
+    transition: 'color 0.15s',
   },
+
+  // ── Error
   errorBox: {
     display: 'flex',
     alignItems: 'flex-start',
-    gap: '0.5rem',
-    backgroundColor: 'rgba(248,113,113,0.08)',
-    border: '1px solid rgba(248,113,113,0.25)',
+    gap: 8,
+    background: 'rgba(239,68,68,0.06)',
+    border: '1px solid rgba(239,68,68,0.2)',
     borderRadius: '0.5rem',
     padding: '0.625rem 0.875rem',
     fontSize: '0.8125rem',
-    color: '#fca5a5',
+    color: '#dc2626',
     lineHeight: 1.5,
   },
+
+  // ── Submit button
   submitBtn: {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: '0.5rem',
-    backgroundColor: '#111827',
-    color: '#fff',
+    gap: 6,
+    background: '#0f1117',
+    color: '#ffffff',
     border: 'none',
-    borderRadius: '0.5rem',
-    padding: '0.75rem 1rem',
+    borderRadius: '0.625rem',
+    padding: '0.75rem 1.25rem',
     fontSize: '0.9375rem',
-    fontWeight: 600,
+    fontWeight: 700,
+    letterSpacing: '-0.01em',
     cursor: 'pointer',
     marginTop: '0.25rem',
-    transition: 'background-color 0.15s',
+    transition: 'background 0.15s, transform 0.1s',
+    fontFamily: 'inherit',
   },
-  submitBtnDisabled: {
-    backgroundColor: '#78716c',
-    opacity: 0.6,
+  submitDisabled: {
+    background: '#d1d5db',
+    color: '#9ca3af',
     cursor: 'not-allowed',
   },
-  footerNote: {
+  cardFooter: {
+    margin: '1.25rem 0 0',
     fontSize: '0.75rem',
-    color: '#78716c',
-    marginTop: '1.25rem',
-    lineHeight: 1.5,
+    color: '#9ca3af',
     textAlign: 'center',
+    letterSpacing: '0.01em',
   },
-  // Success screen
-  successIcon: {
+
+  // ── Success / error screens
+  successWrap: {
+    background: '#ffffff',
+    border: '1px solid rgba(0,0,0,0.07)',
+    borderRadius: '1.25rem',
+    padding: 'clamp(2rem, 5vw, 3rem)',
+    maxWidth: 440,
+    width: '100%',
+    boxShadow: '0 4px 24px rgba(0,0,0,0.06)',
     display: 'flex',
-    justifyContent: 'center',
-    marginBottom: '1rem',
-  },
-  successTitle: {
-    fontSize: '1.5rem',
-    fontWeight: 700,
-    color: '#111827',
+    flexDirection: 'column',
+    alignItems: 'center',
     textAlign: 'center',
-    margin: '0 0 0.375rem 0',
+    gap: '1rem',
   },
-  successEventName: {
-    fontSize: '1.0625rem',
-    fontWeight: 600,
-    color: '#a78bfa',
-    textAlign: 'center',
-    margin: '0 0 1rem 0',
-  },
-  successBody: {
-    fontSize: '0.875rem',
-    color: '#57534e',
-    textAlign: 'center',
-    lineHeight: 1.6,
-    margin: '0 0 1.5rem 0',
-  },
-  successHint: {
+  successRing: {
+    width: 64,
+    height: 64,
+    borderRadius: '50%',
+    background: 'rgba(16,185,129,0.1)',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: '0.375rem',
   },
-  successHintText: {
+  successTitle: {
+    margin: 0,
+    fontSize: '1.5rem',
+    fontWeight: 800,
+    color: '#0f1117',
+    letterSpacing: '-0.03em',
+  },
+  successEvent: {
+    margin: 0,
+    fontSize: '1rem',
+    fontWeight: 600,
+    color: '#a78bfa',
+  },
+  successBody: {
+    margin: 0,
+    fontSize: '0.9rem',
+    color: '#6b7280',
+    lineHeight: 1.6,
+    maxWidth: '32ch',
+  },
+  successPill: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: 6,
+    background: 'rgba(0,0,0,0.04)',
+    borderRadius: 999,
+    padding: '7px 14px',
     fontSize: '0.8125rem',
     color: '#6b7280',
+    fontWeight: 500,
+    marginTop: 4,
   },
-  // Error screen
-  errorIcon: {
-    display: 'flex',
-    justifyContent: 'center',
-    marginBottom: '1rem',
-  },
-  code: {
-    backgroundColor: '#f5f5f4',
-    border: '1px solid #d6d3d1',
-    borderRadius: '0.25rem',
-    padding: '0.1rem 0.4rem',
-    fontSize: '0.8125rem',
-    fontFamily: 'monospace',
-    color: '#111827',
-  },
-  // How to get started section
-  howToCard: {
-    backgroundColor: '#ffffff',
-    border: '1px solid #d6d3d1',
-    borderRadius: '1rem',
-    padding: '2rem',
+
+  // ── Setup section
+  setupCard: {
     width: '100%',
-    maxWidth: '1040px',
+    maxWidth: 960,
     marginTop: '1.25rem',
-    boxShadow: '0 24px 60px rgba(17,24,39,0.08)',
+    background: '#ffffff',
+    border: '1px solid rgba(0,0,0,0.07)',
+    borderRadius: '1.25rem',
+    padding: 'clamp(1.5rem, 4vw, 2.25rem)',
+    boxShadow: '0 2px 12px rgba(0,0,0,0.04)',
   },
-  howToTitle: {
-    fontSize: '1rem',
+  setupTitle: {
+    margin: '0 0 1.5rem',
+    fontSize: '0.8rem',
     fontWeight: 700,
-    color: '#111827',
-    margin: '0 0 1.5rem 0',
+    letterSpacing: '0.08em',
+    textTransform: 'uppercase',
+    color: '#9ca3af',
   },
-  howToStep: {
+  setupGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 200px), 1fr))',
+    gap: '1.25rem 2rem',
+  },
+  step: {
     display: 'flex',
     gap: '0.875rem',
-    marginBottom: '1.25rem',
     alignItems: 'flex-start',
   },
-  howToNum: {
+  stepNum: {
     flexShrink: 0,
     width: 24,
     height: 24,
     borderRadius: '50%',
-    backgroundColor: '#f5f5f4',
-    color: '#111827',
-    fontSize: '0.75rem',
-    fontWeight: 700,
+    background: '#f3f4f6',
+    color: '#374151',
+    fontSize: '0.6875rem',
+    fontWeight: 800,
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: '0.125rem',
+    marginTop: 1,
   },
-  howToStepTitle: {
+  stepContent: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 4,
+  },
+  stepTitle: {
+    margin: 0,
     fontSize: '0.875rem',
-    fontWeight: 600,
-    color: '#e2e8f0',
-    margin: '0 0 0.25rem 0',
+    fontWeight: 700,
+    color: '#111827',
+    letterSpacing: '-0.01em',
   },
-  howToStepBody: {
+  stepBody: {
+    margin: 0,
     fontSize: '0.8125rem',
-    color: '#57534e',
-    margin: '0 0 0.5rem 0',
+    color: '#6b7280',
     lineHeight: 1.6,
+  },
+  codeBlock: {
+    background: '#f3f4f6',
+    border: '1px solid #e5e7eb',
+    borderRadius: '0.375rem',
+    padding: '6px 10px',
+    fontSize: '0.8rem',
+    fontFamily: "'SF Mono', 'Fira Code', monospace",
+    color: '#111827',
+    marginTop: 4,
+  },
+  ctaLink: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    marginTop: 6,
+    fontSize: '0.8125rem',
+    fontWeight: 700,
+    color: '#0f1117',
+    background: '#f3f4f6',
+    borderRadius: '0.375rem',
+    padding: '5px 10px',
+    textDecoration: 'none',
+    transition: 'background 0.15s',
+  },
+  promptList: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 5,
+    marginTop: 4,
+  },
+  prompt: {
+    background: '#f8f7f5',
+    border: '1px solid #e5e7eb',
+    borderRadius: '0.375rem',
+    padding: '5px 10px',
+    fontSize: '0.75rem',
+    fontFamily: "'SF Mono', 'Fira Code', monospace",
+    color: '#374151',
+  },
+  inlineCode: {
+    background: '#f3f4f6',
+    border: '1px solid #e5e7eb',
+    borderRadius: '0.25rem',
+    padding: '1px 5px',
+    fontSize: '0.8em',
+    fontFamily: "'SF Mono', 'Fira Code', monospace",
+    color: '#111827',
   },
   link: {
     color: '#a78bfa',
     textDecoration: 'none',
-  },
-  mcpLink: {
-    display: 'inline-block',
-    backgroundColor: '#f5f5f4',
-    color: '#111827',
-    borderRadius: '0.375rem',
-    padding: '0.375rem 0.75rem',
-    fontSize: '0.8125rem',
     fontWeight: 600,
-    textDecoration: 'none',
-    marginTop: '0.25rem',
   },
-  codeBlock: {
-    display: 'inline-block',
-    backgroundColor: '#f5f5f4',
-    border: '1px solid #d6d3d1',
-    borderRadius: '0.375rem',
-    padding: '0.375rem 0.75rem',
-    fontSize: '0.8125rem',
-    fontFamily: 'monospace',
-    color: '#111827',
-    margin: '0.25rem 0 0.5rem 0',
-  },
-  examplePrompts: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '0.375rem',
-    marginTop: '0.375rem',
-  },
-  prompt: {
-    backgroundColor: '#f5f5f4',
-    border: '1px solid #d6d3d1',
-    borderRadius: '0.375rem',
-    padding: '0.375rem 0.75rem',
-    fontSize: '0.8rem',
-    fontFamily: 'monospace',
-    color: '#111827',
-  },
-  howToFooter: {
-    fontSize: '0.75rem',
-    color: '#78716c',
-    marginTop: '1rem',
-    lineHeight: 1.5,
-    borderTop: '1px solid #e7e5e4',
+  setupNote: {
+    margin: '1.5rem 0 0',
     paddingTop: '1rem',
+    borderTop: '1px solid #f3f4f6',
+    fontSize: '0.75rem',
+    color: '#9ca3af',
+    lineHeight: 1.6,
   },
 };
