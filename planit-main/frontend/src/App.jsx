@@ -36,6 +36,7 @@ const License          = lazy(() => import('./pages/License'));
 const InviteBadge      = lazy(() => import('./pages/InviteBadge'));
 const InviteCard       = lazy(() => import('./pages/InviteCard'));
 const ReservePage      = lazy(() => import('./pages/ReservePage'));
+const McpDocs          = lazy(() => import('./pages/ClaudeDocs'));
 // ReserveCancelPage is a named export — lazy() only works with default exports,
 // so we re-wrap it as a default-export chunk.
 const ReserveCancelPage = lazy(() =>
@@ -546,6 +547,7 @@ function App() {
         <Route path="/about"           element={<About />} />
         <Route path="/status"          element={<Status />} />
         <Route path="/discover"        element={<Discover />} />
+        <Route path="/mcp-docs"        element={<McpDocs  />} />     
         <Route path="/help"            element={<Help />} />
         <Route path="/blog"            element={<Blog />} />
         <Route path="/blog/:slug"      element={<Blog />} />
