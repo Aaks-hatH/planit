@@ -3704,7 +3704,7 @@ const CLAUDE_ARTICLE = {
       items: [
         {
           title: 'Step 1 — Add PlanIt to Claude',
-          body: 'Go to claude.ai and click the link below (or paste it into your browser). This installs the PlanIt tools into Claude so it knows how to talk to your event:\n\nhttps://claude.ai/add-mcp?url=https://mcp.planitapp.onrender.com\n\nYou only need to do this once — PlanIt stays connected to Claude until you remove it.',
+          body: 'Go to claude.ai and click the link below (or paste it into your browser). This opens Claude\'s "Add custom connector" screen pre-filled with PlanIt\'s connector:\n\nhttps://claude.ai/customize/connectors?modal=add-custom-connector&mcpName=PlanIt&mcpServerUrl=https://planit-mcp.onrender.com/mcp\n\nIf the form opens empty instead of pre-filled, just paste this URL into the "Remote MCP server URL" field yourself:\n\nhttps://planit-mcp.onrender.com/mcp\n\nYou only need to do this once — PlanIt stays connected to Claude until you remove it.',
         },
         {
           title: 'Step 2 — Tell Claude to connect your event',
