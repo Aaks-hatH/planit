@@ -3704,19 +3704,19 @@ const CLAUDE_ARTICLE = {
       items: [
         {
           title: 'Step 1 — Add PlanIt to Claude',
-          body: 'Go to claude.ai and click the link below (or paste it into your browser). This opens Claude\'s "Add custom connector" screen pre-filled with PlanIt\'s connector:\n\nhttps://claude.ai/customize/connectors?modal=add-custom-connector&mcpName=PlanIt&mcpServerUrl=https://planit-mcp.onrender.com/mcp\n\nIf the form opens empty instead of pre-filled, just paste this URL into the "Remote MCP server URL" field yourself:\n\nhttps://planit-mcp.onrender.com/mcp\n\nYou only need to do this once — PlanIt stays connected to Claude until you remove it.',
+          body: 'Open Claude and add PlanIt as a custom connector. The fastest route is the pre-filled setup link below:\n\nhttps://claude.ai/customize/connectors?modal=add-custom-connector&mcpName=PlanIt&mcpServerUrl=https://planit-mcp.onrender.com/mcp\n\nIf Claude opens a blank connector form, enter these values manually:\nConnector name: PlanIt\nRemote MCP server URL: https://planit-mcp.onrender.com/mcp\n\nSave the connector. This installs the PlanIt tools in Claude; it does not connect a specific event yet.',
         },
         {
           title: 'Step 2 — Tell Claude to connect your event',
-          body: 'Open a new conversation in Claude and say:\n\n"Connect my PlanIt event"\n\nClaude will generate a one-time link for you. Click it — it opens the PlanIt connect page.',
+          body: 'Open a new Claude conversation and say:\n\n"Connect my PlanIt event"\n\nClaude should call the PlanIt connector and return a one-time connection link. Click that link to open the PlanIt connect page. If Claude says the connector is unavailable, confirm the custom connector is enabled in Claude settings.',
         },
         {
           title: 'Step 3 — Enter your Event ID and Organiser Password',
-          body: 'On the connect page, enter your Event ID (the slug in your event URL — e.g. "summer-gala-2026") and your Organiser Password (the account password you set when you created the event). Click Connect.',
+          body: 'On the connect page, enter your Event ID and Organiser Password. Your Event ID is the slug in your event URL. For example, planitapp.onrender.com/e/summer-gala-2026 uses summer-gala-2026. The Organiser Password is the account password you set when creating the event. Click Connect to authorize Claude for that one event.',
         },
         {
           title: 'Step 4 — Start managing your event by talking',
-          body: 'Once connected, go back to Claude and start a conversation. Claude now has full organiser access to your event. Try asking it anything — it will take action directly.',
+          body: 'Return to Claude and ask for the specific action you want. Claude will use PlanIt tools only when needed and should explain what changed. Start with read-only checks like "How many guests are invited?" before using write actions like adding guests or sending announcements.',
         },
       ],
     },
@@ -3787,6 +3787,10 @@ const CLAUDE_ARTICLE = {
         {
           q: 'Can more than one person use Claude with my event at the same time?',
           a: 'Only one Claude session can be connected to an event at a time. Generating a new connection link invalidates the previous one. If two people need to manage the event via Claude simultaneously, they would need to take turns reconnecting.',
+        },
+        {
+          q: 'How do I become an official Claude connector?',
+          a: 'PlanIt currently works as a custom Claude connector using its remote MCP server URL. To become an official listed Claude connector, you need to follow Anthropic\'s connector / MCP publisher requirements: operate a reliable remote MCP server, document the tools and privacy/security model, provide support and branding information, and submit through Anthropic\'s partner or developer channels when they accept connector listings. Until Anthropic approves a public listing, users can still install PlanIt manually as a custom connector with https://planit-mcp.onrender.com/mcp.',
         },
         {
           q: 'What is MCP?',
