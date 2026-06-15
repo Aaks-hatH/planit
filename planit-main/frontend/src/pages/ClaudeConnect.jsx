@@ -1,10 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Bot, Lock, Hash, CheckCircle, AlertCircle, Eye, EyeOff, Loader2 } from 'lucide-react';
+import { Bot, Lock, Hash, CheckCircle, AlertCircle, Eye, EyeOff, Loader2, ShieldCheck } from 'lucide-react';
 
 export default function ClaudeConnect() {
   const [searchParams] = useSearchParams();
   const token = searchParams.get('token');
+  const MCP_BASE_URL = import.meta.env.VITE_MCP_BASE_URL || 'https://planit-mcp.onrender.com';
 
   const [eventId, setEventId]         = useState('');
   const [password, setPassword]       = useState('');
@@ -24,7 +25,7 @@ export default function ClaudeConnect() {
     setLoading(true);
 
     try {
-      const res = await fetch('/mcp/connect/verify', {
+      const res = await fetch(`${MCP_BASE_URL}/mcp/connect/verify`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -97,7 +98,20 @@ export default function ClaudeConnect() {
   // ─── Main form ────────────────────────────────────────────────────────────
   return (
     <div style={styles.root}>
-      <div style={styles.card}>
+      <div style={styles.shell}>
+        <div style={styles.heroPanel}>
+          <div style={styles.kicker}>PlanIt connector</div>
+          <h1 style={styles.heroTitle}>Connect one event to Claude, then manage it in plain English.</h1>
+          <p style={styles.heroCopy}>Use Claude to add guests, check live attendance, send announcements, review RSVPs, and work through event-day operations without digging through tabs.</p>
+          <div style={styles.trustGrid}>
+            <span style={styles.trustPill}><ShieldCheck size={14} /> One-event scoped</span>
+            <span style={styles.trustPill}><Lock size={14} /> Organizer password required</span>
+            <span style={styles.trustPill}><Bot size={14} /> MCP tools for Claude</span>
+          </div>
+          <a href="#instructions" style={styles.secondaryLink}>Need setup instructions?</a>
+        </div>
+
+        <div style={styles.card}>
         {/* Header */}
         <div style={styles.logoRow}>
           <div style={styles.logoBox}>
@@ -192,11 +206,12 @@ export default function ClaudeConnect() {
           This link expires in 10 minutes and can only be used once.
           If it has expired, ask Claude for a new link.
         </p>
+        </div>
       </div>
 
       {/* How to get started card */}
-      <div style={styles.howToCard}>
-        <h2 style={styles.howToTitle}>New here? How to get started</h2>
+      <div id="instructions" style={styles.howToCard}>
+        <h2 style={styles.howToTitle}>Setup instructions</h2>
 
         <div style={styles.howToStep}>
           <span style={styles.howToNum}>1</span>
@@ -221,7 +236,7 @@ export default function ClaudeConnect() {
             </a>
             <p style={{ ...styles.howToStepBody, marginTop: '0.5rem' }}>
               If that link opens an empty "Add custom connector" form instead of
-              pre-filling, just paste this URL into the <strong style={{ color: '#c4b5fd' }}>Remote MCP server URL</strong>{' '}
+              pre-filling, just paste this URL into the <strong style={{ color: '#111827' }}>Remote MCP server URL</strong>{' '}
               field: <span style={styles.code}>https://planit-mcp.onrender.com/mcp</span>
             </p>
           </div>
@@ -247,8 +262,8 @@ export default function ClaudeConnect() {
             <p style={styles.howToStepTitle}>Open the link and enter your details</p>
             <p style={styles.howToStepBody}>
               Click the link Claude gives you — it brings you to this page.
-              Enter your <strong style={{ color: '#c4b5fd' }}>Event ID</strong> and{' '}
-              <strong style={{ color: '#c4b5fd' }}>Organiser Password</strong> to authorise Claude.
+              Enter your <strong style={{ color: '#111827' }}>Event ID</strong> and{' '}
+              <strong style={{ color: '#111827' }}>Organiser Password</strong> to authorise Claude.
             </p>
           </div>
         </div>
@@ -270,8 +285,7 @@ export default function ClaudeConnect() {
         </div>
 
         <p style={styles.howToFooter}>
-          Your Event ID is shown on your event dashboard. Your Organiser Password was set when you
-          created the event.
+          Tip: your Event ID is the slug in your event URL, for example planitapp.onrender.com/e/summer-gala-2026 uses summer-gala-2026. Your organiser password is the account password set when the event was created.
         </p>
       </div>
 
@@ -287,7 +301,7 @@ export default function ClaudeConnect() {
 const styles = {
   root: {
     minHeight: '100vh',
-    backgroundColor: '#0f172a',
+    backgroundColor: '#f5f5f4',
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center',
@@ -295,14 +309,76 @@ const styles = {
     padding: '1.5rem',
     fontFamily: "'Inter', system-ui, -apple-system, sans-serif",
   },
+  shell: {
+    width: '100%',
+    maxWidth: '1040px',
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 360px), 1fr))',
+    gap: '1rem',
+    alignItems: 'stretch',
+  },
+  heroPanel: {
+    backgroundColor: '#111827',
+    color: '#fff',
+    borderRadius: '1.25rem',
+    padding: '2.25rem',
+    display: 'flex',
+    flexDirection: 'column',
+    justifyContent: 'center',
+    boxShadow: '0 24px 60px rgba(17,24,39,0.16)',
+  },
+  kicker: {
+    fontSize: '0.75rem',
+    fontWeight: 800,
+    letterSpacing: '0.12em',
+    textTransform: 'uppercase',
+    color: '#d6d3d1',
+    marginBottom: '1rem',
+  },
+  heroTitle: {
+    margin: 0,
+    fontSize: 'clamp(2rem, 5vw, 3.65rem)',
+    lineHeight: 0.96,
+    letterSpacing: '-0.06em',
+    fontWeight: 900,
+  },
+  heroCopy: {
+    color: '#d6d3d1',
+    fontSize: '1rem',
+    lineHeight: 1.7,
+    margin: '1.25rem 0',
+    maxWidth: '34rem',
+  },
+  trustGrid: {
+    display: 'flex',
+    flexWrap: 'wrap',
+    gap: '0.5rem',
+    marginBottom: '1rem',
+  },
+  trustPill: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '0.4rem',
+    border: '1px solid rgba(255,255,255,0.18)',
+    borderRadius: '999px',
+    color: '#f5f5f4',
+    padding: '0.45rem 0.7rem',
+    fontSize: '0.78rem',
+    fontWeight: 700,
+  },
+  secondaryLink: {
+    color: '#fff',
+    fontWeight: 800,
+    textUnderlineOffset: '4px',
+  },
   card: {
-    backgroundColor: '#1e293b',
-    border: '1px solid #334155',
+    backgroundColor: '#ffffff',
+    border: '1px solid #d6d3d1',
     borderRadius: '1rem',
     padding: '2rem',
     width: '100%',
-    maxWidth: '420px',
-    boxShadow: '0 25px 50px -12px rgba(0,0,0,0.5)',
+    maxWidth: 'none',
+    boxShadow: '0 24px 60px rgba(17,24,39,0.08)',
   },
   logoRow: {
     display: 'flex',
@@ -314,7 +390,7 @@ const styles = {
     width: 36,
     height: 36,
     borderRadius: '0.5rem',
-    backgroundColor: '#312e81',
+    backgroundColor: '#f5f5f4',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
@@ -322,25 +398,25 @@ const styles = {
   logoText: {
     fontSize: '0.875rem',
     fontWeight: 600,
-    color: '#c4b5fd',
+    color: '#111827',
     letterSpacing: '0.02em',
   },
   title: {
     fontSize: '1.375rem',
     fontWeight: 700,
-    color: '#f1f5f9',
+    color: '#111827',
     margin: '0 0 0.5rem 0',
     lineHeight: 1.3,
   },
   subtitle: {
     fontSize: '0.875rem',
-    color: '#94a3b8',
+    color: '#57534e',
     margin: '0 0 1.75rem 0',
     lineHeight: 1.6,
   },
   body: {
     fontSize: '0.9rem',
-    color: '#94a3b8',
+    color: '#57534e',
     lineHeight: 1.6,
     margin: '0',
   },
@@ -359,15 +435,15 @@ const styles = {
     alignItems: 'center',
     fontSize: '0.8125rem',
     fontWeight: 500,
-    color: '#94a3b8',
+    color: '#57534e',
   },
   input: {
-    backgroundColor: '#0f172a',
-    border: '1px solid #334155',
+    backgroundColor: '#f5f5f4',
+    border: '1px solid #d6d3d1',
     borderRadius: '0.5rem',
     padding: '0.625rem 0.875rem',
     fontSize: '0.9375rem',
-    color: '#f1f5f9',
+    color: '#111827',
     outline: 'none',
     width: '100%',
     boxSizing: 'border-box',
@@ -405,7 +481,7 @@ const styles = {
     alignItems: 'center',
     justifyContent: 'center',
     gap: '0.5rem',
-    backgroundColor: '#7c3aed',
+    backgroundColor: '#111827',
     color: '#fff',
     border: 'none',
     borderRadius: '0.5rem',
@@ -417,13 +493,13 @@ const styles = {
     transition: 'background-color 0.15s',
   },
   submitBtnDisabled: {
-    backgroundColor: '#4c1d95',
+    backgroundColor: '#78716c',
     opacity: 0.6,
     cursor: 'not-allowed',
   },
   footerNote: {
     fontSize: '0.75rem',
-    color: '#475569',
+    color: '#78716c',
     marginTop: '1.25rem',
     lineHeight: 1.5,
     textAlign: 'center',
@@ -437,7 +513,7 @@ const styles = {
   successTitle: {
     fontSize: '1.5rem',
     fontWeight: 700,
-    color: '#f1f5f9',
+    color: '#111827',
     textAlign: 'center',
     margin: '0 0 0.375rem 0',
   },
@@ -450,7 +526,7 @@ const styles = {
   },
   successBody: {
     fontSize: '0.875rem',
-    color: '#94a3b8',
+    color: '#57534e',
     textAlign: 'center',
     lineHeight: 1.6,
     margin: '0 0 1.5rem 0',
@@ -472,29 +548,29 @@ const styles = {
     marginBottom: '1rem',
   },
   code: {
-    backgroundColor: '#0f172a',
-    border: '1px solid #334155',
+    backgroundColor: '#f5f5f4',
+    border: '1px solid #d6d3d1',
     borderRadius: '0.25rem',
     padding: '0.1rem 0.4rem',
     fontSize: '0.8125rem',
     fontFamily: 'monospace',
-    color: '#c4b5fd',
+    color: '#111827',
   },
   // How to get started section
   howToCard: {
-    backgroundColor: '#1e293b',
-    border: '1px solid #334155',
+    backgroundColor: '#ffffff',
+    border: '1px solid #d6d3d1',
     borderRadius: '1rem',
     padding: '2rem',
     width: '100%',
-    maxWidth: '420px',
+    maxWidth: '1040px',
     marginTop: '1.25rem',
-    boxShadow: '0 25px 50px -12px rgba(0,0,0,0.5)',
+    boxShadow: '0 24px 60px rgba(17,24,39,0.08)',
   },
   howToTitle: {
     fontSize: '1rem',
     fontWeight: 700,
-    color: '#f1f5f9',
+    color: '#111827',
     margin: '0 0 1.5rem 0',
   },
   howToStep: {
@@ -508,8 +584,8 @@ const styles = {
     width: 24,
     height: 24,
     borderRadius: '50%',
-    backgroundColor: '#312e81',
-    color: '#c4b5fd',
+    backgroundColor: '#f5f5f4',
+    color: '#111827',
     fontSize: '0.75rem',
     fontWeight: 700,
     display: 'flex',
@@ -525,7 +601,7 @@ const styles = {
   },
   howToStepBody: {
     fontSize: '0.8125rem',
-    color: '#94a3b8',
+    color: '#57534e',
     margin: '0 0 0.5rem 0',
     lineHeight: 1.6,
   },
@@ -535,8 +611,8 @@ const styles = {
   },
   mcpLink: {
     display: 'inline-block',
-    backgroundColor: '#312e81',
-    color: '#c4b5fd',
+    backgroundColor: '#f5f5f4',
+    color: '#111827',
     borderRadius: '0.375rem',
     padding: '0.375rem 0.75rem',
     fontSize: '0.8125rem',
@@ -546,13 +622,13 @@ const styles = {
   },
   codeBlock: {
     display: 'inline-block',
-    backgroundColor: '#0f172a',
-    border: '1px solid #334155',
+    backgroundColor: '#f5f5f4',
+    border: '1px solid #d6d3d1',
     borderRadius: '0.375rem',
     padding: '0.375rem 0.75rem',
     fontSize: '0.8125rem',
     fontFamily: 'monospace',
-    color: '#c4b5fd',
+    color: '#111827',
     margin: '0.25rem 0 0.5rem 0',
   },
   examplePrompts: {
@@ -562,20 +638,20 @@ const styles = {
     marginTop: '0.375rem',
   },
   prompt: {
-    backgroundColor: '#0f172a',
-    border: '1px solid #1e3a5f',
+    backgroundColor: '#f5f5f4',
+    border: '1px solid #d6d3d1',
     borderRadius: '0.375rem',
     padding: '0.375rem 0.75rem',
     fontSize: '0.8rem',
     fontFamily: 'monospace',
-    color: '#7dd3fc',
+    color: '#111827',
   },
   howToFooter: {
     fontSize: '0.75rem',
-    color: '#475569',
+    color: '#78716c',
     marginTop: '1rem',
     lineHeight: 1.5,
-    borderTop: '1px solid #1e293b',
+    borderTop: '1px solid #e7e5e4',
     paddingTop: '1rem',
   },
 };
