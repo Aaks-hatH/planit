@@ -1,0 +1,76 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# PlanIT — Gitleaks configuration
+# Drop at: .gitleaks.toml
+# ─────────────────────────────────────────────────────────────────────────────
+#
+# Gitleaks scans every commit in the PR for secrets and credentials.
+# This file lets you:
+#   1. Add custom patterns specific to PlanIT's stack.
+#   2. Allowlist known false positives (e.g. test keys in unit tests).
+#
+# HOW TO ADD A FALSE POSITIVE ALLOWLIST
+# If Gitleaks flags something that is NOT a real secret (e.g. a test value
+# in a unit test file, or a placeholder in documentation), add an allow rule:
+#
+#   [[rules.allowlist]]
+#   description = "Explain why this is safe"
+#   regexes = ["the-specific-value-that-was-flagged"]
+#   paths = ["tests/fixtures/example.js"]
+#
+# NEVER use this to suppress a real credential. Only false positives.
+# ─────────────────────────────────────────────────────────────────────────────
+
+title = "PlanIT Secret Scanner"
+
+[extend]
+# Use the official Gitleaks ruleset as a base — covers 100+ secret types
+# including AWS, GitHub tokens, generic API keys, etc.
+useDefault = true
+
+# ── PlanIT-specific custom rules ──────────────────────────────────────────────
+
+[[rules]]
+id = "planit-license-key"
+description = "PlanIT license key (64-char hex)"
+regex = '''PLANIT_LICENSE_KEY\s*=\s*[0-9a-f]{64}'''
+tags = ["planit", "license"]
+
+[[rules]]
+id = "planit-integrity-proof"
+description = "PlanIT integrity proof values"
+regex = '''PLANIT_INTEGRITY_PROOF_[123]\s*=\s*[0-9a-f]{64}'''
+tags = ["planit", "license"]
+
+[[rules]]
+id = "planit-mesh-secret"
+description = "PlanIT mesh secret in code"
+regex = '''MESH_SECRET\s*=\s*[^\s"']{8,}'''
+tags = ["planit", "auth"]
+
+[[rules]]
+id = "planit-wl-license"
+description = "White-label license secret"
+regex = '''WL_LICENSE_SECRET\s*=\s*[^\s"']{8,}'''
+tags = ["planit", "license"]
+
+# ── Global allowlist ──────────────────────────────────────────────────────────
+
+[allowlist]
+description = "Global allowlist for PlanIT false positives"
+
+# Allow .env.example — it has placeholder values like "YOUR_KEY_HERE", not real keys
+paths = [
+  '''.env\.example''',
+  '''CONTRIBUTING\.md''',
+  '''\.github/pull_request_template\.md''',
+]
+
+# Allow obvious placeholder strings that aren't real secrets
+regexes = [
+  '''YOUR_[A-Z_]+_HERE''',
+  '''sk_test_YOUR''',
+  '''dev_[a-z_]+_key''',
+  '''dev_[a-z_]+_secret''',
+  '''change_this_for_local_only''',
+  '''replace_with_32_char''',
+]
