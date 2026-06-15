@@ -90,23 +90,23 @@ function buildMcpServer(sessionId) {
 app.get('/sse', async (req, res) => {
   const sessionId = createSession();
 
-  // SSE headers
-  res.setHeader('Content-Type', 'text/event-stream');
-  res.setHeader('Cache-Control', 'no-cache');
-  res.setHeader('Connection', 'keep-alive');
+  // X-Accel-Buffering must be set before SSEServerTransport writes its own
+  // headers — but Content-Type / Cache-Control / Connection are set by the
+  // SDK itself. Setting them here too causes ERR_HTTP_HEADERS_SENT.
   res.setHeader('X-Accel-Buffering', 'no'); // Nginx / Render proxy
-
-  // Send session ID to client as first SSE event
-  res.write(`data: ${JSON.stringify({ type: 'session', sessionId })}\n\n`);
-
-  // Send system prompt
-  res.write(
-    `data: ${JSON.stringify({ type: 'system', content: PLANIT_SYSTEM_PROMPT })}\n\n`
-  );
 
   const mcpServer = buildMcpServer(sessionId);
   const transport = new SSEServerTransport('/messages', res);
+
+  // transport.start() (called inside mcpServer.connect) writes the SSE headers
+  // and opens the stream. We can queue our own events only AFTER that.
   await mcpServer.connect(transport);
+
+  // Send session ID and system prompt as the first two SSE events
+  res.write(`data: ${JSON.stringify({ type: 'session', sessionId })}\n\n`);
+  res.write(
+    `data: ${JSON.stringify({ type: 'system', content: PLANIT_SYSTEM_PROMPT })}\n\n`
+  );
 
   sessions.set(sessionId, { server: mcpServer, transport });
 
