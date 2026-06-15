@@ -212,13 +212,18 @@ export default function ClaudeConnect() {
               or visit the link below to install the PlanIt tools into Claude:
             </p>
             <a
-              href="https://claude.ai/add-mcp?url=https://mcp.planitapp.onrender.com"
+              href="https://claude.ai/customize/connectors?modal=add-custom-connector&mcpName=PlanIt&mcpServerUrl=https://planit-mcp.onrender.com/mcp"
               target="_blank"
               rel="noopener noreferrer"
               style={styles.mcpLink}
             >
               Add PlanIt to Claude →
             </a>
+            <p style={{ ...styles.howToStepBody, marginTop: '0.5rem' }}>
+              If that link opens an empty "Add custom connector" form instead of
+              pre-filling, just paste this URL into the <strong style={{ color: '#c4b5fd' }}>Remote MCP server URL</strong>{' '}
+              field: <span style={styles.code}>https://planit-mcp.onrender.com/mcp</span>
+            </p>
           </div>
         </div>
 
