@@ -1656,6 +1656,12 @@ export default function EventSpace() {
                   >
                     Setup help
                   </a>
+                  <a
+                    href="/mcp-docs"
+                    className="hidden sm:inline-flex items-center justify-center gap-1.5 rounded-xl border border-neutral-200 bg-white px-3.5 py-2 text-xs font-black text-neutral-800 transition-colors hover:bg-neutral-50"
+                  >
+                    Docs
+                  </a>
                   <button
                     onClick={() => { try { localStorage.setItem('planit_claude_banner_dismissed', '1'); } catch {} setClaudeBannerDismissed(true); }}
                     className="w-9 h-9 rounded-xl border border-neutral-200 bg-white flex items-center justify-center text-neutral-500 transition-colors hover:bg-neutral-50 hover:text-neutral-900"
