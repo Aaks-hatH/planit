@@ -3119,6 +3119,11 @@ export default function Home() {
                       style={{ border: '1px solid rgba(255,255,255,0.1)' }}>
                       How it works
                     </a>
+                    <a href="/mcp-docs"
+                      className="inline-flex items-center gap-2 px-5 py-3 rounded-xl text-neutral-300 text-sm transition-colors hover:text-white"
+                      style={{ border: '1px solid rgba(255,255,255,0.1)' }}>
+                      View full docs
+                    </a>
                   </div>
                 </Reveal>
               </div>
