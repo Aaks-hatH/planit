@@ -83,7 +83,23 @@ function FAQ({ items }) {
           </button>
           {open === i && (
             <div className="px-4 pb-4 text-sm text-neutral-600 leading-relaxed border-t border-neutral-100 pt-3">
-              {item.a}
+              <p>{item.a}</p>
+              {item.links && item.links.length > 0 && (
+                <div className="flex flex-wrap gap-x-4 gap-y-1.5 mt-2.5">
+                  {item.links.map((l, j) => (
+                    <a
+                      key={j}
+                      href={l.href}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 text-xs font-bold text-neutral-900 underline underline-offset-2 hover:text-neutral-600 transition-colors"
+                    >
+                      {l.label}
+                      <ExternalLink className="w-3 h-3" />
+                    </a>
+                  ))}
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -591,10 +607,17 @@ const FAQS = [
   {
     q: 'What is MCP?',
     a: 'MCP stands for Model Context Protocol — an open standard that lets AI assistants like Claude connect to external tools and data sources. PlanIt runs an MCP server at https://planit-mcp.onrender.com/mcp that Claude connects to, giving it the ability to read and write data in your event.',
+    links: [
+      { label: 'Anthropic: What is MCP?', href: 'https://claude.com/blog/what-is-model-context-protocol' },
+    ],
   },
   {
     q: 'Why is the connector not in the official Claude connector directory?',
     a: 'PlanIt is working toward official listing. In the meantime you can install it as a custom connector using the MCP server URL. Custom connectors work identically to listed ones — you just install them manually rather than from the directory.',
+    links: [
+      { label: 'Anthropic: Custom connectors guide', href: 'https://support.claude.com/en/articles/11175166-get-started-with-custom-connectors-using-remote-mcp' },
+      { label: 'Anthropic: Connectors Directory submission', href: 'https://claude.com/docs/connectors/building/submission' },
+    ],
   },
   {
     q: 'What happens if the MCP server is down?',
@@ -677,19 +700,22 @@ export default function ClaudeDocs() {
         </div>
 
         {/* ── Quick links ── */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-12">
+        <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-12">
           {[
             { label: 'Getting started', href: '#setup' },
             { label: 'All tools', href: '#tools' },
             { label: 'Authentication', href: '#auth' },
             { label: 'FAQ', href: '#faq' },
+            { label: 'Anthropic docs', href: 'https://support.claude.com/en/articles/11175166-get-started-with-custom-connectors-using-remote-mcp', external: true },
           ].map(link => (
             <a
               key={link.href}
               href={link.href}
-              className="flex items-center justify-center px-4 py-3 bg-white border border-neutral-200 rounded-xl text-sm font-semibold text-neutral-700 hover:border-neutral-900 hover:text-neutral-900 transition-all text-center"
+              {...(link.external ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
+              className="flex items-center justify-center gap-1.5 px-4 py-3 bg-white border border-neutral-200 rounded-xl text-sm font-semibold text-neutral-700 hover:border-neutral-900 hover:text-neutral-900 transition-all text-center"
             >
               {link.label}
+              {link.external && <ExternalLink className="w-3 h-3 opacity-50" />}
             </a>
           ))}
         </div>
@@ -995,6 +1021,14 @@ export default function ClaudeDocs() {
               className="flex items-center justify-center gap-2 px-5 py-2.5 bg-white/10 text-white text-sm font-bold rounded-xl hover:bg-white/20 transition-colors"
             >
               Help Center
+            </a>
+            <a
+              href="https://support.claude.com/en/articles/11175166-get-started-with-custom-connectors-using-remote-mcp"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center justify-center gap-2 px-5 py-2.5 bg-white/10 text-white text-sm font-bold rounded-xl hover:bg-white/20 transition-colors"
+            >
+              Anthropic Docs <ExternalLink className="w-3.5 h-3.5 opacity-70" />
             </a>
             <a
               href="mailto:planit.userhelp@gmail.com"
