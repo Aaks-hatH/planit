@@ -3700,11 +3700,23 @@ const CLAUDE_ARTICLE = {
       text: 'PlanIt integrates with Claude AI — Anthropic\'s AI assistant — so you can manage your entire event by having a conversation. Add guests, check attendance, send announcements, and more, all without opening the dashboard.',
     },
     {
+      type: 'links',
+      items: [
+        { label: 'Full PlanIt × Claude documentation', href: '/mcp-docs', external: false },
+        { label: 'Anthropic: Custom connectors guide', href: 'https://support.claude.com/en/articles/11175166-get-started-with-custom-connectors-using-remote-mcp' },
+        { label: 'Anthropic: What is MCP?', href: 'https://claude.com/blog/what-is-model-context-protocol' },
+      ],
+    },
+    {
       type: 'steps',
       items: [
         {
           title: 'Step 1 — Add PlanIt to Claude',
-          body: 'Open Claude and add PlanIt as a custom connector. The fastest route is the pre-filled setup link below:\n\nhttps://claude.ai/customize/connectors?modal=add-custom-connector&mcpName=PlanIt&mcpServerUrl=https://planit-mcp.onrender.com/mcp\n\nIf Claude opens a blank connector form, enter these values manually:\nConnector name: PlanIt\nRemote MCP server URL: https://planit-mcp.onrender.com/mcp\n\nSave the connector. This installs the PlanIt tools in Claude; it does not connect a specific event yet.',
+          body: 'Open Claude and add PlanIt as a custom connector. The fastest route is the pre-filled setup link below.\n\nIf Claude opens a blank connector form, enter these values manually:\nConnector name: PlanIt\nRemote MCP server URL: https://planit-mcp.onrender.com/mcp\n\nSave the connector. This installs the PlanIt tools in Claude; it does not connect a specific event yet.',
+          links: [
+            { label: 'Open pre-filled connector form', href: 'https://claude.ai/customize/connectors?modal=add-custom-connector&mcpName=PlanIt&mcpServerUrl=https://planit-mcp.onrender.com/mcp' },
+            { label: 'Full setup guide on /mcp-docs', href: '/mcp-docs', external: false },
+          ],
         },
         {
           title: 'Step 2 — Tell Claude to connect your event',
@@ -3791,10 +3803,16 @@ const CLAUDE_ARTICLE = {
         {
           q: 'How do I become an official Claude connector?',
           a: 'PlanIt currently works as a custom Claude connector using its remote MCP server URL. To become an official listed Claude connector, you need to follow Anthropic\'s connector / MCP publisher requirements: operate a reliable remote MCP server, document the tools and privacy/security model, provide support and branding information, and submit through Anthropic\'s partner or developer channels when they accept connector listings. Until Anthropic approves a public listing, users can still install PlanIt manually as a custom connector with https://planit-mcp.onrender.com/mcp.',
+          links: [
+            { label: 'Anthropic: Submitting to the Connectors Directory', href: 'https://claude.com/docs/connectors/building/submission' },
+          ],
         },
         {
           q: 'What is MCP?',
           a: 'MCP stands for Model Context Protocol — it\'s an open standard that lets AI assistants like Claude connect to external tools and data sources. PlanIt runs an MCP server that Claude connects to, which is how Claude gains the ability to take actions in your event.',
+          links: [
+            { label: 'Anthropic: What is MCP?', href: 'https://claude.com/blog/what-is-model-context-protocol' },
+          ],
         },
         {
           q: 'The connect page says "Invalid Link" — what do I do?',
@@ -3810,6 +3828,19 @@ const POPULAR = ['gs-create', 'claude-integration', 'err-service-crash', 'err-lo
 
 /* ─── SUB-COMPONENTS ────────────────────────────────────────────────────────── */
 
+function ResourceLink({ label, href, external = true }) {
+  return (
+    <a
+      href={href}
+      {...(external ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
+      className="inline-flex items-center gap-1.5 text-xs font-bold text-neutral-900 underline underline-offset-2 hover:text-neutral-600 transition-colors"
+    >
+      {label}
+      {external && <ExternalLink className="w-3 h-3" />}
+    </a>
+  );
+}
+
 function StepBlock({ items }) {
   return (
     <ol className="space-y-4 mt-4">
@@ -3820,11 +3851,34 @@ function StepBlock({ items }) {
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-sm font-bold text-neutral-900 mb-1">{item.title}</p>
-            <p className="text-sm text-neutral-600 leading-relaxed">{item.body}</p>
+            <p className="text-sm text-neutral-600 leading-relaxed whitespace-pre-line">{item.body}</p>
+            {item.links && item.links.length > 0 && (
+              <div className="flex flex-wrap gap-x-4 gap-y-1.5 mt-2">
+                {item.links.map((l, j) => <ResourceLink key={j} {...l} />)}
+              </div>
+            )}
           </div>
         </li>
       ))}
     </ol>
+  );
+}
+
+function LinksBlock({ items }) {
+  return (
+    <div className="flex flex-wrap gap-2 mt-4">
+      {items.map((l, i) => (
+        <a
+          key={i}
+          href={l.href}
+          {...(l.external !== false ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
+          className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-neutral-200 bg-white text-xs font-bold text-neutral-700 hover:border-neutral-900 hover:text-neutral-900 transition-colors"
+        >
+          {l.label}
+          {l.external !== false && <ExternalLink className="w-3 h-3 opacity-60" />}
+        </a>
+      ))}
+    </div>
   );
 }
 
@@ -3888,7 +3942,12 @@ function FAQBlock({ items }) {
           </button>
           {open === i && (
             <div className="px-4 pb-4 text-sm text-neutral-600 leading-relaxed border-t border-neutral-100 pt-3">
-              {item.a}
+              <p>{item.a}</p>
+              {item.links && item.links.length > 0 && (
+                <div className="flex flex-wrap gap-x-4 gap-y-1.5 mt-2.5">
+                  {item.links.map((l, j) => <ResourceLink key={j} {...l} />)}
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -3906,6 +3965,7 @@ function ArticleContent({ article }) {
         if (block.type === 'callout') return <CalloutBlock key={i} variant={block.variant} text={block.text} />;
         if (block.type === 'compare') return <CompareBlock key={i} items={block.items} />;
         if (block.type === 'faq')     return <FAQBlock key={i} items={block.items} />;
+        if (block.type === 'links')   return <LinksBlock key={i} items={block.items} />;
         return null;
       })}
     </div>
