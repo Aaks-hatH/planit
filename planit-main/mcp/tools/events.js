@@ -44,9 +44,10 @@ const tools = [
   {
     name: 'create_event',
     description:
-      'Create a new PlanIt event. Have a natural conversation to gather the fields — ask for name and date first, ' +
-      'then time and timezone, then passwords. After creating, tell the user their Event ID and immediately call ' +
-      'generate_connect_link so they can authenticate this session to the new event.',
+      'Create a new PlanIt event — works with no prior session, since there\'s nothing to connect to yet. Have a natural ' +
+      'conversation to gather the fields: ask for name and date first, then time and timezone, then passwords. On success ' +
+      'this session is automatically authenticated as the new event\'s organiser (check the returned "authenticated" flag) — ' +
+      'no separate generate_connect_link call needed. Only fall back to generate_connect_link if "authenticated" comes back false.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -116,8 +117,8 @@ const tools = [
   {
     name: 'get_event_status',
     description:
-      'Get live real-time status of the event: guests checked in, total guests invited, tables occupied, ' +
-      'active staff count, and time until the event starts. Use this when the organiser asks how things are going.',
+      'Live event status: guests checked in, total invited, tables occupied, active staff, time until start. ' +
+      'For a full "how\'s it going" summary, pair this with get_checkin_stats rather than using either alone.',
     inputSchema: {
       type: 'object',
       properties: {},
