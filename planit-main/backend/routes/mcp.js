@@ -75,6 +75,42 @@ async function resolveSession(mcpSessionId) {
   }
 }
 
+/**
+ * Sign a scoped MCP session JWT for `event` and store it in Redis under
+ * `mcpSessionId`, exactly as connect/verify does. Shared so create_event
+ * can self-authenticate a brand-new event without a separate connect step.
+ * Returns true on success, false if MCP_JWT_SECRET is missing (caller
+ * should treat that as a non-fatal "session wasn't minted" case — the
+ * event itself is still created either way).
+ */
+async function mintMcpSession(mcpSessionId, event) {
+  const mcpJwtSecret = process.env.MCP_JWT_SECRET;
+  if (!mcpJwtSecret) return false;
+
+  await redis.del(`mcp:session:${mcpSessionId}`);
+
+  let expUnix;
+  if (event.date) {
+    expUnix = Math.floor(event.date.getTime() / 1000) + 7 * 24 * 60 * 60;
+  } else {
+    expUnix = Math.floor(Date.now() / 1000) + 30 * 24 * 60 * 60;
+  }
+  const minExp = Math.floor(Date.now() / 1000) + 60 * 60; // at least 1h from now
+  if (expUnix < minExp) expUnix = minExp;
+
+  const payload = {
+    eventId: event._id.toString(),
+    subdomain: event.subdomain,
+    role: 'mcp-organizer',
+    sessionId: mcpSessionId,
+  };
+
+  const signedJwt = jwt.sign(payload, mcpJwtSecret, { expiresIn: expUnix - Math.floor(Date.now() / 1000) });
+  const ttlSeconds = expUnix - Math.floor(Date.now() / 1000);
+  await redis.set(`mcp:session:${mcpSessionId}`, signedJwt, ttlSeconds);
+  return true;
+}
+
 // ─── Rate limiters ────────────────────────────────────────────────────────────
 
 // 10 init requests per IP per hour
@@ -128,6 +164,19 @@ async function actionRateLimiter(req, res, next) {
   }
   next();
 }
+
+// 10 event creations per IP per hour. create_event is reachable without a
+// prior authenticated session (see /action below), so it needs its own
+// IP-scoped limiter on top of actionRateLimiter's per-session one — a
+// caller can otherwise mint a fresh session ID per request and bypass
+// the per-session limit entirely.
+const createEventLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  handler: (_req, res) => res.status(429).json({ error: 'Too many events created from this network. Please try again later.' }),
+});
 
 // ─── POST /mcp/connect/init ───────────────────────────────────────────────────
 
@@ -212,40 +261,13 @@ router.post(
     }
     if (!passwordMatch) return res.status(400).json(GENERIC_ERROR);
 
-    // Step 6: Invalidate any existing MCP session for this session ID
-    await redis.del(`mcp:session:${mcpSessionId}`);
-
-    // Step 7: Sign scoped JWT — exp = event.date + 7 days (or 30 days if no date set)
-    const mcpJwtSecret = process.env.MCP_JWT_SECRET;
-    if (!mcpJwtSecret) return res.status(503).json({ error: 'Server configuration error.' });
-
-    let expUnix;
-    if (event.date) {
-      expUnix = Math.floor(event.date.getTime() / 1000) + 7 * 24 * 60 * 60;
-    } else {
-      expUnix = Math.floor(Date.now() / 1000) + 30 * 24 * 60 * 60;
-    }
-    // Don't let the token expire in the past
-    const minExp = Math.floor(Date.now() / 1000) + 60 * 60; // at least 1h from now
-    if (expUnix < minExp) expUnix = minExp;
-
-    const payload = {
-      eventId:  event._id.toString(),
-      subdomain: event.subdomain,
-      role:     'mcp-organizer',
-      sessionId: mcpSessionId,
-    };
-
-    let signedJwt;
+    // Step 6-8: mint and store the scoped session JWT (shared with create_event)
+    if (!process.env.MCP_JWT_SECRET) return res.status(503).json({ error: 'Server configuration error.' });
     try {
-      signedJwt = jwt.sign(payload, mcpJwtSecret, { expiresIn: expUnix - Math.floor(Date.now() / 1000) });
+      await mintMcpSession(mcpSessionId, event);
     } catch {
       return res.status(500).json({ error: 'Failed to issue session token.' });
     }
-
-    // Step 8: Store JWT in Redis with same TTL
-    const ttlSeconds = expUnix - Math.floor(Date.now() / 1000);
-    await redis.set(`mcp:session:${mcpSessionId}`, signedJwt, ttlSeconds);
 
     return res.json({ success: true, eventName: event.title });
   }
@@ -277,16 +299,24 @@ router.get('/session/check', verifySecret, async (req, res) => {
 // ─── POST /mcp/action ─────────────────────────────────────────────────────────
 
 router.post('/action', verifySecret, actionRateLimiter, async (req, res) => {
+  const { tool, params = {} } = req.body || {};
+  if (typeof tool !== 'string' || !tool) {
+    return res.status(400).json({ error: 'Tool name is required.' });
+  }
+
+  // create_event is the one tool that legitimately runs with no prior
+  // session — there's no event to be "connected" to yet. It gets its own
+  // IP rate limit (see createEventLimiter) and self-authenticates the
+  // session at the end instead of requiring one up front.
+  if (tool === 'create_event') {
+    return createEventLimiter(req, res, () => handleCreateEvent(req, res, params));
+  }
+
   const sessionId = sanitiseSessionId(req.headers['x-mcp-session-id'] || '');
   if (!sessionId) return res.status(401).json({ error: 'No session ID provided.' });
 
   const payload = await resolveSession(sessionId);
   if (!payload) return res.status(401).json({ error: 'Session not authenticated. Please connect your PlanIt event first.' });
-
-  const { tool, params = {} } = req.body;
-  if (typeof tool !== 'string' || !tool) {
-    return res.status(400).json({ error: 'Tool name is required.' });
-  }
 
   // Load the event once — most handlers need it
   let event;
@@ -316,72 +346,106 @@ function userError(message) {
   throw err;
 }
 
+/**
+ * Handles create_event specifically. Unlike every other tool, this one
+ * runs with no authenticated session — it creates one. After the event
+ * and organizer participant are saved, it mints a session JWT for the MCP
+ * session ID making the request (the transport-level ID, always present
+ * even pre-auth) so the very next tool call in the same conversation is
+ * already authenticated as that event's organizer. No separate
+ * connect-link round trip required.
+ */
+async function handleCreateEvent(req, res, params) {
+  const sessionId = sanitiseSessionId(req.headers['x-mcp-session-id'] || '');
+  // sessionId may legitimately be absent (e.g. a bare HTTP client testing
+  // this endpoint outside the MCP transport) — event creation still
+  // succeeds, it just won't auto-authenticate anything afterward.
+
+  try {
+    const { name, date, time, timezone, organizerName, organizerEmail, organizerPassword,
+            eventPassword, description, maxGuests, location } = params;
+
+    if (!name || !date || !time || !timezone || !organizerName || !organizerEmail || !organizerPassword) {
+      userError('Missing required fields: name, date, time, timezone, organizerName, organizerEmail, organizerPassword.');
+    }
+    if (organizerPassword.length < 6) userError('Organiser password must be at least 6 characters.');
+
+    const rawSubdomain = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40);
+    const suffix = crypto.randomBytes(3).toString('hex');
+    const subdomain = `${rawSubdomain}-${suffix}`;
+
+    const existing = await Event.findOne({ subdomain });
+    if (existing) userError('Could not generate a unique event link. Please try again.');
+
+    const dateTime = new Date(`${date}T${time}:00`);
+
+    let hashedEventPassword = null;
+    let isPasswordProtected = false;
+    if (eventPassword) {
+      hashedEventPassword = await bcrypt.hash(eventPassword, 10);
+      isPasswordProtected = true;
+    }
+
+    const newEvent = new Event({
+      subdomain,
+      title: name,
+      description: description || '',
+      date: dateTime,
+      timezone,
+      location: location || '',
+      organizerName,
+      organizerEmail,
+      password: hashedEventPassword,
+      isPasswordProtected,
+      maxParticipants: maxGuests || 100,
+      participants: [{ username: organizerName, role: 'organizer' }],
+    });
+
+    await newEvent.save();
+
+    const hashedOrgPassword = await bcrypt.hash(organizerPassword, 10);
+    await EventParticipant.create({
+      eventId: newEvent._id,
+      username: organizerName,
+      password: hashedOrgPassword,
+      hasPassword: true,
+      role: 'organizer',
+    });
+
+    // Self-authenticate this MCP session as the new event's organizer,
+    // skipping the separate connect-link step entirely.
+    let sessionMinted = false;
+    if (sessionId) {
+      try {
+        sessionMinted = await mintMcpSession(sessionId, newEvent);
+      } catch {
+        sessionMinted = false; // non-fatal — event is still created either way
+      }
+    }
+
+    return res.json({
+      success: true,
+      eventId: subdomain,
+      eventName: name,
+      eventUrl: `https://planitapp.onrender.com/e/${subdomain}`,
+      authenticated: sessionMinted,
+      message: sessionMinted
+        ? `Event "${name}" created and connected — you're all set to manage it from here.`
+        : `Event "${name}" created successfully. Event ID: ${subdomain}`,
+    });
+  } catch (err) {
+    const msg = err.isUserFacing ? err.message : 'An error occurred. Please try again.';
+    return res.status(err.isUserFacing ? 400 : 500).json({ error: msg });
+  }
+}
+
 async function routeTool(tool, params, event) {
   switch (tool) {
 
     // ── Events ────────────────────────────────────────────────────────────────
-
-    case 'create_event': {
-      const { name, date, time, timezone, organizerName, organizerEmail, organizerPassword,
-              eventPassword, description, maxGuests, location } = params;
-
-      if (!name || !date || !time || !timezone || !organizerName || !organizerEmail || !organizerPassword) {
-        userError('Missing required fields: name, date, time, timezone, organizerName, organizerEmail, organizerPassword.');
-      }
-      if (organizerPassword.length < 6) userError('Organiser password must be at least 6 characters.');
-
-      // Generate subdomain from event name
-      const rawSubdomain = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40);
-      const suffix = crypto.randomBytes(3).toString('hex');
-      const subdomain = `${rawSubdomain}-${suffix}`;
-
-      const existing = await Event.findOne({ subdomain });
-      if (existing) userError('Could not generate a unique event link. Please try again.');
-
-      const dateTime = new Date(`${date}T${time}:00`);
-
-      let hashedEventPassword = null;
-      let isPasswordProtected = false;
-      if (eventPassword) {
-        hashedEventPassword = await bcrypt.hash(eventPassword, 10);
-        isPasswordProtected = true;
-      }
-
-      const newEvent = new Event({
-        subdomain,
-        title: name,
-        description: description || '',
-        date: dateTime,
-        timezone,
-        location: location || '',
-        organizerName,
-        organizerEmail,
-        password: hashedEventPassword,
-        isPasswordProtected,
-        maxParticipants: maxGuests || 100,
-        participants: [{ username: organizerName, role: 'organizer' }],
-      });
-
-      await newEvent.save();
-
-      // Create organizer participant with hashed password
-      const hashedOrgPassword = await bcrypt.hash(organizerPassword, 10);
-      await EventParticipant.create({
-        eventId: newEvent._id,
-        username: organizerName,
-        password: hashedOrgPassword,
-        hasPassword: true,
-        role: 'organizer',
-      });
-
-      return {
-        success: true,
-        eventId: subdomain,
-        eventName: name,
-        eventUrl: `https://planitapp.onrender.com/e/${subdomain}`,
-        message: `Event "${name}" created successfully. Event ID: ${subdomain}`,
-      };
-    }
+    // Note: create_event is handled by handleCreateEvent() before routeTool
+    // is ever called — it runs pre-auth and needs different inputs (no
+    // existing `event`), so it can't live in this switch.
 
     case 'get_event': {
       const inviteCount = await Invite.countDocuments({ eventId: event._id });
@@ -484,7 +548,7 @@ async function routeTool(tool, params, event) {
         guestId: invite._id.toString(),
         name: invite.guestName,
         inviteCode,
-        inviteUrl: `https://planitapp.onrender.com/e/${event.subdomain}?invite=${inviteCode}`,
+        inviteUrl: `https://planitapp.onrender.com/invite/${inviteCode}`,
       };
     }
 
