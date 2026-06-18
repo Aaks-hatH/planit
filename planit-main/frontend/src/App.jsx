@@ -417,6 +417,7 @@ const PAGE_TITLES = {
   '/dashboard':                'Your White Label Dashboard · PlanIt',
   '/discover':                 'Discover Events Near You · PlanIt',
   '/help':                     'Help Center and Frequently Asked Questions · PlanIt',
+  '/mcp-docs':                 'Mcp Integration Guide and Help Center · PlanIt',
   '/license':                  'Platform License Agreement · PlanIt',
   '/credits':                  'Credits & Open Source Acknowledgements · PlanIt',
   '/privacy':                  'Privacy Policy · PlanIt',
