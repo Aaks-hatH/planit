@@ -1473,6 +1473,8 @@ export default function EnterpriseCheckin() {
   const [isOffline, setIsOffline]     = useState(!navigator.onLine);
   const [pendingSync, setPendingSync] = useState(0);
   const [cacheReady, setCacheReady]   = useState(false);
+  const [cacheInfo, setCacheInfo]     = useState(null);
+  const [syncError, setSyncError]     = useState(null);
 
   // ── Seating map state ────────────────────────────────────────────────────
   const [seatingData,    setSeatingData]    = useState(null); // { seatingMap, guestsByTable }
@@ -1547,12 +1549,15 @@ export default function EnterpriseCheckin() {
     }
 
     // ── Offline cache: load from DB immediately, then refresh from server ──
+    const refreshCacheInfo = () => offlineCheckin.cacheInfo(eventId).then(setCacheInfo);
     offlineCheckin.loadCacheFromDB(eventId).then(cached => {
       if (cached) setCacheReady(true);
+      refreshCacheInfo();
     });
     if (offlineCheckin.isOnline()) {
       offlineCheckin.refreshCache(eventId, () => eventAPI.getCheckinCache(eventId)).then(ok => {
         if (ok) setCacheReady(true);
+        refreshCacheInfo();
       });
     }
 
@@ -1560,15 +1565,15 @@ export default function EnterpriseCheckin() {
     offlineCheckin.pendingCount(eventId).then(n => setPendingSync(n));
 
     // ── Connectivity listeners ─────────────────────────────────────────────
-    function handleOnline() {
-      setIsOffline(false);
-      // Refresh cache first, then flush queue
-      offlineCheckin.refreshCache(eventId, () => eventAPI.getCheckinCache(eventId)).then(ok => {
-        if (ok) setCacheReady(true);
-      });
-      offlineCheckin.flushQueue(eventId, (inviteCode, actualAttendees) =>
-        eventAPI.checkIn(eventId, inviteCode, { actualAttendees, pinVerified: false })
-      ).then(results => {
+    async function syncOfflineWork() {
+      try {
+        setSyncError(null);
+        const cacheOk = await offlineCheckin.refreshCache(eventId, () => eventAPI.getCheckinCache(eventId));
+        if (cacheOk) setCacheReady(true);
+        await refreshCacheInfo();
+        const results = await offlineCheckin.flushQueue(eventId, (inviteCode, actualAttendees) =>
+          eventAPI.checkIn(eventId, inviteCode, { actualAttendees, pinVerified: false })
+        );
         if (results.synced > 0) {
           loadInvites();
           loadStats();
@@ -1576,12 +1581,26 @@ export default function EnterpriseCheckin() {
         if (results.conflicts.length > 0) {
           addConflicts(results.conflicts);
         }
+        if (results.failed > 0) {
+          setSyncError(`${results.failed} queued check-in${results.failed !== 1 ? 's' : ''} still need another sync attempt.`);
+        }
         offlineCheckin.pendingCount(eventId).then(n => setPendingSync(n));
-      });
+      } catch (err) {
+        setSyncError('Offline sync could not finish. PlanIt will retry automatically.');
+      }
+    }
+
+    function handleOnline() {
+      setIsOffline(false);
+      syncOfflineWork();
     }
     function handleOffline() {
       setIsOffline(true);
     }
+
+    const syncTimer = setInterval(() => {
+      if (navigator.onLine) syncOfflineWork();
+    }, 30000);
 
     window.addEventListener('online',  handleOnline);
     window.addEventListener('offline', handleOffline);
@@ -1594,6 +1613,7 @@ export default function EnterpriseCheckin() {
         socket.off('seating_assignments_updated');
         socket.off('guest_table_updated');
       }
+      clearInterval(syncTimer);
       window.removeEventListener('online',  handleOnline);
       window.removeEventListener('offline', handleOffline);
     };
@@ -1836,9 +1856,10 @@ export default function EnterpriseCheckin() {
       }
       // Valid — optimistically admit offline
       hapticSuccess();
-      offlineCheckin.markCheckedInLocally(inviteCode, cached.groupSize, authState.username);
-      offlineCheckin.queueCheckin(eventId, inviteCode, cached.groupSize);
+      await offlineCheckin.markCheckedInLocally(inviteCode, cached.groupSize, authState.username, eventId);
+      await offlineCheckin.queueCheckin(eventId, inviteCode, cached.groupSize);
       offlineCheckin.pendingCount(eventId).then(n => setPendingSync(n));
+      offlineCheckin.cacheInfo(eventId).then(setCacheInfo);
       setCurrentGuest({
         id: inviteCode, inviteCode,
         guestName:  cached.name,
@@ -2636,13 +2657,27 @@ export default function EnterpriseCheckin() {
             </span>
           </div>
         )}
+        {isOffline && cacheInfo && (
+          <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-neutral-900 border border-neutral-800">
+            <Clock className="w-3.5 h-3.5 text-neutral-500" />
+            <span className="text-xs font-semibold text-neutral-400">
+              Cache: {cacheInfo.total} guests · {cacheInfo.builtAt ? new Date(cacheInfo.builtAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'saved'}
+            </span>
+          </div>
+        )}
         {!isOffline && pendingSync > 0 && (
           <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-blue-500/10 border border-blue-500/30">
             <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
             <span className="text-xs font-bold text-blue-400">Syncing {pendingSync} offline check-in{pendingSync !== 1 ? 's' : ''}…</span>
           </div>
         )}
-        {!isOffline && pendingSync === 0 && (
+        {syncError && (
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-red-500/10 border border-red-500/30">
+            <AlertTriangle className="w-3.5 h-3.5 text-red-400" />
+            <span className="text-xs font-bold text-red-400">{syncError}</span>
+          </div>
+        )}
+        {!isOffline && pendingSync === 0 && !syncError && (
           <p className="text-xs text-neutral-400 font-medium tracking-wide">
             Powered by <span className="font-black text-neutral-500">Planit</span>
           </p>

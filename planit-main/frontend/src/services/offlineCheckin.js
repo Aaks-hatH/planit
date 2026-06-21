@@ -33,9 +33,9 @@
  */
 
 const DB_NAME    = 'planit_checkin';
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 const STORE_CACHE = 'guest_cache';   // { key: eventId, snapshot: [...], builtAt }
-const STORE_QUEUE = 'checkin_queue'; // { id, eventId, inviteCode, actualAttendees, queuedAt }
+const STORE_QUEUE = 'checkin_queue'; // { id, eventId, inviteCode, actualAttendees, queuedAt, attempts, lastError }
 
 // ─── IndexedDB bootstrap ───────────────────────────────────────────────────
 
@@ -50,6 +50,12 @@ function openDB() {
       if (!db.objectStoreNames.contains(STORE_QUEUE)) {
         const qs = db.createObjectStore(STORE_QUEUE, { keyPath: 'id', autoIncrement: true });
         qs.createIndex('eventId', 'eventId', { unique: false });
+        qs.createIndex('dedupeKey', 'dedupeKey', { unique: false });
+      } else {
+        const qs = e.target.transaction.objectStore(STORE_QUEUE);
+        if (!qs.indexNames.contains('dedupeKey')) {
+          qs.createIndex('dedupeKey', 'dedupeKey', { unique: false });
+        }
       }
     };
     req.onsuccess  = () => resolve(req.result);
@@ -102,6 +108,31 @@ function dbClear(store) {
   }));
 }
 
+
+function normalizeInviteCode(inviteCode) {
+  return String(inviteCode || '').toUpperCase().trim();
+}
+
+async function updateCachedGuest(eventId, inviteCode, patch) {
+  const cached = await dbGet(STORE_CACHE, eventId);
+  if (!cached || !Array.isArray(cached.snapshot)) return false;
+  const key = normalizeInviteCode(inviteCode);
+  let changed = false;
+  const snapshot = cached.snapshot.map(guest => {
+    if (normalizeInviteCode(guest.code) !== key) return guest;
+    changed = true;
+    return { ...guest, ...patch };
+  });
+  if (!changed) return false;
+  await dbPut(STORE_CACHE, { ...cached, snapshot, lastLocalUpdate: new Date().toISOString() });
+  _buildMap(snapshot);
+  return true;
+}
+
+async function dbUpdateQueueItem(item) {
+  return dbPut(STORE_QUEUE, item);
+}
+
 // ─── In-memory map built from the snapshot for O(1) lookups ───────────────
 
 let _currentEventId = null;
@@ -110,7 +141,7 @@ let _guestMap = new Map(); // inviteCode → guest record (also tracks offline c
 function _buildMap(snapshot) {
   _guestMap = new Map();
   for (const guest of snapshot) {
-    _guestMap.set(guest.code.toUpperCase(), { ...guest });
+    _guestMap.set(normalizeInviteCode(guest.code), { ...guest });
   }
 }
 
@@ -201,7 +232,7 @@ const offlineCheckin = {
    */
   lookupGuest(inviteCode) {
     if (!inviteCode) return null;
-    return _guestMap.get(inviteCode.toUpperCase().trim()) ?? null;
+    return _guestMap.get(normalizeInviteCode(inviteCode)) ?? null;
   },
 
   /**
@@ -210,17 +241,20 @@ const offlineCheckin = {
    * Does NOT write to IndexedDB — the map is session-only.
    * The server remains the source of truth once the queue flushes.
    */
-  markCheckedInLocally(inviteCode, actualAttendees, staffUser) {
-    const key   = inviteCode.toUpperCase().trim();
+  async markCheckedInLocally(inviteCode, actualAttendees, staffUser, eventId = _currentEventId) {
+    const key   = normalizeInviteCode(inviteCode);
     const guest = _guestMap.get(key);
-    if (!guest) return;
-    _guestMap.set(key, {
-      ...guest,
+    if (!guest) return false;
+    const patch = {
       checkedIn:    true,
       checkedInAt:  new Date().toISOString(),
       checkedInBy:  staffUser || 'offline-staff',
       actualAttendees,
-    });
+      pendingOfflineSync: true,
+    };
+    _guestMap.set(key, { ...guest, ...patch });
+    if (eventId) await updateCachedGuest(eventId, key, patch);
+    return true;
   },
 
   /**
@@ -230,15 +264,31 @@ const offlineCheckin = {
    */
   async queueCheckin(eventId, inviteCode, actualAttendees) {
     try {
-      await dbPut(STORE_QUEUE, {
+      const normalizedCode = normalizeInviteCode(inviteCode);
+      const all = await dbGetAll(STORE_QUEUE);
+      const existing = all.find(item => item.eventId === eventId && item.inviteCode === normalizedCode);
+      if (existing) {
+        await dbPut(STORE_QUEUE, {
+          ...existing,
+          actualAttendees: actualAttendees ?? existing.actualAttendees ?? null,
+          updatedAt: new Date().toISOString(),
+        });
+        return existing.id;
+      }
+      const id = await dbPut(STORE_QUEUE, {
         eventId,
-        inviteCode: inviteCode.toUpperCase().trim(),
+        inviteCode: normalizedCode,
+        dedupeKey: `${eventId}:${normalizedCode}`,
         actualAttendees: actualAttendees ?? null,
         queuedAt: new Date().toISOString(),
+        attempts: 0,
+        lastError: null,
       });
-      console.log(`[offlineCheckin] Queued check-in: ${inviteCode}`);
+      console.log(`[offlineCheckin] Queued check-in: ${normalizedCode}`);
+      return id;
     } catch (err) {
       console.error('[offlineCheckin] queueCheckin failed:', err);
+      throw err;
     }
   },
 
@@ -277,6 +327,7 @@ const offlineCheckin = {
         try {
           await apiCallFn(item.inviteCode, item.actualAttendees);
           await dbDelete(STORE_QUEUE, item.id);
+          await updateCachedGuest(eventId, item.inviteCode, { pendingOfflineSync: false });
           results.synced++;
         } catch (err) {
           const status  = err?.response?.status;
@@ -307,6 +358,7 @@ const offlineCheckin = {
           } else {
             // Network / server error — keep in queue for next flush attempt
             results.failed++;
+            await dbUpdateQueueItem({ ...item, attempts: (item.attempts || 0) + 1, lastError: message, lastAttemptAt: new Date().toISOString() });
             console.warn(`[offlineCheckin] Flush failed for ${item.inviteCode} (status ${status}):`, message);
           }
         }
@@ -323,6 +375,27 @@ const offlineCheckin = {
    * clearCache(eventId)
    * Remove the cached snapshot for this event (e.g. on logout).
    */
+  async queueItems(eventId) {
+    try {
+      const all = await dbGetAll(STORE_QUEUE);
+      return all.filter(item => item.eventId === eventId)
+                .sort((a, b) => new Date(a.queuedAt) - new Date(b.queuedAt));
+    } catch { return []; }
+  },
+
+  async cacheInfo(eventId) {
+    try {
+      const cached = await dbGet(STORE_CACHE, eventId);
+      if (!cached) return null;
+      return {
+        builtAt: cached.builtAt || null,
+        total: cached.total || cached.snapshot?.length || 0,
+        ageMs: cached.builtAt ? Date.now() - new Date(cached.builtAt).getTime() : Infinity,
+        lastLocalUpdate: cached.lastLocalUpdate || null,
+      };
+    } catch { return null; }
+  },
+
   async clearCache(eventId) {
     try {
       await dbDelete(STORE_CACHE, eventId);
