@@ -363,7 +363,8 @@ async function handleCreateEvent(req, res, params) {
 
   try {
     const { name, date, time, timezone, organizerName, organizerEmail, organizerPassword,
-            eventPassword, description, maxGuests, location } = params;
+            eventPassword, description, maxGuests, location, isEnterpriseMode,
+            isTableServiceMode, staffPassword } = params;
 
     if (!name || !date || !time || !timezone || !organizerName || !organizerEmail || !organizerPassword) {
       userError('Missing required fields: name, date, time, timezone, organizerName, organizerEmail, organizerPassword.');
@@ -397,6 +398,8 @@ async function handleCreateEvent(req, res, params) {
       organizerEmail,
       password: hashedEventPassword,
       isPasswordProtected,
+      isEnterpriseMode: !!isEnterpriseMode,
+      isTableServiceMode: !!isTableServiceMode,
       maxParticipants: maxGuests || 100,
       participants: [{ username: organizerName, role: 'organizer' }],
     });
@@ -404,13 +407,30 @@ async function handleCreateEvent(req, res, params) {
     await newEvent.save();
 
     const hashedOrgPassword = await bcrypt.hash(organizerPassword, 10);
+    const recoverySegments = Array.from({ length: 5 }, () => crypto.randomBytes(2).toString('hex').toUpperCase());
+    const organizerRecoveryCode = recoverySegments.join('-');
+    const recoveryCodeHash = await bcrypt.hash(organizerRecoveryCode.replace(/-/g, '').toLowerCase(), 10);
+
     await EventParticipant.create({
       eventId: newEvent._id,
       username: organizerName,
       password: hashedOrgPassword,
       hasPassword: true,
+      recoveryCodeHash,
+      recoveryCodeGeneratedAt: new Date(),
       role: 'organizer',
     });
+
+    if (isTableServiceMode && staffPassword && String(staffPassword).length >= 4) {
+      const hashedStaffPassword = await bcrypt.hash(String(staffPassword), 10);
+      await EventParticipant.create({
+        eventId: newEvent._id,
+        username: 'staff',
+        password: hashedStaffPassword,
+        hasPassword: true,
+        role: 'staff',
+      });
+    }
 
     // Self-authenticate this MCP session as the new event's organizer,
     // skipping the separate connect-link step entirely.
@@ -429,6 +449,9 @@ async function handleCreateEvent(req, res, params) {
       eventName: name,
       eventUrl: `https://planitapp.onrender.com/e/${subdomain}`,
       authenticated: sessionMinted,
+      recoveryCode: organizerRecoveryCode,
+      resetPasswordUrl: 'https://planitapp.onrender.com/forgot-password',
+      mode: isTableServiceMode ? 'table-service' : (isEnterpriseMode ? 'enterprise' : 'regular'),
       message: sessionMinted
         ? `Event "${name}" created and connected — you're all set to manage it from here.`
         : `Event "${name}" created successfully. Event ID: ${subdomain}`,
