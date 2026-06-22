@@ -8,7 +8,7 @@ This is a **hosted remote MCP server** — there's nothing to install. Claude co
 
 ## What you can do
 
-- **Create events** — name, date, time, passwords, guest capacity
+- **Create events** — name, date, time, passwords, guest capacity, automatic mode selection, and one-time recovery code delivery
 - **Manage guests** — add individually, bulk import, search, update, remove
 - **Seating** — create tables, assign guests, get the full seating map
 - **Check-in** — live stats, recent activity, manual check-in, manager overrides
@@ -35,13 +35,27 @@ This is a **hosted remote MCP server** — there's nothing to install. Claude co
 
 ## How the event connection works
 
-When you ask Claude to connect to your event, it generates a one-time link (valid for 10 minutes, single-use). You open the link, enter your **Event ID** and **Organiser Password**, and the backend verifies your credentials and issues Claude a scoped session token. Claude then has full organiser access to that event — and only that event — until the event's 7-day post-event window expires.
+When you ask Claude to connect to an existing event, it generates a one-time link (valid for 10 minutes, single-use). You open the link, enter your **Event ID** and **Organiser Password**, and the backend verifies your credentials and issues Claude a scoped session token. Claude then has full organiser access to that event — and only that event — until the event's 7-day post-event window expires.
+
+When Claude creates a brand-new event with `create_event`, no prior connection is required. The backend creates the event, creates the organiser participant, mints the same scoped MCP session for the current Claude conversation, and returns the event URL plus a one-time organiser recovery code. Claude must show that recovery code to the organiser immediately and explain that it can reset the Organiser Password at `https://planitapp.onrender.com/forgot-password` by entering the event link/Event ID, organiser display name, recovery code, and a new password. The recovery code is shown once, stored only as a hash, and cannot be retrieved later.
 
 **Important:**
 - The connection is scoped to one event at a time
 - Only one Claude session can be connected to an event at a time
 - You can reconnect at any time by asking Claude for a new connection link
 - Claude's access expires automatically with your event data (7 days after the event date)
+
+---
+
+## Event modes Claude can choose
+
+Claude should infer the mode from the organiser's goals rather than asking technical setup questions first:
+
+- **Regular event**: parties, weddings, meetups, conferences, private gatherings, and other standard events.
+- **Enterprise event**: larger operations that need stronger check-in flow, staff coordination, security monitoring, high guest capacity, or stricter entry controls.
+- **Table service event**: restaurants, hospitality venues, reservation/waitlist workflows, live occupancy, walk-ins, and table status management.
+
+The MCP `create_event` tool accepts `isEnterpriseMode`, `isTableServiceMode`, and optional `staffPassword` so Claude can create the right kind of event from the organiser's stated needs.
 
 ---
 

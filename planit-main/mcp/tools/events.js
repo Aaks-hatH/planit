@@ -45,9 +45,10 @@ const tools = [
     name: 'create_event',
     description:
       'Create a new PlanIt event — works with no prior session, since there\'s nothing to connect to yet. Have a natural ' +
-      'conversation to gather the fields: ask for name and date first, then time and timezone, then passwords. On success ' +
-      'this session is automatically authenticated as the new event\'s organiser (check the returned "authenticated" flag) — ' +
-      'no separate generate_connect_link call needed. Only fall back to generate_connect_link if "authenticated" comes back false.',
+      'conversation to gather the fields, infer whether it should be regular, enterprise, or table-service from the event needs, ' +
+      'and include those mode flags. On success this session is automatically authenticated as the new event\'s organiser ' +
+      '(check the returned "authenticated" flag), and the response includes a one-time recovery code plus password-reset URL ' +
+      'that must be shown to the organiser and explained clearly. Only fall back to generate_connect_link if "authenticated" comes back false.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -69,6 +70,9 @@ const tools = [
         description: { type: 'string', description: 'Optional event description' },
         maxGuests: { type: 'number', description: 'Maximum number of guests allowed' },
         location: { type: 'string', description: 'Event venue or location string' },
+        isEnterpriseMode: { type: 'boolean', description: 'Use for larger/operational events needing enterprise check-in, staff workflows, security, or higher scale' },
+        isTableServiceMode: { type: 'boolean', description: 'Use for restaurant, hospitality, reservations, waitlist, or live floor/table service events' },
+        staffPassword: { type: 'string', description: 'Optional staff password/PIN for table-service staff login; minimum 4 characters if provided' },
       },
       required: ['name', 'date', 'time', 'timezone', 'organizerName', 'organizerEmail', 'organizerPassword'],
     },
