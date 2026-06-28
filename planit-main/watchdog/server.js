@@ -51,9 +51,16 @@ const SERVICE_NAME      = process.env.SERVICE_NAME  || 'watchdog';
 // SLO_TARGET_PCT   — the uptime percentage you promise (default 99.5)
 // LATENCY_WARN_MS  — p95 latency that triggers a warning alert (default 3000ms)
 // LATENCY_CRIT_MS  — p95 latency that triggers a critical alert (default 8000ms)
-const SLO_TARGET_PCT   = parseFloat(process.env.SLO_TARGET_PCT  || '99.5');
-const LATENCY_WARN_MS  = parseInt(process.env.LATENCY_WARN_MS   || '3000',  10);
-const LATENCY_CRIT_MS  = parseInt(process.env.LATENCY_CRIT_MS   || '8000',  10);
+const SLO_TARGET_PCT        = parseFloat(process.env.SLO_TARGET_PCT        || '99.5');
+const LATENCY_WARN_MS       = parseInt(process.env.LATENCY_WARN_MS          || '3000',  10);
+const LATENCY_CRIT_MS       = parseInt(process.env.LATENCY_CRIT_MS          || '8000',  10);
+// Configurable ping timeout. Render cold-starts can take 20–30s; 45s gives a
+// comfortable margin without masking genuine outages.
+const PING_TIMEOUT_MS       = parseInt(process.env.PING_TIMEOUT_MS          || '45000', 10);
+// Number of ping cycles to ignore failures after watchdog boot.
+// Absorbs Render cold-starts during the initial warm-up window.
+// Default: 5 pings = 5 minutes at the default 60s interval.
+const COLD_START_GRACE_PINGS = parseInt(process.env.COLD_START_GRACE_PINGS  || '5',     10);
 
 // Maintenance window — ISO strings or empty.  When NOW is inside the window,
 // all alert notifications are suppressed (checks + incidents still recorded).
@@ -109,7 +116,9 @@ console.log(`[${ts()}] +==================================================+`);
 console.log(`[${ts()}]   Monitoring ${targets.length} target(s):`);
 targets.forEach(t => console.log(`[${ts()}]     [${t.type}] ${t.name} -> ${t.pingUrl}`));
 console.log(`[${ts()}]   Interval   : ${PING_MS / 1000}s`);
+console.log(`[${ts()}]   Timeout    : ${PING_TIMEOUT_MS}ms`);
 console.log(`[${ts()}]   Threshold  : ${THRESHOLD} failures`);
+console.log(`[${ts()}]   Grace pings: ${COLD_START_GRACE_PINGS} (failures ignored during startup)`);
 console.log(`[${ts()}]   SLO target : ${SLO_TARGET_PCT}%`);
 console.log(`[${ts()}]   Lat warn   : ${LATENCY_WARN_MS}ms  crit: ${LATENCY_CRIT_MS}ms`);
 console.log(`[${ts()}]   ntfy       : ${NTFY_URL || 'NOT SET - alerts disabled'}`);
@@ -182,6 +191,8 @@ targets.forEach(t => {
     // Latency alert state — avoid spamming ntfy on every slow ping
     latencyAlertFiredAt:  null,
     latencyAlertLevel:    null, // 'warn' | 'crit' | null
+    // Tracks total pings since watchdog boot (used for cold-start grace window)
+    pingsSinceBoot:       0,
   };
 });
 
@@ -615,12 +626,16 @@ async function checkLatencyAnomaly(target, latencyMs) {
 async function pingTarget(target) {
   const s = states[target.name];
   s.totalPings++;
+  s.pingsSinceBoot++;
   s.lastPingAt = new Date();
+
+  // Are we still inside the cold-start grace window?
+  const inGrace = s.pingsSinceBoot <= COLD_START_GRACE_PINGS;
 
   try {
     const t0 = Date.now();
     const pingResp = await axios.head(target.pingUrl, {
-      timeout:        30000, // Render cold-start can take up to 20s
+      timeout:        PING_TIMEOUT_MS,
       // Accept any non-5xx response as "up".
       // 429 = rate-limited → server IS alive, rate limiter is responding.
       // 4xx = client error → server IS alive.
@@ -685,6 +700,14 @@ async function pingTarget(target) {
     s.lastPingMs = null;
 
     UptimeCheck.create({ service: target.name, status: 'down', error: err.message }).catch(() => {});
+
+    if (inGrace) {
+      console.warn(`[${ts()}] ${target.name} FAILED in grace window (ping ${s.pingsSinceBoot}/${COLD_START_GRACE_PINGS}) — not counting: ${err.message}`);
+      // Reset consecutive failure counter so grace-period failures don't
+      // carry over and immediately trigger a down-alert once grace ends.
+      s.consecutiveFailures = 0;
+      return;
+    }
 
     console.warn(`[${ts()}] ${target.name} FAILED (${s.consecutiveFailures}/${THRESHOLD}): ${err.message}`);
 
