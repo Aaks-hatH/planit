@@ -1,22 +1,14 @@
 /**
  * services/analytics.js
  *
- * Google Analytics 4 — Consent-Gated Wrapper
- * ───────────────────────────────────────────
+ * Google Analytics 4 — No-consent-mode wrapper (testing)
+ * ───────────────────────────────────────────────────────
  * GA4 measurement ID: G-4H00MP64BG
  *
- * CONSENT MODEL
- * ─────────────
- * gtag.js is loaded via index.html with analytics_storage='denied' by default.
- * No hits are sent to Google until the user accepts the consent banner.
- *
- * CRITICAL ORDERING — gtag('config') MUST come AFTER gtag('consent','update').
- * If config fires before the consent update, GA4 stamps the session as G100
- * (consent granted but not through proper consent mode flow) and hits are
- * discarded from standard reports. Correct flow:
- *   1. consent update → analytics_storage: 'granted'
- *   2. config         → registers the stream with consent already granted
- *   3. page_view      → first hit, now stamped G111 (fully valid)
+ * Consent mode is currently disabled for testing. gtag('config') fires in
+ * index.html immediately on load, so all hits are sent unconditionally.
+ * activateGA() is still called by initGA() on mount to keep _gaInitialised
+ * in sync and avoid double-config, but the consent/update step is skipped.
  *
  * PAGE TRACKING
  * ─────────────
@@ -25,22 +17,7 @@
  * preventing double-counting on the initial load.
  */
 
-const GA_ID = 'G-4H00MP64BG';
-const CONSENT_KEY = 'planit_cookie_consent';
-const CONSENT_VERSION = '1';
-
 let _gaInitialised = false;
-
-// ─── Consent helpers ──────────────────────────────────────────────────────────
-function getStoredConsent() {
-  try {
-    const raw = localStorage.getItem(CONSENT_KEY);
-    if (!raw) return null;
-    const parsed = JSON.parse(raw);
-    if (parsed.v !== CONSENT_VERSION) return null;
-    return parsed.accepted === true;
-  } catch { return null; }
-}
 
 // ─── gtag shim (safe to call even before the script loads) ───────────────────
 function gtag(...args) {
@@ -53,14 +30,8 @@ function gtag(...args) {
 function activateGA() {
   if (_gaInitialised) return;
   _gaInitialised = true;
-
-  // Step 1 — upgrade consent FIRST. Must come before config so GA4
-  // stamps all subsequent hits as G111 (fully consent-mode compliant).
-  gtag('consent', 'update', { analytics_storage: 'granted' });
-
-  // Step 2 — register the stream AFTER consent is granted.
-  // send_page_view:false so the SPA router controls page_view timing.
-  gtag('config', GA_ID, { send_page_view: false });
+  // Consent mode disabled — gtag('config') already fired in index.html.
+  // Nothing else needed here; _gaInitialised just gates trackPageView/trackGAEvent.
 }
 
 // ─── Public API ───────────────────────────────────────────────────────────────
@@ -68,33 +39,14 @@ function activateGA() {
 /**
  * initGA — call once from usePageTracker on mount.
  *
- * Behaviour mirrors initTracker() in tracker.js:
- *  • Already accepted → activate GA immediately.
- *  • Already declined → do nothing.
- *  • No decision yet → listen for the planit:consent DOM event.
+ * Consent mode disabled: activates GA immediately on mount so
+ * trackPageView and trackGAEvent fire from the first navigation.
+ * The consent banner still shows; if the user declines, their
+ * preference is stored but GA continues to run in this testing mode.
  */
 export function initGA() {
   if (typeof window === 'undefined') return;
-
-  const consent = getStoredConsent();
-
-  if (consent === true) {
-    activateGA();
-    return;
-  }
-  if (consent === false) {
-    return; // never track declined users
-  }
-
-  // Waiting for the user's choice
-  document.addEventListener(
-    'planit:consent',
-    (e) => {
-      if (e.detail?.accepted === true) activateGA();
-      // If declined, analytics_storage stays 'denied'
-    },
-    { once: true },
-  );
+  activateGA();
 }
 
 /**
