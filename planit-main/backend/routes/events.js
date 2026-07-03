@@ -9,7 +9,19 @@ const axios = require('axios');
 const Event = require('../models/Event');
 const EventParticipant = require('../models/EventParticipant');
 const { verifyEventAccess, verifyOrganizer, verifyCheckinAccess } = require('../middleware/auth');
-const { createEventLimiter, authLimiter, joinLimiter, reservationLimiter, availabilityLimiter } = require('../middleware/rateLimiter');
+const { createEventLimiter, authLimiter, joinLimiter, reservationLimiter, availabilityLimiter, inviteLookupLimiter } = require('../middleware/rateLimiter');
+
+// SEC FIX: Invite codes are public lookup keys returned in guest-facing URLs.
+// Math.random() is not a CSPRNG and its output is guessable given enough
+// samples. Use crypto.randomBytes so codes can't be predicted/brute-forced.
+const INVITE_CODE_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'; // 36 chars, same format as before
+function generateInviteCode(length = 8) {
+  let code = '';
+  for (let i = 0; i < length; i++) {
+    code += INVITE_CODE_ALPHABET[crypto.randomInt(INVITE_CODE_ALPHABET.length)];
+  }
+  return code; // 8 chars from a 36-char alphabet via CSPRNG (~41 bits), same shape as the old codes
+}
 const rateLimit = require('express-rate-limit');
 
 // M4: Per-event password brute-force limiter (keyed on ip:eventId, not just ip)
@@ -915,7 +927,7 @@ router.post('/public/wait/:subdomain/join', availabilityLimiter, async (req, res
 
 
 // Get invite by code (public)
-router.get('/invite/:inviteCode', async (req, res, next) => {
+router.get('/invite/:inviteCode', inviteLookupLimiter, async (req, res, next) => {
   try {
     const Invite = require('../models/Invite');
     const invite = await Invite.findOne({ inviteCode: req.params.inviteCode });
@@ -958,7 +970,7 @@ router.get('/invite/:inviteCode', async (req, res, next) => {
 // Returns a branded PlanIt QR card for a specific guest invite.
 // No auth required — the invite code IS the credential (same as the invite page).
 // Matches the dark-card aesthetic of the event QR already used in EventSpace.
-router.get('/invite/:inviteCode/qr.svg', async (req, res, next) => {
+router.get('/invite/:inviteCode/qr.svg', inviteLookupLimiter, async (req, res, next) => {
   try {
     const QRCode = require('qrcode');
     const Invite = require('../models/Invite');
@@ -2357,7 +2369,7 @@ router.post('/:eventId/invites', verifyOrganizer,
       
       const invites = [];
       for (const guest of guests) {
-        const inviteCode = Math.random().toString(36).substring(2, 10).toUpperCase();
+        const inviteCode = generateInviteCode();
         
         // Calculate adults and children with proper defaults
         const adults = parseInt(guest.adults) >= 0 ? parseInt(guest.adults) : 1;
@@ -2511,7 +2523,7 @@ router.post('/:eventId/invites/import-csv', verifyOrganizer, async (req, res, ne
       }
 
       // ── Create invite ─────────────────────────────────────────────────────
-      const inviteCode = Math.random().toString(36).substring(2, 10).toUpperCase();
+      const inviteCode = generateInviteCode();
       await Invite.create({
         eventId:     req.params.eventId,
         inviteCode,
