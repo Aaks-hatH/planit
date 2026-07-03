@@ -10,6 +10,9 @@ import toast from 'react-hot-toast';
 import { formatDateInTimezone } from '../utils/timezoneUtils';
 import { motion } from 'framer-motion';
 import StarBackground from '../components/StarBackground';
+import EventCountdown from '../components/EventCountdown';
+import GuestAvatarStack from '../components/GuestAvatarStack';
+import ShareCardModal from '../components/ShareCardModal';
 import { useWhiteLabel } from '../context/WhiteLabelContext';
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
@@ -30,6 +33,7 @@ export default function GuestInvite() {
   const [rsvpLoading, setRsvpLoading] = useState(false);
   const [copied, setCopied] = useState(false);
   const [showQRFullscreen, setShowQRFullscreen] = useState(false);
+  const [showShareCard, setShowShareCard] = useState(false);
   const [expired, setExpired] = useState(false);
   const [expiredAt, setExpiredAt] = useState(null);
 
@@ -233,11 +237,11 @@ export default function GuestInvite() {
               </div>
             </div>
             {showSocialShare && (<button
-              onClick={handleCopyLink}
+              onClick={() => setShowShareCard(true)}
               className="flex items-center gap-2 px-4 py-2 bg-neutral-800/60 hover:bg-neutral-700/60 border border-neutral-700 rounded-xl text-sm font-medium text-neutral-300 transition-all"
             >
-              {copied ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
-              {copied ? 'Copied!' : 'Share'}
+              <Share2 className="w-4 h-4" />
+              Share
             </button>)}
           </div>
         </motion.header>
@@ -265,7 +269,10 @@ export default function GuestInvite() {
                         }
                       </div>
                       <h1 className="text-4xl font-black text-neutral-100 mb-2">{invite.guestName}</h1>
-                      <p className="text-neutral-400 text-lg">{event.isTableServiceMode ? 'Your reservation is confirmed' : "You're invited to attend"}</p>
+                      <p className="text-neutral-400 text-lg mb-4">{event.isTableServiceMode ? 'Your reservation is confirmed' : "You're invited to attend"}</p>
+                      {event.date && !event.isTableServiceMode && (
+                        <EventCountdown date={event.date} accent="#a3a3a3" compact />
+                      )}
                     </div>
                     {invite.checkedIn && (
                       <div className="flex-shrink-0 px-4 py-2 bg-emerald-500/10 border border-emerald-500/30 rounded-xl">
@@ -399,10 +406,13 @@ export default function GuestInvite() {
 
                   {/* RSVP counts (if organizer hasn't hidden them) */}
                   {rsvpInfo?.showCount && rsvpInfo.total > 0 && (
-                    <div className="flex gap-4 mb-5 text-sm">
-                      <span className="text-emerald-400 font-medium">{rsvpInfo.summary.yes} going</span>
-                      <span className="text-amber-400 font-medium">{rsvpInfo.summary.maybe} maybe</span>
-                      <span className="text-neutral-500 font-medium">{rsvpInfo.summary.no} not going</span>
+                    <div className="flex items-center justify-between mb-5 flex-wrap gap-3">
+                      <div className="flex gap-4 text-sm">
+                        <span className="text-emerald-400 font-medium">{rsvpInfo.summary.yes} going</span>
+                        <span className="text-amber-400 font-medium">{rsvpInfo.summary.maybe} maybe</span>
+                        <span className="text-neutral-500 font-medium">{rsvpInfo.summary.no} not going</span>
+                      </div>
+                      <GuestAvatarStack count={rsvpInfo.summary.yes} label={`${rsvpInfo.summary.yes} going`} />
                     </div>
                   )}
 
@@ -491,9 +501,9 @@ export default function GuestInvite() {
                     </button>
                   )}
 {showSocialShare && (
-                  <button onClick={handleCopyLink} className="flex items-center justify-center gap-2 px-6 py-4 bg-neutral-800/50 hover:bg-neutral-700/50 border border-neutral-700 rounded-xl font-semibold text-neutral-200 transition-all">
-                    {copied ? <Check className="w-5 h-5 text-emerald-400" /> : <Share2 className="w-5 h-5" />}
-                    {copied ? 'Link Copied!' : 'Share Invite'}
+                  <button onClick={() => setShowShareCard(true)} className="flex items-center justify-center gap-2 px-6 py-4 bg-neutral-800/50 hover:bg-neutral-700/50 border border-neutral-700 rounded-xl font-semibold text-neutral-200 transition-all">
+                    <Share2 className="w-5 h-5" />
+                    Share Invite
                   </button>
 )}
                 </div>
@@ -544,6 +554,16 @@ export default function GuestInvite() {
           </div>
         </div>
       )}
+      <ShareCardModal
+        open={showShareCard}
+        onClose={() => setShowShareCard(false)}
+        eventTitle={event.title}
+        dateLabel={event.date ? formatDateInTimezone(event.date, event.timezone || 'UTC', { weekday: 'long', month: 'long', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : ''}
+        location={event.location}
+        guestName={invite.guestName}
+        goingCount={rsvpInfo?.showCount ? rsvpInfo?.summary?.yes : undefined}
+        url={inviteUrl}
+      />
     </div>
   );
 }
