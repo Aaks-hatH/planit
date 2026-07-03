@@ -16,6 +16,8 @@ const TableService     = lazy(() => import('./pages/TableService'));
 const ServerView       = lazy(() => import('./pages/ServerView'));
 const KitchenView      = lazy(() => import('./pages/KitchenView'));
 const GuestInvite      = lazy(() => import('./pages/GuestInvite'));
+const InviteDemo       = lazy(() => import('./pages/InviteDemo'));
+const RSVPDemo         = lazy(() => import('./pages/RSVPDemo'));
 const OrganizerLogin   = lazy(() => import('./pages/OrganizerLogin'));
 const Admin            = lazy(() => import('./pages/Admin'));
 const SecurityDashboard= lazy(() => import('./pages/SecurityDashboard'));
@@ -534,6 +536,8 @@ function App() {
         <Route path="/reserve/cancel/:cancelToken" element={<ReserveCancelPage />} />
         <Route path="/reservation/:cancelToken"  element={<ReservationTicket />} />
         <Route path="/invite/:inviteCode"        element={<GuestInvite />} />
+        <Route path="/demo/invite"               element={<InviteDemo />} />
+        <Route path="/demo/rsvp"                 element={<RSVPDemo />} />
         <Route path="/badge/:inviteCode"         element={<InviteBadge />} />
         <Route path="/card/:inviteCode"          element={<InviteCard />} />
 
