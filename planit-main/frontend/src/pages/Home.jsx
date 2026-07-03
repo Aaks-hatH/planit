@@ -5,7 +5,8 @@ import {
   Calendar, Users, MessageSquare, BarChart3, FileText, Shield, Copy, Check, Lock,
   ArrowRight, Link, Eye, EyeOff, ChevronRight, Zap, Clock,
   CheckCircle2, TrendingUp, ListChecks, Timer,
-  Brain, ArrowUpRight, AlertCircle, UtensilsCrossed, MapPin, QrCode, Layers, Search, CornerDownRight, Bot
+  Brain, ArrowUpRight, AlertCircle, UtensilsCrossed, MapPin, QrCode, Layers, Search, CornerDownRight, Bot,
+  Share2, Ticket
 } from 'lucide-react';
 import { eventAPI } from '../services/api';
 import { trackFeature, flushTracker } from '../services/tracker';
@@ -2598,6 +2599,58 @@ export default function Home() {
                 </Reveal>
               ))}
             </div>
+
+            {/* Invite/RSVP demo advertisement — sits right under the QR check-in feature mention */}
+            <Reveal className="mb-20">
+              <div
+                onClick={() => navigate('/demo/invite')}
+                role="link"
+                tabIndex={0}
+                onKeyDown={(e) => { if (e.key === 'Enter') navigate('/demo/invite'); }}
+                className="group relative flex flex-col sm:flex-row items-stretch gap-0 rounded-3xl border border-indigo-500/20 overflow-hidden transition-all duration-400 hover:border-indigo-500/40 cursor-pointer"
+                style={{ background: 'rgba(99,102,241,0.04)' }}
+              >
+                <div className="flex-1 p-8 sm:p-10">
+                  <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl border border-indigo-500/20 bg-indigo-500/8 mb-5">
+                    <Ticket className="w-3.5 h-3.5 text-indigo-400" />
+                    <span className="text-xs font-bold text-indigo-400 uppercase tracking-wider">See it in action</span>
+                  </div>
+                  <h3 className="font-syne text-2xl sm:text-3xl font-black text-white mb-3 leading-tight">
+                    Invites and RSVP pages guests actually want to share.
+                  </h3>
+                  <p className="text-sm text-neutral-500 leading-relaxed mb-6 max-w-lg">
+                    Live countdowns, who else is going, a QR entry pass, and a personalized share card for every guest — try the real thing below, no account needed.
+                  </p>
+                  <div className="flex flex-wrap gap-3">
+                    <span className="inline-flex items-center gap-2 text-sm font-bold text-indigo-400 group-hover:text-indigo-300 transition-colors">
+                      Try the invite demo <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform duration-300" />
+                    </span>
+                    <a
+                      href="/demo/rsvp"
+                      onClick={(e) => e.stopPropagation()}
+                      className="inline-flex items-center gap-2 text-sm font-bold text-neutral-400 hover:text-neutral-200 transition-colors"
+                    >
+                      <Share2 className="w-3.5 h-3.5" /> Try the RSVP demo
+                    </a>
+                  </div>
+                </div>
+                <div className="hidden sm:flex w-64 flex-shrink-0 items-center justify-center p-8 border-l border-indigo-500/10" style={{ background: 'rgba(0,0,0,0.2)' }}>
+                  <div className="w-full rounded-2xl border border-neutral-800 bg-neutral-950 p-4">
+                    <p className="text-[10px] uppercase tracking-widest text-neutral-600 mb-2">You're invited to</p>
+                    <p className="font-syne text-lg font-black text-white mb-3 leading-tight">Bonfire &amp; vinyl</p>
+                    <div className="flex gap-1.5 mb-3">
+                      {['D', 'H', 'M', 'S'].map((u) => (
+                        <div key={u} className="flex-1 text-center rounded-md bg-neutral-900 border border-neutral-800 py-1.5">
+                          <div className="text-xs font-mono font-bold text-neutral-300">09</div>
+                          <div className="text-[8px] text-neutral-600">{u}</div>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="h-8 rounded-lg bg-indigo-500/80 flex items-center justify-center text-[11px] font-bold text-white">I'm going</div>
+                  </div>
+                </div>
+              </div>
+            </Reveal>
 
             {/* Stats row */}
             <Reveal>
