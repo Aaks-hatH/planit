@@ -12,6 +12,7 @@ import { rsvpAPI } from '../services/api';
 import { trackGAEvent } from '../services/analytics';
 import { formatDateInTimezone } from '../utils/timezoneUtils';
 import TurnstileWidget from '../components/TurnstileWidget';
+import ShareCardModal from '../components/ShareCardModal';
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
@@ -122,10 +123,11 @@ function PasswordGate({ eventId, accent, bgStyle, fontStyle, onUnlocked }) {
 }
 
 /* ─── Confirmation screen ─────────────────────────────────────────────────── */
-function ConfirmationScreen({ data, rsvpPage, event, editToken, accent, bgStyle, fontStyle }) {
+function ConfirmationScreen({ data, rsvpPage, event, editToken, accent, bgStyle, fontStyle, guestName }) {
   const fonts = FONTS[fontStyle] || FONTS.modern;
   const bg = getBgStyle(bgStyle, accent);
   const isLight = bgStyle === 'light';
+  const [showShareCard, setShowShareCard] = useState(false);
 
   const copyLink = () => {
     navigator.clipboard.writeText(`${window.location.origin}/rsvp/${event.subdomain}`);
@@ -198,7 +200,7 @@ function ConfirmationScreen({ data, rsvpPage, event, editToken, accent, bgStyle,
             </a>
           )}
           {rsvpPage.showShareButton !== false && (
-            <button onClick={copyLink}
+            <button onClick={() => setShowShareCard(true)}
               className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-semibold transition-all"
               style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', color: 'inherit' }}>
               <Share2 className="w-4 h-4" /> Share Event
@@ -219,6 +221,16 @@ function ConfirmationScreen({ data, rsvpPage, event, editToken, accent, bgStyle,
           </p>
         )}
       </div>
+
+      <ShareCardModal
+        open={showShareCard}
+        onClose={() => setShowShareCard(false)}
+        eventTitle={event.rawTitle || event.title}
+        dateLabel={event.date ? formatDateInTimezone(event.date, event.timezone || 'UTC', { weekday: 'long', month: 'long', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : ''}
+        location={event.location}
+        guestName={guestName}
+        url={`${window.location.origin}/rsvp/${event.subdomain}`}
+      />
     </div>
   );
 }
@@ -345,6 +357,7 @@ export default function RSVPPage() {
         accent={accent}
         bgStyle={bgStyle}
         fontStyle={fontStyle}
+        guestName={`${firstName} ${lastName}`.trim()}
       />
     );
   }
