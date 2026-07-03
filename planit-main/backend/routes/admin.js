@@ -29,22 +29,41 @@ const { unbanIp, listActiveBans } = require('../middleware/security');
 // ─── TOTP helpers ─────────────────────────────────────────────────────────────
 // Encrypt a TOTP secret before storing it so the DB field is not plaintext.
 // We derive an encryption key from the license key so there's no extra secret.
+//
+// SEC FIX: previously AES-128-CBC with no integrity check (ciphertext could be
+// tampered with undetected) and a key that was just a raw slice of another
+// secret. Now AES-256-GCM (authenticated) with the key derived via SHA-256
+// so we always get a full 32-byte key regardless of secrets.db's length/format.
 function _totpKey() {
-  return secrets.db.slice(0, 32); // 32 hex chars → 16 bytes AES-128 key
+  return crypto.createHash('sha256').update(String(secrets.db)).digest(); // 32-byte AES-256 key
 }
 function encryptTotpSecret(secret) {
-  const iv  = crypto.randomBytes(16);
-  const key = Buffer.from(_totpKey(), 'hex');
-  const cipher = crypto.createCipheriv('aes-128-cbc', key, iv);
-  const enc = Buffer.concat([cipher.update(secret, 'utf8'), cipher.final()]);
-  return iv.toString('hex') + ':' + enc.toString('hex');
+  const iv     = crypto.randomBytes(12); // 96-bit nonce, standard for GCM
+  const key    = _totpKey();
+  const cipher = crypto.createCipheriv('aes-256-gcm', key, iv);
+  const enc    = Buffer.concat([cipher.update(secret, 'utf8'), cipher.final()]);
+  const tag    = cipher.getAuthTag();
+  return `v2:${iv.toString('hex')}:${tag.toString('hex')}:${enc.toString('hex')}`;
 }
 function decryptTotpSecret(stored) {
-  const [ivHex, encHex] = stored.split(':');
+  const parts = stored.split(':');
+  if (parts[0] === 'v2') {
+    const [, ivHex, tagHex, encHex] = parts;
+    const iv  = Buffer.from(ivHex,  'hex');
+    const tag = Buffer.from(tagHex, 'hex');
+    const enc = Buffer.from(encHex, 'hex');
+    const decipher = crypto.createDecipheriv('aes-256-gcm', _totpKey(), iv);
+    decipher.setAuthTag(tag);
+    return Buffer.concat([decipher.update(enc), decipher.final()]).toString('utf8');
+  }
+  // Legacy format (iv:enc, AES-128-CBC keyed off the raw secrets.db slice) —
+  // kept read-only so 2FA secrets stored before this fix still decrypt.
+  // New/rotated secrets always use the v2 (GCM) format above.
+  const [ivHex, encHex] = parts;
   const iv  = Buffer.from(ivHex,  'hex');
   const enc = Buffer.from(encHex, 'hex');
-  const key = Buffer.from(_totpKey(), 'hex');
-  const decipher = crypto.createDecipheriv('aes-128-cbc', key, iv);
+  const legacyKey = Buffer.from(String(secrets.db).slice(0, 32), 'hex');
+  const decipher = crypto.createDecipheriv('aes-128-cbc', legacyKey, iv);
   return Buffer.concat([decipher.update(enc), decipher.final()]).toString('utf8');
 }
 function verifyTotpCode(encryptedSecret, code) {
@@ -937,8 +956,13 @@ router.patch('/events/:eventId', verifyAdmin, requirePermission('canEditEvents')
       if (req.body[field] !== undefined) updates[field] = req.body[field];
     }
     // Allow patching nested settings fields
+    // SEC FIX: keys came straight from req.body with no denylist, so a request
+    // body like {"settings": {"__proto__": {...}}} or a "$"-prefixed key could
+    // reach Mongoose's update path unfiltered. Block dangerous key shapes.
+    const DANGEROUS_KEY = /^(__proto__|constructor|prototype)$/i;
     if (req.body.settings && typeof req.body.settings === 'object') {
       for (const [k, v] of Object.entries(req.body.settings)) {
+        if (DANGEROUS_KEY.test(k) || k.startsWith('$') || k.includes('.')) continue;
         updates[`settings.${k}`] = v;
       }
     }
