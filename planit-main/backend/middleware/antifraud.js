@@ -1,3 +1,4 @@
+const crypto = require('crypto');
 const Invite = require('../models/Invite');
 const Event  = require('../models/Event');
 const { realIp } = require('./realIp');
@@ -138,7 +139,7 @@ async function detectDuplicates(req, res, next) {
 async function preventReentrancy(req, res, next) {
   try {
     const { eventId, inviteCode } = req.params;
-    const sessionId = req.headers['x-session-id'] || req.sessionID || `${Date.now()}-${Math.random()}`;
+    const sessionId = req.headers['x-session-id'] || req.sessionID || `${Date.now()}-${crypto.randomBytes(8).toString('hex')}`;
     const staffUser = req.eventAccess?.username || 'staff';
 
     const event = await Event.findById(eventId).select('checkinSettings').lean();
