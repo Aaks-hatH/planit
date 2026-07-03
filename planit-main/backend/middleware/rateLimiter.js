@@ -175,6 +175,19 @@ const availabilityLimiter = rateLimit({
   message:         { error: 'Too many availability requests, please slow down.' },
 });
 
+// SEC FIX: Invite codes are public lookup keys (guest name/email/phone behind
+// them). Without a limiter here, an attacker can brute-force the code space
+// from a single IP. Tight per-IP cap; codes are also now high-entropy (see
+// events.js) so guessing within this budget is infeasible either way.
+const inviteLookupLimiter = rateLimit({
+  windowMs:        15 * 60 * 1000,
+  max:             30,
+  standardHeaders: true,
+  legacyHeaders:   false,
+  keyGenerator:    realIp,
+  message:         { error: 'Too many invite lookups, please slow down.' },
+});
+
 module.exports = {
   apiLimiter,
   authLimiter,
@@ -185,4 +198,5 @@ module.exports = {
   honeypotCheck,
   reservationLimiter,
   availabilityLimiter,
+  inviteLookupLimiter,
 };
