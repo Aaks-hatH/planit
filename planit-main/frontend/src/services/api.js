@@ -84,6 +84,10 @@ api.interceptors.response.use(
 );
 
 // ─── Event API ────────────────────────────────────────────────────────────────
+export const timezoneAPI = {
+  detect: (browserTz) => api.get('/timezone/detect', { params: { browserTz } }),
+};
+
 export const eventAPI = {
   create:         (data)              => api.post('/events', data),
   getBySubdomain: (subdomain)         => api.get(`/events/subdomain/${subdomain}`),

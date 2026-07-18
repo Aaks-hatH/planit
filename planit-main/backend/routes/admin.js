@@ -946,7 +946,7 @@ router.get('/events/:eventId', verifyAdmin, async (req, res, next) => {
 router.patch('/events/:eventId', verifyAdmin, requirePermission('canEditEvents'), async (req, res, next) => {
   try {
     const allowed = [
-      'title', 'description', 'date', 'location',
+      'title', 'description', 'date', 'timezone', 'location',
       'organizerName', 'organizerEmail', 'maxParticipants',
       'isPasswordProtected', 'isEnterpriseMode', 'subdomain', 'status',
       'themeColor', 'tags', 'coverImage',

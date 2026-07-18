@@ -7,9 +7,24 @@
 
 import { DateTime } from 'luxon';
 
+
+export function isValidTimezone(timezone) {
+  if (!timezone) return false;
+  try {
+    Intl.DateTimeFormat('en-US', { timeZone: timezone }).format(new Date());
+    return true;
+  } catch (error) {
+    return false;
+  }
+}
+
+export function normalizeTimezone(timezone, fallback = 'UTC') {
+  return isValidTimezone(timezone) ? timezone : fallback;
+}
+
 export function getUserTimezone() {
   try {
-    return Intl.DateTimeFormat().resolvedOptions().timeZone;
+    return normalizeTimezone(Intl.DateTimeFormat().resolvedOptions().timeZone, 'UTC');
   } catch (error) {
     return 'UTC';
   }

@@ -39,6 +39,7 @@ const Blocklist = require('../models/Blocklist');
 const { analyzeEvent, applyEventSpamResult } = require('../services/spamDetector');
 const { verifyTurnstile } = require('../services/captchaService');
 const { sendAntiAbuse } = require('../services/antiAbuseResponses');
+const { isValidTimeZone } = require('./timezone');
 
 const validate = (req, res, next) => {
   const errors = validationResult(req);
@@ -63,6 +64,7 @@ router.post('/',
     body('subdomain').trim().isLength({ min: 3, max: 50 }).matches(/^[a-z0-9-]+$/).withMessage('Invalid subdomain format'),
     body('title').trim().isLength({ min: 1, max: 200 }).withMessage('Title is required'),
     body('date').if(body('isTableServiceMode').not().equals('true')).if(body('isTableServiceMode').not().equals(true)).isISO8601().withMessage('Valid date is required'),
+    body('timezone').optional({ values: 'falsy' }).custom((tz) => isValidTimeZone(tz)).withMessage('Valid IANA timezone is required'),
     body('organizerName').trim().isLength({ min: 1, max: 100 }).withMessage('Organizer name is required'),
     body('organizerEmail').isEmail().normalizeEmail().withMessage('Valid email is required'),
     body('password').optional({ values: 'falsy' }).isLength({ min: 6 }).withMessage('Password must be at least 6 characters'),
@@ -70,7 +72,7 @@ router.post('/',
   ],
   async (req, res, next) => {
     try {
-      const { subdomain, title, description, date, location, organizerName, organizerEmail, password, accountPassword, staffPassword, isEnterpriseMode, isTableServiceMode, settings, maxParticipants } = req.body;
+      const { subdomain, title, description, date, timezone, location, organizerName, organizerEmail, password, accountPassword, staffPassword, isEnterpriseMode, isTableServiceMode, settings, maxParticipants } = req.body;
 
       const existing = await Event.findOne({ subdomain });
       if (existing) return res.status(409).json({ error: 'This event link is already taken.' });
@@ -153,7 +155,7 @@ router.post('/',
       }
 
       const event = new Event({
-        subdomain, title, description, date, location, organizerName, organizerEmail,
+        subdomain, title, description, date, timezone: isValidTimeZone(timezone) ? timezone : 'UTC', location, organizerName, organizerEmail,
         password: hashedPassword, isPasswordProtected,
         isEnterpriseMode: isEnterpriseMode || false,
         isTableServiceMode: isTableServiceMode || false,
@@ -2247,16 +2249,18 @@ router.put('/:eventId', verifyOrganizer,
     body('title').optional().trim().isLength({ min: 1, max: 200 }),
     body('description').optional().trim().isLength({ max: 2000 }),
     body('date').optional().isISO8601(),
+    body('timezone').optional({ values: 'falsy' }).custom((tz) => isValidTimeZone(tz)).withMessage('Valid IANA timezone is required'),
     body('location').optional().trim().isLength({ max: 500 }),
     validate
   ],
   async (req, res, next) => {
     try {
-      const { title, description, date, location, settings, maxParticipants, status, coverImage, themeColor, tags } = req.body;
+      const { title, description, date, timezone, location, settings, maxParticipants, status, coverImage, themeColor, tags } = req.body;
       const event = req.event;
       if (title) event.title = title;
       if (description !== undefined) event.description = description;
       if (date) event.date = date;
+      if (timezone) event.timezone = timezone;
       if (location !== undefined) event.location = location;
       if (settings) {
         event.settings = { ...event.settings, ...settings };

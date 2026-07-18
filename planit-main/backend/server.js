@@ -62,6 +62,7 @@ const seatingRoutes       = require('./routes/seating');
 const whiteLabelRoutes    = require('./routes/whitelabel');
 const { router: wlPortalRoutes } = require('./routes/wl-portal');
 const platformAnalyticsRoutes  = require('./routes/platform-analytics');
+const timezoneRoutes           = require('./routes/timezone');
 
 // ── Cat-4: New routes ─────────────────────────────────────────────────────────
 const honeypotRoutes = require('./routes/honeypot');
@@ -458,6 +459,7 @@ app.use('/api/events',      seatingRoutes);
 app.use('/api/whitelabel',  whiteLabelRoutes);
 app.use('/api/wl-portal',   wlPortalRoutes);
 app.use('/api/platform-analytics', express.json({ limit: '200kb' }), platformAnalyticsRoutes);
+app.use('/api/timezone',   timezoneRoutes);
 
 // ── MCP integration — single proxy endpoint, own rate limiting, no /api/ prefix ──
 app.use('/mcp', require('./routes/mcp'));

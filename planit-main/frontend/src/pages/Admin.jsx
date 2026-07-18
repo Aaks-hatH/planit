@@ -36,6 +36,7 @@ import api, { adminAPI, uptimeAPI, watchdogAPI, routerAPI, bugReportAPI, blogAPI
 import PlatformAnalyticsDashboard from '../components/PlatformAnalyticsDashboard';
 import { SERVICE_CATEGORIES, ALL_SERVICES_FLAT } from '../utils/serviceCategories';
 import { formatNumber, formatFileSize } from '../utils/formatters';
+import { getTimezoneOptions, getUserTimezone } from '../utils/timezoneUtils';
 import { DateTime } from 'luxon';
 import toast from 'react-hot-toast';
 import TurnstileWidget from '../components/TurnstileWidget';
@@ -43,17 +44,16 @@ import socketService from '../services/socket';
 import { getDemoStats, getDemoEvents, getDemoOrganizers, getDemoStaff, DEMO_EMPLOYEES, getDemoParticipants, getDemoAnalytics, getDemoSystem, getDemoFleet } from '../services/demoData';
 
 // ─── Formatters ───────────────────────────────────────────────────────────────
-const fmt = (date) => {
+const fmt = (date, timezone = getUserTimezone()) => {
   if (!date) return '—';
-  const dt = DateTime.fromISO(date, { zone: 'UTC' }).toLocal();
-  const now = DateTime.local();
-  if (dt.hasSame(now, 'day')) return `Today ${dt.toFormat('HH:mm')}`;
-  if (dt.hasSame(now.minus({ days: 1 }), 'day')) return `Yesterday ${dt.toFormat('HH:mm')}`;
-  return dt.toFormat('MMM dd, yyyy HH:mm');
+  const dt = DateTime.fromISO(date, { zone: 'UTC' }).setZone(timezone || getUserTimezone());
+  if (!dt.isValid) return '—';
+  const abbr = dt.offsetNameShort || timezone || '';
+  return `${dt.toFormat('MMM dd, yyyy HH:mm')} ${abbr}`;
 };
 const rel = (date) => date ? DateTime.fromISO(date, { zone: 'UTC' }).toRelative() || '' : '';
-const utcToLocal = (d) => d ? DateTime.fromISO(d, { zone: 'UTC' }).toLocal().toFormat("yyyy-MM-dd'T'HH:mm") : '';
-const localToUtc = (s) => s ? DateTime.fromISO(s).toUTC().toISO() : '';
+const utcToLocal = (d, timezone = getUserTimezone()) => d ? DateTime.fromISO(d, { zone: 'UTC' }).setZone(timezone || getUserTimezone()).toFormat("yyyy-MM-dd'T'HH:mm") : '';
+const localToUtc = (s, timezone = getUserTimezone()) => s ? DateTime.fromISO(s, { zone: timezone || getUserTimezone() }).toUTC().toISO() : '';
 const fmtUptime = (s) => {
   if (!s) return '0s';
   const d = Math.floor(s / 86400), h = Math.floor((s % 86400) / 3600), m = Math.floor((s % 3600) / 60);
@@ -382,7 +382,13 @@ function EventDetail({ event: initialEvent, onBack, onDelete, onUpdate }) {
             ))}
             <div>
               <label className="block text-xs font-medium text-neutral-600 mb-1">Date</label>
-              <input type="datetime-local" className="input text-sm" value={utcToLocal(editForm.date)} onChange={e => setEditForm({ ...editForm, date: localToUtc(e.target.value) })} />
+              <input type="datetime-local" className="input text-sm" value={utcToLocal(editForm.date, editForm.timezone)} onChange={e => setEditForm({ ...editForm, date: localToUtc(e.target.value, editForm.timezone) })} />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-neutral-600 mb-1">Timezone</label>
+              <select className="input text-sm" value={editForm.timezone || 'UTC'} onChange={e => setEditForm({ ...editForm, timezone: e.target.value })}>
+                {getTimezoneOptions().map(tz => <option key={tz.value} value={tz.value}>{tz.label}</option>)}
+              </select>
             </div>
             <div className="flex items-center gap-6">
               {[['isPasswordProtected', 'Password Protected'], ['isEnterpriseMode', 'Enterprise Mode'], ['isTableServiceMode', 'Table Service Mode'], ['keepForever', 'Keep Forever (no auto-delete)']].map(([k, l]) => (
@@ -447,8 +453,9 @@ function EventDetail({ event: initialEvent, onBack, onDelete, onUpdate }) {
                   <h3 className="text-xs font-bold text-neutral-400 uppercase tracking-widest mb-3">Event Info</h3>
                   <dl className="space-y-3">
                     {[
-                      [Calendar, 'Date', fmt(event.date)],
+                      [Calendar, 'Date', fmt(event.date, event.timezone)],
                       [MapPin, 'Location', event.location || 'Not set'],
+                      [Globe, 'Timezone', event.timezone || 'UTC'],
                       [User, 'Organizer', event.organizerName],
                       [Mail, 'Email', event.organizerEmail],
                       [Clock, 'Created', rel(event.createdAt)],
@@ -11590,7 +11597,7 @@ export default function Admin() {
                         <tr key={ev._id} className="hover:bg-neutral-50 cursor-pointer transition-colors" onClick={() => setSelectedEvent(ev)}>
                           <td className="px-5 py-3"><p className="text-sm font-semibold text-neutral-900">{ev.title}</p><p className="text-xs text-neutral-400 font-mono">/{ev.subdomain}</p></td>
                           <td className="px-5 py-3"><p className="text-sm text-neutral-900">{ev.organizerName}</p><p className="text-xs text-neutral-400">{ev.organizerEmail}</p></td>
-                          <td className="px-5 py-3 text-xs text-neutral-500">{ev.date ? fmt(ev.date) : '—'}</td>
+                          <td className="px-5 py-3 text-xs text-neutral-500">{ev.date ? fmt(ev.date, ev.timezone) : '—'}</td>
                           <td className="px-5 py-3"><div className="flex items-center gap-1.5"><Users className="w-3.5 h-3.5 text-neutral-400" /><span className="text-sm font-medium">{ev.participants?.length || 0}</span></div></td>
                           <td className="px-5 py-3">{ev.isTableServiceMode ? <span className="text-xs font-semibold text-orange-600 bg-orange-50 px-2 py-0.5 rounded-full flex items-center gap-1 w-fit">Table Service</span> : ev.isEnterpriseMode ? <span className="text-xs font-semibold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full flex items-center gap-1 w-fit"><Zap className="w-3 h-3" /> Enterprise</span> : <span className="text-xs text-neutral-400">Standard</span>}</td>
                           <td className="px-5 py-3"><StatusBadge status={ev.status} /></td>
@@ -11643,7 +11650,7 @@ export default function Admin() {
                         <tr key={ev._id} className="hover:bg-neutral-50 cursor-pointer" onClick={() => setSelectedEvent(ev)}>
                           <td className="px-5 py-3"><p className="text-sm font-semibold">{ev.title}</p><p className="text-xs text-neutral-400 font-mono">/{ev.subdomain}</p></td>
                           <td className="px-5 py-3"><p className="text-sm">{ev.organizerName}</p><p className="text-xs text-neutral-400">{ev.organizerEmail}</p></td>
-                          <td className="px-5 py-3 text-xs text-neutral-500">{ev.date ? fmt(ev.date) : '—'}</td>
+                          <td className="px-5 py-3 text-xs text-neutral-500">{ev.date ? fmt(ev.date, ev.timezone) : '—'}</td>
                           <td className="px-5 py-3 text-sm">{ev.participants?.length || 0}</td>
                           <td className="px-5 py-3">{ev.isTableServiceMode ? <span className="text-xs text-orange-600 bg-orange-50 px-2 py-0.5 rounded-full font-semibold">Table Service</span> : ev.isEnterpriseMode ? <span className="text-xs text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full font-semibold">Enterprise</span> : <span className="text-xs text-neutral-400">Standard</span>}</td>
                           <td className="px-5 py-3"><StatusBadge status={ev.status} /></td>

@@ -8,7 +8,7 @@ import {
   Brain, ArrowUpRight, AlertCircle, UtensilsCrossed, MapPin, QrCode, Layers, Search, CornerDownRight, Bot,
   Share2, Ticket
 } from 'lucide-react';
-import { eventAPI } from '../services/api';
+import { eventAPI, timezoneAPI } from '../services/api';
 import { trackFeature, flushTracker } from '../services/tracker';
 import { trackGAEvent } from '../services/analytics';
 import RecoveryCodeModal from '../components/RecoveryCodeModal';
@@ -1546,7 +1546,7 @@ function OnboardingWizard({ mode, formData, setFormData, fieldErrors, setFieldEr
 
   const update = (field) => (e) => {
     onUserInput?.();
-    setFormData(p => ({ ...p, [field]: e.target.value }));
+    setFormData(p => ({ ...p, [field]: e.target.value, ...(field === 'timezone' ? { _timezoneTouched: true } : {}) }));
     if (localErr[field]) setLocalErr(p => ({ ...p, [field]: '' }));
     if (fieldErrors[field]) setFieldErrors(p => ({ ...p, [field]: '' }));
   };
@@ -2092,6 +2092,21 @@ export default function Home() {
   const [turnstileToken, setTurnstileToken] = useState('');
   const [captchaResetKey, setCaptchaResetKey] = useState(0);
   const eventFormTimingRef = useRef({ pageLoadedAt: Date.now(), formStartedAt: 0, firstInputAt: 0, largestPasteChars: 0, largestPasteElapsedMs: 0 });
+
+  useEffect(() => {
+    let cancelled = false;
+    const browserTz = getUserTimezone();
+    timezoneAPI.detect(browserTz)
+      .then((r) => {
+        const detected = r.data?.timezone;
+        if (!cancelled && detected) {
+          setFormData(prev => ({ ...prev, timezone: prev._timezoneTouched ? prev.timezone : detected }));
+        }
+      })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, []);
+
   // On white-label domains, skip the branch selector and go straight to event creation
   useEffect(() => { if (isWL) { setSelectedBranch('events'); setLoadingDone(true); } }, [isWL]);
 
@@ -2119,7 +2134,7 @@ export default function Home() {
   };
   const update = (field) => (e) => {
     if (!eventFormTimingRef.current.firstInputAt) eventFormTimingRef.current.firstInputAt = Date.now();
-    setFormData(prev => ({ ...prev, [field]: e.target.value, ...(field === 'subdomain' ? { _subdomainTouched: true } : {}) }));
+    setFormData(prev => ({ ...prev, [field]: e.target.value, ...(field === 'subdomain' ? { _subdomainTouched: true } : {}), ...(field === 'timezone' ? { _timezoneTouched: true } : {}) }));
   };
 
   // Sanitise a string: trim whitespace, collapse internal whitespace
