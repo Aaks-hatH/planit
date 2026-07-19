@@ -1,8 +1,8 @@
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, FileText } from 'lucide-react';
 
-const LAST_UPDATED = 'June 9, 2026';
-const EFFECTIVE_DATE = 'June 9, 2026';
+const LAST_UPDATED = 'July 20, 2026';
+const EFFECTIVE_DATE = 'July 20, 2026';
 
 function Section({ number, title, children }) {
   return (
@@ -94,7 +94,7 @@ export default function Terms() {
               <DefItem term="Participant">Any User accessing an Event workspace in a capacity other than Organizer, regardless of the means by which access was obtained.</DefItem>
               <DefItem term="Personal Data">Information relating to an identified or identifiable natural person, as further defined and governed by the Privacy Policy.</DefItem>
               <DefItem term="Platform">The entirety of PlanIt's technical infrastructure, including the frontend application, backend application servers, load balancing router, watchdog monitoring service, database systems, real-time communication layer, mesh authentication infrastructure, Platform Analytics System, and all associated APIs, microservices, and third-party integrations.</DefItem>
-              <DefItem term="Platform Analytics System">The analytics infrastructure operated by PlanIt, comprising (a) the server-side backend analytics pipeline that collects, stores, encrypts, and processes business-event Analytics Data as described in Section 12 of these Terms, and (b) Google Analytics 4 (GA4), a third-party web analytics service operated by Google LLC, which collects page-view and session data under the consent framework described in Section 12.</DefItem>
+              <DefItem term="Platform Analytics System">The analytics infrastructure operated by PlanIt, comprising (a) the server-side backend analytics pipeline that collects, stores, encrypts, and processes Analytics Data as described in Section 12 of these Terms, and (b) Google Analytics 4 (GA4), a third-party web analytics service operated by Google LLC, which collects page-view and session data. Both components operate for all visitors as described in Section 12.2.</DefItem>
               <DefItem term="Prohibited Content">Content falling within the categories enumerated in Section 6.2 of these Terms.</DefItem>
               <DefItem term="Service">The PlanIt event planning platform accessible at planitapp.onrender.com and any successor domains, subdomains, or applications, including all features, functionalities, and services available therethrough, accessed via web browser, progressive web application, or any other means.</DefItem>
               <DefItem term="User">Any individual or entity that accesses, browses, uses, or interacts with the Service in any capacity, including Organizers, Participants, and Guests.</DefItem>
@@ -327,15 +327,15 @@ export default function Terms() {
           <Section number="12" title="Platform Analytics — Scope, Consent, and User Rights">
             <Sub number="12.1" title="Operation of the Platform Analytics System">
               <p>
-                PlanIt operates a Platform Analytics System comprising two complementary components. The first is PlanIt's own server-side backend analytics pipeline, which records named business events (such as feature usage and guest interactions) to help PlanIt understand aggregate platform usage, identify and resolve technical errors, detect and prevent fraudulent or abusive activity, and improve the reliability, safety, and performance of the platform. The second is Google Analytics 4 (GA4), a web analytics service operated by Google LLC, which collects page-view and session data on PlanIt's behalf using measurement ID G-4H00MP64BG. The full scope of data collected is set out in Section 2.3 of the Privacy Policy, which is incorporated into these Terms by reference. Both components are subject to the consent mechanism in Section 12.2.
+                PlanIt operates a Platform Analytics System comprising two complementary components. The first is PlanIt's own server-side backend analytics pipeline, which records page views, sessions, interaction events, and named business events (such as feature usage and guest interactions) to help PlanIt understand aggregate platform usage, identify and resolve technical errors, detect and prevent fraudulent or abusive activity, and improve the reliability, safety, and performance of the platform. The second is Google Analytics 4 (GA4), a web analytics service operated by Google LLC, which collects page-view and session data on PlanIt's behalf using measurement ID G-4H00MP64BG. The full scope of data collected is set out in Section 2.3 of the Privacy Policy, which is incorporated into these Terms by reference. Both components operate for every visitor to the Service as described in Section 12.2.
               </p>
             </Sub>
-            <Sub number="12.2" title="Analytics Consent Mechanism">
+            <Sub number="12.2" title="Cookie Notice — Acknowledgment, Not Consent Mechanism">
               <p>
-                On your first visit to the Service, PlanIt displays a consent banner giving you the choice to accept or decline Analytics Data collection. By clicking "Accept," you consent to the collection, storage, and processing of Analytics Data as described in the Privacy Policy — including the transmission of page-view and session data to Google Analytics 4 (operated by Google LLC) and business-event data to PlanIt's backend analytics pipeline. By clicking "Decline," no Visitor ID will be created, no analytics events will be transmitted to PlanIt's analytics infrastructure, and the GA4 consent state will remain denied, meaning no data is sent to Google. Essential browser storage items (authentication tokens, username preferences) continue to function regardless of your analytics choice, as these are operationally necessary to provide the Service.
+                On your first visit to the Service, PlanIt displays a notice informing you that cookies and Analytics Data collection are in use. Dismissing this notice ("Got it") is an acknowledgment that you have seen it; it is not an accept/decline choice and does not gate, enable, or disable any collection. Analytics Data collection — including the transmission of page-view and session data to Google Analytics 4 (operated by Google LLC) and events to PlanIt's backend analytics pipeline — begins on your first page load and continues regardless of whether the notice has been shown, dismissed, or seen at all. Essential browser storage items (authentication tokens, username preferences) also continue to function, as these are operationally necessary to provide the Service.
               </p>
               <p className="mt-2">
-                Your consent choice is stored in your browser's local storage. You may withdraw or change your choice at any time by clearing your browser's local storage for this site, which will cause the consent banner to reappear on your next visit. Withdrawal of consent does not affect the lawfulness of Analytics Data collected prior to withdrawal.
+                Your acknowledgment of the notice is stored in your browser's local storage so it is not shown on every visit; clearing local storage will cause it to reappear but will not pause or stop collection. You may clear your Visitor ID and GA4 cookies at any time through your browser settings, and may opt out of Google Analytics globally at tools.google.com/dlpage/gaoptout, subject to Section 12.6.
               </p>
             </Sub>
             <Sub number="12.3" title="Analytics Data Security">
@@ -596,7 +596,7 @@ export default function Terms() {
           <div className="mt-10 p-6 bg-neutral-900 rounded-xl">
             <p className="text-xs font-bold text-neutral-400 uppercase tracking-widest mb-3">Plain-Language Summary (non-binding)</p>
             <p className="text-sm text-neutral-300 leading-relaxed">
-              By using PlanIt you agree to use it lawfully, to own what you submit, and to understand that all event data is permanently deleted seven days after the event — so export anything you need first. When you first visit, we ask your permission before running platform analytics (page views, clicks, session data). You can say no and the site still works fully; the analytics just won't run. We use analytics to understand how the platform is used, fix bugs, and catch abuse — never for ads or profiling. All analytics records are automatically deleted after 90 days. PlanIt is free, provided as-is, with no guarantees of uptime or fitness for any purpose. We can remove your access for any reason at any time. Disputes come to us directly first. All rights to PlanIt's software, design, and architecture are reserved. If something is unclear, contact us.
+              By using PlanIt you agree to use it lawfully, to own what you submit, and to understand that all event data is permanently deleted seven days after the event — so export anything you need first. When you first visit, we show a notice that platform analytics (page views, clicks, session data) is running. Dismissing it just acknowledges you've seen it — it's not an accept/decline choice, and analytics runs for everyone regardless. We use analytics to understand how the platform is used, fix bugs, and catch abuse — never for ads or profiling. All analytics records are automatically deleted after 90 days. PlanIt is free, provided as-is, with no guarantees of uptime or fitness for any purpose. We can remove your access for any reason at any time. Disputes come to us directly first. All rights to PlanIt's software, design, and architecture are reserved. If something is unclear, contact us.
             </p>
           </div>
 
