@@ -1,0 +1,264 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# PlanIT — CI Safety Checks
+# Runs automatically on every pull request targeting main.
+# ALL checks must pass before the PR can be merged.
+
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  # Also run when PRs are re-opened or synchronized (new commits pushed)
+  pull_request_target:
+    types: [opened, synchronize, reopened]
+
+# Cancel any in-progress run for the same PR when new commits are pushed
+concurrency:
+  group: ci-${{ github.head_ref }}
+  cancel-in-progress: true
+
+# ─── JOB 1: Dependency security audit ────────────────────────────────────────
+jobs:
+  dependency-audit:
+    name: security / dependency-audit
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # ── Backend audit ────────────────────────────────────────────────────
+      - name: Set up Node.js (backend)
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install backend dependencies
+        working-directory: backend
+        run: npm ci --ignore-scripts
+        # --ignore-scripts: prevents malicious postinstall scripts from running
+        # during the audit step. Safe here because we're just checking, not running.
+
+      - name: Audit backend dependencies
+        working-directory: backend
+        run: |
+          echo "──────────────────────────────────────────"
+          echo "Scanning backend/package.json for CVEs..."
+          echo "──────────────────────────────────────────"
+          # --audit-level=high: fail on high OR critical vulnerabilities.
+          # moderate/low issues are reported but won't block the PR.
+          # If this fails, the volunteer must run: npm audit fix
+          # or discuss with you before adding the vulnerable package.
+          npm audit --audit-level=high
+        # If npm audit returns exit code 1 (vulnerabilities found), the step fails
+        # and the whole job is marked failed — blocking the merge.
+
+      # ── Frontend audit ───────────────────────────────────────────────────
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm ci --ignore-scripts
+
+      - name: Audit frontend dependencies
+        working-directory: frontend
+        run: |
+          echo "──────────────────────────────────────────"
+          echo "Scanning frontend/package.json for CVEs..."
+          echo "──────────────────────────────────────────"
+          npm audit --audit-level=high
+
+
+# ─── JOB 2: Secret / credential leak scan ────────────────────────────────────
+  secret-scan:
+    name: security / secret-scan
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code (full history for better detection)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          # fetch-depth: 0 fetches ALL commits, not just the latest.
+          # This lets the scanner check the entire history of the PR branch,
+          # so secrets in early commits (later "fixed") are still caught.
+
+      - name: Run Gitleaks secret scanner
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # GITHUB_TOKEN is automatically provided by GitHub Actions — no setup needed.
+          # Gitleaks scans for: API keys, JWT secrets, Stripe keys, Cloudinary credentials,
+          # MongoDB connection strings, Redis URLs, Discord webhooks, and 100+ other patterns.
+          #
+          # HOW TO RESPOND IF THIS FAILS:
+          # 1. Look at the Gitleaks output to find what was detected and where.
+          # 2. Remove the secret from the code.
+          # 3. If it was a real credential, ROTATE IT IMMEDIATELY — assume it's compromised.
+          # 4. Do NOT just add the file to .gitleaksignore to silence the warning.
+          #    Only use .gitleaksignore for confirmed false positives.
+
+      # ── Extra PlanIT-specific pattern check ──────────────────────────────
+      # Gitleaks covers most cases, but we add a targeted grep for patterns
+      # specific to PlanIT's stack.
+      - name: Check for PlanIT-specific credential patterns
+        run: |
+          echo "Checking for PlanIT-specific credential patterns..."
+          FOUND=0
+
+          # Stripe live key (test keys are fine, live keys are not)
+          if git diff origin/main...HEAD -- . | grep -E "sk_live_[0-9a-zA-Z]{24,}"; then
+            echo "❌ FAIL: Stripe LIVE secret key detected in diff"
+            FOUND=1
+          fi
+
+          # MongoDB Atlas production URI (contains cluster hostname)
+          if git diff origin/main...HEAD -- . | grep -E "mongodb\+srv://[^@]+@[a-z0-9]+\.mongodb\.net"; then
+            echo "❌ FAIL: MongoDB Atlas connection string detected in diff"
+            FOUND=1
+          fi
+
+          # Upstash Redis token (starts with specific prefix)
+          if git diff origin/main...HEAD -- . | grep -E "AX[A-Z0-9]{40,}"; then
+            echo "❌ FAIL: Upstash Redis token pattern detected in diff"
+            FOUND=1
+          fi
+
+          # 64-char hex (PLANIT_LICENSE_KEY / PLANIT_INTEGRITY_PROOF patterns)
+          if git diff origin/main...HEAD -- . ':(exclude)*.md' ':(exclude)*.example' | grep -E '"[0-9a-f]{64}"'; then
+            echo "❌ FAIL: 64-char hex string detected — may be a license key or integrity proof"
+            FOUND=1
+          fi
+
+          if [ $FOUND -eq 1 ]; then
+            echo ""
+            echo "One or more credential patterns were found in this PR."
+            echo "Remove them, then rotate any real credentials that were exposed."
+            exit 1
+          fi
+
+          echo "✅ No PlanIT-specific credential patterns found."
+
+
+# ─── JOB 3: Backend lint (ESLint) ────────────────────────────────────────────
+  lint-backend:
+    name: code-quality / lint-backend
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install backend dependencies
+        working-directory: backend
+        run: npm ci --ignore-scripts
+
+      - name: Install ESLint (backend)
+        working-directory: backend
+        run: npm install --save-dev eslint@8 --ignore-scripts
+
+      - name: Run ESLint on backend
+        working-directory: backend
+        run: |
+          echo "Running ESLint on backend..."
+          # Uses .eslintrc.js if present, otherwise applies the inline config below.
+          # --max-warnings 0: treat ALL warnings as errors. This forces the volunteer
+          # to fix issues rather than leaving them as "just warnings".
+          npx eslint . \
+            --ext .js \
+            --ignore-pattern "node_modules/" \
+            --rule '{"no-console": "warn", "no-unused-vars": ["error", {"argsIgnorePattern": "^_", "varsIgnorePattern": "^_"}], "no-undef": "error", "eqeqeq": ["error", "always"], "no-eval": "error", "no-implied-eval": "error", "no-new-func": "error"}' \
+            --max-warnings 0 \
+            || {
+              echo ""
+              echo "ESLint found issues. The volunteer must fix all errors and warnings."
+              echo "Run this locally: cd backend && npx eslint . --ext .js"
+              exit 1
+            }
+
+
+# ─── JOB 4: Frontend lint ─────────────────────────────────────────────────────
+  lint-frontend:
+    name: code-quality / lint-frontend
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm ci --ignore-scripts
+
+      - name: Run ESLint on frontend
+        working-directory: frontend
+        # The frontend already has an ESLint script in package.json ("lint")
+        # If it doesn't, this falls back to running eslint directly.
+        run: |
+          echo "Running ESLint on frontend..."
+          npm run lint || npx eslint . --ext js,jsx --max-warnings 0
+
+
+# ─── JOB 5: PR size check ─────────────────────────────────────────────────────
+  size-check:
+    name: pr-hygiene / size-check
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check PR size
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Count lines added + removed in this PR (excluding lock files and generated files)
+          ADDITIONS=$(git diff origin/main...HEAD \
+            -- . \
+            ':(exclude)package-lock.json' \
+            ':(exclude)*/package-lock.json' \
+            ':(exclude)*.lock' \
+            ':(exclude)docs/' \
+            | grep -c "^+" || true)
+
+          DELETIONS=$(git diff origin/main...HEAD \
+            -- . \
+            ':(exclude)package-lock.json' \
+            ':(exclude)*/package-lock.json' \
+            ':(exclude)*.lock' \
+            ':(exclude)docs/' \
+            | grep -c "^-" || true)
+
+          TOTAL=$((ADDITIONS + DELETIONS))
+
+          echo "PR size: +${ADDITIONS} -${DELETIONS} (${TOTAL} total lines changed)"
+          echo ""
+
+          if [ "$TOTAL" -gt 800 ]; then
+            echo "❌ FAIL: This PR changes $TOTAL lines."
+            echo ""
+            echo "Large PRs are hard to review safely and increase the risk of missing bugs."
+            echo "Please split this into smaller PRs, each focused on one thing."
+            echo "Aim for under 400 lines per PR. Max allowed: 800."
+            echo ""
+            echo "If this PR genuinely cannot be split (e.g. a large refactor that must be atomic),"
+            echo "please comment on the PR explaining why, and tag the repo owner for manual override."
+            exit 1
+          elif [ "$TOTAL" -gt 400 ]; then
+            echo "⚠️  WARNING: This PR is on the larger side ($TOTAL lines)."
+            echo "It will pass CI, but please consider splitting it if possible."
+            echo "Large PRs are harder to review carefully."
+          else
+            echo "✅ PR size is fine ($TOTAL lines)."
+          fi

@@ -1,0 +1,3893 @@
+import { useState, useEffect, useRef } from 'react';
+import { getUserTimezone, localDateTimeToUTC, getTimezoneOptions } from '../utils/timezoneUtils';
+import { validateEmail } from '../utils/validators';
+import { useNavigate } from 'react-router-dom';
+import {
+  Calendar, Users, MessageSquare, BarChart3, FileText, Shield, Copy, Check, Lock,
+  ArrowRight, Link, Eye, EyeOff, ChevronRight, Zap, Clock,
+  CheckCircle2, TrendingUp, ListChecks, Timer,
+  Brain, ArrowUpRight, AlertCircle, UtensilsCrossed, MapPin, QrCode, Layers, Search, CornerDownRight, Bot,
+  Share2, Ticket
+} from 'lucide-react';
+import { eventAPI } from '../services/api';
+import { trackFeature, flushTracker } from '../services/tracker';
+import { trackGAEvent } from '../services/analytics';
+import RecoveryCodeModal from '../components/RecoveryCodeModal';
+import toast from 'react-hot-toast';
+import { motion } from 'framer-motion';
+import { useWhiteLabel } from '../context/WhiteLabelContext';
+
+/*
+PLANIT SOFTWARE LICENSE AGREEMENT
+Copyright (c) 2026 Aakshat Hariharan. All rights reserved.
+
+PLEASE READ THIS LICENSE AGREEMENT CAREFULLY BEFORE ACCESSING, VIEWING,
+OR USING THIS SOFTWARE. BY ACCESSING THE REPOSITORY, VIEWING THE SOURCE
+CODE, OR USING THE HOSTED SERVICE, YOU ACKNOWLEDGE THAT YOU HAVE READ
+THIS AGREEMENT, UNDERSTAND IT, AND AGREE TO BE BOUND BY ITS TERMS. IF
+YOU DO NOT AGREE TO THESE TERMS, YOU MUST IMMEDIATELY CEASE ALL ACCESS
+TO AND USE OF THIS SOFTWARE.
+
+================================================================================
+SECTION 1 -- DEFINITIONS
+================================================================================
+
+1.1  "Software" means the PlanIt application in its entirety, including but
+     not limited to all source code, object code, compiled binaries, scripts,
+     configuration files, database schemas, API definitions, frontend
+     components, backend services, routing infrastructure, watchdog services,
+     documentation, design assets, visual layouts, user interface elements,
+     architectural decisions, and all related materials made available in this
+     repository or through the hosted service.
+
+1.2  "Author" means Aakshat Hariharan, the sole creator and owner of the
+     Software and all intellectual property rights therein.
+
+1.3  "You" or "Licensee" means any individual, organization, company,
+     partnership, or other legal entity that accesses, views, downloads,
+     copies, or otherwise interacts with the Software or any portion thereof.
+
+1.4  "Hosted Service" means the publicly accessible deployment of the
+     Software operated by the Author at planitapp.onrender.com and any
+     associated domains or subdomains.
+
+1.5  "Derivative Work" means any work, software, product, service, or
+     creation that is based on, derived from, substantially similar to,
+     inspired by, or incorporates any portion of the Software, including
+     works that replicate the design, architecture, functionality, or
+     user experience of the Software in any form.
+
+1.6  "Commercial Use" means any use of the Software or any portion thereof
+     in connection with any activity intended to generate revenue, profit,
+     or other financial or commercial benefit, whether directly or indirectly.
+
+1.7  "Distribute" means to make available, publish, transmit, share,
+     sublicense, sell, rent, lease, lend, or otherwise transfer the Software
+     or any portion thereof to any third party by any means.
+
+1.8  "Deploy" means to install, run, host, execute, or operate the Software
+     or any portion thereof on any server, device, infrastructure, cloud
+     platform, virtual machine, container, or computing environment.
+
+================================================================================
+SECTION 2 -- GRANT OF LIMITED LICENSE
+================================================================================
+
+2.1  Subject to the terms and conditions of this Agreement, the Author
+     hereby grants You a limited, non-exclusive, non-transferable,
+     non-sublicensable, revocable license to:
+
+     (a) View the source code of the Software solely for personal,
+         non-commercial educational and reference purposes; and
+
+     (b) Access and use the Hosted Service for its intended purpose of
+         event planning, subject to the Terms of Service of the Hosted
+         Service.
+
+2.2  This license does not grant You any rights to the Software except
+     as expressly set forth in Section 2.1. All rights not expressly
+     granted herein are reserved by the Author.
+
+2.3  The Author reserves the right to revoke this limited license at any
+     time, for any reason or no reason, upon notice or without notice.
+
+2.4  Making the repository publicly accessible does not, under any
+     circumstances, constitute a grant of any rights beyond those expressly
+     set forth in Section 2.1, nor does it constitute a dedication of the
+     Software to the public domain.
+
+================================================================================
+SECTION 3 -- RESTRICTIONS
+================================================================================
+
+3.1  You expressly agree that You will NOT, without prior explicit written
+     permission from the Author:
+
+     (a) Copy, clone, fork, mirror, scrape, or otherwise reproduce the
+         Software or any portion thereof, in whole or in part, in any
+         medium or format, whether digital or physical;
+
+     (b) Deploy, host, run, or execute the Software or any portion thereof
+         on any server, device, or infrastructure other than the Author's
+         official Hosted Service;
+
+     (c) Distribute, sublicense, sell, rent, lease, transfer, publish,
+         or otherwise make the Software or any portion thereof available
+         to any third party in any form;
+
+     (d) Modify, adapt, translate, reverse engineer, decompile, disassemble,
+         or attempt to derive the source code of any compiled portion of
+         the Software;
+
+     (e) Create any Derivative Work based on or substantially similar to
+         the Software, including recreating its functionality, architecture,
+         design, or user experience in any other codebase or product;
+
+     (f) Use the Software or any portion of its source code, design,
+         architecture, or functionality as the basis for any competing
+         product or service, whether commercial or non-commercial;
+
+     (g) Use the Software for any Commercial Use without a separately
+         negotiated commercial license agreement executed in writing by
+         the Author;
+
+     (h) Remove, alter, obscure, or replace any copyright notices, license
+         notices, proprietary markings, or attribution notices contained
+         in or accompanying the Software;
+
+     (i) Use the name "PlanIt", the PlanIt logo, or the name "Aakshat
+         Hariharan" in connection with any product, service, or
+         organization in a manner that suggests endorsement, affiliation,
+         or sponsorship without prior written permission from the Author;
+
+     (j) Use the Software in any manner that violates any applicable local,
+         state, national, or international law or regulation;
+
+     (k) Circumvent, disable, or interfere with any technical measures
+         implemented in the Software to enforce the terms of this license,
+         including but not limited to the cryptographic license integrity
+         verification system embedded in the Software's backend;
+
+     (l) Access the Software's backend services, APIs, or database
+         infrastructure through any means other than the official Hosted
+         Service's user interface, except as explicitly authorized by
+         the Author in writing;
+
+     (m) Use any automated tools, bots, scrapers, or scripts to access,
+         download, or index the Software's source code or the Hosted
+         Service's content at scale.
+
+3.2  The restrictions set forth in Section 3.1 apply regardless of whether
+     Your intended use is personal, educational, academic, commercial,
+     non-profit, or for any other purpose.
+
+3.3  The restrictions set forth in this Agreement apply to the Software
+     as a whole and to any portion, excerpt, component, module, or file
+     thereof, no matter how small.
+
+================================================================================
+SECTION 4 -- INTELLECTUAL PROPERTY OWNERSHIP
+================================================================================
+
+4.1  The Software and all copies, modifications, and Derivative Works
+     thereof, and all intellectual property rights therein, including
+     without limitation all copyrights, patents, trade secrets, trademarks,
+     and other proprietary rights, are and shall remain the exclusive
+     property of the Author.
+
+4.2  Nothing in this Agreement shall be construed to transfer, assign, or
+     convey to You any ownership interest in the Software or any intellectual
+     property rights therein.
+
+4.3  The design, architecture, visual appearance, user experience, and
+     functionality of the Software are trade secrets and confidential
+     information of the Author, and You agree to treat them as such.
+
+4.4  Any feedback, suggestions, bug reports, or contributions You provide
+     to the Author regarding the Software shall be the sole and exclusive
+     property of the Author, and You hereby assign to the Author all
+     rights in such feedback without any obligation of compensation or
+     attribution to You.
+
+4.5  You acknowledge that the Software embodies substantial creative effort
+     and investment by the Author, and that unauthorized use or copying
+     would cause irreparable harm to the Author for which monetary damages
+     would be inadequate.
+
+================================================================================
+SECTION 5 -- TECHNICAL ENFORCEMENT
+================================================================================
+
+5.1  The Software includes a cryptographic license integrity verification
+     system that runs at server startup and periodically during operation.
+     This system uses HMAC proof chains derived from a deployment-specific
+     license key to verify that each running instance of the Software is
+     an authorized deployment.
+
+5.2  Any attempt to tamper with, circumvent, disable, or bypass this
+     verification system constitutes a material breach of this Agreement
+     and may also constitute a violation of applicable computer fraud and
+     abuse laws.
+
+5.3  Unauthorized deployments will fail to start or will terminate
+     automatically. The Author reserves the right to implement additional
+     technical measures to prevent unauthorized use at any time.
+
+================================================================================
+SECTION 6 -- CONFIDENTIALITY
+================================================================================
+
+6.1  You acknowledge that the Software contains confidential and proprietary
+     information belonging to the Author, including but not limited to
+     source code, algorithms, data structures, database schemas, security
+     implementations, and architectural design.
+
+6.2  You agree to maintain the confidentiality of the Software and not to
+     disclose, publish, or share any non-public portions of the Software
+     with any third party without the Author's prior written consent.
+
+6.3  You agree to take reasonable precautions to prevent unauthorized
+     access to or disclosure of the Software, using at least the same
+     degree of care You use to protect Your own confidential information,
+     but in no event less than reasonable care.
+
+================================================================================
+SECTION 7 -- DISCLAIMER OF WARRANTIES
+================================================================================
+
+7.1  THE SOFTWARE AND THE HOSTED SERVICE ARE PROVIDED "AS IS" AND "AS
+     AVAILABLE" WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED.
+
+7.2  THE AUTHOR EXPRESSLY DISCLAIMS ALL WARRANTIES, INCLUDING BUT NOT
+     LIMITED TO: (A) ANY IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS
+     FOR A PARTICULAR PURPOSE, TITLE, AND NON-INFRINGEMENT; (B) ANY
+     WARRANTIES THAT THE SOFTWARE WILL BE UNINTERRUPTED, ERROR-FREE, OR
+     FREE OF HARMFUL COMPONENTS; (C) ANY WARRANTIES REGARDING THE ACCURACY,
+     RELIABILITY, OR COMPLETENESS OF THE SOFTWARE OR ANY CONTENT THEREIN;
+     AND (D) ANY WARRANTIES ARISING FROM COURSE OF DEALING, COURSE OF
+     PERFORMANCE, OR USAGE OF TRADE.
+
+7.3  YOU ASSUME ALL RISK ARISING FROM YOUR ACCESS TO AND USE OF THE
+     SOFTWARE AND THE HOSTED SERVICE.
+
+================================================================================
+SECTION 8 -- LIMITATION OF LIABILITY
+================================================================================
+
+8.1  TO THE MAXIMUM EXTENT PERMITTED BY APPLICABLE LAW, IN NO EVENT SHALL
+     THE AUTHOR BE LIABLE FOR ANY INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY,
+     CONSEQUENTIAL, OR PUNITIVE DAMAGES, INCLUDING BUT NOT LIMITED TO LOSS
+     OF PROFITS, LOSS OF DATA, LOSS OF GOODWILL, BUSINESS INTERRUPTION,
+     OR ANY OTHER COMMERCIAL DAMAGES OR LOSSES, ARISING OUT OF OR RELATED
+     TO THIS AGREEMENT OR YOUR USE OF OR INABILITY TO USE THE SOFTWARE,
+     EVEN IF THE AUTHOR HAS BEEN ADVISED OF THE POSSIBILITY OF SUCH DAMAGES.
+
+8.2  THE AUTHOR'S TOTAL CUMULATIVE LIABILITY TO YOU FOR ANY AND ALL CLAIMS
+     ARISING OUT OF OR RELATED TO THIS AGREEMENT SHALL NOT EXCEED THE
+     GREATER OF (A) THE AMOUNT YOU PAID TO THE AUTHOR IN THE TWELVE MONTHS
+     PRECEDING THE CLAIM, OR (B) ONE HUNDRED DOLLARS (USD $100.00).
+
+================================================================================
+SECTION 9 -- INDEMNIFICATION
+================================================================================
+
+9.1  You agree to indemnify, defend, and hold harmless the Author from and
+     against any and all claims, damages, losses, liabilities, costs, and
+     expenses (including reasonable attorneys' fees) arising out of or
+     related to: (a) Your breach of this Agreement; (b) Your use of or
+     access to the Software in violation of this Agreement; (c) Your
+     violation of any applicable law or regulation; or (d) Your
+     infringement of any third-party rights.
+
+================================================================================
+SECTION 10 -- TERMINATION
+================================================================================
+
+10.1 This Agreement and the license granted herein are effective until
+     terminated. The Author may terminate this Agreement and the license
+     immediately and without notice if You breach any term of this Agreement.
+
+10.2 Upon termination of this Agreement for any reason: (a) all rights
+     granted to You hereunder shall immediately terminate; (b) You must
+     immediately cease all use of and access to the Software; (c) You must
+     immediately destroy all copies of the Software in Your possession
+     or control; and (d) You must certify in writing to the Author that
+     You have complied with the foregoing obligations upon request.
+
+10.3 Termination of this Agreement shall not limit the Author's rights
+     or remedies at law or in equity. Sections 1, 3, 4, 6, 7, 8, 9,
+     10, 11, and 12 shall survive termination of this Agreement.
+
+================================================================================
+SECTION 11 -- ENFORCEMENT AND REMEDIES
+================================================================================
+
+11.1 You acknowledge that any breach of this Agreement would cause
+     irreparable harm to the Author for which monetary damages would be
+     an inadequate remedy, and that the Author shall be entitled to seek
+     equitable relief, including injunctive relief and specific performance,
+     in addition to all other remedies available at law or in equity,
+     without the requirement of posting a bond or other security.
+
+11.2 The Author reserves the right to pursue all available legal and
+     equitable remedies for violations of this Agreement, including but
+     not limited to injunctive relief, damages, disgorgement of profits,
+     attorneys' fees, and court costs.
+
+11.3 The failure of the Author to enforce any provision of this Agreement
+     shall not constitute a waiver of the Author's right to enforce that
+     provision or any other provision in the future.
+
+================================================================================
+SECTION 12 -- GENERAL PROVISIONS
+================================================================================
+
+12.1 Governing Law. This Agreement shall be governed by and construed in
+     accordance with the laws of the jurisdiction in which the Author
+     resides, without regard to its conflict of law provisions.
+
+12.2 Entire Agreement. This Agreement constitutes the entire agreement
+     between You and the Author with respect to the subject matter hereof
+     and supersedes all prior or contemporaneous agreements, representations,
+     warranties, and understandings with respect to the Software.
+
+12.3 Severability. If any provision of this Agreement is held to be
+     invalid, illegal, or unenforceable, the remaining provisions shall
+     continue in full force and effect, and the invalid, illegal, or
+     unenforceable provision shall be modified to the minimum extent
+     necessary to make it valid, legal, and enforceable.
+
+12.4 No Waiver. No waiver by the Author of any breach of this Agreement
+     shall be deemed a waiver of any subsequent breach of the same or any
+     other provision.
+
+12.5 Assignment. You may not assign or transfer this Agreement or any
+     rights or obligations hereunder, in whole or in part, without the
+     Author's prior written consent. Any purported assignment without such
+     consent shall be null and void. The Author may assign this Agreement
+     freely without restriction.
+
+12.6 Contact. For licensing inquiries, permission requests, or to report
+     violations of this Agreement, contact the Author through the official
+     support page at planitapp.onrender.com or planit.userhelp@gmail.com
+
+================================================================================
+
+Copyright (c) 2026 Aakshat Hariharan. All rights reserved.
+*/
+
+// ─────────────────────────────────────────────────────────────────────────────
+// GLOBAL STYLES — injected once
+// ─────────────────────────────────────────────────────────────────────────────
+const GLOBAL_CSS = `
+  @import url('https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,700&display=swap');
+
+  :root {
+    --accent-1: #6366f1;
+    --accent-2: #8b5cf6;
+    --glow-1: rgba(99,102,241,0.18);
+    --glow-2: rgba(139,92,246,0.12);
+    --surface-glass: rgba(255,255,255,0.03);
+    --border-subtle: rgba(255,255,255,0.06);
+  }
+
+  @keyframes shake {
+    0%,100% { transform: translateX(0); }
+    20%,60%  { transform: translateX(-6px); }
+    40%,80%  { transform: translateX(6px); }
+  }
+  .animate-shake { animation: shake 0.45s ease-in-out; }
+  @keyframes loader-bar {
+    0%   { transform: scaleX(0);   }
+    60%  { transform: scaleX(0.85);}
+    100% { transform: scaleX(1);   }
+  }
+  @keyframes loader-fade-out {
+    0%   { opacity:1; }
+    100% { opacity:0; pointer-events:none; }
+  }
+  @keyframes hero-word-in {
+    0%   { opacity:0; transform: translateY(28px) skewY(3deg); filter: blur(6px); }
+    100% { opacity:1; transform: translateY(0) skewY(0deg);   filter: blur(0);   }
+  }
+  @keyframes grid-pulse {
+    0%,100% { opacity:0.018; }
+    50%      { opacity:0.042; }
+  }
+  @keyframes orb-drift-a {
+    0%,100% { transform: translate(0,0) scale(1);      }
+    33%     { transform: translate(30px,-20px) scale(1.06); }
+    66%     { transform: translate(-18px,25px) scale(0.96); }
+  }
+  @keyframes orb-drift-b {
+    0%,100% { transform: translate(0,0) scale(1);      }
+    33%     { transform: translate(-22px,18px) scale(1.04); }
+    66%     { transform: translate(28px,-15px) scale(0.98); }
+  }
+  @keyframes badge-glow {
+    0%,100% { box-shadow: 0 0 0 0 rgba(99,102,241,0); }
+    50%     { box-shadow: 0 0 22px 2px rgba(99,102,241,0.22); }
+  }
+  @keyframes scan-line {
+    0%   { transform: translateY(-100%); }
+    100% { transform: translateY(100vh); }
+  }
+  @keyframes cta-shimmer {
+    0%   { background-position: -200% center; }
+    100% { background-position:  200% center; }
+  }
+  @keyframes float-gentle {
+    0%,100% { transform: translateY(0px); }
+    50%     { transform: translateY(-8px); }
+  }
+  @keyframes scroll-indicator-bounce {
+    0%,100% { opacity:0.3; transform:translateY(0); }
+    50%     { opacity:0.7; transform:translateY(6px); }
+  }
+  @keyframes tick-in {
+    0%   { opacity:0; transform:scale(0.6); }
+    80%  { transform:scale(1.15); }
+    100% { opacity:1; transform:scale(1); }
+  }
+
+  .font-syne    { font-family: 'Syne', sans-serif; }
+  .hero-word    { animation: hero-word-in 0.7s cubic-bezier(0.22,1,0.36,1) both; }
+  .loading-bar  { animation: loader-bar 1.6s cubic-bezier(0.22,1,0.36,1) forwards; transform-origin: left; }
+  .cta-primary  {
+    background: linear-gradient(135deg, #fff 0%, #e8e8f0 100%);
+    background-size: 200% auto;
+    transition: background-position 0.5s ease, transform 0.2s ease, box-shadow 0.3s ease;
+  }
+  .cta-primary:hover {
+    background-position: right center;
+    transform: translateY(-2px);
+    box-shadow: 0 20px 40px rgba(0,0,0,0.4), 0 0 30px rgba(99,102,241,0.15);
+  }
+  .cta-venue {
+    transition: transform 0.2s ease, box-shadow 0.3s ease, border-color 0.3s ease;
+  }
+  .cta-venue:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 20px 40px rgba(0,0,0,0.4), 0 0 30px rgba(249,115,22,0.12);
+    border-color: rgba(249,115,22,0.6);
+  }
+  .branch-card {
+    transition: transform 0.4s cubic-bezier(0.22,1,0.36,1), box-shadow 0.4s ease;
+  }
+  .branch-card:hover { transform: translateY(-4px); }
+  .branch-card-events:hover { box-shadow: 0 30px 60px rgba(0,0,0,0.5), 0 0 60px rgba(99,102,241,0.08); }
+  .branch-card-venue:hover  { box-shadow: 0 30px 60px rgba(0,0,0,0.5), 0 0 60px rgba(249,115,22,0.08); }
+  .feature-card {
+    transition: transform 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+    border: 1px solid rgba(255,255,255,0.05);
+  }
+  .feature-card:hover {
+    transform: translateY(-3px);
+    border-color: rgba(99,102,241,0.25);
+    box-shadow: 0 16px 40px rgba(0,0,0,0.4), 0 0 24px rgba(99,102,241,0.07);
+  }
+  .stat-card {
+    border: 1px solid rgba(255,255,255,0.06);
+    transition: border-color 0.3s ease, box-shadow 0.3s ease, transform 0.3s ease;
+  }
+  .stat-card:hover {
+    border-color: rgba(99,102,241,0.3);
+    box-shadow: 0 8px 32px rgba(99,102,241,0.1);
+    transform: translateY(-2px);
+  }
+  .shimmer-white {
+    background: linear-gradient(90deg, #fff 0%, #a5b4fc 50%, #fff 100%);
+    background-size: 200% auto;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    animation: cta-shimmer 4s linear infinite;
+  }
+  .shimmer-slate {
+    background: linear-gradient(90deg, #94a3b8 0%, #cbd5e1 50%, #94a3b8 100%);
+    background-size: 200% auto;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    animation: cta-shimmer 4s linear infinite;
+  }
+  .typing-dot { animation: float-gentle 1.2s ease-in-out infinite; }
+  .typing-dot:nth-child(2) { animation-delay: 0.2s; }
+  .typing-dot:nth-child(3) { animation-delay: 0.4s; }
+  .nav-link { position:relative; }
+  .nav-link::after {
+    content:''; position:absolute; bottom:-2px; left:50%; right:50%;
+    height:1px; background:var(--accent-1);
+    transition: left 0.3s ease, right 0.3s ease;
+  }
+  .nav-link:hover::after { left:10%; right:10%; }
+
+  @keyframes wiz-overlay-in {
+    from { opacity:0; }
+    to   { opacity:1; }
+  }
+  /* ── Onboarding Wizard ─────────────────────────────────────────── */
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+  @keyframes wiz-in-right {
+    from { opacity:0; transform:translateX(36px); }
+    to   { opacity:1; transform:translateX(0); }
+  }
+  @keyframes wiz-in-left {
+    from { opacity:0; transform:translateX(-36px); }
+    to   { opacity:1; transform:translateX(0); }
+  }
+  @keyframes wiz-q-in {
+    from { opacity:0; transform:translateY(14px); }
+    to   { opacity:1; transform:translateY(0); }
+  }
+  @keyframes wiz-pop {
+    0%   { opacity:0; transform:scale(0.88); }
+    70%  { transform:scale(1.04); }
+    100% { opacity:1; transform:scale(1); }
+  }
+  @keyframes wiz-check {
+    0%   { opacity:0; transform:scale(0.5) rotate(-15deg); }
+    60%  { transform:scale(1.2) rotate(6deg); }
+    100% { opacity:1; transform:scale(1) rotate(0deg); }
+  }
+  .wiz-forward  { animation: wiz-in-right 0.34s cubic-bezier(0.22,1,0.36,1) both; }
+  .wiz-back     { animation: wiz-in-left  0.34s cubic-bezier(0.22,1,0.36,1) both; }
+  .wiz-question { animation: wiz-q-in 0.4s cubic-bezier(0.22,1,0.36,1) both; }
+  .wiz-card-pop { animation: wiz-pop 0.28s cubic-bezier(0.22,1,0.36,1) both; }
+  .wiz-type-card {
+    transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+    cursor: pointer;
+  }
+  .wiz-type-card:hover  { transform: translateY(-3px) scale(1.02); }
+  .wiz-type-card.active { transform: translateY(-2px) scale(1.04); }
+  .wiz-input {
+    width:100%; background:rgba(10,10,20,0.7); border:1px solid rgba(255,255,255,0.1);
+    border-radius:14px; color:#fff; font-size:16px; padding:14px 18px;
+    outline:none; transition:border-color 0.2s ease, box-shadow 0.2s ease;
+    font-family:'DM Sans',sans-serif;
+  }
+  .wiz-input::placeholder { color:rgba(255,255,255,0.25); }
+  .wiz-input:focus { border-color:rgba(255,255,255,0.3); box-shadow:0 0 0 3px rgba(99,102,241,0.12); }
+  .wiz-input.error { border-color:rgba(239,68,68,0.6); box-shadow:0 0 0 3px rgba(239,68,68,0.1); }
+  .wiz-input-venue:focus { border-color:rgba(249,115,22,0.4); box-shadow:0 0 0 3px rgba(249,115,22,0.1); }
+  .wiz-btn-next {
+    background:#fff; color:#111; border:none; border-radius:14px;
+    font-size:15px; font-weight:700; padding:14px 28px; cursor:pointer;
+    transition:transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+    display:flex; align-items:center; gap:8px; white-space:nowrap;
+  }
+  .wiz-btn-next:hover:not(:disabled) { transform:translateY(-2px); box-shadow:0 12px 32px rgba(0,0,0,0.35); }
+  .wiz-btn-next:disabled { opacity:0.45; cursor:not-allowed; }
+  .wiz-btn-next.venue { background:#f97316; color:#fff; }
+  .wiz-btn-next.venue:hover:not(:disabled) { background:#fb923c; box-shadow:0 12px 32px rgba(249,115,22,0.3); }
+  .wiz-btn-back {
+    background:transparent; color:rgba(255,255,255,0.4); border:1px solid rgba(255,255,255,0.1);
+    border-radius:14px; font-size:14px; font-weight:600; padding:14px 20px; cursor:pointer;
+    transition:color 0.2s ease, border-color 0.2s ease, background 0.2s ease;
+    display:flex; align-items:center; gap:6px;
+  }
+  .wiz-btn-back:hover { color:rgba(255,255,255,0.8); border-color:rgba(255,255,255,0.25); background:rgba(255,255,255,0.04); }
+  .wiz-pill {
+    width:28px; height:6px; border-radius:99px;
+    transition:background 0.3s ease, width 0.3s ease;
+  }
+  .wiz-select {
+    width:100%; background:rgba(10,10,20,0.7); border:1px solid rgba(255,255,255,0.1);
+    border-radius:14px; color:#fff; font-size:15px; padding:13px 18px;
+    outline:none; appearance:none; cursor:pointer;
+    font-family:'DM Sans',sans-serif;
+    transition:border-color 0.2s ease;
+  }
+  .wiz-select:focus { border-color:rgba(255,255,255,0.3); }
+  .dark-input {
+    width:100%; background:rgba(10,10,20,0.7); border:1px solid rgba(255,255,255,0.1);
+    border-radius:10px; color:#fff; font-size:14px; padding:11px 14px;
+    outline:none; transition:border-color 0.2s ease;
+    font-family:'DM Sans',sans-serif;
+  }
+  .dark-input::placeholder { color:rgba(255,255,255,0.25); }
+  .dark-input:focus { border-color:rgba(255,255,255,0.28); }
+
+  /* ── Icon micro-interactions ─────────────────────────────────────── */
+  .feature-icon { transition: transform 0.5s cubic-bezier(0.22,1,0.36,1), background 0.5s ease; }
+  .group:hover .feature-icon { transform: rotate(-8deg) scale(1.12); }
+  .feature-icon svg { transition: transform 0.4s ease; }
+  .group:hover .feature-icon svg { transform: scale(1.08); }
+
+  /* ── Respect reduced-motion preference ───────────────────────────── */
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.001ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.001ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+`;
+
+function InjectGlobalCSS() {
+  useEffect(() => {
+    const id = 'planit-home-styles';
+    if (!document.getElementById(id)) {
+      const s = document.createElement('style'); s.id = id; s.textContent = GLOBAL_CSS;
+      document.head.appendChild(s);
+    }
+    return () => { const el = document.getElementById(id); if (el) el.remove(); };
+  }, []);
+  return null;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// CINEMATIC LOADING SCREEN
+// ─────────────────────────────────────────────────────────────────────────────
+function LoadingScreen({ onDone }) {
+  const [phase, setPhase] = useState(0); // 0=loading, 1=fading
+  useEffect(() => {
+    const t1 = setTimeout(() => setPhase(1), 1700);
+    const t2 = setTimeout(() => onDone(), 2100);
+    return () => { clearTimeout(t1); clearTimeout(t2); };
+  }, [onDone]);
+  return (
+    <div
+      aria-hidden="true"
+      style={{
+        position:'fixed', inset:0, zIndex:9999, background:'#050508',
+        display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center',
+        transition:'opacity 0.4s ease',
+        opacity: phase === 1 ? 0 : 1,
+        pointerEvents: phase === 1 ? 'none' : 'all',
+      }}
+    >
+      {/* Scan line */}
+      <div style={{ position:'absolute', inset:0, overflow:'hidden', pointerEvents:'none' }}>
+        <div style={{ position:'absolute', top:0, left:0, right:0, height:'2px', background:'linear-gradient(90deg, transparent, rgba(99,102,241,0.4), transparent)', animation:'scan-line 1.8s linear 1' }} />
+      </div>
+      {/* Logo */}
+      <div style={{ display:'flex', alignItems:'center', gap:14, marginBottom:36 }}>
+        <div style={{ width:44, height:44, borderRadius:14, background:'rgba(99,102,241,0.1)', border:'1px solid rgba(99,102,241,0.3)', display:'flex', alignItems:'center', justifyContent:'center', boxShadow:'0 0 24px rgba(99,102,241,0.2)' }}>
+          <Calendar style={{ width:22, height:22, color:'#818cf8' }} />
+        </div>
+        <span style={{ fontFamily:'Syne,sans-serif', fontSize:26, fontWeight:800, color:'#fff', letterSpacing:'-0.03em' }}>PlanIt</span>
+      </div>
+      {/* Progress bar */}
+      <div style={{ width:200, height:1, background:'rgba(255,255,255,0.06)', borderRadius:1, overflow:'hidden' }}>
+        <div className="loading-bar" style={{ height:'100%', background:'linear-gradient(90deg, #6366f1, #8b5cf6)', borderRadius:1 }} />
+      </div>
+      <p style={{ marginTop:16, fontSize:11, letterSpacing:'0.18em', textTransform:'uppercase', color:'rgba(255,255,255,0.25)', fontFamily:'DM Sans,sans-serif' }}>Event & venue management</p>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ANIMATED GRID BACKGROUND
+// ─────────────────────────────────────────────────────────────────────────────
+function CinematicGrid() {
+  return (
+    <div aria-hidden="true" style={{ position:'absolute', inset:0, overflow:'hidden', pointerEvents:'none', zIndex:0 }}>
+      {/* Animated grid lines */}
+      <svg style={{ position:'absolute', inset:0, width:'100%', height:'100%', animation:'grid-pulse 6s ease-in-out infinite' }} preserveAspectRatio="xMidYMid slice">
+        <defs>
+          <pattern id="grid-sm" width="60" height="60" patternUnits="userSpaceOnUse">
+            <path d="M 60 0 L 0 0 0 60" fill="none" stroke="rgba(255,255,255,0.03)" strokeWidth="1"/>
+          </pattern>
+          <pattern id="grid-lg" width="240" height="240" patternUnits="userSpaceOnUse">
+            <path d="M 240 0 L 0 0 0 240" fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth="1"/>
+          </pattern>
+          <radialGradient id="grid-fade" cx="50%" cy="40%" r="60%">
+            <stop offset="0%" stopColor="white" stopOpacity="1"/>
+            <stop offset="100%" stopColor="white" stopOpacity="0"/>
+          </radialGradient>
+          <mask id="grid-mask"><rect width="100%" height="100%" fill="url(#grid-fade)"/></mask>
+        </defs>
+        <rect width="100%" height="100%" fill="url(#grid-sm)" mask="url(#grid-mask)"/>
+        <rect width="100%" height="100%" fill="url(#grid-lg)" mask="url(#grid-mask)"/>
+      </svg>
+      {/* Floating orbs */}
+      <div style={{ position:'absolute', top:'15%', left:'12%', width:500, height:500, borderRadius:'50%', background:'radial-gradient(circle, rgba(99,102,241,0.1) 0%, transparent 70%)', animation:'orb-drift-a 18s ease-in-out infinite', filter:'blur(40px)' }}/>
+      <div style={{ position:'absolute', bottom:'10%', right:'10%', width:400, height:400, borderRadius:'50%', background:'radial-gradient(circle, rgba(139,92,246,0.08) 0%, transparent 70%)', animation:'orb-drift-b 22s ease-in-out infinite', filter:'blur(50px)' }}/>
+      <div style={{ position:'absolute', top:'55%', left:'55%', width:300, height:300, borderRadius:'50%', background:'radial-gradient(circle, rgba(249,115,22,0.04) 0%, transparent 70%)', animation:'orb-drift-a 26s ease-in-out infinite reverse', filter:'blur(60px)' }}/>
+    </div>
+  );
+}
+
+function slugify(text) {
+  return text.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').substring(0, 40);
+}
+function makeSubdomain(title) {
+  const slug = slugify(title);
+  if (!slug) return '';
+  return `${slug}-${Math.random().toString(36).substring(2, 6)}`;
+}
+
+function useScrollReveal(threshold = 0.1) {
+  const ref = useRef(null);
+  const [visible, setVisible] = useState(false);
+  useEffect(() => {
+    const el = ref.current; if (!el) return;
+    const obs = new IntersectionObserver(
+      ([e]) => { if (e.isIntersecting) { setVisible(true); obs.unobserve(el); } }, { threshold }
+    );
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, [threshold]);
+  return [ref, visible];
+}
+
+function AnimatedCounter({ end, duration = 2000, suffix = '' }) {
+  const [count, setCount] = useState(0);
+  const [ref, visible] = useScrollReveal(0.1);
+  useEffect(() => {
+    if (!visible) return;
+    let startTime, raf;
+    const animate = (ts) => {
+      if (!startTime) startTime = ts;
+      const pct = Math.min((ts - startTime) / duration, 1);
+      setCount(Math.floor(end * pct));
+      if (pct < 1) raf = requestAnimationFrame(animate);
+    };
+    raf = requestAnimationFrame(animate);
+    return () => cancelAnimationFrame(raf);
+  }, [visible, end, duration]);
+  return <span ref={ref} className="tabular-nums">{count}{suffix}</span>;
+}
+
+function CopyLinkBox({ eventId, subdomain, mode }) {
+  const [copiedRsvp, setCopiedRsvp] = useState(false);
+  const [copiedEvent, setCopiedEvent] = useState(false);
+
+  const rsvpLink  = subdomain ? `${window.location.origin}/rsvp/${subdomain}` : null;
+  const eventLink = subdomain ? `${window.location.origin}/e/${subdomain}` : `${window.location.origin}/event/${eventId}`;
+
+  const showRsvp = mode !== 'table-service' && rsvpLink;
+
+  const copyRsvp = () => {
+    navigator.clipboard.writeText(rsvpLink);
+    setCopiedRsvp(true); toast.success('RSVP link copied');
+    setTimeout(() => setCopiedRsvp(false), 2000);
+  };
+  const copyEvent = () => {
+    navigator.clipboard.writeText(eventLink);
+    setCopiedEvent(true); toast.success('Event link copied');
+    setTimeout(() => setCopiedEvent(false), 2000);
+  };
+
+  return (
+    <div className="mt-3 space-y-2">
+      {showRsvp && (
+        <div className="rounded-2xl border border-indigo-700/50 overflow-hidden bg-indigo-950/40 hover:border-indigo-600/60 transition-all duration-300">
+          <div className="flex items-center gap-3 px-4 py-3">
+            <div className="flex-shrink-0 text-xs font-bold text-indigo-400 uppercase tracking-wider w-14">RSVP</div>
+            <span className="flex-1 text-xs text-indigo-300 font-mono truncate">{rsvpLink}</span>
+            <button onClick={copyRsvp} className={`flex-shrink-0 flex items-center gap-1.5 px-3 py-2 text-xs font-medium rounded-xl transition-all duration-300 ${copiedRsvp ? 'bg-emerald-500 text-white' : 'bg-indigo-600 text-white hover:bg-indigo-500'}`}>
+              {copiedRsvp ? <><Check className="w-3 h-3" />Copied</> : <><Copy className="w-3 h-3" />Copy</>}
+            </button>
+          </div>
+        </div>
+      )}
+      <div className="rounded-2xl border border-neutral-700 overflow-hidden bg-neutral-900 hover:border-neutral-600 transition-all duration-300">
+        <div className="flex items-center gap-3 px-4 py-3">
+          <div className="flex-shrink-0 text-xs font-bold text-neutral-500 uppercase tracking-wider w-14">Space</div>
+          <span className="flex-1 text-xs text-neutral-300 font-mono truncate">{eventLink}</span>
+          <button onClick={copyEvent} className={`flex-shrink-0 flex items-center gap-1.5 px-3 py-2 text-xs font-medium rounded-xl transition-all duration-300 ${copiedEvent ? 'bg-emerald-500 text-white' : 'bg-white text-neutral-900 hover:bg-neutral-100'}`}>
+            {copiedEvent ? <><Check className="w-3 h-3" />Copied</> : <><Copy className="w-3 h-3" />Copy</>}
+          </button>
+        </div>
+      </div>
+      {showRsvp && (
+        <p className="text-xs text-neutral-600 px-1">The RSVP link is the primary shareable link. Enable the RSVP page in Event Settings to activate it.</p>
+      )}
+    </div>
+  );
+}
+
+function Reveal({ children, delay = 0, className = '', direction = 'up' }) {
+  const ref = useRef(null);
+  const [visible, setVisible] = useState(false);
+  useEffect(() => {
+    const el = ref.current; if (!el) return;
+    const obs = new IntersectionObserver(
+      ([e]) => { if (e.isIntersecting) { setTimeout(() => setVisible(true), delay); obs.unobserve(el); } },
+      { threshold: 0.08 }
+    );
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, [delay]);
+  const hiddenTransform = {
+    up:     'translateY(28px)',
+    left:   'translateX(-32px)',
+    right:  'translateX(32px)',
+    scale:  'scale(0.94)',
+  }[direction] || 'translateY(28px)';
+  return (
+    <div
+      ref={ref}
+      className={`${className} transition-all ease-out ${visible ? 'opacity-100' : 'opacity-0'}`}
+      style={{
+        transitionDuration: '800ms',
+        transitionTimingFunction: 'cubic-bezier(0.16,1,0.3,1)',
+        transform: visible ? 'none' : hiddenTransform,
+        willChange: 'transform, opacity',
+      }}
+    >
+      {children}
+    </div>
+  );
+}
+
+// A soft, low-opacity gradient seam used between major sections so the page
+// reads as one continuous surface rather than a stack of hard-edged blocks.
+function SectionSeam({ tint = 'indigo' }) {
+  const colors = {
+    indigo: 'rgba(99,102,241,0.5)',
+    orange: 'rgba(249,115,22,0.4)',
+    violet: 'rgba(139,92,246,0.4)',
+    neutral: 'rgba(255,255,255,0.15)',
+  };
+  return (
+    <div aria-hidden="true" className="relative h-px w-full overflow-hidden" style={{ zIndex: 1 }}>
+      <div style={{
+        position: 'absolute', inset: 0, margin: '0 auto', maxWidth: 420, height: 1,
+        background: `linear-gradient(90deg, transparent, ${colors[tint] || colors.indigo}, transparent)`,
+        opacity: 0.6,
+      }} />
+    </div>
+  );
+}
+
+function SectionHeader({ eyebrow, title, subtitle }) {
+  return (
+    <Reveal className="text-center mb-20">
+      {eyebrow && (
+        <p className="inline-flex items-center gap-2 text-xs font-bold text-neutral-500 uppercase tracking-[0.2em] mb-4">
+          <span className="w-4 h-px bg-neutral-700" />{eyebrow}<span className="w-4 h-px bg-neutral-700" />
+        </p>
+      )}
+      <h2 className="font-syne text-3xl sm:text-5xl md:text-6xl font-black text-white mb-5 leading-[1.05] tracking-tight">{title}</h2>
+      {subtitle && <p className="text-lg sm:text-xl text-neutral-400 max-w-2xl mx-auto leading-relaxed">{subtitle}</p>}
+    </Reveal>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SLUG FINDER — lets users jump directly to an event by its link/slug
+// ─────────────────────────────────────────────────────────────────────────────
+function SlugFinder({ compact = false }) {
+  const navigate = useNavigate();
+  const [value, setValue] = useState('');
+  const [shaking, setShaking] = useState(false);
+
+  const handleGo = () => {
+    const raw = value.trim();
+    if (!raw) return;
+
+    // Accept full URL (e.g. https://planitapp.onrender.com/e/my-slug) or bare slug
+    let slug = raw;
+    try {
+      const url = new URL(raw.startsWith('http') ? raw : `https://x.com/${raw}`);
+      const rsvpMatch  = url.pathname.match(/\/rsvp\/([^/?#]+)/);
+      const eventMatch = url.pathname.match(/\/e\/([^/?#]+)/);
+      if (rsvpMatch)       slug = rsvpMatch[1];
+      else if (eventMatch) slug = eventMatch[1];
+      else                 slug = url.pathname.replace(/^\/+|\/+$/g, '');
+    } catch {
+      // not a URL — use raw as slug
+    }
+    // Strip leading prefixes if typed manually
+    slug = slug.replace(/^\/?(rsvp\/|e\/)?/, '').replace(/\/+$/, '');
+
+    if (!slug) {
+      setShaking(true);
+      setTimeout(() => setShaking(false), 500);
+      return;
+    }
+    navigate(`/e/${slug}`);
+  };
+
+  const handleKey = (e) => { if (e.key === 'Enter') handleGo(); };
+
+  if (compact) {
+    return (
+      <div className={`flex items-center gap-2 ${shaking ? 'animate-shake' : ''}`}>
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-500 pointer-events-none" />
+          <input
+            type="text"
+            value={value}
+            onChange={e => setValue(e.target.value)}
+            onKeyDown={handleKey}
+            placeholder="Paste an event link or slug…"
+            className="w-full h-10 pl-10 pr-4 rounded-xl text-sm text-white placeholder-neutral-600 border border-neutral-800 focus:border-neutral-600 focus:outline-none transition-colors"
+            style={{ background: 'rgba(255,255,255,0.04)' }}
+          />
+        </div>
+        <button
+          onClick={handleGo}
+          className="flex-shrink-0 flex items-center gap-1.5 h-10 px-4 rounded-xl text-sm font-bold bg-white text-neutral-900 hover:bg-neutral-100 hover:scale-105 transition-all"
+        >
+          Go <CornerDownRight className="w-3.5 h-3.5" />
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className={`mt-4 flex items-center gap-2 max-w-sm mx-auto ${shaking ? 'animate-shake' : ''}`}>
+      <div className="relative flex-1">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-500 pointer-events-none" />
+        <input
+          type="text"
+          value={value}
+          onChange={e => setValue(e.target.value)}
+          onKeyDown={handleKey}
+          placeholder="Have a link? Paste it here…"
+          className="w-full h-10 pl-10 pr-4 rounded-xl text-sm text-white placeholder-neutral-600 border border-neutral-800/80 focus:border-neutral-600 focus:outline-none transition-colors"
+          style={{ background: 'rgba(255,255,255,0.04)' }}
+        />
+      </div>
+      <button
+        onClick={handleGo}
+        className="flex-shrink-0 flex items-center gap-1.5 h-10 px-4 rounded-xl text-sm font-bold border border-neutral-700 text-neutral-300 hover:border-neutral-500 hover:text-white transition-all"
+        style={{ background: 'rgba(255,255,255,0.04)' }}
+      >
+        Go <CornerDownRight className="w-3.5 h-3.5" />
+      </button>
+    </div>
+  );
+}
+
+function FeatureCard({ icon: Icon, title, description, delay = 0 }) {
+  return (
+    <Reveal delay={delay}>
+      <div className="group relative p-6 sm:p-10 rounded-2xl border border-neutral-800/80 bg-neutral-900/40 hover:border-neutral-600 hover:bg-neutral-800/50 transition-all duration-500 h-full">
+        <div className="mb-5">
+          <div className="feature-icon w-14 h-14 rounded-2xl bg-neutral-800 flex items-center justify-center group-hover:bg-white group-hover:shadow-[0_0_24px_rgba(99,102,241,0.35)]">
+            <Icon className="w-7 h-7 text-neutral-400 group-hover:text-neutral-900 transition-colors duration-500" />
+          </div>
+        </div>
+        <h3 className="text-lg font-semibold text-white mb-3">{title}</h3>
+        <p className="text-sm text-neutral-400 leading-relaxed">{description}</p>
+      </div>
+    </Reveal>
+  );
+}
+
+function TestimonialCard({ quote, author, role, event, delay = 0, direction = 'up' }) {
+  return (
+    <Reveal delay={delay} direction={direction}>
+      <div className="group relative p-8 rounded-2xl border border-neutral-800 bg-neutral-900/50 hover:border-neutral-700 hover:bg-neutral-800/50 hover:-translate-y-1.5 hover:shadow-[0_20px_50px_rgba(0,0,0,0.4)] transition-all duration-500 h-full">
+        <span aria-hidden="true" className="absolute top-6 right-7 font-syne text-5xl font-black text-neutral-800 group-hover:text-neutral-700 transition-colors duration-500 select-none leading-none">"</span>
+        <div className="flex items-start gap-4 mb-5">
+          <div className="flex-shrink-0 w-12 h-12 rounded-2xl bg-white flex items-center justify-center ring-1 ring-white/10 group-hover:ring-2 group-hover:ring-indigo-400/40 transition-all duration-500">
+            <span className="text-base font-bold text-neutral-900">{author.charAt(0)}</span>
+          </div>
+          <div>
+            <p className="text-base font-semibold text-white">{author}</p>
+            <p className="text-xs text-neutral-500">{role}</p>
+            <p className="text-xs text-neutral-600 mt-0.5">{event}</p>
+          </div>
+        </div>
+        <p className="relative text-sm text-neutral-300 leading-relaxed mb-1">"{quote}"</p>
+      </div>
+    </Reveal>
+  );
+}
+
+
+// 
+// ENTERPRISE INTERACTIVE DEMO
+// 
+
+// 
+// ENTERPRISE INTERACTIVE DEMO
+// 
+
+const DEMO_GUESTS = [
+  { id: 1, name: 'Sarah Johnson',   group: 4, table: 12, code: 'SJ4A-X9', role: 'VIP',      status: 'normal' },
+  { id: 2, name: 'Marcus Rivera',   group: 2, table: 5,  code: 'MR2B-K3', role: 'Speaker',  status: 'normal' },
+  { id: 3, name: 'Priya Sharma',    group: 1, table: 8,  code: 'PS1C-M7', role: 'Attendee', status: 'normal' },
+  { id: 4, name: 'Tom & Lisa Chen', group: 2, table: 3,  code: 'TC2D-R1', role: 'Sponsor',  status: 'normal' },
+  { id: 5, name: 'Dev Patel',       group: 6, table: 15, code: 'DP6E-N5', role: 'Attendee', status: 'blocked',  blockReason: 'Duplicate identity — another invite with same email already checked in' },
+  { id: 6, name: 'Amara Okafor',    group: 1, table: 7,  code: 'AO1F-Q2', role: 'Attendee', status: 'flagged',  flagReason: 'Low trust score: 42/100 — scanned from 3 different devices' },
+];
+
+function ScrollProgressBar() {
+  const [progress, setProgress] = useState(0);
+  useEffect(() => {
+    const update = () => {
+      const scrollTop = window.scrollY;
+      const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+      setProgress(docHeight > 0 ? (scrollTop / docHeight) * 100 : 0);
+    };
+    window.addEventListener('scroll', update, { passive: true });
+    return () => window.removeEventListener('scroll', update);
+  }, []);
+  return (
+    <div style={{ position: 'fixed', top: 0, left: 0, right: 0, height: 2, zIndex: 9999, background: 'rgba(255,255,255,0.04)', pointerEvents: 'none' }}>
+      <div style={{ height: '100%', width: `${progress}%`, background: 'linear-gradient(90deg,#6366f1,#8b5cf6)', transition: 'width .1s linear', boxShadow: '0 0 8px rgba(99,102,241,0.5)' }} />
+    </div>
+  );
+}
+
+function QRPattern({ code, size = 40, faded = false }) {
+  const cells = 10;
+  const hash = code.split('').reduce((acc, c) => acc * 31 + c.charCodeAt(0), 7);
+  return (
+    <div style={{ width: size, height: size, display: 'grid', gridTemplateColumns: `repeat(${cells}, 1fr)`, gap: 1, padding: 3, background: faded ? '#333' : 'white', borderRadius: 6, opacity: faded ? 0.4 : 1 }}>
+      {Array.from({ length: cells * cells }, (_, i) => {
+        const filled = ((hash * (i + 13) * 1103515245 + 12345) & 0x7fffffff) % 3 !== 0;
+        return <div key={i} style={{ background: filled ? (faded ? '#888' : '#111') : (faded ? '#333' : 'white'), borderRadius: 1 }} />;
+      })}
+    </div>
+  );
+}
+
+function EnterpriseDemo() {
+  const [tab, setTab] = useState('guests');
+  const [guests, setGuests] = useState(DEMO_GUESTS.map(g => ({ ...g, checkedIn: false, checking: false, checkedAt: null, scanCount: 0 })));
+  const [scanning, setScanning] = useState(null);
+  const [lastChecked, setLastChecked] = useState(null);
+  const [securityLog, setSecurityLog] = useState([]);
+  const [overrideTarget, setOverrideTarget] = useState(null); // guest being overridden
+  const [overridePin, setOverridePin] = useState('');
+  const [overrideError, setOverrideError] = useState('');
+  const [overrideSuccess, setOverrideSuccess] = useState(false);
+  const [simulating, setSimulating] = useState(false);
+
+  const checkedInCount = guests.filter(g => g.checkedIn).length;
+  const totalGuests = guests.reduce((s, g) => s + g.group, 0);
+  const checkedInPeople = guests.filter(g => g.checkedIn).reduce((s, g) => s + g.group, 0);
+  const pct = Math.round((checkedInPeople / totalGuests) * 100);
+
+  const addLog = (entry) => setSecurityLog(prev => [{ ...entry, id: Date.now() + Math.random(), ts: new Date() }, ...prev].slice(0, 20));
+
+  const handleCheckIn = (guest) => {
+    if (scanning) return;
+
+    // Already checked in → duplicate attempt
+    if (guest.checkedIn) {
+      addLog({ type: 'duplicate', severity: 'high', name: guest.name, msg: `Duplicate scan — ${guest.name} already checked in at ${guest.checkedAt?.toLocaleTimeString()}` });
+      return;
+    }
+
+    // Blocked guest
+    if (guest.status === 'blocked') {
+      addLog({ type: 'blocked', severity: 'critical', name: guest.name, msg: `BLOCKED: ${guest.name} — ${guest.blockReason}` });
+      setOverrideTarget(guest);
+      return;
+    }
+
+    // Flagged guest
+    if (guest.status === 'flagged') {
+      addLog({ type: 'flagged', severity: 'high', name: guest.name, msg: `WARNING: ${guest.name} — ${guest.flagReason}` });
+      setOverrideTarget(guest);
+      return;
+    }
+
+    // Normal check-in
+    setScanning(guest.id);
+    setGuests(prev => prev.map(g => g.id === guest.id ? { ...g, checking: true, scanCount: g.scanCount + 1 } : g));
+    setTimeout(() => {
+      const now = new Date();
+      setGuests(prev => prev.map(g => g.id === guest.id ? { ...g, checkedIn: true, checking: false, checkedAt: now } : g));
+      setLastChecked(guest.id);
+      setScanning(null);
+      addLog({ type: 'success', severity: 'ok', name: guest.name, msg: `Checked in: ${guest.name} — party of ${guest.group}, table ${guest.table}` });
+      setTimeout(() => setLastChecked(null), 2500);
+    }, 900);
+  };
+
+  const handleOverride = () => {
+    if (overridePin !== '1234') {
+      setOverrideError('Wrong PIN. Try 1234 for this demo.');
+      return;
+    }
+    setOverrideError('');
+    setOverrideSuccess(true);
+    const target = overrideTarget;
+    setTimeout(() => {
+      const now = new Date();
+      setGuests(prev => prev.map(g => g.id === target.id ? { ...g, checkedIn: true, checking: false, checkedAt: now, status: 'normal' } : g));
+      addLog({ type: 'override', severity: 'medium', name: target.name, msg: `Manager override approved — ${target.name} manually checked in` });
+      setOverrideTarget(null);
+      setOverridePin('');
+      setOverrideSuccess(false);
+    }, 1000);
+  };
+
+  const simulateUnauthorized = () => {
+    if (simulating) return;
+    setSimulating(true);
+    const fakeCodes = ['XX99-ZZ', 'FAKE-001', 'HACK-123'];
+    const code = fakeCodes[Math.floor(Math.random() * fakeCodes.length)];
+    addLog({ type: 'unauthorized', severity: 'critical', name: 'Unknown', msg: `UNAUTHORIZED: Code "${code}" not found — possible forged ticket` });
+    setTimeout(() => {
+      addLog({ type: 'ratelimit', severity: 'medium', name: 'System', msg: `Rate limit triggered — IP blocked for 60s after 3 failed attempts` });
+      setSimulating(false);
+    }, 1200);
+    if (tab !== 'security') setTab('security');
+  };
+
+  const handleReset = () => {
+    setGuests(DEMO_GUESTS.map(g => ({ ...g, checkedIn: false, checking: false, checkedAt: null, scanCount: 0 })));
+    setSecurityLog([]);
+    setLastChecked(null);
+    setScanning(null);
+    setOverrideTarget(null);
+    setOverridePin('');
+    setOverrideError('');
+  };
+
+  const roleColors = {
+    VIP: 'text-amber-400 bg-amber-400/10',
+    Speaker: 'text-blue-400 bg-blue-400/10',
+    Sponsor: 'text-purple-400 bg-purple-400/10',
+    Attendee: 'text-neutral-400 bg-neutral-800',
+  };
+  const logColors = {
+    ok: 'text-emerald-400 border-emerald-800/40 bg-emerald-950/20',
+    high: 'text-amber-400 border-amber-800/40 bg-amber-950/20',
+    critical: 'text-red-400 border-red-800/40 bg-red-950/20',
+    medium: 'text-blue-400 border-blue-800/40 bg-blue-950/20',
+  };
+  const logIcons = { success: '+', duplicate: '!', blocked: 'x', flagged: '!', unauthorized: 'x', override: 'o', ratelimit: '-' };
+
+  return (
+    <div className="bg-neutral-900/60 rounded-3xl border border-neutral-800 overflow-hidden">
+
+      {/* Manager override modal */}
+      {overrideTarget && !overrideSuccess && (
+        <div className="absolute inset-0 z-10 flex items-center justify-center" style={{ background: 'rgba(0,0,0,0.85)', borderRadius: 24 }}>
+          <div className="w-full max-w-xs mx-4 bg-neutral-900 rounded-2xl border border-neutral-700 p-6">
+            <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold mb-4 ${overrideTarget.status === 'blocked' ? 'bg-red-950/50 border border-red-800/50 text-red-400' : 'bg-amber-950/50 border border-amber-800/50 text-amber-400'}`}>
+              {overrideTarget.status === 'blocked' ? 'Guest Blocked' : 'Guest Flagged'}
+            </div>
+            <p className="text-sm font-bold text-white mb-1">{overrideTarget.name}</p>
+            <p className="text-xs text-neutral-500 mb-4">{overrideTarget.blockReason || overrideTarget.flagReason}</p>
+            <p className="text-xs font-bold text-neutral-400 mb-2">Manager PIN required to override</p>
+            <input
+              type="password"
+              maxLength={4}
+              value={overridePin}
+              onChange={e => { setOverridePin(e.target.value); setOverrideError(''); }}
+              placeholder="Enter PIN (hint: 1234)"
+              className="dark-input text-center text-lg font-mono tracking-widest mb-2"
+              autoFocus
+            />
+            {overrideError && <p className="text-xs text-red-400 mb-2">{overrideError}</p>}
+            <div className="flex gap-2 mt-3">
+              <button onClick={() => { setOverrideTarget(null); setOverridePin(''); setOverrideError(''); }}
+                className="flex-1 py-2 text-xs font-bold text-neutral-400 bg-neutral-800 rounded-xl hover:bg-neutral-700 transition-all">
+                Cancel
+              </button>
+              <button onClick={handleOverride}
+                className="flex-1 py-2 text-xs font-bold text-white bg-white/10 border border-white/20 rounded-xl hover:bg-white/20 transition-all">
+                Override
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {overrideTarget && overrideSuccess && (
+        <div className="absolute inset-0 z-10 flex items-center justify-center" style={{ background: 'rgba(0,0,0,0.85)', borderRadius: 24 }}>
+          <div className="text-center">
+            <div className="w-14 h-14 bg-emerald-500 rounded-full flex items-center justify-center mx-auto mb-3 animate-bounce">
+              <Check className="w-7 h-7 text-white" />
+            </div>
+            <p className="text-sm font-bold text-emerald-400">Override approved</p>
+          </div>
+        </div>
+      )}
+
+      {/* Header */}
+      <div className="px-5 pt-5 pb-0" style={{ position: 'relative' }}>
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-emerald-500/10 border border-emerald-500/30 rounded-full text-xs font-bold text-emerald-400 mb-2">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse inline-block" />
+              Live Check-in Demo
+            </div>
+            <h3 className="text-sm font-bold text-white">Tech Summit 2025</h3>
+            <p className="text-xs text-neutral-500">{DEMO_GUESTS.length} invites · {totalGuests} guests</p>
+          </div>
+          <div className="relative w-12 h-12 flex-shrink-0">
+            <svg className="w-12 h-12 -rotate-90" viewBox="0 0 48 48">
+              <circle cx="24" cy="24" r="18" fill="none" stroke="#262626" strokeWidth="4" />
+              <circle cx="24" cy="24" r="18" fill="none" stroke="#10b981" strokeWidth="4"
+                strokeDasharray={`${2 * Math.PI * 18}`}
+                strokeDashoffset={`${2 * Math.PI * 18 * (1 - pct / 100)}`}
+                strokeLinecap="round"
+                style={{ transition: 'stroke-dashoffset 0.6s ease' }} />
+            </svg>
+            <div className="absolute inset-0 flex items-center justify-center">
+              <span className="text-xs font-black text-white">{pct}%</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Tabs */}
+        <div className="flex gap-1 border-b border-neutral-800">
+          {['guests', 'security', 'analytics'].map(t => (
+            <button key={t} onClick={() => setTab(t)}
+              className={`px-3 py-2.5 text-xs font-bold capitalize transition-all duration-200 border-b-2 -mb-px flex items-center gap-1.5 ${tab === t ? 'text-white border-white bg-white/5 rounded-t-lg' : 'text-neutral-500 border-transparent hover:text-neutral-300 hover:bg-white/3 rounded-t-lg'}`}>
+              {t === 'security' && securityLog.length > 0 && (
+                <span className="w-4 h-4 rounded-full bg-red-500 text-white text-xs flex items-center justify-center font-black" style={{ fontSize: 9 }}>
+                  {securityLog.filter(l => l.severity === 'critical' || l.severity === 'high').length}
+                </span>
+              )}
+              {t}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* GUESTS TAB */}
+      {tab === 'guests' && (
+        <div className="p-3" style={{ minHeight: 280, maxHeight: 360, overflowY: 'auto' }}>
+          <div className="space-y-2">
+            {guests.map(guest => {
+              const isBlocked = guest.status === 'blocked' && !guest.checkedIn;
+              const isFlagged = guest.status === 'flagged' && !guest.checkedIn;
+              return (
+                <div key={guest.id}
+                  className={`flex items-center gap-3 p-3 rounded-2xl border transition-all duration-300 ${
+                    guest.checkedIn  ? 'border-emerald-800/50 bg-emerald-950/30' :
+                    guest.checking   ? 'border-neutral-600 bg-neutral-800/80' :
+                    isBlocked        ? 'border-red-900/60 bg-red-950/20' :
+                    isFlagged        ? 'border-amber-900/50 bg-amber-950/15' :
+                    'border-neutral-800 bg-neutral-900/50 hover:border-neutral-700'
+                  }`}>
+
+                  {/* QR / status icon */}
+                  <div className="flex-shrink-0">
+                    {guest.checking ? (
+                      <div className="w-10 h-10 rounded-lg border border-neutral-700 bg-neutral-800 flex items-center justify-center">
+                        <div className="w-4 h-4 border-2 border-neutral-400 border-t-white rounded-full animate-spin" />
+                      </div>
+                    ) : guest.checkedIn ? (
+                      <div className="w-10 h-10 rounded-lg bg-emerald-500 flex items-center justify-center">
+                        <Check className="w-5 h-5 text-white" />
+                      </div>
+                    ) : isBlocked ? (
+                      <div className="w-10 h-10 rounded-lg bg-red-950/60 border border-red-900/50 flex items-center justify-center">
+                        <Shield className="w-5 h-5 text-red-400" />
+                      </div>
+                    ) : isFlagged ? (
+                      <div className="w-10 h-10 rounded-lg bg-amber-950/60 border border-amber-900/50 flex items-center justify-center">
+                        <span className="text-amber-400 font-black text-xs">FLAG</span>
+                      </div>
+                    ) : (
+                      <QRPattern code={guest.code} size={40} />
+                    )}
+                  </div>
+
+                  {/* Info */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <p className="text-sm font-semibold text-white truncate">{guest.name}</p>
+                      <span className={`text-xs px-1.5 py-0.5 rounded font-medium flex-shrink-0 ${roleColors[guest.role]}`}>{guest.role}</span>
+                      {isBlocked && <span className="text-xs px-1.5 py-0.5 rounded font-bold flex-shrink-0 bg-red-950/60 text-red-400 border border-red-900/40">BLOCKED</span>}
+                      {isFlagged && <span className="text-xs px-1.5 py-0.5 rounded font-bold flex-shrink-0 bg-amber-950/50 text-amber-400 border border-amber-900/40">FLAGGED</span>}
+                    </div>
+                    <p className="text-xs text-neutral-500 truncate">
+                      {guest.checkedIn
+                        ? `Checked in · Party of ${guest.group} · Table ${guest.table}`
+                        : isBlocked ? guest.blockReason
+                        : isFlagged ? guest.flagReason
+                        : `Party of ${guest.group} · Table ${guest.table}`}
+                    </p>
+                  </div>
+
+                  {/* Action */}
+                  <button
+                    onClick={() => handleCheckIn(guest)}
+                    disabled={!!scanning}
+                    className={`flex-shrink-0 px-3 py-1.5 rounded-xl text-xs font-bold transition-all duration-200 ${
+                      guest.checkedIn   ? 'bg-emerald-950/40 text-emerald-600 cursor-default' :
+                      scanning === guest.id ? 'bg-neutral-700 text-neutral-400 cursor-wait' :
+                      scanning          ? 'bg-neutral-800 text-neutral-600 cursor-not-allowed' :
+                      isBlocked         ? 'bg-red-950/50 text-red-400 border border-red-900/40 hover:bg-red-900/40' :
+                      isFlagged         ? 'bg-amber-950/50 text-amber-400 border border-amber-900/40 hover:bg-amber-900/40' :
+                      'bg-white text-neutral-900 hover:bg-neutral-100 hover:scale-105 active:scale-95'
+                    }`}>
+                    {guest.checkedIn ? 'Done' : scanning === guest.id ? '…' : isBlocked ? 'Blocked' : isFlagged ? 'Review' : 'Scan'}
+                  </button>
+
+                  {lastChecked === guest.id && (
+                    <span className="flex-shrink-0 text-xs text-emerald-400 font-bold animate-pulse">In!</span>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Simulate unauthorized */}
+          <div className="mt-3 p-3 rounded-2xl border border-dashed border-neutral-700 bg-neutral-900/30">
+            <p className="text-xs text-neutral-600 mb-2 font-medium">Simulate security scenarios:</p>
+            <div className="flex gap-2">
+              <button onClick={simulateUnauthorized} disabled={simulating}
+                className="flex-1 py-1.5 text-xs font-bold text-red-400 border border-red-900/50 rounded-xl bg-red-950/20 hover:bg-red-950/40 transition-all disabled:opacity-40">
+                {simulating ? 'Scanning…' : 'Try forged ticket'}
+              </button>
+              {(checkedInCount > 0 || securityLog.length > 0) && (
+                <button onClick={handleReset} className="px-3 py-1.5 text-xs text-neutral-600 hover:text-neutral-400 border border-neutral-800 rounded-xl transition-colors">
+                  Reset
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* SECURITY TAB */}
+      {tab === 'security' && (
+        <div className="p-4" style={{ minHeight: 280, maxHeight: 360, overflowY: 'auto' }}>
+          {/* Security overview badges */}
+          <div className="grid grid-cols-3 gap-2 mb-4">
+            {[
+              { label: 'Blocked', count: guests.filter(g => g.status === 'blocked' && !g.checkedIn).length, color: 'text-red-400', bg: 'bg-red-950/30 border-red-900/40' },
+              { label: 'Flagged', count: guests.filter(g => g.status === 'flagged' && !g.checkedIn).length, color: 'text-amber-400', bg: 'bg-amber-950/30 border-amber-900/40' },
+              { label: 'Alerts', count: securityLog.filter(l => l.severity !== 'ok').length, color: 'text-blue-400', bg: 'bg-blue-950/30 border-blue-900/40' },
+            ].map(s => (
+              <div key={s.label} className={`text-center p-2.5 rounded-xl border ${s.bg}`}>
+                <div className={`text-xl font-black tabular-nums ${s.color}`}>{s.count}</div>
+                <div className="text-xs text-neutral-500">{s.label}</div>
+              </div>
+            ))}
+          </div>
+
+          {/* Security features list */}
+          <div className="space-y-2 mb-4">
+            <p className="text-xs font-bold text-neutral-600 uppercase tracking-widest">Active protections</p>
+            {[
+              { icon: 'X', label: 'Duplicate detection', desc: 'Flags same identity across multiple invites', active: true, color: 'text-emerald-400' },
+              { icon: '-', label: 'Rate limiting', desc: '3 failed scans → 60s IP lockout', active: true, color: 'text-emerald-400' },
+              { icon: '!', label: 'Trust scoring', desc: 'Flags low-trust guests for manual review', active: true, color: 'text-emerald-400' },
+              { icon: 'O', label: 'Manager override', desc: 'PIN-protected override for blocked guests', active: true, color: 'text-emerald-400' },
+              { icon: 'Q', label: 'QR forgery detection', desc: 'Rejects codes not in guest registry', active: true, color: 'text-emerald-400' },
+            ].map((f, i) => (
+              <div key={i} className="flex items-start gap-3 p-2.5 bg-neutral-900/40 rounded-xl border border-neutral-800">
+                <span className={`text-sm font-black flex-shrink-0 mt-0.5 ${f.color}`}>{f.icon}</span>
+                <div>
+                  <p className="text-xs font-bold text-white">{f.label}</p>
+                  <p className="text-xs text-neutral-500">{f.desc}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Live log */}
+          <p className="text-xs font-bold text-neutral-600 uppercase tracking-widest mb-2">Security log</p>
+          {securityLog.length === 0 ? (
+            <div className="text-center py-6">
+              <p className="text-xs text-neutral-700">No events yet.</p>
+              <p className="text-xs text-neutral-700 mt-1">Go to Guests → try scanning blocked/flagged guests or a forged ticket.</p>
+            </div>
+          ) : (
+            <div className="space-y-1.5">
+              {securityLog.map(entry => (
+                <div key={entry.id} className={`flex items-start gap-2.5 p-2.5 rounded-xl border text-xs ${logColors[entry.severity]}`}>
+                  <span className="font-black flex-shrink-0 mt-0.5">{logIcons[entry.type] || '·'}</span>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium leading-snug">{entry.msg}</p>
+                    <p className="opacity-50 mt-0.5">{entry.ts.toLocaleTimeString()}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ANALYTICS TAB */}
+      {tab === 'analytics' && (
+        <div className="p-4" style={{ minHeight: 280, maxHeight: 360, overflowY: 'auto' }}>
+          <div className="grid grid-cols-3 gap-2 mb-4">
+            {[
+              { label: 'Arrived',  value: checkedInPeople, color: 'text-emerald-400' },
+              { label: 'Pending',  value: totalGuests - checkedInPeople, color: 'text-amber-400' },
+              { label: 'Checked',  value: checkedInCount, color: 'text-blue-400' },
+            ].map(s => (
+              <div key={s.label} className="text-center p-3 bg-neutral-900 rounded-2xl border border-neutral-800">
+                <div className={`text-2xl font-black tabular-nums ${s.color}`}>{s.value}</div>
+                <div className="text-xs text-neutral-500 mt-0.5">{s.label}</div>
+              </div>
+            ))}
+          </div>
+
+          <p className="text-xs font-bold text-neutral-600 uppercase tracking-widest mb-3">Guest breakdown</p>
+          <div className="space-y-2.5 mb-4">
+            {guests.map(g => (
+              <div key={g.id}>
+                <div className="flex justify-between items-center mb-1">
+                  <span className="text-xs text-neutral-400 truncate">{g.name}</span>
+                  <span className="text-xs text-neutral-500 flex-shrink-0 ml-2">
+                    {g.checkedIn ? `${g.group}/${g.group}` : `0/${g.group}`}
+                  </span>
+                </div>
+                <div className="h-1.5 bg-neutral-800 rounded-full overflow-hidden">
+                  <div className={`h-full rounded-full transition-all duration-700 ${
+                    g.checkedIn ? 'bg-emerald-500' :
+                    g.checking  ? 'bg-neutral-600' :
+                    g.status === 'blocked' ? 'bg-red-800' :
+                    g.status === 'flagged' ? 'bg-amber-800' : 'bg-neutral-700'
+                  }`} style={{ width: g.checkedIn ? '100%' : g.checking ? '45%' : '0%' }} />
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="p-4 bg-neutral-900 rounded-2xl border border-neutral-800">
+            <div className="flex justify-between mb-2">
+              <span className="text-xs font-bold text-neutral-400">Overall attendance</span>
+              <span className="text-xs font-black text-white">{pct}%</span>
+            </div>
+            <div className="h-2 bg-neutral-800 rounded-full overflow-hidden">
+              <div className="h-full bg-emerald-500 rounded-full transition-all duration-700" style={{ width: `${pct}%` }} />
+            </div>
+            <p className="text-xs text-neutral-600 mt-2">{checkedInPeople} of {totalGuests} guests arrived</p>
+          </div>
+
+          {checkedInCount === 0 && (
+            <p className="text-center text-xs text-neutral-600 mt-4">← Switch to Guests and start checking people in</p>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+import StarBackground from '../components/StarBackground';
+import CrossPlatformAd from '../components/CrossPlatformAd';
+import TurnstileWidget from '../components/TurnstileWidget';
+
+
+
+// 
+// MAIN
+// 
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ONBOARDING WIZARD
+// ─────────────────────────────────────────────────────────────────────────────
+const EVENT_TYPES = [
+  { id:'wedding',    label:'Wedding',          hint:'Ceremony, reception, the works' },
+  { id:'birthday',   label:'Birthday',         hint:'Milestone or casual celebration' },
+  { id:'conference', label:'Conference',       hint:'Speakers, sessions, networking' },
+  { id:'corporate',  label:'Corporate',        hint:'Retreat, offsite, team event' },
+  { id:'festival',   label:'Festival',         hint:'Multi-stage, outdoor, crowd' },
+  { id:'other',      label:'Other',            hint:'Something totally unique' },
+];
+const VENUE_TYPES = [
+  { id:'restaurant', label:'Restaurant',       hint:'Full-service dining floor' },
+  { id:'cafe',       label:'Cafe',             hint:'Counter service and tables' },
+  { id:'bar',        label:'Bar / Pub',        hint:'Drinks-led with seating' },
+  { id:'popup',      label:'Pop-up',           hint:'Temporary or market stall' },
+  { id:'hotel',      label:'Hotel dining',     hint:'In-house restaurant or lounge' },
+  { id:'other',      label:'Other venue',      hint:'Something different entirely' },
+];
+
+function OnboardingWizard({ mode, formData, setFormData, fieldErrors, setFieldErrors, onSubmit, loading, submittedRef, stepControlRef, abuseStatus, requiresVerification, onCaptchaToken, captchaResetKey, onUserInput, onUserPaste }) {
+  const isVenue = mode === 'table-service';
+  const accent  = isVenue ? '#f97316' : '#6366f1';
+  const accentHover = isVenue ? '#fb923c' : '#818cf8';
+
+  const [step, setStep]           = useState(0);
+  const [dir, setDir]             = useState('forward');
+  const [stepKey, setStepKey]     = useState(0);
+  const [eventType, setEventType] = useState('');
+  const [venueType, setVenueType] = useState('');
+  const [showPw, setShowPw]       = useState(false);
+  const [showPw2, setShowPw2]     = useState(false);
+  const [localErr, setLocalErr]   = useState({});
+  const firstInputRef             = useRef(null);
+
+  // Expose step navigation to the parent so it can redirect back after a server error
+  useEffect(() => {
+    if (stepControlRef) {
+      stepControlRef.current = {
+        goTo: (n) => {
+          setDir(n < step ? 'back' : 'forward');
+          setStep(n);
+          setStepKey(k => k + 1);
+          setLocalErr({});
+        },
+        getStep: () => step,
+      };
+    }
+  });
+
+  // ── Draft persistence state ────────────────────────────────────────────────
+  const [pendingDraft, setPendingDraft]           = useState(null);
+  const [draftBannerVisible, setDraftBannerVisible] = useState(false);
+  const debounceRef = useRef(null);
+  const stepRef     = useRef(step);
+
+  // Keep stepRef in sync for beforeunload closure
+  useEffect(() => { stepRef.current = step; }, [step]);
+
+  // Mount effect: track feature start, detect saved draft, register abandon listener
+  useEffect(() => {
+    trackFeature('event_creation_start');
+    trackGAEvent('event_creation_started');
+
+    try {
+      const raw = localStorage.getItem('planit_event_draft');
+      if (raw) {
+        const draft = JSON.parse(raw);
+        const SEVENTY_TWO_HOURS = 72 * 60 * 60 * 1000;
+        if (draft.timestamp && (Date.now() - draft.timestamp) < SEVENTY_TWO_HOURS) {
+          setPendingDraft(draft);
+          setDraftBannerVisible(true);
+        }
+      }
+    } catch { /* ignore */ }
+
+    const handleBeforeUnload = () => {
+      if (!submittedRef?.current) {
+        trackFeature('event_creation_abandon', { step: stepRef.current });
+        flushTracker();
+      }
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Auto-save draft on formData/step change (debounced 1.2s)
+  useEffect(() => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      try {
+        const vid = localStorage.getItem('planit_vid');
+        localStorage.setItem('planit_event_draft', JSON.stringify({
+          formData,
+          step,
+          timestamp: Date.now(),
+          visitorId: vid,
+        }));
+      } catch { /* ignore */ }
+    }, 1200);
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+  }, [formData, step]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Focus first input on step change
+  useEffect(() => {
+    const t = setTimeout(() => firstInputRef.current?.focus(), 360);
+    return () => clearTimeout(t);
+  }, [step]);
+
+  const totalSteps = isVenue ? 4 : 6;
+
+  const go = (delta) => {
+    setDir(delta > 0 ? 'forward' : 'back');
+    setStep(s => s + delta);
+    setStepKey(k => k + 1);
+    setLocalErr({});
+  };
+
+  const validate = () => {
+    const e = {};
+    if (step === 1) {
+      if (!formData.title.trim()) e.title = isVenue ? 'Venue name is required.' : 'Event title is required.';
+    }
+    if (!isVenue && step === 2) {
+      if (!formData.date)     e.date     = 'Date and time is required.';
+      if (!formData.timezone) e.timezone = 'Timezone is required.';
+    }
+    const nameStep = isVenue ? 2 : 4;
+    if (step === nameStep) {
+      if (!formData.organizerName.trim()) e.organizerName = isVenue ? 'Manager name is required.' : 'Your name is required.';
+      if (!formData.organizerEmail.trim()) e.organizerEmail = 'Email is required.';
+      else if (!validateEmail(formData.organizerEmail.trim())) e.organizerEmail = 'Please enter a valid email.';
+    }
+    const pwStep = isVenue ? 3 : 5;
+    if (step === pwStep) {
+      if (!formData.accountPassword) e.accountPassword = 'Password is required.';
+      else if (formData.accountPassword.length < 4) e.accountPassword = 'Must be at least 4 characters.';
+    }
+    setLocalErr(e);
+    return Object.keys(e).length === 0;
+  };
+
+  const next = () => {
+    if (!validate()) return;
+    if (step < totalSteps - 1) { go(1); }
+    else { onSubmit(); }
+  };
+
+  const update = (field) => (e) => {
+    onUserInput?.();
+    setFormData(p => ({ ...p, [field]: e.target.value }));
+    if (localErr[field]) setLocalErr(p => ({ ...p, [field]: '' }));
+    if (fieldErrors[field]) setFieldErrors(p => ({ ...p, [field]: '' }));
+  };
+
+  const handleTitleChange = (e) => {
+    onUserInput?.();
+    const title = e.target.value;
+    setFormData(prev => ({
+      ...prev, title,
+      subdomain: prev._subdomainTouched ? prev.subdomain : makeSubdomain(title),
+    }));
+    if (localErr.title) setLocalErr(p => ({ ...p, title: '' }));
+  };
+
+  // Merge server-side errors into localErr
+  const err = { ...localErr, ...fieldErrors };
+
+  const renderStatusCard = () => abuseStatus ? (
+    <div style={{ background:'rgba(99,102,241,0.10)', border:'1px solid rgba(129,140,248,0.35)', borderRadius:14, padding:'12px 14px', marginBottom:18, color:'#e0e7ff', fontSize:13, lineHeight:1.5 }}>
+      <strong style={{ display:'block', marginBottom:4 }}>{abuseStatus.title}</strong>
+      <span>{abuseStatus.message}</span>
+    </div>
+  ) : null;
+
+  // ── Step content factory ────────────────────────────────────────────────────
+  const renderStep = () => {
+    // Step 0: type picker
+    if (step === 0) {
+      const types = isVenue ? VENUE_TYPES : EVENT_TYPES;
+      const selected = isVenue ? venueType : eventType;
+      const setSelected = isVenue
+        ? (id) => { setVenueType(id); }
+        : (id) => { setEventType(id); };
+      return (
+        <div>
+          <p className="wiz-question" style={{ fontSize:'clamp(1.5rem,4vw,2.2rem)', fontFamily:'Syne,sans-serif', fontWeight:800, color:'#fff', lineHeight:1.15, marginBottom:8 }}>
+            {isVenue ? 'What kind of venue?' : 'What are you planning?'}
+          </p>
+          <p style={{ fontSize:14, color:'rgba(255,255,255,0.35)', marginBottom:28 }}>
+            This helps us personalise your setup — you can change anything later.
+          </p>
+          <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(140px,1fr))', gap:10, marginBottom:4 }}>
+            {types.map((t, i) => {
+              const active = selected === t.id;
+              return (
+                <button key={t.id} type="button"
+                  className={`wiz-type-card${active ? ' active' : ''}`}
+                  style={{
+                    background: active ? (isVenue ? 'rgba(249,115,22,0.12)' : 'rgba(99,102,241,0.12)') : 'rgba(255,255,255,0.03)',
+                    border: `1.5px solid ${active ? accent : 'rgba(255,255,255,0.07)'}`,
+                    borderRadius:12, padding:'14px 10px', textAlign:'center',
+                    boxShadow: active ? `0 0 20px ${accent}28` : 'none',
+                    animationDelay:`${i*0.04}s`,
+                  }}
+                  onClick={() => { setSelected(t.id); }}
+                >
+                  <div style={{ fontSize:13, fontWeight:700, color: active ? '#fff' : 'rgba(255,255,255,0.55)', marginBottom:4, letterSpacing:'-0.01em' }}>{t.label}</div>
+                  <div style={{ fontSize:11, color:'rgba(255,255,255,0.28)', lineHeight:1.3 }}>{t.hint}</div>
+                </button>
+              );
+            })}
+          </div>
+          {selected && (
+            <p style={{ fontSize:12, color: isVenue ? '#fb923c' : '#818cf8', marginTop:12, display:'flex', alignItems:'center', gap:6 }}>
+              <CheckCircle2 style={{ width:13, height:13 }} />
+              Selection confirmed — continue when ready.
+            </p>
+          )}
+        </div>
+      );
+    }
+
+    // Step 1: Name
+    if (step === 1) {
+      return (
+        <div style={{ display:'flex', flexDirection:'column', gap:18 }}>
+          <div>
+            <p className="wiz-question" style={{ fontSize:'clamp(1.5rem,4vw,2.2rem)', fontFamily:'Syne,sans-serif', fontWeight:800, color:'#fff', lineHeight:1.15, marginBottom:8 }}>
+              {isVenue ? 'What\'s your venue called?' : 'What\'s your event called?'}
+            </p>
+            <p style={{ fontSize:14, color:'rgba(255,255,255,0.35)', marginBottom:24 }}>
+              {isVenue ? 'Your restaurant name — guests will see this.' : 'Give it a name your team will recognise.'}
+            </p>
+          </div>
+          <div>
+            <input
+              ref={firstInputRef}
+              type="text"
+              className={`wiz-input${isVenue ? ' wiz-input-venue' : ''}${err.title ? ' error' : ''}`}
+              placeholder={isVenue ? 'Taverna Roma, The Oak Room…' : 'Summer Company Retreat 2025'}
+              value={formData.title}
+              onChange={handleTitleChange}
+              onKeyDown={e => e.key === 'Enter' && next()}
+              autoComplete="off"
+            />
+            {err.title && <p style={{ fontSize:12, color:'#f87171', marginTop:6, display:'flex', alignItems:'center', gap:5 }}><AlertCircle style={{ width:12, height:12 }} />{err.title}</p>}
+          </div>
+          {formData.title && (
+            <div style={{ background: err.subdomain ? 'rgba(248,113,113,0.06)' : 'rgba(255,255,255,0.03)', border: err.subdomain ? '1px solid rgba(248,113,113,0.5)' : '1px solid rgba(255,255,255,0.07)', borderRadius:12, padding:'10px 14px' }}>
+              <p style={{ fontSize:11, color: err.subdomain ? '#f87171' : 'rgba(255,255,255,0.3)', marginBottom:4, textTransform:'uppercase', letterSpacing:'0.12em' }}>Your URL</p>
+              <div style={{ display:'flex', alignItems:'center', gap:0 }}>
+                <span style={{ fontSize:13, color:'rgba(255,255,255,0.25)', fontFamily:'monospace' }}>/e/</span>
+                <input
+                  type="text"
+                  value={formData.subdomain}
+                  onChange={(e) => {
+                    const cleaned = e.target.value.toLowerCase().replace(/[^a-z0-9-]/g,'-').replace(/-{2,}/g,'-');
+                    setFormData(p => ({ ...p, subdomain: cleaned, _subdomainTouched: true }));
+                    if (fieldErrors.subdomain) setFieldErrors(p => ({ ...p, subdomain: '' }));
+                  }}
+                  style={{ flex:1, background:'transparent', border:'none', outline:'none', color: err.subdomain ? '#fca5a5' : 'rgba(255,255,255,0.7)', fontFamily:'monospace', fontSize:13 }}
+                  spellCheck={false}
+                />
+              </div>
+              {err.subdomain && <p style={{ fontSize:12, color:'#f87171', marginTop:6, display:'flex', alignItems:'center', gap:5 }}><AlertCircle style={{ width:12, height:12 }} />{err.subdomain}</p>}
+            </div>
+          )}
+          {!isVenue && (
+            <div>
+              <textarea
+                className={`wiz-input${err.description ? ' error' : ''}`}
+                style={{ resize:'none', minHeight:80 }}
+                placeholder="A short description (optional)"
+                value={formData.description}
+                onChange={update('description')}
+                rows={3}
+              />
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    // Events Step 2: Date + location + enterprise
+    if (!isVenue && step === 2) {
+      return (
+        <div style={{ display:'flex', flexDirection:'column', gap:18 }}>
+          <div>
+            <p className="wiz-question" style={{ fontSize:'clamp(1.5rem,4vw,2.2rem)', fontFamily:'Syne,sans-serif', fontWeight:800, color:'#fff', lineHeight:1.15, marginBottom:8 }}>
+              When and where?
+            </p>
+            <p style={{ fontSize:14, color:'rgba(255,255,255,0.35)', marginBottom:24 }}>
+              Set the date and location — guests see this on their invite.
+            </p>
+          </div>
+          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 }}>
+            <div style={{ gridColumn:'1/-1' }}>
+              <label style={{ fontSize:12, color:'rgba(255,255,255,0.4)', display:'block', marginBottom:6, textTransform:'uppercase', letterSpacing:'0.1em' }}>Date & time *</label>
+              <input
+                ref={firstInputRef}
+                type="datetime-local"
+                className={`wiz-input${err.date ? ' error' : ''}`}
+                value={formData.date}
+                onChange={update('date')}
+                style={{ colorScheme:'dark' }}
+              />
+              {err.date && <p style={{ fontSize:12, color:'#f87171', marginTop:5 }}>{err.date}</p>}
+            </div>
+            <div style={{ gridColumn:'1/-1' }}>
+              <label style={{ fontSize:12, color:'rgba(255,255,255,0.4)', display:'block', marginBottom:6, textTransform:'uppercase', letterSpacing:'0.1em' }}>Timezone *</label>
+              <div style={{ position:'relative' }}>
+                <select className="wiz-select" value={formData.timezone} onChange={update('timezone')}>
+                  {getTimezoneOptions().map(tz => <option key={tz.value} value={tz.value}>{tz.label}</option>)}
+                </select>
+                <ChevronRight style={{ position:'absolute', right:14, top:'50%', transform:'translateY(-50%) rotate(90deg)', width:16, height:16, color:'rgba(255,255,255,0.3)', pointerEvents:'none' }} />
+              </div>
+            </div>
+            <div style={{ gridColumn:'1/-1' }}>
+              <label style={{ fontSize:12, color:'rgba(255,255,255,0.4)', display:'block', marginBottom:6, textTransform:'uppercase', letterSpacing:'0.1em' }}>Location</label>
+              <input
+                type="text"
+                className="wiz-input"
+                placeholder="Central Park, NYC"
+                value={formData.location}
+                onChange={update('location')}
+              />
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // Events Step 3: Enterprise decision slide
+    if (!isVenue && step === 3) {
+      const isEnt = formData.isEnterpriseMode;
+      return (
+        <div style={{ display:'flex', flexDirection:'column', gap:0 }}>
+          <p className="wiz-question" style={{ fontSize:'clamp(1.3rem,3.5vw,2rem)', fontFamily:'Syne,sans-serif', fontWeight:800, color:'#fff', lineHeight:1.15, marginBottom:8 }}>
+            Choose your event mode.
+          </p>
+          <p style={{ fontSize:14, color:'rgba(255,255,255,0.35)', marginBottom:24 }}>
+            This setting <span style={{ color:'rgba(239,68,68,0.85)', fontWeight:700 }}>cannot be changed</span> after your event is created. Choose carefully.
+          </p>
+
+          {/* Mode cards */}
+          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10, marginBottom:20 }}>
+            {/* Standard */}
+            <button type="button"
+              onClick={() => setFormData(p => ({ ...p, isEnterpriseMode: false }))}
+              style={{
+                background: !isEnt ? 'rgba(255,255,255,0.06)' : 'rgba(255,255,255,0.02)',
+                border: `1.5px solid ${!isEnt ? 'rgba(255,255,255,0.3)' : 'rgba(255,255,255,0.07)'}`,
+                borderRadius:14, padding:'16px 14px', cursor:'pointer', textAlign:'left',
+                transition:'all 0.2s ease',
+                boxShadow: !isEnt ? '0 0 24px rgba(255,255,255,0.06)' : 'none',
+              }}>
+              <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:8 }}>
+                <div style={{ width:28, height:28, borderRadius:8, background:'rgba(255,255,255,0.06)', border:'1px solid rgba(255,255,255,0.12)', display:'flex', alignItems:'center', justifyContent:'center' }}>
+                  <Calendar style={{ width:14, height:14, color:'rgba(255,255,255,0.6)' }} />
+                </div>
+                <span style={{ fontSize:13, fontWeight:700, color: !isEnt ? '#fff' : 'rgba(255,255,255,0.4)' }}>Standard</span>
+                {!isEnt && <span style={{ marginLeft:'auto', fontSize:10, background:'rgba(255,255,255,0.1)', borderRadius:6, padding:'2px 6px', color:'rgba(255,255,255,0.5)', fontWeight:600 }}>Selected</span>}
+              </div>
+              <ul style={{ fontSize:12, color:'rgba(255,255,255,0.35)', lineHeight:1.7, listStyle:'none', padding:0, margin:0 }}>
+                {['Open RSVP link', 'Team chat & tasks', 'Polls & budget', 'Unlimited members'].map(f => (
+                  <li key={f} style={{ display:'flex', alignItems:'center', gap:5 }}>
+                    <span style={{ color:'rgba(255,255,255,0.2)', fontSize:10 }}>✓</span>{f}
+                  </li>
+                ))}
+              </ul>
+            </button>
+
+            {/* Enterprise */}
+            <button type="button"
+              onClick={() => setFormData(p => ({ ...p, isEnterpriseMode: true }))}
+              style={{
+                background: isEnt ? 'rgba(99,102,241,0.12)' : 'rgba(99,102,241,0.03)',
+                border: `1.5px solid ${isEnt ? 'rgba(99,102,241,0.55)' : 'rgba(99,102,241,0.15)'}`,
+                borderRadius:14, padding:'16px 14px', cursor:'pointer', textAlign:'left',
+                transition:'all 0.2s ease',
+                boxShadow: isEnt ? '0 0 28px rgba(99,102,241,0.15)' : 'none',
+              }}>
+              <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:8 }}>
+                <div style={{ width:28, height:28, borderRadius:8, background:'rgba(99,102,241,0.15)', border:'1px solid rgba(99,102,241,0.3)', display:'flex', alignItems:'center', justifyContent:'center' }}>
+                  <Zap style={{ width:14, height:14, color:'#818cf8' }} />
+                </div>
+                <span style={{ fontSize:13, fontWeight:700, color: isEnt ? '#a5b4fc' : 'rgba(99,102,241,0.5)' }}>Enterprise</span>
+                {isEnt && <span style={{ marginLeft:'auto', fontSize:10, background:'rgba(99,102,241,0.2)', borderRadius:6, padding:'2px 6px', color:'#a5b4fc', fontWeight:600 }}>Selected</span>}
+              </div>
+              <ul style={{ fontSize:12, color: isEnt ? 'rgba(165,180,252,0.6)' : 'rgba(99,102,241,0.4)', lineHeight:1.7, listStyle:'none', padding:0, margin:0 }}>
+                {['Personalized QR invites', 'Check-in dashboard', 'Everything in Standard', 'Table assignments + groups'].map(f => (
+                  <li key={f} style={{ display:'flex', alignItems:'center', gap:5 }}>
+                    <span style={{ color: isEnt ? 'rgba(99,102,241,0.6)' : 'rgba(99,102,241,0.25)', fontSize:10 }}>✦</span>{f}
+                  </li>
+                ))}
+              </ul>
+            </button>
+          </div>
+
+          {/* When to use Enterprise — description block */}
+          <div style={{
+            background:'rgba(99,102,241,0.05)', border:'1px solid rgba(99,102,241,0.12)',
+            borderRadius:14, padding:'14px 16px',
+          }}>
+            <p style={{ fontSize:12, fontWeight:700, color:'rgba(99,102,241,0.7)', marginBottom:8, textTransform:'uppercase', letterSpacing:'0.08em' }}>When to use Enterprise mode</p>
+            <p style={{ fontSize:13, color:'rgba(255,255,255,0.35)', lineHeight:1.65, margin:0 }}>
+              Enterprise is built for <strong style={{ color:'rgba(255,255,255,0.55)' }}>large, ticketed, or access-controlled events</strong> where every guest gets a unique QR invite — galas, conferences, award nights, corporate parties with 50+ attendees. If your event is open RSVP or team-only, Standard is all you need.
+            </p>
+          </div>
+
+          {/* Immutable warning */}
+          <div style={{ display:'flex', alignItems:'flex-start', gap:8, marginTop:14, padding:'10px 14px', background:'rgba(239,68,68,0.07)', border:'1px solid rgba(239,68,68,0.18)', borderRadius:10 }}>
+            <AlertCircle style={{ width:14, height:14, color:'#f87171', flexShrink:0, marginTop:1 }} />
+            <p style={{ fontSize:12, color:'rgba(239,68,68,0.75)', lineHeight:1.5, margin:0 }}>
+              <strong>This cannot be changed later.</strong> Once your event is created, switching between Standard and Enterprise modes is not possible.
+            </p>
+          </div>
+        </div>
+      );
+    }
+
+    // Name step (events: 4, venue: 2)
+    const nameStep = isVenue ? 2 : 4;
+    if (step === nameStep) {
+      return (
+        <div style={{ display:'flex', flexDirection:'column', gap:18 }}>
+          <div>
+            <p className="wiz-question" style={{ fontSize:'clamp(1.5rem,4vw,2.2rem)', fontFamily:'Syne,sans-serif', fontWeight:800, color:'#fff', lineHeight:1.15, marginBottom:8 }}>
+              {isVenue ? 'Who manages this venue?' : 'Who\'s organizing this?'}
+            </p>
+            <p style={{ fontSize:14, color:'rgba(255,255,255,0.35)', marginBottom:24 }}>
+              {isVenue ? 'We\'ll send important updates here and you\'ll use this to log back in.' : 'This is your organizer account — keep these details safe.'}
+            </p>
+          </div>
+          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 }}>
+            <div style={{ gridColumn:'1/-1' }}>
+              <label style={{ fontSize:12, color:'rgba(255,255,255,0.4)', display:'block', marginBottom:6, textTransform:'uppercase', letterSpacing:'0.1em' }}>{isVenue ? 'Manager name' : 'Your name'} *</label>
+              <input
+                ref={firstInputRef}
+                type="text"
+                className={`wiz-input${isVenue ? ' wiz-input-venue' : ''}${err.organizerName ? ' error' : ''}`}
+                placeholder={isVenue ? 'Head Manager' : 'Alex Smith'}
+                value={formData.organizerName}
+                onChange={update('organizerName')}
+                onKeyDown={e => e.key === 'Enter' && next()}
+              />
+              {err.organizerName && <p style={{ fontSize:12, color:'#f87171', marginTop:5 }}>{err.organizerName}</p>}
+            </div>
+            <div style={{ gridColumn:'1/-1' }}>
+              <label style={{ fontSize:12, color:'rgba(255,255,255,0.4)', display:'block', marginBottom:6, textTransform:'uppercase', letterSpacing:'0.1em' }}>{isVenue ? 'Manager email' : 'Your email'} *</label>
+              <input
+                type="email"
+                className={`wiz-input${isVenue ? ' wiz-input-venue' : ''}${err.organizerEmail ? ' error' : ''}`}
+                placeholder={isVenue ? 'manager@restaurant.com' : 'alex@company.com'}
+                value={formData.organizerEmail}
+                onChange={update('organizerEmail')}
+                onKeyDown={e => e.key === 'Enter' && next()}
+              />
+              {err.organizerEmail && <p style={{ fontSize:12, color:'#f87171', marginTop:5 }}>{err.organizerEmail}</p>}
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // Password step (events: 5, venue: 3)
+    const pwStep = isVenue ? 3 : 5;
+    if (step === pwStep) {
+      const secondPwLabel = isVenue ? 'Staff password' : 'Event password';
+      const secondPwHint  = isVenue ? 'PIN your floor staff enter to log in (optional)' : 'Restrict who can join your event (optional)';
+      return (
+        <div style={{ display:'flex', flexDirection:'column', gap:18 }}>
+          <div>
+            <p className="wiz-question" style={{ fontSize:'clamp(1.5rem,4vw,2.2rem)', fontFamily:'Syne,sans-serif', fontWeight:800, color:'#fff', lineHeight:1.15, marginBottom:8 }}>
+              {isVenue ? 'Secure your venue.' : 'Secure your event.'}
+            </p>
+            <p style={{ fontSize:14, color:'rgba(255,255,255,0.35)', marginBottom:24 }}>
+              {isVenue
+                ? 'Set a password to manage the venue. Share a staff PIN with your team.'
+                : 'Your account password gets you back in from any device.'}
+            </p>
+          </div>
+          <div>
+            <label style={{ fontSize:12, color:'rgba(255,255,255,0.4)', display:'block', marginBottom:6, textTransform:'uppercase', letterSpacing:'0.1em' }}>
+              <Lock style={{ width:12, height:12, display:'inline', marginRight:5, verticalAlign:'middle' }} />
+              {isVenue ? 'Organizer password' : 'Account password'} *
+            </label>
+            <div style={{ position:'relative' }}>
+              <input
+                ref={firstInputRef}
+                type={showPw ? 'text' : 'password'}
+                className={`wiz-input${isVenue ? ' wiz-input-venue' : ''}${err.accountPassword ? ' error' : ''}`}
+                style={{ paddingRight:48 }}
+                placeholder="Minimum 4 characters"
+                value={formData.accountPassword}
+                onChange={update('accountPassword')}
+                minLength={4}
+                onKeyDown={e => e.key === 'Enter' && next()}
+              />
+              <button type="button" onClick={() => setShowPw(p => !p)}
+                style={{ position:'absolute', right:14, top:'50%', transform:'translateY(-50%)', background:'none', border:'none', cursor:'pointer', color:'rgba(255,255,255,0.35)', display:'flex', alignItems:'center' }}>
+                {showPw ? <EyeOff style={{ width:18, height:18 }} /> : <Eye style={{ width:18, height:18 }} />}
+              </button>
+            </div>
+            {err.accountPassword && <p style={{ fontSize:12, color:'#f87171', marginTop:5, display:'flex', alignItems:'center', gap:5 }}><AlertCircle style={{ width:12, height:12 }} />{err.accountPassword}</p>}
+          </div>
+          <div>
+            <label style={{ fontSize:12, color:'rgba(255,255,255,0.4)', display:'block', marginBottom:6, textTransform:'uppercase', letterSpacing:'0.1em' }}>
+              <Shield style={{ width:12, height:12, display:'inline', marginRight:5, verticalAlign:'middle' }} />
+              {secondPwLabel} <span style={{ color:'rgba(255,255,255,0.2)', textTransform:'none', letterSpacing:'normal', fontSize:11 }}>— optional</span>
+            </label>
+            <div style={{ position:'relative' }}>
+              <input
+                type={showPw2 ? 'text' : 'password'}
+                className={`wiz-input${isVenue ? ' wiz-input-venue' : ''}`}
+                style={{ paddingRight:48 }}
+                placeholder={isVenue ? 'Staff PIN or password' : 'Leave empty for open access'}
+                value={isVenue ? formData.staffPassword : formData.password}
+                onChange={update(isVenue ? 'staffPassword' : 'password')}
+              />
+              <button type="button" onClick={() => setShowPw2(p => !p)}
+                style={{ position:'absolute', right:14, top:'50%', transform:'translateY(-50%)', background:'none', border:'none', cursor:'pointer', color:'rgba(255,255,255,0.35)', display:'flex', alignItems:'center' }}>
+                {showPw2 ? <EyeOff style={{ width:18, height:18 }} /> : <Eye style={{ width:18, height:18 }} />}
+              </button>
+            </div>
+            <p style={{ fontSize:12, color:'rgba(255,255,255,0.25)', marginTop:6 }}>{secondPwHint}</p>
+          </div>
+        </div>
+      );
+    }
+
+    return null;
+  };
+
+  const isLastStep = step === totalSteps - 1;
+  const canSkipType = step === 0; // type picker: can proceed without selection
+
+  return (
+    <div style={{ display:'flex', flexDirection:'column', gap:0 }}>
+      {/* Progress bar */}
+      <div style={{ display:'flex', alignItems:'center', gap:6, marginBottom:36 }}>
+        {Array.from({ length: totalSteps }).map((_, i) => (
+          <div key={i} className="wiz-pill" style={{
+            background: i < step ? accent : i === step ? accent : 'rgba(255,255,255,0.1)',
+            width: i === step ? 40 : 28,
+            opacity: i > step ? 0.4 : 1,
+          }} />
+        ))}
+        <span style={{ marginLeft:'auto', fontSize:12, color:'rgba(255,255,255,0.3)', whiteSpace:'nowrap' }}>
+          Step {step + 1} of {totalSteps}
+        </span>
+      </div>
+
+      {/* Draft recovery banner */}
+      {draftBannerVisible && pendingDraft && (
+        <div style={{
+          background: 'rgba(99,102,241,0.08)',
+          border: '1px solid rgba(99,102,241,0.2)',
+          borderRadius: 12,
+          padding: '14px 16px',
+          marginBottom: 24,
+          display: 'flex',
+          alignItems: 'center',
+          gap: 12,
+          flexWrap: 'wrap',
+        }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <p style={{ fontSize: 14, fontWeight: 600, color: '#a5b4fc', margin: 0 }}>
+              You were in the middle of creating an event.
+            </p>
+            <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)', margin: '3px 0 0' }}>
+              Want to continue where you left off?
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              setFormData(pendingDraft.formData);
+              setStep(pendingDraft.step);
+              setStepKey(k => k + 1);
+              setPendingDraft(null);
+              setDraftBannerVisible(false);
+            }}
+            style={{
+              background: '#6366f1', color: '#fff', border: 'none',
+              borderRadius: 8, padding: '8px 16px',
+              fontSize: 13, fontWeight: 700, cursor: 'pointer', flexShrink: 0,
+            }}
+          >
+            Continue
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              localStorage.removeItem('planit_event_draft');
+              setPendingDraft(null);
+              setDraftBannerVisible(false);
+            }}
+            style={{
+              background: 'transparent', color: 'rgba(255,255,255,0.4)',
+              border: '1px solid rgba(255,255,255,0.1)',
+              borderRadius: 8, padding: '8px 16px',
+              fontSize: 13, fontWeight: 600, cursor: 'pointer', flexShrink: 0,
+            }}
+          >
+            Start Fresh
+          </button>
+        </div>
+      )}
+
+      {/* Animated step content */}
+      <div key={stepKey} className={dir === 'forward' ? 'wiz-forward' : 'wiz-back'}
+        onPaste={onUserPaste}
+        style={{ minHeight:260 }}>
+        {renderStatusCard()}
+            {renderStep()}
+            {requiresVerification && (
+              <div style={{ marginTop:18, display:'flex', flexDirection:'column', alignItems:'center', gap:10 }}>
+                <p style={{ color:'rgba(255,255,255,0.65)', fontSize:13, textAlign:'center' }}>Please complete the verification step to continue.</p>
+                <TurnstileWidget onToken={onCaptchaToken} resetKey={captchaResetKey} theme="dark" />
+              </div>
+            )}
+      </div>
+
+      {/* Nav */}
+      <div style={{ display:'flex', gap:10, marginTop:36 }}>
+        {step > 0 && (
+          <button className="wiz-btn-back" type="button" onClick={() => go(-1)}>
+            <ArrowRight style={{ width:14, height:14, transform:'rotate(180deg)' }} /> Back
+          </button>
+        )}
+        <button
+          className={`wiz-btn-next${isVenue ? ' venue' : ''}`}
+          type="button"
+          onClick={next}
+          disabled={loading}
+          style={{ flex:1, justifyContent:'center' }}
+        >
+          {loading ? (
+            <><div style={{ width:16, height:16, border:`2px solid ${isVenue ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.3)'}`, borderTop:`2px solid ${isVenue ? '#fff' : '#111'}`, borderRadius:'50%', animation:'spin 0.7s linear infinite' }} />Creating…</>
+          ) : isLastStep ? (
+            <>{isVenue ? 'Launch venue' : 'Create event'} <ArrowRight style={{ width:16, height:16 }} /></>
+          ) : (
+            <>Continue <ArrowRight style={{ width:16, height:16 }} /></>
+          )}
+        </button>
+      </div>
+
+      {/* Keyboard hint */}
+      <p style={{ fontSize:11, color:'rgba(255,255,255,0.18)', textAlign:'center', marginTop:12 }}>
+        Press Enter to continue · Esc to go back
+      </p>
+    </div>
+  );
+}
+
+export default function Home() {
+  const { wl, isWL } = useWhiteLabel();
+  const wlName    = isWL ? (wl?.branding?.companyName || wl?.clientName || '') : '';
+  const wlLogo    = isWL ? (wl?.branding?.logoUrl    || '') : '';
+  const wlPrimary = isWL ? (wl?.branding?.primaryColor || '') : '';
+  // Pages content from WL portal
+  const wlPages   = isWL ? (wl?.pages  || {}) : {};
+  const wlFeatures= isWL ? (wl?.features || {}) : {};
+  // Home page overrides
+  const heroHeadline    = wlPages?.home?.headline    || '';
+  const heroSubheadline = wlPages?.home?.subheadline || '';
+  const heroCta         = wlPages?.home?.ctaText     || '';
+  const heroImage       = wlPages?.home?.heroImageUrl|| '';
+  const navigate = useNavigate();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [navScrolled, setNavScrolled] = useState(false);
+  // Nav starts transparent over the hero, then picks up a blurred surface once scrolled
+  useEffect(() => {
+    const onScroll = () => setNavScrolled(window.scrollY > 48);
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
+  const [mode, setMode] = useState('standard');
+  const [formData, setFormData] = useState({
+    subdomain: '', title: '', description: '', date: '', timezone: getUserTimezone(), location: '',
+    organizerName: '', organizerEmail: '', accountPassword: '', password: '', staffPassword: '',
+    isEnterpriseMode: false, maxParticipants: 10000,
+  });
+  const [loading, setLoading] = useState(false);
+  const [created, setCreated] = useState(null);
+  const [showAd, setShowAd] = useState(false);
+  const [organizerRecoveryCode, setOrganizerRecoveryCode] = useState(null); // shown once after event creation
+  const [showPassword, setShowPassword] = useState(false);
+  const [showAccountPassword, setShowAccountPassword] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState({});
+  const [selectedBranch, setSelectedBranch] = useState(null); // null | 'events' | 'venue'
+  const [loadingDone, setLoadingDone] = useState(false);
+  const [wizardKey, setWizardKey] = useState(0); // increment to hard-reset the wizard
+  const [wizardOpen, setWizardOpen] = useState(false); // fullscreen wizard overlay
+  const wizardSubmittedRef = useRef(false); // flipped true on successful event creation
+  const wizardStepRef = useRef(null);       // populated by OnboardingWizard with { goTo(n), getStep() }
+  const [abuseStatus, setAbuseStatus] = useState(null);
+  const [requiresVerification, setRequiresVerification] = useState(false);
+  const [turnstileToken, setTurnstileToken] = useState('');
+  const [captchaResetKey, setCaptchaResetKey] = useState(0);
+  const eventFormTimingRef = useRef({ pageLoadedAt: Date.now(), formStartedAt: 0, firstInputAt: 0, largestPasteChars: 0, largestPasteElapsedMs: 0 });
+  // On white-label domains, skip the branch selector and go straight to event creation
+  useEffect(() => { if (isWL) { setSelectedBranch('events'); setLoadingDone(true); } }, [isWL]);
+
+  // Close wizard on Escape key
+  useEffect(() => {
+    const handler = (e) => { if (e.key === 'Escape') setWizardOpen(false); };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, []);
+
+  const selectBranch = (branch) => {
+    setSelectedBranch(branch);
+    setMode(branch === 'venue' ? 'table-service' : 'standard');
+    setWizardKey(k => k + 1); // reset wizard to step 0
+    setTimeout(() => {
+      document.getElementById(branch === 'venue' ? 'planit-venue' : 'planit-events')
+        ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 50);
+  };
+
+  const handleTitleChange = (e) => {
+    onUserInput?.();
+    const title = e.target.value;
+    setFormData(prev => ({ ...prev, title, subdomain: prev._subdomainTouched ? prev.subdomain : makeSubdomain(title) }));
+  };
+  const update = (field) => (e) => {
+    if (!eventFormTimingRef.current.firstInputAt) eventFormTimingRef.current.firstInputAt = Date.now();
+    setFormData(prev => ({ ...prev, [field]: e.target.value, ...(field === 'subdomain' ? { _subdomainTouched: true } : {}) }));
+  };
+
+  // Sanitise a string: trim whitespace, collapse internal whitespace
+  const sanitize = (str) => (str || '').trim().replace(/\s+/g, ' ');
+
+  const handleSubmit = async (e) => {
+    if (e && e.preventDefault) e.preventDefault();
+
+    //  Client-side field validation 
+    const errs = {};
+    const isTS = mode === 'table-service';
+    if (!formData.title.trim())            errs.title          = isTS ? 'Restaurant name is required.' : 'Event title is required.';
+    if (!isTS && !formData.date)           errs.date           = 'Date and time is required.';
+    if (!isTS && !formData.timezone)       errs.timezone       = 'Timezone is required.';
+    if (!formData.organizerName.trim())    errs.organizerName  = isTS ? 'Manager name is required.' : 'Your name is required.';
+    if (!formData.organizerEmail.trim())   errs.organizerEmail = isTS ? 'Manager email is required.' : 'Your email is required.';
+    else if (!validateEmail(formData.organizerEmail.trim()))
+                                           errs.organizerEmail = 'Please enter a valid email address.';
+    if (!formData.accountPassword)         errs.accountPassword = 'Account password is required.';
+    else if (formData.accountPassword.length < 4)
+                                           errs.accountPassword = 'Password must be at least 4 characters.';
+    if (isTS && formData.staffPassword && formData.staffPassword.length < 4)
+                                           errs.staffPassword  = 'Staff PIN must be at least 4 characters.';
+
+    if (Object.keys(errs).length > 0) {
+      setFieldErrors(errs);
+      // Scroll to first error
+      const firstField = document.querySelector('.field-error');
+      if (firstField) firstField.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      return;
+    }
+    setFieldErrors({});
+    setLoading(true);
+
+    const dateValue = (!isTS && formData.date) ? localDateTimeToUTC(formData.date, formData.timezone) : undefined;
+    const payload = {
+      title:          sanitize(formData.title),
+      description:    sanitize(formData.description),
+      ...(dateValue ? { date: dateValue, timezone: formData.timezone } : {}),
+      location:       sanitize(formData.location),
+      organizerName:  sanitize(formData.organizerName),
+      organizerEmail: sanitize(formData.organizerEmail),
+      accountPassword:formData.accountPassword,
+      password:       formData.password || undefined,
+      staffPassword:  (isTS && formData.staffPassword) ? formData.staffPassword : undefined,
+      subdomain:      formData.subdomain || makeSubdomain(formData.title) || `event-${Date.now()}`,
+      isEnterpriseMode: mode === 'enterprise' || formData.isEnterpriseMode,
+      isTableServiceMode: isTS,
+      maxParticipants: formData.maxParticipants,
+      ...(turnstileToken ? { turnstileToken } : {}),
+      behavior: { ...eventFormTimingRef.current, submittedAt: Date.now(), formStartedAt: eventFormTimingRef.current.formStartedAt || eventFormTimingRef.current.pageLoadedAt },
+      browserMeta: {
+        webdriver: navigator.webdriver === true,
+        language: navigator.language || '',
+        platform: navigator.platform || '',
+        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || '',
+        hardwareConcurrency: navigator.hardwareConcurrency || 0,
+        deviceMemory: navigator.deviceMemory || 0,
+        plugins: navigator.plugins ? Array.from(navigator.plugins).slice(0, 5).map(p => p.name) : [],
+        userAgent: navigator.userAgent || '',
+      },
+    };
+    try {
+      const response = await eventAPI.create(payload);
+      localStorage.setItem('eventToken', response.data.token);
+      localStorage.setItem('username', sanitize(formData.organizerName));
+      setCreated(response.data.event);
+      if (response.data.recoveryCode) {
+        setOrganizerRecoveryCode(response.data.recoveryCode);
+      }
+      // Draft cleanup and completion tracking
+      wizardSubmittedRef.current = true;
+      localStorage.removeItem('planit_event_draft');
+      trackFeature('event_creation_complete');
+      trackGAEvent('event_created', { event_type: formData.isEnterpriseMode ? 'enterprise' : 'standard' });
+      setRequiresVerification(false);
+      setAbuseStatus(null);
+      setShowAd(true);
+      return true;
+    } catch (error) {
+      const data = error.response?.data;
+
+      // Friendly labels for server field paths
+      const FIELD_LABELS = {
+        date:            'Date and time',
+        timezone:        'Timezone',
+        title:           mode === 'table-service' ? 'Restaurant name' : 'Event title',
+        organizerName:   mode === 'table-service' ? 'Manager name' : 'Your name',
+        organizerEmail:  mode === 'table-service' ? 'Manager email' : 'Your email',
+        accountPassword: 'Account password',
+        password:        mode === 'table-service' ? 'Staff PIN' : 'Event password',
+        subdomain:       mode === 'table-service' ? 'Restaurant URL' : 'Event URL',
+      };
+
+      if (data?.requiresVerification || data?.code === 'VERIFICATION_REQUIRED' || data?.code === 'INVALID_VERIFICATION') {
+        setRequiresVerification(true);
+        setCaptchaResetKey(k => k + 1);
+        setTurnstileToken('');
+        setAbuseStatus({ title: data?.code === 'INVALID_VERIFICATION' ? 'Invalid Verification' : 'Verification Required', message: data?.userMessage || 'Please complete the verification step to continue.' });
+        return;
+      }
+      if (['TRY_AGAIN_LATER', 'ADDITIONAL_REVIEW_REQUIRED', 'SUBMISSION_RECEIVED'].includes(data?.code)) {
+        setAbuseStatus({ title: 'Please Try Again', message: data?.userMessage || 'We couldn’t complete your request right now. Please try again shortly.' });
+        return;
+      }
+
+      if (data?.errors && Array.isArray(data.errors)) {
+        const serverErrs = {};
+        const toastMsgs = [];
+        data.errors.forEach(e => {
+          const path = e.path || e.param || '';
+          const label = FIELD_LABELS[path] || path;
+          const msg = e.msg || e.message || 'Invalid value';
+          // Skip date errors entirely for table-service (shouldn't reach here but safety net)
+          if (path === 'date' && mode === 'table-service') return;
+          serverErrs[path] = `${label}: ${msg}`;
+          toastMsgs.push(`${label} — ${msg}`);
+        });
+        setFieldErrors(serverErrs);
+        if (toastMsgs.length === 1) {
+          toast.error(toastMsgs[0]);
+        } else if (toastMsgs.length > 1) {
+          toast.error(`${toastMsgs.length} fields need attention:\n${toastMsgs.map(m => `• ${m}`).join('\n')}`, { duration: 6000 });
+        }
+      } else {
+        const msg = data?.error || 'Failed to create';
+        const isTS2 = mode === 'table-service';
+        const nameStepNum = isTS2 ? 2 : 4;
+
+        if (msg.includes('already taken')) {
+          // Taken slug — show inline error and navigate back to the URL step
+          setFieldErrors({ subdomain: 'This URL is already taken — please choose a different one.' });
+          wizardStepRef.current?.goTo(1);
+        } else if (msg.includes('not available')) {
+          // Banned slug — show inline error and navigate back to the URL step
+          setFieldErrors({ subdomain: 'This URL is not available — please choose a different one.' });
+          wizardStepRef.current?.goTo(1);
+        } else if (msg.includes('not allowed') || msg.toLowerCase().includes('display name')) {
+          // Banned organizer/display name — navigate back to the name step
+          setFieldErrors({ organizerName: 'This display name is not allowed — please choose a different one.' });
+          wizardStepRef.current?.goTo(nameStepNum);
+        } else if (msg.includes('email')) {
+          setFieldErrors({ organizerEmail: 'Please enter a valid email address.' });
+          wizardStepRef.current?.goTo(nameStepNum);
+        } else if (msg.includes('password')) {
+          setFieldErrors({ accountPassword: 'Password must be at least 6 characters.' });
+        } else {
+          toast.error(msg || 'Something went wrong. Please check your details and try again.');
+        }
+      }
+      return false;
+    } finally { setLoading(false); }
+  };
+
+  return (
+    <div className="min-h-screen text-white relative" style={{ background: 'var(--bg-base)', overflowX: 'clip', maxWidth: '100vw', isolation: 'isolate' }}>
+      <InjectGlobalCSS />
+      {showAd && <CrossPlatformAd trigger="post_event_create" onClose={() => setShowAd(false)} />}
+      {/* Recovery code modal — shown once when organizer sets an account password at creation */}
+      {organizerRecoveryCode && (
+        <RecoveryCodeModal
+          code={organizerRecoveryCode}
+          onDismiss={() => {
+            setOrganizerRecoveryCode(null);
+            // Navigate to the event after dismissing the modal
+            if (created) {
+              const base = created.subdomain ? `/e/${created.subdomain}` : `/event/${created.id}`;
+              // Don't auto-navigate — let them read the screen first
+            }
+          }}
+          eventSlug={created?.subdomain}
+        />
+      )}
+      {!isWL && !loadingDone && <LoadingScreen onDone={() => setLoadingDone(true)} />}
+      <ScrollProgressBar />
+
+
+      {/* Nav */}
+      <header
+        className="sticky top-0 z-50 border-b"
+        style={{
+          transition: 'background 0.5s ease, border-color 0.5s ease, backdrop-filter 0.5s ease, box-shadow 0.5s ease',
+          backdropFilter: navScrolled ? 'blur(24px)' : 'blur(0px)',
+          boxShadow: navScrolled ? '0 8px 32px rgba(0,0,0,0.35)' : 'none',
+          ...(selectedBranch === 'venue'
+            ? { background: navScrolled ? 'rgba(10,6,3,0.97)' : 'rgba(10,6,3,0)', borderColor: navScrolled ? 'rgba(249,115,22,0.20)' : 'rgba(249,115,22,0)' }
+            : { background: navScrolled ? 'rgba(6,6,12,0.96)' : 'rgba(6,6,12,0)', borderColor: navScrolled ? 'rgba(38,38,38,0.6)' : 'rgba(38,38,38,0)' }
+          ),
+        }}
+      >
+        <div className="max-w-screen-xl mx-auto px-4 sm:px-8 h-16 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            {/* ── Events brand: visible outside Venue section ── */}
+            <div style={{ display: selectedBranch === 'venue' ? 'none' : 'flex' }} className="items-center gap-3 transition-opacity duration-300">
+              {isWL && wlLogo ? (
+                <img src={wlLogo} alt={wlName} className="h-8 object-contain" />
+              ) : (
+                <>
+                  <div className="relative">
+                    <div className="w-9 h-9 rounded-2xl bg-neutral-800 border border-neutral-700 flex items-center justify-center">
+                      <Calendar className="w-5 h-5 text-neutral-300" />
+                    </div>
+                    {!isWL && <div className="absolute -top-1 -right-1 w-3 h-3 bg-emerald-500 rounded-full border-2 border-[#06060c] animate-pulse" />}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="font-syne text-xl font-bold text-white tracking-tight">{isWL ? wlName : 'PlanIt'}</span>
+                    {!isWL && <span className="hidden sm:block px-2 py-0.5 rounded-md text-[10px] font-bold bg-neutral-800 border border-neutral-700 text-neutral-400 uppercase tracking-wider">Events</span>}
+                  </div>
+                </>
+              )}
+            </div>
+            {/* ── Venue brand: visible only in Venue section ── */}
+            <div style={{ display: selectedBranch === 'venue' ? 'flex' : 'none' }} className="items-center gap-3 transition-opacity duration-300">
+              <div className="w-9 h-9 rounded-2xl bg-orange-500/15 border border-orange-500/30 flex items-center justify-center">
+                <UtensilsCrossed className="w-5 h-5 text-orange-400" />
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="font-syne text-xl font-bold text-white tracking-tight">{isWL ? wlName : 'PlanIt'}</span>
+                {!isWL && <span className="hidden sm:block px-2 py-0.5 rounded-md text-[10px] font-bold bg-orange-500/10 border border-orange-500/25 text-orange-400 uppercase tracking-wider">Venue</span>}
+              </div>
+            </div>
+          </div>
+          <nav className="flex items-center gap-1">
+            {/* ── Branch switcher: shown when a branch is selected ── */}
+            {selectedBranch && (
+              <button
+                onClick={() => setSelectedBranch(null)}
+                className="hidden md:flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-neutral-500 hover:text-neutral-200 hover:bg-neutral-800/50 rounded-xl transition-all duration-200 border border-neutral-800 mr-1"
+              >
+                <ChevronRight className="w-3 h-3 rotate-180" /> Change
+              </button>
+            )}
+            {/* ── When NOT in Venue section: show Venue link ── */}
+            {!isWL && <a href="#planit-venue"
+              onClick={(e) => { e.preventDefault(); selectBranch('venue'); }}
+              style={{ display: selectedBranch === 'venue' ? 'none' : undefined }}
+              className="hidden md:flex items-center gap-1.5 px-3 py-2 text-sm text-orange-400/80 hover:text-orange-300 hover:bg-orange-500/8 rounded-xl transition-all duration-200">
+              <UtensilsCrossed className="w-3.5 h-3.5" />
+              PlanIt Venue
+            </a>}
+            {/* ── When IN Venue section: show Events link ── */}
+            <a href="#planit-events"
+              onClick={(e) => { e.preventDefault(); selectBranch('events'); }}
+              style={{ display: selectedBranch === 'venue' ? 'flex' : 'none' }}
+              className="items-center gap-1.5 px-3 py-2 text-sm text-neutral-300 hover:text-white hover:bg-neutral-800/50 rounded-xl transition-all duration-200">
+              <Calendar className="w-3.5 h-3.5" />
+              PlanIt Events
+            </a>
+            <a href="/discover" className="hidden md:flex items-center gap-1.5 px-3 py-2 text-sm text-neutral-400 hover:text-neutral-200 hover:bg-neutral-800/50 rounded-xl transition-all duration-200">
+              <Zap className="w-3.5 h-3.5" />
+              Discover
+            </a>
+            <a href="/blog" className="hidden md:flex items-center gap-1.5 px-3 py-2 text-sm text-neutral-400 hover:text-neutral-200 hover:bg-neutral-800/50 rounded-xl transition-all duration-200">
+              Blog
+            </a>
+            <a href="/status" className="hidden md:flex items-center gap-1.5 px-3 py-2 text-sm text-neutral-400 hover:text-neutral-200 hover:bg-neutral-800/50 rounded-xl transition-all duration-200">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block" />
+              Status
+            </a>
+            <a href="/help" className="hidden md:flex items-center gap-1.5 px-3 py-2 text-sm text-neutral-400 hover:text-neutral-200 hover:bg-neutral-800/50 rounded-xl transition-all duration-200">
+              Help
+            </a>
+            <a href="/blog" className="hidden md:flex items-center gap-1.5 px-3 py-2 text-sm text-neutral-400 hover:text-neutral-200 hover:bg-neutral-800/50 rounded-xl transition-all duration-200">
+              Blog
+            </a>
+            <a href="/about" className="hidden md:flex items-center gap-1.5 px-3 py-2 text-sm text-neutral-400 hover:text-neutral-200 hover:bg-neutral-800/50 rounded-xl transition-all duration-200">
+              About
+            </a>
+            {/* Hamburger — mobile only */}
+            <button
+              className="md:hidden ml-2 w-9 h-9 flex items-center justify-center rounded-xl bg-neutral-800 border border-neutral-700 text-neutral-300 hover:text-white hover:bg-neutral-700 transition-all"
+              onClick={() => setMobileMenuOpen(o => !o)}
+              aria-label="Toggle menu"
+            >
+              {mobileMenuOpen ? (
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+              ) : (
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" /></svg>
+              )}
+            </button>
+          </nav>
+        </div>
+        {/* Mobile dropdown menu */}
+        {mobileMenuOpen && (
+          <div className="md:hidden border-t border-neutral-800/60 px-4 py-3 space-y-1" style={{ background: 'rgba(6,6,12,0.98)' }}>
+            <a href="#planit-venue" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-2.5 px-3 py-2.5 text-sm text-orange-400 hover:text-orange-300 hover:bg-orange-500/10 rounded-xl transition-all">
+              <UtensilsCrossed className="w-4 h-4" />{isWL ? 'Venue' : 'PlanIt Venue'}
+            </a>
+            <a href="/discover" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-2.5 px-3 py-2.5 text-sm text-neutral-300 hover:text-white hover:bg-neutral-800/60 rounded-xl transition-all">
+              <Zap className="w-4 h-4 text-neutral-500" />Discover
+            </a>
+            <a href="/status" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-2.5 px-3 py-2.5 text-sm text-neutral-300 hover:text-white hover:bg-neutral-800/60 rounded-xl transition-all">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block ml-0.5 mr-0.5" />Status
+            </a>
+            <a href="/help" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-2.5 px-3 py-2.5 text-sm text-neutral-300 hover:text-white hover:bg-neutral-800/60 rounded-xl transition-all">
+              <svg className="w-4 h-4 text-neutral-500" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3M12 17h.01"/></svg>Help
+            </a>
+            <a href="/blog" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-2.5 px-3 py-2.5 text-sm text-neutral-300 hover:text-white hover:bg-neutral-800/60 rounded-xl transition-all">
+              <svg className="w-4 h-4 text-neutral-500" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>Blog
+            </a>
+            <a href="/about" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-2.5 px-3 py-2.5 text-sm text-neutral-400 hover:text-white hover:bg-neutral-800/60 rounded-xl transition-all">
+              About
+            </a>
+            <div className="pt-1 border-t border-neutral-800 flex gap-2 mt-1">
+              <a href="/terms" onClick={() => setMobileMenuOpen(false)} className="flex-1 text-center py-2 text-xs text-neutral-600 hover:text-neutral-400 rounded-lg hover:bg-neutral-800/40 transition-all">
+                Terms
+              </a>
+              <a href="/privacy" onClick={() => setMobileMenuOpen(false)} className="flex-1 text-center py-2 text-xs text-neutral-600 hover:text-neutral-400 rounded-lg hover:bg-neutral-800/40 transition-all">
+                Privacy
+              </a>
+            </div>
+          </div>
+        )}
+      </header>
+
+      <main className="relative" style={{ zIndex: 2, overflowX: 'hidden', maxWidth: '100vw' }}>
+        {/* HERO — redesigned */}
+        <section id="hero-top" className="relative min-h-screen flex items-center" style={{ overflow: 'hidden', maxWidth: '100vw' }}>
+          {/* Deep-space layer — subtle nod to PlanIt → Planet, hero only */}
+          {!isWL && (
+            <div aria-hidden="true" className="absolute inset-0 pointer-events-none" style={{ zIndex: 0, opacity: 0.55 }}>
+              <StarBackground fixed={false} forceActive={true} />
+            </div>
+          )}
+          {/* Layered background system */}
+          {(isWL && heroImage)
+            ? <div className="absolute inset-0" style={{ backgroundImage: `url(${heroImage})`, backgroundSize: 'cover', backgroundPosition: 'center', opacity: 0.2 }} />
+            : <CinematicGrid />
+          }
+          {/* Deep ambient radials */}
+          <div aria-hidden="true" className="absolute inset-0 pointer-events-none" style={{ zIndex: 1,
+            background: 'radial-gradient(ellipse 90% 60% at 50% 0%, rgba(99,102,241,0.07) 0%, transparent 55%), radial-gradient(ellipse 50% 40% at 85% 90%, rgba(249,115,22,0.05) 0%, transparent 50%), radial-gradient(ellipse 60% 40% at 10% 70%, rgba(139,92,246,0.05) 0%, transparent 50%)',
+          }} />
+
+          <div className="w-full relative" style={{ zIndex: 2 }}>
+            <div className="max-w-6xl mx-auto px-4 sm:px-8 lg:px-12 py-20 sm:py-28 lg:py-36 text-center">
+
+              {/* Eyebrow badges */}
+              <motion.div initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }} transition={{ duration:0.5, delay:0.1 }}
+                className="inline-flex items-center gap-3 mb-12"
+              >
+                <span className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold border border-indigo-500/20 text-indigo-300 uppercase tracking-widest cursor-default"
+                  style={{ background: 'rgba(99,102,241,0.07)', animation:'badge-glow 3s ease-in-out infinite' }}>
+                  <Calendar className="w-3 h-3" />{isWL ? 'Events' : 'PlanIt Events'}
+                </span>
+                <span className="w-1 h-1 rounded-full bg-neutral-700" />
+                <span className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold border border-orange-500/25 text-orange-400 uppercase tracking-widest cursor-default"
+                  style={{ background: 'rgba(249,115,22,0.06)' }}>
+                  <UtensilsCrossed className="w-3 h-3" />{isWL ? 'Venue' : 'PlanIt Venue'}
+                </span>
+              </motion.div>
+
+              {/* Main headline — word-by-word animation */}
+              {(isWL && heroHeadline)
+                ? (
+                  <motion.h1 initial={{ opacity:0, y:30 }} animate={{ opacity:1, y:0 }} transition={{ duration:0.9, delay:0.25 }}
+                    className="font-syne font-black leading-[0.92] tracking-tight mb-8 text-white"
+                    style={{ fontSize:'clamp(2.5rem,8.5vw,7rem)' }}>
+                    {heroHeadline}
+                  </motion.h1>
+                ) : (
+                  <h1 className="font-syne font-black leading-[0.9] tracking-tight mb-8"
+                    style={{ fontSize:'clamp(2.6rem,8.5vw,7rem)' }}>
+                    <span className="hero-word inline-block text-white" style={{ animationDelay:'0.25s' }}>Plan</span>{' '}
+                    <span className="hero-word inline-block text-white" style={{ animationDelay:'0.38s' }}>every</span>{' '}
+                    <span className="hero-word inline-block text-white" style={{ animationDelay:'0.51s' }}>detail.</span>
+                    <br />
+                    <span className="hero-word inline-block shimmer-slate" style={{ animationDelay:'0.64s' }}>Execute</span>{' '}
+                    <span className="hero-word inline-block shimmer-white" style={{ animationDelay:'0.77s' }}>flawlessly.</span>
+                  </h1>
+                )
+              }
+
+              {/* Sub-headline */}
+              <motion.p initial={{ opacity:0, y:20 }} animate={{ opacity:1, y:0 }} transition={{ duration:0.7, delay:0.9 }}
+                className="text-lg md:text-xl text-neutral-400 max-w-2xl mx-auto leading-relaxed font-light mb-14"
+              >
+                {isWL
+                  ? (heroSubheadline || wlName || 'Your event platform')
+                  : <>The complete workspace for events &amp; hospitality —{' '}
+                      <span className="text-neutral-200 font-medium">team chat, tasks, RSVP, check-in</span>
+                      {' '}and a live floor manager for restaurants.</>
+                }
+              </motion.p>
+
+              {/* CTA buttons */}
+              <motion.div initial={{ opacity:0, y:20 }} animate={{ opacity:1, y:0 }} transition={{ duration:0.7, delay:1.05 }}
+                className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-16">
+                <a href="#planit-events"
+                  onClick={(e) => { e.preventDefault(); selectBranch('events'); }}
+                  className="cta-primary group inline-flex items-center justify-center gap-3 w-full sm:w-auto px-8 py-4 bg-white text-neutral-900 text-sm font-bold rounded-2xl shadow-2xl">
+                  <Calendar className="w-4 h-4" />
+                  {(isWL && heroCta) ? heroCta : 'Start with Events'}
+                  <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform duration-300" />
+                </a>
+                <a href="#create"
+                  onClick={(e) => { e.preventDefault(); setSelectedBranch('events'); setMode('enterprise'); setWizardKey(k => k + 1); setTimeout(() => document.getElementById('planit-events')?.scrollIntoView({ behavior:'smooth', block:'start' }), 50); }}
+                  className="group inline-flex items-center justify-center gap-3 w-full sm:w-auto px-8 py-4 border border-indigo-500/40 text-indigo-300 text-sm font-bold rounded-2xl transition-all duration-300 hover:border-indigo-400/70 hover:bg-indigo-500/10"
+                  style={{ background: 'rgba(99,102,241,0.07)' }}>
+                  <Zap className="w-4 h-4" />
+                  Enterprise
+                  <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform duration-300" />
+                </a>
+                <a href="#planit-venue"
+                  onClick={(e) => { e.preventDefault(); selectBranch('venue'); }}
+                  className="cta-venue group inline-flex items-center justify-center gap-3 w-full sm:w-auto px-8 py-4 border border-orange-500/30 text-orange-400 text-sm font-bold rounded-2xl"
+                  style={{ background: 'rgba(249,115,22,0.06)' }}>
+                  <UtensilsCrossed className="w-4 h-4" />
+                  Explore Venue
+                  <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform duration-300" />
+                </a>
+              </motion.div>
+
+              {/* Slug finder — jump to a private event */}
+              <motion.div initial={{ opacity:0, y:12 }} animate={{ opacity:1, y:0 }} transition={{ duration:0.6, delay:1.15 }}
+                className="mb-10">
+                <p className="text-xs text-neutral-600 uppercase tracking-widest mb-2">Already have an event link?</p>
+                <SlugFinder />
+              </motion.div>
+
+              {/* Trust stats */}
+              <motion.div initial={{ opacity:0, y:20 }} animate={{ opacity:1, y:0 }} transition={{ duration:0.7, delay:1.2 }}
+                className="grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-xl mx-auto">
+                {[
+                  { tag: 'Free forever',   desc: 'No credit card required',           icon: '✦' },
+                  { tag: 'Zero accounts',  desc: 'Guests join by name instantly',      icon: '◈' },
+                  { tag: 'Unlimited team', desc: 'Every organizer & vendor included',  icon: '◉' },
+                ].map((item) => (
+                  <div key={item.tag} className="stat-card text-center p-5 rounded-2xl cursor-default"
+                    style={{ background:'rgba(255,255,255,0.025)', backdropFilter:'blur(12px)' }}>
+                    <div className="text-indigo-400 text-lg mb-1">{item.icon}</div>
+                    <div className="text-sm font-black text-white mb-0.5 tracking-wide">{item.tag}</div>
+                    <div className="text-xs text-neutral-500">{item.desc}</div>
+                  </div>
+                ))}
+              </motion.div>
+
+              {/* Scroll indicator */}
+              <div className="mt-16 flex flex-col items-center gap-2 cursor-default" style={{ opacity:0.4 }}>
+                <span className="text-[10px] font-bold uppercase tracking-[0.25em] text-neutral-500">Scroll</span>
+                <div style={{ width:1, height:36, background:'linear-gradient(to bottom, rgba(99,102,241,0.6), transparent)', animation:'scroll-indicator-bounce 2s ease-in-out infinite' }} />
+              </div>
+            </div>
+          </div>
+        </section>
+
+
+        {/* ═══════════════════════════════════════════════════════════
+            SOCIAL PROOF STRIP — replaces branch gateway
+        ═══════════════════════════════════════════════════════════ */}
+        <section className="relative border-t overflow-hidden" style={{ borderColor:'rgba(255,255,255,0.05)', display: (selectedBranch || isWL) ? 'none' : 'block' }}>
+          <div className="max-w-screen-xl mx-auto px-6 sm:px-10 py-20">
+
+            {/* Section label */}
+            <Reveal className="text-center mb-16">
+              <p className="text-xs font-semibold text-neutral-600 uppercase tracking-widest mb-4">The complete event platform</p>
+              <h2 className="font-syne text-4xl sm:text-6xl font-black text-white leading-tight mb-6">
+                Everything in one place.<br />
+                <span className="text-neutral-600">Nothing spread across five apps.</span>
+              </h2>
+              <p className="text-neutral-500 text-lg max-w-2xl mx-auto leading-relaxed">
+                Most teams plan events across group chats, email threads, shared spreadsheets, and scattered notes.
+                PlanIt puts it all in one workspace — with your whole team, from day one.
+              </p>
+            </Reveal>
+
+            {/* Feature comparison grid */}
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-px bg-neutral-800/30 rounded-3xl overflow-hidden mb-24">
+              {[
+                { icon: MessageSquare, label: 'Real-time team chat',  desc: 'Your planning channel. Typing indicators, persistent history, instant delivery.' },
+                { icon: ListChecks,    label: 'Shared task lists',    desc: 'Assign, prioritize, and track every action item from one shared view.' },
+                { icon: BarChart3,     label: 'Live polls',           desc: 'Vote on venues, menus, dates. Results update on every screen in real time.' },
+                { icon: Users,         label: 'Unlimited team',       desc: 'No per-seat pricing. Add every organizer, vendor, and volunteer for free.' },
+                { icon: QrCode,        label: 'QR check-in',          desc: 'Personal QR invites for every guest. Scan at the door, see live attendance.' },
+                { icon: Bot,           label: 'Claude AI co-pilot',   desc: 'Manage guests, send announcements, and check attendance — conversationally.' },
+                { icon: FileText,      label: 'File sharing',         desc: 'Floor plans, contracts, schedules — attached directly to the workspace.' },
+                { icon: Shield,        label: 'Anti-fraud check-in',  desc: 'Duplicate detection, trust scoring, and manager override built in.' },
+                { icon: UtensilsCrossed, label: 'Live floor manager', desc: 'For restaurants: visual floor map, walk-in waitlist, and live table status.' },
+              ].map((f, i) => (
+                <Reveal key={f.label} delay={(i % 3) * 60} direction={i % 3 === 0 ? 'left' : i % 3 === 2 ? 'right' : 'up'}>
+                  <div className="group relative p-7 sm:p-9 bg-neutral-950 hover:bg-neutral-900 transition-all duration-400 h-full overflow-hidden">
+                    <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"
+                      style={{ background: 'radial-gradient(circle at 20% 0%, rgba(99,102,241,0.08), transparent 60%)' }} />
+                    <div className="relative">
+                      <div className="feature-icon w-11 h-11 rounded-xl bg-neutral-800 border border-neutral-700/50 flex items-center justify-center mb-5 group-hover:bg-white group-hover:border-white group-hover:shadow-[0_0_20px_rgba(99,102,241,0.3)]">
+                        <f.icon className="w-5 h-5 text-neutral-400 group-hover:text-neutral-900 transition-colors duration-400" />
+                      </div>
+                      <div className="text-sm font-bold text-white mb-2 tracking-tight">{f.label}</div>
+                      <div className="text-xs text-neutral-500 leading-relaxed">{f.desc}</div>
+                    </div>
+                  </div>
+                </Reveal>
+              ))}
+            </div>
+
+            {/* Stats row */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-24">
+                {[
+                  { value: '< 60s',   label: 'To create an event',    sub: 'No account needed' },
+                  { value: '∞',       label: 'Team members',          sub: 'No per-seat caps' },
+                  { value: '3',       label: 'Event modes',           sub: 'Standard, Enterprise, Venue' },
+                  { value: '7 days',  label: 'Post-event data',       sub: 'Auto-deleted after' },
+                ].map((s, i) => (
+                  <Reveal key={s.label} delay={i * 70}>
+                    <div className="stat-card text-center p-6 sm:p-7 rounded-2xl cursor-default h-full"
+                      style={{ background:'rgba(255,255,255,0.025)', backdropFilter:'blur(12px)' }}>
+                      <div className="font-syne text-2xl sm:text-3xl font-black text-white mb-1.5 tracking-tight">{s.value}</div>
+                      <div className="text-xs font-bold text-neutral-300 mb-1">{s.label}</div>
+                      <div className="text-xs text-neutral-600">{s.sub}</div>
+                    </div>
+                  </Reveal>
+                ))}
+            </div>
+
+            {/* Two paths CTA */}
+            <div className="grid md:grid-cols-2 gap-4">
+                <Reveal direction="left">
+                <a href="#planit-events"
+                  onClick={(e) => { e.preventDefault(); selectBranch('events'); }}
+                  className="group relative flex flex-col p-8 sm:p-10 rounded-3xl border border-neutral-800 hover:border-indigo-500/40 hover:-translate-y-1 transition-all duration-500 overflow-hidden h-full"
+                  style={{ background: 'rgba(99,102,241,0.03)' }}>
+                  <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500"
+                    style={{ background:'radial-gradient(ellipse at 0% 50%, rgba(99,102,241,0.08) 0%, transparent 60%)' }} />
+                  <div className="relative">
+                    <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl border border-indigo-500/20 bg-indigo-500/8 mb-6">
+                      <Calendar className="w-3.5 h-3.5 text-indigo-400" />
+                      <span className="text-xs font-bold text-indigo-400 uppercase tracking-wider">PlanIt Events</span>
+                    </div>
+                    <h3 className="font-syne text-2xl sm:text-3xl font-black text-white mb-3 leading-tight">
+                      Planning an event?<br />Start here.
+                    </h3>
+                    <p className="text-sm text-neutral-500 leading-relaxed mb-7 max-w-sm">
+                      Weddings, conferences, corporate retreats, galas. The full planning workspace — chat, tasks, RSVP, QR check-in, all in one place.
+                    </p>
+                    <div className="flex items-center gap-2 text-sm font-bold text-indigo-400 group-hover:text-indigo-300 transition-colors">
+                      Get started free <ArrowRight className="w-4 h-4 group-hover:translate-x-1.5 transition-transform duration-300" />
+                    </div>
+                  </div>
+                </a>
+                </Reveal>
+
+                <Reveal direction="right">
+                <a href="#planit-venue"
+                  onClick={(e) => { e.preventDefault(); selectBranch('venue'); }}
+                  className="group relative flex flex-col p-8 sm:p-10 rounded-3xl border border-neutral-800 hover:border-orange-500/40 hover:-translate-y-1 transition-all duration-500 overflow-hidden h-full"
+                  style={{ background: 'rgba(249,115,22,0.02)' }}>
+                  <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500"
+                    style={{ background:'radial-gradient(ellipse at 100% 50%, rgba(249,115,22,0.07) 0%, transparent 60%)' }} />
+                  <div className="relative">
+                    <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl border border-orange-500/25 bg-orange-500/8 mb-6">
+                      <UtensilsCrossed className="w-3.5 h-3.5 text-orange-400" />
+                      <span className="text-xs font-bold text-orange-400 uppercase tracking-wider">PlanIt Venue</span>
+                    </div>
+                    <h3 className="font-syne text-2xl sm:text-3xl font-black text-white mb-3 leading-tight">
+                      Running a restaurant<br />or venue floor?
+                    </h3>
+                    <p className="text-sm text-neutral-500 leading-relaxed mb-7 max-w-sm">
+                      Live floor map, walk-in waitlist, QR reservations, one-tap seating. Everything front-of-house needs, every service.
+                    </p>
+                    <div className="flex items-center gap-2 text-sm font-bold text-orange-400 group-hover:text-orange-300 transition-colors">
+                      Set up your venue <ArrowRight className="w-4 h-4 group-hover:translate-x-1.5 transition-transform duration-300" />
+                    </div>
+                  </div>
+                </a>
+                </Reveal>
+            </div>
+          </div>
+        </section>{/* end SOCIAL PROOF STRIP */}
+
+        <SectionSeam tint="indigo" />
+
+        {/* ═══════════════════════════════════════════════════════════
+            PLANIT EVENTS — its own "page" section
+        ═══════════════════════════════════════════════════════════ */}
+        <section id="planit-events" className="relative overflow-hidden" style={{ background: 'var(--bg-surface)', display: selectedBranch === 'events' ? 'block' : 'none' }}>
+          {/* Page-break top border with glow */}
+          <div style={{ height: '2px', background: 'linear-gradient(90deg, transparent, rgba(148,163,184,0.12) 20%, rgba(255,255,255,0.25) 50%, rgba(148,163,184,0.12) 80%, transparent)' }} />
+          {/* Background texture */}
+          <div className="absolute inset-0 pointer-events-none" style={{
+            backgroundImage: 'radial-gradient(circle at 15% 50%, rgba(100,116,139,0.06) 0%, transparent 50%), radial-gradient(circle at 85% 20%, rgba(148,163,184,0.04) 0%, transparent 40%)',
+          }} />
+          {/* Animated SVG grid decoration */}
+          <svg style={{ position:'absolute', top:0, right:0, width:320, height:320, opacity:0.4, pointerEvents:'none' }} viewBox="0 0 320 320" aria-hidden="true">
+            <defs><radialGradient id="evg" cx="100%" cy="0%"><stop offset="0%" stopColor="rgba(148,163,184,0.15)"/><stop offset="100%" stopColor="transparent"/></radialGradient></defs>
+            <rect width="320" height="320" fill="url(#evg)"/>
+            {Array.from({length:6},(_,i)=><line key={i} x1={i*60} y1="0" x2={i*60} y2="320" stroke="rgba(255,255,255,0.04)" strokeWidth="1"/>)}
+            {Array.from({length:6},(_,i)=><line key={i} x1="0" y1={i*60} x2="320" y2={i*60} stroke="rgba(255,255,255,0.04)" strokeWidth="1"/>)}
+            {/* Floating task nodes */}
+            {[[60,60],[180,40],[260,120],[120,200],[200,260]].map(([cx,cy],i)=>(
+              <g key={i}>
+                <circle cx={cx} cy={cy} r="18" fill="rgba(255,255,255,0.02)" stroke="rgba(255,255,255,0.06)" strokeWidth="1">
+                  <animate attributeName="cy" values={`${cy};${cy-8};${cy}`} dur={`${5+i*0.8}s`} begin={`${i*0.6}s`} repeatCount="indefinite"/>
+                </circle>
+                <line x1={cx} y1={cy-5} x2={cx+8} y2={cy-5} stroke="rgba(255,255,255,0.12)" strokeWidth="1" strokeLinecap="round"/>
+                <line x1={cx} y1={cy} x2={cx+12} y2={cy} stroke="rgba(255,255,255,0.08)" strokeWidth="1" strokeLinecap="round"/>
+                <line x1={cx} y1={cy+5} x2={cx+6} y2={cy+5} stroke="rgba(255,255,255,0.06)" strokeWidth="1" strokeLinecap="round"/>
+              </g>
+            ))}
+          </svg>
+
+          {/* Product "page header" */}
+          <div className="relative max-w-screen-xl mx-auto px-6 sm:px-10 pt-20 pb-4">
+            <Reveal>
+              <div className="flex items-center gap-4 mb-2">
+                <div className="w-10 h-10 rounded-2xl bg-neutral-800 border border-neutral-700 flex items-center justify-center">
+                  <Calendar className="w-5 h-5 text-neutral-300" />
+                </div>
+                <div>
+                  <div className="text-[10px] font-black uppercase tracking-[0.3em] text-neutral-600">{isWL ? '' : 'PlanIt'}</div>
+                  <div className="text-lg font-black text-white tracking-tight leading-none">Events</div>
+                </div>
+                <div className="ml-2 h-px flex-1 bg-neutral-800" />
+                <span className="text-[10px] font-bold uppercase tracking-widest text-neutral-700">Branch 01</span>
+              </div>
+            </Reveal>
+          </div>
+
+          {/* Hero headline */}
+          <div className="relative max-w-screen-xl mx-auto px-6 sm:px-10 pt-10 pb-20">
+            <div className="grid lg:grid-cols-2 gap-16 items-center">
+              <Reveal>
+                <p className="text-xs font-bold text-neutral-400 uppercase tracking-[0.2em] mb-6">For event teams who actually have a lot going on</p>
+                <h2 className="font-syne font-black text-white leading-[0.9] tracking-tight mb-8" style={{ fontSize: 'clamp(2.2rem, 5vw, 4.5rem)' }}>
+                  Everything your<br />
+                  team needs.<br />
+                  <span style={{ color: '#64748b' }}>Nothing you don't.</span>
+                </h2>
+                <p className="text-neutral-400 text-lg leading-relaxed mb-10 max-w-lg">
+                  From 6 months out to the final wrap-up. {isWL ? (wlName || 'Your platform') : 'PlanIt Events'} is the workspace for the whole team — organizers, vendors, volunteers, everyone.
+                </p>
+                <div className="flex items-center gap-4">
+                  <a href="#create" className="inline-flex items-center gap-2 px-6 py-3 bg-white text-neutral-900 rounded-xl font-bold hover:bg-neutral-100 transition-colors text-sm">
+                    Start planning free <ArrowRight className="w-4 h-4" />
+                  </a>
+                  <span className="text-xs text-neutral-700">No credit card · No account needed</span>
+                </div>
+              </Reveal>
+
+              {/* Animated workspace mockup */}
+              <Reveal delay={120}>
+                <div className="relative rounded-2xl border border-neutral-800 overflow-hidden" style={{ background: 'rgba(13,13,22,0.9)' }}>
+                  {/* App chrome */}
+                  <div className="flex items-center gap-2 px-4 py-3 border-b border-neutral-800/60" style={{ background: 'rgba(10,10,18,0.95)' }}>
+                    <div className="flex gap-1.5">
+                      <div className="w-2.5 h-2.5 rounded-full bg-neutral-700" />
+                      <div className="w-2.5 h-2.5 rounded-full bg-neutral-700" />
+                      <div className="w-2.5 h-2.5 rounded-full bg-neutral-700" />
+                    </div>
+                    <div className="flex-1 flex justify-center">
+                      <div className="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-neutral-800/60 border border-neutral-700/40">
+                        <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                        <span className="text-[9px] text-neutral-500 font-mono">Summer Gala 2026</span>
+                      </div>
+                    </div>
+                  </div>
+                  {/* Two-panel layout */}
+                  <div className="grid grid-cols-5 divide-x divide-neutral-800/60" style={{ minHeight: 320 }}>
+                    {/* Sidebar */}
+                    <div className="col-span-2 p-4 space-y-1">
+                      {[['Chat','active'],['Tasks',''],['Guests',''],['Polls',''],['Budget','']].map(([label,active]) => (
+                        <div key={label} className={`flex items-center gap-2 px-2.5 py-2 rounded-lg text-xs font-semibold transition-colors ${active ? 'bg-white/6 text-white' : 'text-neutral-600 hover:text-neutral-400'}`}>
+                          <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: active ? 'rgba(255,255,255,0.5)' : '#404040' }} />{label}
+                        </div>
+                      ))}
+                    </div>
+                    {/* Chat panel */}
+                    <div className="col-span-3 flex flex-col">
+                      <div className="px-3 py-2 border-b border-neutral-800/40">
+                        <span className="text-[10px] font-bold text-neutral-500"># planning-team</span>
+                      </div>
+                      <div className="flex-1 p-3 space-y-2.5 overflow-hidden">
+                        <div className="msg-1 flex items-start gap-2">
+                          <div className="w-5 h-5 rounded-full bg-violet-600/40 flex-shrink-0 mt-0.5 flex items-center justify-center">
+                            <span className="text-[7px] font-bold text-violet-300">A</span>
+                          </div>
+                          <div>
+                            <div className="text-[9px] font-bold text-violet-400 mb-0.5">Alex</div>
+                            <div className="text-[10px] text-neutral-400 bg-neutral-800/60 px-2 py-1.5 rounded-lg rounded-tl-none">Venue deposit confirmed</div>
+                          </div>
+                        </div>
+                        <div className="msg-2 flex items-start gap-2">
+                          <div className="w-5 h-5 rounded-full bg-sky-600/40 flex-shrink-0 mt-0.5 flex items-center justify-center">
+                            <span className="text-[7px] font-bold text-sky-300">S</span>
+                          </div>
+                          <div>
+                            <div className="text-[9px] font-bold text-sky-400 mb-0.5">Sam</div>
+                            <div className="text-[10px] text-neutral-400 bg-neutral-800/60 px-2 py-1.5 rounded-lg rounded-tl-none">Floor plan uploaded to files</div>
+                          </div>
+                        </div>
+                        <div className="msg-3 flex items-start gap-2 justify-end">
+                          <div>
+                            <div className="text-[10px] text-neutral-300 bg-neutral-700/80 px-2 py-1.5 rounded-lg rounded-tr-none">On it! Creating checklist now</div>
+                          </div>
+                        </div>
+                      </div>
+                      {/* typing */}
+                      <div className="px-3 pb-3">
+                        <div className="flex items-center gap-2 px-2.5 py-2 rounded-lg bg-neutral-800/40 border border-neutral-700/30">
+                          <span className="text-[9px] text-neutral-600">Alex is typing</span>
+                          <div className="flex items-end gap-0.5">
+                            <div className="typing-dot w-1 h-1 rounded-full bg-neutral-500" />
+                            <div className="typing-dot w-1 h-1 rounded-full bg-neutral-500" />
+                            <div className="typing-dot w-1 h-1 rounded-full bg-neutral-500" />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </Reveal>
+            </div>
+          </div>
+
+          {/* Features grid */}
+          <div className="relative border-t border-neutral-800/40">
+            <div className="max-w-screen-xl mx-auto px-6 sm:px-10 py-16">
+              <Reveal className="mb-10">
+                <p className="text-xs font-bold uppercase tracking-[0.2em] text-neutral-600 mb-2">What's included</p>
+                <h3 className="font-syne text-2xl font-black text-white">Every tool. One workspace.</h3>
+              </Reveal>
+              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {[
+                  { icon: MessageSquare, label: 'Real-time team chat',    desc: 'Typing indicators, reactions, threads. Your team stays in sync.' },
+                  { icon: ListChecks,    label: 'Task management',        desc: 'Assign tasks, set deadlines, track completion down to the wire.' },
+                  { icon: BarChart3,     label: 'Polls & voting',         desc: 'Vote on venues, dates, menus. Live results instantly.' },
+                  { icon: FileText,      label: 'File sharing',           desc: 'Contracts, floor plans, schedules — all in one place.' },
+                  { icon: Users,         label: 'Unlimited team',         desc: 'No caps. Every organizer, vendor, and volunteer included.' },
+                  { icon: QrCode,        label: 'QR check-in',           desc: 'Professional guest check-in with real-time attendance.' },
+                  { icon: Bot,           label: 'Claude AI co-pilot',    desc: 'Manage your whole event by talking to Claude. Add guests, check-ins, announcements — conversationally.' },
+                ].map((f, i) => (
+                  <Reveal key={f.label} delay={(i % 3) * 60} direction={i % 3 === 0 ? 'left' : i % 3 === 2 ? 'right' : 'up'}>
+                    <div className="feature-card group p-6 rounded-2xl h-full" style={{ background: 'rgba(255,255,255,0.02)' }}>
+                      <div className="feature-icon w-9 h-9 rounded-xl bg-neutral-800 border border-neutral-700/50 flex items-center justify-center mb-4 group-hover:bg-neutral-700">
+                        <f.icon className="w-4 h-4 text-neutral-400" />
+                      </div>
+                      <div className="text-sm font-bold text-white mb-1.5 tracking-tight">{f.label}</div>
+                      <div className="text-xs text-neutral-400 leading-relaxed">{f.desc}</div>
+                    </div>
+                  </Reveal>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Invite/RSVP demo advertisement */}
+          <div className="border-t border-neutral-800/40">
+            <div className="max-w-screen-xl mx-auto px-6 sm:px-10 py-16">
+              <Reveal>
+                <div
+                  onClick={() => navigate('/demo/invite')}
+                  role="link"
+                  tabIndex={0}
+                  onKeyDown={(e) => { if (e.key === 'Enter') navigate('/demo/invite'); }}
+                  className="group relative flex flex-col sm:flex-row items-stretch gap-0 rounded-3xl border border-indigo-500/20 overflow-hidden transition-all duration-400 hover:border-indigo-500/40 hover:-translate-y-1 hover:shadow-[0_24px_60px_rgba(0,0,0,0.35)] cursor-pointer"
+                  style={{ background: 'rgba(99,102,241,0.04)' }}
+                >
+                  <div className="flex-1 p-8 sm:p-10">
+                    <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl border border-indigo-500/20 bg-indigo-500/8 mb-5">
+                      <Ticket className="w-3.5 h-3.5 text-indigo-400" />
+                      <span className="text-xs font-bold text-indigo-400 uppercase tracking-wider">See it in action</span>
+                    </div>
+                    <h3 className="font-syne text-2xl sm:text-3xl font-black text-white mb-3 leading-tight">
+                      Invites and RSVP pages guests actually want to share.
+                    </h3>
+                    <p className="text-sm text-neutral-500 leading-relaxed mb-6 max-w-lg">
+                      Live countdowns, who else is going, a QR entry pass, and a personalized share card for every guest — try the real thing below, no account needed.
+                    </p>
+                    <div className="flex flex-wrap gap-3">
+                      <span className="inline-flex items-center gap-2 text-sm font-bold text-indigo-400 group-hover:text-indigo-300 transition-colors">
+                        Try the invite demo <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform duration-300" />
+                      </span>
+                      <a
+                        href="/demo/rsvp"
+                        onClick={(e) => e.stopPropagation()}
+                        className="inline-flex items-center gap-2 text-sm font-bold text-neutral-400 hover:text-neutral-200 transition-colors"
+                      >
+                        <Share2 className="w-3.5 h-3.5" /> Try the RSVP demo
+                      </a>
+                    </div>
+                  </div>
+                  <div className="hidden sm:flex w-64 flex-shrink-0 items-center justify-center p-8 border-l border-indigo-500/10" style={{ background: 'rgba(0,0,0,0.2)' }}>
+                    <div className="w-full rounded-2xl border border-neutral-800 bg-neutral-950 p-4">
+                      <p className="text-[10px] uppercase tracking-widest text-neutral-600 mb-2">You're invited to</p>
+                      <p className="font-syne text-lg font-black text-white mb-3 leading-tight">Bonfire &amp; vinyl</p>
+                      <div className="flex gap-1.5 mb-3">
+                        {['D', 'H', 'M', 'S'].map((u) => (
+                          <div key={u} className="flex-1 text-center rounded-md bg-neutral-900 border border-neutral-800 py-1.5">
+                            <div className="text-xs font-mono font-bold text-neutral-300">09</div>
+                            <div className="text-[8px] text-neutral-600">{u}</div>
+                          </div>
+                        ))}
+                      </div>
+                      <div className="h-8 rounded-lg bg-indigo-500/80 flex items-center justify-center text-[11px] font-bold text-white">I'm going</div>
+                    </div>
+                  </div>
+                </div>
+              </Reveal>
+            </div>
+          </div>
+
+          {/* Enterprise strip */}
+          <div className="border-t border-neutral-800/40">
+            <div className="max-w-screen-xl mx-auto px-6 sm:px-10 py-12">
+              <Reveal>
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 p-6 rounded-2xl border border-neutral-800 transition-all duration-400 hover:border-neutral-700 hover:-translate-y-0.5" style={{ background: 'rgba(255,255,255,0.02)' }}>
+                  <div className="flex items-center gap-4">
+                    <div className="w-10 h-10 rounded-xl bg-neutral-800 border border-neutral-700 flex items-center justify-center flex-shrink-0">
+                      <Zap className="w-5 h-5 text-neutral-400" />
+                    </div>
+                    <div>
+                      <div className="text-sm font-black text-white mb-0.5">Enterprise Mode</div>
+                      <div className="text-xs text-neutral-600">Personalized QR invites, check-in dashboard, real-time attendance analytics. For 100+ guest events.</div>
+                    </div>
+                  </div>
+                  <a href="#create" className="flex-shrink-0 inline-flex items-center gap-2 px-5 py-2.5 border border-neutral-700 rounded-xl text-xs font-bold text-neutral-300 hover:border-neutral-500 hover:text-white transition-all">
+                    Set up Enterprise <ArrowRight className="w-3.5 h-3.5" />
+                  </a>
+                </div>
+              </Reveal>
+            </div>
+          </div>
+
+          {/* Bottom page-break */}
+          <div style={{ height: '2px', background: 'linear-gradient(90deg, transparent, rgba(148,163,184,0.08) 20%, rgba(255,255,255,0.15) 50%, rgba(148,163,184,0.08) 80%, transparent)' }} />
+        </section>
+
+        {/* ═══════════════════════════════════════════════════════════
+            BRANCH TRANSITION — visual page turn
+        ═══════════════════════════════════════════════════════════ */}
+        <div className="relative py-12 flex items-center justify-center overflow-hidden" style={{ background: 'var(--bg-base)', display: selectedBranch ? 'none' : 'flex' }}>
+          <div className="absolute inset-0" style={{ backgroundImage: 'radial-gradient(circle at 50% 50%, rgba(249,115,22,0.04) 0%, transparent 60%)' }} />
+          <Reveal>
+            <div className="relative flex items-center gap-5 text-center">
+              <div className="h-px w-16 bg-neutral-800" />
+              <div className="flex items-center gap-3 px-5 py-2.5 rounded-full border border-neutral-800" style={{ background: 'rgba(255,255,255,0.02)' }}>
+                <div className="flex items-center gap-1.5 text-[10px] font-bold text-neutral-700 uppercase tracking-widest">
+                  <Calendar className="w-3 h-3 text-neutral-700" /> Events
+                </div>
+                <span className="text-neutral-800">·</span>
+                <div className="flex items-center gap-1.5 text-[10px] font-bold text-neutral-700 uppercase tracking-widest">
+                  <UtensilsCrossed className="w-3 h-3 text-neutral-700" /> Venue
+                </div>
+              </div>
+              <div className="h-px w-16 bg-neutral-800" />
+            </div>
+          </Reveal>
+        </div>
+
+        {/* ═══════════════════════════════════════════════════════════
+            PLANIT VENUE — its own "page" section
+        ═══════════════════════════════════════════════════════════ */}
+        <section id="planit-venue" className="relative overflow-hidden" style={{ background: 'var(--bg-venue)', display: selectedBranch === 'venue' ? 'block' : 'none' }}>
+          {/* Page-break top border with orange glow */}
+          <div style={{ height: '2px', background: 'linear-gradient(90deg, transparent, rgba(249,115,22,0.15) 20%, rgba(249,115,22,0.5) 50%, rgba(249,115,22,0.15) 80%, transparent)' }} />
+          {/* Background */}
+          <div className="absolute inset-0 pointer-events-none" style={{
+            backgroundImage: 'radial-gradient(circle at 85% 40%, rgba(249,115,22,0.06) 0%, transparent 50%), radial-gradient(circle at 15% 80%, rgba(234,88,12,0.03) 0%, transparent 40%)',
+          }} />
+          {/* Animated venue floor SVG decoration */}
+          <svg style={{ position:'absolute', top:0, left:0, width:280, height:280, opacity:0.35, pointerEvents:'none' }} viewBox="0 0 280 280" aria-hidden="true">
+            <defs><radialGradient id="vng" cx="0%" cy="0%"><stop offset="0%" stopColor="rgba(249,115,22,0.12)"/><stop offset="100%" stopColor="transparent"/></radialGradient></defs>
+            <rect width="280" height="280" fill="url(#vng)"/>
+            {Array.from({length:5},(_,i)=><line key={i} x1={i*60} y1="0" x2={i*60} y2="280" stroke="rgba(249,115,22,0.05)" strokeWidth="1"/>)}
+            {Array.from({length:5},(_,i)=><line key={i} x1="0" y1={i*60} x2="280" y2={i*60} stroke="rgba(249,115,22,0.05)" strokeWidth="1"/>)}
+            {/* Mini table shapes */}
+            {[[50,60,18,'#22c55e'],[130,50,16,'#ef4444'],[60,160,14,'#f59e0b'],[170,150,18,'#22c55e']].map(([cx,cy,r,c],i)=>(
+              <g key={i}>
+                <circle cx={cx} cy={cy} r={r} fill={`${c}12`} stroke={c} strokeWidth="1" opacity="0.7">
+                  <animate attributeName="cy" values={`${cy};${cy-6};${cy}`} dur={`${4+i*0.9}s`} begin={`${i*0.7}s`} repeatCount="indefinite"/>
+                </circle>
+                <text x={cx} y={cy+4} textAnchor="middle" fill={c} fontSize="8" fontWeight="800" opacity="0.8">T{i+1}</text>
+              </g>
+            ))}
+          </svg>
+
+          {/* Product "page header" */}
+          <div className="relative max-w-screen-xl mx-auto px-6 sm:px-10 pt-20 pb-4">
+            <Reveal>
+              <div className="flex items-center gap-4 mb-2">
+                <div className="w-10 h-10 rounded-2xl bg-orange-500/10 border border-orange-500/25 flex items-center justify-center">
+                  <UtensilsCrossed className="w-5 h-5 text-orange-400" />
+                </div>
+                <div>
+                  <div className="text-[10px] font-black uppercase tracking-[0.3em] text-orange-500/40">PlanIt</div>
+                  <div className="text-lg font-black text-white tracking-tight leading-none">Venue</div>
+                </div>
+                <div className="ml-2 h-px flex-1 bg-orange-500/10" />
+                <span className="text-[10px] font-bold uppercase tracking-widest text-orange-500/30">Branch 02</span>
+              </div>
+            </Reveal>
+          </div>
+
+          {/* Hero headline */}
+          <div className="relative max-w-screen-xl mx-auto px-6 sm:px-10 pt-10 pb-20">
+            <div className="grid lg:grid-cols-2 gap-16 items-center">
+              <Reveal>
+                <p className="text-xs font-bold uppercase tracking-[0.2em] text-orange-500/40 mb-6">For restaurants that run a real floor every night</p>
+                <h2 className="font-syne font-black text-white leading-[0.9] tracking-tight mb-8" style={{ fontSize: 'clamp(2.2rem, 5vw, 4.5rem)' }}>
+                  Run your floor.<br />
+                  Know your wait.<br />
+                  <span style={{ color: 'rgba(249,115,22,0.5)' }}>Seat every table.</span>
+                </h2>
+                <p className="text-neutral-600 text-lg leading-relaxed mb-10 max-w-lg">
+                  Live table states. Walk-in waitlist with a public wait board guests scan at the door. One-tap seating. Your floor data never expires.
+                </p>
+                <div className="flex items-center gap-4">
+                  <a href="#create" onClick={() => setTimeout(() => document.querySelector('[data-mode="table-service"]')?.click(), 100)}
+                    className="inline-flex items-center gap-2 px-6 py-3 bg-orange-500 text-white rounded-xl font-bold hover:bg-orange-400 transition-colors text-sm">
+                    Set up your venue <ArrowRight className="w-4 h-4" />
+                  </a>
+                  <span className="text-xs text-neutral-700">Free · Data never expires</span>
+                </div>
+              </Reveal>
+
+              {/* Animated floor map */}
+              <Reveal delay={120}>
+                <div className="relative rounded-2xl border border-orange-500/15 overflow-hidden" style={{ background: 'rgba(13,10,5,0.95)' }}>
+                  {/* App chrome */}
+                  <div className="flex items-center justify-between px-4 py-3 border-b border-orange-500/10" style={{ background: 'rgba(10,8,3,0.98)' }}>
+                    <div className="flex items-center gap-2">
+                      <div className="w-5 h-5 rounded-lg bg-orange-500/15 border border-orange-500/20 flex items-center justify-center">
+                        <UtensilsCrossed className="w-2.5 h-2.5 text-orange-400" />
+                      </div>
+                      <span className="text-xs font-bold text-neutral-400">Taverna Roma</span>
+                      <span className="text-[9px] text-orange-400/40 font-bold uppercase tracking-wider">PlanIt Venue</span>
+                    </div>
+                    <div className="flex gap-2">
+                      {[['#22c55e','3 Free'],['#ef4444','4 Occ'],['#8b5cf6','1 Cln']].map(([c,l]) => (
+                        <span key={l} className="flex items-center gap-1 text-[9px] px-1.5 py-0.5 rounded-md bg-neutral-900 text-neutral-500">
+                          <span className="w-1.5 h-1.5 rounded-full" style={{ background: c }} />{l}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                  {/* Floor plan SVG */}
+                  <div className="p-4">
+                    <svg viewBox="0 0 520 260" className="w-full" style={{ height: 220 }}>
+                      <defs>
+                        <pattern id="vg" width="28" height="28" patternUnits="userSpaceOnUse">
+                          <path d="M 28 0 L 0 0 0 28" fill="none" stroke="rgba(249,115,22,0.04)" strokeWidth="0.5" />
+                        </pattern>
+                      </defs>
+                      <rect width="520" height="260" fill="url(#vg)" />
+                      {/* Zone */}
+                      <rect x="18" y="10" width="155" height="90" rx="8" fill="rgba(249,115,22,0.02)" stroke="rgba(249,115,22,0.08)" strokeDasharray="6 3" />
+                      <text x="95" y="58" textAnchor="middle" fill="rgba(249,115,22,0.2)" fontSize="11" fontWeight="700" letterSpacing="2">MAIN ROOM</text>
+                      {/* Tables */}
+                      {[
+                        {x:65,  y:155, r:26, status:'available', label:'T1', cap:'4'},
+                        {x:145, y:155, r:26, status:'occupied',  label:'T2', cap:'4', party:'Smith', time:'38m'},
+                        {x:215, y:135, r:30, status:'occupied',  label:'T3', cap:'6', party:'Chen',  time:'19m'},
+                        {x:300, y:155, r:26, status:'cleaning',  label:'T4', cap:'4'},
+                        {x:370, y:135, r:30, status:'available', label:'T5', cap:'6'},
+                        {x:455, y:155, r:26, status:'reserved',  label:'T6', cap:'4', party:'Jones'},
+                      ].map(t => {
+                        const c = t.status==='available'?'#22c55e':t.status==='occupied'?'#ef4444':t.status==='cleaning'?'#8b5cf6':'#f59e0b';
+                        const pulse = t.status === 'available';
+                        return (
+                          <g key={t.label}>
+                            <circle cx={t.x} cy={t.y} r={t.r+4} fill="none" stroke={c} strokeWidth="1.5" opacity={pulse ? undefined : "0.5"} className={pulse ? 'table-pulse-ring' : ''} />
+                            <circle cx={t.x} cy={t.y} r={t.r} fill={`${c}18`} stroke={c} strokeWidth="1" className={pulse ? 'table-pulse-fill' : ''} />
+                            <text x={t.x} y={t.y-3} textAnchor="middle" fill="rgba(255,255,255,0.9)" fontSize="9" fontWeight="800">{t.label}</text>
+                            <text x={t.x} y={t.y+8} textAnchor="middle" fill={c} fontSize="8">{t.cap}</text>
+                            {t.time && <text x={t.x+t.r-2} y={t.y-t.r+4} textAnchor="middle" fill="white" fontSize="7.5" fontWeight="700" opacity="0.8">{t.time}</text>}
+                          </g>
+                        );
+                      })}
+                      {/* Waitlist widget */}
+                      <rect x="18" y="178" width="130" height="60" rx="8" fill="rgba(245,158,11,0.06)" stroke="rgba(245,158,11,0.18)" />
+                      <text x="30" y="196" fill="#f59e0b" fontSize="8" fontWeight="800" letterSpacing="1">WAITLIST</text>
+                      <text x="90" y="196" fill="rgba(245,158,11,0.5)" fontSize="8" fontWeight="700" className="waitlist-tick">·3</text>
+                      <text x="30" y="212" fill="rgba(255,255,255,0.4)" fontSize="8">Martinez · 4 · ~14m</text>
+                      <text x="30" y="226" fill="rgba(255,255,255,0.4)" fontSize="8">Taylor · 2 · ~8m</text>
+                    </svg>
+                  </div>
+                </div>
+              </Reveal>
+            </div>
+          </div>
+
+          {/* Features grid */}
+          <div className="relative border-t border-orange-500/8">
+            <div className="max-w-screen-xl mx-auto px-6 sm:px-10 py-16">
+              <Reveal className="mb-10">
+                <p className="text-xs font-bold uppercase tracking-[0.2em] text-orange-500/40 mb-2">What's included</p>
+                <h3 className="font-syne text-2xl font-black text-white">Your whole floor, in one screen.</h3>
+              </Reveal>
+              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {[
+                  { icon: Layers,       label: 'Visual floor editor',    desc: 'Drag tables to match your exact layout. Zones, shapes, labels.' },
+                  { icon: Users,        label: 'Walk-in waitlist',       desc: 'Add parties instantly. Estimated wait times update as tables clear.' },
+                  { icon: QrCode,       label: 'Public wait board',      desc: 'Guests scan the door QR, see the queue, and join from their phone.' },
+                  { icon: MapPin,       label: 'Live sync',              desc: 'Every status update hits all staff screens in real time.' },
+                  { icon: CheckCircle2, label: 'One-tap seat next',      desc: 'Auto-picks the tightest-fit table and seats the next waiting party.' },
+                  { icon: Clock,        label: 'Data never expires',     desc: 'Your floor plan and history persist forever. No cleanup, no resets.' },
+                ].map((f, i) => (
+                  <Reveal key={f.label} delay={(i % 3) * 60} direction={i % 3 === 0 ? 'left' : i % 3 === 2 ? 'right' : 'up'}>
+                    <div className="group p-6 rounded-2xl border border-orange-500/10 hover:border-orange-500/25 hover:-translate-y-1 hover:shadow-[0_16px_40px_rgba(0,0,0,0.35)] transition-all duration-400 h-full" style={{ background: 'rgba(249,115,22,0.025)' }}>
+                      <div className="w-9 h-9 rounded-xl bg-orange-500/10 border border-orange-500/20 flex items-center justify-center mb-4 transition-all duration-500 group-hover:bg-orange-500/20 group-hover:scale-110 group-hover:-rotate-6">
+                        <f.icon className="w-4 h-4 text-orange-400" />
+                      </div>
+                      <div className="text-sm font-bold text-white mb-1.5 tracking-tight">{f.label}</div>
+                      <div className="text-xs text-neutral-500 leading-relaxed">{f.desc}</div>
+                    </div>
+                  </Reveal>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Bottom page-break */}
+          <div style={{ height: '2px', background: 'linear-gradient(90deg, transparent, rgba(249,115,22,0.08) 20%, rgba(249,115,22,0.25) 50%, rgba(249,115,22,0.08) 80%, transparent)' }} />
+        </section>
+
+        {/* TESTIMONIALS */}
+        <section className="py-32 border-t border-neutral-800/40" style={{ display: selectedBranch === 'events' ? 'block' : 'none' }}>
+          <div className="max-w-screen-xl mx-auto px-4 sm:px-8">
+            <SectionHeader eyebrow="Testimonials" title="Trusted by event planners" subtitle="See how teams are using PlanIt to execute flawless events" />
+            <div className="grid md:grid-cols-3 gap-6">
+              <TestimonialCard direction="left" quote="PlanIt transformed how we coordinated our annual company conference. The task management kept our 15-person planning team organized for 6 months of prep. The QR check-in on event day was seamless for 300 attendees." author="Michael Chen" role="Senior Event Coordinator" event="Tech Summit 2025" delay={0} />
+              <TestimonialCard direction="up" quote="As a wedding planner, I've used every tool out there. PlanIt stands out because it doesn't require my couples or vendors to create accounts. We used it for 4 months of planning." author="Sarah Williams" role="Lead Wedding Planner" event="Williams-Martinez Wedding" delay={120} />
+              <TestimonialCard direction="right" quote="Our nonprofit used PlanIt to coordinate a 500-person fundraising gala. The unlimited participant feature meant we could include our entire board, 30 volunteers, all vendors, and staff." author="David Martinez" role="Development Director" event="Charity Gala 2025" delay={240} />
+            </div>
+          </div>
+        </section>
+
+        <SectionSeam tint="violet" />
+        <section className="py-32 border-t border-orange-500/8" style={{ display: selectedBranch === 'venue' ? 'block' : 'none' }}>
+          <div className="max-w-screen-xl mx-auto px-4 sm:px-8">
+            <SectionHeader eyebrow="Testimonials" title="Trusted by restaurant floors" subtitle="See how venues are using PlanIt to run service, night after night" />
+            <div className="grid md:grid-cols-3 gap-6">
+              <TestimonialCard direction="left" quote="The floor map alone paid for itself in week one. Our host stand used to be a legal pad — now every server sees table status update live from their phone." author="Michael Chen" role="General Manager" event="Taverna Roma" delay={0} />
+              <TestimonialCard direction="up" quote="Walk-ins used to mean guessing at wait times. Now guests scan a QR at the door, see the real queue, and we seat the next table with one tap." author="Sarah Williams" role="Front of House Manager" event="The Oak Room" delay={120} />
+              <TestimonialCard direction="right" quote="Our floor history just sits there — no resets, no cleanup. We can look back at any night and see exactly how service ran." author="David Martinez" role="Operations Lead" event="Bellwood Bistro" delay={240} />
+            </div>
+          </div>
+        </section>
+
+        {/* CLAUDE INTEGRATION */}
+        <section className="py-28 border-t border-neutral-800/40" style={{ display: selectedBranch === 'events' ? 'block' : 'none' }}>
+          <div className="max-w-screen-xl mx-auto px-4 sm:px-8">
+            <div className="flex flex-col lg:flex-row items-center gap-16">
+              {/* Left: copy */}
+              <div className="flex-1">
+                <Reveal direction="left">
+                  <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full mb-6"
+                    style={{ border: '1px solid rgba(139,92,246,0.3)', background: 'rgba(139,92,246,0.08)' }}>
+                    <Bot size={13} className="text-violet-400" />
+                    <span className="text-violet-400 text-xs font-semibold">Now available · Claude Integration</span>
+                  </div>
+                  <h2 className="font-syne font-black text-white mb-4 leading-tight" style={{ fontSize: 'clamp(1.8rem,4vw,3rem)' }}>
+                    Manage your event<br />by talking to Claude.
+                  </h2>
+                  <p className="text-neutral-400 text-lg leading-relaxed mb-8 max-w-lg">
+                    Add PlanIt to Claude once. Then just have a conversation — build your guest list, set up seating,
+                    send announcements, and monitor check-ins without touching the dashboard.
+                  </p>
+                  <div className="space-y-3 mb-8">
+                    {[
+                      '"Add Sarah Jones, email sarah@example.com"',
+                      '"How many people have checked in so far?"',
+                      '"Send an announcement: doors open in 10 minutes"',
+                      '"Create 15 round tables of 10"',
+                    ].map((q, i) => (
+                      <div key={i} className="flex items-center gap-3">
+                        <Bot size={14} className="text-violet-500 flex-shrink-0" />
+                        <span className="text-sm text-neutral-400 font-mono">{q}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="flex flex-col sm:flex-row gap-3">
+                    <a
+                      href="https://claude.ai/customize/connectors?modal=add-custom-connector&mcpName=PlanIt&mcpServerUrl=https://planit-mcp.onrender.com/mcp"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="group inline-flex items-center gap-2 px-5 py-3 rounded-xl text-white font-semibold text-sm transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_12px_28px_rgba(124,58,237,0.35)]"
+                      style={{ background: '#7c3aed' }}
+                      onMouseEnter={e => e.currentTarget.style.background = '#6d28d9'}
+                      onMouseLeave={e => e.currentTarget.style.background = '#7c3aed'}
+                    >
+                      <Bot size={16} /> Add to Claude <ArrowUpRight size={14} className="transition-transform duration-300 group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
+                    </a>
+                    <a href="/help#claude"
+                      className="inline-flex items-center gap-2 px-5 py-3 rounded-xl text-neutral-300 text-sm transition-colors hover:text-white"
+                      style={{ border: '1px solid rgba(255,255,255,0.1)' }}>
+                      How it works
+                    </a>
+                    <a href="/mcp-docs"
+                      className="inline-flex items-center gap-2 px-5 py-3 rounded-xl text-neutral-300 text-sm transition-colors hover:text-white"
+                      style={{ border: '1px solid rgba(255,255,255,0.1)' }}>
+                      View full docs
+                    </a>
+                  </div>
+                </Reveal>
+              </div>
+
+              {/* Right: chat mockup */}
+              <Reveal delay={120} direction="right" className="flex-1 max-w-md w-full">
+                <div className="rounded-2xl overflow-hidden transition-all duration-500 hover:-translate-y-1 hover:shadow-[0_24px_60px_rgba(124,58,237,0.15)]" style={{ border: '1px solid rgba(255,255,255,0.08)', background: 'rgba(14,14,22,0.9)' }}>
+                  {/* Chrome */}
+                  <div className="flex items-center gap-2 px-4 py-3" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)', background: 'rgba(10,10,18,0.95)' }}>
+                    <div className="flex gap-1.5">
+                      <div className="w-2.5 h-2.5 rounded-full bg-neutral-700" />
+                      <div className="w-2.5 h-2.5 rounded-full bg-neutral-700" />
+                      <div className="w-2.5 h-2.5 rounded-full bg-neutral-700" />
+                    </div>
+                    <div className="flex items-center gap-2 mx-auto">
+                      <div className="w-4 h-4 rounded-md bg-violet-600/30 flex items-center justify-center">
+                        <Bot size={9} className="text-violet-300" />
+                      </div>
+                      <span className="text-[11px] text-neutral-500 font-medium">Claude + PlanIt</span>
+                    </div>
+                  </div>
+                  {/* Messages */}
+                  <div className="p-4 space-y-3 text-sm">
+                    <div className="flex justify-end">
+                      <div className="px-3 py-2 rounded-2xl rounded-tr-sm text-neutral-200 text-xs max-w-xs"
+                        style={{ background: 'rgba(124,58,237,0.25)', border: '1px solid rgba(124,58,237,0.2)' }}>
+                        Add Sarah Jones to the guest list, sarah@example.com
+                      </div>
+                    </div>
+                    <div className="flex gap-2 items-start">
+                      <div className="w-6 h-6 rounded-full flex-shrink-0 mt-0.5 flex items-center justify-center" style={{ background: 'rgba(124,58,237,0.2)' }}>
+                        <Bot size={11} className="text-violet-300" />
+                      </div>
+                      <div className="px-3 py-2 rounded-2xl rounded-tl-sm text-neutral-300 text-xs max-w-xs"
+                        style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.07)' }}>
+                        Done — Sarah Jones has been added. Her invite link is ready to share.
+                      </div>
+                    </div>
+                    <div className="flex justify-end">
+                      <div className="px-3 py-2 rounded-2xl rounded-tr-sm text-neutral-200 text-xs max-w-xs"
+                        style={{ background: 'rgba(124,58,237,0.25)', border: '1px solid rgba(124,58,237,0.2)' }}>
+                        How many people have checked in?
+                      </div>
+                    </div>
+                    <div className="flex gap-2 items-start">
+                      <div className="w-6 h-6 rounded-full flex-shrink-0 mt-0.5 flex items-center justify-center" style={{ background: 'rgba(124,58,237,0.2)' }}>
+                        <Bot size={11} className="text-violet-300" />
+                      </div>
+                      <div className="px-3 py-2 rounded-2xl rounded-tl-sm text-neutral-300 text-xs max-w-xs"
+                        style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.07)' }}>
+                        87 of 150 guests checked in — 58%. Last scan 2 minutes ago.
+                      </div>
+                    </div>
+                    <div className="flex justify-end">
+                      <div className="px-3 py-2 rounded-2xl rounded-tr-sm text-neutral-200 text-xs max-w-xs"
+                        style={{ background: 'rgba(124,58,237,0.25)', border: '1px solid rgba(124,58,237,0.2)' }}>
+                        Send an announcement: doors open in 10 minutes
+                      </div>
+                    </div>
+                    <div className="flex gap-2 items-start">
+                      <div className="w-6 h-6 rounded-full flex-shrink-0 mt-0.5 flex items-center justify-center" style={{ background: 'rgba(124,58,237,0.2)' }}>
+                        <Bot size={11} className="text-violet-300" />
+                      </div>
+                      <div className="px-3 py-2 rounded-2xl rounded-tl-sm text-neutral-300 text-xs max-w-xs"
+                        style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.07)' }}>
+                        Announcement sent to all guests and staff ✓
+                      </div>
+                    </div>
+                  </div>
+                  {/* Footer */}
+                  <div className="px-4 pb-4">
+                    <div className="flex items-center gap-2 px-3 py-2 rounded-xl" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}>
+                      <span className="text-[11px] text-neutral-600 flex-1">Message Claude…</span>
+                      <Bot size={12} className="text-neutral-700" />
+                    </div>
+                  </div>
+                </div>
+              </Reveal>
+            </div>
+          </div>
+        </section>
+
+        {/* DISCOVER + STATUS CARDS */}
+        <section className="py-28 border-t border-neutral-800/40" style={{ display: selectedBranch ? 'block' : 'none' }}>
+          <div className="max-w-screen-xl mx-auto px-4 sm:px-8">
+            <Reveal className="text-center mb-12">
+              <p className="text-xs font-semibold text-neutral-500 uppercase tracking-widest mb-3">Explore more</p>
+              <h2 className="font-syne text-4xl md:text-5xl font-black text-white mb-4">Everything you need</h2>
+              <p className="text-lg text-neutral-400 max-w-md mx-auto">Find public events and check our service health — all in one place.</p>
+            </Reveal>
+            <div className={selectedBranch === 'venue' ? 'grid max-w-lg mx-auto gap-6' : 'grid md:grid-cols-2 gap-6'}>
+              {/* Discover Card — events only */}
+              {selectedBranch !== 'venue' && (
+              <Reveal delay={0} direction="left">
+                <a href="/discover" className="group relative block p-8 sm:p-10 rounded-3xl border border-neutral-800 bg-neutral-900/50 hover:border-neutral-500 hover:bg-neutral-800/60 hover:-translate-y-1.5 hover:shadow-[0_24px_60px_rgba(0,0,0,0.4)] transition-all duration-500 overflow-hidden h-full">
+                  <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500"
+                    style={{ background: 'radial-gradient(ellipse at top left, rgba(80,60,200,0.12) 0%, transparent 65%)' }} />
+                  <div className="relative">
+                    <div className="w-14 h-14 rounded-2xl bg-neutral-800 border border-neutral-700 flex items-center justify-center mb-6 group-hover:bg-white group-hover:border-white transition-all duration-500 group-hover:scale-110">
+                      <Zap className="w-7 h-7 text-neutral-300 group-hover:text-neutral-900 transition-colors duration-500" />
+                    </div>
+                    <h3 className="text-2xl font-bold text-white mb-3">Discover Events</h3>
+                    <p className="text-neutral-400 leading-relaxed mb-6">Browse public events happening right now. Find meetups, workshops, and gatherings open to everyone.</p>
+                    <div className="flex items-center gap-2 text-sm font-medium text-neutral-300 group-hover:text-white transition-colors">
+                      Browse events
+                      <ArrowUpRight className="w-4 h-4 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform duration-200" />
+                    </div>
+                  </div>
+                </a>
+              </Reveal>
+              )}
+
+              {/* Status Card */}
+              <Reveal delay={120} direction="right">
+                <a href="/status" className="group relative block p-8 sm:p-10 rounded-3xl border border-neutral-800 bg-neutral-900/50 hover:border-neutral-500 hover:bg-neutral-800/60 hover:-translate-y-1.5 hover:shadow-[0_24px_60px_rgba(0,0,0,0.4)] transition-all duration-500 overflow-hidden h-full">
+                  <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500"
+                    style={{ background: 'radial-gradient(ellipse at top right, rgba(20,180,80,0.10) 0%, transparent 65%)' }} />
+                  <div className="relative">
+                    <div className="w-14 h-14 rounded-2xl bg-neutral-800 border border-neutral-700 flex items-center justify-center mb-6 group-hover:bg-white group-hover:border-white transition-all duration-500 group-hover:scale-110">
+                      <TrendingUp className="w-7 h-7 text-neutral-300 group-hover:text-neutral-900 transition-colors duration-500" />
+                    </div>
+                    <div className="flex items-center gap-3 mb-3">
+                      <h3 className="text-2xl font-bold text-white">System Status</h3>
+                      <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-950/60 border border-emerald-900/50 text-emerald-400">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse inline-block" />
+                        Operational
+                      </span>
+                    </div>
+                    <p className="text-neutral-400 leading-relaxed mb-6">Monitor real-time uptime, API performance, and incident history. Stay informed about service health.</p>
+                    <div className="flex items-center gap-2 text-sm font-medium text-neutral-300 group-hover:text-white transition-colors">
+                      View status
+                      <ArrowUpRight className="w-4 h-4 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform duration-200" />
+                    </div>
+                  </div>
+                </a>
+              </Reveal>
+            </div>
+          </div>
+        </section>
+
+        {/* CREATE EVENT */}
+        <SectionSeam tint="neutral" />
+        <section id="create" className="py-28 sm:py-32 border-t border-neutral-800/40" style={{ display: selectedBranch ? 'block' : 'none' }}>
+          <div className="max-w-8xl mx-auto px-4 sm:px-6">
+            <div className="grid lg:grid-cols-2 gap-10 lg:gap-20 items-start">
+
+              <div className="lg:sticky lg:top-24">
+                <Reveal direction="left">
+                  <div className="mb-10">
+                    <h2 className="font-syne font-black text-white mb-6 tracking-tight leading-[1.05]" style={{ fontSize: 'clamp(2.2rem, 4vw, 3.2rem)' }}>
+                      {created
+                        ? mode === 'table-service' ? 'Venue created!' : 'Event created!'
+                        : mode === 'table-service' ? 'Set up your venue' : mode === 'enterprise' ? 'Launch an enterprise event' : 'Start planning your event'}
+                    </h2>
+                    <p className="text-lg sm:text-xl text-neutral-400 leading-relaxed">
+                      {created
+                        ? mode === 'table-service'
+                          ? 'Your floor management system is live. Set up your seating layout and go.'
+                          : 'Your planning hub is ready. Share the link with your team and get started.'
+                        : mode === 'table-service'
+                          ? 'Create your restaurant workspace in 60 seconds. Your data never expires.'
+                          : mode === 'enterprise'
+                            ? 'Built for large-scale, ticketed events. Every guest gets a personalized QR invite and seamless check-in.'
+                            : 'Create your event workspace in 60 seconds. No credit card, no hassle, just start planning.'}
+                    </p>
+                  </div>
+                </Reveal>
+
+                {!created && (
+                  <Reveal delay={100}>
+                    <div className="grid grid-cols-3 gap-2 sm:gap-4 mb-10">
+                      {[{ icon: Clock, label: '60 seconds' }, { icon: Shield, label: 'Secure' }, { icon: CheckCircle2, label: 'Free forever' }].map((item, i) => (
+                        <div key={i} className="group text-center p-5 bg-neutral-900/50 rounded-2xl border border-neutral-800 hover:border-neutral-700 hover:bg-neutral-800/50 hover:-translate-y-1 transition-all duration-400">
+                          <item.icon className="w-6 h-6 text-neutral-400 mx-auto mb-2 transition-transform duration-400 group-hover:scale-110 group-hover:text-neutral-200" />
+                          <p className="text-sm font-semibold text-neutral-300">{item.label}</p>
+                        </div>
+                      ))}
+                    </div>
+                    {mode === 'table-service' ? (
+                      <div className="space-y-3 p-5 sm:p-8 bg-neutral-900/50 rounded-3xl border border-neutral-800">
+                        <p className="text-base font-bold text-white mb-4">Everything included in Table Service:</p>
+                        {['Visual floor plan editor — drag & drop tables anywhere', 'Live table states: available, occupied, cleaning, reserved', 'Walk-in waitlist with real-time estimated wait times', 'QR code reservations with configurable expiry windows', 'Per-restaurant timing config: dining duration, buffer, hours', 'Instant sync across all staff devices via live socket', 'Data never auto-deleted — your floor plan persists forever', 'Party size tracking and server assignment per table', 'Occupancy overview and turn time estimates at a glance'].map((item, i) => (
+                          <div key={i} className="flex items-start gap-3 text-sm text-neutral-400">
+                            <CheckCircle2 className="w-5 h-5 text-orange-500 flex-shrink-0 mt-0.5" />
+                            <span className="leading-relaxed">{item}</span>
+                          </div>
+                        ))}
+                      </div>
+                    ) : mode === 'enterprise' ? (
+                      <div className="rounded-3xl border border-indigo-500/20 overflow-hidden" style={{ background: 'rgba(8,8,20,0.7)' }}>
+                        {/* Enterprise vs Standard comparison header */}
+                        <div className="grid grid-cols-2 border-b border-indigo-500/15">
+                          <div className="px-5 py-3 border-r border-indigo-500/10">
+                            <span className="text-xs font-bold text-neutral-500 uppercase tracking-widest">Standard</span>
+                          </div>
+                          <div className="px-5 py-3 flex items-center gap-2" style={{ background: 'rgba(99,102,241,0.06)' }}>
+                            <Zap className="w-3 h-3 text-indigo-400" />
+                            <span className="text-xs font-bold text-indigo-400 uppercase tracking-widest">Enterprise</span>
+                          </div>
+                        </div>
+                        {[
+                          ['Open RSVP link', 'Personalized QR invite per guest'],
+                          ['Basic attendance count', 'Real-time check-in dashboard'],
+                          ['No guest tracking', 'Group sizes + table assignments'],
+                          ['No trust scoring', 'Security flags + override tools'],
+                          ['No entry verification', 'Duplicate & fraud detection'],
+                          ['Chat, tasks, polls, budget', 'All Standard features included'],
+                        ].map(([std, ent], i) => (
+                          <div key={i} className="grid grid-cols-2 border-b border-white/[0.04] last:border-b-0">
+                            <div className="px-5 py-3 border-r border-white/[0.04] flex items-start gap-2.5">
+                              <span className="mt-0.5 text-neutral-600 text-xs flex-shrink-0">✕</span>
+                              <span className="text-xs text-neutral-600 leading-relaxed">{std}</span>
+                            </div>
+                            <div className="px-5 py-3 flex items-start gap-2.5" style={{ background: 'rgba(99,102,241,0.03)' }}>
+                              <CheckCircle2 className="w-3.5 h-3.5 text-indigo-400 flex-shrink-0 mt-0.5" />
+                              <span className="text-xs text-indigo-300/70 leading-relaxed">{ent}</span>
+                            </div>
+                          </div>
+                        ))}
+                        {/* Warning */}
+                        <div className="px-5 py-3 flex items-center gap-2" style={{ background: 'rgba(239,68,68,0.06)', borderTop: '1px solid rgba(239,68,68,0.12)' }}>
+                          <AlertCircle className="w-3.5 h-3.5 text-red-400/70 flex-shrink-0" />
+                          <span className="text-xs text-red-400/60">Mode cannot be changed after creation</span>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="space-y-3 p-5 sm:p-8 bg-neutral-900/50 rounded-3xl border border-neutral-800">
+                        <p className="text-base font-bold text-white mb-4">Everything included:</p>
+                        {['Private event space with custom branded URL', 'Unlimited team members, no caps', 'Real-time chat with file sharing', 'Task lists and deadline tracking', 'Polls, voting, and decision tools', 'RSVP management and tracking', 'Expense splitting and budgets', 'QR check-in for large events', 'Timeline and scheduling tools'].map((item, i) => (
+                          <div key={i} className="flex items-start gap-3 text-sm text-neutral-400">
+                            <CheckCircle2 className="w-5 h-5 text-emerald-500 flex-shrink-0 mt-0.5" />
+                            <span className="leading-relaxed">{item}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </Reveal>
+                )}
+
+                {created && (
+                  <Reveal delay={100}>
+                    <div className="space-y-6">
+                      <div className="flex items-center justify-center p-10 bg-emerald-500/10 rounded-3xl border border-emerald-500/20">
+                        <div className="text-center">
+                          <div className="w-20 h-20 mx-auto mb-5 rounded-full bg-emerald-500 flex items-center justify-center animate-bounce shadow-lg">
+                            <Check className="w-10 h-10 text-white" />
+                          </div>
+                          <p className="text-lg font-bold text-emerald-400">
+                            {mode === 'table-service' ? 'Venue created!' : mode === 'enterprise' ? 'Enterprise event created!' : 'Your planning hub is live!'}
+                          </p>
+                        </div>
+                      </div>
+                      {mode === 'table-service' ? (
+                        <div className="p-8 bg-neutral-900/50 border border-neutral-800 rounded-3xl">
+                          <div className="flex items-start gap-4">
+                            <UtensilsCrossed className="w-6 h-6 text-orange-400 flex-shrink-0 mt-1" />
+                            <div className="w-full">
+                              <p className="text-base font-bold text-white mb-4">Your venue is live!</p>
+                              {formData.staffPassword && (
+                                <div className="mb-4 p-3 bg-neutral-800 border border-neutral-700 rounded-xl">
+                                  <p className="text-xs font-semibold text-neutral-400 uppercase tracking-wide mb-2">Default staff login</p>
+                                  <div className="flex justify-between text-sm">
+                                    <span className="text-neutral-400">Username</span>
+                                    <span className="text-white font-mono font-bold">staff</span>
+                                  </div>
+                                  <div className="flex justify-between text-sm mt-1">
+                                    <span className="text-neutral-400">Password</span>
+                                    <span className="text-white font-mono font-bold">{formData.staffPassword}</span>
+                                  </div>
+                                  <p className="text-xs text-neutral-600 mt-2">Share this with your team — they log in at <code className="text-neutral-500">/login</code></p>
+                                </div>
+                              )}
+                              <ol className="text-sm text-neutral-400 space-y-3 list-decimal ml-5">
+                                <li>Open your floor dashboard and click "Edit Layout"</li>
+                                <li>Drag and drop tables to match your restaurant's floor plan</li>
+                                <li>Set each table's capacity and label</li>
+                                <li>Open Settings to configure dining time and operating hours</li>
+                                <li>Staff log in at <code className="text-neutral-500">/login</code> and go straight to the floor</li>
+                              </ol>
+                            </div>
+                          </div>
+                        </div>
+                      ) : mode === 'enterprise' ? (
+                        <div className="p-8 bg-neutral-900/50 border border-neutral-800 rounded-3xl">
+                          <div className="flex items-start gap-4">
+                            <Zap className="w-6 h-6 text-neutral-400 flex-shrink-0 mt-1" />
+                            <div>
+                              <p className="text-base font-bold text-white mb-4">Next steps for Enterprise Mode:</p>
+                              <ol className="text-sm text-neutral-400 space-y-3 list-decimal ml-5">
+                                <li>Enter your event and click "Manage Guest Invites"</li>
+                                <li>Add all guests with names, email, and group sizes</li>
+                                <li>Send personalized invite links with QR codes to each guest</li>
+                                <li>On event day, use the check-in dashboard to scan QR codes</li>
+                                <li>View real-time attendance analytics as guests arrive</li>
+                              </ol>
+                            </div>
+                          </div>
+                        </div>
+                      ) : (
+                        <div>
+                          <p className="text-sm font-bold text-neutral-300 mb-3">Your event link:</p>
+                          <CopyLinkBox eventId={created.id} subdomain={created.subdomain} mode={mode} />
+                          <p className="text-xs text-neutral-600 mt-3">Share this link with your planning team to get started</p>
+                        </div>
+                      )}
+                      <button
+                        onClick={() => {
+                          const base = created.subdomain ? `/e/${created.subdomain}` : `/event/${created.id}`;
+                          navigate(mode === 'table-service' ? `${base}/floor` : `${base}?new=1`);
+                        }}
+                        className="w-full px-8 py-5 bg-white text-neutral-900 rounded-2xl font-bold hover:scale-105 hover:bg-neutral-100 transition-all duration-300 shadow-xl flex items-center justify-center gap-3 text-lg"
+                      >
+                        {mode === 'table-service' ? 'Open Floor Dashboard' : mode === 'enterprise' ? 'Set Up Guest Invites' : 'Enter your planning hub'}
+                        <ArrowUpRight className="w-5 h-5" />
+                      </button>
+                    </div>
+                  </Reveal>
+                )}
+              </div>
+
+              {!created && (
+                <Reveal delay={80}>
+                  <div className="sticky top-24">
+                    {/* Mode selector */}
+                    {selectedBranch !== 'venue' && (
+                      <div style={{ display:'flex', gap:6, marginBottom:20, padding:'6px', background:'rgba(255,255,255,0.03)', borderRadius:14, border:'1px solid rgba(255,255,255,0.06)' }}>
+                        {[
+                          { val:'standard',   label:'Standard',   sub:'Team planning'  },
+                          { val:'enterprise', label:'Enterprise', sub:'Large + QR'     },
+                        ].map(({ val, label, sub }) => (
+                          <button key={val} type="button" onClick={() => { setMode(val); setFormData(p => ({ ...p, isEnterpriseMode: val === 'enterprise' })); setWizardKey(k => k + 1); }}
+                            data-mode={val}
+                            style={{
+                              flex:1, padding:'9px 12px', borderRadius:10, border:'none', cursor:'pointer',
+                              background: mode === val ? (val === 'enterprise' ? 'rgba(99,102,241,0.9)' : '#fff') : 'transparent',
+                              color: mode === val ? (val === 'enterprise' ? '#fff' : '#111') : 'rgba(255,255,255,0.4)',
+                              fontWeight:700, fontSize:13, transition:'all 0.2s ease',
+                              boxShadow: mode === val && val === 'enterprise' ? '0 0 20px rgba(99,102,241,0.3)' : 'none',
+                            }}>
+                            <div>{label}</div>
+                            <div style={{ fontSize:11, opacity:0.6, fontWeight:400, marginTop:1 }}>{sub}</div>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Launch wizard CTA */}
+                    <div
+                      style={{
+                        background:'rgba(255,255,255,0.02)',
+                        border:'1px solid rgba(255,255,255,0.07)',
+                        borderRadius:24,
+                        padding:'48px 40px',
+                        textAlign:'center',
+                        position:'relative',
+                        overflow:'hidden',
+                      }}
+                    >
+                      {/* Ambient glow */}
+                      <div aria-hidden="true" style={{
+                        position:'absolute', inset:0, pointerEvents:'none',
+                        background: mode === 'table-service'
+                          ? 'radial-gradient(ellipse at 50% 0%, rgba(249,115,22,0.07) 0%, transparent 70%)'
+                          : mode === 'enterprise'
+                            ? 'radial-gradient(ellipse at 50% 0%, rgba(99,102,241,0.12) 0%, transparent 70%)'
+                            : 'radial-gradient(ellipse at 50% 0%, rgba(99,102,241,0.08) 0%, transparent 70%)',
+                      }} />
+
+                      {/* Icon */}
+                      <div style={{
+                        width:56, height:56, borderRadius:16, margin:'0 auto 24px',
+                        background: mode === 'table-service' ? 'rgba(249,115,22,0.1)' : mode === 'enterprise' ? 'rgba(99,102,241,0.15)' : 'rgba(99,102,241,0.1)',
+                        border: mode === 'table-service' ? '1px solid rgba(249,115,22,0.2)' : mode === 'enterprise' ? '1px solid rgba(99,102,241,0.35)' : '1px solid rgba(99,102,241,0.2)',
+                        display:'flex', alignItems:'center', justifyContent:'center',
+                        boxShadow: mode === 'table-service' ? '0 0 32px rgba(249,115,22,0.12)' : mode === 'enterprise' ? '0 0 40px rgba(99,102,241,0.25)' : '0 0 32px rgba(99,102,241,0.12)',
+                      }}>
+                        {mode === 'table-service'
+                          ? <UtensilsCrossed style={{ width:26, height:26, color:'#f97316' }} />
+                          : mode === 'enterprise'
+                            ? <Zap style={{ width:26, height:26, color:'#a5b4fc' }} />
+                            : <Calendar style={{ width:26, height:26, color:'#818cf8' }} />
+                        }
+                      </div>
+
+                      <p style={{
+                        fontFamily:'Syne,sans-serif', fontSize:'clamp(1.4rem,3vw,1.75rem)',
+                        fontWeight:800, color:'#fff', lineHeight:1.2, marginBottom:10,
+                      }}>
+                        {mode === 'table-service' ? 'Launch your venue' : mode === 'enterprise' ? 'Launch enterprise event' : 'Create your event'}
+                      </p>
+                      <p style={{ fontSize:14, color:'rgba(255,255,255,0.35)', marginBottom:36, lineHeight:1.6, maxWidth:260, margin:'0 auto 36px' }}>
+                        {mode === 'table-service'
+                          ? 'Set up your floor plan and start managing tables in under 60 seconds.'
+                          : mode === 'enterprise'
+                            ? 'Personalized QR invites, check-in dashboard, and real-time analytics for large events.'
+                            : 'Build your planning workspace in under 60 seconds. No credit card required.'}
+                      </p>
+
+                      <button
+                        onClick={() => { setFormData(p => ({ ...p, isEnterpriseMode: mode === 'enterprise' })); setWizardKey(k => k + 1); eventFormTimingRef.current.formStartedAt = Date.now(); setWizardOpen(true); }}
+                        style={{
+                          width:'100%', padding:'16px 28px', borderRadius:14, border:'none', cursor:'pointer',
+                          background: mode === 'table-service'
+                            ? 'linear-gradient(135deg, #f97316, #fb923c)'
+                            : mode === 'enterprise'
+                              ? 'linear-gradient(135deg, #4f46e5, #7c3aed)'
+                              : 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+                          color:'#fff', fontSize:15, fontWeight:700,
+                          display:'flex', alignItems:'center', justifyContent:'center', gap:10,
+                          transition:'transform 0.2s ease, box-shadow 0.2s ease',
+                          boxShadow: mode === 'table-service'
+                            ? '0 8px 28px rgba(249,115,22,0.35)'
+                            : mode === 'enterprise'
+                              ? '0 8px 32px rgba(79,70,229,0.5)'
+                              : '0 8px 28px rgba(99,102,241,0.35)',
+                          fontFamily:'DM Sans,sans-serif',
+                        }}
+                        onMouseEnter={e => { e.currentTarget.style.transform='translateY(-2px)'; e.currentTarget.style.boxShadow = mode === 'table-service' ? '0 14px 36px rgba(249,115,22,0.45)' : mode === 'enterprise' ? '0 16px 40px rgba(79,70,229,0.6)' : '0 14px 36px rgba(99,102,241,0.45)'; }}
+                        onMouseLeave={e => { e.currentTarget.style.transform=''; e.currentTarget.style.boxShadow = mode === 'table-service' ? '0 8px 28px rgba(249,115,22,0.35)' : mode === 'enterprise' ? '0 8px 32px rgba(79,70,229,0.5)' : '0 8px 28px rgba(99,102,241,0.35)'; }}
+                      >
+                        {mode === 'table-service' ? 'Set up your venue' : mode === 'enterprise' ? 'Set up enterprise event' : 'Start building'}
+                        <ArrowRight style={{ width:18, height:18 }} />
+                      </button>
+
+                      {/* Trust signals */}
+                      <div style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:20, marginTop:24 }}>
+                        {[
+                          { icon: Clock, text:'~60 seconds' },
+                          { icon: Shield, text:'Encrypted' },
+                          { icon: CheckCircle2, text:'Free forever' },
+                        ].map(({ icon: Icon, text }) => (
+                          <div key={text} style={{ display:'flex', alignItems:'center', gap:5, fontSize:12, color:'rgba(255,255,255,0.28)' }}>
+                            <Icon style={{ width:12, height:12 }} />
+                            {text}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </Reveal>
+              )}
+
+              {/* Fullscreen wizard overlay */}
+              {wizardOpen && !created && (
+                <div
+                  style={{
+                    position:'fixed', inset:0, zIndex:1000,
+                    background:'rgba(5,5,10,0.96)',
+                    backdropFilter:'blur(20px)',
+                    display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center',
+                    animation:'wiz-overlay-in 0.35s cubic-bezier(0.22,1,0.36,1) both',
+                    padding:'24px',
+                  }}
+                >
+                  {/* Ambient orb */}
+                  <div aria-hidden="true" style={{
+                    position:'absolute', top:'-10%', left:'50%', transform:'translateX(-50%)',
+                    width:600, height:600, borderRadius:'50%', pointerEvents:'none',
+                    background: mode === 'table-service'
+                      ? 'radial-gradient(circle, rgba(249,115,22,0.07) 0%, transparent 65%)'
+                      : 'radial-gradient(circle, rgba(99,102,241,0.08) 0%, transparent 65%)',
+                    filter:'blur(40px)',
+                  }} />
+
+                  {/* Close button */}
+                  <button
+                    onClick={() => setWizardOpen(false)}
+                    style={{
+                      position:'absolute', top:24, right:24,
+                      width:40, height:40, borderRadius:12,
+                      background:'rgba(255,255,255,0.05)',
+                      border:'1px solid rgba(255,255,255,0.08)',
+                      color:'rgba(255,255,255,0.5)',
+                      cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center',
+                      transition:'background 0.2s, color 0.2s',
+                      fontFamily:'DM Sans,sans-serif',
+                      fontSize:20, lineHeight:1,
+                    }}
+                    onMouseEnter={e => { e.currentTarget.style.background='rgba(255,255,255,0.1)'; e.currentTarget.style.color='#fff'; }}
+                    onMouseLeave={e => { e.currentTarget.style.background='rgba(255,255,255,0.05)'; e.currentTarget.style.color='rgba(255,255,255,0.5)'; }}
+                    aria-label="Close"
+                  >
+                    ×
+                  </button>
+
+                  {/* Wordmark */}
+                  <div style={{ position:'absolute', top:26, left:28, display:'flex', alignItems:'center', gap:10 }}>
+                    <div style={{
+                      width:32, height:32, borderRadius:9,
+                      background: mode === 'table-service' ? 'rgba(249,115,22,0.1)' : 'rgba(99,102,241,0.1)',
+                      border: mode === 'table-service' ? '1px solid rgba(249,115,22,0.25)' : '1px solid rgba(99,102,241,0.25)',
+                      display:'flex', alignItems:'center', justifyContent:'center',
+                    }}>
+                      {mode === 'table-service'
+                        ? <UtensilsCrossed style={{ width:15, height:15, color:'#f97316' }} />
+                        : <Calendar style={{ width:15, height:15, color:'#818cf8' }} />
+                      }
+                    </div>
+                    <span style={{ fontFamily:'Syne,sans-serif', fontWeight:800, fontSize:17, color:'rgba(255,255,255,0.7)', letterSpacing:'-0.02em' }}>PlanIt</span>
+                  </div>
+
+                  {/* Wizard card */}
+                  <div style={{
+                    width:'100%', maxWidth:520,
+                    background:'rgba(12,12,20,0.9)',
+                    border:'1px solid rgba(255,255,255,0.08)',
+                    borderRadius:28,
+                    padding:'clamp(28px,6vw,52px)',
+                    boxShadow:'0 40px 100px rgba(0,0,0,0.7)',
+                    position:'relative',
+                  }}>
+                    {/* Mode tabs (events only) */}
+                    {selectedBranch !== 'venue' && (
+                      <div style={{ display:'flex', gap:6, marginBottom:32, padding:'6px', background:'rgba(255,255,255,0.03)', borderRadius:14, border:'1px solid rgba(255,255,255,0.06)' }}>
+                        {[
+                          { val:'standard',   label:'Standard',   sub:'Team planning'  },
+                          { val:'enterprise', label:'Enterprise', sub:'Large + QR'     },
+                        ].map(({ val, label, sub }) => (
+                          <button key={val} type="button" onClick={() => { setMode(val); setFormData(p => ({ ...p, isEnterpriseMode: val === 'enterprise' })); setWizardKey(k => k + 1); }}
+                            style={{
+                              flex:1, padding:'9px 12px', borderRadius:10, border:'none', cursor:'pointer',
+                              background: mode === val ? (val === 'enterprise' ? 'rgba(99,102,241,0.9)' : '#fff') : 'transparent',
+                              color: mode === val ? (val === 'enterprise' ? '#fff' : '#111') : 'rgba(255,255,255,0.4)',
+                              fontWeight:700, fontSize:13, transition:'all 0.2s ease',
+                              fontFamily:'DM Sans,sans-serif',
+                              boxShadow: mode === val && val === 'enterprise' ? '0 0 20px rgba(99,102,241,0.35)' : 'none',
+                            }}>
+                            <div>{label}</div>
+                            <div style={{ fontSize:11, opacity:0.6, fontWeight:400, marginTop:1 }}>{sub}</div>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+
+                    <OnboardingWizard
+                      key={wizardKey}
+                      mode={mode}
+                      formData={formData}
+                      setFormData={setFormData}
+                      fieldErrors={fieldErrors}
+                      setFieldErrors={setFieldErrors}
+                      loading={loading}
+                      submittedRef={wizardSubmittedRef}
+                      stepControlRef={wizardStepRef}
+                      abuseStatus={abuseStatus}
+                      requiresVerification={requiresVerification}
+                      onCaptchaToken={setTurnstileToken}
+                      captchaResetKey={captchaResetKey}
+                      onUserInput={() => { if (!eventFormTimingRef.current.firstInputAt) eventFormTimingRef.current.firstInputAt = Date.now(); }}
+                      onUserPaste={(e) => { const len = e.clipboardData?.getData('text')?.length || 0; if (len > eventFormTimingRef.current.largestPasteChars) { eventFormTimingRef.current.largestPasteChars = len; eventFormTimingRef.current.largestPasteElapsedMs = Date.now() - (eventFormTimingRef.current.firstInputAt || eventFormTimingRef.current.pageLoadedAt); } }}
+                      onSubmit={async () => { const ok = await handleSubmit(); if (ok) setWizardOpen(false); }}
+                    />
+                  </div>
+
+                  <p style={{ marginTop:20, fontSize:12, color:'rgba(255,255,255,0.18)', letterSpacing:'0.05em' }}>
+                    Press Esc to close
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+        </section>
+
+        {/* FOOTER */}
+        <footer className="border-t border-neutral-800/50 relative overflow-hidden" style={{ background: 'rgba(6,6,12,0.95)' }}>
+          <div aria-hidden="true" className="absolute inset-x-0 top-0 h-px" style={{ background: 'linear-gradient(90deg, transparent, rgba(99,102,241,0.35), transparent)' }} />
+          <div className="max-w-screen-xl mx-auto px-4 sm:px-8 py-16 sm:py-24">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-10 sm:gap-12 mb-14">
+              <div>
+                <div className="flex items-center gap-3 mb-5">
+                  {isWL && wlLogo
+                    ? <img src={wlLogo} alt={wlName} className="h-8 object-contain" />
+                    : <><div className="w-10 h-10 rounded-2xl bg-neutral-800 border border-neutral-700 flex items-center justify-center"><Calendar className="w-5 h-5 text-neutral-300" /></div>
+                       <span className="font-syne font-black text-xl text-white tracking-tight">{isWL ? wlName : 'PlanIt'}</span></>
+                  }
+                </div>
+                <p className="text-sm text-neutral-500 leading-relaxed mb-4 max-w-xs">{isWL ? '' : 'The ultimate planning hub for event teams. Plan smart, execute flawlessly.'}</p>
+                <p className="text-xs text-neutral-600">Built by Aakshat Hariharan</p>
+              </div>
+              <div>
+                <h3 className="text-xs font-bold text-neutral-500 mb-5 uppercase tracking-wider">Product</h3>
+                <ul className="space-y-3.5 text-sm text-neutral-500">
+                  {[['Features', '#features'], ['Claude Integration', '/help#claude'], ['Discover', '/discover'], ['Blog', '/blog'], ['Status', '/status'], ['Help', '/help'], ['Get Started', '#create'], ['License', '/license'], ['Credits', '/credits']].map(([l, h]) => (
+                    <li key={l}><a href={h} className="nav-link inline-block hover:text-neutral-200 transition-colors duration-200">{l}</a></li>
+                  ))}
+                </ul>
+              </div>
+              <div>
+                <h3 className="text-xs font-bold text-neutral-500 mb-5 uppercase tracking-wider">Company</h3>
+                <ul className="space-y-3.5 text-sm text-neutral-500">
+                  {[['About PlanIt', '/about'], ['Blog & Guides', '/blog'], ['Terms of Service', '/terms'], ['Privacy Policy', '/privacy'], ['License', '/license'], ['Credits', '/credits']].map(([l, h]) => (
+                    <li key={l}><a href={h} className="nav-link inline-block hover:text-neutral-200 transition-colors duration-200">{l}</a></li>
+                  ))}
+                </ul>
+              </div>
+              <div>
+                <h3 className="text-xs font-bold text-neutral-500 mb-5 uppercase tracking-wider">Connect</h3>
+                <ul className="space-y-3.5 text-sm text-neutral-500">
+                  {[['Contact / Support', '/support'], ['Wall of Supporters', '/support/wall'], ['System Status', '/status'], ['Help Center', '/help']].map(([l, h]) => (
+                    <li key={l}><a href={h} className="nav-link inline-block hover:text-neutral-200 transition-colors duration-200">{l}</a></li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+            <div className="pt-8 border-t border-neutral-800 flex flex-col md:flex-row items-center justify-between gap-4 text-sm text-neutral-600">
+              <span>© 2026 PlanIt. All rights reserved.</span>
+              <span className="font-medium">By Aakshat Hariharan</span>
+            </div>
+          </div>
+        </footer>
+
+      </main>
+    </div>
+  );
+}

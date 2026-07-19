@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Infrastructure — PlanIt Docs</title>
+  <link rel="stylesheet" href="style.css" />
+  <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+  <script>window.CURRENT_PAGE = 'infrastructure';</script>
+</head>
+<body>
+  <div class="sidebar-overlay"></div>
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="sidebar-logo"><a href="index.html"><div class="logo-mark">P</div><div><div class="logo-text">PLANIT</div><div class="logo-sub">Docs</div></div></a></div>
+      <div class="sidebar-search"><div class="sidebar-search-wrap"><svg class="sidebar-search-icon" width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="7" cy="7" r="5"/><path d="M11 11l3 3"/></svg><input class="sidebar-search-input" type="text" placeholder="Search docs..." autocomplete="off" /><span class="search-kbd">/</span></div></div>
+      <nav class="sidebar-nav"></nav>
+      <div class="sidebar-status"><div class="status-dot"></div>All systems operational</div>
+      <div class="sidebar-footer"><a href="https://planitapp.onrender.com" class="sidebar-footer-link" target="_blank">Open PlanIt App →</a></div>
+    </aside>
+    <div class="main">
+      <div class="topbar">
+        <div class="topbar-left">
+          <button class="menu-toggle" aria-label="Toggle menu"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><line x1="2" y1="5" x2="16" y2="5"/><line x1="2" y1="9" x2="16" y2="9"/><line x1="2" y1="13" x2="16" y2="13"/></svg></button>
+          <div class="topbar-breadcrumb">Docs <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M4 2l4 4-4 4"/></svg> <span>Infrastructure</span></div>
+        </div>
+        <div class="topbar-right"><a href="https://planitapp.onrender.com" class="topbar-btn" target="_blank">Open App →</a></div>
+      </div>
+      <div class="inner-layout">
+        <div class="content">
+
+          <div class="page-header">
+            <div class="page-tag">Security &amp; Data</div>
+            <h1 class="page-title">Infrastructure</h1>
+            <p class="page-desc">A transparent look at every layer of the PlanIt stack — hosting, database, real-time transport, file storage, status monitoring, and watchdog systems.</p>
+          </div>
+
+          <h2 id="tech-stack">Technology stack</h2>
+          <div class="table-wrap"><table>
+            <thead><tr><th>Layer</th><th>Technology</th><th>Purpose</th></tr></thead>
+            <tbody>
+              <tr><td><strong>Frontend</strong></td><td>React 18, Vite</td><td>Organiser dashboard, check-in UI, guest invite pages, Table Service floor</td></tr>
+              <tr><td><strong>Backend API</strong></td><td>Node.js 20, Express</td><td>REST API, auth, business logic, anti-fraud middleware</td></tr>
+              <tr><td><strong>Database</strong></td><td>MongoDB (Mongoose ODM)</td><td>Events, guests, participants, messages, seating maps, tasks, polls, files metadata</td></tr>
+              <tr><td><strong>Real-time</strong></td><td>Socket.IO 4</td><td>Check-in sync, seating updates, walkie-talkie signalling, security alerts, chat, task/poll/note updates</td></tr>
+              <tr><td><strong>Voice (walkie-talkie)</strong></td><td>WebRTC (browser-native)</td><td>Peer-to-peer audio; server handles signalling only via Socket.IO</td></tr>
+              <tr><td><strong>Cache &amp; PubSub</strong></td><td>Redis</td><td>Rate-limit state, session caching, Socket.IO adapter for multi-instance pub/sub</td></tr>
+              <tr><td><strong>Auth</strong></td><td>JWT (jsonwebtoken) + bcrypt</td><td>Organiser sessions (30-day tokens) and staff PIN verification</td></tr>
+              <tr><td><strong>File storage</strong></td><td>Cloudinary</td><td>User-uploaded files in the Files tab</td></tr>
+              <tr><td><strong>Hosting (frontend)</strong></td><td>Render (static site)</td><td>CDN-served React SPA</td></tr>
+              <tr><td><strong>Hosting (backend)</strong></td><td>Render (web service)</td><td>Node.js API + Socket.IO server</td></tr>
+              <tr><td><strong>Docs</strong></td><td>Netlify</td><td>This documentation site (static HTML)</td></tr>
+            </tbody>
+          </table></div>
+
+          <h2 id="cold-start">Cold-start behaviour</h2>
+          <p>PlanIt runs on Render's free-tier infrastructure. The backend web service spins down automatically after <strong>15 minutes of inactivity</strong>. When traffic arrives after a spin-down, the service takes approximately <strong>30–60 seconds</strong> to cold-start.</p>
+
+          <p>During a cold start you may see:</p>
+          <ul>
+            <li>A loading spinner or "Service starting up" message on the app homepage</li>
+            <li>A brief error screen on event pages before the API comes back online</li>
+            <li>Delayed Socket.IO connection establishment</li>
+          </ul>
+
+          <div class="callout warn">
+            <div class="callout-icon"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#f59e0b" stroke-width="1.5" stroke-linecap="round"><path d="M8 2L2 13h12L8 2z"/><line x1="8" y1="7" x2="8" y2="10"/><circle cx="8" cy="12" r=".6" fill="#f59e0b" stroke="none"/></svg></div>
+            <div class="callout-body">
+              <div class="callout-title">Load the check-in page 60 seconds early on event day</div>
+              <p>Open the check-in dashboard at least 60 seconds before you expect to start admitting guests. This ensures the backend is warm and the guest list cache is populated. If you open it cold at the exact moment the first guest arrives, you may face a brief delay.</p>
+            </div>
+          </div>
+
+          <h2 id="realtime-architecture">Real-time architecture</h2>
+          <p>PlanIt's real-time layer uses Socket.IO over WebSocket with long-polling as a fallback. Every event workspace has its own Socket.IO room, and all clients connected to that room receive updates when any state-changing action occurs.</p>
+
+          <h3 id="socket-events">Key Socket.IO events</h3>
+          <div class="table-wrap"><table>
+            <thead><tr><th>Event name</th><th>Direction</th><th>Payload summary</th></tr></thead>
+            <tbody>
+              <tr><td><code>chat:message</code></td><td>Server → clients</td><td>New chat message with author, text, timestamp</td></tr>
+              <tr><td><code>checkin:update</code></td><td>Server → clients</td><td>Guest check-in state change with guestId and new status</td></tr>
+              <tr><td><code>checkin:count</code></td><td>Server → clients</td><td>Updated admitted / total counts</td></tr>
+              <tr><td><code>seating:update</code></td><td>Server → clients</td><td>Full seating map state after any edit</td></tr>
+              <tr><td><code>task:created</code></td><td>Server → clients</td><td>New task object</td></tr>
+              <tr><td><code>task:updated</code></td><td>Server → clients</td><td>Updated task fields (complete status, priority, etc.)</td></tr>
+              <tr><td><code>task:deleted</code></td><td>Server → clients</td><td>Task ID to remove</td></tr>
+              <tr><td><code>poll:vote</code></td><td>Server → clients</td><td>Updated vote counts for a specific poll</td></tr>
+              <tr><td><code>announcement:new</code></td><td>Server → clients</td><td>Announcement object; triggers toast if important=true</td></tr>
+              <tr><td><code>security:alert</code></td><td>Server → organiser</td><td>Anti-fraud event details and trust score update</td></tr>
+              <tr><td><code>wt:signal</code></td><td>Peer → server → peer</td><td>WebRTC offer/answer/ICE candidate for walkie-talkie</td></tr>
+              <tr><td><code>wt:transmit-start</code></td><td>Client → server → clients</td><td>Transmission start notification with sender identity</td></tr>
+              <tr><td><code>wt:transmit-end</code></td><td>Client → server → clients</td><td>Transmission end signal</td></tr>
+              <tr><td><code>floor:update</code></td><td>Server → clients</td><td>Table Service floor state change</td></tr>
+              <tr><td><code>waitlist:update</code></td><td>Server → clients</td><td>Walk-in waitlist change</td></tr>
+            </tbody>
+          </table></div>
+
+          <h2 id="redis">Redis</h2>
+          <p>Redis serves two roles in PlanIt:</p>
+          <ul>
+            <li><strong>Rate limiting state</strong> — sliding window counters for all API rate limits are stored in Redis with TTL-based expiry. This ensures limits are consistent even if the Node.js process restarts.</li>
+            <li><strong>Socket.IO adapter</strong> — the <code>@socket.io/redis-adapter</code> allows multiple instances of the backend (if scaled horizontally) to share the same Socket.IO room state. Clients connected to different instances still receive the same broadcasts.</li>
+          </ul>
+
+          <h2 id="watchdog">Watchdog monitoring</h2>
+          <p>PlanIt runs a watchdog service that pings the backend API at regular intervals and records the results. If the API returns an error or times out, the watchdog logs an incident and the <a href="https://planitapp.onrender.com/status" target="_blank">public status page</a> reflects the degraded state within one check interval.</p>
+
+          <div class="table-wrap"><table>
+            <thead><tr><th>Property</th><th>Value</th></tr></thead>
+            <tbody>
+              <tr><td>Check interval</td><td>Every 5 minutes</td></tr>
+              <tr><td>Timeout threshold</td><td>10 seconds</td></tr>
+              <tr><td>Incident resolution</td><td>3 consecutive successful pings</td></tr>
+              <tr><td>Status page</td><td><a href="https://planitapp.onrender.com/status" target="_blank">planitapp.onrender.com/status</a></td></tr>
+            </tbody>
+          </table></div>
+
+          <h2 id="status-page">Status page</h2>
+          <p>The public status page at <code>/status</code> shows the live operational state of:</p>
+          <ul>
+            <li>API server (response time and last check timestamp)</li>
+            <li>Database (MongoDB connectivity)</li>
+            <li>Redis cache</li>
+            <li>WebSocket server</li>
+            <li>File storage (Cloudinary reachability)</li>
+            <li>Recent incident log (last 30 days)</li>
+          </ul>
+          <p>No account is required to view the status page. Bookmark it if you are running a time-sensitive event.</p>
+
+          <h2 id="database-schema">Database collections</h2>
+          <div class="table-wrap"><table>
+            <thead><tr><th>Collection</th><th>Key documents</th></tr></thead>
+            <tbody>
+              <tr><td><code>events</code></td><td>Event metadata, slugs, passwords (hashed), settings, mode, date, location</td></tr>
+              <tr><td><code>participants</code></td><td>Workspace participants: display name, join time, session ID, event reference</td></tr>
+              <tr><td><code>guests</code></td><td>Enterprise guest records: name, email (hashed), role, group size, invite code, check-in status, trust score</td></tr>
+              <tr><td><code>messages</code></td><td>Chat messages: author, text, event reference, timestamp</td></tr>
+              <tr><td><code>tasks</code></td><td>Task: title, description, priority, assignee, due date, complete flag, event reference</td></tr>
+              <tr><td><code>polls</code></td><td>Poll: question, options array with vote counts, voter session IDs, event reference</td></tr>
+              <tr><td><code>notes</code></td><td>Note: title, body, colour, author, event reference</td></tr>
+              <tr><td><code>announcements</code></td><td>Bulletin post: text, important flag, timestamp, event reference</td></tr>
+              <tr><td><code>expenses</code></td><td>Expense: title, amount, category, payer, notes, event reference</td></tr>
+              <tr><td><code>files</code></td><td>File metadata: name, Cloudinary URL, size, uploader, event reference</td></tr>
+              <tr><td><code>seatings</code></td><td>Seating map: canvas objects array, table-to-guest assignments, event reference</td></tr>
+              <tr><td><code>checkins</code></td><td>Check-in log: guest reference, timestamp, staff session, override flag, fraud signals</td></tr>
+              <tr><td><code>venues</code></td><td>Table Service: floor plan, tables, waitlist, reservations, server assignments</td></tr>
+            </tbody>
+          </table></div>
+
+          <h2 id="dark-background">Why the interface is dark</h2>
+          <p>The dark background is deliberate and functional, not purely aesthetic. Check-in staff typically operate in dim venues — bars, ballrooms, dimly lit entrances. A dark UI dramatically reduces eye strain and makes the critical check-in verdict (green admit / red deny) far more visible at a glance in low-light conditions. The contrast ratio of status colours against the dark background also exceeds WCAG 2.1 AA requirements.</p>
+
+          <h2 id="stars">Stars animation</h2>
+          <p>The moving star field visible on the main landing page and event workspaces is a canvas-based CSS animation running entirely on the GPU — no JavaScript animation loop. It uses a repeated CSS animation on SVG circle elements offset by individual delays, which means it is smooth, zero-CPU, and automatically pauses on browsers that honour <code>prefers-reduced-motion</code>.</p>
+
+          <h2 id="page-colours">Page colour system</h2>
+          <p>Each PlanIt page has a distinct accent colour used for interactive elements, highlights, and borders. This makes it immediately clear which interface you're in — organiser workspace (indigo), check-in system (green), guest invite page (gradient), Table Service floor (orange). The colour is applied via a CSS custom property override at the root of each page, so a single design system covers all modes without separate stylesheets.</p>
+
+          <div class="page-nav">
+            <a href="security.html" class="page-nav-link">
+              <span class="page-nav-label">← Previous</span>
+              <span class="page-nav-title">Security &amp; Passwords</span>
+            </a>
+            <a href="integrations.html" class="page-nav-link page-nav-next">
+              <span class="page-nav-label">Next →</span>
+              <span class="page-nav-title">Integrations &amp; QR</span>
+            </a>
+          </div>
+        </div>
+        <div class="toc-right"></div>
+      </div>
+    </div>
+  </div>
+  <script src="nav.js"></script>
+</body>
+</html>
