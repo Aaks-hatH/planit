@@ -1553,7 +1553,7 @@ export default function EventSpace() {
               className="w-8 h-8 rounded-lg bg-neutral-100 hover:bg-neutral-200 flex items-center justify-center transition-colors">
               {copied ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5 text-neutral-600" />}
             </button>
-            {isOrganizer && (
+            {isOrganizer && event?.isEnterpriseMode && (
               <button onClick={() => navigate(`/event/${eventId}/checkin`)}
                 className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition-colors">
                 <UserCheck className="w-3.5 h-3.5" />Check-in
@@ -2315,10 +2315,12 @@ export default function EventSpace() {
               {isOrganizer && (
                 <>
                   <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest px-1 pt-1 pb-0.5">Organizer</p>
-                  <button onClick={() => navigate(`/event/${eventId}/checkin`)}
-                    className="flex items-center gap-2.5 w-full px-4 py-3 text-xs bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl transition-colors font-bold">
-                    <UserCheck className="w-3.5 h-3.5 flex-shrink-0" />Guest Check-in
-                  </button>
+                  {event?.isEnterpriseMode && (
+                    <button onClick={() => navigate(`/event/${eventId}/checkin`)}
+                      className="flex items-center gap-2.5 w-full px-4 py-3 text-xs bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl transition-colors font-bold">
+                      <UserCheck className="w-3.5 h-3.5 flex-shrink-0" />Guest Check-in
+                    </button>
+                  )}
                   <button onClick={() => setShowSettings(true)}
                     className="flex items-center gap-2.5 w-full px-4 py-3 text-xs bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl transition-colors font-bold relative">
                     <Sliders className="w-3.5 h-3.5 flex-shrink-0" />Event Settings
