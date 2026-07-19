@@ -1,52 +1,32 @@
 import { useState, useEffect } from 'react';
-import { trackGAEvent } from '../services/analytics';
 
 const CONSENT_KEY = 'planit_cookie_consent';
 const CONSENT_VERSION = '1';
 
-function getStoredConsent() {
+// NOTE: This banner is an acknowledgment notice, not an opt-out control.
+// Analytics (GA4 and PlanIt's backend pipeline) run for every visitor
+// regardless of whether this notice has been seen or dismissed. See
+// Privacy Policy Section 9 and Terms of Service Section 12.2.
+
+function hasAcknowledged() {
   try {
     const raw = localStorage.getItem(CONSENT_KEY);
-    if (!raw) return null;
+    if (!raw) return false;
     const parsed = JSON.parse(raw);
-    if (parsed.v !== CONSENT_VERSION) return null;
-    return parsed;
+    return parsed.v === CONSENT_VERSION && parsed.acknowledged === true;
   } catch {
-    return null;
+    return false;
   }
 }
 
-function storeConsent(accepted) {
+function storeAcknowledgment() {
   try {
     localStorage.setItem(CONSENT_KEY, JSON.stringify({
       v: CONSENT_VERSION,
-      accepted,
+      acknowledged: true,
       ts: Date.now(),
     }));
   } catch {}
-}
-
-export function hasAnalyticsConsent() {
-  const stored = getStoredConsent();
-  return stored?.accepted === true;
-}
-
-export function waitForConsent(cb) {
-  const stored = getStoredConsent();
-  if (stored !== null) { cb(stored.accepted); return; }
-  const handler = (e) => {
-    if (e.key === CONSENT_KEY) {
-      window.removeEventListener('storage', handler);
-      const v = getStoredConsent();
-      cb(v?.accepted === true);
-    }
-  };
-  window.addEventListener('storage', handler);
-  const domHandler = (e) => {
-    document.removeEventListener('planit:consent', domHandler);
-    cb(e.detail?.accepted === true);
-  };
-  document.addEventListener('planit:consent', domHandler);
 }
 
 export default function ConsentBanner() {
@@ -54,20 +34,14 @@ export default function ConsentBanner() {
   const [out, setOut] = useState(false);
 
   useEffect(() => {
-    const stored = getStoredConsent();
-    if (stored === null) {
+    if (!hasAcknowledged()) {
       const t = setTimeout(() => setVisible(true), 600);
       return () => clearTimeout(t);
     }
   }, []);
 
-  function dismiss(accepted) {
-    storeConsent(accepted);
-    document.dispatchEvent(new CustomEvent('planit:consent', { detail: { accepted } }));
-    if (accepted) {
-      // Small delay so analytics.js activateGA() runs first from the same event
-      setTimeout(() => trackGAEvent('consent_granted'), 100);
-    }
+  function dismiss() {
+    storeAcknowledgment();
     setOut(true);
     setTimeout(() => setVisible(false), 300);
   }
@@ -115,7 +89,7 @@ export default function ConsentBanner() {
           color: '#6b7280',
           lineHeight: 1.5,
         }}>
-          We use cookies to keep you signed in and improve the platform.{' '}
+          We use cookies and platform analytics to run and improve the site.{' '}
           <a
             href="/privacy"
             style={{ color: '#9ca3af', textDecoration: 'underline', textUnderlineOffset: 2 }}
@@ -126,29 +100,10 @@ export default function ConsentBanner() {
           </a>
         </p>
 
-        {/* Buttons */}
+        {/* Acknowledgment — informational only, does not opt out of analytics */}
         <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
           <button
-            onClick={() => dismiss(false)}
-            style={{
-              background: 'none',
-              border: '1px solid #e5e7eb',
-              borderRadius: 6,
-              padding: '5px 10px',
-              fontSize: 11,
-              fontWeight: 600,
-              color: '#9ca3af',
-              cursor: 'pointer',
-              whiteSpace: 'nowrap',
-              lineHeight: 1,
-            }}
-            onMouseEnter={e => { e.currentTarget.style.color = '#6b7280'; e.currentTarget.style.borderColor = '#d1d5db'; }}
-            onMouseLeave={e => { e.currentTarget.style.color = '#9ca3af'; e.currentTarget.style.borderColor = '#e5e7eb'; }}
-          >
-            Decline
-          </button>
-          <button
-            onClick={() => dismiss(true)}
+            onClick={() => dismiss()}
             style={{
               background: '#111827',
               border: '1px solid #111827',
@@ -164,7 +119,7 @@ export default function ConsentBanner() {
             onMouseEnter={e => { e.currentTarget.style.background = '#374151'; }}
             onMouseLeave={e => { e.currentTarget.style.background = '#111827'; }}
           >
-            Accept
+            Got it
           </button>
         </div>
       </div>
