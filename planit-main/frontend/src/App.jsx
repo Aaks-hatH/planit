@@ -3,6 +3,7 @@ import { useState, useEffect, lazy, Suspense } from 'react';
 import { WhiteLabelProvider, useWhiteLabel } from './context/WhiteLabelContext';
 import { usePageTracker } from './hooks/usePageTracker';
 import ConsentBanner from './components/ConsentBanner';
+import ReferralWelcome from './components/ReferralWelcome';
 
 // ─── Lazy-loaded pages — each page is a separate JS chunk loaded on demand ────
 // This means the initial bundle only contains the shell (router, context, etc.)
@@ -105,7 +106,7 @@ function MaintenancePage({ message, eta, type = 's' }) {
   const remaining = fmtEta(eta);
 
   return (
-    <div style={{ minHeight:'100vh', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', background:'#05050f', color:'white', fontFamily:'system-ui,sans-serif', padding:'2rem', textAlign:'center' }}>
+    <div className="font-sans" style={{ minHeight:'100vh', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', background:'#05050f', color:'white', padding:'2rem', textAlign:'center' }}>
       {/* Grid */}
       <svg style={{ position:'fixed', inset:0, width:'100%', height:'100%', pointerEvents:'none', zIndex:0 }} aria-hidden="true">
         <defs><pattern id="mg" width="64" height="64" patternUnits="userSpaceOnUse"><path d="M 64 0 L 0 0 0 64" fill="none" stroke="rgba(255,255,255,0.022)" strokeWidth="1"/></pattern></defs>
@@ -189,7 +190,7 @@ function MaintenanceBanner({ info }) {
     : null;
 
   return (
-    <div style={{ width:'100%', background:c.bg, borderBottom:`1px solid ${c.border}`, fontFamily:'system-ui,-apple-system,sans-serif' }}>
+    <div className="font-sans" style={{ width:'100%', background:c.bg, borderBottom:`1px solid ${c.border}` }}>
       <div style={{ maxWidth:900, margin:'0 auto', padding:'9px 16px', display:'flex', alignItems:'center', gap:10 }}>
         <span style={{ width:7, height:7, borderRadius:'50%', background:c.dot, flexShrink:0, animation:'mnt-blink 2s ease-in-out infinite' }} />
         <span style={{ fontSize:11, fontWeight:700, letterSpacing:'0.04em', textTransform:'uppercase', background:c.pill, color:c.pillText, padding:'2px 8px', borderRadius:999, flexShrink:0 }}>
@@ -299,7 +300,7 @@ function WLSuspendedPage() {
   const iconClr = isNetworkError ? '#d97706' : isExpired ? '#d97706' : '#ef4444';
 
   return (
-    <div style={{ minHeight:'100vh', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', background:'#f9fafb', fontFamily:"'Inter',-apple-system,sans-serif", textAlign:'center', padding:'2rem' }}>
+    <div className="font-sans" style={{ minHeight:'100vh', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', background:'#f9fafb', textAlign:'center', padding:'2rem' }}>
       {company && (
         <p style={{ position:'absolute', top:'24px', left:'50%', transform:'translateX(-50%)', fontSize:'0.85rem', fontWeight:600, color:primary, letterSpacing:'-0.01em', opacity:.8 }}>
           {company}
@@ -501,6 +502,7 @@ function App() {
             <PageTitle />
             <PageTrackerMount />
             <ConsentBanner />
+            <ReferralWelcome />
             <Suspense fallback={<PageLoader />}>
             <Routes>
         <Route path="/" element={<HomeRoute />} />

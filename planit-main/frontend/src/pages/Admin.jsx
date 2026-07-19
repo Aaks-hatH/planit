@@ -4226,7 +4226,7 @@ function CommandCenterPanel() {
   };
 
   return (
-    <div className="min-h-screen bg-neutral-50" style={{ fontFamily:"Inter,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" }}>
+    <div className="min-h-screen bg-neutral-50 font-sans">
       <style>{CC_STYLES}</style>
 
       {/* ══ TOP BAR ══ */}
@@ -10864,9 +10864,9 @@ export default function Admin() {
     const strengthColor = passedCount <= 1 ? '#ef4444' : passedCount <= 2 ? '#f97316' : passedCount === 3 ? '#eab308' : '#22c55e';
 
     return (
-      <div style={{
+      <div className="font-sans" style={{
         minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center',
-        background: '#09090b', fontFamily: "'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif",
+        background: '#09090b',
         position: 'relative', overflow: 'hidden', padding: '24px',
       }}>
         {/* Dot-grid texture */}
@@ -11044,11 +11044,10 @@ export default function Admin() {
 
   // ── Login Screen ──────────────────────────────────────────────────────────
   if (!auth) return (
-    <div style={{
+    <div className="font-sans" style={{
       minHeight: '100vh',
       display: 'flex',
       background: '#09090b',
-      fontFamily: "'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif",
       position: 'relative',
       overflow: 'hidden',
     }}>

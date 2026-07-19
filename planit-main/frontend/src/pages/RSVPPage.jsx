@@ -13,6 +13,7 @@ import { trackGAEvent } from '../services/analytics';
 import { formatDateInTimezone } from '../utils/timezoneUtils';
 import TurnstileWidget from '../components/TurnstileWidget';
 import ShareCardModal from '../components/ShareCardModal';
+import GuestSeatPicker from '../components/GuestSeatPicker';
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
@@ -260,6 +261,7 @@ export default function RSVPPage() {
   const [dietary, setDietary]     = useState('');
   const [accessibility, setAccessibility] = useState('');
   const [guestNote, setGuestNote] = useState('');
+  const [selectedTableId, setSelectedTableId] = useState(null);
   const [customAnswers, setCustomAnswers] = useState({});
   const [fieldErrors, setFieldErrors] = useState({});
   const [expandedSection, setExpandedSection] = useState('info');
@@ -305,7 +307,7 @@ export default function RSVPPage() {
     );
   }
 
-  const { rsvpPage, eventId, subdomain, title, rawTitle, description, date, timezone, location, organizerName, counts, spotsLeft, isFull, deadlinePast } = pageData;
+  const { rsvpPage, eventId, subdomain, title, rawTitle, description, date, timezone, location, organizerName, counts, spotsLeft, isFull, deadlinePast, seatingChartEnabled, seatingMap, tableOccupancy } = pageData;
   const accent    = rsvpPage.accentColor || '#6366f1';
   const bgStyle   = rsvpPage.backgroundStyle || 'dark';
   const fontStyle = rsvpPage.fontStyle || 'modern';
@@ -411,6 +413,7 @@ export default function RSVPPage() {
         accessibilityNeeds:  accessibility,
         customAnswers: answersArr,
         guestNote,
+        ...(selectedTableId ? { selectedTableId } : {}),
         pagePassword: unlockedPw || undefined,
         _hp: '',  // honeypot field — bots fill this, humans don't
         ...(turnstileToken ? { turnstileToken } : {}),
@@ -748,6 +751,41 @@ export default function RSVPPage() {
                         )}
                       </div>
                     ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Seating chart */}
+            {response === 'yes' && seatingChartEnabled && seatingMap?.objects?.length > 0 && (
+              <div className={`rounded-2xl overflow-hidden ${cardBg}`}>
+                <button type="button"
+                  className={`w-full flex items-center justify-between p-5 text-left ${isLight ? 'hover:bg-gray-50' : 'hover:bg-white/[0.02]'} transition-colors`}
+                  onClick={() => setExpandedSection(expandedSection === 'seating' ? '' : 'seating')}>
+                  <div>
+                    <span className={`text-xs font-bold uppercase tracking-widest ${textMuted}`}>Choose Your Table</span>
+                    {selectedTableId && (
+                      <span className="ml-2 text-xs font-semibold" style={{ color: accent }}>
+                        {seatingMap.objects.find(o => o.id === selectedTableId)?.label || 'Selected'}
+                      </span>
+                    )}
+                  </div>
+                  {expandedSection === 'seating' ? <ChevronUp className={`w-4 h-4 ${textMuted}`} /> : <ChevronDown className={`w-4 h-4 ${textMuted}`} />}
+                </button>
+                {expandedSection === 'seating' && (
+                  <div className="px-5 pb-5">
+                    <p className={`text-xs mb-3 ${textMuted}`}>Optional — tap a table to reserve seats for your party. You can also skip this and the organizer will seat you.</p>
+                    <GuestSeatPicker
+                      objects={seatingMap.objects}
+                      occupancy={tableOccupancy || {}}
+                      canvasW={seatingMap.canvasW}
+                      canvasH={seatingMap.canvasH}
+                      requestedSeats={1 + (Number(plusOnes) || 0)}
+                      selectedId={selectedTableId}
+                      onSelect={setSelectedTableId}
+                      accent={accent}
+                      isLight={isLight}
+                    />
                   </div>
                 )}
               </div>

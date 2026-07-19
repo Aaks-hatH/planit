@@ -24,6 +24,7 @@ const router   = express.Router();
 const crypto   = require('crypto');
 const Event    = require('../models/Event');
 const RSVPSubmission = require('../models/RSVPSubmission');
+const WhiteLabel = require('../models/WhiteLabel');
 const { verifyOrganizer } = require('../middleware/auth');
 const { authLimiter } = require('../middleware/rateLimiter');
 const { meshPost } = require('../middleware/mesh');
@@ -45,6 +46,37 @@ async function resolveEvent(idOrSlug, selectExtra = '') {
     : Event.findOne({ subdomain: idOrSlug.toLowerCase() });
   if (selectExtra) query.select(selectExtra);
   return query.lean();
+}
+
+// Resolve whether the seating chart should be offered at checkout for this
+// event. This is the single server-side source of truth — never trust a
+// client-supplied flag. Mirrors the client-side gating pattern used for
+// showGuestList/showWaitlist/showSocialShare (!isWL || flag), except the
+// chart defaults OFF and is pro+-tier-gated, matching its WhiteLabel schema
+// default and the tier check already enforced in wl-portal.js's
+// PATCH /features route.
+async function resolveSeatingChart(event) {
+  const hasMap = !!(event.seatingMap?.enabled && (event.seatingMap.objects || []).length);
+  if (!hasMap) return { enabled: false, objects: [], canvasW: 1000, canvasH: 700 };
+
+  if (!event.wlDomain) {
+    // Non-white-label event — organizer's own seatingMap.enabled is the gate.
+    return {
+      enabled: true,
+      objects: event.seatingMap.objects,
+      canvasW: event.seatingMap.canvasW || 1000,
+      canvasH: event.seatingMap.canvasH || 700,
+    };
+  }
+
+  const wl = await WhiteLabel.findOne({ domain: event.wlDomain }).select('tier features').lean();
+  const allowed = !!wl && wl.tier !== 'basic' && wl.features?.showSeatingChart === true;
+  return {
+    enabled: allowed,
+    objects: allowed ? event.seatingMap.objects : [],
+    canvasW: event.seatingMap.canvasW || 1000,
+    canvasH: event.seatingMap.canvasH || 700,
+  };
 }
 
 // Safe IP extraction
@@ -120,6 +152,17 @@ router.get('/:eventIdOrSlug/page', async (req, res, next) => {
     // Determine deadline status
     const deadlinePast = rsvpPage.deadline ? new Date() > new Date(rsvpPage.deadline) : false;
 
+    // Seating chart — server-resolved, tier/flag-checked (see resolveSeatingChart)
+    const seatingChart = await resolveSeatingChart(event);
+    let tableOccupancy = {};
+    if (seatingChart.enabled) {
+      const occRows = await RSVPSubmission.aggregate([
+        { $match: { eventId: event._id, deletedAt: null, status: { $in: ['confirmed', 'pending'] }, selectedTableId: { $ne: null } } },
+        { $group: { _id: '$selectedTableId', occupied: { $sum: { $add: ['$plusOnes', 1] } } } },
+      ]);
+      occRows.forEach(r => { tableOccupancy[r._id] = r.occupied; });
+    }
+
     // If closed, return minimal info
     if (rsvpPage.accessMode === 'closed') {
       return res.json({
@@ -152,6 +195,11 @@ router.get('/:eventIdOrSlug/page', async (req, res, next) => {
       isFull,
       deadlinePast,
       requiresPassword: rsvpPage.accessMode === 'password',
+      seatingChartEnabled: seatingChart.enabled,
+      seatingMap: seatingChart.enabled
+        ? { objects: seatingChart.objects, canvasW: seatingChart.canvasW, canvasH: seatingChart.canvasH }
+        : null,
+      tableOccupancy,
     });
   } catch (err) { next(err); }
 });
@@ -215,6 +263,7 @@ router.post('/:eventIdOrSlug/submit', async (req, res, next) => {
       accessibilityNeeds,
       customAnswers,
       guestNote,
+      selectedTableId,
     } = req.body;
 
     // Validate response
@@ -305,6 +354,36 @@ router.post('/:eventIdOrSlug/submit', async (req, res, next) => {
       }
     }
 
+    // Seating chart selection (checkout) — re-resolve server-side, never trust
+    // the client's boolean. Only meaningful for confirmed 'yes' attendance;
+    // waitlisted guests are handled above and never reach here.
+    let selectedTableLabel = '';
+    let validatedTableId = null;
+    if (selectedTableId) {
+      const seatingChart = await resolveSeatingChart(event);
+      if (!seatingChart.enabled) {
+        return res.status(403).json({ error: 'Seating selection is not available for this event.' });
+      }
+      const table = seatingChart.objects.find(o => o.id === selectedTableId);
+      if (!table) {
+        return res.status(400).json({ error: 'Selected table no longer exists.' });
+      }
+      if (table.type === 'zone' || table.type === 'stage') {
+        return res.status(400).json({ error: 'That is not a seatable table.' });
+      }
+      const requestedSeats = 1 + (Number(plusOnes) || 0);
+      const [occRow] = await RSVPSubmission.aggregate([
+        { $match: { eventId: event._id, deletedAt: null, status: { $in: ['confirmed', 'pending'] }, selectedTableId } },
+        { $group: { _id: null, occupied: { $sum: { $add: ['$plusOnes', 1] } } } },
+      ]);
+      const occupied = occRow?.occupied || 0;
+      if (table.capacity > 0 && occupied + requestedSeats > table.capacity) {
+        return res.status(409).json({ error: 'That table no longer has enough open seats.' });
+      }
+      validatedTableId = table.id;
+      selectedTableLabel = table.label || '';
+    }
+
     // Duplicate email check
     let isDuplicateSubmission = false;
     if (email && rsvpPage.duplicateEmailPolicy !== 'allow') {
@@ -389,6 +468,8 @@ router.post('/:eventIdOrSlug/submit', async (req, res, next) => {
       accessibilityNeeds:  accessibilityNeeds?.trim() || '',
       customAnswers:       Array.isArray(customAnswers) ? customAnswers : [],
       guestNote:           guestNote?.trim() || '',
+      selectedTableId:     validatedTableId,
+      selectedTableLabel,
       status,
       editToken,
       duplicateFlag: isDuplicateSubmission,
