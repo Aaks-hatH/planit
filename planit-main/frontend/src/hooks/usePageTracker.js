@@ -13,10 +13,8 @@ let _initialised = false;
  * every SPA route change. Backend feature-event tracking (trackFeature) is
  * unchanged — only the page/session tracking has moved to GA4.
  *
- * CONSENT
- * ───────
- * initGA() reads the stored consent decision (or waits for planit:consent).
- * Neither GA nor the backend tracker fires anything without explicit consent.
+ * Both GA4 and the backend tracker run for every visitor regardless of the
+ * cookie banner acknowledgment — see Privacy Policy Section 9.
  */
 export function usePageTracker() {
   const { pathname } = useLocation();
