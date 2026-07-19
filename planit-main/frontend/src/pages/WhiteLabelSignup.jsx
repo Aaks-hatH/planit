@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../services/api';
+import { validateEmail, validateMessage } from '../utils/validators';
 
 const BUSINESS_TYPES = [
   { value: 'restaurant', label: 'Restaurant or Cafe' },
@@ -206,6 +207,14 @@ function RequestForm() {
       setErrorMsg('Please fill in all required fields.');
       return;
     }
+    if (!validateEmail(form.email)) {
+      setErrorMsg('Please enter a valid email address.');
+      return;
+    }
+    if (form.message && !validateMessage(form.message)) {
+      setErrorMsg('Message must be 5000 characters or fewer.');
+      return;
+    }
     setState('loading');
     setErrorMsg('');
     try {
@@ -320,15 +329,11 @@ function Footer() {
 export default function WhiteLabelSignup() {
   useEffect(() => {
     document.title = 'White Label — PlanIt';
-    const link = document.createElement('link');
-    link.rel = 'stylesheet';
-    link.href = 'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap';
-    document.head.appendChild(link);
-    return () => { try { document.head.removeChild(link); } catch {} document.title = 'PlanIt'; };
+    return () => { document.title = 'PlanIt'; };
   }, []);
 
   return (
-    <div style={{ fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", background: '#f9fafb', minHeight: '100vh', color: '#111827' }}>
+    <div className="font-sans" style={{ background: '#f9fafb', minHeight: '100vh', color: '#111827' }}>
       <Nav />
       <Hero />
       <HowItWorks />

@@ -18,6 +18,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useWhiteLabel } from '../context/WhiteLabelContext';
+import { validatePassword } from '../utils/validators';
 
 const API = (import.meta.env.VITE_API_URL || 'http://localhost:5000/api').replace(/\/$/, '');
 const TOKEN_KEY = 'wl_portal_token';
@@ -482,8 +483,6 @@ function FeaturesSection({ data, tier, token, onUpdate, toast }) {
     showWaitlist:     data?.showWaitlist     !== false,
     showSeatingChart: data?.showSeatingChart || false,
     showSocialShare:  data?.showSocialShare  !== false,
-    showReviews:      data?.showReviews      || false,
-    allowGuestSignup: data?.allowGuestSignup !== false,
   });
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -493,8 +492,6 @@ function FeaturesSection({ data, tier, token, onUpdate, toast }) {
     { key: 'showWaitlist',     label: 'Waitlist',            hint: 'Let guests join waitlist for sold-out events' },
     { key: 'showSeatingChart', label: 'Seating chart',       hint: 'Visual seating selection at checkout', proOnly: true },
     { key: 'showSocialShare',  label: 'Social sharing',      hint: 'Share buttons on event pages' },
-    { key: 'showReviews',      label: 'Reviews',             hint: 'Post-event review prompts and display' },
-    { key: 'allowGuestSignup', label: 'Guest self-checkout', hint: 'Allow ticket purchase without an account' },
   ];
 
   const save = async () => {
@@ -663,6 +660,10 @@ function LoginScreen({ wl, onLogin }) {
   const submit = async (e) => {
     e.preventDefault();
     setError('');
+    if (!validatePassword(password)) {
+      setError('Password must be at least 6 characters.');
+      return;
+    }
     setLoading(true);
     try {
       const r = await fetch(`${API}/wl-portal/login`, {
@@ -841,7 +842,7 @@ export default function ClientPortal() {
   if (!resolved) return null;
   if (!isWL) return <div className="min-h-screen flex items-center justify-center bg-neutral-50 text-sm text-neutral-400">Not a white-label domain.</div>;
   if (resolved && isWL && wl && !wl.portalEnabled) return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-neutral-50 text-center px-6" style={{ fontFamily: "'Inter',system-ui,sans-serif" }}>
+    <div className="min-h-screen flex flex-col items-center justify-center bg-neutral-50 text-center px-6 font-sans">
       {wl.branding?.logoUrl
         ? <img src={wl.branding.logoUrl} alt="" style={{ height: 36, marginBottom: 24, objectFit: 'contain' }} />
         : <div style={{ width: 36, height: 36, borderRadius: 10, background: wl.branding?.primaryColor || '#2563eb', marginBottom: 24 }} />}
@@ -932,7 +933,7 @@ export default function ClientPortal() {
         </header>
 
         {/* Content */}
-        <main className="flex-1 p-6 max-w-2xl w-full mx-auto">
+        <main className="flex-1 p-6 pb-24 md:pb-6 max-w-2xl w-full mx-auto">
           {section === 'branding' && (
             <BrandingSection data={data.branding} tier={tier} token={token} onUpdate={handleUpdate} toast={showToast} />
           )}
@@ -978,6 +979,18 @@ export default function ClientPortal() {
           )}
         </main>
       </div>
+
+      {/* Mobile bottom tab bar — same NAV array as the desktop sidebar so it can't drift out of sync */}
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 flex items-stretch"
+        style={{ background: '#0a0a0a', borderTop: '1px solid rgba(255,255,255,0.08)', paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
+        {NAV.map(({ id, label, Icon }) => (
+          <button key={id} onClick={() => setSection(id)}
+            className={`flex-1 flex flex-col items-center justify-center gap-1 py-2.5 text-[10px] font-medium transition-colors ${section === id ? 'text-white' : 'text-neutral-500'}`}>
+            <Icon size={17} />
+            <span className="truncate px-1 leading-tight text-center">{label}</span>
+          </button>
+        ))}
+      </nav>
 
       <Toast msg={toast.msg} type={toast.type} />
 

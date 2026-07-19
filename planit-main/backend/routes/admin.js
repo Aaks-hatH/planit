@@ -2998,7 +2998,7 @@ router.get('/cc/ws-stats', verifyAdmin, requireSuperAdmin, async (req, res, next
     }
 
     const config = [
-      { label:'MongoDB URI',          set:!!(process.env.MONGO_URI||process.env.MONGODB_URI) },
+      { label:'MongoDB URI',          set:!!process.env.MONGODB_URI },
       { label:'JWT / License Key',    set:!!(process.env.JWT_SECRET||process.env.PLANIT_LICENSE_KEY) },
       { label:'Router URL',           set:!!process.env.ROUTER_URL },
       { label:'Cloudinary',           set:!!process.env.CLOUDINARY_CLOUD_NAME },

@@ -50,7 +50,7 @@ export default function SetupFee() {
   };
 
   return (
-    <div style={{ fontFamily: "'Inter', -apple-system, sans-serif", background: '#f9fafb', minHeight: '100vh', color: '#111827' }}>
+    <div className="font-sans" style={{ background: '#f9fafb', minHeight: '100vh', color: '#111827' }}>
       {/* Nav */}
       <nav style={{ background: '#fff', borderBottom: '1px solid #e5e7eb', padding: '0 2rem', height: '56px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <Link to="/" style={{ fontWeight: 700, fontSize: '1rem', color: '#111827', textDecoration: 'none' }}>PlanIt</Link>

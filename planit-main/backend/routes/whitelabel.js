@@ -284,8 +284,6 @@ router.get('/', verifyAdmin, async (req, res) => {
   }
 });
 
-// ─── Admin: Get single white label ────────────────────────────────────────────
-
 // ─── Stripe Webhook ───────────────────────────────────────────────────────────
 // Stripe calls this endpoint when subscription events occur.
 // IMPORTANT: This route must receive the raw request body (not JSON-parsed).
@@ -684,7 +682,7 @@ router.get('/setup-fee/verify', async (req, res) => {
   }
 });
 
-
+// ─── Admin: Get single white label ────────────────────────────────────────────
 
 router.get('/:id', verifyAdmin, async (req, res) => {
   try {
@@ -963,7 +961,6 @@ router.post('/:id/billing-portal', verifyAdmin, async (req, res) => {
   }
 });
 
-module.exports = router;
 // ─── Admin: Set / reset portal password for a WL client ──────────────────────
 // POST /api/whitelabel/:id/portal/set-password
 // Only super-admin or root admin. Enables portal access and sets the password.

@@ -68,6 +68,13 @@ const rsvpSubmissionSchema = new mongoose.Schema(
     // ── Free-text note from guest ─────────────────────────────────────────────
     guestNote: { type: String, trim: true, maxlength: 1000, default: '' },
 
+    // ── Seating chart selection (checkout) ──────────────────────────────────
+    // Only populated when the event's seating chart is enabled at submit time.
+    // References seatingMap.objects[].id on the parent Event — not a separate
+    // collection, so it's stored denormalized (id + label snapshot).
+    selectedTableId:    { type: String, default: null },
+    selectedTableLabel: { type: String, trim: true, maxlength: 50, default: '' },
+
     // ── Status ────────────────────────────────────────────────────────────────
     // pending   = submitted, awaiting organizer approval
     // confirmed = accepted / auto-confirmed

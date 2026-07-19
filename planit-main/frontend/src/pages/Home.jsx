@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { getUserTimezone, localDateTimeToUTC, getTimezoneOptions } from '../utils/timezoneUtils';
+import { validateEmail } from '../utils/validators';
 import { useNavigate } from 'react-router-dom';
 import {
   Calendar, Users, MessageSquare, BarChart3, FileText, Shield, Copy, Check, Lock,
@@ -1582,7 +1583,7 @@ function OnboardingWizard({ mode, formData, setFormData, fieldErrors, setFieldEr
     if (step === nameStep) {
       if (!formData.organizerName.trim()) e.organizerName = isVenue ? 'Manager name is required.' : 'Your name is required.';
       if (!formData.organizerEmail.trim()) e.organizerEmail = 'Email is required.';
-      else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.organizerEmail.trim())) e.organizerEmail = 'Please enter a valid email.';
+      else if (!validateEmail(formData.organizerEmail.trim())) e.organizerEmail = 'Please enter a valid email.';
     }
     const pwStep = isVenue ? 3 : 5;
     if (step === pwStep) {
@@ -2199,7 +2200,7 @@ export default function Home() {
     if (!isTS && !formData.timezone)       errs.timezone       = 'Timezone is required.';
     if (!formData.organizerName.trim())    errs.organizerName  = isTS ? 'Manager name is required.' : 'Your name is required.';
     if (!formData.organizerEmail.trim())   errs.organizerEmail = isTS ? 'Manager email is required.' : 'Your email is required.';
-    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.organizerEmail.trim()))
+    else if (!validateEmail(formData.organizerEmail.trim()))
                                            errs.organizerEmail = 'Please enter a valid email address.';
     if (!formData.accountPassword)         errs.accountPassword = 'Account password is required.';
     else if (formData.accountPassword.length < 4)
