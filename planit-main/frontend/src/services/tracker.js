@@ -1,38 +1,20 @@
 /**
  * services/tracker.js
  *
- * PlanIt Backend Feature-Event Tracker
+ * PlanIt Backend Analytics Tracker
  * ─────────────────────────────────────
- * Sends named business events (feature_use, guest actions) to the PlanIt
- * backend analytics endpoint. Google Analytics 4 now handles all page/session/
- * click/scroll tracking — this module is limited to custom business events that
- * are specific to PlanIt's platform (e.g. event_created, checkin_completed).
- *
- * CONSENT
- * ───────
- * All enqueue() calls are gated on _trackingEnabled. Nothing is sent until the
- * user accepts the consent banner (planit:consent DOM event) or we detect a
- * stored acceptance from a previous session.
+ * Sends both automatic site-wide events (page_view, session_start/end, click,
+ * scroll_depth, outbound_link) and named business events (feature_use, guest
+ * actions) to the PlanIt backend analytics endpoint. Runs for every visitor —
+ * this is not gated on the cookie banner choice; see Privacy Policy Section 9.
  */
 
 const API_BASE = (import.meta.env.VITE_API_URL || 'http://localhost:5000/api').replace(/\/$/, '');
 const TRACK_URL = `${API_BASE}/platform-analytics/track`;
 
-const CONSENT_KEY     = 'planit_cookie_consent';
-const CONSENT_VERSION = '1';
-
-function getStoredConsent() {
-  try {
-    const raw = localStorage.getItem(CONSENT_KEY);
-    if (!raw) return null;
-    const parsed = JSON.parse(raw);
-    if (parsed.v !== CONSENT_VERSION) return null;
-    return parsed.accepted === true;
-  } catch { return null; }
-}
-
 // ─── Tracking gate ────────────────────────────────────────────────────────────
-let _trackingEnabled = false;
+// Always on — collection is not conditional on the cookie banner choice.
+let _trackingEnabled = true;
 
 // ─── Event context ────────────────────────────────────────────────────────────
 let _linkedEventId        = null;
@@ -96,30 +78,62 @@ async function flush(sync = false) {
   }
 }
 
-// ─── Initialise consent ───────────────────────────────────────────────────────
-function startTracking() {
-  _trackingEnabled = true;
+// ─── Automatic event wiring ───────────────────────────────────────────────────
+let _sessionStarted = false;
+let _lastScrollMilestone = 0;
+
+function startSession() {
+  if (_sessionStarted) return;
+  _sessionStarted = true;
+  enqueue('session_start');
 }
 
-/**
- * Called once by usePageTracker on mount. Mirrors the initGA() consent flow.
- * Also used by usePageTracker to pass the current path on navigation.
- */
+/** Called on mount and on every SPA route change. */
 export function trackPageChange(pathname) {
-  // No-op for page tracking — GA4 handles that.
-  // This function is kept so usePageTracker imports remain stable.
-  if (!_trackingEnabled) return;
+  startSession();
+  enqueue('page_view', { payload: { path: pathname } });
 }
 
-// Initialise consent on first import
+function handleClick(e) {
+  const target = e.target.closest('a, button, [role="button"]');
+  if (!target) return;
+  enqueue('click', {
+    payload: {
+      tag: target.tagName.toLowerCase(),
+      text: (target.innerText || target.getAttribute('aria-label') || '').slice(0, 80),
+    },
+  });
+  if (target.tagName.toLowerCase() === 'a') {
+    const href = target.getAttribute('href') || '';
+    if (/^https?:\/\//i.test(href) && !href.includes(window.location.hostname)) {
+      enqueue('outbound_link', { payload: { href } });
+    }
+  }
+}
+
+function handleScroll() {
+  const doc = document.documentElement;
+  const scrolled = doc.scrollTop + window.innerHeight;
+  const pct = Math.min(100, Math.round((scrolled / doc.scrollHeight) * 100));
+  const milestone = Math.floor(pct / 25) * 25; // 0, 25, 50, 75, 100
+  if (milestone > _lastScrollMilestone) {
+    _lastScrollMilestone = milestone;
+    enqueue('scroll_depth', { payload: { depth: milestone } });
+  }
+}
+
+function handleUnload() {
+  if (_sessionStarted) enqueue('session_end');
+  flush(true);
+}
+
+// Wire global listeners once on import.
 (function bootstrap() {
   if (typeof window === 'undefined') return;
-  const consent = getStoredConsent();
-  if (consent === true) { startTracking(); return; }
-  if (consent === false) return;
-  document.addEventListener('planit:consent', (e) => {
-    if (e.detail?.accepted === true) startTracking();
-  }, { once: true });
+  document.addEventListener('click', handleClick, { capture: true, passive: true });
+  window.addEventListener('scroll', handleScroll, { passive: true });
+  window.addEventListener('beforeunload', handleUnload);
+  window.addEventListener('pagehide', handleUnload);
 })();
 
 // ─── Public API ───────────────────────────────────────────────────────────────
