@@ -220,7 +220,7 @@ export default function Privacy() {
                 <strong>Compliance with legal obligations (Article 6(1)(c)):</strong> Where processing is necessary to comply with applicable legal obligations, including responding to lawful requests from courts, regulators, and law enforcement authorities.
               </li>
               <li>
-                <strong>Consent (Article 6(1)(a)):</strong> Where you have given specific, freely given, informed, and unambiguous consent to processing for a particular purpose — including your consent to non-essential platform analytics tracking collected via the cookie/storage consent banner presented on your first visit. You may withdraw consent at any time; withdrawal will not affect the lawfulness of processing carried out prior to withdrawal.
+                <strong>Consent (Article 6(1)(a)):</strong> Where you have given specific, freely given, informed, and unambiguous consent to processing for a particular purpose. Platform analytics is not processed on this basis — see the Legitimate Interests basis above and Section 9 for details on the cookie notice shown on your first visit.
               </li>
             </ul>
             <p className="mt-3">
@@ -341,9 +341,9 @@ export default function Privacy() {
             <ul className="list-disc list-inside space-y-2 ml-3 mt-2">
               <li><strong>localStorage (event token):</strong> When you join or create an event, an authentication token is stored in your browser's localStorage. This token allows you to re-access the event from the same browser without re-entering your credentials. It is scoped to the specific event and expires when the event is deleted.</li>
               <li><strong>localStorage (username):</strong> Your chosen username is stored in localStorage so it can be pre-filled on subsequent visits to the same event.</li>
-              <li><strong>localStorage (visitor ID — analytics):</strong> A randomly generated visitor identifier is stored in localStorage and used by PlanIt's backend analytics pipeline to distinguish repeat visits from the same browser across sessions. This identifier is an opaque random string with no inherent connection to your identity. It is used solely for aggregate analytics purposes and is not shared with third parties. If you decline analytics via the consent banner, this identifier is not created or used for tracking. You can delete it at any time by clearing your browser's localStorage for this site.</li>
-              <li><strong>localStorage (consent preference):</strong> Your analytics consent decision (accept or decline) is stored in localStorage so that the consent banner is not shown on every visit.</li>
-              <li><strong>Google Analytics 4 cookies (_ga, _ga_*):</strong> If you accept analytics, Google Analytics 4 sets cookies on your browser to distinguish users and sessions. The <code>_ga</code> cookie expires after 2 years; the <code>_ga_G-4H00MP64BG</code> session cookie expires after 24 hours. These cookies are first-party cookies set on the planitapp.onrender.com domain. If you decline analytics, these cookies are not set. You can remove them at any time by clearing your browser cookies, or opt out globally at tools.google.com/dlpage/gaoptout.</li>
+              <li><strong>localStorage (visitor ID — analytics):</strong> A randomly generated visitor identifier is stored in localStorage and used by PlanIt's backend analytics pipeline to distinguish repeat visits from the same browser across sessions. This identifier is an opaque random string with no inherent connection to your identity. It is used solely for aggregate analytics purposes and is not shared with third parties. It is created for every visitor, regardless of the cookie notice interaction described below. You can delete it at any time by clearing your browser's localStorage for this site.</li>
+              <li><strong>localStorage (cookie notice acknowledgment):</strong> Whether you have dismissed the cookie notice is stored in localStorage so that the notice is not shown on every visit. This is an acknowledgment, not an opt-out; see Section 9.</li>
+              <li><strong>Google Analytics 4 cookies (_ga, _ga_*):</strong> Google Analytics 4 sets cookies on your browser to distinguish users and sessions for every visitor. The <code>_ga</code> cookie expires after 2 years; the <code>_ga_G-4H00MP64BG</code> session cookie expires after 24 hours. These cookies are first-party cookies set on the planitapp.onrender.com domain. You can remove them at any time by clearing your browser cookies, or opt out globally at tools.google.com/dlpage/gaoptout.</li>
             </ul>
             <p className="mt-3">
               You can clear all of these at any time through your browser settings. Clearing localStorage will
@@ -351,21 +351,19 @@ export default function Privacy() {
             </p>
           </Section>
 
-          <Section number="9" title="Your Consent Choices — Analytics">
+          <Section number="9" title="Cookie Notice — Acknowledgment, Not Opt-Out">
             <p>
-              When you first visit PlanIt, a consent banner is displayed giving you the choice to accept or decline
-              analytics tracking. Your choice controls both Google Analytics 4 and PlanIt's backend feature-event analytics:
+              When you first visit PlanIt, a notice is displayed informing you that the Service uses cookies and
+              platform analytics. Dismissing this notice ("Got it") is an acknowledgment that you have seen it —
+              it does not stop or change data collection, and there is no button to decline or opt out through the
+              notice itself. Both Google Analytics 4 and PlanIt's backend analytics pipeline (Section 2.3) run for
+              every visitor from their first page load, regardless of whether the notice has been dismissed.
             </p>
             <ul className="list-disc list-inside space-y-2 ml-3 mt-2">
-              <li><strong>If you accept:</strong> Google Analytics 4 will collect page-view and session data (subject to Google's Privacy Policy), and PlanIt's backend analytics pipeline will record business events (feature usage, guest actions) as described in Section 2.3. A visitor ID is stored in your browser's localStorage to enable session continuity in the backend analytics data.</li>
-              <li><strong>If you decline:</strong> GA4's consent state is set to 'denied' — no page-view or session data is sent to Google, and no GA4 cookies are set. No visitor ID will be created and no business events will be transmitted to our backend analytics pipeline. Essential functional cookies and localStorage items (authentication tokens, username) continue to operate as these are necessary to provide the Service.</li>
-              <li><strong>Changing your choice:</strong> You can change your analytics preference at any time by clearing your browser's localStorage for this site (which will cause the consent banner to reappear on your next visit), by clearing GA4 cookies, or by contacting us. You can also opt out of Google Analytics tracking globally at tools.google.com/dlpage/gaoptout.</li>
+              <li><strong>Why:</strong> PlanIt relies on the Legitimate Interests basis (Section 4) for platform analytics rather than consent, so that aggregate usage, error, and anti-fraud data is available regardless of whether the notice has been seen.</li>
+              <li><strong>Your options:</strong> You may clear your browser's localStorage and cookies for this site at any time to remove your visitor ID and GA4 cookies, and you can opt out of Google Analytics tracking globally at tools.google.com/dlpage/gaoptout. Clearing storage does not stop a new visitor ID from being created on your next visit.</li>
+              <li><strong>Data subject rights:</strong> If applicable law in your jurisdiction gives you a right to object to or request erasure of this processing, you can exercise it as described in Section 13, notwithstanding the absence of an in-banner opt-out.</li>
             </ul>
-            <p className="mt-3">
-              Note that even if you decline analytics, certain server-side logging (including IP-based rate
-              limiting and security monitoring) continues to operate as a necessary security measure on a legitimate
-              interests basis, as described in Section 4.
-            </p>
           </Section>
 
           <Section number="10" title="Camera Access">
