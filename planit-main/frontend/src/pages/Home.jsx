@@ -586,6 +586,22 @@ const GLOBAL_CSS = `
   }
   .dark-input::placeholder { color:rgba(255,255,255,0.25); }
   .dark-input:focus { border-color:rgba(255,255,255,0.28); }
+
+  /* ── Icon micro-interactions ─────────────────────────────────────── */
+  .feature-icon { transition: transform 0.5s cubic-bezier(0.22,1,0.36,1), background 0.5s ease; }
+  .group:hover .feature-icon { transform: rotate(-8deg) scale(1.12); }
+  .feature-icon svg { transition: transform 0.4s ease; }
+  .group:hover .feature-icon svg { transform: scale(1.08); }
+
+  /* ── Respect reduced-motion preference ───────────────────────────── */
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.001ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.001ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
 `;
 
 function InjectGlobalCSS() {
@@ -763,7 +779,7 @@ function CopyLinkBox({ eventId, subdomain, mode }) {
   );
 }
 
-function Reveal({ children, delay = 0, className = '' }) {
+function Reveal({ children, delay = 0, className = '', direction = 'up' }) {
   const ref = useRef(null);
   const [visible, setVisible] = useState(false);
   useEffect(() => {
@@ -775,19 +791,58 @@ function Reveal({ children, delay = 0, className = '' }) {
     obs.observe(el);
     return () => obs.disconnect();
   }, [delay]);
+  const hiddenTransform = {
+    up:     'translateY(28px)',
+    left:   'translateX(-32px)',
+    right:  'translateX(32px)',
+    scale:  'scale(0.94)',
+  }[direction] || 'translateY(28px)';
   return (
-    <div ref={ref} className={`${className} transition-all duration-700 ease-out ${visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
+    <div
+      ref={ref}
+      className={`${className} transition-all ease-out ${visible ? 'opacity-100' : 'opacity-0'}`}
+      style={{
+        transitionDuration: '800ms',
+        transitionTimingFunction: 'cubic-bezier(0.16,1,0.3,1)',
+        transform: visible ? 'none' : hiddenTransform,
+        willChange: 'transform, opacity',
+      }}
+    >
       {children}
+    </div>
+  );
+}
+
+// A soft, low-opacity gradient seam used between major sections so the page
+// reads as one continuous surface rather than a stack of hard-edged blocks.
+function SectionSeam({ tint = 'indigo' }) {
+  const colors = {
+    indigo: 'rgba(99,102,241,0.5)',
+    orange: 'rgba(249,115,22,0.4)',
+    violet: 'rgba(139,92,246,0.4)',
+    neutral: 'rgba(255,255,255,0.15)',
+  };
+  return (
+    <div aria-hidden="true" className="relative h-px w-full overflow-hidden" style={{ zIndex: 1 }}>
+      <div style={{
+        position: 'absolute', inset: 0, margin: '0 auto', maxWidth: 420, height: 1,
+        background: `linear-gradient(90deg, transparent, ${colors[tint] || colors.indigo}, transparent)`,
+        opacity: 0.6,
+      }} />
     </div>
   );
 }
 
 function SectionHeader({ eyebrow, title, subtitle }) {
   return (
-    <Reveal className="text-center mb-16">
-      {eyebrow && <p className="text-xs font-semibold text-neutral-500 uppercase tracking-widest mb-3">{eyebrow}</p>}
-      <h2 className="font-syne text-3xl sm:text-5xl md:text-7xl font-black text-white mb-5 leading-tight">{title}</h2>
-      {subtitle && <p className="text-xl text-neutral-400 max-w-2xl mx-auto leading-relaxed">{subtitle}</p>}
+    <Reveal className="text-center mb-20">
+      {eyebrow && (
+        <p className="inline-flex items-center gap-2 text-xs font-bold text-neutral-500 uppercase tracking-[0.2em] mb-4">
+          <span className="w-4 h-px bg-neutral-700" />{eyebrow}<span className="w-4 h-px bg-neutral-700" />
+        </p>
+      )}
+      <h2 className="font-syne text-3xl sm:text-5xl md:text-6xl font-black text-white mb-5 leading-[1.05] tracking-tight">{title}</h2>
+      {subtitle && <p className="text-lg sm:text-xl text-neutral-400 max-w-2xl mx-auto leading-relaxed">{subtitle}</p>}
     </Reveal>
   );
 }
@@ -884,7 +939,7 @@ function FeatureCard({ icon: Icon, title, description, delay = 0 }) {
     <Reveal delay={delay}>
       <div className="group relative p-6 sm:p-10 rounded-2xl border border-neutral-800/80 bg-neutral-900/40 hover:border-neutral-600 hover:bg-neutral-800/50 transition-all duration-500 h-full">
         <div className="mb-5">
-          <div className="w-14 h-14 rounded-2xl bg-neutral-800 flex items-center justify-center group-hover:bg-white transition-all duration-500 group-hover:scale-110">
+          <div className="feature-icon w-14 h-14 rounded-2xl bg-neutral-800 flex items-center justify-center group-hover:bg-white group-hover:shadow-[0_0_24px_rgba(99,102,241,0.35)]">
             <Icon className="w-7 h-7 text-neutral-400 group-hover:text-neutral-900 transition-colors duration-500" />
           </div>
         </div>
@@ -895,12 +950,13 @@ function FeatureCard({ icon: Icon, title, description, delay = 0 }) {
   );
 }
 
-function TestimonialCard({ quote, author, role, event, delay = 0 }) {
+function TestimonialCard({ quote, author, role, event, delay = 0, direction = 'up' }) {
   return (
-    <Reveal delay={delay}>
-      <div className="p-8 rounded-2xl border border-neutral-800 bg-neutral-900/50 hover:border-neutral-700 hover:bg-neutral-800/50 transition-all duration-500 h-full">
+    <Reveal delay={delay} direction={direction}>
+      <div className="group relative p-8 rounded-2xl border border-neutral-800 bg-neutral-900/50 hover:border-neutral-700 hover:bg-neutral-800/50 hover:-translate-y-1.5 hover:shadow-[0_20px_50px_rgba(0,0,0,0.4)] transition-all duration-500 h-full">
+        <span aria-hidden="true" className="absolute top-6 right-7 font-syne text-5xl font-black text-neutral-800 group-hover:text-neutral-700 transition-colors duration-500 select-none leading-none">"</span>
         <div className="flex items-start gap-4 mb-5">
-          <div className="flex-shrink-0 w-12 h-12 rounded-2xl bg-white flex items-center justify-center">
+          <div className="flex-shrink-0 w-12 h-12 rounded-2xl bg-white flex items-center justify-center ring-1 ring-white/10 group-hover:ring-2 group-hover:ring-indigo-400/40 transition-all duration-500">
             <span className="text-base font-bold text-neutral-900">{author.charAt(0)}</span>
           </div>
           <div>
@@ -909,8 +965,7 @@ function TestimonialCard({ quote, author, role, event, delay = 0 }) {
             <p className="text-xs text-neutral-600 mt-0.5">{event}</p>
           </div>
         </div>
-        <p className="text-sm text-neutral-300 leading-relaxed mb-4">"{quote}"</p>
-
+        <p className="relative text-sm text-neutral-300 leading-relaxed mb-1">"{quote}"</p>
       </div>
     </Reveal>
   );
@@ -2068,6 +2123,14 @@ export default function Home() {
   const heroImage       = wlPages?.home?.heroImageUrl|| '';
   const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [navScrolled, setNavScrolled] = useState(false);
+  // Nav starts transparent over the hero, then picks up a blurred surface once scrolled
+  useEffect(() => {
+    const onScroll = () => setNavScrolled(window.scrollY > 48);
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
   const [mode, setMode] = useState('standard');
   const [formData, setFormData] = useState({
     subdomain: '', title: '', description: '', date: '', timezone: getUserTimezone(), location: '',
@@ -2299,11 +2362,16 @@ export default function Home() {
 
       {/* Nav */}
       <header
-        className="sticky top-0 z-50 border-b transition-colors duration-500"
-        style={selectedBranch === 'venue'
-          ? { background: 'rgba(10,6,3,0.97)', borderColor: 'rgba(249,115,22,0.20)', backdropFilter: 'blur(24px)' }
-          : { background: 'rgba(6,6,12,0.96)', borderColor: 'rgba(38,38,38,0.6)',    backdropFilter: 'blur(24px)' }
-        }
+        className="sticky top-0 z-50 border-b"
+        style={{
+          transition: 'background 0.5s ease, border-color 0.5s ease, backdrop-filter 0.5s ease, box-shadow 0.5s ease',
+          backdropFilter: navScrolled ? 'blur(24px)' : 'blur(0px)',
+          boxShadow: navScrolled ? '0 8px 32px rgba(0,0,0,0.35)' : 'none',
+          ...(selectedBranch === 'venue'
+            ? { background: navScrolled ? 'rgba(10,6,3,0.97)' : 'rgba(10,6,3,0)', borderColor: navScrolled ? 'rgba(249,115,22,0.20)' : 'rgba(249,115,22,0)' }
+            : { background: navScrolled ? 'rgba(6,6,12,0.96)' : 'rgba(6,6,12,0)', borderColor: navScrolled ? 'rgba(38,38,38,0.6)' : 'rgba(38,38,38,0)' }
+          ),
+        }}
       >
         <div className="max-w-screen-xl mx-auto px-4 sm:px-8 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -2433,6 +2501,12 @@ export default function Home() {
       <main className="relative" style={{ zIndex: 2, overflowX: 'hidden', maxWidth: '100vw' }}>
         {/* HERO — redesigned */}
         <section id="hero-top" className="relative min-h-screen flex items-center" style={{ overflow: 'hidden', maxWidth: '100vw' }}>
+          {/* Deep-space layer — subtle nod to PlanIt → Planet, hero only */}
+          {!isWL && (
+            <div aria-hidden="true" className="absolute inset-0 pointer-events-none" style={{ zIndex: 0, opacity: 0.55 }}>
+              <StarBackground fixed={false} forceActive={true} />
+            </div>
+          )}
           {/* Layered background system */}
           {(isWL && heroImage)
             ? <div className="absolute inset-0" style={{ backgroundImage: `url(${heroImage})`, backgroundSize: 'cover', backgroundPosition: 'center', opacity: 0.2 }} />
@@ -2576,7 +2650,7 @@ export default function Home() {
             </Reveal>
 
             {/* Feature comparison grid */}
-            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-px bg-neutral-800/30 rounded-3xl overflow-hidden mb-20">
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-px bg-neutral-800/30 rounded-3xl overflow-hidden mb-24">
               {[
                 { icon: MessageSquare, label: 'Real-time team chat',  desc: 'Your planning channel. Typing indicators, persistent history, instant delivery.' },
                 { icon: ListChecks,    label: 'Shared task lists',    desc: 'Assign, prioritize, and track every action item from one shared view.' },
@@ -2588,89 +2662,97 @@ export default function Home() {
                 { icon: Shield,        label: 'Anti-fraud check-in',  desc: 'Duplicate detection, trust scoring, and manager override built in.' },
                 { icon: UtensilsCrossed, label: 'Live floor manager', desc: 'For restaurants: visual floor map, walk-in waitlist, and live table status.' },
               ].map((f, i) => (
-                <Reveal key={f.label} delay={i * 40}>
-                  <div className="group p-7 bg-neutral-950 hover:bg-neutral-900 transition-colors duration-300 h-full">
-                    <div className="w-10 h-10 rounded-xl bg-neutral-800 border border-neutral-700/50 flex items-center justify-center mb-4 group-hover:bg-white group-hover:border-white transition-all duration-400">
-                      <f.icon className="w-5 h-5 text-neutral-400 group-hover:text-neutral-900 transition-colors duration-400" />
+                <Reveal key={f.label} delay={(i % 3) * 60} direction={i % 3 === 0 ? 'left' : i % 3 === 2 ? 'right' : 'up'}>
+                  <div className="group relative p-7 sm:p-9 bg-neutral-950 hover:bg-neutral-900 transition-all duration-400 h-full overflow-hidden">
+                    <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"
+                      style={{ background: 'radial-gradient(circle at 20% 0%, rgba(99,102,241,0.08), transparent 60%)' }} />
+                    <div className="relative">
+                      <div className="feature-icon w-11 h-11 rounded-xl bg-neutral-800 border border-neutral-700/50 flex items-center justify-center mb-5 group-hover:bg-white group-hover:border-white group-hover:shadow-[0_0_20px_rgba(99,102,241,0.3)]">
+                        <f.icon className="w-5 h-5 text-neutral-400 group-hover:text-neutral-900 transition-colors duration-400" />
+                      </div>
+                      <div className="text-sm font-bold text-white mb-2 tracking-tight">{f.label}</div>
+                      <div className="text-xs text-neutral-500 leading-relaxed">{f.desc}</div>
                     </div>
-                    <div className="text-sm font-bold text-white mb-1.5">{f.label}</div>
-                    <div className="text-xs text-neutral-500 leading-relaxed">{f.desc}</div>
                   </div>
                 </Reveal>
               ))}
             </div>
 
             {/* Stats row */}
-            <Reveal>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-20">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-24">
                 {[
                   { value: '< 60s',   label: 'To create an event',    sub: 'No account needed' },
                   { value: '∞',       label: 'Team members',          sub: 'No per-seat caps' },
                   { value: '3',       label: 'Event modes',           sub: 'Standard, Enterprise, Venue' },
                   { value: '7 days',  label: 'Post-event data',       sub: 'Auto-deleted after' },
-                ].map((s) => (
-                  <div key={s.label} className="stat-card text-center p-6 rounded-2xl cursor-default"
-                    style={{ background:'rgba(255,255,255,0.025)', backdropFilter:'blur(12px)' }}>
-                    <div className="font-syne text-3xl font-black text-white mb-1">{s.value}</div>
-                    <div className="text-xs font-bold text-neutral-300 mb-0.5">{s.label}</div>
-                    <div className="text-xs text-neutral-600">{s.sub}</div>
-                  </div>
+                ].map((s, i) => (
+                  <Reveal key={s.label} delay={i * 70}>
+                    <div className="stat-card text-center p-6 sm:p-7 rounded-2xl cursor-default h-full"
+                      style={{ background:'rgba(255,255,255,0.025)', backdropFilter:'blur(12px)' }}>
+                      <div className="font-syne text-2xl sm:text-3xl font-black text-white mb-1.5 tracking-tight">{s.value}</div>
+                      <div className="text-xs font-bold text-neutral-300 mb-1">{s.label}</div>
+                      <div className="text-xs text-neutral-600">{s.sub}</div>
+                    </div>
+                  </Reveal>
                 ))}
-              </div>
-            </Reveal>
+            </div>
 
             {/* Two paths CTA */}
-            <Reveal>
-              <div className="grid md:grid-cols-2 gap-4">
+            <div className="grid md:grid-cols-2 gap-4">
+                <Reveal direction="left">
                 <a href="#planit-events"
                   onClick={(e) => { e.preventDefault(); selectBranch('events'); }}
-                  className="group relative flex flex-col p-8 rounded-3xl border border-neutral-800 hover:border-indigo-500/40 transition-all duration-400 overflow-hidden"
+                  className="group relative flex flex-col p-8 sm:p-10 rounded-3xl border border-neutral-800 hover:border-indigo-500/40 hover:-translate-y-1 transition-all duration-500 overflow-hidden h-full"
                   style={{ background: 'rgba(99,102,241,0.03)' }}>
                   <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500"
                     style={{ background:'radial-gradient(ellipse at 0% 50%, rgba(99,102,241,0.08) 0%, transparent 60%)' }} />
                   <div className="relative">
-                    <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl border border-indigo-500/20 bg-indigo-500/8 mb-5">
+                    <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl border border-indigo-500/20 bg-indigo-500/8 mb-6">
                       <Calendar className="w-3.5 h-3.5 text-indigo-400" />
                       <span className="text-xs font-bold text-indigo-400 uppercase tracking-wider">PlanIt Events</span>
                     </div>
-                    <h3 className="font-syne text-2xl font-black text-white mb-3 leading-tight">
+                    <h3 className="font-syne text-2xl sm:text-3xl font-black text-white mb-3 leading-tight">
                       Planning an event?<br />Start here.
                     </h3>
-                    <p className="text-sm text-neutral-500 leading-relaxed mb-6">
+                    <p className="text-sm text-neutral-500 leading-relaxed mb-7 max-w-sm">
                       Weddings, conferences, corporate retreats, galas. The full planning workspace — chat, tasks, RSVP, QR check-in, all in one place.
                     </p>
                     <div className="flex items-center gap-2 text-sm font-bold text-indigo-400 group-hover:text-indigo-300 transition-colors">
-                      Get started free <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform duration-300" />
+                      Get started free <ArrowRight className="w-4 h-4 group-hover:translate-x-1.5 transition-transform duration-300" />
                     </div>
                   </div>
                 </a>
+                </Reveal>
 
+                <Reveal direction="right">
                 <a href="#planit-venue"
                   onClick={(e) => { e.preventDefault(); selectBranch('venue'); }}
-                  className="group relative flex flex-col p-8 rounded-3xl border border-neutral-800 hover:border-orange-500/40 transition-all duration-400 overflow-hidden"
+                  className="group relative flex flex-col p-8 sm:p-10 rounded-3xl border border-neutral-800 hover:border-orange-500/40 hover:-translate-y-1 transition-all duration-500 overflow-hidden h-full"
                   style={{ background: 'rgba(249,115,22,0.02)' }}>
                   <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500"
                     style={{ background:'radial-gradient(ellipse at 100% 50%, rgba(249,115,22,0.07) 0%, transparent 60%)' }} />
                   <div className="relative">
-                    <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl border border-orange-500/25 bg-orange-500/8 mb-5">
+                    <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl border border-orange-500/25 bg-orange-500/8 mb-6">
                       <UtensilsCrossed className="w-3.5 h-3.5 text-orange-400" />
                       <span className="text-xs font-bold text-orange-400 uppercase tracking-wider">PlanIt Venue</span>
                     </div>
-                    <h3 className="font-syne text-2xl font-black text-white mb-3 leading-tight">
+                    <h3 className="font-syne text-2xl sm:text-3xl font-black text-white mb-3 leading-tight">
                       Running a restaurant<br />or venue floor?
                     </h3>
-                    <p className="text-sm text-neutral-500 leading-relaxed mb-6">
+                    <p className="text-sm text-neutral-500 leading-relaxed mb-7 max-w-sm">
                       Live floor map, walk-in waitlist, QR reservations, one-tap seating. Everything front-of-house needs, every service.
                     </p>
                     <div className="flex items-center gap-2 text-sm font-bold text-orange-400 group-hover:text-orange-300 transition-colors">
-                      Set up your venue <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform duration-300" />
+                      Set up your venue <ArrowRight className="w-4 h-4 group-hover:translate-x-1.5 transition-transform duration-300" />
                     </div>
                   </div>
                 </a>
-              </div>
-            </Reveal>
+                </Reveal>
+            </div>
           </div>
         </section>{/* end SOCIAL PROOF STRIP */}
+
+        <SectionSeam tint="indigo" />
 
         {/* ═══════════════════════════════════════════════════════════
             PLANIT EVENTS — its own "page" section
@@ -2831,12 +2913,12 @@ export default function Home() {
                   { icon: QrCode,        label: 'QR check-in',           desc: 'Professional guest check-in with real-time attendance.' },
                   { icon: Bot,           label: 'Claude AI co-pilot',    desc: 'Manage your whole event by talking to Claude. Add guests, check-ins, announcements — conversationally.' },
                 ].map((f, i) => (
-                  <Reveal key={f.label} delay={i * 60}>
-                    <div className="feature-card group p-5 rounded-2xl" style={{ background: 'rgba(255,255,255,0.02)' }}>
-                      <div className="w-9 h-9 rounded-xl bg-neutral-800 border border-neutral-700/50 flex items-center justify-center mb-3 group-hover:bg-neutral-700 transition-colors">
+                  <Reveal key={f.label} delay={(i % 3) * 60} direction={i % 3 === 0 ? 'left' : i % 3 === 2 ? 'right' : 'up'}>
+                    <div className="feature-card group p-6 rounded-2xl h-full" style={{ background: 'rgba(255,255,255,0.02)' }}>
+                      <div className="feature-icon w-9 h-9 rounded-xl bg-neutral-800 border border-neutral-700/50 flex items-center justify-center mb-4 group-hover:bg-neutral-700">
                         <f.icon className="w-4 h-4 text-neutral-400" />
                       </div>
-                      <div className="text-sm font-bold text-white mb-1">{f.label}</div>
+                      <div className="text-sm font-bold text-white mb-1.5 tracking-tight">{f.label}</div>
                       <div className="text-xs text-neutral-400 leading-relaxed">{f.desc}</div>
                     </div>
                   </Reveal>
@@ -2854,7 +2936,7 @@ export default function Home() {
                   role="link"
                   tabIndex={0}
                   onKeyDown={(e) => { if (e.key === 'Enter') navigate('/demo/invite'); }}
-                  className="group relative flex flex-col sm:flex-row items-stretch gap-0 rounded-3xl border border-indigo-500/20 overflow-hidden transition-all duration-400 hover:border-indigo-500/40 cursor-pointer"
+                  className="group relative flex flex-col sm:flex-row items-stretch gap-0 rounded-3xl border border-indigo-500/20 overflow-hidden transition-all duration-400 hover:border-indigo-500/40 hover:-translate-y-1 hover:shadow-[0_24px_60px_rgba(0,0,0,0.35)] cursor-pointer"
                   style={{ background: 'rgba(99,102,241,0.04)' }}
                 >
                   <div className="flex-1 p-8 sm:p-10">
@@ -2905,7 +2987,7 @@ export default function Home() {
           <div className="border-t border-neutral-800/40">
             <div className="max-w-screen-xl mx-auto px-6 sm:px-10 py-12">
               <Reveal>
-                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 p-6 rounded-2xl border border-neutral-800" style={{ background: 'rgba(255,255,255,0.02)' }}>
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 p-6 rounded-2xl border border-neutral-800 transition-all duration-400 hover:border-neutral-700 hover:-translate-y-0.5" style={{ background: 'rgba(255,255,255,0.02)' }}>
                   <div className="flex items-center gap-4">
                     <div className="w-10 h-10 rounded-xl bg-neutral-800 border border-neutral-700 flex items-center justify-center flex-shrink-0">
                       <Zap className="w-5 h-5 text-neutral-400" />
@@ -3097,12 +3179,12 @@ export default function Home() {
                   { icon: CheckCircle2, label: 'One-tap seat next',      desc: 'Auto-picks the tightest-fit table and seats the next waiting party.' },
                   { icon: Clock,        label: 'Data never expires',     desc: 'Your floor plan and history persist forever. No cleanup, no resets.' },
                 ].map((f, i) => (
-                  <Reveal key={f.label} delay={i * 60}>
-                    <div className="group p-5 rounded-2xl border border-orange-500/10 hover:border-orange-500/25 transition-all duration-300" style={{ background: 'rgba(249,115,22,0.025)' }}>
-                      <div className="w-9 h-9 rounded-xl bg-orange-500/10 border border-orange-500/20 flex items-center justify-center mb-3 group-hover:bg-orange-500/15 transition-colors">
+                  <Reveal key={f.label} delay={(i % 3) * 60} direction={i % 3 === 0 ? 'left' : i % 3 === 2 ? 'right' : 'up'}>
+                    <div className="group p-6 rounded-2xl border border-orange-500/10 hover:border-orange-500/25 hover:-translate-y-1 hover:shadow-[0_16px_40px_rgba(0,0,0,0.35)] transition-all duration-400 h-full" style={{ background: 'rgba(249,115,22,0.025)' }}>
+                      <div className="w-9 h-9 rounded-xl bg-orange-500/10 border border-orange-500/20 flex items-center justify-center mb-4 transition-all duration-500 group-hover:bg-orange-500/20 group-hover:scale-110 group-hover:-rotate-6">
                         <f.icon className="w-4 h-4 text-orange-400" />
                       </div>
-                      <div className="text-sm font-bold text-white mb-1">{f.label}</div>
+                      <div className="text-sm font-bold text-white mb-1.5 tracking-tight">{f.label}</div>
                       <div className="text-xs text-neutral-500 leading-relaxed">{f.desc}</div>
                     </div>
                   </Reveal>
@@ -3120,21 +3202,21 @@ export default function Home() {
           <div className="max-w-screen-xl mx-auto px-4 sm:px-8">
             <SectionHeader eyebrow="Testimonials" title="Trusted by event planners" subtitle="See how teams are using PlanIt to execute flawless events" />
             <div className="grid md:grid-cols-3 gap-6">
-              <TestimonialCard quote="PlanIt transformed how we coordinated our annual company conference. The task management kept our 15-person planning team organized for 6 months of prep. The QR check-in on event day was seamless for 300 attendees." author="Michael Chen" role="Senior Event Coordinator" event="Tech Summit 2025" delay={0} />
-              <TestimonialCard quote="As a wedding planner, I've used every tool out there. PlanIt stands out because it doesn't require my couples or vendors to create accounts. We used it for 4 months of planning." author="Sarah Williams" role="Lead Wedding Planner" event="Williams-Martinez Wedding" delay={120} />
-              <TestimonialCard quote="Our nonprofit used PlanIt to coordinate a 500-person fundraising gala. The unlimited participant feature meant we could include our entire board, 30 volunteers, all vendors, and staff." author="David Martinez" role="Development Director" event="Charity Gala 2025" delay={240} />
+              <TestimonialCard direction="left" quote="PlanIt transformed how we coordinated our annual company conference. The task management kept our 15-person planning team organized for 6 months of prep. The QR check-in on event day was seamless for 300 attendees." author="Michael Chen" role="Senior Event Coordinator" event="Tech Summit 2025" delay={0} />
+              <TestimonialCard direction="up" quote="As a wedding planner, I've used every tool out there. PlanIt stands out because it doesn't require my couples or vendors to create accounts. We used it for 4 months of planning." author="Sarah Williams" role="Lead Wedding Planner" event="Williams-Martinez Wedding" delay={120} />
+              <TestimonialCard direction="right" quote="Our nonprofit used PlanIt to coordinate a 500-person fundraising gala. The unlimited participant feature meant we could include our entire board, 30 volunteers, all vendors, and staff." author="David Martinez" role="Development Director" event="Charity Gala 2025" delay={240} />
             </div>
           </div>
         </section>
 
-        {/* VENUE TESTIMONIALS */}
+        <SectionSeam tint="violet" />
         <section className="py-32 border-t border-orange-500/8" style={{ display: selectedBranch === 'venue' ? 'block' : 'none' }}>
           <div className="max-w-screen-xl mx-auto px-4 sm:px-8">
             <SectionHeader eyebrow="Testimonials" title="Trusted by restaurant floors" subtitle="See how venues are using PlanIt to run service, night after night" />
             <div className="grid md:grid-cols-3 gap-6">
-              <TestimonialCard quote="The floor map alone paid for itself in week one. Our host stand used to be a legal pad — now every server sees table status update live from their phone." author="Michael Chen" role="General Manager" event="Taverna Roma" delay={0} />
-              <TestimonialCard quote="Walk-ins used to mean guessing at wait times. Now guests scan a QR at the door, see the real queue, and we seat the next table with one tap." author="Sarah Williams" role="Front of House Manager" event="The Oak Room" delay={120} />
-              <TestimonialCard quote="Our floor history just sits there — no resets, no cleanup. We can look back at any night and see exactly how service ran." author="David Martinez" role="Operations Lead" event="Bellwood Bistro" delay={240} />
+              <TestimonialCard direction="left" quote="The floor map alone paid for itself in week one. Our host stand used to be a legal pad — now every server sees table status update live from their phone." author="Michael Chen" role="General Manager" event="Taverna Roma" delay={0} />
+              <TestimonialCard direction="up" quote="Walk-ins used to mean guessing at wait times. Now guests scan a QR at the door, see the real queue, and we seat the next table with one tap." author="Sarah Williams" role="Front of House Manager" event="The Oak Room" delay={120} />
+              <TestimonialCard direction="right" quote="Our floor history just sits there — no resets, no cleanup. We can look back at any night and see exactly how service ran." author="David Martinez" role="Operations Lead" event="Bellwood Bistro" delay={240} />
             </div>
           </div>
         </section>
@@ -3145,7 +3227,7 @@ export default function Home() {
             <div className="flex flex-col lg:flex-row items-center gap-16">
               {/* Left: copy */}
               <div className="flex-1">
-                <Reveal>
+                <Reveal direction="left">
                   <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full mb-6"
                     style={{ border: '1px solid rgba(139,92,246,0.3)', background: 'rgba(139,92,246,0.08)' }}>
                     <Bot size={13} className="text-violet-400" />
@@ -3176,12 +3258,12 @@ export default function Home() {
                       href="https://claude.ai/customize/connectors?modal=add-custom-connector&mcpName=PlanIt&mcpServerUrl=https://planit-mcp.onrender.com/mcp"
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex items-center gap-2 px-5 py-3 rounded-xl text-white font-semibold text-sm transition-colors"
+                      className="group inline-flex items-center gap-2 px-5 py-3 rounded-xl text-white font-semibold text-sm transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_12px_28px_rgba(124,58,237,0.35)]"
                       style={{ background: '#7c3aed' }}
                       onMouseEnter={e => e.currentTarget.style.background = '#6d28d9'}
                       onMouseLeave={e => e.currentTarget.style.background = '#7c3aed'}
                     >
-                      <Bot size={16} /> Add to Claude <ArrowUpRight size={14} />
+                      <Bot size={16} /> Add to Claude <ArrowUpRight size={14} className="transition-transform duration-300 group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
                     </a>
                     <a href="/help#claude"
                       className="inline-flex items-center gap-2 px-5 py-3 rounded-xl text-neutral-300 text-sm transition-colors hover:text-white"
@@ -3198,8 +3280,8 @@ export default function Home() {
               </div>
 
               {/* Right: chat mockup */}
-              <Reveal delay={120} className="flex-1 max-w-md w-full">
-                <div className="rounded-2xl overflow-hidden" style={{ border: '1px solid rgba(255,255,255,0.08)', background: 'rgba(14,14,22,0.9)' }}>
+              <Reveal delay={120} direction="right" className="flex-1 max-w-md w-full">
+                <div className="rounded-2xl overflow-hidden transition-all duration-500 hover:-translate-y-1 hover:shadow-[0_24px_60px_rgba(124,58,237,0.15)]" style={{ border: '1px solid rgba(255,255,255,0.08)', background: 'rgba(14,14,22,0.9)' }}>
                   {/* Chrome */}
                   <div className="flex items-center gap-2 px-4 py-3" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)', background: 'rgba(10,10,18,0.95)' }}>
                     <div className="flex gap-1.5">
@@ -3286,8 +3368,8 @@ export default function Home() {
             <div className={selectedBranch === 'venue' ? 'grid max-w-lg mx-auto gap-6' : 'grid md:grid-cols-2 gap-6'}>
               {/* Discover Card — events only */}
               {selectedBranch !== 'venue' && (
-              <Reveal delay={0}>
-                <a href="/discover" className="group relative block p-8 rounded-3xl border border-neutral-800 bg-neutral-900/50 hover:border-neutral-500 hover:bg-neutral-800/60 transition-all duration-500 overflow-hidden">
+              <Reveal delay={0} direction="left">
+                <a href="/discover" className="group relative block p-8 sm:p-10 rounded-3xl border border-neutral-800 bg-neutral-900/50 hover:border-neutral-500 hover:bg-neutral-800/60 hover:-translate-y-1.5 hover:shadow-[0_24px_60px_rgba(0,0,0,0.4)] transition-all duration-500 overflow-hidden h-full">
                   <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500"
                     style={{ background: 'radial-gradient(ellipse at top left, rgba(80,60,200,0.12) 0%, transparent 65%)' }} />
                   <div className="relative">
@@ -3306,8 +3388,8 @@ export default function Home() {
               )}
 
               {/* Status Card */}
-              <Reveal delay={120}>
-                <a href="/status" className="group relative block p-8 rounded-3xl border border-neutral-800 bg-neutral-900/50 hover:border-neutral-500 hover:bg-neutral-800/60 transition-all duration-500 overflow-hidden">
+              <Reveal delay={120} direction="right">
+                <a href="/status" className="group relative block p-8 sm:p-10 rounded-3xl border border-neutral-800 bg-neutral-900/50 hover:border-neutral-500 hover:bg-neutral-800/60 hover:-translate-y-1.5 hover:shadow-[0_24px_60px_rgba(0,0,0,0.4)] transition-all duration-500 overflow-hidden h-full">
                   <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500"
                     style={{ background: 'radial-gradient(ellipse at top right, rgba(20,180,80,0.10) 0%, transparent 65%)' }} />
                   <div className="relative">
@@ -3334,19 +3416,20 @@ export default function Home() {
         </section>
 
         {/* CREATE EVENT */}
-        <section id="create" className="py-28 border-t border-neutral-800/40" style={{ display: selectedBranch ? 'block' : 'none' }}>
+        <SectionSeam tint="neutral" />
+        <section id="create" className="py-28 sm:py-32 border-t border-neutral-800/40" style={{ display: selectedBranch ? 'block' : 'none' }}>
           <div className="max-w-8xl mx-auto px-4 sm:px-6">
             <div className="grid lg:grid-cols-2 gap-10 lg:gap-20 items-start">
 
               <div className="lg:sticky lg:top-24">
-                <Reveal>
+                <Reveal direction="left">
                   <div className="mb-10">
-                    <h2 className="font-syne text-5xl font-black text-white mb-6 tracking-tight leading-tight">
+                    <h2 className="font-syne font-black text-white mb-6 tracking-tight leading-[1.05]" style={{ fontSize: 'clamp(2.2rem, 4vw, 3.2rem)' }}>
                       {created
                         ? mode === 'table-service' ? 'Venue created!' : 'Event created!'
                         : mode === 'table-service' ? 'Set up your venue' : mode === 'enterprise' ? 'Launch an enterprise event' : 'Start planning your event'}
                     </h2>
-                    <p className="text-xl text-neutral-400 leading-relaxed">
+                    <p className="text-lg sm:text-xl text-neutral-400 leading-relaxed">
                       {created
                         ? mode === 'table-service'
                           ? 'Your floor management system is live. Set up your seating layout and go.'
@@ -3364,8 +3447,8 @@ export default function Home() {
                   <Reveal delay={100}>
                     <div className="grid grid-cols-3 gap-2 sm:gap-4 mb-10">
                       {[{ icon: Clock, label: '60 seconds' }, { icon: Shield, label: 'Secure' }, { icon: CheckCircle2, label: 'Free forever' }].map((item, i) => (
-                        <div key={i} className="text-center p-5 bg-neutral-900/50 rounded-2xl border border-neutral-800 hover:border-neutral-700 hover:bg-neutral-800/50 transition-all duration-300 hover:scale-105">
-                          <item.icon className="w-6 h-6 text-neutral-400 mx-auto mb-2" />
+                        <div key={i} className="group text-center p-5 bg-neutral-900/50 rounded-2xl border border-neutral-800 hover:border-neutral-700 hover:bg-neutral-800/50 hover:-translate-y-1 transition-all duration-400">
+                          <item.icon className="w-6 h-6 text-neutral-400 mx-auto mb-2 transition-transform duration-400 group-hover:scale-110 group-hover:text-neutral-200" />
                           <p className="text-sm font-semibold text-neutral-300">{item.label}</p>
                         </div>
                       ))}
@@ -3756,41 +3839,42 @@ export default function Home() {
         </section>
 
         {/* FOOTER */}
-        <footer className="border-t border-neutral-800/50" style={{ background: 'rgba(6,6,12,0.95)' }}>
-          <div className="max-w-screen-xl mx-auto px-4 sm:px-8 py-14 sm:py-20">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-8 sm:gap-12 mb-12">
+        <footer className="border-t border-neutral-800/50 relative overflow-hidden" style={{ background: 'rgba(6,6,12,0.95)' }}>
+          <div aria-hidden="true" className="absolute inset-x-0 top-0 h-px" style={{ background: 'linear-gradient(90deg, transparent, rgba(99,102,241,0.35), transparent)' }} />
+          <div className="max-w-screen-xl mx-auto px-4 sm:px-8 py-16 sm:py-24">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-10 sm:gap-12 mb-14">
               <div>
                 <div className="flex items-center gap-3 mb-5">
                   {isWL && wlLogo
                     ? <img src={wlLogo} alt={wlName} className="h-8 object-contain" />
                     : <><div className="w-10 h-10 rounded-2xl bg-neutral-800 border border-neutral-700 flex items-center justify-center"><Calendar className="w-5 h-5 text-neutral-300" /></div>
-                       <span className="font-black text-xl text-white">{isWL ? wlName : 'PlanIt'}</span></>
+                       <span className="font-syne font-black text-xl text-white tracking-tight">{isWL ? wlName : 'PlanIt'}</span></>
                   }
                 </div>
-                <p className="text-sm text-neutral-500 leading-relaxed mb-4">{isWL ? '' : 'The ultimate planning hub for event teams. Plan smart, execute flawlessly.'}</p>
+                <p className="text-sm text-neutral-500 leading-relaxed mb-4 max-w-xs">{isWL ? '' : 'The ultimate planning hub for event teams. Plan smart, execute flawlessly.'}</p>
                 <p className="text-xs text-neutral-600">Built by Aakshat Hariharan</p>
               </div>
               <div>
                 <h3 className="text-xs font-bold text-neutral-500 mb-5 uppercase tracking-wider">Product</h3>
-                <ul className="space-y-3 text-sm text-neutral-500">
+                <ul className="space-y-3.5 text-sm text-neutral-500">
                   {[['Features', '#features'], ['Claude Integration', '/help#claude'], ['Discover', '/discover'], ['Blog', '/blog'], ['Status', '/status'], ['Help', '/help'], ['Get Started', '#create'], ['License', '/license'], ['Credits', '/credits']].map(([l, h]) => (
-                    <li key={l}><a href={h} className="hover:text-neutral-200 transition-colors">{l}</a></li>
+                    <li key={l}><a href={h} className="nav-link inline-block hover:text-neutral-200 transition-colors duration-200">{l}</a></li>
                   ))}
                 </ul>
               </div>
               <div>
                 <h3 className="text-xs font-bold text-neutral-500 mb-5 uppercase tracking-wider">Company</h3>
-                <ul className="space-y-3 text-sm text-neutral-500">
+                <ul className="space-y-3.5 text-sm text-neutral-500">
                   {[['About PlanIt', '/about'], ['Blog & Guides', '/blog'], ['Terms of Service', '/terms'], ['Privacy Policy', '/privacy'], ['License', '/license'], ['Credits', '/credits']].map(([l, h]) => (
-                    <li key={l}><a href={h} className="hover:text-neutral-200 transition-colors">{l}</a></li>
+                    <li key={l}><a href={h} className="nav-link inline-block hover:text-neutral-200 transition-colors duration-200">{l}</a></li>
                   ))}
                 </ul>
               </div>
               <div>
                 <h3 className="text-xs font-bold text-neutral-500 mb-5 uppercase tracking-wider">Connect</h3>
-                <ul className="space-y-3 text-sm text-neutral-500">
+                <ul className="space-y-3.5 text-sm text-neutral-500">
                   {[['Contact / Support', '/support'], ['Wall of Supporters', '/support/wall'], ['System Status', '/status'], ['Help Center', '/help']].map(([l, h]) => (
-                    <li key={l}><a href={h} className="hover:text-neutral-200 transition-colors">{l}</a></li>
+                    <li key={l}><a href={h} className="nav-link inline-block hover:text-neutral-200 transition-colors duration-200">{l}</a></li>
                   ))}
                 </ul>
               </div>
