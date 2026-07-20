@@ -32,7 +32,7 @@ function fmtTime(d) {
 
 export default function WLHome() {
   const navigate = useNavigate();
-  const { wl } = useWhiteLabel();
+  const { wl, resolved } = useWhiteLabel();
 
   const branding  = wl?.branding  || {};
   const pages     = wl?.pages     || {};
@@ -46,17 +46,28 @@ export default function WLHome() {
   const company  = branding.companyName  || wl?.clientName || 'Welcome';
   const logo     = branding.logoUrl      || null;
 
-  // If the owner linked a table service event, redirect the home page straight
-  // to that event's floor/reservation view instead of showing the events grid.
-  const linkedEventId = home.tableServiceEventId?.trim();
-  useEffect(() => {
-    if (linkedEventId) {
-      navigate(`/e/${linkedEventId}/reserve`, { replace: true });
-    }
-  }, [linkedEventId]);
+  // If the owner linked a homepage event, redirect straight to it instead of
+  // showing the events grid. The backend resolves the linked event's mode
+  // (table service vs. standard) at /whitelabel/resolve time and hands it
+  // back as wl.linkedEventKind, so we route to the right page for either
+  // a restaurant/venue (reservation floor) or a regular party/RSVP event
+  // (event space) without guessing on the client.
+  const linkedEventId   = home.tableServiceEventId?.trim();
+  const linkedEventKind = wl?.linkedEventKind; // 'table_service' | 'standard' | null (null once resolved = not found)
+  const linkedEventNotFound = resolved && !!linkedEventId && !linkedEventKind;
 
-  // Don't render the rest while redirecting
-  if (linkedEventId) return null;
+  useEffect(() => {
+    if (!resolved || !linkedEventId || !linkedEventKind) return;
+    const dest = linkedEventKind === 'table_service'
+      ? `/e/${linkedEventId}/reserve`
+      : `/e/${linkedEventId}`;
+    navigate(dest, { replace: true });
+  }, [resolved, linkedEventId, linkedEventKind]);
+
+  // Don't render the rest while we're still resolving or about to redirect —
+  // but if the linked event turned out not to exist (deleted, typo, etc.),
+  // fall through and show the normal events grid instead of a blank screen.
+  if (linkedEventId && !linkedEventNotFound) return null;
 
   const headline    = home.headline    || `Welcome to ${company}`;
   const subheadline = home.subheadline || 'Browse and book upcoming events.';
