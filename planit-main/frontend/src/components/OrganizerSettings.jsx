@@ -3,7 +3,7 @@ import {
  Settings, X, Users, MessageSquare, BarChart3, FileText,
  Calendar, Save, Lock, Globe, Clock, CheckCircle, AlertTriangle,
  ChevronDown, ChevronUp, Info, Webhook, Copy, Trash2, Plus, RefreshCw,
- Image, Palette, Tag, Upload, Bell, UserCheck, UserX
+ Image, Palette, Tag, Upload, Bell, UserCheck, UserX, Sliders
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { eventAPI, fileAPI } from '../services/api';
@@ -15,10 +15,10 @@ const API = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 // ─── Toggle row component ─────────────────────────────────────────────────────
 function Toggle({ label, description, checked, onChange, disabled }) {
  return (
- <div className={`flex items-center justify-between py-3 ${disabled ? 'opacity-50' : ''}`}>
- <div className="flex-1 min-w-0 pr-4">
+ <div className={`flex items-center justify-between py-3.5 ${disabled ? 'opacity-50' : ''}`}>
+ <div className="flex-1 min-w-0 pr-6">
  <p className="text-sm font-medium text-neutral-900">{label}</p>
- {description && <p className="text-xs text-neutral-500 mt-0.5">{description}</p>}
+ {description && <p className="text-xs text-neutral-500 mt-1">{description}</p>}
  </div>
  <button
  type="button"
@@ -48,9 +48,9 @@ function Section({ title, icon: Icon, children, defaultOpen = true }) {
  <button
  type="button"
  onClick={() => setOpen(o => !o)}
- className="flex items-center justify-between w-full px-4 py-3 bg-neutral-50 hover:bg-neutral-100 transition-colors"
+ className="flex items-center justify-between w-full px-4 py-3.5 bg-neutral-50 hover:bg-neutral-100 transition-colors"
  >
- <div className="flex items-center gap-2">
+ <div className="flex items-center gap-2.5">
  <Icon className="w-4 h-4 text-neutral-500" />
  <span className="text-sm font-semibold text-neutral-700">{title}</span>
  </div>
@@ -291,59 +291,65 @@ export default function OrganizerSettings({ eventId, event, onClose, onUpdated, 
  onClick={onClose}
  >
  <div
- className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col"
+ className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl h-[85vh] max-h-[740px] flex flex-col overflow-hidden"
  onClick={e => e.stopPropagation()}
  >
  {/* Header */}
- <div className="flex items-center justify-between px-6 py-4 border-b border-neutral-100">
- <div className="flex items-center gap-2">
+ <div className="flex items-center justify-between px-7 py-5 border-b border-neutral-100 flex-shrink-0">
+ <div className="flex items-center gap-2.5">
  <Settings className="w-5 h-5 text-neutral-700" />
- <h2 className="text-base font-semibold text-neutral-900">Event Settings</h2>
+ <h2 className="text-lg font-semibold text-neutral-900">Event Settings</h2>
  </div>
- <button onClick={onClose} className="btn btn-ghost p-1.5">
+ <button onClick={onClose} className="btn btn-ghost p-2">
  <X className="w-4 h-4" />
  </button>
  </div>
 
- {/* Tab bar */}
- <div className="flex overflow-x-auto scrollbar-hide border-b border-neutral-100 px-6 gap-1">
+ {/* Sidebar + body */}
+ <div className="flex flex-1 min-h-0">
+
+ {/* Sidebar nav */}
+ <div className="w-52 flex-shrink-0 border-r border-neutral-100 bg-neutral-50/70 overflow-y-auto py-4 px-3 space-y-1">
  {[
- { id: 'general', label: 'General' },
- { id: 'features', label: 'Features' },
-     { id: 'approvals', label: 'Approvals', badge: pendingCount },
- { id: 'rsvp', label: 'RSVP' },
- { id: 'rsvp-page', label: 'RSVP Page' },
- { id: 'rsvp-guests', label: 'RSVP Guests' },
- { id: 'theme', label: 'Theme' },
- { id: 'integrations', label: 'Integrations' },
- ].map(tab => (
+ { id: 'general', label: 'General', icon: Calendar },
+ { id: 'features', label: 'Features', icon: Sliders },
+ { id: 'approvals', label: 'Approvals', icon: UserCheck, badge: pendingCount },
+ { id: 'rsvp', label: 'RSVP', icon: CheckCircle },
+ { id: 'rsvp-page', label: 'RSVP Page', icon: FileText },
+ { id: 'rsvp-guests', label: 'RSVP Guests', icon: Users },
+ { id: 'theme', label: 'Theme', icon: Palette },
+ { id: 'integrations', label: 'Integrations', icon: Webhook },
+ ].map(tab => {
+ const Icon = tab.icon;
+ const active = activeTab === tab.id;
+ return (
  <button
  key={tab.id}
  onClick={() => { setActiveTab(tab.id); if (tab.id === 'approvals') loadApprovalQueue(); }}
- className={`px-3 py-2.5 text-sm font-medium border-b-2 transition-all -mb-px ${
- activeTab === tab.id
- ? 'text-neutral-900 border-neutral-900'
- : 'text-neutral-500 border-transparent hover:text-neutral-700'
+ className={`flex items-center gap-2.5 w-full px-3.5 py-2.5 rounded-xl text-sm font-medium transition-colors ${
+ active
+ ? 'bg-neutral-900 text-white shadow-sm'
+ : 'text-neutral-600 hover:bg-neutral-100'
  }`}
  >
-     <span className="relative inline-flex items-center gap-1.5">
-       {tab.label}
-       {tab.badge > 0 && (
-         <span className="inline-flex items-center justify-center min-w-[16px] h-4 px-1 text-[10px] font-black bg-red-500 text-white rounded-full">
-           {tab.badge > 9 ? '9+' : tab.badge}
-         </span>
-       )}
-     </span>
+ <Icon className={`w-4 h-4 flex-shrink-0 ${active ? 'text-white' : 'text-neutral-400'}`} />
+ <span className="flex-1 text-left truncate">{tab.label}</span>
+ {tab.badge > 0 && (
+ <span className="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 text-[10px] font-black bg-red-500 text-white rounded-full flex-shrink-0">
+ {tab.badge > 9 ? '9+' : tab.badge}
+ </span>
+ )}
  </button>
- ))}
+ );
+ })}
  </div>
 
  {/* Body */}
- <div className="flex-1 overflow-y-auto px-6 py-5 space-y-4">
+ <div className="flex-1 overflow-y-auto px-8 py-7 space-y-4 min-w-0">
 
  {/* ── General tab ── */}
  {activeTab === 'general' && (
- <div className="space-y-4">
+ <div className="space-y-5">
  <div>
  <label className="block text-xs font-medium text-neutral-600 mb-1.5">Event Title</label>
  <input
@@ -358,7 +364,7 @@ export default function OrganizerSettings({ eventId, event, onClose, onUpdated, 
  onChange={e => setDescription(e.target.value)} placeholder="Event description (optional)"
  />
  </div>
- <div className="grid grid-cols-2 gap-3">
+ <div className="grid grid-cols-2 gap-4">
  <div>
  <label className="block text-xs font-medium text-neutral-600 mb-1.5">Date & Time</label>
  <input
@@ -397,7 +403,7 @@ export default function OrganizerSettings({ eventId, event, onClose, onUpdated, 
 
  {/* ── Features tab ── */}
  {activeTab === 'features' && (
- <div className="space-y-3">
+ <div className="space-y-4">
  <div className="p-3 bg-blue-50 border border-blue-100 rounded-xl flex items-start gap-2">
  <Info className="w-4 h-4 text-blue-500 flex-shrink-0 mt-0.5" />
  <p className="text-xs text-blue-700">
@@ -1036,8 +1042,9 @@ export default function OrganizerSettings({ eventId, event, onClose, onUpdated, 
  )}
 
  </div>{/* ── end scrollable body ── */}
+ </div>{/* ── end sidebar+body row ── */}
 
- <div className="flex items-center justify-between px-6 py-4 border-t border-neutral-100 bg-neutral-50 rounded-b-2xl flex-shrink-0">
+ <div className="flex items-center justify-between px-7 py-4 border-t border-neutral-100 bg-neutral-50 rounded-b-2xl flex-shrink-0">
  <button onClick={onClose} className="btn btn-secondary text-sm">
  Cancel
  </button>
