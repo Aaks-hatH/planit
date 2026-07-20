@@ -177,6 +177,20 @@ router.get('/resolve', async (req, res) => {
       });
     }
 
+    // If the client linked a homepage event, resolve its mode server-side so
+    // the frontend knows whether to route to the table-service reservation
+    // flow or the standard event space — without an extra client round trip.
+    // linkedEventKind: 'table_service' | 'standard' | null (null = not found/unset)
+    let linkedEventKind = null;
+    const linkedSubdomain = wl.pages?.home?.tableServiceEventId?.trim();
+    if (linkedSubdomain) {
+      const Event = require('../models/Event');
+      const linked = await Event.findOne({ subdomain: linkedSubdomain.toLowerCase() })
+        .select('isTableServiceMode')
+        .lean();
+      if (linked) linkedEventKind = linked.isTableServiceMode ? 'table_service' : 'standard';
+    }
+
     return res.json({
       clientName:      wl.clientName,
       tier:            wl.tier,
@@ -187,6 +201,7 @@ router.get('/resolve', async (req, res) => {
       licenseKey:      wl.licenseKey,
       keyExpiresAt:    wl.keyExpiresAt,
       portalEnabled:   wl.portal?.enabled || false,
+      linkedEventKind,
     });
   } catch (err) {
     console.error('[whitelabel] resolve error', err);
