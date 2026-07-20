@@ -1538,7 +1538,7 @@ export default function EventSpace() {
 
       {showQR && <QRModal eventId={eventId} onClose={() => setShowQR(false)} />}
       {showSeatingMap && isOrganizer && seatingLoading && !seatingData && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-neutral-950/90">
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-neutral-950/90">
           <div className="text-neutral-400 text-sm font-semibold animate-pulse">Loading seating map…</div>
         </div>
       )}
