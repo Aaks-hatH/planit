@@ -1416,31 +1416,31 @@ const ARTICLES_EXTRA = [
   },
   {
     id: 'ent-seating',
-    category: 'Enterprise & Check-in',
+    category: 'Planning Tools',
     title: 'Seating map: designing your floor plan and assigning tables',
     icon: MapPin,
     tags: ['seating', 'seating map', 'table', 'seat', 'floor plan', 'assign', 'table assignment', 'layout', 'map', 'canvas'],
     content: [
       {
         type: 'intro',
-        text: 'The seating map lets you design a visual layout of your venue, assign guests to tables, and monitor real-time fill status during check-in — all from the check-in dashboard.',
+        text: 'The seating map lets you design a visual layout of your venue, assign guests to tables, and monitor real-time fill status as guests arrive. It\'s available on every event type except Table Service venues (which use their own live floor plan instead).',
       },
       {
         type: 'steps',
         items: [
-          { title: 'Open the seating map editor', body: 'In the check-in dashboard header, click the purple "Seating" button. It only appears once a seating map has been enabled. If you don\'t see it, open the map editor and create your first table — saving it activates the button.' },
+          { title: 'Open the seating map editor', body: 'On a standard event, click "Set Up Seating" (or "Seating Map" once one exists) in the organizer panel on your event workspace. On an Enterprise event, you can open it the same way, or from the purple "Seating" button in the check-in dashboard header once a map has been enabled.' },
           { title: 'Create tables on the canvas', body: 'In editor mode (organizer only), drag table objects from the palette onto the canvas. Each table gets a unique label (e.g. "Table 1", "VIP Table"). You can drag tables to reposition them and use the corner handles to resize.' },
-          { title: 'Label and save your layout', body: 'Give each table a clear label — guests will see this label on their invite page and on the admission screen. When the layout looks right, click Save. The layout is broadcast to all connected staff devices immediately.' },
+          { title: 'Label and save your layout', body: 'Give each table a clear label — guests will see this label on their invite page and on the admission screen. When the layout looks right, click Save. The layout is broadcast to everyone with the map open immediately.' },
           { title: 'Assign guests to tables', body: 'With the map open in editor mode, you can drag guest names from the assignment panel onto tables on the canvas. Each assignment is saved instantly. You can also assign a table when adding or editing a guest record from the main guest list.' },
-          { title: 'View table fill status during check-in', body: 'Staff can open the seating map in display mode at any time. Each table shows a live count of how many assigned guests have checked in vs total assigned. Tables that are nearly full show an amber indicator; full tables show green.' },
-          { title: 'Show a guest their table after check-in', body: 'When a guest is admitted, if they have a table assignment, the admission success screen shows their table name and a "Show on Map" button. Tap it to open the map with their table highlighted — use this to point the guest in the right direction immediately.' },
-          { title: 'Find a table from the guest list', body: 'For any checked-in guest with a table assignment, a small "Show table" shortcut appears in their guest list row. Click it to open the map focused on their table.' },
+          { title: 'View table fill status', body: 'Anyone with access can open the seating map in display mode at any time. Each table shows a live count of how many assigned guests have checked in vs total assigned. Tables that are nearly full show an amber indicator; full tables show green.' },
+          { title: 'Show a guest their table after check-in (Enterprise)', body: 'On Enterprise events, when a guest is admitted at the door, if they have a table assignment, the admission success screen shows their table name and a "Show on Map" button. Tap it to open the map with their table highlighted — use this to point the guest in the right direction immediately.' },
+          { title: 'Find a table from the guest list', body: 'For any guest with a table assignment, a small "Show table" shortcut appears in their guest list row. Click it to open the map focused on their table.' },
         ],
       },
       {
         type: 'callout',
         variant: 'info',
-        text: 'Table assignments are visible on the guest\'s admit screen and boarding pass review. Staff can direct every guest to their seat at the moment of admission — no separate seating chart needed.',
+        text: 'On Enterprise events, table assignments are also visible on the guest\'s admit screen and boarding pass review, so check-in staff can direct every guest to their seat at the moment of admission.',
       },
       {
         type: 'callout',
@@ -1450,10 +1450,11 @@ const ARTICLES_EXTRA = [
       {
         type: 'faq',
         items: [
-          { q: 'Can staff edit the seating map, or only organizers?', a: 'Only organizers can edit the canvas layout and assign guests. Staff see a read-only display view with live fill indicators.' },
-          { q: 'Does the map update live if I move tables while the event is running?', a: 'Yes. Any change an organizer saves is broadcast to all staff devices instantly via the seating_map_updated event.' },
+          { q: 'Is this an Enterprise-only feature?', a: 'No. The seating map is available on standard events as well as Enterprise events — only Table Service venues use a different, dedicated floor plan tool instead.' },
+          { q: 'Can staff edit the seating map, or only organizers?', a: 'Only organizers can edit the canvas layout and assign guests. Everyone else sees a read-only display view with live fill indicators.' },
+          { q: 'Does the map update live if I move tables while the event is running?', a: 'Yes. Any change an organizer saves is broadcast instantly via the seating_map_updated event.' },
           { q: 'Can a guest be assigned to more than one table?', a: 'No. Each guest has one table assignment. Assigning them to a new table replaces the previous one.' },
-          { q: 'What if I assigned a guest to a table before they checked in?', a: 'Their table name appears on the boarding pass review screen as soon as their QR code is scanned — even before pressing Admit.' },
+          { q: 'What if I assigned a guest to a table before they checked in?', a: 'On Enterprise events, their table name appears on the boarding pass review screen as soon as their QR code is scanned — even before pressing Admit.' },
         ],
       },
     ],
