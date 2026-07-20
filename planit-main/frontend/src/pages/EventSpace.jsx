@@ -31,6 +31,7 @@ import RecoveryCodeBanner from '../components/RecoveryCodeBanner';
 import OrganizerSettings from '../components/OrganizerSettings';
 import Onboarding from '../components/Onboarding';
 import CrossPlatformAd from '../components/CrossPlatformAd';
+import SeatingMap from '../components/SeatingMap';
 
 /* ─── QR Modal ───────────────────────────────────────────────────────────── */
 function QRModal({ eventId, onClose }) {
@@ -963,6 +964,12 @@ export default function EventSpace() {
   const [pendingApprovals, setPendingApprovals] = useState(0); // live count of pending join requests
   const [waitlistCount, setWaitlistCount] = useState(0);
 
+  // ── Seating map editor (organizer-only) ──────────────────────────────────
+  const [showSeatingMap, setShowSeatingMap]   = useState(false);
+  const [seatingData, setSeatingData]         = useState(null);
+  const [seatingLoading, setSeatingLoading]   = useState(false);
+  const [seatingIsSaving, setSeatingIsSaving] = useState(false);
+
   const currentUser = localStorage.getItem('username');
   // Check both the original organizerName field AND the participants array role —
   // the latter handles co-organizers promoted after event creation.
@@ -1437,6 +1444,46 @@ export default function EventSpace() {
     setTimeout(() => setCopied(false), 2000);
   };
 
+  // ── Seating map editor ────────────────────────────────────────────────────
+  // Reuses the same GET/PUT /api/events/:eventId/seating endpoints and the
+  // same <SeatingMap> component the Check-in tool uses, so a layout built
+  // here shows up there too (and vice versa) — it's the same event.seatingMap.
+  const loadSeating = async () => {
+    setSeatingLoading(true);
+    try {
+      const res = await eventAPI.getSeatingMap(eventId);
+      setSeatingData(res.data);
+    } catch (err) {
+      toast.error(err.response?.data?.error || 'Failed to load seating map');
+      setSeatingData({ seatingMap: { enabled: false, objects: [] }, guestsByTable: {} });
+    } finally {
+      setSeatingLoading(false);
+    }
+  };
+
+  const handleOpenSeatingMap = () => {
+    setShowSeatingMap(true);
+    if (!seatingData) loadSeating();
+  };
+
+  const handleSaveSeatingMap = async (newObjects) => {
+    setSeatingIsSaving(true);
+    try {
+      await eventAPI.saveSeatingMap(eventId, {
+        enabled: true,
+        objects: newObjects,
+        canvasW: 1000,
+        canvasH: 700,
+      });
+      await loadSeating();
+      toast.success('Seating map saved');
+    } catch (err) {
+      toast.error(err.response?.data?.error || 'Failed to save seating map');
+    } finally {
+      setSeatingIsSaving(false);
+    }
+  };
+
   const settings = event?.settings || {};
   // WL feature flags — fall back to true (show everything) when not on a WL domain
   const wlFeatures = wl?.features || {};
@@ -1490,6 +1537,22 @@ export default function EventSpace() {
       )}
 
       {showQR && <QRModal eventId={eventId} onClose={() => setShowQR(false)} />}
+      {showSeatingMap && isOrganizer && seatingLoading && !seatingData && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-neutral-950/90">
+          <div className="text-neutral-400 text-sm font-semibold animate-pulse">Loading seating map…</div>
+        </div>
+      )}
+      {showSeatingMap && isOrganizer && seatingData && (
+        <SeatingMap
+          mode="editor"
+          objects={seatingData.seatingMap?.objects || []}
+          guestsByTable={seatingData.guestsByTable || {}}
+          allGuests={[]}
+          onSave={handleSaveSeatingMap}
+          onClose={() => setShowSeatingMap(false)}
+          isSaving={seatingIsSaving}
+        />
+      )}
       {showSettings && isOrganizer && (
         <OrganizerSettings eventId={eventId} event={event}
           onClose={() => { setShowSettings(false); setPendingApprovals(0); }}
@@ -2319,6 +2382,13 @@ export default function EventSpace() {
                     <button onClick={() => navigate(`/event/${eventId}/checkin`)}
                       className="flex items-center gap-2.5 w-full px-4 py-3 text-xs bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl transition-colors font-bold">
                       <UserCheck className="w-3.5 h-3.5 flex-shrink-0" />Guest Check-in
+                    </button>
+                  )}
+                  {!event?.isTableServiceMode && (
+                    <button onClick={handleOpenSeatingMap}
+                      className="flex items-center gap-2.5 w-full px-4 py-3 text-xs bg-violet-600 hover:bg-violet-700 text-white rounded-xl transition-colors font-bold">
+                      <MapPin className="w-3.5 h-3.5 flex-shrink-0" />
+                      {event?.seatingMap?.enabled ? 'Seating Map' : 'Set Up Seating'}
                     </button>
                   )}
                   <button onClick={() => setShowSettings(true)}
