@@ -319,7 +319,7 @@ function PagesSection({ data, branding, token, onUpdate, toast }) {
 
   const TABS = [
     { id: 'home',        label: 'Home' },
-    { id: 'reservation', label: 'Reservation Page' },
+    { id: 'reservation', label: 'Linked Event' },
     { id: 'events',      label: 'Events' },
     { id: 'checkout',    label: 'Checkout' },
     { id: 'contact',     label: 'Contact' },
@@ -355,8 +355,8 @@ function PagesSection({ data, branding, token, onUpdate, toast }) {
 
         {tab === 'reservation' && <>
           <Field
-            label="Linked table service event"
-            hint="When set, your home page (/) redirects straight to this event's table service floor instead of showing the events grid. Paste the event subdomain from its URL — e.g. if your event lives at /e/nobu-downtown, enter nobu-downtown."
+            label="Linked homepage event"
+            hint="When set, your home page (/) redirects straight to this one event instead of showing the events grid — works for both table service venues and regular party/RSVP events. Paste the event subdomain from its URL — e.g. if your event lives at /e/nobu-downtown, enter nobu-downtown."
           >
             <Input
               value={form.home.tableServiceEventId}
@@ -368,7 +368,7 @@ function PagesSection({ data, branding, token, onUpdate, toast }) {
           {form.home.tableServiceEventId && (
             <div className="flex items-start gap-2 p-3 rounded-lg bg-blue-50 border border-blue-100 text-xs text-blue-700">
               <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" className="flex-shrink-0 mt-0.5"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
-              Guests visiting your home page will be redirected to <strong className="mx-1">/e/{form.home.tableServiceEventId}/floor</strong>. Make sure that event exists and has table service enabled before saving.
+              Guests visiting your home page will be redirected to <strong className="mx-1">/e/{form.home.tableServiceEventId}/reserve</strong> if that event has table service enabled, or <strong className="mx-1">/e/{form.home.tableServiceEventId}</strong> (its regular event space) otherwise. Make sure the event exists before saving.
             </div>
           )}
           {!form.home.tableServiceEventId && (
@@ -444,7 +444,7 @@ function PagesSection({ data, branding, token, onUpdate, toast }) {
                 {form.home.tableServiceEventId ? (
                   <div className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold text-white"
                     style={{ background: branding?.primaryColor || '#2563eb' }}>
-                    → Redirects to /e/{form.home.tableServiceEventId}/reserve
+                    → Redirects to /e/{form.home.tableServiceEventId}
                   </div>
                 ) : (
                   <div className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold text-white"
