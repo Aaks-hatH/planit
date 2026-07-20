@@ -681,10 +681,10 @@ export default function SeatingMap({
   const selectedObj = objs.find(o => o.id === selected) || null;
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-neutral-950">
+    <div className="fixed inset-0 z-[60] flex flex-col bg-neutral-950">
 
       {/* ── Mobile Warning ── */}
-      <div className="md:hidden absolute inset-0 z-50 bg-neutral-950 flex items-center justify-center p-6">
+      <div className="md:hidden absolute inset-0 z-[60] bg-neutral-950 flex items-center justify-center p-6">
         <div className="max-w-xs w-full text-center space-y-4">
           <div className="w-14 h-14 bg-amber-500/10 border border-amber-500/30 rounded-xl flex items-center justify-center mx-auto">
             <svg xmlns="http://www.w3.org/2000/svg" className="w-7 h-7 text-amber-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
