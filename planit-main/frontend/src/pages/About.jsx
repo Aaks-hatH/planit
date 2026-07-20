@@ -144,6 +144,7 @@ export default function About() {
         { href: '#files',          label: 'Files and sharing'              },
         { href: '#countdown',      label: 'Countdown timer'                },
         { href: '#utilities',      label: 'Utilities and export'           },
+        { href: '#seating-map',    label: 'Seating map'                    },
       ]
     },
     {
@@ -155,7 +156,6 @@ export default function About() {
         { href: '#antifraud',      label: 'Anti-fraud system'              },
         { href: '#manager-override', label: 'Manager override'             },
         { href: '#walkie-talkie',  label: 'Walkie-talkie PTT'              },
-        { href: '#seating-map',    label: 'Seating map'                    },
         { href: '#table-service',  label: 'Table Service mode'             },
       ]
     },
@@ -1059,27 +1059,27 @@ export default function About() {
               subtitle="A visual canvas for designing and managing the seating layout of your venue. Organizers can drag, drop, and label tables on an interactive map, assign guests to seats, and see real-time fill status during check-in."
             />
             <p className="text-neutral-500 leading-relaxed mb-4">
-              For events with formal seating — galas, wedding receptions, corporate dinners, award ceremonies — knowing which table each guest is assigned to and whether that table is filling as expected is a significant operational concern. The seating map brings this visibility into the same check-in screen where guests are being admitted, so staff can direct each guest immediately without consulting a separate spreadsheet or printed floor plan.
+              For events with formal seating — galas, wedding receptions, corporate dinners, award ceremonies — knowing which table each guest is assigned to and whether that table is filling as expected is a significant operational concern. The seating map is available on standard events as well as Enterprise events (every event type except Table Service venues, which use their own dedicated floor plan tool), so organizers get this visibility whether or not they're running a staffed check-in desk.
             </p>
             <FeatureRow
               icon={MapPin}
               title="Interactive canvas editor"
-              description="Organizers open the seating map editor from the check-in dashboard header. The editor renders a canvas — default 1000×700 logical units — where tables can be placed, moved, labeled, and resized by drag-and-drop. Each object on the canvas has a unique ID that persists across sessions. The canvas state is saved to the event's seating record in the database and synchronized to all connected sessions via the seating_map_updated socket event."
+              description="On a standard event, organizers open the seating map editor from the organizer panel on the event workspace. On an Enterprise event, it's available the same way, or from the check-in dashboard header once a map has been enabled. The editor renders a canvas — default 1000×700 logical units — where tables can be placed, moved, labeled, and resized by drag-and-drop. Each object on the canvas has a unique ID that persists across sessions. The canvas state is saved to the event's seating record in the database and synchronized to all connected sessions via the seating_map_updated socket event."
             />
             <FeatureRow
               icon={Users}
               title="Guest-to-table assignment"
-              description="Within the seating map editor, organizers can drag guest names from a list onto table objects on the canvas. Each assignment is persisted on the guest's invite record (tableId, tableLabel fields) and broadcast via the guest_table_updated socket event to all connected sessions. The guest list in the check-in dashboard shows a violet table badge next to any guest who has been assigned, and the seating map view shows real-time occupancy per table."
+              description="Within the seating map editor, organizers can drag guest names from a list onto table objects on the canvas. Each assignment is persisted on the guest's invite record (tableId, tableLabel fields) and broadcast via the guest_table_updated socket event to all connected sessions. On Enterprise events, the guest list in the check-in dashboard also shows a violet table badge next to any guest who has been assigned, and the seating map view shows real-time occupancy per table."
             />
             <FeatureRow
               icon={CheckCircle2}
-              title="Real-time fill status during check-in"
-              description="When a guest is admitted at the door, their table assignment is immediately visible on the admit confirmation screen and on their boarding pass review card. Staff can tell the guest their table number without looking anything up. The seating map viewer (available to all authenticated staff) shows a live count of admitted guests per table, so front-of-house staff can see at a glance which tables are filling and communicate seating status to catering."
+              title="Real-time fill status"
+              description="The seating map view shows a live count of assigned guests per table, so organizers can see at a glance which tables are filling. On Enterprise events, this extends into the check-in flow: when a guest is admitted at the door, their table assignment is immediately visible on the admit confirmation screen and on their boarding pass review card, and staff can tell the guest their table number without looking anything up."
             />
             <FeatureRow
               icon={MapPin}
-              title="Show on Map: post-admission navigation"
-              description="After admitting a guest who has a table assignment, the admission success screen offers a 'Show on Map' button. Tapping it opens the seating map with the guest's assigned table highlighted and centered in view. This lets a staff member at the entrance physically point at the table on the map and then direct the guest with confidence, without needing to explain coordinates verbally."
+              title="Show on Map: post-admission navigation (Enterprise)"
+              description="On Enterprise events, after admitting a guest who has a table assignment, the admission success screen offers a 'Show on Map' button. Tapping it opens the seating map with the guest's assigned table highlighted and centered in view. This lets a staff member at the entrance physically point at the table on the map and then direct the guest with confidence, without needing to explain coordinates verbally."
             />
             <FeatureRow
               icon={Radio}
@@ -1088,12 +1088,12 @@ export default function About() {
             />
             <div className="border border-neutral-200 rounded-2xl overflow-hidden my-6">
               <TechDetail label="Editor mode" value="Organizers see the full drag-and-drop editor with table palette, guest assignment panel, and save controls. Saving dispatches a PUT to /events/:id/seating with the full canvas state." />
-              <TechDetail label="Display mode" value="Staff (non-organizer) sessions see a read-only display of the seating map with real-time fill indicators per table. No editing controls are shown." />
-              <TechDetail label="Focus API" value="Internal seatingFocusId state allows any part of the check-in system to request the map to open and center on a specific table — used by the 'Show on Map' button on the admit success screen and the 'Show table' shortcut on checked-in guests in the guest list." />
-              <TechDetail label="Persistence" value="The seating layout (canvas objects) and all guest assignments are stored in the database and survive server restarts. The seating map is non-blocking at load time — if no map has been created yet, the Seating button is hidden and no error is shown." />
+              <TechDetail label="Display mode" value="Non-organizer sessions (staff on Enterprise events, or anyone with the map open on a standard event) see a read-only display of the seating map with real-time fill indicators per table. No editing controls are shown." />
+              <TechDetail label="Focus API" value="Internal seatingFocusId state allows any part of the app to request the map to open and center on a specific table — used by the 'Show on Map' button on the admit success screen (Enterprise) and the 'Show table' shortcut on assigned guests in the guest list." />
+              <TechDetail label="Persistence" value="The seating layout (canvas objects) and all guest assignments are stored in the database and survive server restarts. The seating map is non-blocking at load time — if no map has been created yet, the Seating button shows as 'Set Up Seating' instead, and no error is shown." />
             </div>
             <Callout accent>
-              The seating map is optional — it only activates once an organizer creates and saves a layout. Events where seating is not a concern are completely unaffected. The Seating button only appears in the check-in header when a seating map is enabled for that event.
+              The seating map is optional — it only activates once an organizer creates and saves a layout. Events where seating is not a concern are completely unaffected. It's available on standard and Enterprise events alike; only Table Service venues use a different floor plan tool instead.
             </Callout>
           </Section>
 
