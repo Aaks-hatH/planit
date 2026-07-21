@@ -8913,6 +8913,206 @@ const EMPTY_FORM = {
   limits: { maxEvents: 10, maxGuestsPerEvent: 500, maxAdminUsers: 3 },
 };
 
+// ─── Client events section — shown inside the WL client view modal ──────────
+// Lists events already linked to this client via wlDomain, shows usage against
+// limits.maxEvents, and launches the create-event wizard.
+function ClientEventsSection({ selected, isDemo, API, onCreated }) {
+  const [data, setData]       = useState(null); // { events, count, maxEvents }
+  const [loading, setLoading] = useState(true);
+  const [showWizard, setShowWizard] = useState(false);
+
+  const load = useCallback(() => {
+    if (!selected?._id) return;
+    setLoading(true);
+    api.get(`${API}/${selected._id}/events`)
+      .then(r => setData(r.data))
+      .catch(() => setData(null))
+      .finally(() => setLoading(false));
+  }, [selected?._id, API]);
+
+  useEffect(() => { load(); }, [load]);
+
+  const atLimit = data && data.maxEvents != null && data.count >= data.maxEvents;
+
+  return (
+    <div className="border border-neutral-200 rounded-xl p-3 space-y-2">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Calendar className="w-3.5 h-3.5 text-neutral-500" />
+          <span className="text-xs font-semibold text-neutral-700">Events</span>
+          {data && (
+            <span className={`text-xs px-1.5 py-0.5 rounded border ${atLimit ? 'bg-red-50 text-red-700 border-red-200' : 'bg-neutral-100 text-neutral-500 border-transparent'}`}>
+              {data.count}{data.maxEvents != null ? ` / ${data.maxEvents}` : ''}
+            </span>
+          )}
+        </div>
+        <button
+          onClick={() => {
+            if (atLimit) { toast.error(`Event limit reached (${data.count}/${data.maxEvents}). Raise limits.maxEvents to add more.`); return; }
+            setShowWizard(true);
+          }}
+          className="text-xs flex items-center gap-1 px-2 py-1 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold">
+          <Plus className="w-3 h-3" /> New Event
+        </button>
+      </div>
+
+      {loading ? (
+        <div className="text-xs text-neutral-400 py-2 text-center">Loading events...</div>
+      ) : !data || data.events.length === 0 ? (
+        <div className="text-xs text-neutral-400 py-2 text-center">No events yet for this client.</div>
+      ) : (
+        <div className="space-y-1 max-h-40 overflow-y-auto">
+          {data.events.map(ev => (
+            <div key={ev.id} className="flex items-center justify-between text-xs bg-neutral-50 rounded-lg px-2 py-1.5">
+              <div className="min-w-0">
+                <div className="font-medium text-neutral-800 truncate">{ev.title}</div>
+                <div className="text-neutral-400 font-mono truncate">{ev.subdomain}</div>
+              </div>
+              <span className={`shrink-0 px-1.5 py-0.5 rounded text-[10px] font-semibold ${ev.status === 'active' ? 'bg-green-50 text-green-700' : 'bg-neutral-200 text-neutral-500'}`}>
+                {ev.status || 'active'}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {showWizard && (
+        <CreateEventWizardModal
+          selected={selected}
+          isDemo={isDemo}
+          API={API}
+          onClose={() => setShowWizard(false)}
+          onCreated={() => { setShowWizard(false); load(); onCreated?.(); }}
+        />
+      )}
+    </div>
+  );
+}
+
+// ─── Create-event wizard modal — admin-side, no CAPTCHA/abuse checks ────────
+// Scoped-down counterpart to the public OnboardingWizard in Home.jsx: that
+// component is wired directly into the self-serve signup flow (Turnstile,
+// bot-abuse scoring, timing telemetry) and isn't safe to reuse for an
+// authenticated internal action, so this is a smaller purpose-built form that
+// posts straight to /whitelabel/:id/create-event.
+function CreateEventWizardModal({ selected, isDemo, API, onClose, onCreated }) {
+  const [form, setForm] = useState({
+    title: '', date: '', location: '',
+    organizerName: selected?.contactName || '',
+    organizerEmail: selected?.contactEmail || '',
+    mode: 'standard', // 'standard' | 'table-service' | 'enterprise'
+  });
+  const [saving, setSaving] = useState(false);
+  const [error, setError]   = useState(null);
+
+  const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
+
+  const submit = async () => {
+    setError(null);
+    if (!form.title.trim())          { setError('Title is required'); return; }
+    if (!form.organizerName.trim())  { setError('Organizer name is required'); return; }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.organizerEmail)) { setError('Valid organizer email is required'); return; }
+    if (form.mode === 'standard' && !form.date) { setError('Date is required unless this is a table-service event'); return; }
+
+    if (isDemo) { toast.success('Event created (sandbox)'); onCreated?.(); return; }
+
+    setSaving(true);
+    try {
+      await api.post(`${API}/${selected._id}/create-event`, {
+        title: form.title.trim(),
+        date: form.mode === 'standard' ? form.date : null,
+        location: form.location.trim(),
+        organizerName: form.organizerName.trim(),
+        organizerEmail: form.organizerEmail.trim(),
+        isTableServiceMode: form.mode === 'table-service',
+        isEnterpriseMode: form.mode === 'enterprise',
+      });
+      toast.success('Event created for ' + selected.clientName);
+      onCreated?.();
+    } catch (e) {
+      setError(e?.response?.data?.error || 'Failed to create event');
+    } finally { setSaving(false); }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md max-h-[90vh] overflow-y-auto">
+        <div className="flex items-center justify-between p-5 border-b border-neutral-200">
+          <div>
+            <h3 className="text-base font-bold text-neutral-900">New Event</h3>
+            <p className="text-xs text-neutral-500">for {selected?.clientName}</p>
+          </div>
+          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-neutral-100"><X className="w-4 h-4" /></button>
+        </div>
+
+        <div className="p-5 space-y-3">
+          {error && (
+            <div className="text-xs bg-red-50 text-red-700 border border-red-200 rounded-lg px-3 py-2">{error}</div>
+          )}
+
+          <div className="flex gap-2">
+            {[
+              { v: 'standard',      label: 'Standard' },
+              { v: 'table-service', label: 'Table Service' },
+              { v: 'enterprise',    label: 'Enterprise' },
+            ].map(({ v, label }) => (
+              <button key={v} onClick={() => set('mode', v)}
+                className={`flex-1 text-xs font-semibold rounded-lg py-1.5 border ${form.mode === v ? 'bg-blue-600 text-white border-blue-600' : 'border-neutral-200 text-neutral-600 hover:bg-neutral-50'}`}>
+                {label}
+              </button>
+            ))}
+          </div>
+
+          <div>
+            <label className="text-xs font-medium text-neutral-500">Event Title</label>
+            <input value={form.title} onChange={e => set('title', e.target.value)}
+              className="mt-1 w-full border border-neutral-200 rounded-lg px-3 py-2 text-sm" placeholder="e.g. Summer Gala 2026" />
+          </div>
+
+          {form.mode !== 'table-service' && (
+            <div>
+              <label className="text-xs font-medium text-neutral-500">Date</label>
+              <input type="datetime-local" value={form.date} onChange={e => set('date', e.target.value)}
+                className="mt-1 w-full border border-neutral-200 rounded-lg px-3 py-2 text-sm" />
+            </div>
+          )}
+
+          <div>
+            <label className="text-xs font-medium text-neutral-500">Location</label>
+            <input value={form.location} onChange={e => set('location', e.target.value)}
+              className="mt-1 w-full border border-neutral-200 rounded-lg px-3 py-2 text-sm" placeholder="Optional" />
+          </div>
+
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <label className="text-xs font-medium text-neutral-500">Organizer Name</label>
+              <input value={form.organizerName} onChange={e => set('organizerName', e.target.value)}
+                className="mt-1 w-full border border-neutral-200 rounded-lg px-3 py-2 text-sm" />
+            </div>
+            <div>
+              <label className="text-xs font-medium text-neutral-500">Organizer Email</label>
+              <input value={form.organizerEmail} onChange={e => set('organizerEmail', e.target.value)}
+                className="mt-1 w-full border border-neutral-200 rounded-lg px-3 py-2 text-sm" />
+            </div>
+          </div>
+
+          <p className="text-[11px] text-neutral-400">
+            The event's subdomain is generated automatically from the title. It'll be tagged to {selected?.domain} and appear on this client's branded discovery feed.
+          </p>
+        </div>
+
+        <div className="p-5 border-t border-neutral-200 flex gap-2">
+          <button onClick={onClose} className="flex-1 border border-neutral-200 rounded-xl py-2 text-sm font-medium hover:bg-neutral-50">Cancel</button>
+          <button onClick={submit} disabled={saving}
+            className="flex-1 flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white rounded-xl py-2 text-sm font-semibold">
+            {saving ? <><Loader2 className="w-4 h-4 animate-spin" /> Creating...</> : 'Create Event'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Portal password row — shown inside the WL client view modal ─────────────
 function PortalPasswordRow({ selected, isDemo, API }) {
   const [pw, setPw]         = useState('');
@@ -10332,6 +10532,8 @@ function WhiteLabelPanel() {
               )}
             </div>
             <div className="flex flex-col gap-2 p-6 border-t border-neutral-200 sticky bottom-0 bg-white">
+              {/* Events row */}
+              <ClientEventsSection selected={selected} isDemo={isDemo} API={API} />
               {/* Stripe billing row */}
               <div className="flex gap-2">
                 <button
