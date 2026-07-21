@@ -649,14 +649,30 @@ router.post('/:eventId/verify-password', authLimiter, async (req, res, next) => 
 router.get('/:eventId/settings', verifyOrganizer, async (req, res, next) => {
   try {
     const event = await Event.findById(req.params.eventId)
-      .select('rsvpPage subdomain title')
+      .select('rsvpPage subdomain title wlDomain')
       .lean();
     if (!event) return res.status(404).json({ error: 'Event not found.' });
+
+    // Surface whether this event's seating chart is WL-tier/feature-gated so
+    // the RSVP Page Builder can explain *why* it may not appear to guests,
+    // mirroring the same tier/feature check resolveSeatingChart() enforces
+    // server-side at RSVP time. Non-white-label events get seatingWlGate: null
+    // (their seatingMap.enabled is the only gate — see resolveSeatingChart above).
+    let seatingWlGate = null;
+    if (event.wlDomain) {
+      const wl = await WhiteLabel.findOne({ domain: event.wlDomain }).select('tier features').lean();
+      seatingWlGate = {
+        isWhiteLabel:            true,
+        tier:                    wl?.tier || null,
+        showSeatingChartAllowed: !!wl && wl.tier !== 'basic' && wl.features?.showSeatingChart === true,
+      };
+    }
 
     res.json({
       rsvpPage:  event.rsvpPage || {},
       subdomain: event.subdomain,
       title:     event.title,
+      seatingWlGate,
     });
   } catch (err) { next(err); }
 });
