@@ -976,6 +976,122 @@ router.post('/:id/billing-portal', verifyAdmin, async (req, res) => {
   }
 });
 
+// ─── Admin: List events owned by a WL client ─────────────────────────────────
+// GET /api/whitelabel/:id/events
+// Events are linked via Event.wlDomain === WhiteLabel.domain (see events.js
+// create route, which stamps wlDomain from a validated x-wl-domain header).
+// Used by the client view modal to show what's already been created and to
+// enforce limits.maxEvents before opening the create-event wizard.
+
+router.get('/:id/events', verifyAdmin, async (req, res) => {
+  try {
+    const wl = await WhiteLabel.findById(req.params.id).select('domain limits').lean();
+    if (!wl) return res.status(404).json({ error: 'not_found' });
+
+    const Event = require('../models/Event');
+    const events = await Event.find({ wlDomain: wl.domain })
+      .select('subdomain title date location status isTableServiceMode isEnterpriseMode createdAt participants')
+      .sort({ createdAt: -1 })
+      .lean();
+
+    return res.json({
+      events: events.map(e => ({
+        id: e._id, subdomain: e.subdomain, title: e.title, date: e.date,
+        location: e.location, status: e.status,
+        isTableServiceMode: e.isTableServiceMode, isEnterpriseMode: e.isEnterpriseMode,
+        createdAt: e.createdAt, participantCount: e.participants?.length || 0,
+      })),
+      count: events.length,
+      maxEvents: wl.limits?.maxEvents ?? null,
+    });
+  } catch (err) {
+    console.error('[whitelabel] list events error', err.message);
+    return res.status(500).json({ error: 'internal' });
+  }
+});
+
+// ─── Admin: Create an event on behalf of a WL client ─────────────────────────
+// POST /api/whitelabel/:id/create-event
+// Skips the public self-serve flow entirely (no CAPTCHA/abuse scoring — this
+// is an authenticated admin action). Stamps wlDomain so the event is owned by
+// this client the same way self-serve WL events are, and enforces
+// limits.maxEvents since nothing else in the codebase does.
+
+router.post('/:id/create-event', verifyAdmin, demoGuard, [
+  body('title').trim().isLength({ min: 1, max: 200 }).withMessage('Title is required'),
+  body('organizerName').trim().isLength({ min: 1, max: 100 }).withMessage('Organizer name is required'),
+  body('organizerEmail').isEmail().normalizeEmail().withMessage('Valid organizer email is required'),
+  body('date').optional({ nullable: true }).isISO8601().withMessage('Date must be a valid ISO date'),
+  body('isTableServiceMode').optional().isBoolean(),
+  body('isEnterpriseMode').optional().isBoolean(),
+], async (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) return res.status(400).json({ error: errors.array()[0].msg, fields: errors.array() });
+
+  try {
+    const wl = await WhiteLabel.findById(req.params.id).lean();
+    if (!wl) return res.status(404).json({ error: 'not_found' });
+    if (wl.status === 'suspended') return res.status(400).json({ error: 'This client is suspended. Reactivate before creating events.' });
+
+    const Event = require('../models/Event');
+    const EventParticipant = require('../models/EventParticipant');
+
+    // Enforce limits.maxEvents — nothing else in the codebase checks this today.
+    const maxEvents = wl.limits?.maxEvents ?? 10;
+    const currentCount = await Event.countDocuments({ wlDomain: wl.domain });
+    if (currentCount >= maxEvents) {
+      return res.status(400).json({ error: `This client has reached its event limit (${currentCount}/${maxEvents}). Raise limits.maxEvents to create more.` });
+    }
+
+    const {
+      title, description = '', date = null, location = '',
+      organizerName, organizerEmail,
+      isTableServiceMode = false, isEnterpriseMode = false,
+      maxParticipants = 100,
+    } = req.body;
+
+    // Slugify the title into a subdomain and retry on collision, same shape
+    // the public wizard produces client-side but done server-side here since
+    // there's no shared helper and the admin shouldn't have to think about it.
+    const base = String(title).toLowerCase().trim()
+      .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40) || 'event';
+    let subdomain = base;
+    let suffix = 0;
+    while (await Event.exists({ subdomain })) {
+      suffix += 1;
+      subdomain = `${base}-${suffix}`;
+      if (suffix > 50) return res.status(500).json({ error: 'Could not generate a unique subdomain, try a different title.' });
+    }
+
+    const event = new Event({
+      subdomain, title, description, date: date || undefined, location,
+      organizerName, organizerEmail,
+      isEnterpriseMode: !!isEnterpriseMode,
+      isTableServiceMode: !!isTableServiceMode,
+      maxParticipants,
+      participants: [{ username: organizerName, role: 'organizer' }],
+      wlDomain: wl.domain,
+    });
+    await event.save();
+
+    await EventParticipant.create({
+      eventId: event._id, username: organizerName, role: 'organizer', hasPassword: false,
+    });
+
+    const { sendEventConfirmation } = require('../services/emailService');
+    sendEventConfirmation(event).catch(() => {});
+
+    return res.status(201).json({
+      message: 'Event created',
+      event: { id: event._id, subdomain: event.subdomain, title: event.title },
+    });
+  } catch (err) {
+    if (err?.code === 11000) return res.status(409).json({ error: 'Subdomain already in use, try again.' });
+    console.error('[whitelabel] create-event error', err.message);
+    return res.status(500).json({ error: 'internal' });
+  }
+});
+
 // ─── Admin: Set / reset portal password for a WL client ──────────────────────
 // POST /api/whitelabel/:id/portal/set-password
 // Only super-admin or root admin. Enables portal access and sets the password.
