@@ -1466,6 +1466,15 @@ export default function EventSpace() {
     if (!seatingData) loadSeating();
   };
 
+  // Auto-open when arriving from RSVPPageBuilder.jsx's "Set up / edit seating"
+  // link (?openSeating=1) — same gating as the "Set Up Seating" button itself.
+  useEffect(() => {
+    if (!event || !isOrganizer || showSeatingMap) return;
+    if (event.isTableServiceMode) return;
+    if (searchParams.get('openSeating') === '1') handleOpenSeatingMap();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [event, isOrganizer, searchParams]);
+
   const handleSaveSeatingMap = async (newObjects) => {
     setSeatingIsSaving(true);
     try {
