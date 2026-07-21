@@ -284,7 +284,7 @@ function QuestionCard({ q, onChange, onDelete }) {
 }
 
 /* ─── Live preview (mini phone-frame RSVP page) ───────────────────────────── */
-function LivePreview({ settings, event, viewMode }) {
+function LivePreview({ settings, event, viewMode, seatingEnabled }) {
   const accent    = settings.accentColor || '#6366f1';
   const bg        = getBgStyle(settings.backgroundStyle || 'dark', accent);
   const isLight   = settings.backgroundStyle === 'light';
@@ -403,6 +403,14 @@ function LivePreview({ settings, event, viewMode }) {
               </div>
             )}
           </div>
+
+          {/* Seating chart placeholder */}
+          {seatingEnabled && (
+            <div style={{ background:cardBg, border:`1px solid ${cardBorder}`, borderRadius:16, padding:'14px 16px', marginBottom:14, display:'flex', alignItems:'center', gap:10 }}>
+              <MapPin style={{ width:14, height:14, color:accent, flexShrink:0 }} />
+              <span style={{ fontSize:12, color: isLight ? '#111' : '#fff' }}>Seating chart appears here</span>
+            </div>
+          )}
 
           {/* Form preview */}
           <div style={{ background:cardBg, border:`1px solid ${cardBorder}`, borderRadius:16, padding:'14px 16px', marginBottom:14 }}>
@@ -833,6 +841,14 @@ export default function RSVPPageBuilder() {
   const [gmailDisconnecting,  setGmailDisconnecting]  = useState(false);
   const [showWizard,          setShowWizard]          = useState(false);
 
+  // ── Seating chart (event.seatingMap — a separate data model from rsvpPage
+  // settings; see note on toggleSeatingChart below for why it's never folded
+  // into save()) ──
+  const [seatingMap,      setSeatingMap]      = useState(null); // { enabled, objects, canvasW, canvasH }
+  const [seatingLoading,  setSeatingLoading]  = useState(true);
+  const [seatingToggling, setSeatingToggling] = useState(false);
+  const [seatingWlGate,   setSeatingWlGate]   = useState(null); // null = not WL-gated
+
   const ROUTER_URL = import.meta.env.VITE_ROUTER_URL || '';
 
   /* load event + settings */
@@ -860,6 +876,18 @@ export default function RSVPPageBuilder() {
         const settingsRes = await rsvpAPI.getSettings(eid);
         if (settingsRes.data.rsvpPage) {
           setSettings({ ...DEFAULT_SETTINGS, ...settingsRes.data.rsvpPage });
+        }
+        setSeatingWlGate(settingsRes.data.seatingWlGate || null);
+
+        // Load the seating chart status (separate data model from rsvpPage —
+        // event.seatingMap, built in Event Space's "Set Up Seating" editor)
+        try {
+          const seatingRes = await eventAPI.getSeatingMap(eid);
+          setSeatingMap(seatingRes.data.seatingMap || { enabled: false, objects: [] });
+        } catch {
+          setSeatingMap({ enabled: false, objects: [] });
+        } finally {
+          setSeatingLoading(false);
         }
 
         // Load Gmail connection status
@@ -953,6 +981,31 @@ export default function RSVPPageBuilder() {
     } finally { setSaving(false); }
   };
 
+  // event.seatingMap is a separate Mongoose sub-document from event.rsvpPage —
+  // save() above only ever PATCHes rsvpPage-scoped fields via rsvpAPI.updateSettings.
+  // Toggling seating visibility goes through the dedicated seating endpoint
+  // (PUT /events/:eventId/seating) instead, so it never gets shoehorned into
+  // — or corrupted by — the RSVP settings save flow.
+  const toggleSeatingChart = async () => {
+    if (!eventId || !seatingMap || seatingToggling) return;
+    const nextEnabled = !seatingMap.enabled;
+    setSeatingToggling(true);
+    try {
+      const res = await eventAPI.saveSeatingMap(eventId, {
+        enabled:  nextEnabled,
+        objects:  seatingMap.objects || [],
+        canvasW:  seatingMap.canvasW || 1000,
+        canvasH:  seatingMap.canvasH || 700,
+      });
+      setSeatingMap(res.data.seatingMap);
+      toast.success(nextEnabled ? 'Seating chart enabled on your RSVP page' : 'Seating chart hidden from your RSVP page');
+    } catch (err) {
+      toast.error(err.response?.data?.error || 'Failed to update seating chart');
+    } finally {
+      setSeatingToggling(false);
+    }
+  };
+
   const addQuestion = () => {
     const id = `q_${Date.now()}`;
     set('customQuestions', [...(settings.customQuestions||[]), { id, label:'', type:'text', required:false, options:[], placeholder:'', helpText:'', order:(settings.customQuestions||[]).length }]);
@@ -1017,6 +1070,52 @@ export default function RSVPPageBuilder() {
           </div>
         )}
       </div>
+
+      {/* ── Seating Chart ── */}
+      <SectionCard icon={MapPin} title="Seating Chart" description="Let guests pick their own table when they RSVP" accent={accent}>
+        {seatingLoading ? (
+          <p className="text-xs text-neutral-400">Checking seating status…</p>
+        ) : (seatingMap?.objects?.length > 0) ? (
+          <>
+            <Toggle
+              label="Show seating chart on RSVP page"
+              hint="Guests who RSVP 'Attending' will be able to pick their table from the floor plan you built in Event Space."
+              checked={!!seatingMap.enabled}
+              onChange={toggleSeatingChart}
+              disabled={seatingToggling || (seatingWlGate?.isWhiteLabel && !seatingWlGate.showSeatingChartAllowed)}
+            />
+            {seatingWlGate?.isWhiteLabel && !seatingWlGate.showSeatingChartAllowed && (
+              <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-xl p-3">
+                <AlertTriangle className="w-3.5 h-3.5 text-amber-500 flex-shrink-0 mt-0.5" />
+                <p className="text-xs text-amber-700 leading-relaxed">
+                  {seatingWlGate.tier === 'basic'
+                    ? "Seating charts aren't available on this white-label plan's Basic tier — guests won't see this even if you turn it on here. Ask about upgrading to Pro or Enterprise."
+                    : "The seating chart feature isn't turned on for this white-label client, so guests won't see it even if enabled here. An admin can turn it on from the white-label portal."}
+                </p>
+              </div>
+            )}
+            <button
+              type="button"
+              onClick={() => navigate(`/event/${eventId}?openSeating=1`)}
+              className="flex items-center gap-1.5 text-sm font-semibold text-indigo-600 hover:text-indigo-700 transition-colors pt-1"
+            >
+              <ExternalLink className="w-3.5 h-3.5" /> Edit floor plan in Event Space
+            </button>
+          </>
+        ) : (
+          <div>
+            <p className="text-sm text-neutral-600 leading-relaxed">No floor plan yet. Build one in Event Space, then come back here to turn on seat selection for guests.</p>
+            <button
+              type="button"
+              onClick={() => navigate(`/event/${eventId}?openSeating=1`)}
+              className="flex items-center gap-1.5 mt-3 px-3.5 py-2 rounded-xl text-sm font-bold text-white transition-all"
+              style={{ background: accent }}
+            >
+              <ArrowRight className="w-4 h-4" /> Set up seating in Event Space
+            </button>
+          </div>
+        )}
+      </SectionCard>
 
       {/* ── Appearance ── */}
       <SectionCard icon={Palette} title="Appearance" description="Colors, fonts, background style — how the page looks" defaultOpen accent={accent}>
@@ -1539,7 +1638,12 @@ export default function RSVPPageBuilder() {
         <div className="flex-1 overflow-hidden relative" style={{ background: '#1a1a2e' }}>
           <div className="absolute inset-0 overflow-auto">
             <div className={`${viewMode === 'desktop' ? 'h-full' : 'min-h-full py-8 px-4'}`}>
-              <LivePreview settings={settings} event={event} viewMode={viewMode} />
+              <LivePreview
+                settings={settings}
+                event={event}
+                viewMode={viewMode}
+                seatingEnabled={!!(seatingMap?.enabled && seatingMap?.objects?.length > 0 && !(seatingWlGate?.isWhiteLabel && !seatingWlGate.showSeatingChartAllowed))}
+              />
             </div>
           </div>
 
