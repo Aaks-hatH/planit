@@ -3782,21 +3782,31 @@ export default function Home() {
               {!created && (
                 <Reveal delay={80}>
                   <div className="sticky top-24">
-                    {/* Mode selector — Standard vs Enterprise only applies within the Events branch */}
-                    {selectedBranch === 'events' && (
+                    {/* Mode selector — lets you flip between Standard, Enterprise, and RSVP-only without leaving the wizard */}
+                    {(selectedBranch === 'events' || selectedBranch === 'rsvp') && (
                       <div style={{ display:'flex', gap:6, marginBottom:20, padding:'6px', background:'rgba(255,255,255,0.03)', borderRadius:14, border:'1px solid rgba(255,255,255,0.06)' }}>
                         {[
                           { val:'standard',   label:'Standard',   sub:'Team planning'  },
                           { val:'enterprise', label:'Enterprise', sub:'Large + QR'     },
+                          { val:'rsvp',       label:'RSVP',       sub:'Just RSVPs'     },
                         ].map(({ val, label, sub }) => (
-                          <button key={val} type="button" onClick={() => { setMode(val); setFormData(p => ({ ...p, isEnterpriseMode: val === 'enterprise' })); setWizardKey(k => k + 1); }}
+                          <button key={val} type="button" onClick={() => {
+                              setMode(val);
+                              setFormData(p => ({ ...p, isEnterpriseMode: val === 'enterprise' }));
+                              setWizardKey(k => k + 1);
+                              const nextBranch = val === 'rsvp' ? 'rsvp' : 'events';
+                              if (nextBranch !== selectedBranch) {
+                                setSelectedBranch(nextBranch);
+                                setTimeout(() => document.getElementById(nextBranch === 'rsvp' ? 'planit-rsvp' : 'planit-events')?.scrollIntoView({ behavior:'smooth', block:'start' }), 50);
+                              }
+                            }}
                             data-mode={val}
                             style={{
                               flex:1, padding:'9px 12px', borderRadius:10, border:'none', cursor:'pointer',
-                              background: mode === val ? (val === 'enterprise' ? 'rgba(99,102,241,0.9)' : '#fff') : 'transparent',
-                              color: mode === val ? (val === 'enterprise' ? '#fff' : '#111') : 'rgba(255,255,255,0.4)',
+                              background: mode === val ? (val === 'enterprise' ? 'rgba(99,102,241,0.9)' : val === 'rsvp' ? 'rgba(16,185,129,0.9)' : '#fff') : 'transparent',
+                              color: mode === val ? (val === 'enterprise' || val === 'rsvp' ? '#fff' : '#111') : 'rgba(255,255,255,0.4)',
                               fontWeight:700, fontSize:13, transition:'all 0.2s ease',
-                              boxShadow: mode === val && val === 'enterprise' ? '0 0 20px rgba(99,102,241,0.3)' : 'none',
+                              boxShadow: mode === val && val === 'enterprise' ? '0 0 20px rgba(99,102,241,0.3)' : mode === val && val === 'rsvp' ? '0 0 20px rgba(16,185,129,0.3)' : 'none',
                             }}>
                             <div>{label}</div>
                             <div style={{ fontSize:11, opacity:0.6, fontWeight:400, marginTop:1 }}>{sub}</div>
@@ -3919,6 +3929,8 @@ export default function Home() {
                     width:600, height:600, borderRadius:'50%', pointerEvents:'none',
                     background: mode === 'table-service'
                       ? 'radial-gradient(circle, rgba(249,115,22,0.07) 0%, transparent 65%)'
+                      : mode === 'rsvp'
+                      ? 'radial-gradient(circle, rgba(16,185,129,0.08) 0%, transparent 65%)'
                       : 'radial-gradient(circle, rgba(99,102,241,0.08) 0%, transparent 65%)',
                     filter:'blur(40px)',
                   }} />
@@ -3948,12 +3960,14 @@ export default function Home() {
                   <div style={{ position:'absolute', top:26, left:28, display:'flex', alignItems:'center', gap:10 }}>
                     <div style={{
                       width:32, height:32, borderRadius:9,
-                      background: mode === 'table-service' ? 'rgba(249,115,22,0.1)' : 'rgba(99,102,241,0.1)',
-                      border: mode === 'table-service' ? '1px solid rgba(249,115,22,0.25)' : '1px solid rgba(99,102,241,0.25)',
+                      background: mode === 'table-service' ? 'rgba(249,115,22,0.1)' : mode === 'rsvp' ? 'rgba(16,185,129,0.1)' : 'rgba(99,102,241,0.1)',
+                      border: mode === 'table-service' ? '1px solid rgba(249,115,22,0.25)' : mode === 'rsvp' ? '1px solid rgba(16,185,129,0.25)' : '1px solid rgba(99,102,241,0.25)',
                       display:'flex', alignItems:'center', justifyContent:'center',
                     }}>
                       {mode === 'table-service'
                         ? <UtensilsCrossed style={{ width:15, height:15, color:'#f97316' }} />
+                        : mode === 'rsvp'
+                        ? <CheckSquare style={{ width:15, height:15, color:'#34d399' }} />
                         : <Calendar style={{ width:15, height:15, color:'#818cf8' }} />
                       }
                     </div>
@@ -3970,21 +3984,22 @@ export default function Home() {
                     boxShadow:'0 40px 100px rgba(0,0,0,0.7)',
                     position:'relative',
                   }}>
-                    {/* Mode tabs (events only) */}
+                    {/* Mode tabs (events + rsvp; hidden for venue) */}
                     {selectedBranch !== 'venue' && (
                       <div style={{ display:'flex', gap:6, marginBottom:32, padding:'6px', background:'rgba(255,255,255,0.03)', borderRadius:14, border:'1px solid rgba(255,255,255,0.06)' }}>
                         {[
                           { val:'standard',   label:'Standard',   sub:'Team planning'  },
                           { val:'enterprise', label:'Enterprise', sub:'Large + QR'     },
+                          { val:'rsvp',       label:'RSVP',       sub:'Just RSVPs'     },
                         ].map(({ val, label, sub }) => (
-                          <button key={val} type="button" onClick={() => { setMode(val); setFormData(p => ({ ...p, isEnterpriseMode: val === 'enterprise' })); setWizardKey(k => k + 1); }}
+                          <button key={val} type="button" onClick={() => { setMode(val); setFormData(p => ({ ...p, isEnterpriseMode: val === 'enterprise' })); setWizardKey(k => k + 1); if (val === 'rsvp' && selectedBranch !== 'rsvp') setSelectedBranch('rsvp'); if (val !== 'rsvp' && selectedBranch === 'rsvp') setSelectedBranch('events'); }}
                             style={{
                               flex:1, padding:'9px 12px', borderRadius:10, border:'none', cursor:'pointer',
-                              background: mode === val ? (val === 'enterprise' ? 'rgba(99,102,241,0.9)' : '#fff') : 'transparent',
-                              color: mode === val ? (val === 'enterprise' ? '#fff' : '#111') : 'rgba(255,255,255,0.4)',
+                              background: mode === val ? (val === 'enterprise' ? 'rgba(99,102,241,0.9)' : val === 'rsvp' ? 'rgba(16,185,129,0.9)' : '#fff') : 'transparent',
+                              color: mode === val ? (val === 'enterprise' || val === 'rsvp' ? '#fff' : '#111') : 'rgba(255,255,255,0.4)',
                               fontWeight:700, fontSize:13, transition:'all 0.2s ease',
                               fontFamily:'DM Sans,sans-serif',
-                              boxShadow: mode === val && val === 'enterprise' ? '0 0 20px rgba(99,102,241,0.35)' : 'none',
+                              boxShadow: mode === val && val === 'enterprise' ? '0 0 20px rgba(99,102,241,0.35)' : mode === val && val === 'rsvp' ? '0 0 20px rgba(16,185,129,0.35)' : 'none',
                             }}>
                             <div>{label}</div>
                             <div style={{ fontSize:11, opacity:0.6, fontWeight:400, marginTop:1 }}>{sub}</div>
@@ -4035,14 +4050,14 @@ export default function Home() {
                        <span className="font-syne font-black text-xl text-white tracking-tight">{isWL ? wlName : 'PlanIt'}</span></>
                   }
                 </div>
-                <p className="text-sm text-neutral-500 leading-relaxed mb-4 max-w-xs">{isWL ? '' : 'The ultimate planning hub for event teams. Plan smart, execute flawlessly.'}</p>
+                <p className="text-sm text-neutral-500 leading-relaxed mb-4 max-w-xs">{isWL ? '' : 'The ultimate planning hub for event teams — plus standalone RSVP pages when that\'s all you need. Plan smart, execute flawlessly.'}</p>
                 <p className="text-xs text-neutral-600">Built by Aakshat Hariharan</p>
               </div>
               <div>
                 <h3 className="text-xs font-bold text-neutral-500 mb-5 uppercase tracking-wider">Product</h3>
                 <ul className="space-y-3.5 text-sm text-neutral-500">
-                  {[['Features', '#features'], ['Claude Integration', '/help#claude'], ['Discover', '/discover'], ['Blog', '/blog'], ['Status', '/status'], ['Help', '/help'], ['Get Started', '#create'], ['License', '/license'], ['Credits', '/credits']].map(([l, h]) => (
-                    <li key={l}><a href={h} className="nav-link inline-block hover:text-neutral-200 transition-colors duration-200">{l}</a></li>
+                  {[['Features', '#features'], ['RSVP Pages', '#planit-rsvp'], ['Claude Integration', '/help#claude'], ['Discover', '/discover'], ['Blog', '/blog'], ['Status', '/status'], ['Help', '/help'], ['Get Started', '#create'], ['License', '/license'], ['Credits', '/credits']].map(([l, h]) => (
+                    <li key={l}><a href={h} onClick={l === 'RSVP Pages' ? (e) => { e.preventDefault(); selectBranch('rsvp'); } : undefined} className="nav-link inline-block hover:text-neutral-200 transition-colors duration-200">{l}</a></li>
                   ))}
                 </ul>
               </div>
