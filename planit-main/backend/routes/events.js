@@ -70,7 +70,8 @@ router.post('/',
   ],
   async (req, res, next) => {
     try {
-      const { subdomain, title, description, date, location, organizerName, organizerEmail, password, accountPassword, staffPassword, isEnterpriseMode, isTableServiceMode, settings, maxParticipants } = req.body;
+      const { subdomain, title, description, date, location, organizerName, organizerEmail, password, accountPassword, staffPassword, isEnterpriseMode, isTableServiceMode, eventType, settings, maxParticipants } = req.body;
+      const resolvedEventType = eventType === 'rsvpOnly' ? 'rsvpOnly' : 'standard';
 
       const existing = await Event.findOne({ subdomain });
       if (existing) return res.status(409).json({ error: 'This event link is already taken.' });
@@ -157,6 +158,8 @@ router.post('/',
         password: hashedPassword, isPasswordProtected,
         isEnterpriseMode: isEnterpriseMode || false,
         isTableServiceMode: isTableServiceMode || false,
+        eventType: resolvedEventType,
+        ...(resolvedEventType === 'rsvpOnly' ? { rsvpPage: { enabled: true } } : {}),
         settings: settings || {}, maxParticipants: maxParticipants || 100,
         participants: [{ username: organizerName, role: 'organizer' }],
         wlDomain,
