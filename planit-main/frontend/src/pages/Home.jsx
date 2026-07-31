@@ -1468,6 +1468,7 @@ const VENUE_TYPES = [
 
 function OnboardingWizard({ mode, formData, setFormData, fieldErrors, setFieldErrors, onSubmit, loading, submittedRef, stepControlRef, abuseStatus, requiresVerification, onCaptchaToken, captchaResetKey, onUserInput, onUserPaste }) {
   const isVenue = mode === 'table-service';
+  const isRsvp  = mode === 'rsvp';
   const accent  = isVenue ? '#f97316' : '#6366f1';
   const accentHover = isVenue ? '#fb923c' : '#818cf8';
 
@@ -1561,7 +1562,7 @@ function OnboardingWizard({ mode, formData, setFormData, fieldErrors, setFieldEr
     return () => clearTimeout(t);
   }, [step]);
 
-  const totalSteps = isVenue ? 4 : 6;
+  const totalSteps = isVenue ? 4 : (isRsvp ? 5 : 6);
 
   const go = (delta) => {
     setDir(delta > 0 ? 'forward' : 'back');
@@ -1579,13 +1580,13 @@ function OnboardingWizard({ mode, formData, setFormData, fieldErrors, setFieldEr
       if (!formData.date)     e.date     = 'Date and time is required.';
       if (!formData.timezone) e.timezone = 'Timezone is required.';
     }
-    const nameStep = isVenue ? 2 : 4;
+    const nameStep = isVenue ? 2 : (isRsvp ? 3 : 4);
     if (step === nameStep) {
       if (!formData.organizerName.trim()) e.organizerName = isVenue ? 'Manager name is required.' : 'Your name is required.';
       if (!formData.organizerEmail.trim()) e.organizerEmail = 'Email is required.';
       else if (!validateEmail(formData.organizerEmail.trim())) e.organizerEmail = 'Please enter a valid email.';
     }
-    const pwStep = isVenue ? 3 : 5;
+    const pwStep = isVenue ? 3 : (isRsvp ? 4 : 5);
     if (step === pwStep) {
       if (!formData.accountPassword) e.accountPassword = 'Password is required.';
       else if (formData.accountPassword.length < 4) e.accountPassword = 'Must be at least 4 characters.';
@@ -1785,8 +1786,8 @@ function OnboardingWizard({ mode, formData, setFormData, fieldErrors, setFieldEr
       );
     }
 
-    // Events Step 3: Enterprise decision slide
-    if (!isVenue && step === 3) {
+    // Events Step 3: Enterprise decision slide (not shown for RSVP-only events)
+    if (!isVenue && !isRsvp && step === 3) {
       const isEnt = formData.isEnterpriseMode;
       return (
         <div style={{ display:'flex', flexDirection:'column', gap:0 }}>
@@ -1874,8 +1875,8 @@ function OnboardingWizard({ mode, formData, setFormData, fieldErrors, setFieldEr
       );
     }
 
-    // Name step (events: 4, venue: 2)
-    const nameStep = isVenue ? 2 : 4;
+    // Name step (events: 4, rsvp: 3, venue: 2)
+    const nameStep = isVenue ? 2 : (isRsvp ? 3 : 4);
     if (step === nameStep) {
       return (
         <div style={{ display:'flex', flexDirection:'column', gap:18 }}>
@@ -1918,11 +1919,15 @@ function OnboardingWizard({ mode, formData, setFormData, fieldErrors, setFieldEr
       );
     }
 
-    // Password step (events: 5, venue: 3)
-    const pwStep = isVenue ? 3 : 5;
+    // Password step (events: 5, rsvp: 4, venue: 3)
+    const pwStep = isVenue ? 3 : (isRsvp ? 4 : 5);
     if (step === pwStep) {
       const secondPwLabel = isVenue ? 'Staff password' : 'Event password';
-      const secondPwHint  = isVenue ? 'PIN your floor staff enter to log in (optional)' : 'Restrict who can join your event (optional)';
+      const secondPwHint  = isVenue
+        ? 'PIN your floor staff enter to log in (optional)'
+        : isRsvp
+          ? "Restrict who can access your event space (optional) — your RSVP page itself stays open to anyone with the link, unless you password-protect it separately in RSVP Settings."
+          : 'Restrict who can join your event (optional)';
       return (
         <div style={{ display:'flex', flexDirection:'column', gap:18 }}>
           <div>
@@ -2312,7 +2317,8 @@ export default function Home() {
       } else {
         const msg = data?.error || 'Failed to create';
         const isTS2 = mode === 'table-service';
-        const nameStepNum = isTS2 ? 2 : 4;
+        const isRsvp2 = mode === 'rsvp';
+        const nameStepNum = isTS2 ? 2 : (isRsvp2 ? 3 : 4);
 
         if (msg.includes('already taken')) {
           // Taken slug — show inline error and navigate back to the URL step
@@ -2417,31 +2423,22 @@ export default function Home() {
                 <ChevronRight className="w-3 h-3 rotate-180" /> Change
               </button>
             )}
-            {/* ── Branch links: show whichever of Events / RSVP / Venue isn't the active one ── */}
-            {!isWL && selectedBranch !== 'venue' && (
-              <a href="#planit-venue"
-                onClick={(e) => { e.preventDefault(); selectBranch('venue'); }}
-                className="hidden md:flex items-center gap-1.5 px-3 py-2 text-sm text-orange-400/80 hover:text-orange-300 hover:bg-orange-500/8 rounded-xl transition-all duration-200">
-                <UtensilsCrossed className="w-3.5 h-3.5" />
-                PlanIt Venue
-              </a>
-            )}
-            {selectedBranch !== 'rsvp' && (
-              <a href="#planit-rsvp"
-                onClick={(e) => { e.preventDefault(); selectBranch('rsvp'); }}
-                className="hidden md:flex items-center gap-1.5 px-3 py-2 text-sm text-emerald-400/80 hover:text-emerald-300 hover:bg-emerald-500/8 rounded-xl transition-all duration-200">
-                <CheckSquare className="w-3.5 h-3.5" />
-                RSVP Event
-              </a>
-            )}
-            {selectedBranch && selectedBranch !== 'events' && (
-              <a href="#planit-events"
-                onClick={(e) => { e.preventDefault(); selectBranch('events'); }}
-                className="hidden md:flex items-center gap-1.5 px-3 py-2 text-sm text-neutral-300 hover:text-white hover:bg-neutral-800/50 rounded-xl transition-all duration-200">
-                <Calendar className="w-3.5 h-3.5" />
-                PlanIt Events
-              </a>
-            )}
+            {/* ── When NOT in Venue section: show Venue link ── */}
+            {!isWL && <a href="#planit-venue"
+              onClick={(e) => { e.preventDefault(); selectBranch('venue'); }}
+              style={{ display: selectedBranch === 'venue' ? 'none' : undefined }}
+              className="hidden md:flex items-center gap-1.5 px-3 py-2 text-sm text-orange-400/80 hover:text-orange-300 hover:bg-orange-500/8 rounded-xl transition-all duration-200">
+              <UtensilsCrossed className="w-3.5 h-3.5" />
+              PlanIt Venue
+            </a>}
+            {/* ── When IN Venue section: show Events link ── */}
+            <a href="#planit-events"
+              onClick={(e) => { e.preventDefault(); selectBranch('events'); }}
+              style={{ display: selectedBranch === 'venue' ? 'flex' : 'none' }}
+              className="items-center gap-1.5 px-3 py-2 text-sm text-neutral-300 hover:text-white hover:bg-neutral-800/50 rounded-xl transition-all duration-200">
+              <Calendar className="w-3.5 h-3.5" />
+              PlanIt Events
+            </a>
             <a href="/discover" className="hidden md:flex items-center gap-1.5 px-3 py-2 text-sm text-neutral-400 hover:text-neutral-200 hover:bg-neutral-800/50 rounded-xl transition-all duration-200">
               <Zap className="w-3.5 h-3.5" />
               Discover
@@ -2479,14 +2476,9 @@ export default function Home() {
         {/* Mobile dropdown menu */}
         {mobileMenuOpen && (
           <div className="md:hidden border-t border-neutral-800/60 px-4 py-3 space-y-1" style={{ background: 'rgba(6,6,12,0.98)' }}>
-            <a href="#planit-venue" onClick={() => { setMobileMenuOpen(false); selectBranch('venue'); }} className="flex items-center gap-2.5 px-3 py-2.5 text-sm text-orange-400 hover:text-orange-300 hover:bg-orange-500/10 rounded-xl transition-all">
+            <a href="#planit-venue" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-2.5 px-3 py-2.5 text-sm text-orange-400 hover:text-orange-300 hover:bg-orange-500/10 rounded-xl transition-all">
               <UtensilsCrossed className="w-4 h-4" />{isWL ? 'Venue' : 'PlanIt Venue'}
             </a>
-            {!isWL && (
-              <a href="#planit-rsvp" onClick={() => { setMobileMenuOpen(false); selectBranch('rsvp'); }} className="flex items-center gap-2.5 px-3 py-2.5 text-sm text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/10 rounded-xl transition-all">
-                <CheckSquare className="w-4 h-4" />RSVP Event
-              </a>
-            )}
             <a href="/discover" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-2.5 px-3 py-2.5 text-sm text-neutral-300 hover:text-white hover:bg-neutral-800/60 rounded-xl transition-all">
               <Zap className="w-4 h-4 text-neutral-500" />Discover
             </a>
@@ -2586,7 +2578,7 @@ export default function Home() {
 
               {/* CTA buttons */}
               <motion.div initial={{ opacity:0, y:20 }} animate={{ opacity:1, y:0 }} transition={{ duration:0.7, delay:1.05 }}
-                className="flex flex-col sm:flex-row flex-wrap items-center justify-center gap-4 mb-16">
+                className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-16">
                 <a href="#planit-events"
                   onClick={(e) => { e.preventDefault(); selectBranch('events'); }}
                   className="cta-primary group inline-flex items-center justify-center gap-3 w-full sm:w-auto px-8 py-4 bg-white text-neutral-900 text-sm font-bold rounded-2xl shadow-2xl">
@@ -2594,16 +2586,6 @@ export default function Home() {
                   {(isWL && heroCta) ? heroCta : 'Start with Events'}
                   <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform duration-300" />
                 </a>
-                {!isWL && (
-                  <a href="#planit-rsvp"
-                    onClick={(e) => { e.preventDefault(); selectBranch('rsvp'); }}
-                    className="group inline-flex items-center justify-center gap-3 w-full sm:w-auto px-8 py-4 border border-emerald-500/40 text-emerald-300 text-sm font-bold rounded-2xl transition-all duration-300 hover:border-emerald-400/70 hover:bg-emerald-500/10"
-                    style={{ background: 'rgba(16,185,129,0.07)' }}>
-                    <CheckSquare className="w-4 h-4" />
-                    Create an RSVP Page
-                    <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform duration-300" />
-                  </a>
-                )}
                 <a href="#create"
                   onClick={(e) => { e.preventDefault(); setSelectedBranch('events'); setMode('enterprise'); setWizardKey(k => k + 1); setTimeout(() => document.getElementById('planit-events')?.scrollIntoView({ behavior:'smooth', block:'start' }), 50); }}
                   className="group inline-flex items-center justify-center gap-3 w-full sm:w-auto px-8 py-4 border border-indigo-500/40 text-indigo-300 text-sm font-bold rounded-2xl transition-all duration-300 hover:border-indigo-400/70 hover:bg-indigo-500/10"
@@ -3773,7 +3755,11 @@ export default function Home() {
                       <button
                         onClick={() => {
                           const base = created.subdomain ? `/e/${created.subdomain}` : `/event/${created.id}`;
-                          navigate(mode === 'table-service' ? `${base}/floor` : `${base}?new=1`);
+                          navigate(
+                            mode === 'table-service' ? `${base}/floor`
+                              : mode === 'rsvp' ? `${base}/rsvp-dashboard`
+                              : `${base}?new=1`
+                          );
                         }}
                         className="w-full px-8 py-5 bg-white text-neutral-900 rounded-2xl font-bold hover:scale-105 hover:bg-neutral-100 transition-all duration-300 shadow-xl flex items-center justify-center gap-3 text-lg"
                       >
@@ -3788,8 +3774,8 @@ export default function Home() {
               {!created && (
                 <Reveal delay={80}>
                   <div className="sticky top-24">
-                    {/* Mode selector */}
-                    {selectedBranch !== 'venue' && (
+                    {/* Mode selector — Standard vs Enterprise only applies within the Events branch */}
+                    {selectedBranch === 'events' && (
                       <div style={{ display:'flex', gap:6, marginBottom:20, padding:'6px', background:'rgba(255,255,255,0.03)', borderRadius:14, border:'1px solid rgba(255,255,255,0.06)' }}>
                         {[
                           { val:'standard',   label:'Standard',   sub:'Team planning'  },
