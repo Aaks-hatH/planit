@@ -35,6 +35,10 @@ export const HeroBlock = React.memo(function HeroBlock({ content, layout, spacin
   const cover = coverImageUrl || null; // resolved cover URL, passed down by renderer after cover-cache lookup
   const dateStr = dateTime ? new Date(dateTime).toLocaleString(undefined, { dateStyle: 'full', timeStyle: 'short' }) : '';
   const split = layout === 'split';
+  // Fall back to a classic invitation eyebrow line when no tagline has been
+  // set, so a freshly-created page (or one an organizer hasn't customized
+  // yet) never looks like an empty placeholder.
+  const eyebrow = subtitle || (title ? `You're invited to ${title}` : "You're invited");
 
   return (
     <section className={`w-full ${spacingClass(spacing)} px-6 md:px-10`}>
@@ -48,7 +52,7 @@ export const HeroBlock = React.memo(function HeroBlock({ content, layout, spacin
           />
         )}
         <div className={split ? 'md:w-1/2 flex flex-col gap-3' : 'flex flex-col items-center gap-3'}>
-          {subtitle && <p className="uppercase tracking-[0.2em] text-xs md:text-sm opacity-70" style={{ color: accent }}>{subtitle}</p>}
+          {eyebrow && <p className="uppercase tracking-[0.2em] text-xs md:text-sm opacity-70" style={{ color: accent }}>{eyebrow}</p>}
           <h1 className={`text-4xl md:text-6xl ${fonts.heading}`}>{title || 'Untitled Event'}</h1>
           <div className={`flex flex-col ${split ? 'items-start' : 'items-center'} gap-1 ${fonts.body} opacity-80 text-sm md:text-base`}>
             {dateStr && <span>{dateStr}</span>}
