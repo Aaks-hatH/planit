@@ -28,6 +28,7 @@ import {
 import toast from 'react-hot-toast';
 import { rsvpAPI } from '../services/api';
 import RSVPPageRenderer from '../components/RSVPPageRenderer';
+import RSVPSettings from '../components/RSVPSettings';
 import BlockContentEditor from '../components/rsvpBlocks/BlockContentEditor';
 import { BLOCK_TYPES, LAYOUT_VARIANTS, PRESET_COLORS } from '../components/rsvpBlocks/theme';
 import { BLOCK_LABELS, defaultContentFor } from '../components/rsvpBlocks/contentSchema';
@@ -177,6 +178,8 @@ export default function RSVPPageBuilder() {
   const [viewMode, setViewMode] = useState('desktop');
   const [addMenuOpen, setAddMenuOpen] = useState(false);
   const [saveState, setSaveState] = useState('idle'); // idle | saving | saved | error
+  const [activeTab, setActiveTab] = useState('design'); // 'design' | 'settings'
+  const [orgRsvpPage, setOrgRsvpPage] = useState(null); // full organizer-only settings (on/off, access, notifications, security, etc.)
 
   const saveTimer = useRef(null);
   const latestConfigRef = useRef(null);
@@ -196,13 +199,18 @@ export default function RSVPPageBuilder() {
           date: pageRes.data.date,
           location: pageRes.data.location,
           organizerName: pageRes.data.organizerName,
+          subdomain: pageRes.data.subdomain,
         });
 
-        const cfgRes = await rsvpAPI.getPageConfig(eid);
+        const [cfgRes, settingsRes] = await Promise.all([
+          rsvpAPI.getPageConfig(eid),
+          rsvpAPI.getSettings(eid),
+        ]);
         setConfig(cfgRes.data.rsvpPageConfig);
         setFlatSettings(cfgRes.data.flatSettings || {});
         setSeatingMapEnabled(!!cfgRes.data.seatingMapEnabled);
         setCoverTemplates(cfgRes.data.coverTemplates || []);
+        setOrgRsvpPage(settingsRes.data.rsvpPage || {});
       } catch (err) {
         console.error(err);
         toast.error('Could not load the RSVP page builder.');
@@ -305,6 +313,33 @@ export default function RSVPPageBuilder() {
 
   const previewConfig = useMemo(() => config, [config]);
 
+  // Re-pull settings + flatSettings after the Settings tab saves, so the live
+  // preview (which reads flatSettings for the pinned rsvpForm block) and the
+  // Settings panel itself both reflect what was just persisted.
+  const refreshSettings = useCallback(async () => {
+    if (!eventId) return;
+    try {
+      const [cfgRes, settingsRes] = await Promise.all([
+        rsvpAPI.getPageConfig(eventId),
+        rsvpAPI.getSettings(eventId),
+      ]);
+      setFlatSettings(cfgRes.data.flatSettings || {});
+      setSeatingMapEnabled(!!cfgRes.data.seatingMapEnabled);
+      setOrgRsvpPage(settingsRes.data.rsvpPage || {});
+    } catch (err) {
+      console.error(err);
+    }
+  }, [eventId]);
+
+  // RSVPSettings resets its local state whenever the `event` prop identity
+  // changes, so this must stay referentially stable across renders that
+  // don't actually change event/orgRsvpPage — otherwise every keystroke
+  // elsewhere in the builder would wipe unsaved settings edits.
+  const settingsEvent = useMemo(
+    () => (event ? { ...event, rsvpPage: orgRsvpPage || {} } : null),
+    [event, orgRsvpPage]
+  );
+
   if (loading) {
     return <div className="min-h-screen flex items-center justify-center bg-[#0a0a12] text-white/60"><Loader2 className="animate-spin" /></div>;
   }
@@ -322,14 +357,21 @@ export default function RSVPPageBuilder() {
         </div>
         <SaveIndicator state={saveState} />
         <div className="flex rounded-full bg-white/5 p-0.5">
-          <button onClick={() => setViewMode('desktop')} className={`p-1.5 rounded-full ${viewMode === 'desktop' ? 'bg-white/15' : 'opacity-50'}`}><Monitor size={14} /></button>
-          <button onClick={() => setViewMode('mobile')} className={`p-1.5 rounded-full ${viewMode === 'mobile' ? 'bg-white/15' : 'opacity-50'}`}><Smartphone size={14} /></button>
+          <button onClick={() => setActiveTab('design')} className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-colors ${activeTab === 'design' ? 'bg-white/15' : 'opacity-50 hover:opacity-80'}`}>Design</button>
+          <button onClick={() => setActiveTab('settings')} className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-colors ${activeTab === 'settings' ? 'bg-white/15' : 'opacity-50 hover:opacity-80'}`}>Settings</button>
         </div>
+        {activeTab === 'design' && (
+          <div className="flex rounded-full bg-white/5 p-0.5">
+            <button onClick={() => setViewMode('desktop')} className={`p-1.5 rounded-full ${viewMode === 'desktop' ? 'bg-white/15' : 'opacity-50'}`}><Monitor size={14} /></button>
+            <button onClick={() => setViewMode('mobile')} className={`p-1.5 rounded-full ${viewMode === 'mobile' ? 'bg-white/15' : 'opacity-50'}`}><Smartphone size={14} /></button>
+          </div>
+        )}
         <a href={`/rsvp/${event?.subdomain || eventId}`} target="_blank" rel="noreferrer" className="text-xs flex items-center gap-1 opacity-70 hover:opacity-100">
           View live <ExternalLink size={12} />
         </a>
       </div>
 
+      {activeTab === 'design' && (
       <div className="flex flex-1 overflow-hidden">
         {/* left rail */}
         <div className="w-[380px] shrink-0 border-r border-white/10 overflow-y-auto p-4 flex flex-col gap-3">
@@ -434,6 +476,25 @@ export default function RSVPPageBuilder() {
           </div>
         </div>
       </div>
+      )}
+
+      {activeTab === 'settings' && (
+        <div className="flex-1 overflow-y-auto bg-neutral-100">
+          <div className="max-w-3xl mx-auto px-4 py-8">
+            {settingsEvent ? (
+              <RSVPSettings
+                event={settingsEvent}
+                eventId={eventId}
+                onSettingsChanged={refreshSettings}
+              />
+            ) : (
+              <div className="flex items-center justify-center py-16 text-neutral-500">
+                <Loader2 className="w-5 h-5 animate-spin" />
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
