@@ -2602,6 +2602,14 @@ export default function Home() {
                   Explore Venue
                   <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform duration-300" />
                 </a>
+                <a href="#planit-rsvp"
+                  onClick={(e) => { e.preventDefault(); selectBranch('rsvp'); }}
+                  className="group inline-flex items-center justify-center gap-3 w-full sm:w-auto px-8 py-4 border border-emerald-500/30 text-emerald-400 text-sm font-bold rounded-2xl transition-all duration-300 hover:border-emerald-400/60 hover:bg-emerald-500/10"
+                  style={{ background: 'rgba(16,185,129,0.06)' }}>
+                  <CheckSquare className="w-4 h-4" />
+                  Just Need RSVPs?
+                  <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform duration-300" />
+                </a>
               </motion.div>
 
               {/* Slug finder — jump to a private event */}
@@ -2691,7 +2699,7 @@ export default function Home() {
                 {[
                   { value: '< 60s',   label: 'To create an event',    sub: 'No account needed' },
                   { value: '∞',       label: 'Team members',          sub: 'No per-seat caps' },
-                  { value: '3',       label: 'Event modes',           sub: 'Standard, Enterprise, Venue' },
+                  { value: '4',       label: 'Event modes',           sub: 'Standard, Enterprise, RSVP, Venue' },
                   { value: '7 days',  label: 'Post-event data',       sub: 'Auto-deleted after' },
                 ].map((s, i) => (
                   <Reveal key={s.label} delay={i * 70}>
