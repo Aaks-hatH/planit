@@ -1,0 +1,243 @@
+================================================================================
+================================================================================
+
+                PLANIT ROUTER SERVICE — PROPRIETARY SOFTWARE LICENSE
+                          EXCLUSIVE RIGHTS RESERVED
+
+================================================================================
+================================================================================
+
+                     PlanIt Router Infrastructure License Agreement
+                              Version 2.0 — January 2026
+
+              Copyright (c) 2026 Aakshat Hariharan. All Rights Reserved.
+
+                          planit.userhelp@gmail.com
+                        https://planitapp.onrender.com
+
+================================================================================
+                            PREAMBLE AND LEGAL NOTICE
+================================================================================
+
+IMPORTANT — READ THIS ENTIRE AGREEMENT BEFORE ACCESSING, READING, CLONING,
+OPERATING, BENCHMARKING, OR INTERACTING WITH THE PLANIT ROUTER SERVICE OR ANY
+PORTION OF ITS SOURCE CODE OR INFRASTRUCTURE CONFIGURATION.
+
+This License Agreement ("Agreement") is a legally binding contract between You
+and Aakshat Hariharan ("Author") governing Your access to and use of the PlanIt
+Router Service — the intelligent traffic management and request orchestration
+layer that sits at the heart of the PlanIt platform's infrastructure.
+
+The Router Service is not a commodity reverse proxy. It embodies proprietary
+algorithms for adaptive backend selection, health-aware load distribution,
+maintenance-safe traffic management, mesh-authenticated inter-service
+communication, and white-label-aware routing that represent significant
+engineering investment and constitute trade secrets of the Author. This
+software is not available for use, adaptation, or deployment outside of
+the Author's own infrastructure under any circumstances without a
+separately executed written license.
+
+================================================================================
+SECTION 1 — DEFINITIONS
+================================================================================
+
+1.1   "Router Service" or "Software" means the PlanIt HTTP routing and
+      orchestration layer in its entirety, including without limitation:
+
+      (a)  All source code implementing the intelligent backend selection
+           algorithm, including the scoring function, health-check polling
+           loop, alive-state tracking, weighted cycling logic, boost mode
+           configuration, and adaptive scaling heuristics;
+
+      (b)  The maintenance intercept middleware and the _maintenanceExempt()
+           exemption logic, including all hardcoded path exceptions and the
+           rationale embedded in comments;
+
+      (c)  The CORS management system, including the dynamic whitelist of
+           allowed origins, the white-label domain registration mechanism,
+           the Access-Control header injection logic, and the preflight
+           handling;
+
+      (d)  The mesh authentication protocol, including the SERVICE_NAME
+           constant, the meshAuth() middleware factory, the shared secret
+           scheme, and all inter-service communication endpoints under /mesh/;
+
+      (e)  The response caching layer, including the cache key computation,
+           TTL configuration, cache invalidation logic, and the list of
+           cacheable route patterns;
+
+      (f)  The rate limiting configuration, including per-path rate limit
+           rules, the routerRateLimit middleware, and any IP-based throttling;
+
+      (g)  The health check aggregation endpoint, its backend liveness testing
+           logic, and the structured health response format;
+
+      (h)  The deploy hook configuration, the backend fleet membership list,
+           the backend URL registry (Maverick, Goose, Iceman, Slider, Viper),
+           and all associated operational configuration;
+
+      (i)  The WebSocket and Socket.IO proxying configuration and sticky-session
+           routing logic;
+
+      (j)  All configuration files, environment variable schemas, and
+           deployment manifests associated with the Router Service;
+
+      (k)  All documentation, comments, and architectural annotations embedded
+           in or accompanying the Router Service.
+
+1.2   "Author" means Aakshat Hariharan, the sole architect, developer, and
+      intellectual property owner of the Router Service, its Routing
+      Intelligence, and all proprietary systems embodied therein.
+
+1.3   "You" or "Licensee" means any individual, engineer, DevOps professional,
+      infrastructure architect, organization, company, or other legal entity
+      that in any way reads, accesses, downloads, clones, deploys, operates,
+      benchmarks, or otherwise interacts with the Router Service or any portion
+      of its source code or configuration.
+
+1.4   "Routing Intelligence" means the proprietary collection of algorithms,
+      heuristics, scoring models, and decision logic that determine how the
+      Router Service selects backend instances, manages health state, adapts to
+      load conditions, and optimizes request distribution — including the
+      specific threshold values, weight calculations, polling intervals, and
+      adaptive scaling formulas — all of which constitute trade secrets of
+      the Author.
+
+1.5   "Hosted Infrastructure" means the production deployment of the PlanIt
+      Router Service operated by the Author at planit-router.onrender.com,
+      serving as the public entry point to the PlanIt platform.
+
+1.6   "Backend Fleet" means the collection of PlanIt backend application
+      server instances managed and orchestrated by the Router Service.
+
+1.7   "Mesh Protocol" means the authenticated inter-service communication
+      protocol implemented between the Router Service and the Backend Fleet,
+      including HMAC-based mutual authentication, the /mesh/* endpoint
+      namespace, and the meshAuth() verification middleware.
+
+1.8   "Derivative Work" means any software, service, infrastructure component,
+      or other work that: (a) is derived from or copies any portion of the
+      Router Service; (b) reimplements the Routing Intelligence; (c) uses the
+      Router Service's source code as a reference implementation; or (d) is
+      functionally equivalent to or substantially similar to the Router Service
+      in design or operation.
+
+1.9   "Deploy" means to execute, run, host, containerize, or otherwise operate
+      the Router Service or any portion thereof on any computing infrastructure.
+
+1.10  "Commercial Use" means operating the Router Service or any Derivative
+      Work in connection with any revenue-generating commercial activity.
+
+================================================================================
+SECTION 2 — GRANT OF LIMITED LICENSE
+================================================================================
+
+2.1   Subject to Your full compliance with this Agreement, the Author grants
+      You a limited, personal, non-exclusive, non-transferable, non-sublicensable,
+      revocable license to view the source code of the Router Service solely for
+      personal, non-commercial educational and reference purposes.
+
+2.2   No right is granted to Deploy, modify, distribute, or commercially exploit
+      the Router Service or any portion thereof.
+
+2.3   All rights not expressly granted are reserved by the Author.
+
+================================================================================
+SECTION 3 — RESTRICTIONS ON USE
+================================================================================
+
+3.1   Without the Author's prior explicit written permission, You must NOT:
+
+      (a)  Deploy, execute, or host the Router Service or any portion thereof
+           on any infrastructure for any purpose;
+
+      (b)  Copy, clone, fork, or reproduce the Router Service in any medium;
+
+      (c)  Distribute, sell, sublicense, or transfer the Router Service or any
+           portion thereof to any third party;
+
+      (d)  Modify the Router Service or create any Derivative Work, including
+           reimplementing the Routing Intelligence in any other system;
+
+      (e)  Reverse engineer, benchmark, or analyze the Routing Intelligence
+           for the purpose of building a competing or similar routing system;
+
+      (f)  Disclose, publish, or share the Routing Intelligence, Mesh Protocol
+           specifications, or any other Confidential Information of the Author
+           with any third party;
+
+      (g)  Probe, scan, fuzz, or stress-test the Hosted Infrastructure through
+           any means beyond normal user-initiated HTTP requests from the
+           official PlanIt frontend;
+
+      (h)  Attempt to forge, spoof, or bypass Mesh Protocol authentication;
+
+      (i)  Use the Router Service's source code in any machine learning training
+           dataset or AI model;
+
+      (j)  Remove any copyright notices or proprietary markings from the
+           Router Service;
+
+      (k)  Use the Router Service for any Commercial Use without a separately
+           executed commercial license agreement.
+
+3.2   The Routing Intelligence specifically — including the backend scoring
+      algorithm, health threshold values, boost mode parameters, and adaptive
+      scaling heuristics — is classified as Confidential Information and a
+      trade secret of the Author. Any attempt to extract, reproduce, or
+      commercialize the Routing Intelligence in any form constitutes
+      misappropriation of trade secrets in addition to a breach of this Agreement.
+
+================================================================================
+SECTION 4 — ROUTING INTELLIGENCE AS TRADE SECRET
+================================================================================
+
+4.1   The Author has invested substantial time, expertise, and iterative
+      engineering effort in developing the Routing Intelligence. The specific
+      combination of: health-check scoring weights; backend alive-state
+      hysteresis logic; adaptive boost mode activation thresholds; the
+      interaction between polling frequency and scoring decay; and the
+      maintenance-safe exemption categorization — together constitute a
+      proprietary system that is not publicly known or readily ascertainable
+      and that provides the Author with a competitive advantage.
+
+4.2   You agree to treat the Routing Intelligence as a trade secret of the
+      Author, to use it only as permitted under Section 2.1 (reading for
+      educational reference), and never to disclose it to any third party or
+      use it as the basis for any other system.
+
+4.3   Your obligation to maintain the confidentiality of the Routing
+      Intelligence survives termination of this Agreement indefinitely,
+      including beyond any applicable statute of limitations for copyright
+      claims.
+
+================================================================================
+SECTIONS 5–11
+================================================================================
+
+Sections 5 through 11 (Intellectual Property Ownership, Confidentiality,
+Disclaimer of Warranties, Limitation of Liability, Indemnification, Term and
+Termination, Enforcement, and General Provisions) of this Agreement are
+identical in substance to the corresponding sections of the PlanIt Frontend
+Application License Agreement and are incorporated herein by reference,
+substituting "Router Service" for "Frontend Application" and "Router
+Infrastructure License Agreement" for "Frontend Application License Agreement"
+throughout.
+
+In addition:
+
+11.8  Infrastructure Integrity. You agree not to take any action that could
+      degrade, disrupt, interfere with, or damage the Hosted Infrastructure
+      or the Backend Fleet, including but not limited to DDoS attacks, cache
+      poisoning, routing manipulation, or exploitation of any vulnerability.
+
+================================================================================
+
+                  Copyright (c) 2026 Aakshat Hariharan.
+                         All Rights Reserved.
+
+        This routing infrastructure software contains trade secrets.
+       Unauthorized copying, deployment, or reverse engineering is
+                    strictly prohibited by law.
+
+================================================================================

@@ -25,9 +25,34 @@ const crypto   = require('crypto');
 const Event    = require('../models/Event');
 const RSVPSubmission = require('../models/RSVPSubmission');
 const WhiteLabel = require('../models/WhiteLabel');
+const File     = require('../models/File');
 const { verifyOrganizer } = require('../middleware/auth');
 const { authLimiter } = require('../middleware/rateLimiter');
 const { meshPost } = require('../middleware/mesh');
+const sanitizeHtml = require('sanitize-html');
+const { migrateFlatConfigToSections } = require('../utils/rsvpPageMigration');
+const { validateSections } = require('../utils/rsvpBlockSchema');
+const { generateCover, TEMPLATES: COVER_TEMPLATES } = require('../services/coverGenerator');
+
+// Allowed markup inside a richText block's content.html. This is authored
+// through the builder's own rich-text editor, not pasted raw HTML from
+// anywhere else, but it's sanitized here regardless before it's ever
+// persisted — this is the only place that HTML reaches storage, and
+// RSVPPageRenderer's RichTextBlock trusts that this has already happened.
+const RICH_TEXT_ALLOWED_TAGS = ['p', 'b', 'strong', 'i', 'em', 'u', 'a', 'ul', 'ol', 'li', 'br', 'h1', 'h2', 'h3', 'blockquote'];
+const RICH_TEXT_ALLOWED_ATTRS = { a: ['href', 'target', 'rel'] };
+function sanitizeSectionsRichText(sections) {
+  return sections.map((s) => {
+    if (s.type !== 'richText' || !s.content?.html) return s;
+    return {
+      ...s,
+      content: {
+        ...s.content,
+        html: sanitizeHtml(s.content.html, { allowedTags: RICH_TEXT_ALLOWED_TAGS, allowedAttributes: RICH_TEXT_ALLOWED_ATTRS }),
+      },
+    };
+  });
+}
 const { sendRsvpGuestConfirmation } = require('../services/emailService');
 const { analyzeRsvp } = require('../services/spamDetector');
 const { verifyTurnstile } = require('../services/captchaService');
@@ -124,6 +149,38 @@ setInterval(() => {
 // GET /api/rsvp/:eventIdOrSlug/page
 // Public — returns all info needed to render the RSVP page
 // ─────────────────────────────────────────────────────────────────────────────
+/**
+ * Returns event.rsvpPageConfig, migrating it from the legacy flat rsvpPage
+ * on first read if it hasn't happened yet. `event` here is often a `.lean()`
+ * plain object (this route is public/high-traffic and reads leanly by
+ * default), so on the rare cold-start path (migratedAt not set) this does
+ * one extra full-document fetch + save — after that one-time write, every
+ * subsequent request for this event takes the cheap read-only path.
+ */
+async function getOrMigratePageConfig(event) {
+  if (event.rsvpPageConfig?.migratedAt) return event.rsvpPageConfig;
+
+  const fullDoc = await Event.findById(event._id);
+  if (!fullDoc) return event.rsvpPageConfig || { accentColor: '#6366f1', sections: [] };
+  if (fullDoc.rsvpPageConfig?.migratedAt) return fullDoc.rsvpPageConfig; // migrated concurrently by another request
+
+  const migrated = migrateFlatConfigToSections(fullDoc);
+  fullDoc.rsvpPageConfig = { ...migrated, migratedAt: new Date(), updatedAt: new Date(), updatedBy: 'system:lazy-migration' };
+  fullDoc.markModified('rsvpPageConfig');
+  await fullDoc.save();
+  return fullDoc.rsvpPageConfig;
+}
+
+/** Scans hero sections for a coverImageId and resolves it to a Cloudinary URL via the File model. */
+async function resolveCoverUrls(sections) {
+  const ids = (sections || [])
+    .filter((s) => s.type === 'hero' && s.content?.coverImageId)
+    .map((s) => s.content.coverImageId);
+  if (!ids.length) return {};
+  const files = await File.find({ _id: { $in: ids }, isDeleted: false }).select('_id cloudinaryUrl');
+  return Object.fromEntries(files.map((f) => [String(f._id), f.cloudinaryUrl]));
+}
+
 router.get('/:eventIdOrSlug/page', async (req, res, next) => {
   try {
     const event = await resolveEvent(req.params.eventIdOrSlug);
@@ -170,6 +227,8 @@ router.get('/:eventIdOrSlug/page', async (req, res, next) => {
         subdomain:   event.subdomain,
         title:       event.title,
         rsvpPage:    { enabled: false, accessMode: 'closed' },
+        rsvpPageConfig: event.rsvpPageConfig || { accentColor: '#6366f1', sections: [] },
+        coverUrlsById: {},
         closed:      true,
       });
     }
@@ -177,6 +236,9 @@ router.get('/:eventIdOrSlug/page', async (req, res, next) => {
     // Return public-safe event info + RSVP page config
     // Never return rsvpPassword in this endpoint
     const { rsvpPassword: _pw, ...safePage } = rsvpPage;
+
+    const rsvpPageConfig = await getOrMigratePageConfig(event);
+    const coverUrlsById = await resolveCoverUrls(rsvpPageConfig.sections);
 
     res.json({
       eventId:       event._id,
@@ -190,6 +252,8 @@ router.get('/:eventIdOrSlug/page', async (req, res, next) => {
       organizerName: event.organizerName,
       isEnterpriseMode: event.isEnterpriseMode,
       rsvpPage:      safePage,
+      rsvpPageConfig,
+      coverUrlsById,
       counts:        rsvpPage.showGuestCount !== false ? counts : null,
       spotsLeft,
       isFull,
@@ -731,6 +795,106 @@ router.patch('/:eventId/settings', verifyOrganizer, async (req, res, next) => {
       : event.rsvpPage;
 
     res.json({ success: true, rsvpPage: safePage });
+  } catch (err) { next(err); }
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// GET /api/rsvp/:eventId/page-config
+// Organizer — fetch the section-based builder config (Part 2/4).
+// Lazily migrates from the legacy flat `rsvpPage` the first time this is
+// requested for a given event (rsvpPageConfig.migratedAt is null), so
+// every event gets a valid sections array without needing a separate
+// blocking backfill step. Safe to call repeatedly: once migratedAt is set,
+// this is a plain read.
+// ─────────────────────────────────────────────────────────────────────────────
+router.get('/:eventId/page-config', verifyOrganizer, async (req, res, next) => {
+  try {
+    const event = await Event.findById(req.params.eventId);
+    if (!event) return res.status(404).json({ error: 'Event not found.' });
+
+    if (!event.rsvpPageConfig?.migratedAt) {
+      const migrated = migrateFlatConfigToSections(event);
+      event.rsvpPageConfig = { ...migrated, migratedAt: new Date(), updatedAt: new Date(), updatedBy: req.eventAccess?.username || '' };
+      event.markModified('rsvpPageConfig');
+      await event.save();
+    }
+
+    const { rsvpPassword: _pw, ...safeFlatSettings } = (event.rsvpPage?.toObject ? event.rsvpPage.toObject() : event.rsvpPage) || {};
+
+    res.json({
+      rsvpPageConfig: event.rsvpPageConfig,
+      flatSettings: safeFlatSettings, // read-only context the rsvpForm block needs (field toggles, custom questions, etc.)
+      seatingMapEnabled: !!event.seatingMap?.enabled,
+      eventType: event.eventType,
+      coverTemplates: COVER_TEMPLATES,
+      subdomain: event.subdomain,
+      title: event.title,
+    });
+  } catch (err) { next(err); }
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PATCH /api/rsvp/:eventId/page-config
+// Organizer — persist section reordering/edits from the drag-and-drop builder.
+// Validated server-side (see rsvpBlockSchema.js) independent of whatever the
+// builder UI already enforces client-side, since this endpoint can be hit
+// directly. Rejects the whole payload on the first problem rather than
+// partially applying it.
+// ─────────────────────────────────────────────────────────────────────────────
+router.patch('/:eventId/page-config', verifyOrganizer, async (req, res, next) => {
+  try {
+    const event = await Event.findById(req.params.eventId);
+    if (!event) return res.status(404).json({ error: 'Event not found.' });
+
+    const { accentColor, sections } = req.body;
+
+    let validated;
+    try {
+      validated = validateSections(sections);
+    } catch (validationErr) {
+      return res.status(validationErr.statusCode || 400).json({ error: validationErr.message });
+    }
+    const cleanSections = sanitizeSectionsRichText(validated);
+
+    if (accentColor !== undefined && !/^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(accentColor)) {
+      return res.status(400).json({ error: 'accentColor must be a hex color.' });
+    }
+
+    event.rsvpPageConfig = {
+      accentColor: accentColor || event.rsvpPageConfig?.accentColor || '#6366f1',
+      sections: cleanSections,
+      migratedAt: event.rsvpPageConfig?.migratedAt || new Date(),
+      updatedAt: new Date(),
+      updatedBy: req.eventAccess?.username || '',
+    };
+    event.markModified('rsvpPageConfig');
+    await event.save();
+
+    res.json({ success: true, rsvpPageConfig: event.rsvpPageConfig });
+  } catch (err) { next(err); }
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// POST /api/rsvp/:eventId/cover
+// Organizer — (re)generate the hero cover graphic (Part 5). Body:
+// { template, accentColor, hostPhotoUrl?, logoUrl? }. Regenerates only when
+// called — the builder should only call this when the organizer changes the
+// template/accent/photo, not on every render (see coverGenerator.js caching).
+// Returns the coverImageId (a Files _id) the hero block's content.coverImageId
+// should be set to.
+// ─────────────────────────────────────────────────────────────────────────────
+router.post('/:eventId/cover', verifyOrganizer, async (req, res, next) => {
+  try {
+    const event = await Event.findById(req.params.eventId).select('title date organizerName');
+    if (!event) return res.status(404).json({ error: 'Event not found.' });
+
+    const { template, accentColor, hostPhotoUrl, logoUrl } = req.body;
+    if (!COVER_TEMPLATES.includes(template)) {
+      return res.status(400).json({ error: `template must be one of: ${COVER_TEMPLATES.join(', ')}` });
+    }
+
+    const cover = await generateCover(event, { template, accentColor, hostPhotoUrl, logoUrl });
+    res.json({ success: true, ...cover });
   } catch (err) { next(err); }
 });
 

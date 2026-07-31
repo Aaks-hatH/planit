@@ -1032,6 +1032,7 @@ const CATEGORIES = [
   { label: 'Planning Tools',        icon: Calendar,        id: 'Planning Tools' },
   { label: 'Enterprise & Check-in', icon: UserCheck,       id: 'Enterprise & Check-in' },
   { label: 'Table Service',         icon: UtensilsCrossed, id: 'Table Service' },
+  { label: 'RSVP Pages',            icon: LayoutGrid,      id: 'RSVP Pages' },
   { label: 'White Label & Branding', icon: Globe,          id: 'White Label & Branding' },
   { label: 'Security & Passwords',  icon: Shield,          id: 'Security & Passwords' },
   { label: 'Data & Privacy',        icon: Database,        id: 'Data & Privacy' },
@@ -3687,6 +3688,152 @@ const ARTICLES_EXTRA = [
 ];
 
 ARTICLES.push(...ARTICLES_EXTRA);
+
+// ── RSVP PAGES ─────────────────────────────────────────────────────────────
+const ARTICLES_RSVP = [
+  {
+    id: 'rsvp-builder-basics',
+    category: 'RSVP Pages',
+    title: 'How the RSVP page builder works',
+    icon: LayoutGrid,
+    tags: ['rsvp', 'builder', 'sections', 'drag', 'drop', 'page', 'editor'],
+    content: [
+      {
+        type: 'intro',
+        text: 'Every event\u2019s RSVP page — standard, enterprise, or RSVP Event — is built the same way: a list of sections you can add, remove, reorder, and restyle, with a live preview that updates as you go.'
+      },
+      {
+        type: 'steps',
+        items: [
+          { title: 'Open the builder', body: 'From your event dashboard, open the RSVP Page Builder. You\u2019ll see a section list on the left and a live, real-scale preview on the right.' },
+          { title: 'Add a block', body: 'Click "Add block" to insert any block from the library at a chosen position — not just the end. See "The block library" article for what\u2019s available.' },
+          { title: 'Reorder by dragging', body: 'Grab the handle on the left of any section card and drag it to a new position. The preview updates immediately.' },
+          { title: 'Adjust layout and style', body: 'If a block has more than one layout variant (like Hero\u2019s "stack" vs "split"), a toggle appears on its card. Click the card to expand spacing, alignment, and an optional accent color override.' },
+          { title: 'Edit content inline', body: 'Expand a section to edit its text, images, and lists right there — no separate content editor to hunt for.' },
+          { title: 'Changes save automatically', body: 'There\u2019s no save button. Edits are saved a moment after you stop typing or dragging, and a small indicator in the header shows Saving\u2026 / Saved / an error if something went wrong.' }
+        ]
+      },
+      {
+        type: 'callout',
+        variant: 'info',
+        text: 'The RSVP form itself is always the last section, has no drag handle, and can\u2019t be deleted — everything else on the page is entirely optional.'
+      }
+    ]
+  },
+  {
+    id: 'rsvp-block-library',
+    category: 'RSVP Pages',
+    title: 'The block library: what each section does',
+    icon: List,
+    tags: ['rsvp', 'blocks', 'sections', 'hero', 'agenda', 'gallery', 'faq', 'library'],
+    content: [
+      {
+        type: 'intro',
+        text: 'The builder\u2019s block library covers everything from a hero banner to an FAQ accordion. Add as many or as few as your event needs.'
+      },
+      {
+        type: 'steps',
+        items: [
+          { title: 'Hero', body: 'Title, subtitle, date/time, location, and your auto-generated cover graphic. Stack or split layout.' },
+          { title: 'Host', body: 'One or more hosts with a name, role, and optional photo.' },
+          { title: 'About', body: 'A free-text description of the event, single or two-column.' },
+          { title: 'Tags', body: 'A row of short label chips — dress code, theme, vibe, whatever fits.' },
+          { title: 'Social Links', body: 'A row of links to your event or organization\u2019s social profiles.' },
+          { title: 'Agenda', body: 'A list or vertical timeline of scheduled items with time, title, and description.' },
+          { title: 'Speaker Lineup', body: 'A grid or row of speaker/performer cards with photo, name, title, and organization.' },
+          { title: 'Photo Gallery', body: 'A grid or horizontal carousel of photos — the one block that uses real image uploads.' },
+          { title: 'Sponsors', body: 'A row or grid of sponsor logos, each optionally linking out.' },
+          { title: 'Countdown', body: 'A live countdown to your event, inline or as a full-width banner.' },
+          { title: 'Map', body: 'An embedded map for your venue address, full-width or split alongside other content.' },
+          { title: 'FAQ', body: 'An accordion of expandable question-and-answer pairs.' },
+          { title: 'Rich Text', body: 'A freeform formatted text block for anything the other blocks don\u2019t cover.' },
+          { title: 'Video', body: 'An embedded YouTube or Vimeo video, full-width or split.' },
+          { title: 'Testimonials', body: 'A row or stack of quotes with author and role — nice for a "past guests say" section.' },
+          { title: 'Divider', body: 'A plain visual break between sections. No content, just spacing.' }
+        ]
+      },
+      {
+        type: 'callout',
+        variant: 'info',
+        text: 'Every block shares the same style controls — spacing, alignment, and an optional accent color override — so the page stays visually consistent no matter which blocks you use.'
+      }
+    ]
+  },
+  {
+    id: 'rsvp-cover-generator',
+    category: 'RSVP Pages',
+    title: 'How the auto-generated cover graphic works',
+    icon: Star,
+    tags: ['rsvp', 'cover', 'graphic', 'template', 'generate', 'hero', 'image'],
+    content: [
+      {
+        type: 'intro',
+        text: 'Instead of uploading a cover photo, PlanIt generates one for you from your real event details — so it\u2019s always sharp, on-brand, and instantly up to date.'
+      },
+      {
+        type: 'steps',
+        items: [
+          { title: 'Pick a template', body: 'Choose from centered-stack, split, minimal-wordmark, or gradient-orb inside the Hero block\u2019s content editor.' },
+          { title: 'Pick an accent color', body: 'The same accent color that flows through the rest of your page\u2019s buttons, dividers, and chips is used in the cover.' },
+          { title: 'Everything else fills in automatically', body: 'Your event title, date, and host name are pulled straight from the event — no retyping, and it stays correct if you edit those details later.' },
+          { title: 'Generate (or regenerate)', body: 'Click Generate cover. It only takes a moment, and you can regenerate any time you change the template, accent color, or event details.' }
+        ]
+      },
+      {
+        type: 'callout',
+        variant: 'info',
+        text: 'The cover is built as real vector text, not a flattened photo, so it stays crisp at any size and regenerates instantly — there\u2019s no "paste your own image URL" option, since the whole point is that it\u2019s always in sync with your real event details.'
+      }
+    ]
+  },
+  {
+    id: 'rsvp-vs-standard',
+    category: 'RSVP Pages',
+    title: 'RSVP Events vs Standard Events',
+    icon: CheckSquare,
+    tags: ['rsvp', 'event', 'standard', 'difference', 'compare', 'lightweight'],
+    content: [
+      {
+        type: 'intro',
+        text: 'An RSVP Event is a lightweight event type for when the guest list and RSVP page are the whole job — no seating chart, no floor management, no enterprise check-in complexity.'
+      },
+      {
+        type: 'compare',
+        items: [
+          {
+            label: 'Standard Event',
+            desc: 'The full planning workspace, with the same RSVP page builder underneath.',
+            features: [
+              'Chat, tasks, polls, notes, announcements',
+              'Seating chart and floor management',
+              'Enterprise check-in with fraud detection tuning',
+              'RSVP page builder (same one RSVP Events use)',
+            ],
+            best: 'Weddings, galas, conferences, and events that need a full team workspace'
+          },
+          {
+            label: 'RSVP Event',
+            desc: 'Just what it takes to collect RSVPs beautifully — nothing else to configure.',
+            features: [
+              'RSVP page builder — the exact same one, full block library included',
+              'Guest list',
+              'Simple check-in (scan or confirm, no fraud-detection tuning)',
+              'Analytics on views and responses',
+            ],
+            best: 'Parties, meetups, and simple gatherings where a fast, good-looking RSVP page is the goal'
+          }
+        ]
+      },
+      {
+        type: 'callout',
+        variant: 'warning',
+        text: 'The event type is chosen when you create the event and can\u2019t be changed afterward. If you\u2019re not sure you\u2019ll need seating or floor management later, Standard Event is the safer choice.'
+      }
+    ]
+  },
+];
+
+ARTICLES.push(...ARTICLES_RSVP);
 
 // ── CLAUDE INTEGRATION ────────────────────────────────────────────────────
 const CLAUDE_ARTICLE = {

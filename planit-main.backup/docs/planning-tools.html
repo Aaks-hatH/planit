@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Planning Tools — PlanIt Docs</title>
+  <link rel="stylesheet" href="style.css" />
+  <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+  <script>window.CURRENT_PAGE = 'planning-tools';</script>
+</head>
+<body>
+  <div class="sidebar-overlay"></div>
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="sidebar-logo"><a href="index.html"><div class="logo-mark">P</div><div><div class="logo-text">PLANIT</div><div class="logo-sub">Docs</div></div></a></div>
+      <div class="sidebar-search"><div class="sidebar-search-wrap"><svg class="sidebar-search-icon" width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="7" cy="7" r="5"/><path d="M11 11l3 3"/></svg><input class="sidebar-search-input" type="text" placeholder="Search docs..." autocomplete="off" /><span class="search-kbd">/</span></div></div>
+      <nav class="sidebar-nav"></nav>
+      <div class="sidebar-status"><div class="status-dot"></div>All systems operational</div>
+      <div class="sidebar-footer"><a href="https://planitapp.onrender.com" class="sidebar-footer-link" target="_blank">Open PlanIt App →</a></div>
+    </aside>
+    <div class="main">
+      <div class="topbar">
+        <div class="topbar-left">
+          <button class="menu-toggle" aria-label="Toggle menu"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><line x1="2" y1="5" x2="16" y2="5"/><line x1="2" y1="9" x2="16" y2="9"/><line x1="2" y1="13" x2="16" y2="13"/></svg></button>
+          <div class="topbar-breadcrumb">Docs <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M4 2l4 4-4 4"/></svg> <span>Planning Tools</span></div>
+        </div>
+        <div class="topbar-right"><a href="https://planitapp.onrender.com" class="topbar-btn" target="_blank">Open App →</a></div>
+      </div>
+      <div class="inner-layout">
+        <div class="content">
+
+          <div class="page-header">
+            <div class="page-tag">Planning Tools</div>
+            <h1 class="page-title">Every planning tool, explained</h1>
+            <p class="page-desc">The PlanIt workspace has twelve collaborative tools for your event planning team. Here is what each one does, how to use it, and when to reach for it.</p>
+          </div>
+
+          <div class="callout info">
+            <div class="callout-icon"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#60a5fa" stroke-width="1.5" stroke-linecap="round"><circle cx="8" cy="8" r="6"/><line x1="8" y1="6" x2="8" y2="8.5"/><circle cx="8" cy="11" r=".6" fill="#60a5fa" stroke="none"/></svg></div>
+            <div class="callout-body">
+              <div class="callout-title">Available in Standard and Enterprise modes</div>
+              <p>All planning tools described here are available in both Standard and Enterprise event modes. Table Service mode has an entirely different interface and does not include these tools.</p>
+            </div>
+          </div>
+
+          <!-- ── CHAT ── -->
+          <h2 id="chat">Chat</h2>
+          <p>The Chat tab is the real-time messaging channel for your planning team. Messages are delivered in milliseconds via WebSocket and stored persistently in MongoDB for the lifetime of the event.</p>
+
+          <div class="feature-grid" style="grid-template-columns:repeat(2,1fr);gap:12px;margin:16px 0;">
+            <div class="feature-cell"><div class="feature-cell-title">Real-time delivery</div><div class="feature-cell-desc">Messages appear instantly on all connected screens via Socket.IO. No polling, no refresh required.</div></div>
+            <div class="feature-cell"><div class="feature-cell-title">Typing indicators</div><div class="feature-cell-desc">When another participant is composing, their username appears in a typing indicator at the bottom of the chat panel.</div></div>
+            <div class="feature-cell"><div class="feature-cell-title">Persistent history</div><div class="feature-cell-desc">All messages from the start of the event load when you open chat. New members can scroll back to catch up.</div></div>
+            <div class="feature-cell"><div class="feature-cell-title">Rate limited</div><div class="feature-cell-desc">30 messages per minute per session. If you hit the limit, a brief error is shown and it resets automatically.</div></div>
+          </div>
+
+          <h3 id="chat-permissions">Permissions</h3>
+          <div class="table-wrap"><table>
+            <thead><tr><th>Action</th><th>Participant</th><th>Organiser</th></tr></thead>
+            <tbody>
+              <tr><td>Send a message</td><td><span class="t-yes">Yes</span></td><td><span class="t-yes">Yes</span></td></tr>
+              <tr><td>Delete own message</td><td><span class="t-yes">Yes</span></td><td><span class="t-yes">Yes</span></td></tr>
+              <tr><td>Delete any message</td><td><span class="t-no">No</span></td><td><span class="t-yes">Yes</span></td></tr>
+            </tbody>
+          </table></div>
+
+          <div class="callout tip">
+            <div class="callout-icon"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#a78bfa" stroke-width="1.5" stroke-linecap="round"><path d="M8 2l5 2.5V9c0 2.5-2 4.5-5 5-3-1-5-2.5-5-5V4.5L8 2z"/></svg></div>
+            <div class="callout-body">
+              <div class="callout-title">Keep chat for discussion; use Bulletin for critical info</div>
+              <p>Important announcements get buried in a busy chat channel. Use the Chat tab for conversation and the Bulletin for things every team member must see. The Bulletin sends a toast notification to all connected sessions regardless of which tab they're viewing.</p>
+            </div>
+          </div>
+
+          <!-- ── TASKS ── -->
+          <h2 id="tasks">Tasks</h2>
+          <p>The Tasks tab is a shared to-do list for your entire team. Any participant can create, assign, prioritise, and complete tasks. Updates broadcast live to every connected session.</p>
+
+          <ol class="steps">
+            <li><div class="step-num">1</div><div class="step-content"><strong>Create a task</strong><p>Click the <strong>+</strong> or <strong>Add Task</strong> button. Fill in a title (required), optional description, assignee name (free text — doesn't need to be a workspace participant), due date, and priority level.</p></div></li>
+            <li><div class="step-num">2</div><div class="step-content"><strong>Set priority</strong><p>Choose <strong>High</strong> (red), <strong>Medium</strong> (amber), or <strong>Low</strong> (blue). High-priority tasks sort to the top of the list automatically.</p></div></li>
+            <li><div class="step-num">3</div><div class="step-content"><strong>Mark complete</strong><p>Click the circle to the left of the task. Completed tasks move to the bottom with strikethrough styling. This updates live for everyone.</p></div></li>
+            <li><div class="step-num">4</div><div class="step-content"><strong>Delete a task</strong><p>Click the trash icon. The deletion removes it from the database immediately and it disappears from all connected sessions.</p></div></li>
+          </ol>
+
+          <p>The top of the task panel shows a live summary: total tasks, completed count, pending count, and completion percentage. Overdue tasks (past due date, not yet complete) are highlighted with an amber indicator.</p>
+
+          <!-- ── POLLS ── -->
+          <h2 id="polls">Polls</h2>
+          <p>The Polls tab enables real-time group decision-making. Any participant can create a poll, and vote counts update live on every screen as ballots come in.</p>
+
+          <div class="table-wrap"><table>
+            <thead><tr><th>Property</th><th>Value</th></tr></thead>
+            <tbody>
+              <tr><td>Minimum options</td><td>2</td></tr>
+              <tr><td>Maximum options</td><td>10</td></tr>
+              <tr><td>One vote per session</td><td>Yes — votes are final, no changes</td></tr>
+              <tr><td>Anonymous voting</td><td>No — votes are attributed to your session username</td></tr>
+              <tr><td>Who can create</td><td>Any participant</td></tr>
+              <tr><td>Who can delete</td><td>Organiser (any poll); participants (their own polls only)</td></tr>
+            </tbody>
+          </table></div>
+
+          <!-- ── NOTES ── -->
+          <h2 id="notes">Notes</h2>
+          <p>The Notes tab is a shared scratchpad styled as a grid of colour-coded sticky notes. Unlike chat, notes are persistent structured items meant to be revisited rather than scrolled past.</p>
+
+          <div class="feature-grid" style="grid-template-columns:repeat(3,1fr);gap:10px;margin:16px 0;">
+            <div class="feature-cell" style="border-left:3px solid #facc15;"><div class="feature-cell-title">Yellow</div><div class="feature-cell-desc">Open items, pending decisions</div></div>
+            <div class="feature-cell" style="border-left:3px solid #60a5fa;"><div class="feature-cell-title">Blue</div><div class="feature-cell-desc">Reference information</div></div>
+            <div class="feature-cell" style="border-left:3px solid #f87171;"><div class="feature-cell-title">Red</div><div class="feature-cell-desc">Blockers, urgent issues</div></div>
+            <div class="feature-cell" style="border-left:3px solid #4ade80;"><div class="feature-cell-title">Green</div><div class="feature-cell-desc">Confirmed / resolved items</div></div>
+            <div class="feature-cell" style="border-left:3px solid #c084fc;"><div class="feature-cell-title">Purple</div><div class="feature-cell-desc">Ideas and brainstorming</div></div>
+            <div class="feature-cell" style="border-left:3px solid #fb923c;"><div class="feature-cell-title">Orange</div><div class="feature-cell-desc">Vendor and logistics info</div></div>
+          </div>
+
+          <p>These colour meanings are suggestions, not enforced by PlanIt. Develop your own team convention — the important thing is that everyone on your team uses the same system.</p>
+
+          <!-- ── ANNOUNCEMENTS / BULLETIN ── -->
+          <h2 id="bulletin">Bulletin (Announcements)</h2>
+          <p>The Bulletin tab is a one-way broadcast channel from organiser to team. Only organisers can post; all participants read. Important announcements trigger a toast notification on every connected session regardless of which tab they're viewing.</p>
+
+          <div class="callout success">
+            <div class="callout-icon"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#10b981" stroke-width="1.5" stroke-linecap="round"><circle cx="8" cy="8" r="6"/><polyline points="5 8 7 10 11 6"/></svg></div>
+            <div class="callout-body">
+              <div class="callout-title">Use the Important flag for urgent communications</div>
+              <p>When posting, check the <strong>Important</strong> box for venue changes, schedule shifts, or emergency notices. Important announcements render with a red border in the Bulletin and trigger the toast notification system.</p>
+            </div>
+          </div>
+
+          <!-- ── BUDGET ── -->
+          <h2 id="budget">Budget &amp; Expenses</h2>
+          <p>The Budget tab is a shared ledger for tracking costs as they're incurred and comparing total spending against a target budget.</p>
+
+          <ol class="steps">
+            <li><div class="step-num">1</div><div class="step-content"><strong>Set a budget (organiser only)</strong><p>Click <strong>Set Budget</strong> and enter the total amount. The panel then shows spent vs budget and a remaining balance that turns red when over.</p></div></li>
+            <li><div class="step-num">2</div><div class="step-content"><strong>Log an expense (anyone)</strong><p>Click <strong>Add Expense</strong>. Enter: title, amount, category, who paid, and optional notes. The entry appears instantly for all connected sessions.</p></div></li>
+            <li><div class="step-num">3</div><div class="step-content"><strong>Review the breakdown</strong><p>A category summary derives automatically from the labels you use. No pre-configuration needed — just be consistent with your category names.</p></div></li>
+          </ol>
+
+          <div class="callout info">
+            <div class="callout-icon"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#60a5fa" stroke-width="1.5" stroke-linecap="round"><circle cx="8" cy="8" r="6"/><line x1="8" y1="6" x2="8" y2="8.5"/><circle cx="8" cy="11" r=".6" fill="#60a5fa" stroke="none"/></svg></div>
+            <div class="callout-body">
+              <div class="callout-title">Amounts are currency-agnostic</div>
+              <p>PlanIt stores amounts as plain numbers without enforcing a currency symbol. Treat all entries as whatever currency your event is budgeted in. This is a collaborative ledger, not a payment system.</p>
+            </div>
+          </div>
+
+          <!-- ── FILES ── -->
+          <h2 id="files">Files</h2>
+          <p>The Files tab lets your team share documents, images, PDFs, spreadsheets, and other files inside the workspace without using an external service.</p>
+
+          <div class="table-wrap"><table>
+            <thead><tr><th>Property</th><th>Value</th></tr></thead>
+            <tbody>
+              <tr><td>Storage provider</td><td>Cloudinary</td></tr>
+              <tr><td>Upload limit per file</td><td>Up to ~100 MB (Cloudinary plan dependent)</td></tr>
+              <tr><td>Upload rate limit</td><td>20 uploads per hour per IP</td></tr>
+              <tr><td>Who can upload</td><td>Any workspace participant</td></tr>
+              <tr><td>Who can delete</td><td>Organiser (any file); uploader (own files)</td></tr>
+              <tr><td>Retention</td><td>Deleted with event data, 7 days after event date</td></tr>
+            </tbody>
+          </table></div>
+
+          <div class="callout warn">
+            <div class="callout-icon"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#f59e0b" stroke-width="1.5" stroke-linecap="round"><path d="M8 2L2 13h12L8 2z"/><line x1="8" y1="7" x2="8" y2="10"/><circle cx="8" cy="12" r=".6" fill="#f59e0b" stroke="none"/></svg></div>
+            <div class="callout-body">
+              <div class="callout-title">Download files before the 7-day deletion window closes</div>
+              <p>All uploaded files are permanently deleted along with the rest of the event data. Download anything you need to keep — invoices, contracts, signed documents — before that deadline.</p>
+            </div>
+          </div>
+
+          <!-- ── AGENDA ── -->
+          <h2 id="agenda">Agenda</h2>
+          <p>The Agenda tab lets you build a structured run-of-show for the event — individual time slots with titles, times, descriptions, and speaker names. All participants can view the agenda; only organisers can add, edit, or delete items.</p>
+
+          <p>Items are displayed in chronological order by start time. Use the Agenda to communicate the event flow to team members, share with speakers, and keep everyone aligned on the schedule.</p>
+
+          <!-- ── COUNTDOWN ── -->
+          <h2 id="countdown">Countdown Timer</h2>
+          <p>A live countdown clock in the workspace header counts down to the event's exact start time, updated every second. It shows days, hours, minutes, and seconds remaining.</p>
+          <p>When the current UTC time passes the event start, the countdown transitions automatically to a green <strong>"Event is Live!"</strong> state on all connected sessions simultaneously. No action required.</p>
+          <p>The countdown is timezone-aware: it calculates from the absolute UTC timestamp set at event creation, so team members in different timezones all see the same remaining time.</p>
+
+          <!-- ── SHARE / UTILITIES ── -->
+          <h2 id="share">Share &amp; Utilities Panel</h2>
+          <p>The Share tab consolidates tools for distributing the event and accessing adjacent systems.</p>
+
+          <div class="feature-grid" style="grid-template-columns:repeat(2,1fr);gap:12px;margin:16px 0;">
+            <div class="feature-cell"><div class="feature-cell-title">Copy event link</div><div class="feature-cell-desc">One-click copy of the workspace URL to your clipboard.</div></div>
+            <div class="feature-cell"><div class="feature-cell-title">Workspace QR code</div><div class="feature-cell-desc">QR encoding the workspace URL — for getting team members in quickly by scan. Not the same as guest invite QR codes.</div></div>
+            <div class="feature-cell"><div class="feature-cell-title">Add to Calendar (.ics)</div><div class="feature-cell-desc">Downloads a standard iCalendar file for Apple Calendar, Google Calendar, Outlook, and others.</div></div>
+            <div class="feature-cell"><div class="feature-cell-title">Check-in dashboard link</div><div class="feature-cell-desc">Direct button to the Enterprise check-in dashboard (Enterprise mode only).</div></div>
+          </div>
+
+          <!-- ── PEOPLE LIST ── -->
+          <h2 id="people">People List</h2>
+          <p>The People tab shows every participant currently active in the workspace. Each entry shows the participant's display name, join time, and online status. This is a live view — participants appear when they join and disappear when they leave.</p>
+          <p>The organiser can see all participants; the total count updates in the workspace header in real time.</p>
+
+          <div class="page-nav">
+            <a href="walkie-talkie.html" class="page-nav-link">
+              <span class="page-nav-label">← Previous</span>
+              <span class="page-nav-title">Walkie-Talkie</span>
+            </a>
+            <a href="table-service.html" class="page-nav-link page-nav-next">
+              <span class="page-nav-label">Next →</span>
+              <span class="page-nav-title">Table Service Mode</span>
+            </a>
+          </div>
+        </div>
+        <div class="toc-right"></div>
+      </div>
+    </div>
+  </div>
+  <script src="nav.js"></script>
+</body>
+</html>

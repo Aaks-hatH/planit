@@ -1,0 +1,338 @@
+================================================================================
+================================================================================
+
+               PLANIT BACKEND APPLICATION — PROPRIETARY SOFTWARE LICENSE
+                          EXCLUSIVE RIGHTS RESERVED
+
+================================================================================
+================================================================================
+
+                      PlanIt Backend Services License Agreement
+                              Version 2.0 — January 2026
+
+              Copyright (c) 2026 Aakshat Hariharan. All Rights Reserved.
+
+                          planit.userhelp@gmail.com
+                        https://planitapp.onrender.com
+
+================================================================================
+                            PREAMBLE AND LEGAL NOTICE
+================================================================================
+
+IMPORTANT — READ THIS ENTIRE AGREEMENT BEFORE ACCESSING, READING, CLONING,
+EXECUTING, DEPLOYING, OR INTERACTING WITH THE PLANIT BACKEND APPLICATION OR
+ANY PART OF ITS INFRASTRUCTURE.
+
+This License Agreement ("Agreement") is a legally binding contract between You
+and Aakshat Hariharan ("Author") governing Your access to and use of the PlanIt
+backend application — the server-side engine that powers all data persistence,
+business logic, authentication, authorization, real-time communication,
+external integrations, and API services for the PlanIt platform.
+
+The backend services embody years of architectural decisions, security
+engineering, proprietary data models, and integration logic that represent
+the core commercial value of the PlanIt platform. Unauthorized access to,
+copying of, deployment of, or derivation from this software constitutes not
+only a breach of this Agreement but may also give rise to civil copyright
+infringement claims and, depending on the method of access, potential criminal
+liability under computer fraud and abuse statutes.
+
+By reading, running, or interacting with this code in any form, You agree to
+be bound by this Agreement in its entirety.
+
+================================================================================
+SECTION 1 — DEFINITIONS
+================================================================================
+
+1.1   "Backend Application" or "Software" means the PlanIt server-side
+      application in its entirety, including without limitation:
+
+      (a)  The main Express.js application server file (server.js) and all
+           middleware registered therein, including security middleware,
+           maintenance guard, CORS configuration, rate limiting, compression,
+           trust proxy settings, and error handling;
+
+      (b)  All route handler files under /routes/, including but not limited
+           to routes for events, authentication, public data, admin operations,
+           white-label management, white-label client portal, seating charts,
+           uptime monitoring, file upload handling, and all future routes;
+
+      (c)  All Mongoose schema definitions and model files under /models/,
+           including the Event, WhiteLabel, WLLead, EventParticipant, Incident,
+           MaintenanceSchedule, and all other data models and their validators,
+           virtuals, middleware hooks, and indexes;
+
+      (d)  All middleware files under /middleware/, including the trafficGuard
+           security middleware, rate limiters, upload scanners, error handlers,
+           and authentication verifiers;
+
+      (e)  All service modules under /services/, including the email service
+           (Brevo/Mailjet integrations), notification service (ntfy.sh, Discord
+           webhook), cryptographic license key generation and verification
+           service, and any other integration services;
+
+      (f)  The proprietary license key cryptographic system, including the
+           HMAC-based key format specification (WL-{TIER}-{DOMAIN_HASH}-
+           {EXPIRY_HEX}-{HMAC_12}), the key generation logic, the key
+           verification algorithm, and all associated secret management;
+
+      (g)  The white-label resolution, heartbeat verification, and license
+           enforcement logic, including the domain-based lookup, suspension
+           handling, CORS domain registration, and billing status enforcement;
+
+      (h)  The Socket.IO real-time event communication layer, including room
+           management, event broadcasting, participant state synchronization,
+           table service real-time updates, and chat message delivery;
+
+      (i)  All configuration files, environment variable schemas, seed scripts,
+           database migration utilities, and operational tooling;
+
+      (j)  All documentation, code comments, architectural notes, and inline
+           specifications embedded in or accompanying the Backend Application.
+
+1.2   "Author" means Aakshat Hariharan, the sole architect, developer, and
+      intellectual property owner of the Backend Application, its data models,
+      cryptographic systems, and all business logic embodied therein.
+
+1.3   "You" or "Licensee" means any individual, developer, engineer, data
+      scientist, security researcher, organization, company, partnership,
+      corporation, government entity, educational institution, non-profit, or
+      any other natural or legal person that in any way accesses, reads,
+      downloads, clones, deploys, executes, queries, penetration-tests,
+      benchmarks, reverse engineers, or otherwise interacts with the Backend
+      Application or any component thereof.
+
+1.4   "Hosted Service" means the publicly accessible deployment of the PlanIt
+      platform operated by the Author, including the backend instances
+      (Maverick, Goose, Iceman, Slider, Viper) reachable through the Router
+      Service at planitapp.onrender.com and associated domains.
+
+1.5   "Cryptographic License System" means the proprietary white-label license
+      key generation and verification system embedded in the Backend Application,
+      including the key format specification, the HMAC-SHA256 proof chain
+      algorithm, the domain hash derivation function, the expiry encoding
+      scheme, and all secrets required to operate it.
+
+1.6   "Data Models" means the Mongoose schema definitions, field specifications,
+      validation rules, indexing strategies, middleware hooks, and all associated
+      database design decisions embodied in the /models/ directory, which
+      constitute proprietary business logic and trade secrets of the Author.
+
+1.7   "API Surface" means the complete set of HTTP endpoints, their request
+      schemas, response formats, authentication requirements, rate limiting
+      configurations, and behavioral specifications defined by the Backend
+      Application.
+
+1.8   "Derivative Work" means any software, service, API, backend system, data
+      model, schema, or other work that: (a) is derived from, copies, or adapts
+      any portion of the Backend Application; (b) reimplements the Data Models,
+      Cryptographic License System, or API Surface; (c) replicates the
+      architectural patterns, security mechanisms, or business logic; or
+      (d) could serve as a drop-in or functional replacement for the Backend
+      Application.
+
+1.9   "Deploy" means to execute, run, serve, containerize, orchestrate, or
+      operate the Backend Application or any portion thereof on any computing
+      infrastructure including local development machines, cloud platforms
+      (AWS, GCP, Azure, Render, Railway, Fly.io, etc.), VPS, shared hosting,
+      Kubernetes clusters, serverless functions, or any other environment.
+
+1.10  "Commercial Use" means any deployment, use, or exploitation of the
+      Backend Application in connection with any commercial or revenue-
+      generating activity, including operating a competing SaaS, providing
+      consulting services, building client projects, or powering any paid
+      product or service.
+
+1.11  "Penetration Testing" means any deliberate attempt to probe, test, scan,
+      or otherwise assess the security of the Hosted Service or any Backend
+      Application instance beyond normal user interaction, including but not
+      limited to vulnerability scanning, SQL injection attempts, authentication
+      bypass attempts, API fuzzing, and rate limit circumvention.
+
+================================================================================
+SECTION 2 — GRANT OF LIMITED LICENSE
+================================================================================
+
+2.1   Subject to Your full, continuous, and unconditional compliance with this
+      Agreement, the Author grants You a limited, personal, non-exclusive,
+      non-transferable, non-sublicensable, revocable license to:
+
+      (a)  View the source code of the Backend Application solely for personal,
+           non-commercial educational reference and architectural study; and
+
+      (b)  Access the API Surface of the Hosted Service exclusively through the
+           official frontend application at planitapp.onrender.com and through
+           programmatic means explicitly authorized by the Author in writing
+           (such as approved integration partnerships).
+
+2.2   This license expressly does NOT include any right to: run the Backend
+      Application locally; deploy it to any server; query its API outside of
+      the official frontend; access its database; read its environment variables
+      or secrets; or perform Penetration Testing.
+
+2.3   All rights not expressly and specifically granted in Section 2.1 are
+      reserved by the Author in their entirety.
+
+================================================================================
+SECTION 3 — RESTRICTIONS ON USE
+================================================================================
+
+3.1   Without the Author's explicit prior written authorization, You must NOT:
+
+      (a)  Deploy, execute, run, or host the Backend Application or any portion
+           thereof on any computing infrastructure for any purpose;
+
+      (b)  Copy, clone, fork, mirror, or reproduce the Backend Application or
+           any portion thereof in any form or medium;
+
+      (c)  Distribute, transfer, publish, sublicense, sell, or otherwise make
+           the Backend Application or any portion thereof available to any third
+           party;
+
+      (d)  Modify, adapt, translate, extend, refactor, or create any Derivative
+           Work based on the Backend Application, including reimplementing the
+           Data Models, Cryptographic License System, or API Surface;
+
+      (e)  Reverse engineer, decompile, disassemble, or attempt to reconstruct
+           the Cryptographic License System, the HMAC key verification logic,
+           the domain hash algorithm, or any other security or business logic
+           in the Backend Application;
+
+      (f)  Access, query, inspect, scrape, or interact with the API Surface of
+           the Hosted Service through any means other than the official frontend
+           application, except as explicitly authorized in writing by the Author;
+
+      (g)  Conduct or commission Penetration Testing, vulnerability assessment,
+           security scanning, load testing, stress testing, or any other form
+           of systematic technical probing of the Hosted Service without the
+           Author's explicit prior written authorization;
+
+      (h)  Attempt to access, read, modify, or interfere with the Backend
+           Application's databases, message queues, caches, file storage
+           systems, or any other data persistence layer;
+
+      (i)  Use the Backend Application's source code as training data for any
+           machine learning model, AI code assistant, or automated software
+           generation system;
+
+      (j)  Circumvent, disable, tamper with, or reverse engineer any security
+           mechanism in the Backend Application, including the trafficGuard
+           middleware, rate limiters, JWT authentication, bcrypt password
+           hashing, the white-label heartbeat verification, or the maintenance
+           guard;
+
+      (k)  Use the Data Models or schema designs as the basis for any competing
+           event management platform or similar application;
+
+      (l)  Remove, alter, or obscure any copyright notices, license notices,
+           or proprietary markings embedded in the Backend Application;
+
+      (m)  Use any portion of the Backend Application for Commercial Use without
+           a separate written commercial license agreement with the Author.
+
+3.2   Unauthorized API Access. Any attempt to directly access, query, or
+      interact with the Backend Application's API endpoints outside of the
+      officially supported frontend application — including through Postman,
+      curl, automated scripts, SDK clients, or any other HTTP client — without
+      explicit written authorization from the Author constitutes a breach of
+      this Agreement.
+
+3.3   Security Research. If You discover a security vulnerability in the Hosted
+      Service or Backend Application, You must promptly report it to the Author
+      at planit.userhelp@gmail.com without disclosing it publicly, exploiting
+      it, or using it for any purpose other than the report itself. Responsible
+      disclosure does not grant You any license rights beyond those in Section 2.
+
+================================================================================
+SECTION 4 — CRYPTOGRAPHIC LICENSE SYSTEM
+================================================================================
+
+4.1   The Cryptographic License System embedded in the Backend Application is
+      a proprietary invention of the Author and constitutes one of the most
+      commercially sensitive trade secrets in the Software.
+
+4.2   You acknowledge that the key format, the HMAC chain algorithm, the domain
+      hash function, the expiry encoding method, and the verification logic
+      collectively form a proprietary system that the Author uses to enforce
+      white-label licensing terms and protect commercial revenue.
+
+4.3   Any attempt to reverse engineer, reproduce, bypass, spoof, or otherwise
+      circumvent the Cryptographic License System constitutes: (a) a material
+      breach of this Agreement; (b) misappropriation of trade secrets; and
+      (c) a potential violation of computer fraud and abuse laws in applicable
+      jurisdictions.
+
+4.4   The WL_LICENSE_SECRET environment variable and all related cryptographic
+      secrets are the Author's confidential information. You have no right to
+      access, derive, or reconstruct these secrets under any circumstances.
+
+================================================================================
+SECTION 5 — DATA AND PRIVACY
+================================================================================
+
+5.1   The Backend Application processes personal data of users of the Hosted
+      Service, including names, email addresses, event participation records,
+      and other personally identifiable information. Any unauthorized access
+      to the Backend Application or its databases constitutes a serious privacy
+      violation and may trigger mandatory breach notification obligations under
+      applicable data protection laws.
+
+5.2   You must not attempt to access, extract, copy, or aggregate any user
+      data stored or processed by the Backend Application.
+
+5.3   The Author processes user data in accordance with the Privacy Policy
+      published at planitapp.onrender.com/privacy.
+
+================================================================================
+SECTION 6 — INTELLECTUAL PROPERTY OWNERSHIP
+================================================================================
+
+6.1   The Backend Application and all its components — including without
+      limitation all source code, data models, schemas, cryptographic systems,
+      API designs, security implementations, service integrations, and
+      documentation — are and shall remain the sole and exclusive property of
+      the Author. All copyrights, trade secrets, and other proprietary rights
+      therein belong exclusively to the Author.
+
+6.2   The Data Models embody substantial creative and commercial investment by
+      the Author and constitute trade secrets in addition to copyrighted works.
+
+6.3   The Cryptographic License System is a proprietary invention of the Author
+      protected as a trade secret and as a copyrighted work.
+
+6.4   Any feedback or contributions You provide to the Author are assigned to
+      the Author in full without compensation.
+
+================================================================================
+SECTIONS 7–11
+================================================================================
+
+Sections 7 through 11 (Confidentiality, Disclaimer of Warranties, Limitation
+of Liability, Indemnification, Term and Termination, Enforcement, and General
+Provisions) of this Agreement are identical in substance to Sections 5 through
+11 of the PlanIt Frontend Application License Agreement and are incorporated
+herein by reference, substituting "Backend Application" for "Frontend
+Application" and "Backend Services License Agreement" for "Frontend Application
+License Agreement" throughout.
+
+In addition to the general provisions:
+
+11.8  Export Compliance. You agree to comply with all applicable export control
+      laws and regulations in connection with Your use of the Backend Application,
+      and You represent that You are not located in any jurisdiction that is
+      subject to a comprehensive embargo by Your country of residence.
+
+11.9  Security Obligations. You agree not to use the Backend Application or any
+      knowledge gained from reading its source code to harm the Author, the
+      Hosted Service, its users, or any third party.
+
+================================================================================
+
+                  Copyright (c) 2026 Aakshat Hariharan.
+                         All Rights Reserved.
+
+          Unauthorized deployment, copying, or distribution of this
+          server-side application is strictly prohibited and may
+              constitute a criminal offense under applicable law.
+
+================================================================================

@@ -305,6 +305,7 @@ router.get('/subdomain/:subdomain', async (req, res, next) => {
         maxParticipants: event.maxParticipants, participantCount: event.participants.length,
         isTableServiceMode: !!event.isTableServiceMode,
         isEnterpriseMode: !!event.isEnterpriseMode,
+        eventType: event.eventType || 'standard',
       }
     });
   } catch (error) { next(error); }
@@ -1398,6 +1399,7 @@ router.get('/:eventId', verifyEventAccess, async (req, res, next) => {
         status: event.status, isPasswordProtected: event.isPasswordProtected,
         isEnterpriseMode: event.isEnterpriseMode,
         isTableServiceMode: !!event.isTableServiceMode,
+        eventType: event.eventType || 'standard',
         seatingMap: { enabled: !!event.seatingMap?.enabled, tableCount: (event.seatingMap?.objects || []).length },
         rsvps: event.rsvps, rsvpSummary: event.getRsvpSummary(),
         agenda: event.agenda ? [...event.agenda].sort((a, b) => a.order - b.order) : [],

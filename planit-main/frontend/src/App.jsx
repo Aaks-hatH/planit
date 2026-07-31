@@ -12,6 +12,8 @@ import ReferralWelcome from './components/ReferralWelcome';
 const Home             = lazy(() => import('./pages/Home'));
 const WLHome           = lazy(() => import('./pages/WLHome'));
 const EventSpace       = lazy(() => import('./pages/EventSpace'));
+const EventTypeRouter  = lazy(() => import('./pages/EventTypeRouter'));
+const RSVPEventDashboard = lazy(() => import('./pages/RSVPEventDashboard'));
 const EnterpriseCheckin= lazy(() => import('./pages/EnterpriseCheckin'));
 const TableService     = lazy(() => import('./pages/TableService'));
 const ServerView       = lazy(() => import('./pages/ServerView'));
@@ -516,8 +518,10 @@ function App() {
         <Route path="/event/:eventId/rsvp-builder" element={<RSVPPageBuilder />} />
 
         {/* ── Event space — full planning workspace ── */}
-        <Route path="/e/:subdomain"              element={<EventSpace />} />
-        <Route path="/event/:eventId"            element={<EventSpace />} />
+        <Route path="/e/:subdomain"              element={<EventTypeRouter />} />
+        <Route path="/event/:eventId"            element={<EventTypeRouter />} />
+        <Route path="/e/:subdomain/rsvp-dashboard"   element={<RSVPEventDashboard />} />
+        <Route path="/event/:eventId/rsvp-dashboard" element={<RSVPEventDashboard />} />
         <Route path="/event/:eventId/checkin"    element={<EnterpriseCheckin />} />
         <Route path="/e/:subdomain/checkin"      element={<EnterpriseCheckin />} />
         <Route path="/event/:eventId/floor"      element={<TableService />} />

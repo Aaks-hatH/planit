@@ -7,7 +7,7 @@ import {
   ArrowRight, Link, Eye, EyeOff, ChevronRight, Zap, Clock,
   CheckCircle2, TrendingUp, ListChecks, Timer,
   Brain, ArrowUpRight, AlertCircle, UtensilsCrossed, MapPin, QrCode, Layers, Search, CornerDownRight, Bot,
-  Share2, Ticket
+  Share2, Ticket, CheckSquare, X
 } from 'lucide-react';
 import { eventAPI } from '../services/api';
 import { trackFeature, flushTracker } from '../services/tracker';
@@ -2145,7 +2145,7 @@ export default function Home() {
   const [showPassword, setShowPassword] = useState(false);
   const [showAccountPassword, setShowAccountPassword] = useState(false);
   const [fieldErrors, setFieldErrors] = useState({});
-  const [selectedBranch, setSelectedBranch] = useState(null); // null | 'events' | 'venue'
+  const [selectedBranch, setSelectedBranch] = useState(null); // null | 'events' | 'venue' | 'rsvp'
   const [loadingDone, setLoadingDone] = useState(false);
   const [wizardKey, setWizardKey] = useState(0); // increment to hard-reset the wizard
   const [wizardOpen, setWizardOpen] = useState(false); // fullscreen wizard overlay
@@ -2168,10 +2168,10 @@ export default function Home() {
 
   const selectBranch = (branch) => {
     setSelectedBranch(branch);
-    setMode(branch === 'venue' ? 'table-service' : 'standard');
+    setMode(branch === 'venue' ? 'table-service' : branch === 'rsvp' ? 'rsvp' : 'standard');
     setWizardKey(k => k + 1); // reset wizard to step 0
     setTimeout(() => {
-      document.getElementById(branch === 'venue' ? 'planit-venue' : 'planit-events')
+      document.getElementById(branch === 'venue' ? 'planit-venue' : branch === 'rsvp' ? 'planit-rsvp' : 'planit-events')
         ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }, 50);
   };
@@ -2232,6 +2232,7 @@ export default function Home() {
       subdomain:      formData.subdomain || makeSubdomain(formData.title) || `event-${Date.now()}`,
       isEnterpriseMode: mode === 'enterprise' || formData.isEnterpriseMode,
       isTableServiceMode: isTS,
+      eventType:      mode === 'rsvp' ? 'rsvpOnly' : 'standard',
       maxParticipants: formData.maxParticipants,
       ...(turnstileToken ? { turnstileToken } : {}),
       behavior: { ...eventFormTimingRef.current, submittedAt: Date.now(), formStartedAt: eventFormTimingRef.current.formStartedAt || eventFormTimingRef.current.pageLoadedAt },
@@ -2699,7 +2700,7 @@ export default function Home() {
             </div>
 
             {/* Two paths CTA */}
-            <div className="grid md:grid-cols-2 gap-4">
+            <div className="grid md:grid-cols-3 gap-4">
                 <Reveal direction="left">
                 <a href="#planit-events"
                   onClick={(e) => { e.preventDefault(); selectBranch('events'); }}
@@ -2720,6 +2721,31 @@ export default function Home() {
                     </p>
                     <div className="flex items-center gap-2 text-sm font-bold text-indigo-400 group-hover:text-indigo-300 transition-colors">
                       Get started free <ArrowRight className="w-4 h-4 group-hover:translate-x-1.5 transition-transform duration-300" />
+                    </div>
+                  </div>
+                </a>
+                </Reveal>
+
+                <Reveal direction="up">
+                <a href="#planit-rsvp"
+                  onClick={(e) => { e.preventDefault(); selectBranch('rsvp'); }}
+                  className="group relative flex flex-col p-8 sm:p-10 rounded-3xl border border-neutral-800 hover:border-emerald-500/40 hover:-translate-y-1 transition-all duration-500 overflow-hidden h-full"
+                  style={{ background: 'rgba(16,185,129,0.03)' }}>
+                  <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500"
+                    style={{ background:'radial-gradient(ellipse at 50% 0%, rgba(16,185,129,0.08) 0%, transparent 60%)' }} />
+                  <div className="relative">
+                    <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl border border-emerald-500/20 bg-emerald-500/8 mb-6">
+                      <CheckSquare className="w-3.5 h-3.5 text-emerald-400" />
+                      <span className="text-xs font-bold text-emerald-400 uppercase tracking-wider">RSVP Event</span>
+                    </div>
+                    <h3 className="font-syne text-2xl sm:text-3xl font-black text-white mb-3 leading-tight">
+                      Just need RSVPs?<br />Skip the rest.
+                    </h3>
+                    <p className="text-sm text-neutral-500 leading-relaxed mb-7 max-w-sm">
+                      A beautiful, section-based RSVP page and guest list — no seating charts, no floor management, live in under a minute.
+                    </p>
+                    <div className="flex items-center gap-2 text-sm font-bold text-emerald-400 group-hover:text-emerald-300 transition-colors">
+                      Create an RSVP page <ArrowRight className="w-4 h-4 group-hover:translate-x-1.5 transition-transform duration-300" />
                     </div>
                   </div>
                 </a>
@@ -3031,6 +3057,127 @@ export default function Home() {
             </div>
           </Reveal>
         </div>
+
+        {/* ═══════════════════════════════════════════════════════════
+            PLANIT RSVP — its own "page" section
+        ═══════════════════════════════════════════════════════════ */}
+        <section id="planit-rsvp" className="relative overflow-hidden" style={{ background: 'rgba(6,20,16,0.97)', display: selectedBranch === 'rsvp' ? 'block' : 'none' }}>
+          <div style={{ height: '2px', background: 'linear-gradient(90deg, transparent, rgba(16,185,129,0.15) 20%, rgba(52,211,153,0.3) 50%, rgba(16,185,129,0.15) 80%, transparent)' }} />
+          <div className="absolute inset-0 pointer-events-none" style={{
+            backgroundImage: 'radial-gradient(circle at 15% 40%, rgba(16,185,129,0.07) 0%, transparent 50%), radial-gradient(circle at 85% 10%, rgba(52,211,153,0.05) 0%, transparent 40%)',
+          }} />
+
+          {/* Product "page header" */}
+          <div className="relative max-w-screen-xl mx-auto px-6 sm:px-10 pt-20 pb-4">
+            <Reveal>
+              <div className="flex items-center gap-4 mb-2">
+                <div className="w-10 h-10 rounded-2xl bg-emerald-950/60 border border-emerald-800/50 flex items-center justify-center">
+                  <CheckSquare className="w-5 h-5 text-emerald-400" />
+                </div>
+                <div>
+                  <div className="text-[10px] font-black uppercase tracking-[0.3em] text-emerald-800">{isWL ? '' : 'PlanIt'}</div>
+                  <div className="text-lg font-black text-white tracking-tight leading-none">RSVP</div>
+                </div>
+                <div className="ml-2 h-px flex-1 bg-emerald-900/50" />
+                <span className="text-[10px] font-bold uppercase tracking-widest text-emerald-800">Branch 03</span>
+              </div>
+            </Reveal>
+          </div>
+
+          {/* Hero headline */}
+          <div className="relative max-w-screen-xl mx-auto px-6 sm:px-10 pt-10 pb-16">
+            <Reveal>
+              <p className="text-xs font-bold text-emerald-500/70 uppercase tracking-[0.2em] mb-6">For when the guest list is the whole job</p>
+              <h2 className="font-syne font-black text-white leading-[0.9] tracking-tight mb-8 max-w-3xl" style={{ fontSize: 'clamp(2.2rem, 5vw, 4.5rem)' }}>
+                A gorgeous RSVP page.<br />
+                <span style={{ color: '#34d399' }}>Nothing else to configure.</span>
+              </h2>
+              <p className="text-neutral-400 text-lg leading-relaxed mb-10 max-w-lg">
+                Drag-and-drop a real page — hero, agenda, photos, FAQ, whatever the event needs — then share one link. No seating charts, no floor management, no ticketing. Just RSVPs, done beautifully.
+              </p>
+              <div className="flex items-center gap-4">
+                <a href="#create" className="inline-flex items-center gap-2 px-6 py-3 bg-emerald-400 text-emerald-950 rounded-xl font-bold hover:bg-emerald-300 transition-colors text-sm">
+                  Create an RSVP page <ArrowRight className="w-4 h-4" />
+                </a>
+                <span className="text-xs text-emerald-900">Live in under a minute</span>
+              </div>
+            </Reveal>
+          </div>
+
+          {/* Feature highlights */}
+          <div className="relative max-w-screen-xl mx-auto px-6 sm:px-10 pb-20">
+            <div className="grid sm:grid-cols-3 gap-4">
+              {[
+                { icon: Layers, label: 'Section-based builder', body: 'Drag, drop, and reorder from a 16-block library — hero, agenda, FAQ, sponsors, and more.' },
+                { icon: Zap, label: 'Auto-generated cover', body: 'Pick a template and accent color; your event\u2019s cover graphic builds itself, no design work.' },
+                { icon: Users, label: 'Guest list + check-in', body: 'The same guest list and simple check-in as every PlanIt event, without the extra setup.' },
+              ].map(({ icon: Icon, label, body }, i) => (
+                <Reveal key={label} delay={i * 80}>
+                  <div className="p-6 rounded-2xl border border-emerald-900/40 h-full" style={{ background: 'rgba(16,185,129,0.03)' }}>
+                    <Icon className="w-5 h-5 text-emerald-400 mb-3" />
+                    <p className="text-sm font-bold text-white mb-1.5">{label}</p>
+                    <p className="text-xs text-neutral-500 leading-relaxed">{body}</p>
+                  </div>
+                </Reveal>
+              ))}
+            </div>
+          </div>
+
+          {/* Standard Event vs RSVP Event comparison — styled cards, not a plain table */}
+          <div className="relative max-w-screen-xl mx-auto px-6 sm:px-10 pb-24">
+            <Reveal>
+              <p className="text-xs font-bold text-neutral-500 uppercase tracking-[0.2em] mb-6 text-center">Which one do you actually need?</p>
+              <div className="grid md:grid-cols-2 gap-5">
+                {/* Standard Event card */}
+                <div className="rounded-3xl border border-neutral-800 p-8" style={{ background: 'rgba(255,255,255,0.02)' }}>
+                  <div className="flex items-center gap-2 mb-1">
+                    <Calendar className="w-4 h-4 text-indigo-400" />
+                    <span className="text-sm font-black text-white">Standard Event</span>
+                  </div>
+                  <p className="text-xs text-neutral-600 mb-6">The full workspace</p>
+                  <div className="space-y-3 text-sm">
+                    <div className="flex items-center justify-between border-b border-neutral-800/60 pb-3"><span className="text-neutral-500">Setup time</span><span className="text-neutral-300 font-semibold">~5–10 min</span></div>
+                    <div className="flex items-start justify-between border-b border-neutral-800/60 pb-3"><span className="text-neutral-500">Included</span><span className="text-neutral-300 font-semibold text-right">Seating charts, floor management,<br />enterprise check-in, RSVP page</span></div>
+                    <div className="flex items-center justify-between"><span className="text-neutral-500">Best for</span><span className="text-neutral-300 font-semibold">Weddings, galas, multi-day events</span></div>
+                  </div>
+                </div>
+                {/* RSVP Event card */}
+                <div className="rounded-3xl border border-emerald-700/40 p-8 relative overflow-hidden" style={{ background: 'rgba(16,185,129,0.05)' }}>
+                  <div className="absolute top-0 right-0 text-[10px] font-black uppercase tracking-widest text-emerald-950 bg-emerald-400 px-3 py-1 rounded-bl-xl">Lightweight</div>
+                  <div className="flex items-center gap-2 mb-1">
+                    <CheckSquare className="w-4 h-4 text-emerald-400" />
+                    <span className="text-sm font-black text-white">RSVP Event</span>
+                  </div>
+                  <p className="text-xs text-emerald-800 mb-6">Just the RSVP page</p>
+                  <div className="space-y-3 text-sm">
+                    <div className="flex items-center justify-between border-b border-emerald-900/40 pb-3"><span className="text-emerald-700">Setup time</span><span className="text-white font-semibold">~1 min</span></div>
+                    <div className="flex items-start justify-between border-b border-emerald-900/40 pb-3"><span className="text-emerald-700">Included</span><span className="text-white font-semibold text-right">Guest list, RSVP builder,<br />basic check-in, analytics</span></div>
+                    <div className="flex items-start justify-between border-b border-emerald-900/40 pb-3"><span className="text-emerald-700">Intentionally left out</span><span className="text-white font-semibold text-right">Seating charts, floor management,<br />ticketing, advanced fraud detection</span></div>
+                    <div className="flex items-center justify-between"><span className="text-emerald-700">Best for</span><span className="text-white font-semibold">Parties, meetups, simple gatherings</span></div>
+                  </div>
+                </div>
+              </div>
+            </Reveal>
+          </div>
+
+          <div className="max-w-screen-xl mx-auto px-6 sm:px-10 pb-10">
+            <Reveal>
+              <div className="flex items-center gap-3">
+                <div className="h-px w-16 bg-emerald-900/50" />
+                <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-1.5 text-[10px] font-bold text-emerald-900 uppercase tracking-widest">
+                    <Calendar className="w-3 h-3 text-emerald-900" /> Events
+                  </div>
+                  <span className="text-emerald-950">·</span>
+                  <div className="flex items-center gap-1.5 text-[10px] font-bold text-emerald-900 uppercase tracking-widest">
+                    <UtensilsCrossed className="w-3 h-3 text-emerald-900" /> Venue
+                  </div>
+                </div>
+                <div className="h-px w-16 bg-emerald-900/50" />
+              </div>
+            </Reveal>
+          </div>
+        </section>
 
         {/* ═══════════════════════════════════════════════════════════
             PLANIT VENUE — its own "page" section
@@ -3427,19 +3574,23 @@ export default function Home() {
                   <div className="mb-10">
                     <h2 className="font-syne font-black text-white mb-6 tracking-tight leading-[1.05]" style={{ fontSize: 'clamp(2.2rem, 4vw, 3.2rem)' }}>
                       {created
-                        ? mode === 'table-service' ? 'Venue created!' : 'Event created!'
-                        : mode === 'table-service' ? 'Set up your venue' : mode === 'enterprise' ? 'Launch an enterprise event' : 'Start planning your event'}
+                        ? mode === 'table-service' ? 'Venue created!' : mode === 'rsvp' ? 'Your RSVP page is live!' : 'Event created!'
+                        : mode === 'table-service' ? 'Set up your venue' : mode === 'enterprise' ? 'Launch an enterprise event' : mode === 'rsvp' ? 'Create your RSVP page' : 'Start planning your event'}
                     </h2>
                     <p className="text-lg sm:text-xl text-neutral-400 leading-relaxed">
                       {created
                         ? mode === 'table-service'
                           ? 'Your floor management system is live. Set up your seating layout and go.'
-                          : 'Your planning hub is ready. Share the link with your team and get started.'
+                          : mode === 'rsvp'
+                            ? 'Your section-based RSVP builder is ready. Add blocks, pick a cover, and share your link.'
+                            : 'Your planning hub is ready. Share the link with your team and get started.'
                         : mode === 'table-service'
                           ? 'Create your restaurant workspace in 60 seconds. Your data never expires.'
                           : mode === 'enterprise'
                             ? 'Built for large-scale, ticketed events. Every guest gets a personalized QR invite and seamless check-in.'
-                            : 'Create your event workspace in 60 seconds. No credit card, no hassle, just start planning.'}
+                            : mode === 'rsvp'
+                              ? 'Just a guest list and a beautiful RSVP page — no seating charts, no floor management. Live in under a minute.'
+                              : 'Create your event workspace in 60 seconds. No credit card, no hassle, just start planning.'}
                     </p>
                   </div>
                 </Reveal>
@@ -3501,6 +3652,20 @@ export default function Home() {
                           <span className="text-xs text-red-400/60">Mode cannot be changed after creation</span>
                         </div>
                       </div>
+                    ) : mode === 'rsvp' ? (
+                      <div className="space-y-3 p-5 sm:p-8 bg-neutral-900/50 rounded-3xl border border-neutral-800">
+                        <p className="text-base font-bold text-white mb-4">What's included in an RSVP Event:</p>
+                        {['Section-based drag-and-drop RSVP page builder', 'A 16-block library — hero, agenda, FAQ, gallery, sponsors, and more', 'Auto-generated cover graphic, no design work needed', 'Guest list with the same tools as every PlanIt event', 'Simple check-in (scan or confirm)', 'Analytics on views and responses'].map((item, i) => (
+                          <div key={i} className="flex items-start gap-3 text-sm text-neutral-400">
+                            <CheckCircle2 className="w-5 h-5 text-emerald-500 flex-shrink-0 mt-0.5" />
+                            <span className="leading-relaxed">{item}</span>
+                          </div>
+                        ))}
+                        <div className="flex items-start gap-3 text-sm pt-2 mt-2 border-t border-neutral-800/60">
+                          <X className="w-5 h-5 text-neutral-600 flex-shrink-0 mt-0.5" />
+                          <span className="leading-relaxed text-neutral-600">No seating charts, floor management, ticketing, or enterprise check-in — that's what Standard Event and Venue are for.</span>
+                        </div>
+                      </div>
                     ) : (
                       <div className="space-y-3 p-5 sm:p-8 bg-neutral-900/50 rounded-3xl border border-neutral-800">
                         <p className="text-base font-bold text-white mb-4">Everything included:</p>
@@ -3524,7 +3689,7 @@ export default function Home() {
                             <Check className="w-10 h-10 text-white" />
                           </div>
                           <p className="text-lg font-bold text-emerald-400">
-                            {mode === 'table-service' ? 'Venue created!' : mode === 'enterprise' ? 'Enterprise event created!' : 'Your planning hub is live!'}
+                            {mode === 'table-service' ? 'Venue created!' : mode === 'enterprise' ? 'Enterprise event created!' : mode === 'rsvp' ? 'Your RSVP page is live!' : 'Your planning hub is live!'}
                           </p>
                         </div>
                       </div>
@@ -3588,7 +3753,7 @@ export default function Home() {
                         }}
                         className="w-full px-8 py-5 bg-white text-neutral-900 rounded-2xl font-bold hover:scale-105 hover:bg-neutral-100 transition-all duration-300 shadow-xl flex items-center justify-center gap-3 text-lg"
                       >
-                        {mode === 'table-service' ? 'Open Floor Dashboard' : mode === 'enterprise' ? 'Set Up Guest Invites' : 'Enter your planning hub'}
+                        {mode === 'table-service' ? 'Open Floor Dashboard' : mode === 'enterprise' ? 'Set Up Guest Invites' : mode === 'rsvp' ? 'Open RSVP Dashboard' : 'Enter your planning hub'}
                         <ArrowUpRight className="w-5 h-5" />
                       </button>
                     </div>

@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Troubleshooting — PlanIt Docs</title>
+  <link rel="stylesheet" href="style.css" />
+  <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+  <script>window.CURRENT_PAGE = 'troubleshooting';</script>
+</head>
+<body>
+  <div class="sidebar-overlay"></div>
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="sidebar-logo"><a href="index.html"><div class="logo-mark">P</div><div><div class="logo-text">PLANIT</div><div class="logo-sub">Docs</div></div></a></div>
+      <div class="sidebar-search"><div class="sidebar-search-wrap"><svg class="sidebar-search-icon" width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="7" cy="7" r="5"/><path d="M11 11l3 3"/></svg><input class="sidebar-search-input" type="text" placeholder="Search docs..." autocomplete="off" /><span class="search-kbd">/</span></div></div>
+      <nav class="sidebar-nav"></nav>
+      <div class="sidebar-status"><div class="status-dot"></div>All systems operational</div>
+      <div class="sidebar-footer"><a href="https://planitapp.onrender.com" class="sidebar-footer-link" target="_blank">Open PlanIt App →</a></div>
+    </aside>
+    <div class="main">
+      <div class="topbar">
+        <div class="topbar-left">
+          <button class="menu-toggle" aria-label="Toggle menu"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><line x1="2" y1="5" x2="16" y2="5"/><line x1="2" y1="9" x2="16" y2="9"/><line x1="2" y1="13" x2="16" y2="13"/></svg></button>
+          <div class="topbar-breadcrumb">Docs <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M4 2l4 4-4 4"/></svg> <span>Troubleshooting</span></div>
+        </div>
+        <div class="topbar-right"><a href="https://planitapp.onrender.com" class="topbar-btn" target="_blank">Open App →</a></div>
+      </div>
+      <div class="inner-layout">
+        <div class="content">
+
+          <div class="page-header">
+            <div class="page-tag">Reference</div>
+            <h1 class="page-title">Troubleshooting</h1>
+            <p class="page-desc">Step-by-step fixes for the most common issues — loading errors, scanner problems, password lockouts, offline failures, and walkie-talkie faults.</p>
+          </div>
+
+          <!-- SERVICE CRASH -->
+          <h2 id="service-crash">The app shows "Service Crash" or won't load</h2>
+          <div class="callout info">
+            <div class="callout-icon"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#60a5fa" stroke-width="1.5" stroke-linecap="round"><circle cx="8" cy="8" r="6"/><line x1="8" y1="6" x2="8" y2="8.5"/><circle cx="8" cy="11" r=".6" fill="#60a5fa" stroke="none"/></svg></div>
+            <div class="callout-body">
+              <div class="callout-title">This is usually a cold start, not a real crash</div>
+              <p>PlanIt's backend spins down after 15 minutes of inactivity and takes 30–60 seconds to restart. Wait 60 seconds and refresh before escalating.</p>
+            </div>
+          </div>
+          <ol class="steps">
+            <li><div class="step-num">1</div><div class="step-content"><strong>Wait 60 seconds and hard-refresh</strong><p>Press <kbd>Ctrl+Shift+R</kbd> (Windows/Linux) or <kbd>Cmd+Shift+R</kbd> (Mac) to bypass the browser cache and reload. On mobile, pull down to refresh or close and reopen the tab.</p></div></li>
+            <li><div class="step-num">2</div><div class="step-content"><strong>Check the status page</strong><p>Open <a href="https://planitapp.onrender.com/status" target="_blank">planitapp.onrender.com/status</a> from a different device or browser to see if there is an active incident. If all systems are green, the issue may be local.</p></div></li>
+            <li><div class="step-num">3</div><div class="step-content"><strong>Try a different network</strong><p>Switch from Wi-Fi to mobile data (or vice versa). Some corporate or venue Wi-Fi networks block WebSocket connections, which prevents PlanIt from functioning correctly.</p></div></li>
+            <li><div class="step-num">4</div><div class="step-content"><strong>Try a different browser</strong><p>If Chrome is failing, try Safari or Edge. Browser extension conflicts (ad blockers, VPNs) can interfere with API requests.</p></div></li>
+            <li><div class="step-num">5</div><div class="step-content"><strong>Disable browser extensions</strong><p>Temporarily disable extensions — especially ad blockers, privacy shields, or VPN extensions — which can block fetch requests or WebSocket connections.</p></div></li>
+            <li><div class="step-num">6</div><div class="step-content"><strong>Still broken?</strong><p>Submit a report at <a href="https://planitapp.onrender.com/support" target="_blank">/support</a> with your browser version, device, and a description of what you see.</p></div></li>
+          </ol>
+
+          <!-- LOADING SLOW -->
+          <h2 id="loading-slow">The app is very slow to load</h2>
+          <p>PlanIt on Render's free tier has limited compute resources. During periods of high load:</p>
+          <ul>
+            <li>API response times may increase to 2–5 seconds instead of the usual &lt;500ms</li>
+            <li>Real-time events (chat messages, check-in updates) may lag by 1–3 seconds</li>
+            <li>File uploads may take longer than usual</li>
+          </ul>
+          <p>These are infrastructure constraints, not bugs. If the slowness persists beyond 10 minutes, check the <a href="https://planitapp.onrender.com/status" target="_blank">status page</a> for any ongoing incidents.</p>
+
+          <!-- QR SCANNER -->
+          <h2 id="qr-scanner">QR scanner won't start or camera is black</h2>
+          <ol class="steps">
+            <li><div class="step-num">1</div><div class="step-content"><strong>Check camera permission</strong><p>Look in the browser address bar for a camera or lock icon. Click it and set Camera to <strong>Allow</strong>. Reload the page after changing permission.</p></div></li>
+            <li><div class="step-num">2</div><div class="step-content"><strong>iOS-specific: check per-app camera permission</strong><p>Go to Settings → Safari (or Chrome) → Camera and set it to <strong>Allow</strong>. On newer iOS: Settings → Privacy → Camera → find your browser and enable it.</p></div></li>
+            <li><div class="step-num">3</div><div class="step-content"><strong>Android-specific: check site permissions</strong><p>In Chrome, tap the lock icon next to the URL → Site settings → Camera → set to Allow.</p></div></li>
+            <li><div class="step-num">4</div><div class="step-content"><strong>Make sure no other app has the camera</strong><p>Close any open video call apps (FaceTime, Zoom, Teams, Google Meet). Only one app can use the camera at a time.</p></div></li>
+            <li><div class="step-num">5</div><div class="step-content"><strong>Reload the page</strong><p>The scanner initialises on page load. A permission change requires a reload to take effect.</p></div></li>
+            <li><div class="step-num">6</div><div class="step-content"><strong>Try a different browser</strong><p>Chrome (Android) and Safari (iOS) have the most reliable scanner implementations. Firefox and Samsung Internet sometimes have camera initialisation delays.</p></div></li>
+          </ol>
+
+          <!-- QR WON'T SCAN -->
+          <h2 id="qr-bad-scan">QR code scans but gives an error, or won't scan at all</h2>
+          <div class="table-wrap"><table>
+            <thead><tr><th>Symptom</th><th>Likely cause</th><th>Fix</th></tr></thead>
+            <tbody>
+              <tr><td>Code scans but shows "Invalid invite"</td><td>Code is from a different event</td><td>Confirm the guest has the right invite URL for this specific event</td></tr>
+              <tr><td>Code scans but shows "Outside time window"</td><td>Check-in window not open yet</td><td>Wait until the window opens, or extend it in check-in settings</td></tr>
+              <tr><td>Scanner can't read the code</td><td>Brightness too low, screen glare, or distorted image</td><td>Ask guest to maximise screen brightness; angle away from overhead lights</td></tr>
+              <tr><td>Guest screenshot is blurry</td><td>QR image was screenshotted and re-compressed</td><td>Ask guest to open original invite link; use Manual check-in as fallback</td></tr>
+              <tr><td>QR appears inverted (dark/light swapped)</td><td>Guest's phone dark mode or app inversion</td><td>Ask guest to disable dark mode inversion on the invite page; use Manual check-in</td></tr>
+              <tr><td>"Already checked in" error</td><td>Guest was already admitted</td><td>Use Manager Override if it was a mistake; verify with guest history in the list</td></tr>
+            </tbody>
+          </table></div>
+
+          <!-- OFFLINE CHECK-IN -->
+          <h2 id="offline-checkin">Offline check-in not working</h2>
+          <p>Offline mode requires the check-in page to have been fully loaded while online. If the page was opened for the first time without a connection, the cache was never populated.</p>
+          <ol class="steps">
+            <li><div class="step-num">1</div><div class="step-content"><strong>Verify the page loaded online</strong><p>The guest list must have been fetched at least once with a working internet connection. If you opened the check-in page and it showed a loading spinner that never resolved, the cache is empty.</p></div></li>
+            <li><div class="step-num">2</div><div class="step-content"><strong>Check for the offline indicator</strong><p>When PlanIt detects it has lost connectivity, it shows an offline banner at the top of the check-in screen. If you don't see this banner but scans are failing, connectivity may be intermittent rather than fully offline.</p></div></li>
+            <li><div class="step-num">3</div><div class="step-content"><strong>Wait for sync on reconnect</strong><p>When connectivity returns, queued offline check-ins sync automatically. You will see a sync status indicator while they upload. Do not close the page during sync.</p></div></li>
+            <li><div class="step-num">4</div><div class="step-content"><strong>Prevention for next time</strong><p>Load the check-in page and wait for the full guest list to appear at least 30 minutes before the event, while you still have good connectivity. This seeds the offline cache.</p></div></li>
+          </ol>
+
+          <!-- PASSWORD LOCKED OUT -->
+          <h2 id="password-lockout">Locked out — forgot organiser password</h2>
+          <p>There is no self-service password reset. If you have lost your organiser (account) password:</p>
+          <ol class="steps">
+            <li><div class="step-num">1</div><div class="step-content"><strong>Check your password manager</strong><p>If you use a password manager (1Password, Bitwarden, LastPass, iCloud Keychain, browser saved passwords), search there first.</p></div></li>
+            <li><div class="step-num">2</div><div class="step-content"><strong>Check your other browsers</strong><p>If you used a different browser to create the event, check that browser's saved passwords.</p></div></li>
+            <li><div class="step-num">3</div><div class="step-content"><strong>Contact support</strong><p>Submit a request at <a href="https://planitapp.onrender.com/support" target="_blank">/support</a>. Include the event name, slug, and approximate creation date. If you can prove ownership (e.g. you created the event from a specific device), recovery may be possible.</p></div></li>
+          </ol>
+
+          <div class="callout warn">
+            <div class="callout-icon"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#f59e0b" stroke-width="1.5" stroke-linecap="round"><path d="M8 2L2 13h12L8 2z"/><line x1="8" y1="7" x2="8" y2="10"/><circle cx="8" cy="12" r=".6" fill="#f59e0b" stroke="none"/></svg></div>
+            <div class="callout-body">
+              <div class="callout-title">For your next event</div>
+              <p>Save your organiser password in a password manager the moment you create the event. Before sharing the event link, confirm you can successfully log in as organiser from a fresh incognito window.</p>
+            </div>
+          </div>
+
+          <!-- WALKIE-TALKIE ISSUES -->
+          <h2 id="walkie-talkie-issues">Walkie-talkie not working</h2>
+          <div class="table-wrap"><table>
+            <thead><tr><th>Symptom</th><th>Likely cause</th><th>Fix</th></tr></thead>
+            <tbody>
+              <tr><td>Button is greyed out</td><td>Microphone permission not granted</td><td>Grant mic permission in browser; reload page</td></tr>
+              <tr><td>Others can't hear me</td><td>Wrong mic selected; mic muted at OS level</td><td>Check OS microphone settings; ensure correct input device is selected</td></tr>
+              <tr><td>I can't hear others</td><td>Speaker/headphone volume; audio output muted</td><td>Increase device volume; check audio output device</td></tr>
+              <tr><td>Choppy or cutting out audio</td><td>Poor internet connectivity; WebRTC packet loss</td><td>Move closer to Wi-Fi router; switch to mobile data</td></tr>
+              <tr><td>Long delay between transmit and receive</td><td>High network latency (hotel Wi-Fi, weak signal)</td><td>Switch to 4G/5G; avoid congested public Wi-Fi</td></tr>
+              <tr><td>Feature not available on device</td><td>Old browser that lacks WebRTC support</td><td>Update browser; use Chrome or Safari on supported OS versions</td></tr>
+            </tbody>
+          </table></div>
+
+          <!-- REAL-TIME NOT UPDATING -->
+          <h2 id="realtime-not-updating">Real-time updates stopped working</h2>
+          <p>If check-in counts, chat messages, or task changes are no longer updating live:</p>
+          <ol class="steps">
+            <li><div class="step-num">1</div><div class="step-content"><strong>Check your connection</strong><p>The WebSocket connection may have dropped. Look for a connection status indicator in the workspace header. A disconnected state means real-time is paused.</p></div></li>
+            <li><div class="step-num">2</div><div class="step-content"><strong>Reload the page</strong><p>A page reload re-establishes the WebSocket connection and fetches the latest state from the server.</p></div></li>
+            <li><div class="step-num">3</div><div class="step-content"><strong>Check if the network blocks WebSockets</strong><p>Some corporate or hotel Wi-Fi networks block WebSocket connections. Switch to mobile data to test. PlanIt falls back to HTTP long-polling if WebSockets are unavailable, but this is slower and may not work on all restricted networks.</p></div></li>
+          </ol>
+
+          <!-- CSV IMPORT ERRORS -->
+          <h2 id="csv-import">CSV import failing</h2>
+          <div class="table-wrap"><table>
+            <thead><tr><th>Error</th><th>Cause</th><th>Fix</th></tr></thead>
+            <tbody>
+              <tr><td>"Invalid column headers"</td><td>Column names don't match the template</td><td>Download the template again from the import dialog; don't rename columns</td></tr>
+              <tr><td>"Missing required field: guestEmail"</td><td>Email column is empty for one or more rows</td><td>Every row must have a value in <code>guestEmail</code></td></tr>
+              <tr><td>"Invalid role value"</td><td>guestRole is not GUEST, VIP, or SPEAKER</td><td>Use exactly <code>GUEST</code>, <code>VIP</code>, or <code>SPEAKER</code> — case-sensitive, all caps</td></tr>
+              <tr><td>"Too many rows"</td><td>File exceeds 500 guests per import</td><td>Split into multiple files of ≤500 rows and import sequentially</td></tr>
+              <tr><td>"Rate limit exceeded"</td><td>More than 5 imports per hour for this event</td><td>Wait for the hourly window to reset</td></tr>
+              <tr><td>Import completes but fewer guests than expected</td><td>Duplicate emails — same email appears more than once</td><td>PlanIt skips rows whose email address already exists in the event guest list</td></tr>
+            </tbody>
+          </table></div>
+
+          <!-- WALLET CARD ISSUES -->
+          <h2 id="wallet-card">Wallet card not adding correctly</h2>
+          <ul>
+            <li><strong>iOS</strong>: Wallet pass requires iOS 6+ and the Wallet app installed (it is pre-installed on all iPhones). If the "Add to Wallet" button does nothing, check that Wallet is not restricted under Screen Time → Content &amp; Privacy Restrictions.</li>
+            <li><strong>Android</strong>: Google Wallet must be installed and set up. If the pass doesn't add, ensure Google Wallet is updated to the latest version from the Play Store.</li>
+            <li><strong>Details not updating</strong>: Wallet passes are cached on-device. If you change the event date or table assignment after a guest has added their pass, the update may take up to 24 hours to push to their device. Ask guests to open the invite page and re-add the pass if they need the latest information immediately.</li>
+          </ul>
+
+          <h2 id="get-help">Still stuck?</h2>
+          <p>If none of the above resolves your issue, submit a support request at <a href="https://planitapp.onrender.com/support" target="_blank">planitapp.onrender.com/support</a>. Include:</p>
+          <ul>
+            <li>Browser name and version (e.g. "Chrome 124 on Android 14")</li>
+            <li>Device type (iPhone 15, Samsung Galaxy S23, MacBook Air M2, etc.)</li>
+            <li>The exact error message or behaviour you saw</li>
+            <li>What you were trying to do when it happened</li>
+            <li>Any steps you already tried from this page</li>
+          </ul>
+
+          <div class="page-nav">
+            <a href="admin.html" class="page-nav-link">
+              <span class="page-nav-label">← Previous</span>
+              <span class="page-nav-title">Admin Panel</span>
+            </a>
+            <a href="faq.html" class="page-nav-link page-nav-next">
+              <span class="page-nav-label">Next →</span>
+              <span class="page-nav-title">FAQ</span>
+            </a>
+          </div>
+        </div>
+        <div class="toc-right"></div>
+      </div>
+    </div>
+  </div>
+  <script src="nav.js"></script>
+</body>
+</html>

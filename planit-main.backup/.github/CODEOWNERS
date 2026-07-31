@@ -1,0 +1,68 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# PLANIT — CODEOWNERS
+# ─────────────────────────────────────────────────────────────────────────────
+#
+# HOW THIS WORKS
+# GitHub reads this file top-to-bottom. The LAST matching rule wins.
+# Every PR that touches a matching path will require approval from the
+# listed owner(s) before it can merge — even if branch protection is set
+# to "1 required reviewer". This file makes YOU the required reviewer
+# for everything, and adds extra requirements on the most sensitive paths.
+#
+# HOW TO SET THIS UP
+# 1. Replace @Aaks-hatH below with your actual GitHub username.
+# 2. Commit this file to .github/CODEOWNERS on your main branch.
+# 3. Go to Settings → Branches → Edit your main branch protection rule.
+#    ✅ Check "Require review from Code Owners"
+# 4. That's it. GitHub enforces it automatically on every PR.
+# ─────────────────────────────────────────────────────────────────────────────
+
+# ── DEFAULT: You must approve every single PR, on every file ──────────────────
+*   @Aaks-hatH
+
+
+# ── EXTRA SENSITIVE: backend security, auth, payments, licensing ──────────────
+# These files are the most dangerous to get wrong. If you ever bring in
+# a second trusted reviewer, add them on the lines below too.
+
+# Auth middleware — JWT verification, session revocation, role checks
+backend/middleware/auth.js                  @Aaks-hatH
+
+# Security middleware — traffic guard, rate limiting, banning
+backend/middleware/security.js              @Aaks-hatH
+backend/middleware/rateLimiter.js           @Aaks-hatH
+backend/middleware/antifraud.js             @Aaks-hatH
+
+# License key + integrity verification — do NOT let anyone touch this
+backend/keys.js                             @Aaks-hatH
+
+# Stripe payment routes
+backend/routes/events.js                    @Aaks-hatH
+
+# Admin panel — employee management, permissions, demo guard
+backend/routes/admin.js                     @Aaks-hatH
+
+# White-label licensing
+backend/routes/whitelabel.js                @Aaks-hatH
+backend/routes/wl-portal.js                 @Aaks-hatH
+
+# Response signing — tamper-evident API responses
+backend/middleware/responseSigning.js       @Aaks-hatH
+
+# Watchdog service — uptime + mesh monitoring
+watchdog/                                   @Aaks-hatH
+
+# Router service
+router/                                     @Aaks-hatH
+
+# All GitHub workflow/config files — prevents a contributor from disabling CI
+.github/                                    @Aaks-hatH
+
+# Environment example — if this changes, secrets structure changed
+.env.example                                @Aaks-hatH
+
+# Package files — any new dependency must be reviewed
+backend/package.json                        @Aaks-hatH
+backend/package-lock.json                   @Aaks-hatH
+frontend/package.json                       @Aaks-hatH
+frontend/package-lock.json                  @Aaks-hatH

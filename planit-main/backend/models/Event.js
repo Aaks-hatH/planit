@@ -69,6 +69,16 @@ const eventSchema = new mongoose.Schema({
   isEnterpriseMode:    { type: Boolean, default: false },
 
   // --------------------------------------------------------------------------
+  // Event type — additive, does not replace isEnterpriseMode.
+  // 'standard' — full EventSpace (seating, table service, enterprise check-in)
+  // 'rsvpOnly' — lightweight: guest list, RSVP page/builder, basic check-in,
+  //              analytics only. seatingMap and the advanced fields inside
+  //              checkinSettings are simply unused/hidden for this type,
+  //              not removed from the schema.
+  // --------------------------------------------------------------------------
+  eventType: { type: String, enum: ['standard', 'rsvpOnly'], default: 'standard' },
+
+  // --------------------------------------------------------------------------
   // Visual seating map
   //
   // enabled   — false by default; organizer turns it on in the seating editor
@@ -668,6 +678,32 @@ const eventSchema = new mongoose.Schema({
     // ── Metadata ─────────────────────────────────────────────────────────────
     updatedAt: { type: Date, default: null },
     updatedBy: { type: String, default: null },
+  },
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // RSVP PAGE CONFIG — section-based, drag-and-drop page builder.
+  // This is the new source of truth for how the public RSVP page renders.
+  // `rsvpPage` above is kept as-is (not deleted) so nothing that reads the
+  // old flat shape breaks, and so migrateFlatConfigToSections() always has
+  // an unmodified source to read from / re-run if needed. New reads/writes
+  // for the actual page go through rsvpPageConfig only.
+  //
+  // NOTE: sections is intentionally mongoose.Schema.Types.Mixed rather than
+  // a strictly-typed sub-schema. The block library (Part 2 of the spec) has
+  // 16 different `content` shapes that share only { id, type, layout, style }.
+  // Modeling that as 16 discriminated sub-schemas adds real friction (every
+  // new block type requires a schema migration) for no runtime-safety
+  // benefit, since content is always validated by the block-specific
+  // renderer/editor at read time, not by Mongoose. Validation of individual
+  // block content happens in backend/utils/rsvpPageMigration.js and in the
+  // builder API route, not here.
+  // ─────────────────────────────────────────────────────────────────────────
+  rsvpPageConfig: {
+    accentColor: { type: String, default: '#6366f1' },
+    sections:    { type: mongoose.Schema.Types.Mixed, default: [] },
+    migratedAt:  { type: Date, default: null }, // set once migrateFlatConfigToSections has run for this event
+    updatedAt:   { type: Date, default: null },
+    updatedBy:   { type: String, default: null },
   },
 
 }, { timestamps: true });

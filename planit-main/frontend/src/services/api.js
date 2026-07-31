@@ -600,6 +600,9 @@ export const rsvpAPI = {
   // Organizer
   getSettings:      (eventId)            => api.get(`/rsvp/${eventId}/settings`),
   updateSettings:   (eventId, data)      => api.patch(`/rsvp/${eventId}/settings`, data),
+  getPageConfig:    (eventId)            => api.get(`/rsvp/${eventId}/page-config`),
+  updatePageConfig: (eventId, data)      => api.patch(`/rsvp/${eventId}/page-config`, data),
+  generateCover:    (eventId, data)      => api.post(`/rsvp/${eventId}/cover`, data),
   getSubmissions:   (eventId, params)    => api.get(`/rsvp/${eventId}/submissions`, { params }),
   updateSubmission: (eventId, id, data)  => api.patch(`/rsvp/${eventId}/submissions/${id}`, data),
   deleteSubmission: (eventId, id)        => api.delete(`/rsvp/${eventId}/submissions/${id}`),

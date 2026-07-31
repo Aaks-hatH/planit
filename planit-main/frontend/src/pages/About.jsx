@@ -145,6 +145,7 @@ export default function About() {
         { href: '#countdown',      label: 'Countdown timer'                },
         { href: '#utilities',      label: 'Utilities and export'           },
         { href: '#seating-map',    label: 'Seating map'                    },
+        { href: '#rsvp-pages',     label: 'RSVP page builder'              },
       ]
     },
     {
@@ -504,11 +505,11 @@ export default function About() {
           <Section id="event-modes">
             <SectionTitle
               icon={ToggleLeft}
-              title="Standard vs Enterprise vs Table Service"
-              subtitle="PlanIt offers three event modes, each serving a fundamentally different purpose. The mode is chosen at creation time and cannot be changed afterward."
+              title="Standard vs Enterprise vs RSVP Event vs Table Service"
+              subtitle="PlanIt offers four event modes, each serving a fundamentally different purpose. The mode is chosen at creation time and cannot be changed afterward."
             />
             <p className="text-neutral-500 leading-relaxed mb-6">
-              The mode distinction exists because not every event needs a guest list and a check-in system, and a restaurant has completely different operational needs from either. By choosing at creation time, you get a workspace tailored exactly to what your event or venue requires.
+              The mode distinction exists because not every event needs a guest list and a check-in system, not every guest list needs seating charts, and a restaurant has completely different operational needs from any of them. By choosing at creation time, you get a workspace tailored exactly to what your event or venue requires.
             </p>
             <FeatureRow
               icon={Users}
@@ -521,12 +522,17 @@ export default function About() {
               description="Enterprise mode adds the complete guest management and check-in system on top of everything in Standard mode. You can build a guest list with individual invite links and QR codes, manage RSVPs, run a real-time check-in dashboard on event day, and review post-event attendance analytics. Enterprise mode is appropriate for weddings, galas, corporate dinners, conferences with ticketed attendance, award ceremonies, and any occasion where the guest experience and entry management are central concerns."
             />
             <FeatureRow
+              icon={LayoutGrid}
+              title="RSVP Event"
+              description="RSVP Event is a lightweight mode for when the guest list and RSVP page are the entire job. It gets the same section-based RSVP page builder as every other event type — see 'RSVP page builder' below — plus a guest list, basic check-in (scan or confirm, without Enterprise's fraud-detection tuning), and analytics. There is no planning workspace, no seating chart, and no floor management. RSVP Event is appropriate for parties, meetups, and simple gatherings where a fast, good-looking RSVP page is the goal rather than a full team workspace."
+            />
+            <FeatureRow
               icon={UtensilsCrossed}
               title="Table Service mode"
               description="Table Service mode is a purpose-built floor management system for restaurants, bars, and hospitality venues. Instead of a planning workspace, you get a live visual floor plan showing every table's real-time status, a walk-in waitlist with estimated wait time calculations, and a QR code reservation system with configurable expiry windows. The floor layout is persistent — unlike event data, Table Service data is never auto-deleted. This mode is appropriate for restaurants, private dining rooms, event venues, and anywhere that needs live table turn management."
             />
             <Callout>
-              The mode cannot be changed after the event is created. Table Service mode produces a fundamentally different interface at a different URL (<code className="text-xs font-mono bg-neutral-200 px-1 py-0.5 rounded">/e/your-venue/floor</code>) with no planning workspace. If you need both a planning workspace and a floor management tool, create two separate events — one in Enterprise mode for event planning, one in Table Service mode for the venue on the night.
+              The mode cannot be changed after the event is created. Table Service mode produces a fundamentally different interface at a different URL (<code className="text-xs font-mono bg-neutral-200 px-1 py-0.5 rounded">/e/your-venue/floor</code>) with no planning workspace, and RSVP Event produces a dashboard scoped to just the RSVP builder, guest list, check-in, and analytics at the same <code className="text-xs font-mono bg-neutral-200 px-1 py-0.5 rounded">/e/your-slug</code> URL every other mode uses. If you need both a planning workspace and a floor management tool, create two separate events — one in Enterprise mode for event planning, one in Table Service mode for the venue on the night.
             </Callout>
           </Section>
 
@@ -1094,6 +1100,42 @@ export default function About() {
             </div>
             <Callout accent>
               The seating map is optional — it only activates once an organizer creates and saves a layout. Events where seating is not a concern are completely unaffected. It's available on standard and Enterprise events alike; only Table Service venues use a different floor plan tool instead.
+            </Callout>
+          </Section>
+
+          {/* ─── RSVP PAGES ──────────────────────────────────────────── */}
+          <Section id="rsvp-pages">
+            <SectionTitle
+              icon={LayoutGrid}
+              title="RSVP page builder"
+              subtitle="A section-based, drag-and-drop page builder shared by every event type — standard, Enterprise, and RSVP Event alike. There is exactly one implementation; the same component renders the organizer's live preview and the guest-facing public page."
+            />
+            <p className="text-neutral-500 leading-relaxed mb-4">
+              Instead of a fixed template with a handful of toggleable settings, every event's RSVP page is a list of sections an organizer can add, remove, reorder, and restyle. Each section is one of sixteen block types — hero, host, about, tags, social links, agenda, speaker lineup, photo gallery, sponsors, countdown, map, FAQ, rich text, video, testimonials, and a plain divider — plus the RSVP form itself, which is always present, always last, and cannot be removed or reordered.
+            </p>
+            <FeatureRow
+              icon={LayoutGrid}
+              title="Drag-and-drop builder"
+              description="The left rail shows every section as a card: block type, a drag handle, a layout-variant toggle when a block supports more than one layout, and expandable spacing/alignment/accent-color controls. The right side is a live, real-scale preview that updates as sections are edited or reordered. Changes autosave a moment after you stop editing, with a Saving / Saved / error indicator rather than a manual save button."
+            />
+            <FeatureRow
+              icon={Zap}
+              title="Auto-generated cover graphic"
+              description="Rather than uploading a cover photo, the hero block's cover is generated server-side from your real event title, date, and host name, rendered as vector text so it stays sharp at any size. Organizers choose a template (centered-stack, split, minimal-wordmark, or gradient-orb) and an accent color; everything else fills in automatically and regenerates on demand, not on every page load."
+            />
+            <FeatureRow
+              icon={Users}
+              title="One accent color, everywhere"
+              description="Each RSVP page has a single accent color that flows through every block — buttons, dividers, tag chips, timeline markers, and the generated cover — with an optional per-section override for anyone who wants one block to stand out. The goal is a page that reads as one designed composition, not a form with each field styled independently."
+            />
+            <div className="border border-neutral-200 rounded-2xl overflow-hidden my-6">
+              <TechDetail label="Shared renderer" value="RSVPPageRenderer.jsx is the single implementation of every block's rendering logic, imported by both the builder's live preview and the public-facing page. There is no second copy to keep in sync." />
+              <TechDetail label="Performance" value="Only block types actually present in a page's section list are ever mounted. Each block is independently memoized, so editing one section doesn't re-render the rest. Sections below the first screen defer mounting until they're near the viewport." />
+              <TechDetail label="Public bundle" value="The public RSVP page never loads the drag-and-drop builder's editing dependencies — those are isolated to the organizer-facing builder page and code-split out of the guest-facing bundle." />
+              <TechDetail label="Photo uploads" value="Photo Gallery is the one block backed by real image uploads, using the same Cloudinary-backed upload pipeline as every other file in PlanIt. Every other image on the page — the generated cover, in particular — is produced server-side rather than uploaded." />
+            </div>
+            <Callout>
+              The RSVP page builder is identical across event types — a standard event, an Enterprise event, and an RSVP Event all get the exact same block library and drag-and-drop editor. What differs by event type is everything around the page: whether there's a seating chart, a full planning workspace, or just a guest list and check-in. See "RSVP Event" above.
             </Callout>
           </Section>
 

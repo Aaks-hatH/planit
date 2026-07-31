@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Table Service Mode — PlanIt Docs</title>
+  <link rel="stylesheet" href="style.css" />
+  <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+  <script>window.CURRENT_PAGE = 'table-service';</script>
+</head>
+<body>
+  <div class="sidebar-overlay"></div>
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="sidebar-logo"><a href="index.html"><div class="logo-mark">P</div><div><div class="logo-text">PLANIT</div><div class="logo-sub">Docs</div></div></a></div>
+      <div class="sidebar-search"><div class="sidebar-search-wrap"><svg class="sidebar-search-icon" width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="7" cy="7" r="5"/><path d="M11 11l3 3"/></svg><input class="sidebar-search-input" type="text" placeholder="Search docs..." autocomplete="off" /><span class="search-kbd">/</span></div></div>
+      <nav class="sidebar-nav"></nav>
+      <div class="sidebar-status"><div class="status-dot"></div>All systems operational</div>
+      <div class="sidebar-footer"><a href="https://planitapp.onrender.com" class="sidebar-footer-link" target="_blank">Open PlanIt App →</a></div>
+    </aside>
+    <div class="main">
+      <div class="topbar">
+        <div class="topbar-left">
+          <button class="menu-toggle" aria-label="Toggle menu"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><line x1="2" y1="5" x2="16" y2="5"/><line x1="2" y1="9" x2="16" y2="9"/><line x1="2" y1="13" x2="16" y2="13"/></svg></button>
+          <div class="topbar-breadcrumb">Docs <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M4 2l4 4-4 4"/></svg> <span>Table Service Mode</span></div>
+        </div>
+        <div class="topbar-right"><a href="https://planitapp.onrender.com" class="topbar-btn" target="_blank">Open App →</a></div>
+      </div>
+      <div class="inner-layout">
+        <div class="content">
+
+          <div class="page-header">
+            <div class="page-tag">Features</div>
+            <h1 class="page-title">Table Service Mode</h1>
+            <p class="page-desc">A live floor management system for restaurants, private dining rooms, and hospitality venues. Real-time table status, walk-in waitlists, QR reservations, and server coordination — no planning workspace, just the floor.</p>
+          </div>
+
+          <div class="callout info">
+            <div class="callout-icon"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#60a5fa" stroke-width="1.5" stroke-linecap="round"><circle cx="8" cy="8" r="6"/><line x1="8" y1="6" x2="8" y2="8.5"/><circle cx="8" cy="11" r=".6" fill="#60a5fa" stroke="none"/></svg></div>
+            <div class="callout-body">
+              <div class="callout-title">Table Service is a completely different mode</div>
+              <p>Selecting Table Service at event creation opens a different interface entirely. There is no planning workspace (chat, tasks, polls, notes, budget). The mode cannot be changed after creation. Venue data is never auto-deleted — it persists indefinitely.</p>
+            </div>
+          </div>
+
+          <h2 id="overview">Overview</h2>
+          <p>Table Service mode is designed for venues that need to manage a live dining floor in real time — seeing which tables are occupied, who is next on the waitlist, how long each party has been seated, and which server is responsible for each table. Everything updates live across all staff devices via WebSocket.</p>
+
+          <p>The interface lives at <code>/e/your-venue/floor</code> and is separate from the standard event workspace URL.</p>
+
+          <h2 id="floor-plan">The floor plan</h2>
+          <p>The floor plan is a visual grid of your venue's tables. Each table shows:</p>
+          <ul>
+            <li>Table number or name</li>
+            <li>Capacity (number of seats)</li>
+            <li>Current status (colour-coded)</li>
+            <li>Party name and size (when occupied)</li>
+            <li>Time seated (live elapsed timer)</li>
+            <li>Assigned server</li>
+          </ul>
+
+          <h3 id="table-statuses">Table status colours</h3>
+          <div class="table-wrap"><table>
+            <thead><tr><th>Colour</th><th>Status</th><th>Meaning</th></tr></thead>
+            <tbody>
+              <tr><td><span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:#10b981;margin-right:6px;"></span>Green</td><td>Available</td><td>Table is clean and ready for the next party</td></tr>
+              <tr><td><span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:#ef4444;margin-right:6px;"></span>Red</td><td>Occupied</td><td>Party seated, actively dining</td></tr>
+              <tr><td><span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:#f59e0b;margin-right:6px;"></span>Amber</td><td>Reserved</td><td>Held for an incoming reservation or walk-in</td></tr>
+              <tr><td><span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:#6b7280;margin-right:6px;"></span>Grey</td><td>Cleaning</td><td>Party has left; table is being cleaned</td></tr>
+              <tr><td><span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:#8b5cf6;margin-right:6px;"></span>Purple</td><td>Unavailable</td><td>Table closed (maintenance, private event, etc.)</td></tr>
+            </tbody>
+          </table></div>
+
+          <h2 id="seating-a-party">Seating a party</h2>
+          <ol class="steps">
+            <li><div class="step-num">1</div><div class="step-content"><strong>Click an available table</strong><p>Tap any green (available) table on the floor plan. A detail panel slides in from the right.</p></div></li>
+            <li><div class="step-num">2</div><div class="step-content"><strong>Enter party details</strong><p>Fill in the party name, number of guests, any notes (dietary restrictions, special occasions), and optionally assign a server. Phone number is optional but useful for contact.</p></div></li>
+            <li><div class="step-num">3</div><div class="step-content"><strong>Seat the party</strong><p>Click <strong>Seat Party</strong>. The table turns red on all connected staff devices simultaneously. A live elapsed timer starts.</p></div></li>
+            <li><div class="step-num">4</div><div class="step-content"><strong>Mark as paid &amp; clear</strong><p>When the party leaves, click the table and tap <strong>Clear Table</strong>. Choose whether to mark it Cleaning (grey) or immediately Available (green). The timer stops and the party details are archived in the session log.</p></div></li>
+          </ol>
+
+          <h2 id="waitlist">Walk-in waitlist</h2>
+          <p>The waitlist panel (accessible from the floor view) shows parties waiting for a table. Each entry shows the party name, size, time added, and an estimated wait time based on current floor occupancy and average turn times.</p>
+
+          <ol class="steps">
+            <li><div class="step-num">1</div><div class="step-content"><strong>Add a walk-in</strong><p>Click <strong>Add to Waitlist</strong>. Enter party name, size, and optionally a contact number. The party is added to the queue immediately.</p></div></li>
+            <li><div class="step-num">2</div><div class="step-content"><strong>Seat from waitlist</strong><p>When a table opens, click the first matching party on the waitlist and select <strong>Seat Now</strong>. This removes them from the waitlist and opens the seating form pre-filled with their details.</p></div></li>
+            <li><div class="step-num">3</div><div class="step-content"><strong>Remove from waitlist</strong><p>If a party leaves before being seated, click their entry and tap <strong>Remove</strong>. The list re-sorts automatically.</p></div></li>
+          </ol>
+
+          <h2 id="qr-reservations">QR reservations</h2>
+          <p>Your venue has a unique QR code that customers can scan to make a reservation. The QR code leads to a mobile-friendly reservation form where they enter:</p>
+          <ul>
+            <li>Name</li>
+            <li>Party size</li>
+            <li>Contact phone number</li>
+            <li>Requested time (optional)</li>
+            <li>Special requests (optional)</li>
+          </ul>
+
+          <p>Submitted reservations appear in the waitlist immediately. Staff can accept, reject, or assign them to specific tables. Reservation QR codes generated for the customer expire after a configurable window (default: 30 minutes) — if the customer arrives after expiry, they re-enter the waitlist as a walk-in.</p>
+
+          <h3 id="reservation-qr-display">Where to display your venue QR</h3>
+          <p>Print the venue QR code and place it at:</p>
+          <ul>
+            <li>The front-of-house host stand</li>
+            <li>On physical menus</li>
+            <li>On table tent cards</li>
+            <li>In your venue's window display</li>
+            <li>On your website or social media bio</li>
+          </ul>
+
+          <h2 id="server-assignment">Server assignment</h2>
+          <p>Each table can be assigned to a named server. The floor plan view can be filtered by server to show only their section. This helps hosts coordinate floor coverage and ensures the right person is alerted when their section has a new party.</p>
+
+          <h2 id="occupancy-overview">Occupancy overview</h2>
+          <p>The header of the floor plan always shows:</p>
+          <ul>
+            <li>Tables occupied / total tables</li>
+            <li>Guests seated / total capacity</li>
+            <li>Parties on the waitlist</li>
+            <li>Average time seated (across currently occupied tables)</li>
+          </ul>
+
+          <h2 id="data-retention">Data retention</h2>
+          <p>Table Service venues are exempt from the 7-day event data deletion policy. Floor plan configuration, server assignments, and venue settings persist indefinitely. Individual party session records (who was seated, when, at which table) are archived for reference but do not count toward any deletion window.</p>
+          <p>You can manually reset the floor plan or clear session history from the venue management settings at any time.</p>
+
+          <h2 id="multiple-staff">Multiple staff devices</h2>
+          <p>Open the floor view on as many tablets or phones as you need. Every change — a table status update, a waitlist addition, a reservation confirmation — syncs instantly across all connected devices via Socket.IO WebSocket. There is no per-device setup. All staff see the same live floor at all times.</p>
+
+          <div class="callout tip">
+            <div class="callout-icon"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#a78bfa" stroke-width="1.5" stroke-linecap="round"><path d="M8 2l5 2.5V9c0 2.5-2 4.5-5 5-3-1-5-2.5-5-5V4.5L8 2z"/></svg></div>
+            <div class="callout-body">
+              <div class="callout-title">Best setup: tablet at host stand, phone in server pockets</div>
+              <p>A shared tablet at the host stand works well as the primary floor view. Servers with phones can check their section and update table status without walking back to the host stand. All views stay in sync automatically.</p>
+            </div>
+          </div>
+
+          <div class="page-nav">
+            <a href="planning-tools.html" class="page-nav-link">
+              <span class="page-nav-label">← Previous</span>
+              <span class="page-nav-title">Planning Tools</span>
+            </a>
+            <a href="security.html" class="page-nav-link page-nav-next">
+              <span class="page-nav-label">Next →</span>
+              <span class="page-nav-title">Security &amp; Passwords</span>
+            </a>
+          </div>
+        </div>
+        <div class="toc-right"></div>
+      </div>
+    </div>
+  </div>
+  <script src="nav.js"></script>
+</body>
+</html>
