@@ -4,12 +4,13 @@ import {
   Calendar, Lock, Plus, Trash2, GripVertical, ChevronDown,
   ChevronUp, Check, Save, RefreshCw, AlertTriangle,
   ToggleLeft, ToggleRight, ExternalLink, Copy, Sliders,
-  MessageSquare, Star, Tag, Clock, FileText, Layers
+  MessageSquare, Star, Tag, Clock, FileText, Layers, CheckCircle2, LogOut
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { rsvpAPI } from '../services/api';
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+const ROUTER_URL = (import.meta.env.VITE_ROUTER_URL || '').replace(/\/$/, '');
 
 /* ─── Toggle ──────────────────────────────────────────────────────────────── */
 function Toggle({ label, description, checked, onChange, disabled }) {
@@ -151,6 +152,63 @@ export default function RSVPSettings({ event, eventId, onSettingsChanged }) {
   const [saving, setSaving]     = useState(false);
   const [dirty, setDirty]       = useState(false);
   const [activeTab, setActiveTab] = useState('general');
+
+  // ── Gmail OAuth (organizer connects their own Gmail to send RSVP notification/confirmation emails) ──
+  const [gmailStatus, setGmailStatus]         = useState(null); // { connected, email }
+  const [gmailStatusLoading, setGmailStatusLoading] = useState(false);
+  const [gmailConnecting, setGmailConnecting] = useState(false);
+  const gmailPopupRef = useRef(null);
+
+  const refreshGmailStatus = () => {
+    if (!eventId) return;
+    setGmailStatusLoading(true);
+    rsvpAPI.getGmailStatus(eventId)
+      .then(r => setGmailStatus(r.data))
+      .catch(() => setGmailStatus(null))
+      .finally(() => setGmailStatusLoading(false));
+  };
+
+  useEffect(() => { refreshGmailStatus(); }, [eventId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Listen for the postMessage the router's OAuth popup sends back on completion
+  // (see router/server.js closePopup — GMAIL_OAUTH_SUCCESS / GMAIL_OAUTH_ERROR).
+  useEffect(() => {
+    const handler = (e) => {
+      if (!e.data || (e.data.type !== 'GMAIL_OAUTH_SUCCESS' && e.data.type !== 'GMAIL_OAUTH_ERROR')) return;
+      setGmailConnecting(false);
+      if (e.data.type === 'GMAIL_OAUTH_SUCCESS') {
+        toast.success(e.data.message ? `Gmail connected: ${e.data.message}` : 'Gmail connected.');
+        refreshGmailStatus();
+      } else {
+        toast.error(e.data.message || 'Gmail connection failed.');
+      }
+    };
+    window.addEventListener('message', handler);
+    return () => window.removeEventListener('message', handler);
+  }, [eventId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const connectGmail = () => {
+    if (!ROUTER_URL) { toast.error('Gmail connect is not configured on this server.'); return; }
+    if (!eventId) return;
+    setGmailConnecting(true);
+    const w = 520, h = 640;
+    const left = window.screenX + (window.outerWidth - w) / 2;
+    const top  = window.screenY + (window.outerHeight - h) / 2;
+    gmailPopupRef.current = window.open(
+      `${ROUTER_URL}/gmail/connect?eventId=${eventId}`,
+      'planit-gmail-oauth',
+      `width=${w},height=${h},left=${left},top=${top}`
+    );
+    if (!gmailPopupRef.current) { setGmailConnecting(false); toast.error('Please allow pop-ups to connect Gmail.'); }
+  };
+
+  const disconnectGmail = async () => {
+    try {
+      await rsvpAPI.disconnectGmail(eventId);
+      toast.success('Gmail disconnected.');
+      refreshGmailStatus();
+    } catch { toast.error('Failed to disconnect Gmail.'); }
+  };
 
   useEffect(() => {
     if (!eventId) return;
@@ -554,6 +612,37 @@ export default function RSVPSettings({ event, eventId, onSettingsChanged }) {
       {/* ── NOTIFICATIONS ── */}
       {activeTab === 'notifications' && (
         <div className="space-y-4">
+          <Section title="Send via Gmail" icon={Mail} defaultOpen>
+            <div className="py-1">
+              <p className="text-xs text-neutral-500 mb-3 leading-relaxed">
+                Connect a Gmail account so RSVP notifications and guest confirmations send from a real inbox instead of a no-reply address.
+              </p>
+              {gmailStatusLoading ? (
+                <div className="flex items-center gap-2 text-xs text-neutral-400 py-2"><RefreshCw className="w-3.5 h-3.5 animate-spin" /> Checking connection…</div>
+              ) : gmailStatus?.connected ? (
+                <div className="flex items-center justify-between gap-3 p-3 rounded-lg bg-emerald-50 border border-emerald-200">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0" />
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-emerald-800 truncate">Connected</p>
+                      <p className="text-xs text-emerald-600 truncate">{gmailStatus.email}</p>
+                    </div>
+                  </div>
+                  <button type="button" onClick={disconnectGmail} className="flex items-center gap-1.5 text-xs font-semibold text-red-600 hover:text-red-700 flex-shrink-0">
+                    <LogOut className="w-3.5 h-3.5" /> Disconnect
+                  </button>
+                </div>
+              ) : (
+                <button type="button" onClick={connectGmail} disabled={gmailConnecting || !ROUTER_URL}
+                  className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold border border-neutral-200 hover:border-neutral-300 hover:bg-neutral-50 transition-colors disabled:opacity-50">
+                  {gmailConnecting ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Mail className="w-4 h-4" />}
+                  {gmailConnecting ? 'Waiting for Google…' : 'Connect Gmail'}
+                </button>
+              )}
+              {!ROUTER_URL && <p className="text-xs text-amber-600 mt-2">VITE_ROUTER_URL is not set — Gmail connect is unavailable in this environment.</p>}
+            </div>
+          </Section>
+
           <Section title="Organizer Notifications" icon={Mail} defaultOpen>
             <Toggle label="Notify me on each RSVP" description="Receive an email each time someone RSVPs."
               checked={settings.notifyOrganizerOnRsvp !== false} onChange={v => set('notifyOrganizerOnRsvp', v)} />
