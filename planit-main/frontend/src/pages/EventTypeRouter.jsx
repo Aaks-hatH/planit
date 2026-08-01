@@ -43,7 +43,7 @@ export default function EventTypeRouter() {
   }, [subdomain, eventId]);
 
   if (eventType === undefined) {
-    return <div className="min-h-screen flex items-center justify-center bg-[#0a0a12] text-white/60">Loading…</div>;
+    return <div className="min-h-screen flex items-center justify-center bg-neutral-50 text-neutral-400 text-sm">Loading…</div>;
   }
 
   return eventType === 'rsvpOnly' ? <RSVPEventDashboard /> : <EventSpace />;
