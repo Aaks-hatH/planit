@@ -30,34 +30,90 @@ const Wrap = ({ spacing, align, className = '', children }) => (
 );
 
 /* ── hero ──────────────────────────────────────────────────────────────── */
-export const HeroBlock = React.memo(function HeroBlock({ content, layout, spacing, align, accent, fonts, isLight }) {
-  const { title, subtitle, dateTime, location, coverImageId, coverImageUrl } = content || {};
+// A couple of small inline icons so date/location read as chips rather than
+// bare strings — no icon package dependency, just two tiny paths.
+const CalendarGlyph = () => (
+  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <rect x="3" y="4" width="18" height="18" rx="3" /><path d="M16 2v4M8 2v4M3 10h18" />
+  </svg>
+);
+const PinGlyph = () => (
+  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z" /><circle cx="12" cy="10" r="3" />
+  </svg>
+);
+
+// Mixes the page accent with a couple of warm, high-energy hues so every
+// event — whatever accent color was picked — still lands on a lively,
+// sun-bleached gradient rather than a flat tinted-black box. This is the
+// hero card's OWN background; it doesn't touch the page-level backgroundStyle.
+const heroGradient = (accent) => `
+  radial-gradient(circle at 12% 18%, ${accent}80 0%, transparent 42%),
+  radial-gradient(circle at 88% 12%, #ffd166a0 0%, transparent 40%),
+  radial-gradient(circle at 78% 92%, #ff5d8fa8 0%, transparent 45%),
+  radial-gradient(circle at 8% 90%, #14b8a680 0%, transparent 40%),
+  linear-gradient(135deg, #120a1e 0%, #1a0f2e 60%, #0e1626 100%)
+`;
+
+export const HeroBlock = React.memo(function HeroBlock({ content, layout, spacing, align, accent, fonts }) {
+  const { title, subtitle, dateTime, location, coverImageUrl } = content || {};
   const cover = coverImageUrl || null; // resolved cover URL, passed down by renderer after cover-cache lookup
   const dateStr = dateTime ? new Date(dateTime).toLocaleString(undefined, { dateStyle: 'full', timeStyle: 'short' }) : '';
-  const split = layout === 'split';
-  // Fall back to a classic invitation eyebrow line when no tagline has been
-  // set, so a freshly-created page (or one an organizer hasn't customized
-  // yet) never looks like an empty placeholder.
+  // "split" now controls where the overlaid text sits (left vs. centered),
+  // not a side-by-side image — the cover graphic and the hero copy are
+  // always one merged card, never a picture next to a second text block.
+  const leftAlign = layout === 'split';
   const eyebrow = subtitle || (title ? `You're invited to ${title}` : "You're invited");
 
   return (
-    <section className={`w-full ${spacingClass(spacing)} px-6 md:px-10`}>
-      <div className={`max-w-5xl mx-auto flex ${split ? 'flex-col md:flex-row items-center gap-10' : 'flex-col items-center text-center gap-4'}`}>
+    <section className={`w-full ${spacingClass(spacing)} px-4 md:px-10`}>
+      <div
+        className={`relative max-w-5xl mx-auto overflow-hidden rounded-[2rem] md:rounded-[2.5rem] shadow-2xl ${cover ? 'aspect-[4/5] md:aspect-[16/9]' : 'aspect-[4/5] md:aspect-[21/9]'}`}
+        style={cover ? undefined : { background: heroGradient(accent) }}
+      >
         {cover && (
-          <img
-            src={cover}
-            alt=""
-            loading="lazy"
-            className={split ? 'w-full md:w-1/2 rounded-2xl object-cover aspect-[4/5]' : 'w-full max-w-lg rounded-2xl object-cover aspect-[16/9] mb-2'}
-          />
+          <>
+            <img src={cover} alt="" loading="lazy" className="absolute inset-0 w-full h-full object-cover" />
+            {/* scrim so overlaid text stays legible on any generated cover */}
+            <div className="absolute inset-0" style={{ background: 'linear-gradient(0deg, rgba(0,0,0,0.75) 0%, rgba(0,0,0,0.15) 45%, rgba(0,0,0,0.35) 100%)' }} />
+          </>
         )}
-        <div className={split ? 'md:w-1/2 flex flex-col gap-3' : 'flex flex-col items-center gap-3'}>
-          {eyebrow && <p className="uppercase tracking-[0.2em] text-xs md:text-sm opacity-70" style={{ color: accent }}>{eyebrow}</p>}
-          <h1 className={`text-4xl md:text-6xl ${fonts.heading}`}>{title || 'Untitled Event'}</h1>
-          <div className={`flex flex-col ${split ? 'items-start' : 'items-center'} gap-1 ${fonts.body} opacity-80 text-sm md:text-base`}>
-            {dateStr && <span>{dateStr}</span>}
-            {location && <span>{location}</span>}
-          </div>
+        {!cover && (
+          <>
+            <div className="absolute -top-16 -right-16 w-64 h-64 rounded-full blur-3xl opacity-60" style={{ background: '#ffd166' }} />
+            <div className="absolute -bottom-20 -left-10 w-72 h-72 rounded-full blur-3xl opacity-50" style={{ background: accent }} />
+          </>
+        )}
+
+        <div
+          className={`relative z-10 h-full w-full flex flex-col justify-end gap-3 p-6 md:p-12 text-white ${leftAlign ? 'items-start text-left' : 'items-center text-center'}`}
+        >
+          {eyebrow && (
+            <span
+              className="inline-flex items-center gap-1.5 uppercase tracking-[0.15em] text-[10px] md:text-xs font-semibold px-3 py-1.5 rounded-full backdrop-blur-md border border-white/25"
+              style={{ background: `${accent}33`, color: '#fff' }}
+            >
+              <span className="w-1.5 h-1.5 rounded-full" style={{ background: accent }} />
+              {eyebrow}
+            </span>
+          )}
+          <h1 className={`text-4xl md:text-7xl leading-[1.05] drop-shadow-[0_2px_12px_rgba(0,0,0,0.45)] ${fonts.heading}`}>
+            {title || 'Untitled Event'}
+          </h1>
+          {(dateStr || location) && (
+            <div className={`flex flex-wrap gap-2 mt-1 ${leftAlign ? 'justify-start' : 'justify-center'}`}>
+              {dateStr && (
+                <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs md:text-sm bg-white/10 backdrop-blur-md border border-white/20 ${fonts.body}`}>
+                  <CalendarGlyph />{dateStr}
+                </span>
+              )}
+              {location && (
+                <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs md:text-sm bg-white/10 backdrop-blur-md border border-white/20 ${fonts.body}`}>
+                  <PinGlyph />{location}
+                </span>
+              )}
+            </div>
+          )}
         </div>
       </div>
     </section>
