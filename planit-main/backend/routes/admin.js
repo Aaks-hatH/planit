@@ -1199,6 +1199,76 @@ router.delete('/events/:eventId/invites/:inviteId', verifyAdmin, requirePermissi
   } catch (error) { next(error); }
 });
 
+// ─── RSVP Page Submissions (new guest-facing RSVP page system) ────────────────
+// Separate from the legacy `event.rsvps[]` embedded array (which only tracks
+// in-app participant yes/maybe/no). These are collected via the public RSVP
+// page builder and can carry plus-ones, custom answers, seating selections,
+// approval status, and check-in state.
+router.get('/events/:eventId/rsvp-submissions', verifyAdmin, async (req, res, next) => {
+  try {
+    const RSVPSubmission = require('../models/RSVPSubmission');
+    const submissions = await RSVPSubmission.find({ eventId: req.params.eventId, deletedAt: null })
+      .sort({ submittedAt: -1 })
+      .lean();
+    res.json({ submissions });
+  } catch (error) { next(error); }
+});
+
+router.patch('/events/:eventId/rsvp-submissions/:submissionId', verifyAdmin, requirePermission('canEditEvents'), async (req, res, next) => {
+  try {
+    const RSVPSubmission = require('../models/RSVPSubmission');
+    const ALLOWED = ['status', 'organizerNotes', 'starred', 'tags'];
+    const update = {};
+    ALLOWED.forEach(key => { if (req.body[key] !== undefined) update[key] = req.body[key]; });
+    update.updatedAt = new Date();
+
+    const submission = await RSVPSubmission.findOneAndUpdate(
+      { _id: req.params.submissionId, eventId: req.params.eventId },
+      update,
+      { new: true }
+    ).lean();
+    if (!submission) return res.status(404).json({ error: 'Submission not found' });
+    res.json({ message: 'Submission updated', submission });
+  } catch (error) { next(error); }
+});
+
+router.post('/events/:eventId/rsvp-submissions/:submissionId/checkin', verifyAdmin, requirePermission('canEditEvents'), async (req, res, next) => {
+  try {
+    const RSVPSubmission = require('../models/RSVPSubmission');
+    const submission = await RSVPSubmission.findOneAndUpdate(
+      { _id: req.params.submissionId, eventId: req.params.eventId },
+      { checkedIn: true, checkedInAt: new Date() },
+      { new: true }
+    ).lean();
+    if (!submission) return res.status(404).json({ error: 'Submission not found' });
+    res.json({ message: 'Guest checked in', submission });
+  } catch (error) { next(error); }
+});
+
+router.post('/events/:eventId/rsvp-submissions/:submissionId/undo-checkin', verifyAdmin, requirePermission('canEditEvents'), async (req, res, next) => {
+  try {
+    const RSVPSubmission = require('../models/RSVPSubmission');
+    const submission = await RSVPSubmission.findOneAndUpdate(
+      { _id: req.params.submissionId, eventId: req.params.eventId },
+      { checkedIn: false, checkedInAt: null },
+      { new: true }
+    ).lean();
+    if (!submission) return res.status(404).json({ error: 'Submission not found' });
+    res.json({ message: 'Check-in undone', submission });
+  } catch (error) { next(error); }
+});
+
+router.delete('/events/:eventId/rsvp-submissions/:submissionId', verifyAdmin, requirePermission('canDeleteEvents'), async (req, res, next) => {
+  try {
+    const RSVPSubmission = require('../models/RSVPSubmission');
+    await RSVPSubmission.findOneAndUpdate(
+      { _id: req.params.submissionId, eventId: req.params.eventId },
+      { deletedAt: new Date() }
+    );
+    res.json({ message: 'Submission deleted' });
+  } catch (error) { next(error); }
+});
+
 // ─── GET /events/:eventId/full ─────────────────────────────────────────────────
 // Returns all event data in a single round-trip for the admin event detail panel.
 router.get('/events/:eventId/full', verifyAdmin, async (req, res, next) => {
@@ -1245,7 +1315,9 @@ router.get('/events/:eventId/full', verifyAdmin, async (req, res, next) => {
     const rsvpBreakdown = { yes: 0, maybe: 0, no: 0 };
     (event.rsvps || []).forEach(r => { if (rsvpBreakdown[r.status] !== undefined) rsvpBreakdown[r.status]++; });
 
-    const [participants, invites, polls, files, messages, auditLogs] = await Promise.all([
+    const RSVPSubmission = require('../models/RSVPSubmission');
+
+    const [participants, invites, polls, files, messages, auditLogs, rsvpSubmissions] = await Promise.all([
       EventParticipant.find({ eventId: event._id })
         .select('username role joinedAt lastSeenAt hasPassword recoveryCodeGeneratedAt')
         .lean(),
@@ -1256,7 +1328,39 @@ router.get('/events/:eventId/full', verifyAdmin, async (req, res, next) => {
       File.find({ eventId: event._id, isDeleted: false }).lean(),
       Message.find({ eventId: event._id, isDeleted: false }).sort({ createdAt: -1 }).limit(50).lean(),
       getAuditLogs({ targetId: String(event._id), limit: 100 }),
+      RSVPSubmission.find({ eventId: event._id, deletedAt: null }).sort({ submittedAt: -1 }).lean(),
     ]);
+
+    // ── New RSVP page system: stats + sanitized settings ─────────────────────
+    // rsvpSubmissions come from the public RSVP page builder (plus-ones, custom
+    // questions, seating selections, approval workflow, check-in) — distinct
+    // from the legacy `event.rsvps[]` array used above for rsvpBreakdown.
+    const rsvpStats = {
+      total:          rsvpSubmissions.length,
+      byResponse:     { yes: 0, maybe: 0, no: 0 },
+      byStatus:       { pending: 0, confirmed: 0, waitlisted: 0, declined: 0 },
+      totalAttendees: 0,
+      checkedIn:      0,
+      withPlusOnes:   0,
+      withSeatSelected: 0,
+    };
+    rsvpSubmissions.forEach(s => {
+      if (rsvpStats.byResponse[s.response] !== undefined) rsvpStats.byResponse[s.response]++;
+      if (rsvpStats.byStatus[s.status] !== undefined) rsvpStats.byStatus[s.status]++;
+      rsvpStats.totalAttendees += 1 + (s.plusOnes || 0);
+      if (s.checkedIn) rsvpStats.checkedIn++;
+      if (s.plusOnes > 0) rsvpStats.withPlusOnes++;
+      if (s.selectedTableId) rsvpStats.withSeatSelected++;
+    });
+
+    // Strip secrets (rsvpPassword, Gmail OAuth tokens) before this reaches the
+    // admin frontend — replace with booleans so the UI can still show state.
+    let rsvpPage = null;
+    if (event.rsvpPage) {
+      const { rsvpPassword, gmailAuth, ...rest } = event.rsvpPage;
+      rsvpPage = { ...rest, hasPassword: !!rsvpPassword, gmailConnected: !!gmailAuth?.connected, gmailEmail: gmailAuth?.connected ? gmailAuth.email : '' };
+      event.rsvpPage = rsvpPage; // keep the embedded `event` object consistent with the sanitized copy
+    }
 
     res.json({
       event,
@@ -1269,6 +1373,12 @@ router.get('/events/:eventId/full', verifyAdmin, async (req, res, next) => {
       rsvpBreakdown,
       analytics,
       liveConnections,
+      // New RSVP page system (page builder submissions) — separate from the
+      // legacy embedded rsvpBreakdown above.
+      rsvpSubmissions,
+      rsvpStats,
+      rsvpPage,
+      rsvpPageConfig: event.rsvpPageConfig || null,
     });
   } catch (err) {
     next(err);
@@ -1298,6 +1408,60 @@ router.patch('/events/:eventId/admin-notes', verifyAdmin, async (req, res, next)
     });
 
     res.json({ adminNotes: event.adminNotes, updatedAt: new Date() });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// ─── PATCH /events/:eventId/event-type ─────────────────────────────────────────
+// Admin-only: convert an event between Standard and RSVP-only. Keeps
+// event.rsvpPage.enabled in sync — turning it on when converting TO rsvpOnly,
+// and just disabling (not deleting) it when converting back to standard, so
+// nothing is lost if the event is flipped back later.
+router.patch('/events/:eventId/event-type', verifyAdmin, requirePermission('canEditEvents'), async (req, res, next) => {
+  try {
+    const { eventType } = req.body || {};
+    const ALLOWED = ['standard', 'rsvpOnly'];
+    if (!ALLOWED.includes(eventType)) {
+      return res.status(400).json({ error: `eventType must be one of: ${ALLOWED.join(', ')}` });
+    }
+
+    const event = await Event.findById(req.params.eventId);
+    if (!event) return res.status(404).json({ error: 'Event not found' });
+
+    if (event.eventType === eventType) {
+      return res.json({ message: 'No change', eventType: event.eventType, rsvpPageEnabled: event.rsvpPage?.enabled || false });
+    }
+
+    const previousType = event.eventType;
+    const wasRsvpOnly = previousType === 'rsvpOnly';
+    event.eventType = eventType;
+
+    if (eventType === 'rsvpOnly') {
+      if (!event.rsvpPage) event.rsvpPage = {};
+      event.rsvpPage.enabled = true;
+    } else if (wasRsvpOnly && event.rsvpPage) {
+      event.rsvpPage.enabled = false;
+    }
+
+    await event.save();
+
+    const io = req.app.get('io');
+    if (io) io.to(`event_${event._id}`).emit('event_settings_updated', { eventType: event.eventType });
+
+    await audit({
+      action:    'admin_event_type_changed',
+      actorId:   req.admin?.id,
+      actorName: req.admin?.username,
+      targetId:  String(event._id),
+      details:   { from: previousType, to: eventType },
+    });
+
+    res.json({
+      message: 'Event type updated',
+      eventType: event.eventType,
+      rsvpPageEnabled: event.rsvpPage?.enabled || false,
+    });
   } catch (err) {
     next(err);
   }
