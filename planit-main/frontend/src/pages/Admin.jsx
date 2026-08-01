@@ -222,6 +222,11 @@ function EventDetail({ event: initialEvent, onBack, onDelete, onUpdate }) {
   const [polls, setPolls] = useState([]);
   const [files, setFiles] = useState([]);
   const [invites, setInvites] = useState([]);
+  const [rsvpSubmissions, setRsvpSubmissions] = useState([]);
+  const [rsvpStats, setRsvpStats] = useState(null);
+  const [rsvpPage, setRsvpPage] = useState(null);
+  const [rsvpPageConfig, setRsvpPageConfig] = useState(null);
+  const [rsvpFilter, setRsvpFilter] = useState('all'); // 'all' | 'yes' | 'maybe' | 'no'
   const [loading, setLoading] = useState(true);
   const [editMode, setEditMode] = useState(false);
   const [editForm, setEditForm] = useState({});
@@ -266,6 +271,10 @@ function EventDetail({ event: initialEvent, onBack, onDelete, onUpdate }) {
       setPolls(d.polls || []);
       setFiles(d.files || []);
       setInvites(d.invites || []);
+      setRsvpSubmissions(d.rsvpSubmissions || []);
+      setRsvpStats(d.rsvpStats || null);
+      setRsvpPage(d.rsvpPage || null);
+      setRsvpPageConfig(d.rsvpPageConfig || null);
       if (d.event) {
         setEvent(d.event);
         setAdminNotes(d.event.adminNotes || '');
@@ -317,6 +326,12 @@ function EventDetail({ event: initialEvent, onBack, onDelete, onUpdate }) {
 
   const fm = messages.filter(m => !search || m.content?.toLowerCase().includes(search.toLowerCase()) || m.username?.toLowerCase().includes(search.toLowerCase()));
   const fp = participants.filter(p => !search || p.username?.toLowerCase().includes(search.toLowerCase()));
+  const frsvp = rsvpSubmissions.filter(s => {
+    if (rsvpFilter !== 'all' && s.response !== rsvpFilter) return false;
+    if (!search) return true;
+    const q = search.toLowerCase();
+    return s.firstName?.toLowerCase().includes(q) || s.lastName?.toLowerCase().includes(q) || s.email?.toLowerCase().includes(q);
+  });
 
   const tabs = [
     { id: 'overview',      label: 'Overview',      icon: Info },
@@ -325,6 +340,7 @@ function EventDetail({ event: initialEvent, onBack, onDelete, onUpdate }) {
     { id: 'polls',         label: 'Polls',          icon: BarChart3, count: polls.length },
     { id: 'files',         label: 'Files',          icon: FileText, count: files.length },
     { id: 'invites',       label: 'Invites',        icon: Mail, count: invites.length },
+    { id: 'rsvp',          label: 'RSVP Page',      icon: UserCheck, count: rsvpSubmissions.length },
     { id: 'analytics',     label: 'Analytics',      icon: Activity },
     { id: 'admin',         label: 'Admin',          icon: Shield },
     { id: 'pii',           label: 'PII & Compliance', icon: Fingerprint },
@@ -351,6 +367,16 @@ function EventDetail({ event: initialEvent, onBack, onDelete, onUpdate }) {
         </button>
         <select value={event.status} onChange={e => adminAPI.updateEventStatus(event._id, e.target.value).then(() => { setEvent({ ...event, status: e.target.value }); toast.success('Status updated'); onUpdate?.(); }).catch(() => toast.error('Failed'))} className="input py-1.5 text-sm">
           {['active', 'completed', 'cancelled', 'draft'].map(s => <option key={s} value={s}>{s}</option>)}
+        </select>
+        <select value={event.eventType || 'standard'} title="Event type"
+          onChange={e => {
+            const next = e.target.value;
+            adminAPI.updateEventType(event._id, next)
+              .then(() => { setEvent(ev => ({ ...ev, eventType: next, rsvpPage: { ...(ev.rsvpPage || {}), enabled: next === 'rsvpOnly' ? true : (ev.rsvpPage?.enabled && false) } })); toast.success(next === 'rsvpOnly' ? 'Converted to RSVP event' : 'Converted to standard event'); load(); })
+              .catch(() => toast.error('Failed to change event type'));
+          }} className="input py-1.5 text-sm">
+          <option value="standard">Standard</option>
+          <option value="rsvpOnly">RSVP Only</option>
         </select>
         {editMode ? (
           <>
@@ -627,6 +653,123 @@ function EventDetail({ event: initialEvent, onBack, onDelete, onUpdate }) {
                       <div className="flex gap-2 opacity-0 group-hover:opacity-100">
                         {!inv.checkedIn && <button onClick={() => adminAPI.checkInGuest(event._id, inv.inviteCode).then(() => { toast.success('Checked in'); load(); }).catch(() => toast.error('Failed'))} className="btn btn-primary text-xs px-2 py-1">Check In</button>}
                         <button onClick={() => adminAPI.deleteInvite(event._id, inv._id).then(() => { setInvites(p => p.filter(x => x._id !== inv._id)); toast.success('Deleted'); }).catch(() => toast.error('Failed'))} className="btn btn-secondary text-xs px-2 py-1 text-red-600"><Trash2 className="w-3 h-3" /></button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* ── RSVP PAGE TAB (new guest-facing RSVP page builder system) ──── */}
+            {tab === 'rsvp' && (
+              <div>
+                {/* Page settings summary */}
+                <div className="card p-4 mb-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <p className="text-sm font-semibold flex items-center gap-2">
+                      <UserCheck className="w-4 h-4 text-indigo-500" /> RSVP Page
+                    </p>
+                    {rsvpPage?.enabled
+                      ? <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 font-semibold">Enabled</span>
+                      : <span className="text-xs px-2 py-0.5 rounded-full bg-neutral-100 text-neutral-500 font-semibold">Disabled</span>}
+                  </div>
+                  {rsvpPage ? (
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+                      <div><p className="text-neutral-400 mb-0.5">Access</p><p className="font-medium capitalize">{rsvpPage.accessMode || 'open'}{rsvpPage.hasPassword && ' · has password'}</p></div>
+                      <div><p className="text-neutral-400 mb-0.5">Confirmation</p><p className="font-medium capitalize">{(rsvpPage.confirmationMode || 'auto_confirm').replace('_', ' ')}</p></div>
+                      <div><p className="text-neutral-400 mb-0.5">Deadline</p><p className="font-medium">{rsvpPage.deadline ? fmt(rsvpPage.deadline) : '—'}</p></div>
+                      <div><p className="text-neutral-400 mb-0.5">Capacity</p><p className="font-medium">{rsvpPage.capacityLimit ? `${rsvpPage.capacityLimit} (waitlist ${rsvpPage.enableWaitlist ? 'on' : 'off'})` : 'Unlimited'}</p></div>
+                      <div><p className="text-neutral-400 mb-0.5">Plus-ones</p><p className="font-medium">{rsvpPage.allowPlusOnes ? `Up to ${rsvpPage.maxPlusOnes}` : 'Off'}</p></div>
+                      <div><p className="text-neutral-400 mb-0.5">Guest edits</p><p className="font-medium">{rsvpPage.allowGuestEdit ? `Allowed (${rsvpPage.editCutoffHours}h cutoff)` : 'Off'}</p></div>
+                      <div><p className="text-neutral-400 mb-0.5">Custom questions</p><p className="font-medium">{(rsvpPage.customQuestions || []).length}</p></div>
+                      <div><p className="text-neutral-400 mb-0.5">Gmail notify</p><p className="font-medium">{rsvpPage.gmailConnected ? rsvpPage.gmailEmail || 'Connected' : 'Not connected'}</p></div>
+                      <div><p className="text-neutral-400 mb-0.5">Builder sections</p><p className="font-medium">{rsvpPageConfig?.sections?.length ?? 0}</p></div>
+                      <div><p className="text-neutral-400 mb-0.5">Seating checkout</p><p className="font-medium">{fullEventData?.event?.seatingMap?.enabled ? 'Enabled' : 'Off'}</p></div>
+                      <div><p className="text-neutral-400 mb-0.5">Responses</p><p className="font-medium">{[rsvpPage.allowYes && rsvpPage.yesButtonLabel, rsvpPage.allowMaybe && rsvpPage.maybeButtonLabel, rsvpPage.allowNo && rsvpPage.noButtonLabel].filter(Boolean).join(' · ')}</p></div>
+                      <div><p className="text-neutral-400 mb-0.5">Duplicate email policy</p><p className="font-medium capitalize">{(rsvpPage.duplicateEmailPolicy || 'warn_organizer').replace('_', ' ')}</p></div>
+                    </div>
+                  ) : <p className="text-sm text-neutral-400">No RSVP page configured for this event.</p>}
+                </div>
+
+                {/* Stats grid */}
+                {rsvpStats && (
+                  <div className="grid grid-cols-3 sm:grid-cols-6 gap-3 mb-4">
+                    {[
+                      ['Total',      rsvpStats.total],
+                      ['Yes',        rsvpStats.byResponse.yes],
+                      ['Maybe',      rsvpStats.byResponse.maybe],
+                      ['No',         rsvpStats.byResponse.no],
+                      ['Attendees',  rsvpStats.totalAttendees],
+                      ['Checked In', rsvpStats.checkedIn],
+                    ].map(([l, v]) => (
+                      <div key={l} className="card p-3 text-center">
+                        <p className="text-xl font-bold">{v}</p>
+                        <p className="text-xs text-neutral-500">{l}</p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {rsvpStats && (rsvpStats.byStatus.pending > 0 || rsvpStats.byStatus.waitlisted > 0 || rsvpStats.byStatus.declined > 0) && (
+                  <div className="flex flex-wrap gap-2 mb-4 text-xs">
+                    {rsvpStats.byStatus.pending > 0 && <span className="px-2 py-1 rounded-full bg-amber-100 text-amber-700 font-semibold">{rsvpStats.byStatus.pending} pending approval</span>}
+                    {rsvpStats.byStatus.waitlisted > 0 && <span className="px-2 py-1 rounded-full bg-blue-100 text-blue-700 font-semibold">{rsvpStats.byStatus.waitlisted} waitlisted</span>}
+                    {rsvpStats.byStatus.declined > 0 && <span className="px-2 py-1 rounded-full bg-red-100 text-red-700 font-semibold">{rsvpStats.byStatus.declined} declined</span>}
+                    {rsvpStats.withPlusOnes > 0 && <span className="px-2 py-1 rounded-full bg-neutral-100 text-neutral-600 font-semibold">{rsvpStats.withPlusOnes} with plus-ones</span>}
+                    {rsvpStats.withSeatSelected > 0 && <span className="px-2 py-1 rounded-full bg-neutral-100 text-neutral-600 font-semibold">{rsvpStats.withSeatSelected} picked a seat</span>}
+                  </div>
+                )}
+
+                {/* Response filter + export */}
+                <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
+                  <div className="flex gap-1.5">
+                    {['all', 'yes', 'maybe', 'no'].map(f => (
+                      <button key={f} onClick={() => setRsvpFilter(f)}
+                        className={`px-3 py-1.5 rounded-full text-xs font-semibold capitalize transition-colors ${rsvpFilter === f ? 'bg-neutral-900 text-white' : 'bg-neutral-100 text-neutral-500 hover:bg-neutral-200'}`}>
+                        {f === 'all' ? `All (${rsvpSubmissions.length})` : `${f} (${rsvpStats?.byResponse?.[f] ?? 0})`}
+                      </button>
+                    ))}
+                  </div>
+                  <button onClick={() => exportJSON('rsvp-submissions', rsvpSubmissions)} className="btn btn-secondary text-sm gap-1"><Download className="w-3 h-3" /> Export</button>
+                </div>
+
+                {frsvp.length === 0 ? (
+                  <p className="text-sm text-neutral-400 text-center py-12">No RSVP submissions{rsvpFilter !== 'all' ? ` for "${rsvpFilter}"` : ''}</p>
+                ) : frsvp.map(s => (
+                  <div key={s._id} className={`p-3 rounded-lg border mb-1.5 group ${s.checkedIn ? 'bg-emerald-50 border-emerald-200' : 'border-neutral-100'}`}>
+                    <div className="flex items-center justify-between gap-3 flex-wrap">
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2 mb-1 flex-wrap">
+                          <p className="text-sm font-medium truncate">{[s.firstName, s.lastName].filter(Boolean).join(' ')}</p>
+                          <StatusBadge status={s.response} />
+                          <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${
+                            s.status === 'confirmed' ? 'bg-emerald-100 text-emerald-700' :
+                            s.status === 'pending' ? 'bg-amber-100 text-amber-700' :
+                            s.status === 'waitlisted' ? 'bg-blue-100 text-blue-700' : 'bg-red-100 text-red-700'}`}>{s.status}</span>
+                          {s.plusOnes > 0 && <span className="text-xs px-2 py-0.5 rounded-full bg-neutral-100 text-neutral-600">+{s.plusOnes}</span>}
+                          {s.selectedTableLabel && <span className="text-xs px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700">Seat: {s.selectedTableLabel}</span>}
+                          {s.checkedIn && <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 font-semibold">In</span>}
+                          {s.starred && <Star className="w-3 h-3 text-amber-500 fill-amber-500" />}
+                        </div>
+                        <p className="text-xs text-neutral-400 truncate">{s.email || 'no email'}{s.phone ? ` · ${s.phone}` : ''} · {rel(s.submittedAt)}</p>
+                        {(s.dietaryRestrictions || s.accessibilityNeeds || s.guestNote) && (
+                          <p className="text-xs text-neutral-400 mt-1 truncate">
+                            {s.dietaryRestrictions && `Dietary: ${s.dietaryRestrictions}`}
+                            {s.accessibilityNeeds && `${s.dietaryRestrictions ? ' · ' : ''}Access: ${s.accessibilityNeeds}`}
+                            {s.guestNote && `${(s.dietaryRestrictions || s.accessibilityNeeds) ? ' · ' : ''}"${s.guestNote}"`}
+                          </p>
+                        )}
+                      </div>
+                      <div className="flex gap-2 opacity-0 group-hover:opacity-100">
+                        {s.status === 'pending' && (
+                          <>
+                            <button onClick={() => adminAPI.updateRsvpSubmission(event._id, s._id, { status: 'confirmed' }).then(() => { toast.success('Approved'); load(); }).catch(() => toast.error('Failed'))} className="btn btn-primary text-xs px-2 py-1">Approve</button>
+                            <button onClick={() => adminAPI.updateRsvpSubmission(event._id, s._id, { status: 'declined' }).then(() => { toast.success('Declined'); load(); }).catch(() => toast.error('Failed'))} className="btn btn-secondary text-xs px-2 py-1">Decline</button>
+                          </>
+                        )}
+                        {!s.checkedIn
+                          ? <button onClick={() => adminAPI.checkInRsvpSubmission(event._id, s._id).then(() => { toast.success('Checked in'); load(); }).catch(() => toast.error('Failed'))} className="btn btn-primary text-xs px-2 py-1">Check In</button>
+                          : <button onClick={() => adminAPI.undoCheckInRsvpSubmission(event._id, s._id).then(() => { toast.success('Undone'); load(); }).catch(() => toast.error('Failed'))} className="btn btn-secondary text-xs px-2 py-1">Undo</button>}
+                        <button onClick={() => { if (confirm('Delete this RSVP submission?')) adminAPI.deleteRsvpSubmission(event._id, s._id).then(() => { setRsvpSubmissions(p => p.filter(x => x._id !== s._id)); toast.success('Deleted'); }).catch(() => toast.error('Failed')); }} className="btn btn-secondary text-xs px-2 py-1 text-red-600"><Trash2 className="w-3 h-3" /></button>
                       </div>
                     </div>
                   </div>
