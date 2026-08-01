@@ -12,7 +12,10 @@
  *    list + search/filter/check-in (rsvpAPI.checkinSubmission) — this is
  *    the same component OrganizerSettings.jsx already renders elsewhere in
  *    the app, not a new one.
- *  - Analytics (components/Analytics.jsx) — same component EventSpace uses.
+ *
+ * NOTE: the Analytics tab was deliberately removed from this page — guests
+ * & check-in is the one thing organizers of an RSVP-only event need, and it
+ * now renders directly (no tab bar) instead of competing with a second tab.
  *
  * SCOPE NOTE on the "Builder" tab: RSVPPageBuilder.jsx (Part 4) is already
  * a complete full-page experience with its own header, save-state, and
@@ -38,16 +41,10 @@
  */
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, ExternalLink, LayoutTemplate, Users, BarChart3, ChevronRight } from 'lucide-react';
+import { ArrowLeft, ExternalLink, LayoutTemplate, ChevronRight } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { eventAPI } from '../services/api';
 import RSVPDashboard from '../components/RSVPDashboard';
-import Analytics from '../components/Analytics';
-
-const TABS = [
-  { key: 'guests', label: 'Guests & Check-in', icon: Users },
-  { key: 'analytics', label: 'Analytics', icon: BarChart3 },
-];
 
 export default function RSVPEventDashboard() {
   const { subdomain, eventId: paramEventId } = useParams();
@@ -55,7 +52,6 @@ export default function RSVPEventDashboard() {
 
   const [event, setEvent] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [tab, setTab] = useState('guests');
 
   useEffect(() => {
     const load = async () => {
@@ -117,27 +113,10 @@ export default function RSVPEventDashboard() {
           <ChevronRight className="w-[18px] h-[18px] text-neutral-300" />
         </button>
 
-        {/* Guests & Check-in / Analytics tabs */}
-        <div className="bg-white rounded-2xl border border-neutral-200/80 overflow-hidden flex flex-col">
-          <div className="flex border-b border-neutral-100 overflow-x-auto scrollbar-hide flex-shrink-0" style={{ background: '#fafafa' }}>
-            {TABS.map(({ key, label, icon: Icon }) => (
-              <button
-                key={key}
-                onClick={() => setTab(key)}
-                className={`flex items-center gap-1.5 px-4 py-3 text-xs font-bold whitespace-nowrap transition-all border-b-2 flex-shrink-0 ${
-                  tab === key
-                    ? 'text-neutral-900 border-neutral-900 bg-white'
-                    : 'text-neutral-400 border-transparent hover:text-neutral-600'
-                }`}
-              >
-                <Icon className="w-[13px] h-[13px]" /> {label}
-              </button>
-            ))}
-          </div>
-
+        {/* Guests & Check-in */}
+        <div className="bg-white rounded-2xl border border-neutral-200/80 overflow-hidden">
           <div className="p-4 sm:p-5">
-            {tab === 'guests' && <RSVPDashboard event={event} eventId={eventId} />}
-            {tab === 'analytics' && <Analytics eventId={eventId} />}
+            <RSVPDashboard event={event} eventId={eventId} />
           </div>
         </div>
       </div>
