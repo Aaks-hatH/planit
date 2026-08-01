@@ -268,6 +268,7 @@ export const adminAPI = {
   getEvents:         (params)     => api.get('/admin/events', { params }),
   getEvent:          (id)         => api.get(`/admin/events/${id}`),
   getEventFull:      (id)         => api.get(`/admin/events/${id}/full`),
+  updateEventType:   (id, eventType) => api.patch(`/admin/events/${id}/event-type`, { eventType }),
   getEventAccess:    (id)         => api.post(`/admin/events/${id}/access`),
   updateEvent:       (id, data)   => api.patch(`/admin/events/${id}`, data),
   updateEventStatus: (id, status) => api.patch(`/admin/events/${id}/status`, { status }),
@@ -301,6 +302,13 @@ export const adminAPI = {
   getInvites:  (eventId)                     => api.get(`/admin/events/${eventId}/invites`),
   checkInGuest:(eventId, inviteCode, actual) => api.post(`/admin/events/${eventId}/invites/${inviteCode}/checkin`, { actualAttendees: actual }),
   deleteInvite:(eventId, inviteId)           => api.delete(`/admin/events/${eventId}/invites/${inviteId}`),
+
+  // RSVP Page Submissions (new guest-facing RSVP page builder system)
+  getRsvpSubmissions:      (eventId)                    => api.get(`/admin/events/${eventId}/rsvp-submissions`),
+  updateRsvpSubmission:    (eventId, submissionId, data) => api.patch(`/admin/events/${eventId}/rsvp-submissions/${submissionId}`, data),
+  checkInRsvpSubmission:   (eventId, submissionId)       => api.post(`/admin/events/${eventId}/rsvp-submissions/${submissionId}/checkin`),
+  undoCheckInRsvpSubmission: (eventId, submissionId)     => api.post(`/admin/events/${eventId}/rsvp-submissions/${submissionId}/undo-checkin`),
+  deleteRsvpSubmission:    (eventId, submissionId)       => api.delete(`/admin/events/${eventId}/rsvp-submissions/${submissionId}`),
 
   // Search & Discovery
   search: (query) => api.get('/admin/search', { params: { q: query } }),
