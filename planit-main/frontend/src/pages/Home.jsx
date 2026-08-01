@@ -360,7 +360,7 @@ Copyright (c) 2026 Aakshat Hariharan. All rights reserved.
 // GLOBAL STYLES — injected once
 // ─────────────────────────────────────────────────────────────────────────────
 const GLOBAL_CSS = `
-  @import url('https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,700&family=Instrument+Serif:ital@0;1&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,700&display=swap');
 
   :root {
     --accent-1: #6366f1;
@@ -380,15 +380,6 @@ const GLOBAL_CSS = `
     40%,80%  { transform: translateX(6px); }
   }
   .animate-shake { animation: shake 0.45s ease-in-out; }
-  @keyframes loader-bar {
-    0%   { transform: scaleX(0);   }
-    60%  { transform: scaleX(0.85);}
-    100% { transform: scaleX(1);   }
-  }
-  @keyframes loader-fade-out {
-    0%   { opacity:1; }
-    100% { opacity:0; pointer-events:none; }
-  }
   @keyframes hero-word-in {
     0%   { opacity:0; transform: translateY(28px) skewY(3deg); filter: blur(6px); }
     100% { opacity:1; transform: translateY(0) skewY(0deg);   filter: blur(0);   }
@@ -411,10 +402,6 @@ const GLOBAL_CSS = `
     0%,100% { box-shadow: 0 0 0 0 rgba(99,102,241,0); }
     50%     { box-shadow: 0 0 22px 2px rgba(99,102,241,0.22); }
   }
-  @keyframes scan-line {
-    0%   { transform: translateY(-100%); }
-    100% { transform: translateY(100vh); }
-  }
   @keyframes cta-shimmer {
     0%   { background-position: -200% center; }
     100% { background-position:  200% center; }
@@ -434,9 +421,7 @@ const GLOBAL_CSS = `
   }
 
   .font-syne    { font-family: 'Syne', sans-serif; }
-  .font-accent  { font-family: 'Instrument Serif', serif; font-style: italic; font-weight: 400; }
   .hero-word    { animation: hero-word-in 0.7s cubic-bezier(0.22,1,0.36,1) both; }
-  .loading-bar  { animation: loader-bar 1.6s cubic-bezier(0.22,1,0.36,1) forwards; transform-origin: left; }
   .gradient-pop {
     background: linear-gradient(90deg, #818cf8 0%, #f472b6 45%, #fb923c 100%);
     background-size: 200% auto;
@@ -626,47 +611,6 @@ function InjectGlobalCSS() {
     return () => { const el = document.getElementById(id); if (el) el.remove(); };
   }, []);
   return null;
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// CINEMATIC LOADING SCREEN
-// ─────────────────────────────────────────────────────────────────────────────
-function LoadingScreen({ onDone }) {
-  const [phase, setPhase] = useState(0); // 0=loading, 1=fading
-  useEffect(() => {
-    const t1 = setTimeout(() => setPhase(1), 1700);
-    const t2 = setTimeout(() => onDone(), 2100);
-    return () => { clearTimeout(t1); clearTimeout(t2); };
-  }, [onDone]);
-  return (
-    <div
-      aria-hidden="true"
-      style={{
-        position:'fixed', inset:0, zIndex:9999, background:'#050508',
-        display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center',
-        transition:'opacity 0.4s ease',
-        opacity: phase === 1 ? 0 : 1,
-        pointerEvents: phase === 1 ? 'none' : 'all',
-      }}
-    >
-      {/* Scan line */}
-      <div style={{ position:'absolute', inset:0, overflow:'hidden', pointerEvents:'none' }}>
-        <div style={{ position:'absolute', top:0, left:0, right:0, height:'2px', background:'linear-gradient(90deg, transparent, rgba(99,102,241,0.4), transparent)', animation:'scan-line 1.8s linear 1' }} />
-      </div>
-      {/* Logo */}
-      <div style={{ display:'flex', alignItems:'center', gap:14, marginBottom:36 }}>
-        <div style={{ width:44, height:44, borderRadius:14, background:'rgba(99,102,241,0.1)', border:'1px solid rgba(99,102,241,0.3)', display:'flex', alignItems:'center', justifyContent:'center', boxShadow:'0 0 24px rgba(99,102,241,0.2)' }}>
-          <Calendar style={{ width:22, height:22, color:'#818cf8' }} />
-        </div>
-        <span style={{ fontFamily:'Syne,sans-serif', fontSize:26, fontWeight:800, color:'#fff', letterSpacing:'-0.03em' }}>PlanIt</span>
-      </div>
-      {/* Progress bar */}
-      <div style={{ width:200, height:1, background:'rgba(255,255,255,0.06)', borderRadius:1, overflow:'hidden' }}>
-        <div className="loading-bar" style={{ height:'100%', background:'linear-gradient(90deg, #6366f1, #8b5cf6)', borderRadius:1 }} />
-      </div>
-      <p style={{ marginTop:16, fontSize:11, letterSpacing:'0.18em', textTransform:'uppercase', color:'rgba(255,255,255,0.25)', fontFamily:'DM Sans,sans-serif' }}>Event & venue management</p>
-    </div>
-  );
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -2164,7 +2108,6 @@ export default function Home() {
   const [showAccountPassword, setShowAccountPassword] = useState(false);
   const [fieldErrors, setFieldErrors] = useState({});
   const [selectedBranch, setSelectedBranch] = useState(null); // null | 'events' | 'venue' | 'rsvp'
-  const [loadingDone, setLoadingDone] = useState(false);
   const [wizardKey, setWizardKey] = useState(0); // increment to hard-reset the wizard
   const [wizardOpen, setWizardOpen] = useState(false); // fullscreen wizard overlay
   const wizardSubmittedRef = useRef(false); // flipped true on successful event creation
@@ -2377,7 +2320,6 @@ export default function Home() {
           eventSlug={created?.subdomain}
         />
       )}
-      {!isWL && !loadingDone && <LoadingScreen onDone={() => setLoadingDone(true)} />}
       <ScrollProgressBar />
 
 
@@ -2539,25 +2481,25 @@ export default function Home() {
           }} />
 
           <div className="w-full relative" style={{ zIndex: 2 }}>
-            <div className="max-w-6xl mx-auto px-4 sm:px-8 lg:px-12 py-20 sm:py-28 lg:py-36 text-center">
+            <div className="max-w-6xl mx-auto px-4 sm:px-8 lg:px-12 py-14 sm:py-28 lg:py-36 text-center">
 
               {/* Eyebrow badges */}
               <motion.div initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }} transition={{ duration:0.5, delay:0.1 }}
-                className="inline-flex flex-wrap items-center justify-center gap-3 mb-12"
+                className="flex flex-wrap items-center justify-center gap-2 sm:gap-3 mb-8 sm:mb-12"
               >
-                <span className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold border border-indigo-500/20 text-indigo-300 uppercase tracking-widest cursor-default"
+                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 sm:px-3.5 rounded-full text-[10px] sm:text-xs font-bold border border-indigo-500/20 text-indigo-300 uppercase tracking-wide sm:tracking-widest cursor-default"
                   style={{ background: 'rgba(99,102,241,0.07)', animation:'badge-glow 3s ease-in-out infinite' }}>
                   <Calendar className="w-3 h-3" />{isWL ? 'Events' : 'PlanIt Events'}
                 </span>
-                <span className="w-1 h-1 rounded-full bg-neutral-700" />
-                <span className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold border border-orange-500/25 text-orange-400 uppercase tracking-widest cursor-default"
+                <span className="hidden sm:inline-block w-1 h-1 rounded-full bg-neutral-700" />
+                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 sm:px-3.5 rounded-full text-[10px] sm:text-xs font-bold border border-orange-500/25 text-orange-400 uppercase tracking-wide sm:tracking-widest cursor-default"
                   style={{ background: 'rgba(249,115,22,0.06)' }}>
                   <UtensilsCrossed className="w-3 h-3" />{isWL ? 'Venue' : 'PlanIt Venue'}
                 </span>
                 {!isWL && (
                   <>
-                    <span className="w-1 h-1 rounded-full bg-neutral-700" />
-                    <span className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold border border-emerald-500/25 text-emerald-400 uppercase tracking-widest cursor-default"
+                    <span className="hidden sm:inline-block w-1 h-1 rounded-full bg-neutral-700" />
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1.5 sm:px-3.5 rounded-full text-[10px] sm:text-xs font-bold border border-emerald-500/25 text-emerald-400 uppercase tracking-wide sm:tracking-widest cursor-default"
                       style={{ background: 'rgba(16,185,129,0.06)' }}>
                       <CheckSquare className="w-3 h-3" />RSVP
                     </span>
@@ -2574,21 +2516,21 @@ export default function Home() {
                     {heroHeadline}
                   </motion.h1>
                 ) : (
-                  <h1 className="font-syne font-black leading-[0.9] tracking-tight mb-8"
-                    style={{ fontSize:'clamp(2.6rem,8.5vw,7rem)' }}>
+                  <h1 className="font-syne font-black leading-[0.9] tracking-tight mb-6 sm:mb-8"
+                    style={{ fontSize:'clamp(2.25rem,9vw,7rem)' }}>
                     <span className="hero-word inline-block text-white" style={{ animationDelay:'0.25s' }}>Plan</span>{' '}
                     <span className="hero-word inline-block text-white" style={{ animationDelay:'0.38s' }}>every</span>{' '}
-                    <span className="hero-word inline-block font-accent gradient-pop" style={{ animationDelay:'0.51s' }}>detail.</span>
+                    <span className="hero-word inline-block text-white" style={{ animationDelay:'0.51s' }}>detail.</span>
                     <br />
                     <span className="hero-word inline-block shimmer-slate" style={{ animationDelay:'0.64s' }}>Execute</span>{' '}
-                    <span className="hero-word inline-block shimmer-white" style={{ animationDelay:'0.77s' }}>flawlessly.</span>
+                    <span className="hero-word inline-block gradient-pop" style={{ animationDelay:'0.77s' }}>flawlessly.</span>
                   </h1>
                 )
               }
 
               {/* Sub-headline */}
               <motion.p initial={{ opacity:0, y:20 }} animate={{ opacity:1, y:0 }} transition={{ duration:0.7, delay:0.9 }}
-                className="text-lg md:text-xl text-neutral-400 max-w-2xl mx-auto leading-relaxed font-light mb-14"
+                className="text-base sm:text-lg md:text-xl text-neutral-400 max-w-sm sm:max-w-2xl mx-auto leading-relaxed font-light mb-10 sm:mb-14"
               >
                 {isWL
                   ? (heroSubheadline || wlName || 'Your event platform')
@@ -2600,17 +2542,17 @@ export default function Home() {
 
               {/* CTA buttons */}
               <motion.div initial={{ opacity:0, y:20 }} animate={{ opacity:1, y:0 }} transition={{ duration:0.7, delay:1.05 }}
-                className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-16">
+                className="flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-2.5 sm:gap-4 mb-10 sm:mb-16">
                 <a href="#planit-events"
                   onClick={(e) => { e.preventDefault(); selectBranch('events'); }}
-                  className="cta-primary group inline-flex items-center justify-center gap-3 w-full sm:w-auto px-8 py-4 bg-white text-neutral-900 text-sm font-bold rounded-2xl shadow-2xl">
+                  className="cta-primary group inline-flex items-center justify-center gap-2.5 sm:gap-3 w-full sm:w-auto px-6 py-3.5 sm:px-8 sm:py-4 bg-white text-neutral-900 text-sm font-bold rounded-2xl shadow-2xl">
                   <Calendar className="w-4 h-4" />
                   {(isWL && heroCta) ? heroCta : 'Start with Events'}
                   <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform duration-300" />
                 </a>
                 <a href="#create"
                   onClick={(e) => { e.preventDefault(); setSelectedBranch('events'); setMode('enterprise'); setWizardKey(k => k + 1); setTimeout(() => document.getElementById('planit-events')?.scrollIntoView({ behavior:'smooth', block:'start' }), 50); }}
-                  className="group inline-flex items-center justify-center gap-3 w-full sm:w-auto px-8 py-4 border border-indigo-500/40 text-indigo-300 text-sm font-bold rounded-2xl transition-all duration-300 hover:border-indigo-400/70 hover:bg-indigo-500/10"
+                  className="group inline-flex items-center justify-center gap-2.5 sm:gap-3 w-full sm:w-auto px-6 py-3.5 sm:px-8 sm:py-4 border border-indigo-500/40 text-indigo-300 text-sm font-bold rounded-2xl transition-all duration-300 hover:border-indigo-400/70 hover:bg-indigo-500/10"
                   style={{ background: 'rgba(99,102,241,0.07)' }}>
                   <Zap className="w-4 h-4" />
                   Enterprise
@@ -2618,7 +2560,7 @@ export default function Home() {
                 </a>
                 <a href="#planit-venue"
                   onClick={(e) => { e.preventDefault(); selectBranch('venue'); }}
-                  className="cta-venue group inline-flex items-center justify-center gap-3 w-full sm:w-auto px-8 py-4 border border-orange-500/30 text-orange-400 text-sm font-bold rounded-2xl"
+                  className="cta-venue group inline-flex items-center justify-center gap-2.5 sm:gap-3 w-full sm:w-auto px-6 py-3.5 sm:px-8 sm:py-4 border border-orange-500/30 text-orange-400 text-sm font-bold rounded-2xl"
                   style={{ background: 'rgba(249,115,22,0.06)' }}>
                   <UtensilsCrossed className="w-4 h-4" />
                   Explore Venue
@@ -2626,7 +2568,7 @@ export default function Home() {
                 </a>
                 <a href="#planit-rsvp"
                   onClick={(e) => { e.preventDefault(); selectBranch('rsvp'); }}
-                  className="group inline-flex items-center justify-center gap-3 w-full sm:w-auto px-8 py-4 border border-emerald-500/30 text-emerald-400 text-sm font-bold rounded-2xl transition-all duration-300 hover:border-emerald-400/60 hover:bg-emerald-500/10"
+                  className="group inline-flex items-center justify-center gap-2.5 sm:gap-3 w-full sm:w-auto px-6 py-3.5 sm:px-8 sm:py-4 border border-emerald-500/30 text-emerald-400 text-sm font-bold rounded-2xl transition-all duration-300 hover:border-emerald-400/60 hover:bg-emerald-500/10"
                   style={{ background: 'rgba(16,185,129,0.06)' }}>
                   <CheckSquare className="w-4 h-4" />
                   Just Need RSVPs?
@@ -2636,20 +2578,20 @@ export default function Home() {
 
               {/* Slug finder — jump to a private event */}
               <motion.div initial={{ opacity:0, y:12 }} animate={{ opacity:1, y:0 }} transition={{ duration:0.6, delay:1.15 }}
-                className="mb-10">
+                className="mb-8 sm:mb-10">
                 <p className="text-xs text-neutral-600 uppercase tracking-widest mb-2">Already have an event link?</p>
                 <SlugFinder />
               </motion.div>
 
               {/* Trust stats */}
               <motion.div initial={{ opacity:0, y:20 }} animate={{ opacity:1, y:0 }} transition={{ duration:0.7, delay:1.2 }}
-                className="grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-xl mx-auto">
+                className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 max-w-xl mx-auto">
                 {[
                   { tag: 'Free forever',   desc: 'No credit card required',           icon: '✦', color: 'text-indigo-400' },
                   { tag: 'Zero accounts',  desc: 'Guests join by name instantly',      icon: '◈', color: 'text-amber-400' },
                   { tag: 'Unlimited team', desc: 'Every organizer & vendor included',  icon: '◉', color: 'text-emerald-400' },
                 ].map((item) => (
-                  <div key={item.tag} className="stat-card text-center p-5 rounded-2xl cursor-default"
+                  <div key={item.tag} className="stat-card text-center p-4 sm:p-5 rounded-2xl cursor-default"
                     style={{ background:'rgba(255,255,255,0.025)', backdropFilter:'blur(12px)' }}>
                     <div className={`${item.color} text-lg mb-1`}>{item.icon}</div>
                     <div className="text-sm font-black text-white mb-0.5 tracking-wide">{item.tag}</div>
@@ -2659,7 +2601,7 @@ export default function Home() {
               </motion.div>
 
               {/* Scroll indicator */}
-              <div className="mt-16 flex flex-col items-center gap-2 cursor-default" style={{ opacity:0.4 }}>
+              <div className="mt-10 sm:mt-16 flex flex-col items-center gap-2 cursor-default" style={{ opacity:0.4 }}>
                 <span className="text-[10px] font-bold uppercase tracking-[0.25em] text-neutral-500">Scroll</span>
                 <div style={{ width:1, height:36, background:'linear-gradient(to bottom, rgba(99,102,241,0.6), transparent)', animation:'scroll-indicator-bounce 2s ease-in-out infinite' }} />
               </div>
