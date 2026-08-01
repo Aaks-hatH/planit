@@ -1,10 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import {
   Users, Check, X, Clock, Search, Filter, Download,
-  ChevronDown, Star, Tag, Trash2, UserCheck, MoreVertical,
-  RefreshCw, AlertTriangle, CheckSquare, Square,
-  ThumbsUp, ThumbsDown, Edit2, Mail, Phone,
-  ArrowUpDown, BarChart2, MessageSquare, Clipboard
+  ChevronDown, Star, Trash2, UserCheck,
+  RefreshCw, ThumbsUp, ThumbsDown, Edit2,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { rsvpAPI } from '../services/api';
@@ -22,13 +20,20 @@ const RESPONSE_META = {
   no:    { label: 'Not Attending', icon: <X      className="w-3.5 h-3.5" />, color: 'text-red-500' },
 };
 
-/* ─── Stat card ────────────────────────────────────────────────────────────── */
-function StatCard({ label, value, sub, color }) {
+/* ─── Stat strip ──────────────────────────────────────────────────────────── */
+// One combined row, reusing the exact same colors as the per-guest status
+// badges below (STATUS_META), so "Attending" up top is visibly the same
+// color language as the "Confirmed" pill on each row — one system, not two
+// disconnected components stacked on top of each other.
+function StatChip({ label, value, sub, dot, text }) {
   return (
-    <div className="bg-white border border-neutral-200 rounded-xl p-4 space-y-1">
-      <p className="text-xs font-semibold text-neutral-400 uppercase tracking-wide">{label}</p>
-      <p className={`text-3xl font-black ${color || 'text-neutral-900'}`}>{value ?? '—'}</p>
-      {sub && <p className="text-xs text-neutral-400">{sub}</p>}
+    <div className="flex-1 min-w-[110px] bg-white border border-neutral-200 rounded-xl px-3.5 py-3">
+      <div className="flex items-center gap-1.5 mb-1">
+        <span className={`w-2 h-2 rounded-full flex-shrink-0 ${dot}`} />
+        <p className="text-[11px] font-semibold text-neutral-400 uppercase tracking-wide truncate">{label}</p>
+      </div>
+      <p className={`text-2xl font-black leading-none ${text || 'text-neutral-900'}`}>{value ?? '—'}</p>
+      {sub && <p className="text-[11px] text-neutral-400 mt-1">{sub}</p>}
     </div>
   );
 }
@@ -39,10 +44,8 @@ function SubmissionRow({ submission: s, selected, onSelect, onUpdate, onDelete, 
   const [editing, setEditing]   = useState(false);
   const [note, setNote]         = useState(s.organizerNotes || '');
   const [tags, setTags]         = useState((s.tags || []).join(', '));
-  const [menuOpen, setMenuOpen] = useState(false);
 
-  const resp   = RESPONSE_META[s.response] || RESPONSE_META.yes;
-  const status = STATUS_META[s.status] || STATUS_META.confirmed;
+  const resp = RESPONSE_META[s.response] || RESPONSE_META.yes;
 
   const saveNote = async () => {
     try {
@@ -55,12 +58,12 @@ function SubmissionRow({ submission: s, selected, onSelect, onUpdate, onDelete, 
   };
 
   const changeStatus = async (newStatus) => {
+    if (newStatus === s.status) return;
     try {
       await rsvpAPI.updateSubmission(eventId, s._id, { status: newStatus });
       onUpdate();
-      toast.success(`Status updated to ${newStatus}.`);
+      toast.success(`Status updated to ${STATUS_META[newStatus]?.label || newStatus}.`);
     } catch { toast.error('Failed to update.'); }
-    setMenuOpen(false);
   };
 
   const toggleStar = async () => {
@@ -107,12 +110,27 @@ function SubmissionRow({ submission: s, selected, onSelect, onUpdate, onDelete, 
             <span className="ml-1.5 text-xs text-neutral-400">+{s.plusOnes}</span>
           )}
         </td>
-        {/* Status */}
+        {/* Status — a live segmented control, not a menu hidden behind a "⋮".
+            All three actions organizers actually reach for (accept / waitlist /
+            decline) sit right here, always visible; the highlighted button
+            IS the current status, so there's no separate badge to reconcile
+            it against. */}
         <td className="px-3 py-3">
-          <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-semibold border ${status.bg} ${status.text} ${status.border}`}>
-            <span className={`w-1.5 h-1.5 rounded-full ${status.dot}`} />
-            {status.label}
-          </span>
+          <div className="inline-flex rounded-lg border border-neutral-200 overflow-hidden flex-shrink-0">
+            <button type="button" title="Accept" onClick={() => changeStatus('confirmed')}
+              className={`p-1.5 transition-colors ${s.status === 'confirmed' ? 'bg-emerald-500 text-white' : 'text-neutral-300 hover:text-emerald-600 hover:bg-emerald-50'}`}>
+              <Check className="w-3.5 h-3.5" />
+            </button>
+            <button type="button" title="Waitlist" onClick={() => changeStatus('waitlisted')}
+              className={`p-1.5 border-l border-neutral-200 transition-colors ${s.status === 'waitlisted' ? 'bg-amber-500 text-white' : 'text-neutral-300 hover:text-amber-600 hover:bg-amber-50'}`}>
+              <Clock className="w-3.5 h-3.5" />
+            </button>
+            <button type="button" title="Decline" onClick={() => changeStatus('declined')}
+              className={`p-1.5 border-l border-neutral-200 transition-colors ${s.status === 'declined' ? 'bg-red-500 text-white' : 'text-neutral-300 hover:text-red-500 hover:bg-red-50'}`}>
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
+          {s.status === 'pending' && <p className="text-[10px] text-indigo-500 font-semibold mt-1">Pending</p>}
         </td>
         {/* Check-in */}
         <td className="px-3 py-3">
@@ -128,36 +146,18 @@ function SubmissionRow({ submission: s, selected, onSelect, onUpdate, onDelete, 
         <td className="px-3 py-3 text-xs text-neutral-400 whitespace-nowrap">
           {new Date(s.submittedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
         </td>
-        {/* Actions */}
+        {/* Actions — plain, always-visible controls; nothing hidden behind a
+            popup menu that a scrollable table could clip. */}
         <td className="px-3 py-3">
           <div className="flex items-center gap-1">
-            <button onClick={() => setExpanded(o => !o)}
+            <button onClick={() => setExpanded(o => !o)} title="Guest details"
               className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-neutral-100 transition-colors">
               <ChevronDown className={`w-4 h-4 text-neutral-400 transition-transform ${expanded ? 'rotate-180' : ''}`} />
             </button>
-            <div className="relative">
-              <button onClick={() => setMenuOpen(o => !o)}
-                className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-neutral-100 transition-colors">
-                <MoreVertical className="w-4 h-4 text-neutral-400" />
-              </button>
-              {menuOpen && (
-                <div className="absolute right-0 top-full mt-1 z-20 bg-white border border-neutral-200 rounded-xl shadow-xl py-1 w-44">
-                  {['confirmed', 'pending', 'waitlisted', 'declined'].map(st => (
-                    <button key={st} onClick={() => changeStatus(st)}
-                      className="w-full text-left px-3 py-1.5 text-xs hover:bg-neutral-50 transition-colors flex items-center gap-2">
-                      <span className={`w-2 h-2 rounded-full ${STATUS_META[st].dot}`} />
-                      {STATUS_META[st].label}
-                    </button>
-                  ))}
-                  <div className="border-t border-neutral-100 mt-1 pt-1">
-                    <button onClick={() => { onDelete(s._id); setMenuOpen(false); }}
-                      className="w-full text-left px-3 py-1.5 text-xs text-red-500 hover:bg-red-50 transition-colors flex items-center gap-2">
-                      <Trash2 className="w-3.5 h-3.5" /> Delete
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
+            <button onClick={() => onDelete(s._id)} title="Delete"
+              className="w-7 h-7 flex items-center justify-center rounded-lg text-neutral-300 hover:text-red-500 hover:bg-red-50 transition-colors">
+              <Trash2 className="w-3.5 h-3.5" />
+            </button>
           </div>
         </td>
       </tr>
@@ -343,19 +343,15 @@ export default function RSVPDashboard({ event, eventId }) {
   return (
     <div className="space-y-5">
 
-      {/* Stats */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <StatCard label="Attending" value={stats?.totalYes} sub={`${stats?.totalAttendees || 0} total incl. plus-ones`} color="text-emerald-600" />
-        <StatCard label="Maybe" value={stats?.totalMaybe} color="text-amber-600" />
-        <StatCard label="Pending Approval" value={stats?.pending} color="text-indigo-600" />
-        <StatCard label="Checked In" value={stats?.checkedIn} sub={`of ${stats?.totalYes || 0} attending`} color="text-neutral-900" />
-      </div>
-
-      {/* Secondary stats */}
-      <div className="grid grid-cols-3 gap-3">
-        <StatCard label="Not Attending" value={stats?.totalNo} color="text-red-500" />
-        <StatCard label="Waitlisted" value={stats?.waitlisted} color="text-amber-500" />
-        <StatCard label="Starred" value={stats?.starred} color="text-amber-400" />
+      {/* Stats — one combined strip, always visible at the top, no second layer below it */}
+      <div className="flex flex-wrap gap-3">
+        <StatChip label="Attending" value={stats?.totalYes} sub={`${stats?.totalAttendees || 0} incl. plus-ones`} dot="bg-emerald-500" text="text-emerald-600" />
+        <StatChip label="Maybe" value={stats?.totalMaybe} dot="bg-amber-500" text="text-amber-600" />
+        <StatChip label="Pending" value={stats?.pending} dot="bg-indigo-500" text="text-indigo-600" />
+        <StatChip label="Waitlisted" value={stats?.waitlisted} dot="bg-amber-400" text="text-amber-500" />
+        <StatChip label="Declined" value={stats?.totalNo} dot="bg-red-400" text="text-red-500" />
+        <StatChip label="Checked In" value={stats?.checkedIn} sub={`of ${stats?.totalYes || 0} attending`} dot="bg-neutral-700" text="text-neutral-900" />
+        <StatChip label="Starred" value={stats?.starred} dot="bg-amber-300" text="text-amber-500" />
       </div>
 
       {/* RSVP link */}
