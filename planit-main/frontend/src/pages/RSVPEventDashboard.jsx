@@ -24,6 +24,17 @@
  * navigates to the existing `/e/:subdomain/rsvp-builder` route — consistent
  * with how those other full-page tools are already reached, and avoiding a
  * second, subtly different embedded copy of the builder chrome.
+ *
+ * THEME NOTE: this shell is light (bg-neutral-50 / white cards), matching
+ * EventSpace.jsx — the standard dashboard this page stands in for — and,
+ * just as importantly, matching RSVPDashboard.jsx and Analytics.jsx below,
+ * which are shared components built entirely with light Tailwind classes
+ * (bg-white, text-neutral-900, border-neutral-200, etc). An earlier version
+ * of this file used a dark shell (bg-[#0a0a12]/text-white) around those same
+ * light components, which is what produced the "white boxes floating on a
+ * dark background" look. Don't flip this back to dark without also reworking
+ * RSVPDashboard/Analytics, since they're reused as-is inside OrganizerSettings
+ * (a light modal) too.
  */
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
@@ -62,60 +73,72 @@ export default function RSVPEventDashboard() {
   }, [subdomain, paramEventId]);
 
   if (loading) {
-    return <div className="min-h-screen flex items-center justify-center bg-[#0a0a12] text-white/60">Loading…</div>;
+    return <div className="min-h-screen flex items-center justify-center bg-neutral-50 text-neutral-400 text-sm">Loading…</div>;
   }
   if (!event) {
-    return <div className="min-h-screen flex items-center justify-center bg-[#0a0a12] text-white/60">Event not found.</div>;
+    return <div className="min-h-screen flex items-center justify-center bg-neutral-50 text-neutral-400 text-sm">Event not found.</div>;
   }
 
   const eventId = event.id;
   const base = subdomain ? `/e/${subdomain}` : `/event/${paramEventId}`;
 
   return (
-    <div className="min-h-screen bg-[#0a0a12] text-white">
-      <div className="flex items-center gap-3 px-4 sm:px-6 py-4 border-b border-white/10">
-        <button onClick={() => navigate('/')} className="opacity-70 hover:opacity-100"><ArrowLeft size={18} /></button>
-        <div className="flex-1 min-w-0">
-          <p className="text-sm font-semibold truncate">{event.title}</p>
-          <p className="text-xs opacity-50">RSVP Event</p>
+    <div className="min-h-screen bg-neutral-50">
+      <header className="bg-white/95 backdrop-blur-md border-b border-neutral-200/60 sticky top-0 z-50">
+        <div className="max-w-screen-lg mx-auto px-4 sm:px-6 h-14 flex items-center gap-3">
+          <button onClick={() => navigate('/')}
+            className="w-8 h-8 rounded-lg bg-neutral-100 hover:bg-neutral-200 flex items-center justify-center flex-shrink-0 transition-colors">
+            <ArrowLeft className="w-3.5 h-3.5 text-neutral-600" />
+          </button>
+          <div className="flex-1 min-w-0">
+            <h1 className="text-sm font-bold text-neutral-900 truncate leading-tight">{event.title}</h1>
+            <p className="text-[11px] font-semibold text-emerald-600">RSVP Event</p>
+          </div>
+          <a href={`/rsvp/${event.subdomain}`} target="_blank" rel="noreferrer"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-neutral-600 border border-neutral-200 bg-white hover:bg-neutral-50 hover:border-neutral-300 transition-colors flex-shrink-0">
+            View live page <ExternalLink className="w-3 h-3" />
+          </a>
         </div>
-        <a href={`/rsvp/${event.subdomain}`} target="_blank" rel="noreferrer" className="text-xs flex items-center gap-1 opacity-70 hover:opacity-100">
-          View live page <ExternalLink size={12} />
-        </a>
-      </div>
+      </header>
 
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 py-6 flex flex-col gap-6">
+      <div className="max-w-screen-lg mx-auto px-4 sm:px-6 py-6 flex flex-col gap-6">
         {/* Builder — full-page tool, linked out to rather than embedded, see file header */}
         <button
           onClick={() => navigate(`${base}/rsvp-builder`)}
-          className="w-full flex items-center gap-4 p-5 rounded-2xl border border-white/10 bg-white/[0.03] hover:bg-white/[0.06] hover:border-white/20 transition-all text-left"
+          className="w-full flex items-center gap-4 p-5 rounded-2xl border border-neutral-200 bg-white hover:border-neutral-300 hover:shadow-sm transition-all text-left"
         >
-          <div className="w-11 h-11 rounded-xl bg-emerald-500/15 flex items-center justify-center flex-shrink-0">
-            <LayoutTemplate size={20} className="text-emerald-400" />
+          <div className="w-11 h-11 rounded-xl bg-emerald-50 flex items-center justify-center flex-shrink-0">
+            <LayoutTemplate className="w-5 h-5 text-emerald-600" />
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold">RSVP Page Builder</p>
-            <p className="text-xs opacity-50">Drag-and-drop sections, cover graphic, and page styling</p>
+            <p className="text-sm font-semibold text-neutral-900">RSVP Page Builder</p>
+            <p className="text-xs text-neutral-400">Drag-and-drop sections, cover graphic, and page styling</p>
           </div>
-          <ChevronRight size={18} className="opacity-40" />
+          <ChevronRight className="w-[18px] h-[18px] text-neutral-300" />
         </button>
 
         {/* Guests & Check-in / Analytics tabs */}
-        <div className="flex gap-1 rounded-xl bg-white/[0.03] p-1 w-fit">
-          {TABS.map(({ key, label, icon: Icon }) => (
-            <button
-              key={key}
-              onClick={() => setTab(key)}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${tab === key ? 'bg-white/10' : 'opacity-50 hover:opacity-80'}`}
-            >
-              <Icon size={13} /> {label}
-            </button>
-          ))}
-        </div>
+        <div className="bg-white rounded-2xl border border-neutral-200/80 overflow-hidden flex flex-col">
+          <div className="flex border-b border-neutral-100 overflow-x-auto scrollbar-hide flex-shrink-0" style={{ background: '#fafafa' }}>
+            {TABS.map(({ key, label, icon: Icon }) => (
+              <button
+                key={key}
+                onClick={() => setTab(key)}
+                className={`flex items-center gap-1.5 px-4 py-3 text-xs font-bold whitespace-nowrap transition-all border-b-2 flex-shrink-0 ${
+                  tab === key
+                    ? 'text-neutral-900 border-neutral-900 bg-white'
+                    : 'text-neutral-400 border-transparent hover:text-neutral-600'
+                }`}
+              >
+                <Icon className="w-[13px] h-[13px]" /> {label}
+              </button>
+            ))}
+          </div>
 
-        <div>
-          {tab === 'guests' && <RSVPDashboard event={event} eventId={eventId} />}
-          {tab === 'analytics' && <Analytics eventId={eventId} />}
+          <div className="p-4 sm:p-5">
+            {tab === 'guests' && <RSVPDashboard event={event} eventId={eventId} />}
+            {tab === 'analytics' && <Analytics eventId={eventId} />}
+          </div>
         </div>
       </div>
     </div>
