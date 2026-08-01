@@ -360,13 +360,16 @@ Copyright (c) 2026 Aakshat Hariharan. All rights reserved.
 // GLOBAL STYLES — injected once
 // ─────────────────────────────────────────────────────────────────────────────
 const GLOBAL_CSS = `
-  @import url('https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,700&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,700&family=Instrument+Serif:ital@0;1&display=swap');
 
   :root {
     --accent-1: #6366f1;
     --accent-2: #8b5cf6;
     --glow-1: rgba(99,102,241,0.18);
     --glow-2: rgba(139,92,246,0.12);
+    --glow-3: rgba(251,146,60,0.16);
+    --glow-4: rgba(236,72,153,0.14);
+    --glow-5: rgba(45,212,191,0.14);
     --surface-glass: rgba(255,255,255,0.03);
     --border-subtle: rgba(255,255,255,0.06);
   }
@@ -431,8 +434,16 @@ const GLOBAL_CSS = `
   }
 
   .font-syne    { font-family: 'Syne', sans-serif; }
+  .font-accent  { font-family: 'Instrument Serif', serif; font-style: italic; font-weight: 400; }
   .hero-word    { animation: hero-word-in 0.7s cubic-bezier(0.22,1,0.36,1) both; }
   .loading-bar  { animation: loader-bar 1.6s cubic-bezier(0.22,1,0.36,1) forwards; transform-origin: left; }
+  .gradient-pop {
+    background: linear-gradient(90deg, #818cf8 0%, #f472b6 45%, #fb923c 100%);
+    background-size: 200% auto;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    animation: cta-shimmer 5s linear infinite;
+  }
   .cta-primary  {
     background: linear-gradient(135deg, #fff 0%, #e8e8f0 100%);
     background-size: 200% auto;
@@ -441,7 +452,7 @@ const GLOBAL_CSS = `
   .cta-primary:hover {
     background-position: right center;
     transform: translateY(-2px);
-    box-shadow: 0 20px 40px rgba(0,0,0,0.4), 0 0 30px rgba(99,102,241,0.15);
+    box-shadow: 0 20px 40px rgba(0,0,0,0.4), 0 0 30px rgba(99,102,241,0.15), 0 0 46px rgba(244,114,182,0.08);
   }
   .cta-venue {
     transition: transform 0.2s ease, box-shadow 0.3s ease, border-color 0.3s ease;
@@ -683,9 +694,11 @@ function CinematicGrid() {
         <rect width="100%" height="100%" fill="url(#grid-lg)" mask="url(#grid-mask)"/>
       </svg>
       {/* Floating orbs */}
-      <div style={{ position:'absolute', top:'15%', left:'12%', width:500, height:500, borderRadius:'50%', background:'radial-gradient(circle, rgba(99,102,241,0.1) 0%, transparent 70%)', animation:'orb-drift-a 18s ease-in-out infinite', filter:'blur(40px)' }}/>
-      <div style={{ position:'absolute', bottom:'10%', right:'10%', width:400, height:400, borderRadius:'50%', background:'radial-gradient(circle, rgba(139,92,246,0.08) 0%, transparent 70%)', animation:'orb-drift-b 22s ease-in-out infinite', filter:'blur(50px)' }}/>
-      <div style={{ position:'absolute', top:'55%', left:'55%', width:300, height:300, borderRadius:'50%', background:'radial-gradient(circle, rgba(249,115,22,0.04) 0%, transparent 70%)', animation:'orb-drift-a 26s ease-in-out infinite reverse', filter:'blur(60px)' }}/>
+      <div style={{ position:'absolute', top:'15%', left:'12%', width:500, height:500, borderRadius:'50%', background:'radial-gradient(circle, rgba(99,102,241,0.14) 0%, transparent 70%)', animation:'orb-drift-a 18s ease-in-out infinite', filter:'blur(40px)' }}/>
+      <div style={{ position:'absolute', bottom:'10%', right:'10%', width:400, height:400, borderRadius:'50%', background:'radial-gradient(circle, rgba(139,92,246,0.11) 0%, transparent 70%)', animation:'orb-drift-b 22s ease-in-out infinite', filter:'blur(50px)' }}/>
+      <div style={{ position:'absolute', top:'55%', left:'55%', width:300, height:300, borderRadius:'50%', background:'radial-gradient(circle, rgba(249,115,22,0.08) 0%, transparent 70%)', animation:'orb-drift-a 26s ease-in-out infinite reverse', filter:'blur(60px)' }}/>
+      <div style={{ position:'absolute', top:'8%', right:'18%', width:340, height:340, borderRadius:'50%', background:'radial-gradient(circle, rgba(244,114,182,0.09) 0%, transparent 70%)', animation:'orb-drift-b 20s ease-in-out infinite reverse', filter:'blur(55px)' }}/>
+      <div style={{ position:'absolute', bottom:'22%', left:'8%', width:260, height:260, borderRadius:'50%', background:'radial-gradient(circle, rgba(45,212,191,0.08) 0%, transparent 70%)', animation:'orb-drift-a 24s ease-in-out infinite', filter:'blur(50px)' }}/>
     </div>
   );
 }
@@ -2522,7 +2535,7 @@ export default function Home() {
           }
           {/* Deep ambient radials */}
           <div aria-hidden="true" className="absolute inset-0 pointer-events-none" style={{ zIndex: 1,
-            background: 'radial-gradient(ellipse 90% 60% at 50% 0%, rgba(99,102,241,0.07) 0%, transparent 55%), radial-gradient(ellipse 50% 40% at 85% 90%, rgba(249,115,22,0.05) 0%, transparent 50%), radial-gradient(ellipse 60% 40% at 10% 70%, rgba(139,92,246,0.05) 0%, transparent 50%)',
+            background: 'radial-gradient(ellipse 90% 60% at 50% 0%, rgba(99,102,241,0.09) 0%, transparent 55%), radial-gradient(ellipse 50% 40% at 85% 90%, rgba(249,115,22,0.06) 0%, transparent 50%), radial-gradient(ellipse 60% 40% at 10% 70%, rgba(139,92,246,0.06) 0%, transparent 50%), radial-gradient(ellipse 45% 35% at 90% 10%, rgba(244,114,182,0.05) 0%, transparent 50%)',
           }} />
 
           <div className="w-full relative" style={{ zIndex: 2 }}>
@@ -2530,7 +2543,7 @@ export default function Home() {
 
               {/* Eyebrow badges */}
               <motion.div initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }} transition={{ duration:0.5, delay:0.1 }}
-                className="inline-flex items-center gap-3 mb-12"
+                className="inline-flex flex-wrap items-center justify-center gap-3 mb-12"
               >
                 <span className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold border border-indigo-500/20 text-indigo-300 uppercase tracking-widest cursor-default"
                   style={{ background: 'rgba(99,102,241,0.07)', animation:'badge-glow 3s ease-in-out infinite' }}>
@@ -2541,6 +2554,15 @@ export default function Home() {
                   style={{ background: 'rgba(249,115,22,0.06)' }}>
                   <UtensilsCrossed className="w-3 h-3" />{isWL ? 'Venue' : 'PlanIt Venue'}
                 </span>
+                {!isWL && (
+                  <>
+                    <span className="w-1 h-1 rounded-full bg-neutral-700" />
+                    <span className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold border border-emerald-500/25 text-emerald-400 uppercase tracking-widest cursor-default"
+                      style={{ background: 'rgba(16,185,129,0.06)' }}>
+                      <CheckSquare className="w-3 h-3" />RSVP
+                    </span>
+                  </>
+                )}
               </motion.div>
 
               {/* Main headline — word-by-word animation */}
@@ -2556,7 +2578,7 @@ export default function Home() {
                     style={{ fontSize:'clamp(2.6rem,8.5vw,7rem)' }}>
                     <span className="hero-word inline-block text-white" style={{ animationDelay:'0.25s' }}>Plan</span>{' '}
                     <span className="hero-word inline-block text-white" style={{ animationDelay:'0.38s' }}>every</span>{' '}
-                    <span className="hero-word inline-block text-white" style={{ animationDelay:'0.51s' }}>detail.</span>
+                    <span className="hero-word inline-block font-accent gradient-pop" style={{ animationDelay:'0.51s' }}>detail.</span>
                     <br />
                     <span className="hero-word inline-block shimmer-slate" style={{ animationDelay:'0.64s' }}>Execute</span>{' '}
                     <span className="hero-word inline-block shimmer-white" style={{ animationDelay:'0.77s' }}>flawlessly.</span>
@@ -2623,13 +2645,13 @@ export default function Home() {
               <motion.div initial={{ opacity:0, y:20 }} animate={{ opacity:1, y:0 }} transition={{ duration:0.7, delay:1.2 }}
                 className="grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-xl mx-auto">
                 {[
-                  { tag: 'Free forever',   desc: 'No credit card required',           icon: '✦' },
-                  { tag: 'Zero accounts',  desc: 'Guests join by name instantly',      icon: '◈' },
-                  { tag: 'Unlimited team', desc: 'Every organizer & vendor included',  icon: '◉' },
+                  { tag: 'Free forever',   desc: 'No credit card required',           icon: '✦', color: 'text-indigo-400' },
+                  { tag: 'Zero accounts',  desc: 'Guests join by name instantly',      icon: '◈', color: 'text-amber-400' },
+                  { tag: 'Unlimited team', desc: 'Every organizer & vendor included',  icon: '◉', color: 'text-emerald-400' },
                 ].map((item) => (
                   <div key={item.tag} className="stat-card text-center p-5 rounded-2xl cursor-default"
                     style={{ background:'rgba(255,255,255,0.025)', backdropFilter:'blur(12px)' }}>
-                    <div className="text-indigo-400 text-lg mb-1">{item.icon}</div>
+                    <div className={`${item.color} text-lg mb-1`}>{item.icon}</div>
                     <div className="text-sm font-black text-white mb-0.5 tracking-wide">{item.tag}</div>
                     <div className="text-xs text-neutral-500">{item.desc}</div>
                   </div>
