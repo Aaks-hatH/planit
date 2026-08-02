@@ -1423,6 +1423,242 @@ const VENUE_TYPES = [
   { id:'other',      label:'Other venue',      hint:'Something different entirely' },
 ];
 
+// ─────────────────────────────────────────────────────────────────────────────
+// DEVICE FRAME — chrome wrapper so mockups read as "a screen", not a raw div
+// ─────────────────────────────────────────────────────────────────────────────
+function DeviceFrame({ variant = 'browser', children }) {
+  if (variant === 'phone') {
+    return (
+      <div className="relative mx-auto" style={{ width: 260 }}>
+        <div className="rounded-[2.25rem] border-[6px] border-neutral-800 bg-neutral-950 shadow-2xl overflow-hidden relative" style={{ height: 480 }}>
+          <div className="absolute left-1/2 -translate-x-1/2 top-0 w-20 h-4 bg-neutral-800 rounded-b-xl z-20" />
+          <div className="w-full h-full overflow-hidden">{children}</div>
+        </div>
+      </div>
+    );
+  }
+  if (variant === 'tablet') {
+    return (
+      <div className="relative mx-auto w-full" style={{ maxWidth: 440 }}>
+        <div className="rounded-[1.5rem] border-[8px] border-neutral-800 bg-neutral-950 shadow-2xl overflow-hidden">
+          {children}
+        </div>
+      </div>
+    );
+  }
+  // browser
+  return (
+    <div className="relative mx-auto w-full rounded-2xl border border-neutral-800 bg-neutral-950 shadow-2xl overflow-hidden">
+      <div className="flex items-center gap-1.5 px-4 py-3 border-b border-neutral-800 bg-neutral-900/60">
+        <span className="w-2.5 h-2.5 rounded-full bg-red-500/70" />
+        <span className="w-2.5 h-2.5 rounded-full bg-amber-500/70" />
+        <span className="w-2.5 h-2.5 rounded-full bg-emerald-500/70" />
+        <div className="ml-3 flex-1 h-6 rounded-md bg-neutral-800/70 flex items-center px-3 max-w-xs">
+          <span className="text-[10px] text-neutral-500 truncate">app.planit.events/acme-summit</span>
+        </div>
+      </div>
+      {children}
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// MAGNETIC LINK — pulls toward the cursor when nearby (hover polish, CTA row)
+// ─────────────────────────────────────────────────────────────────────────────
+function MagneticLink({ className = '', children, strength = 12, ...props }) {
+  const ref = useRef(null);
+  const onMouseMove = (e) => {
+    const el = ref.current; if (!el) return;
+    const r = el.getBoundingClientRect();
+    const x = (e.clientX - r.left - r.width / 2) / (r.width / 2);
+    const y = (e.clientY - r.top - r.height / 2) / (r.height / 2);
+    el.style.transform = `translate(${(x * strength).toFixed(1)}px, ${(y * strength).toFixed(1)}px)`;
+  };
+  const onMouseLeave = () => { if (ref.current) ref.current.style.transform = 'translate(0px,0px)'; };
+  return (
+    <a ref={ref} onMouseMove={onMouseMove} onMouseLeave={onMouseLeave} className={className}
+      style={{ transition: 'transform 0.2s cubic-bezier(0.22,1,0.36,1)' }} {...props}>
+      {children}
+    </a>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// RSVP MOCKUP (phone) — fake render, but the status buttons actually respond
+// ─────────────────────────────────────────────────────────────────────────────
+const RSVP_STATUS_STYLE = {
+  yes:   'bg-emerald-500 border-emerald-500 text-white',
+  maybe: 'bg-amber-500 border-amber-500 text-white',
+  no:    'bg-red-500 border-red-500 text-white',
+};
+function RSVPMockup() {
+  const [status, setStatus] = useState(null);
+  const [count, setCount] = useState(84);
+  const pick = (key) => {
+    setCount(c => {
+      if (key === status) return c;
+      if (key === 'yes') return c + 1;
+      if (status === 'yes') return c - 1;
+      return c;
+    });
+    setStatus(key);
+  };
+  return (
+    <div className="h-full flex flex-col text-white" style={{ background: '#0d0714' }}>
+      <div className="relative flex-shrink-0 flex items-end p-4" style={{
+        height: 168,
+        background: 'radial-gradient(circle at 20% 20%, rgba(99,102,241,0.55) 0%, transparent 45%), radial-gradient(circle at 85% 15%, rgba(255,209,102,0.5) 0%, transparent 40%), radial-gradient(circle at 80% 90%, rgba(255,93,143,0.55) 0%, transparent 45%), linear-gradient(135deg,#150a24,#0e1626)',
+      }}>
+        <div>
+          <span className="inline-block text-[9px] font-bold uppercase tracking-widest px-2 py-1 rounded-full bg-white/15 backdrop-blur mb-1.5">You&apos;re invited</span>
+          <p className="font-syne font-black text-lg leading-tight">Summer Rooftop<br />Social</p>
+        </div>
+      </div>
+      <div className="flex-1 p-4 flex flex-col gap-2.5">
+        <div className="flex items-center gap-2 text-[11px] text-neutral-400"><Calendar className="w-3 h-3 flex-shrink-0" /> Sat, Aug 16 · 7:00 PM</div>
+        <div className="flex items-center gap-2 text-[11px] text-neutral-400"><MapPin className="w-3 h-3 flex-shrink-0" /> The Hendrick Rooftop</div>
+        <div className="flex gap-1.5 mt-2">
+          {[{ key:'yes', label:'Attending' }, { key:'maybe', label:'Maybe' }, { key:'no', label:"Can't go" }].map(o => (
+            <button key={o.key} onClick={() => pick(o.key)}
+              className={`flex-1 py-2 rounded-xl text-[10px] font-bold border transition-all duration-200 ${status === o.key ? RSVP_STATUS_STYLE[o.key] : 'border-white/15 text-neutral-400 hover:border-white/30'}`}>
+              {o.label}
+            </button>
+          ))}
+        </div>
+        <div className="mt-auto flex items-center justify-between pt-3 border-t border-white/10">
+          <span className="text-[10px] text-neutral-500">Going</span>
+          <span className="text-sm font-black tabular-nums">{count} guests</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// EVENT SPACE MOCKUP (browser) — fake render; a typing bubble resolves into
+// a new message once, so the panel has a little life without needing real data
+// ─────────────────────────────────────────────────────────────────────────────
+function EventSpaceMockup() {
+  const [messages, setMessages] = useState([
+    { id: 1, user: 'Maya',  text: 'Can we push the sound check to 4pm?', me: false },
+    { id: 2, user: 'You',   text: 'Works for me — updating the run of show now.', me: true },
+  ]);
+  const [typing, setTyping] = useState(false);
+  useEffect(() => {
+    const t1 = setTimeout(() => setTyping(true), 1400);
+    const t2 = setTimeout(() => {
+      setTyping(false);
+      setMessages(m => [...m, { id: Date.now(), user: 'Jordan', text: 'Floor plan is finalized ✅', me: false }]);
+    }, 2900);
+    return () => { clearTimeout(t1); clearTimeout(t2); };
+  }, []);
+  const tasks = [
+    { label: 'Confirm catering headcount', done: true },
+    { label: 'Print name badges',          done: true },
+    { label: 'Brief volunteer team',       done: false },
+    { label: 'Load in AV equipment',       done: false },
+  ];
+  return (
+    <div className="flex text-white" style={{ background: '#0a0a0f', height: 340 }}>
+      <div className="w-2/3 flex flex-col border-r border-white/5">
+        <div className="px-4 py-2.5 border-b border-white/5 flex items-center gap-2 flex-shrink-0">
+          <MessageSquare className="w-3.5 h-3.5 text-indigo-400" /><span className="text-xs font-bold"># general</span>
+        </div>
+        <div className="flex-1 p-4 space-y-3 overflow-hidden">
+          {messages.map(m => (
+            <div key={m.id} className={`flex ${m.me ? 'justify-end' : 'justify-start'}`}>
+              <div className={`max-w-[75%] px-3 py-2 rounded-2xl text-[11px] leading-snug ${m.me ? 'bg-indigo-500 text-white rounded-br-sm' : 'bg-white/8 text-neutral-200 rounded-bl-sm'}`}>
+                {!m.me && <p className="text-[9px] font-bold text-indigo-300 mb-0.5">{m.user}</p>}
+                {m.text}
+              </div>
+            </div>
+          ))}
+          {typing && (
+            <div className="flex justify-start">
+              <div className="px-3 py-2.5 rounded-2xl bg-white/8 flex gap-1 rounded-bl-sm">
+                <span className="w-1.5 h-1.5 rounded-full bg-neutral-500 animate-bounce" style={{ animationDelay: '0ms' }} />
+                <span className="w-1.5 h-1.5 rounded-full bg-neutral-500 animate-bounce" style={{ animationDelay: '150ms' }} />
+                <span className="w-1.5 h-1.5 rounded-full bg-neutral-500 animate-bounce" style={{ animationDelay: '300ms' }} />
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+      <div className="w-1/3 p-3.5 flex flex-col gap-2.5 overflow-hidden">
+        <div className="flex items-center gap-1.5 mb-0.5 flex-shrink-0"><ListChecks className="w-3.5 h-3.5 text-emerald-400" /><span className="text-xs font-bold">Tasks</span></div>
+        {tasks.map(t => (
+          <div key={t.label} className="flex items-start gap-2">
+            <div className={`w-3.5 h-3.5 rounded-md border flex-shrink-0 mt-0.5 flex items-center justify-center ${t.done ? 'bg-emerald-500 border-emerald-500' : 'border-white/20'}`}>
+              {t.done && <Check className="w-2.5 h-2.5 text-white" />}
+            </div>
+            <span className={`text-[10.5px] leading-snug ${t.done ? 'text-neutral-500 line-through' : 'text-neutral-300'}`}>{t.label}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PRODUCT SHOWCASE — scroll-pinned mockup that swaps as each step scrolls
+// into view. Step 3 renders the real EnterpriseDemo (already built above),
+// so that one isn't even a fake render — it's genuinely interactive.
+// ─────────────────────────────────────────────────────────────────────────────
+const SHOWCASE_STEPS = [
+  { key: 'rsvp',    eyebrow: 'Step 01', title: 'Guests RSVP in seconds',      desc: 'No app, no account — a beautiful invite page guests can respond to from any phone.' },
+  { key: 'space',   eyebrow: 'Step 02', title: 'Your team plans together',     desc: 'Chat, shared tasks, and polls in one live workspace instead of five different apps.' },
+  { key: 'checkin', eyebrow: 'Step 03', title: 'Check them in at the door',    desc: 'Real, working check-in demo below — duplicate detection and manager overrides included. Try it.' },
+];
+function ProductShowcase() {
+  const [active, setActive] = useState(0);
+  const refs = useRef([]);
+  useEffect(() => {
+    const obs = new IntersectionObserver((entries) => {
+      entries.forEach(e => {
+        if (e.isIntersecting) {
+          const idx = refs.current.indexOf(e.target);
+          if (idx !== -1) setActive(idx);
+        }
+      });
+    }, { threshold: 0.55, rootMargin: '-15% 0px -15% 0px' });
+    refs.current.forEach(el => el && obs.observe(el));
+    return () => obs.disconnect();
+  }, []);
+
+  return (
+    <section className="relative border-t overflow-hidden" style={{ borderColor: 'rgba(255,255,255,0.05)' }}>
+      <div className="max-w-6xl mx-auto px-6 sm:px-10 py-20 sm:py-28">
+        <Reveal className="text-center mb-16 sm:mb-20">
+          <p className="text-xs font-semibold text-neutral-600 uppercase tracking-widest mb-4">See it in action</p>
+          <h2 className="font-syne text-3xl sm:text-5xl font-black text-white leading-tight">
+            Not just a screenshot.<br /><span className="text-neutral-600">Scroll through the real thing.</span>
+          </h2>
+        </Reveal>
+
+        <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-start">
+          <div className="space-y-20 lg:space-y-36 lg:pb-24">
+            {SHOWCASE_STEPS.map((s, i) => (
+              <div key={s.key} ref={el => refs.current[i] = el} className="lg:min-h-[45vh] flex flex-col justify-center">
+                <span className={`text-xs font-bold uppercase tracking-widest mb-3 transition-colors duration-300 ${active === i ? 'text-indigo-400' : 'text-neutral-700'}`}>{s.eyebrow}</span>
+                <h3 className={`font-syne text-2xl sm:text-3xl font-black mb-3 transition-colors duration-300 ${active === i ? 'text-white' : 'text-neutral-700'}`}>{s.title}</h3>
+                <p className={`text-sm sm:text-base leading-relaxed max-w-sm transition-colors duration-300 ${active === i ? 'text-neutral-400' : 'text-neutral-800'}`}>{s.desc}</p>
+              </div>
+            ))}
+          </div>
+
+          <div className="lg:sticky lg:top-28">
+            <motion.div key={active} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
+              {active === 0 && <DeviceFrame variant="phone"><RSVPMockup /></DeviceFrame>}
+              {active === 1 && <DeviceFrame variant="browser"><EventSpaceMockup /></DeviceFrame>}
+              {active === 2 && <DeviceFrame variant="tablet"><EnterpriseDemo /></DeviceFrame>}
+            </motion.div>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 function OnboardingWizard({ mode, formData, setFormData, fieldErrors, setFieldErrors, onSubmit, loading, submittedRef, stepControlRef, abuseStatus, requiresVerification, onCaptchaToken, captchaResetKey, onUserInput, onUserPaste }) {
   const isVenue = mode === 'table-service';
   const isRsvp  = mode === 'rsvp';
@@ -2543,37 +2779,41 @@ export default function Home() {
               {/* CTA buttons */}
               <motion.div initial={{ opacity:0, y:20 }} animate={{ opacity:1, y:0 }} transition={{ duration:0.7, delay:1.05 }}
                 className="flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-2.5 sm:gap-4 mb-10 sm:mb-16">
-                <a href="#planit-events"
+                <MagneticLink href="#planit-events"
                   onClick={(e) => { e.preventDefault(); selectBranch('events'); }}
+                  strength={10}
                   className="cta-primary group inline-flex items-center justify-center gap-2.5 sm:gap-3 w-full sm:w-auto px-6 py-3.5 sm:px-8 sm:py-4 bg-white text-neutral-900 text-sm font-bold rounded-2xl shadow-2xl">
                   <Calendar className="w-4 h-4" />
                   {(isWL && heroCta) ? heroCta : 'Start with Events'}
                   <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform duration-300" />
-                </a>
-                <a href="#create"
+                </MagneticLink>
+                <MagneticLink href="#create"
                   onClick={(e) => { e.preventDefault(); setSelectedBranch('events'); setMode('enterprise'); setWizardKey(k => k + 1); setTimeout(() => document.getElementById('planit-events')?.scrollIntoView({ behavior:'smooth', block:'start' }), 50); }}
+                  strength={10}
                   className="group inline-flex items-center justify-center gap-2.5 sm:gap-3 w-full sm:w-auto px-6 py-3.5 sm:px-8 sm:py-4 border border-indigo-500/40 text-indigo-300 text-sm font-bold rounded-2xl transition-all duration-300 hover:border-indigo-400/70 hover:bg-indigo-500/10"
                   style={{ background: 'rgba(99,102,241,0.07)' }}>
                   <Zap className="w-4 h-4" />
                   Enterprise
                   <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform duration-300" />
-                </a>
-                <a href="#planit-venue"
+                </MagneticLink>
+                <MagneticLink href="#planit-venue"
                   onClick={(e) => { e.preventDefault(); selectBranch('venue'); }}
+                  strength={10}
                   className="cta-venue group inline-flex items-center justify-center gap-2.5 sm:gap-3 w-full sm:w-auto px-6 py-3.5 sm:px-8 sm:py-4 border border-orange-500/30 text-orange-400 text-sm font-bold rounded-2xl"
                   style={{ background: 'rgba(249,115,22,0.06)' }}>
                   <UtensilsCrossed className="w-4 h-4" />
                   Explore Venue
                   <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform duration-300" />
-                </a>
-                <a href="#planit-rsvp"
+                </MagneticLink>
+                <MagneticLink href="#planit-rsvp"
                   onClick={(e) => { e.preventDefault(); selectBranch('rsvp'); }}
+                  strength={10}
                   className="group inline-flex items-center justify-center gap-2.5 sm:gap-3 w-full sm:w-auto px-6 py-3.5 sm:px-8 sm:py-4 border border-emerald-500/30 text-emerald-400 text-sm font-bold rounded-2xl transition-all duration-300 hover:border-emerald-400/60 hover:bg-emerald-500/10"
                   style={{ background: 'rgba(16,185,129,0.06)' }}>
                   <CheckSquare className="w-4 h-4" />
                   Just Need RSVPs?
                   <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform duration-300" />
-                </a>
+                </MagneticLink>
               </motion.div>
 
               {/* Slug finder — jump to a private event */}
@@ -2643,9 +2883,14 @@ export default function Home() {
                 { icon: UtensilsCrossed, label: 'Live floor manager', desc: 'For restaurants: visual floor map, walk-in waitlist, and live table status.' },
               ].map((f, i) => (
                 <Reveal key={f.label} delay={(i % 3) * 60} direction={i % 3 === 0 ? 'left' : i % 3 === 2 ? 'right' : 'up'}>
-                  <div className="group relative p-7 sm:p-9 bg-neutral-950 hover:bg-neutral-900 transition-all duration-400 h-full overflow-hidden">
+                  <div className="group relative p-7 sm:p-9 bg-neutral-950 hover:bg-neutral-900 transition-all duration-400 h-full overflow-hidden"
+                    onMouseMove={(e) => {
+                      const r = e.currentTarget.getBoundingClientRect();
+                      e.currentTarget.style.setProperty('--mx', `${((e.clientX - r.left) / r.width) * 100}%`);
+                      e.currentTarget.style.setProperty('--my', `${((e.clientY - r.top) / r.height) * 100}%`);
+                    }}>
                     <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"
-                      style={{ background: 'radial-gradient(circle at 20% 0%, rgba(99,102,241,0.08), transparent 60%)' }} />
+                      style={{ background: 'radial-gradient(circle at var(--mx, 20%) var(--my, 0%), rgba(99,102,241,0.12), transparent 60%)' }} />
                     <div className="relative">
                       <div className="feature-icon w-11 h-11 rounded-xl bg-neutral-800 border border-neutral-700/50 flex items-center justify-center mb-5 group-hover:bg-white group-hover:border-white group-hover:shadow-[0_0_20px_rgba(99,102,241,0.3)]">
                         <f.icon className="w-5 h-5 text-neutral-400 group-hover:text-neutral-900 transition-colors duration-400" />
@@ -2756,6 +3001,8 @@ export default function Home() {
             </div>
           </div>
         </section>{/* end SOCIAL PROOF STRIP */}
+
+        {!(selectedBranch || isWL) && <ProductShowcase />}
 
         <SectionSeam tint="indigo" />
 
