@@ -389,18 +389,14 @@ const GLOBAL_CSS = `
     50%      { opacity:0.042; }
   }
   @keyframes orb-drift-a {
-    0%,100% { transform: translate(0,0) scale(1);      }
-    33%     { transform: translate(30px,-20px) scale(1.06); }
-    66%     { transform: translate(-18px,25px) scale(0.96); }
+    0%,100% { transform: translate(0,0);      }
+    33%     { transform: translate(30px,-20px); }
+    66%     { transform: translate(-18px,25px); }
   }
   @keyframes orb-drift-b {
-    0%,100% { transform: translate(0,0) scale(1);      }
-    33%     { transform: translate(-22px,18px) scale(1.04); }
-    66%     { transform: translate(28px,-15px) scale(0.98); }
-  }
-  @keyframes badge-glow {
-    0%,100% { box-shadow: 0 0 0 0 rgba(99,102,241,0); }
-    50%     { box-shadow: 0 0 22px 2px rgba(99,102,241,0.22); }
+    0%,100% { transform: translate(0,0);      }
+    33%     { transform: translate(-22px,18px); }
+    66%     { transform: translate(28px,-15px); }
   }
   @keyframes cta-shimmer {
     0%   { background-position: -200% center; }
@@ -637,12 +633,11 @@ function CinematicGrid() {
         <rect width="100%" height="100%" fill="url(#grid-sm)" mask="url(#grid-mask)"/>
         <rect width="100%" height="100%" fill="url(#grid-lg)" mask="url(#grid-mask)"/>
       </svg>
-      {/* Floating orbs */}
-      <div style={{ position:'absolute', top:'15%', left:'12%', width:500, height:500, borderRadius:'50%', background:'radial-gradient(circle, rgba(99,102,241,0.14) 0%, transparent 70%)', animation:'orb-drift-a 18s ease-in-out infinite', filter:'blur(40px)' }}/>
-      <div style={{ position:'absolute', bottom:'10%', right:'10%', width:400, height:400, borderRadius:'50%', background:'radial-gradient(circle, rgba(139,92,246,0.11) 0%, transparent 70%)', animation:'orb-drift-b 22s ease-in-out infinite', filter:'blur(50px)' }}/>
-      <div style={{ position:'absolute', top:'55%', left:'55%', width:300, height:300, borderRadius:'50%', background:'radial-gradient(circle, rgba(249,115,22,0.08) 0%, transparent 70%)', animation:'orb-drift-a 26s ease-in-out infinite reverse', filter:'blur(60px)' }}/>
-      <div style={{ position:'absolute', top:'8%', right:'18%', width:340, height:340, borderRadius:'50%', background:'radial-gradient(circle, rgba(244,114,182,0.09) 0%, transparent 70%)', animation:'orb-drift-b 20s ease-in-out infinite reverse', filter:'blur(55px)' }}/>
-      <div style={{ position:'absolute', bottom:'22%', left:'8%', width:260, height:260, borderRadius:'50%', background:'radial-gradient(circle, rgba(45,212,191,0.08) 0%, transparent 70%)', animation:'orb-drift-a 24s ease-in-out infinite', filter:'blur(50px)' }}/>
+      {/* Floating orbs — translate-only (no scale) so the blurred layer composites
+          on the GPU without re-rasterizing every frame; kept to 3, not 5 */}
+      <div style={{ position:'absolute', top:'15%', left:'12%', width:420, height:420, borderRadius:'50%', background:'radial-gradient(circle, rgba(99,102,241,0.14) 0%, transparent 70%)', animation:'orb-drift-a 20s ease-in-out infinite', filter:'blur(40px)', willChange:'transform' }}/>
+      <div style={{ position:'absolute', bottom:'10%', right:'10%', width:360, height:360, borderRadius:'50%', background:'radial-gradient(circle, rgba(139,92,246,0.11) 0%, transparent 70%)', animation:'orb-drift-b 24s ease-in-out infinite', filter:'blur(45px)', willChange:'transform' }}/>
+      <div style={{ position:'absolute', top:'55%', left:'55%', width:280, height:280, borderRadius:'50%', background:'radial-gradient(circle, rgba(249,115,22,0.07) 0%, transparent 70%)', animation:'orb-drift-a 26s ease-in-out infinite reverse', filter:'blur(50px)', willChange:'transform' }}/>
     </div>
   );
 }
@@ -1626,7 +1621,7 @@ function ProductShowcase() {
   }, []);
 
   return (
-    <section className="relative border-t overflow-hidden" style={{ borderColor: 'rgba(255,255,255,0.05)' }}>
+    <section className="relative border-t" style={{ borderColor: 'rgba(255,255,255,0.05)' }}>
       <div className="max-w-6xl mx-auto px-6 sm:px-10 py-20 sm:py-28">
         <Reveal className="text-center mb-16 sm:mb-20">
           <p className="text-xs font-semibold text-neutral-600 uppercase tracking-widest mb-4">See it in action</p>
@@ -2724,7 +2719,7 @@ export default function Home() {
                 className="flex flex-wrap items-center justify-center gap-2 sm:gap-3 mb-8 sm:mb-12"
               >
                 <span className="inline-flex items-center gap-1.5 px-3 py-1.5 sm:px-3.5 rounded-full text-[10px] sm:text-xs font-bold border border-indigo-500/20 text-indigo-300 uppercase tracking-wide sm:tracking-widest cursor-default"
-                  style={{ background: 'rgba(99,102,241,0.07)', animation:'badge-glow 3s ease-in-out infinite' }}>
+                  style={{ background: 'rgba(99,102,241,0.07)', boxShadow: '0 0 16px 1px rgba(99,102,241,0.15)' }}>
                   <Calendar className="w-3 h-3" />{isWL ? 'Events' : 'PlanIt Events'}
                 </span>
                 <span className="hidden sm:inline-block w-1 h-1 rounded-full bg-neutral-700" />
@@ -2832,7 +2827,7 @@ export default function Home() {
                   { tag: 'Unlimited team', desc: 'Every organizer & vendor included',  icon: '◉', color: 'text-emerald-400' },
                 ].map((item) => (
                   <div key={item.tag} className="stat-card text-center p-4 sm:p-5 rounded-2xl cursor-default"
-                    style={{ background:'rgba(255,255,255,0.025)', backdropFilter:'blur(12px)' }}>
+                    style={{ background:'rgba(255,255,255,0.04)' }}>
                     <div className={`${item.color} text-lg mb-1`}>{item.icon}</div>
                     <div className="text-sm font-black text-white mb-0.5 tracking-wide">{item.tag}</div>
                     <div className="text-xs text-neutral-500">{item.desc}</div>
@@ -2849,6 +2844,8 @@ export default function Home() {
           </div>
         </section>
 
+
+        {!(selectedBranch || isWL) && <ProductShowcase />}
 
         {/* ═══════════════════════════════════════════════════════════
             SOCIAL PROOF STRIP — replaces branch gateway
@@ -2913,7 +2910,7 @@ export default function Home() {
                 ].map((s, i) => (
                   <Reveal key={s.label} delay={i * 70}>
                     <div className="stat-card text-center p-6 sm:p-7 rounded-2xl cursor-default h-full"
-                      style={{ background:'rgba(255,255,255,0.025)', backdropFilter:'blur(12px)' }}>
+                      style={{ background:'rgba(255,255,255,0.04)' }}>
                       <div className="font-syne text-2xl sm:text-3xl font-black text-white mb-1.5 tracking-tight">{s.value}</div>
                       <div className="text-xs font-bold text-neutral-300 mb-1">{s.label}</div>
                       <div className="text-xs text-neutral-600">{s.sub}</div>
@@ -3001,8 +2998,6 @@ export default function Home() {
             </div>
           </div>
         </section>{/* end SOCIAL PROOF STRIP */}
-
-        {!(selectedBranch || isWL) && <ProductShowcase />}
 
         <SectionSeam tint="indigo" />
 
