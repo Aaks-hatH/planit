@@ -61,13 +61,43 @@ export function getFaceApi() {
 const detectorOptions = () =>
   new faceapiModule.TinyFaceDetectorOptions({ inputSize: 224, scoreThreshold: 0.5 });
 
+// ─── Video -> canvas snapshot ──────────────────────────────────────────────
+// face-api.js (via tfjs's tf.browser.fromPixels) can read pixel data directly
+// from a <video> element, but that WebGL texture-upload path is inconsistent
+// on mobile — iOS Safari in particular will sometimes upload a blank or stale
+// frame from a <video> source with no error, so detection just silently never
+// finds a face. Desktop Chrome/Firefox are lenient about this in a way mobile
+// browsers aren't. Uploading from a <canvas> instead is reliable everywhere,
+// so we snapshot the current frame to a reused offscreen canvas and detect on
+// that rather than on the live video element.
+let snapshotCanvas = null;
+
+function videoFrameToCanvas(videoEl) {
+  const w = videoEl?.videoWidth;
+  const h = videoEl?.videoHeight;
+  // Not enough decoded data yet (can happen right after start() on a slower
+  // mobile camera init) — nothing to detect on this frame.
+  if (!w || !h) return null;
+
+  if (!snapshotCanvas) snapshotCanvas = document.createElement('canvas');
+  if (snapshotCanvas.width !== w || snapshotCanvas.height !== h) {
+    snapshotCanvas.width = w;
+    snapshotCanvas.height = h;
+  }
+  const ctx = snapshotCanvas.getContext('2d', { willReadFrequently: true });
+  ctx.drawImage(videoEl, 0, 0, w, h);
+  return snapshotCanvas;
+}
+
 /** Full detection: box + 68 landmarks + 128-float descriptor. Used once, for
  *  the frame that actually becomes the ticket or the verification sample —
  *  not run every animation frame, since it's the heaviest of the three nets. */
 export async function detectFaceWithDescriptor(videoEl) {
   if (!faceapiModule) throw new Error('Face models not loaded yet');
+  const frame = videoFrameToCanvas(videoEl);
+  if (!frame) return null;
   const result = await faceapiModule
-    .detectSingleFace(videoEl, detectorOptions())
+    .detectSingleFace(frame, detectorOptions())
     .withFaceLandmarks()
     .withFaceDescriptor();
   return result || null;
@@ -77,8 +107,10 @@ export async function detectFaceWithDescriptor(videoEl) {
  *  liveness sampling loop where we need many quick frames. */
 export async function detectFaceLandmarksOnly(videoEl) {
   if (!faceapiModule) throw new Error('Face models not loaded yet');
+  const frame = videoFrameToCanvas(videoEl);
+  if (!frame) return null;
   const result = await faceapiModule
-    .detectSingleFace(videoEl, detectorOptions())
+    .detectSingleFace(frame, detectorOptions())
     .withFaceLandmarks();
   return result || null;
 }
