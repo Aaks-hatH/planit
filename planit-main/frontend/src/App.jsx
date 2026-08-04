@@ -4,6 +4,7 @@ import { WhiteLabelProvider, useWhiteLabel } from './context/WhiteLabelContext';
 import { usePageTracker } from './hooks/usePageTracker';
 import ConsentBanner from './components/ConsentBanner';
 import ReferralWelcome from './components/ReferralWelcome';
+import FaceTicketTeaser from './components/FaceTicketTeaser';
 
 // ─── Lazy-loaded pages — each page is a separate JS chunk loaded on demand ────
 // This means the initial bundle only contains the shell (router, context, etc.)
@@ -58,6 +59,7 @@ const RSVPPage          = lazy(() => import('./pages/RSVPPage'));
 const RSVPManage        = lazy(() => import('./pages/RSVPManage'));
 const RSVPPageBuilder   = lazy(() => import('./pages/RSVPPageBuilder'));
 const Credits           = lazy(() => import('./pages/Credits'));
+const FaceTicket         = lazy(() => import('./pages/FaceTicket'));
 const ForgotPassword    = lazy(() => import('./pages/ForgotPassword'));
 const ClaudeConnect     = lazy(() => import('./pages/ClaudeConnect'));
 
@@ -505,6 +507,7 @@ function App() {
             <PageTrackerMount />
             <ConsentBanner />
             <ReferralWelcome />
+            <FaceTicketTeaser />
             <Suspense fallback={<PageLoader />}>
             <Routes>
         <Route path="/" element={<HomeRoute />} />
@@ -544,6 +547,7 @@ function App() {
         <Route path="/invite/:inviteCode"        element={<GuestInvite />} />
         <Route path="/demo/invite"               element={<InviteDemo />} />
         <Route path="/demo/rsvp"                 element={<RSVPDemo />} />
+        <Route path="/beta/face-ticket"          element={<FaceTicket />} />
         <Route path="/badge/:inviteCode"         element={<InviteBadge />} />
         <Route path="/card/:inviteCode"          element={<InviteCard />} />
 
