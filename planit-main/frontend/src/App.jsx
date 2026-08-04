@@ -437,6 +437,7 @@ const PAGE_TITLES = {
   '/white-label':              'Launch Your Own Branded Event Platform · PlanIt White Label',
   '/white-label/setup-fee':    'White Label Setup Payment · PlanIt White Label',
   '/white-label/setup-success': 'Payment Confirmed, You Are Live · PlanIt White Label',
+  '/beta/face-ticket':          'Face Ticket \u00b7 On-Device Face Check-In Beta \u00b7 PlanIt Labs',
 };
 
 // Titles for dynamic routes — matched by pattern in order (first match wins)
