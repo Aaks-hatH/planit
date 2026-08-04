@@ -1,0 +1,301 @@
+// ═══════════════════════════════════════════════════════════════════════════
+// FACE TICKET — core logic (no React here)
+//
+// Everything in this file runs entirely client-side. No image, frame, or
+// embedding is ever sent to a server — this module never imports `api.js`
+// or touches the network beyond loading the (static, public) model weights.
+//
+// Pipeline:
+//   selfie -> face-api.js descriptor (Float32Array[128])
+//          -> quantize to Uint8Array[128] + {min,max}
+//          -> pack into a compact JSON payload
+//          -> QR-encode (see FaceTicket.jsx)
+//
+//   scan   -> decode QR -> unpack payload -> dequantize
+//          -> live selfie -> fresh descriptor
+//          -> cosine similarity + liveness signal -> match decision
+// ═══════════════════════════════════════════════════════════════════════════
+
+const MODEL_URL = '/models';
+const PROTOCOL_VERSION = 1;
+
+// Byte-budget for the QR payload. QR version 25 at error-correction level H
+// (the level we use everywhere) holds ~382 bytes, version 30 holds ~468.
+// We target comfortably below that so the print/screen QR stays dense enough
+// to survive glare, angle and cheap phone cameras.
+const MAX_PAYLOAD_BYTES = 480;
+
+let modelsLoadingPromise = null;
+let faceapiModule = null;
+
+/** Lazily import face-api.js and load the three pretrained nets it needs.
+ *  Memoized so repeated calls (enroll screen, then scan screen) reuse the
+ *  same load. Never trains or fine-tunes anything — these are the stock
+ *  pretrained weights shipped by face-api.js. */
+export async function loadFaceModels(onProgress) {
+  if (modelsLoadingPromise) return modelsLoadingPromise;
+
+  modelsLoadingPromise = (async () => {
+    onProgress?.('engine');
+    const faceapi = await import('face-api.js');
+    faceapiModule = faceapi;
+
+    onProgress?.('detector');
+    await faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL);
+    onProgress?.('landmarks');
+    await faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL);
+    onProgress?.('embedding');
+    await faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL);
+    onProgress?.('ready');
+
+    return faceapi;
+  })();
+
+  return modelsLoadingPromise;
+}
+
+export function getFaceApi() {
+  return faceapiModule;
+}
+
+const detectorOptions = () =>
+  new faceapiModule.TinyFaceDetectorOptions({ inputSize: 224, scoreThreshold: 0.5 });
+
+/** Full detection: box + 68 landmarks + 128-float descriptor. Used once, for
+ *  the frame that actually becomes the ticket or the verification sample —
+ *  not run every animation frame, since it's the heaviest of the three nets. */
+export async function detectFaceWithDescriptor(videoEl) {
+  if (!faceapiModule) throw new Error('Face models not loaded yet');
+  const result = await faceapiModule
+    .detectSingleFace(videoEl, detectorOptions())
+    .withFaceLandmarks()
+    .withFaceDescriptor();
+  return result || null;
+}
+
+/** Lightweight detection: box + landmarks only, no descriptor. Used for the
+ *  liveness sampling loop where we need many quick frames. */
+export async function detectFaceLandmarksOnly(videoEl) {
+  if (!faceapiModule) throw new Error('Face models not loaded yet');
+  const result = await faceapiModule
+    .detectSingleFace(videoEl, detectorOptions())
+    .withFaceLandmarks();
+  return result || null;
+}
+
+// ─── Quantization ────────────────────────────────────────────────────────
+// 128 floats (4 bytes each = 512B) -> 128 bytes + 2 small floats for range.
+// Roughly a 4x reduction, as specced.
+
+export function quantizeEmbedding(float32arr) {
+  let min = Infinity;
+  let max = -Infinity;
+  for (const v of float32arr) {
+    if (v < min) min = v;
+    if (v > max) max = v;
+  }
+  const range = max - min || 1e-6;
+  const bytes = new Uint8Array(float32arr.length);
+  for (let i = 0; i < float32arr.length; i++) {
+    bytes[i] = Math.max(0, Math.min(255, Math.round(((float32arr[i] - min) / range) * 255)));
+  }
+  return { bytes, min, max };
+}
+
+export function dequantizeEmbedding(bytes, min, max) {
+  const range = max - min || 1e-6;
+  const out = new Float32Array(bytes.length);
+  for (let i = 0; i < bytes.length; i++) {
+    out[i] = min + (bytes[i] / 255) * range;
+  }
+  return out;
+}
+
+export function cosineSimilarity(a, b) {
+  let dot = 0, magA = 0, magB = 0;
+  for (let i = 0; i < a.length; i++) {
+    dot += a[i] * b[i];
+    magA += a[i] * a[i];
+    magB += b[i] * b[i];
+  }
+  if (magA === 0 || magB === 0) return 0;
+  return dot / (Math.sqrt(magA) * Math.sqrt(magB));
+}
+
+// ─── Base64 helpers (Uint8Array <-> string, no Node Buffer) ───────────────
+
+function bytesToBase64(bytes) {
+  let bin = '';
+  for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
+  return btoa(bin);
+}
+
+function base64ToBytes(b64) {
+  const bin = atob(b64);
+  const bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  return bytes;
+}
+
+function byteLengthOf(str) {
+  return new TextEncoder().encode(str).length;
+}
+
+// ─── Ticket payload pack / unpack ──────────────────────────────────────────
+
+/** Packs everything the QR needs to carry into the smallest reasonable JSON
+ *  string, trimming metadata if the encoded size creeps past budget so the
+ *  QR stays scannable. Returns { json, byteLength, trimmed }. */
+export function packTicketPayload({ name, eventName, seatId, quantized }) {
+  const build = (nameLen, eventLen) => {
+    const obj = {
+      v: PROTOCOL_VERSION,
+      n: (name || 'Guest').trim().slice(0, nameLen),
+      e: (eventName || 'PlanIt Beta Event').trim().slice(0, eventLen),
+      s: (seatId || '').trim().slice(0, 12),
+      t: Math.floor(Date.now() / 1000),
+      mn: Math.round(quantized.min * 100000) / 100000,
+      mx: Math.round(quantized.max * 100000) / 100000,
+      d: bytesToBase64(quantized.bytes),
+    };
+    return JSON.stringify(obj);
+  };
+
+  let json = build(28, 32);
+  let trimmed = false;
+  let nameLen = 28, eventLen = 32;
+
+  // Defensive shrink loop — the descriptor bytes dominate size (~172 chars
+  // base64) so this rarely triggers, but we honor the spec's requirement
+  // to verify actual size and trim if needed.
+  while (byteLengthOf(json) > MAX_PAYLOAD_BYTES && (nameLen > 8 || eventLen > 8)) {
+    nameLen = Math.max(8, nameLen - 6);
+    eventLen = Math.max(8, eventLen - 6);
+    json = build(nameLen, eventLen);
+    trimmed = true;
+  }
+
+  return { json, byteLength: byteLengthOf(json), trimmed };
+}
+
+export function unpackTicketPayload(text) {
+  let obj;
+  try {
+    obj = JSON.parse(text);
+  } catch {
+    throw new Error('This QR code isn\u2019t a Face Ticket payload.');
+  }
+  if (!obj || obj.v !== PROTOCOL_VERSION || typeof obj.d !== 'string') {
+    throw new Error('Unrecognized ticket format.');
+  }
+  const bytes = base64ToBytes(obj.d);
+  if (bytes.length !== 128) {
+    throw new Error('Ticket embedding is malformed.');
+  }
+  return {
+    name: obj.n || 'Guest',
+    eventName: obj.e || 'PlanIt Beta Event',
+    seatId: obj.s || '',
+    issuedAt: obj.t ? new Date(obj.t * 1000) : null,
+    quantized: { bytes, min: obj.mn, max: obj.mx },
+  };
+}
+
+// ─── Liveness: eye-aspect-ratio blink detection + nose-tip motion check ───
+// Deliberately simple and clearly labeled "beta" in the UI — this is a
+// proof-of-concept anti-spoof signal, not a hardened liveness system.
+
+function dist(p1, p2) {
+  return Math.hypot(p1.x - p2.x, p1.y - p2.y);
+}
+
+/** Eye-aspect-ratio for a 6-point eye contour, per Soukupov\u00e1 & \u010cech. */
+function eyeAspectRatio(eye) {
+  const vertical1 = dist(eye[1], eye[5]);
+  const vertical2 = dist(eye[2], eye[4]);
+  const horizontal = dist(eye[0], eye[3]);
+  if (horizontal === 0) return 0;
+  return (vertical1 + vertical2) / (2 * horizontal);
+}
+
+function averageEAR(landmarks) {
+  const left = eyeAspectRatio(landmarks.getLeftEye());
+  const right = eyeAspectRatio(landmarks.getRightEye());
+  return (left + right) / 2;
+}
+
+/** Samples the live video for `durationMs`, tracking eye-aspect-ratio (for a
+ *  blink) and nose-tip displacement (for natural micro-motion / parallax).
+ *  `onSample` fires after every frame with a lightweight progress payload
+ *  so the UI can show a live capture ring / sparkline. */
+export async function runLivenessCapture(videoEl, { durationMs = 2800, intervalMs = 110, onSample } = {}) {
+  const samples = [];
+  const start = performance.now();
+  let baselineEAR = null;
+
+  while (performance.now() - start < durationMs) {
+    const frameStart = performance.now();
+    const result = await detectFaceLandmarksOnly(videoEl);
+
+    if (result) {
+      const ear = averageEAR(result.landmarks);
+      const nose = result.landmarks.getNose()[3]; // landmark ~30, the tip
+      samples.push({ t: frameStart - start, ear, nose: { x: nose.x, y: nose.y } });
+      if (baselineEAR === null && samples.length >= 4) {
+        baselineEAR = samples.slice(0, 4).reduce((s, x) => s + x.ear, 0) / 4;
+      }
+    } else {
+      samples.push({ t: frameStart - start, ear: null, nose: null });
+    }
+
+    onSample?.({
+      progress: Math.min(1, (performance.now() - start) / durationMs),
+      ear: samples[samples.length - 1].ear,
+      faceFound: !!result,
+    });
+
+    const elapsed = performance.now() - frameStart;
+    await new Promise((r) => setTimeout(r, Math.max(0, intervalMs - elapsed)));
+  }
+
+  const earSamples = samples.filter((s) => s.ear !== null);
+  const noseSamples = samples.filter((s) => s.nose !== null);
+
+  // Blink: an adaptive dip-then-recover pattern relative to this session's
+  // own baseline, rather than a hardcoded global EAR threshold — different
+  // faces and camera angles have different resting EAR values.
+  let blinkDetected = false;
+  if (baselineEAR && earSamples.length > 5) {
+    const dipThreshold = baselineEAR * 0.72;
+    const recoverThreshold = baselineEAR * 0.9;
+    let sawDip = false;
+    for (const s of earSamples) {
+      if (!sawDip && s.ear < dipThreshold) sawDip = true;
+      else if (sawDip && s.ear > recoverThreshold) { blinkDetected = true; break; }
+    }
+  }
+
+  // Motion: cumulative frame-to-frame nose-tip displacement. Too little
+  // suggests a static photo/screen; we don't penalize "too much" here since
+  // natural head movement varies a lot — beta-grade, not exhaustive.
+  let cumulativeMotion = 0;
+  for (let i = 1; i < noseSamples.length; i++) {
+    cumulativeMotion += dist(noseSamples[i].nose, noseSamples[i - 1].nose);
+  }
+  const motionDetected = cumulativeMotion > 4 && noseSamples.length > 5;
+
+  return {
+    blinkDetected,
+    motionDetected,
+    faceCoverage: samples.length ? earSamples.length / samples.length : 0,
+    cumulativeMotion,
+    baselineEAR,
+  };
+}
+
+export function formatConfidence(similarity) {
+  // Cosine similarity on face-api descriptors typically sits in ~0.3-0.9
+  // for genuine matches and lower for mismatches; we present it as a 0-100
+  // "confidence" scaled around the spec's suggested 0.6-0.7 decision band.
+  return Math.round(Math.max(0, Math.min(1, similarity)) * 100);
+}
