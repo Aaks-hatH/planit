@@ -4,7 +4,7 @@ import {
   ArrowLeft, ScanFace, QrCode, Fingerprint, ShieldAlert,
   Camera, CameraOff, RefreshCw, Download, CheckCircle2, XCircle,
   ThumbsUp, ThumbsDown, AlertTriangle, Radar, Sparkles, Lock,
-  ChevronRight, Ticket, Loader2, ScanLine,
+  ChevronRight, Ticket, Loader2, ScanLine, Smartphone,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useCameraStream } from '../hooks/useCameraStream';
@@ -37,8 +37,13 @@ function EmbeddingBarcode({ bytes, height = 56, tone = 'violet', className = '' 
     rose: ['#FB7185', '#F0B429'],
   }[tone] || ['#8B7FFF', '#5EEAD4'];
 
+  // Bars flex to fill their container's width instead of a fixed pixel
+  // width, so 96-128 bars never overflow a narrow phone screen — they just
+  // get thinner. min-width keeps them from vanishing entirely on very
+  // small viewports (they'll wrap onto invisible overflow instead, which
+  // is fine since it's decorative).
   return (
-    <div className={`flex items-end gap-[1px] ${className}`} style={{ height }}>
+    <div className={`flex items-end gap-[1px] w-full overflow-hidden ${className}`} style={{ height }}>
       {Array.from(bytes).map((b, i) => {
         const t = b / 255;
         const barHeight = Math.max(3, t * height);
@@ -48,7 +53,9 @@ function EmbeddingBarcode({ bytes, height = 56, tone = 'violet', className = '' 
             key={i}
             style={{
               height: barHeight,
-              width: 2,
+              flex: '1 1 0',
+              minWidth: 1,
+              maxWidth: 3,
               background: color,
               opacity: 0.35 + t * 0.65,
               borderRadius: 1,
@@ -107,10 +114,16 @@ function BetaBar() {
 
 function PageChrome({ onBack, right, children }) {
   return (
-    <div className="min-h-screen bg-[#05050f] text-white flex flex-col">
+    <div
+      className="min-h-screen bg-[#05050f] text-white flex flex-col"
+      style={{ paddingTop: 'var(--safe-top, 0px)', paddingBottom: 'var(--safe-bottom, 0px)' }}
+    >
       <BetaBar />
       <div className="flex items-center justify-between px-4 sm:px-6 py-4 border-b border-white/[0.06]">
-        <button onClick={onBack} className="flex items-center gap-2 text-neutral-400 hover:text-white transition-colors text-sm">
+        <button
+          onClick={onBack}
+          className="flex items-center gap-2 text-neutral-400 hover:text-white active:text-white transition-colors text-sm -ml-2 px-2 py-1.5 rounded-lg"
+        >
           <ArrowLeft className="w-4 h-4" />
           Back
         </button>
@@ -496,6 +509,22 @@ function EnrollFlow({ onDone }) {
           Your face never left this device
         </div>
 
+        {/* Two-device testing instructions. A single device can't scan a QR
+            code rendered on its own screen (self-scanning), so anyone
+            testing the door-check flow needs a second device in the loop. */}
+        <div className="rounded-xl border border-[#8B7FFF]/25 bg-[#8B7FFF]/[0.06] p-4 mb-6">
+          <div className="flex items-center gap-2 mb-2.5 text-[#c4bcff]">
+            <Smartphone className="w-4 h-4" />
+            <span className="font-display font-bold text-sm">Testing this yourself?</span>
+          </div>
+          <ol className="space-y-1.5 text-xs text-neutral-400 leading-relaxed list-decimal list-inside">
+            <li>Grab a second phone or computer &mdash; you can&rsquo;t scan a QR code from the same screen it&rsquo;s displayed on.</li>
+            <li>On that second device, open this same page and choose <span className="text-neutral-300 font-medium">Scan a ticket</span>.</li>
+            <li>Point its camera at <span className="text-neutral-300 font-medium">this</span> ticket&rsquo;s QR code above.</li>
+            <li>When your ticket shows up, tap <span className="text-neutral-300 font-medium">Verify with camera</span> and look into the second device&rsquo;s camera &mdash; that confirms it&rsquo;s really you.</li>
+          </ol>
+        </div>
+
         <div className="flex flex-col gap-3">
           <button onClick={downloadQR} className="flex items-center justify-center gap-2 py-3 rounded-xl bg-white text-black font-semibold text-sm">
             <Download className="w-4 h-4" />
@@ -576,19 +605,44 @@ function QRScanStage({ onDecoded, onCancel }) {
         }
       };
 
-      try {
-        await scanner.start({ facingMode: { exact: 'environment' } }, config, onSuccess, () => {});
-      } catch {
+      // Camera fallback chain. `exact: 'environment'` fails outright on a
+      // lot of Android devices (multiple rear lenses, or a device that only
+      // exposes a generic device list rather than facingMode metadata) —
+      // that's the intermittent "sometimes doesn't load" behavior. Try the
+      // rear camera as a soft preference first, then fall back to whatever
+      // camera is available via getCameras(), then finally the front camera
+      // as a last resort so the scanner never just dead-ends.
+      const attempts = [
+        () => scanner.start({ facingMode: 'environment' }, config, onSuccess, () => {}),
+        async () => {
+          const cameras = await Html5Qrcode.getCameras();
+          if (!cameras?.length) throw new Error('NO_CAMERAS');
+          const rear = cameras.find((c) => /back|rear|environment/i.test(c.label)) || cameras[0];
+          await scanner.start({ deviceId: { exact: rear.id } }, config, onSuccess, () => {});
+        },
+        () => scanner.start({ facingMode: 'user' }, config, onSuccess, () => {}),
+      ];
+
+      let started = false;
+      let lastErr = null;
+      for (const attempt of attempts) {
         if (!mountedRef.current) return;
-        const fallback = new Html5Qrcode(containerId);
-        scannerRef.current = fallback;
-        await fallback.start({ facingMode: 'user' }, config, onSuccess, () => {});
+        try {
+          await attempt();
+          started = true;
+          break;
+        } catch (err) {
+          lastErr = err;
+          if (err?.name === 'NotAllowedError') break; // permission denied — retrying won't help
+        }
       }
+      if (!started) throw lastErr || new Error('Could not start the camera.');
     } catch (err) {
       if (!mountedRef.current) return;
       let message = 'Could not start the camera.';
-      if (err.name === 'NotAllowedError') message = 'Camera permission denied. Allow access and retry.';
-      else if (err.name === 'NotFoundError') message = 'No camera found on this device.';
+      if (err.name === 'NotAllowedError') message = 'Camera permission denied. Allow access in your browser settings and retry.';
+      else if (err.name === 'NotFoundError' || err.message === 'NO_CAMERAS') message = 'No camera found on this device.';
+      else if (!window.isSecureContext) message = 'Camera access needs a secure connection (https://).';
       setError(message);
     }
   };
@@ -606,7 +660,15 @@ function QRScanStage({ onDecoded, onCancel }) {
         </div>
       ) : (
         <>
-          <div id={containerId} className="rounded-2xl overflow-hidden border border-white/10 bg-black" />
+          {/* Fixed aspect box: html5-qrcode injects its own <video>/<canvas>
+              with inline sizing, which on some mobile browsers renders taller
+              than the viewport or overflows the rounded corners. Constraining
+              the container and forcing the injected video to fill it keeps
+              the scanner boxed no matter what size the library picks. */}
+          <div
+            id={containerId}
+            className="qr-reader-box rounded-2xl overflow-hidden border border-white/10 bg-black relative aspect-square w-full [&_video]:!w-full [&_video]:!h-full [&_video]:!object-cover [&_canvas]:!w-full"
+          />
           <p className="text-center text-neutral-500 text-xs mt-4">Scanning automatically&hellip;</p>
         </>
       )}
