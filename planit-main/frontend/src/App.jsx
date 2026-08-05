@@ -5,6 +5,7 @@ import { usePageTracker } from './hooks/usePageTracker';
 import ConsentBanner from './components/ConsentBanner';
 import ReferralWelcome from './components/ReferralWelcome';
 import FaceTicketTeaser from './components/FaceTicketTeaser';
+import VenueWalkTeaser from './components/VenueWalkTeaser';
 
 // ─── Lazy-loaded pages — each page is a separate JS chunk loaded on demand ────
 // This means the initial bundle only contains the shell (router, context, etc.)
@@ -60,6 +61,7 @@ const RSVPManage        = lazy(() => import('./pages/RSVPManage'));
 const RSVPPageBuilder   = lazy(() => import('./pages/RSVPPageBuilder'));
 const Credits           = lazy(() => import('./pages/Credits'));
 const FaceTicket         = lazy(() => import('./pages/FaceTicket'));
+const VenueWalk          = lazy(() => import('./pages/VenueWalk'));
 const ForgotPassword    = lazy(() => import('./pages/ForgotPassword'));
 const ClaudeConnect     = lazy(() => import('./pages/ClaudeConnect'));
 
@@ -438,6 +440,7 @@ const PAGE_TITLES = {
   '/white-label/setup-fee':    'White Label Setup Payment · PlanIt White Label',
   '/white-label/setup-success': 'Payment Confirmed, You Are Live · PlanIt White Label',
   '/beta/face-ticket':          'Face Ticket \u00b7 On-Device Face Check-In Beta \u00b7 PlanIt Labs',
+  '/beta/venue-walk':           'Venue Walk \u00b7 Dead-Reckoning Table Finder Beta \u00b7 PlanIt Labs',
 };
 
 // Titles for dynamic routes — matched by pattern in order (first match wins)
@@ -508,7 +511,11 @@ function App() {
             <PageTrackerMount />
             <ConsentBanner />
             <ReferralWelcome />
+            {/* Both mount globally, same as before — betaTeaserRotation.js
+                ensures only one of the two ever actually renders at once,
+                so shipping a second beta doesn't double up the advertising. */}
             <FaceTicketTeaser />
+            <VenueWalkTeaser />
             <Suspense fallback={<PageLoader />}>
             <Routes>
         <Route path="/" element={<HomeRoute />} />
@@ -549,6 +556,7 @@ function App() {
         <Route path="/demo/invite"               element={<InviteDemo />} />
         <Route path="/demo/rsvp"                 element={<RSVPDemo />} />
         <Route path="/beta/face-ticket"          element={<FaceTicket />} />
+        <Route path="/beta/venue-walk"           element={<VenueWalk />} />
         <Route path="/badge/:inviteCode"         element={<InviteBadge />} />
         <Route path="/card/:inviteCode"          element={<InviteCard />} />
 
