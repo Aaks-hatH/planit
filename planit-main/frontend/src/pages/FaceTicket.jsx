@@ -251,6 +251,7 @@ const LOAD_LABELS = {
   detector: 'Loading face detector\u2026',
   landmarks: 'Loading landmark model\u2026',
   embedding: 'Loading embedding model\u2026',
+  warmup: 'Warming up on this device\u2026',
   ready: 'Ready',
 };
 
@@ -336,7 +337,8 @@ function EnrollFlow({ onDone, onComplete }) {
       setStep('details');
     } catch (err) {
       console.error(err);
-      setCaptureError('Something went wrong reading your face. Try again.');
+      const detail = err?.message ? ` (${err.message})` : '';
+      setCaptureError(`Something went wrong reading your face${detail}. Try again.`);
     } finally {
       setCapturing(false);
     }
