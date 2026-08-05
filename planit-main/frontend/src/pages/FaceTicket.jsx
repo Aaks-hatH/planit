@@ -726,36 +726,50 @@ function VerifyCameraStage({ onResult, onCancel }) {
     setPhase('liveness');
     setProgress(0);
 
-    const liveness = await runLivenessCapture(videoRef.current, {
-      durationMs: 2800,
-      onSample: (s) => { setProgress(s.progress); setEar(s.ear); },
-    });
+    // Everything below this point used to run with no try/catch at all: any
+    // thrown error (a WebGL hiccup, a texture read failure, anything) would
+    // silently kill this function mid-flight, leaving `phase` frozen on
+    // 'liveness' or 'match' forever and `runningRef.current` stuck `true` —
+    // which permanently blocks every future tap on "Start check" too, since
+    // the guard above bails out early. No error, no visible reaction, just a
+    // dead screen. That's the "just says analyzing and doesn't do anything"
+    // behavior. This makes sure any failure resets the UI to a retryable
+    // state instead of locking it up.
+    try {
+      const liveness = await runLivenessCapture(videoRef.current, {
+        durationMs: 2800,
+        onSample: (s) => { setProgress(s.progress); setEar(s.ear); },
+      });
 
-    if (liveness.faceCoverage < 0.4) {
-      setIssue('Couldn\u2019t get a clear, steady view of your face. Center your face and try again.');
+      if (liveness.faceCoverage < 0.4) {
+        setIssue('Couldn\u2019t get a clear, steady view of your face. Center your face and try again.');
+        setPhase('camera');
+        return;
+      }
+
+      setPhase('match');
+      let result = null;
+      for (let i = 0; i < 4 && !result; i++) {
+        result = await detectFaceWithDescriptor(videoRef.current);
+        if (!result) await new Promise((r) => setTimeout(r, 150));
+      }
+
+      if (!result) {
+        setIssue('Lost sight of your face for the final capture. Try again in better light.');
+        setPhase('camera');
+        return;
+      }
+
+      stop();
+      setPhase('done');
+      onResult({ liveDescriptor: result.descriptor, liveness });
+    } catch (err) {
+      console.error('Verification check failed:', err);
+      setIssue('Something went wrong during the check. Try again.');
       setPhase('camera');
+    } finally {
       runningRef.current = false;
-      return;
     }
-
-    setPhase('match');
-    let result = null;
-    for (let i = 0; i < 4 && !result; i++) {
-      result = await detectFaceWithDescriptor(videoRef.current);
-      if (!result) await new Promise((r) => setTimeout(r, 150));
-    }
-
-    if (!result) {
-      setIssue('Lost sight of your face for the final capture. Try again in better light.');
-      setPhase('camera');
-      runningRef.current = false;
-      return;
-    }
-
-    stop();
-    setPhase('done');
-    onResult({ liveDescriptor: result.descriptor, liveness });
-    runningRef.current = false;
   };
 
   return (
