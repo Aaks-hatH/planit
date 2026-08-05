@@ -11,6 +11,7 @@ import {
   bearingTo, distanceBetween, bearingLabel, relativeBearing, formatDistance,
   saveVenueLayout, loadVenueLayout, listSavedVenues,
 } from '../utils/venueWalk';
+import { BetaBar } from '../components/BetaBar';
 
 // A guest is considered "arrived" once dead-reckoned distance drops below
 // this — close enough that remaining drift makes a finer number meaningless,
@@ -23,43 +24,29 @@ const PIXELS_PER_METER = 26;
 // ═══════════════════════════════════════════════════════════════════════════
 // SHARED CHROME
 // ═══════════════════════════════════════════════════════════════════════════
-function BetaBar() {
-  const [expanded, setExpanded] = useState(false);
-  return (
-    <div className="border-b border-amber-400/20 bg-amber-400/[0.06]">
-      <button
-        onClick={() => setExpanded((e) => !e)}
-        className="w-full flex items-center gap-2 px-4 py-2 text-left"
-      >
-        <AlertTriangle className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-        <span className="text-[11px] font-mono tracking-wide text-amber-300/90 flex-1">
-          BETA DEMO &mdash; dead-reckoning, not GPS or true AR anchoring
-        </span>
-        <ChevronRight className={`w-3.5 h-3.5 text-amber-400/60 transition-transform ${expanded ? 'rotate-90' : ''}`} />
-      </button>
-      {expanded && (
-        <div className="px-4 pb-3 -mt-0.5 text-[12px] leading-relaxed text-neutral-400 max-w-2xl">
-          Venue Walk estimates position by counting steps and reading your phone&rsquo;s
-          compass &mdash; it never uses GPS and there&rsquo;s no true AR anchoring under the
-          arrow. Every step compounds a small amount of error onto the last one, so drift
-          grows the farther you walk from the start point. Treat the arrow and distance as
-          an estimate, not precision positioning &mdash; the same honest framing Face Ticket
-          uses for its liveness check. Nothing recorded here (steps, heading, table
-          positions) ever leaves your browser&rsquo;s storage; there\u2019s no server call
-          anywhere in this feature.
-        </div>
-      )}
-    </div>
-  );
-}
-
 function PageChrome({ onBack, children }) {
   return (
     <div
       className="min-h-screen bg-[#05050f] text-white flex flex-col"
       style={{ paddingTop: 'var(--safe-top, 0px)', paddingBottom: 'var(--safe-bottom, 0px)' }}
     >
-      <BetaBar />
+      <BetaBar
+        featureId="venue-walk"
+        title="BETA DEMO — dead-reckoning, not GPS or true AR anchoring"
+        description={
+          <>
+            Venue Walk estimates position by counting steps and reading your phone&rsquo;s
+            compass &mdash; it never uses GPS and there&rsquo;s no true AR anchoring under the
+            arrow. Every step compounds a small amount of error onto the last one, so drift
+            grows the farther you walk from the start point. Treat the arrow and distance as
+            an estimate, not precision positioning &mdash; the same honest framing Face Ticket
+            uses for its liveness check. Your walking trail and table positions never leave
+            this device. If something breaks, we may collect error details (what went wrong,
+            device/browser info) to help fix the beta &mdash; never your position, steps, or
+            heading data.
+          </>
+        }
+      />
       <div className="flex items-center justify-between px-4 sm:px-6 py-4 border-b border-white/[0.06]">
         <button
           onClick={onBack}
