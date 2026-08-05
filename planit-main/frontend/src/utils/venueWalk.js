@@ -147,11 +147,24 @@ export function useStepTracker({ onUnavailable } = {}) {
     }
 
     const handler = (event) => {
+      // `accelerationIncludingGravity` and `acceleration` are always
+      // *objects* when present, even on devices that never populate their
+      // x/y/z fields (a common Android/Chrome combo) — so `a || b` never
+      // falls through to the second source, since a null-filled object is
+      // still truthy. Pick whichever source actually has numeric fields,
+      // the same way useHeading below picks webkitCompassHeading vs alpha
+      // with explicit typeof checks rather than object-level `||`.
+      const isUsable = (v) =>
+        v && typeof v.x === 'number' && typeof v.y === 'number' && typeof v.z === 'number';
+      const a = isUsable(event.accelerationIncludingGravity)
+        ? event.accelerationIncludingGravity
+        : isUsable(event.acceleration)
+        ? event.acceleration
+        : null;
+      if (!a) return;
       gotFirstEventRef.current = true;
-      const a = event.accelerationIncludingGravity || event.acceleration;
-      if (!a || a.x === null || a.x === undefined) return;
 
-      const magnitude = Math.sqrt((a.x || 0) ** 2 + (a.y || 0) ** 2 + (a.z || 0) ** 2);
+      const magnitude = Math.sqrt(a.x ** 2 + a.y ** 2 + a.z ** 2);
       const win = windowRef.current;
       win.push(magnitude);
       if (win.length > ROLLING_WINDOW) win.shift();
