@@ -25,13 +25,27 @@
 // ═══════════════════════════════════════════════════════════════════════════
 
 import { useState, useRef, useEffect, useCallback } from 'react';
+import { logBetaEvent } from './betaDiagnostics';
+
+const FEATURE_ID = 'venue-walk';
 
 // ─── Tuning constants ──────────────────────────────────────────────────────
 const DEFAULT_STRIDE_M = 0.7;          // average adult walking stride, meters
-const STEP_THRESHOLD = 1.6;            // m/s^2 above rolling average to count as a step
+const STEP_THRESHOLD = 1.6;            // m/s^2 above the noise-floor baseline to count as a step
 const STEP_DEBOUNCE_MS = 300;          // minimum gap between counted steps
-const ROLLING_WINDOW = 12;             // samples averaged for the noise floor
-const MIN_SAMPLES_BEFORE_DETECT = 6;   // let the rolling average settle first
+// The noise floor is a time-based EMA (exponential moving average), not a
+// fixed sample count. `devicemotion` fires at wildly different rates across
+// devices — a steady ~60Hz on iOS, but often throttled to 5-15Hz on Android
+// for power saving. A sample-count window (e.g. "last 12 samples") covers a
+// different amount of *time* on every device: at 60Hz it's ~200ms (shorter
+// than one step cycle, so the average stays low between peaks and a step
+// stands out); at 10Hz that same 12 samples spans over a second, several
+// step peaks get folded into the average itself, and the average rises to
+// meet the peaks until no step can ever cross the threshold. Smoothing by
+// elapsed wall-clock time instead makes detection behave the same
+// regardless of the sensor's actual firing rate.
+const BASELINE_TAU_MS = 1200;          // time constant for the noise-floor EMA
+const WARM_UP_MS = 400;                // let the baseline settle before detecting steps
 const PERMISSION_TIMEOUT_MS = 15000;   // iOS permission dialog is user-paced; generous
 // If motion/orientation events never actually arrive after we start listening
 // (permission silently no-op'd, a WebView that reports the API but has no
@@ -71,23 +85,27 @@ export function motionSensorsSupported() {
  *  gesture handler (a tap). Other browsers (desktop Chrome/Firefox, most
  *  Android) don't define requestPermission at all, so each call here is
  *  feature-detected rather than gated on platform sniffing. */
-export async function requestMotionPermission() {
+export async function requestMotionPermission(source = 'unknown') {
   const need = (Ctor) => typeof Ctor !== 'undefined' && typeof Ctor.requestPermission === 'function';
 
   if (need(window.DeviceMotionEvent)) {
+    logBetaEvent(FEATURE_ID, 'permission-requested', { source, api: 'DeviceMotionEvent' });
     const result = await withTimeout(
       window.DeviceMotionEvent.requestPermission(),
       PERMISSION_TIMEOUT_MS,
       'Motion permission prompt',
     );
+    logBetaEvent(FEATURE_ID, 'permission-result', { source, api: 'DeviceMotionEvent', result });
     if (result !== 'granted') throw new Error('denied');
   }
   if (need(window.DeviceOrientationEvent)) {
+    logBetaEvent(FEATURE_ID, 'permission-requested', { source, api: 'DeviceOrientationEvent' });
     const result = await withTimeout(
       window.DeviceOrientationEvent.requestPermission(),
       PERMISSION_TIMEOUT_MS,
       'Orientation permission prompt',
     );
+    logBetaEvent(FEATURE_ID, 'permission-result', { source, api: 'DeviceOrientationEvent', result });
     if (result !== 'granted') throw new Error('denied');
   }
   return true;
@@ -108,10 +126,14 @@ export function useStepTracker({ onUnavailable } = {}) {
   const [error, setError] = useState(null);
 
   const handlerRef = useRef(null);
-  const windowRef = useRef([]);
+  const baselineRef = useRef(null);       // time-smoothed noise floor (EMA), null until first sample
+  const lastSampleAtRef = useRef(0);      // wall-clock ms of the previous sample, for dt
+  const startedAtRef = useRef(0);         // wall-clock ms tracking began, for the warm-up window
   const lastStepAtRef = useRef(0);
   const gotFirstEventRef = useRef(false);
   const firstEventTimerRef = useRef(null);
+  const loggedUnusableRef = useRef(false); // log the "event fired but no usable data" case once, not every tick
+  const lastSnapshotAtRef = useRef(0);     // throttle periodic diagnostic snapshots
 
   const stop = useCallback(() => {
     if (handlerRef.current) {
@@ -122,25 +144,34 @@ export function useStepTracker({ onUnavailable } = {}) {
       clearTimeout(firstEventTimerRef.current);
       firstEventTimerRef.current = null;
     }
+    logBetaEvent(FEATURE_ID, 'steps-stopped', {});
     setActive(false);
   }, []);
 
   const start = useCallback(async () => {
     setError(null);
-    windowRef.current = [];
+    baselineRef.current = null;
+    lastSampleAtRef.current = 0;
+    startedAtRef.current = performance.now();
     lastStepAtRef.current = 0;
     gotFirstEventRef.current = false;
+    loggedUnusableRef.current = false;
+    lastSnapshotAtRef.current = 0;
+
+    logBetaEvent(FEATURE_ID, 'steps-start-called', {});
 
     if (!motionSensorsSupported()) {
+      logBetaEvent(FEATURE_ID, 'steps-unsupported', {});
       setError('UNSUPPORTED');
       onUnavailable?.('UNSUPPORTED');
       return;
     }
 
     try {
-      await requestMotionPermission();
+      await requestMotionPermission('steps');
     } catch (err) {
       const code = err?.message === 'denied' ? 'PERMISSION_DENIED' : 'PERMISSION_FAILED';
+      logBetaEvent(FEATURE_ID, 'steps-permission-error', { code, message: err?.message });
       setError(code);
       onUnavailable?.(code);
       return;
@@ -161,23 +192,76 @@ export function useStepTracker({ onUnavailable } = {}) {
         : isUsable(event.acceleration)
         ? event.acceleration
         : null;
-      if (!a) return;
-      gotFirstEventRef.current = true;
+      if (!a) {
+        if (!loggedUnusableRef.current) {
+          loggedUnusableRef.current = true;
+          logBetaEvent(FEATURE_ID, 'steps-event-unusable', {
+            hadGravityField: !!event.accelerationIncludingGravity,
+            hadLinearField: !!event.acceleration,
+            gravitySample: event.accelerationIncludingGravity
+              ? { x: event.accelerationIncludingGravity.x, y: event.accelerationIncludingGravity.y, z: event.accelerationIncludingGravity.z }
+              : null,
+            linearSample: event.acceleration
+              ? { x: event.acceleration.x, y: event.acceleration.y, z: event.acceleration.z }
+              : null,
+          });
+        }
+        return;
+      }
+      if (!gotFirstEventRef.current) {
+        gotFirstEventRef.current = true;
+        logBetaEvent(FEATURE_ID, 'steps-first-usable-event', {
+          source: isUsable(event.accelerationIncludingGravity) ? 'accelerationIncludingGravity' : 'acceleration',
+          x: a.x, y: a.y, z: a.z,
+        });
+      }
 
       const magnitude = Math.sqrt(a.x ** 2 + a.y ** 2 + a.z ** 2);
-      const win = windowRef.current;
-      win.push(magnitude);
-      if (win.length > ROLLING_WINDOW) win.shift();
-      if (win.length < MIN_SAMPLES_BEFORE_DETECT) return;
-
-      const avg = win.reduce((s, v) => s + v, 0) / win.length;
       const now = performance.now();
-      const crossedThreshold = magnitude > avg + STEP_THRESHOLD;
+
+      if (baselineRef.current === null) {
+        // First sample: seed the baseline directly, nothing to average yet.
+        baselineRef.current = magnitude;
+        lastSampleAtRef.current = now;
+        return;
+      }
+
+      // Time-based EMA: alpha grows with elapsed dt, so the baseline adapts
+      // at the same *speed* (in real seconds) no matter how densely or
+      // sparsely samples arrive. Update the baseline BEFORE the threshold
+      // check uses the *pre-update* value, so a step's own spike can't pull
+      // the baseline up under itself before we've compared against it.
+      const dt = Math.max(now - lastSampleAtRef.current, 0);
+      lastSampleAtRef.current = now;
+      const priorBaseline = baselineRef.current;
+      const alpha = 1 - Math.exp(-dt / BASELINE_TAU_MS);
+      baselineRef.current = priorBaseline + alpha * (magnitude - priorBaseline);
+
+      const warmedUp = now - startedAtRef.current > WARM_UP_MS;
+      const crossedThreshold = magnitude > priorBaseline + STEP_THRESHOLD;
       const debounced = now - lastStepAtRef.current > STEP_DEBOUNCE_MS;
 
-      if (crossedThreshold && debounced) {
+      if (warmedUp && crossedThreshold && debounced) {
         lastStepAtRef.current = now;
         setStepCount((c) => c + 1);
+        logBetaEvent(FEATURE_ID, 'steps-step-counted', {
+          magnitude: Number(magnitude.toFixed(3)),
+          baseline: Number(priorBaseline.toFixed(3)),
+          dtMs: Math.round(dt),
+        });
+      } else if (now - lastSnapshotAtRef.current > 1000) {
+        // Periodic "still alive" snapshot even when no step fires — this is
+        // the data that answers "is the sensor even producing meaningful
+        // variance, and how close is it to threshold" instead of just
+        // seeing silence in the console.
+        lastSnapshotAtRef.current = now;
+        logBetaEvent(FEATURE_ID, 'steps-sample', {
+          magnitude: Number(magnitude.toFixed(3)),
+          baseline: Number(priorBaseline.toFixed(3)),
+          delta: Number((magnitude - priorBaseline).toFixed(3)),
+          dtMs: Math.round(dt),
+          warmedUp,
+        });
       }
     };
 
@@ -191,6 +275,7 @@ export function useStepTracker({ onUnavailable } = {}) {
     // looking "active" with a permanently frozen step count.
     firstEventTimerRef.current = setTimeout(() => {
       if (!gotFirstEventRef.current) {
+        logBetaEvent(FEATURE_ID, 'steps-no-sensor-data', { waitedMs: FIRST_EVENT_TIMEOUT_MS });
         stop();
         setError('NO_SENSOR_DATA');
         onUnavailable?.('NO_SENSOR_DATA');
@@ -221,6 +306,7 @@ export function useHeading({ onUnavailable } = {}) {
   const handlerRef = useRef(null);
   const gotFirstEventRef = useRef(false);
   const firstEventTimerRef = useRef(null);
+  const lastSnapshotAtRef = useRef(0); // throttle periodic diagnostic snapshots
 
   const stop = useCallback(() => {
     if (handlerRef.current) {
@@ -231,39 +317,61 @@ export function useHeading({ onUnavailable } = {}) {
       clearTimeout(firstEventTimerRef.current);
       firstEventTimerRef.current = null;
     }
+    logBetaEvent(FEATURE_ID, 'heading-stopped', {});
     setActive(false);
   }, []);
 
   const start = useCallback(async () => {
     setError(null);
     gotFirstEventRef.current = false;
+    lastSnapshotAtRef.current = 0;
+
+    logBetaEvent(FEATURE_ID, 'heading-start-called', {});
 
     if (!motionSensorsSupported()) {
+      logBetaEvent(FEATURE_ID, 'heading-unsupported', {});
       setError('UNSUPPORTED');
       onUnavailable?.('UNSUPPORTED');
       return;
     }
 
     try {
-      await requestMotionPermission();
+      await requestMotionPermission('heading');
     } catch (err) {
       const code = err?.message === 'denied' ? 'PERMISSION_DENIED' : 'PERMISSION_FAILED';
+      logBetaEvent(FEATURE_ID, 'heading-permission-error', { code, message: err?.message });
       setError(code);
       onUnavailable?.(code);
       return;
     }
 
     const handler = (event) => {
-      gotFirstEventRef.current = true;
+      if (!gotFirstEventRef.current) {
+        gotFirstEventRef.current = true;
+        logBetaEvent(FEATURE_ID, 'heading-first-event', {
+          hasWebkitCompassHeading: typeof event.webkitCompassHeading === 'number',
+          hasAlpha: typeof event.alpha === 'number',
+          absolute: event.absolute,
+        });
+      }
       let deg;
+      let source;
       if (typeof event.webkitCompassHeading === 'number') {
         deg = event.webkitCompassHeading;
+        source = 'webkitCompassHeading';
       } else if (typeof event.alpha === 'number') {
         deg = (360 - event.alpha) % 360;
+        source = 'alpha';
       } else {
         return;
       }
       setHeading(deg);
+
+      const now = performance.now();
+      if (now - lastSnapshotAtRef.current > 1000) {
+        lastSnapshotAtRef.current = now;
+        logBetaEvent(FEATURE_ID, 'heading-sample', { deg: Number(deg.toFixed(1)), source });
+      }
     };
 
     handlerRef.current = handler;
@@ -272,6 +380,7 @@ export function useHeading({ onUnavailable } = {}) {
 
     firstEventTimerRef.current = setTimeout(() => {
       if (!gotFirstEventRef.current) {
+        logBetaEvent(FEATURE_ID, 'heading-no-sensor-data', { waitedMs: FIRST_EVENT_TIMEOUT_MS });
         stop();
         setError('NO_SENSOR_DATA');
         onUnavailable?.('NO_SENSOR_DATA');
