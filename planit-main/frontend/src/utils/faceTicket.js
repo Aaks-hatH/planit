@@ -40,6 +40,31 @@ export async function loadFaceModels(onProgress) {
     const faceapi = await import('face-api.js');
     faceapiModule = faceapi;
 
+    // Some Apple GPU/driver combos (Metal via ANGLE, seen on both Safari and
+    // Chrome on Apple Silicon Macs and some iOS versions) fail to compile one
+    // of tfjs-backend-webgl's *packed* texture kernels — the compound
+    // increment/swizzle helper it emits for certain slice/pack ops trips a
+    // strict Metal lvalue-binding rule. It's a driver-level shader compiler
+    // bug in ANGLE's Metal backend, not something in our code, and it
+    // surfaces as an opaque "Internal error while linking shader" crash the
+    // first time a net actually runs (i.e. during the warm-up pass below).
+    // Turning off WebGL texture packing makes tfjs fall back to the
+    // unpacked kernel variants, which sidesteps the offending codegen
+    // entirely while keeping WebGL (GPU) acceleration on. This has to run
+    // before any inference — including this module's own warm-up call —
+    // so we set it right after face-api's bundled tf is available and
+    // before any detector net is loaded/used.
+    try {
+      const tf = faceapi.tf;
+      if (tf?.env) {
+        tf.env().set('WEBGL_PACK', false);
+      }
+    } catch {
+      // If face-api's tf export ever changes shape, don't let this
+      // best-effort mitigation block model loading — worst case we're
+      // back to relying on the warm-up's own try/catch below.
+    }
+
     onProgress?.('detector');
     await faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL);
     onProgress?.('landmarks');
@@ -65,8 +90,15 @@ export async function loadFaceModels(onProgress) {
         .withFaceLandmarks()
         .withFaceDescriptor();
     } catch {
-      // Expected — a blank canvas has no face. We only care about the
-      // shader-compile side effect, not the (nonexistent) result.
+      // Deliberately swallow ANY error here, not just "no face found" on
+      // the blank canvas. This is also where a driver-level WebGL shader
+      // compile failure (see the WEBGL_PACK note above) would surface on
+      // an affected GPU if the packing workaround didn't fully avoid it —
+      // we still only care about paying the shader-compile cost up front,
+      // not about getting a usable result from a blank frame, so any
+      // failure mode here is safe to ignore and let the real capture flow
+      // (which has its own timeout + error handling) be the source of
+      // truth for whether face detection actually works on this device.
     }
 
     onProgress?.('ready');
