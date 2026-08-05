@@ -12,6 +12,8 @@ import {
   saveVenueLayout, loadVenueLayout, listSavedVenues,
 } from '../utils/venueWalk';
 import { BetaBar } from '../components/BetaBar';
+import StepIndicator from '../components/StepIndicator';
+import DemoFeedback from '../components/DemoFeedback';
 
 // A guest is considered "arrived" once dead-reckoned distance drops below
 // this — close enough that remaining drift makes a finer number meaningless,
@@ -699,7 +701,9 @@ function SetupDone({ venueName, tables, onExit }) {
   );
 }
 
-function SetupFlow({ onDone }) {
+const SETUP_STEP_LABELS = ['Name venue', 'Walk & place tables', 'Review & save'];
+
+function SetupFlow({ onDone, onComplete }) {
   const [step, setStep] = useState('name'); // name -> walk -> floorplan -> done
   const [venueName, setVenueName] = useState('');
   const [savedTables, setSavedTables] = useState([]);
@@ -709,8 +713,11 @@ function SetupFlow({ onDone }) {
   // detection, not user-agent sniffing.
   const startWalkStep = () => setStep(motionSensorsSupported() ? 'walk' : 'floorplan');
 
+  const stepIdx = step === 'done' ? 2 : (step === 'walk' || step === 'floorplan') ? 1 : 0;
+
+  let content;
   if (step === 'name') {
-    return (
+    content = (
       <VenueNameStep
         title="Name this venue"
         subtitle="Used to save and later find this table layout on this device."
@@ -718,9 +725,8 @@ function SetupFlow({ onDone }) {
         onCancel={onDone}
       />
     );
-  }
-  if (step === 'walk') {
-    return (
+  } else if (step === 'walk') {
+    content = (
       <SetupWalk
         venueName={venueName}
         onFinish={(tables) => { setSavedTables(tables); setStep('done'); }}
@@ -728,17 +734,27 @@ function SetupFlow({ onDone }) {
         onSensorsUnavailable={() => setStep('floorplan')}
       />
     );
-  }
-  if (step === 'floorplan') {
-    return (
+  } else if (step === 'floorplan') {
+    content = (
       <FloorPlanSetup
         venueName={venueName}
         onFinish={(tables) => { setSavedTables(tables); setStep('done'); }}
         onCancel={onDone}
       />
     );
+  } else {
+    // Terminal step — an actual completion, not a cancel, so it hands off
+    // to onComplete (the feedback screen) rather than onDone (which just
+    // bails back to the landing screen from every other step above).
+    content = <SetupDone venueName={venueName} tables={savedTables} onExit={onComplete} />;
   }
-  return <SetupDone venueName={venueName} tables={savedTables} onExit={onDone} />;
+
+  return (
+    <>
+      <StepIndicator labels={SETUP_STEP_LABELS} index={stepIdx} />
+      {content}
+    </>
+  );
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -862,13 +878,18 @@ function FindWalk({ table, onDone, onCancel, onSensorsUnavailable }) {
   );
 }
 
-function FindFlow({ onDone }) {
-  const [step, setStep] = useState('venue'); // venue -> table -> walk -> floorplan -> arrived
+const FIND_STEP_LABELS = ['Choose venue', 'Choose table', 'Follow the arrow'];
+
+function FindFlow({ onDone, onComplete }) {
+  const [step, setStep] = useState('venue'); // venue -> table -> walk -> floorplan
   const [layout, setLayout] = useState(null);
   const [table, setTable] = useState(null);
 
+  const stepIdx = step === 'venue' ? 0 : step === 'table' ? 1 : 2;
+
+  let content;
   if (step === 'venue') {
-    return (
+    content = (
       <VenuePicker
         onPick={(venueId) => {
           const data = loadVenueLayout(venueId);
@@ -879,9 +900,8 @@ function FindFlow({ onDone }) {
         onCancel={onDone}
       />
     );
-  }
-  if (step === 'table') {
-    return (
+  } else if (step === 'table') {
+    content = (
       <TablePicker
         layout={layout}
         onPick={(t) => {
@@ -891,21 +911,27 @@ function FindFlow({ onDone }) {
         onCancel={() => setStep('venue')}
       />
     );
-  }
-  if (step === 'walk') {
-    return (
+  } else if (step === 'walk') {
+    content = (
       <FindWalk
         table={table}
-        onDone={onDone}
+        onDone={onComplete}
         onCancel={onDone}
         onSensorsUnavailable={() => setStep('floorplan')}
       />
     );
+  } else if (step === 'floorplan') {
+    content = <FloorPlanFind layout={layout} table={table} onExit={onComplete} />;
+  } else {
+    content = null;
   }
-  if (step === 'floorplan') {
-    return <FloorPlanFind layout={layout} table={table} onExit={onDone} />;
-  }
-  return null;
+
+  return (
+    <>
+      <StepIndicator labels={FIND_STEP_LABELS} index={stepIdx} />
+      {content}
+    </>
+  );
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -913,11 +939,19 @@ function FindFlow({ onDone }) {
 // ═══════════════════════════════════════════════════════════════════════════
 export default function VenueWalk() {
   const navigate = useNavigate();
-  const [mode, setMode] = useState('landing'); // landing | setup | find
+  const [mode, setMode] = useState('landing'); // landing | setup | find | feedback
+  const [feedbackLabel, setFeedbackLabel] = useState('');
 
   const handleBack = () => {
     if (mode === 'landing') navigate('/');
     else setMode('landing');
+  };
+
+  // Only real completions land here — cancel/back buttons throughout
+  // SetupFlow/FindFlow go straight to onDone (back to landing) instead.
+  const complete = (label) => {
+    setFeedbackLabel(label);
+    setMode('feedback');
   };
 
   return (
@@ -925,8 +959,21 @@ export default function VenueWalk() {
       {mode === 'landing' && (
         <LandingScreen onSetup={() => setMode('setup')} onFind={() => setMode('find')} />
       )}
-      {mode === 'setup' && <SetupFlow onDone={() => setMode('landing')} />}
-      {mode === 'find' && <FindFlow onDone={() => setMode('landing')} />}
+      {mode === 'setup' && (
+        <SetupFlow
+          onDone={() => setMode('landing')}
+          onComplete={() => complete('Venue Walk \u2014 Table Setup')}
+        />
+      )}
+      {mode === 'find' && (
+        <FindFlow
+          onDone={() => setMode('landing')}
+          onComplete={() => complete('Venue Walk \u2014 Find My Table')}
+        />
+      )}
+      {mode === 'feedback' && (
+        <DemoFeedback demoLabel={feedbackLabel} onExit={() => setMode('landing')} />
+      )}
     </PageChrome>
   );
 }
