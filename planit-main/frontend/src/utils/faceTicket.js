@@ -138,9 +138,34 @@ function videoFrameToCanvas(videoEl) {
     snapshotCanvas.width = w;
     snapshotCanvas.height = h;
   }
-  const ctx = snapshotCanvas.getContext('2d', { willReadFrequently: true });
+  // willReadFrequently forces Safari onto a software-composited 2D canvas,
+  // which is the right tradeoff for pixel-readback-heavy loops but is slow
+  // per-drawImage() on iOS specifically — it was quietly eating a real
+  // chunk of the detection timeout budget on every capture. We only ever
+  // draw once per detection call here (not read back pixels in a tight
+  // loop the way the name implies), so let the browser pick its normal,
+  // GPU-composited canvas instead.
+  const ctx = snapshotCanvas.getContext('2d');
   ctx.drawImage(videoEl, 0, 0, w, h);
   return snapshotCanvas;
+}
+
+// iOS Safari in particular can resolve <video>.play() before the element
+// has actually decoded a first real frame — videoWidth/videoHeight both
+// still read 0 for a short, variable window after that. A capture attempt
+// that lands in that window has nothing to detect on and, worse, burns
+// part of the fixed detection timeout waiting on stale/empty video before
+// face-api's own detection call ever starts. This polls for a real decoded
+// frame (bounded, short) so the timed detection call only ever starts once
+// there's actually something in the frame to find a face in.
+async function waitForVideoFrame(videoEl, timeoutMs = 2500) {
+  const step = 50;
+  let waited = 0;
+  while ((!videoEl?.videoWidth || !videoEl?.videoHeight) && waited < timeoutMs) {
+    await new Promise((r) => setTimeout(r, step));
+    waited += step;
+  }
+  return !!(videoEl?.videoWidth && videoEl?.videoHeight);
 }
 
 // face-api.js's internal input pipeline can, on some mobile browsers, stall
@@ -166,6 +191,7 @@ function withTimeout(promise, ms, label) {
  *  not run every animation frame, since it's the heaviest of the three nets. */
 export async function detectFaceWithDescriptor(videoEl) {
   if (!faceapiModule) throw new Error('Face models not loaded yet');
+  await waitForVideoFrame(videoEl);
   const frame = videoFrameToCanvas(videoEl);
   if (!frame) return null;
   const result = await withTimeout(
