@@ -31,7 +31,16 @@ const FEATURE_ID = 'venue-walk';
 
 // ─── Tuning constants ──────────────────────────────────────────────────────
 const DEFAULT_STRIDE_M = 0.7;          // average adult walking stride, meters
-const STEP_THRESHOLD = 1.6;            // m/s^2 above the noise-floor baseline to count as a step
+// Tuned for the phone held level and steady in the hand — the common case —
+// not swung at the arm or carried in a pocket. A level, steady grip produces
+// much smaller per-footfall acceleration spikes than a swinging arm or a
+// pocket (which gets more direct momentum transfer through the stride), so
+// a threshold calibrated for those carries misses gentle, normal walking
+// held level almost entirely: real steps just never cross a shake-sized
+// bar. 0.9 sits comfortably above hand-jitter/sensor noise (per the
+// steps-sample diagnostic logging below, that noise floor is a small
+// fraction of this) while still catching a level-carry footfall.
+const STEP_THRESHOLD = 0.9;            // m/s^2 above the noise-floor baseline to count as a step
 const STEP_DEBOUNCE_MS = 300;          // minimum gap between counted steps
 // The noise floor is a time-based EMA (exponential moving average), not a
 // fixed sample count. `devicemotion` fires at wildly different rates across
