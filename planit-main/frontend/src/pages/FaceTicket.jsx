@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import {
   ArrowLeft, ScanFace, QrCode, Fingerprint, ShieldAlert,
   Camera, CameraOff, RefreshCw, Download, CheckCircle2, XCircle,
-  ThumbsUp, ThumbsDown, AlertTriangle, Radar, Sparkles, Lock,
+  AlertTriangle, Radar, Sparkles, Lock,
   ChevronRight, Ticket, Loader2, ScanLine, Smartphone,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -13,6 +13,8 @@ import {
   cosineSimilarity, packTicketPayload, unpackTicketPayload, runLivenessCapture,
   formatConfidence,
 } from '../utils/faceTicket';
+import StepIndicator from '../components/StepIndicator';
+import DemoFeedback from '../components/DemoFeedback';
 
 // Match decision band — the spec suggests tuning around 0.6-0.7 depending on
 // the model's score distribution. face-api.js's recognition net tends to sit
@@ -290,8 +292,11 @@ function ModelLoadingCard({ stage, error, onRetry }) {
 // ═══════════════════════════════════════════════════════════════════════════
 // ENROLL FLOW
 // ═══════════════════════════════════════════════════════════════════════════
-function EnrollFlow({ onDone }) {
+const ENROLL_STEP_LABELS = ['Take selfie', 'Ticket details', 'Ticket ready'];
+
+function EnrollFlow({ onDone, onComplete }) {
   const [step, setStep] = useState('camera'); // camera -> processing -> details -> ticket
+  const enrollStepIdx = step === 'ticket' ? 2 : step === 'details' ? 1 : 0;
   const { videoRef, ready, error: camError, start, stop } = useCameraStream();
   const models = useFaceModels();
   const [captureError, setCaptureError] = useState(null);
@@ -375,6 +380,8 @@ function EnrollFlow({ onDone }) {
   // ── camera step ──
   if (step === 'camera') {
     return (
+      <>
+      <StepIndicator labels={ENROLL_STEP_LABELS} index={enrollStepIdx} />
       <div className="max-w-md mx-auto px-5 py-10">
         <h2 className="font-display font-bold text-2xl mb-1.5">Take your selfie</h2>
         <p className="text-neutral-500 text-sm mb-6">
@@ -417,12 +424,15 @@ function EnrollFlow({ onDone }) {
           {capturing ? 'Reading your face\u2026' : 'Capture'}
         </button>
       </div>
+      </>
     );
   }
 
   // ── details step ──
   if (step === 'details') {
     return (
+      <>
+      <StepIndicator labels={ENROLL_STEP_LABELS} index={enrollStepIdx} />
       <div className="max-w-md mx-auto px-5 py-10">
         <div className="flex items-center gap-2 text-teal-300 text-sm mb-1.5">
           <CheckCircle2 className="w-4 h-4" />
@@ -464,12 +474,15 @@ function EnrollFlow({ onDone }) {
           {generating ? 'Generating QR\u2026' : 'Generate my ticket'}
         </button>
       </div>
+      </>
     );
   }
 
   // ── ticket step ──
   if (step === 'ticket' && ticket) {
     return (
+      <>
+      <StepIndicator labels={ENROLL_STEP_LABELS} index={enrollStepIdx} />
       <div className="max-w-md mx-auto px-5 py-10">
         <div className="flex items-center gap-2 text-teal-300 text-sm mb-4">
           <Sparkles className="w-4 h-4" />
@@ -530,11 +543,12 @@ function EnrollFlow({ onDone }) {
             <Download className="w-4 h-4" />
             Download QR
           </button>
-          <button onClick={onDone} className="flex items-center justify-center gap-2 py-3 rounded-xl border border-white/15 text-white text-sm font-medium hover:bg-white/5">
+          <button onClick={onComplete} className="flex items-center justify-center gap-2 py-3 rounded-xl border border-white/15 text-white text-sm font-medium hover:bg-white/5">
             Done
           </button>
         </div>
       </div>
+      </>
     );
   }
 
@@ -856,26 +870,6 @@ function LivenessChip({ label, passed }) {
   );
 }
 
-function FeedbackWidget() {
-  const [sent, setSent] = useState(false);
-  if (sent) {
-    return <p className="text-center text-sm text-neutral-500 mt-6">Thanks for the feedback \u2014 it stays on your device too.</p>;
-  }
-  return (
-    <div className="mt-8 pt-6 border-t border-white/10 text-center">
-      <p className="text-sm text-neutral-400 mb-3">Did this work well for you?</p>
-      <div className="flex items-center justify-center gap-3">
-        <button onClick={() => setSent(true)} className="p-2.5 rounded-lg border border-white/10 hover:bg-white/5 text-teal-300">
-          <ThumbsUp className="w-4 h-4" />
-        </button>
-        <button onClick={() => setSent(true)} className="p-2.5 rounded-lg border border-white/10 hover:bg-white/5 text-rose-300">
-          <ThumbsDown className="w-4 h-4" />
-        </button>
-      </div>
-    </div>
-  );
-}
-
 function ResultScreen({ ticket, verify, onRescan, onExit }) {
   const liveQuantized = useMemo(() => quantizeEmbedding(verify.liveDescriptor), [verify.liveDescriptor]);
   const storedDescriptor = useMemo(
@@ -926,8 +920,6 @@ function ResultScreen({ ticket, verify, onRescan, onExit }) {
         Compared entirely on this device
       </div>
 
-      <FeedbackWidget />
-
       <div className="flex flex-col gap-3 mt-8">
         <button onClick={onRescan} className="flex items-center justify-center gap-2 py-3 rounded-xl bg-white text-black font-semibold text-sm">
           <RefreshCw className="w-4 h-4" />
@@ -941,24 +933,43 @@ function ResultScreen({ ticket, verify, onRescan, onExit }) {
   );
 }
 
-function ScanFlow({ onDone }) {
+const SCAN_STEP_LABELS = ['Scan QR', 'Confirm ticket', 'Verify face', 'Result'];
+
+function ScanFlow({ onDone, onComplete }) {
   const [step, setStep] = useState('qr'); // qr -> decoded -> camera -> result
   const [ticket, setTicket] = useState(null);
   const [verify, setVerify] = useState(null);
 
+  const stepIdx = { qr: 0, decoded: 1, camera: 2, result: 3 }[step] ?? 0;
+
+  let content;
   if (step === 'qr') {
-    return <QRScanStage onDecoded={(t) => { setTicket(t); setStep('decoded'); }} onCancel={onDone} />;
+    content = <QRScanStage onDecoded={(t) => { setTicket(t); setStep('decoded'); }} onCancel={onDone} />;
+  } else if (step === 'decoded') {
+    content = <DecodedTicketCard ticket={ticket} onVerify={() => setStep('camera')} onRescan={() => setStep('qr')} />;
+  } else if (step === 'camera') {
+    content = <VerifyCameraStage onResult={(v) => { setVerify(v); setStep('result'); }} onCancel={() => setStep('decoded')} />;
+  } else if (step === 'result') {
+    // A genuine completion — hands off to onComplete (feedback) rather
+    // than onDone, which the earlier steps use to cancel back to landing.
+    content = (
+      <ResultScreen
+        ticket={ticket}
+        verify={verify}
+        onRescan={() => { setTicket(null); setVerify(null); setStep('qr'); }}
+        onExit={onComplete}
+      />
+    );
+  } else {
+    content = null;
   }
-  if (step === 'decoded') {
-    return <DecodedTicketCard ticket={ticket} onVerify={() => setStep('camera')} onRescan={() => setStep('qr')} />;
-  }
-  if (step === 'camera') {
-    return <VerifyCameraStage onResult={(v) => { setVerify(v); setStep('result'); }} onCancel={() => setStep('decoded')} />;
-  }
-  if (step === 'result') {
-    return <ResultScreen ticket={ticket} verify={verify} onRescan={() => { setTicket(null); setVerify(null); setStep('qr'); }} onExit={onDone} />;
-  }
-  return null;
+
+  return (
+    <>
+      <StepIndicator labels={SCAN_STEP_LABELS} index={stepIdx} />
+      {content}
+    </>
+  );
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -966,11 +977,19 @@ function ScanFlow({ onDone }) {
 // ═══════════════════════════════════════════════════════════════════════════
 export default function FaceTicket() {
   const navigate = useNavigate();
-  const [mode, setMode] = useState('landing'); // landing | enroll | scan
+  const [mode, setMode] = useState('landing'); // landing | enroll | scan | feedback
+  const [feedbackLabel, setFeedbackLabel] = useState('');
 
   const handleBack = () => {
     if (mode === 'landing') navigate('/');
     else setMode('landing');
+  };
+
+  // Only real completions land here — cancel/back buttons throughout
+  // EnrollFlow/ScanFlow go straight to onDone (back to landing) instead.
+  const complete = (label) => {
+    setFeedbackLabel(label);
+    setMode('feedback');
   };
 
   return (
@@ -978,8 +997,21 @@ export default function FaceTicket() {
       {mode === 'landing' && (
         <LandingScreen onEnroll={() => setMode('enroll')} onScan={() => setMode('scan')} />
       )}
-      {mode === 'enroll' && <EnrollFlow onDone={() => setMode('landing')} />}
-      {mode === 'scan' && <ScanFlow onDone={() => setMode('landing')} />}
+      {mode === 'enroll' && (
+        <EnrollFlow
+          onDone={() => setMode('landing')}
+          onComplete={() => complete('Face Ticket \u2014 Enroll')}
+        />
+      )}
+      {mode === 'scan' && (
+        <ScanFlow
+          onDone={() => setMode('landing')}
+          onComplete={() => complete('Face Ticket \u2014 Scan & Verify')}
+        />
+      )}
+      {mode === 'feedback' && (
+        <DemoFeedback demoLabel={feedbackLabel} onExit={() => setMode('landing')} />
+      )}
     </PageChrome>
   );
 }
