@@ -89,6 +89,24 @@ function videoFrameToCanvas(videoEl) {
   return snapshotCanvas;
 }
 
+// face-api.js's internal input pipeline can, on some mobile browsers, stall
+// waiting on a video-readiness signal that never arrives — the promise just
+// never settles: no result, no error, no timeout. The canvas-snapshot input
+// above sidesteps the usual cause of that, but a detection call should never
+// be allowed to hang the UI forever regardless of what causes it, so every
+// call here is raced against a hard timeout. If it fires, the caller's normal
+// catch block runs and the person sees a real error instead of an infinite
+// "analyzing" spinner.
+const DETECTION_TIMEOUT_MS = 6000;
+
+function withTimeout(promise, ms, label) {
+  let timer;
+  const timeout = new Promise((_, reject) => {
+    timer = setTimeout(() => reject(new Error(`${label} timed out`)), ms);
+  });
+  return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
+}
+
 /** Full detection: box + 68 landmarks + 128-float descriptor. Used once, for
  *  the frame that actually becomes the ticket or the verification sample —
  *  not run every animation frame, since it's the heaviest of the three nets. */
@@ -96,10 +114,11 @@ export async function detectFaceWithDescriptor(videoEl) {
   if (!faceapiModule) throw new Error('Face models not loaded yet');
   const frame = videoFrameToCanvas(videoEl);
   if (!frame) return null;
-  const result = await faceapiModule
-    .detectSingleFace(frame, detectorOptions())
-    .withFaceLandmarks()
-    .withFaceDescriptor();
+  const result = await withTimeout(
+    faceapiModule.detectSingleFace(frame, detectorOptions()).withFaceLandmarks().withFaceDescriptor(),
+    DETECTION_TIMEOUT_MS,
+    'Face detection',
+  );
   return result || null;
 }
 
@@ -109,9 +128,11 @@ export async function detectFaceLandmarksOnly(videoEl) {
   if (!faceapiModule) throw new Error('Face models not loaded yet');
   const frame = videoFrameToCanvas(videoEl);
   if (!frame) return null;
-  const result = await faceapiModule
-    .detectSingleFace(frame, detectorOptions())
-    .withFaceLandmarks();
+  const result = await withTimeout(
+    faceapiModule.detectSingleFace(frame, detectorOptions()).withFaceLandmarks(),
+    DETECTION_TIMEOUT_MS,
+    'Face detection',
+  );
   return result || null;
 }
 
@@ -267,7 +288,18 @@ export async function runLivenessCapture(videoEl, { durationMs = 2800, intervalM
 
   while (performance.now() - start < durationMs) {
     const frameStart = performance.now();
-    const result = await detectFaceLandmarksOnly(videoEl);
+    // A single bad frame (a transient WebGL hiccup, a dropped texture read,
+    // our own timeout guard firing) must not kill the whole 2.8s sampling
+    // window — treat it the same as "no face this frame" and keep going.
+    // Losing one sample out of ~25 doesn't meaningfully change faceCoverage;
+    // letting the exception propagate out of this loop used to abort the
+    // capture entirely with no way to recover short of reloading the page.
+    let result = null;
+    try {
+      result = await detectFaceLandmarksOnly(videoEl);
+    } catch (err) {
+      console.warn('Liveness frame skipped:', err);
+    }
 
     if (result) {
       const ear = averageEAR(result.landmarks);
