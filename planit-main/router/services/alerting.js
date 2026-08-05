@@ -199,18 +199,43 @@ async function _sendNtfy({ title, body, priority, tags, actions, iconUrl, clickU
     if (actionList.length) ntfyPayload.actions = actionList;
   }
 
-  const headers = { 'Content-Type': 'application/json' };
+  const headers = { 'Content-Type': 'application/json', 'Connection': 'close' };
   if (process.env.NTFY_TOKEN) headers['Authorization'] = `Bearer ${process.env.NTFY_TOKEN}`;
 
   const requestBody = JSON.stringify(ntfyPayload);
 
-  try {
+  // A manual curl with this exact same JSON body against the same topic
+  // succeeds every time, and every reconstruction of this payload here
+  // (including adversarial input) has verified as valid JSON — so this
+  // isn't a malformed-body bug. What's left is a live-request difference
+  // between this process's outbound connection and a fresh curl. The two
+  // realistic causes are (a) a stale/reused keep-alive socket on the
+  // outbound connection pool occasionally sending a request Go's server
+  // reads as truncated or doubled-up, or (b) a transient hiccup on ntfy.sh
+  // itself. `Connection: close` forces a brand-new connection every call
+  // instead of reusing a pooled one, which directly rules out (a); a
+  // single bounded retry on failure covers (b) without risking duplicate
+  // notifications piling up (ntfy has no idempotency key here, so we only
+  // retry once, not in a loop).
+  async function attempt() {
     const res = await fetch(serverUrl, {
       method:  'POST',
       headers,
       body:    requestBody,
       signal:  AbortSignal.timeout(8000),
     });
+    return res;
+  }
+
+  try {
+    let res = await attempt();
+    if (!res.ok && res.status >= 500) {
+      // Only retry on server-side failure — a 400 (like JSON-invalid) will
+      // fail identically on retry since it's the same body, so retrying
+      // would just double the noise for a real bug. A 5xx is the one case
+      // where "try again" can plausibly succeed.
+      res = await attempt();
+    }
     if (!res.ok) {
       const text = await res.text().catch(() => '');
       // Log exactly what we sent alongside what ntfy said back — this is a
