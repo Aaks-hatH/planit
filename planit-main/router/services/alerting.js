@@ -202,16 +202,31 @@ async function _sendNtfy({ title, body, priority, tags, actions, iconUrl, clickU
   const headers = { 'Content-Type': 'application/json' };
   if (process.env.NTFY_TOKEN) headers['Authorization'] = `Bearer ${process.env.NTFY_TOKEN}`;
 
+  const requestBody = JSON.stringify(ntfyPayload);
+
   try {
     const res = await fetch(serverUrl, {
       method:  'POST',
       headers,
-      body:    JSON.stringify(ntfyPayload),
+      body:    requestBody,
       signal:  AbortSignal.timeout(8000),
     });
     if (!res.ok) {
       const text = await res.text().catch(() => '');
+      // Log exactly what we sent alongside what ntfy said back — this is a
+      // "must be valid JSON" error from ntfy's own parser, which every
+      // local reconstruction of this payload (including deliberately
+      // adversarial input: emoji cut mid-surrogate-pair, control chars,
+      // etc.) fails to reproduce; JSON.stringify()'ing this exact shape has
+      // never produced invalid JSON in testing. Logging the real outgoing
+      // body — server URL, byte length, and a hash — turns the next
+      // occurrence into a byte-level comparison instead of another guess:
+      // either the logged body itself doesn't parse (a genuine bug here
+      // we've missed) or it does (pointing at something ntfy-side: auth,
+      // rate limiting, a transient error misreporting its own code).
       console.error(`[alert:ntfy] HTTP ${res.status} — ${text.slice(0, 200)}`);
+      console.error(`[alert:ntfy] target=${serverUrl} bodyBytes=${Buffer.byteLength(requestBody, 'utf8')} bodyValid=${(() => { try { JSON.parse(requestBody); return true; } catch (e) { return `NO: ${e.message}`; } })()}`);
+      console.error(`[alert:ntfy] body=${requestBody.slice(0, 500)}`);
     }
   } catch (err) {
     console.error('[alert:ntfy] Error:', err.message);
