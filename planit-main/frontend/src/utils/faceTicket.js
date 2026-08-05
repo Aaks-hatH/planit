@@ -46,8 +46,30 @@ export async function loadFaceModels(onProgress) {
     await faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL);
     onProgress?.('embedding');
     await faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL);
-    onProgress?.('ready');
 
+    // Warm-up pass — the FIRST inference through a freshly loaded tfjs model
+    // pays a one-time cost to compile WebGL shader programs. On a desktop
+    // GPU that's under a second; on a mid-range phone GPU it can run past
+    // our 6s detection timeout, which is what actually produces "Something
+    // went wrong reading your face" on someone's very first capture tap.
+    // Running one throwaway detection here — against a blank canvas, before
+    // the person ever sees the Capture button light up — moves that cost
+    // into the loading screen (uncapped) instead of the timed capture call.
+    onProgress?.('warmup');
+    try {
+      const warm = document.createElement('canvas');
+      warm.width = 224;
+      warm.height = 224;
+      await faceapi
+        .detectSingleFace(warm, new faceapi.TinyFaceDetectorOptions({ inputSize: 224, scoreThreshold: 0.5 }))
+        .withFaceLandmarks()
+        .withFaceDescriptor();
+    } catch {
+      // Expected — a blank canvas has no face. We only care about the
+      // shader-compile side effect, not the (nonexistent) result.
+    }
+
+    onProgress?.('ready');
     return faceapi;
   })();
 
@@ -97,7 +119,7 @@ function videoFrameToCanvas(videoEl) {
 // call here is raced against a hard timeout. If it fires, the caller's normal
 // catch block runs and the person sees a real error instead of an infinite
 // "analyzing" spinner.
-const DETECTION_TIMEOUT_MS = 6000;
+const DETECTION_TIMEOUT_MS = 10000;
 
 function withTimeout(promise, ms, label) {
   let timer;
