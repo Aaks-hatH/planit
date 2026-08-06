@@ -257,13 +257,17 @@ export function cosineSimilarity(a, b) {
 
 // ─── Base64 helpers (Uint8Array <-> string, no Node Buffer) ───────────────
 
-function bytesToBase64(bytes) {
+// Exported so utils/eventRoster.js (Face Ticket event/roster mode) can reuse
+// the exact same encoding for embeddings it persists to localStorage and
+// packs into event-ticket QR payloads, instead of drifting out of sync with
+// a second implementation.
+export function bytesToBase64(bytes) {
   let bin = '';
   for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
   return btoa(bin);
 }
 
-function base64ToBytes(b64) {
+export function base64ToBytes(b64) {
   const bin = atob(b64);
   const bytes = new Uint8Array(bin.length);
   for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
