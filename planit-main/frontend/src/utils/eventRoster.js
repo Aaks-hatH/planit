@@ -237,6 +237,22 @@ export function packEventTicketPayload({ eventId, eventName, attendee }) {
   return JSON.stringify(obj);
 }
 
+/** Renders one attendee's fallback ticket as a QR code data URL. Shared by
+ *  the enrollment flow (so a QR is ready the moment a guest is signed up),
+ *  the per-attendee ticket panel on the Manage screen, and the "all tickets"
+ *  view. `width` is left adjustable since a single full-size ticket and a
+ *  printable grid of dozens want different pixel sizes. */
+export async function generateAttendeeQrDataUrl({ eventId, eventName, attendee, width = 320 }) {
+  const QRCode = (await import('qrcode')).default;
+  const payload = packEventTicketPayload({ eventId, eventName, attendee });
+  return QRCode.toDataURL(payload, {
+    errorCorrectionLevel: 'H',
+    margin: 1,
+    width,
+    color: { dark: '#0a0714ff', light: '#ffffffff' },
+  });
+}
+
 export function unpackEventTicketPayload(text) {
   let obj;
   try {
