@@ -33,7 +33,19 @@ let faceapiModule = null;
  *  same load. Never trains or fine-tunes anything — these are the stock
  *  pretrained weights shipped by face-api.js. */
 export async function loadFaceModels(onProgress) {
-  if (modelsLoadingPromise) return modelsLoadingPromise;
+  if (modelsLoadingPromise) {
+    // Models are already loading or already loaded (e.g. another Face
+    // Ticket screen — enroll, verify, guided check-in — triggered the load
+    // earlier this session). We reuse that same promise so we never fetch
+    // or warm up twice, but this caller's `onProgress` was never wired into
+    // the original load, so its local "ready" state would otherwise never
+    // flip to true even though the models are perfectly usable. Explicitly
+    // signal 'ready' here once the (possibly-already-resolved) promise
+    // settles so every caller's readiness state stays correct.
+    const faceapi = await modelsLoadingPromise;
+    onProgress?.('ready');
+    return faceapi;
+  }
 
   modelsLoadingPromise = (async () => {
     onProgress?.('engine');
