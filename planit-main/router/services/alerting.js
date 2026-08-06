@@ -60,13 +60,19 @@ const SEVERITY_EMOJI = {
   resolved: '✅',
 };
 
+// ntfy's JSON publish API wants priority as a number (1-5), not the string
+// name — confirmed by testing: {"priority":"low"} gets rejected by ntfy.sh
+// as invalid JSON (error 40024), while {"priority":2} succeeds. The string
+// names (low/default/high/urgent/min) are only accepted via the X-Priority
+// HTTP header form, not in the JSON body. Mapping straight to ntfy's
+// documented numeric IDs: 5=max/urgent, 4=high, 3=default, 2=low, 1=min.
 const NTFY_PRIORITY = {
-  critical: 'urgent',
-  high:     'high',
-  medium:   'default',
-  low:      'low',
-  info:     'min',
-  resolved: 'default',
+  critical: 5,
+  high:     4,
+  medium:   3,
+  low:      2,
+  info:     1,
+  resolved: 3,
 };
 
 // Discord user to mention on every alert — set this to your Discord user ID
@@ -182,7 +188,7 @@ async function _sendNtfy({ title, body, priority, tags, actions, iconUrl, clickU
     topic,
     title,
     message:  String(body).slice(0, 4096),
-    priority: priority || 'default',
+    priority: priority || 3,
   };
 
   if (tags)     ntfyPayload.tags  = Array.isArray(tags) ? tags : tags.split(',').map(t => t.trim());
@@ -410,7 +416,7 @@ async function alertBugReport(report) {
   await _sendNtfy({
     title:    `[${severity.toUpperCase()}] ${(report.summary || '').slice(0, 100)}`,
     body:     ntfyBody,
-    priority: NTFY_PRIORITY[severity] || 'default',
+    priority: NTFY_PRIORITY[severity] || 3,
     tags:     ['bug', report.category || 'bug'],
     actions:  ntfyActions.join('; ') || undefined,
     iconUrl:  APP_ICON_URL,
@@ -706,8 +712,8 @@ async function alertIncident({ incident, update, type = 'created' }) {
     title:    fullTitle.slice(0, 130),
     body:     ntfyBody,
     priority: isCreated
-      ? (severity === 'critical' ? 'urgent' : severity === 'major' ? 'high' : 'default')
-      : (isResolved ? 'default' : 'high'),
+      ? (severity === 'critical' ? 5 : severity === 'major' ? 4 : 3)
+      : (isResolved ? 3 : 4),
     tags:    ntfyTags,
     actions: incNtfyActions.join('; ') || undefined,
     iconUrl: APP_ICON_URL,
