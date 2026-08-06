@@ -202,6 +202,27 @@ export async function detectFaceWithDescriptor(videoEl) {
   return result || null;
 }
 
+/** Multi-face detection: box + landmarks + descriptor for EVERY face in the
+ *  current frame, not just one. Used by the kiosk/walk-up auto-scan check-in
+ *  mode, where several guests can be in view of a stationary camera at once
+ *  and the UI needs to pick out whichever one it's "focusing" on. Heavier
+ *  than detectFaceWithDescriptor (runs the descriptor net once per face
+ *  found), so callers should throttle how often this runs rather than
+ *  calling it every animation frame. Returns [] on no faces / no frame yet,
+ *  never null, so callers can iterate without a null check. */
+export async function detectAllFacesWithDescriptors(videoEl) {
+  if (!faceapiModule) throw new Error('Face models not loaded yet');
+  await waitForVideoFrame(videoEl);
+  const frame = videoFrameToCanvas(videoEl);
+  if (!frame) return [];
+  const results = await withTimeout(
+    faceapiModule.detectAllFaces(frame, detectorOptions()).withFaceLandmarks().withFaceDescriptors(),
+    DETECTION_TIMEOUT_MS,
+    'Face detection',
+  );
+  return results || [];
+}
+
 /** Lightweight detection: box + landmarks only, no descriptor. Used for the
  *  liveness sampling loop where we need many quick frames. */
 export async function detectFaceLandmarksOnly(videoEl) {
