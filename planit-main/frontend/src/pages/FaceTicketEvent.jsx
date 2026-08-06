@@ -1041,6 +1041,26 @@ function KioskCheckInFlow({ event, onExit }) {
   const pendingRef = useRef({ id: null, count: 0 });
   const requireQR = event.settings?.requireQR || 'auto';
 
+  // scanTick runs as a self-perpetuating setTimeout chain kicked off once
+  // from the mount effect below (scheduleNext(300) -> setTimeout(scanTick)
+  // -> scanTick's own scheduleNext() call at the end -> setTimeout(scanTick)
+  // -> ...). Because that chain is only ever re-armed from *inside* the
+  // previous scanTick call, every scanTick in the chain is the SAME closure
+  // captured at mount time — it never picks up a fresh closure from a later
+  // render the way a normal event handler would. Reading `models.ready` or
+  // `ready` (camera) directly here would forever see their mount-time values
+  // (both false, since loading hasn't finished yet at t=0), so the loop
+  // would reschedule itself forever and never reach an actual detection
+  // call — no error, just silent inaction. Refs mirrored via effects below
+  // give scanTick a live read instead of a frozen snapshot.
+  const modelsReadyRef = useRef(false);
+  const cameraReadyRef = useRef(false);
+  const stageSizeRef = useRef({ w: 0, h: 0 });
+
+  useEffect(() => { modelsReadyRef.current = models.ready; }, [models.ready]);
+  useEffect(() => { cameraReadyRef.current = ready; }, [ready]);
+  useEffect(() => { stageSizeRef.current = stageSize; }, [stageSize]);
+
   const freshEvent = () => getEvent(event.id) || event;
 
   useEffect(() => {
@@ -1074,7 +1094,7 @@ function KioskCheckInFlow({ event, onExit }) {
 
   const scanTick = async () => {
     if (!mountedRef.current || pausedRef.current || runningRef.current) return;
-    if (!models.ready || !ready) { scheduleNext(); return; }
+    if (!modelsReadyRef.current || !cameraReadyRef.current) { scheduleNext(); return; }
     runningRef.current = true;
     try {
       const faces = await detectAllFacesWithDescriptors(videoRef.current);
@@ -1094,7 +1114,7 @@ function KioskCheckInFlow({ event, onExit }) {
       const focused = byArea[0];
 
       setOverlayBoxes(faces.map((f) => ({
-        rect: mapBoxToOverlay(f.detection.box, videoW, videoH, stageSize.w, stageSize.h),
+        rect: mapBoxToOverlay(f.detection.box, videoW, videoH, stageSizeRef.current.w, stageSizeRef.current.h),
         focused: f === focused,
       })).filter((b) => b.rect));
 
