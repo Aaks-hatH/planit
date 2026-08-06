@@ -2,21 +2,21 @@ import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import {
   Camera, CameraOff, Loader2, ScanFace, Users, Plus, ChevronLeft,
   CheckCircle2, XCircle, AlertTriangle, Trash2, Download, Upload, Settings2,
-  QrCode, Search, ArrowRight, Radar, LogIn,
+  QrCode, Search, ArrowRight, Radar, LogIn, Focus, Printer, LayoutGrid,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useCameraStream } from '../hooks/useCameraStream';
 import FaceModeMobileNotice from '../components/FaceModeMobileNotice';
 import StepIndicator from '../components/StepIndicator';
 import {
-  loadFaceModels, detectFaceWithDescriptor, quantizeEmbedding, runLivenessCapture,
-  formatConfidence,
+  loadFaceModels, detectFaceWithDescriptor, detectAllFacesWithDescriptors,
+  quantizeEmbedding, runLivenessCapture, formatConfidence,
 } from '../utils/faceTicket';
 import {
   listEvents, getEvent, createEvent, updateEventSettings, deleteEvent,
   addAttendee, removeAttendee, setCheckedIn, matchAgainstRoster,
-  packEventTicketPayload, unpackEventTicketPayload, exportEventFile, importEventFile,
-  DEFAULT_MATCH_THRESHOLD,
+  unpackEventTicketPayload, generateAttendeeQrDataUrl,
+  exportEventFile, importEventFile, DEFAULT_MATCH_THRESHOLD,
 } from '../utils/eventRoster';
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -160,9 +160,14 @@ function EventHub({ events, onNew, onOpen, onCheckIn, onDelete, onImport, onExit
                 </div>
               </div>
               <div className="flex items-center gap-2 shrink-0">
-                <button onClick={() => onCheckIn(ev.id)} disabled={ev.attendeeCount === 0}
+                <button onClick={() => onCheckIn(ev.id, 'checkin')} disabled={ev.attendeeCount === 0}
                   className="px-3 py-2 rounded-lg bg-white text-black text-xs font-semibold disabled:opacity-30 disabled:cursor-not-allowed">
                   Check in
+                </button>
+                <button onClick={() => onCheckIn(ev.id, 'kiosk')} disabled={ev.attendeeCount === 0}
+                  title="Kiosk mode — auto-scan, beta"
+                  className="p-2 rounded-lg border border-[#8B7FFF]/30 text-[#c4bcff] hover:bg-[#8B7FFF]/10 disabled:opacity-30 disabled:cursor-not-allowed">
+                  <Focus className="w-3.5 h-3.5" />
                 </button>
                 <button onClick={() => onOpen(ev.id)} className="px-3 py-2 rounded-lg border border-white/15 text-xs text-neutral-300 hover:bg-white/5">
                   Manage
@@ -250,6 +255,8 @@ function AddAttendeeFlow({ event, onDone }) {
   const [form, setForm] = useState({ name: '', seatId: '' });
   const [savedCount, setSavedCount] = useState(0);
   const [saving, setSaving] = useState(false);
+  const [lastAttendee, setLastAttendee] = useState(null);
+  const [lastQr, setLastQr] = useState(null);
 
   useEffect(() => {
     models.load();
@@ -286,13 +293,22 @@ function AddAttendeeFlow({ event, onDone }) {
     setSaving(false);
     if (!attendee) { toast.error('Could not save this guest on this device.'); return; }
     setSavedCount((c) => c + 1);
+    setLastAttendee(attendee);
+    setLastQr(null);
     setStep('saved');
+    // Generate this guest's fallback ticket QR right away, as they sign up,
+    // rather than making the organizer come back for it later from Manage.
+    generateAttendeeQrDataUrl({ eventId: event.id, eventName: event.name, attendee, width: 280 })
+      .then((url) => setLastQr(url))
+      .catch((err) => console.error('Could not render ticket QR', err));
   };
 
   const addAnother = () => {
     setForm({ name: '', seatId: '' });
     setQuantized(null);
     setCaptureError(null);
+    setLastAttendee(null);
+    setLastQr(null);
     setStep('camera');
     start();
   };
@@ -393,7 +409,24 @@ function AddAttendeeFlow({ event, onDone }) {
           <CheckCircle2 className="w-8 h-8 text-teal-300" />
         </div>
         <h2 className="font-display font-bold text-2xl mb-1.5">{form.name} added</h2>
-        <p className="text-neutral-500 text-sm mb-8">{savedCount} guest{savedCount === 1 ? '' : 's'} enrolled for {event.name} so far.</p>
+        <p className="text-neutral-500 text-sm mb-6">{savedCount} guest{savedCount === 1 ? '' : 's'} enrolled for {event.name} so far.</p>
+
+        {lastAttendee && (
+          <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4 mb-8">
+            <p className="text-[11px] font-mono uppercase tracking-widest text-neutral-500 mb-3">
+              Fallback ticket &middot; beta
+            </p>
+            <div className="bg-white rounded-xl p-3 mb-3 flex items-center justify-center min-h-[160px]">
+              {lastQr ? <img src={lastQr} alt={`QR ticket for ${lastAttendee.name}`} className="w-full max-w-[200px]" /> : <Loader2 className="w-6 h-6 animate-spin text-neutral-400" />}
+            </div>
+            <p className="text-xs text-neutral-500 leading-relaxed">
+              Only needed if face check-in can&rsquo;t confidently confirm {lastAttendee.name} at the door.
+              This demo ticket isn&rsquo;t a real access credential &mdash; screenshot, print, or hand it to
+              the guest now if you want it ready ahead of time. You can always re-open it later from Manage.
+            </p>
+          </div>
+        )}
+
         <div className="flex flex-col gap-3">
           <button onClick={addAnother} className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl bg-[#8B7FFF] text-[#0a0714] font-bold text-sm">
             <Plus className="w-4 h-4" />
@@ -413,6 +446,7 @@ function AddAttendeeFlow({ event, onDone }) {
 // ═══════════════════════════════════════════════════════════════════════════
 function EventManageScreen({ event, onBack, onAddMore, onCheckIn, onRefresh }) {
   const [ticketFor, setTicketFor] = useState(null); // attendee id showing its fallback QR
+  const [showAllTickets, setShowAllTickets] = useState(false);
 
   const setRequireQR = (value) => {
     updateEventSettings(event.id, { requireQR: value });
@@ -456,9 +490,17 @@ function EventManageScreen({ event, onBack, onAddMore, onCheckIn, onRefresh }) {
         <button onClick={onAddMore} className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#8B7FFF] text-[#0a0714] font-bold text-sm">
           <Plus className="w-4 h-4" /> Add guests
         </button>
-        <button onClick={() => onCheckIn(event.id)} disabled={event.attendees.length === 0}
+        <button onClick={() => onCheckIn(event.id, 'checkin')} disabled={event.attendees.length === 0}
           className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white text-black font-bold text-sm disabled:opacity-30">
           <LogIn className="w-4 h-4" /> Start check-in
+        </button>
+        <button onClick={() => onCheckIn(event.id, 'kiosk')} disabled={event.attendees.length === 0}
+          className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-[#8B7FFF]/40 bg-[#8B7FFF]/10 text-[#c4bcff] font-semibold text-sm disabled:opacity-30">
+          <Focus className="w-4 h-4" /> Kiosk mode <span className="text-[10px] font-mono uppercase text-[#c4bcff]/60">beta</span>
+        </button>
+        <button onClick={() => setShowAllTickets(true)} disabled={event.attendees.length === 0}
+          className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-white/15 text-sm text-neutral-300 hover:bg-white/5 disabled:opacity-30">
+          <LayoutGrid className="w-4 h-4" /> View all QR codes
         </button>
         <button onClick={() => exportEventFile(event)} className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-white/15 text-sm text-neutral-300 hover:bg-white/5">
           <Download className="w-4 h-4" /> Export event file
@@ -494,6 +536,80 @@ function EventManageScreen({ event, onBack, onAddMore, onCheckIn, onRefresh }) {
       {ticketFor && (
         <AttendeeTicketPanel event={event} attendee={event.attendees.find((a) => a.id === ticketFor)} onClose={() => setTicketFor(null)} />
       )}
+      {showAllTickets && (
+        <AllTicketsPanel event={event} onClose={() => setShowAllTickets(false)} />
+      )}
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// ALL TICKETS — every attendee's fallback QR at once, for printing/handing
+// out as people get signed up rather than pulling each one up individually.
+// ═══════════════════════════════════════════════════════════════════════════
+function AllTicketsPanel({ event, onClose }) {
+  const [qrs, setQrs] = useState({}); // attendeeId -> dataUrl | 'error'
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      for (const attendee of event.attendees) {
+        if (cancelled) return;
+        try {
+          const url = await generateAttendeeQrDataUrl({ eventId: event.id, eventName: event.name, attendee, width: 260 });
+          if (!cancelled) setQrs((prev) => ({ ...prev, [attendee.id]: url }));
+        } catch (err) {
+          console.error('Could not render ticket QR', err);
+          if (!cancelled) setQrs((prev) => ({ ...prev, [attendee.id]: 'error' }));
+        }
+      }
+    })();
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [event.id]);
+
+  const readyCount = Object.keys(qrs).length;
+
+  return (
+    <div className="fixed inset-0 bg-[#05050f] z-50 overflow-y-auto">
+      <div className="max-w-4xl mx-auto px-5 py-8 print:px-0 print:py-0">
+        <div className="flex items-center justify-between mb-2 print:hidden">
+          <button onClick={onClose} className="flex items-center gap-1.5 text-neutral-400 hover:text-white text-sm -ml-1">
+            <ChevronLeft className="w-4 h-4" /> Back to manage
+          </button>
+          <button onClick={() => window.print()} disabled={readyCount < event.attendees.length}
+            className="flex items-center gap-2 px-3.5 py-2 rounded-lg bg-white text-black text-xs font-semibold disabled:opacity-40">
+            <Printer className="w-3.5 h-3.5" /> Print all
+          </button>
+        </div>
+        <h2 className="font-display font-bold text-2xl mb-1.5 print:text-black">{event.name} &mdash; all tickets</h2>
+        <div className="flex items-start gap-2 text-xs text-amber-300 bg-amber-400/10 border border-amber-400/20 rounded-lg px-3 py-2.5 mb-6 print:hidden">
+          <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
+          <span>
+            Beta demo tickets, not a real ticketing system &mdash; these QR codes are only a
+            fallback for when face check-in can&rsquo;t confidently confirm someone at the door.
+            Generated on this device only ({readyCount}/{event.attendees.length} rendered).
+          </span>
+        </div>
+
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 print:grid-cols-2 print:gap-6">
+          {event.attendees.map((a) => (
+            <div key={a.id} className="rounded-xl border border-white/10 bg-white/[0.03] p-3 text-center print:break-inside-avoid print:border-black/20">
+              <div className="bg-white rounded-lg p-2 mb-2 flex items-center justify-center min-h-[140px]">
+                {qrs[a.id] && qrs[a.id] !== 'error' ? (
+                  <img src={qrs[a.id]} alt={`QR ticket for ${a.name}`} className="w-full max-w-[160px]" />
+                ) : qrs[a.id] === 'error' ? (
+                  <XCircle className="w-6 h-6 text-rose-400" />
+                ) : (
+                  <Loader2 className="w-5 h-5 animate-spin text-neutral-400" />
+                )}
+              </div>
+              <div className="text-sm font-medium truncate print:text-black">{a.name}</div>
+              <div className="text-[11px] text-neutral-500 font-mono print:text-neutral-600">{a.seatId || 'no seat'}</div>
+            </div>
+          ))}
+        </div>
+      </div>
     </div>
   );
 }
@@ -502,12 +618,9 @@ function AttendeeTicketPanel({ event, attendee, onClose }) {
   const [qrDataUrl, setQrDataUrl] = useState(null);
   useEffect(() => {
     let cancelled = false;
-    (async () => {
-      const QRCode = (await import('qrcode')).default;
-      const payload = packEventTicketPayload({ eventId: event.id, eventName: event.name, attendee });
-      const url = await QRCode.toDataURL(payload, { errorCorrectionLevel: 'H', margin: 1, width: 320, color: { dark: '#0a0714ff', light: '#ffffffff' } });
-      if (!cancelled) setQrDataUrl(url);
-    })();
+    generateAttendeeQrDataUrl({ eventId: event.id, eventName: event.name, attendee })
+      .then((url) => { if (!cancelled) setQrDataUrl(url); })
+      .catch((err) => console.error('Could not render ticket QR', err));
     return () => { cancelled = true; };
   }, [event.id, event.name, attendee]);
 
@@ -875,10 +988,357 @@ function CheckInFlow({ event, onExit, onComplete }) {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
+// KIOSK / WALK-UP MODE — unattended big-screen check-in. The camera runs
+// continuously and scans on its own (no per-guest button tap); whoever it's
+// "focusing on" gets matched against the roster automatically. A confident
+// match auto-checks the guest in on screen. When the face check can't
+// confidently tell who it's looking at, it says so on screen and asks that
+// person to scan their QR ticket instead \u2014 the guest drives that step
+// themselves, since nobody is standing at a kiosk to tap Start for them.
+//
+// Still beta: no liveness check runs here (there's no discrete "hold
+// still" moment the way the guided flow has one), so a confident match is
+// only ever acted on after it repeats on two scan cycles in a row for the
+// same person, as a cheap guard against a single noisy frame.
+// ═══════════════════════════════════════════════════════════════════════════
+const KIOSK_SCAN_INTERVAL_MS = 900;
+const KIOSK_CONFIRM_STREAK = 2;
+const KIOSK_FEED_LIMIT = 6;
+
+/** Maps a raw face-api box (in the camera's native, unmirrored pixel space)
+ *  onto the on-screen video element, matching the object-cover crop and the
+ *  horizontal mirror the <video> is displayed with, so the overlay box lands
+ *  exactly on the face it describes regardless of container size. */
+function mapBoxToOverlay(box, videoW, videoH, containerW, containerH) {
+  if (!videoW || !videoH || !containerW || !containerH) return null;
+  const scale = Math.max(containerW / videoW, containerH / videoH);
+  const offsetX = (containerW - videoW * scale) / 2;
+  const offsetY = (containerH - videoH * scale) / 2;
+  const dispX = box.x * scale + offsetX;
+  const dispY = box.y * scale + offsetY;
+  const dispW = box.width * scale;
+  const dispH = box.height * scale;
+  return { left: containerW - dispX - dispW, top: dispY, width: dispW, height: dispH };
+}
+
+function KioskCheckInFlow({ event, onExit }) {
+  const { videoRef, ready, error: camError, start, stop } = useCameraStream();
+  const models = useFaceModels();
+  const stageRef = useRef(null);
+  const [stageSize, setStageSize] = useState({ w: 0, h: 0 });
+  const [overlayBoxes, setOverlayBoxes] = useState([]);
+  const [status, setStatus] = useState({ mode: 'idle' });
+  const [feed, setFeed] = useState([]);
+  const [sessionCount, setSessionCount] = useState(0);
+  const [qrModal, setQrModal] = useState(null); // { candidate, similarity } | null
+  const [manualOpen, setManualOpen] = useState(false);
+  const [issue, setIssue] = useState(null);
+
+  const mountedRef = useRef(true);
+  const runningRef = useRef(false);
+  const pausedRef = useRef(false); // true while the QR fallback modal owns the camera
+  const timerRef = useRef(null);
+  const pendingRef = useRef({ id: null, count: 0 });
+  const requireQR = event.settings?.requireQR || 'auto';
+
+  const freshEvent = () => getEvent(event.id) || event;
+
+  useEffect(() => {
+    mountedRef.current = true;
+    models.load();
+    start();
+    scheduleNext(300);
+    return () => { mountedRef.current = false; clearTimeout(timerRef.current); stop(); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    const el = stageRef.current;
+    if (!el || typeof ResizeObserver === 'undefined') return;
+    const ro = new ResizeObserver((entries) => {
+      const box = entries[0]?.contentRect;
+      if (box) setStageSize({ w: box.width, h: box.height });
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
+  const scheduleNext = (delay = KIOSK_SCAN_INTERVAL_MS) => {
+    clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(scanTick, delay);
+  };
+
+  const pushFeed = (name) => {
+    setFeed((f) => [{ name, at: Date.now() }, ...f].slice(0, KIOSK_FEED_LIMIT));
+  };
+
+  const scanTick = async () => {
+    if (!mountedRef.current || pausedRef.current || runningRef.current) return;
+    if (!models.ready || !ready) { scheduleNext(); return; }
+    runningRef.current = true;
+    try {
+      const faces = await detectAllFacesWithDescriptors(videoRef.current);
+      const videoW = videoRef.current?.videoWidth || 0;
+      const videoH = videoRef.current?.videoHeight || 0;
+
+      if (!faces.length) {
+        setOverlayBoxes([]);
+        setStatus({ mode: 'idle' });
+        pendingRef.current = { id: null, count: 0 };
+        scheduleNext();
+        return;
+      }
+
+      const byArea = [...faces].sort((a, b) =>
+        (b.detection.box.width * b.detection.box.height) - (a.detection.box.width * a.detection.box.height));
+      const focused = byArea[0];
+
+      setOverlayBoxes(faces.map((f) => ({
+        rect: mapBoxToOverlay(f.detection.box, videoW, videoH, stageSize.w, stageSize.h),
+        focused: f === focused,
+      })).filter((b) => b.rect));
+
+      const roster = freshEvent().attendees;
+      const match = matchAgainstRoster(focused.descriptor, roster, { threshold: DEFAULT_MATCH_THRESHOLD });
+      const mustAskQR = requireQR === 'always' || (requireQR === 'auto' && !match.confident);
+
+      if (requireQR !== 'always' && match.confident) {
+        const attendee = match.top.attendee;
+        if (attendee.checkedIn) {
+          setStatus({ mode: 'already', attendee });
+          pendingRef.current = { id: null, count: 0 };
+        } else {
+          const streak = pendingRef.current.id === attendee.id ? pendingRef.current.count + 1 : 1;
+          pendingRef.current = { id: attendee.id, count: streak };
+          if (streak >= KIOSK_CONFIRM_STREAK) {
+            setCheckedIn(event.id, attendee.id, true);
+            setSessionCount((c) => c + 1);
+            pushFeed(attendee.name);
+            setStatus({ mode: 'confirmed', attendee });
+            pendingRef.current = { id: null, count: 0 };
+          } else {
+            setStatus({ mode: 'matching', attendee, similarity: match.top.similarity });
+          }
+        }
+      } else if (mustAskQR) {
+        pendingRef.current = { id: null, count: 0 };
+        setStatus({ mode: 'need-qr', candidate: match.top?.attendee || null, similarity: match.top?.similarity ?? null });
+      } else {
+        pendingRef.current = { id: null, count: 0 };
+        setStatus({ mode: 'no-match' });
+      }
+    } catch (err) {
+      console.error('Kiosk scan failed:', err);
+    } finally {
+      runningRef.current = false;
+      if (mountedRef.current && !pausedRef.current) scheduleNext();
+    }
+  };
+
+  const openQrModal = () => {
+    pausedRef.current = true;
+    clearTimeout(timerRef.current);
+    stop();
+    setQrModal({ candidate: status.candidate || null, similarity: status.similarity ?? null });
+  };
+
+  const closeQrModal = () => {
+    setQrModal(null);
+    setStatus({ mode: 'idle' });
+    pausedRef.current = false;
+    start();
+    scheduleNext(300);
+  };
+
+  const handleQRDecoded = (parsed) => {
+    const roster = freshEvent().attendees;
+    const attendee = roster.find((a) => a.id === parsed.attendeeId);
+    if (!attendee) {
+      setIssue('That ticket doesn\u2019t match anyone on this event\u2019s roster.');
+      closeQrModal();
+      return;
+    }
+    if (!attendee.checkedIn) {
+      setCheckedIn(event.id, attendee.id, true);
+      setSessionCount((c) => c + 1);
+      pushFeed(attendee.name);
+      toast.success(`${attendee.name} checked in`);
+    } else {
+      toast(`${attendee.name} was already checked in`);
+    }
+    closeQrModal();
+  };
+
+  const manualCheckIn = (attendee) => {
+    if (!attendee.checkedIn) {
+      setCheckedIn(event.id, attendee.id, true);
+      setSessionCount((c) => c + 1);
+      pushFeed(attendee.name);
+    }
+    setManualOpen(false);
+  };
+
+  if (qrModal) {
+    return (
+      <div className="max-w-lg mx-auto px-5 py-8">
+        {qrModal.candidate && (
+          <div className="flex items-center gap-2 text-xs text-neutral-400 mb-1 -mt-2">
+            Best guess so far: <span className="text-neutral-200 font-medium">{qrModal.candidate.name}</span>
+            {qrModal.similarity != null && <span className="font-mono">{formatConfidence(qrModal.similarity)}%</span>}
+          </div>
+        )}
+        <EventQRScanStage event={event} onDecoded={handleQRDecoded} onCancel={closeQrModal} />
+      </div>
+    );
+  }
+
+  return (
+    <div className="max-w-3xl mx-auto px-5 py-6">
+      <div className="flex items-center justify-between mb-3">
+        <div>
+          <div className="flex items-center gap-2 text-[#8B7FFF] text-sm mb-0.5">
+            <Focus className="w-4 h-4" />
+            Kiosk mode &middot; beta
+          </div>
+          <h2 className="font-display font-bold text-xl">{event.name}</h2>
+        </div>
+        <div className="flex items-center gap-2">
+          <Pill tone="teal">{sessionCount} checked in this session</Pill>
+          <button onClick={onExit} className="px-3 py-2 rounded-lg border border-white/15 text-xs text-neutral-300 hover:bg-white/5">
+            Exit
+          </button>
+        </div>
+      </div>
+
+      <div className="flex items-start gap-2 text-xs text-amber-300 bg-amber-400/10 border border-amber-400/20 rounded-lg px-3 py-2.5 mb-4">
+        <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
+        <span>
+          Beta demo &mdash; this scans continuously and checks people in automatically with no one
+          needing to tap anything. It&rsquo;s a proof of concept, not a production access-control
+          system: it works best with one face clearly in frame at a time, everything runs in this
+          browser only, and nothing is ever sent to a server.
+        </span>
+      </div>
+      <FaceModeMobileNotice className="mb-4" />
+
+      <div ref={stageRef} className="relative aspect-video rounded-2xl overflow-hidden bg-black border border-white/10 mb-4">
+        {camError ? (
+          <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-6">
+            <CameraOff className="w-10 h-10 text-rose-400 mb-3" />
+            <p className="text-sm text-neutral-300 mb-4">{camError}</p>
+            <button onClick={start} className="px-4 py-2 rounded-lg bg-white text-black text-sm font-semibold">Retry camera</button>
+          </div>
+        ) : (
+          <>
+            <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover scale-x-[-1]" />
+
+            {overlayBoxes.map((b, i) => (
+              <div key={i} className="absolute pointer-events-none transition-all duration-150" style={{
+                left: b.rect.left, top: b.rect.top, width: b.rect.width, height: b.rect.height,
+                border: `2px solid ${b.focused ? '#8B7FFF' : 'rgba(255,255,255,0.35)'}`,
+                borderRadius: 12,
+                boxShadow: b.focused ? '0 0 0 3px rgba(139,127,255,0.2)' : 'none',
+              }}>
+                {b.focused && (
+                  <span className="absolute -top-7 left-0 whitespace-nowrap text-[11px] font-mono px-2 py-1 rounded-md bg-[#8B7FFF] text-[#0a0714] font-semibold">
+                    {status.mode === 'confirmed' || status.mode === 'already' ? (status.attendee?.name || 'Checked in') :
+                      status.mode === 'matching' ? `${status.attendee?.name || '\u2026'}?` :
+                      status.mode === 'need-qr' ? 'Scan your ticket \u2193' : 'Scanning\u2026'}
+                  </span>
+                )}
+              </div>
+            ))}
+
+            {!models.ready && (
+              <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
+                <ModelLoadingCard stage={models.stage} error={models.error} onRetry={models.load} />
+              </div>
+            )}
+
+            {models.ready && overlayBoxes.length === 0 && (
+              <div className="absolute inset-x-0 bottom-4 flex justify-center">
+                <span className="px-3 py-1.5 rounded-full bg-black/60 border border-white/10 text-xs text-neutral-300">
+                  Step up and look at the camera to check in
+                </span>
+              </div>
+            )}
+          </>
+        )}
+      </div>
+
+      {status.mode === 'confirmed' && (
+        <div className="flex items-center gap-2 text-sm text-teal-300 bg-teal-400/10 border border-teal-400/20 rounded-lg px-3 py-2.5 mb-4">
+          <CheckCircle2 className="w-4 h-4 shrink-0" />
+          {status.attendee.name} checked in
+        </div>
+      )}
+      {status.mode === 'already' && (
+        <div className="flex items-center gap-2 text-sm text-neutral-300 bg-white/[0.04] border border-white/10 rounded-lg px-3 py-2.5 mb-4">
+          <AlertTriangle className="w-4 h-4 shrink-0 text-amber-300" />
+          {status.attendee.name} was already checked in
+          {status.attendee.checkedInAt ? ` at ${new Date(status.attendee.checkedInAt).toLocaleTimeString()}` : ''}.
+        </div>
+      )}
+      {status.mode === 'need-qr' && (
+        <div className="flex items-center justify-between gap-3 text-sm text-amber-300 bg-amber-400/10 border border-amber-400/20 rounded-lg px-3 py-2.5 mb-4">
+          <span className="flex items-center gap-2">
+            <AlertTriangle className="w-4 h-4 shrink-0" />
+            {status.candidate ? `Can\u2019t confirm it\u2019s ${status.candidate.name} from face alone.` : 'Can\u2019t confidently match a face on the roster.'} Please scan your ticket.
+          </span>
+          <button onClick={openQrModal} className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white text-black text-xs font-semibold">
+            <QrCode className="w-3.5 h-3.5" /> Scan ticket
+          </button>
+        </div>
+      )}
+      {status.mode === 'no-match' && (
+        <div className="flex items-center justify-between gap-3 text-sm text-neutral-300 bg-white/[0.04] border border-white/10 rounded-lg px-3 py-2.5 mb-4">
+          <span className="flex items-center gap-2">
+            <XCircle className="w-4 h-4 shrink-0 text-rose-300" />
+            No confident match on this roster &mdash; ask staff for help.
+          </span>
+          <button onClick={() => setManualOpen(true)} className="shrink-0 px-3 py-1.5 rounded-lg border border-white/15 text-xs text-neutral-300 hover:bg-white/5">
+            Staff override
+          </button>
+        </div>
+      )}
+
+      {issue && (
+        <div className="flex items-start gap-2 text-sm text-amber-300 bg-amber-400/10 border border-amber-400/20 rounded-lg px-3 py-2.5 mb-4">
+          <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
+          {issue}
+        </div>
+      )}
+
+      {feed.length > 0 && (
+        <div className="rounded-xl border border-white/10 bg-white/[0.02] p-3.5">
+          <p className="text-[11px] font-mono uppercase tracking-widest text-neutral-500 mb-2">Just checked in</p>
+          <div className="flex flex-wrap gap-2">
+            {feed.map((f, i) => (
+              <Pill key={i} tone="teal">{f.name}</Pill>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <div className="mt-4 text-center">
+        <button onClick={() => setManualOpen((o) => !o)} className="text-xs text-neutral-500 hover:text-neutral-300 underline underline-offset-2">
+          {manualOpen ? 'Hide staff override' : 'Staff: find a guest manually instead'}
+        </button>
+        {manualOpen && (
+          <div className="mt-3 text-left">
+            <RosterSearch attendees={freshEvent().attendees} onPick={manualCheckIn} />
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
 // PAGE
 // ═══════════════════════════════════════════════════════════════════════════
 export default function FaceTicketEvent({ onExit, onComplete }) {
-  const [sub, setSub] = useState('hub'); // hub | new | add | manage | checkin
+  const [sub, setSub] = useState('hub'); // hub | new | add | manage | checkin | kiosk
   const [events, setEvents] = useState(() => listEvents());
   const [activeId, setActiveId] = useState(null);
 
@@ -891,13 +1351,15 @@ export default function FaceTicketEvent({ onExit, onComplete }) {
     refresh();
   };
 
+  const goCheckIn = (id, mode = 'checkin') => { setActiveId(id); setSub(mode === 'kiosk' ? 'kiosk' : 'checkin'); };
+
   if (sub === 'hub') {
     return (
       <EventHub
         events={events}
         onNew={() => setSub('new')}
         onOpen={(id) => { setActiveId(id); setSub('manage'); }}
-        onCheckIn={(id) => { setActiveId(id); setSub('checkin'); }}
+        onCheckIn={goCheckIn}
         onDelete={handleDelete}
         onImport={refresh}
         onExit={onExit}
@@ -929,7 +1391,7 @@ export default function FaceTicketEvent({ onExit, onComplete }) {
         event={activeEvent}
         onBack={() => { refresh(); setSub('hub'); }}
         onAddMore={() => setSub('add')}
-        onCheckIn={(id) => { setActiveId(id); setSub('checkin'); }}
+        onCheckIn={goCheckIn}
         onRefresh={refresh}
       />
     );
@@ -945,9 +1407,18 @@ export default function FaceTicketEvent({ onExit, onComplete }) {
     );
   }
 
+  if (sub === 'kiosk' && activeEvent) {
+    return (
+      <KioskCheckInFlow
+        event={activeEvent}
+        onExit={() => { refresh(); setSub('manage'); }}
+      />
+    );
+  }
+
   // Fallback (e.g. activeEvent got deleted from under us)
   return (
     <EventHub events={events} onNew={() => setSub('new')} onOpen={(id) => { setActiveId(id); setSub('manage'); }}
-      onCheckIn={(id) => { setActiveId(id); setSub('checkin'); }} onDelete={handleDelete} onImport={refresh} onExit={onExit} />
+      onCheckIn={goCheckIn} onDelete={handleDelete} onImport={refresh} onExit={onExit} />
   );
 }
