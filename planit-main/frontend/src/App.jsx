@@ -560,8 +560,9 @@ function App() {
         <Route path="/badge/:inviteCode"         element={<InviteBadge />} />
         <Route path="/card/:inviteCode"          element={<InviteCard />} />
 
-        <Route path="/admin"           element={<Admin />} />
-        <Route path="/admin/security"  element={<SecurityDashboard />} />
+        <Route path="/admin"             element={<Admin />} />
+        <Route path="/admin/bug-reports" element={<Admin />} />
+        <Route path="/admin/security"    element={<SecurityDashboard />} />
         <Route path="/dashboard"       element={<ClientPortal />} />
         <Route path="/terms"           element={<Terms />} />
         <Route path="/privacy"         element={<Privacy />} />
