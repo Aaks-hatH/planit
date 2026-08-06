@@ -4,7 +4,7 @@ import {
   ArrowLeft, ScanFace, QrCode, Fingerprint, ShieldAlert,
   Camera, CameraOff, RefreshCw, Download, CheckCircle2, XCircle,
   AlertTriangle, Radar, Sparkles, Lock,
-  ChevronRight, Ticket, Loader2, ScanLine, Smartphone,
+  ChevronRight, Ticket, Loader2, ScanLine, Smartphone, Users,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useCameraStream } from '../hooks/useCameraStream';
@@ -15,6 +15,8 @@ import {
 } from '../utils/faceTicket';
 import StepIndicator from '../components/StepIndicator';
 import DemoFeedback from '../components/DemoFeedback';
+import FaceModeMobileNotice from '../components/FaceModeMobileNotice';
+import FaceTicketEvent from './FaceTicketEvent';
 
 // Match decision band — the spec suggests tuning around 0.6-0.7 depending on
 // the model's score distribution. face-api.js's recognition net tends to sit
@@ -143,7 +145,7 @@ function PageChrome({ onBack, right, children }) {
 // ═══════════════════════════════════════════════════════════════════════════
 // LANDING
 // ═══════════════════════════════════════════════════════════════════════════
-function LandingScreen({ onEnroll, onScan }) {
+function LandingScreen({ onEnroll, onScan, onEvent }) {
   return (
     <div className="max-w-6xl mx-auto px-5 sm:px-8 py-12 sm:py-20">
       <div className="grid lg:grid-cols-2 gap-12 lg:gap-8 items-center">
@@ -177,10 +179,22 @@ function LandingScreen({ onEnroll, onScan }) {
               Scan a ticket
             </button>
           </div>
-          <div className="flex items-center gap-2 text-[12px] text-neutral-500 font-mono">
+          <div className="flex items-center gap-2 text-[12px] text-neutral-500 font-mono mb-6">
             <Lock className="w-3.5 h-3.5" />
             Your face never leaves your device
           </div>
+
+          <button
+            onClick={onEvent}
+            className="group flex items-center gap-2.5 text-left px-4 py-3 rounded-xl border border-[#8B7FFF]/25 bg-[#8B7FFF]/[0.06] hover:bg-[#8B7FFF]/[0.1] transition-colors"
+          >
+            <Users className="w-4 h-4 text-[#8B7FFF] shrink-0" />
+            <span className="flex-1">
+              <span className="block text-sm font-semibold text-white">Running an event with many guests?</span>
+              <span className="block text-xs text-neutral-500">Enroll a whole roster, then check people in with just a look &mdash; no ticket needed.</span>
+            </span>
+            <ChevronRight className="w-4 h-4 text-neutral-500 shrink-0 transition-transform group-hover:translate-x-0.5" />
+          </button>
         </div>
 
         <div className="relative">
@@ -386,9 +400,10 @@ function EnrollFlow({ onDone, onComplete }) {
       <StepIndicator labels={ENROLL_STEP_LABELS} index={enrollStepIdx} />
       <div className="max-w-md mx-auto px-5 py-10">
         <h2 className="font-display font-bold text-2xl mb-1.5">Take your selfie</h2>
-        <p className="text-neutral-500 text-sm mb-6">
+        <p className="text-neutral-500 text-sm mb-4">
           Center your face, good lighting helps. This photo never leaves your browser.
         </p>
+        <FaceModeMobileNotice className="mb-4" />
 
         <div className="relative aspect-[3/4] rounded-2xl overflow-hidden bg-black border border-white/10 mb-4">
           {camError ? (
@@ -791,11 +806,12 @@ function VerifyCameraStage({ onResult, onCancel }) {
   return (
     <div className="max-w-md mx-auto px-5 py-10">
       <h2 className="font-display font-bold text-2xl mb-1.5">Verify</h2>
-      <p className="text-neutral-500 text-sm mb-6">
+      <p className="text-neutral-500 text-sm mb-4">
         {phase === 'camera' && 'Hold your face in frame and blink naturally when checking begins.'}
         {phase === 'liveness' && 'Hold steady \u2014 checking liveness\u2026'}
         {phase === 'match' && 'Capturing your face for matching\u2026'}
       </p>
+      <FaceModeMobileNotice className="mb-4" />
 
       <div className="relative aspect-[3/4] rounded-2xl overflow-hidden bg-black border border-white/10 mb-4">
         {camError ? (
@@ -979,7 +995,7 @@ function ScanFlow({ onDone, onComplete }) {
 // ═══════════════════════════════════════════════════════════════════════════
 export default function FaceTicket() {
   const navigate = useNavigate();
-  const [mode, setMode] = useState('landing'); // landing | enroll | scan | feedback
+  const [mode, setMode] = useState('landing'); // landing | enroll | scan | event | feedback
   const [feedbackLabel, setFeedbackLabel] = useState('');
 
   const handleBack = () => {
@@ -997,7 +1013,7 @@ export default function FaceTicket() {
   return (
     <PageChrome onBack={handleBack}>
       {mode === 'landing' && (
-        <LandingScreen onEnroll={() => setMode('enroll')} onScan={() => setMode('scan')} />
+        <LandingScreen onEnroll={() => setMode('enroll')} onScan={() => setMode('scan')} onEvent={() => setMode('event')} />
       )}
       {mode === 'enroll' && (
         <EnrollFlow
@@ -1009,6 +1025,12 @@ export default function FaceTicket() {
         <ScanFlow
           onDone={() => setMode('landing')}
           onComplete={() => complete('Face Ticket \u2014 Scan & Verify')}
+        />
+      )}
+      {mode === 'event' && (
+        <FaceTicketEvent
+          onExit={() => setMode('landing')}
+          onComplete={() => complete('Face Ticket \u2014 Event check-in')}
         />
       )}
       {mode === 'feedback' && (
