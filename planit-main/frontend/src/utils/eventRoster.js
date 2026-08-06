@@ -23,7 +23,9 @@
 import { bytesToBase64, base64ToBytes, dequantizeEmbedding, cosineSimilarity } from './faceTicket';
 
 const STORAGE_KEY = 'planit_face_events_v1';
-const EVENT_TICKET_VERSION = 'ev1';
+// 'ev2' = current lightweight format (no embedding — see packEventTicketPayload).
+// 'ev1' still decodes below for anyone with an already-printed older ticket.
+const EVENT_TICKET_VERSION = 'ev2';
 
 // Same decision band as the single-ticket flow (MATCH_THRESHOLD in
 // FaceTicket.jsx) — kept as an independent constant here rather than
@@ -217,11 +219,18 @@ export function matchAgainstRoster(liveDescriptor, attendees, {
 }
 
 // ─── Event ticket QR payload (per-attendee, optional fallback) ─────────────
-// Same idea as packTicketPayload/unpackTicketPayload in faceTicket.js, but
-// tagged with the event + attendee id so a scanned ticket at check-in can be
-// matched straight back to a specific roster entry instead of only being
-// compared 1:1 against the live face.
-
+// Unlike the single-ticket flow's QR (packTicketPayload/unpackTicketPayload
+// in faceTicket.js), this one is only ever scanned back on a device that
+// already has the full roster loaded locally (same machine, or another
+// machine that imported the exported event file) — see the module banner
+// above. Check-in only ever needs to know WHICH attendee this ticket is for
+// (matched by aId against the local roster); it never compares embeddings
+// out of the QR itself. So unlike the single-ticket QR, this one does NOT
+// carry the face descriptor — including it would roughly quadruple the
+// payload for no functional benefit, forcing a much higher-density QR
+// (more, smaller modules) that's noticeably harder for a phone camera or
+// handheld scanner to resolve. 'ev2' marks this lighter format explicitly
+// so an older 'ev1' ticket (which does carry an embedding) still decodes.
 export function packEventTicketPayload({ eventId, eventName, attendee }) {
   const obj = {
     v: EVENT_TICKET_VERSION,
@@ -230,9 +239,6 @@ export function packEventTicketPayload({ eventId, eventName, attendee }) {
     n: attendee.name,
     e: (eventName || '').trim().slice(0, 32),
     s: attendee.seatId,
-    mn: Math.round(attendee.embedding.min * 100000) / 100000,
-    mx: Math.round(attendee.embedding.max * 100000) / 100000,
-    d: attendee.embedding.d,
   };
   return JSON.stringify(obj);
 }
@@ -260,20 +266,31 @@ export function unpackEventTicketPayload(text) {
   } catch {
     throw new Error('This QR code isn\u2019t a Face Ticket event payload.');
   }
-  if (!obj || obj.v !== EVENT_TICKET_VERSION || typeof obj.d !== 'string') {
+  if (!obj || (obj.v !== 'ev1' && obj.v !== 'ev2')) {
     throw new Error('Unrecognized event ticket format \u2014 scan the ticket for this event.');
   }
-  const bytes = base64ToBytes(obj.d);
-  if (bytes.length !== 128) {
-    throw new Error('Ticket embedding is malformed.');
+
+  // 'ev1' tickets (pre-dating the payload slim-down) still carry an
+  // embedding; decode it if present so an older printed ticket keeps
+  // working, but it's optional now — 'ev2' tickets never include it since
+  // check-in only ever needs the attendeeId to look the guest up in the
+  // roster already stored on this device.
+  let quantized = null;
+  if (typeof obj.d === 'string') {
+    const bytes = base64ToBytes(obj.d);
+    if (bytes.length !== 128) {
+      throw new Error('Ticket embedding is malformed.');
+    }
+    quantized = { bytes, min: obj.mn, max: obj.mx };
   }
+
   return {
     eventId: obj.evId,
     attendeeId: obj.aId,
     name: obj.n || 'Guest',
     eventName: obj.e || '',
     seatId: obj.s || '',
-    quantized: { bytes, min: obj.mn, max: obj.mx },
+    quantized,
   };
 }
 
