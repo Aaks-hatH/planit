@@ -1612,7 +1612,7 @@ function ProductShowcase() {
         <Reveal className="text-center mb-16 sm:mb-20">
           <p className="text-xs font-semibold text-neutral-600 uppercase tracking-widest mb-4">See it in action</p>
           <h2 className="font-syne text-3xl sm:text-5xl font-black text-white leading-tight">
-            Not just a screenshot.<br /><span className="text-neutral-600">This is the real thing.</span>
+            Not just a Free Trial.<br /><span className="text-neutral-600">This is the real thing.</span>
           </h2>
         </Reveal>
 
