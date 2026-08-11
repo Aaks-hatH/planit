@@ -12,6 +12,16 @@
  *    list + search/filter/check-in (rsvpAPI.checkinSubmission) — this is
  *    the same component OrganizerSettings.jsx already renders elsewhere in
  *    the app, not a new one.
+ *  - JoinGate (exported from pages/EventSpace.jsx) already implements the
+ *    full name/password/approval/waitlist gate. This page used to skip
+ *    that gate entirely and just call eventAPI.getBySubdomain/getById
+ *    straight away — which meant a password-protected event (or a stale/
+ *    missing eventToken) had nowhere to send the organizer: the fetch
+ *    would 401/403, get swallowed by a generic catch, and the page would
+ *    show "Event not found" instead of ever asking for the password. This
+ *    now mirrors EventSpace.jsx's own load sequence exactly: resolve
+ *    subdomain → validate the cached token locally → fetch → on 401/403
+ *    drop into JoinGate → on success, load once more.
  *
  * NOTE: the Analytics tab was deliberately removed from this page — guests
  * & check-in is the one thing organizers of an RSVP-only event need, and it
@@ -45,37 +55,126 @@ import { ArrowLeft, ExternalLink, LayoutTemplate, ChevronRight } from 'lucide-re
 import toast from 'react-hot-toast';
 import { eventAPI } from '../services/api';
 import RSVPDashboard from '../components/RSVPDashboard';
+import { JoinGate } from './EventSpace';
 
 export default function RSVPEventDashboard() {
   const { subdomain, eventId: paramEventId } = useParams();
   const navigate = useNavigate();
 
-  const [event, setEvent] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [eventId, setEventId]     = useState(paramEventId || null);
+  const [resolving, setResolving] = useState(!paramEventId && !!subdomain);
+  const [needsJoin, setNeedsJoin] = useState(false);
+  const [event, setEvent]         = useState(null);
+  const [loading, setLoading]     = useState(true);
 
+  // ── Step 1: resolve subdomain → eventId (public, no auth needed) ────────
   useEffect(() => {
-    const load = async () => {
-      try {
-        const res = subdomain ? await eventAPI.getBySubdomain(subdomain) : await eventAPI.getById(paramEventId);
-        setEvent(res.data.event);
-      } catch (err) {
-        console.error(err);
-        toast.error('Could not load this event.');
-      } finally {
-        setLoading(false);
-      }
-    };
-    load();
-  }, [subdomain, paramEventId]);
+    if (paramEventId) { setEventId(paramEventId); setResolving(false); return; }
+    if (!subdomain) { navigate('/'); return; }
 
-  if (loading) {
+    let cancelled = false;
+    let attempts  = 0;
+    setResolving(true);
+
+    const tryResolve = () => {
+      eventAPI.getBySubdomain(subdomain)
+        .then((res) => {
+          if (cancelled) return;
+          setEventId(res.data.event.id);
+          setResolving(false);
+        })
+        .catch((err) => {
+          if (cancelled) return;
+          if (err.response?.status === 404) { navigate('/not-found', { replace: true }); return; }
+          if (err.response?.status === 429) {
+            const retryAfter = err.response.headers?.['retry-after'];
+            navigate('/429', { replace: true, state: { retryAfter: retryAfter ? parseInt(retryAfter) : 5, blockedAt: Date.now(), returnTo: window.location.pathname } });
+            return;
+          }
+          attempts++;
+          if (attempts < 3) setTimeout(tryResolve, attempts * 2000);
+          else navigate('/not-found', { replace: true });
+        });
+    };
+    tryResolve();
+    return () => { cancelled = true; };
+  }, [paramEventId, subdomain, navigate]);
+
+  // ── Step 2: validate any cached token BEFORE trusting it (same check as
+  // EventSpace.jsx — a token for a different event, or an expired one,
+  // must never be sent as-is; it just routes straight into JoinGate) ──────
+  useEffect(() => {
+    if (!eventId || resolving) return;
+    const token = localStorage.getItem('eventToken');
+    if (!token) { setNeedsJoin(true); setLoading(false); return; }
+
+    try {
+      const base64  = token.split('.')[1]?.replace(/-/g, '+').replace(/_/g, '/');
+      const decoded = base64 ? JSON.parse(atob(base64)) : null;
+      const expired    = decoded?.exp && decoded.exp * 1000 < Date.now();
+      const wrongEvent = decoded?.eventId && decoded.eventId !== eventId;
+      if (expired || wrongEvent || !decoded) {
+        localStorage.removeItem('eventToken'); localStorage.removeItem('username');
+        setNeedsJoin(true); setLoading(false);
+        return;
+      }
+    } catch {
+      localStorage.removeItem('eventToken'); localStorage.removeItem('username');
+      setNeedsJoin(true); setLoading(false);
+      return;
+    }
+
+    loadEvent();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [eventId, resolving]);
+
+  // ── Step 3: real (authed) fetch — same fallback rules as EventSpace.jsx ─
+  const loadEvent = async (attempt = 0) => {
+    try {
+      const res = await eventAPI.getById(eventId);
+      const ev  = res.data.event;
+      if (ev.eventType && ev.eventType !== 'rsvpOnly') {
+        // Type changed under us (or we somehow got here for a non-rsvp
+        // event) — send the organizer to the real dashboard instead of
+        // rendering the wrong shell.
+        navigate(subdomain ? `/e/${subdomain}` : `/event/${eventId}`, { replace: true });
+        return;
+      }
+      setEvent(ev);
+    } catch (err) {
+      if (err.response?.status === 401 || err.response?.status === 403) {
+        localStorage.removeItem('eventToken'); localStorage.removeItem('username');
+        setNeedsJoin(true);
+      } else if (err.response?.status === 404) {
+        toast.error('Event not found');
+        navigate('/');
+      } else if (err.response?.status === 429) {
+        const retryAfter = err.response.headers?.['retry-after'];
+        navigate('/429', { state: { retryAfter: retryAfter ? parseInt(retryAfter) : 60, blockedAt: Date.now(), returnTo: window.location.pathname } });
+        return;
+      } else if (!err.response && attempt < 2) {
+        setTimeout(() => loadEvent(attempt + 1), (attempt + 1) * 3000);
+        return;
+      } else {
+        toast.error('Failed to load event — please refresh the page');
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleJoined = () => { setNeedsJoin(false); setLoading(true); loadEvent(); };
+
+  if (resolving || loading) {
     return <div className="min-h-screen flex items-center justify-center bg-neutral-50 text-neutral-400 text-sm">Loading…</div>;
+  }
+  if (needsJoin) {
+    return <JoinGate eventId={eventId} onJoined={handleJoined} />;
   }
   if (!event) {
     return <div className="min-h-screen flex items-center justify-center bg-neutral-50 text-neutral-400 text-sm">Event not found.</div>;
   }
 
-  const eventId = event.id;
   const base = subdomain ? `/e/${subdomain}` : `/event/${paramEventId}`;
 
   return (
