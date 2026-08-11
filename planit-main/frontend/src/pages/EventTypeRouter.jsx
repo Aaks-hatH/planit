@@ -8,6 +8,20 @@
  * fetches only enough to read eventType, then renders the real dashboard —
  * EventSpace for 'standard'/enterprise, RSVPEventDashboard for 'rsvpOnly'.
  *
+ * IMPORTANT: this pre-check must use a PUBLIC, unauthenticated endpoint.
+ * It used to call eventAPI.getBySubdomain / getById directly — getById hits
+ * GET /events/:eventId, which is behind verifyEventAccess and 401/403s for
+ * any password-protected event when the visitor doesn't already have a
+ * valid eventToken cached (a brand new browser/session, a cleared token,
+ * an organizer opening their own link fresh, etc). That failure was being
+ * swallowed and silently treated as eventType 'standard', which is why
+ * rsvpOnly events would randomly open into EventSpace instead of
+ * RSVPEventDashboard. Both branches below now use routes that never
+ * require auth, so the type check itself can't fail for that reason:
+ *   - subdomain param → GET /events/subdomain/:subdomain (already public)
+ *   - eventId param    → GET /events/public/:eventId (public; now also
+ *                         returns eventType, see backend/routes/events.js)
+ *
  * This means EventSpace.jsx and RSVPEventDashboard.jsx both still do their
  * own full data fetch on mount (this component's fetch is deliberately
  * separate and minimal) — a small amount of duplicate network work in
@@ -22,21 +36,34 @@ import RSVPEventDashboard from './RSVPEventDashboard';
 
 export default function EventTypeRouter() {
   const { subdomain, eventId } = useParams();
-  const [eventType, setEventType] = useState(undefined); // undefined = loading, null = not found
+  const [eventType, setEventType] = useState(undefined); // undefined = loading
 
   useEffect(() => {
     let cancelled = false;
-    const check = async () => {
-      try {
-        const res = subdomain ? await eventAPI.getBySubdomain(subdomain) : await eventAPI.getById(eventId);
-        if (!cancelled) setEventType(res.data.event?.eventType || 'standard');
-      } catch {
-        // If this lightweight check fails (e.g. password-protected event
-        // returning limited fields, or a transient error), fall back to
-        // the standard dashboard rather than blocking the page — EventSpace
-        // already has its own real auth/error handling for the actual load.
-        if (!cancelled) setEventType('standard');
-      }
+    let attempts = 0;
+
+    const check = () => {
+      const req = subdomain ? eventAPI.getBySubdomain(subdomain) : eventAPI.getPublicInfo(eventId);
+      req
+        .then((res) => {
+          if (cancelled) return;
+          setEventType(res.data.event?.eventType || 'standard');
+        })
+        .catch((err) => {
+          if (cancelled) return;
+          // A real 404 means the event doesn't exist — let the real
+          // dashboard's own loader show the proper "not found" state
+          // rather than guessing a type for a page that won't load anyway.
+          if (err.response?.status === 404) { setEventType('standard'); return; }
+          // Network hiccup / cold start — retry briefly instead of
+          // guessing wrong and flashing the wrong dashboard.
+          if (!err.response && attempts < 3) {
+            attempts++;
+            setTimeout(check, attempts * 1500);
+            return;
+          }
+          setEventType('standard');
+        });
     };
     check();
     return () => { cancelled = true; };
