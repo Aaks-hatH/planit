@@ -81,7 +81,10 @@ function QRModal({ eventId, onClose }) {
 }
 
 /* ─── Join Gate ──────────────────────────────────────────────────────────── */
-function JoinGate({ eventId, onJoined }) {
+// Exported (named) so other event-type dashboards — e.g. RSVPEventDashboard,
+// which needs the exact same password/approval/waitlist gate — can reuse it
+// instead of re-implementing a second, subtly-different copy.
+export function JoinGate({ eventId, onJoined }) {
   const { wl, isWL } = useWhiteLabel();
   const [publicInfo, setPublicInfo]               = useState(null);
   const [knownParticipants, setKnownParticipants] = useState([]);
@@ -139,7 +142,7 @@ function JoinGate({ eventId, onJoined }) {
           if (err.response?.status === 429) {
             const retryAfter = err.response.headers?.['retry-after'];
             const delay = retryAfter ? parseInt(retryAfter) : 60;
-            navigate('/429', { state: { retryAfter: delay, returnTo: window.location.pathname } });
+            navigate('/429', { state: { retryAfter: delay, blockedAt: Date.now(), returnTo: window.location.pathname } });
             return;
           }
           // Timeout / network error / 5xx → retry on cold-start, don't redirect
@@ -1046,7 +1049,7 @@ export default function EventSpace() {
             if (err.response?.status === 429) {
               const retryAfter = err.response.headers?.['retry-after'];
               const delay = retryAfter ? parseInt(retryAfter) * 1000 : 5000;
-              navigate('/429', { replace: true, state: { retryAfter: Math.ceil(delay / 1000), returnTo: window.location.pathname } });
+              navigate('/429', { replace: true, state: { retryAfter: Math.ceil(delay / 1000), blockedAt: Date.now(), returnTo: window.location.pathname } });
               return;
             }
             attempts++;
@@ -1273,7 +1276,7 @@ export default function EventSpace() {
       } else if (err.response?.status === 429) {
         // Rate limited — navigate to the 429 page with a countdown
         const retryAfter = err.response.headers?.['retry-after'];
-        navigate('/429', { state: { retryAfter: retryAfter ? parseInt(retryAfter) : 60, returnTo: window.location.pathname } });
+        navigate('/429', { state: { retryAfter: retryAfter ? parseInt(retryAfter) : 60, blockedAt: Date.now(), returnTo: window.location.pathname } });
         return; // Keep spinner visible until navigation completes
       } else if (!err.response && attempt < 2) {
         // Network error or timeout (Render cold-start). Retry up to 2 times
