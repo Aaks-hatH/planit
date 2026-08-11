@@ -284,6 +284,7 @@ router.get('/public/:eventId', async (req, res, next) => {
         status: event.status, rsvpSummary: event.getRsvpSummary(),
         isTableServiceMode: !!event.isTableServiceMode,
         isEnterpriseMode: !!event.isEnterpriseMode,
+        eventType: event.eventType || 'standard',
       }
     });
   } catch (error) { next(error); }
