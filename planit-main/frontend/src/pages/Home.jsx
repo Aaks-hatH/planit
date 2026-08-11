@@ -14,7 +14,7 @@ import { trackFeature, flushTracker } from '../services/tracker';
 import { trackGAEvent } from '../services/analytics';
 import RecoveryCodeModal from '../components/RecoveryCodeModal';
 import toast from 'react-hot-toast';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useWhiteLabel } from '../context/WhiteLabelContext';
 
 /*
@@ -607,6 +607,112 @@ function InjectGlobalCSS() {
     return () => { const el = document.getElementById(id); if (el) el.remove(); };
   }, []);
   return null;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// OPENING CINEMATIC — "Hello" typewriter through languages, accelerating
+// ─────────────────────────────────────────────────────────────────────────────
+const HELLO_WORDS = [
+  { text: 'Hello',        lang: 'English' },
+  { text: 'Hola',         lang: 'Spanish' },
+  { text: 'Bonjour',      lang: 'French' },
+  { text: 'Ciao',         lang: 'Italian' },
+  { text: 'Hallo',        lang: 'German' },
+  { text: 'Olá',          lang: 'Portuguese' },
+  { text: 'Hallo',        lang: 'Dutch' },
+  { text: 'Hej',          lang: 'Swedish' },
+  { text: 'Привет',       lang: 'Russian' },
+  { text: 'こんにちは',      lang: 'Japanese' },
+  { text: '你好',          lang: 'Chinese' },
+  { text: '안녕하세요',      lang: 'Korean' },
+  { text: 'مرحبا',        lang: 'Arabic',   rtl: true },
+  { text: 'नमस्ते',        lang: 'Hindi' },
+  { text: 'Merhaba',      lang: 'Turkish' },
+  { text: 'Cześć',        lang: 'Polish' },
+  { text: 'Γειά σου',     lang: 'Greek' },
+  { text: 'שלום',         lang: 'Hebrew',   rtl: true },
+  { text: 'สวัสดี',        lang: 'Thai' },
+  { text: 'Xin chào',     lang: 'Vietnamese' },
+  { text: 'Halo',         lang: 'Indonesian' },
+  { text: 'Habari',       lang: 'Swahili' },
+  { text: 'Kumusta',      lang: 'Filipino' },
+  { text: 'Привіт',       lang: 'Ukrainian' },
+  { text: 'PlanIt',       lang: 'PlanIt' },
+];
+
+function IntroCinematic({ onComplete }) {
+  const [wordIndex, setWordIndex] = useState(0);
+  const [typedChars, setTypedChars] = useState(0);
+  const [phase, setPhase] = useState('typing'); // 'typing' | 'closing'
+
+  const word = HELLO_WORDS[wordIndex];
+  const chars = Array.from(word.text);
+
+  useEffect(() => {
+    if (phase !== 'typing') return;
+    // Both typing speed and hold time shrink exponentially — the whole
+    // sequence visibly speeds up as it races through the list.
+    const typeSpeed = Math.max(14, Math.round(90 * Math.pow(0.885, wordIndex)));
+    const holdTime  = Math.max(55, Math.round(480 * Math.pow(0.85, wordIndex)));
+
+    let t;
+    if (typedChars < chars.length) {
+      t = setTimeout(() => setTypedChars(c => c + 1), typeSpeed);
+    } else {
+      t = setTimeout(() => {
+        if (wordIndex < HELLO_WORDS.length - 1) {
+          setWordIndex(i => i + 1);
+          setTypedChars(0);
+        } else {
+          setPhase('closing');
+        }
+      }, holdTime);
+    }
+    return () => clearTimeout(t);
+  }, [wordIndex, typedChars, phase, chars.length]);
+
+  useEffect(() => {
+    if (phase === 'closing') {
+      const t = setTimeout(() => onComplete?.(), 750);
+      return () => clearTimeout(t);
+    }
+  }, [phase, onComplete]);
+
+  const display = chars.slice(0, typedChars).join('');
+  const stillTyping = typedChars < chars.length;
+
+  return (
+    <motion.div
+      className="fixed inset-0 flex items-center justify-center"
+      style={{ background: '#050505', zIndex: 999 }}
+      initial={{ opacity: 1 }}
+      animate={phase === 'closing' ? { opacity: 0, scale: 1.06 } : { opacity: 1, scale: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.75, ease: [0.22, 1, 0.36, 1] }}
+    >
+      <div
+        dir={word.rtl ? 'rtl' : 'ltr'}
+        style={{
+          fontSize: 'clamp(2.25rem, 9vw, 6rem)',
+          fontWeight: 600,
+          color: '#fff',
+          letterSpacing: '-0.02em',
+          minHeight: '1.2em',
+          display: 'flex',
+          alignItems: 'center',
+        }}
+      >
+        <span>{display}</span>
+        <span
+          aria-hidden="true"
+          style={{
+            display: 'inline-block', width: '0.09em', marginLeft: 6, alignSelf: 'stretch',
+            background: '#fff', opacity: stillTyping ? 1 : 0, transition: 'opacity 0.1s linear',
+          }}
+        />
+      </div>
+    </motion.div>
+  );
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -2297,6 +2403,21 @@ export default function Home() {
   const heroCta         = wlPages?.home?.ctaText     || '';
   const heroImage       = wlPages?.home?.heroImageUrl|| '';
   const navigate = useNavigate();
+  // Opening cinematic — plays once per browser session, skipped entirely on
+  // white-label domains (they get their own branded hero, not PlanIt's).
+  const [showIntro, setShowIntro] = useState(
+    () => !isWL && typeof window !== 'undefined' && !sessionStorage.getItem('planit_intro_played')
+  );
+  useEffect(() => {
+    if (!showIntro) return;
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = prevOverflow; };
+  }, [showIntro]);
+  const dismissIntro = () => {
+    sessionStorage.setItem('planit_intro_played', '1');
+    setShowIntro(false);
+  };
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [navScrolled, setNavScrolled] = useState(false);
   // Nav starts transparent over the hero, then picks up a blurred surface once scrolled
@@ -2330,7 +2451,7 @@ export default function Home() {
   const [captchaResetKey, setCaptchaResetKey] = useState(0);
   const eventFormTimingRef = useRef({ pageLoadedAt: Date.now(), formStartedAt: 0, firstInputAt: 0, largestPasteChars: 0, largestPasteElapsedMs: 0 });
   // On white-label domains, skip the branch selector and go straight to event creation
-  useEffect(() => { if (isWL) { setSelectedBranch('events'); setLoadingDone(true); } }, [isWL]);
+  useEffect(() => { if (isWL) { setSelectedBranch('events'); setShowIntro(false); } }, [isWL]);
 
   // Close wizard on Escape key
   useEffect(() => {
@@ -2516,6 +2637,9 @@ export default function Home() {
   return (
     <div className="min-h-screen text-white relative" style={{ background: 'var(--bg-base)', overflowX: 'clip', maxWidth: '100vw', isolation: 'isolate' }}>
       <InjectGlobalCSS />
+      <AnimatePresence>
+        {showIntro && <IntroCinematic onComplete={dismissIntro} />}
+      </AnimatePresence>
       {showAd && <CrossPlatformAd trigger="post_event_create" onClose={() => setShowAd(false)} />}
       {/* Recovery code modal — shown once when organizer sets an account password at creation */}
       {organizerRecoveryCode && (
