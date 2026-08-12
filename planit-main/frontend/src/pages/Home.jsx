@@ -610,114 +610,616 @@ function InjectGlobalCSS() {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// OPENING CINEMATIC — punchy title-card montage through a handful of
-// languages, accelerating, then the whole panel rises to reveal the hero.
+// OPENING CINEMATIC — a movie-title-style entrance:
+//   black → distant light → atmosphere/particles drift in → a multilingual
+//   greeting montage that accelerates → a sudden stop to black → "PLANIT"
+//   assembles from separated letters with a light sweep and particle
+//   convergence → tagline → cinematic bloom → camera pullback → the panel
+//   rises to reveal the real homepage underneath.
 //
-// Driven by a single requestAnimationFrame loop keyed off real elapsed time
-// (not chained setTimeouts) and written straight to the DOM via refs — no
-// React re-renders during playback. That's what makes this version smooth
-// and identical on every run: nothing here depends on timer drift or how
-// busy the main thread is, everything is a function of elapsed milliseconds.
+// Everything here is one coordinated requestAnimationFrame loop keyed to real
+// elapsed time (never chained setTimeouts), and every visual is written
+// straight to the DOM/canvas via refs — no React re-renders during playback.
+// That's what keeps this smooth and identical on every run: every layer's
+// look at any instant is a pure function of elapsed milliseconds, not of how
+// many frames fired or how busy the main thread happened to be.
 // ─────────────────────────────────────────────────────────────────────────────
-const CINEMATIC_WORDS = [
-  { text: 'Hello' },
-  { text: 'Hola' },
-  { text: 'Bonjour' },
-  { text: 'こんにちは' },
-  { text: '안녕하세요' },
-  { text: 'Ciao' },
-  { text: 'Привет' },
-  { text: 'PlanIt' },
-];
-// One slot per word, ms — shrinks fast so the montage visibly accelerates.
-// The last slot (the "PlanIt" logo beat) holds longer on purpose.
-const SLOT_MS = [520, 360, 280, 220, 180, 150, 135, 520];
-const CLOSE_MS = 700;
 
+// ── Easing ──────────────────────────────────────────────────────────────────
+const clamp01 = t => (t < 0 ? 0 : t > 1 ? 1 : t);
+const lerp = (a, b, t) => a + (b - a) * t;
 const easeOutCubic = t => 1 - Math.pow(1 - t, 3);
-const easeInCubic  = t => t * t * t;
-const easeInOutExpo = t => (t < 0.5 ? Math.pow(2, 20 * t - 10) / 2 : (2 - Math.pow(2, -20 * t + 10)) / 2);
+const easeInCubic = t => t * t * t;
+const easeInOutCubic = t => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
+const easeInOutExpo = t => (t <= 0 ? 0 : t >= 1 ? 1 : t < 0.5 ? Math.pow(2, 20 * t - 10) / 2 : (2 - Math.pow(2, -20 * t + 10)) / 2);
+
+// ── The multilingual montage — reuses the greetings already established for
+// this cinematic. Each gets its own restrained visual treatment so the
+// montage reads as a system of variations, not a single repeated effect.
+const CINEMATIC_WORDS = [
+  { text: 'Hello',     variant: 'emerge',      dur: 700 },
+  { text: 'Hola',      variant: 'horizontal',  dur: 450 },
+  { text: 'Bonjour',   variant: 'tracking',    dur: 400 },
+  { text: 'こんにちは',   variant: 'depthBlur',   dur: 350 },
+  { text: '안녕하세요',   variant: 'converge',    dur: 300 },
+  { text: 'Ciao',      variant: 'push',        dur: 250 },
+  { text: 'Привет',    variant: 'directional', dur: 200 },
+];
+
+// ── Master timeline (ms from mount) — computed once. Guidelines, tuned by
+// feel, not rigid: total runtime lands around 8s.
+function buildTimeline() {
+  const DARK_END = 650;
+  const ENV_END = 1650;
+  const wordStarts = [];
+  let acc = ENV_END;
+  for (const w of CINEMATIC_WORDS) { wordStarts.push(acc); acc += w.dur; }
+  const WORDS_END = acc;
+  const SILENCE_END = WORDS_END + 400;
+  const TITLE_START = SILENCE_END;
+  const TITLE_LOCK = TITLE_START + 900;
+  const SWEEP_END = TITLE_LOCK + 450;
+  const TAGLINE_START = TITLE_LOCK + 100;
+  const TAGLINE_END = TAGLINE_START + 700;
+  const BLOOM_START = Math.max(SWEEP_END, TAGLINE_END);
+  const BLOOM_END = BLOOM_START + 450;
+  const PULLBACK_START = BLOOM_END;
+  const PULLBACK_END = PULLBACK_START + 900;
+  const PANEL_RISE_START = PULLBACK_START + 400;
+  const PANEL_RISE_END = PANEL_RISE_START + 750;
+  return {
+    DARK_END, ENV_END, wordStarts, WORDS_END, SILENCE_END, TITLE_START, TITLE_LOCK,
+    SWEEP_END, TAGLINE_START, TAGLINE_END, BLOOM_START, BLOOM_END,
+    PULLBACK_START, PULLBACK_END, PANEL_RISE_START, PANEL_RISE_END,
+    COMPLETE: PANEL_RISE_END,
+  };
+}
+const TIMELINE = buildTimeline();
+
+// Short, simplified timeline for prefers-reduced-motion — same beats, none of
+// the camera/particle motion, much shorter.
+function buildReducedTimeline() {
+  const HELLO_END = 480;
+  const MONTAGE_START = HELLO_END + 140;
+  const WORD_DUR = 130;
+  const MONTAGE_END = MONTAGE_START + WORD_DUR * (CINEMATIC_WORDS.length - 1);
+  const SILENCE_END = MONTAGE_END + 160;
+  const TITLE_START = SILENCE_END;
+  const TITLE_END = TITLE_START + 420;
+  const TAGLINE_START = TITLE_END + 120;
+  const TAGLINE_END = TAGLINE_START + 360;
+  const HOLD_END = TAGLINE_END + 200;
+  const CLOSE_END = HOLD_END + 420;
+  return { HELLO_END, MONTAGE_START, WORD_DUR, MONTAGE_END, SILENCE_END, TITLE_START, TITLE_END, TAGLINE_START, TAGLINE_END, HOLD_END, COMPLETE: CLOSE_END };
+}
+const REDUCED_TIMELINE = buildReducedTimeline();
+
+// ── Per-word motion — each variant animates a different combination of
+// opacity/translate/scale/blur/tracking, but every one follows the same
+// enter → hold → exit shape, so the montage feels like one visual system.
+function getWordFrame(variant, localT, slotDur) {
+  const frame = { opacity: 1, tx: 0, ty: 0, scale: 1, blur: 0, tracking: 0, rotate: 0 };
+  const fadeIn = Math.min(slotDur * 0.42, variant === 'emerge' ? 420 : variant === 'directional' ? 70 : 120);
+  const fadeOut = Math.min(slotDur * 0.4, variant === 'emerge' ? 260 : variant === 'directional' ? 60 : 100);
+
+  if (localT < fadeIn) {
+    const e = easeOutCubic(clamp01(localT / fadeIn));
+    switch (variant) {
+      case 'emerge':
+        frame.opacity = e; frame.scale = lerp(0.65, 1.04, e); frame.ty = lerp(28, -2, e); frame.blur = lerp(20, 0, e);
+        break;
+      case 'horizontal':
+        frame.opacity = e; frame.tx = lerp(-32, 0, e);
+        break;
+      case 'tracking':
+        frame.opacity = e; frame.tracking = lerp(0.55, 0, e);
+        break;
+      case 'depthBlur':
+        frame.opacity = e; frame.ty = lerp(26, 0, e); frame.blur = lerp(11, 0, e);
+        break;
+      case 'converge':
+        frame.opacity = e; frame.scale = lerp(0.72, 1, e); frame.rotate = lerp(3.5, 0, e);
+        break;
+      case 'push':
+        frame.opacity = e; frame.scale = lerp(1.18, 1, e); frame.blur = lerp(3, 0, e);
+        break;
+      default: // directional
+        frame.opacity = e; frame.tx = lerp(36, 0, e);
+    }
+    return frame;
+  }
+
+  if (localT > slotDur - fadeOut) {
+    const e = easeInCubic(clamp01((localT - (slotDur - fadeOut)) / fadeOut));
+    switch (variant) {
+      case 'emerge':
+        frame.opacity = 1 - e; frame.scale = lerp(1, 1.05, e); frame.ty = lerp(0, -14, e); frame.blur = lerp(0, 6, e);
+        break;
+      case 'horizontal':
+        frame.opacity = 1 - e; frame.tx = lerp(0, 28, e);
+        break;
+      case 'tracking':
+        frame.opacity = 1 - e; frame.tracking = lerp(0, 0.42, e);
+        break;
+      case 'depthBlur':
+        frame.opacity = 1 - e; frame.ty = lerp(0, -20, e); frame.blur = lerp(0, 8, e);
+        break;
+      case 'converge':
+        frame.opacity = 1 - e; frame.scale = lerp(1, 1.08, e); frame.rotate = lerp(0, -3, e);
+        break;
+      case 'push':
+        frame.opacity = 1 - e; frame.scale = lerp(1, 0.92, e);
+        break;
+      default: // directional
+        frame.opacity = 1 - e; frame.tx = lerp(0, -32, e);
+    }
+    return frame;
+  }
+  return frame; // steady hold
+}
+
+// ── Particle field — a small, deterministic set of soft points across three
+// depth layers (background/midground/foreground). Foreground particles are
+// larger and drift faster, which is what sells the "camera moving forward"
+// illusion; background ones barely move. Drawn straight into one canvas
+// inside the same master loop — no separate rAF, no React state.
+function makeParticles(count) {
+  const list = [];
+  for (let i = 0; i < count; i++) {
+    const layer = i < count * 0.45 ? 0 : i < count * 0.8 ? 1 : 2;
+    list.push({
+      layer,
+      angle: Math.random() * Math.PI * 2,
+      baseRadius: 0.14 + Math.random() * 0.34,
+      phase: Math.random() * Math.PI * 2,
+      driftSpeed: 0.14 + Math.random() * 0.22,
+      size: layer === 0 ? 0.7 + Math.random() * 0.6 : layer === 1 ? 1.2 + Math.random() * 0.8 : 1.8 + Math.random() * 1.3,
+      baseOpacity: layer === 0 ? 0.16 + Math.random() * 0.16 : layer === 1 ? 0.24 + Math.random() * 0.2 : 0.32 + Math.random() * 0.26,
+      convergeJitterX: (Math.random() - 0.5) * 24,
+      convergeJitterY: (Math.random() - 0.5) * 16,
+      disperseAngle: Math.random() * Math.PI * 2,
+      disperseRadius: 0.5 + Math.random() * 0.55,
+    });
+  }
+  return list;
+}
+
+function drawParticles(ctx, W, H, elapsed, particles) {
+  ctx.clearRect(0, 0, W, H);
+  const cx = W / 2, cy = H * 0.46;
+  const minDim = Math.min(W, H);
+  const t = elapsed * 0.001;
+  const { DARK_END, ENV_END, WORDS_END, SILENCE_END, TITLE_START, TITLE_LOCK, PULLBACK_START, PULLBACK_END, BLOOM_START, BLOOM_END } = TIMELINE;
+
+  let speedMult = 1;
+  if (elapsed >= ENV_END && elapsed < WORDS_END) speedMult = lerp(1, 2.4, clamp01((elapsed - ENV_END) / (WORDS_END - ENV_END)));
+  else if (elapsed >= WORDS_END) speedMult = 2.4;
+
+  let envelope = 0;
+  if (elapsed < DARK_END) envelope = 0;
+  else if (elapsed < ENV_END) envelope = easeOutCubic(clamp01((elapsed - DARK_END) / (ENV_END - DARK_END)));
+  else if (elapsed < WORDS_END) envelope = 1;
+  else if (elapsed < SILENCE_END) envelope = 1 - easeInCubic(clamp01((elapsed - WORDS_END) / (SILENCE_END - WORDS_END)));
+
+  const convergeWindowStart = TITLE_START - 250;
+  let convergeT = 0, convergeVisible = 0;
+  if (elapsed >= convergeWindowStart && elapsed < PULLBACK_START) {
+    convergeT = easeInOutCubic(clamp01((elapsed - convergeWindowStart) / (TITLE_LOCK - convergeWindowStart)));
+    convergeVisible = lerp(0, 0.8, easeOutCubic(clamp01((elapsed - convergeWindowStart) / 500)));
+  }
+  let disperseT = 0;
+  if (elapsed >= PULLBACK_START) disperseT = easeInOutCubic(clamp01((elapsed - PULLBACK_START) / (PULLBACK_END - PULLBACK_START)));
+
+  const bloomBoost = (elapsed >= BLOOM_START && elapsed <= BLOOM_END)
+    ? Math.sin(clamp01((elapsed - BLOOM_START) / (BLOOM_END - BLOOM_START)) * Math.PI) * 0.5
+    : 0;
+
+  const active = envelope > 0.003 || convergeT > 0 || disperseT > 0 || convergeVisible > 0;
+  if (!active) return;
+
+  for (const pt of particles) {
+    let x, y, opacity;
+    if (convergeT > 0 || disperseT > 0) {
+      const targetX = cx + pt.convergeJitterX;
+      const targetY = cy + pt.convergeJitterY;
+      const driftAngle = pt.angle + t * pt.driftSpeed * 0.06;
+      const fromX = cx + Math.cos(driftAngle) * pt.baseRadius * minDim;
+      const fromY = cy + Math.sin(driftAngle) * pt.baseRadius * minDim * 0.7;
+      if (disperseT <= 0) {
+        x = lerp(fromX, targetX, convergeT);
+        y = lerp(fromY, targetY, convergeT);
+        opacity = convergeVisible * pt.baseOpacity * 3 + bloomBoost * pt.baseOpacity;
+      } else {
+        const outX = cx + Math.cos(pt.disperseAngle) * pt.disperseRadius * minDim;
+        const outY = cy + Math.sin(pt.disperseAngle) * pt.disperseRadius * minDim * 0.7;
+        x = lerp(targetX, outX, disperseT);
+        y = lerp(targetY, outY, disperseT);
+        opacity = (1 - disperseT) * convergeVisible * pt.baseOpacity * 3;
+      }
+    } else {
+      const driftAngle = pt.angle + t * pt.driftSpeed * 0.06 * speedMult;
+      const depthFactor = pt.layer === 0 ? 0.5 : pt.layer === 1 ? 0.8 : 1.25;
+      const r = pt.baseRadius * minDim * depthFactor;
+      x = cx + Math.cos(driftAngle) * r + Math.sin(t * 0.3 + pt.phase) * 4 * depthFactor;
+      y = cy + Math.sin(driftAngle) * r * 0.7 + Math.cos(t * 0.25 + pt.phase) * 3 * depthFactor;
+      opacity = envelope * pt.baseOpacity * (1 + bloomBoost);
+    }
+    if (opacity <= 0.004) continue;
+    ctx.beginPath();
+    ctx.fillStyle = `rgba(255,255,255,${clamp01(opacity).toFixed(3)})`;
+    ctx.arc(x, y, pt.size * (pt.layer === 2 ? 1.35 : 1), 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
+
+const TITLE_LETTERS = Array.from('PLANIT');
 
 function IntroCinematic({ onComplete }) {
-  const panelRef = useRef(null);
-  const wordRef  = useRef(null);
-  const rafRef   = useRef(null);
-  const startRef = useRef(null);
-  const doneRef  = useRef(false);
+  const [reduced] = useState(
+    () => typeof window !== 'undefined' && !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+  );
+  const [isMobile] = useState(
+    () => typeof window !== 'undefined' && window.innerWidth < 768
+  );
 
+  const panelRef = useRef(null);
+  const lightRef = useRef(null);
+  const envWrapRef = useRef(null);
+  const canvasRef = useRef(null);
+  const wordRef = useRef(null);
+  const titleWrapRef = useRef(null);
+  const letterRefs = useRef([]);
+  const sweepRef = useRef(null);
+  const taglineWrapRef = useRef(null);
+  const line1Ref = useRef(null);
+  const line2Ref = useRef(null);
+  const bloomRef = useRef(null);
+
+  const rafRef = useRef(null);
+  const startRef = useRef(null);
+  const doneRef = useRef(false);
+  const particlesRef = useRef(null);
+
+  const finish = (cb) => { if (!doneRef.current) { doneRef.current = true; cb?.(); } };
+
+  // ── Reduced-motion path: short, simple opacity fades only. ────────────────
   useEffect(() => {
-    const totalWordsMs = SLOT_MS.reduce((a, b) => a + b, 0);
-    const cumulative = [];
-    let acc = 0;
-    for (const d of SLOT_MS) { cumulative.push(acc); acc += d; }
+    if (!reduced) return;
+    const T = REDUCED_TIMELINE;
+
+    const onKey = (e) => { if (e.key === 'Escape') { cancelAnimationFrame(rafRef.current); finish(onComplete); } };
+    window.addEventListener('keydown', onKey);
 
     const tick = (now) => {
       if (startRef.current == null) startRef.current = now;
       const elapsed = now - startRef.current;
 
-      if (elapsed < totalWordsMs) {
-        let idx = 0;
-        for (let i = SLOT_MS.length - 1; i >= 0; i--) {
-          if (elapsed >= cumulative[i]) { idx = i; break; }
-        }
-        const slot = SLOT_MS[idx];
-        const localT = elapsed - cumulative[idx];
-        const fadeIn  = Math.min(150, slot * 0.32);
-        const fadeOut = Math.min(170, slot * 0.34);
+      if (elapsed >= T.COMPLETE) { finish(onComplete); return; }
 
-        let opacity = 1, scale = 1, y = 0;
-        if (localT < fadeIn) {
-          const p = easeOutCubic(localT / fadeIn);
-          opacity = p; scale = 0.84 + 0.16 * p; y = 16 * (1 - p);
-        } else if (localT > slot - fadeOut) {
-          const p = easeInCubic((localT - (slot - fadeOut)) / fadeOut);
-          opacity = 1 - p; scale = 1 + 0.12 * p; y = -16 * p;
+      // Word (Hello + montage), simple crossfade, no motion.
+      let wIdx = -1, wOpacity = 0;
+      if (elapsed < T.HELLO_END) { wIdx = 0; wOpacity = easeOutCubic(clamp01(elapsed / T.HELLO_END)); }
+      else if (elapsed < T.MONTAGE_START) { wIdx = 0; wOpacity = 1 - clamp01((elapsed - (T.HELLO_END - 80)) / 80); }
+      else if (elapsed < T.MONTAGE_END) {
+        const rel = elapsed - T.MONTAGE_START;
+        const i = Math.min(CINEMATIC_WORDS.length - 2, Math.floor(rel / T.WORD_DUR));
+        wIdx = i + 1;
+        const localT = rel - i * T.WORD_DUR;
+        const p = clamp01(localT / T.WORD_DUR);
+        wOpacity = Math.sin(p * Math.PI);
+      }
+      if (wordRef.current) {
+        if (wIdx >= 0 && wordRef.current.dataset.idx !== String(wIdx)) {
+          wordRef.current.textContent = CINEMATIC_WORDS[wIdx].text;
+          wordRef.current.dataset.idx = String(wIdx);
         }
+        wordRef.current.style.opacity = String(wIdx >= 0 ? wOpacity : 0);
+      }
 
-        const el = wordRef.current;
-        if (el) {
-          if (el.dataset.idx !== String(idx)) {
-            el.textContent = CINEMATIC_WORDS[idx].text;
-            el.dataset.idx = String(idx);
+      // Title — plain fade, letters already together.
+      if (titleWrapRef.current) {
+        let op = 0;
+        if (elapsed >= T.TITLE_START && elapsed < T.HOLD_END) {
+          op = elapsed < T.TITLE_END
+            ? easeOutCubic(clamp01((elapsed - T.TITLE_START) / (T.TITLE_END - T.TITLE_START)))
+            : 1;
+        } else if (elapsed >= T.HOLD_END) {
+          op = Math.max(0, 1 - clamp01((elapsed - T.HOLD_END) / (T.COMPLETE - T.HOLD_END)));
+        }
+        titleWrapRef.current.style.opacity = String(op);
+      }
+      letterRefs.current.forEach(el => { if (el) el.style.transform = 'translateX(0px)'; });
+      if (sweepRef.current) sweepRef.current.style.opacity = '0';
+
+      // Tagline — plain fade.
+      if (taglineWrapRef.current) {
+        let op = 0;
+        if (elapsed >= T.TAGLINE_START && elapsed < T.HOLD_END) {
+          op = elapsed < T.TAGLINE_END
+            ? easeOutCubic(clamp01((elapsed - T.TAGLINE_START) / (T.TAGLINE_END - T.TAGLINE_START)))
+            : 1;
+        } else if (elapsed >= T.HOLD_END) {
+          op = Math.max(0, 1 - clamp01((elapsed - T.HOLD_END) / (T.COMPLETE - T.HOLD_END)));
+        }
+        taglineWrapRef.current.style.opacity = String(op);
+      }
+
+      // Panel — plain fade out (no slide, minimal motion).
+      if (panelRef.current) {
+        const fadeStart = T.HOLD_END;
+        const op = elapsed >= fadeStart ? 1 - clamp01((elapsed - fadeStart) / (T.COMPLETE - fadeStart)) : 1;
+        panelRef.current.style.opacity = String(op);
+      }
+
+      rafRef.current = requestAnimationFrame(tick);
+    };
+    rafRef.current = requestAnimationFrame(tick);
+    return () => { cancelAnimationFrame(rafRef.current); window.removeEventListener('keydown', onKey); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [reduced]);
+
+  // ── Full cinematic path. ───────────────────────────────────────────────────
+  useEffect(() => {
+    if (reduced) return;
+    const T = TIMELINE;
+    particlesRef.current = makeParticles(isMobile ? 26 : 54);
+
+    const canvas = canvasRef.current;
+    const ctx = canvas?.getContext('2d');
+    const resize = () => {
+      if (!canvas) return;
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    };
+    resize();
+    window.addEventListener('resize', resize);
+
+    const onKey = (e) => { if (e.key === 'Escape') { cancelAnimationFrame(rafRef.current); finish(onComplete); } };
+    window.addEventListener('keydown', onKey);
+
+    const tick = (now) => {
+      if (startRef.current == null) startRef.current = now;
+      const elapsed = now - startRef.current;
+
+      if (elapsed >= T.COMPLETE) { finish(onComplete); return; }
+
+      // Act 0 — distant light point.
+      if (lightRef.current) {
+        const p = clamp01((elapsed - 80) / (T.DARK_END - 80));
+        let opacity;
+        if (elapsed < T.DARK_END) opacity = easeOutCubic(p) * 0.9;
+        else opacity = Math.max(0, 0.9 * (1 - clamp01((elapsed - T.DARK_END) / 500)));
+        const scale = lerp(0.4, 1, easeOutCubic(p));
+        lightRef.current.style.opacity = String(opacity);
+        lightRef.current.style.transform = `scale(${scale})`;
+      }
+
+      // Act 1 — environment (grid + particle canvas wrapper) entrance / hold / fade to black.
+      if (envWrapRef.current) {
+        let envOpacity, envScale, envBlur;
+        if (elapsed < T.DARK_END) { envOpacity = 0; envScale = 1.08; envBlur = 6; }
+        else if (elapsed < T.ENV_END) {
+          const p = easeOutCubic(clamp01((elapsed - T.DARK_END) / (T.ENV_END - T.DARK_END)));
+          envOpacity = p; envScale = lerp(1.08, 1, p); envBlur = lerp(6, 0, p);
+        } else if (elapsed < T.WORDS_END) {
+          envOpacity = 1; envScale = 1; envBlur = 0;
+        } else if (elapsed < T.SILENCE_END) {
+          const p = easeInCubic(clamp01((elapsed - T.WORDS_END) / (T.SILENCE_END - T.WORDS_END)));
+          envOpacity = lerp(1, 0, Math.min(p * 1.6, 1)); envScale = 1; envBlur = 0;
+        } else {
+          envOpacity = 0; envScale = 1; envBlur = 0;
+        }
+        envWrapRef.current.style.opacity = String(envOpacity);
+        envWrapRef.current.style.transform = `scale(${envScale})`;
+        envWrapRef.current.style.filter = envBlur > 0.05 ? `blur(${envBlur}px)` : 'none';
+      }
+
+      // Particle canvas — drawn every frame regardless of act; the function
+      // itself figures out visibility from elapsed time.
+      if (ctx && canvas) drawParticles(ctx, canvas.width, canvas.height, elapsed, particlesRef.current);
+
+      // Acts 2–4 — the word montage.
+      if (wordRef.current) {
+        if (elapsed < T.ENV_END) {
+          wordRef.current.style.opacity = '0';
+        } else if (elapsed < T.WORDS_END) {
+          let idx = 0;
+          for (let i = T.wordStarts.length - 1; i >= 0; i--) { if (elapsed >= T.wordStarts[i]) { idx = i; break; } }
+          const word = CINEMATIC_WORDS[idx];
+          const localT = elapsed - T.wordStarts[idx];
+          const frame = getWordFrame(word.variant, localT, word.dur);
+          if (wordRef.current.dataset.idx !== String(idx)) {
+            wordRef.current.textContent = word.text;
+            wordRef.current.dataset.idx = String(idx);
           }
-          el.style.opacity = String(opacity);
-          el.style.transform = `translateY(${y}px) scale(${scale})`;
-        }
-      } else {
-        const closeElapsed = Math.min(CLOSE_MS, elapsed - totalWordsMs);
-        const p = easeInOutExpo(closeElapsed / CLOSE_MS);
-        if (panelRef.current) panelRef.current.style.transform = `translateY(${-100 * p}%)`;
-        if (wordRef.current) { wordRef.current.style.opacity = '1'; wordRef.current.style.transform = 'translateY(0px) scale(1)'; }
-
-        if (closeElapsed >= CLOSE_MS) {
-          if (!doneRef.current) { doneRef.current = true; onComplete?.(); }
-          return; // stop the loop — we're done
+          wordRef.current.style.opacity = String(clamp01(frame.opacity));
+          wordRef.current.style.transform = `translate(${frame.tx}px, ${frame.ty}px) scale(${frame.scale}) rotate(${frame.rotate}deg)`;
+          wordRef.current.style.filter = frame.blur > 0.05 ? `blur(${frame.blur}px)` : 'none';
+          wordRef.current.style.letterSpacing = `${-0.02 + frame.tracking}em`;
+        } else {
+          wordRef.current.style.opacity = '0';
         }
       }
+
+      // Act 5 (silence) needs no code of its own — the environment and word
+      // layers above have already faded to nothing by T.SILENCE_END, and the
+      // title below hasn't started yet, so the screen is genuinely black.
+
+      // Act 6 — PLANIT: letters separate → converge, wrapper blur/scale/opacity, then light sweep.
+      if (titleWrapRef.current) {
+        if (elapsed < T.TITLE_START) {
+          titleWrapRef.current.style.opacity = '0';
+          if (sweepRef.current) sweepRef.current.style.opacity = '0';
+        } else if (elapsed < T.PULLBACK_START) {
+          const p = clamp01((elapsed - T.TITLE_START) / (T.TITLE_LOCK - T.TITLE_START));
+          const eIn = easeOutCubic(clamp01(p / 0.35));
+          const eSpacing = easeInOutCubic(p);
+          const wrapScale = p < 0.5 ? lerp(0.94, 1.02, easeOutCubic(p / 0.5)) : lerp(1.02, 1, easeOutCubic((p - 0.5) / 0.5));
+          titleWrapRef.current.style.opacity = String(eIn);
+          titleWrapRef.current.style.transform = `scale(${wrapScale})`;
+          titleWrapRef.current.style.filter = eIn < 0.98 ? `blur(${lerp(5, 0, eIn)}px)` : 'none';
+
+          const spacing = lerp(52, 2, eSpacing);
+          const n = letterRefs.current.length;
+          letterRefs.current.forEach((el, i) => { if (el) el.style.transform = `translateX(${(i - (n - 1) / 2) * spacing}px)`; });
+
+          if (sweepRef.current) {
+            if (elapsed >= T.TITLE_LOCK) {
+              const sp = clamp01((elapsed - T.TITLE_LOCK) / (T.SWEEP_END - T.TITLE_LOCK));
+              sweepRef.current.style.opacity = sp < 1 ? String(Math.sin(sp * Math.PI)) : '0';
+              sweepRef.current.style.transform = `translateX(${lerp(-140, 340, sp)}%)`;
+            } else {
+              sweepRef.current.style.opacity = '0';
+            }
+          }
+        } else {
+          const pp = clamp01((elapsed - T.PULLBACK_START) / (T.PULLBACK_END - T.PULLBACK_START));
+          titleWrapRef.current.style.opacity = String(1 - easeInCubic(pp));
+          titleWrapRef.current.style.transform = `scale(${lerp(1, 1.08, pp)})`;
+          titleWrapRef.current.style.filter = 'none';
+          if (sweepRef.current) sweepRef.current.style.opacity = '0';
+        }
+      }
+
+      // Act 7 — tagline, two lines staggered slightly.
+      if (line1Ref.current && line2Ref.current) {
+        if (elapsed < T.PULLBACK_START) {
+          [line1Ref.current, line2Ref.current].forEach((el, i) => {
+            const localStart = T.TAGLINE_START + i * 140;
+            if (elapsed < localStart) { el.style.opacity = '0'; el.style.transform = 'translateY(14px)'; return; }
+            const dur = Math.max(T.TAGLINE_END - localStart, 1);
+            const e = easeOutCubic(clamp01((elapsed - localStart) / dur));
+            el.style.opacity = String(e);
+            el.style.transform = `translateY(${lerp(14, 0, e)}px)`;
+          });
+        } else {
+          const pp = clamp01((elapsed - T.PULLBACK_START) / (T.PULLBACK_END - T.PULLBACK_START));
+          const op = Math.max(0, 1 - easeInCubic(pp) * 1.3);
+          const ty = lerp(0, -10, pp);
+          [line1Ref.current, line2Ref.current].forEach(el => { el.style.opacity = String(op); el.style.transform = `translateY(${ty}px)`; });
+        }
+      }
+
+      // Act 8 — cinematic bloom.
+      if (bloomRef.current) {
+        if (elapsed >= T.BLOOM_START && elapsed <= T.BLOOM_END) {
+          const intensity = Math.sin(clamp01((elapsed - T.BLOOM_START) / (T.BLOOM_END - T.BLOOM_START)) * Math.PI);
+          bloomRef.current.style.opacity = String(intensity * 0.55);
+        } else {
+          bloomRef.current.style.opacity = '0';
+        }
+      }
+
+      // Acts 9–10 — camera pullback is expressed above (env fade, title/tagline
+      // recede); the panel itself rises last, overlapping the tail of pullback.
+      if (panelRef.current) {
+        if (elapsed >= T.PANEL_RISE_START) {
+          const rp = easeInOutExpo(clamp01((elapsed - T.PANEL_RISE_START) / (T.PANEL_RISE_END - T.PANEL_RISE_START)));
+          panelRef.current.style.transform = `translateY(${-100 * rp}%)`;
+        }
+      }
+
       rafRef.current = requestAnimationFrame(tick);
     };
 
     rafRef.current = requestAnimationFrame(tick);
-    return () => { if (rafRef.current) cancelAnimationFrame(rafRef.current); };
-  }, [onComplete]);
+    return () => {
+      cancelAnimationFrame(rafRef.current);
+      window.removeEventListener('resize', resize);
+      window.removeEventListener('keydown', onKey);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [reduced, isMobile]);
+
+  const titleTextStyle = {
+    fontSize: 'clamp(2.75rem, 11vw, 7.5rem)', fontWeight: 700, color: '#fff',
+    letterSpacing: '-0.01em', lineHeight: 1,
+  };
+
+  if (reduced) {
+    return (
+      <div ref={panelRef} className="fixed inset-0 flex items-center justify-center" style={{ background: '#050505', zIndex: 999 }}>
+        <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 20px' }}>
+          <div ref={wordRef} style={{ fontSize: 'clamp(2.25rem, 9vw, 6rem)', fontWeight: 600, color: '#fff', letterSpacing: '-0.02em', opacity: 0 }}>Hello</div>
+        </div>
+        <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '0 20px' }}>
+          <div ref={titleWrapRef} style={{ display: 'flex', opacity: 0 }}>
+            {TITLE_LETTERS.map((ch, i) => (
+              <span key={i} ref={el => { letterRefs.current[i] = el; }} style={{ ...titleTextStyle, display: 'inline-block' }}>{ch}</span>
+            ))}
+          </div>
+          <div ref={taglineWrapRef} style={{ marginTop: '1.25rem', textAlign: 'center' }}>
+            <div ref={line1Ref} style={{ fontSize: 'clamp(0.8rem,2.2vw,1rem)', fontWeight: 500, letterSpacing: '0.18em', color: 'rgba(255,255,255,0.72)' }}>PLAN SMART.</div>
+            <div ref={line2Ref} style={{ fontSize: 'clamp(0.8rem,2.2vw,1rem)', fontWeight: 500, letterSpacing: '0.18em', color: 'rgba(255,255,255,0.72)' }}>EXECUTE FLAWLESSLY.</div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div
-      ref={panelRef}
-      className="fixed inset-0 flex items-center justify-center"
-      style={{ background: '#050505', zIndex: 999, willChange: 'transform' }}
-    >
-      <div style={{ width: 'min(90vw, 640px)', display: 'flex', justifyContent: 'center' }}>
+    <div ref={panelRef} className="fixed inset-0 overflow-hidden" style={{ background: '#04040a', zIndex: 999, willChange: 'transform' }}>
+      {/* Act 1 — environment: faint grid + soft depth particles */}
+      <div ref={envWrapRef} aria-hidden="true" style={{ position: 'absolute', inset: 0, opacity: 0, willChange: 'opacity, transform, filter' }}>
+        <CinematicGrid />
+        <canvas ref={canvasRef} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }} />
+      </div>
+
+      {/* Act 0 — distant point of light */}
+      <div
+        ref={lightRef}
+        aria-hidden="true"
+        style={{
+          position: 'absolute', left: '50%', top: '46%', width: 5, height: 5, marginLeft: -2.5, marginTop: -2.5,
+          borderRadius: '50%', background: '#fff', opacity: 0,
+          boxShadow: '0 0 3px 1px rgba(255,255,255,0.9), 0 0 46px 14px rgba(200,210,255,0.28)',
+          willChange: 'transform, opacity',
+        }}
+      />
+
+      {/* Cinematic vignette — always present, gives the frame depth */}
+      <div aria-hidden="true" style={{ position: 'absolute', inset: 0, pointerEvents: 'none', background: 'radial-gradient(ellipse 72% 65% at 50% 48%, transparent 42%, rgba(0,0,0,0.6) 100%)' }} />
+
+      {/* Act 8 — bloom */}
+      <div
+        ref={bloomRef}
+        aria-hidden="true"
+        style={{
+          position: 'absolute', inset: 0, pointerEvents: 'none', opacity: 0, mixBlendMode: 'screen',
+          background: 'radial-gradient(circle at 50% 46%, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0.22) 32%, transparent 66%)',
+        }}
+      />
+
+      {/* Word layer (Hello + montage) */}
+      <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 20px' }}>
         <div
           ref={wordRef}
           style={{
-            fontSize: 'clamp(2.25rem, 9vw, 6rem)', fontWeight: 600, color: '#fff',
-            letterSpacing: '-0.02em', minHeight: '1.2em', display: 'flex', alignItems: 'center',
-            justifyContent: 'center', textAlign: 'center', width: '100%',
-            opacity: 0, willChange: 'transform, opacity',
+            fontSize: 'clamp(2.25rem, 9vw, 6rem)', fontWeight: 600, color: '#fff', letterSpacing: '-0.02em',
+            opacity: 0, whiteSpace: 'nowrap', willChange: 'transform, opacity, filter',
           }}
-        >
-          {CINEMATIC_WORDS[0].text}
+        />
+      </div>
+
+      {/* Title + tagline layer */}
+      <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '0 20px' }}>
+        <div ref={titleWrapRef} style={{ position: 'relative', display: 'flex', opacity: 0, willChange: 'transform, opacity, filter' }}>
+          {TITLE_LETTERS.map((ch, i) => (
+            <span key={i} ref={el => { letterRefs.current[i] = el; }} style={{ ...titleTextStyle, display: 'inline-block', willChange: 'transform' }}>{ch}</span>
+          ))}
+          <div
+            ref={sweepRef}
+            aria-hidden="true"
+            style={{
+              position: 'absolute', top: 0, bottom: 0, left: 0, width: '26%', opacity: 0, pointerEvents: 'none',
+              background: 'linear-gradient(78deg, transparent 0%, rgba(255,255,255,0.65) 45%, transparent 100%)',
+              mixBlendMode: 'screen', transform: 'translateX(-140%)',
+            }}
+          />
+        </div>
+        <div ref={taglineWrapRef} style={{ marginTop: '1.4rem', textAlign: 'center' }}>
+          <div ref={line1Ref} style={{ fontSize: 'clamp(0.8rem,2.2vw,1rem)', fontWeight: 500, letterSpacing: '0.18em', color: 'rgba(255,255,255,0.72)', opacity: 0 }}>PLAN SMART.</div>
+          <div ref={line2Ref} style={{ fontSize: 'clamp(0.8rem,2.2vw,1rem)', fontWeight: 500, letterSpacing: '0.18em', color: 'rgba(255,255,255,0.72)', opacity: 0, marginTop: 4 }}>EXECUTE FLAWLESSLY.</div>
         </div>
       </div>
     </div>
