@@ -610,16 +610,16 @@ function InjectGlobalCSS() {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// OPENING CINEMATIC — "Hello" typewriter through languages, accelerating
+// OPENING CINEMATIC — types "Hello", crossfades through languages
+// (accelerating), then the whole panel rises up to reveal the hero.
 // ─────────────────────────────────────────────────────────────────────────────
-const HELLO_WORDS = [
-  { text: 'Hello',        lang: 'English' },
+const OPEN_WORD = { text: 'Hello', lang: 'English' };
+const MONTAGE_WORDS = [
   { text: 'Hola',         lang: 'Spanish' },
   { text: 'Bonjour',      lang: 'French' },
   { text: 'Ciao',         lang: 'Italian' },
   { text: 'Hallo',        lang: 'German' },
   { text: 'Olá',          lang: 'Portuguese' },
-  { text: 'Hallo',        lang: 'Dutch' },
   { text: 'Hej',          lang: 'Swedish' },
   { text: 'Привет',       lang: 'Russian' },
   { text: 'こんにちは',      lang: 'Japanese' },
@@ -639,77 +639,117 @@ const HELLO_WORDS = [
   { text: 'Привіт',       lang: 'Ukrainian' },
   { text: 'PlanIt',       lang: 'PlanIt' },
 ];
+const SMOOTH_EASE_IN  = [0.76, 0, 0.24, 1];   // slow start, fast finish — for the rising panel
+const SMOOTH_EASE_OUT = [0.16, 1, 0.3, 1];    // fast start, gentle settle — for each word
 
 function IntroCinematic({ onComplete }) {
-  const [wordIndex, setWordIndex] = useState(0);
-  const [typedChars, setTypedChars] = useState(0);
-  const [phase, setPhase] = useState('typing'); // 'typing' | 'closing'
+  // phase: 'open' (typing "Hello") → 'montage' (crossfading languages) → 'closing' (panel rises)
+  const [phase, setPhase] = useState('open');
+  const [openChars, setOpenChars] = useState(0);
+  const [montageIndex, setMontageIndex] = useState(0);
 
-  const word = HELLO_WORDS[wordIndex];
-  const chars = Array.from(word.text);
-
+  // Type "Hello" out at a steady, gentle pace — each letter eases in on its
+  // own rather than snapping into place.
   useEffect(() => {
-    if (phase !== 'typing') return;
-    // Both typing speed and hold time shrink exponentially — the whole
-    // sequence visibly speeds up as it races through the list.
-    const typeSpeed = Math.max(14, Math.round(90 * Math.pow(0.885, wordIndex)));
-    const holdTime  = Math.max(55, Math.round(480 * Math.pow(0.85, wordIndex)));
-
-    let t;
-    if (typedChars < chars.length) {
-      t = setTimeout(() => setTypedChars(c => c + 1), typeSpeed);
-    } else {
-      t = setTimeout(() => {
-        if (wordIndex < HELLO_WORDS.length - 1) {
-          setWordIndex(i => i + 1);
-          setTypedChars(0);
-        } else {
-          setPhase('closing');
-        }
-      }, holdTime);
+    if (phase !== 'open') return;
+    if (openChars < OPEN_WORD.text.length) {
+      const t = setTimeout(() => setOpenChars(c => c + 1), 90);
+      return () => clearTimeout(t);
     }
+    const t = setTimeout(() => setPhase('montage'), 480);
     return () => clearTimeout(t);
-  }, [wordIndex, typedChars, phase, chars.length]);
+  }, [phase, openChars]);
+
+  // Crossfade through the language list — the interval between words shrinks
+  // exponentially, so the montage visibly speeds up, but every transition
+  // itself is still a full, smooth fade+drift (never an instant cut).
+  useEffect(() => {
+    if (phase !== 'montage') return;
+    const interval = Math.max(90, Math.round(430 * Math.pow(0.83, montageIndex)));
+    const t = setTimeout(() => {
+      if (montageIndex < MONTAGE_WORDS.length - 1) {
+        setMontageIndex(i => i + 1);
+      } else {
+        setPhase('closing');
+      }
+    }, interval);
+    return () => clearTimeout(t);
+  }, [phase, montageIndex]);
 
   useEffect(() => {
     if (phase === 'closing') {
-      const t = setTimeout(() => onComplete?.(), 750);
+      const t = setTimeout(() => onComplete?.(), 950);
       return () => clearTimeout(t);
     }
   }, [phase, onComplete]);
 
-  const display = chars.slice(0, typedChars).join('');
-  const stillTyping = typedChars < chars.length;
+  // Each word's own crossfade gets quicker alongside the montage, but never
+  // drops below a duration the eye can still resolve as a smooth motion.
+  const montageWordDuration = Math.max(0.16, Math.min(0.4, (430 * Math.pow(0.83, montageIndex)) / 1000 * 0.7));
+
+  // Stays pointed at the last word once we enter 'closing' — the word rides
+  // up together with the panel rather than re-triggering its own fade.
+  const currentWord = MONTAGE_WORDS[montageIndex];
 
   return (
     <motion.div
       className="fixed inset-0 flex items-center justify-center"
-      style={{ background: '#050505', zIndex: 999 }}
-      initial={{ opacity: 1 }}
-      animate={phase === 'closing' ? { opacity: 0, scale: 1.06 } : { opacity: 1, scale: 1 }}
+      style={{ background: '#050505', zIndex: 999, willChange: 'transform' }}
+      initial={{ y: 0 }}
+      animate={{ y: phase === 'closing' ? '-100%' : 0 }}
       exit={{ opacity: 0 }}
-      transition={{ duration: 0.75, ease: [0.22, 1, 0.36, 1] }}
+      transition={{ duration: 0.95, ease: SMOOTH_EASE_IN }}
     >
-      <div
-        dir={word.rtl ? 'rtl' : 'ltr'}
-        style={{
-          fontSize: 'clamp(2.25rem, 9vw, 6rem)',
-          fontWeight: 600,
-          color: '#fff',
-          letterSpacing: '-0.02em',
-          minHeight: '1.2em',
-          display: 'flex',
-          alignItems: 'center',
-        }}
-      >
-        <span>{display}</span>
-        <span
-          aria-hidden="true"
-          style={{
-            display: 'inline-block', width: '0.09em', marginLeft: 6, alignSelf: 'stretch',
-            background: '#fff', opacity: stillTyping ? 1 : 0, transition: 'opacity 0.1s linear',
-          }}
-        />
+      <style>{`
+        @keyframes intro-cursor-blink { 0%, 45% { opacity: 1; } 50%, 100% { opacity: 0; } }
+      `}</style>
+      <div style={{ width: 'min(90vw, 640px)', display: 'flex', justifyContent: 'center' }}>
+        {phase === 'open' ? (
+          <div
+            style={{
+              fontSize: 'clamp(2.25rem, 9vw, 6rem)', fontWeight: 600, color: '#fff',
+              letterSpacing: '-0.02em', minHeight: '1.2em', display: 'flex', alignItems: 'center',
+            }}
+          >
+            {Array.from(OPEN_WORD.text).slice(0, openChars).map((ch, i) => (
+              <motion.span
+                key={i}
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.28, ease: SMOOTH_EASE_OUT }}
+              >
+                {ch}
+              </motion.span>
+            ))}
+            <span
+              aria-hidden="true"
+              style={{
+                display: 'inline-block', width: '0.09em', height: '0.85em', marginLeft: 6,
+                background: '#fff',
+                animation: openChars < OPEN_WORD.text.length ? 'none' : 'intro-cursor-blink 1s steps(1) infinite',
+                opacity: openChars < OPEN_WORD.text.length ? 1 : undefined,
+              }}
+            />
+          </div>
+        ) : (
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={montageIndex}
+              dir={currentWord.rtl ? 'rtl' : 'ltr'}
+              initial={{ opacity: 0, y: 18 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -18 }}
+              transition={{ duration: montageWordDuration, ease: SMOOTH_EASE_OUT }}
+              style={{
+                fontSize: 'clamp(2.25rem, 9vw, 6rem)', fontWeight: 600, color: '#fff',
+                letterSpacing: '-0.02em', minHeight: '1.2em', display: 'flex', alignItems: 'center',
+                justifyContent: 'center', textAlign: 'center', width: '100%',
+              }}
+            >
+              {currentWord.text}
+            </motion.div>
+          </AnimatePresence>
+        )}
       </div>
     </motion.div>
   );
