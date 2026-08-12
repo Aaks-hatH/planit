@@ -610,148 +610,117 @@ function InjectGlobalCSS() {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// OPENING CINEMATIC — types "Hello", crossfades through languages
-// (accelerating), then the whole panel rises up to reveal the hero.
+// OPENING CINEMATIC — punchy title-card montage through a handful of
+// languages, accelerating, then the whole panel rises to reveal the hero.
+//
+// Driven by a single requestAnimationFrame loop keyed off real elapsed time
+// (not chained setTimeouts) and written straight to the DOM via refs — no
+// React re-renders during playback. That's what makes this version smooth
+// and identical on every run: nothing here depends on timer drift or how
+// busy the main thread is, everything is a function of elapsed milliseconds.
 // ─────────────────────────────────────────────────────────────────────────────
-const OPEN_WORD = { text: 'Hello', lang: 'English' };
-const MONTAGE_WORDS = [
-  { text: 'Hola',         lang: 'Spanish' },
-  { text: 'Bonjour',      lang: 'French' },
-  { text: 'Ciao',         lang: 'Italian' },
-  { text: 'Hallo',        lang: 'German' },
-  { text: 'Olá',          lang: 'Portuguese' },
-  { text: 'Hej',          lang: 'Swedish' },
-  { text: 'Привет',       lang: 'Russian' },
-  { text: 'こんにちは',      lang: 'Japanese' },
-  { text: '你好',          lang: 'Chinese' },
-  { text: '안녕하세요',      lang: 'Korean' },
-  { text: 'مرحبا',        lang: 'Arabic',   rtl: true },
-  { text: 'नमस्ते',        lang: 'Hindi' },
-  { text: 'Merhaba',      lang: 'Turkish' },
-  { text: 'Cześć',        lang: 'Polish' },
-  { text: 'Γειά σου',     lang: 'Greek' },
-  { text: 'שלום',         lang: 'Hebrew',   rtl: true },
-  { text: 'สวัสดี',        lang: 'Thai' },
-  { text: 'Xin chào',     lang: 'Vietnamese' },
-  { text: 'Halo',         lang: 'Indonesian' },
-  { text: 'Habari',       lang: 'Swahili' },
-  { text: 'Kumusta',      lang: 'Filipino' },
-  { text: 'Привіт',       lang: 'Ukrainian' },
-  { text: 'PlanIt',       lang: 'PlanIt' },
+const CINEMATIC_WORDS = [
+  { text: 'Hello' },
+  { text: 'Hola' },
+  { text: 'Bonjour' },
+  { text: 'こんにちは' },
+  { text: '안녕하세요' },
+  { text: 'Ciao' },
+  { text: 'Привет' },
+  { text: 'PlanIt' },
 ];
-const SMOOTH_EASE_IN  = [0.76, 0, 0.24, 1];   // slow start, fast finish — for the rising panel
-const SMOOTH_EASE_OUT = [0.16, 1, 0.3, 1];    // fast start, gentle settle — for each word
+// One slot per word, ms — shrinks fast so the montage visibly accelerates.
+// The last slot (the "PlanIt" logo beat) holds longer on purpose.
+const SLOT_MS = [520, 360, 280, 220, 180, 150, 135, 520];
+const CLOSE_MS = 700;
+
+const easeOutCubic = t => 1 - Math.pow(1 - t, 3);
+const easeInCubic  = t => t * t * t;
+const easeInOutExpo = t => (t < 0.5 ? Math.pow(2, 20 * t - 10) / 2 : (2 - Math.pow(2, -20 * t + 10)) / 2);
 
 function IntroCinematic({ onComplete }) {
-  // phase: 'open' (typing "Hello") → 'montage' (crossfading languages) → 'closing' (panel rises)
-  const [phase, setPhase] = useState('open');
-  const [openChars, setOpenChars] = useState(0);
-  const [montageIndex, setMontageIndex] = useState(0);
+  const panelRef = useRef(null);
+  const wordRef  = useRef(null);
+  const rafRef   = useRef(null);
+  const startRef = useRef(null);
+  const doneRef  = useRef(false);
 
-  // Type "Hello" out at a steady, gentle pace — each letter eases in on its
-  // own rather than snapping into place.
   useEffect(() => {
-    if (phase !== 'open') return;
-    if (openChars < OPEN_WORD.text.length) {
-      const t = setTimeout(() => setOpenChars(c => c + 1), 90);
-      return () => clearTimeout(t);
-    }
-    const t = setTimeout(() => setPhase('montage'), 480);
-    return () => clearTimeout(t);
-  }, [phase, openChars]);
+    const totalWordsMs = SLOT_MS.reduce((a, b) => a + b, 0);
+    const cumulative = [];
+    let acc = 0;
+    for (const d of SLOT_MS) { cumulative.push(acc); acc += d; }
 
-  // Crossfade through the language list — the interval between words shrinks
-  // exponentially, so the montage visibly speeds up, but every transition
-  // itself is still a full, smooth fade+drift (never an instant cut).
-  useEffect(() => {
-    if (phase !== 'montage') return;
-    const interval = Math.max(90, Math.round(430 * Math.pow(0.83, montageIndex)));
-    const t = setTimeout(() => {
-      if (montageIndex < MONTAGE_WORDS.length - 1) {
-        setMontageIndex(i => i + 1);
+    const tick = (now) => {
+      if (startRef.current == null) startRef.current = now;
+      const elapsed = now - startRef.current;
+
+      if (elapsed < totalWordsMs) {
+        let idx = 0;
+        for (let i = SLOT_MS.length - 1; i >= 0; i--) {
+          if (elapsed >= cumulative[i]) { idx = i; break; }
+        }
+        const slot = SLOT_MS[idx];
+        const localT = elapsed - cumulative[idx];
+        const fadeIn  = Math.min(150, slot * 0.32);
+        const fadeOut = Math.min(170, slot * 0.34);
+
+        let opacity = 1, scale = 1, y = 0;
+        if (localT < fadeIn) {
+          const p = easeOutCubic(localT / fadeIn);
+          opacity = p; scale = 0.84 + 0.16 * p; y = 16 * (1 - p);
+        } else if (localT > slot - fadeOut) {
+          const p = easeInCubic((localT - (slot - fadeOut)) / fadeOut);
+          opacity = 1 - p; scale = 1 + 0.12 * p; y = -16 * p;
+        }
+
+        const el = wordRef.current;
+        if (el) {
+          if (el.dataset.idx !== String(idx)) {
+            el.textContent = CINEMATIC_WORDS[idx].text;
+            el.dataset.idx = String(idx);
+          }
+          el.style.opacity = String(opacity);
+          el.style.transform = `translateY(${y}px) scale(${scale})`;
+        }
       } else {
-        setPhase('closing');
+        const closeElapsed = Math.min(CLOSE_MS, elapsed - totalWordsMs);
+        const p = easeInOutExpo(closeElapsed / CLOSE_MS);
+        if (panelRef.current) panelRef.current.style.transform = `translateY(${-100 * p}%)`;
+        if (wordRef.current) { wordRef.current.style.opacity = '1'; wordRef.current.style.transform = 'translateY(0px) scale(1)'; }
+
+        if (closeElapsed >= CLOSE_MS) {
+          if (!doneRef.current) { doneRef.current = true; onComplete?.(); }
+          return; // stop the loop — we're done
+        }
       }
-    }, interval);
-    return () => clearTimeout(t);
-  }, [phase, montageIndex]);
+      rafRef.current = requestAnimationFrame(tick);
+    };
 
-  useEffect(() => {
-    if (phase === 'closing') {
-      const t = setTimeout(() => onComplete?.(), 950);
-      return () => clearTimeout(t);
-    }
-  }, [phase, onComplete]);
-
-  // Each word's own crossfade gets quicker alongside the montage, but never
-  // drops below a duration the eye can still resolve as a smooth motion.
-  const montageWordDuration = Math.max(0.16, Math.min(0.4, (430 * Math.pow(0.83, montageIndex)) / 1000 * 0.7));
-
-  // Stays pointed at the last word once we enter 'closing' — the word rides
-  // up together with the panel rather than re-triggering its own fade.
-  const currentWord = MONTAGE_WORDS[montageIndex];
+    rafRef.current = requestAnimationFrame(tick);
+    return () => { if (rafRef.current) cancelAnimationFrame(rafRef.current); };
+  }, [onComplete]);
 
   return (
-    <motion.div
+    <div
+      ref={panelRef}
       className="fixed inset-0 flex items-center justify-center"
       style={{ background: '#050505', zIndex: 999, willChange: 'transform' }}
-      initial={{ y: 0 }}
-      animate={{ y: phase === 'closing' ? '-100%' : 0 }}
-      exit={{ opacity: 0 }}
-      transition={{ duration: 0.95, ease: SMOOTH_EASE_IN }}
     >
-      <style>{`
-        @keyframes intro-cursor-blink { 0%, 45% { opacity: 1; } 50%, 100% { opacity: 0; } }
-      `}</style>
       <div style={{ width: 'min(90vw, 640px)', display: 'flex', justifyContent: 'center' }}>
-        {phase === 'open' ? (
-          <div
-            style={{
-              fontSize: 'clamp(2.25rem, 9vw, 6rem)', fontWeight: 600, color: '#fff',
-              letterSpacing: '-0.02em', minHeight: '1.2em', display: 'flex', alignItems: 'center',
-            }}
-          >
-            {Array.from(OPEN_WORD.text).slice(0, openChars).map((ch, i) => (
-              <motion.span
-                key={i}
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.28, ease: SMOOTH_EASE_OUT }}
-              >
-                {ch}
-              </motion.span>
-            ))}
-            <span
-              aria-hidden="true"
-              style={{
-                display: 'inline-block', width: '0.09em', height: '0.85em', marginLeft: 6,
-                background: '#fff',
-                animation: openChars < OPEN_WORD.text.length ? 'none' : 'intro-cursor-blink 1s steps(1) infinite',
-                opacity: openChars < OPEN_WORD.text.length ? 1 : undefined,
-              }}
-            />
-          </div>
-        ) : (
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={montageIndex}
-              dir={currentWord.rtl ? 'rtl' : 'ltr'}
-              initial={{ opacity: 0, y: 18 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -18 }}
-              transition={{ duration: montageWordDuration, ease: SMOOTH_EASE_OUT }}
-              style={{
-                fontSize: 'clamp(2.25rem, 9vw, 6rem)', fontWeight: 600, color: '#fff',
-                letterSpacing: '-0.02em', minHeight: '1.2em', display: 'flex', alignItems: 'center',
-                justifyContent: 'center', textAlign: 'center', width: '100%',
-              }}
-            >
-              {currentWord.text}
-            </motion.div>
-          </AnimatePresence>
-        )}
+        <div
+          ref={wordRef}
+          style={{
+            fontSize: 'clamp(2.25rem, 9vw, 6rem)', fontWeight: 600, color: '#fff',
+            letterSpacing: '-0.02em', minHeight: '1.2em', display: 'flex', alignItems: 'center',
+            justifyContent: 'center', textAlign: 'center', width: '100%',
+            opacity: 0, willChange: 'transform, opacity',
+          }}
+        >
+          {CINEMATIC_WORDS[0].text}
+        </div>
       </div>
-    </motion.div>
+    </div>
   );
 }
 
@@ -2596,7 +2565,8 @@ export default function Home() {
       trackGAEvent('event_created', { event_type: formData.isEnterpriseMode ? 'enterprise' : 'standard' });
       setRequiresVerification(false);
       setAbuseStatus(null);
-      setShowAd(true);
+      // Cross-promo ad disabled — don't show it after event creation.
+      // setShowAd(true);
       return true;
     } catch (error) {
       const data = error.response?.data;
