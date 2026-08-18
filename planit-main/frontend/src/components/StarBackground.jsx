@@ -670,9 +670,19 @@ function drawAirglow(ctx,W,H){
 // ═══════════════════════════════════════════════════════════════════════════════
 // COMPONENT
 // ═══════════════════════════════════════════════════════════════════════════════
-export default function StarBackground({ fixed=true, starCount=null, forceActive=false }) {
+export default function StarBackground({ fixed=true, starCount=null, forceActive=false, paused=false }) {
   const [active, setActive] = useState(forceActive);
   const canvasRef = useRef(null);
+  // `paused` lets a full-screen overlay (e.g. the intro cinematic) that's
+  // temporarily covering this canvas tell the render loop to stand down —
+  // there should never be two heavy rAF loops fighting for frame time at
+  // once. We keep the loop *scheduled* (cheap) but skip all drawing work
+  // while paused, and pick back up seamlessly (lastTs is still updated each
+  // paused frame so the first real frame after resuming doesn't see a huge
+  // delta). A ref, not state, because this needs to be read inside a rAF
+  // callback without retriggering the setup effect.
+  const pausedRef = useRef(paused);
+  useEffect(() => { pausedRef.current = paused; }, [paused]);
   const tier      = useMemo(() => detectTier(), []);
   const cfg       = TIER_CFG[tier];
   const count     = starCount ?? cfg.stars;
@@ -745,9 +755,17 @@ export default function StarBackground({ fixed=true, starCount=null, forceActive
       canvas.height = newH;
       if(canvas.width!==mwW||canvas.height!==mwH){
         mwW=canvas.width; mwH=canvas.height;
-        requestAnimationFrame(()=>{
+        // Building the Milky Way bitmap does dozens of gradient fills — real
+        // work, but not urgent. Run it when the browser has spare idle time
+        // rather than forcing it into the next animation frame, so it never
+        // steals budget from whatever's currently animating on screen (e.g.
+        // the intro cinematic, if this canvas happens to be paused/hidden
+        // behind it right now).
+        const schedule = window.requestIdleCallback
+          || (cb => requestAnimationFrame(() => requestAnimationFrame(cb)));
+        schedule(() => {
           mwCanvas=renderMWOffscreen(mwW,mwH,mwStars,mwDust,cfg.mwGlow,cfg.mwDust);
-        });
+        }, { timeout: 1500 });
       }
     }
 
@@ -787,6 +805,10 @@ export default function StarBackground({ fixed=true, starCount=null, forceActive
     console.log(`%c PlanIt | __planit_stars() already active | tier=${tier}`, 'color:#adf;font-size:11px');
 
     function tick(ts){
+      // Paused (typically: fully covered by the intro cinematic's opaque
+      // panel) — skip all drawing. Still reschedule so resuming is instant
+      // and lastTs stays fresh, but do zero canvas/gradient work.
+      if(pausedRef.current){lastTs=ts; raf=requestAnimationFrame(tick); return;}
       if(ts-lastDrawTs < minFrameMs){raf=requestAnimationFrame(tick);return;}
       // While scrolling, skip canvas redraws so iOS compositor can use its
       // fast off-thread scroll path. Stars are frozen but imperceptible.
