@@ -784,8 +784,9 @@ function makeParticles(count) {
   return list;
 }
 
-function drawParticles(ctx, W, H, elapsed, particles) {
+function drawParticles(ctx, W, H, elapsed, particles, activeCount) {
   ctx.clearRect(0, 0, W, H);
+  const count = activeCount == null ? particles.length : activeCount;
   const cx = W / 2, cy = H * 0.46;
   const minDim = Math.min(W, H);
   const t = elapsed * 0.001;
@@ -817,7 +818,8 @@ function drawParticles(ctx, W, H, elapsed, particles) {
   const active = envelope > 0.003 || convergeT > 0 || disperseT > 0 || convergeVisible > 0;
   if (!active) return;
 
-  for (const pt of particles) {
+  for (let pi = 0; pi < count; pi++) {
+    const pt = particles[pi];
     let x, y, opacity;
     if (convergeT > 0 || disperseT > 0) {
       const targetX = cx + pt.convergeJitterX;
@@ -854,13 +856,41 @@ function drawParticles(ctx, W, H, elapsed, particles) {
 
 const TITLE_LETTERS = Array.from('PLANIT');
 
+// ── Device capability tiering — a cheap, one-time read of hardware signals
+// (never sampled inside the render loop) used only to pick a rendering
+// quality level. Three tiers keep this simple: HIGH gets the full particle
+// count and a mildly higher canvas resolution, MEDIUM (the common laptop/
+// tablet case, and the default for mobile) is the previous baseline, LOW is
+// for weak/low-memory devices where the montage should still play but with
+// noticeably less to draw per frame.
+// Note: the environment layer's entrance no longer animates `filter: blur()`
+// at all (see envWrapRef handling below) — animating blur across a
+// full-screen element every frame was the single most expensive thing this
+// cinematic was doing, so it's gone rather than tiered.
+const INTRO_QUALITY = {
+  LOW:    { particles: 16, dpr: 1   },
+  MEDIUM: { particles: 30, dpr: 1   },
+  HIGH:   { particles: 54, dpr: 1.5 },
+};
+function detectIntroQuality() {
+  if (typeof window === 'undefined') return 'MEDIUM';
+  const isMobile = window.innerWidth < 768 || /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent || '');
+  const cores = navigator.hardwareConcurrency || 4;
+  const mem = navigator.deviceMemory; // undefined on many browsers — treat as unknown, not penalized
+  if (isMobile) {
+    if ((mem !== undefined && mem <= 3) || cores <= 3) return 'LOW';
+    return 'MEDIUM';
+  }
+  if (cores >= 8 && (mem === undefined || mem >= 8)) return 'HIGH';
+  if (cores <= 3 || (mem !== undefined && mem <= 3)) return 'LOW';
+  return 'MEDIUM';
+}
+
 function IntroCinematic({ onComplete }) {
   const [reduced] = useState(
     () => typeof window !== 'undefined' && !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
   );
-  const [isMobile] = useState(
-    () => typeof window !== 'undefined' && window.innerWidth < 768
-  );
+  const [quality] = useState(detectIntroQuality);
 
   const panelRef = useRef(null);
   const lightRef = useRef(null);
@@ -962,24 +992,55 @@ function IntroCinematic({ onComplete }) {
   useEffect(() => {
     if (reduced) return;
     const T = TIMELINE;
-    particlesRef.current = makeParticles(isMobile ? 26 : 54);
+    const cfg = INTRO_QUALITY[quality];
+    particlesRef.current = makeParticles(cfg.particles);
+    // How many of those precomputed particles actually get drawn each frame.
+    // Adaptive quality (below) can shrink this on a slow device without ever
+    // reallocating the particle array — it just draws a shorter slice of it.
+    let activeParticleCount = particlesRef.current.length;
 
     const canvas = canvasRef.current;
     const ctx = canvas?.getContext('2d');
+    // DPR is capped (and only above 1 on the HIGH tier at all) so a
+    // high-density phone screen never blows the canvas up to millions of
+    // pixels — see cfg.dpr above.
+    const effectiveDPR = Math.min(window.devicePixelRatio || 1, cfg.dpr);
     const resize = () => {
       if (!canvas) return;
-      canvas.width = window.innerWidth;
-      canvas.height = window.innerHeight;
+      canvas.width = Math.round(window.innerWidth * effectiveDPR);
+      canvas.height = Math.round(window.innerHeight * effectiveDPR);
     };
     resize();
-    window.addEventListener('resize', resize);
+    // Debounced — mobile browsers fire `resize` repeatedly as the address
+    // bar hides/shows while scrolling; we don't want to touch the canvas
+    // (or, if it ever needed to, regenerate particles) on every one of those.
+    let resizeTimer = null;
+    const onResize = () => {
+      clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(resize, 150);
+    };
+    window.addEventListener('resize', onResize);
 
     const onKey = (e) => { if (e.key === 'Escape') { cancelAnimationFrame(rafRef.current); finish(onComplete); } };
     window.addEventListener('keydown', onKey);
 
+    // ── Lightweight adaptive quality — a safety net, not the primary
+    // strategy (the primary strategy is simply not doing expensive work in
+    // the first place). If frame times are consistently poor we quietly
+    // draw fewer particles; if they recover we restore. Hysteresis (500ms /
+    // 1500ms) avoids flapping back and forth every other frame.
+    let slowSince = null, goodSince = null, degraded = false, lastFrameTime = null;
+    const minParticles = Math.ceil(particlesRef.current.length * 0.35);
+
+    // Dev-only perf readout — never rendered to the DOM, just a console
+    // marker so this is easy to sanity-check while working on it locally.
+    const isDev = typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.DEV;
+    let devFrames = 0, devTimeAcc = 0, devLastLog = 0;
+
     const tick = (now) => {
       if (startRef.current == null) startRef.current = now;
       const elapsed = now - startRef.current;
+      const frameStart = isDev ? performance.now() : 0;
 
       if (elapsed >= T.COMPLETE) { finish(onComplete); return; }
 
@@ -995,28 +1056,37 @@ function IntroCinematic({ onComplete }) {
       }
 
       // Act 1 — environment (grid + particle canvas wrapper) entrance / hold / fade to black.
+      // Deliberately opacity + scale only, never `filter: blur()` — this
+      // wrapper is full-screen (it contains the grid SVG *and* the particle
+      // canvas), and animating blur across a full-screen element every
+      // frame is one of the most expensive things a browser can be asked to
+      // do. The zoom-in-from-1.08 alone reads as an atmospheric entrance
+      // without paying that cost.
       if (envWrapRef.current) {
-        let envOpacity, envScale, envBlur;
-        if (elapsed < T.DARK_END) { envOpacity = 0; envScale = 1.08; envBlur = 6; }
+        let envOpacity, envScale;
+        if (elapsed < T.DARK_END) { envOpacity = 0; envScale = 1.08; }
         else if (elapsed < T.ENV_END) {
           const p = easeOutCubic(clamp01((elapsed - T.DARK_END) / (T.ENV_END - T.DARK_END)));
-          envOpacity = p; envScale = lerp(1.08, 1, p); envBlur = lerp(6, 0, p);
+          envOpacity = p; envScale = lerp(1.08, 1, p);
         } else if (elapsed < T.WORDS_END) {
-          envOpacity = 1; envScale = 1; envBlur = 0;
+          envOpacity = 1; envScale = 1;
         } else if (elapsed < T.SILENCE_END) {
           const p = easeInCubic(clamp01((elapsed - T.WORDS_END) / (T.SILENCE_END - T.WORDS_END)));
-          envOpacity = lerp(1, 0, Math.min(p * 1.6, 1)); envScale = 1; envBlur = 0;
+          envOpacity = lerp(1, 0, Math.min(p * 1.6, 1)); envScale = 1;
         } else {
-          envOpacity = 0; envScale = 1; envBlur = 0;
+          envOpacity = 0; envScale = 1;
         }
         envWrapRef.current.style.opacity = String(envOpacity);
         envWrapRef.current.style.transform = `scale(${envScale})`;
-        envWrapRef.current.style.filter = envBlur > 0.05 ? `blur(${envBlur}px)` : 'none';
       }
 
       // Particle canvas — drawn every frame regardless of act; the function
-      // itself figures out visibility from elapsed time.
-      if (ctx && canvas) drawParticles(ctx, canvas.width, canvas.height, elapsed, particlesRef.current);
+      // itself figures out visibility from elapsed time. `activeParticleCount`
+      // is the adaptive-quality lever: normally the full array, shrunk to a
+      // slice of itself if frame times are struggling (see below).
+      if (ctx && canvas) {
+        drawParticles(ctx, canvas.width, canvas.height, elapsed, particlesRef.current, activeParticleCount);
+      }
 
       // Acts 2–4 — the word montage.
       if (wordRef.current) {
@@ -1119,17 +1189,57 @@ function IntroCinematic({ onComplete }) {
         }
       }
 
+      // ── Adaptive quality check — cheap arithmetic on numbers we already
+      // have, no allocations. A frame taking >22ms is roughly sub-45fps; if
+      // that's sustained for ~500ms, draw fewer particles. Recovery needs a
+      // longer, calmer window (1500ms under ~18ms/frame) before restoring,
+      // so this doesn't flap.
+      const frameMs = now - (lastFrameTime ?? now);
+      lastFrameTime = now;
+      if (frameMs > 22) {
+        if (slowSince == null) slowSince = now;
+        goodSince = null;
+        if (!degraded && now - slowSince > 500) {
+          degraded = true;
+          activeParticleCount = minParticles;
+        }
+      } else if (frameMs < 18) {
+        if (goodSince == null) goodSince = now;
+        slowSince = null;
+        if (degraded && now - goodSince > 1500) {
+          degraded = false;
+          activeParticleCount = particlesRef.current.length;
+        }
+      } else {
+        slowSince = null; goodSince = null;
+      }
+
+      if (isDev) {
+        devFrames++; devTimeAcc += performance.now() - frameStart;
+        if (now - devLastLog > 1000) {
+          devLastLog = now;
+          // eslint-disable-next-line no-console
+          console.debug(
+            `[intro-cinematic] ~${Math.round(1000 / (devTimeAcc / devFrames || 1))}fps · ` +
+            `${(devTimeAcc / devFrames).toFixed(2)}ms/frame · quality=${quality} · ` +
+            `particles=${activeParticleCount}/${particlesRef.current.length}${degraded ? ' (degraded)' : ''}`
+          );
+          devFrames = 0; devTimeAcc = 0;
+        }
+      }
+
       rafRef.current = requestAnimationFrame(tick);
     };
 
     rafRef.current = requestAnimationFrame(tick);
     return () => {
       cancelAnimationFrame(rafRef.current);
-      window.removeEventListener('resize', resize);
+      clearTimeout(resizeTimer);
+      window.removeEventListener('resize', onResize);
       window.removeEventListener('keydown', onKey);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [reduced, isMobile]);
+  }, [reduced, quality]);
 
   const titleTextStyle = {
     fontSize: 'clamp(2.75rem, 11vw, 7.5rem)', fontWeight: 700, color: '#fff',
@@ -1159,9 +1269,12 @@ function IntroCinematic({ onComplete }) {
 
   return (
     <div ref={panelRef} className="fixed inset-0 overflow-hidden" style={{ background: '#04040a', zIndex: 999, willChange: 'transform' }}>
-      {/* Act 1 — environment: faint grid + soft depth particles */}
-      <div ref={envWrapRef} aria-hidden="true" style={{ position: 'absolute', inset: 0, opacity: 0, willChange: 'opacity, transform, filter' }}>
-        <CinematicGrid />
+      {/* Act 1 — environment: faint grid + soft depth particles. Only
+          opacity/transform are ever written to this element's style, so
+          that's all it's promoted for — no `filter` in will-change since
+          nothing here animates it (see the tick loop above). */}
+      <div ref={envWrapRef} aria-hidden="true" style={{ position: 'absolute', inset: 0, opacity: 0, willChange: 'opacity, transform' }}>
+        <CinematicGrid reduceEffects={quality === 'LOW'} />
         <canvas ref={canvasRef} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }} />
       </div>
 
@@ -1229,7 +1342,11 @@ function IntroCinematic({ onComplete }) {
 // ─────────────────────────────────────────────────────────────────────────────
 // ANIMATED GRID BACKGROUND
 // ─────────────────────────────────────────────────────────────────────────────
-function CinematicGrid() {
+// `reduceEffects` trims the blurred orb decorations for low-tier devices
+// when this is used inside the intro cinematic (see IntroCinematic above).
+// Defaults to false so the standalone page-background usage elsewhere is
+// completely unchanged.
+function CinematicGrid({ reduceEffects = false }) {
   return (
     <div aria-hidden="true" style={{ position:'absolute', inset:0, overflow:'hidden', pointerEvents:'none', zIndex:0 }}>
       {/* Animated grid lines */}
@@ -1251,10 +1368,16 @@ function CinematicGrid() {
         <rect width="100%" height="100%" fill="url(#grid-lg)" mask="url(#grid-mask)"/>
       </svg>
       {/* Floating orbs — translate-only (no scale) so the blurred layer composites
-          on the GPU without re-rasterizing every frame; kept to 3, not 5 */}
+          on the GPU without re-rasterizing every frame. Kept to 3 normally;
+          low-tier intro playback drops to 1 since a blurred layer is still
+          non-trivial to keep composited on weak GPUs. */}
       <div style={{ position:'absolute', top:'15%', left:'12%', width:420, height:420, borderRadius:'50%', background:'radial-gradient(circle, rgba(99,102,241,0.14) 0%, transparent 70%)', animation:'orb-drift-a 20s ease-in-out infinite', filter:'blur(40px)', willChange:'transform' }}/>
-      <div style={{ position:'absolute', bottom:'10%', right:'10%', width:360, height:360, borderRadius:'50%', background:'radial-gradient(circle, rgba(139,92,246,0.11) 0%, transparent 70%)', animation:'orb-drift-b 24s ease-in-out infinite', filter:'blur(45px)', willChange:'transform' }}/>
-      <div style={{ position:'absolute', top:'55%', left:'55%', width:280, height:280, borderRadius:'50%', background:'radial-gradient(circle, rgba(249,115,22,0.07) 0%, transparent 70%)', animation:'orb-drift-a 26s ease-in-out infinite reverse', filter:'blur(50px)', willChange:'transform' }}/>
+      {!reduceEffects && (
+        <>
+          <div style={{ position:'absolute', bottom:'10%', right:'10%', width:360, height:360, borderRadius:'50%', background:'radial-gradient(circle, rgba(139,92,246,0.11) 0%, transparent 70%)', animation:'orb-drift-b 24s ease-in-out infinite', filter:'blur(45px)', willChange:'transform' }}/>
+          <div style={{ position:'absolute', top:'55%', left:'55%', width:280, height:280, borderRadius:'50%', background:'radial-gradient(circle, rgba(249,115,22,0.07) 0%, transparent 70%)', animation:'orb-drift-a 26s ease-in-out infinite reverse', filter:'blur(50px)', willChange:'transform' }}/>
+        </>
+      )}
     </div>
   );
 }
@@ -3315,7 +3438,7 @@ export default function Home() {
           {/* Deep-space layer — subtle nod to PlanIt → Planet, hero only */}
           {!isWL && (
             <div aria-hidden="true" className="absolute inset-0 pointer-events-none" style={{ zIndex: 0, opacity: 0.55 }}>
-              <StarBackground fixed={false} forceActive={true} />
+              <StarBackground fixed={false} forceActive={true} paused={showIntro} />
             </div>
           )}
           {/* Layered background system */}
