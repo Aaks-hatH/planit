@@ -357,7 +357,7 @@ Copyright (c) 2026 Aakshat Hariharan. All rights reserved.
 */
 
 // ─────────────────────────────────────────────────────────────────────────────
-// GLOBAL STYLES — injected once
+// GLOBAL STYLES, injected once
 // ─────────────────────────────────────────────────────────────────────────────
 const GLOBAL_CSS = `
   @import url('https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,700&display=swap');
@@ -387,16 +387,6 @@ const GLOBAL_CSS = `
   @keyframes grid-pulse {
     0%,100% { opacity:0.018; }
     50%      { opacity:0.042; }
-  }
-  @keyframes orb-drift-a {
-    0%,100% { transform: translate(0,0);      }
-    33%     { transform: translate(30px,-20px); }
-    66%     { transform: translate(-18px,25px); }
-  }
-  @keyframes orb-drift-b {
-    0%,100% { transform: translate(0,0);      }
-    33%     { transform: translate(-22px,18px); }
-    66%     { transform: translate(28px,-15px); }
   }
   @keyframes cta-shimmer {
     0%   { background-position: -200% center; }
@@ -610,7 +600,7 @@ function InjectGlobalCSS() {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// OPENING CINEMATIC — a movie-title-style entrance:
+// OPENING CINEMATIC, a movie-title-style entrance:
 //   black → distant light → atmosphere/particles drift in → a multilingual
 //   greeting montage that accelerates → a sudden stop to black → "PLANIT"
 //   assembles from separated letters with a light sweep and particle
@@ -619,7 +609,7 @@ function InjectGlobalCSS() {
 //
 // Everything here is one coordinated requestAnimationFrame loop keyed to real
 // elapsed time (never chained setTimeouts), and every visual is written
-// straight to the DOM/canvas via refs — no React re-renders during playback.
+// straight to the DOM/canvas via refs, no React re-renders during playback.
 // That's what keeps this smooth and identical on every run: every layer's
 // look at any instant is a pure function of elapsed milliseconds, not of how
 // many frames fired or how busy the main thread happened to be.
@@ -633,7 +623,7 @@ const easeInCubic = t => t * t * t;
 const easeInOutCubic = t => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
 const easeInOutExpo = t => (t <= 0 ? 0 : t >= 1 ? 1 : t < 0.5 ? Math.pow(2, 20 * t - 10) / 2 : (2 - Math.pow(2, -20 * t + 10)) / 2);
 
-// ── The multilingual montage — reuses the greetings already established for
+// ── The multilingual montage, reuses the greetings already established for
 // this cinematic. Each gets its own restrained visual treatment so the
 // montage reads as a system of variations, not a single repeated effect.
 const CINEMATIC_WORDS = [
@@ -646,7 +636,7 @@ const CINEMATIC_WORDS = [
   { text: 'Привет',    variant: 'directional', dur: 200 },
 ];
 
-// ── Master timeline (ms from mount) — computed once. Guidelines, tuned by
+// ── Master timeline (ms from mount), computed once. Guidelines, tuned by
 // feel, not rigid: total runtime lands around 8s.
 function buildTimeline() {
   const DARK_END = 650;
@@ -676,7 +666,7 @@ function buildTimeline() {
 }
 const TIMELINE = buildTimeline();
 
-// Short, simplified timeline for prefers-reduced-motion — same beats, none of
+// Short, simplified timeline for prefers-reduced-motion, same beats, none of
 // the camera/particle motion, much shorter.
 function buildReducedTimeline() {
   const HELLO_END = 480;
@@ -694,7 +684,7 @@ function buildReducedTimeline() {
 }
 const REDUCED_TIMELINE = buildReducedTimeline();
 
-// ── Per-word motion — each variant animates a different combination of
+// ── Per-word motion, each variant animates a different combination of
 // opacity/translate/scale/blur/tracking, but every one follows the same
 // enter → hold → exit shape, so the montage feels like one visual system.
 function getWordFrame(variant, localT, slotDur) {
@@ -758,11 +748,11 @@ function getWordFrame(variant, localT, slotDur) {
   return frame; // steady hold
 }
 
-// ── Particle field — a small, deterministic set of soft points across three
+// ── Particle field, a small, deterministic set of soft points across three
 // depth layers (background/midground/foreground). Foreground particles are
 // larger and drift faster, which is what sells the "camera moving forward"
 // illusion; background ones barely move. Drawn straight into one canvas
-// inside the same master loop — no separate rAF, no React state.
+// inside the same master loop, no separate rAF, no React state.
 function makeParticles(count) {
   const list = [];
   for (let i = 0; i < count; i++) {
@@ -856,7 +846,7 @@ function drawParticles(ctx, W, H, elapsed, particles, activeCount) {
 
 const TITLE_LETTERS = Array.from('PLANIT');
 
-// ── Device capability tiering — a cheap, one-time read of hardware signals
+// ── Device capability tiering, a cheap, one-time read of hardware signals
 // (never sampled inside the render loop) used only to pick a rendering
 // quality level. Three tiers keep this simple: HIGH gets the full particle
 // count and a mildly higher canvas resolution, MEDIUM (the common laptop/
@@ -864,7 +854,7 @@ const TITLE_LETTERS = Array.from('PLANIT');
 // for weak/low-memory devices where the montage should still play but with
 // noticeably less to draw per frame.
 // Note: the environment layer's entrance no longer animates `filter: blur()`
-// at all (see envWrapRef handling below) — animating blur across a
+// at all (see envWrapRef handling below), animating blur across a
 // full-screen element every frame was the single most expensive thing this
 // cinematic was doing, so it's gone rather than tiered.
 const INTRO_QUALITY = {
@@ -876,7 +866,7 @@ function detectIntroQuality() {
   if (typeof window === 'undefined') return 'MEDIUM';
   const isMobile = window.innerWidth < 768 || /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent || '');
   const cores = navigator.hardwareConcurrency || 4;
-  const mem = navigator.deviceMemory; // undefined on many browsers — treat as unknown, not penalized
+  const mem = navigator.deviceMemory; // undefined on many browsers, treat as unknown, not penalized
   if (isMobile) {
     if ((mem !== undefined && mem <= 3) || cores <= 3) return 'LOW';
     return 'MEDIUM';
@@ -946,7 +936,7 @@ function IntroCinematic({ onComplete }) {
         wordRef.current.style.opacity = String(wIdx >= 0 ? wOpacity : 0);
       }
 
-      // Title — plain fade, letters already together.
+      // Title, plain fade, letters already together.
       if (titleWrapRef.current) {
         let op = 0;
         if (elapsed >= T.TITLE_START && elapsed < T.HOLD_END) {
@@ -961,7 +951,7 @@ function IntroCinematic({ onComplete }) {
       letterRefs.current.forEach(el => { if (el) el.style.transform = 'translateX(0px)'; });
       if (sweepRef.current) sweepRef.current.style.opacity = '0';
 
-      // Tagline — plain fade.
+      // Tagline, plain fade.
       if (taglineWrapRef.current) {
         let op = 0;
         if (elapsed >= T.TAGLINE_START && elapsed < T.HOLD_END) {
@@ -974,7 +964,7 @@ function IntroCinematic({ onComplete }) {
         taglineWrapRef.current.style.opacity = String(op);
       }
 
-      // Panel — plain fade out (no slide, minimal motion).
+      // Panel, plain fade out (no slide, minimal motion).
       if (panelRef.current) {
         const fadeStart = T.HOLD_END;
         const op = elapsed >= fadeStart ? 1 - clamp01((elapsed - fadeStart) / (T.COMPLETE - fadeStart)) : 1;
@@ -996,14 +986,14 @@ function IntroCinematic({ onComplete }) {
     particlesRef.current = makeParticles(cfg.particles);
     // How many of those precomputed particles actually get drawn each frame.
     // Adaptive quality (below) can shrink this on a slow device without ever
-    // reallocating the particle array — it just draws a shorter slice of it.
+    // reallocating the particle array, it just draws a shorter slice of it.
     let activeParticleCount = particlesRef.current.length;
 
     const canvas = canvasRef.current;
     const ctx = canvas?.getContext('2d');
     // DPR is capped (and only above 1 on the HIGH tier at all) so a
     // high-density phone screen never blows the canvas up to millions of
-    // pixels — see cfg.dpr above.
+    // pixels, see cfg.dpr above.
     const effectiveDPR = Math.min(window.devicePixelRatio || 1, cfg.dpr);
     const resize = () => {
       if (!canvas) return;
@@ -1011,7 +1001,7 @@ function IntroCinematic({ onComplete }) {
       canvas.height = Math.round(window.innerHeight * effectiveDPR);
     };
     resize();
-    // Debounced — mobile browsers fire `resize` repeatedly as the address
+    // Debounced, mobile browsers fire `resize` repeatedly as the address
     // bar hides/shows while scrolling; we don't want to touch the canvas
     // (or, if it ever needed to, regenerate particles) on every one of those.
     let resizeTimer = null;
@@ -1024,7 +1014,7 @@ function IntroCinematic({ onComplete }) {
     const onKey = (e) => { if (e.key === 'Escape') { cancelAnimationFrame(rafRef.current); finish(onComplete); } };
     window.addEventListener('keydown', onKey);
 
-    // ── Lightweight adaptive quality — a safety net, not the primary
+    // ── Lightweight adaptive quality, a safety net, not the primary
     // strategy (the primary strategy is simply not doing expensive work in
     // the first place). If frame times are consistently poor we quietly
     // draw fewer particles; if they recover we restore. Hysteresis (500ms /
@@ -1032,7 +1022,7 @@ function IntroCinematic({ onComplete }) {
     let slowSince = null, goodSince = null, degraded = false, lastFrameTime = null;
     const minParticles = Math.ceil(particlesRef.current.length * 0.35);
 
-    // Dev-only perf readout — never rendered to the DOM, just a console
+    // Dev-only perf readout, never rendered to the DOM, just a console
     // marker so this is easy to sanity-check while working on it locally.
     const isDev = typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.DEV;
     let devFrames = 0, devTimeAcc = 0, devLastLog = 0;
@@ -1044,7 +1034,7 @@ function IntroCinematic({ onComplete }) {
 
       if (elapsed >= T.COMPLETE) { finish(onComplete); return; }
 
-      // Act 0 — distant light point.
+      // Act 0, distant light point.
       if (lightRef.current) {
         const p = clamp01((elapsed - 80) / (T.DARK_END - 80));
         let opacity;
@@ -1055,8 +1045,8 @@ function IntroCinematic({ onComplete }) {
         lightRef.current.style.transform = `scale(${scale})`;
       }
 
-      // Act 1 — environment (grid + particle canvas wrapper) entrance / hold / fade to black.
-      // Deliberately opacity + scale only, never `filter: blur()` — this
+      // Act 1, environment (grid + particle canvas wrapper) entrance / hold / fade to black.
+      // Deliberately opacity + scale only, never `filter: blur()`, this
       // wrapper is full-screen (it contains the grid SVG *and* the particle
       // canvas), and animating blur across a full-screen element every
       // frame is one of the most expensive things a browser can be asked to
@@ -1080,7 +1070,7 @@ function IntroCinematic({ onComplete }) {
         envWrapRef.current.style.transform = `scale(${envScale})`;
       }
 
-      // Particle canvas — drawn every frame regardless of act; the function
+      // Particle canvas, drawn every frame regardless of act; the function
       // itself figures out visibility from elapsed time. `activeParticleCount`
       // is the adaptive-quality lever: normally the full array, shrunk to a
       // slice of itself if frame times are struggling (see below).
@@ -1088,7 +1078,7 @@ function IntroCinematic({ onComplete }) {
         drawParticles(ctx, canvas.width, canvas.height, elapsed, particlesRef.current, activeParticleCount);
       }
 
-      // Acts 2–4 — the word montage.
+      // Acts 2–4, the word montage.
       if (wordRef.current) {
         if (elapsed < T.ENV_END) {
           wordRef.current.style.opacity = '0';
@@ -1111,11 +1101,11 @@ function IntroCinematic({ onComplete }) {
         }
       }
 
-      // Act 5 (silence) needs no code of its own — the environment and word
+      // Act 5 (silence) needs no code of its own, the environment and word
       // layers above have already faded to nothing by T.SILENCE_END, and the
       // title below hasn't started yet, so the screen is genuinely black.
 
-      // Act 6 — PLANIT: letters separate → converge, wrapper blur/scale/opacity, then light sweep.
+      // Act 6, PLANIT: letters separate → converge, wrapper blur/scale/opacity, then light sweep.
       if (titleWrapRef.current) {
         if (elapsed < T.TITLE_START) {
           titleWrapRef.current.style.opacity = '0';
@@ -1151,7 +1141,7 @@ function IntroCinematic({ onComplete }) {
         }
       }
 
-      // Act 7 — tagline, two lines staggered slightly.
+      // Act 7, tagline, two lines staggered slightly.
       if (line1Ref.current && line2Ref.current) {
         if (elapsed < T.PULLBACK_START) {
           [line1Ref.current, line2Ref.current].forEach((el, i) => {
@@ -1170,7 +1160,7 @@ function IntroCinematic({ onComplete }) {
         }
       }
 
-      // Act 8 — cinematic bloom.
+      // Act 8, cinematic bloom.
       if (bloomRef.current) {
         if (elapsed >= T.BLOOM_START && elapsed <= T.BLOOM_END) {
           const intensity = Math.sin(clamp01((elapsed - T.BLOOM_START) / (T.BLOOM_END - T.BLOOM_START)) * Math.PI);
@@ -1180,7 +1170,7 @@ function IntroCinematic({ onComplete }) {
         }
       }
 
-      // Acts 9–10 — camera pullback is expressed above (env fade, title/tagline
+      // Acts 9–10, camera pullback is expressed above (env fade, title/tagline
       // recede); the panel itself rises last, overlapping the tail of pullback.
       if (panelRef.current) {
         if (elapsed >= T.PANEL_RISE_START) {
@@ -1189,7 +1179,7 @@ function IntroCinematic({ onComplete }) {
         }
       }
 
-      // ── Adaptive quality check — cheap arithmetic on numbers we already
+      // ── Adaptive quality check, cheap arithmetic on numbers we already
       // have, no allocations. A frame taking >22ms is roughly sub-45fps; if
       // that's sustained for ~500ms, draw fewer particles. Recovery needs a
       // longer, calmer window (1500ms under ~18ms/frame) before restoring,
@@ -1269,16 +1259,16 @@ function IntroCinematic({ onComplete }) {
 
   return (
     <div ref={panelRef} className="fixed inset-0 overflow-hidden" style={{ background: '#04040a', zIndex: 999, willChange: 'transform' }}>
-      {/* Act 1 — environment: faint grid + soft depth particles. Only
+      {/* Act 1, environment: faint grid + soft depth particles. Only
           opacity/transform are ever written to this element's style, so
-          that's all it's promoted for — no `filter` in will-change since
+          that's all it's promoted for, no `filter` in will-change since
           nothing here animates it (see the tick loop above). */}
       <div ref={envWrapRef} aria-hidden="true" style={{ position: 'absolute', inset: 0, opacity: 0, willChange: 'opacity, transform' }}>
-        <CinematicGrid reduceEffects={quality === 'LOW'} />
+        <CinematicGrid />
         <canvas ref={canvasRef} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }} />
       </div>
 
-      {/* Act 0 — distant point of light */}
+      {/* Act 0, distant point of light */}
       <div
         ref={lightRef}
         aria-hidden="true"
@@ -1290,10 +1280,10 @@ function IntroCinematic({ onComplete }) {
         }}
       />
 
-      {/* Cinematic vignette — always present, gives the frame depth */}
+      {/* Cinematic vignette, always present, gives the frame depth */}
       <div aria-hidden="true" style={{ position: 'absolute', inset: 0, pointerEvents: 'none', background: 'radial-gradient(ellipse 72% 65% at 50% 48%, transparent 42%, rgba(0,0,0,0.6) 100%)' }} />
 
-      {/* Act 8 — bloom */}
+      {/* Act 8, bloom */}
       <div
         ref={bloomRef}
         aria-hidden="true"
@@ -1342,11 +1332,7 @@ function IntroCinematic({ onComplete }) {
 // ─────────────────────────────────────────────────────────────────────────────
 // ANIMATED GRID BACKGROUND
 // ─────────────────────────────────────────────────────────────────────────────
-// `reduceEffects` trims the blurred orb decorations for low-tier devices
-// when this is used inside the intro cinematic (see IntroCinematic above).
-// Defaults to false so the standalone page-background usage elsewhere is
-// completely unchanged.
-function CinematicGrid({ reduceEffects = false }) {
+function CinematicGrid() {
   return (
     <div aria-hidden="true" style={{ position:'absolute', inset:0, overflow:'hidden', pointerEvents:'none', zIndex:0 }}>
       {/* Animated grid lines */}
@@ -1367,17 +1353,6 @@ function CinematicGrid({ reduceEffects = false }) {
         <rect width="100%" height="100%" fill="url(#grid-sm)" mask="url(#grid-mask)"/>
         <rect width="100%" height="100%" fill="url(#grid-lg)" mask="url(#grid-mask)"/>
       </svg>
-      {/* Floating orbs — translate-only (no scale) so the blurred layer composites
-          on the GPU without re-rasterizing every frame. Kept to 3 normally;
-          low-tier intro playback drops to 1 since a blurred layer is still
-          non-trivial to keep composited on weak GPUs. */}
-      <div style={{ position:'absolute', top:'15%', left:'12%', width:420, height:420, borderRadius:'50%', background:'radial-gradient(circle, rgba(99,102,241,0.14) 0%, transparent 70%)', animation:'orb-drift-a 20s ease-in-out infinite', filter:'blur(40px)', willChange:'transform' }}/>
-      {!reduceEffects && (
-        <>
-          <div style={{ position:'absolute', bottom:'10%', right:'10%', width:360, height:360, borderRadius:'50%', background:'radial-gradient(circle, rgba(139,92,246,0.11) 0%, transparent 70%)', animation:'orb-drift-b 24s ease-in-out infinite', filter:'blur(45px)', willChange:'transform' }}/>
-          <div style={{ position:'absolute', top:'55%', left:'55%', width:280, height:280, borderRadius:'50%', background:'radial-gradient(circle, rgba(249,115,22,0.07) 0%, transparent 70%)', animation:'orb-drift-a 26s ease-in-out infinite reverse', filter:'blur(50px)', willChange:'transform' }}/>
-        </>
-      )}
     </div>
   );
 }
@@ -1541,7 +1516,7 @@ function SectionHeader({ eyebrow, title, subtitle }) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// SLUG FINDER — lets users jump directly to an event by its link/slug
+// SLUG FINDER, lets users jump directly to an event by its link/slug
 // ─────────────────────────────────────────────────────────────────────────────
 function SlugFinder({ compact = false }) {
   const navigate = useNavigate();
@@ -1562,7 +1537,7 @@ function SlugFinder({ compact = false }) {
       else if (eventMatch) slug = eventMatch[1];
       else                 slug = url.pathname.replace(/^\/+|\/+$/g, '');
     } catch {
-      // not a URL — use raw as slug
+      // not a URL, use raw as slug
     }
     // Strip leading prefixes if typed manually
     slug = slug.replace(/^\/?(rsvp\/|e\/)?/, '').replace(/\/+$/, '');
@@ -1678,8 +1653,8 @@ const DEMO_GUESTS = [
   { id: 2, name: 'Marcus Rivera',   group: 2, table: 5,  code: 'MR2B-K3', role: 'Speaker',  status: 'normal' },
   { id: 3, name: 'Priya Sharma',    group: 1, table: 8,  code: 'PS1C-M7', role: 'Attendee', status: 'normal' },
   { id: 4, name: 'Tom & Lisa Chen', group: 2, table: 3,  code: 'TC2D-R1', role: 'Sponsor',  status: 'normal' },
-  { id: 5, name: 'Dev Patel',       group: 6, table: 15, code: 'DP6E-N5', role: 'Attendee', status: 'blocked',  blockReason: 'Duplicate identity — another invite with same email already checked in' },
-  { id: 6, name: 'Amara Okafor',    group: 1, table: 7,  code: 'AO1F-Q2', role: 'Attendee', status: 'flagged',  flagReason: 'Low trust score: 42/100 — scanned from 3 different devices' },
+  { id: 5, name: 'Dev Patel',       group: 6, table: 15, code: 'DP6E-N5', role: 'Attendee', status: 'blocked',  blockReason: 'Duplicate identity: another invite with same email already checked in' },
+  { id: 6, name: 'Amara Okafor',    group: 1, table: 7,  code: 'AO1F-Q2', role: 'Attendee', status: 'flagged',  flagReason: 'Low trust score: 42/100, scanned from 3 different devices' },
 ];
 
 function ScrollProgressBar() {
@@ -1737,20 +1712,20 @@ function EnterpriseDemo() {
 
     // Already checked in → duplicate attempt
     if (guest.checkedIn) {
-      addLog({ type: 'duplicate', severity: 'high', name: guest.name, msg: `Duplicate scan — ${guest.name} already checked in at ${guest.checkedAt?.toLocaleTimeString()}` });
+      addLog({ type: 'duplicate', severity: 'high', name: guest.name, msg: `Duplicate scan: ${guest.name} already checked in at ${guest.checkedAt?.toLocaleTimeString()}` });
       return;
     }
 
     // Blocked guest
     if (guest.status === 'blocked') {
-      addLog({ type: 'blocked', severity: 'critical', name: guest.name, msg: `BLOCKED: ${guest.name} — ${guest.blockReason}` });
+      addLog({ type: 'blocked', severity: 'critical', name: guest.name, msg: `BLOCKED: ${guest.name}, ${guest.blockReason}` });
       setOverrideTarget(guest);
       return;
     }
 
     // Flagged guest
     if (guest.status === 'flagged') {
-      addLog({ type: 'flagged', severity: 'high', name: guest.name, msg: `WARNING: ${guest.name} — ${guest.flagReason}` });
+      addLog({ type: 'flagged', severity: 'high', name: guest.name, msg: `WARNING: ${guest.name}, ${guest.flagReason}` });
       setOverrideTarget(guest);
       return;
     }
@@ -1763,7 +1738,7 @@ function EnterpriseDemo() {
       setGuests(prev => prev.map(g => g.id === guest.id ? { ...g, checkedIn: true, checking: false, checkedAt: now } : g));
       setLastChecked(guest.id);
       setScanning(null);
-      addLog({ type: 'success', severity: 'ok', name: guest.name, msg: `Checked in: ${guest.name} — party of ${guest.group}, table ${guest.table}` });
+      addLog({ type: 'success', severity: 'ok', name: guest.name, msg: `Checked in: ${guest.name}, party of ${guest.group}, table ${guest.table}` });
       setTimeout(() => setLastChecked(null), 2500);
     }, 900);
   };
@@ -1779,7 +1754,7 @@ function EnterpriseDemo() {
     setTimeout(() => {
       const now = new Date();
       setGuests(prev => prev.map(g => g.id === target.id ? { ...g, checkedIn: true, checking: false, checkedAt: now, status: 'normal' } : g));
-      addLog({ type: 'override', severity: 'medium', name: target.name, msg: `Manager override approved — ${target.name} manually checked in` });
+      addLog({ type: 'override', severity: 'medium', name: target.name, msg: `Manager override approved: ${target.name} manually checked in` });
       setOverrideTarget(null);
       setOverridePin('');
       setOverrideSuccess(false);
@@ -1791,9 +1766,9 @@ function EnterpriseDemo() {
     setSimulating(true);
     const fakeCodes = ['XX99-ZZ', 'FAKE-001', 'HACK-123'];
     const code = fakeCodes[Math.floor(Math.random() * fakeCodes.length)];
-    addLog({ type: 'unauthorized', severity: 'critical', name: 'Unknown', msg: `UNAUTHORIZED: Code "${code}" not found — possible forged ticket` });
+    addLog({ type: 'unauthorized', severity: 'critical', name: 'Unknown', msg: `UNAUTHORIZED: Code "${code}" not found, possible forged ticket` });
     setTimeout(() => {
-      addLog({ type: 'ratelimit', severity: 'medium', name: 'System', msg: `Rate limit triggered — IP blocked for 60s after 3 failed attempts` });
+      addLog({ type: 'ratelimit', severity: 'medium', name: 'System', msg: `Rate limit triggered: IP blocked for 60s after 3 failed attempts` });
       setSimulating(false);
     }, 1200);
     if (tab !== 'security') setTab('security');
@@ -2159,7 +2134,7 @@ const VENUE_TYPES = [
 ];
 
 // ─────────────────────────────────────────────────────────────────────────────
-// DEVICE FRAME — chrome wrapper so mockups read as "a screen", not a raw div
+// DEVICE FRAME, chrome wrapper so mockups read as "a screen", not a raw div
 // ─────────────────────────────────────────────────────────────────────────────
 function DeviceFrame({ variant = 'browser', children }) {
   if (variant === 'phone') {
@@ -2198,7 +2173,7 @@ function DeviceFrame({ variant = 'browser', children }) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// MAGNETIC LINK — pulls toward the cursor when nearby (hover polish, CTA row)
+// MAGNETIC LINK, pulls toward the cursor when nearby (hover polish, CTA row)
 // ─────────────────────────────────────────────────────────────────────────────
 function MagneticLink({ className = '', children, strength = 12, ...props }) {
   const ref = useRef(null);
@@ -2219,7 +2194,7 @@ function MagneticLink({ className = '', children, strength = 12, ...props }) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// RSVP MOCKUP (phone) — fake render, but the status buttons actually respond
+// RSVP MOCKUP (phone), fake render, but the status buttons actually respond
 // ─────────────────────────────────────────────────────────────────────────────
 const RSVP_STATUS_STYLE = {
   yes:   'bg-emerald-500 border-emerald-500 text-white',
@@ -2270,13 +2245,13 @@ function RSVPMockup() {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// EVENT SPACE MOCKUP (browser) — fake render; a typing bubble resolves into
+// EVENT SPACE MOCKUP (browser), fake render; a typing bubble resolves into
 // a new message once, so the panel has a little life without needing real data
 // ─────────────────────────────────────────────────────────────────────────────
 function EventSpaceMockup() {
   const [messages, setMessages] = useState([
     { id: 1, user: 'Maya',  text: 'Can we push the sound check to 4pm?', me: false },
-    { id: 2, user: 'You',   text: 'Works for me — updating the run of show now.', me: true },
+    { id: 2, user: 'You',   text: 'Works for me. Updating the run of show now.', me: true },
   ]);
   const [typing, setTyping] = useState(false);
   useEffect(() => {
@@ -2335,15 +2310,15 @@ function EventSpaceMockup() {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// PRODUCT SHOWCASE — static, no scroll logic. Each step sits directly next to
+// PRODUCT SHOWCASE, static, no scroll logic. Each step sits directly next to
 // its own device frame; nothing swaps, nothing is pinned. Step 3 renders the
 // real EnterpriseDemo (already built above), so that one isn't even a fake
-// render — it's genuinely interactive.
+// render, it's genuinely interactive.
 // ─────────────────────────────────────────────────────────────────────────────
 const SHOWCASE_STEPS = [
-  { key: 'rsvp',    eyebrow: 'Step 01', title: 'Guests RSVP in seconds',   desc: 'No app, no account — a beautiful invite page guests can respond to from any phone.',                                device: 'phone',   node: <RSVPMockup /> },
+  { key: 'rsvp',    eyebrow: 'Step 01', title: 'Guests RSVP in seconds',   desc: 'No app, no account: a beautiful invite page guests can respond to from any phone.',                                device: 'phone',   node: <RSVPMockup /> },
   { key: 'space',   eyebrow: 'Step 02', title: 'Your team plans together', desc: 'Chat, shared tasks, and polls in one live workspace instead of five different apps.',                                device: 'browser', node: <EventSpaceMockup /> },
-  { key: 'checkin', eyebrow: 'Step 03', title: 'Check them in at the door',desc: 'Real, working check-in demo below — duplicate detection and manager overrides included. Try it.',                     device: 'tablet',  node: <EnterpriseDemo /> },
+  { key: 'checkin', eyebrow: 'Step 03', title: 'Check them in at the door',desc: 'Real, working check-in demo below. Duplicate detection and manager overrides included. Try it.',                     device: 'tablet',  node: <EnterpriseDemo /> },
 ];
 function ProductShowcase() {
   return (
@@ -2552,7 +2527,7 @@ function OnboardingWizard({ mode, formData, setFormData, fieldErrors, setFieldEr
             {isVenue ? 'What kind of venue?' : 'What are you planning?'}
           </p>
           <p style={{ fontSize:14, color:'rgba(255,255,255,0.35)', marginBottom:28 }}>
-            This helps us personalise your setup — you can change anything later.
+            This helps us personalise your setup. You can change anything later.
           </p>
           <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(140px,1fr))', gap:10, marginBottom:4 }}>
             {types.map((t, i) => {
@@ -2578,7 +2553,7 @@ function OnboardingWizard({ mode, formData, setFormData, fieldErrors, setFieldEr
           {selected && (
             <p style={{ fontSize:12, color: isVenue ? '#fb923c' : '#818cf8', marginTop:12, display:'flex', alignItems:'center', gap:6 }}>
               <CheckCircle2 style={{ width:13, height:13 }} />
-              Selection confirmed — continue when ready.
+              Selection confirmed. Continue when ready.
             </p>
           )}
         </div>
@@ -2594,7 +2569,7 @@ function OnboardingWizard({ mode, formData, setFormData, fieldErrors, setFieldEr
               {isVenue ? 'What\'s your venue called?' : 'What\'s your event called?'}
             </p>
             <p style={{ fontSize:14, color:'rgba(255,255,255,0.35)', marginBottom:24 }}>
-              {isVenue ? 'Your restaurant name — guests will see this.' : 'Give it a name your team will recognise.'}
+              {isVenue ? 'Your restaurant name (guests will see this).' : 'Give it a name your team will recognise.'}
             </p>
           </div>
           <div>
@@ -2655,7 +2630,7 @@ function OnboardingWizard({ mode, formData, setFormData, fieldErrors, setFieldEr
               When and where?
             </p>
             <p style={{ fontSize:14, color:'rgba(255,255,255,0.35)', marginBottom:24 }}>
-              Set the date and location — guests see this on their invite.
+              Set the date and location (guests see this on their invite).
             </p>
           </div>
           <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 }}>
@@ -2762,14 +2737,14 @@ function OnboardingWizard({ mode, formData, setFormData, fieldErrors, setFieldEr
             </button>
           </div>
 
-          {/* When to use Enterprise — description block */}
+          {/* When to use Enterprise, description block */}
           <div style={{
             background:'rgba(99,102,241,0.05)', border:'1px solid rgba(99,102,241,0.12)',
             borderRadius:14, padding:'14px 16px',
           }}>
             <p style={{ fontSize:12, fontWeight:700, color:'rgba(99,102,241,0.7)', marginBottom:8, textTransform:'uppercase', letterSpacing:'0.08em' }}>When to use Enterprise mode</p>
             <p style={{ fontSize:13, color:'rgba(255,255,255,0.35)', lineHeight:1.65, margin:0 }}>
-              Enterprise is built for <strong style={{ color:'rgba(255,255,255,0.55)' }}>large, ticketed, or access-controlled events</strong> where every guest gets a unique QR invite — galas, conferences, award nights, corporate parties with 50+ attendees. If your event is open RSVP or team-only, Standard is all you need.
+              Enterprise is built for <strong style={{ color:'rgba(255,255,255,0.55)' }}>large, ticketed, or access-controlled events</strong> where every guest gets a unique QR invite: galas, conferences, award nights, corporate parties with 50+ attendees. If your event is open RSVP or team-only, Standard is all you need.
             </p>
           </div>
 
@@ -2794,7 +2769,7 @@ function OnboardingWizard({ mode, formData, setFormData, fieldErrors, setFieldEr
               {isVenue ? 'Who manages this venue?' : 'Who\'s organizing this?'}
             </p>
             <p style={{ fontSize:14, color:'rgba(255,255,255,0.35)', marginBottom:24 }}>
-              {isVenue ? 'We\'ll send important updates here and you\'ll use this to log back in.' : 'This is your organizer account — keep these details safe.'}
+              {isVenue ? 'We\'ll send important updates here and you\'ll use this to log back in.' : 'This is your organizer account. Keep these details safe.'}
             </p>
           </div>
           <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 }}>
@@ -2835,7 +2810,7 @@ function OnboardingWizard({ mode, formData, setFormData, fieldErrors, setFieldEr
       const secondPwHint  = isVenue
         ? 'PIN your floor staff enter to log in (optional)'
         : isRsvp
-          ? "Restrict who can access your event space (optional) — your RSVP page itself stays open to anyone with the link, unless you password-protect it separately in RSVP Settings."
+          ? "Restrict who can access your event space (optional). Your RSVP page itself stays open to anyone with the link, unless you password-protect it separately in RSVP Settings."
           : 'Restrict who can join your event (optional)';
       return (
         <div style={{ display:'flex', flexDirection:'column', gap:18 }}>
@@ -2876,7 +2851,7 @@ function OnboardingWizard({ mode, formData, setFormData, fieldErrors, setFieldEr
           <div>
             <label style={{ fontSize:12, color:'rgba(255,255,255,0.4)', display:'block', marginBottom:6, textTransform:'uppercase', letterSpacing:'0.1em' }}>
               <Shield style={{ width:12, height:12, display:'inline', marginRight:5, verticalAlign:'middle' }} />
-              {secondPwLabel} <span style={{ color:'rgba(255,255,255,0.2)', textTransform:'none', letterSpacing:'normal', fontSize:11 }}>— optional</span>
+              {secondPwLabel} <span style={{ color:'rgba(255,255,255,0.2)', textTransform:'none', letterSpacing:'normal', fontSize:11 }}>(optional)</span>
             </label>
             <div style={{ position:'relative' }}>
               <input
@@ -3037,7 +3012,7 @@ export default function Home() {
   const heroCta         = wlPages?.home?.ctaText     || '';
   const heroImage       = wlPages?.home?.heroImageUrl|| '';
   const navigate = useNavigate();
-  // Opening cinematic — plays once per browser session, skipped entirely on
+  // Opening cinematic, plays once per browser session, skipped entirely on
   // white-label domains (they get their own branded hero, not PlanIt's).
   const [showIntro, setShowIntro] = useState(
     () => !isWL && typeof window !== 'undefined' && !sessionStorage.getItem('planit_intro_played')
@@ -3190,7 +3165,7 @@ export default function Home() {
       trackGAEvent('event_created', { event_type: formData.isEnterpriseMode ? 'enterprise' : 'standard' });
       setRequiresVerification(false);
       setAbuseStatus(null);
-      // Cross-promo ad disabled — don't show it after event creation.
+      // Cross-promo ad disabled, don't show it after event creation.
       // setShowAd(true);
       return true;
     } catch (error) {
@@ -3230,7 +3205,7 @@ export default function Home() {
           // Skip date errors entirely for table-service (shouldn't reach here but safety net)
           if (path === 'date' && mode === 'table-service') return;
           serverErrs[path] = `${label}: ${msg}`;
-          toastMsgs.push(`${label} — ${msg}`);
+          toastMsgs.push(`${label}: ${msg}`);
         });
         setFieldErrors(serverErrs);
         if (toastMsgs.length === 1) {
@@ -3245,16 +3220,16 @@ export default function Home() {
         const nameStepNum = isTS2 ? 2 : (isRsvp2 ? 3 : 4);
 
         if (msg.includes('already taken')) {
-          // Taken slug — show inline error and navigate back to the URL step
-          setFieldErrors({ subdomain: 'This URL is already taken — please choose a different one.' });
+          // Taken slug, show inline error and navigate back to the URL step
+          setFieldErrors({ subdomain: 'This URL is already taken. Please choose a different one.' });
           wizardStepRef.current?.goTo(1);
         } else if (msg.includes('not available')) {
-          // Banned slug — show inline error and navigate back to the URL step
-          setFieldErrors({ subdomain: 'This URL is not available — please choose a different one.' });
+          // Banned slug, show inline error and navigate back to the URL step
+          setFieldErrors({ subdomain: 'This URL is not available. Please choose a different one.' });
           wizardStepRef.current?.goTo(1);
         } else if (msg.includes('not allowed') || msg.toLowerCase().includes('display name')) {
-          // Banned organizer/display name — navigate back to the name step
-          setFieldErrors({ organizerName: 'This display name is not allowed — please choose a different one.' });
+          // Banned organizer/display name, navigate back to the name step
+          setFieldErrors({ organizerName: 'This display name is not allowed. Please choose a different one.' });
           wizardStepRef.current?.goTo(nameStepNum);
         } else if (msg.includes('email')) {
           setFieldErrors({ organizerEmail: 'Please enter a valid email address.' });
@@ -3276,7 +3251,7 @@ export default function Home() {
         {showIntro && <IntroCinematic onComplete={dismissIntro} />}
       </AnimatePresence>
       {showAd && <CrossPlatformAd trigger="post_event_create" onClose={() => setShowAd(false)} />}
-      {/* Recovery code modal — shown once when organizer sets an account password at creation */}
+      {/* Recovery code modal, shown once when organizer sets an account password at creation */}
       {organizerRecoveryCode && (
         <RecoveryCodeModal
           code={organizerRecoveryCode}
@@ -3285,7 +3260,7 @@ export default function Home() {
             // Navigate to the event after dismissing the modal
             if (created) {
               const base = created.subdomain ? `/e/${created.subdomain}` : `/event/${created.id}`;
-              // Don't auto-navigate — let them read the screen first
+              // Don't auto-navigate, let them read the screen first
             }
           }}
           eventSlug={created?.subdomain}
@@ -3385,7 +3360,7 @@ export default function Home() {
             <a href="/about" className="hidden md:flex items-center gap-1.5 px-3 py-2 text-sm text-neutral-400 hover:text-neutral-200 hover:bg-neutral-800/50 rounded-xl transition-all duration-200">
               About
             </a>
-            {/* Hamburger — mobile only */}
+            {/* Hamburger, mobile only */}
             <button
               className="md:hidden ml-2 w-9 h-9 flex items-center justify-center rounded-xl bg-neutral-800 border border-neutral-700 text-neutral-300 hover:text-white hover:bg-neutral-700 transition-all"
               onClick={() => setMobileMenuOpen(o => !o)}
@@ -3433,9 +3408,9 @@ export default function Home() {
       </header>
 
       <main className="relative" style={{ zIndex: 2, overflowX: 'hidden', maxWidth: '100vw' }}>
-        {/* HERO — redesigned */}
+        {/* HERO, redesigned */}
         <section id="hero-top" className="relative min-h-screen flex items-center" style={{ overflow: 'hidden', maxWidth: '100vw' }}>
-          {/* Deep-space layer — subtle nod to PlanIt → Planet, hero only */}
+          {/* Deep-space layer, subtle nod to PlanIt → Planet, hero only */}
           {!isWL && (
             <div aria-hidden="true" className="absolute inset-0 pointer-events-none" style={{ zIndex: 0, opacity: 0.55 }}>
               <StarBackground fixed={false} forceActive={true} paused={showIntro} />
@@ -3478,7 +3453,7 @@ export default function Home() {
                 )}
               </motion.div>
 
-              {/* Main headline — word-by-word animation */}
+              {/* Main headline, word-by-word animation */}
               {(isWL && heroHeadline)
                 ? (
                   <motion.h1 initial={{ opacity:0, y:30 }} animate={{ opacity:1, y:0 }} transition={{ duration:0.9, delay:0.25 }}
@@ -3505,7 +3480,7 @@ export default function Home() {
               >
                 {isWL
                   ? (heroSubheadline || wlName || 'Your event platform')
-                  : <>The complete workspace for events &amp; hospitality —{' '}
+                  : <>The complete workspace for events &amp; hospitality:{' '}
                       <span className="text-neutral-200 font-medium">team chat, tasks, RSVP, check-in</span>
                       {' '}and a live floor manager for restaurants.</>
                 }
@@ -3551,7 +3526,7 @@ export default function Home() {
                 </MagneticLink>
               </motion.div>
 
-              {/* Slug finder — jump to a private event */}
+              {/* Slug finder, jump to a private event */}
               <motion.div initial={{ opacity:0, y:12 }} animate={{ opacity:1, y:0 }} transition={{ duration:0.6, delay:1.15 }}
                 className="mb-8 sm:mb-10">
                 <p className="text-xs text-neutral-600 uppercase tracking-widest mb-2">Already have an event link?</p>
@@ -3588,7 +3563,7 @@ export default function Home() {
         {!(selectedBranch || isWL) && <ProductShowcase />}
 
         {/* ═══════════════════════════════════════════════════════════
-            SOCIAL PROOF STRIP — replaces branch gateway
+            SOCIAL PROOF STRIP, replaces branch gateway
         ═══════════════════════════════════════════════════════════ */}
         <section className="relative border-t overflow-hidden" style={{ borderColor:'rgba(255,255,255,0.05)', display: (selectedBranch || isWL) ? 'none' : 'block' }}>
           <div className="max-w-screen-xl mx-auto px-6 sm:px-10 py-20">
@@ -3602,7 +3577,7 @@ export default function Home() {
               </h2>
               <p className="text-neutral-500 text-lg max-w-2xl mx-auto leading-relaxed">
                 Most teams plan events across group chats, email threads, shared spreadsheets, and scattered notes.
-                PlanIt puts it all in one workspace — with your whole team, from day one.
+                PlanIt puts it all in one workspace, with your whole team, from day one.
               </p>
             </Reveal>
 
@@ -3614,8 +3589,8 @@ export default function Home() {
                 { icon: BarChart3,     label: 'Live polls',           desc: 'Vote on venues, menus, dates. Results update on every screen in real time.' },
                 { icon: Users,         label: 'Unlimited team',       desc: 'No per-seat pricing. Add every organizer, vendor, and volunteer for free.' },
                 { icon: QrCode,        label: 'QR check-in',          desc: 'Personal QR invites for every guest. Scan at the door, see live attendance.' },
-                { icon: Bot,           label: 'Claude AI co-pilot',   desc: 'Manage guests, send announcements, and check attendance — conversationally.' },
-                { icon: FileText,      label: 'File sharing',         desc: 'Floor plans, contracts, schedules — attached directly to the workspace.' },
+                { icon: Bot,           label: 'Claude AI co-pilot',   desc: 'Manage guests, send announcements, and check attendance, all conversationally.' },
+                { icon: FileText,      label: 'File sharing',         desc: 'Floor plans, contracts, schedules, attached directly to the workspace.' },
                 { icon: Shield,        label: 'Anti-fraud check-in',  desc: 'Duplicate detection, trust scoring, and manager override built in.' },
                 { icon: UtensilsCrossed, label: 'Live floor manager', desc: 'For restaurants: visual floor map, walk-in waitlist, and live table status.' },
               ].map((f, i) => (
@@ -3677,7 +3652,7 @@ export default function Home() {
                       Planning an event?<br />Start here.
                     </h3>
                     <p className="text-sm text-neutral-500 leading-relaxed mb-7 max-w-sm">
-                      Weddings, conferences, corporate retreats, galas. The full planning workspace — chat, tasks, RSVP, QR check-in, all in one place.
+                      Weddings, conferences, corporate retreats, galas. The full planning workspace: chat, tasks, RSVP, QR check-in, all in one place.
                     </p>
                     <div className="flex items-center gap-2 text-sm font-bold text-indigo-400 group-hover:text-indigo-300 transition-colors">
                       Get started free <ArrowRight className="w-4 h-4 group-hover:translate-x-1.5 transition-transform duration-300" />
@@ -3702,7 +3677,7 @@ export default function Home() {
                       Just need RSVPs?<br />Skip the rest.
                     </h3>
                     <p className="text-sm text-neutral-500 leading-relaxed mb-7 max-w-sm">
-                      A beautiful, section-based RSVP page and guest list — no seating charts, no floor management, live in under a minute.
+                      A beautiful, section-based RSVP page and guest list. No seating charts, no floor management, live in under a minute.
                     </p>
                     <div className="flex items-center gap-2 text-sm font-bold text-emerald-400 group-hover:text-emerald-300 transition-colors">
                       Create an RSVP page <ArrowRight className="w-4 h-4 group-hover:translate-x-1.5 transition-transform duration-300" />
@@ -3742,7 +3717,7 @@ export default function Home() {
         <SectionSeam tint="indigo" />
 
         {/* ═══════════════════════════════════════════════════════════
-            PLANIT EVENTS — its own "page" section
+            PLANIT EVENTS, its own "page" section
         ═══════════════════════════════════════════════════════════ */}
         <section id="planit-events" className="relative overflow-hidden" style={{ background: 'var(--bg-surface)', display: selectedBranch === 'events' ? 'block' : 'none' }}>
           {/* Page-break top border with glow */}
@@ -3798,7 +3773,7 @@ export default function Home() {
                   <span style={{ color: '#64748b' }}>Nothing you don't.</span>
                 </h2>
                 <p className="text-neutral-400 text-lg leading-relaxed mb-10 max-w-lg">
-                  From 6 months out to the final wrap-up. {isWL ? (wlName || 'Your platform') : 'PlanIt Events'} is the workspace for the whole team — organizers, vendors, volunteers, everyone.
+                  From 6 months out to the final wrap-up. {isWL ? (wlName || 'Your platform') : 'PlanIt Events'} is the workspace for the whole team: organizers, vendors, volunteers, everyone.
                 </p>
                 <div className="flex items-center gap-4">
                   <a href="#create" className="inline-flex items-center gap-2 px-6 py-3 bg-white text-neutral-900 rounded-xl font-bold hover:bg-neutral-100 transition-colors text-sm">
@@ -3895,10 +3870,10 @@ export default function Home() {
                   { icon: MessageSquare, label: 'Real-time team chat',    desc: 'Typing indicators, reactions, threads. Your team stays in sync.' },
                   { icon: ListChecks,    label: 'Task management',        desc: 'Assign tasks, set deadlines, track completion down to the wire.' },
                   { icon: BarChart3,     label: 'Polls & voting',         desc: 'Vote on venues, dates, menus. Live results instantly.' },
-                  { icon: FileText,      label: 'File sharing',           desc: 'Contracts, floor plans, schedules — all in one place.' },
+                  { icon: FileText,      label: 'File sharing',           desc: 'Contracts, floor plans, schedules, all in one place.' },
                   { icon: Users,         label: 'Unlimited team',         desc: 'No caps. Every organizer, vendor, and volunteer included.' },
                   { icon: QrCode,        label: 'QR check-in',           desc: 'Professional guest check-in with real-time attendance.' },
-                  { icon: Bot,           label: 'Claude AI co-pilot',    desc: 'Manage your whole event by talking to Claude. Add guests, check-ins, announcements — conversationally.' },
+                  { icon: Bot,           label: 'Claude AI co-pilot',    desc: 'Manage your whole event by talking to Claude. Add guests, check-ins, announcements, all conversationally.' },
                 ].map((f, i) => (
                   <Reveal key={f.label} delay={(i % 3) * 60} direction={i % 3 === 0 ? 'left' : i % 3 === 2 ? 'right' : 'up'}>
                     <div className="feature-card group p-6 rounded-2xl h-full" style={{ background: 'rgba(255,255,255,0.02)' }}>
@@ -3935,7 +3910,7 @@ export default function Home() {
                       Invites and RSVP pages guests actually want to share.
                     </h3>
                     <p className="text-sm text-neutral-500 leading-relaxed mb-6 max-w-lg">
-                      Live countdowns, who else is going, a QR entry pass, and a personalized share card for every guest — try the real thing below, no account needed.
+                      Live countdowns, who else is going, a QR entry pass, and a personalized share card for every guest. Try the real thing below, no account needed.
                     </p>
                     <div className="flex flex-wrap gap-3">
                       <span className="inline-flex items-center gap-2 text-sm font-bold text-indigo-400 group-hover:text-indigo-300 transition-colors">
@@ -3997,7 +3972,7 @@ export default function Home() {
         </section>
 
         {/* ═══════════════════════════════════════════════════════════
-            BRANCH TRANSITION — visual page turn
+            BRANCH TRANSITION, visual page turn
         ═══════════════════════════════════════════════════════════ */}
         <div className="relative py-12 flex items-center justify-center overflow-hidden" style={{ background: 'var(--bg-base)', display: selectedBranch ? 'none' : 'flex' }}>
           <div className="absolute inset-0" style={{ backgroundImage: 'radial-gradient(circle at 50% 50%, rgba(249,115,22,0.04) 0%, transparent 60%)' }} />
@@ -4019,7 +3994,7 @@ export default function Home() {
         </div>
 
         {/* ═══════════════════════════════════════════════════════════
-            PLANIT RSVP — its own "page" section
+            PLANIT RSVP, its own "page" section
         ═══════════════════════════════════════════════════════════ */}
         <section id="planit-rsvp" className="relative overflow-hidden" style={{ background: 'rgba(6,20,16,0.97)', display: selectedBranch === 'rsvp' ? 'block' : 'none' }}>
           <div style={{ height: '2px', background: 'linear-gradient(90deg, transparent, rgba(16,185,129,0.15) 20%, rgba(52,211,153,0.3) 50%, rgba(16,185,129,0.15) 80%, transparent)' }} />
@@ -4053,7 +4028,7 @@ export default function Home() {
                 <span style={{ color: '#34d399' }}>Nothing else to configure.</span>
               </h2>
               <p className="text-neutral-400 text-lg leading-relaxed mb-10 max-w-lg">
-                Drag-and-drop a real page — hero, agenda, photos, FAQ, whatever the event needs — then share one link. No seating charts, no floor management, no ticketing. Just RSVPs, done beautifully.
+                Drag-and-drop a real page: hero, agenda, photos, FAQ, whatever the event needs. Then share one link. No seating charts, no floor management, no ticketing. Just RSVPs, done beautifully.
               </p>
               <div className="flex items-center gap-4">
                 <a href="#create" className="inline-flex items-center gap-2 px-6 py-3 bg-emerald-400 text-emerald-950 rounded-xl font-bold hover:bg-emerald-300 transition-colors text-sm">
@@ -4068,7 +4043,7 @@ export default function Home() {
           <div className="relative max-w-screen-xl mx-auto px-6 sm:px-10 pb-20">
             <div className="grid sm:grid-cols-3 gap-4">
               {[
-                { icon: Layers, label: 'Section-based builder', body: 'Drag, drop, and reorder from a 16-block library — hero, agenda, FAQ, sponsors, and more.' },
+                { icon: Layers, label: 'Section-based builder', body: 'Drag, drop, and reorder from a 16-block library: hero, agenda, FAQ, sponsors, and more.' },
                 { icon: Zap, label: 'Auto-generated cover', body: 'Pick a template and accent color; your event\u2019s cover graphic builds itself, no design work.' },
                 { icon: Users, label: 'Guest list + check-in', body: 'The same guest list and simple check-in as every PlanIt event, without the extra setup.' },
               ].map(({ icon: Icon, label, body }, i) => (
@@ -4083,7 +4058,7 @@ export default function Home() {
             </div>
           </div>
 
-          {/* Standard Event vs RSVP Event comparison — styled cards, not a plain table */}
+          {/* Standard Event vs RSVP Event comparison, styled cards, not a plain table */}
           <div className="relative max-w-screen-xl mx-auto px-6 sm:px-10 pb-24">
             <Reveal>
               <p className="text-xs font-bold text-neutral-500 uppercase tracking-[0.2em] mb-6 text-center">Which one do you actually need?</p>
@@ -4140,7 +4115,7 @@ export default function Home() {
         </section>
 
         {/* ═══════════════════════════════════════════════════════════
-            PLANIT VENUE — its own "page" section
+            PLANIT VENUE, its own "page" section
         ═══════════════════════════════════════════════════════════ */}
         <section id="planit-venue" className="relative overflow-hidden" style={{ background: 'var(--bg-venue)', display: selectedBranch === 'venue' ? 'block' : 'none' }}>
           {/* Page-break top border with orange glow */}
@@ -4322,9 +4297,9 @@ export default function Home() {
           <div className="max-w-screen-xl mx-auto px-4 sm:px-8">
             <SectionHeader eyebrow="Testimonials" title="Trusted by restaurant floors" subtitle="See how venues are using PlanIt to run service, night after night" />
             <div className="grid md:grid-cols-3 gap-6">
-              <TestimonialCard direction="left" quote="The floor map alone paid for itself in week one. Our host stand used to be a legal pad — now every server sees table status update live from their phone." author="Michael Chen" role="General Manager" event="Taverna Roma" delay={0} />
+              <TestimonialCard direction="left" quote="The floor map alone paid for itself in week one. Our host stand used to be a legal pad. Now every server sees table status update live from their phone." author="Michael Chen" role="General Manager" event="Taverna Roma" delay={0} />
               <TestimonialCard direction="up" quote="Walk-ins used to mean guessing at wait times. Now guests scan a QR at the door, see the real queue, and we seat the next table with one tap." author="Sarah Williams" role="Front of House Manager" event="The Oak Room" delay={120} />
-              <TestimonialCard direction="right" quote="Our floor history just sits there — no resets, no cleanup. We can look back at any night and see exactly how service ran." author="David Martinez" role="Operations Lead" event="Bellwood Bistro" delay={240} />
+              <TestimonialCard direction="right" quote="Our floor history just sits there. No resets, no cleanup. We can look back at any night and see exactly how service ran." author="David Martinez" role="Operations Lead" event="Bellwood Bistro" delay={240} />
             </div>
           </div>
         </section>
@@ -4345,7 +4320,7 @@ export default function Home() {
                     Manage your event<br />by talking to Claude.
                   </h2>
                   <p className="text-neutral-400 text-lg leading-relaxed mb-8 max-w-lg">
-                    Add PlanIt to Claude once. Then just have a conversation — build your guest list, set up seating,
+                    Add PlanIt to Claude once. Then just have a conversation: build your guest list, set up seating,
                     send announcements, and monitor check-ins without touching the dashboard.
                   </p>
                   <div className="space-y-3 mb-8">
@@ -4418,7 +4393,7 @@ export default function Home() {
                       </div>
                       <div className="px-3 py-2 rounded-2xl rounded-tl-sm text-neutral-300 text-xs max-w-xs"
                         style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.07)' }}>
-                        Done — Sarah Jones has been added. Her invite link is ready to share.
+                        Done! Sarah Jones has been added. Her invite link is ready to share.
                       </div>
                     </div>
                     <div className="flex justify-end">
@@ -4433,7 +4408,7 @@ export default function Home() {
                       </div>
                       <div className="px-3 py-2 rounded-2xl rounded-tl-sm text-neutral-300 text-xs max-w-xs"
                         style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.07)' }}>
-                        87 of 150 guests checked in — 58%. Last scan 2 minutes ago.
+                        87 of 150 guests checked in (58%). Last scan 2 minutes ago.
                       </div>
                     </div>
                     <div className="flex justify-end">
@@ -4471,10 +4446,10 @@ export default function Home() {
             <Reveal className="text-center mb-12">
               <p className="text-xs font-semibold text-neutral-500 uppercase tracking-widest mb-3">Explore more</p>
               <h2 className="font-syne text-4xl md:text-5xl font-black text-white mb-4">Everything you need</h2>
-              <p className="text-lg text-neutral-400 max-w-md mx-auto">Find public events and check our service health — all in one place.</p>
+              <p className="text-lg text-neutral-400 max-w-md mx-auto">Find public events and check our service health, all in one place.</p>
             </Reveal>
             <div className={selectedBranch === 'venue' ? 'grid max-w-lg mx-auto gap-6' : 'grid md:grid-cols-2 gap-6'}>
-              {/* Discover Card — events only */}
+              {/* Discover Card, events only */}
               {selectedBranch !== 'venue' && (
               <Reveal delay={0} direction="left">
                 <a href="/discover" className="group relative block p-8 sm:p-10 rounded-3xl border border-neutral-800 bg-neutral-900/50 hover:border-neutral-500 hover:bg-neutral-800/60 hover:-translate-y-1.5 hover:shadow-[0_24px_60px_rgba(0,0,0,0.4)] transition-all duration-500 overflow-hidden h-full">
@@ -4549,7 +4524,7 @@ export default function Home() {
                           : mode === 'enterprise'
                             ? 'Built for large-scale, ticketed events. Every guest gets a personalized QR invite and seamless check-in.'
                             : mode === 'rsvp'
-                              ? 'Just a guest list and a beautiful RSVP page — no seating charts, no floor management. Live in under a minute.'
+                              ? 'Just a guest list and a beautiful RSVP page. No seating charts, no floor management. Live in under a minute.'
                               : 'Create your event workspace in 60 seconds. No credit card, no hassle, just start planning.'}
                     </p>
                   </div>
@@ -4568,7 +4543,7 @@ export default function Home() {
                     {mode === 'table-service' ? (
                       <div className="space-y-3 p-5 sm:p-8 bg-neutral-900/50 rounded-3xl border border-neutral-800">
                         <p className="text-base font-bold text-white mb-4">Everything included in Table Service:</p>
-                        {['Visual floor plan editor — drag & drop tables anywhere', 'Live table states: available, occupied, cleaning, reserved', 'Walk-in waitlist with real-time estimated wait times', 'QR code reservations with configurable expiry windows', 'Per-restaurant timing config: dining duration, buffer, hours', 'Instant sync across all staff devices via live socket', 'Data never auto-deleted — your floor plan persists forever', 'Party size tracking and server assignment per table', 'Occupancy overview and turn time estimates at a glance'].map((item, i) => (
+                        {['Visual floor plan editor: drag & drop tables anywhere', 'Live table states: available, occupied, cleaning, reserved', 'Walk-in waitlist with real-time estimated wait times', 'QR code reservations with configurable expiry windows', 'Per-restaurant timing config: dining duration, buffer, hours', 'Instant sync across all staff devices via live socket', 'Data never auto-deleted: your floor plan persists forever', 'Party size tracking and server assignment per table', 'Occupancy overview and turn time estimates at a glance'].map((item, i) => (
                           <div key={i} className="flex items-start gap-3 text-sm text-neutral-400">
                             <CheckCircle2 className="w-5 h-5 text-orange-500 flex-shrink-0 mt-0.5" />
                             <span className="leading-relaxed">{item}</span>
@@ -4615,7 +4590,7 @@ export default function Home() {
                     ) : mode === 'rsvp' ? (
                       <div className="space-y-3 p-5 sm:p-8 bg-neutral-900/50 rounded-3xl border border-neutral-800">
                         <p className="text-base font-bold text-white mb-4">What's included in an RSVP Event:</p>
-                        {['Section-based drag-and-drop RSVP page builder', 'A 16-block library — hero, agenda, FAQ, gallery, sponsors, and more', 'Auto-generated cover graphic, no design work needed', 'Guest list with the same tools as every PlanIt event', 'Simple check-in (scan or confirm)', 'Analytics on views and responses'].map((item, i) => (
+                        {['Section-based drag-and-drop RSVP page builder', 'A 16-block library: hero, agenda, FAQ, gallery, sponsors, and more', 'Auto-generated cover graphic, no design work needed', 'Guest list with the same tools as every PlanIt event', 'Simple check-in (scan or confirm)', 'Analytics on views and responses'].map((item, i) => (
                           <div key={i} className="flex items-start gap-3 text-sm text-neutral-400">
                             <CheckCircle2 className="w-5 h-5 text-emerald-500 flex-shrink-0 mt-0.5" />
                             <span className="leading-relaxed">{item}</span>
@@ -4623,7 +4598,7 @@ export default function Home() {
                         ))}
                         <div className="flex items-start gap-3 text-sm pt-2 mt-2 border-t border-neutral-800/60">
                           <X className="w-5 h-5 text-neutral-600 flex-shrink-0 mt-0.5" />
-                          <span className="leading-relaxed text-neutral-600">No seating charts, floor management, ticketing, or enterprise check-in — that's what Standard Event and Venue are for.</span>
+                          <span className="leading-relaxed text-neutral-600">No seating charts, floor management, ticketing, or enterprise check-in: that's what Standard Event and Venue are for.</span>
                         </div>
                       </div>
                     ) : (
@@ -4670,7 +4645,7 @@ export default function Home() {
                                     <span className="text-neutral-400">Password</span>
                                     <span className="text-white font-mono font-bold">{formData.staffPassword}</span>
                                   </div>
-                                  <p className="text-xs text-neutral-600 mt-2">Share this with your team — they log in at <code className="text-neutral-500">/login</code></p>
+                                  <p className="text-xs text-neutral-600 mt-2">Share this with your team: they log in at <code className="text-neutral-500">/login</code></p>
                                 </div>
                               )}
                               <ol className="text-sm text-neutral-400 space-y-3 list-decimal ml-5">
@@ -4728,7 +4703,7 @@ export default function Home() {
               {!created && (
                 <Reveal delay={80}>
                   <div className="sticky top-24">
-                    {/* Mode selector — lets you flip between Standard, Enterprise, and RSVP-only without leaving the wizard */}
+                    {/* Mode selector, lets you flip between Standard, Enterprise, and RSVP-only without leaving the wizard */}
                     {(selectedBranch === 'events' || selectedBranch === 'rsvp') && (
                       <div style={{ display:'flex', gap:6, marginBottom:20, padding:'6px', background:'rgba(255,255,255,0.03)', borderRadius:14, border:'1px solid rgba(255,255,255,0.06)' }}>
                         {[
@@ -4996,7 +4971,7 @@ export default function Home() {
                        <span className="font-syne font-black text-xl text-white tracking-tight">{isWL ? wlName : 'PlanIt'}</span></>
                   }
                 </div>
-                <p className="text-sm text-neutral-500 leading-relaxed mb-4 max-w-xs">{isWL ? '' : 'The ultimate planning hub for event teams — plus standalone RSVP pages when that\'s all you need. Plan smart, execute flawlessly.'}</p>
+                <p className="text-sm text-neutral-500 leading-relaxed mb-4 max-w-xs">{isWL ? '' : 'The ultimate planning hub for event teams, plus standalone RSVP pages when that\'s all you need. Plan smart, execute flawlessly.'}</p>
                 <p className="text-xs text-neutral-600">Built by Aakshat Hariharan</p>
               </div>
               <div>
