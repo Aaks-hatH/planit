@@ -9,17 +9,18 @@
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import {
   Users, Clock, CheckCircle, XCircle, AlertTriangle, Settings, Plus,
   RefreshCw, QrCode, Trash2, Edit2, ChevronRight, Bell, MapPin,
   Coffee, Utensils, Star, LayoutGrid, List, X, Save, Check,
   ArrowRight, ArrowLeft, Phone, ScanLine, Calendar, Timer, Loader2, Lock,
-  ExternalLink, UtensilsCrossed, CameraOff, Copy, RotateCcw,
+  ExternalLink, UtensilsCrossed, CameraOff, Copy, RotateCcw, Sparkles,
 } from 'lucide-react';
 import { eventAPI } from '../services/api';
 import toast from 'react-hot-toast';
 import SeatingMap from '../components/SeatingMap';
+import FeatureTour from '../components/tour/FeatureTour';
 
 // ── Utilities ────────────────────────────────────────────────────────────────
 
@@ -2820,8 +2821,10 @@ function SettingsModal({ settings, reservationSettings, onSave, onSaveReserve, o
 export default function TableService() {
   const { eventId: eventIdParam, subdomain } = useParams();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
 
   const [loading, setLoading]           = useState(true);
+  const [showTour, setShowTour]         = useState(false);
   const [resolvedEventId, setResolvedEventId] = useState(eventIdParam || null);
   const [floorData, setFloorData]       = useState({ seatingMap: { objects: [] }, tableStates: [], settings: {}, reservations: [], waitlist: [], restaurantName: '', isTableServiceMode: false, isEnterpriseMode: false });
   const [selectedTableId, setSelectedTableId] = useState(null);
@@ -2872,6 +2875,17 @@ export default function TableService() {
 
   const selectedObj   = objects.find(o => o.id === selectedTableId) || null;
   const selectedState = tableStates.find(s => s.tableId === selectedTableId) || null;
+
+  // First-run tour — same `?new=1` + localStorage convention as EventSpace.jsx
+  useEffect(() => {
+    if (!eid || loading) return;
+    if (searchParams.get('new') !== '1') return;
+    const seenKey = `planit_onboarding_${eid}`;
+    if (!localStorage.getItem(seenKey)) {
+      localStorage.setItem(seenKey, '1');
+      setShowTour(true);
+    }
+  }, [eid, loading, searchParams]);
 
   const loadFloor = useCallback(async () => {
     if (!eid || isRedirecting.current) return;
@@ -3242,6 +3256,7 @@ export default function TableService() {
             </button>
           )}
           <button onClick={loadFloor} title="Refresh" className="p-2 hover:bg-neutral-800 rounded-lg text-neutral-500 hover:text-white transition-colors"><RefreshCw className="w-4 h-4" /></button>
+          <button onClick={() => setShowTour(true)} title="Take the tour" className="p-2 hover:bg-neutral-800 rounded-lg text-neutral-500 hover:text-white transition-colors"><Sparkles className="w-4 h-4" /></button>
           {isTableService && (subdomain || eid) && (
             <a
               href={subdomain ? `/e/${subdomain}/server` : `/event/${eid}/server`}
@@ -3562,6 +3577,11 @@ export default function TableService() {
           onConfirm={handleSeatNextConfirm}
           onClose={() => setSeatNextParty(null)}
         />
+      )}
+
+      {/* ── Feature tour ── */}
+      {showTour && (
+        <FeatureTour variant="tableService" onClose={() => setShowTour(false)} />
       )}
 
       {/* ── Settings Modal ── */}
