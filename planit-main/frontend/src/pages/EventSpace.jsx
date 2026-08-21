@@ -7,7 +7,7 @@ import {
   ChevronRight, Clock, QrCode,
   Smile,
   CheckCircle2, Megaphone, DollarSign, StickyNote, Share2, UserCheck, XCircle, ClipboardList,
-  Star, Shield, LogIn, UserPlus, HelpCircle, Bot
+  Star, Shield, LogIn, UserPlus, HelpCircle, Bot, Sparkles
 } from 'lucide-react';
 import { eventAPI, chatAPI, pollAPI, fileAPI, rsvpAPI } from '../services/api';
 import socketService from '../services/socket';
@@ -29,7 +29,7 @@ import DeletionWarningBanner from '../components/DeletionWarningBanner';
 import RecoveryCodeModal from '../components/RecoveryCodeModal';
 import RecoveryCodeBanner from '../components/RecoveryCodeBanner';
 import OrganizerSettings from '../components/OrganizerSettings';
-import Onboarding from '../components/Onboarding';
+import FeatureTour from '../components/tour/FeatureTour';
 import CrossPlatformAd from '../components/CrossPlatformAd';
 import SeatingMap from '../components/SeatingMap';
 
@@ -1572,10 +1572,8 @@ export default function EventSpace() {
           pendingCount={pendingApprovals} />
       )}
       {showOnboarding && (
-        <Onboarding eventId={eventId} subdomain={event?.subdomain}
-          isOrganizer={isOrganizer}
-          isEnterprise={event?.isEnterpriseMode}
-          isVenue={event?.isTableServiceMode}
+        <FeatureTour
+          variant={event?.isEnterpriseMode ? 'enterprise' : 'standard'}
           onClose={() => setShowOnboarding(false)} />
       )}
 
@@ -1649,6 +1647,10 @@ export default function EventSpace() {
               onClick={() => { localStorage.removeItem('eventToken'); localStorage.removeItem('username'); navigate('/'); }}
               className="w-8 h-8 rounded-lg bg-neutral-100 hover:bg-red-50 flex items-center justify-center transition-colors group">
               <LogOut className="w-3.5 h-3.5 text-neutral-500 group-hover:text-red-500 transition-colors" />
+            </button>
+            <button onClick={() => setShowOnboarding(true)} title="Take the tour"
+              className="w-8 h-8 rounded-lg bg-neutral-100 hover:bg-neutral-200 flex items-center justify-center transition-colors">
+              <Sparkles className="w-3.5 h-3.5 text-neutral-600" />
             </button>
             <a href="/help" title="Help Center"
               className="w-8 h-8 rounded-lg bg-neutral-100 hover:bg-neutral-200 flex items-center justify-center transition-colors">
