@@ -50,22 +50,36 @@
  * (a light modal) too.
  */
 import { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, ExternalLink, LayoutTemplate, ChevronRight } from 'lucide-react';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
+import { ArrowLeft, ExternalLink, LayoutTemplate, ChevronRight, Sparkles } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { eventAPI } from '../services/api';
 import RSVPDashboard from '../components/RSVPDashboard';
 import { JoinGate } from './EventSpace';
+import FeatureTour from '../components/tour/FeatureTour';
 
 export default function RSVPEventDashboard() {
   const { subdomain, eventId: paramEventId } = useParams();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
 
   const [eventId, setEventId]     = useState(paramEventId || null);
   const [resolving, setResolving] = useState(!paramEventId && !!subdomain);
   const [needsJoin, setNeedsJoin] = useState(false);
   const [event, setEvent]         = useState(null);
   const [loading, setLoading]     = useState(true);
+  const [showTour, setShowTour]   = useState(false);
+
+  // First-run tour — same `?new=1` + localStorage convention as EventSpace.jsx
+  useEffect(() => {
+    if (!eventId || loading || needsJoin) return;
+    if (searchParams.get('new') !== '1') return;
+    const seenKey = `planit_onboarding_${eventId}`;
+    if (!localStorage.getItem(seenKey)) {
+      localStorage.setItem(seenKey, '1');
+      setShowTour(true);
+    }
+  }, [eventId, loading, needsJoin, searchParams]);
 
   // ── Step 1: resolve subdomain → eventId (public, no auth needed) ────────
   useEffect(() => {
@@ -193,8 +207,16 @@ export default function RSVPEventDashboard() {
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-neutral-600 border border-neutral-200 bg-white hover:bg-neutral-50 hover:border-neutral-300 transition-colors flex-shrink-0">
             View live page <ExternalLink className="w-3 h-3" />
           </a>
+          <button onClick={() => setShowTour(true)} title="Take the tour"
+            className="w-8 h-8 rounded-lg bg-neutral-100 hover:bg-neutral-200 flex items-center justify-center flex-shrink-0 transition-colors">
+            <Sparkles className="w-3.5 h-3.5 text-neutral-600" />
+          </button>
         </div>
       </header>
+
+      {showTour && (
+        <FeatureTour variant="rsvp" onClose={() => setShowTour(false)} />
+      )}
 
       <div className="max-w-screen-lg mx-auto px-4 sm:px-6 py-6 flex flex-col gap-6">
         {/* Builder — full-page tool, linked out to rather than embedded, see file header */}
