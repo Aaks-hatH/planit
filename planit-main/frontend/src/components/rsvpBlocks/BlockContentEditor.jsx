@@ -18,7 +18,7 @@ function toDatetimeLocal(value) {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
-function ImageUploadField({ eventId, value, onChange }) {
+function ImageUploadField({ eventId, value, onChange, purpose }) {
   const [busy, setBusy] = useState(false);
   const handleFile = async (e) => {
     const file = e.target.files?.[0];
@@ -27,7 +27,7 @@ function ImageUploadField({ eventId, value, onChange }) {
     try {
       const fd = new FormData();
       fd.append('files', file);
-      const res = await fileAPI.upload(eventId, fd);
+      const res = await fileAPI.upload(eventId, fd, purpose);
       onChange(res.data.file.url);
     } catch (err) {
       console.error('Image upload failed', err);
@@ -107,36 +107,90 @@ function ListEditor({ eventId, field, items = [], onChange }) {
   );
 }
 
-function CoverPickerField({ coverTemplates = [], accentColor, coverPreviewUrl, generating, onGenerate }) {
+function CoverPickerField({ eventId, coverTemplates = [], accentColor, coverPreviewUrl, generating, onGenerate, uploadedUrl, onUploadImage, onClearUpload }) {
   const [template, setTemplate] = useState('centered-stack');
+  const [mode, setMode] = useState(uploadedUrl ? 'upload' : 'generate');
+  const [uploading, setUploading] = useState(false);
+
+  // The generated-cover preview only applies in 'generate' mode — an
+  // uploaded image always wins on the actual page (see RSVPPageRenderer's
+  // resolution order), so showing it here too when an upload is active
+  // would misrepresent what guests will actually see.
+  const previewUrl = mode === 'upload' ? uploadedUrl : coverPreviewUrl;
+
+  const handleFile = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    try {
+      await onUploadImage?.(file);
+    } finally {
+      setUploading(false);
+    }
+  };
+
   return (
     <div className="flex flex-col gap-2">
-      {coverPreviewUrl && (
-        <img src={coverPreviewUrl} alt="Cover preview" className="w-full rounded-lg border border-white/10 aspect-[1200/630] object-cover" />
+      {previewUrl && (
+        <img src={previewUrl} alt="Cover preview" className="w-full rounded-lg border border-white/10 aspect-[1200/630] object-cover" />
       )}
-      <div className="flex flex-wrap gap-1.5">
-        {coverTemplates.map((t) => (
-          <button
-            key={t}
-            type="button"
-            onClick={() => setTemplate(t)}
-            className="text-[11px] px-2 py-1 rounded-full border"
-            style={template === t ? { borderColor: accentColor, color: accentColor } : { borderColor: 'rgba(255,255,255,0.15)', opacity: 0.6 }}
-          >
-            {t.replace(/-/g, ' ')}
-          </button>
-        ))}
+
+      <div className="flex gap-1 p-0.5 rounded-lg bg-white/5 w-fit">
+        <button type="button" onClick={() => setMode('generate')}
+          className="text-[11px] px-2.5 py-1 rounded-md transition-colors"
+          style={mode === 'generate' ? { background: accentColor, color: '#0a0a12' } : { opacity: 0.6 }}>
+          Generate
+        </button>
+        <button type="button" onClick={() => setMode('upload')}
+          className="text-[11px] px-2.5 py-1 rounded-md transition-colors"
+          style={mode === 'upload' ? { background: accentColor, color: '#0a0a12' } : { opacity: 0.6 }}>
+          Upload your own
+        </button>
       </div>
-      <button
-        type="button"
-        onClick={() => onGenerate(template)}
-        disabled={generating}
-        className="self-start text-xs px-3 py-1.5 rounded-lg flex items-center gap-1.5 disabled:opacity-50"
-        style={{ background: accentColor, color: '#0a0a12' }}
-      >
-        {generating ? <Loader2 size={12} className="animate-spin" /> : null}
-        {coverPreviewUrl ? 'Regenerate cover' : 'Generate cover'}
-      </button>
+
+      {mode === 'generate' && (
+        <>
+          <div className="flex flex-wrap gap-1.5">
+            {coverTemplates.map((t) => (
+              <button
+                key={t}
+                type="button"
+                onClick={() => setTemplate(t)}
+                className="text-[11px] px-2 py-1 rounded-full border"
+                style={template === t ? { borderColor: accentColor, color: accentColor } : { borderColor: 'rgba(255,255,255,0.15)', opacity: 0.6 }}
+              >
+                {t.replace(/-/g, ' ')}
+              </button>
+            ))}
+          </div>
+          <button
+            type="button"
+            onClick={() => onGenerate(template)}
+            disabled={generating}
+            className="self-start text-xs px-3 py-1.5 rounded-lg flex items-center gap-1.5 disabled:opacity-50"
+            style={{ background: accentColor, color: '#0a0a12' }}
+          >
+            {generating ? <Loader2 size={12} className="animate-spin" /> : null}
+            {coverPreviewUrl ? 'Regenerate cover' : 'Generate cover'}
+          </button>
+        </>
+      )}
+
+      {mode === 'upload' && (
+        <div className="flex items-center gap-2">
+          <label className="text-xs px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 cursor-pointer flex items-center gap-1.5 w-fit">
+            {uploading ? <Loader2 size={12} className="animate-spin" /> : null}
+            {uploadedUrl ? 'Replace image' : 'Upload image'}
+            <input type="file" accept="image/*" className="hidden" onChange={handleFile} disabled={uploading} />
+          </label>
+          {uploadedUrl && (
+            <button type="button" onClick={onClearUpload} className="text-xs text-red-400 hover:text-red-300">
+              Remove
+            </button>
+          )}
+          <span className="text-[11px] opacity-40">Automatically resized to fit the hero.</span>
+        </div>
+      )}
     </div>
   );
 }
@@ -155,11 +209,20 @@ export default function BlockContentEditor({ eventId, type, content, onChange, c
             <div key={field.key} className="flex flex-col gap-1">
               <label className="text-[11px] uppercase tracking-wide opacity-50">{field.label}</label>
               <CoverPickerField
+                eventId={eventId}
                 coverTemplates={coverProps?.coverTemplates}
                 accentColor={coverProps?.accentColor}
                 coverPreviewUrl={coverProps?.coverPreviewUrl}
                 generating={coverProps?.generating}
                 onGenerate={(template) => coverProps?.onGenerate?.(template)}
+                uploadedUrl={content?.coverImageUrl}
+                onUploadImage={async (file) => {
+                  const fd = new FormData();
+                  fd.append('files', file);
+                  const res = await fileAPI.upload(eventId, fd, 'cover');
+                  onChange({ ...content, coverImageUrl: res.data.file.url });
+                }}
+                onClearUpload={() => onChange({ ...content, coverImageUrl: null })}
               />
             </div>
           );
