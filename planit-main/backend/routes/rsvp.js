@@ -53,13 +53,42 @@ function sanitizeSectionsRichText(sections) {
     };
   });
 }
-const { sendRsvpGuestConfirmation } = require('../services/emailService');
+const { sendRsvpGuestConfirmation, buildRsvpGuestConfirmation } = require('../services/emailService');
 const { analyzeRsvp } = require('../services/spamDetector');
 const { verifyTurnstile } = require('../services/captchaService');
 const { sendAntiAbuse } = require('../services/antiAbuseResponses');
 
 const CALLER     = process.env.BACKEND_LABEL || 'Backend';
 const ROUTER_URL = () => process.env.ROUTER_URL || '';
+
+// Sends the guest's RSVP confirmation email. If the organizer has connected
+// Gmail (used today only for their own "New RSVP" notifications), the guest
+// confirmation goes out from that same real inbox instead of the no-reply
+// relay — matching what the Notifications settings copy already promises
+// ("...guest confirmations send from a real inbox instead of a no-reply
+// address"). Falls back to the no-reply relay if Gmail isn't connected, or
+// if the Gmail send fails for any reason.
+async function sendGuestConfirmation(event, opts) {
+  const gmailAuth = event.rsvpPage?.gmailAuth;
+  const routerUrl = ROUTER_URL();
+  if (routerUrl && gmailAuth?.connected && gmailAuth.refreshToken && opts.guestEmail) {
+    const { subject, html } = buildRsvpGuestConfirmation(opts);
+    const result = await meshPost(CALLER, `${routerUrl}/mesh/gmail-send`, {
+      eventId:      String(event._id),
+      to:           opts.guestEmail,
+      fromEmail:    gmailAuth.email,
+      accessToken:  gmailAuth.accessToken,
+      refreshToken: gmailAuth.refreshToken,
+      expiresAt:    gmailAuth.expiresAt,
+      subject,
+      html,
+    }, { timeout: 15000 }).catch(() => ({ ok: false }));
+    if (result.ok) return;
+    // Gmail send failed (expired grant, API error, etc.) — still get the
+    // confirmation to the guest via the no-reply relay rather than dropping it.
+  }
+  return sendRsvpGuestConfirmation(opts);
+}
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -388,6 +417,24 @@ router.post('/:eventIdOrSlug/submit', async (req, res, next) => {
               ipAddress: getClientIp(req),
               userAgent: req.headers['user-agent'] || '',
             });
+            // Fire-and-forget: send waitlist confirmation to guest. (This used to
+            // sit after the `return` below and could never actually run.)
+            if (rsvpPage.sendGuestConfirmation && email?.trim()) {
+              sendGuestConfirmation(event, {
+                guestEmail:      email.trim().toLowerCase(),
+                guestFirstName:  firstName.trim(),
+                guestName:       `${firstName.trim()}${lastName?.trim() ? ' ' + lastName.trim() : ''}`,
+                eventTitle:      event.title,
+                eventDate:       event.date || null,
+                eventLocation:   event.location || null,
+                response,
+                status:          'waitlisted',
+                plusOnes:        Number(plusOnes) || 0,
+                editToken,
+                customSubject:   rsvpPage.confirmationEmailSubject || null,
+                customBody:      rsvpPage.confirmationEmailBody    || null,
+              }).catch(() => {});
+            }
             return res.json({
               success:   true,
               waitlisted: true,
@@ -395,23 +442,6 @@ router.post('/:eventIdOrSlug/submit', async (req, res, next) => {
               editToken,
               submissionId: submission._id,
             });
-
-            // Fire-and-forget: send waitlist confirmation to guest
-            if (rsvpPage.sendGuestConfirmation && email?.trim()) {
-              sendRsvpGuestConfirmation({
-                guestEmail:    email.trim().toLowerCase(),
-                guestName:     `${firstName.trim()}${lastName?.trim() ? ' ' + lastName.trim() : ''}`,
-                eventTitle:    event.title,
-                eventDate:     event.date || null,
-                eventLocation: event.location || null,
-                response,
-                status:        'waitlisted',
-                plusOnes:      Number(plusOnes) || 0,
-                editToken,
-                customSubject: rsvpPage.confirmationEmailSubject || null,
-                customBody:    rsvpPage.confirmationEmailBody    || null,
-              }).catch(() => {});
-            }
           }
           return res.status(409).json({ error: 'This event has reached capacity.' });
         }
@@ -556,18 +586,19 @@ router.post('/:eventIdOrSlug/submit', async (req, res, next) => {
 
     // Fire-and-forget: send confirmation email to the guest
     if (rsvpPage.sendGuestConfirmation && email?.trim()) {
-      sendRsvpGuestConfirmation({
-        guestEmail:    email.trim().toLowerCase(),
-        guestName:     `${firstName.trim()}${lastName?.trim() ? ' ' + lastName.trim() : ''}`,
-        eventTitle:    event.title,
-        eventDate:     event.date || null,
-        eventLocation: event.location || null,
+      sendGuestConfirmation(event, {
+        guestEmail:     email.trim().toLowerCase(),
+        guestFirstName: firstName.trim(),
+        guestName:      `${firstName.trim()}${lastName?.trim() ? ' ' + lastName.trim() : ''}`,
+        eventTitle:     event.title,
+        eventDate:      event.date || null,
+        eventLocation:  event.location || null,
         response,
         status,
-        plusOnes:      Number(plusOnes) || 0,
+        plusOnes:       Number(plusOnes) || 0,
         editToken,
-        customSubject: rsvpPage.confirmationEmailSubject || null,
-        customBody:    rsvpPage.confirmationEmailBody    || null,
+        customSubject:  rsvpPage.confirmationEmailSubject || null,
+        customBody:     rsvpPage.confirmationEmailBody    || null,
       }).catch(() => {});
     }
 
