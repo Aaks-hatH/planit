@@ -56,15 +56,24 @@ const heroGradient = (accent) => `
 `;
 
 export const HeroBlock = React.memo(function HeroBlock({ content, layout, spacing, align, accent, fonts }) {
-  const { title, subtitle, dateTime, location, coverImageUrl, imageZoom, imagePosition, textPosition, showOverlayText } = content || {};
-  const cover = coverImageUrl || null; // resolved cover URL, passed down by renderer after cover-cache lookup
+  const {
+    title, subtitle, dateTime, location, coverImageUrl, coverImageUrlDesktop,
+    imageZoom, imagePosition, imageFit, imageZoomDesktop, imagePositionDesktop, imageFitDesktop,
+    bgColor, textPosition, showOverlayText,
+  } = content || {};
+  // Each breakpoint falls back to the other's image when it has none of its
+  // own, so a hero with only ONE image ever uploaded still shows it on both
+  // screen sizes — "desktop image" is purely an optional override.
+  const mobileSrc = coverImageUrl || coverImageUrlDesktop || null;
+  const desktopSrc = coverImageUrlDesktop || coverImageUrl || null;
+  const hasAnyImage = !!(mobileSrc || desktopSrc);
   // Generated covers already render the title/date/host name as part of the
   // graphic itself (see backend/services/coverGenerator.js), so overlaying
   // this same text again would double it up and look stacked/cluttered.
   // BlockContentEditor defaults `showOverlayText` to false the first time a
   // cover is generated, and to true for an uploaded photo (which has no text
   // of its own) — this is only ever skipped once there IS a cover image.
-  const shouldShowText = !cover || showOverlayText !== false;
+  const shouldShowText = !hasAnyImage || showOverlayText !== false;
   const dateStr = dateTime ? new Date(dateTime).toLocaleString(undefined, { dateStyle: 'full', timeStyle: 'short' }) : '';
   // "split" now controls where the overlaid text sits (left vs. centered),
   // not a side-by-side image — the cover graphic and the hero copy are
@@ -72,13 +81,21 @@ export const HeroBlock = React.memo(function HeroBlock({ content, layout, spacin
   const leftAlign = layout === 'split';
   const eyebrow = subtitle || (title ? `You're invited to ${title}` : "You're invited");
 
-  // Pan/zoom and title placement are only applied once the organizer has
+  // Pan/zoom, fit and position are only applied once the organizer has
   // adjusted them in the builder's "Crop & position" panel (HeroAdjustPanel).
   // Undefined means "use the old, un-adjusted rendering" so existing hero
-  // sections never shift on their own.
-  const zoom = imageZoom || 100;
-  const imgX = imagePosition?.x ?? 50;
-  const imgY = imagePosition?.y ?? 50;
+  // sections never shift on their own. Desktop values fall back to the
+  // mobile ones whenever they haven't been customized separately, so a hero
+  // with a single shared image still crops identically on both breakpoints
+  // exactly as before.
+  const mobileZoom = imageZoom || 100;
+  const desktopZoom = imageZoomDesktop || mobileZoom;
+  const mobileX = imagePosition?.x ?? 50;
+  const mobileY = imagePosition?.y ?? 50;
+  const desktopX = imagePositionDesktop?.x ?? mobileX;
+  const desktopY = imagePositionDesktop?.y ?? mobileY;
+  const mobileFit = imageFit === 'contain' ? 'contain' : 'cover';
+  const desktopFit = (imageFitDesktop || imageFit) === 'contain' ? 'contain' : 'cover';
   const hasCustomTextPos = !!textPosition;
 
   const textContent = (
@@ -112,30 +129,77 @@ export const HeroBlock = React.memo(function HeroBlock({ content, layout, spacin
     </>
   );
 
+  // Scrims differ slightly by fit: 'contain' leaves more of the actual photo
+  // visible so it needs a lighter touch than the harder crop-to-fill 'cover'.
+  const coverScrim = 'linear-gradient(0deg, rgba(0,0,0,0.75) 0%, rgba(0,0,0,0.15) 45%, rgba(0,0,0,0.35) 100%)';
+  const containScrim = 'linear-gradient(0deg, rgba(0,0,0,0.6) 0%, rgba(0,0,0,0.05) 40%, rgba(0,0,0,0.25) 100%)';
+
   return (
     <section className={`w-full ${spacingClass(spacing)} px-4 md:px-10`}>
       <div
-        className={`relative max-w-5xl mx-auto overflow-hidden rounded-[2rem] md:rounded-[2.5rem] shadow-2xl ${cover ? 'aspect-[4/5] md:aspect-[16/9]' : 'aspect-[4/5] md:aspect-[21/9]'}`}
-        style={cover ? undefined : { background: heroGradient(accent) }}
+        className={`relative max-w-5xl mx-auto overflow-hidden rounded-[2rem] md:rounded-[2.5rem] shadow-2xl ${hasAnyImage ? 'aspect-[4/5] md:aspect-[16/9]' : 'aspect-[4/5] md:aspect-[21/9]'}`}
+        // Always keep a real background behind the image, on every device.
+        // 'contain' letterboxes (visible bars) and a zoom below 100% on
+        // 'cover' can reveal the container edges — without this those gaps
+        // were plain transparent/white depending on the page theme. An
+        // organizer-picked bgColor overrides the default accent gradient.
+        style={{ background: bgColor || heroGradient(accent) }}
       >
-        {cover && (
+        {hasAnyImage && (
           <>
-            <img
-              src={cover}
-              alt=""
-              loading="lazy"
-              className="absolute inset-0 w-full h-full object-cover"
-              style={{
-                objectPosition: `${imgX}% ${imgY}%`,
-                transform: zoom !== 100 ? `scale(${zoom / 100})` : undefined,
-                transformOrigin: `${imgX}% ${imgY}%`,
-              }}
-            />
-            {/* scrim so overlaid text stays legible on any generated cover */}
-            <div className="absolute inset-0" style={{ background: 'linear-gradient(0deg, rgba(0,0,0,0.75) 0%, rgba(0,0,0,0.15) 45%, rgba(0,0,0,0.35) 100%)' }} />
+            {/* Mobile banner — visible below the md breakpoint */}
+            <div className="absolute inset-0 block md:hidden">
+              {mobileFit === 'contain' && (
+                <img
+                  src={mobileSrc}
+                  alt=""
+                  aria-hidden="true"
+                  loading="lazy"
+                  className="absolute inset-0 w-full h-full object-cover scale-125 blur-2xl opacity-50"
+                />
+              )}
+              <img
+                src={mobileSrc}
+                alt=""
+                loading="lazy"
+                className={`absolute inset-0 w-full h-full ${mobileFit === 'contain' ? 'object-contain' : 'object-cover'}`}
+                style={{
+                  objectPosition: `${mobileX}% ${mobileY}%`,
+                  transform: mobileZoom !== 100 ? `scale(${mobileZoom / 100})` : undefined,
+                  transformOrigin: `${mobileX}% ${mobileY}%`,
+                }}
+              />
+              <div className="absolute inset-0" style={{ background: mobileFit === 'contain' ? containScrim : coverScrim }} />
+            </div>
+
+            {/* Desktop banner — visible at md and up. Same image unless the
+                organizer uploaded a separate one for this breakpoint. */}
+            <div className="absolute inset-0 hidden md:block">
+              {desktopFit === 'contain' && (
+                <img
+                  src={desktopSrc}
+                  alt=""
+                  aria-hidden="true"
+                  loading="lazy"
+                  className="absolute inset-0 w-full h-full object-cover scale-125 blur-2xl opacity-50"
+                />
+              )}
+              <img
+                src={desktopSrc}
+                alt=""
+                loading="lazy"
+                className={`absolute inset-0 w-full h-full ${desktopFit === 'contain' ? 'object-contain' : 'object-cover'}`}
+                style={{
+                  objectPosition: `${desktopX}% ${desktopY}%`,
+                  transform: desktopZoom !== 100 ? `scale(${desktopZoom / 100})` : undefined,
+                  transformOrigin: `${desktopX}% ${desktopY}%`,
+                }}
+              />
+              <div className="absolute inset-0" style={{ background: desktopFit === 'contain' ? containScrim : coverScrim }} />
+            </div>
           </>
         )}
-        {!cover && (
+        {!hasAnyImage && (
           <>
             <div className="absolute -top-16 -right-16 w-64 h-64 rounded-full blur-3xl opacity-60" style={{ background: '#ffd166' }} />
             <div className="absolute -bottom-20 -left-10 w-72 h-72 rounded-full blur-3xl opacity-50" style={{ background: accent }} />
