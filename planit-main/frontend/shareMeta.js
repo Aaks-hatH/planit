@@ -92,10 +92,20 @@ function dateAndLocation(date, location) {
 async function getJSON(url) {
   try {
     const res = await fetch(url, { headers: { Accept: 'application/json' } });
-    if (!res.ok) return null;
+    if (!res.ok) {
+      // Don't swallow this silently — a 500 from the backend and a
+      // genuine 404 look identical to the caller otherwise, which makes
+      // real backend failures (race conditions, DB hiccups, etc.)
+      // invisible in the share-preview debug logs.
+      let body = '';
+      try { body = (await res.text()).slice(0, 300); } catch { /* ignore */ }
+      console.warn(`[share-preview] ${url} -> HTTP ${res.status}${body ? ` — ${body}` : ''}`);
+      return null;
+    }
     return await res.json();
-  } catch {
-    return null; // network/backend hiccup — caller falls back to default tags
+  } catch (err) {
+    console.warn(`[share-preview] ${url} -> ${err.message}`); // network/backend hiccup — caller falls back to default tags
+    return null;
   }
 }
 
