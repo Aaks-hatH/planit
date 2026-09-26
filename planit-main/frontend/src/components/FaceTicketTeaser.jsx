@@ -14,6 +14,8 @@ const SNOOZE_DAYS = 7;
 const HIDDEN_PATH_PATTERNS = [
   /^\/beta\/face-ticket/,
   /^\/beta\/venue-walk/,
+  /^\/rsvp\//,
+  /^\/reservation\//,
   /^\/admin/,
   /^\/event\/[^/]+\/(checkin|floor|server|kitchen|table|login|waitlist|wait)/,
   /^\/e\/[^/]+\/(checkin|floor|server|kitchen|table|login|waitlist|wait|rsvp-builder)/,
