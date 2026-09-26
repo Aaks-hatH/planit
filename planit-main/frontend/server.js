@@ -107,12 +107,18 @@ app.get('*', async (req, res, next) => {
     let html = fs.readFileSync(INDEX_HTML_PATH, 'utf8');
 
     const ua = req.headers['user-agent'] || '';
-    const route = BOT_UA_RE.test(ua) ? matchShareRoute(req.path) : null;
+    const isBotUA = BOT_UA_RE.test(ua);
+    const routeMatch = matchShareRoute(req.path);
+    console.log('[share-preview debug]', JSON.stringify({
+      path: req.path, ua, isBotUA, hasRouteForPath: !!routeMatch, apiBase: API_BASE,
+    }));
+    const route = isBotUA ? routeMatch : null;
 
     if (route) {
       let meta = null;
       try {
         meta = await route.resolve(API_BASE);
+        console.log('[share-preview debug] resolve result:', JSON.stringify(meta));
       } catch (err) {
         console.error('[share-preview] resolve failed for', req.path, err.message);
       }
