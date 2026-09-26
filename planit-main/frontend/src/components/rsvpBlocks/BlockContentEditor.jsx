@@ -9,6 +9,7 @@ import React, { useState } from 'react';
 import { Plus, Trash2, ImagePlus, Loader2 } from 'lucide-react';
 import { CONTENT_SCHEMA } from './contentSchema';
 import { fileAPI } from '../../services/api';
+import HeroAdjustPanel from './HeroAdjustPanel';
 
 function toDatetimeLocal(value) {
   if (!value) return '';
@@ -223,6 +224,20 @@ export default function BlockContentEditor({ eventId, type, content, onChange, c
                   onChange({ ...content, coverImageUrl: res.data.file.url });
                 }}
                 onClearUpload={() => onChange({ ...content, coverImageUrl: null })}
+              />
+            </div>
+          );
+        }
+        if (field.type === 'heroAdjust') {
+          return (
+            <div key={field.key} className="flex flex-col gap-1">
+              <label className="text-[11px] uppercase tracking-wide opacity-50">{field.label}</label>
+              <HeroAdjustPanel
+                imageUrl={content?.coverImageUrl || coverProps?.coverPreviewUrl || null}
+                imageZoom={content?.imageZoom}
+                imagePosition={content?.imagePosition}
+                textPosition={content?.textPosition}
+                onChange={(patch) => onChange({ ...content, ...patch })}
               />
             </div>
           );
