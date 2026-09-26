@@ -29,8 +29,9 @@ export const CONTENT_SCHEMA = {
     { key: 'subtitle', label: 'Subtitle', type: 'text', hint: 'A short tag shown above the title, e.g. \u201cYou\u2019re invited to \u2026\u201d. Leave blank to use the default.' },
     { key: 'dateTime', label: 'Date & time', type: 'datetime', hint: 'Shown as a pill with a calendar icon under the title.' },
     { key: 'location', label: 'Location', type: 'text', hint: 'Shown as a pill with a pin icon next to the date.' },
-    { key: 'coverImageId', label: 'Banner image', type: 'coverPicker', hint: 'Your banner background \u2014 either a photo you upload, or a graphic PlanIt generates from your event\u2019s title, date and host.' },
-    { key: 'heroAdjust', label: 'Crop & position', type: 'heroAdjust', hint: 'Fine-tune how the image and the title fit inside the banner, previewed for both desktop and mobile.' },
+    { key: 'coverImageId', label: 'Banner image', type: 'coverPicker', hint: 'Your banner background \u2014 either a photo you upload, or a graphic PlanIt generates from your event\u2019s title, date and host. You can also set a separate image for desktop.' },
+    { key: 'heroAdjust', label: 'Crop & position', type: 'heroAdjust', hint: 'Fine-tune how each image and the title fit inside the banner, previewed for both desktop and mobile.' },
+    { key: 'bgColor', label: 'Banner background color', type: 'colorWheel', hint: 'Shows behind and around your banner image \u2014 in the letterboxed edges when using \u201cFull photo\u201d fit, or as the whole background if there\u2019s no image. Leave unset to use a gradient built from your event\u2019s accent color.' },
   ],
   hostCard: [
     { key: 'hosts', label: 'Hosts', type: 'list', itemFields: [
