@@ -86,6 +86,16 @@ export default function RSVPPage() {
 
   useEffect(() => { loadPage(); }, [slug]);
 
+  // ── Browser tab title: use the RSVP page's own title (organizer's custom
+  // welcomeTitle, falling back to the event's title — see backend/routes/
+  // rsvp.js) instead of the generic "RSVP · PlanIt" set by App.jsx.
+  useEffect(() => {
+    if (!pageData?.title) return;
+    const prev = document.title;
+    document.title = `${pageData.title} · PlanIt`;
+    return () => { document.title = prev; };
+  }, [pageData?.title]);
+
   const loadPage = async () => {
     try {
       const res = await rsvpAPI.getPage(slug);
@@ -163,6 +173,8 @@ export default function RSVPPage() {
       <RSVPPageRenderer
         config={config}
         pageData={pageData}
+        logoUrl={rsvpPage.logoUrl || null}
+        fallbackCoverUrl={rsvpPage.coverImageUrl || null}
         slug={slug}
         unlockedPw={unlockedPw}
         backgroundStyle={bgStyleKey}
