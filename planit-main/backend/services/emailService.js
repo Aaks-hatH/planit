@@ -342,7 +342,34 @@ function buildThankyou(event) {
   );
 }
 
-function buildRsvpGuestConfirmation({ guestName, guestEmail, eventTitle, eventDate, eventLocation, response, status, plusOnes, editToken, customSubject, customBody }) {
+// ─── Organizer-authored email placeholders ─────────────────────────────────────
+// Organizers write custom RSVP confirmation subjects/bodies (see
+// RSVPSettings.jsx), and the UI's own placeholder text shows examples like
+// "[Event Name]" and "[First Name]" — so that bracket form has to work, not
+// just the {{eventName}} mustache form some earlier code only checked for.
+// Both are supported here, case-insensitively, with optional inner spacing.
+const TOKEN_DEFS = [
+  { pick: (t) => t.eventTitle,    re: [/\{\{\s*event(?:name)?\s*\}\}/gi, /\[\s*event\s*name\s*\]/gi] },
+  { pick: (t) => t.firstName,     re: [/\{\{\s*first\s*name\s*\}\}/gi, /\[\s*first\s*name\s*\]/gi] },
+  { pick: (t) => t.fullName,      re: [/\{\{\s*name\s*\}\}/gi, /\[\s*name\s*\]/gi, /\[\s*full\s*name\s*\]/gi] },
+  { pick: (t) => t.dateStr,       re: [/\{\{\s*(?:event)?date\s*\}\}/gi, /\[\s*(?:event\s*)?date\s*\]/gi] },
+  { pick: (t) => t.location,      re: [/\{\{\s*location\s*\}\}/gi, /\[\s*location\s*\]/gi] },
+  { pick: (t) => t.responseLabel, re: [/\{\{\s*response\s*\}\}/gi, /\[\s*response\s*\]/gi] },
+  { pick: (t) => t.statusLabel,   re: [/\{\{\s*status\s*\}\}/gi, /\[\s*status\s*\]/gi] },
+];
+
+function applyTemplateTokens(str, tokens, { escapeHtml = false } = {}) {
+  if (!str) return str;
+  let out = str;
+  for (const { pick, re } of TOKEN_DEFS) {
+    const raw = pick(tokens) ?? '';
+    const value = escapeHtml ? h(raw) : String(raw);
+    for (const pattern of re) out = out.replace(pattern, value);
+  }
+  return out;
+}
+
+function buildRsvpGuestConfirmation({ guestName, guestFirstName, guestEmail, eventTitle, eventDate, eventLocation, response, status, plusOnes, editToken, customSubject, customBody }) {
   const base      = (process.env.FRONTEND_URL || '').split(',')[0].trim().replace(/\/$/, '');
   const editUrl   = editToken && base ? `${base}/rsvp/edit/${editToken}` : null;
 
@@ -352,52 +379,55 @@ function buildRsvpGuestConfirmation({ guestName, guestEmail, eventTitle, eventDa
 
   const pillLabel = status === 'waitlisted' ? 'Waitlist' : status === 'pending' ? 'Pending' : 'RSVP Confirmed';
 
-  // If the organizer provided a custom body, render it with simple variable substitution
-  let bodyContent;
-  if (customBody && customBody.trim()) {
-    const interpolated = customBody
-      .replace(/\{\{name\}\}/gi, h(guestName))
-      .replace(/\{\{firstName\}\}/gi, h(guestName))
-      .replace(/\{\{event\}\}/gi, h(eventTitle))
-      .replace(/\{\{eventName\}\}/gi, h(eventTitle))
-      .replace(/\{\{response\}\}/gi, responseLabel)
-      .replace(/\{\{status\}\}/gi, statusLabel)
-      .replace(/\{\{date\}\}/gi, eventDate ? h(fmtDate(eventDate)) : '')
-      .replace(/\{\{eventDate\}\}/gi, eventDate ? h(fmtDate(eventDate)) : '')
-      .replace(/\{\{location\}\}/gi, eventLocation ? h(eventLocation) : '');
-    bodyContent = `<p style="margin:0 0 16px 0;font-size:15px;color:${MID};line-height:1.78;white-space:pre-line;font-family:${FONT};">${interpolated}</p>`;
-  } else {
-    const detailTableRows = [
-      ['Event',    eventTitle],
-      ['Date',     eventDate ? fmtDate(eventDate) : null],
-      ['Location', eventLocation || null],
-      ['Response', responseLabel],
-      ['Status',   statusLabel],
-      plusOnes > 0 ? ['Plus-ones', String(plusOnes)] : null,
-    ].filter(Boolean).filter(([, v]) => v).map(([k, v]) => `
-      <tr>
-        <td style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:${FAINT};width:90px;padding:8px 0;vertical-align:top;font-family:${FONT};">${h(k)}</td>
-        <td style="font-size:15px;color:${MID};padding:8px 0 8px 12px;line-height:1.45;font-family:${FONT};">${h(String(v))}</td>
-      </tr>`).join('');
+  const tokens = {
+    eventTitle,
+    firstName: guestFirstName || guestName,
+    fullName:  guestName,
+    dateStr:   eventDate ? fmtDate(eventDate) : '',
+    location:  eventLocation || '',
+    responseLabel,
+    statusLabel,
+  };
 
-    const pendingNote = status === 'pending'
-      ? `<p style="margin:16px 0 0 0;font-size:14px;color:#4B5563;line-height:1.7;font-family:${FONT};">Your RSVP is awaiting approval from the organiser. You will receive a follow-up once it has been reviewed.</p>`
-      : status === 'waitlisted'
-      ? `<p style="margin:16px 0 0 0;font-size:14px;color:#4B5563;line-height:1.7;font-family:${FONT};">You have been added to the waitlist. The organiser will be in touch if a spot opens up.</p>`
-      : '';
+  // The organizer's custom note (if any) always supplements the actual RSVP
+  // details and edit link below it — it never replaces them. Previously a
+  // custom body swapped out the whole info block, so guests who got a
+  // personalized note lost the event details and their edit link entirely.
+  const customNote = (customBody && customBody.trim())
+    ? `<p style="margin:0 0 20px 0;font-size:15px;color:${MID};line-height:1.78;white-space:pre-line;font-family:${FONT};">${applyTemplateTokens(customBody.trim(), tokens, { escapeHtml: true })}</p>`
+    : '';
 
-    const editNote = editUrl
-      ? `${hrule()}<p style="margin:24px 0 10px 0;font-size:14px;color:${MUTED};line-height:1.65;font-family:${FONT};">Need to make a change? You can update your RSVP at any time using the button below.</p>${ctaButton('Manage My RSVP', editUrl)}`
-      : '';
+  const detailTableRows = [
+    ['Event',    eventTitle],
+    ['Date',     eventDate ? fmtDate(eventDate) : null],
+    ['Location', eventLocation || null],
+    ['Response', responseLabel],
+    ['Status',   statusLabel],
+    plusOnes > 0 ? ['Plus-ones', String(plusOnes)] : null,
+  ].filter(Boolean).filter(([, v]) => v).map(([k, v]) => `
+    <tr>
+      <td style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:${FAINT};width:90px;padding:8px 0;vertical-align:top;font-family:${FONT};">${h(k)}</td>
+      <td style="font-size:15px;color:${MID};padding:8px 0 8px 12px;line-height:1.45;font-family:${FONT};">${h(String(v))}</td>
+    </tr>`).join('');
 
-    bodyContent = `
-      ${sectionCap('Your RSVP Details')}
-      <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
-        ${detailTableRows}
-      </table>
-      ${pendingNote}
-      ${editNote}`;
-  }
+  const pendingNote = status === 'pending'
+    ? `<p style="margin:16px 0 0 0;font-size:14px;color:#4B5563;line-height:1.7;font-family:${FONT};">Your RSVP is awaiting approval from the organiser. You will receive a follow-up once it has been reviewed.</p>`
+    : status === 'waitlisted'
+    ? `<p style="margin:16px 0 0 0;font-size:14px;color:#4B5563;line-height:1.7;font-family:${FONT};">You have been added to the waitlist. The organiser will be in touch if a spot opens up.</p>`
+    : '';
+
+  const editNote = editUrl
+    ? `${hrule()}<p style="margin:24px 0 10px 0;font-size:14px;color:${MUTED};line-height:1.65;font-family:${FONT};">Need to make a change? You can update your RSVP at any time using the button below.</p>${ctaButton('Manage My RSVP', editUrl)}`
+    : '';
+
+  const bodyContent = `
+    ${customNote}
+    ${sectionCap('Your RSVP Details')}
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+      ${detailTableRows}
+    </table>
+    ${pendingNote}
+    ${editNote}`;
 
   const headerRow = `
     <tr>
@@ -407,12 +437,15 @@ function buildRsvpGuestConfirmation({ guestName, guestEmail, eventTitle, eventDa
           ${status === 'waitlisted' ? "You're on the waitlist." : status === 'pending' ? "We've received your RSVP." : "You're all set!"}
         </h1>
         <p style="margin:0;font-size:15px;color:${MUTED};line-height:1.65;font-family:${FONT};">
-          Hi ${h(guestName)}, thanks for responding to <strong>${h(eventTitle)}</strong>.
+          Hi ${h(guestFirstName || guestName)}, thanks for responding to <strong>${h(eventTitle)}</strong>.
         </p>
       </td>
     </tr>`;
 
-  const subject = customSubject?.trim() || `RSVP ${statusLabel}: ${eventTitle}`;
+  const subject = customSubject?.trim()
+    ? applyTemplateTokens(customSubject.trim(), tokens, { escapeHtml: false })
+    : `RSVP ${statusLabel}: ${eventTitle}`;
+
 
   return {
     subject,
@@ -499,4 +532,5 @@ module.exports = {
   sendEventReminder,
   sendEventThankyou,
   sendRsvpGuestConfirmation,
+  buildRsvpGuestConfirmation,
 };
