@@ -25,12 +25,12 @@ export const BLOCK_LABELS = {
 
 export const CONTENT_SCHEMA = {
   hero: [
-    { key: 'title', label: 'Title', type: 'text' },
-    { key: 'subtitle', label: 'Subtitle', type: 'text' },
-    { key: 'dateTime', label: 'Date & time', type: 'datetime' },
-    { key: 'location', label: 'Location', type: 'text' },
-    { key: 'coverImageId', label: 'Cover graphic', type: 'coverPicker' },
-    { key: 'heroAdjust', label: 'Crop & position', type: 'heroAdjust' },
+    { key: 'title', label: 'Title', type: 'text', hint: 'The big headline on your banner. Hidden automatically when it\u2019s already baked into a generated cover graphic.' },
+    { key: 'subtitle', label: 'Subtitle', type: 'text', hint: 'A short tag shown above the title, e.g. \u201cYou\u2019re invited to \u2026\u201d. Leave blank to use the default.' },
+    { key: 'dateTime', label: 'Date & time', type: 'datetime', hint: 'Shown as a pill with a calendar icon under the title.' },
+    { key: 'location', label: 'Location', type: 'text', hint: 'Shown as a pill with a pin icon next to the date.' },
+    { key: 'coverImageId', label: 'Banner image', type: 'coverPicker', hint: 'Your banner background \u2014 either a photo you upload, or a graphic PlanIt generates from your event\u2019s title, date and host.' },
+    { key: 'heroAdjust', label: 'Crop & position', type: 'heroAdjust', hint: 'Fine-tune how the image and the title fit inside the banner, previewed for both desktop and mobile.' },
   ],
   hostCard: [
     { key: 'hosts', label: 'Hosts', type: 'list', itemFields: [
@@ -102,7 +102,7 @@ export const CONTENT_SCHEMA = {
 
 export function defaultContentFor(type) {
   switch (type) {
-    case 'hero': return { title: '', subtitle: '', dateTime: null, location: '', coverImageId: null };
+    case 'hero': return { title: '', subtitle: '', dateTime: null, location: '', coverImageId: null, showOverlayText: true };
     case 'hostCard': return { hosts: [] };
     case 'about': return { bodyText: '' };
     case 'tags': return { tags: [] };
