@@ -43,15 +43,29 @@ const DEFAULT_IMAGE = 'https://planitapp.onrender.com/planit-og.png';
 
 // WhatsApp, iMessage, and most link-preview crawlers don't render SVG —
 // when og:image fails to decode, several of them drop the ENTIRE preview
-// card (title included) rather than just showing no image. Organizers can
-// upload SVG covers (Cloudinary passes them through as-is), so anything
-// ending in .svg (ignoring query strings) must be swapped for a real
-// raster fallback before being used as a share image.
-function safeImage(url) {
+// card (title included) rather than just showing no image. Event covers
+// come from Cloudinary, which can convert format on the fly via a URL
+// transformation segment (e.g. /upload/f_png/...), so an SVG cover is
+// rewritten to a real PNG at share-time rather than thrown away in favor
+// of generic PlanIt branding — the whole point is showing THIS event's
+// image, not an ad for PlanIt.
+function shareableImage(url) {
   if (!url) return null;
-  const clean = url.split('?')[0].split('#')[0];
-  if (/\.svg$/i.test(clean)) return null;
-  return url;
+  const clean = url.split('#')[0];
+  const isSvg = /\.svg(\?|$)/i.test(clean.split('?')[0]);
+  if (!isSvg) return url;
+
+  // Cloudinary URLs look like:
+  //   https://res.cloudinary.com/<cloud>/image/upload/v123/path/file.svg
+  // Inserting f_png,q_auto right after /upload/ asks Cloudinary to
+  // deliver a rasterized PNG of the same asset instead.
+  const m = clean.match(/^(https?:\/\/res\.cloudinary\.com\/[^/]+\/image\/upload\/)(.*)$/i);
+  if (m) return `${m[1]}f_png,q_auto/${m[2]}`;
+
+  // Not a Cloudinary URL we know how to transform — can't safely serve
+  // this SVG to crawlers, so signal "no usable image" and let the caller
+  // fall back to DEFAULT_IMAGE.
+  return null;
 }
 
 function truncate(str, n) {
@@ -97,7 +111,7 @@ async function resolveRsvp([, slug], apiBase) {
   return {
     title,
     description: truncate([subtitle, data.description].filter(Boolean).join(' — ') || `RSVP to ${title} on PlanIt.`, 200),
-    image: safeImage(data.rsvpPage?.coverImageUrl) || safeImage(firstCover) || DEFAULT_IMAGE,
+    image: shareableImage(data.rsvpPage?.coverImageUrl) || shareableImage(firstCover) || DEFAULT_IMAGE,
   };
 }
 
@@ -126,7 +140,7 @@ async function resolveReserve([, subdomain], apiBase) {
     data.metaDescription || data.tagline || data.description || `Book your table at ${data.name} on PlanIt.`,
     200
   );
-  return { title, description, image: safeImage(data.heroImageUrl) || DEFAULT_IMAGE };
+  return { title, description, image: shareableImage(data.heroImageUrl) || DEFAULT_IMAGE };
 }
 
 async function resolveEventWorkspace([, eventId], apiBase) {
