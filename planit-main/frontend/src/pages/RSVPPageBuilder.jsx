@@ -311,7 +311,20 @@ export default function RSVPPageBuilder() {
     try {
       const res = await rsvpAPI.generateCover(eventId, { template, accentColor: config.accentColor });
       setCoverUrlsById((prev) => ({ ...prev, [res.data.fileId]: res.data.cloudinaryUrl }));
-      patchSection(sectionId, { content: { ...sections.find((s) => s.id === sectionId)?.content, coverImageId: res.data.fileId } });
+      const prevContent = sections.find((s) => s.id === sectionId)?.content;
+      patchSection(sectionId, {
+        content: {
+          ...prevContent,
+          coverImageId: res.data.fileId,
+          // Generated banners already render the title/date/host as part of
+          // the graphic (see backend/services/coverGenerator.js), so the
+          // overlay text on top of it would double up. Default it off the
+          // first time a cover is generated for this section, but respect
+          // whatever the organizer has explicitly chosen after that (e.g. on
+          // a "Regenerate cover" click).
+          showOverlayText: prevContent?.coverImageId ? prevContent?.showOverlayText : false,
+        },
+      });
     } catch (err) {
       console.error(err);
       toast.error('Could not generate the cover graphic.');
