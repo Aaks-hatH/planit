@@ -236,9 +236,16 @@ export const pollAPI = {
 
 // ─── File API ─────────────────────────────────────────────────────────────────
 export const fileAPI = {
-  upload:   (eventId, formData) => api.post(`/files/${eventId}/upload`, formData, {
-    headers: { 'Content-Type': undefined },
-  }),
+  // `purpose` ('cover' | 'logo') tells the backend which resize preset to
+  // apply so the stored image already matches where it'll be shown — see
+  // IMAGE_RESIZE_PRESETS in backend/routes/files.js. Optional; omit for
+  // ordinary attachments.
+  upload:   (eventId, formData, purpose) => {
+    if (purpose) formData.append('purpose', purpose);
+    return api.post(`/files/${eventId}/upload`, formData, {
+      headers: { 'Content-Type': undefined },
+    });
+  },
   getAll:   (eventId)           => api.get(`/files/${eventId}`),
   download: (eventId, fileId)   => api.get(`/files/${eventId}/download/${fileId}`, { responseType: 'blob' }),
   delete:   (eventId, fileId, data) => api.delete(`/files/${eventId}/${fileId}`, { data }),
