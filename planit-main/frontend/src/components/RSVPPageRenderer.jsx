@@ -126,9 +126,17 @@ export default function RSVPPageRenderer({
         //      coverUrlsById by the backend's cache lookup).
         //   3. The flat Appearance "Cover Image" as a page-level fallback, so
         //      organizers who only ever set that field still see an image.
-        const content = section.type === 'hero'
-          ? { ...section.content, coverImageUrl: section.content?.coverImageUrl || coverUrlsById[section.content?.coverImageId] || fallbackCoverUrl || null }
-          : section.content;
+        // Desktop can optionally use a completely different image
+        // (section.content.coverImageUrlDesktop) — some banners just don't
+        // translate across screen shapes. When it's not set, desktop falls
+        // back to the same resolved image mobile uses, so existing hero
+        // sections render exactly as before.
+        let content = section.content;
+        if (section.type === 'hero') {
+          const resolvedMobile = section.content?.coverImageUrl || coverUrlsById[section.content?.coverImageId] || fallbackCoverUrl || null;
+          const resolvedDesktop = section.content?.coverImageUrlDesktop || resolvedMobile;
+          content = { ...section.content, coverImageUrl: resolvedMobile, coverImageUrlDesktop: resolvedDesktop };
+        }
 
         return (
           <InViewport key={section.id} eager={eager}>
