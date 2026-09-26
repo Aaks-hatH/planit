@@ -64,6 +64,8 @@ function InViewport({ eager, minHeight = 120, children }) {
  * @param {string} props.backgroundStyle - 'dark' | 'light' | 'gradient' | 'frosted'
  * @param {string} props.fontStyle - key into FONTS
  * @param {Object.<string,string>} [props.coverUrlsById] - resolved cover-image URLs keyed by coverImageId (Part 5 output), so this renderer never needs to know how covers are generated
+ * @param {string} [props.logoUrl] - organizer's logo (Appearance settings), shown above the first section
+ * @param {string} [props.fallbackCoverUrl] - organizer's Appearance "Cover Image URL", used as the hero's cover graphic whenever the hero section has no coverImageId of its own set
  * @param {function} [props.onSubmitted] - called with the submit response once a live RSVP succeeds; RSVPPage.jsx uses this to switch to ConfirmationScreen
  */
 export default function RSVPPageRenderer({
@@ -74,6 +76,8 @@ export default function RSVPPageRenderer({
   backgroundStyle = 'dark',
   fontStyle = 'modern',
   coverUrlsById = {},
+  logoUrl = null,
+  fallbackCoverUrl = null,
   onSubmitted,
 }) {
   const sections = config?.sections || [];
@@ -84,6 +88,11 @@ export default function RSVPPageRenderer({
 
   return (
     <div style={bgStyle} className="min-h-screen w-full">
+      {logoUrl && (
+        <div className="w-full flex justify-center pt-8 pb-2 px-4">
+          <img src={logoUrl} alt="" loading="lazy" className="max-h-16 md:max-h-20 w-auto object-contain" />
+        </div>
+      )}
       {sections.map((section, index) => {
         const accent = resolveAccent(section, pageAccent);
         const eager = index <= 1; // hero + the block right after it never defer, avoids a blank-page flash
@@ -109,8 +118,16 @@ export default function RSVPPageRenderer({
         const Block = BLOCK_COMPONENTS[section.type];
         if (!Block) return null; // unknown/future block type in stored data — skip rather than crash the page
 
+        // Resolution order for the hero's cover graphic:
+        //   1. An image the organizer directly uploaded for this hero
+        //      (section.content.coverImageUrl, set by the builder's "Upload
+        //      your own image" option — a real URL, not something typed in).
+        //   2. A generated cover (section.content.coverImageId, resolved via
+        //      coverUrlsById by the backend's cache lookup).
+        //   3. The flat Appearance "Cover Image" as a page-level fallback, so
+        //      organizers who only ever set that field still see an image.
         const content = section.type === 'hero'
-          ? { ...section.content, coverImageUrl: coverUrlsById[section.content?.coverImageId] || null }
+          ? { ...section.content, coverImageUrl: section.content?.coverImageUrl || coverUrlsById[section.content?.coverImageId] || fallbackCoverUrl || null }
           : section.content;
 
         return (
