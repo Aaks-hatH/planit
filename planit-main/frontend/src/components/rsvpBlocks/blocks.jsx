@@ -56,7 +56,7 @@ const heroGradient = (accent) => `
 `;
 
 export const HeroBlock = React.memo(function HeroBlock({ content, layout, spacing, align, accent, fonts }) {
-  const { title, subtitle, dateTime, location, coverImageUrl } = content || {};
+  const { title, subtitle, dateTime, location, coverImageUrl, imageZoom, imagePosition, textPosition } = content || {};
   const cover = coverImageUrl || null; // resolved cover URL, passed down by renderer after cover-cache lookup
   const dateStr = dateTime ? new Date(dateTime).toLocaleString(undefined, { dateStyle: 'full', timeStyle: 'short' }) : '';
   // "split" now controls where the overlaid text sits (left vs. centered),
@@ -64,6 +64,46 @@ export const HeroBlock = React.memo(function HeroBlock({ content, layout, spacin
   // always one merged card, never a picture next to a second text block.
   const leftAlign = layout === 'split';
   const eyebrow = subtitle || (title ? `You're invited to ${title}` : "You're invited");
+
+  // Pan/zoom and title placement are only applied once the organizer has
+  // adjusted them in the builder's "Crop & position" panel (HeroAdjustPanel).
+  // Undefined means "use the old, un-adjusted rendering" so existing hero
+  // sections never shift on their own.
+  const zoom = imageZoom || 100;
+  const imgX = imagePosition?.x ?? 50;
+  const imgY = imagePosition?.y ?? 50;
+  const hasCustomTextPos = !!textPosition;
+
+  const textContent = (
+    <>
+      {eyebrow && (
+        <span
+          className="inline-flex items-center gap-1.5 uppercase tracking-[0.15em] text-[10px] md:text-xs font-semibold px-3 py-1.5 rounded-full backdrop-blur-md border border-white/25"
+          style={{ background: `${accent}33`, color: '#fff' }}
+        >
+          <span className="w-1.5 h-1.5 rounded-full" style={{ background: accent }} />
+          {eyebrow}
+        </span>
+      )}
+      <h1 className={`text-4xl md:text-7xl leading-[1.05] drop-shadow-[0_2px_12px_rgba(0,0,0,0.45)] ${fonts.heading}`}>
+        {title || 'Untitled Event'}
+      </h1>
+      {(dateStr || location) && (
+        <div className={`flex flex-wrap gap-2 mt-1 ${leftAlign ? 'justify-start' : 'justify-center'}`}>
+          {dateStr && (
+            <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs md:text-sm bg-white/10 backdrop-blur-md border border-white/20 ${fonts.body}`}>
+              <CalendarGlyph />{dateStr}
+            </span>
+          )}
+          {location && (
+            <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs md:text-sm bg-white/10 backdrop-blur-md border border-white/20 ${fonts.body}`}>
+              <PinGlyph />{location}
+            </span>
+          )}
+        </div>
+      )}
+    </>
+  );
 
   return (
     <section className={`w-full ${spacingClass(spacing)} px-4 md:px-10`}>
@@ -73,7 +113,17 @@ export const HeroBlock = React.memo(function HeroBlock({ content, layout, spacin
       >
         {cover && (
           <>
-            <img src={cover} alt="" loading="lazy" className="absolute inset-0 w-full h-full object-cover" />
+            <img
+              src={cover}
+              alt=""
+              loading="lazy"
+              className="absolute inset-0 w-full h-full object-cover"
+              style={{
+                objectPosition: `${imgX}% ${imgY}%`,
+                transform: zoom !== 100 ? `scale(${zoom / 100})` : undefined,
+                transformOrigin: `${imgX}% ${imgY}%`,
+              }}
+            />
             {/* scrim so overlaid text stays legible on any generated cover */}
             <div className="absolute inset-0" style={{ background: 'linear-gradient(0deg, rgba(0,0,0,0.75) 0%, rgba(0,0,0,0.15) 45%, rgba(0,0,0,0.35) 100%)' }} />
           </>
@@ -85,36 +135,25 @@ export const HeroBlock = React.memo(function HeroBlock({ content, layout, spacin
           </>
         )}
 
-        <div
-          className={`relative z-10 h-full w-full flex flex-col justify-end gap-3 p-6 md:p-12 text-white ${leftAlign ? 'items-start text-left' : 'items-center text-center'}`}
-        >
-          {eyebrow && (
-            <span
-              className="inline-flex items-center gap-1.5 uppercase tracking-[0.15em] text-[10px] md:text-xs font-semibold px-3 py-1.5 rounded-full backdrop-blur-md border border-white/25"
-              style={{ background: `${accent}33`, color: '#fff' }}
-            >
-              <span className="w-1.5 h-1.5 rounded-full" style={{ background: accent }} />
-              {eyebrow}
-            </span>
-          )}
-          <h1 className={`text-4xl md:text-7xl leading-[1.05] drop-shadow-[0_2px_12px_rgba(0,0,0,0.45)] ${fonts.heading}`}>
-            {title || 'Untitled Event'}
-          </h1>
-          {(dateStr || location) && (
-            <div className={`flex flex-wrap gap-2 mt-1 ${leftAlign ? 'justify-start' : 'justify-center'}`}>
-              {dateStr && (
-                <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs md:text-sm bg-white/10 backdrop-blur-md border border-white/20 ${fonts.body}`}>
-                  <CalendarGlyph />{dateStr}
-                </span>
-              )}
-              {location && (
-                <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs md:text-sm bg-white/10 backdrop-blur-md border border-white/20 ${fonts.body}`}>
-                  <PinGlyph />{location}
-                </span>
-              )}
-            </div>
-          )}
-        </div>
+        {hasCustomTextPos ? (
+          <div
+            className={`absolute z-10 flex flex-col gap-3 text-white ${leftAlign ? 'items-start text-left' : 'items-center text-center'}`}
+            style={{
+              left: `${textPosition.x}%`,
+              top: `${textPosition.y}%`,
+              transform: 'translate(-50%, -50%)',
+              width: 'min(92%, 640px)',
+            }}
+          >
+            {textContent}
+          </div>
+        ) : (
+          <div
+            className={`relative z-10 h-full w-full flex flex-col justify-end gap-3 p-6 md:p-12 text-white ${leftAlign ? 'items-start text-left' : 'items-center text-center'}`}
+          >
+            {textContent}
+          </div>
+        )}
       </div>
     </section>
   );
