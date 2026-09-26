@@ -56,8 +56,15 @@ const heroGradient = (accent) => `
 `;
 
 export const HeroBlock = React.memo(function HeroBlock({ content, layout, spacing, align, accent, fonts }) {
-  const { title, subtitle, dateTime, location, coverImageUrl, imageZoom, imagePosition, textPosition } = content || {};
+  const { title, subtitle, dateTime, location, coverImageUrl, imageZoom, imagePosition, textPosition, showOverlayText } = content || {};
   const cover = coverImageUrl || null; // resolved cover URL, passed down by renderer after cover-cache lookup
+  // Generated covers already render the title/date/host name as part of the
+  // graphic itself (see backend/services/coverGenerator.js), so overlaying
+  // this same text again would double it up and look stacked/cluttered.
+  // BlockContentEditor defaults `showOverlayText` to false the first time a
+  // cover is generated, and to true for an uploaded photo (which has no text
+  // of its own) — this is only ever skipped once there IS a cover image.
+  const shouldShowText = !cover || showOverlayText !== false;
   const dateStr = dateTime ? new Date(dateTime).toLocaleString(undefined, { dateStyle: 'full', timeStyle: 'short' }) : '';
   // "split" now controls where the overlaid text sits (left vs. centered),
   // not a side-by-side image — the cover graphic and the hero copy are
@@ -135,7 +142,7 @@ export const HeroBlock = React.memo(function HeroBlock({ content, layout, spacin
           </>
         )}
 
-        {hasCustomTextPos ? (
+        {shouldShowText && (hasCustomTextPos ? (
           <div
             className={`absolute z-10 flex flex-col gap-3 text-white ${leftAlign ? 'items-start text-left' : 'items-center text-center'}`}
             style={{
@@ -153,7 +160,7 @@ export const HeroBlock = React.memo(function HeroBlock({ content, layout, spacin
           >
             {textContent}
           </div>
-        )}
+        ))}
       </div>
     </section>
   );
