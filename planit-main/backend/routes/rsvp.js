@@ -194,10 +194,29 @@ async function getOrMigratePageConfig(event) {
   if (fullDoc.rsvpPageConfig?.migratedAt) return fullDoc.rsvpPageConfig; // migrated concurrently by another request
 
   const migrated = migrateFlatConfigToSections(fullDoc);
-  fullDoc.rsvpPageConfig = { ...migrated, migratedAt: new Date(), updatedAt: new Date(), updatedBy: 'system:lazy-migration' };
-  fullDoc.markModified('rsvpPageConfig');
-  await fullDoc.save();
-  return fullDoc.rsvpPageConfig;
+  const newConfig = { ...migrated, migratedAt: new Date(), updatedAt: new Date(), updatedBy: 'system:lazy-migration' };
+
+  // This route is public/high-traffic (a single shared link is often
+  // fetched several times nearly simultaneously by link-preview crawlers —
+  // WhatsApp, iMessage, Slack, etc.), so multiple requests can land here
+  // for the same event before any of them has migrated it. A plain
+  // findById + .save() would race: two requests load the same __v, both
+  // try to save, and every loser throws a VersionError that bubbles up as
+  // a 500 (which callers like shareMeta.js quietly treat as "no data").
+  // findOneAndUpdate with the un-migrated condition in the filter makes
+  // the write atomic — only one concurrent request can ever win it.
+  const updated = await Event.findOneAndUpdate(
+    { _id: fullDoc._id, 'rsvpPageConfig.migratedAt': { $exists: false } },
+    { $set: { rsvpPageConfig: newConfig } },
+    { new: true }
+  );
+
+  if (!updated) {
+    // Lost the race — another request already migrated it. Use theirs.
+    const winner = await Event.findById(fullDoc._id).select('rsvpPageConfig').lean();
+    return winner?.rsvpPageConfig || newConfig;
+  }
+  return updated.rsvpPageConfig;
 }
 
 /** Scans hero sections for a coverImageId and resolves it to a Cloudinary URL via the File model. */
