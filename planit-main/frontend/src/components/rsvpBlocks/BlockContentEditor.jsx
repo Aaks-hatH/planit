@@ -10,6 +10,7 @@ import { Plus, Trash2, ImagePlus, Loader2, Info, Sparkles, UploadCloud, Eye, Eye
 import { CONTENT_SCHEMA } from './contentSchema';
 import { fileAPI } from '../../services/api';
 import HeroAdjustPanel from './HeroAdjustPanel';
+import ColorWheelPicker from './ColorWheelPicker';
 import InfoTooltip from './InfoTooltip';
 
 function toDatetimeLocal(value) {
@@ -109,10 +110,16 @@ function ListEditor({ eventId, field, items = [], onChange }) {
   );
 }
 
-function CoverPickerField({ eventId, coverTemplates = [], accentColor, coverPreviewUrl, generating, onGenerate, uploadedUrl, onUploadImage, onClearUpload, showOverlayText, onToggleOverlayText }) {
+function CoverPickerField({
+  eventId, coverTemplates = [], accentColor, coverPreviewUrl, generating, onGenerate,
+  uploadedUrl, onUploadImage, onClearUpload, showOverlayText, onToggleOverlayText,
+  uploadedUrlDesktop, onUploadImageDesktop, onClearUploadDesktop,
+}) {
   const [template, setTemplate] = useState('centered-stack');
   const [mode, setMode] = useState(uploadedUrl ? 'upload' : 'generate');
   const [uploading, setUploading] = useState(false);
+  const [uploadingDesktop, setUploadingDesktop] = useState(false);
+  const [desktopEnabled, setDesktopEnabled] = useState(!!uploadedUrlDesktop);
 
   // The generated-cover preview only applies in 'generate' mode — an
   // uploaded image always wins on the actual page (see RSVPPageRenderer's
@@ -130,6 +137,17 @@ function CoverPickerField({ eventId, coverTemplates = [], accentColor, coverPrev
       setMode('upload');
     } finally {
       setUploading(false);
+    }
+  };
+
+  const handleFileDesktop = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadingDesktop(true);
+    try {
+      await onUploadImageDesktop?.(file);
+    } finally {
+      setUploadingDesktop(false);
     }
   };
 
@@ -223,6 +241,50 @@ function CoverPickerField({ eventId, coverTemplates = [], accentColor, coverPrev
       )}
 
       {hasCover && (
+        <div className="rounded-lg border border-white/10 p-2.5 flex flex-col gap-2">
+          <label className="flex items-start gap-2 text-[11px] cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={desktopEnabled}
+              onChange={(e) => {
+                const checked = e.target.checked;
+                setDesktopEnabled(checked);
+                if (!checked) onClearUploadDesktop?.();
+              }}
+              className="accent-current mt-0.5"
+              style={{ accentColor }}
+            />
+            <span className="flex-1">
+              <span className="opacity-85 font-medium">Use a different image for desktop</span>
+              <InfoTooltip text="Some banners just don't translate across screen shapes: a tall poster or invite card that fills a phone screen nicely can leave huge gaps or crop badly on a wide desktop banner — and a wide landscape photo can do the same in reverse on mobile. Upload a second image cropped for the other shape instead of forcing one image to do both jobs. Leave this off to keep using the same image everywhere." />
+            </span>
+          </label>
+          {desktopEnabled && (
+            <div className="pl-6 flex flex-col gap-2">
+              {uploadedUrlDesktop && (
+                <img src={uploadedUrlDesktop} alt="Desktop banner source" className="max-w-full max-h-24 object-contain rounded border border-white/10 bg-black/30" />
+              )}
+              <div className="flex flex-wrap items-center gap-2">
+                <label className="text-xs px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 cursor-pointer flex items-center gap-1.5 w-fit">
+                  {uploadingDesktop ? <Loader2 size={12} className="animate-spin" /> : <UploadCloud size={12} />}
+                  {uploadedUrlDesktop ? 'Replace desktop image' : 'Upload desktop image'}
+                  <input type="file" accept="image/*" className="hidden" onChange={handleFileDesktop} disabled={uploadingDesktop} />
+                </label>
+                {uploadedUrlDesktop && (
+                  <button type="button" onClick={onClearUploadDesktop} className="text-xs text-red-400 hover:text-red-300">
+                    Remove
+                  </button>
+                )}
+              </div>
+              <span className="text-[11px] opacity-40">
+                Crop it separately below, under the "Desktop" tab of Crop &amp; position.
+              </span>
+            </div>
+          )}
+        </div>
+      )}
+
+      {hasCover && (
         <label className="flex items-center gap-2 mt-1 text-[11px] cursor-pointer select-none">
           <input
             type="checkbox"
@@ -264,7 +326,7 @@ export default function BlockContentEditor({ eventId, type, content, onChange, c
           <Info size={13} className="mt-0.5 shrink-0 text-white/40" />
           <div className="text-[11px] leading-relaxed text-white/60 space-y-1">
             <p><strong className="text-white/85">How the banner works:</strong> generate a graphic from your event details, or upload your own photo — not both at once.</p>
-            <p>Then use <strong className="text-white/85">Crop &amp; position</strong> to fit it on desktop and mobile, since the banner isn't the same shape on both.</p>
+            <p>Then use <strong className="text-white/85">Crop &amp; position</strong> to fit it on desktop and mobile, since the banner isn't the same shape on both — and optionally upload a second image just for desktop if one photo doesn't work well on both screen shapes.</p>
           </div>
         </div>
       )}
@@ -298,6 +360,20 @@ export default function BlockContentEditor({ eventId, type, content, onChange, c
                   });
                 }}
                 onClearUpload={() => onChange({ ...content, coverImageUrl: null })}
+                uploadedUrlDesktop={content?.coverImageUrlDesktop}
+                onUploadImageDesktop={async (file) => {
+                  const fd = new FormData();
+                  fd.append('files', file);
+                  const res = await fileAPI.upload(eventId, fd, 'cover');
+                  onChange({ ...content, coverImageUrlDesktop: res.data.file.url });
+                }}
+                onClearUploadDesktop={() => onChange({
+                  ...content,
+                  coverImageUrlDesktop: null,
+                  imageZoomDesktop: undefined,
+                  imagePositionDesktop: undefined,
+                  imageFitDesktop: undefined,
+                })}
               />
             </div>
           );
@@ -308,10 +384,27 @@ export default function BlockContentEditor({ eventId, type, content, onChange, c
               <FieldLabel hint={field.hint}>{field.label}</FieldLabel>
               <HeroAdjustPanel
                 imageUrl={content?.coverImageUrl || coverProps?.coverPreviewUrl || null}
+                imageUrlDesktop={content?.coverImageUrlDesktop || null}
                 imageZoom={content?.imageZoom}
                 imagePosition={content?.imagePosition}
+                imageFit={content?.imageFit}
+                imageZoomDesktop={content?.imageZoomDesktop}
+                imagePositionDesktop={content?.imagePositionDesktop}
+                imageFitDesktop={content?.imageFitDesktop}
                 textPosition={content?.textPosition}
                 onChange={(patch) => onChange({ ...content, ...patch })}
+              />
+            </div>
+          );
+        }
+        if (field.type === 'colorWheel') {
+          return (
+            <div key={field.key} className="flex flex-col gap-1">
+              <FieldLabel hint={field.hint}>{field.label}</FieldLabel>
+              <ColorWheelPicker
+                value={content?.[field.key] || null}
+                defaultColor={coverProps?.accentColor || '#6366f1'}
+                onChange={(hex) => onChange({ ...content, [field.key]: hex })}
               />
             </div>
           );
