@@ -67,6 +67,23 @@ function checkMagicBytes(buffer, declaredMime) {
   return patterns.some(magic => magic.every((byte, i) => buffer[i] === byte));
 }
 
+// Per-purpose resize presets. Images arrive at wildly different raw sizes
+// (a phone photo, a screenshot, a logo exported at 4000px) and were
+// previously uploaded completely untouched, which is why hero covers and
+// logos could come out stretched, oversized, or slow to load. `crop: limit`
+// only ever scales DOWN (never upscales a small image) and preserves aspect
+// ratio, so this only trims oversized images down to a sane max instead of
+// forcing a specific shape.
+const IMAGE_RESIZE_PRESETS = {
+  // Wide hero/cover graphics shown behind page copy.
+  cover: { width: 1600, height: 900, crop: 'limit' },
+  // Small square-ish marks (organizer logo, host avatar).
+  logo: { width: 500, height: 500, crop: 'limit' },
+  // General attachments/photo-gallery images — cap so nothing multi-megapixel
+  // ships to a guest's phone, but keep more headroom than a logo.
+  default: { width: 2000, height: 2000, crop: 'limit' },
+};
+
 // Upload buffer to Cloudinary via a temporary file on disk.
 //
 // Previous attempts used upload_stream (stream flushing issues with SDK v1)
@@ -82,7 +99,12 @@ function checkMagicBytes(buffer, declaredMime) {
 // resource_type: 'auto' lets Cloudinary's servers detect image/video/raw —
 // removing our manual mimetype check which was the source of the "Invalid image
 // file" rejection.
-const uploadToCloudinary = async (buffer, filename) => {
+//
+// `imagePreset` (optional): one of IMAGE_RESIZE_PRESETS' keys. Applied as an
+// eager transformation so the returned/stored URL is already the resized
+// asset — pages don't need to know a transform happened. Ignored for
+// non-image uploads (PDFs, docs) since transformation only applies to images.
+const uploadToCloudinary = async (buffer, filename, imagePreset) => {
   // Sanitize filename for use as a Cloudinary public_id.
   const safeName = (
     filename
@@ -96,12 +118,17 @@ const uploadToCloudinary = async (buffer, filename) => {
   fs.writeFileSync(tmpPath, buffer);
 
   try {
+    const preset = IMAGE_RESIZE_PRESETS[imagePreset] || IMAGE_RESIZE_PRESETS.default;
     const result = await cloudinary.uploader.upload(tmpPath, {
       folder: 'planit-events',
       resource_type: 'auto', // Let Cloudinary detect type — avoids client-side validation errors
       // V-15 FIX: Add crypto random suffix so IDs are not predictable/enumerable
       public_id: `${Date.now()}-${require('crypto').randomBytes(6).toString('hex')}-${safeName}`,
       secure: true,
+      // Only meaningful for images; Cloudinary ignores transformation for
+      // raw/video resource types resolved by 'auto', so this is safe to pass
+      // unconditionally for every upload through this helper.
+      transformation: [{ ...preset, quality: 'auto', fetch_format: 'auto' }],
     });
     return result;
   } finally {
@@ -179,9 +206,19 @@ router.post('/:eventId/upload',
         });
       }
 
+      // Optional hint from the client ('cover' | 'logo') so images used in
+      // specific spots (RSVP page hero, organizer logo) get resized to a
+      // preset suited to where they'll actually be displayed, instead of
+      // every upload — a hero photo or a tiny logo alike — going through
+      // unresized. Anything else (or omitted) falls back to the general
+      // default cap so ordinary attachments/photo-gallery images are still
+      // capped at a sane size. See IMAGE_RESIZE_PRESETS above.
+      const imagePreset = ['cover', 'logo'].includes(req.body?.purpose) ? req.body.purpose : 'default';
+
       const cloudinaryResult = await uploadToCloudinary(
         req.file.buffer,
-        req.file.originalname
+        req.file.originalname,
+        imagePreset
       );
 
       uploadedPublicId = cloudinaryResult.public_id;
