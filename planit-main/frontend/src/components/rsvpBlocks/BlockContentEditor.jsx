@@ -6,10 +6,11 @@
  * a bespoke form per block type — see that file's header for why.
  */
 import React, { useState } from 'react';
-import { Plus, Trash2, ImagePlus, Loader2 } from 'lucide-react';
+import { Plus, Trash2, ImagePlus, Loader2, Info, Sparkles, UploadCloud, Eye, EyeOff } from 'lucide-react';
 import { CONTENT_SCHEMA } from './contentSchema';
 import { fileAPI } from '../../services/api';
 import HeroAdjustPanel from './HeroAdjustPanel';
+import InfoTooltip from './InfoTooltip';
 
 function toDatetimeLocal(value) {
   if (!value) return '';
@@ -108,7 +109,7 @@ function ListEditor({ eventId, field, items = [], onChange }) {
   );
 }
 
-function CoverPickerField({ eventId, coverTemplates = [], accentColor, coverPreviewUrl, generating, onGenerate, uploadedUrl, onUploadImage, onClearUpload }) {
+function CoverPickerField({ eventId, coverTemplates = [], accentColor, coverPreviewUrl, generating, onGenerate, uploadedUrl, onUploadImage, onClearUpload, showOverlayText, onToggleOverlayText }) {
   const [template, setTemplate] = useState('centered-stack');
   const [mode, setMode] = useState(uploadedUrl ? 'upload' : 'generate');
   const [uploading, setUploading] = useState(false);
@@ -118,6 +119,7 @@ function CoverPickerField({ eventId, coverTemplates = [], accentColor, coverPrev
   // resolution order), so showing it here too when an upload is active
   // would misrepresent what guests will actually see.
   const previewUrl = mode === 'upload' ? uploadedUrl : coverPreviewUrl;
+  const hasCover = !!(uploadedUrl || coverPreviewUrl);
 
   const handleFile = async (e) => {
     const file = e.target.files?.[0];
@@ -125,32 +127,53 @@ function CoverPickerField({ eventId, coverTemplates = [], accentColor, coverPrev
     setUploading(true);
     try {
       await onUploadImage?.(file);
+      setMode('upload');
     } finally {
       setUploading(false);
     }
   };
 
   return (
-    <div className="flex flex-col gap-2">
+    <div className="flex flex-col gap-2.5">
+      {/* Preview shows the SOURCE image un-cropped (object-contain) — the
+          real, device-accurate crop preview lives in the "Crop & position"
+          panel below, so this doesn't show a third, misleading aspect ratio. */}
       {previewUrl && (
-        <img src={previewUrl} alt="Cover preview" className="w-full rounded-lg border border-white/10 aspect-[1200/630] object-cover" />
+        <div className="w-full rounded-lg border border-white/10 bg-black/30 flex items-center justify-center overflow-hidden" style={{ maxHeight: 160 }}>
+          <img src={previewUrl} alt="Banner source" className="max-w-full max-h-40 object-contain" />
+        </div>
       )}
+
+      <div className="rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2 flex items-start gap-2">
+        <Info size={12} className="mt-0.5 shrink-0 text-white/35" />
+        <p className="text-[11px] leading-relaxed text-white/55">
+          Pick <strong className="text-white/80 font-semibold">one</strong> source for your banner — generate a graphic from your event details, or upload your own photo. Switching to the other mode replaces whichever one is active.
+        </p>
+      </div>
 
       <div className="flex gap-1 p-0.5 rounded-lg bg-white/5 w-fit">
         <button type="button" onClick={() => setMode('generate')}
-          className="text-[11px] px-2.5 py-1 rounded-md transition-colors"
+          className="flex items-center gap-1.5 text-[11px] px-2.5 py-1 rounded-md transition-colors"
           style={mode === 'generate' ? { background: accentColor, color: '#0a0a12' } : { opacity: 0.6 }}>
-          Generate
+          <Sparkles size={11} /> Generate
         </button>
         <button type="button" onClick={() => setMode('upload')}
-          className="text-[11px] px-2.5 py-1 rounded-md transition-colors"
+          className="flex items-center gap-1.5 text-[11px] px-2.5 py-1 rounded-md transition-colors"
           style={mode === 'upload' ? { background: accentColor, color: '#0a0a12' } : { opacity: 0.6 }}>
-          Upload your own
+          <UploadCloud size={11} /> Upload your own
         </button>
+        <InfoTooltip
+          side="right"
+          text="Generate: PlanIt draws a banner graphic that already includes your title, date and host — no photo needed. Upload: use your own photo instead; add your title back on top with the toggle below."
+        />
       </div>
 
       {mode === 'generate' && (
         <>
+          <div className="flex items-center gap-1">
+            <span className="text-[10px] uppercase tracking-wide opacity-50">Style</span>
+            <InfoTooltip text="The layout used to arrange your title, date and host name inside the generated graphic." />
+          </div>
           <div className="flex flex-wrap gap-1.5">
             {coverTemplates.map((t) => (
               <button
@@ -164,23 +187,26 @@ function CoverPickerField({ eventId, coverTemplates = [], accentColor, coverPrev
               </button>
             ))}
           </div>
-          <button
-            type="button"
-            onClick={() => onGenerate(template)}
-            disabled={generating}
-            className="self-start text-xs px-3 py-1.5 rounded-lg flex items-center gap-1.5 disabled:opacity-50"
-            style={{ background: accentColor, color: '#0a0a12' }}
-          >
-            {generating ? <Loader2 size={12} className="animate-spin" /> : null}
-            {coverPreviewUrl ? 'Regenerate cover' : 'Generate cover'}
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => onGenerate(template)}
+              disabled={generating}
+              className="self-start text-xs px-3 py-1.5 rounded-lg flex items-center gap-1.5 disabled:opacity-50"
+              style={{ background: accentColor, color: '#0a0a12' }}
+            >
+              {generating ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />}
+              {coverPreviewUrl ? 'Regenerate cover' : 'Generate cover'}
+            </button>
+            <InfoTooltip text="Rebuilds the graphic fresh from your current title, date and host name — the previous version is replaced. Your title's text field above stays editable even though it also appears in the image." />
+          </div>
         </>
       )}
 
       {mode === 'upload' && (
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <label className="text-xs px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 cursor-pointer flex items-center gap-1.5 w-fit">
-            {uploading ? <Loader2 size={12} className="animate-spin" /> : null}
+            {uploading ? <Loader2 size={12} className="animate-spin" /> : <UploadCloud size={12} />}
             {uploadedUrl ? 'Replace image' : 'Upload image'}
             <input type="file" accept="image/*" className="hidden" onChange={handleFile} disabled={uploading} />
           </label>
@@ -189,10 +215,39 @@ function CoverPickerField({ eventId, coverTemplates = [], accentColor, coverPrev
               Remove
             </button>
           )}
-          <span className="text-[11px] opacity-40">Automatically resized to fit the hero.</span>
+          <span className="text-[11px] opacity-40 flex items-center gap-1">
+            Cropped to fit below
+            <InfoTooltip text="Uploaded photos aren't resized on upload — use the Crop & position panel below to choose what part shows on desktop vs. mobile." />
+          </span>
         </div>
       )}
+
+      {hasCover && (
+        <label className="flex items-center gap-2 mt-1 text-[11px] cursor-pointer select-none">
+          <input
+            type="checkbox"
+            checked={showOverlayText !== false}
+            onChange={(e) => onToggleOverlayText?.(e.target.checked)}
+            className="accent-current"
+            style={{ accentColor }}
+          />
+          <span className="inline-flex items-center gap-1 opacity-75">
+            {showOverlayText !== false ? <Eye size={12} /> : <EyeOff size={12} />}
+            Show title &amp; details over the banner
+          </span>
+          <InfoTooltip text="Generated banners already draw your title, date and host as part of the graphic — leaving this on too would stack duplicate text on top of it, so it's switched off by default for generated covers. Uploaded photos have no text of their own, so it's on by default for those." />
+        </label>
+      )}
     </div>
+  );
+}
+
+function FieldLabel({ children, hint }) {
+  return (
+    <span className="inline-flex items-center gap-1 text-[11px] uppercase tracking-wide opacity-50">
+      {children}
+      {hint && <InfoTooltip text={hint} />}
+    </span>
   );
 }
 
@@ -204,11 +259,20 @@ export default function BlockContentEditor({ eventId, type, content, onChange, c
 
   return (
     <div className="flex flex-col gap-3">
+      {type === 'hero' && (
+        <div className="rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2.5 flex items-start gap-2">
+          <Info size={13} className="mt-0.5 shrink-0 text-white/40" />
+          <div className="text-[11px] leading-relaxed text-white/60 space-y-1">
+            <p><strong className="text-white/85">How the banner works:</strong> generate a graphic from your event details, or upload your own photo — not both at once.</p>
+            <p>Then use <strong className="text-white/85">Crop &amp; position</strong> to fit it on desktop and mobile, since the banner isn't the same shape on both.</p>
+          </div>
+        </div>
+      )}
       {schema.map((field) => {
         if (field.type === 'coverPicker') {
           return (
             <div key={field.key} className="flex flex-col gap-1">
-              <label className="text-[11px] uppercase tracking-wide opacity-50">{field.label}</label>
+              <FieldLabel hint={field.hint}>{field.label}</FieldLabel>
               <CoverPickerField
                 eventId={eventId}
                 coverTemplates={coverProps?.coverTemplates}
@@ -217,11 +281,21 @@ export default function BlockContentEditor({ eventId, type, content, onChange, c
                 generating={coverProps?.generating}
                 onGenerate={(template) => coverProps?.onGenerate?.(template)}
                 uploadedUrl={content?.coverImageUrl}
+                showOverlayText={content?.showOverlayText}
+                onToggleOverlayText={(checked) => onChange({ ...content, showOverlayText: checked })}
                 onUploadImage={async (file) => {
                   const fd = new FormData();
                   fd.append('files', file);
                   const res = await fileAPI.upload(eventId, fd, 'cover');
-                  onChange({ ...content, coverImageUrl: res.data.file.url });
+                  onChange({
+                    ...content,
+                    coverImageUrl: res.data.file.url,
+                    // An uploaded photo has no text of its own baked in, so
+                    // make sure the overlay is on the first time someone
+                    // uploads — but leave it alone on a "Replace image" if
+                    // they'd already deliberately turned it off.
+                    showOverlayText: content?.coverImageUrl ? content?.showOverlayText : true,
+                  });
                 }}
                 onClearUpload={() => onChange({ ...content, coverImageUrl: null })}
               />
@@ -231,7 +305,7 @@ export default function BlockContentEditor({ eventId, type, content, onChange, c
         if (field.type === 'heroAdjust') {
           return (
             <div key={field.key} className="flex flex-col gap-1">
-              <label className="text-[11px] uppercase tracking-wide opacity-50">{field.label}</label>
+              <FieldLabel hint={field.hint}>{field.label}</FieldLabel>
               <HeroAdjustPanel
                 imageUrl={content?.coverImageUrl || coverProps?.coverPreviewUrl || null}
                 imageZoom={content?.imageZoom}
@@ -244,7 +318,7 @@ export default function BlockContentEditor({ eventId, type, content, onChange, c
         }
         return (
           <div key={field.key} className="flex flex-col gap-1">
-            <label className="text-[11px] uppercase tracking-wide opacity-50">{field.label}</label>
+            <FieldLabel hint={field.hint}>{field.label}</FieldLabel>
             {field.type === 'list'
               ? <ListEditor eventId={eventId} field={field} items={content?.[field.key]} onChange={(v) => set(field.key, v)} />
               : <Field eventId={eventId} field={field} value={content?.[field.key]} onChange={(v) => set(field.key, v)} />}
