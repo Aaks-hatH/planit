@@ -1712,12 +1712,18 @@ app.get('/gmail/callback', async (req, res) => {
 // POST /mesh/gmail-send
 // Backend calls this (via mesh) to send an RSVP notification email via the organizer's Gmail.
 // Handles token refresh and saves updated access token back to backend.
-app.post('/mesh/gmail-send', meshAuth(SERVICE_NAME), express.json({ limit: '64kb' }), async (req, res) => {
+app.post('/mesh/gmail-send', meshAuth(SERVICE_NAME), express.json({ limit: '128kb' }), async (req, res) => {
   const {
     eventId, to, fromEmail,
     accessToken: rawAccessToken, refreshToken, expiresAt,
     guestName, guestEmail, guestPhone, response, status, plusOnes,
     eventTitle, eventDate,
+    // Optional pre-built subject/html — used when this is relaying something
+    // other than the organizer's own "New RSVP" notification (e.g. the
+    // guest-facing confirmation email, built by emailService with the
+    // organizer's custom subject/body already applied). When omitted, this
+    // endpoint builds the standard organizer-notification email as before.
+    subject: overrideSubject, html: overrideHtml,
   } = req.body || {};
 
   if (!refreshToken || !to || !eventId) {
@@ -1748,8 +1754,8 @@ app.post('/mesh/gmail-send', meshAuth(SERVICE_NAME), express.json({ limit: '64kb
     }
 
     // Build email
-    const html    = _buildRsvpNotificationHtml({ guestName, guestEmail, guestPhone, response, status, plusOnes, eventTitle, eventDate });
-    const subject = `New RSVP: ${guestName || 'Someone'} for ${eventTitle || 'your event'}`;
+    const html    = overrideHtml || _buildRsvpNotificationHtml({ guestName, guestEmail, guestPhone, response, status, plusOnes, eventTitle, eventDate });
+    const subject = overrideSubject || `New RSVP: ${guestName || 'Someone'} for ${eventTitle || 'your event'}`;
     const from    = fromEmail ? `"${(eventTitle || 'PlanIt').replace(/"/g, '')}" <${fromEmail}>` : fromEmail || '';
 
     // Construct RFC 2822 message
@@ -1768,7 +1774,7 @@ app.post('/mesh/gmail-send', meshAuth(SERVICE_NAME), express.json({ limit: '64kb
     const sendRes = await _gmailRequest('POST', '/gmail/v1/users/me/messages/send', accessToken, { raw: rawMessage });
 
     if (sendRes.status >= 200 && sendRes.status < 300) {
-      console.log(`[gmail-send] Sent RSVP notification to ${to} for event ${eventId}`);
+      console.log(`[gmail-send] Sent "${subject}" -> ${to} for event ${eventId}`);
       return res.json({ ok: true });
     }
 
