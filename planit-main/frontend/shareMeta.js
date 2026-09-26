@@ -41,6 +41,19 @@
 
 const DEFAULT_IMAGE = 'https://planitapp.onrender.com/planit-og.png';
 
+// WhatsApp, iMessage, and most link-preview crawlers don't render SVG —
+// when og:image fails to decode, several of them drop the ENTIRE preview
+// card (title included) rather than just showing no image. Organizers can
+// upload SVG covers (Cloudinary passes them through as-is), so anything
+// ending in .svg (ignoring query strings) must be swapped for a real
+// raster fallback before being used as a share image.
+function safeImage(url) {
+  if (!url) return null;
+  const clean = url.split('?')[0].split('#')[0];
+  if (/\.svg$/i.test(clean)) return null;
+  return url;
+}
+
 function truncate(str, n) {
   if (!str) return '';
   const s = String(str).trim();
@@ -84,7 +97,7 @@ async function resolveRsvp([, slug], apiBase) {
   return {
     title,
     description: truncate([subtitle, data.description].filter(Boolean).join(' — ') || `RSVP to ${title} on PlanIt.`, 200),
-    image: data.rsvpPage?.coverImageUrl || firstCover || DEFAULT_IMAGE,
+    image: safeImage(data.rsvpPage?.coverImageUrl) || safeImage(firstCover) || DEFAULT_IMAGE,
   };
 }
 
@@ -113,7 +126,7 @@ async function resolveReserve([, subdomain], apiBase) {
     data.metaDescription || data.tagline || data.description || `Book your table at ${data.name} on PlanIt.`,
     200
   );
-  return { title, description, image: data.heroImageUrl || DEFAULT_IMAGE };
+  return { title, description, image: safeImage(data.heroImageUrl) || DEFAULT_IMAGE };
 }
 
 async function resolveEventWorkspace([, eventId], apiBase) {
