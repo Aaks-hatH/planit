@@ -30,6 +30,7 @@ export const CONTENT_SCHEMA = {
     { key: 'dateTime', label: 'Date & time', type: 'datetime' },
     { key: 'location', label: 'Location', type: 'text' },
     { key: 'coverImageId', label: 'Cover graphic', type: 'coverPicker' },
+    { key: 'heroAdjust', label: 'Crop & position', type: 'heroAdjust' },
   ],
   hostCard: [
     { key: 'hosts', label: 'Hosts', type: 'list', itemFields: [
