@@ -248,6 +248,15 @@ export default function RSVPPageBuilder() {
 
   useEffect(() => () => { if (saveTimer.current) clearTimeout(saveTimer.current); }, []);
 
+  // ── Browser tab title: use this event's own name instead of the generic
+  // "RSVP Page Builder · PlanIt" fallback set by App.jsx's PageTitle.
+  useEffect(() => {
+    if (!event?.title) return;
+    const prev = document.title;
+    document.title = `${event.title} — RSVP Builder · PlanIt`;
+    return () => { document.title = prev; };
+  }, [event?.title]);
+
   /* ── section mutations ────────────────────────────────────────────── */
   const sections = config?.sections || [];
   const bodySections = sections.filter((s) => s.type !== 'rsvpForm');
@@ -471,6 +480,8 @@ export default function RSVPPageBuilder() {
                 backgroundStyle={flatSettings.backgroundStyle || 'dark'}
                 fontStyle={flatSettings.fontStyle || 'modern'}
                 coverUrlsById={coverUrlsById}
+                logoUrl={orgRsvpPage?.logoUrl || null}
+                fallbackCoverUrl={orgRsvpPage?.coverImageUrl || null}
               />
             </div>
           </div>
