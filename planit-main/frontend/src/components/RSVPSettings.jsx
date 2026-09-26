@@ -7,7 +7,7 @@ import {
   MessageSquare, Star, Tag, Clock, FileText, Layers, CheckCircle2, LogOut
 } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { rsvpAPI } from '../services/api';
+import { rsvpAPI, fileAPI } from '../services/api';
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 const ROUTER_URL = (import.meta.env.VITE_ROUTER_URL || '').replace(/\/$/, '');
@@ -61,6 +61,60 @@ function Field({ label, description, children }) {
 
 const inputCls = "w-full px-3 py-2 rounded-lg text-sm border border-neutral-200 focus:border-indigo-400 focus:outline-none transition-colors bg-white text-neutral-900";
 const textareaCls = `${inputCls} resize-none`;
+
+/* ─── Image upload field ──────────────────────────────────────────────────── */
+// Replaces a raw "paste a URL" text input with an actual upload: the file
+// goes through the real upload pipeline (backend/routes/files.js), which now
+// resizes it to a preset that fits where it's used (a wide cover vs. a small
+// logo) before handing back a Cloudinary URL — so what gets saved always
+// points at something real and reasonably sized instead of a hand-typed
+// link that may be malformed, unreachable, or an oversized original.
+function AppearanceImageField({ eventId, purpose, previewClassName, value, onChange }) {
+  const [busy, setBusy] = useState(false);
+  const inputRef = useRef(null);
+
+  const handleFile = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setBusy(true);
+    try {
+      const fd = new FormData();
+      fd.append('files', file);
+      const res = await fileAPI.upload(eventId, fd, purpose);
+      onChange(res.data.file.url);
+    } catch (err) {
+      console.error('Image upload failed', err);
+      toast.error(err?.response?.data?.message || 'Could not upload image.');
+    } finally {
+      setBusy(false);
+      if (inputRef.current) inputRef.current.value = '';
+    }
+  };
+
+  return (
+    <div className="flex items-center gap-3">
+      {value ? (
+        <img src={value} alt="" className={previewClassName || "w-16 h-16 rounded-lg object-cover border border-neutral-200"} />
+      ) : (
+        <div className={`${previewClassName || "w-16 h-16"} rounded-lg border border-dashed border-neutral-300 flex items-center justify-center text-neutral-300`}>
+          <Star className="w-4 h-4" />
+        </div>
+      )}
+      <div className="flex flex-col gap-1.5">
+        <label className="text-xs font-medium px-3 py-1.5 rounded-lg bg-neutral-100 hover:bg-neutral-200 cursor-pointer inline-flex items-center gap-1.5 w-fit transition-colors">
+          {busy ? <RefreshCw className="w-3 h-3 animate-spin" /> : null}
+          {value ? 'Replace image' : 'Upload image'}
+          <input ref={inputRef} type="file" accept="image/*" className="hidden" onChange={handleFile} disabled={busy} />
+        </label>
+        {value && (
+          <button type="button" onClick={() => onChange('')} className="text-xs text-red-500 hover:text-red-600 text-left">
+            Remove
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
 
 /* ─── Custom question editor ──────────────────────────────────────────────── */
 const QUESTION_TYPES = [
@@ -442,11 +496,11 @@ export default function RSVPSettings({ event, eventId, onSettingsChanged }) {
                 ))}
               </div>
             </Field>
-            <Field label="Cover Image URL" description="Wide image shown at the top of the RSVP page.">
-              <input value={settings.coverImageUrl || ''} onChange={e => set('coverImageUrl', e.target.value)} placeholder="https://…" className={inputCls} />
+            <Field label="Cover Image" description="Wide image shown behind the hero title. Used automatically if the RSVP builder's hero section doesn't already have its own generated or uploaded cover.">
+              <AppearanceImageField eventId={eventId} purpose="cover" previewClassName="w-24 h-14 rounded-lg object-cover border border-neutral-200" value={settings.coverImageUrl || ''} onChange={v => set('coverImageUrl', v)} />
             </Field>
-            <Field label="Logo URL" description="Your logo shown above the event title.">
-              <input value={settings.logoUrl || ''} onChange={e => set('logoUrl', e.target.value)} placeholder="https://…" className={inputCls} />
+            <Field label="Logo" description="Your logo, shown centered above the RSVP page content.">
+              <AppearanceImageField eventId={eventId} purpose="logo" value={settings.logoUrl || ''} onChange={v => set('logoUrl', v)} />
             </Field>
             <Toggle label="Hide PlanIt branding" description="Remove 'Powered by PlanIt' from the footer."
               checked={settings.hideBranding === true} onChange={v => set('hideBranding', v)} />
@@ -496,7 +550,7 @@ export default function RSVPSettings({ event, eventId, onSettingsChanged }) {
             <Field label="Tagline" description="Small label shown above the event title (e.g. 'You're invited').">
               <input value={settings.heroTagline || ''} onChange={e => set('heroTagline', e.target.value)} placeholder="You're invited" className={inputCls} />
             </Field>
-            <Field label="Welcome Title" description="Overrides the event title on the RSVP page.">
+            <Field label="RSVP Page Title" description="The title shown on this RSVP page and in the browser tab. Leave blank to use the event's own title.">
               <input value={settings.welcomeTitle || ''} onChange={e => set('welcomeTitle', e.target.value)} placeholder="Leave blank to use event title" className={inputCls} />
             </Field>
             <Field label="Welcome Message" description="Shown below the title. Supports multiple paragraphs.">
