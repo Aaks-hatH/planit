@@ -447,7 +447,8 @@ const PAGE_TITLES = {
 const PATTERN_TITLES = [
   [/^\/rsvp\/[^/]+$/,                        'RSVP · PlanIt'],
   [/^\/rsvp\/manage\//,                      'Manage Your RSVP · PlanIt'],
-  [/^\/(e|event)\/[^/]+\/rsvp-builder$/,    'RSVP Page Builder · PlanIt'],
+  [/^\/(e|event)\/[^/]+\/rsvp-dashboard$/,   'RSVP Dashboard · PlanIt'],
+  [/^\/(e|event)\/[^/]+\/rsvp-builder$/,     'RSVP Page Builder · PlanIt'],
   [/^\/(e|event)\/[^/]+\/checkin$/,          'Live Attendee Check-In Dashboard · PlanIt'],
   [/^\/(e|event)\/[^/]+\/floor$/,            'Floor Management and Table Service · PlanIt Venue'],
   [/^\/(e|event)\/[^/]+\/server$/,           'Server and Table Assignment View · PlanIt Venue'],
