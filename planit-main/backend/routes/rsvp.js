@@ -210,6 +210,28 @@ async function resolveCoverUrls(sections) {
   return Object.fromEntries(files.map((f) => [String(f._id), f.cloudinaryUrl]));
 }
 
+/**
+ * The first hero section's cover image, for social-share metadata.
+ *
+ * There are two ways a hero cover ends up on a section, and until now only
+ * one of them was ever surfaced to callers outside RSVPPageRenderer:
+ *   - content.coverImageId  -> a tracked File doc, resolved via coverUrlsById
+ *   - content.coverImageUrl -> set DIRECTLY by BlockContentEditor's normal
+ *                              "Upload Cover" flow (see frontend/src/
+ *                              components/rsvpBlocks/BlockContentEditor.jsx),
+ *                              which is how most organizers actually set a
+ *                              cover today.
+ * RSVPPageRenderer.jsx already prefers the direct URL over the File lookup
+ * when rendering the page for real visitors — this mirrors that same
+ * precedence so link-preview crawlers see the same cover a visitor does,
+ * instead of silently falling back to the generic PlanIt image.
+ */
+function resolveHeroCoverUrl(sections, coverUrlsById) {
+  const hero = (sections || []).find((s) => s.type === 'hero');
+  if (!hero) return null;
+  return hero.content?.coverImageUrl || coverUrlsById[hero.content?.coverImageId] || null;
+}
+
 router.get('/:eventIdOrSlug/page', async (req, res, next) => {
   try {
     const event = await resolveEvent(req.params.eventIdOrSlug);
@@ -288,6 +310,7 @@ router.get('/:eventIdOrSlug/page', async (req, res, next) => {
       rsvpPage:      safePage,
       rsvpPageConfig,
       coverUrlsById,
+      heroCoverUrl:  resolveHeroCoverUrl(rsvpPageConfig.sections, coverUrlsById),
       counts:        rsvpPage.showGuestCount !== false ? counts : null,
       spotsLeft,
       isFull,
