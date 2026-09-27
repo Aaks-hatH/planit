@@ -99,7 +99,20 @@ function dateAndLocation(date, location) {
 
 async function getJSON(url) {
   try {
-    const res = await fetch(url, { headers: { Accept: 'application/json' } });
+    const res = await fetch(url, {
+      headers: {
+        Accept: 'application/json',
+        // The backend's trafficGuard middleware bans any IP that sends
+        // requests with no/empty User-Agent (it looks identical to a
+        // scripted probe). Node's built-in fetch doesn't set one by
+        // default, and every one of these calls comes from this same
+        // frontend server's fixed outbound IP — so without this header,
+        // a single burst of crawler re-fetches (WhatsApp alone does ~9
+        // in a few seconds) was enough to warn-then-ban this server's
+        // own IP, breaking previews for everyone for the next 30 minutes.
+        'User-Agent': 'PlanIt-ShareMeta/1.0 (+https://planitapp.onrender.com)',
+      },
+    });
     if (!res.ok) {
       // Don't swallow this silently — a 500 from the backend and a
       // genuine 404 look identical to the caller otherwise, which makes
@@ -115,6 +128,32 @@ async function getJSON(url) {
     console.warn(`[share-preview] ${url} -> ${err.message}`); // network/backend hiccup — caller falls back to default tags
     return null;
   }
+}
+
+// ── In-flight/short-TTL cache ─────────────────────────────────────────────────
+// Link-preview crawlers (WhatsApp especially) re-fetch the same URL several
+// times within a few seconds of a single paste. Without this, each of those
+// hits triggered its own independent backend call — multiplying load for no
+// reason and, worse, multiplying how many "missing UA"/rapid-request warns a
+// short burst could rack up. Concurrent callers for the same path now share
+// one in-flight promise, and a completed result is reused for a short window
+// after that, so a 9-request WhatsApp burst results in exactly ONE backend
+// call instead of nine.
+const RESOLVE_CACHE_TTL_MS = 20_000;
+const _resolveCache = new Map(); // pathname -> { expiresAt, promise }
+
+function cachedResolve(key, fn) {
+  const hit = _resolveCache.get(key);
+  if (hit && hit.expiresAt > Date.now()) return hit.promise;
+
+  const promise = Promise.resolve().then(fn);
+  _resolveCache.set(key, { expiresAt: Date.now() + RESOLVE_CACHE_TTL_MS, promise });
+  // Don't let a thrown rejection poison the cache for the full TTL — clear
+  // it immediately so the next request gets a fresh attempt. (route.resolve
+  // implementations already catch their own errors and resolve to null, so
+  // this is just a safety net.)
+  promise.catch(() => _resolveCache.delete(key));
+  return promise;
 }
 
 /* ── resolvers ──────────────────────────────────────────────────────────── */
@@ -248,7 +287,7 @@ export function matchShareRoute(pathname) {
 
   for (const route of DYNAMIC_ROUTES) {
     const match = clean.match(route.test);
-    if (match) return { resolve: (apiBase) => route.resolve(match, apiBase) };
+    if (match) return { resolve: (apiBase) => cachedResolve(clean, () => route.resolve(match, apiBase)) };
   }
 
   const staticEntry = STATIC_ROUTES[clean];
