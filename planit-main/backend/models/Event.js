@@ -574,7 +574,7 @@ const eventSchema = new mongoose.Schema({
     // ── Master toggles ────────────────────────────────────────────────────────
     enabled:          { type: Boolean, default: false },
     accessMode:       { type: String, enum: ['open', 'password', 'closed'], default: 'open' },
-    rsvpPassword:     { type: String, default: '' },
+    rsvpPassword:     { type: String, default: '', select: false },
     confirmationMode: { type: String, enum: ['auto_confirm', 'approval'], default: 'auto_confirm' },
 
     // ── Branding & appearance ─────────────────────────────────────────────────
@@ -667,11 +667,17 @@ const eventSchema = new mongoose.Schema({
     enableHoneypot:        { type: Boolean, default: true },
 
     // ── Gmail OAuth (organizer connects their own Gmail to send RSVP notifications) ──
+    // accessToken/refreshToken are real, usable credentials for the
+    // organizer's Gmail account — select: false means no query anywhere in
+    // the app returns them unless it explicitly opts in with
+    // .select('+rsvpPage.gmailAuth.accessToken +rsvpPage.gmailAuth.refreshToken').
+    // connected/email/expiresAt stay selectable — they're just display
+    // metadata, not secrets, and admin.js's dashboard already relies on them.
     gmailAuth: {
       connected:    { type: Boolean, default: false },
       email:        { type: String,  default: '' },
-      accessToken:  { type: String,  default: '' },
-      refreshToken: { type: String,  default: '' },
+      accessToken:  { type: String,  default: '', select: false },
+      refreshToken: { type: String,  default: '', select: false },
       expiresAt:    { type: Number,  default: 0  },
     },
 
