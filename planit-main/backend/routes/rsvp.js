@@ -249,6 +249,12 @@ function resolveHeroCoverUrl(sections, coverUrlsById) {
 }
 
 router.get('/:eventIdOrSlug/page', async (req, res, next) => {
+  // Dynamic, guest-facing, and reflects live state (counts, spotsLeft,
+  // isFull, deadlinePast). Must never be conditionally cached — Express's
+  // default ETag turns an unchanged byte-for-byte response into a 304,
+  // which axios's default validateStatus (200-299) rejects as an error,
+  // surfacing as a false "RSVP not found" on the guest page.
+  res.set('Cache-Control', 'no-store');
   try {
     const event = await resolveEvent(req.params.eventIdOrSlug);
     if (!event) return res.status(404).json({ error: 'Event not found.' });
