@@ -59,15 +59,19 @@ function getQrImageUrl(joinUrl) {
 
 // ─── Shared inline style tokens ───────────────────────────────────────────────
 
-const FONT  = `-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif`;
-const BG    = `#EDEDF2`;
+const FONT_DISPLAY = `'Outfit',-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif`;
+const FONT  = `'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif`;
+const BG    = `#EEF0FA`;
 const WHITE = `#ffffff`;
-const DARK  = `#111827`;
+const DARK  = `#14121F`;
 const MID   = `#374151`;
 const MUTED = `#6B7280`;
 const FAINT = `#9CA3AF`;
 const RULE  = `#E9EAEF`;
-const PANEL = `#F9FAFB`;
+const PANEL = `#F8F7FF`;
+const ACCENT      = `#6D5EF8`;
+const ACCENT_DARK = `#4C3FE0`;
+const ACCENT_SOFT = `#EDEBFF`;
 
 // ─── Shared fragments ─────────────────────────────────────────────────────────
 
@@ -81,6 +85,8 @@ function emailShell(title, preheader, pillLabel, headerRowHtml, bodyHtml, footer
   <meta name="x-apple-disable-message-reformatting"/>
   <title>${h(title)}</title>
   <!--[if mso]><noscript><xml><o:OfficeDocumentSettings><o:PixelsPerInch>96</o:PixelsPerInch></o:OfficeDocumentSettings></xml></noscript><![endif]-->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
     body,table,td,a{-webkit-text-size-adjust:100%;-ms-text-size-adjust:100%}
     table,td{mso-table-lspace:0pt;mso-table-rspace:0pt}
@@ -99,19 +105,19 @@ function emailShell(title, preheader, pillLabel, headerRowHtml, bodyHtml, footer
 
         <div style="display:none;max-height:0;overflow:hidden;mso-hide:all;font-size:1px;color:${BG};line-height:1px;">${h(preheader)}&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;</div>
 
-        <table role="presentation" class="card" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background:${WHITE};border-radius:12px;overflow:hidden;" bgcolor="${WHITE}">
+        <table role="presentation" class="card" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background:${WHITE};border-radius:14px;overflow:hidden;box-shadow:0 1px 3px rgba(20,18,31,0.06);" bgcolor="${WHITE}">
 
           <!-- MASTHEAD -->
           <tr>
-            <td style="background:${DARK};padding:28px 40px;" bgcolor="${DARK}">
+            <td style="background:${DARK};background:linear-gradient(135deg,${DARK} 0%,#241F3D 55%,${ACCENT_DARK} 130%);padding:28px 40px;" bgcolor="${DARK}">
               <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
                 <tr>
                   <td>
-                    <span style="font-size:20px;font-weight:800;color:${WHITE};letter-spacing:-0.5px;font-family:${FONT};">Plan<span style="color:${FAINT};">It</span></span><br/>
-                    <span style="font-size:10px;font-weight:500;letter-spacing:1.2px;text-transform:uppercase;color:rgba(255,255,255,0.28);font-family:${FONT};">Event Management Platform</span>
+                    <span style="font-size:21px;font-weight:800;color:${WHITE};letter-spacing:-0.5px;font-family:${FONT_DISPLAY};">Plan<span style="color:#B8AEFF;">It</span></span><br/>
+                    <span style="font-size:10px;font-weight:500;letter-spacing:1.2px;text-transform:uppercase;color:rgba(255,255,255,0.4);font-family:${FONT};">Event Management Platform</span>
                   </td>
                   <td align="right" valign="middle" class="pill">
-                    <span style="display:inline-block;font-size:10px;font-weight:700;letter-spacing:0.8px;text-transform:uppercase;color:rgba(255,255,255,0.55);border:1px solid rgba(255,255,255,0.18);border-radius:20px;padding:5px 14px;font-family:${FONT};">${h(pillLabel)}</span>
+                    <span style="display:inline-block;font-size:10px;font-weight:700;letter-spacing:0.8px;text-transform:uppercase;color:#DCD6FF;border:1px solid rgba(255,255,255,0.22);border-radius:20px;padding:5px 14px;font-family:${FONT};">${h(pillLabel)}</span>
                   </td>
                 </tr>
               </table>
@@ -131,7 +137,7 @@ function emailShell(title, preheader, pillLabel, headerRowHtml, bodyHtml, footer
           <tr>
             <td class="ep" style="background:${PANEL};border-top:1px solid ${RULE};padding:20px 40px;" bgcolor="${PANEL}">
               <p style="margin:0 0 4px 0;font-size:11px;color:${FAINT};line-height:1.6;font-family:${FONT};">${h(footerNote)}</p>
-              <p style="margin:0;font-size:11px;color:${FAINT};line-height:1.6;font-family:${FONT};"><a href="#unsubscribe" style="color:#6B7280;text-decoration:underline;font-family:${FONT};">Unsubscribe</a> &nbsp;&middot;&nbsp; <a href="#preferences" style="color:#6B7280;text-decoration:underline;font-family:${FONT};">Manage preferences</a></p>
+              <p style="margin:0;font-size:11px;color:${FAINT};line-height:1.6;font-family:${FONT};"><a href="#unsubscribe" style="color:${ACCENT_DARK};text-decoration:underline;font-family:${FONT};">Unsubscribe</a> &nbsp;&middot;&nbsp; <a href="#preferences" style="color:${ACCENT_DARK};text-decoration:underline;font-family:${FONT};">Manage preferences</a></p>
             </td>
           </tr>
 
@@ -158,7 +164,7 @@ function detailRows(event) {
 }
 
 function sectionCap(label) {
-  return `<p style="margin:0 0 16px 0;font-size:10px;font-weight:700;letter-spacing:1.3px;text-transform:uppercase;color:${FAINT};padding-bottom:10px;border-bottom:1px solid ${RULE};font-family:${FONT};">${h(label)}</p>`;
+  return `<p style="margin:0 0 16px 0;font-size:10px;font-weight:700;letter-spacing:1.3px;text-transform:uppercase;color:${ACCENT_DARK};padding-bottom:10px;border-bottom:2px solid ${ACCENT_SOFT};font-family:${FONT};">${h(label)}</p>`;
 }
 
 function hrule() {
@@ -170,9 +176,9 @@ function ctaButton(label, url) {
     <table role="presentation" cellpadding="0" cellspacing="0" style="margin-top:28px;width:100%;">
       <tr>
         <td align="center">
-          <!--[if mso]><v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" href="${h(url)}" style="height:50px;v-text-anchor:middle;width:260px;" arcsize="12%" stroke="f" fillcolor="${DARK}"><w:anchorlock/><center style="color:#ffffff;font-family:${FONT};font-size:15px;font-weight:700;">${h(label)}</center></v:roundrect><![endif]-->
+          <!--[if mso]><v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" href="${h(url)}" style="height:50px;v-text-anchor:middle;width:260px;" arcsize="16%" stroke="f" fillcolor="${ACCENT}"><w:anchorlock/><center style="color:#ffffff;font-family:${FONT};font-size:15px;font-weight:700;">${h(label)}</center></v:roundrect><![endif]-->
           <!--[if !mso]><!-->
-          <a href="${h(url)}" style="background:${DARK};color:#ffffff;display:inline-block;font-family:${FONT};font-size:15px;font-weight:700;line-height:50px;text-align:center;text-decoration:none;width:260px;border-radius:8px;letter-spacing:-0.2px;mso-hide:all;">${h(label)}</a>
+          <a href="${h(url)}" style="background:${ACCENT};background:linear-gradient(135deg,${ACCENT} 0%,${ACCENT_DARK} 100%);color:#ffffff;display:inline-block;font-family:${FONT};font-size:15px;font-weight:700;line-height:50px;text-align:center;text-decoration:none;width:260px;border-radius:10px;letter-spacing:-0.2px;mso-hide:all;">${h(label)}</a>
           <!--<![endif]-->
         </td>
       </tr>
@@ -222,8 +228,8 @@ function buildConfirmation(event) {
   const headerRow = `
     <tr>
       <td class="ep" style="padding:36px 40px 30px 40px;border-bottom:1px solid ${RULE};">
-        <span style="display:inline-block;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:${MID};background:#F3F4F6;padding:5px 12px;border-radius:5px;margin-bottom:16px;font-family:${FONT};">Event Created</span>
-        <h1 style="margin:0 0 12px 0;font-size:24px;font-weight:800;color:${DARK};letter-spacing:-0.5px;line-height:1.2;font-family:${FONT};">Your event is live.</h1>
+        <span style="display:inline-block;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:${ACCENT_DARK};background:${ACCENT_SOFT};padding:5px 12px;border-radius:6px;margin-bottom:16px;font-family:${FONT};">Event Created</span>
+        <h1 style="margin:0 0 12px 0;font-size:24px;font-weight:800;color:${DARK};letter-spacing:-0.5px;line-height:1.2;font-family:${FONT_DISPLAY};">Your event is live.</h1>
         <p style="margin:0;font-size:15px;color:${MUTED};line-height:1.65;font-family:${FONT};">Your dashboard is ready. Share the join link below or print the QR code to display at your venue. Guests join in seconds with no account needed.</p>
       </td>
     </tr>`;
@@ -264,8 +270,8 @@ function buildReminder(event) {
   const headerRow = `
     <tr>
       <td class="ep" style="padding:36px 40px 30px 40px;border-bottom:1px solid ${RULE};">
-        <span style="display:inline-block;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:${MID};background:#F3F4F6;padding:5px 12px;border-radius:5px;margin-bottom:16px;font-family:${FONT};">${h(label)}</span>
-        <h1 style="margin:0 0 12px 0;font-size:24px;font-weight:800;color:${DARK};letter-spacing:-0.5px;line-height:1.2;font-family:${FONT};">Your event starts ${timeStr}.</h1>
+        <span style="display:inline-block;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:${ACCENT_DARK};background:${ACCENT_SOFT};padding:5px 12px;border-radius:6px;margin-bottom:16px;font-family:${FONT};">${h(label)}</span>
+        <h1 style="margin:0 0 12px 0;font-size:24px;font-weight:800;color:${DARK};letter-spacing:-0.5px;line-height:1.2;font-family:${FONT_DISPLAY};">Your event starts ${timeStr}.</h1>
         <p style="margin:0;font-size:15px;color:${MUTED};line-height:1.65;font-family:${FONT};">Everything on PlanIt is ready. Here is a short checklist to keep handy before you head in.</p>
       </td>
     </tr>`;
@@ -315,7 +321,7 @@ function buildThankyou(event) {
     <tr>
       <td class="ep" style="background:${DARK};padding:36px 40px 30px 40px;border-bottom:1px solid #1F2937;" bgcolor="${DARK}">
         <span style="display:inline-block;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:rgba(255,255,255,0.4);background:rgba(255,255,255,0.08);padding:5px 12px;border-radius:5px;margin-bottom:16px;font-family:${FONT};">That is a wrap</span>
-        <h1 style="margin:0 0 12px 0;font-size:24px;font-weight:800;color:${WHITE};letter-spacing:-0.5px;line-height:1.2;font-family:${FONT};">Well done. Truly.</h1>
+        <h1 style="margin:0 0 12px 0;font-size:24px;font-weight:800;color:${WHITE};letter-spacing:-0.5px;line-height:1.2;font-family:${FONT_DISPLAY};">Well done. Truly.</h1>
         <p style="margin:0;font-size:15px;color:rgba(255,255,255,0.4);line-height:1.65;font-family:${FONT};">A personal note about ${h(event.title)} from the founder.</p>
       </td>
     </tr>`;
@@ -433,7 +439,7 @@ function buildRsvpGuestConfirmation({ guestName, guestFirstName, guestEmail, eve
     <tr>
       <td class="ep" style="padding:36px 40px 30px 40px;border-bottom:1px solid ${RULE};">
         <span style="display:inline-block;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#fff;background:${accentColor};padding:5px 12px;border-radius:5px;margin-bottom:16px;font-family:${FONT};">${h(pillLabel)}</span>
-        <h1 style="margin:0 0 12px 0;font-size:24px;font-weight:800;color:${DARK};letter-spacing:-0.5px;line-height:1.2;font-family:${FONT};">
+        <h1 style="margin:0 0 12px 0;font-size:24px;font-weight:800;color:${DARK};letter-spacing:-0.5px;line-height:1.2;font-family:${FONT_DISPLAY};">
           ${status === 'waitlisted' ? "You're on the waitlist." : status === 'pending' ? "We've received your RSVP." : "You're all set!"}
         </h1>
         <p style="margin:0;font-size:15px;color:${MUTED};line-height:1.65;font-family:${FONT};">
@@ -462,7 +468,7 @@ function buildRsvpGuestConfirmation({ guestName, guestFirstName, guestEmail, eve
 
 // ─── Core send ────────────────────────────────────────────────────────────────
 
-async function _send(to, subject, html, { replyTo } = {}) {
+async function _send(to, subject, html, { replyTo, from } = {}) {
   const routerUrl = process.env.ROUTER_URL;
   if (!routerUrl) {
     console.warn('[email] ROUTER_URL not set - cannot relay email');
@@ -470,6 +476,7 @@ async function _send(to, subject, html, { replyTo } = {}) {
   }
   const payload = { to, subject, html };
   if (replyTo) payload.replyTo = replyTo;
+  if (from) payload.from = from;
   const r = await meshPost(CALLER, `${routerUrl}/mesh/email`, payload, { timeout: 15000 });
   if (r.ok) {
     console.log(`[email] Sent "${subject}" -> ${to}`);
@@ -520,11 +527,73 @@ async function sendEventThankyou(event) {
  * @param {string|null} [opts.customBody]    - Organizer-defined body (supports {{name}}, {{event}}, etc.)
  */
 async function sendRsvpGuestConfirmation(opts) {
-  const { guestEmail } = opts;
-  if (!guestEmail) return;
-  if (!(await checkLimit(guestEmail))) return;
+  const { guestEmail, organizerEmail } = opts;
+  if (!guestEmail) return false;
+  if (!(await checkLimit(guestEmail))) return false;
   const { subject, html } = buildRsvpGuestConfirmation(opts);
-  await _send(guestEmail, subject, html, { replyTo: guestEmail });
+  const from = organizerEmail || undefined;
+  return _send(guestEmail, subject, html, { replyTo: organizerEmail || undefined, from });
+}
+
+// ─── Organizer "New RSVP" notification (no-reply-relay fallback) ──────────────
+// Mirrors the Gmail-send version built in router/server.js's _buildRsvpNotificationHtml,
+// used only when the organizer hasn't connected Gmail (or that send failed) so
+// they still get notified — sent as their own address, Reply-To the guest.
+
+function buildRsvpOrganizerNotification({ guestName, guestEmail, guestPhone, response, status, plusOnes, eventTitle, eventDate }) {
+  const responseLabel = response === 'yes' ? 'Attending' : response === 'no' ? 'Not Attending' : 'Maybe';
+  const statusLabel   = status === 'waitlisted' ? 'Waitlisted' : status === 'pending' ? 'Pending Approval' : 'Confirmed';
+
+  const rows = [
+    ['Guest',    guestName],
+    ['Email',    guestEmail],
+    ['Phone',    guestPhone],
+    ['Response', responseLabel],
+    ['Status',   statusLabel],
+    plusOnes > 0 ? ['Plus-ones', String(plusOnes)] : null,
+    ['Event',    eventTitle],
+    ['Date',     eventDate ? fmtDate(eventDate) : null],
+  ].filter(Boolean).filter(([, v]) => v).map(([k, v]) => `
+    <tr>
+      <td style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:${FAINT};width:90px;padding:8px 0;vertical-align:top;font-family:${FONT};">${h(k)}</td>
+      <td style="font-size:15px;color:${MID};padding:8px 0 8px 12px;line-height:1.45;font-family:${FONT};">${h(String(v))}</td>
+    </tr>`).join('');
+
+  const headerRow = `
+    <tr>
+      <td class="ep" style="padding:36px 40px 30px 40px;border-bottom:1px solid ${RULE};">
+        <h1 style="margin:0 0 12px 0;font-size:24px;font-weight:800;color:${DARK};letter-spacing:-0.5px;line-height:1.2;font-family:${FONT_DISPLAY};">New RSVP</h1>
+        <p style="margin:0;font-size:15px;color:${MUTED};line-height:1.65;font-family:${FONT};">
+          ${h(guestName || 'Someone')} just responded to <strong>${h(eventTitle || 'your event')}</strong>.
+        </p>
+      </td>
+    </tr>`;
+
+  const bodyContent = `
+    ${sectionCap('RSVP Details')}
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0">${rows}</table>`;
+
+  const subject = `New RSVP: ${guestName || 'Someone'} for ${eventTitle || 'your event'}`;
+
+  return {
+    subject,
+    html: emailShell(subject, subject, 'New RSVP', headerRow, bodyContent, 'You received this because you are the organizer of this event.'),
+  };
+}
+
+/**
+ * Notify the organizer of a new RSVP via the no-reply relay. Only used when
+ * the organizer hasn't connected Gmail (or their Gmail send failed) — the
+ * Gmail-connected path in rsvp.js already sends as the organizer's own inbox.
+ * Sent "from" the organizer's own address and "reply-to" the guest, so a
+ * reply goes straight to the person who just RSVP'd.
+ */
+async function sendRsvpOrganizerNotification(opts) {
+  const { organizerEmail, guestEmail } = opts;
+  if (!organizerEmail) return false;
+  if (!(await checkLimit(organizerEmail))) return false;
+  const { subject, html } = buildRsvpOrganizerNotification(opts);
+  return _send(organizerEmail, subject, html, { replyTo: guestEmail || undefined, from: organizerEmail });
 }
 
 module.exports = {
@@ -532,5 +601,6 @@ module.exports = {
   sendEventReminder,
   sendEventThankyou,
   sendRsvpGuestConfirmation,
+  sendRsvpOrganizerNotification,
   buildRsvpGuestConfirmation,
 };
