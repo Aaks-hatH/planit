@@ -23,9 +23,15 @@
  *    subdomain → validate the cached token locally → fetch → on 401/403
  *    drop into JoinGate → on success, load once more.
  *
- * NOTE: the Analytics tab was deliberately removed from this page — guests
- * & check-in is the one thing organizers of an RSVP-only event need, and it
- * now renders directly (no tab bar) instead of competing with a second tab.
+ * ANALYTICS TAB: an earlier version of this file deliberately left this
+ * tab out entirely, on the reasoning that guests & check-in was the one
+ * thing rsvpOnly organizers needed. That's been revisited — organizers
+ * kept asking "did anyone even see this?", which guest list alone can't
+ * answer. Rather than bolt on the full Analytics.jsx (built for standard
+ * events — tasks/budget/chat, none of which exist here), this uses a new,
+ * narrow RSVPAnalytics.jsx that shows exactly two numbers: page opens
+ * (RSVPPageView, recorded by RSVPPage.jsx) and RSVP submissions. Guests
+ * stays the default tab so the primary workflow is unchanged.
  *
  * SCOPE NOTE on the "Builder" tab: RSVPPageBuilder.jsx (Part 4) is already
  * a complete full-page experience with its own header, save-state, and
@@ -40,21 +46,21 @@
  *
  * THEME NOTE: this shell is light (bg-neutral-50 / white cards), matching
  * EventSpace.jsx — the standard dashboard this page stands in for — and,
- * just as importantly, matching RSVPDashboard.jsx and Analytics.jsx below,
- * which are shared components built entirely with light Tailwind classes
- * (bg-white, text-neutral-900, border-neutral-200, etc). An earlier version
- * of this file used a dark shell (bg-[#0a0a12]/text-white) around those same
- * light components, which is what produced the "white boxes floating on a
- * dark background" look. Don't flip this back to dark without also reworking
- * RSVPDashboard/Analytics, since they're reused as-is inside OrganizerSettings
- * (a light modal) too.
+ * just as importantly, matching RSVPDashboard.jsx and RSVPAnalytics.jsx
+ * below, which are light-theme components (bg-white, text-neutral-900,
+ * border-neutral-200, etc). An earlier version of this file used a dark
+ * shell (bg-[#0a0a12]/text-white) around those same light components, which
+ * is what produced the "white boxes floating on a dark background" look.
+ * Don't flip this back to dark without also reworking RSVPDashboard, since
+ * it's reused as-is inside OrganizerSettings (a light modal) too.
  */
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, ExternalLink, LayoutTemplate, ChevronRight, Sparkles } from 'lucide-react';
+import { ArrowLeft, ExternalLink, LayoutTemplate, ChevronRight, Sparkles, Users, BarChart3 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { eventAPI } from '../services/api';
 import RSVPDashboard from '../components/RSVPDashboard';
+import RSVPAnalytics from '../components/RSVPAnalytics';
 import { JoinGate } from './EventSpace';
 import FeatureTour from '../components/tour/FeatureTour';
 
@@ -69,6 +75,7 @@ export default function RSVPEventDashboard() {
   const [event, setEvent]         = useState(null);
   const [loading, setLoading]     = useState(true);
   const [showTour, setShowTour]   = useState(false);
+  const [tab, setTab]             = useState('guests'); // 'guests' | 'analytics'
 
   // First-run tour — same `?new=1` + localStorage convention as EventSpace.jsx
   useEffect(() => {
@@ -234,10 +241,34 @@ export default function RSVPEventDashboard() {
           <ChevronRight className="w-[18px] h-[18px] text-neutral-300" />
         </button>
 
-        {/* Guests & Check-in */}
+        {/* Guests & Check-in / Analytics */}
         <div className="bg-white rounded-2xl border border-neutral-200/80 overflow-hidden">
+          <div className="flex border-b border-neutral-200/80 px-2">
+            <button
+              onClick={() => setTab('guests')}
+              className={`flex items-center gap-1.5 px-3 py-3 text-xs font-semibold border-b-2 transition-colors ${
+                tab === 'guests'
+                  ? 'border-neutral-900 text-neutral-900'
+                  : 'border-transparent text-neutral-400 hover:text-neutral-600'
+              }`}
+            >
+              <Users className="w-3.5 h-3.5" /> Guests
+            </button>
+            <button
+              onClick={() => setTab('analytics')}
+              className={`flex items-center gap-1.5 px-3 py-3 text-xs font-semibold border-b-2 transition-colors ${
+                tab === 'analytics'
+                  ? 'border-neutral-900 text-neutral-900'
+                  : 'border-transparent text-neutral-400 hover:text-neutral-600'
+              }`}
+            >
+              <BarChart3 className="w-3.5 h-3.5" /> Analytics
+            </button>
+          </div>
           <div className="p-4 sm:p-5">
-            <RSVPDashboard event={event} eventId={eventId} />
+            {tab === 'guests'
+              ? <RSVPDashboard event={event} eventId={eventId} />
+              : <RSVPAnalytics eventId={eventId} />}
           </div>
         </div>
       </div>
