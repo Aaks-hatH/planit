@@ -9,7 +9,7 @@ const axios        = require('axios');
 const http         = require('http');
 const https        = require('https');
 const crypto       = require('crypto');
-const { meshAuth, meshGet, meshPost } = require('./mesh');
+const { meshAuth, meshGet, meshPost } = require('./middleware/mesh');
 
 // ── Real-IP header signing ─────────────────────────────────────────────────────
 // MESH_SECRET is the same shared secret used for mesh HMAC auth.
