@@ -98,7 +98,14 @@ export default function RSVPPage() {
 
   const loadPage = async () => {
     try {
-      const res = await rsvpAPI.getPage(slug);
+      let res = await rsvpAPI.getPage(slug);
+      // A bare 304 has no body by spec (validateStatus above lets it through
+      // instead of throwing) — if that ever happens on a first load, where
+      // there's no earlier fetch in this tab to fall back on, force one
+      // cache-busted retry rather than showing a false "not found".
+      if (res.status === 304 && !res.data) {
+        res = await rsvpAPI.getPage(slug, { params: { _: Date.now() } });
+      }
       setPageData(res.data);
       // Public config + resolved cover URL travel together on the same
       // response so guests never see a flash of missing sections; the
