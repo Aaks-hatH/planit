@@ -168,7 +168,11 @@ async function resolveRsvp([, slug], apiBase) {
   return {
     title,
     description: truncate([subtitle, data.description].filter(Boolean).join(' — ') || `RSVP to ${title} on PlanIt.`, 200),
-    image: shareableImage(data.rsvpPage?.coverImageUrl) || shareableImage(firstCover) || DEFAULT_IMAGE,
+    // heroCoverUrl (added backend-side) already accounts for a hero's direct
+    // content.coverImageUrl — the path the builder's normal "Upload Cover"
+    // flow actually uses — not just the coverImageId->File lookup. Keep the
+    // older fields as fallbacks for events that predate that field.
+    image: shareableImage(data.heroCoverUrl) || shareableImage(data.rsvpPage?.coverImageUrl) || shareableImage(firstCover) || DEFAULT_IMAGE,
   };
 }
 
