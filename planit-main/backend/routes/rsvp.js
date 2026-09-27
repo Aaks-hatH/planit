@@ -5,6 +5,7 @@
 //
 // Public endpoints (no auth required):
 //   GET  /api/rsvp/:eventIdOrSlug/page          — public event info for the RSVP page
+//   POST /api/rsvp/:eventIdOrSlug/track-view     — records one deduplicated page "open"
 //   POST /api/rsvp/:eventIdOrSlug/submit         — submit an RSVP
 //   GET  /api/rsvp/submission/:editToken         — guest views their own RSVP
 //   PATCH /api/rsvp/submission/:editToken        — guest edits their own RSVP
@@ -17,6 +18,7 @@
 //   GET    /api/rsvp/:eventId/export.csv         — CSV export
 //   PATCH  /api/rsvp/:eventId/settings           — update RSVP page settings
 //   GET    /api/rsvp/:eventId/stats              — submission stats
+//   GET    /api/rsvp/:eventId/analytics          — opens vs. submissions (Analytics tab)
 // ─────────────────────────────────────────────────────────────────────────────
 
 const express  = require('express');
@@ -24,6 +26,7 @@ const router   = express.Router();
 const crypto   = require('crypto');
 const Event    = require('../models/Event');
 const RSVPSubmission = require('../models/RSVPSubmission');
+const RSVPPageView = require('../models/RSVPPageView');
 const WhiteLabel = require('../models/WhiteLabel');
 const File     = require('../models/File');
 const { verifyOrganizer } = require('../middleware/auth');
@@ -141,6 +144,19 @@ function getClientIp(req) {
     req.connection?.remoteAddress ||
     ''
   );
+}
+
+// Salted, one-way, per-day hash used to deduplicate RSVP page "opens" (see
+// RSVPPageView.js) — the same visitor reloading the page repeatedly in one
+// day collapses to a single counted open, without ever persisting their
+// raw IP. Falls back to a fixed key (still salted) if AUDIT_ENCRYPTION_KEY
+// isn't set, so this never crashes the request — it just dedupes slightly
+// less securely in that case.
+const VIEW_SALT = process.env.AUDIT_ENCRYPTION_KEY || 'planit-rsvp-view-fallback-salt';
+function buildViewSessionHash(req) {
+  const day = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+  const raw = `${getClientIp(req)}|${req.headers['user-agent'] || ''}|${day}|${VIEW_SALT}`;
+  return crypto.createHash('sha256').update(raw).digest('hex');
 }
 
 // Generate a secure edit token
@@ -326,9 +342,33 @@ router.get('/:eventIdOrSlug/page', async (req, res, next) => {
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
-// POST /api/rsvp/:eventIdOrSlug/submit
-// Public — submit an RSVP
+// POST /api/rsvp/:eventIdOrSlug/track-view
+// Public — records one deduplicated "open" of the RSVP page (see
+// RSVPPageView.js). Called fire-and-forget from RSVPPage.jsx after the page
+// data has loaded — never from the bot-preview path in server.js, since
+// that path never runs client JS, so link-preview crawlers (WhatsApp,
+// Facebook, etc.) never inflate this count.
+// Always responds 204 and never throws to the client — a tracking failure
+// must never be visible to a guest or block them from RSVPing.
 // ─────────────────────────────────────────────────────────────────────────────
+router.post('/:eventIdOrSlug/track-view', async (req, res) => {
+  try {
+    const event = await resolveEvent(req.params.eventIdOrSlug, '_id');
+    if (!event) return res.status(204).end();
+
+    await RSVPPageView.create({
+      eventId:     event._id,
+      sessionHash: buildViewSessionHash(req),
+    });
+  } catch (err) {
+    // E11000 duplicate key = this visitor already counted today; anything
+    // else is logged but still never surfaced to the guest.
+    if (err?.code !== 11000) console.warn('[rsvp track-view]', err.message);
+  }
+  res.status(204).end();
+});
+
+
 router.post('/:eventIdOrSlug/submit', async (req, res, next) => {
   try {
     const event = await resolveEvent(
@@ -1294,7 +1334,31 @@ router.get('/:eventId/stats', verifyOrganizer, async (req, res, next) => {
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
-// GET /api/rsvp/:eventId/gmail/status
+// GET /api/rsvp/:eventId/analytics
+// Organizer — the Analytics tab in RSVPEventDashboard.jsx. Deliberately just
+// two numbers (opens, submissions) rather than the full standard-event
+// Analytics.jsx (tasks/budget/chat don't exist in rsvpOnly mode — see that
+// dashboard's file header). RSVPSubmission.deletedAt filter mirrors /stats
+// above so "submitted" here means the same thing it means everywhere else
+// in this file.
+// ─────────────────────────────────────────────────────────────────────────────
+router.get('/:eventId/analytics', verifyOrganizer, async (req, res, next) => {
+  try {
+    const mongoose = require('mongoose');
+    const eventObjectId = mongoose.Types.ObjectId.createFromHexString
+      ? mongoose.Types.ObjectId.createFromHexString(req.params.eventId)
+      : new mongoose.Types.ObjectId(req.params.eventId);
+
+    const [opens, submissions] = await Promise.all([
+      RSVPPageView.countDocuments({ eventId: eventObjectId }),
+      RSVPSubmission.countDocuments({ eventId: eventObjectId, deletedAt: null }),
+    ]);
+
+    res.json({ opens, submissions });
+  } catch (err) { next(err); }
+});
+
+
 // Organizer — returns whether Gmail is connected for this event's RSVP notifications
 // ─────────────────────────────────────────────────────────────────────────────
 router.get('/:eventId/gmail/status', verifyOrganizer, async (req, res, next) => {
