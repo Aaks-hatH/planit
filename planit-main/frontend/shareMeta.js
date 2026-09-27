@@ -57,10 +57,18 @@ function shareableImage(url) {
 
   // Cloudinary URLs look like:
   //   https://res.cloudinary.com/<cloud>/image/upload/v123/path/file.svg
-  // Inserting f_png,q_auto right after /upload/ asks Cloudinary to
-  // deliver a rasterized PNG of the same asset instead.
-  const m = clean.match(/^(https?:\/\/res\.cloudinary\.com\/[^/]+\/image\/upload\/)(.*)$/i);
-  if (m) return `${m[1]}f_png,q_auto/${m[2]}`;
+  // Facebook/WhatsApp's crawler (and others) flatly don't support SVG for
+  // og:image — jpg/png/gif/webp only, no exceptions. Cloudinary rasterizes
+  // on the fly if we ask for f_png, but some validators sniff the URL's own
+  // file extension (not just the response Content-Type) before deciding
+  // whether to even fetch it — so this rewrites BOTH the transform flag
+  // *and* the trailing extension, giving back a URL that reads as a plain
+  // .png the whole way through, e.g.:
+  //   .../upload/f_png,q_auto/v123/path/file.png
+  // Cloudinary honors the f_png flag regardless of the extension asked
+  // for, so this is a safe rename, not just cosmetic.
+  const m = clean.match(/^(https?:\/\/res\.cloudinary\.com\/[^/]+\/image\/upload\/)(.*)\.svg$/i);
+  if (m) return `${m[1]}f_png,q_auto/${m[2]}.png`;
 
   // Not a Cloudinary URL we know how to transform — can't safely serve
   // this SVG to crawlers, so signal "no usable image" and let the caller
