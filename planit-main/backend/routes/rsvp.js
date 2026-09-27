@@ -56,7 +56,7 @@ function sanitizeSectionsRichText(sections) {
     };
   });
 }
-const { sendRsvpGuestConfirmation, buildRsvpGuestConfirmation } = require('../services/emailService');
+const { sendRsvpGuestConfirmation, sendRsvpOrganizerNotification, buildRsvpGuestConfirmation } = require('../services/emailService');
 const { analyzeRsvp } = require('../services/spamDetector');
 const { verifyTurnstile } = require('../services/captchaService');
 const { sendAntiAbuse } = require('../services/antiAbuseResponses');
@@ -86,7 +86,7 @@ async function sendGuestConfirmation(event, opts) {
       subject,
       html,
     }, { timeout: 15000 }).catch(() => ({ ok: false }));
-    if (result.ok) return;
+    if (result.ok) return true;
     // Gmail send failed (expired grant, API error, etc.) — still get the
     // confirmation to the guest via the no-reply relay rather than dropping it.
   }
@@ -507,6 +507,14 @@ router.post('/:eventIdOrSlug/submit', async (req, res, next) => {
                 editToken,
                 customSubject:   rsvpPage.confirmationEmailSubject || null,
                 customBody:      rsvpPage.confirmationEmailBody    || null,
+                organizerEmail:  rsvpPage.organizerNotifyEmail?.trim() || event.organizerEmail || null,
+              }).then((sent) => {
+                if (sent) {
+                  RSVPSubmission.updateOne(
+                    { _id: submission._id },
+                    { confirmationEmailSent: true, confirmationEmailSentAt: new Date() }
+                  ).catch(() => {});
+                }
               }).catch(() => {});
             }
             return res.json({
@@ -673,16 +681,28 @@ router.post('/:eventIdOrSlug/submit', async (req, res, next) => {
         editToken,
         customSubject:  rsvpPage.confirmationEmailSubject || null,
         customBody:     rsvpPage.confirmationEmailBody    || null,
+        // Used as Reply-To when the send falls back to the no-reply relay,
+        // so guests replying to their confirmation reach the organizer.
+        organizerEmail: rsvpPage.organizerNotifyEmail?.trim() || event.organizerEmail || null,
+      }).then((sent) => {
+        if (sent) {
+          RSVPSubmission.updateOne(
+            { _id: submission._id },
+            { confirmationEmailSent: true, confirmationEmailSentAt: new Date() }
+          ).catch(() => {});
+        }
       }).catch(() => {});
     }
 
-    // Fire-and-forget: send Gmail RSVP notification to organizer if connected
+    // Fire-and-forget: send Gmail RSVP notification to organizer if connected,
+    // otherwise fall back to the no-reply relay sent as the organizer's own
+    // address, so the organizer is always notified either way.
     if (rsvpPage.notifyOrganizerOnRsvp !== false) {
       const routerUrl = ROUTER_URL();
       const gmailAuth = event.rsvpPage?.gmailAuth;
-      if (routerUrl && gmailAuth?.connected && gmailAuth.refreshToken) {
-        const notifyTo = rsvpPage.organizerNotifyEmail?.trim() || event.organizerEmail || '';
-        if (notifyTo) {
+      const notifyTo = rsvpPage.organizerNotifyEmail?.trim() || event.organizerEmail || '';
+      if (notifyTo) {
+        if (routerUrl && gmailAuth?.connected && gmailAuth.refreshToken) {
           meshPost(CALLER, `${routerUrl}/mesh/gmail-send`, {
             eventId:      String(event._id),
             to:           notifyTo,
@@ -698,7 +718,32 @@ router.post('/:eventIdOrSlug/submit', async (req, res, next) => {
             plusOnes:     Number(plusOnes) || 0,
             eventTitle:   event.title,
             eventDate:    event.date || null,
-          }, { timeout: 15000 }).catch(() => {});
+          }, { timeout: 15000 }).catch(() => {
+            // Gmail send failed — still get the notification out via the relay.
+            sendRsvpOrganizerNotification({
+              organizerEmail: notifyTo,
+              guestName:      `${firstName.trim()}${lastName?.trim() ? ' ' + lastName.trim() : ''}`,
+              guestEmail:     email?.trim() || '',
+              guestPhone:     phone?.trim() || '',
+              response:       submission.response,
+              status:         submission.status,
+              plusOnes:       Number(plusOnes) || 0,
+              eventTitle:     event.title,
+              eventDate:      event.date || null,
+            }).catch(() => {});
+          });
+        } else {
+          sendRsvpOrganizerNotification({
+            organizerEmail: notifyTo,
+            guestName:      `${firstName.trim()}${lastName?.trim() ? ' ' + lastName.trim() : ''}`,
+            guestEmail:     email?.trim() || '',
+            guestPhone:     phone?.trim() || '',
+            response:       submission.response,
+            status:         submission.status,
+            plusOnes:       Number(plusOnes) || 0,
+            eventTitle:     event.title,
+            eventDate:      event.date || null,
+          }).catch(() => {});
         }
       }
     }
@@ -1412,3 +1457,4 @@ router.post('/mesh/gmail-save', require('../middleware/mesh').meshAuth(process.e
 });
 
 module.exports = router;
+module.exports.sendGuestConfirmation = sendGuestConfirmation;
