@@ -606,15 +606,7 @@ export const discoverAPI = {
 // ─── RSVP API ─────────────────────────────────────────────────────────────────
 export const rsvpAPI = {
   // Public
-  // validateStatus accepts 304 alongside the normal 2xx range: the backend
-  // route now sends Cache-Control: no-store so this shouldn't happen going
-  // forward, but a lingering CDN/proxy revalidation shouldn't crash the
-  // guest page either way — see loadPage() in RSVPPage.jsx for how an empty
-  // 304 body is handled.
-  getPage:          (idOrSlug, extraConfig = {}) => api.get(`/rsvp/${idOrSlug}/page`, {
-    validateStatus: (status) => (status >= 200 && status < 300) || status === 304,
-    ...extraConfig,
-  }),
+  getPage:          (idOrSlug)           => api.get(`/rsvp/${idOrSlug}/page`),
   trackView:        (idOrSlug)           => api.post(`/rsvp/${idOrSlug}/track-view`),
   verifyPassword:   (eventId, password)  => api.post(`/rsvp/${eventId}/verify-password`, { password }),
   submit:           (idOrSlug, data)     => api.post(`/rsvp/${idOrSlug}/submit`, data),
@@ -635,6 +627,7 @@ export const rsvpAPI = {
   bulkApprove:      (eventId, ids)       => api.post(`/rsvp/${eventId}/submissions/bulk-approve`, { ids }),
   bulkDecline:      (eventId, ids)       => api.post(`/rsvp/${eventId}/submissions/bulk-decline`, { ids }),
   getStats:         (eventId)            => api.get(`/rsvp/${eventId}/stats`),
+  getAnalytics:     (eventId)            => api.get(`/rsvp/${eventId}/analytics`),
   exportCsv:        (eventId)            => `${API_URL}/rsvp/${eventId}/export.csv`,
   getGmailStatus:   (eventId)            => api.get(`/rsvp/${eventId}/gmail/status`),
   disconnectGmail:  (eventId)            => api.delete(`/rsvp/${eventId}/gmail/disconnect`),
