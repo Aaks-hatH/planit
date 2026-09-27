@@ -371,7 +371,7 @@ function applyTemplateTokens(str, tokens, { escapeHtml = false } = {}) {
 
 function buildRsvpGuestConfirmation({ guestName, guestFirstName, guestEmail, eventTitle, eventDate, eventLocation, response, status, plusOnes, editToken, customSubject, customBody }) {
   const base      = (process.env.FRONTEND_URL || '').split(',')[0].trim().replace(/\/$/, '');
-  const editUrl   = editToken && base ? `${base}/rsvp/edit/${editToken}` : null;
+  const editUrl   = editToken && base ? `${base}/rsvp/manage/${editToken}` : null;
 
   const responseLabel = response === 'yes' ? 'Attending' : response === 'no' ? 'Not Attending' : 'Maybe';
   const statusLabel   = status === 'waitlisted' ? 'Waitlisted' : status === 'pending' ? 'Pending Approval' : 'Confirmed';
