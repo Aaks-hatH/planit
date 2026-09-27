@@ -194,29 +194,10 @@ async function getOrMigratePageConfig(event) {
   if (fullDoc.rsvpPageConfig?.migratedAt) return fullDoc.rsvpPageConfig; // migrated concurrently by another request
 
   const migrated = migrateFlatConfigToSections(fullDoc);
-  const newConfig = { ...migrated, migratedAt: new Date(), updatedAt: new Date(), updatedBy: 'system:lazy-migration' };
-
-  // This route is public/high-traffic (a single shared link is often
-  // fetched several times nearly simultaneously by link-preview crawlers —
-  // WhatsApp, iMessage, Slack, etc.), so multiple requests can land here
-  // for the same event before any of them has migrated it. A plain
-  // findById + .save() would race: two requests load the same __v, both
-  // try to save, and every loser throws a VersionError that bubbles up as
-  // a 500 (which callers like shareMeta.js quietly treat as "no data").
-  // findOneAndUpdate with the un-migrated condition in the filter makes
-  // the write atomic — only one concurrent request can ever win it.
-  const updated = await Event.findOneAndUpdate(
-    { _id: fullDoc._id, 'rsvpPageConfig.migratedAt': { $exists: false } },
-    { $set: { rsvpPageConfig: newConfig } },
-    { new: true }
-  );
-
-  if (!updated) {
-    // Lost the race — another request already migrated it. Use theirs.
-    const winner = await Event.findById(fullDoc._id).select('rsvpPageConfig').lean();
-    return winner?.rsvpPageConfig || newConfig;
-  }
-  return updated.rsvpPageConfig;
+  fullDoc.rsvpPageConfig = { ...migrated, migratedAt: new Date(), updatedAt: new Date(), updatedBy: 'system:lazy-migration' };
+  fullDoc.markModified('rsvpPageConfig');
+  await fullDoc.save();
+  return fullDoc.rsvpPageConfig;
 }
 
 /** Scans hero sections for a coverImageId and resolves it to a Cloudinary URL via the File model. */
@@ -282,8 +263,13 @@ router.get('/:eventIdOrSlug/page', async (req, res, next) => {
     }
 
     // Return public-safe event info + RSVP page config
-    // Never return rsvpPassword in this endpoint
-    const { rsvpPassword: _pw, ...safePage } = rsvpPage;
+    // Never return credentials or organizer-private fields from this public
+    // endpoint. gmailAuth's accessToken/refreshToken are select:false at the
+    // schema level now (so they can't come back even by accident), but strip
+    // the whole object anyway — connected/email/expiresAt are still nobody
+    // else's business, and a denylist here is exactly what let gmailAuth
+    // leak in the first place once, so keep this list deliberately explicit.
+    const { rsvpPassword: _pw, gmailAuth: _gmailAuth, organizerNotifyEmail: _orgNotifyEmail, ...safePage } = rsvpPage;
 
     const rsvpPageConfig = await getOrMigratePageConfig(event);
     const coverUrlsById = await resolveCoverUrls(rsvpPageConfig.sections);
@@ -324,7 +310,7 @@ router.post('/:eventIdOrSlug/submit', async (req, res, next) => {
   try {
     const event = await resolveEvent(
       req.params.eventIdOrSlug,
-      '+rsvpPage.rsvpPassword'
+      '+rsvpPage.rsvpPassword +rsvpPage.gmailAuth.accessToken +rsvpPage.gmailAuth.refreshToken'
     );
     if (!event) return res.status(404).json({ error: 'Event not found.' });
 
