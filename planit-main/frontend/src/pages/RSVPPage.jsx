@@ -109,6 +109,13 @@ export default function RSVPPage() {
         const cached = sessionStorage.getItem(`rsvp_pw_${res.data.eventId}`);
         if (cached) { setPwUnlocked(true); setUnlockedPw(cached); }
       }
+      // Fire-and-forget "open" tracking for the organizer's Analytics tab.
+      // Deliberately only reached once real page data has loaded and this
+      // is running as client JS — link-preview crawlers (WhatsApp,
+      // Facebook, etc.) hit the server-rendered meta tags in server.js and
+      // never execute this, so they never inflate the open count. Never
+      // awaited and never allowed to affect the guest-facing page.
+      rsvpAPI.trackView(slug).catch(() => {});
     } catch {
       setError('Event not found or RSVP is not available.');
     } finally { setLoading(false); }
