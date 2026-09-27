@@ -46,6 +46,25 @@ const INDEX_HTML_PATH = path.join(DIST_DIR, 'index.html');
 const PORT = process.env.PORT || 3000;
 const API_BASE = (process.env.VITE_API_URL || 'http://localhost:5000/api').replace(/\/+$/, '');
 
+// VITE_API_URL is normally a Vite *build-time* variable baked into the
+// client bundle via import.meta.env — but this file is a Node server
+// reading it at RUNTIME via process.env, which only works if it's also set
+// as a regular environment variable on whatever is running this process
+// (e.g. the Render dashboard's Environment tab for this Web Service, not
+// just a build arg). If it's missing here, every bot-preview resolve in
+// shareMeta.js silently fails (getJSON catches the fetch error and returns
+// null) and every page — including RSVP links — quietly falls back to the
+// generic homepage tags baked into index.html. That failure was otherwise
+// invisible outside of a per-request console.warn, so surface it loudly
+// once at boot instead.
+if (API_BASE.includes('localhost')) {
+  console.warn(
+    `[frontend] WARNING: API_BASE resolved to "${API_BASE}" — VITE_API_URL is not set in this ` +
+    'process\'s runtime environment. Bot-preview meta injection (shareMeta.js) will fail for ' +
+    'every request until VITE_API_URL is set on this service (not just at build time).'
+  );
+}
+
 // Known link-preview / unfurl bots. If a platform's preview isn't picking up
 // the new tags, check the request's User-Agent in Render's logs and add it
 // here. Intentionally doesn't try to catch generic search crawlers
