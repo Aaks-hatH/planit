@@ -116,8 +116,16 @@ export default function RSVPPage() {
       // never execute this, so they never inflate the open count. Never
       // awaited and never allowed to affect the guest-facing page.
       rsvpAPI.trackView(slug).catch(() => {});
-    } catch {
-      setError('Event not found or RSVP is not available.');
+    } catch (err) {
+      // Log the real status/cause instead of collapsing every failure mode
+      // (404, 500, timeout, a stray non-2xx like a 304) into the same
+      // generic message — that's what made this bug hard to diagnose.
+      console.error('[RSVP page load]', err.response?.status, err.response?.data || err.message);
+      setError(
+        err.response && err.response.status !== 404
+          ? 'Something went wrong loading this page — please refresh.'
+          : 'Event not found or RSVP is not available.'
+      );
     } finally { setLoading(false); }
   };
 
