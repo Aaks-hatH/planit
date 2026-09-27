@@ -41,7 +41,8 @@
     "@socket.io/redis-adapter": "^8.3.0",
     "speakeasy": "^2.0.0",
     "satori": "^0.29.0",
-    "sanitize-html": "^2.17.6"
+    "sanitize-html": "^2.17.6",
+    "http-proxy-middleware": "^2.0.6"
   },
   "devDependencies": {
     "nodemon": "^3.0.2",
