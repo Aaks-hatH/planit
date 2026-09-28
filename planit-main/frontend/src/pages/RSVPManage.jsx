@@ -119,7 +119,7 @@ export default function RSVPManage() {
               <div className="flex items-center gap-2.5">
                 <Calendar className="w-4 h-4 opacity-40 flex-shrink-0" />
                 <span className="text-sm opacity-60">
-                  {formatDateInTimezone(event.date, event.timezone || 'UTC', 'MMMM d, yyyy — h:mm a zzz')}
+                  {formatDateInTimezone(event.date, event.timezone || 'UTC', { month: 'long', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit', timeZoneName: 'short' })}
                 </span>
               </div>
             )}
