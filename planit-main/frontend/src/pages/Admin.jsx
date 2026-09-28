@@ -34,9 +34,11 @@ import {
 } from 'lucide-react';
 import api, { adminAPI, uptimeAPI, watchdogAPI, routerAPI, bugReportAPI, blogAPI } from '../services/api';
 import PlatformAnalyticsDashboard from '../components/PlatformAnalyticsDashboard';
+import PiiLookupPanel from '../components/PiiLookupPanel';
 import { SERVICE_CATEGORIES, ALL_SERVICES_FLAT } from '../utils/serviceCategories';
 import { formatNumber, formatFileSize } from '../utils/formatters';
 import { DateTime } from 'luxon';
+import { getTimezoneOptions, isValidTimezone } from '../utils/timezoneUtils';
 import toast from 'react-hot-toast';
 import TurnstileWidget from '../components/TurnstileWidget';
 import socketService from '../services/socket';
@@ -52,8 +54,16 @@ const fmt = (date) => {
   return dt.toFormat('MMM dd, yyyy HH:mm');
 };
 const rel = (date) => date ? DateTime.fromISO(date, { zone: 'UTC' }).toRelative() || '' : '';
-const utcToLocal = (d) => d ? DateTime.fromISO(d, { zone: 'UTC' }).toLocal().toFormat("yyyy-MM-dd'T'HH:mm") : '';
-const localToUtc = (s) => s ? DateTime.fromISO(s).toUTC().toISO() : '';
+// Event times are edited/displayed in the EVENT's timezone (not the admin's browser zone).
+const zoneOf = (tz) => (isValidTimezone(tz) ? tz : 'UTC');
+const utcToLocal = (d, tz) => d ? DateTime.fromISO(d, { zone: 'UTC' }).setZone(zoneOf(tz)).toFormat("yyyy-MM-dd'T'HH:mm") : '';
+const localToUtc = (s, tz) => s ? DateTime.fromISO(s, { zone: zoneOf(tz) }).toUTC().toISO() : '';
+// "Sep 28, 2026 6:30 PM EDT" — date in the event's own timezone, with abbreviation.
+const fmtEventTime = (d, tz) => {
+  if (!d) return '—';
+  const dt = DateTime.fromISO(d, { zone: 'UTC' }).setZone(zoneOf(tz));
+  return dt.isValid ? dt.toFormat('MMM dd, yyyy h:mm a ZZZZ') : '—';
+};
 const fmtUptime = (s) => {
   if (!s) return '0s';
   const d = Math.floor(s / 86400), h = Math.floor((s % 86400) / 3600), m = Math.floor((s % 3600) / 60);
@@ -407,8 +417,14 @@ function EventDetail({ event: initialEvent, onBack, onDelete, onUpdate }) {
               </div>
             ))}
             <div>
-              <label className="block text-xs font-medium text-neutral-600 mb-1">Date</label>
-              <input type="datetime-local" className="input text-sm" value={utcToLocal(editForm.date)} onChange={e => setEditForm({ ...editForm, date: localToUtc(e.target.value) })} />
+              <label className="block text-xs font-medium text-neutral-600 mb-1">Date &amp; Time <span className="text-neutral-400 font-normal">(in the event's timezone)</span></label>
+              <input type="datetime-local" className="input text-sm" value={utcToLocal(editForm.date, editForm.timezone)} onChange={e => setEditForm({ ...editForm, date: localToUtc(e.target.value, editForm.timezone) })} />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-neutral-600 mb-1">Timezone <span className="text-neutral-400 font-normal">(changing this keeps the same moment in time)</span></label>
+              <select className="input text-sm" value={editForm.timezone || 'UTC'} onChange={e => setEditForm({ ...editForm, timezone: e.target.value })}>
+                {getTimezoneOptions(editForm.timezone || 'UTC').map(tz => <option key={tz.value} value={tz.value}>{tz.label}</option>)}
+              </select>
             </div>
             <div className="flex items-center gap-6">
               {[['isPasswordProtected', 'Password Protected'], ['isEnterpriseMode', 'Enterprise Mode'], ['isTableServiceMode', 'Table Service Mode'], ['keepForever', 'Keep Forever (no auto-delete)']].map(([k, l]) => (
@@ -473,7 +489,7 @@ function EventDetail({ event: initialEvent, onBack, onDelete, onUpdate }) {
                   <h3 className="text-xs font-bold text-neutral-400 uppercase tracking-widest mb-3">Event Info</h3>
                   <dl className="space-y-3">
                     {[
-                      [Calendar, 'Date', fmt(event.date)],
+                      [Calendar, 'Date', fmtEventTime(event.date, event.timezone)],
                       [MapPin, 'Location', event.location || 'Not set'],
                       [User, 'Organizer', event.organizerName],
                       [Mail, 'Email', event.organizerEmail],
@@ -7829,14 +7845,14 @@ function FleetControl() {
 
 
 // ─── Mobile "More" nav button ─────────────────────────────────────────────────
-const MORE_SECTIONS = ['organizers','staff','employees','audit-logs','analytics','security','blocklist','banned-ips','reports','uptime','command-center','whitelabel','blog','account'];
+const MORE_SECTIONS = ['organizers','staff','employees','audit-logs','analytics','compliance','security','blocklist','banned-ips','reports','uptime','command-center','whitelabel','blog','account'];
 function MoreNavButton({ activeSection, setActiveSection, onLogout }) {
   const [open, setOpen] = React.useState(false);
   const isActive = MORE_SECTIONS.includes(activeSection);
   const labels = {
     organizers: 'Organizers', staff: 'Staff', employees: 'Team',
     'audit-logs': 'Audit Logs',
-    analytics: 'Analytics', security: 'Security', blocklist: 'Blocklist',
+    analytics: 'Analytics', compliance: 'PII & Compliance', security: 'Security', blocklist: 'Blocklist',
     'banned-ips': 'Banned IPs',
     reports: 'Reports', uptime: 'Uptime', 'command-center': 'Command',
     whitelabel: 'White Label', blog: 'Blog CMS', account: 'My Account',
@@ -7844,7 +7860,7 @@ function MoreNavButton({ activeSection, setActiveSection, onLogout }) {
   const icons = {
     organizers: Building2, staff: UserCheck, employees: Briefcase,
     'audit-logs': FileText,
-    analytics: BarChart3, security: Shield, blocklist: Ban,
+    analytics: BarChart3, compliance: ShieldAlert, security: Shield, blocklist: Ban,
     'banned-ips': ShieldAlert,
     reports: Inbox, uptime: Radio, 'command-center': Crosshair,
     whitelabel: Layers, blog: BookOpen, account: User,
@@ -12008,6 +12024,7 @@ export default function Admin() {
           {activeSection === 'audit-logs'    && !selectedEvent && <div className="max-w-5xl mx-auto"><AuditLogsPanel /></div>}
           {activeSection === 'analytics'      && !selectedEvent && <div className="max-w-5xl mx-auto"><AnalyticsPanel stats={stats} /></div>}
           {activeSection === 'platform-analytics' && !selectedEvent && <div className="max-w-6xl mx-auto"><PlatformAnalyticsDashboard /></div>}
+          {activeSection === 'compliance'     && !selectedEvent && <div className="max-w-5xl mx-auto"><PiiLookupPanel /></div>}
           {activeSection === 'fleet'          && !selectedEvent && <FleetControl />}
           {activeSection === 'security'       && !selectedEvent && <SecurityPanel />}
           {activeSection === 'blocklist'      && !selectedEvent && <BlocklistPanel />}
