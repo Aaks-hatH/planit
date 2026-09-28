@@ -16,6 +16,7 @@ import {
 import StepIndicator from '../components/StepIndicator';
 import DemoFeedback from '../components/DemoFeedback';
 import FaceModeMobileNotice from '../components/FaceModeMobileNotice';
+import LivenessPrompt from '../components/LivenessPrompt';
 import FaceTicketEvent from './FaceTicketEvent';
 
 // Match decision band — the spec suggests tuning around 0.6-0.7 depending on
@@ -249,7 +250,7 @@ function LandingScreen({ onEnroll, onScan, onEvent }) {
         <ul className="space-y-2 text-sm text-neutral-400 leading-relaxed">
           <li>&bull; This is a proof of concept, not a production security system.</li>
           <li>&bull; A printed photo or a photo shown on another screen could potentially fool a single-frame match if no live person is present.</li>
-          <li>&bull; The liveness check (blink + motion) is a best-effort beta signal, not spoof-proof.</li>
+          <li>&bull; The liveness check (random on-screen challenges) is required to pass, but it&rsquo;s still client-side and not spoof-proof.</li>
           <li>&bull; No face image or embedding is stored anywhere beyond this browser session and the QR code itself.</li>
         </ul>
       </div>
@@ -740,6 +741,7 @@ function VerifyCameraStage({ onResult, onCancel }) {
   const [phase, setPhase] = useState('camera'); // camera -> liveness -> match -> done
   const [progress, setProgress] = useState(0);
   const [ear, setEar] = useState(null);
+  const [challenge, setChallenge] = useState(null);
   const [issue, setIssue] = useState(null);
   const runningRef = useRef(false);
 
@@ -767,29 +769,29 @@ function VerifyCameraStage({ onResult, onCancel }) {
     // behavior. This makes sure any failure resets the UI to a retryable
     // state instead of locking it up.
     try {
+      setChallenge(null);
       const liveness = await runLivenessCapture(videoRef.current, {
-        durationMs: 2800,
         onSample: (s) => { setProgress(s.progress); setEar(s.ear); },
+        onChallenge: setChallenge,
       });
+      setChallenge(null);
 
-      if (liveness.faceCoverage < 0.4) {
-        setIssue('Couldn\u2019t get a clear, steady view of your face. Center your face and try again.');
+      if (!liveness.passed) {
+        setIssue(
+          liveness.reason === 'no_face' || liveness.reason === 'bad_calibration'
+            ? 'Couldn\u2019t get a clear, forward-facing view of your face. Center it, look straight ahead and try again.'
+            : liveness.reason === 'face_changed'
+              ? 'The face changed during the check. Only one person can be in front of the camera.'
+            : 'Liveness check failed \u2014 follow the on-screen prompts with your real face and try again.'
+        );
         setPhase('camera');
         return;
       }
 
+      // The descriptor comes from inside the liveness run, so the face that
+      // passed the challenges is the face that gets matched.
       setPhase('match');
-      let result = null;
-      for (let i = 0; i < 4 && !result; i++) {
-        result = await detectFaceWithDescriptor(videoRef.current);
-        if (!result) await new Promise((r) => setTimeout(r, 150));
-      }
-
-      if (!result) {
-        setIssue('Lost sight of your face for the final capture. Try again in better light.');
-        setPhase('camera');
-        return;
-      }
+      const result = { descriptor: liveness.descriptor };
 
       stop();
       setPhase('done');
@@ -807,8 +809,8 @@ function VerifyCameraStage({ onResult, onCancel }) {
     <div className="max-w-md mx-auto px-5 py-10">
       <h2 className="font-display font-bold text-2xl mb-1.5">Verify</h2>
       <p className="text-neutral-500 text-sm mb-4">
-        {phase === 'camera' && 'Hold your face in frame and blink naturally when checking begins.'}
-        {phase === 'liveness' && 'Hold steady \u2014 checking liveness\u2026'}
+        {phase === 'camera' && 'Hold your face in frame. You\u2019ll be asked to do a few quick random moves.'}
+        {phase === 'liveness' && 'Follow the prompts on the camera.'}
         {phase === 'match' && 'Capturing your face for matching\u2026'}
       </p>
       <FaceModeMobileNotice className="mb-4" />
@@ -824,6 +826,7 @@ function VerifyCameraStage({ onResult, onCancel }) {
           <>
             <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover scale-x-[-1]" />
             <div className="absolute inset-8 border-2 border-dashed border-white/30 rounded-full pointer-events-none" />
+            {phase === 'liveness' && <LivenessPrompt challenge={challenge} />}
             {phase === 'liveness' && (
               <div className="absolute bottom-0 left-0 right-0 h-1 bg-white/10">
                 <div className="h-full bg-[#8B7FFF] transition-all duration-100" style={{ width: `${progress * 100}%` }} />
@@ -899,7 +902,8 @@ function ResultScreen({ ticket, verify, onRescan, onExit }) {
     [storedDescriptor, verify.liveDescriptor]
   );
   const confidence = formatConfidence(similarity);
-  const isMatch = similarity >= MATCH_THRESHOLD;
+  const livenessPassed = !!verify.liveness?.passed;
+  const isMatch = livenessPassed && similarity >= MATCH_THRESHOLD;
 
   return (
     <div className="max-w-md mx-auto px-5 py-10">
@@ -909,7 +913,7 @@ function ResultScreen({ ticket, verify, onRescan, onExit }) {
         }`}>
           {isMatch ? <CheckCircle2 className="w-10 h-10 text-teal-300" /> : <XCircle className="w-10 h-10 text-rose-300" />}
         </div>
-        <h2 className="font-display font-extrabold text-3xl mb-1">{isMatch ? 'Match' : 'No match'}</h2>
+        <h2 className="font-display font-extrabold text-3xl mb-1">{isMatch ? 'Match' : livenessPassed ? 'No match' : 'Liveness failed'}</h2>
         <p className="text-neutral-500 text-sm">{ticket.name} &middot; {ticket.eventName}</p>
       </div>
 
@@ -917,10 +921,11 @@ function ResultScreen({ ticket, verify, onRescan, onExit }) {
         <ConfidenceMeter percent={confidence} isMatch={isMatch} />
 
         <div>
-          <span className="font-mono text-[11px] uppercase tracking-widest text-neutral-500 block mb-2">Beta liveness check</span>
+          <span className="font-mono text-[11px] uppercase tracking-widest text-neutral-500 block mb-2">Active liveness check</span>
           <div className="flex gap-2 flex-wrap">
-            <LivenessChip label="Blink detected" passed={verify.liveness.blinkDetected} />
-            <LivenessChip label="Natural motion" passed={verify.liveness.motionDetected} />
+            {(verify.liveness.challenges || []).map((c, i) => (
+              <LivenessChip key={i} label={c.label} passed={c.passed} />
+            ))}
           </div>
         </div>
 
