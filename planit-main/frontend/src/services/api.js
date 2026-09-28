@@ -89,6 +89,7 @@ export const eventAPI = {
   getBySubdomain: (subdomain)         => api.get(`/events/subdomain/${subdomain}`),
   getById:        (id)                => api.get(`/events/${id}`),
   getPublicInfo:  (id)                => api.get(`/events/public/${id}`),
+  detectTimezone: ()                  => api.get('/events/detect-timezone'),
   getParticipants:(id)                => api.get(`/events/participants/${id}`),
   getPublicParticipants:(id)          => api.get(`/events/public-participants/${id}`),
   verifyPassword: (id, data)          => api.post(`/events/verify-password/${id}`, data),
@@ -585,6 +586,8 @@ export const platformAnalyticsAPI = {
   getEventAnalytics:(id, sort)        => api.get(`/platform-analytics/by-event/${id}`, { params: sort ? { sort } : {} }),
   getGuestProfile:  (visitorId)       => api.get(`/platform-analytics/guest/${visitorId}`),
   flagVisitor:      (data)            => api.post('/platform-analytics/flag-visitor', data),
+  piiLookup:        (q)               => api.get('/platform-analytics/pii-lookup', { params: { q } }),
+  logPiiExport:     (query, format = 'json') => api.post('/platform-analytics/pii-lookup/export-log', { query, format }),
 };
 
 // ─── Bug Report API ───────────────────────────────────────────────────────────
