@@ -84,8 +84,14 @@ export function utcToLocalDateTime(utcDate, timezone = getUserTimezone()) {
  */
 export function formatDateInTimezone(utcDate, timezone = getUserTimezone(), options = {}) {
   if (!utcDate) return '';
+  // Guard against callers passing a format string instead of an options object
+  // (spreading a string would produce garbage keys like {0:'M',1:'M',...}).
+  if (typeof options !== 'object' || options === null) options = {};
+  if (!isValidTimezone(timezone)) timezone = 'UTC';
   
   try {
+    // Accept Date objects and ISO strings alike.
+    if (utcDate instanceof Date) utcDate = utcDate.toISOString();
     const dt = DateTime.fromISO(utcDate, { zone: 'UTC' }).setZone(timezone);
     
     if (!dt.isValid) {
@@ -111,6 +117,26 @@ export function formatDateInTimezone(utcDate, timezone = getUserTimezone(), opti
   }
 }
 
+export function isValidTimezone(tz) {
+  if (!tz || typeof tz !== 'string') return false;
+  try { new Intl.DateTimeFormat('en-US', { timeZone: tz }); return true; } catch { return false; }
+}
+
+/**
+ * Best-effort timezone for a NEW event: IP-based guess from the server
+ * (geo headers), falling back to the browser's timezone. Never throws.
+ */
+export async function detectTimezone(fetcher) {
+  try {
+    if (fetcher) {
+      const res = await fetcher();
+      const tz = res?.data?.timezone;
+      if (isValidTimezone(tz)) return tz;
+    }
+  } catch { /* fall through to browser tz */ }
+  return getUserTimezone();
+}
+
 /**
  * Get timezone abbreviation (e.g., "EST", "EDT", "PST")
  */
@@ -126,7 +152,17 @@ export function getTimezoneAbbr(timezone = getUserTimezone(), date = new Date())
 /**
  * Get list of common timezones for dropdowns
  */
-export function getTimezoneOptions() {
+export function getTimezoneOptions(extraValue) {
+  const base = getBaseTimezoneOptions();
+  // If the detected / saved zone isn't in the short list, add it so the
+  // <select> can actually show it.
+  if (extraValue && isValidTimezone(extraValue) && !base.some(o => o.value === extraValue)) {
+    return [{ value: extraValue, label: extraValue.replace(/_/g, ' ') }, ...base];
+  }
+  return base;
+}
+
+function getBaseTimezoneOptions() {
   return [
     { value: 'America/New_York', label: 'Eastern Time (ET)' },
     { value: 'America/Chicago', label: 'Central Time (CT)' },
