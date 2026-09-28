@@ -949,11 +949,19 @@ router.patch('/events/:eventId', verifyAdmin, requirePermission('canEditEvents')
       'title', 'description', 'date', 'location',
       'organizerName', 'organizerEmail', 'maxParticipants',
       'isPasswordProtected', 'isEnterpriseMode', 'subdomain', 'status',
-      'themeColor', 'tags', 'coverImage',
+      'themeColor', 'tags', 'coverImage', 'timezone',
     ];
     const updates = {};
     for (const field of allowed) {
       if (req.body[field] !== undefined) updates[field] = req.body[field];
+    }
+    if (updates.date === '') delete updates.date;
+    if (updates.timezone !== undefined) {
+      try { new Intl.DateTimeFormat('en-US', { timeZone: updates.timezone }); }
+      catch { return res.status(400).json({ error: 'Invalid timezone' }); }
+    }
+    if (updates.date !== undefined && updates.date !== null && updates.date !== '' && isNaN(new Date(updates.date).getTime())) {
+      return res.status(400).json({ error: 'Invalid date' });
     }
     // Allow patching nested settings fields
     // SEC FIX: keys came straight from req.body with no denylist, so a request
@@ -967,12 +975,31 @@ router.patch('/events/:eventId', verifyAdmin, requirePermission('canEditEvents')
       }
     }
 
+    // If the date is changing, remember the old one so RSVP hero/countdown blocks
+    // that were seeded from it can follow the new time (otherwise they go stale).
+    let oldDateMs = null;
+    if (updates.date) {
+      const prev = await Event.findById(req.params.eventId).select('date').lean();
+      oldDateMs = prev?.date ? new Date(prev.date).getTime() : null;
+    }
+
     const event = await Event.findByIdAndUpdate(
       req.params.eventId,
       updates,
       { new: true, runValidators: true }
     );
     if (!event) return res.status(404).json({ error: 'Event not found' });
+
+    if (updates.date && oldDateMs !== null && Array.isArray(event.rsvpPageConfig?.sections)) {
+      let touched = false;
+      for (const sec of event.rsvpPageConfig.sections) {
+        const c = sec?.content;
+        if (!c) continue;
+        if (sec.type === 'hero' && c.dateTime && new Date(c.dateTime).getTime() === oldDateMs) { c.dateTime = event.date; touched = true; }
+        if (sec.type === 'countdown' && c.targetDateTime && new Date(c.targetDateTime).getTime() === oldDateMs) { c.targetDateTime = event.date; touched = true; }
+      }
+      if (touched) { event.markModified('rsvpPageConfig'); await event.save(); }
+    }
 
     res.json({ message: 'Event updated successfully', event });
   } catch (error) {
