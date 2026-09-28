@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { getUserTimezone, localDateTimeToUTC, getTimezoneOptions } from '../utils/timezoneUtils';
+import { getUserTimezone, localDateTimeToUTC, getTimezoneOptions, detectTimezone } from '../utils/timezoneUtils';
 import { validateEmail } from '../utils/validators';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -2487,7 +2487,7 @@ function OnboardingWizard({ mode, formData, setFormData, fieldErrors, setFieldEr
 
   const update = (field) => (e) => {
     onUserInput?.();
-    setFormData(p => ({ ...p, [field]: e.target.value }));
+    setFormData(p => ({ ...p, [field]: e.target.value, ...(field === 'timezone' ? { _tzTouched: true } : {}) }));
     if (localErr[field]) setLocalErr(p => ({ ...p, [field]: '' }));
     if (fieldErrors[field]) setFieldErrors(p => ({ ...p, [field]: '' }));
   };
@@ -2650,7 +2650,7 @@ function OnboardingWizard({ mode, formData, setFormData, fieldErrors, setFieldEr
               <label style={{ fontSize:12, color:'rgba(255,255,255,0.4)', display:'block', marginBottom:6, textTransform:'uppercase', letterSpacing:'0.1em' }}>Timezone *</label>
               <div style={{ position:'relative' }}>
                 <select className="wiz-select" value={formData.timezone} onChange={update('timezone')}>
-                  {getTimezoneOptions().map(tz => <option key={tz.value} value={tz.value}>{tz.label}</option>)}
+                  {getTimezoneOptions(formData.timezone).map(tz => <option key={tz.value} value={tz.value}>{tz.label}</option>)}
                 </select>
                 <ChevronRight style={{ position:'absolute', right:14, top:'50%', transform:'translateY(-50%) rotate(90deg)', width:16, height:16, color:'rgba(255,255,255,0.3)', pointerEvents:'none' }} />
               </div>
@@ -3042,6 +3042,16 @@ export default function Home() {
     organizerName: '', organizerEmail: '', accountPassword: '', password: '', staffPassword: '',
     isEnterpriseMode: false, maxParticipants: 10000,
   });
+  // Default the timezone from the visitor's location (IP geo headers via the
+  // backend, else browser tz). Never overrides a zone the user already picked.
+  useEffect(() => {
+    let cancelled = false;
+    detectTimezone(() => eventAPI.detectTimezone()).then((tz) => {
+      if (cancelled || !tz) return;
+      setFormData(f => (f._tzTouched || f.timezone !== getUserTimezone()) ? f : { ...f, timezone: tz });
+    });
+    return () => { cancelled = true; };
+  }, []);
   const [loading, setLoading] = useState(false);
   const [created, setCreated] = useState(null);
   const [showAd, setShowAd] = useState(false);
@@ -3086,7 +3096,7 @@ export default function Home() {
   };
   const update = (field) => (e) => {
     if (!eventFormTimingRef.current.firstInputAt) eventFormTimingRef.current.firstInputAt = Date.now();
-    setFormData(prev => ({ ...prev, [field]: e.target.value, ...(field === 'subdomain' ? { _subdomainTouched: true } : {}) }));
+    setFormData(prev => ({ ...prev, [field]: e.target.value, ...(field === 'subdomain' ? { _subdomainTouched: true } : {}), ...(field === 'timezone' ? { _tzTouched: true } : {}) }));
   };
 
   // Sanitise a string: trim whitespace, collapse internal whitespace
