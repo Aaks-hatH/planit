@@ -307,7 +307,7 @@ export default function GuestInvite() {
                         <p className="text-neutral-200 font-medium">
                           {formatDateInTimezone(event.date, event.timezone || 'UTC', {
                             weekday: 'long', year: 'numeric', month: 'long',
-                            day: 'numeric', hour: 'numeric', minute: '2-digit'
+                            day: 'numeric', hour: 'numeric', minute: '2-digit', timeZoneName: 'short'
                           })}
                         </p>
                       </div>
