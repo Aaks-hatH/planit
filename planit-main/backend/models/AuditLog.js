@@ -163,6 +163,8 @@ const auditSchema = new mongoose.Schema(
         'maintenance_toggled', 'blocklist_updated',
         // Platform Analytics
         'analytics_viewed', 'analytics_exported',
+        // PII / data-subject requests
+        'pii_lookup', 'pii_export',
       ],
     },
 
