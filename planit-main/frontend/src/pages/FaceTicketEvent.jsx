@@ -7,6 +7,7 @@ import {
 import toast from 'react-hot-toast';
 import { useCameraStream } from '../hooks/useCameraStream';
 import FaceModeMobileNotice from '../components/FaceModeMobileNotice';
+import LivenessPrompt from '../components/LivenessPrompt';
 import StepIndicator from '../components/StepIndicator';
 import {
   loadFaceModels, detectFaceWithDescriptor, detectAllFacesWithDescriptors,
@@ -764,6 +765,7 @@ function CheckInFlow({ event, onExit, onComplete }) {
   const models = useFaceModels();
   const [phase, setPhase] = useState('camera'); // camera -> liveness -> match -> result -> qr-fallback
   const [progress, setProgress] = useState(0);
+  const [challenge, setChallenge] = useState(null);
   const [issue, setIssue] = useState(null);
   const [outcome, setOutcome] = useState(null); // { attendee, similarity, viaQR }
   const [checkinCount, setCheckinCount] = useState(0);
@@ -786,26 +788,25 @@ function CheckInFlow({ event, onExit, onComplete }) {
     setPhase('liveness');
     setProgress(0);
     try {
+      setChallenge(null);
       const liveness = await runLivenessCapture(videoRef.current, {
-        durationMs: 2400,
         onSample: (s) => setProgress(s.progress),
+        onChallenge: setChallenge,
       });
-      if (liveness.faceCoverage < 0.4) {
-        setIssue('Couldn\u2019t get a clear, steady view of a face. Center it and try again.');
+      setChallenge(null);
+      if (!liveness.passed) {
+        setIssue(
+          liveness.reason === 'no_face' || liveness.reason === 'bad_calibration'
+            ? 'Couldn\u2019t get a clear, forward-facing view of a face. Center it, look straight ahead and try again.'
+            : liveness.reason === 'face_changed'
+              ? 'The face changed during the check. One person at a time.'
+            : 'Liveness check failed \u2014 the guest must follow the on-screen prompts. Try again.'
+        );
         setPhase('camera');
         return;
       }
       setPhase('match');
-      let result = null;
-      for (let i = 0; i < 4 && !result; i++) {
-        result = await detectFaceWithDescriptor(videoRef.current);
-        if (!result) await new Promise((r) => setTimeout(r, 150));
-      }
-      if (!result) {
-        setIssue('Lost sight of the face for the final capture. Try again in better light.');
-        setPhase('camera');
-        return;
-      }
+      const result = { descriptor: liveness.descriptor };
 
       const roster = freshEvent().attendees;
       const match = matchAgainstRoster(result.descriptor, roster, { threshold: DEFAULT_MATCH_THRESHOLD });
@@ -935,7 +936,7 @@ function CheckInFlow({ event, onExit, onComplete }) {
       </div>
       <p className="text-neutral-500 text-sm mb-4">
         {phase === 'camera' && 'Have the guest look at the camera and tap Start.'}
-        {phase === 'liveness' && 'Hold steady \u2014 checking\u2026'}
+        {phase === 'liveness' && 'Guest: follow the prompts on the camera.'}
         {phase === 'match' && 'Matching against the roster\u2026'}
       </p>
       <FaceModeMobileNotice className="mb-4" />
@@ -951,6 +952,7 @@ function CheckInFlow({ event, onExit, onComplete }) {
           <>
             <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover scale-x-[-1]" />
             <div className="absolute inset-8 border-2 border-dashed border-white/30 rounded-full pointer-events-none" />
+            {phase === 'liveness' && <LivenessPrompt challenge={challenge} />}
             {phase === 'liveness' && (
               <div className="absolute bottom-0 left-0 right-0 h-1 bg-white/10">
                 <div className="h-full bg-[#8B7FFF] transition-all duration-100" style={{ width: `${progress * 100}%` }} />
@@ -996,10 +998,8 @@ function CheckInFlow({ event, onExit, onComplete }) {
 // person to scan their QR ticket instead \u2014 the guest drives that step
 // themselves, since nobody is standing at a kiosk to tap Start for them.
 //
-// Still beta: no liveness check runs here (there's no discrete "hold
-// still" moment the way the guided flow has one), so a confident match is
-// only ever acted on after it repeats on two scan cycles in a row for the
-// same person, as a cheap guard against a single noisy frame.
+// A confident match repeated on two scan cycles triggers the same random
+// active liveness challenge as the guided flow before anyone is checked in.
 // ═══════════════════════════════════════════════════════════════════════════
 const KIOSK_SCAN_INTERVAL_MS = 900;
 const KIOSK_CONFIRM_STREAK = 2;
@@ -1033,6 +1033,7 @@ function KioskCheckInFlow({ event, onExit }) {
   const [qrModal, setQrModal] = useState(null); // { candidate, similarity } | null
   const [manualOpen, setManualOpen] = useState(false);
   const [issue, setIssue] = useState(null);
+  const [challenge, setChallenge] = useState(null);
 
   const mountedRef = useRef(true);
   const runningRef = useRef(false);
@@ -1131,11 +1132,11 @@ function KioskCheckInFlow({ event, onExit }) {
           const streak = pendingRef.current.id === attendee.id ? pendingRef.current.count + 1 : 1;
           pendingRef.current = { id: attendee.id, count: streak };
           if (streak >= KIOSK_CONFIRM_STREAK) {
-            setCheckedIn(event.id, attendee.id, true);
-            setSessionCount((c) => c + 1);
-            pushFeed(attendee.name);
-            setStatus({ mode: 'confirmed', attendee });
             pendingRef.current = { id: null, count: 0 };
+            // A face match alone is not enough (a photo matches perfectly).
+            // Pause scanning and make the person pass the active challenge;
+            // the check-in only happens if the same person is still matched.
+            await runKioskLiveness(attendee);
           } else {
             setStatus({ mode: 'matching', attendee, similarity: match.top.similarity });
           }
@@ -1152,6 +1153,41 @@ function KioskCheckInFlow({ event, onExit }) {
     } finally {
       runningRef.current = false;
       if (mountedRef.current && !pausedRef.current) scheduleNext();
+    }
+  };
+
+  const runKioskLiveness = async (attendee) => {
+    pausedRef.current = true;
+    setOverlayBoxes([]);
+    setChallenge(null);
+    setStatus({ mode: 'liveness', attendee });
+    try {
+      const liveness = await runLivenessCapture(videoRef.current, { onChallenge: setChallenge });
+      if (!mountedRef.current) return;
+      setChallenge(null);
+      if (!liveness.passed) {
+        setIssue(liveness.reason === 'face_changed'
+          ? 'The face changed during the check. One person at a time.'
+          : 'Liveness check failed \u2014 follow the on-screen prompts with your real face.');
+        setStatus({ mode: 'idle' });
+        return;
+      }
+      const again = matchAgainstRoster(liveness.descriptor, freshEvent().attendees, { threshold: DEFAULT_MATCH_THRESHOLD });
+      if (!again.confident || again.top.attendee.id !== attendee.id) {
+        setIssue('Face didn\u2019t match after the liveness check. Try again.');
+        setStatus({ mode: 'idle' });
+        return;
+      }
+      setIssue(null);
+      setCheckedIn(event.id, attendee.id, true);
+      setSessionCount((c) => c + 1);
+      pushFeed(attendee.name);
+      setStatus({ mode: 'confirmed', attendee });
+    } catch (err) {
+      console.error('Kiosk liveness failed:', err);
+      setStatus({ mode: 'idle' });
+    } finally {
+      pausedRef.current = false;
     }
   };
 
@@ -1252,6 +1288,8 @@ function KioskCheckInFlow({ event, onExit }) {
           <>
             <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover scale-x-[-1]" />
 
+            {status.mode === 'liveness' && <LivenessPrompt challenge={challenge} />}
+
             {overlayBoxes.map((b, i) => (
               <div key={i} className="absolute pointer-events-none transition-all duration-150" style={{
                 left: b.rect.left, top: b.rect.top, width: b.rect.width, height: b.rect.height,
@@ -1286,6 +1324,12 @@ function KioskCheckInFlow({ event, onExit }) {
         )}
       </div>
 
+      {status.mode === 'liveness' && (
+        <div className="flex items-center gap-2 text-sm text-[#8B7FFF] bg-[#8B7FFF]/10 border border-[#8B7FFF]/20 rounded-lg px-3 py-2.5 mb-4">
+          <Loader2 className="w-4 h-4 shrink-0 animate-spin" />
+          {status.attendee?.name ? `${status.attendee.name}, ` : ''}follow the prompts on the screen to finish check-in.
+        </div>
+      )}
       {status.mode === 'confirmed' && (
         <div className="flex items-center gap-2 text-sm text-teal-300 bg-teal-400/10 border border-teal-400/20 rounded-lg px-3 py-2.5 mb-4">
           <CheckCircle2 className="w-4 h-4 shrink-0" />
