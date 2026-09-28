@@ -40,6 +40,19 @@ const { analyzeEvent, applyEventSpamResult } = require('../services/spamDetector
 const { verifyTurnstile } = require('../services/captchaService');
 const { sendAntiAbuse } = require('../services/antiAbuseResponses');
 
+// ── Timezone helpers ────────────────────────────────────────────────────────
+function isValidTimezone(tz) {
+  if (!tz || typeof tz !== 'string' || tz.length > 64) return false;
+  try { new Intl.DateTimeFormat('en-US', { timeZone: tz }); return true; } catch { return false; }
+}
+
+// GET /api/events/detect-timezone
+// Best-effort timezone guess from the visitor's IP, using the geo headers that
+// Cloudflare ("Add visitor location headers" managed transform) / Vercel add.
+// Returns { timezone: null } when no header is present — the client then falls
+// back to the browser's timezone. Deliberately NOT under /events/public/* so
+// the edge cache never serves one visitor's answer to another.
+
 const validate = (req, res, next) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
@@ -70,7 +83,9 @@ router.post('/',
   ],
   async (req, res, next) => {
     try {
-      const { subdomain, title, description, date, location, organizerName, organizerEmail, password, accountPassword, staffPassword, isEnterpriseMode, isTableServiceMode, eventType, settings, maxParticipants } = req.body;
+      const { subdomain, title, description, date, location, organizerName, organizerEmail, password, accountPassword, staffPassword, isEnterpriseMode, isTableServiceMode, eventType, settings, maxParticipants, timezone: rawTimezone } = req.body;
+      // Store the organizer's chosen IANA timezone (falls back to UTC only if missing/invalid).
+      const resolvedTimezone = isValidTimezone(rawTimezone) ? rawTimezone : 'UTC';
       const resolvedEventType = eventType === 'rsvpOnly' ? 'rsvpOnly' : 'standard';
 
       const existing = await Event.findOne({ subdomain });
@@ -154,7 +169,7 @@ router.post('/',
       }
 
       const event = new Event({
-        subdomain, title, description, date, location, organizerName, organizerEmail,
+        subdomain, title, description, date, timezone: resolvedTimezone, location, organizerName, organizerEmail,
         password: hashedPassword, isPasswordProtected,
         isEnterpriseMode: isEnterpriseMode || false,
         isTableServiceMode: isTableServiceMode || false,
@@ -220,6 +235,12 @@ router.post('/',
 );
 
 // Public (no-auth) participant list — only username + hasPassword, no roles
+router.get('/detect-timezone', (req, res) => {
+  const candidate = req.headers['cf-timezone'] || req.headers['x-vercel-ip-timezone'] || req.headers['x-planit-client-tz'] || null;
+  res.set('Cache-Control', 'no-store');
+  res.json({ timezone: isValidTimezone(candidate) ? candidate : null });
+});
+
 router.get('/public-participants/:eventId', async (req, res, next) => {
   try {
     const participants = await EventParticipant.find({ eventId: req.params.eventId })
@@ -278,7 +299,7 @@ router.get('/public/:eventId', async (req, res, next) => {
     res.json({
       event: {
         id: event._id, subdomain: event.subdomain, title: event.title,
-        description: event.description, date: event.date, location: event.location,
+        description: event.description, date: event.date, timezone: event.timezone || 'UTC', location: event.location,
         organizerName: event.organizerName, isPasswordProtected: event.isPasswordProtected,
         maxParticipants: event.maxParticipants, participantCount: event.participants.length,
         status: event.status, rsvpSummary: event.getRsvpSummary(),
@@ -301,7 +322,7 @@ router.get('/subdomain/:subdomain', async (req, res, next) => {
     await event.incrementViews();
     res.json({
       event: {
-        id: event._id, subdomain: event.subdomain, title: event.title, date: event.date,
+        id: event._id, subdomain: event.subdomain, title: event.title, date: event.date, timezone: event.timezone || 'UTC',
         organizerName: event.organizerName, isPasswordProtected: event.isPasswordProtected,
         requiresPassword: event.isPasswordProtected,
         description: event.isPasswordProtected ? undefined : event.description,
@@ -3637,7 +3658,7 @@ router.post('/:eventId/webhooks', verifyOrganizer,
           message_sent: 'New message sent',
         };
         const triggersText = wh.events.map(e => triggerLabels[e] || e).join(', ');
-        const eventDate = event.date ? new Date(event.date).toLocaleString('en-GB', { dateStyle: 'full', timeStyle: 'short' }) : 'Not set';
+        const eventDate = event.date ? new Date(event.date).toLocaleString('en-GB', { dateStyle: 'full', timeStyle: 'short', timeZoneName: 'short', timeZone: isValidTimezone(event.timezone) ? event.timezone : 'UTC' }) : 'Not set';
         const participantCount = (event.participants || []).length;
         const maxP = event.maxParticipants || 'Unlimited';
 
