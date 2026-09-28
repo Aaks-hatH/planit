@@ -142,6 +142,7 @@ export default function RSVPPageRenderer({
           <InViewport key={section.id} eager={eager}>
             <Block
               content={content}
+              timezone={pageData?.timezone}
               layout={section.layout}
               spacing={section.style?.spacing}
               align={section.style?.alignment}
