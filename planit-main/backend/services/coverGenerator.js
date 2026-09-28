@@ -154,7 +154,7 @@ async function generateCover(event, opts = {}) {
   const template = TEMPLATES[opts.template] ? opts.template : 'centered-stack';
   const accentColor = opts.accentColor || '#6366f1';
   const dateLabel = event.date
-    ? new Date(event.date).toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' })
+    ? new Date(event.date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric', timeZone: (() => { try { new Intl.DateTimeFormat('en-US', { timeZone: event.timezone }); return event.timezone; } catch { return 'UTC'; } })() })
     : '';
 
   const cacheKey = coverCacheKey({
