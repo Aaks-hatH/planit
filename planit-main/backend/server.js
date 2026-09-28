@@ -1543,11 +1543,15 @@ async function _gmailRefreshToken(refreshToken) {
 }
 
 function _buildRsvpNotificationHtml(data) {
-  const { guestName, guestEmail, guestPhone, response, status, plusOnes, eventTitle, eventDate } = data;
+  const { guestName, guestEmail, guestPhone, response, status, plusOnes, eventTitle, eventDate, eventTimezone } = data;
   const h = s => String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
   const responseLabel = response === 'yes' ? 'Attending' : response === 'maybe' ? 'Maybe' : 'Not Attending';
   const statusLabel   = status === 'pending' ? 'Pending Approval' : status === 'waitlisted' ? 'Waitlisted' : 'Confirmed';
-  const dateStr = eventDate ? (() => { try { return new Date(eventDate).toLocaleString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'UTC' }) + ' UTC'; } catch { return String(eventDate); } })() : '';
+  const dateStr = eventDate ? (() => {
+    let zone = 'UTC';
+    try { if (eventTimezone) { new Intl.DateTimeFormat('en-US', { timeZone: eventTimezone }); zone = eventTimezone; } } catch { zone = 'UTC'; }
+    try { return new Date(eventDate).toLocaleString('en-US', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', hour: 'numeric', minute: '2-digit', timeZone: zone, timeZoneName: 'short' }); } catch { return String(eventDate); }
+  })() : '';
 
   const rows = [
     ['Name',     guestName],
@@ -1730,7 +1734,7 @@ app.post('/mesh/gmail-send', meshAuth(SERVICE_NAME), express.json({ limit: '128k
     eventId, to, fromEmail,
     accessToken: rawAccessToken, refreshToken, expiresAt,
     guestName, guestEmail, guestPhone, response, status, plusOnes,
-    eventTitle, eventDate,
+    eventTitle, eventDate, eventTimezone,
     // Optional pre-built subject/html — used when this is relaying something
     // other than the organizer's own "New RSVP" notification (e.g. the
     // guest-facing confirmation email, built by emailService with the
@@ -1767,7 +1771,7 @@ app.post('/mesh/gmail-send', meshAuth(SERVICE_NAME), express.json({ limit: '128k
     }
 
     // Build email
-    const html    = overrideHtml || _buildRsvpNotificationHtml({ guestName, guestEmail, guestPhone, response, status, plusOnes, eventTitle, eventDate });
+    const html    = overrideHtml || _buildRsvpNotificationHtml({ guestName, guestEmail, guestPhone, response, status, plusOnes, eventTitle, eventDate, eventTimezone });
     const subject = overrideSubject || `New RSVP: ${guestName || 'Someone'} for ${eventTitle || 'your event'}`;
     const from    = fromEmail ? `"${(eventTitle || 'PlanIt').replace(/"/g, '')}" <${fromEmail}>` : fromEmail || '';
 
