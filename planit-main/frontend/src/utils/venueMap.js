@@ -1,3 +1,4 @@
+import { publicOrigin } from './publicOrigin';
 // Venue Map — shared floor plan + landmark anchors. Pure client-side.
 // A layout is a small JSON document. It travels between phones inside a URL
 // fragment (#v=…), which browsers never send to any server.
@@ -67,7 +68,7 @@ export async function decodeLayout(str) {
 }
 
 export const shareLink = async (layout) =>
-  `${window.location.origin}/beta/venue-map#v=${await encodeLayout(layout)}`;
+  `${publicOrigin()}/beta/venue-map#v=${await encodeLayout(layout)}`;
 
 export const layoutFromHash = async (hash) => {
   const m = /^#v=(.+)$/.exec(hash || '');
