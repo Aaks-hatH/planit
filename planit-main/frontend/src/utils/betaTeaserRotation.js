@@ -1,49 +1,110 @@
 /**
  * utils/betaTeaserRotation.js
  *
- * With more than one beta feature now running (Face Ticket, Venue Walk, and
- * whatever comes next), letting every teaser pill mount at once would stack
- * floating widgets in the same corner and read as spam rather than "look
- * what's new." Instead, all teasers share a single rotation slot: only the
- * teaser whose turn it is renders at all. Engaging with (or dismissing) a
- * teaser hands the slot to the next one in line, so across a session a
- * person is advertised one beta at a time, not all of them at once.
+ * One shared, deliberately rare "promo slot" for all PlanIt Labs betas.
  *
- * This is a tiny, dependency-free rotation — not a scheduler — so it stays
- * simple: an index into ORDER, persisted in localStorage, advanced whenever
- * a teaser is dismissed or acted on.
+ * Rules (all enforced here so no teaser can break them):
+ *  - At most ONE teaser is ever in play per browser session, and it appears on
+ *    ONE page only — the first eligible page it lands on. Navigating away ends it.
+ *  - Each session only has a SHOW_CHANCE probability of showing anything at all,
+ *    and after a teaser is shown there's a COOLDOWN_DAYS quiet period.
+ *  - Teasers take turns (ORDER). Each showing hands the slot to the next lab.
+ *  - Closing a teaser with the X, or clicking through it, retires THAT lab's
+ *    teaser permanently on this browser. Nothing brings it back.
+ *
+ * All storage access is wrapped: if storage is unavailable, teasers stay hidden.
  */
 
 const ROTATION_KEY = 'planit_beta_teaser_rotation_v1';
+const DISMISSED_KEY = 'planit_beta_teasers_dismissed_v1';
+const LAST_SHOWN_KEY = 'planit_beta_teaser_last_shown_v1';
+const SESSION_KEY = 'planit_beta_teaser_session_v1';
 
-// Add new beta teaser ids here as they ship. Order is just the starting
-// rotation — it advances from wherever the last visit left off.
-const ORDER = ['face-ticket', 'venue-walk'];
+// Add new lab teaser ids here as they ship.
+export const TEASER_ORDER = ['face-ticket', 'venue-walk', 'qr-pass', 'venue-map'];
 
-function currentIndex() {
+const SHOW_CHANCE = 0.25;   // share of sessions that show any teaser at all
+const COOLDOWN_DAYS = 4;    // quiet period after a teaser has been shown
+
+const readJSON = (store, key, fallback) => {
+  try { const v = JSON.parse(store.getItem(key)); return v ?? fallback; } catch { return fallback; }
+};
+
+function getDismissed() {
+  const d = readJSON(localStorage, DISMISSED_KEY, []);
+  return Array.isArray(d) ? d : [];
+}
+
+/** Permanently retires a lab's teaser on this browser. */
+export function dismissTeaserForever(id) {
+  try {
+    const d = getDismissed();
+    if (!d.includes(id)) localStorage.setItem(DISMISSED_KEY, JSON.stringify([...d, id]));
+  } catch { /* best-effort */ }
+}
+
+export const isTeaserDismissed = (id) => {
+  try { return getDismissed().includes(id); } catch { return true; }
+};
+
+function rotationIndex() {
   try {
     const raw = Number(localStorage.getItem(ROTATION_KEY));
-    if (Number.isInteger(raw) && raw >= 0 && raw < ORDER.length) return raw;
-  } catch {
-    /* localStorage unavailable — fall through to default */
-  }
+    if (Number.isInteger(raw) && raw >= 0 && raw < TEASER_ORDER.length) return raw;
+  } catch { /* fall through */ }
   return 0;
 }
 
-/** True if `id` currently holds the shared teaser slot — call this before
- *  rendering any beta teaser pill. */
-export function isTeaserTurn(id) {
-  return ORDER[currentIndex()] === id;
+function advanceRotationPast(id) {
+  try {
+    const i = TEASER_ORDER.indexOf(id);
+    localStorage.setItem(ROTATION_KEY, String((i + 1) % TEASER_ORDER.length));
+  } catch { /* best-effort */ }
 }
 
-/** Hands the slot to the next teaser in rotation. Call this whenever the
- *  current teaser is dismissed or engaged with (navigated from) — never on
- *  a timer, since that could rotate a pill away mid-read. */
-export function advanceTeaserRotation() {
+function nextAvailableId() {
+  const dismissed = getDismissed();
+  const start = rotationIndex();
+  for (let k = 0; k < TEASER_ORDER.length; k++) {
+    const id = TEASER_ORDER[(start + k) % TEASER_ORDER.length];
+    if (!dismissed.includes(id)) return id;
+  }
+  return null;
+}
+
+/** Decided once per session. Returns the id allowed to show this session, or null. */
+export function teaserForThisSession() {
   try {
-    const next = (currentIndex() + 1) % ORDER.length;
-    localStorage.setItem(ROTATION_KEY, String(next));
+    const existing = readJSON(sessionStorage, SESSION_KEY, null);
+    if (existing) return existing.id || null;
+
+    let id = null;
+    const last = Number(localStorage.getItem(LAST_SHOWN_KEY)) || 0;
+    const cooledDown = Date.now() - last > COOLDOWN_DAYS * 86400000;
+    if (cooledDown && Math.random() < SHOW_CHANCE) id = nextAvailableId();
+
+    sessionStorage.setItem(SESSION_KEY, JSON.stringify({ id, path: null }));
+    return id;
   } catch {
-    /* best-effort only */
+    return null;
+  }
+}
+
+/** Called when a teaser is about to appear. The first page to claim wins;
+ *  every other page in the session gets false. Also starts the cooldown and
+ *  hands the rotation slot to the next lab. */
+export function claimTeaserPage(id, pathname) {
+  try {
+    const s = readJSON(sessionStorage, SESSION_KEY, null);
+    if (!s || s.id !== id) return false;
+    if (s.path === null) {
+      sessionStorage.setItem(SESSION_KEY, JSON.stringify({ id, path: pathname }));
+      localStorage.setItem(LAST_SHOWN_KEY, String(Date.now()));
+      advanceRotationPast(id);
+      return true;
+    }
+    return s.path === pathname;
+  } catch {
+    return false;
   }
 }
