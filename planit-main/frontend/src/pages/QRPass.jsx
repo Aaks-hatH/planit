@@ -9,6 +9,8 @@ import {
   SLOT_MS, randomId, newEventSecret, deriveGuestKey, makeToken, verifyToken, REASON_TEXT,
   loadEvents, saveEvents, loadWallet, saveWallet, passLink, staffLink, parseHash,
 } from '../utils/qrPass';
+import LabLanding from '../components/LabLanding';
+import QRPassPreview from '../components/QRPassPreview';
 
 const ACCENT = '#5EEAD4';
 
@@ -315,6 +317,7 @@ function ScanTab({ events, setEvents }) {
 export default function QRPass() {
   const navigate = useNavigate();
   const [tab, setTab] = useState('host');
+  const [mode, setMode] = useState('landing'); // landing | app
   const [events, setEventsState] = useState(loadEvents);
   const [wallet, setWalletState] = useState(loadWallet);
   const [active, setActive] = useState(null);
@@ -333,6 +336,7 @@ export default function QRPass() {
       addToWallet(parsed.data);
       setActive(parsed.data);
       setTab('wallet');
+      setMode('app');
       toast.success('Pass added to your wallet');
     } else if (parsed.kind === 'staff' && parsed.data?.secret) {
       const d = parsed.data;
@@ -343,6 +347,7 @@ export default function QRPass() {
         return n;
       });
       setTab('scan');
+      setMode('app');
       toast.success('Event loaded for scanning');
     }
     history.replaceState(null, '', window.location.pathname);
@@ -357,7 +362,7 @@ export default function QRPass() {
   return (
     <div className="min-h-screen bg-[#05050f] text-white" style={{ paddingTop: 'var(--safe-top, 0px)', paddingBottom: 'var(--safe-bottom, 0px)' }}>
       <div className="flex items-center justify-between px-4 sm:px-6 py-4 border-b border-white/[0.06]">
-        <button onClick={() => navigate('/')} className="flex items-center gap-2 text-neutral-400 hover:text-white text-sm -ml-2 px-2 py-1.5 rounded-lg">
+        <button onClick={() => (mode === 'app' ? setMode('landing') : navigate('/'))} className="flex items-center gap-2 text-neutral-400 hover:text-white text-sm -ml-2 px-2 py-1.5 rounded-lg">
           <ArrowLeft className="w-4 h-4" />Back
         </button>
         <div className="flex items-center gap-2 font-display font-bold tracking-tight text-sm">
@@ -366,6 +371,30 @@ export default function QRPass() {
         <div className="w-16" />
       </div>
 
+      {mode === 'landing' ? (
+        <LabLanding
+          accent={ACCENT}
+          headline={<>A ticket that<br />expires while<br />you watch.</>}
+          body="Every guest gets a pass whose QR code is signed on their phone and changes every 30 seconds. A forwarded screenshot is dead before it reaches the door. No server, no account."
+          primary={{ label: 'Host an event', icon: CalendarPlus, onClick: () => { setTab('host'); setMode('app'); } }}
+          secondary={{ label: 'Scan guests in', icon: ScanLine, onClick: () => { setTab('scan'); setMode('app'); } }}
+          footnote="Keys and guest lists never leave this browser"
+          preview={<QRPassPreview />}
+          steps={[
+            { title: 'Issue', body: 'Create an event and add guests. Each guest gets a personal key derived from a secret only the host holds.', icon: UserPlus },
+            { title: 'Carry', body: 'The guest opens their pass link once. Their phone then signs a fresh code every 30 seconds \u2014 offline.', icon: Wallet },
+            { title: 'Scan', body: 'Staff scan the live code. Forged, expired and already-used codes are rejected with the reason.', icon: ScanLine },
+          ]}
+          notes={[
+            'This is a proof of concept, not a hardened access-control system.',
+            'Everything is stored in this browser. Each scanning phone keeps its own check-in list, so use one scanner per entrance.',
+            'The staff link contains the event secret \u2014 share it only with people you trust to check guests in.',
+            'A guest who shares their pass link (not just a screenshot) gives away their live code. Treat the link like the ticket.',
+            'Phone clocks must be roughly in sync (within about a minute).',
+          ]}
+        />
+      ) : (
+      <>
       <div className="max-w-2xl mx-auto px-5 pt-8">
         <h1 className="font-display font-extrabold text-3xl sm:text-4xl tracking-tight mb-2">A ticket that expires<br />while you watch.</h1>
         <p className="text-neutral-400 text-sm max-w-md mb-6">
@@ -386,6 +415,8 @@ export default function QRPass() {
         {tab === 'wallet' && <WalletTab wallet={wallet} setWallet={setWallet} active={active} setActive={setActive} />}
         {tab === 'scan' && <ScanTab events={events} setEvents={setEvents} />}
       </div>
+      </>
+      )}
     </div>
   );
 }
