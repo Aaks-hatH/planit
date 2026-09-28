@@ -4,8 +4,7 @@ import { WhiteLabelProvider, useWhiteLabel } from './context/WhiteLabelContext';
 import { usePageTracker } from './hooks/usePageTracker';
 import ConsentBanner from './components/ConsentBanner';
 import ReferralWelcome from './components/ReferralWelcome';
-import FaceTicketTeaser from './components/FaceTicketTeaser';
-import VenueWalkTeaser from './components/VenueWalkTeaser';
+import BetaLabsTeaser from './components/BetaLabsTeaser';
 
 // ─── Lazy-loaded pages — each page is a separate JS chunk loaded on demand ────
 // This means the initial bundle only contains the shell (router, context, etc.)
@@ -516,11 +515,9 @@ function App() {
             <PageTrackerMount />
             <ConsentBanner />
             <ReferralWelcome />
-            {/* Both mount globally, same as before — betaTeaserRotation.js
-                ensures only one of the two ever actually renders at once,
-                so shipping a second beta doesn't double up the advertising. */}
-            <FaceTicketTeaser />
-            <VenueWalkTeaser />
+            {/* One rare, rotating PlanIt Labs promo — rules live in
+                utils/betaTeaserRotation.js. */}
+            <BetaLabsTeaser />
             <Suspense fallback={<PageLoader />}>
             <Routes>
         <Route path="/" element={<HomeRoute />} />
