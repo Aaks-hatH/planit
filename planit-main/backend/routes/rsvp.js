@@ -500,6 +500,7 @@ router.post('/:eventIdOrSlug/submit', async (req, res, next) => {
                 guestName:       `${firstName.trim()}${lastName?.trim() ? ' ' + lastName.trim() : ''}`,
                 eventTitle:      event.title,
                 eventDate:       event.date || null,
+                eventTimezone:       event.timezone || 'UTC',
                 eventLocation:   event.location || null,
                 response,
                 status:          'waitlisted',
@@ -674,6 +675,7 @@ router.post('/:eventIdOrSlug/submit', async (req, res, next) => {
         guestName:      `${firstName.trim()}${lastName?.trim() ? ' ' + lastName.trim() : ''}`,
         eventTitle:     event.title,
         eventDate:      event.date || null,
+        eventTimezone:      event.timezone || 'UTC',
         eventLocation:  event.location || null,
         response,
         status,
@@ -718,6 +720,7 @@ router.post('/:eventIdOrSlug/submit', async (req, res, next) => {
             plusOnes:     Number(plusOnes) || 0,
             eventTitle:   event.title,
             eventDate:    event.date || null,
+            eventTimezone:    event.timezone || 'UTC',
           }, { timeout: 15000 }).catch(() => {
             // Gmail send failed — still get the notification out via the relay.
             sendRsvpOrganizerNotification({
@@ -730,6 +733,7 @@ router.post('/:eventIdOrSlug/submit', async (req, res, next) => {
               plusOnes:       Number(plusOnes) || 0,
               eventTitle:     event.title,
               eventDate:      event.date || null,
+              eventTimezone:      event.timezone || 'UTC',
             }).catch(() => {});
           });
         } else {
@@ -743,6 +747,7 @@ router.post('/:eventIdOrSlug/submit', async (req, res, next) => {
             plusOnes:       Number(plusOnes) || 0,
             eventTitle:     event.title,
             eventDate:      event.date || null,
+            eventTimezone:      event.timezone || 'UTC',
           }).catch(() => {});
         }
       }
@@ -1035,7 +1040,7 @@ router.patch('/:eventId/page-config', verifyOrganizer, async (req, res, next) =>
 // ─────────────────────────────────────────────────────────────────────────────
 router.post('/:eventId/cover', verifyOrganizer, async (req, res, next) => {
   try {
-    const event = await Event.findById(req.params.eventId).select('title date organizerName');
+    const event = await Event.findById(req.params.eventId).select('title date timezone organizerName');
     if (!event) return res.status(404).json({ error: 'Event not found.' });
 
     const { template, accentColor, hostPhotoUrl, logoUrl } = req.body;
