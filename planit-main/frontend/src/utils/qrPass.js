@@ -1,3 +1,4 @@
+import { publicOrigin } from './publicOrigin';
 // ═══════════════════════════════════════════════════════════════════════════
 // QR PASS — signed, rotating check-in codes (no network, no API calls)
 //
@@ -119,9 +120,9 @@ export const saveWallet = (list) => write(WALLET_KEY, list);
 
 // ─── Share links (fragment only — never sent to any server) ────────────────
 export const passLink = (pass) =>
-  `${window.location.origin}/beta/qr-pass#pass=${b64u.fromText(JSON.stringify(pass))}`;
+  `${publicOrigin()}/beta/qr-pass#pass=${b64u.fromText(JSON.stringify(pass))}`;
 export const staffLink = (event) =>
-  `${window.location.origin}/beta/qr-pass#staff=${b64u.fromText(JSON.stringify({
+  `${publicOrigin()}/beta/qr-pass#staff=${b64u.fromText(JSON.stringify({
     id: event.id, name: event.name, secret: event.secret,
     guests: event.guests.map((g) => ({ id: g.id, name: g.name })),
   }))}`;
