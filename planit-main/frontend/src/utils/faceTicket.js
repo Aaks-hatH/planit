@@ -394,84 +394,218 @@ function averageEAR(landmarks) {
   return (left + right) / 2;
 }
 
-/** Samples the live video for `durationMs`, tracking eye-aspect-ratio (for a
- *  blink) and nose-tip displacement (for natural micro-motion / parallax).
- *  `onSample` fires after every frame with a lightweight progress payload
- *  so the UI can show a live capture ring / sparkline. */
-export async function runLivenessCapture(videoEl, { durationMs = 2800, intervalMs = 110, onSample } = {}) {
-  const samples = [];
-  const start = performance.now();
-  let baselineEAR = null;
+// ─── Active-challenge liveness ────────────────────────────────────────────
+// A photo or a pre-recorded clip can't know which prompts it will be given,
+// so the sequence is drawn at random per attempt (crypto RNG) and always
+// contains at least one head turn. The result is a hard pass/fail — callers
+// must gate on `liveness.passed`.
 
-  while (performance.now() - start < durationMs) {
-    const frameStart = performance.now();
-    // A single bad frame (a transient WebGL hiccup, a dropped texture read,
-    // our own timeout guard firing) must not kill the whole 2.8s sampling
-    // window — treat it the same as "no face this frame" and keep going.
-    // Losing one sample out of ~25 doesn't meaningfully change faceCoverage;
-    // letting the exception propagate out of this loop used to abort the
-    // capture entirely with no way to recover short of reloading the page.
+export const LIVENESS_CHALLENGES = {
+  blink: { label: 'Blink once, slowly' },
+  left: { label: 'Turn your head left' },
+  right: { label: 'Turn your head right' },
+  mouth: { label: 'Open your mouth wide' },
+};
+
+function randInt(n) {
+  const a = new Uint32Array(1);
+  crypto.getRandomValues(a);
+  return a[0] % n;
+}
+
+/** Random 3-step sequence, no immediate repeats, always includes a head turn. */
+export function pickLivenessSequence(count = 3) {
+  const ids = Object.keys(LIVENESS_CHALLENGES);
+  for (let attempt = 0; attempt < 50; attempt++) {
+    const seq = [];
+    while (seq.length < count) {
+      const id = ids[randInt(ids.length)];
+      if (seq[seq.length - 1] !== id) seq.push(id);
+    }
+    if (seq.includes('left') || seq.includes('right')) return seq;
+  }
+  return ['left', 'blink', 'mouth'];
+}
+
+function median(arr) {
+  const s = [...arr].sort((x, y) => x - y);
+  return s[Math.floor(s.length / 2)];
+}
+
+// Head yaw proxy: where the nose tip sits between the two jaw extremes.
+// ~0.5 facing the camera. Larger = nose toward image-right, which on the
+// mirrored preview the user sees is the user's LEFT.
+function yawRatio(landmarks) {
+  const jaw = landmarks.getJawOutline();
+  const l = jaw[0].x;
+  const r = jaw[jaw.length - 1].x;
+  const w = r - l;
+  if (w <= 0) return null;
+  const nose = landmarks.getNose()[3];
+  return (nose.x - l) / w;
+}
+
+function mouthOpenRatio(landmarks) {
+  const m = landmarks.getMouth();
+  const w = dist(m[12], m[16]);
+  if (w === 0) return 0;
+  return dist(m[14], m[18]) / w;
+}
+
+function readFrame(landmarks) {
+  const nose = landmarks.getNose()[3];
+  return {
+    ear: averageEAR(landmarks),
+    yaw: yawRatio(landmarks),
+    mar: mouthOpenRatio(landmarks),
+    nose: { x: nose.x, y: nose.y },
+  };
+}
+
+const SAME_FACE_MIN = 0.7;
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+/** Runs the active liveness challenge.
+ *  onChallenge({ index, total, id, label, phase }) — phase: 'calibrate' | 'prompt' | 'passed'
+ *  onSample({ progress, ear, faceFound })
+ *  Resolves with { passed, challenges:[{id,label,passed}], faceCoverage, reason?,
+ *  blinkDetected, motionDetected, cumulativeMotion, baselineEAR }. */
+export async function runLivenessCapture(videoEl, { onSample, onChallenge, challengeTimeoutMs = 8000 } = {}) {
+  const sequence = pickLivenessSequence(3);
+  const total = sequence.length;
+  let frames = 0;
+  let framesWithFace = 0;
+  let cumulativeMotion = 0;
+  let lastNose = null;
+  let lastEar = null;
+  let done = 0;
+
+  const grab = async () => {
     let result = null;
     try {
       result = await detectFaceLandmarksOnly(videoEl);
     } catch (err) {
       console.warn('Liveness frame skipped:', err);
     }
-
+    frames++;
+    let frame = null;
     if (result) {
-      const ear = averageEAR(result.landmarks);
-      const nose = result.landmarks.getNose()[3]; // landmark ~30, the tip
-      samples.push({ t: frameStart - start, ear, nose: { x: nose.x, y: nose.y } });
-      if (baselineEAR === null && samples.length >= 4) {
-        baselineEAR = samples.slice(0, 4).reduce((s, x) => s + x.ear, 0) / 4;
-      }
-    } else {
-      samples.push({ t: frameStart - start, ear: null, nose: null });
+      frame = readFrame(result.landmarks);
+      if (frame.yaw === null) frame = null;
     }
-
-    onSample?.({
-      progress: Math.min(1, (performance.now() - start) / durationMs),
-      ear: samples[samples.length - 1].ear,
-      faceFound: !!result,
-    });
-
-    const elapsed = performance.now() - frameStart;
-    await new Promise((r) => setTimeout(r, Math.max(0, intervalMs - elapsed)));
-  }
-
-  const earSamples = samples.filter((s) => s.ear !== null);
-  const noseSamples = samples.filter((s) => s.nose !== null);
-
-  // Blink: an adaptive dip-then-recover pattern relative to this session's
-  // own baseline, rather than a hardcoded global EAR threshold — different
-  // faces and camera angles have different resting EAR values.
-  let blinkDetected = false;
-  if (baselineEAR && earSamples.length > 5) {
-    const dipThreshold = baselineEAR * 0.72;
-    const recoverThreshold = baselineEAR * 0.9;
-    let sawDip = false;
-    for (const s of earSamples) {
-      if (!sawDip && s.ear < dipThreshold) sawDip = true;
-      else if (sawDip && s.ear > recoverThreshold) { blinkDetected = true; break; }
+    if (frame) {
+      framesWithFace++;
+      lastEar = frame.ear;
+      if (lastNose) cumulativeMotion += dist(frame.nose, lastNose);
+      lastNose = frame.nose;
     }
-  }
-
-  // Motion: cumulative frame-to-frame nose-tip displacement. Too little
-  // suggests a static photo/screen; we don't penalize "too much" here since
-  // natural head movement varies a lot — beta-grade, not exhaustive.
-  let cumulativeMotion = 0;
-  for (let i = 1; i < noseSamples.length; i++) {
-    cumulativeMotion += dist(noseSamples[i].nose, noseSamples[i - 1].nose);
-  }
-  const motionDetected = cumulativeMotion > 4 && noseSamples.length > 5;
-
-  return {
-    blinkDetected,
-    motionDetected,
-    faceCoverage: samples.length ? earSamples.length / samples.length : 0,
-    cumulativeMotion,
-    baselineEAR,
+    onSample?.({ progress: Math.min(1, done / total), ear: frame ? frame.ear : lastEar, faceFound: !!frame });
+    return frame;
   };
+
+  const finish = (passed, challenges, reason) => ({
+    passed,
+    reason,
+    challenges,
+    faceCoverage: frames ? framesWithFace / frames : 0,
+    blinkDetected: challenges.some((c) => c.id === 'blink' && c.passed),
+    motionDetected: challenges.some((c) => (c.id === 'left' || c.id === 'right') && c.passed),
+    cumulativeMotion,
+    baselineEAR: null,
+  });
+
+  const results = sequence.map((id) => ({ id, label: LIVENESS_CHALLENGES[id].label, passed: false }));
+
+  // 1) Calibrate on a neutral, forward-facing face.
+  onChallenge?.({ index: -1, total, id: 'calibrate', label: 'Look straight at the camera', phase: 'calibrate' });
+  const cal = [];
+  const calStart = performance.now();
+  while (cal.length < 8 && performance.now() - calStart < 3500) {
+    const f = await grab();
+    if (f) cal.push(f);
+    await sleep(60);
+  }
+  if (cal.length < 6) return finish(false, results, 'no_face');
+  const base = {
+    ear: median(cal.map((f) => f.ear)),
+    yaw: median(cal.map((f) => f.yaw)),
+    mar: median(cal.map((f) => f.mar)),
+  };
+  // Refuse to calibrate on someone who is already turned away / mouth open.
+  if (Math.abs(base.yaw - 0.5) > 0.2 || base.mar > 0.3) return finish(false, results, 'bad_calibration');
+
+  // Bind the challenge to ONE identity: embed the face now and again at the
+  // end. A live person passing prompts and then swapping in a photo of
+  // someone else (or vice-versa) fails the comparison.
+  const embed = async () => {
+    for (let i = 0; i < 4; i++) {
+      try {
+        const r = await detectFaceWithDescriptor(videoEl);
+        if (r) return r.descriptor;
+      } catch (err) { console.warn('Liveness embed skipped:', err); }
+      await sleep(120);
+    }
+    return null;
+  };
+  const startDesc = await embed();
+  if (!startDesc) return finish(false, results, 'no_face');
+
+  // 2) Random prompts.
+  for (let i = 0; i < total; i++) {
+    const id = sequence[i];
+    onChallenge?.({ index: i, total, id, label: LIVENESS_CHALLENGES[id].label, phase: 'prompt' });
+
+    let ok = false;
+    let blinks = 0;
+    let closed = false;
+    let hold = 0;
+    const t0 = performance.now();
+
+    while (performance.now() - t0 < challengeTimeoutMs && !ok) {
+      const f = await grab();
+      if (f) {
+        if (id === 'blink') {
+          if (!closed && f.ear < base.ear * 0.78) closed = true;
+          else if (closed && f.ear > base.ear * 0.88) { closed = false; blinks++; }
+          ok = blinks >= 1;
+        } else if (id === 'left') {
+          hold = f.yaw - base.yaw > 0.09 ? hold + 1 : 0;
+          ok = hold >= 2;
+        } else if (id === 'right') {
+          hold = base.yaw - f.yaw > 0.09 ? hold + 1 : 0;
+          ok = hold >= 2;
+        } else if (id === 'mouth') {
+          hold = f.mar - base.mar > 0.15 ? hold + 1 : 0;
+          ok = hold >= 2;
+        }
+      }
+      await sleep(40);
+    }
+
+    if (!ok) return finish(false, results, 'timeout');
+    results[i].passed = true;
+    done = i + 1;
+    onChallenge?.({ index: i, total, id, label: LIVENESS_CHALLENGES[id].label, phase: 'passed' });
+
+    // Wait for the face to relax back to neutral before the next prompt so
+    // one gesture can't satisfy two steps.
+    const r0 = performance.now();
+    while (performance.now() - r0 < 2500) {
+      const f = await grab();
+      if (f && Math.abs(f.yaw - base.yaw) < 0.07 && f.mar - base.mar < 0.1 && f.ear > base.ear * 0.85) break;
+      await sleep(40);
+    }
+  }
+
+  onSample?.({ progress: 1, ear: lastEar, faceFound: true });
+
+  // Final identity sample, face relaxed and forward-facing again.
+  const endDesc = await embed();
+  if (!endDesc) return finish(false, results, 'no_face');
+  const sameFace = cosineSimilarity(startDesc, endDesc);
+  if (sameFace < SAME_FACE_MIN) return { ...finish(false, results, 'face_changed'), sameFace };
+
+  return { ...finish(true, results), baselineEAR: base.ear, sameFace, descriptor: endDesc };
 }
 
 export function formatConfidence(similarity) {
