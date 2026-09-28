@@ -55,7 +55,7 @@ const heroGradient = (accent) => `
   linear-gradient(135deg, #120a1e 0%, #1a0f2e 60%, #0e1626 100%)
 `;
 
-export const HeroBlock = React.memo(function HeroBlock({ content, layout, spacing, align, accent, fonts }) {
+export const HeroBlock = React.memo(function HeroBlock({ content, layout, spacing, align, accent, fonts, timezone }) {
   const {
     title, subtitle, dateTime, location, coverImageUrl, coverImageUrlDesktop,
     imageZoom, imagePosition, imageFit, imageZoomDesktop, imagePositionDesktop, imageFitDesktop,
@@ -74,7 +74,16 @@ export const HeroBlock = React.memo(function HeroBlock({ content, layout, spacin
   // cover is generated, and to true for an uploaded photo (which has no text
   // of its own) — this is only ever skipped once there IS a cover image.
   const shouldShowText = !hasAnyImage || showOverlayText !== false;
-  const dateStr = dateTime ? new Date(dateTime).toLocaleString(undefined, { dateStyle: 'full', timeStyle: 'short' }) : '';
+  // Show the time in the EVENT's timezone (with its abbreviation, e.g. "EDT"),
+  // not the viewer's browser zone — otherwise 6:30 PM EDT reads differently per viewer.
+  const dateStr = (() => {
+    if (!dateTime) return '';
+    const d = new Date(dateTime);
+    if (Number.isNaN(d.getTime())) return '';
+    let zone;
+    try { if (timezone) { new Intl.DateTimeFormat('en-US', { timeZone: timezone }); zone = timezone; } } catch { zone = undefined; }
+    return d.toLocaleString(undefined, { dateStyle: 'full', timeStyle: 'short', ...(zone ? { timeZone: zone, timeZoneName: 'short' } : {}) });
+  })();
   // "split" now controls where the overlaid text sits (left vs. centered),
   // not a side-by-side image — the cover graphic and the hero copy are
   // always one merged card, never a picture next to a second text block.
