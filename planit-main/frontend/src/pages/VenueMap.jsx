@@ -6,6 +6,8 @@ import {
   LANDMARK_TYPES, uid, planH, shareLink, layoutFromHash, decodeLayout,
   loadDraft, saveDraft, loadGuestLayout, saveGuestLayout, directions,
 } from '../utils/venueMap';
+import LabLanding from '../components/LabLanding';
+import VenueMapPreview from '../components/VenueMapPreview';
 
 const TEAL = '#5EEAD4';
 const VIOLET = '#8B7FFF';
@@ -343,6 +345,7 @@ function LoadLink({ onLoaded }) {
 export default function VenueMap() {
   const navigate = useNavigate();
   const [tab, setTab] = useState('guest');
+  const [mode, setMode] = useState('landing'); // landing | app
   const [draft, setDraftState] = useState(loadDraft);
   const [guestLayout, setGuestLayoutState] = useState(loadGuestLayout);
 
@@ -354,6 +357,7 @@ export default function VenueMap() {
       if (!l) { if (!loadGuestLayout()) setTab('host'); return; }
       setGuestLayout(l);
       setTab('guest');
+      setMode('app');
       history.replaceState(null, '', window.location.pathname);
     }).catch(() => toast.error('This venue link is damaged.'));
   }, [setGuestLayout]);
@@ -363,7 +367,7 @@ export default function VenueMap() {
   return (
     <div className="min-h-screen bg-[#05050f] text-white" style={{ paddingTop: 'var(--safe-top, 0px)', paddingBottom: 'var(--safe-bottom, 0px)' }}>
       <div className="flex items-center justify-between px-4 sm:px-6 py-4 border-b border-white/[0.06]">
-        <button onClick={() => navigate('/')} className="flex items-center gap-2 text-neutral-400 hover:text-white text-sm -ml-2 px-2 py-1.5 rounded-lg">
+        <button onClick={() => (mode === 'app' ? setMode('landing') : navigate('/'))} className="flex items-center gap-2 text-neutral-400 hover:text-white text-sm -ml-2 px-2 py-1.5 rounded-lg">
           <ArrowLeft className="w-4 h-4" />Back
         </button>
         <div className="flex items-center gap-2 font-display font-bold tracking-tight text-sm">
@@ -372,6 +376,29 @@ export default function VenueMap() {
         <div className="w-16" />
       </div>
 
+      {mode === 'landing' ? (
+        <LabLanding
+          accent={AMBER}
+          headline={<>Tell it where<br />you are. It tells<br />you where to go.</>}
+          body="Draw the room once and share it as a link. Guests tap the landmark they're standing next to and get plain directions to their table. No sensors, no GPS, no drift."
+          primary={{ label: 'Build a venue', icon: PencilRuler, onClick: () => { setTab('host'); setMode('app'); } }}
+          secondary={{ label: 'Find my table', icon: Navigation, onClick: () => { setTab('guest'); setMode('app'); } }}
+          footnote="The floor plan travels inside the link, never to a server"
+          preview={<VenueMapPreview />}
+          steps={[
+            { title: 'Draw', body: 'Drop tables and landmarks like the entrance, bar and stage onto a plan, and assign guests to tables.', icon: PencilRuler },
+            { title: 'Share', body: 'The whole layout is packed into a link and QR code. Any phone that opens it has the map \u2014 nothing to install.', icon: Link2 },
+            { title: 'Anchor', body: 'A guest picks their name, taps the landmark they\u2019re next to, and reads directions to their seat.', icon: MapPin },
+          ]}
+          notes={[
+            'This is a proof of concept. Distances come from the plan you draw, so they are only as accurate as your layout.',
+            'Directions are relative to a landmark the guest chooses. They do not track live movement.',
+            'Large guest lists make long links. Very large events should be split into several venues.',
+            'The layout you build stays in this browser; sharing the link is what gives guests a copy.',
+          ]}
+        />
+      ) : (
+      <>
       <div className="max-w-2xl mx-auto px-5 pt-8">
         <h1 className="font-display font-extrabold text-3xl sm:text-4xl tracking-tight mb-2">Tell it where you are.<br />It tells you where to go.</h1>
         <p className="text-neutral-400 text-sm max-w-md mb-6">
@@ -393,6 +420,8 @@ export default function VenueMap() {
           ? <GuestView layout={guestLayout} onClear={() => setGuestLayout(null)} />
           : <LoadLink onLoaded={setGuestLayout} />)}
       </div>
+      </>
+      )}
     </div>
   );
 }
