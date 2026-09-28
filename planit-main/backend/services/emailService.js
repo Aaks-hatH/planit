@@ -37,12 +37,15 @@ function joinUrl(event) {
 
 const h = (s) => String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
-function fmtDate(d) {
+function fmtDate(d, tz) {
+  // Format in the EVENT's timezone (e.g. "6:30 PM EDT"), not always UTC.
+  let zone = 'UTC';
+  try { if (tz) { new Intl.DateTimeFormat('en-US', { timeZone: tz }); zone = tz; } } catch { zone = 'UTC'; }
   try {
-    return new Date(d).toLocaleString('en-GB', {
+    return new Date(d).toLocaleString('en-US', {
       weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
-      hour: '2-digit', minute: '2-digit', timeZone: 'UTC',
-    }) + ' UTC';
+      hour: 'numeric', minute: '2-digit', timeZone: zone, timeZoneName: 'short',
+    });
   } catch { return String(d || ''); }
 }
 
@@ -155,7 +158,7 @@ function emailShell(title, preheader, pillLabel, headerRowHtml, bodyHtml, footer
 function detailRows(event) {
   const rows = [
     ['Event',     event.title],
-    ['Date',      event.date ? fmtDate(event.date) : null],
+    ['Date',      event.date ? fmtDate(event.date, event.timezone) : null],
     ['Location',  event.location],
     ['Organiser', event.organizerName],
   ];
@@ -378,7 +381,7 @@ function applyTemplateTokens(str, tokens, { escapeHtml = false } = {}) {
   return out;
 }
 
-function buildRsvpGuestConfirmation({ guestName, guestFirstName, guestEmail, eventTitle, eventDate, eventLocation, response, status, plusOnes, editToken, customSubject, customBody }) {
+function buildRsvpGuestConfirmation({ guestName, guestFirstName, guestEmail, eventTitle, eventDate, eventTimezone, eventLocation, response, status, plusOnes, editToken, customSubject, customBody }) {
   const base      = (process.env.FRONTEND_URL || '').split(',')[0].trim().replace(/\/$/, '');
   const editUrl   = editToken && base ? `${base}/rsvp/manage/${editToken}` : null;
 
@@ -392,7 +395,7 @@ function buildRsvpGuestConfirmation({ guestName, guestFirstName, guestEmail, eve
     eventTitle,
     firstName: guestFirstName || guestName,
     fullName:  guestName,
-    dateStr:   eventDate ? fmtDate(eventDate) : '',
+    dateStr:   eventDate ? fmtDate(eventDate, eventTimezone) : '',
     location:  eventLocation || '',
     responseLabel,
     statusLabel,
@@ -408,7 +411,7 @@ function buildRsvpGuestConfirmation({ guestName, guestFirstName, guestEmail, eve
 
   const detailTableRows = [
     ['Event',    eventTitle],
-    ['Date',     eventDate ? fmtDate(eventDate) : null],
+    ['Date',     eventDate ? fmtDate(eventDate, eventTimezone) : null],
     ['Location', eventLocation || null],
     ['Response', responseLabel],
     ['Status',   statusLabel],
@@ -543,7 +546,7 @@ async function sendRsvpGuestConfirmation(opts) {
 // used only when the organizer hasn't connected Gmail (or that send failed) so
 // they still get notified — sent as their own address, Reply-To the guest.
 
-function buildRsvpOrganizerNotification({ guestName, guestEmail, guestPhone, response, status, plusOnes, eventTitle, eventDate }) {
+function buildRsvpOrganizerNotification({ guestName, guestEmail, guestPhone, response, status, plusOnes, eventTitle, eventDate, eventTimezone }) {
   const responseLabel = response === 'yes' ? 'Attending' : response === 'no' ? 'Not Attending' : 'Maybe';
   const statusLabel   = status === 'waitlisted' ? 'Waitlisted' : status === 'pending' ? 'Pending Approval' : 'Confirmed';
 
@@ -555,7 +558,7 @@ function buildRsvpOrganizerNotification({ guestName, guestEmail, guestPhone, res
     ['Status',   statusLabel],
     plusOnes > 0 ? ['Plus-ones', String(plusOnes)] : null,
     ['Event',    eventTitle],
-    ['Date',     eventDate ? fmtDate(eventDate) : null],
+    ['Date',     eventDate ? fmtDate(eventDate, eventTimezone) : null],
   ].filter(Boolean).filter(([, v]) => v).map(([k, v]) => `
     <tr>
       <td style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:${FAINT};width:90px;padding:8px 0;vertical-align:top;font-family:${FONT};">${h(k)}</td>
