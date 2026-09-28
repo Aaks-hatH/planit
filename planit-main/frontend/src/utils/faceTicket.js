@@ -401,7 +401,7 @@ function averageEAR(landmarks) {
 // must gate on `liveness.passed`.
 
 export const LIVENESS_CHALLENGES = {
-  blink: { label: 'Blink once, slowly' },
+  blink: { label: 'Close your eyes for a second' },
   left: { label: 'Turn your head left' },
   right: { label: 'Turn your head right' },
   mouth: { label: 'Open your mouth wide' },
@@ -425,6 +425,11 @@ export function pickLivenessSequence(count = 3) {
     if (seq.includes('left') || seq.includes('right')) return seq;
   }
   return ['left', 'blink', 'mouth'];
+}
+
+function percentile(arr, q) {
+  const s = [...arr].sort((x, y) => x - y);
+  return s[Math.min(s.length - 1, Math.floor(s.length * q))];
 }
 
 function median(arr) {
@@ -527,7 +532,7 @@ export async function runLivenessCapture(videoEl, { onSample, onChallenge, chall
   }
   if (cal.length < 6) return finish(false, results, 'no_face');
   const base = {
-    ear: median(cal.map((f) => f.ear)),
+    ear: percentile(cal.map((f) => f.ear), 0.75),
     yaw: median(cal.map((f) => f.yaw)),
     mar: median(cal.map((f) => f.mar)),
   };
@@ -556,8 +561,6 @@ export async function runLivenessCapture(videoEl, { onSample, onChallenge, chall
     onChallenge?.({ index: i, total, id, label: LIVENESS_CHALLENGES[id].label, phase: 'prompt' });
 
     let ok = false;
-    let blinks = 0;
-    let closed = false;
     let hold = 0;
     const t0 = performance.now();
 
@@ -565,9 +568,11 @@ export async function runLivenessCapture(videoEl, { onSample, onChallenge, chall
       const f = await grab();
       if (f) {
         if (id === 'blink') {
-          if (!closed && f.ear < base.ear * 0.78) closed = true;
-          else if (closed && f.ear > base.ear * 0.88) { closed = false; blinks++; }
-          ok = blinks >= 1;
+          // Eyes-closed detection instead of catching a ~100ms blink between
+          // frames: a clear dip on one frame, or a moderate dip held for two.
+          if (f.ear < base.ear * 0.72) ok = true;
+          else if (f.ear < base.ear * 0.85) { hold += 1; ok = hold >= 2; }
+          else hold = 0;
         } else if (id === 'left') {
           hold = f.yaw - base.yaw > 0.09 ? hold + 1 : 0;
           ok = hold >= 2;
@@ -579,7 +584,7 @@ export async function runLivenessCapture(videoEl, { onSample, onChallenge, chall
           ok = hold >= 2;
         }
       }
-      await sleep(40);
+      if (id !== 'blink') await sleep(40);
     }
 
     if (!ok) return finish(false, results, 'timeout');
