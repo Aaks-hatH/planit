@@ -31,15 +31,19 @@ async function isMarketingAllowed(email) {
 
 // ─── Shared inline style tokens ───────────────────────────────────────────────
 
-const FONT  = `-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif`;
-const BG    = `#EDEDF2`;
+// Brand kit mirrors the live PlanIt product exactly (frontend/tailwind.config.js
+// + frontend/src/index.css): Syne for display/headlines, DM Sans for body copy,
+// a near-black masthead, and the same neutral palette used across the app.
+const FONT_DISPLAY = `'Syne',-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif`;
+const FONT  = `'DM Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif`;
+const BG    = `#F0F0F1`;
 const WHITE = `#ffffff`;
-const DARK  = `#111827`;
-const MID   = `#374151`;
-const MUTED = `#6B7280`;
-const FAINT = `#9CA3AF`;
-const RULE  = `#E9EAEF`;
-const PANEL = `#F9FAFB`;
+const DARK  = `#0A0A0A`;
+const MID   = `#404040`;
+const MUTED = `#525252`;
+const FAINT = `#A3A3A3`;
+const RULE  = `#E5E5E5`;
+const PANEL = `#FAFAFA`;
 
 // ─── Shared fragments ─────────────────────────────────────────────────────────
 
@@ -53,13 +57,15 @@ function emailShell(title, preheader, pillLabel, pillStyle, headerRowHtml, bodyH
   <meta name="x-apple-disable-message-reformatting"/>
   <title>${h(title)}</title>
   <!--[if mso]><noscript><xml><o:OfficeDocumentSettings><o:PixelsPerInch>96</o:PixelsPerInch></o:OfficeDocumentSettings></xml></noscript><![endif]-->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&display=swap" rel="stylesheet">
   <style>
     body,table,td,a{-webkit-text-size-adjust:100%;-ms-text-size-adjust:100%}
     table,td{mso-table-lspace:0pt;mso-table-rspace:0pt}
     img{border:0;height:auto;line-height:100%;outline:none;text-decoration:none;-ms-interpolation-mode:bicubic}
     @media only screen and (max-width:620px){
       .card{border-radius:0!important}
-      .ep{padding-left:20px!important;padding-right:20px!important}
+      .ep{padding-left:24px!important;padding-right:24px!important}
       .pill{display:none!important}
       .fc{display:block!important;width:100%!important;padding:0 0 6px 0!important}
       .sc{display:block!important;width:100%!important;padding:0 0 6px 0!important}
@@ -73,19 +79,19 @@ function emailShell(title, preheader, pillLabel, pillStyle, headerRowHtml, bodyH
 
         <div style="display:none;max-height:0;overflow:hidden;mso-hide:all;font-size:1px;color:${BG};line-height:1px;">${h(preheader)}&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;</div>
 
-        <table role="presentation" class="card" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background:${WHITE};border-radius:12px;overflow:hidden;" bgcolor="${WHITE}">
+        <table role="presentation" class="card" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background:${WHITE};border-radius:20px;overflow:hidden;box-shadow:0 1px 2px rgba(10,10,10,0.04),0 12px 32px rgba(10,10,10,0.08);" bgcolor="${WHITE}">
 
           <!-- MASTHEAD -->
           <tr>
-            <td style="background:${DARK};padding:28px 40px;" bgcolor="${DARK}">
+            <td style="background:${DARK};padding:30px 40px;" bgcolor="${DARK}">
               <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
                 <tr>
                   <td>
-                    <span style="font-size:20px;font-weight:800;color:${WHITE};letter-spacing:-0.5px;font-family:${FONT};">Plan<span style="color:${FAINT};">It</span></span><br/>
-                    <span style="font-size:10px;font-weight:500;letter-spacing:1.2px;text-transform:uppercase;color:rgba(255,255,255,0.28);font-family:${FONT};">Event Management Platform</span>
+                    <span style="font-size:22px;font-weight:800;color:${WHITE};letter-spacing:-0.03em;font-family:${FONT_DISPLAY};">Plan<span style="color:#818CF8;">It</span></span><br/>
+                    <span style="font-size:10px;font-weight:500;letter-spacing:1.4px;text-transform:uppercase;color:rgba(255,255,255,0.38);font-family:${FONT};">Event Management Platform</span>
                   </td>
                   <td align="right" valign="middle" class="pill">
-                    <span style="display:inline-block;font-size:10px;font-weight:700;letter-spacing:0.8px;text-transform:uppercase;${pillStyle};border-radius:20px;padding:5px 14px;font-family:${FONT};">${h(pillLabel)}</span>
+                    <span style="display:inline-block;font-size:10px;font-weight:700;letter-spacing:0.8px;text-transform:uppercase;${pillStyle};border-radius:20px;padding:6px 14px;font-family:${FONT};">${h(pillLabel)}</span>
                   </td>
                 </tr>
               </table>
@@ -101,7 +107,7 @@ function emailShell(title, preheader, pillLabel, pillStyle, headerRowHtml, bodyH
               <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top:36px;padding-top:24px;border-top:1px solid ${RULE};">
                 <tr>
                   <td>
-                    <p style="margin:0 0 18px 0;font-size:15px;color:#4B5563;line-height:1.75;font-family:${FONT};">${sigCopy}</p>
+                    <p style="margin:0 0 18px 0;font-size:15px;color:${MUTED};line-height:1.75;font-family:${FONT};">${sigCopy}</p>
                     <p style="margin:0 0 2px 0;font-size:15px;font-weight:700;color:${DARK};font-family:${FONT};">Aakshat Hariharan</p>
                     <p style="margin:0;font-size:12px;color:${FAINT};font-family:${FONT};">Founder, PlanIt</p>
                   </td>
@@ -127,7 +133,7 @@ function emailShell(title, preheader, pillLabel, pillStyle, headerRowHtml, bodyH
 }
 
 function sectionCap(label) {
-  return `<p style="margin:0 0 16px 0;font-size:10px;font-weight:700;letter-spacing:1.3px;text-transform:uppercase;color:${FAINT};padding-bottom:10px;border-bottom:1px solid ${RULE};font-family:${FONT};">${h(label)}</p>`;
+  return `<p style="margin:0 0 16px 0;font-size:10px;font-weight:700;letter-spacing:1.3px;text-transform:uppercase;color:${DARK};padding-bottom:10px;border-bottom:2px solid #EEF2FF;font-family:${FONT};">${h(label)}</p>`;
 }
 
 function hrule() {
@@ -139,9 +145,9 @@ function ctaButton(label, url, color) {
     <table role="presentation" cellpadding="0" cellspacing="0" style="margin-top:28px;width:100%;">
       <tr>
         <td align="center">
-          <!--[if mso]><v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" href="${h(url)}" style="height:50px;v-text-anchor:middle;width:260px;" arcsize="12%" stroke="f" fillcolor="${color}"><w:anchorlock/><center style="color:#ffffff;font-family:${FONT};font-size:15px;font-weight:700;">${h(label)}</center></v:roundrect><![endif]-->
+          <!--[if mso]><v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" href="${h(url)}" style="height:50px;v-text-anchor:middle;width:260px;" arcsize="20%" stroke="f" fillcolor="${color}"><w:anchorlock/><center style="color:#ffffff;font-family:${FONT};font-size:14px;font-weight:700;">${h(label)}</center></v:roundrect><![endif]-->
           <!--[if !mso]><!-->
-          <a href="${h(url)}" style="background:${color};color:#ffffff;display:inline-block;font-family:${FONT};font-size:15px;font-weight:700;line-height:50px;text-align:center;text-decoration:none;width:260px;border-radius:8px;letter-spacing:-0.2px;mso-hide:all;">${h(label)}</a>
+          <a href="${h(url)}" style="background:${color};color:#ffffff;display:inline-block;font-family:${FONT};font-size:14px;font-weight:700;line-height:50px;text-align:center;text-decoration:none;width:260px;border-radius:12px;letter-spacing:-0.1px;mso-hide:all;">${h(label)}</a>
           <!--<![endif]-->
         </td>
       </tr>
@@ -155,7 +161,7 @@ function featGrid(items) {
     rows += `
       <tr>
         <td class="fc" style="width:50%;padding:0 6px 6px 0;vertical-align:top;">
-          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${PANEL};border:1px solid #E5E7EB;border-radius:8px;">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${PANEL};border:1px solid #E5E5E5;border-radius:14px;">
             <tr><td style="padding:16px 18px;">
               <p style="margin:0 0 5px 0;font-size:13px;font-weight:700;color:${DARK};font-family:${FONT};">${a.t}</p>
               <p style="margin:0;font-size:13px;color:${MUTED};line-height:1.55;font-family:${FONT};">${a.d}</p>
@@ -163,7 +169,7 @@ function featGrid(items) {
           </table>
         </td>
         <td class="fc" style="width:50%;padding:0 0 6px 6px;vertical-align:top;">
-          ${b ? `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${PANEL};border:1px solid #E5E7EB;border-radius:8px;">
+          ${b ? `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${PANEL};border:1px solid #E5E5E5;border-radius:14px;">
             <tr><td style="padding:16px 18px;">
               <p style="margin:0 0 5px 0;font-size:13px;font-weight:700;color:${DARK};font-family:${FONT};">${b.t}</p>
               <p style="margin:0;font-size:13px;color:${MUTED};line-height:1.55;font-family:${FONT};">${b.d}</p>
@@ -179,7 +185,7 @@ function pullQuote(text, attr, accentColor) {
   return `
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top:20px;">
       <tr>
-        <td style="border-left:3px solid ${accentColor};padding:14px 18px;background:${PANEL};border-radius:0 8px 8px 0;">
+        <td style="border-left:3px solid ${accentColor};padding:14px 18px;background:${PANEL};border-radius:0 12px 12px 0;">
           <p style="margin:0 0 8px 0;font-size:14px;color:${MID};line-height:1.7;font-style:italic;font-family:${FONT};">${text}</p>
           <p style="margin:0;font-size:11px;color:${FAINT};font-family:${FONT};">${attr}</p>
         </td>
@@ -191,7 +197,7 @@ function idealFor(label, content, accentColor, bgColor) {
   return `
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top:20px;">
       <tr>
-        <td style="border-left:3px solid ${accentColor};padding:14px 18px;background:${bgColor};border-radius:0 8px 8px 0;">
+        <td style="border-left:3px solid ${accentColor};padding:14px 18px;background:${bgColor};border-radius:0 12px 12px 0;">
           <p style="margin:0 0 6px 0;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:${FAINT};font-family:${FONT};">${h(label)}</p>
           <p style="margin:0;font-size:14px;color:${MID};line-height:1.75;font-family:${FONT};">${content}</p>
         </td>
@@ -202,13 +208,13 @@ function idealFor(label, content, accentColor, bgColor) {
 function darkStrip(capText, headText, subText, subColor, btnLabel, btnColor, ctaUrl) {
   const url = ctaUrl || process.env.FRONTEND_URL || 'https://planitapp.onrender.com';
   return `
-    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top:24px;border-radius:8px;overflow:hidden;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top:28px;border-radius:16px;overflow:hidden;">
       <tr>
-        <td style="background:${DARK};padding:24px 28px;" bgcolor="${DARK}">
-          <p style="margin:0 0 3px 0;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:rgba(255,255,255,0.28);font-family:${FONT};">${h(capText)}</p>
-          <p style="margin:0 0 3px 0;font-size:16px;font-weight:700;color:${WHITE};font-family:${FONT};">${h(headText)}</p>
-          <p style="margin:0 0 18px 0;font-size:11px;color:${subColor};font-family:${FONT};">${h(subText)}</p>
-          <a href="${h(url)}" style="display:inline-block;background:${btnColor};color:${WHITE};font-family:${FONT};font-size:13px;font-weight:700;text-decoration:none;padding:12px 28px;border-radius:6px;">${h(btnLabel)}</a>
+        <td style="background:${DARK};padding:28px 28px;" bgcolor="${DARK}">
+          <p style="margin:0 0 4px 0;font-size:10px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:rgba(255,255,255,0.32);font-family:${FONT};">${h(capText)}</p>
+          <p style="margin:0 0 4px 0;font-size:18px;font-weight:800;color:${WHITE};letter-spacing:-0.02em;font-family:${FONT_DISPLAY};">${h(headText)}</p>
+          <p style="margin:0 0 20px 0;font-size:11px;color:${subColor};font-family:${FONT};">${h(subText)}</p>
+          <a href="${h(url)}" style="display:inline-block;background:${btnColor};color:${WHITE};font-family:${FONT};font-size:13px;font-weight:700;text-decoration:none;padding:13px 28px;border-radius:10px;letter-spacing:-0.1px;">${h(btnLabel)}</a>
         </td>
       </tr>
     </table>`;
@@ -217,9 +223,9 @@ function darkStrip(capText, headText, subText, subColor, btnLabel, btnColor, cta
 function statsRow(items) {
   const cells = items.map((item, i) => `
     <td class="sc" style="width:${Math.floor(100/items.length)}%;padding:0 ${i < items.length - 1 ? '4px' : '0'} 0 ${i > 0 ? '4px' : '0'};vertical-align:top;">
-      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${PANEL};border:1px solid #E5E7EB;border-radius:8px;text-align:center;">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${PANEL};border:1px solid #E5E5E5;border-radius:14px;text-align:center;">
         <tr><td style="padding:18px 12px;">
-          <p style="margin:0 0 4px 0;font-size:22px;font-weight:800;color:${DARK};letter-spacing:-0.5px;font-family:${FONT};">${h(item.n)}</p>
+          <p style="margin:0 0 4px 0;font-size:24px;font-weight:800;color:${DARK};letter-spacing:-0.02em;font-family:${FONT_DISPLAY};">${h(item.n)}</p>
           <p style="margin:0;font-size:10px;font-weight:700;letter-spacing:0.8px;text-transform:uppercase;color:${FAINT};font-family:${FONT};">${h(item.l)}</p>
         </td></tr>
       </table>
@@ -276,7 +282,7 @@ function buildPlanners(ctaUrl, recipient = {}) {
     <tr>
       <td class="ep" style="padding:36px 40px 30px 40px;border-bottom:1px solid ${RULE};">
         <span style="display:inline-block;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#3730A3;background:#EEF2FF;padding:5px 12px;border-radius:5px;margin-bottom:16px;font-family:${FONT};">For Event Professionals</span>
-        <h1 style="margin:0 0 12px 0;font-size:24px;font-weight:800;color:${DARK};letter-spacing:-0.5px;line-height:1.2;font-family:${FONT};">Your clients remember the experience. Not the effort behind it.</h1>
+        <h1 style="margin:0 0 12px 0;font-size:25px;font-weight:800;color:${DARK};letter-spacing:-0.02em;line-height:1.2;font-family:${FONT_DISPLAY};">Your clients remember the experience. Not the effort behind it.</h1>
         <p style="margin:0;font-size:15px;color:${MUTED};line-height:1.65;font-family:${FONT};">PlanIt gives professional event coordinators a single workspace for guest management, day-of check-in, team communication, and post-event wrap-up. It looks polished to clients. It saves hours in practice.</p>
       </td>
     </tr>`;
@@ -314,7 +320,7 @@ function buildSchools(ctaUrl, recipient = {}) {
     <tr>
       <td class="ep" style="padding:36px 40px 30px 40px;border-bottom:1px solid ${RULE};">
         <span style="display:inline-block;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#166534;background:#F0FDF4;padding:5px 12px;border-radius:5px;margin-bottom:16px;font-family:${FONT};">For Schools and Universities</span>
-        <h1 style="margin:0 0 12px 0;font-size:24px;font-weight:800;color:${DARK};letter-spacing:-0.5px;line-height:1.2;font-family:${FONT};">Campus events deserve more than a spreadsheet and a hope.</h1>
+        <h1 style="margin:0 0 12px 0;font-size:25px;font-weight:800;color:${DARK};letter-spacing:-0.02em;line-height:1.2;font-family:${FONT_DISPLAY};">Campus events deserve more than a spreadsheet and a hope.</h1>
         <p style="margin:0;font-size:15px;color:${MUTED};line-height:1.65;font-family:${FONT};">From Freshers' Week and open days to graduation ceremonies and cultural festivals, PlanIt gives educational institutions a structured, accountable way to run student-facing events at any scale.</p>
       </td>
     </tr>`;
@@ -357,7 +363,7 @@ function buildTemples(ctaUrl, recipient = {}) {
     <tr>
       <td class="ep" style="padding:36px 40px 30px 40px;border-bottom:1px solid ${RULE};">
         <span style="display:inline-block;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#92400E;background:#FFFBEB;padding:5px 12px;border-radius:5px;margin-bottom:16px;font-family:${FONT};">For Places of Worship</span>
-        <h1 style="margin:0 0 12px 0;font-size:24px;font-weight:800;color:${DARK};letter-spacing:-0.5px;line-height:1.2;font-family:${FONT};">Your community gathers with purpose. The tools behind it should support that.</h1>
+        <h1 style="margin:0 0 12px 0;font-size:25px;font-weight:800;color:${DARK};letter-spacing:-0.02em;line-height:1.2;font-family:${FONT_DISPLAY};">Your community gathers with purpose. The tools behind it should support that.</h1>
         <p style="margin:0;font-size:15px;color:${MUTED};line-height:1.65;font-family:${FONT};">Whether your congregation is Hindu, Muslim, Christian, Jewish, Sikh, or of any other faith, the administration of bringing people together should never overshadow the occasion itself. PlanIt handles the logistics so your leaders and volunteers can give their full attention to what matters.</p>
       </td>
     </tr>`;
@@ -400,7 +406,7 @@ function buildCorporate(ctaUrl, recipient = {}) {
     <tr>
       <td class="ep" style="background:${DARK};padding:36px 40px 30px 40px;border-bottom:1px solid #1F2937;" bgcolor="${DARK}">
         <span style="display:inline-block;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:rgba(167,163,247,0.8);background:rgba(99,85,240,0.12);padding:5px 12px;border-radius:5px;margin-bottom:16px;font-family:${FONT};">For Corporate Teams</span>
-        <h1 style="margin:0 0 12px 0;font-size:24px;font-weight:800;color:${WHITE};letter-spacing:-0.5px;line-height:1.2;font-family:${FONT};">Your events represent your organisation. The platform behind them should too.</h1>
+        <h1 style="margin:0 0 12px 0;font-size:25px;font-weight:800;color:${WHITE};letter-spacing:-0.02em;line-height:1.2;font-family:${FONT_DISPLAY};">Your events represent your organisation. The platform behind them should too.</h1>
         <p style="margin:0;font-size:15px;color:rgba(255,255,255,0.4);line-height:1.65;font-family:${FONT};">PlanIt gives enterprise teams the structure, auditability, and scale to run conferences, AGMs, product launches, and internal events without relying on a patchwork of tools that do not talk to each other.</p>
       </td>
     </tr>`;
@@ -448,7 +454,7 @@ function buildCommunity(ctaUrl, recipient = {}) {
     <tr>
       <td class="ep" style="padding:36px 40px 30px 40px;border-bottom:1px solid ${RULE};">
         <span style="display:inline-block;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#1E40AF;background:#EFF6FF;padding:5px 12px;border-radius:5px;margin-bottom:16px;font-family:${FONT};">For Community Groups</span>
-        <h1 style="margin:0 0 12px 0;font-size:24px;font-weight:800;color:${DARK};letter-spacing:-0.5px;line-height:1.2;font-family:${FONT};">The people doing the most important work rarely have the largest budgets.</h1>
+        <h1 style="margin:0 0 12px 0;font-size:25px;font-weight:800;color:${DARK};letter-spacing:-0.02em;line-height:1.2;font-family:${FONT_DISPLAY};">The people doing the most important work rarely have the largest budgets.</h1>
         <p style="margin:0;font-size:15px;color:${MUTED};line-height:1.65;font-family:${FONT};">PlanIt is free for community organisers, charities, and non-profits. Not free for fourteen days. Not free with a credit card on file. Free, because those running local events should not have to justify a tool cost to a volunteer committee.</p>
       </td>
     </tr>`;
@@ -492,7 +498,7 @@ function buildWeddings(ctaUrl, recipient = {}) {
     <tr>
       <td class="ep" style="padding:36px 40px 30px 40px;border-bottom:1px solid ${RULE};">
         <span style="display:inline-block;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#86198F;background:#FDF4FF;padding:5px 12px;border-radius:5px;margin-bottom:16px;font-family:${FONT};">For Weddings and Special Occasions</span>
-        <h1 style="margin:0 0 12px 0;font-size:24px;font-weight:800;color:${DARK};letter-spacing:-0.5px;line-height:1.2;font-family:${FONT};">One day. Every detail matters. Nothing should go wrong at the door.</h1>
+        <h1 style="margin:0 0 12px 0;font-size:25px;font-weight:800;color:${DARK};letter-spacing:-0.02em;line-height:1.2;font-family:${FONT_DISPLAY};">One day. Every detail matters. Nothing should go wrong at the door.</h1>
         <p style="margin:0;font-size:15px;color:${MUTED};line-height:1.65;font-family:${FONT};">PlanIt is used by couples and wedding coordinators to manage the guest experience from personalised invitation through to seamless arrival and check-in. It handles the administration so the day can be exactly what you imagined.</p>
       </td>
     </tr>`;
@@ -536,7 +542,7 @@ function buildPersonalized(ctaUrl, recipient = {}) {
     <tr>
       <td class="ep" style="padding:36px 40px 30px 40px;border-bottom:1px solid ${RULE};">
         <span style="display:inline-block;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#0F172A;background:#F1F5F9;padding:5px 12px;border-radius:5px;margin-bottom:16px;font-family:${FONT};">Built for What You Actually Run</span>
-        <h1 style="margin:0 0 12px 0;font-size:24px;font-weight:800;color:${DARK};letter-spacing:-0.5px;line-height:1.2;font-family:${FONT};">Most event platforms were built for the people who built them, not for you.</h1>
+        <h1 style="margin:0 0 12px 0;font-size:25px;font-weight:800;color:${DARK};letter-spacing:-0.02em;line-height:1.2;font-family:${FONT_DISPLAY};">Most event platforms were built for the people who built them, not for you.</h1>
         <p style="margin:0;font-size:15px;color:${MUTED};line-height:1.65;font-family:${FONT};">PlanIt started from a different place: watching real organisers work. The result is a platform shaped around how events actually run, not around a product roadmap designed to justify a subscription price.</p>
       </td>
     </tr>`;
@@ -589,7 +595,7 @@ function buildVenue(ctaUrl, recipient = {}) {
     <tr>
       <td class="ep" style="padding:36px 40px 30px 40px;border-bottom:1px solid ${RULE};">
         <span style="display:inline-block;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:${ORANGE};background:${ORANGE_LIGHT};padding:5px 12px;border-radius:5px;margin-bottom:16px;font-family:${FONT};">PlanIt Venue</span>
-        <h1 style="margin:0 0 12px 0;font-size:24px;font-weight:800;color:${DARK};letter-spacing:-0.5px;line-height:1.2;font-family:${FONT};">Your floor runs on instinct. Give your team a tool that keeps up.</h1>
+        <h1 style="margin:0 0 12px 0;font-size:25px;font-weight:800;color:${DARK};letter-spacing:-0.02em;line-height:1.2;font-family:${FONT_DISPLAY};">Your floor runs on instinct. Give your team a tool that keeps up.</h1>
         <p style="margin:0;font-size:15px;color:${MUTED};line-height:1.65;font-family:${FONT};">PlanIt Venue is a free real-time floor management platform for restaurants and hospitality venues. Your whole front-of-house team sees the same live floor map on their phones. No app to install, no hardware to buy.</p>
       </td>
     </tr>`;
