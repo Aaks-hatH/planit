@@ -59,19 +59,22 @@ function getQrImageUrl(joinUrl) {
 
 // ─── Shared inline style tokens ───────────────────────────────────────────────
 
-const FONT_DISPLAY = `'Outfit',-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif`;
-const FONT  = `'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif`;
-const BG    = `#EEF0FA`;
+// Brand kit mirrors the live PlanIt product exactly (frontend/tailwind.config.js
+// + frontend/src/index.css): Syne for display/headlines, DM Sans for body copy,
+// a near-black masthead, and the same neutral/indigo palette used across the app.
+const FONT_DISPLAY = `'Syne',-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif`;
+const FONT  = `'DM Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif`;
+const BG    = `#F0F0F1`;
 const WHITE = `#ffffff`;
-const DARK  = `#14121F`;
-const MID   = `#374151`;
-const MUTED = `#6B7280`;
-const FAINT = `#9CA3AF`;
-const RULE  = `#E9EAEF`;
-const PANEL = `#F8F7FF`;
-const ACCENT      = `#6D5EF8`;
-const ACCENT_DARK = `#4C3FE0`;
-const ACCENT_SOFT = `#EDEBFF`;
+const DARK  = `#0A0A0A`;
+const MID   = `#404040`;
+const MUTED = `#525252`;
+const FAINT = `#A3A3A3`;
+const RULE  = `#E5E5E5`;
+const PANEL = `#FAFAFA`;
+const ACCENT      = `#6366F1`;
+const ACCENT_DARK = `#4338CA`;
+const ACCENT_SOFT = `#EEF2FF`;
 
 // ─── Shared fragments ─────────────────────────────────────────────────────────
 
@@ -86,14 +89,14 @@ function emailShell(title, preheader, pillLabel, headerRowHtml, bodyHtml, footer
   <title>${h(title)}</title>
   <!--[if mso]><noscript><xml><o:OfficeDocumentSettings><o:PixelsPerInch>96</o:PixelsPerInch></o:OfficeDocumentSettings></xml></noscript><![endif]-->
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&display=swap" rel="stylesheet">
   <style>
     body,table,td,a{-webkit-text-size-adjust:100%;-ms-text-size-adjust:100%}
     table,td{mso-table-lspace:0pt;mso-table-rspace:0pt}
     img{border:0;height:auto;line-height:100%;outline:none;text-decoration:none;-ms-interpolation-mode:bicubic}
     @media only screen and (max-width:620px){
       .card{border-radius:0!important}
-      .ep{padding-left:20px!important;padding-right:20px!important}
+      .ep{padding-left:24px!important;padding-right:24px!important}
       .pill{display:none!important}
     }
   </style>
@@ -105,19 +108,19 @@ function emailShell(title, preheader, pillLabel, headerRowHtml, bodyHtml, footer
 
         <div style="display:none;max-height:0;overflow:hidden;mso-hide:all;font-size:1px;color:${BG};line-height:1px;">${h(preheader)}&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;</div>
 
-        <table role="presentation" class="card" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background:${WHITE};border-radius:14px;overflow:hidden;box-shadow:0 1px 3px rgba(20,18,31,0.06);" bgcolor="${WHITE}">
+        <table role="presentation" class="card" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background:${WHITE};border-radius:20px;overflow:hidden;box-shadow:0 1px 2px rgba(10,10,10,0.04),0 12px 32px rgba(10,10,10,0.08);" bgcolor="${WHITE}">
 
           <!-- MASTHEAD -->
           <tr>
-            <td style="background:${DARK};background:linear-gradient(135deg,${DARK} 0%,#241F3D 55%,${ACCENT_DARK} 130%);padding:28px 40px;" bgcolor="${DARK}">
+            <td style="background:${DARK};padding:30px 40px;" bgcolor="${DARK}">
               <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
                 <tr>
                   <td>
-                    <span style="font-size:21px;font-weight:800;color:${WHITE};letter-spacing:-0.5px;font-family:${FONT_DISPLAY};">Plan<span style="color:#B8AEFF;">It</span></span><br/>
-                    <span style="font-size:10px;font-weight:500;letter-spacing:1.2px;text-transform:uppercase;color:rgba(255,255,255,0.4);font-family:${FONT};">Event Management Platform</span>
+                    <span style="font-size:22px;font-weight:800;color:${WHITE};letter-spacing:-0.03em;font-family:${FONT_DISPLAY};">Plan<span style="color:#818CF8;">It</span></span><br/>
+                    <span style="font-size:10px;font-weight:500;letter-spacing:1.4px;text-transform:uppercase;color:rgba(255,255,255,0.38);font-family:${FONT};">Event Management Platform</span>
                   </td>
                   <td align="right" valign="middle" class="pill">
-                    <span style="display:inline-block;font-size:10px;font-weight:700;letter-spacing:0.8px;text-transform:uppercase;color:#DCD6FF;border:1px solid rgba(255,255,255,0.22);border-radius:20px;padding:5px 14px;font-family:${FONT};">${h(pillLabel)}</span>
+                    <span style="display:inline-block;font-size:10px;font-weight:700;letter-spacing:0.8px;text-transform:uppercase;color:rgba(255,255,255,0.75);border:1px solid rgba(255,255,255,0.16);background:rgba(255,255,255,0.06);border-radius:20px;padding:6px 14px;font-family:${FONT};">${h(pillLabel)}</span>
                   </td>
                 </tr>
               </table>
@@ -176,9 +179,9 @@ function ctaButton(label, url) {
     <table role="presentation" cellpadding="0" cellspacing="0" style="margin-top:28px;width:100%;">
       <tr>
         <td align="center">
-          <!--[if mso]><v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" href="${h(url)}" style="height:50px;v-text-anchor:middle;width:260px;" arcsize="16%" stroke="f" fillcolor="${ACCENT}"><w:anchorlock/><center style="color:#ffffff;font-family:${FONT};font-size:15px;font-weight:700;">${h(label)}</center></v:roundrect><![endif]-->
+          <!--[if mso]><v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" href="${h(url)}" style="height:50px;v-text-anchor:middle;width:260px;" arcsize="20%" stroke="f" fillcolor="${DARK}"><w:anchorlock/><center style="color:#ffffff;font-family:${FONT};font-size:14px;font-weight:700;">${h(label)}</center></v:roundrect><![endif]-->
           <!--[if !mso]><!-->
-          <a href="${h(url)}" style="background:${ACCENT};background:linear-gradient(135deg,${ACCENT} 0%,${ACCENT_DARK} 100%);color:#ffffff;display:inline-block;font-family:${FONT};font-size:15px;font-weight:700;line-height:50px;text-align:center;text-decoration:none;width:260px;border-radius:10px;letter-spacing:-0.2px;mso-hide:all;">${h(label)}</a>
+          <a href="${h(url)}" style="background:${DARK};background:linear-gradient(135deg,#1A1A1A 0%,${DARK} 100%);color:#ffffff;display:inline-block;font-family:${FONT};font-size:14px;font-weight:700;line-height:50px;text-align:center;text-decoration:none;width:260px;border-radius:12px;letter-spacing:-0.1px;mso-hide:all;">${h(label)}</a>
           <!--<![endif]-->
         </td>
       </tr>
@@ -190,7 +193,7 @@ function signature(copy) {
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top:36px;padding-top:24px;border-top:1px solid ${RULE};">
       <tr>
         <td>
-          <p style="margin:0 0 18px 0;font-size:15px;color:#4B5563;line-height:1.75;font-family:${FONT};">${copy}</p>
+          <p style="margin:0 0 18px 0;font-size:15px;color:#525252;line-height:1.75;font-family:${FONT};">${copy}</p>
           <p style="margin:0 0 2px 0;font-size:15px;font-weight:700;color:${DARK};font-family:${FONT};">Aakshat Hariharan</p>
           <p style="margin:0;font-size:12px;color:${FAINT};font-family:${FONT};">Founder, PlanIt</p>
         </td>
@@ -201,13 +204,13 @@ function signature(copy) {
 function qrBlock(qrDataUri, link) {
   if (!qrDataUri) return '';
   return `
-    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top:24px;background:${PANEL};border:1px solid #E5E7EB;border-radius:10px;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top:24px;background:${PANEL};border:1px solid #E5E5E5;border-radius:10px;">
       <tr>
         <td style="padding:24px;text-align:center;">
           <p style="margin:0 0 16px 0;font-size:10px;font-weight:700;letter-spacing:1.3px;text-transform:uppercase;color:${FAINT};font-family:${FONT};">QR Code for Attendees</p>
           <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 auto;">
             <tr>
-              <td style="background:${WHITE};border:1px solid #D1D5DB;border-radius:8px;padding:14px;line-height:0;">
+              <td style="background:${WHITE};border:1px solid #D4D4D4;border-radius:8px;padding:14px;line-height:0;">
                 <img src="${qrDataUri}" alt="Event QR Code" width="160" height="160" style="display:block;border-radius:4px;"/>
               </td>
             </tr>
@@ -240,7 +243,7 @@ function buildConfirmation(event) {
       ${detailRows(event)}
     </table>
     ${hrule()}
-    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top:24px;background:${PANEL};border:1px solid #E5E7EB;border-radius:8px;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top:24px;background:${PANEL};border:1px solid #E5E5E5;border-radius:8px;">
       <tr>
         <td style="padding:16px 20px;">
           <p style="margin:0 0 6px 0;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:${FAINT};font-family:${FONT};">Shareable Join Link</p>
@@ -285,10 +288,10 @@ function buildReminder(event) {
 
   const checkRows = checklist.map((text, i) => `
     <tr>
-      <td style="padding:10px 0;${i < checklist.length - 1 ? 'border-bottom:1px solid #F3F4F6;' : ''}vertical-align:top;width:20px;">
+      <td style="padding:10px 0;${i < checklist.length - 1 ? 'border-bottom:1px solid #F5F5F5;' : ''}vertical-align:top;width:20px;">
         <div style="width:5px;height:5px;background:${MID};border-radius:50%;margin-top:6px;"></div>
       </td>
-      <td style="padding:10px 0 10px 12px;${i < checklist.length - 1 ? 'border-bottom:1px solid #F3F4F6;' : ''}font-size:15px;color:${MID};line-height:1.55;font-family:${FONT};">${h(text)}</td>
+      <td style="padding:10px 0 10px 12px;${i < checklist.length - 1 ? 'border-bottom:1px solid #F5F5F5;' : ''}font-size:15px;color:${MID};line-height:1.55;font-family:${FONT};">${h(text)}</td>
     </tr>`).join('');
 
   const body = `
@@ -319,7 +322,7 @@ function buildThankyou(event) {
 
   const headerRow = `
     <tr>
-      <td class="ep" style="background:${DARK};padding:36px 40px 30px 40px;border-bottom:1px solid #1F2937;" bgcolor="${DARK}">
+      <td class="ep" style="background:${DARK};padding:36px 40px 30px 40px;border-bottom:1px solid #262626;" bgcolor="${DARK}">
         <span style="display:inline-block;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:rgba(255,255,255,0.4);background:rgba(255,255,255,0.08);padding:5px 12px;border-radius:5px;margin-bottom:16px;font-family:${FONT};">That is a wrap</span>
         <h1 style="margin:0 0 12px 0;font-size:24px;font-weight:800;color:${WHITE};letter-spacing:-0.5px;line-height:1.2;font-family:${FONT_DISPLAY};">Well done. Truly.</h1>
         <p style="margin:0;font-size:15px;color:rgba(255,255,255,0.4);line-height:1.65;font-family:${FONT};">A personal note about ${h(event.title)} from the founder.</p>
@@ -417,9 +420,9 @@ function buildRsvpGuestConfirmation({ guestName, guestFirstName, guestEmail, eve
     </tr>`).join('');
 
   const pendingNote = status === 'pending'
-    ? `<p style="margin:16px 0 0 0;font-size:14px;color:#4B5563;line-height:1.7;font-family:${FONT};">Your RSVP is awaiting approval from the organiser. You will receive a follow-up once it has been reviewed.</p>`
+    ? `<p style="margin:16px 0 0 0;font-size:14px;color:#525252;line-height:1.7;font-family:${FONT};">Your RSVP is awaiting approval from the organiser. You will receive a follow-up once it has been reviewed.</p>`
     : status === 'waitlisted'
-    ? `<p style="margin:16px 0 0 0;font-size:14px;color:#4B5563;line-height:1.7;font-family:${FONT};">You have been added to the waitlist. The organiser will be in touch if a spot opens up.</p>`
+    ? `<p style="margin:16px 0 0 0;font-size:14px;color:#525252;line-height:1.7;font-family:${FONT};">You have been added to the waitlist. The organiser will be in touch if a spot opens up.</p>`
     : '';
 
   const editNote = editUrl
