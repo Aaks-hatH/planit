@@ -83,6 +83,54 @@ function decryptPayload(stored) {
   } catch { return '[decryption failed]'; }
 }
 
+// ─── Blind indexes (searchable without decrypting) ────────────────────────────
+// PII is AES-encrypted, so it can't be queried directly. At ingest we also store
+// keyed HMACs of the normalised email / phone / name-words. An admin lookup then
+// hits an index instead of decrypting up to 20,000 rows. The HMAC key is derived
+// from AUDIT_ENCRYPTION_KEY; without that key no indexes are written and lookups
+// fall back to the slower decrypt-and-scan path.
+const IDX_KEY = ENC_KEY
+  ? crypto.createHmac('sha256', ENC_KEY).update('planit-pii-blind-index-v1').digest()
+  : null;
+
+function blind(kind, value) {
+  if (!IDX_KEY || !value) return null;
+  return crypto.createHmac('sha256', IDX_KEY).update(`${kind}:${value}`).digest('hex').slice(0, 32);
+}
+// a.b+tag@Gmail.com -> ab@gmail.com ; other domains only lose +tag
+function normEmail(raw) {
+  const s = String(raw || '').trim().toLowerCase();
+  const at = s.lastIndexOf('@');
+  if (at < 1) return null;
+  let local = s.slice(0, at).split('+')[0];
+  let domain = s.slice(at + 1);
+  if (domain === 'googlemail.com') domain = 'gmail.com';
+  if (domain === 'gmail.com') local = local.replace(/\./g, '');
+  return local && domain ? `${local}@${domain}` : null;
+}
+// +1 (555) 123-4567 -> 5551234567 (last 10 digits)
+function normPhone(raw) {
+  let d = String(raw || '').replace(/\D/g, '');
+  if (d.length === 11 && d[0] === '1') d = d.slice(1);
+  return d.length >= 7 ? d.slice(-10) : null;
+}
+// "José  O'Brien-Smith" -> ['jose','o','brien','smith'] (min length 2, accents folded)
+function nameTokens(raw) {
+  return [...new Set(
+    String(raw || '').toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g, '')
+      .split(/[^a-z0-9]+/).filter((t) => t.length >= 2)
+  )].slice(0, 8);
+}
+function buildPiiIndex(pii) {
+  if (!IDX_KEY || !pii || typeof pii !== 'object') return {};
+  const e = normEmail(pii.email), p = normPhone(pii.phone), n = nameTokens(pii.name);
+  return {
+    piiEmailIdx: e ? blind('email', e) : null,
+    piiPhoneIdx: p ? blind('phone', p) : null,
+    piiNameIdx:  n.map((t) => blind('name', t)),
+  };
+}
+
 // ─── Schema ───────────────────────────────────────────────────────────────────
 const RETENTION_SECS = parseInt(process.env.ANALYTICS_RETENTION_DAYS || '90', 10) * 86400;
 
@@ -133,6 +181,10 @@ const analyticsSchema = new mongoose.Schema(
     checkedInAt:          { type: Date,    default: null },
     // pii: always encryptPayload({ email, name, phone }) — never raw
     pii:                  { type: mongoose.Schema.Types.Mixed, default: null },
+    // Blind indexes of pii (keyed HMACs, not reversible) — see buildPiiIndex()
+    piiEmailIdx:          { type: String, default: null },
+    piiPhoneIdx:          { type: String, default: null },
+    piiNameIdx:           { type: [String], default: undefined },
     // ipHash: SHA-256(rawIp + YYYY-MM-DD), first 32 hex chars — daily-rotating, non-reversible
     ipHash:               { type: String, default: null },
     ipCountry:            { type: String, maxlength: 2, default: null },
@@ -158,6 +210,9 @@ analyticsSchema.index({ linkedEventId: 1, ts: -1 });
 analyticsSchema.index({ linkedEventId: 1, visitorId: 1 });
 analyticsSchema.index({ isSuspected: 1, ts: -1 });
 analyticsSchema.index({ ipHash: 1, ts: -1 });
+analyticsSchema.index({ piiEmailIdx: 1 }, { sparse: true });
+analyticsSchema.index({ piiPhoneIdx: 1 }, { sparse: true });
+analyticsSchema.index({ piiNameIdx: 1 }, { sparse: true });
 
 // ─── Model ─────────────────────────────────────────────────────────────────────
 let _Model = null;
@@ -266,6 +321,7 @@ async function ingestBatch(events = [], req) {
         checkedIn:            ev.checkedIn === true,
         checkedInAt:          ev.checkedInAt ? new Date(ev.checkedInAt) : null,
         pii:                  piiStored,
+        ...buildPiiIndex(ev.pii),
         ipHash,
         ipCountry: req?.headers?.['cf-ipcountry']
                    ? String(req.headers['cf-ipcountry']).slice(0, 2)
@@ -585,4 +641,4 @@ async function getDashboardData(windowDays = 30) {
   };
 }
 
-module.exports = { ingestBatch, getDashboardData, decryptPayload, getModel };
+module.exports = { ingestBatch, getDashboardData, decryptPayload, getModel, blind, normEmail, normPhone, nameTokens };
