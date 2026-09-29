@@ -26,6 +26,7 @@ const { verifyAdmin, requireSuperAdminRole, demoGuard } = require('../middleware
 const axios      = require('axios');
 const { body, validationResult } = require('express-validator');
 const WLLead     = require('../models/WLLead');
+const { recordIdentity } = require('../services/identityService');
 const bcrypt     = require('bcryptjs');
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -541,6 +542,8 @@ router.post('/request', [
       { businessName, contactName, email, businessType, tierInterest: tierInterest || 'unsure', phone, website, message },
       { upsert: true, new: true, setDefaultsOnInsert: true },
     );
+
+    recordIdentity(req, { source: 'wl_lead', name: contactName, email, phone });
 
     console.log(`[wl-lead] New lead: ${businessName} <${email}> tier=${tierInterest}`);
 
