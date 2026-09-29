@@ -3452,6 +3452,22 @@ router.post('/:eventId/clone', verifyOrganizer, cloneLimiter, async (req, res, n
       return res.status(400).json({ error: 'Table service events can\'t be cloned.' });
     }
 
+    // ── Organizer login for the new event(s) ─────────────────────────────────
+    const cloneUsername = String(req.body.username || '').trim();
+    const clonePassword = String(req.body.accountPassword || '');
+    if (!cloneUsername || cloneUsername.length > 100) {
+      return res.status(400).json({ error: 'Enter a username for the new event.' });
+    }
+    if (clonePassword.length < 4) {
+      return res.status(400).json({ error: 'Password must be at least 4 characters.' });
+    }
+    const nameBanned = await Blocklist.findOne({
+      type: 'name',
+      value: { $regex: new RegExp(`^${cloneUsername.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') },
+      $or: [{ expiresAt: null }, { expiresAt: { $gt: new Date() } }],
+    }).lean();
+    if (nameBanned) return res.status(403).json({ error: 'This username is not allowed.' });
+
     // ── Read + validate the requested clones ─────────────────────────────────
     let requested = Array.isArray(req.body.clones) ? req.body.clones : null;
     if (!requested && req.body.date) {
@@ -3532,9 +3548,11 @@ router.post('/:eventId/clone', verifyOrganizer, cloneLimiter, async (req, res, n
     reserved = n;
 
     // ── Build the clones ─────────────────────────────────────────────────────
-    const srcOrganizer = await EventParticipant.findOne({
-      eventId: source._id, username: source.organizerName, role: 'organizer',
-    }).select('+password +recoveryCodeHash').lean();
+    // One fresh organizer login (the username + password the person just typed),
+    // shared by every clone made in this request. Hashed once here.
+    const accountHash  = await bcrypt.hash(clonePassword, 10);
+    const recoveryCode = Array.from({ length: 5 }, () => crypto.randomBytes(2).toString('hex').toUpperCase()).join('-');
+    const recoveryHash = await bcrypt.hash(recoveryCode.replace(/-/g, '').toLowerCase(), 10);
 
     const ip = realIp(req);
     const ua = (req.headers['user-agent'] || '').slice(0, 500);
@@ -3573,7 +3591,7 @@ router.post('/:eventId/clone', verifyOrganizer, cloneLimiter, async (req, res, n
           date:                c.when,
           timezone:            source.timezone,
           location:            source.location,
-          organizerName:       source.organizerName,
+          organizerName:       cloneUsername,
           organizerEmail:      source.organizerEmail,
           wlDomain:            source.wlDomain || null,
           password:            source.password,
@@ -3601,22 +3619,20 @@ router.post('/:eventId/clone', verifyOrganizer, cloneLimiter, async (req, res, n
           ...(rsvpPageConfig ? { rsvpPageConfig } : {}),
           status:       'active',
           clonedFrom:   source._id,
-          participants: [{ username: source.organizerName, role: 'organizer' }],
+          participants: [{ username: cloneUsername, role: 'organizer' }],
           creatorIp: ip, creatorUserAgent: ua, creatorFingerprint: fingerprint,
         });
         await clone.save();
 
-        // Same organizer login as the original event.
+        // Organizer login for the clone: the username + password entered in the clone form.
         await EventParticipant.create({
           eventId:  clone._id,
-          username: source.organizerName,
+          username: cloneUsername,
           role:     'organizer',
-          ...(srcOrganizer?.hasPassword && srcOrganizer.password ? {
-            password:    srcOrganizer.password,
-            hasPassword: true,
-            recoveryCodeHash:        srcOrganizer.recoveryCodeHash || null,
-            recoveryCodeGeneratedAt: srcOrganizer.recoveryCodeGeneratedAt || null,
-          } : {}),
+          password: accountHash,
+          hasPassword: true,
+          recoveryCodeHash: recoveryHash,
+          recoveryCodeGeneratedAt: new Date(),
         });
 
         created.push({
@@ -3644,6 +3660,7 @@ router.post('/:eventId/clone', verifyOrganizer, cloneLimiter, async (req, res, n
       events:  created,
       event:   created[0],
       failed,
+      recoveryCode,   // shown once; only the hash is stored
       clone:   { used, limit: CLONE_LIMIT, remaining: Math.max(0, CLONE_LIMIT - used) },
     });
   } catch (error) {
