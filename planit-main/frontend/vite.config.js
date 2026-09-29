@@ -52,6 +52,11 @@ export default defineConfig({
         // Safari picks up new deployments immediately instead of serving
         // the stale shell from the service-worker cache.
         globPatterns: ['**/*.{js,css,ico,png,svg,woff,woff2}'],
+        // generateSW defaults to navigateFallback: 'index.html', which calls
+        // createHandlerBoundToURL('index.html') and throws "non-precached-url" because
+        // index.html is deliberately excluded above. Navigations are already handled by the
+        // NetworkFirst runtime route below, so turn the precache fallback off.
+        navigateFallback: null,
         runtimeCaching: [
           {
             // Navigation requests (HTML) — always go to the network first.
