@@ -21,11 +21,13 @@ const _isWLHost = !NATIVE_HOSTS.some(h => window.location.hostname === h || wind
 api.interceptors.request.use((config) => {
   // Tell the backend which browser this is, so any route that collects a
   // name/email/phone can tie it to this visitor (see identityService.recordIdentity).
+  // Sent as query params, NOT custom headers: custom headers trigger a CORS preflight
+  // that the router in front of the backend would have to allow-list.
   try {
     const { visitorId, sessionId } = getIdentity();
-    config.headers['x-planit-vid'] = visitorId;
-    config.headers['x-planit-sid'] = sessionId;
-    config.headers['x-planit-page'] = window.location.pathname.slice(0, 200);
+    if (!config.params || typeof config.params === 'object') {
+      config.params = { ...(config.params || {}), _vid: visitorId, _sid: sessionId };
+    }
   } catch { /* tracking must never break a request */ }
 
   // Tag every request from a WL domain so the backend can scope it correctly
