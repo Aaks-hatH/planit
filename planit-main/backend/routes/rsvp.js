@@ -26,6 +26,7 @@ const router   = express.Router();
 const crypto   = require('crypto');
 const Event    = require('../models/Event');
 const RSVPSubmission = require('../models/RSVPSubmission');
+const { recordGuestIdentity } = require('../services/identityService');
 const RSVPPageView = require('../models/RSVPPageView');
 const WhiteLabel = require('../models/WhiteLabel');
 const File     = require('../models/File');
@@ -518,6 +519,7 @@ router.post('/:eventIdOrSlug/submit', async (req, res, next) => {
                 }
               }).catch(() => {});
             }
+            recordGuestIdentity(req, { event, firstName, lastName, email, phone, rsvpStatus: 'waitlist' });
             return res.json({
               success:   true,
               waitlisted: true,
@@ -655,6 +657,8 @@ router.post('/:eventIdOrSlug/submit', async (req, res, next) => {
       // Keep organizer-facing notes generic so internal anti-abuse details are not exposed.
       ...(isSpamSuspect ? { organizerNotes: 'Additional review was requested before confirmation.' } : {}),
     });
+
+    recordGuestIdentity(req, { event, firstName, lastName, email, phone, rsvpStatus: ['yes', 'maybe', 'no'].includes(response) ? response : null });
 
     res.status(201).json({
       success:     true,
