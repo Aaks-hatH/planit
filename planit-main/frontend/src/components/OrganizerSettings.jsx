@@ -9,6 +9,7 @@ import toast from 'react-hot-toast';
 import { eventAPI, fileAPI } from '../services/api';
 import RSVPSettings from './RSVPSettings';
 import RSVPDashboard from './RSVPDashboard';
+import CloneEventButton from './CloneEventButton';
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
@@ -98,10 +99,6 @@ export default function OrganizerSettings({ eventId, event, onClose, onUpdated, 
  const [webhooksLoading, setWebhooksLoading] = useState(false);
  const [newWh, setNewWh] = useState({ url: '', events: [], secret: '' });
  const [addingWh, setAddingWh] = useState(false);
- // Clone
- const [cloneDate, setCloneDate] = useState('');
- const [cloneTitle, setCloneTitle] = useState('');
- const [cloning, setCloning] = useState(false);
 
  // Theme
  const [coverImage, setCoverImage] = useState(event?.coverImage || null);
@@ -833,43 +830,21 @@ export default function OrganizerSettings({ eventId, event, onClose, onUpdated, 
  {activeTab === 'integrations' && (
  <div className="space-y-5">
 
- {/* ── Clone event ── */}
- <div className="border border-neutral-200 rounded-xl overflow-hidden">
- <div className="flex items-center gap-2 px-4 py-3 bg-neutral-50 border-b border-neutral-200">
- <RefreshCw className="w-4 h-4 text-neutral-500" />
- <span className="text-sm font-semibold text-neutral-700">Recurring / Clone Event</span>
- </div>
- <div className="px-4 py-4 space-y-3">
- <p className="text-xs text-neutral-500">Copy this event (title, agenda, settings) to a new date. The clone starts fresh with no participants or messages.</p>
- <div>
- <label className="block text-xs font-medium text-neutral-600 mb-1.5">New title <span className="font-normal text-neutral-400">(optional — defaults to same title)</span></label>
- <input type="text" className="input text-sm" placeholder={event?.title} value={cloneTitle} onChange={e => setCloneTitle(e.target.value)} />
- </div>
- <div>
- <label className="block text-xs font-medium text-neutral-600 mb-1.5">New date & time <span className="text-red-500">*</span></label>
- <input type="datetime-local" className="input text-sm" value={cloneDate} onChange={e => setCloneDate(e.target.value)} />
- </div>
- <button
- disabled={!cloneDate || cloning}
- onClick={async () => {
- if (!cloneDate) return;
- setCloning(true);
- try {
- const r = await eventAPI.clone(eventId, { date: cloneDate, title: cloneTitle || undefined });
- toast.success('Event cloned! Opening…');
- setTimeout(() => window.open(`/event/${r.data.event.id}`, '_blank'), 800);
- } catch (err) {
- toast.error(err.response?.data?.error || 'Clone failed');
- } finally { setCloning(false); }
- }}
- className="btn btn-secondary text-sm gap-1.5 w-full"
- >
- {cloning ? <><span className="spinner w-3.5 h-3.5 border-2 border-neutral-300 border-t-neutral-600" />Cloning…</> : <><RefreshCw className="w-3.5 h-3.5" />Clone to new date</>}
- </button>
- </div>
- </div>
+          {/* ── Clone event ── */}
+          {!event?.isTableServiceMode && (
+            <div className="border border-neutral-200 rounded-xl overflow-hidden">
+              <div className="flex items-center gap-2 px-4 py-3 bg-neutral-50 border-b border-neutral-200">
+                <RefreshCw className="w-4 h-4 text-neutral-500" />
+                <span className="text-sm font-semibold text-neutral-700">Recurring / Clone Event</span>
+              </div>
+              <div className="px-4 py-4 space-y-3">
+                <p className="text-xs text-neutral-500">Copy this event's setup (settings, agenda, checklist, RSVP page) to a new date and link. The clone starts fresh with no guests, participants or messages.</p>
+                <CloneEventButton event={event} eventId={eventId} />
+              </div>
+            </div>
+          )}
 
- {/* ── Webhooks ── */}
+          {/* ── Webhooks ── */}
  <div className="border border-neutral-200 rounded-xl overflow-hidden">
  <div className="flex items-center gap-2 px-4 py-3 bg-neutral-50 border-b border-neutral-200">
  <Webhook className="w-4 h-4 text-neutral-500" />
