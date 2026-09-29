@@ -324,7 +324,7 @@ const corsOptions = {
   },
   credentials:          true,
   methods:              ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
-  allowedHeaders:       ['Content-Type', 'Authorization', 'x-event-token', 'X-MCP-Secret', 'X-MCP-Session-ID'],
+  allowedHeaders:       ['Content-Type', 'Authorization', 'x-event-token', 'X-MCP-Secret', 'X-MCP-Session-ID', 'x-planit-vid', 'x-planit-sid', 'x-planit-page'],
   exposedHeaders:       ['Content-Type', 'Authorization'],
   preflightContinue:    false,
   optionsSuccessStatus: 204,
