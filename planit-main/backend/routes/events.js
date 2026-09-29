@@ -3394,64 +3394,266 @@ router.delete('/:eventId/waitlist/:username', async (req, res, next) => {
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
-// RECURRING EVENTS — clone with a new date
+// CLONE EVENT — copy an event's setup to new dates + slugs
+//
+//   • Works for standard, enterprise and RSVP-only events. Table service is refused.
+//   • Each source event gets EVENT_CLONE_LIMIT clone uses in total (default 2).
+//     One use = one new event, so a single request may create up to the number
+//     of uses still remaining.
+//   • The organizer picks the date and the slug for every clone.
+//   • Copies setup only (settings, agenda, checklist, seating map, check-in
+//     rules, RSVP page + builder layout, theme). It never copies guests, RSVPs,
+//     invites, chat, files, polls, expenses, notes, webhooks or OAuth tokens.
 // ═══════════════════════════════════════════════════════════════════════════
 
-router.post('/:eventId/clone', verifyOrganizer,
-  [body('date').isISO8601().withMessage('Valid date required'), validate],
-  async (req, res, next) => {
-    try {
-      const source = await Event.findById(req.params.eventId).select('+password').lean();
-      if (!source) return res.status(404).json({ error: 'Event not found' });
+const CLONE_LIMIT = Math.max(1, parseInt(process.env.EVENT_CLONE_LIMIT || '2', 10) || 2);
 
-      const { date, title } = req.body;
+// Failed attempts (bad slug, taken slug) don't count against the hourly cap.
+const cloneLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 10,
+  keyGenerator: realIp,
+  skipFailedRequests: true,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many clones, please try again later.' },
+});
 
-      // Generate a unique subdomain based on original + timestamp
-      const baseSubdomain = source.subdomain.replace(/-\d+$/, '');
-      const newSubdomain = `${baseSubdomain}-${Date.now().toString(36)}`;
+const stripIds = (arr) => (Array.isArray(arr) ? arr : []).map((row) => {
+  const { _id, ...rest } = row || {};
+  return rest;
+});
 
-      const cloned = new Event({
-        subdomain:          newSubdomain,
-        title:              (title || source.title).trim(),
-        description:        source.description,
-        date:               new Date(date),
-        timezone:           source.timezone,
-        location:           source.location,
-        organizerName:      source.organizerName,
-        organizerEmail:     source.organizerEmail,
-        password:           source.password,
-        isPasswordProtected: source.isPasswordProtected,
-        isEnterpriseMode:   source.isEnterpriseMode,
-        maxParticipants:    source.maxParticipants,
-        settings:           source.settings,
-        agenda:             source.agenda || [],
-        status:             'active',
-        participants:       [{ username: source.organizerName, role: 'organizer' }],
+// How many clone uses are left for this event.
+router.get('/:eventId/clone-info', verifyOrganizer, async (req, res, next) => {
+  try {
+    const src = await Event.findById(req.params.eventId).select('cloneCount isTableServiceMode').lean();
+    if (!src) return res.status(404).json({ error: 'Event not found' });
+    const used = Math.min(src.cloneCount || 0, CLONE_LIMIT);
+    res.json({
+      allowed:   !src.isTableServiceMode,
+      used,
+      limit:     CLONE_LIMIT,
+      remaining: src.isTableServiceMode ? 0 : Math.max(0, CLONE_LIMIT - used),
+    });
+  } catch (error) { next(error); }
+});
+
+router.post('/:eventId/clone', verifyOrganizer, cloneLimiter, async (req, res, next) => {
+  let reserved = 0; // uses taken from the source event's quota
+  let sourceId = null;
+  try {
+    const source = await Event.findById(req.params.eventId)
+      .select('+password +rsvpPage.rsvpPassword').lean();
+    if (!source) return res.status(404).json({ error: 'Event not found' });
+    sourceId = source._id;
+
+    if (source.isTableServiceMode) {
+      return res.status(400).json({ error: 'Table service events can\'t be cloned.' });
+    }
+
+    // ── Read + validate the requested clones ─────────────────────────────────
+    let requested = Array.isArray(req.body.clones) ? req.body.clones : null;
+    if (!requested && req.body.date) {
+      // Legacy single-clone body: { date, title } — slug is generated.
+      requested = [{ date: req.body.date, title: req.body.title, subdomain: null }];
+    }
+    if (!requested || requested.length === 0) {
+      return res.status(400).json({ error: 'Add at least one date and slug.' });
+    }
+    if (requested.length > CLONE_LIMIT) {
+      return res.status(400).json({ error: `You can create at most ${CLONE_LIMIT} clones of an event.` });
+    }
+
+    const now = Date.now();
+    const seen = new Set();
+    const clean = [];
+    for (let i = 0; i < requested.length; i++) {
+      const r = requested[i] || {};
+      const label = requested.length > 1 ? ` (clone ${i + 1})` : '';
+
+      const when = new Date(r.date);
+      if (!r.date || Number.isNaN(when.getTime())) {
+        return res.status(400).json({ error: `Enter a valid date${label}.` });
+      }
+      if (when.getTime() < now - 60 * 60 * 1000) {
+        return res.status(400).json({ error: `Pick a date in the future${label}.` });
+      }
+
+      let slug = r.subdomain == null ? null : String(r.subdomain).trim().toLowerCase();
+      if (slug === null) {
+        slug = `${source.subdomain.replace(/-\d+$/, '')}-${Date.now().toString(36)}${i}`.slice(0, 50);
+      }
+      if (!/^[a-z0-9-]+$/.test(slug) || slug.length < 3 || slug.length > 50) {
+        return res.status(400).json({ error: `Slug must be 3–50 characters: lowercase letters, numbers and dashes${label}.` });
+      }
+      if (seen.has(slug)) {
+        return res.status(400).json({ error: `Each clone needs its own slug ("${slug}" is used twice).` });
+      }
+      seen.add(slug);
+
+      const title = String(r.title || '').trim().slice(0, 200);
+      clean.push({ slug, when, title });
+    }
+
+    // Slugs must be free and not banned.
+    const slugs = clean.map((c) => c.slug);
+    const [taken, banned] = await Promise.all([
+      Event.find({ subdomain: { $in: slugs } }).select('subdomain').lean(),
+      Blocklist.find({
+        type: 'event', value: { $in: slugs },
+        $or: [{ expiresAt: null }, { expiresAt: { $gt: new Date() } }],
+      }).select('value').lean(),
+    ]);
+    if (taken.length) {
+      return res.status(409).json({ error: `The slug "${taken[0].subdomain}" is already taken.`, field: 'subdomain', slug: taken[0].subdomain });
+    }
+    if (banned.length) {
+      return res.status(403).json({ error: `The slug "${banned[0].value}" isn't available.`, field: 'subdomain', slug: banned[0].value });
+    }
+
+    // ── Reserve quota atomically (two tabs can't both use the last slot) ──────
+    const n = clean.length;
+    const held = await Event.findOneAndUpdate(
+      { _id: source._id, cloneCount: { $not: { $gt: CLONE_LIMIT - n } } },
+      { $inc: { cloneCount: n } },
+      { new: true }
+    ).select('cloneCount').lean();
+    if (!held) {
+      const cur = await Event.findById(source._id).select('cloneCount').lean();
+      const used = Math.min(cur?.cloneCount || 0, CLONE_LIMIT);
+      return res.status(403).json({
+        error: used >= CLONE_LIMIT
+          ? `This event has used all ${CLONE_LIMIT} of its clones.`
+          : `Only ${CLONE_LIMIT - used} clone${CLONE_LIMIT - used === 1 ? '' : 's'} left for this event.`,
+        used, limit: CLONE_LIMIT, remaining: Math.max(0, CLONE_LIMIT - used),
       });
+    }
+    reserved = n;
 
-      await cloned.save();
+    // ── Build the clones ─────────────────────────────────────────────────────
+    const srcOrganizer = await EventParticipant.findOne({
+      eventId: source._id, username: source.organizerName, role: 'organizer',
+    }).select('+password +recoveryCodeHash').lean();
 
-      // Re-create organizer's EventParticipant record
-      await EventParticipant.create({
-        eventId:  cloned._id,
-        username: source.organizerName,
-        role:     'organizer',
-      });
+    const ip = realIp(req);
+    const ua = (req.headers['user-agent'] || '').slice(0, 500);
+    const fingerprint = crypto.createHash('sha256').update(`${ip}::${ua}`).digest('hex').slice(0, 32);
 
-      const token = jwt.sign(
-        { eventId: cloned._id.toString(), username: source.organizerName, role: 'organizer' },
-        secrets.jwt,
-        { expiresIn: '24h' }
-      );
+    const created = [];
+    const failed  = [];
 
-      res.status(201).json({
-        message:   'Event cloned successfully',
-        event:     { id: cloned._id, subdomain: cloned.subdomain, title: cloned.title },
-        token,
-      });
-    } catch (error) { next(error); }
+    for (const c of clean) {
+      try {
+        // Keep relative deadlines (RSVP deadline, task due dates) the same distance from the event.
+        const delta = source.date ? c.when.getTime() - new Date(source.date).getTime() : null;
+        const shift = (d) => (d && delta !== null ? new Date(new Date(d).getTime() + delta) : null);
+
+        const rsvpPage = source.rsvpPage ? { ...source.rsvpPage } : undefined;
+        if (rsvpPage) {
+          delete rsvpPage.gmailAuth;            // OAuth tokens never travel
+          rsvpPage.deadline  = shift(rsvpPage.deadline);
+          rsvpPage.updatedAt = null;
+          rsvpPage.updatedBy = null;
+        }
+        const rsvpPageConfig = source.rsvpPageConfig
+          ? { ...source.rsvpPageConfig, updatedAt: null, updatedBy: null }
+          : undefined;
+
+        const checkinSettings = { ...(source.checkinSettings || {}) };
+        checkinSettings.emergencyLockdown = false;
+        delete checkinSettings.emergencyLockdownReason;
+        delete checkinSettings.emergencyLockdownBy;
+        delete checkinSettings.emergencyLockdownAt;
+
+        const clone = new Event({
+          subdomain:           c.slug,
+          title:               c.title || source.title,
+          description:         source.description,
+          date:                c.when,
+          timezone:            source.timezone,
+          location:            source.location,
+          organizerName:       source.organizerName,
+          organizerEmail:      source.organizerEmail,
+          wlDomain:            source.wlDomain || null,
+          password:            source.password,
+          isPasswordProtected: source.isPasswordProtected,
+          maxParticipants:     source.maxParticipants,
+          isEnterpriseMode:    !!source.isEnterpriseMode,
+          isTableServiceMode:  false,
+          eventType:           source.eventType || 'standard',
+          checkinSettings,
+          seatingMap: source.seatingMap
+            ? { ...source.seatingMap, updatedAt: null, updatedBy: null }
+            : undefined,
+          settings: { ...(source.settings || {}), rsvpDeadline: shift(source.settings?.rsvpDeadline) },
+          agenda:   stripIds(source.agenda),
+          tasks:    stripIds(source.tasks).map((t) => ({
+            ...t, completed: false, completedBy: undefined, completedAt: undefined,
+            dueDate: shift(t.dueDate) || undefined, createdAt: new Date(),
+          })),
+          budget:          source.budget || 0,
+          coverImage:      source.coverImage || null,
+          themeColor:      source.themeColor || null,
+          tags:            source.tags || [],
+          dataRetentionDays: source.dataRetentionDays,
+          ...(rsvpPage ? { rsvpPage } : {}),
+          ...(rsvpPageConfig ? { rsvpPageConfig } : {}),
+          status:       'active',
+          clonedFrom:   source._id,
+          participants: [{ username: source.organizerName, role: 'organizer' }],
+          creatorIp: ip, creatorUserAgent: ua, creatorFingerprint: fingerprint,
+        });
+        await clone.save();
+
+        // Same organizer login as the original event.
+        await EventParticipant.create({
+          eventId:  clone._id,
+          username: source.organizerName,
+          role:     'organizer',
+          ...(srcOrganizer?.hasPassword && srcOrganizer.password ? {
+            password:    srcOrganizer.password,
+            hasPassword: true,
+            recoveryCodeHash:        srcOrganizer.recoveryCodeHash || null,
+            recoveryCodeGeneratedAt: srcOrganizer.recoveryCodeGeneratedAt || null,
+          } : {}),
+        });
+
+        created.push({
+          id: clone._id, subdomain: clone.subdomain, title: clone.title,
+          date: clone.date, eventType: clone.eventType, isEnterpriseMode: clone.isEnterpriseMode,
+        });
+      } catch (err) {
+        failed.push({ subdomain: c.slug, error: err?.code === 11000 ? 'Slug already taken.' : 'Could not create this clone.' });
+        console.error('[clone] failed for', c.slug, err?.message || err);
+      }
+    }
+
+    // Give back the uses for clones that never got created.
+    if (failed.length) {
+      await Event.updateOne({ _id: source._id }, { $inc: { cloneCount: -failed.length } }).catch(() => {});
+      reserved -= failed.length;
+    }
+    if (!created.length) {
+      return res.status(409).json({ error: failed[0]?.error || 'Clone failed.', failed });
+    }
+
+    const used = Math.min((held.cloneCount || 0) - failed.length, CLONE_LIMIT);
+    res.status(201).json({
+      message: created.length > 1 ? 'Events cloned successfully' : 'Event cloned successfully',
+      events:  created,
+      event:   created[0],
+      failed,
+      clone:   { used, limit: CLONE_LIMIT, remaining: Math.max(0, CLONE_LIMIT - used) },
+    });
+  } catch (error) {
+    // Unexpected error before/while creating: return anything still held.
+    if (reserved > 0 && sourceId) {
+      await Event.updateOne({ _id: sourceId }, { $inc: { cloneCount: -reserved } }).catch(() => {});
+    }
+    next(error);
   }
-);
+});
 
 // ═══════════════════════════════════════════════════════════════════════════
 // WEBHOOKS
