@@ -82,7 +82,12 @@ export const HeroBlock = React.memo(function HeroBlock({ content, layout, spacin
     if (Number.isNaN(d.getTime())) return '';
     let zone;
     try { if (timezone) { new Intl.DateTimeFormat('en-US', { timeZone: timezone }); zone = timezone; } } catch { zone = undefined; }
-    return d.toLocaleString(undefined, { dateStyle: 'full', timeStyle: 'short', ...(zone ? { timeZone: zone, timeZoneName: 'short' } : {}) });
+    // NOTE: dateStyle/timeStyle can NOT be combined with timeZoneName — the browser throws
+    // "TypeError: Invalid option : option" and the whole RSVP page unmounts. timeStyle: 'long'
+    // already includes the short zone abbreviation (e.g. "6:30:00 PM EDT"), so use that instead.
+    return d.toLocaleString(undefined, zone
+      ? { dateStyle: 'full', timeStyle: 'long', timeZone: zone }
+      : { dateStyle: 'full', timeStyle: 'short' });
   })();
   // "split" now controls where the overlaid text sits (left vs. centered),
   // not a side-by-side image — the cover graphic and the hero copy are
