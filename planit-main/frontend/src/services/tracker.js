@@ -168,9 +168,9 @@ export function setEventContext(eventId, subdomain) {
 }
 
 /**
- * Returns this browser's visitor + session IDs. Only sent with guest RSVP
- * submissions (see api.js) so the admin data-request tool can tie a submitted
- * name/email/phone to the visits that produced it.
+ * Returns this browser's visitor + session IDs. api.js sends them as
+ * x-planit-vid / x-planit-sid headers on every API request so the backend can tie
+ * any submitted name/email/phone to the visits that produced it.
  */
 export function getIdentity() {
   return { visitorId, sessionId };
