@@ -5,9 +5,10 @@
  *
  * Admin-only identity resolution helpers used by /api/platform-analytics/pii-lookup.
  *
- *  - recordGuestIdentity(): called when a GUEST submits an RSVP. Ties the guest's
- *    name/email/phone to the browser's visitor ID + session ID (sent as _vid/_sid
- *    query params by the frontend) by writing one encrypted analytics row.
+ *  - recordIdentity(): called from any route that collects a name/email/phone.
+ *    Ties it to the browser's visitor ID + session ID (x-planit-vid / x-planit-sid
+ *    headers added by api.js) by writing one encrypted analytics row.
+ *  - resolveVisitor() / visitorsForIdentity(): visitor -> person, and person -> all their visitor IDs.
  *  - findFootprint(): searches every collection that stores a person's contact
  *    details (RSVPs, invites, event participants, white-label leads, staff) and
  *    reports where that person appears, with a confidence label per match.
@@ -22,7 +23,7 @@ const EventParticipant = require('../models/EventParticipant');
 const WLLead           = require('../models/WLLead');
 const Employee         = require('../models/Employee');
 const Event            = require('../models/Event');
-const { ingestBatch, normEmail, normPhone, nameTokens } = require('../models/PlatformAnalytics');
+const { ingestBatch, normEmail, normPhone, nameTokens, blind, getModel, decryptPayload } = require('../models/PlatformAnalytics');
 
 const esc = (s) => String(s).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 const VID_RE = /^v_[a-z0-9_]{6,60}$/i;
@@ -43,27 +44,85 @@ function phoneRegex(d10) { return new RegExp(d10.split('').join('\\D*') + '\\D*$
 // Name: every query token must start a word in the field.
 const wordStart = (t) => new RegExp('(^|\\s)' + esc(t), 'i');
 
-// ── Guest identity capture (RSVP submit) ─────────────────────────────────────
-function recordGuestIdentity(req, { event, firstName, lastName, email, phone, rsvpStatus, feature = 'rsvp_submitted' } = {}) {
+// ── Identity capture ─────────────────────────────────────────────────────────
+// Browser IDs come from the x-planit-vid / x-planit-sid headers that api.js adds
+// to every request. The old _vid/_sid query params are still accepted.
+function readIds(req) {
+  const h = req?.headers || {};
+  const vid = String(h['x-planit-vid'] || req?.query?._vid || '');
+  const sid = String(h['x-planit-sid'] || req?.query?._sid || '');
+  if (!VID_RE.test(vid) || !SID_RE.test(sid)) return null;
+  return { vid, sid };
+}
+
+/**
+ * Call from ANY route where a person gives us their name / email / phone.
+ * Ties that identity to this browser's visitor ID. Because every analytics row
+ * is keyed by visitor ID, all of that browser's past AND future activity then
+ * resolves to this person. Never throws.
+ *
+ *   recordIdentity(req, { source: 'event_created', name, email, phone, event })
+ */
+function recordIdentity(req, { event, firstName, lastName, name, email, phone, rsvpStatus, source = 'identified', feature } = {}) {
   try {
-    const vid = String(req?.query?._vid || '');
-    const sid = String(req?.query?._sid || '');
-    if (!VID_RE.test(vid) || !SID_RE.test(sid)) return; // not a browser with a tracker
-    const name = [firstName, lastName].filter(Boolean).join(' ').trim() || null;
-    if (!name && !email && !phone) return;
+    const ids = readIds(req);
+    if (!ids) return; // not a browser with a tracker
+    const full = name || [firstName, lastName].filter(Boolean).join(' ').trim() || null;
+    if (!full && !email && !phone) return;
     ingestBatch([{
       eventType: 'feature_use',
-      visitorId: vid,
-      sessionId: sid,
-      page: '/rsvp',
+      visitorId: ids.vid,
+      sessionId: ids.sid,
+      page: req?.headers?.['x-planit-page'] || '/',
       ts: new Date().toISOString(),
       linkedEventId: event?._id ? String(event._id) : null,
       linkedEventSubdomain: event?.subdomain || null,
       rsvpStatus: rsvpStatus || null,
-      payload: { feature },
-      pii: { name, email: email || null, phone: phone || null },
+      payload: { feature: feature || source, identitySource: source },
+      pii: { name: full, email: email || null, phone: phone || null },
     }], req).catch(() => {});
-  } catch { /* never break an RSVP over analytics */ }
+  } catch { /* never break a user request over analytics */ }
+}
+
+// Back-compat: rsvp.js already calls this.
+function recordGuestIdentity(req, args = {}) {
+  recordIdentity(req, { source: 'rsvp', feature: 'rsvp_submitted', ...args });
+}
+
+// ── Resolution ───────────────────────────────────────────────────────────────
+/** Who is this visitor ID? Newest identified row wins. Returns {name,email,phone}|null. */
+async function resolveVisitor(vid) {
+  const Model = getModel();
+  if (!Model || !VID_RE.test(String(vid || ''))) return null;
+  const rows = await Model.find({ visitorId: vid, pii: { $ne: null } })
+    .select('pii ts').sort({ ts: -1 }).limit(20).lean();
+  // Merge across rows so a later email-only row still inherits an earlier name.
+  const out = { name: null, email: null, phone: null };
+  for (const r of rows) {
+    const p = decryptPayload(r.pii);
+    if (!p || typeof p !== 'object') continue;
+    out.name  = out.name  || p.name  || null;
+    out.email = out.email || p.email || null;
+    out.phone = out.phone || p.phone || null;
+  }
+  return (out.name || out.email || out.phone) ? out : null;
+}
+
+/**
+ * Every visitor ID that ever submitted this exact email or phone (blind-index
+ * lookup, no decrypting). This is what stitches phone + laptop + incognito into
+ * one person. Deterministic only — names are NOT used to merge visitors.
+ */
+async function visitorsForIdentity({ email, phone } = {}, { max = 10 } = {}) {
+  const Model = getModel();
+  if (!Model) return [];
+  const e = normEmail(email), p = normPhone(phone);
+  const or = [];
+  if (e) or.push({ piiEmailIdx: blind('email', e) });
+  if (p) or.push({ piiPhoneIdx: blind('phone', p) });
+  const clean = or.filter((c) => Object.values(c)[0]);
+  if (!clean.length) return [];
+  return Model.distinct('visitorId', { $or: clean }).then((v) => v.slice(0, max));
 }
 
 // ── Footprint search ─────────────────────────────────────────────────────────
@@ -191,4 +250,4 @@ async function findFootprint(seed, { limit = 40 } = {}) {
   return out;
 }
 
-module.exports = { recordGuestIdentity, findFootprint };
+module.exports = { recordIdentity, recordGuestIdentity, resolveVisitor, visitorsForIdentity, findFootprint };
