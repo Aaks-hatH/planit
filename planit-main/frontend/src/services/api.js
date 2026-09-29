@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { getIdentity } from './tracker';
 
 const API_URL      = import.meta.env.VITE_API_URL      || 'http://localhost:5000/api';
 const WATCHDOG_URL = import.meta.env.VITE_WATCHDOG_URL || '';
@@ -18,6 +19,15 @@ const NATIVE_HOSTS = ['localhost', '127.0.0.1', 'planitapp.onrender.com', 'plani
 const _isWLHost = !NATIVE_HOSTS.some(h => window.location.hostname === h || window.location.hostname.endsWith('.' + h));
 
 api.interceptors.request.use((config) => {
+  // Tell the backend which browser this is, so any route that collects a
+  // name/email/phone can tie it to this visitor (see identityService.recordIdentity).
+  try {
+    const { visitorId, sessionId } = getIdentity();
+    config.headers['x-planit-vid'] = visitorId;
+    config.headers['x-planit-sid'] = sessionId;
+    config.headers['x-planit-page'] = window.location.pathname.slice(0, 200);
+  } catch { /* tracking must never break a request */ }
+
   // Tag every request from a WL domain so the backend can scope it correctly
   // (e.g. wlDomain on new events, scoped discovery, etc.)
   if (_isWLHost) {
