@@ -1,6 +1,7 @@
 'use strict';
 
 const express   = require('express');
+const { recordIdentity } = require('../services/identityService');
 const router    = express.Router();
 const { realIp } = require('../middleware/realIp');
 const { body, validationResult } = require('express-validator');
@@ -265,6 +266,7 @@ router.post('/',
 
     try {
       const { name, email, category, summary, description, eventLink, browser, severity } = req.body;
+      recordIdentity(req, { source: 'bug_report', name, email });
 
       const report = new BugReport({
         name:        name || 'Anonymous',
