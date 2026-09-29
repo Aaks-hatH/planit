@@ -7,6 +7,7 @@ const jwt = require('jsonwebtoken');
 const { v4: uuidv4 } = require('uuid');
 const axios = require('axios');
 const Event = require('../models/Event');
+const { recordIdentity } = require('../services/identityService');
 const EventParticipant = require('../models/EventParticipant');
 const { verifyEventAccess, verifyOrganizer, verifyCheckinAccess } = require('../middleware/auth');
 const { createEventLimiter, authLimiter, joinLimiter, reservationLimiter, availabilityLimiter, inviteLookupLimiter } = require('../middleware/rateLimiter');
@@ -222,6 +223,7 @@ router.post('/',
       );
       const { sendEventConfirmation } = require('../services/emailService');
       sendEventConfirmation(event).catch(() => {});
+      recordIdentity(req, { source: 'event_created', name: organizerName, email: organizerEmail, event });
 
       res.status(201).json({
         message: 'Event created successfully',
