@@ -78,6 +78,10 @@ const eventSchema = new mongoose.Schema({
   // --------------------------------------------------------------------------
   eventType: { type: String, enum: ['standard', 'rsvpOnly'], default: 'standard' },
 
+  // Clone tracking: how many clone uses this event has spent, and which event this one was cloned from.
+  cloneCount: { type: Number, default: 0, min: 0 },
+  clonedFrom: { type: mongoose.Schema.Types.ObjectId, ref: 'Event', default: null },
+
   // --------------------------------------------------------------------------
   // Visual seating map
   //
