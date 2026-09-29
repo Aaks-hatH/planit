@@ -167,6 +167,15 @@ export function setEventContext(eventId, subdomain) {
   _linkedEventSubdomain = subdomain ? String(subdomain) : null;
 }
 
+/**
+ * Returns this browser's visitor + session IDs. Only sent with guest RSVP
+ * submissions (see api.js) so the admin data-request tool can tie a submitted
+ * name/email/phone to the visits that produced it.
+ */
+export function getIdentity() {
+  return { visitorId, sessionId };
+}
+
 /** Flush remaining events immediately (e.g. on unmount). */
 export function flushTracker() {
   flush(true);
