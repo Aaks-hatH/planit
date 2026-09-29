@@ -174,6 +174,7 @@ export const eventAPI = {
 
   // Clone / recurring
   clone: (eventId, data) => api.post(`/events/${eventId}/clone`, data),
+  cloneInfo: (eventId) => api.get(`/events/${eventId}/clone-info`),
 
   // Webhooks
   getWebhooks:   (eventId)              => api.get(`/events/${eventId}/webhooks`),
