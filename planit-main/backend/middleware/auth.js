@@ -1,6 +1,7 @@
 'use strict';
 
 const jwt   = require('jsonwebtoken');
+const mongoose = require('mongoose');
 const Event = require('../models/Event');
 // JWT secret is derived from the license key — not read from JWT_SECRET env var.
 // This means the app silently fails all auth if the wrong key is present.
@@ -57,6 +58,9 @@ async function getCachedEvent(eventId) {
   if (cached && (Date.now() - cached.ts) < CACHE_TTL) {
     return cached.event;
   }
+  // A non-ObjectId (e.g. "detect-timezone" hitting a /:eventId route) used to throw a
+  // Mongoose CastError -> 500. Treat it as "no such event" so callers return 404.
+  if (!mongoose.isValidObjectId(eventId)) return null;
   const event = await Event.findById(eventId);
   if (event) {
     eventCache.set(eventId, { event, ts: Date.now() });
