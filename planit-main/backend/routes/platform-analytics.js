@@ -9,7 +9,8 @@
 
 const express   = require('express');
 const router    = express.Router();
-const { ingestBatch, getDashboardData, getModel, decryptPayload } = require('../models/PlatformAnalytics');
+const { ingestBatch, getDashboardData, getModel, decryptPayload, blind, normEmail, normPhone, nameTokens } = require('../models/PlatformAnalytics');
+const { resolveVisitor, visitorsForIdentity } = require('../services/identityService');
 const { verifyAdmin, requirePermission } = require('../middleware/auth');
 const Event                             = require('../models/Event');
 const { audit }                         = require('../models/AuditLog');
@@ -38,6 +39,9 @@ router.post('/track', async (req, res) => {
       return ev && typeof ev.eventType === 'string' && VALID_TYPES.includes(ev.eventType);
     });
 
+    // PII is only ever written server-side (identityService.recordIdentity).
+    // Strip anything a client tries to attach so nobody can poison identities.
+    for (const ev of batch) { delete ev.pii; delete ev.ipAddress; }
     await ingestBatch(batch, req);
   } catch (err) {
     // Fire-and-forget — never surface to client
@@ -312,6 +316,26 @@ router.get('/pii-lookup', verifyAdmin, requirePermission('canExportData'), async
 
     // 2) PII match (email / phone / name). PII is AES-encrypted at rest so it
     //    can't be queried in Mongo — scan newest records and decrypt in memory.
+    // 2a) Blind-index match (fast, no decrypting). Falls through to the scan below if empty.
+    if (!visitorIds.size) {
+      const looksEmail = q.includes('@');
+      const dq = digitsOnly(q);
+      const looksPhone = !looksEmail && dq.length >= 7 && dq.length >= q.replace(/[\s()+-]/g, '').length - 1;
+      let idxQuery = null;
+      if (looksEmail && normEmail(q))      idxQuery = { piiEmailIdx: blind('email', normEmail(q)) };
+      else if (looksPhone && normPhone(q)) idxQuery = { piiPhoneIdx: blind('phone', normPhone(q)) };
+      else if (!looksEmail && !looksPhone) {
+        const toks = nameTokens(q).map((t) => blind('name', t)).filter(Boolean);
+        if (toks.length) idxQuery = { piiNameIdx: { $all: toks } };
+      }
+      if (idxQuery && Object.values(idxQuery)[0]) {
+        const vids = await Model.distinct('visitorId', idxQuery);
+        vids.slice(0, MAX_VISITORS).forEach((v) => visitorIds.add(v));
+        if (visitorIds.size) matchedBy = looksEmail ? 'email' : looksPhone ? 'phone' : 'name';
+      }
+    }
+
+    // 2b) Fallback: decrypt-and-scan (no blind-index key configured, or substring name match).
     if (!visitorIds.size) {
       const qLower  = q.toLowerCase();
       const qDigits = digitsOnly(q);
@@ -339,11 +363,25 @@ router.get('/pii-lookup', verifyAdmin, requirePermission('canExportData'), async
       if (visitorIds.size) matchedBy = isEmail ? 'email' : isPhone ? 'phone' : 'name';
     }
 
+    // 2c) Stitch: whoever these visitor IDs turned out to be, add every OTHER browser/device
+    //     that submitted the same email or phone. Exact matches only — never name-based.
+    let stitchedFrom = 0;
+    if (visitorIds.size && matchedBy !== 'name') {
+      for (const vid of [...visitorIds]) {
+        if (visitorIds.size >= MAX_VISITORS) break;
+        const who = await resolveVisitor(vid);
+        if (!who) continue;
+        for (const other of await visitorsForIdentity(who, { max: MAX_VISITORS })) {
+          if (!visitorIds.has(other) && visitorIds.size < MAX_VISITORS) { visitorIds.add(other); stitchedFrom++; }
+        }
+      }
+    }
+
     await audit('pii_lookup', {
       req, actor: req.admin,
       targetType: 'visitor',
       targetId: [...visitorIds][0] || null,
-      details: { query: q, matchedBy, visitorsFound: visitorIds.size },
+      details: { query: q, matchedBy, visitorsFound: visitorIds.size, stitchedFrom },
     });
 
     if (!visitorIds.size) {
