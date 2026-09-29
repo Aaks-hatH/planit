@@ -37,6 +37,9 @@ export default function CloneEventButton({ event, eventId, variant = 'button' })
   const [loadingInfo, setLoadingInfo] = useState(false);
   const [rows, setRows]       = useState([emptyRow()]);
   const [title, setTitle]     = useState('');
+  const [username, setUsername]   = useState('');
+  const [password, setPassword]   = useState('');
+  const [recoveryCode, setRecoveryCode] = useState('');
   const [busy, setBusy]       = useState(false);
   const [error, setError]     = useState('');
   const [created, setCreated] = useState(null);   // array of created events after success
@@ -52,6 +55,9 @@ export default function CloneEventButton({ event, eventId, variant = 'button' })
     setCreated(null);
     setRows([emptyRow()]);
     setTitle('');
+    setUsername('');
+    setPassword('');
+    setRecoveryCode('');
     setLoadingInfo(true);
     try {
       const r = await eventAPI.cloneInfo(eventId);
@@ -69,6 +75,8 @@ export default function CloneEventButton({ event, eventId, variant = 'button' })
   const setRow = (i, patch) => setRows((rs) => rs.map((r, idx) => (idx === i ? { ...r, ...patch } : r)));
 
   const validate = () => {
+    if (!username.trim()) return 'Enter a username for the new event.';
+    if (password.length < 4) return 'Password must be at least 4 characters.';
     const seen = new Set();
     for (let i = 0; i < rows.length; i++) {
       const r = rows[i];
@@ -91,6 +99,8 @@ export default function CloneEventButton({ event, eventId, variant = 'button' })
     setBusy(true);
     try {
       const r = await eventAPI.clone(eventId, {
+        username: username.trim(),
+        accountPassword: password,
         clones: rows.map((row) => ({
           date: localDateTimeToUTC(row.date, tz),
           subdomain: row.slug,
@@ -98,6 +108,8 @@ export default function CloneEventButton({ event, eventId, variant = 'button' })
         })),
       });
       setCreated(r.data.events || (r.data.event ? [r.data.event] : []));
+      setRecoveryCode(r.data.recoveryCode || '');
+      setPassword('');
       if (r.data.clone) setInfo(r.data.clone);
       if (r.data.failed?.length) {
         toast.error(`${r.data.failed.length} clone${r.data.failed.length > 1 ? 's' : ''} couldn't be created.`);
@@ -163,8 +175,14 @@ export default function CloneEventButton({ event, eventId, variant = 'button' })
             <div className="space-y-3">
               <p className="text-sm text-neutral-700">
                 {created.length > 1 ? 'Your clones are ready.' : 'Your clone is ready.'}
-                {' '}Log in with the same organizer name and password as this event.
+                {' '}Log in with the username and password you just entered.
               </p>
+              {recoveryCode && (
+                <div className="p-3 rounded-xl bg-amber-50 border border-amber-200">
+                  <p className="text-xs font-medium text-amber-800 mb-1">Recovery code — save it now, it won't be shown again</p>
+                  <p className="text-sm font-mono font-semibold text-amber-900 select-all break-all">{recoveryCode}</p>
+                </div>
+              )}
               {created.map((ev) => (
                 <div key={ev.id} className="flex items-center justify-between gap-3 p-3 border border-neutral-200 rounded-xl">
                   <div className="min-w-0">
@@ -215,6 +233,35 @@ export default function CloneEventButton({ event, eventId, variant = 'button' })
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                 />
+              </div>
+
+              <div className="border border-neutral-200 rounded-xl p-3.5 space-y-3">
+                <p className="text-xs font-semibold text-neutral-500 uppercase tracking-wide">Organizer login for the new event</p>
+                <div>
+                  <label className="block text-xs font-medium text-neutral-600 mb-1.5">
+                    Username <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    className="input text-sm"
+                    maxLength={100}
+                    autoComplete="off"
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-neutral-600 mb-1.5">
+                    Password <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="password"
+                    className="input text-sm"
+                    autoComplete="new-password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                  />
+                </div>
               </div>
 
               {rows.map((row, i) => (
