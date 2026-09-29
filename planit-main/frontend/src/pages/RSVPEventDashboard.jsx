@@ -61,6 +61,7 @@ import toast from 'react-hot-toast';
 import { eventAPI } from '../services/api';
 import RSVPDashboard from '../components/RSVPDashboard';
 import RSVPAnalytics from '../components/RSVPAnalytics';
+import CloneEventButton from '../components/CloneEventButton';
 import { JoinGate } from './EventSpace';
 import FeatureTour from '../components/tour/FeatureTour';
 
@@ -240,6 +241,9 @@ export default function RSVPEventDashboard() {
           </div>
           <ChevronRight className="w-[18px] h-[18px] text-neutral-300" />
         </button>
+
+        {/* Clone this event to a new date + slug (2 uses) */}
+        <CloneEventButton variant="card" event={event} eventId={eventId} />
 
         {/* Guests & Check-in / Analytics */}
         <div className="bg-white rounded-2xl border border-neutral-200/80 overflow-hidden">
