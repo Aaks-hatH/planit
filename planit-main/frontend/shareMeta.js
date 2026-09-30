@@ -167,6 +167,7 @@ async function resolveRsvp([, slug], apiBase) {
   const firstCover = Object.values(data.coverUrlsById || {})[0];
   return {
     title,
+    tabTitle: `${title} · PlanIt`,
     description: truncate([subtitle, data.description].filter(Boolean).join(' — ') || `RSVP to ${title} on PlanIt.`, 200),
     // heroCoverUrl (added backend-side) already accounts for a hero's direct
     // content.coverImageUrl — the path the builder's normal "Upload Cover"
@@ -201,7 +202,13 @@ async function resolveReserve([, subdomain], apiBase) {
     data.metaDescription || data.tagline || data.description || `Book your table at ${data.name} on PlanIt.`,
     200
   );
-  return { title, description, image: shareableImage(data.heroImageUrl) || DEFAULT_IMAGE };
+  return {
+    title,
+    tabTitle: data.metaTitle || `Reserve a Table at ${data.name} · PlanIt`,
+    description,
+    image: shareableImage(data.heroImageUrl) || DEFAULT_IMAGE,
+    brand: { subdomain, name: data.name, isTableServiceMode: true, logoUrl: data.logoUrl || '', accentColor: data.accentColor || '' },
+  };
 }
 
 async function resolveEventWorkspace([, eventId], apiBase) {
@@ -211,7 +218,44 @@ async function resolveEventWorkspace([, eventId], apiBase) {
   const subtitle = dateAndLocation(ev.date, ev.location);
   return {
     title: ev.title,
+    tabTitle: `${ev.title} · PlanIt`,
     description: truncate(subtitle || ev.description || `${ev.title} — planned on PlanIt.`, 200),
+    brand: { id: ev.id, subdomain: ev.subdomain, name: ev.title, eventType: ev.eventType || 'standard', isTableServiceMode: !!ev.isTableServiceMode },
+  };
+}
+
+// Section labels for every event sub-page (/e/:sub/<section>, /event/:id/<section>).
+// Mirrors SECTIONS in src/utils/eventBrand.js — keep the two in sync.
+const EVENT_SECTIONS = [
+  [/^rsvp-dashboard$/, 'RSVP Dashboard'],
+  [/^rsvp-builder$/,   'RSVP Page Builder'],
+  [/^checkin$/,        'Check-In'],
+  [/^floor$/,          'Floor Management'],
+  [/^server$/,         'Server View'],
+  [/^kitchen$/,        'Kitchen Display'],
+  [/^table\//,         'Table Ordering'],
+  [/^(login|waitlist)$/, 'Sign In'],
+  [/^wait$/,           'Live Waitlist'],
+];
+
+// Any event page (workspace, dashboard, builder, check-in, floor, kitchen...).
+// Uses the side-effect-free brand endpoint (no view counter, no password data).
+async function resolveEventBrand([, key, sub = ''], apiBase) {
+  const data = await getJSON(`${apiBase}/events/public/brand/${encodeURIComponent(key)}`);
+  const name = data?.name || data?.title;
+  if (!name) return null;
+  const hit = EVENT_SECTIONS.find(([re]) => re.test(sub));
+  const section = hit ? hit[1] : null;
+  return {
+    title: section ? `${name} · ${section}` : name,
+    tabTitle: section ? `${name} · ${section} · PlanIt` : `${name} · PlanIt`,
+    description: `${name} — planned on PlanIt.`,
+    image: shareableImage(data.logoUrl) || undefined,
+    brand: {
+      id: data.id, subdomain: data.subdomain, name,
+      eventType: data.eventType, isTableServiceMode: !!data.isTableServiceMode,
+      logoUrl: data.logoUrl || '', accentColor: data.accentColor || '',
+    },
   };
 }
 
@@ -228,12 +272,17 @@ async function resolveBlog([, slug], apiBase) {
 
 // Order matters: /rsvp/manage/:token must NOT be swallowed by the RSVP
 // pattern below it, so the negative lookahead comes first.
+// `humans: true` = also used for real browsers (not just link-preview bots) so the
+// first HTML already carries the branded <title> + a preload blob for the loading
+// screen. Only event-branded pages opt in; invites/blog stay bot-only.
 const DYNAMIC_ROUTES = [
-  { test: /^\/rsvp\/(?!manage\/)([^/]+)$/, resolve: resolveRsvp },
+  { test: /^\/rsvp\/(?!manage\/)([^/]+)$/, resolve: resolveRsvp, humans: true },
   { test: /^\/(invite|card|badge)\/([^/]+)$/, resolve: resolveInvite },
-  { test: /^\/e\/([^/]+)\/reserve$/, resolve: resolveReserve },
-  { test: /^\/event\/([a-f0-9]{24})$/i, resolve: resolveEventWorkspace },
+  { test: /^\/e\/([^/]+)\/reserve$/, resolve: resolveReserve, humans: true },
+  { test: /^\/event\/([a-f0-9]{24})$/i, resolve: resolveEventWorkspace, humans: true },
   { test: /^\/blog\/([^/]+)$/, resolve: resolveBlog },
+  // Catch-all for every other event page — must stay after the specific ones above.
+  { test: /^\/(?:e|event)\/([^/]+)(?:\/(.+))?$/, resolve: resolveEventBrand, humans: true },
 ];
 
 // Plain info/marketing pages — no DB call, just better copy than the one
@@ -291,11 +340,11 @@ export function matchShareRoute(pathname) {
 
   for (const route of DYNAMIC_ROUTES) {
     const match = clean.match(route.test);
-    if (match) return { resolve: (apiBase) => cachedResolve(clean, () => route.resolve(match, apiBase)) };
+    if (match) return { humans: !!route.humans, resolve: (apiBase) => cachedResolve(clean, () => route.resolve(match, apiBase)) };
   }
 
   const staticEntry = STATIC_ROUTES[clean];
-  if (staticEntry) return { resolve: async () => staticEntry };
+  if (staticEntry) return { humans: false, resolve: async () => staticEntry };
 
   return null;
 }
