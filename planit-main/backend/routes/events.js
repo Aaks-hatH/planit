@@ -293,6 +293,34 @@ router.get('/public/wl', async (req, res, next) => {
 });
 
 // Public info (no auth) — for join gate
+// ── Brand info (title/preload) ─────────────────────────────────────────────
+// Lightweight, side-effect-free lookup (no view counter) used to brand the
+// browser tab title and the loading screen for an event before the page's own
+// data arrives. `key` is either a subdomain or a 24-char event id.
+// MUST stay above /public/:eventId so "brand" isn't treated as an event id.
+router.get('/public/brand/:key', availabilityLimiter, async (req, res, next) => {
+  try {
+    const key = String(req.params.key || '');
+    if (!key || key.length > 100) return res.status(404).json({ error: 'Not found' });
+    const isId = /^[a-f0-9]{24}$/i.test(key);
+    const q = isId ? Event.findById(key) : Event.findOne({ subdomain: key });
+    const ev = await q
+      .select('title subdomain eventType isTableServiceMode isEnterpriseMode tableServiceSettings.restaurantName reservationPageSettings.logoUrl reservationPageSettings.accentColor rsvpPage.coverImageUrl')
+      .lean();
+    if (!ev) return res.status(404).json({ error: 'Not found' });
+    const name = (ev.isTableServiceMode && ev.tableServiceSettings?.restaurantName) || ev.title;
+    res.set('Cache-Control', 'public, max-age=60');
+    res.json({
+      id: ev._id, subdomain: ev.subdomain, name, title: ev.title,
+      eventType: ev.eventType || 'standard',
+      isTableServiceMode: !!ev.isTableServiceMode,
+      isEnterpriseMode: !!ev.isEnterpriseMode,
+      logoUrl: ev.reservationPageSettings?.logoUrl || '',
+      accentColor: ev.reservationPageSettings?.accentColor || '',
+    });
+  } catch (error) { next(error); }
+});
+
 router.get('/public/:eventId', async (req, res, next) => {
   try {
     const event = await Event.findById(req.params.eventId);
@@ -333,6 +361,7 @@ router.get('/subdomain/:subdomain', async (req, res, next) => {
         isTableServiceMode: !!event.isTableServiceMode,
         isEnterpriseMode: !!event.isEnterpriseMode,
         eventType: event.eventType || 'standard',
+        isClone: !!event.clonedFrom,
       }
     });
   } catch (error) { next(error); }
@@ -1427,6 +1456,7 @@ router.get('/:eventId', verifyEventAccess, async (req, res, next) => {
         isEnterpriseMode: event.isEnterpriseMode,
         isTableServiceMode: !!event.isTableServiceMode,
         eventType: event.eventType || 'standard',
+        isClone: !!event.clonedFrom,
         seatingMap: { enabled: !!event.seatingMap?.enabled, tableCount: (event.seatingMap?.objects || []).length },
         rsvps: event.rsvps, rsvpSummary: event.getRsvpSummary(),
         agenda: event.agenda ? [...event.agenda].sort((a, b) => a.order - b.order) : [],
@@ -3427,14 +3457,17 @@ const stripIds = (arr) => (Array.isArray(arr) ? arr : []).map((row) => {
 // How many clone uses are left for this event.
 router.get('/:eventId/clone-info', verifyOrganizer, async (req, res, next) => {
   try {
-    const src = await Event.findById(req.params.eventId).select('cloneCount isTableServiceMode').lean();
+    const src = await Event.findById(req.params.eventId).select('cloneCount isTableServiceMode clonedFrom').lean();
     if (!src) return res.status(404).json({ error: 'Event not found' });
+    const isClone = !!src.clonedFrom;
+    const canClone = !src.isTableServiceMode && !isClone;
     const used = Math.min(src.cloneCount || 0, CLONE_LIMIT);
     res.json({
-      allowed:   !src.isTableServiceMode,
+      allowed:   canClone,
+      isClone,
       used,
       limit:     CLONE_LIMIT,
-      remaining: src.isTableServiceMode ? 0 : Math.max(0, CLONE_LIMIT - used),
+      remaining: canClone ? Math.max(0, CLONE_LIMIT - used) : 0,
     });
   } catch (error) { next(error); }
 });
@@ -3447,6 +3480,11 @@ router.post('/:eventId/clone', verifyOrganizer, cloneLimiter, async (req, res, n
       .select('+password +rsvpPage.rsvpPassword').lean();
     if (!source) return res.status(404).json({ error: 'Event not found' });
     sourceId = source._id;
+
+    // A cloned event can't be cloned again — only the original event can make clones.
+    if (source.clonedFrom) {
+      return res.status(403).json({ error: 'This event is itself a clone, so it can\'t be cloned again. Clone the original event instead.' });
+    }
 
     if (source.isTableServiceMode) {
       return res.status(400).json({ error: 'Table service events can\'t be cloned.' });
