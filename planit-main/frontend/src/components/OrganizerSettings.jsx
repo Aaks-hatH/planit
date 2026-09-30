@@ -831,7 +831,7 @@ export default function OrganizerSettings({ eventId, event, onClose, onUpdated, 
  <div className="space-y-5">
 
           {/* ── Clone event ── */}
-          {!event?.isTableServiceMode && (
+          {!event?.isTableServiceMode && !event?.isClone && (
             <div className="border border-neutral-200 rounded-xl overflow-hidden">
               <div className="flex items-center gap-2 px-4 py-3 bg-neutral-50 border-b border-neutral-200">
                 <RefreshCw className="w-4 h-4 text-neutral-500" />
