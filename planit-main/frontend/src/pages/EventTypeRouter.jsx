@@ -33,6 +33,7 @@ import { useParams } from 'react-router-dom';
 import { eventAPI } from '../services/api';
 import EventSpace from './EventSpace';
 import RSVPEventDashboard from './RSVPEventDashboard';
+import BrandedLoader from '../components/BrandedLoader';
 
 export default function EventTypeRouter() {
   const { subdomain, eventId } = useParams();
@@ -70,7 +71,7 @@ export default function EventTypeRouter() {
   }, [subdomain, eventId]);
 
   if (eventType === undefined) {
-    return <div className="min-h-screen flex items-center justify-center bg-neutral-50 text-neutral-400 text-sm">Loading…</div>;
+    return <BrandedLoader dark={false} />;
   }
 
   return eventType === 'rsvpOnly' ? <RSVPEventDashboard /> : <EventSpace />;
