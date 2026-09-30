@@ -5,6 +5,8 @@ import { usePageTracker } from './hooks/usePageTracker';
 import ConsentBanner from './components/ConsentBanner';
 import ReferralWelcome from './components/ReferralWelcome';
 import BetaLabsTeaser from './components/BetaLabsTeaser';
+import BrandedLoader from './components/BrandedLoader';
+import { parseEventPath, brandedTitle, getPreload, getCachedBrand, fetchBrand } from './utils/eventBrand';
 
 // ─── Lazy-loaded pages — each page is a separate JS chunk loaded on demand ────
 // This means the initial bundle only contains the shell (router, context, etc.)
@@ -66,16 +68,11 @@ const VenueMap           = lazy(() => import('./pages/VenueMap'));
 const ForgotPassword    = lazy(() => import('./pages/ForgotPassword'));
 const ClaudeConnect     = lazy(() => import('./pages/ClaudeConnect'));
 
-// Minimal spinner shown during chunk loads (usually <200ms on a warm CDN)
+// Loading state shown during chunk loads (usually <200ms on a warm CDN).
+// On event URLs it shows the event's own name (from the server preload or the
+// session cache) instead of an anonymous spinner.
 function PageLoader() {
-  return (
-    <div style={{ minHeight: '100vh', background: '#05050f', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.2)" strokeWidth="2" strokeLinecap="round">
-        <path d="M21 12a9 9 0 11-6.219-8.56" style={{ animation: 'spin 1s linear infinite', transformOrigin: 'center' }} />
-      </svg>
-      <style>{`@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}`}</style>
-    </div>
-  );
+  return <BrandedLoader dark />;
 }
 
 // ─── Maintenance page ─────────────────────────────────────────────────────────
@@ -424,6 +421,9 @@ const PAGE_TITLES = {
   '/about':                    'About PlanIt · Built for Event Planners and Venue Managers',
   '/admin':                    'Admin Control Panel · PlanIt',
   '/admin/security':           'Platform Security Dashboard · PlanIt Admin',
+  '/admin/bug-reports':        'Bug Reports · PlanIt Admin',
+  '/demo/invite':              'Guest Invitation Demo · PlanIt',
+  '/demo/rsvp':                'RSVP Page Demo · PlanIt',
   '/dashboard':                'Your White Label Dashboard · PlanIt',
   '/discover':                 'Discover Events Near You · PlanIt',
   '/help':                     'Help Center and Frequently Asked Questions · PlanIt',
@@ -475,32 +475,53 @@ function PageTrackerMount() {
   return null;
 }
 
+// Generic (non-event-specific) title for a path — used as the instant fallback
+// while the event's own name is still loading.
+function genericTitle(pathname) {
+  if (PAGE_TITLES[pathname]) return PAGE_TITLES[pathname];
+  for (const [pattern, title] of PATTERN_TITLES) {
+    if (pattern.test(pathname)) return title; // null = page handles it itself
+  }
+  return '404 Page Not Found · PlanIt';
+}
+
 function PageTitle() {
   const { pathname } = useLocation();
-  const { isWL } = useWhiteLabel();
+  const { isWL, wl } = useWhiteLabel();
+  // On white-label domains the site name is the client's company, not PlanIt.
+  const siteName = isWL ? (wl?.branding?.companyName || wl?.clientName || 'PlanIt') : 'PlanIt';
 
   useEffect(() => {
+    // ── Event pages (/e/:sub/* and /event/:id/*): title carries the event's
+    // own name, e.g. "Maya's Birthday · RSVP Dashboard · PlanIt". Shown
+    // instantly from the server preload / session cache when we have it,
+    // otherwise a generic title first and the branded one as soon as the
+    // (tiny, side-effect-free) brand lookup returns.
+    const parsed = parseEventPath(pathname);
+    if (parsed) {
+      let live = true;
+      const apply = (brand) => {
+        const t = brandedTitle(brand, parsed.section, siteName, parsed.sub);
+        if (t) document.title = t;
+      };
+      const cached  = getCachedBrand(parsed.key);
+      const preload = getPreload(pathname);
+      if (cached) apply(cached);
+      else if (preload?.title) document.title = preload.title;
+      else if (isWL) document.title = siteName;
+      else { const g = genericTitle(pathname); if (g) document.title = g; }
+
+      fetchBrand(parsed.key).then((b) => { if (live && b) apply(b); });
+      return () => { live = false; };
+    }
+
     // On white-label domains, WhiteLabelTheme (above) sets the title to the
-    // client's company name — we don't override it here.
+    // client's company name — we don't override it for non-event pages.
     if (isWL) return;
 
-    // Check exact match first
-    if (PAGE_TITLES[pathname]) {
-      document.title = PAGE_TITLES[pathname];
-      return;
-    }
-
-    // Then pattern match
-    for (const [pattern, title] of PATTERN_TITLES) {
-      if (pattern.test(pathname)) {
-        if (title) document.title = title; // null means the page handles it itself
-        return;
-      }
-    }
-
-    // Fallback for anything not listed (e.g. 404)
-    document.title = '404 Page Not Found · PlanIt';
-  }, [pathname, isWL]);
+    const t = genericTitle(pathname);
+    if (t) document.title = t; // null means the page handles it itself
+  }, [pathname, isWL, siteName]);
 
   return null;
 }
