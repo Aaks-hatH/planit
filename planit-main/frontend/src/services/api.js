@@ -101,6 +101,7 @@ export const eventAPI = {
   getBySubdomain: (subdomain)         => api.get(`/events/subdomain/${subdomain}`),
   getById:        (id)                => api.get(`/events/${id}`),
   getPublicInfo:  (id)                => api.get(`/events/public/${id}`),
+  getBrand:       (key)               => api.get(`/events/public/brand/${encodeURIComponent(key)}`),
   detectTimezone: ()                  => api.get('/events/detect-timezone'),
   getParticipants:(id)                => api.get(`/events/participants/${id}`),
   getPublicParticipants:(id)          => api.get(`/events/public-participants/${id}`),
