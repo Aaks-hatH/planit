@@ -80,13 +80,14 @@ function escapeHtml(str) {
 function setMetaTag(html, attr, key, content) {
   const re = new RegExp(`<meta[^>]*${attr}=["']${key}["'][^>]*>`, 'i');
   const tag = `<meta ${attr}="${key}" content="${escapeHtml(content)}" />`;
-  return re.test(html) ? html.replace(re, tag) : html.replace('</head>', `    ${tag}\n  </head>`);
+  // Function replacers: '$&' / '$1' inside an event title must not be treated as replacement patterns.
+  return re.test(html) ? html.replace(re, () => tag) : html.replace('</head>', () => `    ${tag}\n  </head>`);
 }
 
 function injectMeta(html, { title, description, image, url, type }) {
   let out = html;
   if (title) {
-    out = out.replace(/<title>[\s\S]*?<\/title>/i, `<title>${escapeHtml(title)}</title>`);
+    out = out.replace(/<title>[\s\S]*?<\/title>/i, () => `<title>${escapeHtml(title)}</title>`);
     out = setMetaTag(out, 'property', 'og:title', title);
     out = setMetaTag(out, 'name', 'twitter:title', title);
   }
@@ -104,10 +105,24 @@ function injectMeta(html, { title, description, image, url, type }) {
     out = setMetaTag(out, 'property', 'og:url', url);
     const canonRe = /<link[^>]*rel=["']canonical["'][^>]*>/i;
     const canonTag = `<link rel="canonical" href="${escapeHtml(url)}" />`;
-    out = canonRe.test(out) ? out.replace(canonRe, canonTag) : out.replace('</head>', `    ${canonTag}\n  </head>`);
+    out = canonRe.test(out) ? out.replace(canonRe, () => canonTag) : out.replace('</head>', () => `    ${canonTag}\n  </head>`);
   }
   return out;
 }
+
+// Bakes the branded title + event brand into the HTML for real visitors so the
+// browser tab and the loading screen show the event's name from the first paint
+// (read back by src/utils/eventBrand.js via window.__PLANIT_PRELOAD__).
+function injectPreload(html, preload) {
+  const json = JSON.stringify(preload)
+    .replace(/</g, '\\u003c')
+    .replace(/\u2028/g, '\\u2028')
+    .replace(/\u2029/g, '\\u2029');
+  const tag = `    <script>window.__PLANIT_PRELOAD__=${json};</script>\n  </head>`;
+  return html.replace('</head>', () => tag); // function form: '$' in event names must not be treated as a replacement pattern
+}
+
+const HUMAN_RESOLVE_TIMEOUT_MS = 1500; // never make a real visitor wait long for a title
 
 const app = express();
 app.disable('x-powered-by');
@@ -128,25 +143,44 @@ app.get('*', async (req, res, next) => {
     const ua = req.headers['user-agent'] || '';
     const isBotUA = BOT_UA_RE.test(ua);
     const routeMatch = matchShareRoute(req.path);
-    console.log('[share-preview debug]', JSON.stringify({
-      path: req.path, ua, isBotUA, hasRouteForPath: !!routeMatch, apiBase: API_BASE,
-    }));
-    const route = isBotUA ? routeMatch : null;
+    if (isBotUA) {
+      console.log('[share-preview debug]', JSON.stringify({
+        path: req.path, ua, isBotUA, hasRouteForPath: !!routeMatch, apiBase: API_BASE,
+      }));
+    }
+    // Bots get full share tags for every resolvable route. Real visitors only
+    // get the branded <title> + preload blob, and only on routes that opt in.
+    const route = routeMatch && (isBotUA || routeMatch.humans) ? routeMatch : null;
 
     if (route) {
       let meta = null;
       try {
-        meta = await route.resolve(API_BASE);
-        console.log('[share-preview debug] resolve result:', JSON.stringify(meta));
+        meta = isBotUA
+          ? await route.resolve(API_BASE)
+          : await Promise.race([
+              route.resolve(API_BASE),
+              new Promise((resolve) => setTimeout(() => resolve(null), HUMAN_RESOLVE_TIMEOUT_MS)),
+            ]);
+        if (isBotUA) console.log('[share-preview debug] resolve result:', JSON.stringify(meta));
       } catch (err) {
         console.error('[share-preview] resolve failed for', req.path, err.message);
       }
       if (meta?.title) {
         const url = `${req.protocol}://${req.get('host')}${req.originalUrl}`;
-        html = injectMeta(html, { ...meta, url });
-        // Short cache — event/RSVP data changes, but a pasted link is often
-        // unfurled by more than one app within seconds of the same paste.
-        res.set('Cache-Control', 'public, max-age=60');
+        if (isBotUA) {
+          html = injectMeta(html, { ...meta, url });
+        } else {
+          const tab = meta.tabTitle || meta.title;
+          html = html.replace(/<title>[\s\S]*?<\/title>/i, () => `<title>${escapeHtml(tab)}</title>`);
+        }
+        html = injectPreload(html, { path: req.path, title: meta.tabTitle || meta.title, brand: meta.brand || null });
+        if (isBotUA) {
+          // Short cache — event/RSVP data changes, but a pasted link is often
+          // unfurled by more than one app within seconds of the same paste.
+          res.set('Cache-Control', 'public, max-age=60');
+        } else {
+          res.set('Cache-Control', 'no-cache');
+        }
         return res.type('html').send(html);
       }
     }
