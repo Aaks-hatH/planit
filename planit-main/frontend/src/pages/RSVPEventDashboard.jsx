@@ -62,6 +62,7 @@ import { eventAPI } from '../services/api';
 import RSVPDashboard from '../components/RSVPDashboard';
 import RSVPAnalytics from '../components/RSVPAnalytics';
 import CloneEventButton from '../components/CloneEventButton';
+import BrandedLoader from '../components/BrandedLoader';
 import { JoinGate } from './EventSpace';
 import FeatureTour from '../components/tour/FeatureTour';
 
@@ -188,7 +189,7 @@ export default function RSVPEventDashboard() {
   const handleJoined = () => { setNeedsJoin(false); setLoading(true); loadEvent(); };
 
   if (resolving || loading) {
-    return <div className="min-h-screen flex items-center justify-center bg-neutral-50 text-neutral-400 text-sm">Loading…</div>;
+    return <BrandedLoader dark={false} />;
   }
   if (needsJoin) {
     return <JoinGate eventId={eventId} onJoined={handleJoined} />;
