@@ -2,7 +2,8 @@
  * frontend/src/components/CloneEventButton.jsx
  *
  * "Clone event" button + modal. Used for standard, enterprise and RSVP-only
- * events. Renders nothing for table service events.
+ * events. Renders nothing for table service events, or for events that are themselves
+ * clones (a clone can't be cloned again).
  *
  * Each event has a fixed number of clone uses (2 by default, set on the
  * backend). The organizer picks a date and a slug for every clone; one
@@ -44,7 +45,7 @@ export default function CloneEventButton({ event, eventId, variant = 'button' })
   const [error, setError]     = useState('');
   const [created, setCreated] = useState(null);   // array of created events after success
 
-  if (!event || event.isTableServiceMode) return null;
+  if (!event || event.isTableServiceMode || event.isClone) return null;
 
   const tz = event.timezone || getUserTimezone();
   const remaining = info ? info.remaining : 0;
