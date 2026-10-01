@@ -78,6 +78,61 @@ setInterval(() => {
 
 // ─────────────────────────────────────────────────────────────────────────────
 
+
+// ─── Admin bypass for event routes ────────────────────────────────────────────
+// Any valid, non-demo, non-restricted admin session (adminToken) — or an
+// event-scoped admin token minted by POST /admin/events/:id/access — is treated
+// as a full organizer of ANY event. This keeps admins from hitting 401/403 on
+// RSVP, enterprise check-in, table-service and standard events.
+//
+// The synthetic req.eventAccess carries the event's real organizer username so
+// the many inline "participants.some(p => p.username === ... && role==='organizer')"
+// checks across the routes pass without being touched individually.
+async function isEmployeeRevoked(decoded) {
+  if (!(decoded.isEmployee && decoded.employeeId)) return false;
+  try {
+    const revokedAt = await redis.get(REVOCATION_KEY(decoded.employeeId));
+    if (!revokedAt) return false;
+    return ((decoded.iat || 0) * 1000) < parseInt(revokedAt, 10);
+  } catch (_) {
+    return false; // fail-open on Redis outage, same as verifyAdmin
+  }
+}
+
+function collectTokens(req, eventId) {
+  const list = [
+    req.headers?.authorization?.split(' ')[1],
+    req.headers?.['x-event-token'],
+    req.cookies?.[`event_${eventId}`],
+    req.cookies?.adminToken,
+  ].filter(Boolean);
+  return [...new Set(list)];
+}
+
+async function resolveAdminEventAccess(req, event) {
+  const eventId = event._id.toString();
+  for (const token of collectTokens(req, eventId)) {
+    let decoded;
+    try { decoded = jwt.verify(token, secrets.jwt); } catch (_) { continue; }
+
+    const isEventScopedAdmin = decoded.isAdminAccess === true;
+    const isAdminSession = decoded.isAdmin === true && !decoded.restricted && !decoded.isDemo;
+    if (!isEventScopedAdmin && !isAdminSession) continue;
+    if (isAdminSession && await isEmployeeRevoked(decoded)) continue;
+
+    const organizer = (event.participants || []).find(p => p.role === 'organizer');
+    return {
+      eventId,
+      username: organizer?.username || event.organizerName || 'ADMIN',
+      role: 'organizer',
+      isAdminAccess: true,
+      canBypassPassword: true,
+      adminName: decoded.name || decoded.email || decoded.username || 'admin',
+    };
+  }
+  return null;
+}
+
 // Verify JWT token
 const verifyToken = (req, res, next) => {
   const token = req.headers.authorization?.split(' ')[1] || req.cookies.token;
@@ -108,6 +163,14 @@ const verifyEventAccess = async (req, res, next) => {
 
     if (!event) {
       return res.status(404).json({ error: 'This event does not exist or has been removed.' });
+    }
+
+    // Admins get through unconditionally (password, approval gate, wrong-event token…)
+    const adminAccess = await resolveAdminEventAccess(req, event);
+    if (adminAccess) {
+      req.event = event;
+      req.eventAccess = adminAccess;
+      return next();
     }
 
     // Always try to decode the token for username/role info
@@ -199,6 +262,13 @@ const verifyOrganizer = async (req, res, next) => {
 
     if (!event) {
       return res.status(404).json({ error: 'Event not found.' });
+    }
+
+    const adminAccess = await resolveAdminEventAccess(req, event);
+    if (adminAccess) {
+      req.event = event;
+      req.eventAccess = adminAccess;
+      return next();
     }
 
     const token = req.headers.authorization?.split(' ')[1] ||
@@ -346,6 +416,13 @@ const verifyCheckinAccess = async (req, res, next) => {
       return res.status(404).json({ error: 'Event not found.' });
     }
 
+    const adminAccess = await resolveAdminEventAccess(req, event);
+    if (adminAccess) {
+      req.event = event;
+      req.eventAccess = adminAccess;
+      return next();
+    }
+
     const token = req.headers.authorization?.split(' ')[1] ||
                   req.headers['x-event-token'] ||
                   req.cookies?.[`event_${eventId}`];
@@ -479,6 +556,7 @@ module.exports = {
   verifyOrganizer,
   verifyCheckinAccess,
   verifyAdmin,
+  resolveAdminEventAccess,
   requirePermission,
   requireSuperAdminRole,
   demoGuard,
