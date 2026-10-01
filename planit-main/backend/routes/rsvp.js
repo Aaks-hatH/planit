@@ -1266,6 +1266,8 @@ router.get('/:eventId/export.csv', async (req, res, next) => {
     catch { return res.status(401).json({ error: 'Invalid or expired token.' }); }
 
     const eventId = req.params.eventId;
+    // Full admin sessions (adminToken) are treated like event-scoped admin access.
+    if (decoded.isAdmin === true && !decoded.restricted && !decoded.isDemo) decoded.isAdminAccess = true;
     if (!decoded.isAdminAccess && decoded.eventId !== eventId && decoded.eventId !== eventId?.toString()) {
       return res.status(403).json({ error: 'Token does not match this event.' });
     }
