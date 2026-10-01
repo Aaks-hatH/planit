@@ -369,7 +369,9 @@ function EventDetail({ event: initialEvent, onBack, onDelete, onUpdate }) {
           try {
             const r = await adminAPI.getEventAccess(event._id);
             localStorage.setItem('eventToken', r.data.token);
-            localStorage.setItem('username', 'ADMIN');
+            // Use the event's real organizer name so organizer UI + API checks pass.
+            localStorage.setItem('username', r.data.username || event.organizerName || 'ADMIN');
+            // /event/:id routes to the right dashboard (RSVP-only, standard, enterprise, venue).
             window.open(`/event/${event._id}`, '_blank');
           } catch { toast.error('Access failed'); }
         }} className="btn btn-secondary text-xs gap-1">
