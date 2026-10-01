@@ -73,6 +73,12 @@ module.exports = (io) => {
 
     try {
       const decoded = jwt.verify(token, secrets.jwt);
+      // Full admin sessions (adminToken) join any event room as organizer.
+      if (decoded.isAdmin === true && !decoded.restricted && !decoded.isDemo && !decoded.isAdminAccess) {
+        decoded.isAdminAccess = true;
+        decoded.role = 'organizer';
+        decoded.username = decoded.username || decoded.name || 'ADMIN';
+      }
       socket.user = decoded;
       next();
     } catch (error) {
