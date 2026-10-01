@@ -50,7 +50,25 @@ api.interceptors.request.use((config) => {
       config.headers.Authorization = `Bearer ${adminToken}`;
     }
   } else {
-    const token = localStorage.getItem('eventToken');
+    // Admins browsing an event link directly fall back to their admin session
+    // (the backend treats a valid admin session as organizer of any event).
+    // Use it when there is no event token, it has expired, or it belongs to a
+    // different event than the one in the request URL (stale token from another event).
+    const eventToken = localStorage.getItem('eventToken');
+    const adminSession = localStorage.getItem('adminToken');
+    let token = eventToken;
+    if (adminSession) {
+      const urlEventId = (url.match(/[a-f0-9]{24}/i) || [])[0];
+      let payload = null;
+      try {
+        payload = eventToken
+          ? JSON.parse(atob(eventToken.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')))
+          : null;
+      } catch { payload = null; }
+      const expired    = !!(payload?.exp && payload.exp * 1000 < Date.now());
+      const wrongEvent = !!(payload && urlEventId && !payload.isAdminAccess && String(payload.eventId) !== urlEventId);
+      if (!eventToken || !payload || expired || wrongEvent) token = adminSession;
+    }
     if (token) {
       config.headers['x-event-token'] = token;
       config.headers.Authorization    = `Bearer ${token}`;
