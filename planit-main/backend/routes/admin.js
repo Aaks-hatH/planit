@@ -2572,25 +2572,45 @@ router.get('/export/stats', verifyAdmin, requirePermission('canExportData'), asy
 // ADMIN EVENT ACCESS — bypass password
 // ═══════════════════════════════════════════════════════════════════════════════
 
-router.post('/events/:eventId/access', verifyAdmin, requirePermission('canEditEvents'), async (req, res, next) => {
+router.post('/events/:eventId/access', verifyAdmin, async (req, res, next) => {
   try {
+    // Demo accounts are read-only guests and must never mint organizer-level tokens.
+    if (req.admin?.isDemo) {
+      return res.status(403).json({ error: 'Demo accounts cannot open events as admin.', demo: true });
+    }
+
     const event = await Event.findById(req.params.eventId);
     if (!event) return res.status(404).json({ error: 'Event not found' });
 
+    // Act as the event's real organizer so every organizer check (RSVP, enterprise
+    // check-in, table service, standard events, sockets) passes without a 401/403.
+    const organizer = (event.participants || []).find(p => p.role === 'organizer');
+    const username  = organizer?.username || event.organizerName || 'ADMIN';
+
     const token = jwt.sign(
       {
-        eventId:          event._id.toString(),
-        username:         'ADMIN',
-        role:             'admin_viewer',
-        isAdminAccess:    true,
+        eventId:           event._id.toString(),
+        username,
+        role:              'organizer',
+        isAdminAccess:     true,
         canBypassPassword: true,
+        adminName:         req.admin?.name || req.admin?.email || req.admin?.username || 'admin',
       },
       secrets.jwt,
       { expiresIn: '24h' }
     );
 
+    audit('admin_event_access', {
+      req, actor: req.admin,
+      targetId: event._id.toString(), targetType: 'event',
+      details: { title: event.title },
+    });
+
     res.json({
       token,
+      username,
+      eventType: event.eventType,
+      isEnterpriseMode: event.isEnterpriseMode,
       event: {
         _id:                 event._id,
         title:               event.title,
@@ -2602,6 +2622,7 @@ router.post('/events/:eventId/access', verifyAdmin, requirePermission('canEditEv
         organizerEmail:      event.organizerEmail,
         isPasswordProtected: event.isPasswordProtected,
         isEnterpriseMode:    event.isEnterpriseMode,
+        eventType:           event.eventType,
         status:              event.status,
         participants:        event.participants,
         createdAt:           event.createdAt,
