@@ -155,6 +155,12 @@ const eventSchema = new mongoose.Schema({
     allowPhotoUpload:       { type: Boolean, default: false },
   },
 
+  // Organizer's acceptance of the Terms / Privacy Policy at creation time.
+  legalAcceptance: {
+    acceptedAt: { type: Date, default: null },
+    version:    { type: String, default: '' },
+  },
+
   settings: {
     allowChat:        { type: Boolean, default: true  },
     allowPolls:       { type: Boolean, default: true  },
