@@ -80,6 +80,7 @@ router.post('/',
     body('organizerName').trim().isLength({ min: 1, max: 100 }).withMessage('Organizer name is required'),
     body('organizerEmail').isEmail().normalizeEmail().withMessage('Valid email is required'),
     body('password').optional({ values: 'falsy' }).isLength({ min: 6 }).withMessage('Password must be at least 6 characters'),
+    body('agreedToTerms').custom(v => v === true || v === 'true').withMessage('You must agree to the Terms of Service and Privacy Policy'),
     validate
   ],
   async (req, res, next) => {
@@ -182,6 +183,11 @@ router.post('/',
         creatorIp:          creatorIpAddr,
         creatorUserAgent,
         creatorFingerprint,
+        // Record when and against which version of the legal text the organizer agreed.
+        legalAcceptance: {
+          acceptedAt: new Date(),
+          version:    String(req.body.legalVersion || '').slice(0, 32),
+        },
       });
 
       await event.save();
