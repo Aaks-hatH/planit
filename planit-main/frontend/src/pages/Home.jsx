@@ -2350,6 +2350,37 @@ function ProductShowcase() {
   );
 }
 
+// Bump this when the Terms / Privacy Policy change in a way that needs fresh consent.
+const LEGAL_VERSION = '2026-10-03';
+
+const LEGAL_CHECKS = [
+  {
+    key: 'agreeTerms',
+    error: 'You need to agree to the Terms of Service and Privacy Policy.',
+    label: (
+      <>
+        I agree to the <a href="/terms" target="_blank" rel="noopener noreferrer" style={{ color:'#a5b4fc', textDecoration:'underline' }}>Terms of Service</a> and the{' '}
+        <a href="/privacy" target="_blank" rel="noopener noreferrer" style={{ color:'#a5b4fc', textDecoration:'underline' }}>Privacy Policy</a>.
+      </>
+    ),
+  },
+  {
+    key: 'agreeResponsible',
+    error: 'Please confirm you are responsible for your event.',
+    label: 'I am responsible for my event and everything posted to it. I will not use PlanIt for anything illegal, harassing, deceptive, or spammy, and I understand PlanIt can remove events that break the rules.',
+  },
+  {
+    key: 'agreeGuestData',
+    error: 'Please confirm you will handle guest data responsibly.',
+    label: 'I have the right to collect my guests\u2019 information (names, emails, RSVPs, check-ins) and will only use it to run this event.',
+  },
+  {
+    key: 'agreeAge',
+    error: 'You must be at least 13 to create an event.',
+    label: 'I am at least 13 years old.',
+  },
+];
+
 function OnboardingWizard({ mode, formData, setFormData, fieldErrors, setFieldErrors, onSubmit, loading, submittedRef, stepControlRef, abuseStatus, requiresVerification, onCaptchaToken, captchaResetKey, onUserInput, onUserPaste }) {
   const isVenue = mode === 'table-service';
   const isRsvp  = mode === 'rsvp';
@@ -2428,7 +2459,8 @@ function OnboardingWizard({ mode, formData, setFormData, fieldErrors, setFieldEr
       try {
         const vid = localStorage.getItem('planit_vid');
         localStorage.setItem('planit_event_draft', JSON.stringify({
-          formData,
+          // Consent is never restored from a draft; the user re-confirms on the last step.
+          formData: { ...formData, agreeTerms: false, agreeResponsible: false, agreeGuestData: false, agreeAge: false },
           step,
           timestamp: Date.now(),
           visitorId: vid,
@@ -2474,6 +2506,7 @@ function OnboardingWizard({ mode, formData, setFormData, fieldErrors, setFieldEr
     if (step === pwStep) {
       if (!formData.accountPassword) e.accountPassword = 'Password is required.';
       else if (formData.accountPassword.length < 4) e.accountPassword = 'Must be at least 4 characters.';
+      for (const c of LEGAL_CHECKS) if (!formData[c.key]) e[c.key] = c.error;
     }
     setLocalErr(e);
     return Object.keys(e).length === 0;
@@ -2869,6 +2902,27 @@ function OnboardingWizard({ mode, formData, setFormData, fieldErrors, setFieldEr
             </div>
             <p style={{ fontSize:12, color:'rgba(255,255,255,0.25)', marginTop:6 }}>{secondPwHint}</p>
           </div>
+          <div style={{ display:'flex', flexDirection:'column', gap:10, marginTop:4, paddingTop:16, borderTop:'1px solid rgba(255,255,255,0.08)' }}>
+            {LEGAL_CHECKS.map(c => (
+              <div key={c.key}>
+                <label style={{ display:'flex', alignItems:'flex-start', gap:10, cursor:'pointer', fontSize:12.5, lineHeight:1.5, color:'rgba(255,255,255,0.55)' }}>
+                  <input
+                    type="checkbox"
+                    checked={!!formData[c.key]}
+                    onChange={(e) => {
+                      onUserInput?.();
+                      const checked = e.target.checked;
+                      setFormData(p => ({ ...p, [c.key]: checked }));
+                      if (checked) setLocalErr(prev => { const n = { ...prev }; delete n[c.key]; return n; });
+                    }}
+                    style={{ marginTop:3, width:16, height:16, flexShrink:0, accentColor: accent, cursor:'pointer' }}
+                  />
+                  <span>{c.label}</span>
+                </label>
+                {err[c.key] && <p style={{ fontSize:12, color:'#f87171', marginTop:4, marginLeft:26, display:'flex', alignItems:'center', gap:5 }}><AlertCircle style={{ width:12, height:12 }} />{err[c.key]}</p>}
+              </div>
+            ))}
+          </div>
         </div>
       );
     }
@@ -3041,6 +3095,7 @@ export default function Home() {
     subdomain: '', title: '', description: '', date: '', timezone: getUserTimezone(), location: '',
     organizerName: '', organizerEmail: '', accountPassword: '', password: '', staffPassword: '',
     isEnterpriseMode: false, maxParticipants: 10000,
+    agreeTerms: false, agreeResponsible: false, agreeGuestData: false, agreeAge: false,
   });
   // Default the timezone from the visitor's location (IP geo headers via the
   // backend, else browser tz). Never overrides a zone the user already picked.
@@ -3120,6 +3175,7 @@ export default function Home() {
                                            errs.accountPassword = 'Password must be at least 4 characters.';
     if (isTS && formData.staffPassword && formData.staffPassword.length < 4)
                                            errs.staffPassword  = 'Staff PIN must be at least 4 characters.';
+    for (const c of LEGAL_CHECKS) if (!formData[c.key]) errs[c.key] = c.error;
 
     if (Object.keys(errs).length > 0) {
       setFieldErrors(errs);
@@ -3147,6 +3203,8 @@ export default function Home() {
       isTableServiceMode: isTS,
       eventType:      mode === 'rsvp' ? 'rsvpOnly' : 'standard',
       maxParticipants: formData.maxParticipants,
+      agreedToTerms:  true,
+      legalVersion:   LEGAL_VERSION,
       ...(turnstileToken ? { turnstileToken } : {}),
       behavior: { ...eventFormTimingRef.current, submittedAt: Date.now(), formStartedAt: eventFormTimingRef.current.formStartedAt || eventFormTimingRef.current.pageLoadedAt },
       browserMeta: {
@@ -3191,6 +3249,7 @@ export default function Home() {
         accountPassword: 'Account password',
         password:        mode === 'table-service' ? 'Staff PIN' : 'Event password',
         subdomain:       mode === 'table-service' ? 'Restaurant URL' : 'Event URL',
+        agreedToTerms:   'Terms agreement',
       };
 
       if (data?.requiresVerification || data?.code === 'VERIFICATION_REQUIRED' || data?.code === 'INVALID_VERIFICATION') {
