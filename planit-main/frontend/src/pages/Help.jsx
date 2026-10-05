@@ -3990,12 +3990,13 @@ const BITCOIN_ARTICLES = [
     content: [
       {
         type: 'intro',
-        text: 'PlanIt takes payments in Bitcoin instead of through a card processor. You don’t need an account, a card, or to hand over billing details — you send Bitcoin from a wallet or an exchange to an address we show you, and the page confirms it automatically. If you have never used Bitcoin, this article covers the five things you need to know.',
+        text: 'PlanIt takes payments in Bitcoin instead of through a card processor. You don’t need an account, a card, or to hand over billing details — you send Bitcoin from a wallet or an exchange to an address we show you, and the page confirms it automatically. If you have never used Bitcoin, this article covers the six things you need to know, including why it is the payment method behind PlanIt Payments.',
       },
       {
         type: 'steps',
         items: [
           { title: 'Bitcoin is digital cash that moves directly between wallets', body: 'A Bitcoin payment goes from your wallet to ours across a public network. No bank or card company sits in the middle, which is why there are no card numbers for us to store or leak.' },
+          { title: 'Why PlanIt uses Bitcoin for payments', body: 'Bitcoin gives PlanIt a globally accessible payment option that works across borders without requiring customers to use a particular bank or card network. It also helps us keep processing costs lean by reducing third-party payment layers, rather than routing payments through a card processor such as Stripe. PlanIt does not store card details, and you pay only the Bitcoin amount shown on the page plus any network fee charged by your wallet.' },
           { title: 'A wallet is an app that holds your Bitcoin', body: 'Wallets are free phone or desktop apps. Many exchanges (where you buy Bitcoin) also include one. Everything you do with Bitcoin starts and ends in a wallet.' },
           { title: 'An address is like a one-time account number', body: 'It’s a long string starting with “bc1q”. PlanIt generates a brand-new address for every order, so the payment can be matched to your order and nobody else’s.' },
           { title: 'Amounts are tiny decimals — and that’s normal', body: 'Because one Bitcoin is worth a lot, small purchases look like 0.00012345 BTC. The page also shows the amount in “sats” (1 BTC = 100,000,000 sats), which many wallets use: 12,345 sats is the same thing.' },
