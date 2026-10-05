@@ -761,6 +761,94 @@ async function alertIncident({ incident, update, type = 'created' }) {
   console.log(`[alert] Incident alerts dispatched — ${fullTitle}`);
 }
 
+
+// ─── Payment Alert ────────────────────────────────────────────────────────────
+//
+// Called via POST /mesh/alert { type: 'payment', payload } by the backend's
+// PlanIt Payments service (new donation, payment seen, needs review, failed
+// fulfilment, renewal due...).
+// payload: { title, content, fields: [{name, value, inline}], level, invoiceId }
+// level: info (silent Discord, normal ntfy) | medium | high | critical
+
+const PAYMENT_COLOR = { info: 0x10b981, medium: 0xf59e0b, high: 0xef4444, critical: 0xb91c1c };
+const PAYMENT_NTFY_TAGS = {
+  info:     ['moneybag'],
+  medium:   ['warning', 'eyes'],
+  high:     ['rotating_light'],
+  critical: ['rotating_light', 'sos'],
+};
+
+function _plain(s, max) {
+  return String(s ?? '').replace(/[\u0000-\u001f\u007f]/g, ' ').replace(/@/g, '@\u200b').trim().slice(0, max);
+}
+
+async function alertPayment({ title, content, fields = [], level = 'info', invoiceId = '' } = {}) {
+  if (!title) return;
+  const lvl = PAYMENT_COLOR[level] ? level : 'info';
+  const safeFields = (Array.isArray(fields) ? fields : [])
+    .filter(f => f && f.value !== undefined && String(f.value).trim() !== '')
+    .slice(0, 10)
+    .map(f => ({ name: _plain(f.name, 60), value: _plain(f.value, 1000), inline: !!f.inline }));
+
+  const dedupKey = `payment:${_plain(title, 80)}:${invoiceId || _plain(content, 60)}`;
+  if (_isDuplicate(dedupKey, 30 * 1000)) {
+    console.log(`[alert] Payment alert deduped -- ${dedupKey}`);
+    return;
+  }
+
+  const adminUrl = _adminUrl();
+  const ping = lvl !== 'info';   // routine donations are silent; anything needing a human pings you
+
+  // ── Discord ──────────────────────────────────────────────────────────────
+  const discordFields = [...safeFields];
+  if (adminUrl) discordFields.push({ name: 'Admin', value: `[Open Payments](${adminUrl})`, inline: true });
+
+  await _sendDiscord({
+    username:   BRAND_NAME,
+    avatar_url: APP_ICON_URL,
+    content:    ping ? `<@${DISCORD_ALERT_USER}> ${_plain(content || title, 180)}` : (_plain(content || '', 300) || undefined),
+    allowed_mentions: ping ? { users: [DISCORD_ALERT_USER] } : { parse: [] },
+    embeds: [{
+      color: PAYMENT_COLOR[lvl],
+      author: { name: `${BRAND_NAME} · Payments`, icon_url: APP_ICON_URL },
+      title: _plain(title, 120),
+      fields: discordFields,
+      thumbnail: { url: APP_ICON_URL },
+      footer: { text: `${BRAND_NAME}  ·  PlanIt Payments${invoiceId ? `  ·  ${invoiceId.slice(0, 8)}` : ''}`, icon_url: APP_ICON_URL },
+      timestamp: _ts(),
+    }],
+  });
+
+  // ── ntfy ─────────────────────────────────────────────────────────────────
+  const ntfyBody = [
+    _plain(content, 300),
+    ...safeFields.map(f => `${f.name}: ${f.value}`),
+  ].filter(Boolean).join('\n');
+
+  await _sendNtfy({
+    title:    _plain(title, 120),
+    body:     ntfyBody || _plain(title, 120),
+    priority: lvl === 'critical' ? 5 : (lvl === 'high' || lvl === 'medium') ? 4 : 3,
+    tags:     PAYMENT_NTFY_TAGS[lvl],
+    actions:  adminUrl ? `view, Open Admin, ${adminUrl}` : undefined,
+    iconUrl:  APP_ICON_URL,
+    clickUrl: adminUrl || undefined,
+  });
+
+  // ── Slack ────────────────────────────────────────────────────────────────
+  const blocks = [
+    { type: 'header', text: { type: 'plain_text', text: _plain(title, 150), emoji: true } },
+    ...(content ? [{ type: 'section', text: { type: 'mrkdwn', text: _plain(content, 300) } }] : []),
+    ...(safeFields.length ? [{ type: 'section', fields: safeFields.map(f => ({ type: 'mrkdwn', text: `*${f.name}:*\n${f.value}`.slice(0, 1900) })) }] : []),
+  ];
+  if (adminUrl) blocks.push({ type: 'actions', elements: [{ type: 'button', text: { type: 'plain_text', text: 'Open Admin', emoji: true }, url: adminUrl }] });
+  blocks.push({ type: 'context', elements: [{ type: 'mrkdwn', text: `*${BRAND_NAME}*  ·  PlanIt Payments  ·  ${new Date().toUTCString()}` }] });
+
+  await _sendSlack({ username: `${BRAND_NAME} Payments`, icon_emoji: ':moneybag:', blocks });
+
+  console.log(`[alert] Payment alert dispatched -- ${title} (${lvl})`);
+}
+
 // ─── Exports ──────────────────────────────────────────────────────────────────
 
-module.exports = { alertBugReport, alertStatusReport, alertIncident };
+module.exports = { alertBugReport, alertStatusReport, alertIncident, alertPayment };
