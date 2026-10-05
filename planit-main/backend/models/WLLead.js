@@ -38,6 +38,9 @@ const wlLeadSchema = new mongoose.Schema({
     default: 'new',
   },
   notes:         { type: String, trim: true, maxlength: 2000 },  // admin notes
+  setupFeePaid:   { type: Boolean, default: false },
+  setupFeePaidAt: { type: Date },
+  setupInvoiceId: { type: String },
   convertedToId: { type: mongoose.Schema.Types.ObjectId, ref: 'WhiteLabel' }, // set on convert
 
 }, { timestamps: true });

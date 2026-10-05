@@ -1,259 +1,107 @@
 const express = require('express');
 const router = express.Router();
 const { body, validationResult } = require('express-validator');
-const mongoose = require('mongoose');
-const axios = require('axios');
+const rateLimit = require('express-rate-limit');
+
+const Support = require('../models/Support');
+const Invoice = require('../models/Invoice');
+const payments = require('../services/payments');
+require('../services/payments/fulfillment');
+const { realIp } = require('../middleware/realIp');
 
 // ══════════════════════════════════════════════════════════════════════════
-// LAZY STRIPE INITIALISATION
-// Initialising stripe(process.env.STRIPE_SECRET_KEY) at the top level
-// crashes the entire server if the env var is missing or not yet injected
-// (common on Render / Railway during cold starts). Lazy init means the
-// server boots fine and only fails at the point a payment is actually
-// attempted, returning a clean 500 instead of taking everything down.
+// PLANIT PAYMENTS (Bitcoin) — support & feature-request payments
+//
+// Amounts are validated here and converted to BTC on the server. The browser
+// never supplies a BTC amount or an address, so neither can be tampered with.
 // ══════════════════════════════════════════════════════════════════════════
 
-let _stripe = null;
-function getStripe() {
-  if (!_stripe) {
-    if (!process.env.STRIPE_SECRET_KEY) {
-      throw new Error('STRIPE_SECRET_KEY is not configured');
-    }
-    _stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
-  }
-  return _stripe;
-}
-
-// Support/Donation Model
-const supportSchema = new mongoose.Schema({
-  email: { type: String, required: true },
-  name: String,
-  amount: { type: Number, required: true },
-  message: String,
-  stripePaymentId: String,
-  type: { type: String, enum: ['support', 'feature_request'], default: 'support' },
-  featureRequest: String,
-  createdAt: { type: Date, default: Date.now }
+const createLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 12,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req) => realIp(req) || 'unknown',
+  message: { error: 'Too many payment attempts. Please try again later.' },
 });
 
-const Support = mongoose.model('Support', supportSchema);
-
-// ══════════════════════════════════════════════════════════════════════════
-// DISCORD NOTIFICATION (Optional)
-// Previously used native fetch() which is only stable in Node 21+.
-// Using axios (already a dependency) makes this work on Node 18 and above.
-// ══════════════════════════════════════════════════════════════════════════
-
-async function sendDiscordNotification(data) {
-  if (!process.env.DISCORD_WEBHOOK_URL) return;
-
-  const { name, amount, type, message, feature } = data;
-  const isFeature = type === 'feature_request';
-  const displayName = (name && name.trim()) ? name.trim() : 'Anonymous';
-  const amountFormatted = `$${(amount / 100).toFixed(2)}`;
-
-  const embed = {
-    title: isFeature ? 'New Feature Request' : 'New Donation',
-    description: isFeature
-      ? `**${displayName}** submitted a feature request with ${amountFormatted}`
-      : `**${displayName}** just supported PlanIt with ${amountFormatted}`,
-    color: isFeature ? 0x3B82F6 : 0x10B981,
-    fields: [
-      { name: 'From', value: displayName, inline: true },
-      { name: 'Amount', value: amountFormatted, inline: true },
-    ],
-    timestamp: new Date().toISOString(),
-    footer: { text: 'PlanIt' },
-  };
-
-  // Only push non-empty string values — Discord rejects empty/undefined field values
-  if (isFeature && feature && feature.trim()) {
-    embed.fields.push({ name: 'Feature Request', value: feature.trim().substring(0, 1024) });
-  } else if (!isFeature && message && message.trim()) {
-    embed.fields.push({ name: 'Message', value: message.trim().substring(0, 1024) });
-  }
-
-  // Top-level content gives Discord something to show even if embed rendering fails
-  const content = isFeature
-    ? `New feature request from **${displayName}** — ${amountFormatted}`
-    : `New donation from **${displayName}** — ${amountFormatted}`;
-
-  try {
-    const response = await axios.post(
-      process.env.DISCORD_WEBHOOK_URL,
-      { content, embeds: [embed] },
-      { headers: { 'Content-Type': 'application/json' } }
-    );
-    if (response.status < 200 || response.status >= 300) {
-      console.error('Discord webhook error:', response.status, response.data);
-    }
-  } catch (error) {
-    // Log but never let a Discord failure bubble up and break the payment flow
-    console.error('Discord notification failed:', error.response?.data || error.message);
-  }
+function fail(res, e, fallback) {
+  if (e instanceof payments.PaymentError) return res.status(e.status).json({ error: e.message, code: e.code });
+  console.error(fallback, e.message);
+  return res.status(500).json({ error: 'Failed to create payment' });
 }
 
-// ══════════════════════════════════════════════════════════════════════════
-// CREATE DONATION PAYMENT
-// ══════════════════════════════════════════════════════════════════════════
-
-router.post('/create-payment',
+// ── Create donation payment ──────────────────────────────────────────────
+router.post('/create-payment', createLimiter,
   [
-    body('amount').isInt({ min: 300 }).withMessage('Minimum $3'),
-    body('email').isEmail().withMessage('Valid email required'),
-    body('name').optional().trim(),
-    body('message').optional().trim().isLength({ max: 500 }),
+    body('amount').isInt({ min: 300, max: 500000 }).withMessage('Minimum $3'),
+    body('email').isEmail().withMessage('Valid email required').normalizeEmail(),
+    body('name').optional({ checkFalsy: true }).trim().isLength({ max: 100 }),
+    body('message').optional({ checkFalsy: true }).trim().isLength({ max: 500 }).withMessage('Message too long'),
   ],
-  async (req, res, next) => {
+  async (req, res) => {
     const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({ errors: errors.array() });
-    }
-
+    if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
     try {
-      const stripe = getStripe();
       const { amount, email, name, message } = req.body;
-      console.log('FRONTEND_URL:', JSON.stringify(process.env.FRONTEND_URL));
-console.log('success_url:', `${process.env.FRONTEND_URL}/support/success?session_id={CHECKOUT_SESSION_ID}`);
-      const session = await stripe.checkout.sessions.create({
-        payment_method_types: ['card'],
-        mode: 'payment',
-        line_items: [{
-          price_data: {
-            currency: 'usd',
-            product_data: {
-              name: ' Support PlanIt',
-              description: message || 'Thank you for your support!',
-            },
-            unit_amount: amount,
-          },
-          quantity: 1,
-        }],
-        customer_email: email,
-        success_url: `${process.env.FRONTEND_URL}/support/success?session_id={CHECKOUT_SESSION_ID}`,
-        cancel_url: `${process.env.FRONTEND_URL}/support`,
-        metadata: {
-          type: 'support',
-          name: name || 'Anonymous',
-          message: message || '',
-        },
+      const inv = await payments.createInvoice({
+        purpose: 'support',
+        usdCents: Number(amount),
+        pii: { email, name: name || '', message: message || '' },
+        ip: realIp(req),
       });
+      res.json({ invoiceId: inv.publicId, payUrl: `/pay/${inv.publicId}` });
+    } catch (e) { fail(res, e, 'Payment creation error:'); }
+  });
 
-      res.json({ url: session.url, sessionId: session.id });
-    } catch (error) {
-      console.error('Payment creation error:', error);
-      res.status(500).json({ error: error.message || 'Failed to create payment session' });
-    }
-  }
-);
-
-// ══════════════════════════════════════════════════════════════════════════
-// CREATE FEATURE REQUEST PAYMENT
-// ══════════════════════════════════════════════════════════════════════════
-
-router.post('/feature-request',
+// ── Create feature-request payment ───────────────────────────────────────
+router.post('/feature-request', createLimiter,
   [
-    body('amount').isInt({ min: 500 }).withMessage('Minimum $5'),
-    body('email').isEmail().withMessage('Valid email required'),
-    body('name').optional().trim(),
+    body('amount').isInt({ min: 500, max: 500000 }).withMessage('Minimum $5'),
+    body('email').isEmail().withMessage('Valid email required').normalizeEmail(),
+    body('name').optional({ checkFalsy: true }).trim().isLength({ max: 100 }),
     body('feature').trim().isLength({ min: 10, max: 500 }).withMessage('Feature description required'),
   ],
-  async (req, res, next) => {
+  async (req, res) => {
     const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({ errors: errors.array() });
-    }
-
+    if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
     try {
-      const stripe = getStripe();
       const { amount, email, name, feature } = req.body;
-
-      const session = await stripe.checkout.sessions.create({
-        payment_method_types: ['card'],
-        mode: 'payment',
-        line_items: [{
-          price_data: {
-            currency: 'usd',
-            product_data: {
-              name: '🚀 Feature Request',
-              description: feature.substring(0, 100),
-            },
-            unit_amount: amount,
-          },
-          quantity: 1,
-        }],
-        customer_email: email,
-        success_url: `${process.env.FRONTEND_URL}/support/success?session_id={CHECKOUT_SESSION_ID}&type=feature`,
-        cancel_url: `${process.env.FRONTEND_URL}/support`,
-        metadata: {
-          type: 'feature_request',
-          name: name || 'Anonymous',
-          feature: feature,
-        },
+      const inv = await payments.createInvoice({
+        purpose: 'feature_request',
+        usdCents: Number(amount),
+        pii: { email, name: name || '', feature },
+        ip: realIp(req),
       });
+      res.json({ invoiceId: inv.publicId, payUrl: `/pay/${inv.publicId}?type=feature` });
+    } catch (e) { fail(res, e, 'Feature request error:'); }
+  });
 
-      res.json({ url: session.url, sessionId: session.id });
-    } catch (error) {
-      console.error('Feature request error:', error);
-      res.status(500).json({ error: error.message || 'Failed to create feature request' });
-    }
-  }
-);
-
-// ══════════════════════════════════════════════════════════════════════════
-// VERIFY PAYMENT
-// ══════════════════════════════════════════════════════════════════════════
-
-router.get('/verify-payment/:sessionId', async (req, res, next) => {
+// ── Verify payment (success page) ────────────────────────────────────────
+router.get('/verify-payment/:invoiceId', async (req, res) => {
   try {
-    const stripe = getStripe();
-    const session = await stripe.checkout.sessions.retrieve(req.params.sessionId);
-    
-    if (session.payment_status === 'paid') {
-      // Avoid duplicate DB entries if verify is called more than once
-      const existing = await Support.findOne({ stripePaymentId: session.payment_intent });
-      if (!existing) {
-        const support = new Support({
-          email: session.customer_details.email,
-          name: session.metadata.name,
-          amount: session.amount_total,
-          message: session.metadata.message,
-          stripePaymentId: session.payment_intent,
-          type: session.metadata.type,
-          featureRequest: session.metadata.feature,
-        });
-        await support.save();
+    if (!/^[0-9a-f]{32}$/.test(req.params.invoiceId)) return res.status(404).json({ success: false });
+    const inv = await Invoice.findOne({ publicId: req.params.invoiceId, purpose: { $in: ['support', 'feature_request'] } })
+      .select('-ipHash').lean();
+    if (!inv) return res.status(404).json({ success: false });
+    if (inv.status !== 'confirmed') return res.json({ success: false, message: 'Payment not completed', status: inv.status });
 
-        // Send Discord notification
-        await sendDiscordNotification({
-          name: session.metadata.name,
-          amount: session.amount_total,
-          type: session.metadata.type,
-          message: session.metadata.message,
-          feature: session.metadata.feature,
-        });
-      }
-
-      res.json({
-        success: true,
-        amount: session.amount_total / 100,
-        type: session.metadata.type,
-        message: session.metadata.message || session.metadata.feature,
-      });
-    } else {
-      res.json({ success: false, message: 'Payment not completed' });
-    }
+    const rec = await Support.findOne({ invoiceId: inv.publicId }).select('type message featureRequest amount -_id').lean();
+    res.json({
+      success: true,
+      amount: inv.usdCents / 100,
+      type: inv.purpose === 'feature_request' ? 'feature_request' : 'support',
+      message: rec?.message || rec?.featureRequest || '',
+      fulfilled: inv.fulfillState === 'done',
+    });
   } catch (error) {
-    console.error('Verification error:', error);
-    res.status(500).json({ error: error.message || 'Failed to verify payment' });
+    console.error('Verification error:', error.message);
+    res.status(500).json({ error: 'Failed to verify payment' });
   }
 });
 
-// ══════════════════════════════════════════════════════════════════════════
-// GET SUPPORTERS
-// ══════════════════════════════════════════════════════════════════════════
-
-router.get('/supporters', async (req, res, next) => {
+// ── Supporters wall ──────────────────────────────────────────────────────
+router.get('/supporters', async (req, res) => {
   try {
     const supporters = await Support.find({ type: 'support' })
       .sort({ createdAt: -1 })
@@ -263,9 +111,8 @@ router.get('/supporters', async (req, res, next) => {
 
     const total = await Support.aggregate([
       { $match: { type: 'support' } },
-      { $group: { _id: null, total: { $sum: '$amount' } } }
+      { $group: { _id: null, total: { $sum: '$amount' } } },
     ]);
-
     const totalCount = await Support.countDocuments({ type: 'support' });
 
     res.json({
@@ -284,11 +131,8 @@ router.get('/supporters', async (req, res, next) => {
   }
 });
 
-// ══════════════════════════════════════════════════════════════════════════
-// GET FEATURE REQUESTS
-// ══════════════════════════════════════════════════════════════════════════
-
-router.get('/feature-requests', async (req, res, next) => {
+// ── Feature requests list ────────────────────────────────────────────────
+router.get('/feature-requests', async (req, res) => {
   try {
     const requests = await Support.find({ type: 'feature_request' })
       .sort({ amount: -1, createdAt: -1 })

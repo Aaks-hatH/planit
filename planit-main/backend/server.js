@@ -22,6 +22,8 @@ const socketIo      = require('socket.io');
 const path          = require('path');
 
 const supportRoutes       = require('./routes/support');
+const paymentRoutes       = require('./routes/payments');
+const { startPaymentWatcher } = require('./jobs/paymentWatcher');
 const bugReportRoutes     = require('./routes/bug-reports');
 const uptimeRoutes        = require('./routes/uptime');
 const { startCleanupScheduler } = require('./jobs/cleanupJob');
@@ -342,9 +344,6 @@ app.use(cors(corsOptions));
 // Express applies the FIRST matching parser and skips subsequent ones once
 // req.body is populated, so specific routes must come BEFORE the general one.
 //
-// Stripe webhooks: raw body required for signature verification — no JSON parser.
-app.use('/api/whitelabel/webhooks/stripe', express.raw({ type: 'application/json' }));
-
 // Auth / login routes: 50KB max
 // Covers staff login, event password verify, WL portal login, password changes.
 app.use(
@@ -448,6 +447,7 @@ app.use('/api/files',       fileRoutes);
 app.use('/api/admin',       adminRoutes);
 app.use('/api/blog',        blogRoutes);
 app.use('/api/support',     supportRoutes);
+app.use('/api/payments',    paymentRoutes);
 app.use('/api/bug-reports', bugReportRoutes);
 app.use('/api/uptime',      uptimeRoutes);
 app.use('/api/mesh',        meshRoutes);
@@ -647,6 +647,8 @@ server.listen(PORT, () => {
   setInterval(_pollMaintenanceState, 30_000);
   require('./socket/chatSocket')(io);
   require('./socket/walkieTalkieSocket')(io);
+  require('./socket/paymentSocket')(io);
+  startPaymentWatcher();
   setTimeout(announceToRouter, 4000);
 })();
 

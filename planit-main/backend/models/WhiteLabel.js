@@ -45,8 +45,11 @@ const whiteLabelSchema = new mongoose.Schema({
   contactEmail: { type: String, trim: true, lowercase: true },
   contactPhone: { type: String, trim: true, maxlength: 30 },
 
-  // ── Billing (Stripe) ────────────────────────────────────────────────────────
+  // ── Billing (PlanIt Payments — Bitcoin) ─────────────────────────────────────
   billing: {
+    provider:             { type: String, default: 'planit-btc' },
+    lastInvoiceId:        { type: String },
+    lastPaidAt:           { type: Date },
     mode:                 { type: String, enum: ['sandbox', 'live'], default: 'sandbox' },
     stripeCustomerId:     { type: String },
     stripeSubscriptionId: { type: String },

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Heart, Coffee, Sparkles, DollarSign } from 'lucide-react';
 import axios from 'axios';
+import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 
 // Plain axios instance with no auth interceptors for public support routes
@@ -10,6 +11,7 @@ const publicApi = axios.create({
 });
 
 export default function Support() {
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('support'); // 'support' or 'feature'
   
   // Support form
@@ -65,11 +67,11 @@ export default function Support() {
     setLoading(true);
     try {
       const res = await publicApi.post('/support/create-payment', supportForm);
-      if (!res.data.url) {
-        toast.error('No checkout URL returned. Check your Stripe configuration.');
+      if (!res.data.payUrl) {
+        toast.error('Could not start the payment. Please try again.');
         return;
       }
-      window.location.href = res.data.url; // Redirect to Stripe
+      navigate(res.data.payUrl); // PlanIt Payments (Bitcoin) pay page
     } catch (error) {
       console.error('Payment error:', error);
       toast.error(error.response?.data?.error || error.response?.data?.errors?.[0]?.msg || 'Failed to create payment');
@@ -100,11 +102,11 @@ export default function Support() {
     setLoading(true);
     try {
       const res = await publicApi.post('/support/feature-request', featureForm);
-      if (!res.data.url) {
-        toast.error('No checkout URL returned. Check your Stripe configuration.');
+      if (!res.data.payUrl) {
+        toast.error('Could not start the payment. Please try again.');
         return;
       }
-      window.location.href = res.data.url; // Redirect to Stripe
+      navigate(res.data.payUrl); // PlanIt Payments (Bitcoin) pay page
     } catch (error) {
       console.error('Feature request error:', error);
       toast.error(error.response?.data?.error || error.response?.data?.errors?.[0]?.msg || 'Failed to create feature request');
@@ -438,7 +440,7 @@ export default function Support() {
         </div>
 
         <p className="text-center text-xs text-neutral-300 mt-10">
-          Payments are currently in test mode. No real charges will be made. Make as many payments as you want...
+          Payments are made in Bitcoin and go directly to PlanIt. Prices are in USD and converted at the current rate when you check out.
         </p>
       </main>
     </div>

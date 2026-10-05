@@ -28,6 +28,17 @@ const { body, validationResult } = require('express-validator');
 const WLLead     = require('../models/WLLead');
 const { recordIdentity } = require('../services/identityService');
 const bcrypt     = require('bcryptjs');
+const rateLimit  = require('express-rate-limit');
+const Invoice    = require('../models/Invoice');
+const payments   = require('../services/payments');
+require('../services/payments/fulfillment');
+const { realIp: resolveIp } = require('../middleware/realIp');
+
+const setupLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, max: 8, standardHeaders: true, legacyHeaders: false,
+  keyGenerator: (req) => resolveIp(req) || 'unknown',
+  message: { error: 'rate_limited' },
+});
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -300,192 +311,11 @@ router.get('/', verifyAdmin, async (req, res) => {
   }
 });
 
-// ─── Stripe Webhook ───────────────────────────────────────────────────────────
-// Stripe calls this endpoint when subscription events occur.
-// IMPORTANT: This route must receive the raw request body (not JSON-parsed).
-// In server.js the webhook path is registered with express.raw() BEFORE express.json().
-
-router.post('/webhooks/stripe', async (req, res) => {
-  const sig    = req.headers['stripe-signature'];
-  const secret = process.env.STRIPE_WEBHOOK_SECRET;
-
-  if (!secret) {
-    console.error('[whitelabel] STRIPE_WEBHOOK_SECRET not set — webhook rejected');
-    return res.status(500).send('Webhook secret not configured');
-  }
-
-  let event;
-  try {
-    const stripe = getStripe();
-    event = stripe.webhooks.constructEvent(req.body, sig, secret);
-  } catch (err) {
-    console.error('[whitelabel] Webhook signature verification failed:', err.message);
-    return res.status(400).send(`Webhook Error: ${err.message}`);
-  }
-
-  const obj  = event.data.object;
-  const wlId = obj.metadata?.planit_wl_id || obj.subscription_details?.metadata?.planit_wl_id;
-
-  try {
-    switch (event.type) {
-
-      // Payment collected — handles BOTH $299 setup fee AND subscription start
-      case 'checkout.session.completed': {
-        const discordUrl = process.env.DISCORD_WEBHOOK_URL;
-
-        // ── One-time setup fee payment ($299) ─────────────────────────────────
-        if (obj.mode === 'payment') {
-          const leadId      = obj.metadata?.leadId;
-          const bizName     = obj.metadata?.businessName || 'Unknown business';
-          const custEmail   = obj.customer_details?.email || obj.customer_email || '';
-          const amountPaid  = ((obj.amount_total || 0) / 100).toFixed(2);
-
-          // Mark lead as "contacted" (already done at checkout creation, but ensure it)
-          if (leadId) {
-            await WLLead.findByIdAndUpdate(leadId, { status: 'contacted' }).catch(() => {});
-          }
-
-          console.log(`[whitelabel] ✓ Setup fee paid — ${bizName} <${custEmail}> $${amountPaid}`);
-
-          // Discord notification to admin
-          if (discordUrl) {
-            await axios.post(discordUrl, {
-              content: `💰 **Setup fee paid — $${amountPaid}**`,
-              embeds: [{
-                title: 'White Label Setup Fee Received',
-                color: 0x22c55e,
-                fields: [
-                  { name: 'Business',    value: bizName,    inline: true },
-                  { name: 'Email',       value: custEmail,  inline: true },
-                  { name: 'Amount',      value: `$${amountPaid}`, inline: true },
-                  { name: 'Next step',   value: 'Go to Admin → White Label → Leads → Convert to Client → set up their domain', inline: false },
-                ],
-                timestamp: new Date().toISOString(),
-                footer: { text: 'PlanIt White Label — Stripe Webhook' },
-              }],
-            }, { headers: { 'Content-Type': 'application/json' } }).catch(e => {
-              console.warn('[whitelabel] Discord setup fee notify failed:', e.message);
-            });
-          }
-          break;
-        }
-
-        // ── Subscription checkout completed ───────────────────────────────────
-        if (obj.mode === 'subscription') {
-          const subscriptionId = obj.subscription;
-          const update = {
-            status:                         'active',
-            'billing.stripeSubscriptionId': subscriptionId,
-            'billing.billingStatus':        'active',
-            'billing.mode':                 'live',
-          };
-          let clientName = '';
-          if (wlId) {
-            const updated = await WhiteLabel.findByIdAndUpdate(wlId, update, { new: true }).lean();
-            clientName = updated?.clientName || wlId;
-            console.log(`[whitelabel] ✓ Subscription activated ${wlId}`);
-          } else {
-            const updated = await WhiteLabel.findOneAndUpdate(
-              { 'billing.stripeCustomerId': obj.customer }, update, { new: true }
-            ).lean();
-            clientName = updated?.clientName || obj.customer;
-            console.log(`[whitelabel] ✓ Subscription activated by customer ${obj.customer}`);
-          }
-
-          // Discord notification
-          if (discordUrl) {
-            const custEmail = obj.customer_details?.email || '';
-            const amountStr = obj.amount_total ? `$${(obj.amount_total / 100).toFixed(2)}/mo` : 'recurring';
-            await axios.post(discordUrl, {
-              content: `🎉 **New subscription started — ${clientName}**`,
-              embeds: [{
-                title: 'White Label Subscription Active',
-                color: 0x6366f1,
-                fields: [
-                  { name: 'Client',    value: clientName, inline: true },
-                  { name: 'Email',     value: custEmail,  inline: true },
-                  { name: 'Amount',    value: amountStr,  inline: true },
-                  { name: 'Sub ID',    value: subscriptionId || 'n/a', inline: false },
-                ],
-                timestamp: new Date().toISOString(),
-                footer: { text: 'PlanIt White Label — Stripe Webhook' },
-              }],
-            }, { headers: { 'Content-Type': 'application/json' } }).catch(e => {
-              console.warn('[whitelabel] Discord subscription notify failed:', e.message);
-            });
-          }
-        }
-        break;
-      }
-
-      // Subscription status changed (upgrade, downgrade, pause, etc.)
-      case 'customer.subscription.updated': {
-        const stripeStatus = obj.status; // active | past_due | canceled | paused | unpaid
-        const billingStatus = stripeStatus === 'active' ? 'active' : stripeStatus === 'past_due' ? 'past_due' : 'cancelled';
-        const platformStatus = billingStatus === 'active' ? 'active' : billingStatus === 'past_due' ? 'active' : 'suspended';
-        const nextBillingDate = obj.current_period_end ? new Date(obj.current_period_end * 1000) : undefined;
-
-        const update = {
-          status: platformStatus,
-          'billing.billingStatus':  billingStatus,
-          ...(nextBillingDate && { 'billing.nextBillingDate': nextBillingDate }),
-        };
-
-        if (wlId) {
-          await WhiteLabel.findByIdAndUpdate(wlId, update);
-        } else {
-          await WhiteLabel.findOneAndUpdate({ 'billing.stripeSubscriptionId': obj.id }, update);
-        }
-        console.log(`[whitelabel] Subscription updated: ${obj.id} → ${stripeStatus}`);
-        break;
-      }
-
-      // Subscription cancelled (by client or admin)
-      case 'customer.subscription.deleted': {
-        const update = { status: 'cancelled', 'billing.billingStatus': 'cancelled' };
-        if (wlId) {
-          await WhiteLabel.findByIdAndUpdate(wlId, update);
-        } else {
-          await WhiteLabel.findOneAndUpdate({ 'billing.stripeSubscriptionId': obj.id }, update);
-        }
-        console.log(`[whitelabel] Subscription cancelled: ${obj.id}`);
-        break;
-      }
-
-      // Payment failed — mark past_due but keep access briefly
-      case 'invoice.payment_failed': {
-        const subId = obj.subscription;
-        if (!subId) break;
-        await WhiteLabel.findOneAndUpdate(
-          { 'billing.stripeSubscriptionId': subId },
-          { 'billing.billingStatus': 'past_due' },
-        );
-        console.log(`[whitelabel] Payment failed for subscription ${subId}`);
-        break;
-      }
-
-      // Invoice paid — ensure status is active (handles recovery from past_due)
-      case 'invoice.payment_succeeded': {
-        const subId = obj.subscription;
-        if (!subId) break;
-        await WhiteLabel.findOneAndUpdate(
-          { 'billing.stripeSubscriptionId': subId },
-          { status: 'active', 'billing.billingStatus': 'active' },
-        );
-        break;
-      }
-
-      default:
-        // Unhandled event type — ignore silently
-        break;
-    }
-  } catch (err) {
-    console.error('[whitelabel] Webhook handler error:', err.message);
-    // Still return 200 so Stripe doesn't retry
-  }
-
-  res.json({ received: true });
-});
+// ─── Payments ─────────────────────────────────────────────────────────────────
+// Billing runs on PlanIt Payments (self-hosted Bitcoin invoicing — see
+// services/payments). There are no inbound webhooks: jobs/paymentWatcher.js
+// watches the chain and calls the fulfillment handlers in
+// services/payments/fulfillment.js when an invoice confirms.
 
 // ─── Admin: Stats summary ─────────────────────────────────────────────────────
 
@@ -629,53 +459,38 @@ router.delete('/leads/:id', verifyAdmin, requireSuperAdminRole, async (req, res)
     return res.status(500).json({ error: 'internal' });
   }
 });
-// ─── PUBLIC: Setup fee checkout ($299) ───────────────────────────────────────
-// Called from /white-label/setup-fee page after a lead is confirmed.
-// Requires a valid lead ID so we can pre-fill customer info.
+// ─── PUBLIC: Setup fee payment ($299) ────────────────────────────────────────
+// Called from /white-label/setup-fee after a lead is confirmed.
+// The price and the buyer details come from the SERVER (the lead record) —
+// nothing the browser sends can change the amount.
 
-router.post('/setup-fee/checkout', [
-  body('leadId').notEmpty(),
-  body('businessName').trim().notEmpty(),
-  body('email').isEmail().normalizeEmail(),
+const SETUP_FEE_CENTS = 29900;
+
+router.post('/setup-fee/checkout', setupLimiter, [
+  body('leadId').isMongoId(),
 ], async (req, res) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) return res.status(400).json({ error: 'validation' });
 
   try {
-    const stripe = getStripe();
-    const { leadId, businessName, email, contactName } = req.body;
-    const frontendUrl = process.env.FRONTEND_URL || '';
+    const lead = await WLLead.findById(req.body.leadId).lean();
+    if (!lead) return res.status(404).json({ error: 'not_found' });
+    if (lead.setupFeePaid) return res.status(409).json({ error: 'already_paid' });
 
-    const session = await stripe.checkout.sessions.create({
-      mode: 'payment',
-      customer_email: email,
-      line_items: [{
-        price_data: {
-          currency: 'usd',
-          unit_amount: 29900, // $299.00
-          product_data: {
-            name: 'PlanIt White Label — Setup Fee',
-            description: 'One-time onboarding fee covering DNS configuration, SSL setup, branding, and launch testing. Your platform will be live within 48 hours of payment.',
-            images: [],
-          },
-        },
-        quantity: 1,
-      }],
-      metadata: { leadId, businessName, contactName: contactName || '' },
-      success_url: `${frontendUrl}/white-label/setup-success?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url:  `${frontendUrl}/white-label`,
-      payment_intent_data: {
-        description: `Setup fee — ${businessName}`,
-        metadata: { leadId, businessName },
-      },
+    const inv = await payments.createInvoice({
+      purpose: 'wl_setup',
+      refId: String(lead._id),
+      usdCents: SETUP_FEE_CENTS,
+      label: lead.businessName,
+      pii: { email: lead.email, businessName: lead.businessName, contactName: lead.contactName || '' },
+      ip: resolveIp(req),
+      reuseOpen: true,
     });
 
-    // Mark lead as contacted now that they've been sent to checkout
-    await WLLead.findByIdAndUpdate(leadId, { status: 'contacted' }).catch(() => {});
-
-    return res.json({ url: session.url });
+    return res.json({ invoiceId: inv.publicId, payUrl: `/pay/${inv.publicId}?next=setup` });
   } catch (err) {
-    console.error('[wl-setup-fee] checkout error', err);
+    if (err instanceof payments.PaymentError) return res.status(err.status).json({ error: err.code, message: err.message });
+    console.error('[wl-setup-fee] checkout error', err.message);
     return res.status(500).json({ error: 'internal' });
   }
 });
@@ -683,18 +498,13 @@ router.post('/setup-fee/checkout', [
 // ─── PUBLIC: Setup fee success verification ───────────────────────────────────
 
 router.get('/setup-fee/verify', async (req, res) => {
-  const { session_id } = req.query;
-  if (!session_id) return res.status(400).json({ error: 'missing session_id' });
+  const id = String(req.query.invoice || '');
+  if (!/^[0-9a-f]{32}$/.test(id)) return res.status(400).json({ error: 'missing invoice' });
   try {
-    const stripe = getStripe();
-    const session = await stripe.checkout.sessions.retrieve(session_id);
-    if (session.payment_status !== 'paid') return res.status(402).json({ error: 'not_paid' });
-    return res.json({
-      ok: true,
-      businessName: session.metadata?.businessName || '',
-      email: session.customer_email || session.customer_details?.email || '',
-      amount: session.amount_total,
-    });
+    const inv = await Invoice.findOne({ publicId: id, purpose: 'wl_setup' }).select('status label emailHint usdCents').lean();
+    if (!inv) return res.status(404).json({ error: 'not_found' });
+    if (inv.status !== 'confirmed') return res.status(402).json({ error: 'not_paid', status: inv.status });
+    return res.json({ ok: true, businessName: inv.label, email: inv.emailHint, amount: inv.usdCents });
   } catch (err) {
     return res.status(500).json({ error: 'internal' });
   }
@@ -888,94 +698,57 @@ router.delete('/:id', verifyAdmin, requireSuperAdminRole, demoGuard, async (req,
   }
 });
 
-// ─── Stripe helpers ───────────────────────────────────────────────────────────
-// Reuses the same STRIPE_SECRET_KEY already configured for support payments.
-// Lazy singleton — same pattern as support.js.
+// ─── Subscription pricing (USD cents / month) ────────────────────────────────
+// Uses the amount the admin set for this client (billing.monthlyAmount); falls
+// back to the public list price for the tier. Override with WL_PRICE_*_CENTS.
 
-let _stripe = null;
-function getStripe() {
-  if (!_stripe) {
-    if (!process.env.STRIPE_SECRET_KEY) throw new Error("STRIPE_SECRET_KEY is not configured");
-    _stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
-  }
-  return _stripe;
-}
-
-const TIER_PRICES = () => ({
-  basic:      process.env.STRIPE_PRICE_BASIC,
-  pro:        process.env.STRIPE_PRICE_PRO,
-  enterprise: process.env.STRIPE_PRICE_ENTERPRISE,
+const TIER_DEFAULT_CENTS = () => ({
+  basic:      Number(process.env.WL_PRICE_BASIC_CENTS      || 4900),
+  pro:        Number(process.env.WL_PRICE_PRO_CENTS        || 9999),
+  enterprise: Number(process.env.WL_PRICE_ENTERPRISE_CENTS || 14999),
 });
 
-// ─── Create Stripe Checkout session ──────────────────────────────────────────
-// Admin calls this → returns a Stripe-hosted checkout URL → send to client
+// ─── Create a Bitcoin payment link for a client's monthly bill ───────────────
+// Admin calls this → returns a pay-page URL → send it to the client.
 
 router.post('/:id/create-checkout', verifyAdmin, demoGuard, async (req, res) => {
   try {
-    const stripe = getStripe();
     const wl = await WhiteLabel.findById(req.params.id).lean();
     if (!wl) return res.status(404).json({ error: 'not_found' });
 
-    const prices = TIER_PRICES();
-    const priceId = prices[wl.tier];
-    if (!priceId) return res.status(400).json({ error: `No Stripe price configured for tier: ${wl.tier}. Set STRIPE_PRICE_${wl.tier.toUpperCase()} in env.` });
+    const usdCents = wl.billing?.monthlyAmount > 0 ? wl.billing.monthlyAmount : TIER_DEFAULT_CENTS()[wl.tier];
+    if (!usdCents) return res.status(400).json({ error: `No price configured for tier: ${wl.tier}` });
 
-    // Create or reuse Stripe customer
-    let customerId = wl.billing?.stripeCustomerId;
-    if (!customerId) {
-      const customer = await stripe.customers.create({
-        name:  wl.clientName,
-        email: wl.contactEmail || undefined,
-        metadata: { planit_wl_id: String(wl._id), domain: wl.domain },
-      });
-      customerId = customer.id;
-      await WhiteLabel.findByIdAndUpdate(wl._id, { 'billing.stripeCustomerId': customerId });
-    }
-
-    const frontendUrl = process.env.FRONTEND_URL || 'https://planitapp.onrender.com';
-
-    const session = await stripe.checkout.sessions.create({
-      customer:   customerId,
-      mode:       'subscription',
-      line_items: [{ price: priceId, quantity: 1 }],
-      metadata:   { planit_wl_id: String(wl._id) },
-      success_url: `${frontendUrl}/admin?section=whitelabel&checkout=success&wl=${wl._id}`,
-      cancel_url:  `${frontendUrl}/admin?section=whitelabel&checkout=cancelled&wl=${wl._id}`,
-      subscription_data: {
-        metadata: { planit_wl_id: String(wl._id), domain: wl.domain, tier: wl.tier },
-      },
+    const inv = await payments.createInvoice({
+      purpose: 'wl_subscription',
+      refId: String(wl._id),
+      usdCents,
+      label: wl.clientName,
+      pii: { email: wl.contactEmail || '', businessName: wl.clientName },
+      reuseOpen: true,
     });
 
-    return res.json({ url: session.url, sessionId: session.id });
+    const frontendUrl = (process.env.FRONTEND_URL || 'https://planitapp.onrender.com').split(',')[0].trim().replace(/\/$/, '');
+    return res.json({ url: `${frontendUrl}/pay/${inv.publicId}`, invoiceId: inv.publicId, expiresAt: inv.expiresAt });
   } catch (err) {
+    if (err instanceof payments.PaymentError) return res.status(err.status).json({ error: err.message });
     console.error('[whitelabel] create-checkout error', err.message);
-    return res.status(500).json({ error: err.message });
+    return res.status(500).json({ error: 'internal' });
   }
 });
 
-// ─── Stripe Customer Portal (for client self-service) ────────────────────────
-// Returns a Stripe-hosted portal URL where the client can update payment details or cancel
+// ─── Latest invoice for a client (replaces the Stripe billing portal) ────────
 
-router.post('/:id/billing-portal', verifyAdmin, async (req, res) => {
+router.get('/:id/latest-invoice', verifyAdmin, async (req, res) => {
   try {
-    const stripe = getStripe();
-    const wl = await WhiteLabel.findById(req.params.id).lean();
-    if (!wl) return res.status(404).json({ error: 'not_found' });
-
-    const customerId = wl.billing?.stripeCustomerId;
-    if (!customerId) return res.status(400).json({ error: 'No Stripe customer linked to this client yet. Create a checkout session first.' });
-
-    const frontendUrl = process.env.FRONTEND_URL || 'https://planitapp.onrender.com';
-
-    const session = await stripe.billingPortal.sessions.create({
-      customer:   customerId,
-      return_url: `${frontendUrl}/admin?section=whitelabel`,
-    });
-
-    return res.json({ url: session.url });
+    const inv = await Invoice.findOne({ purpose: 'wl_subscription', refId: String(req.params.id) })
+      .sort({ createdAt: -1 }).select('publicId status usdCents expiresAt paidAt').lean();
+    if (!inv) return res.status(404).json({ error: 'No invoices yet for this client — create a payment link first.' });
+    const frontendUrl = (process.env.FRONTEND_URL || 'https://planitapp.onrender.com').split(',')[0].trim().replace(/\/$/, '');
+    return res.json({ url: `${frontendUrl}/pay/${inv.publicId}`, status: inv.status, usd: inv.usdCents / 100, expiresAt: inv.expiresAt, paidAt: inv.paidAt });
   } catch (err) {
-    console.error('[whitelabel] billing-portal error', err.message);
-    return res.status(500).json({ error: err.message });
+    console.error('[whitelabel] latest-invoice error', err.message);
+    return res.status(500).json({ error: 'internal' });
   }
 });
 
