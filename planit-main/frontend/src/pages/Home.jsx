@@ -448,6 +448,90 @@ const GLOBAL_CSS = `
     border-color: rgba(99,102,241,0.25);
     box-shadow: 0 16px 40px rgba(0,0,0,0.4), 0 0 24px rgba(99,102,241,0.07);
   }
+  .hero-preview-shell {
+    position:relative; overflow:hidden; border:1px solid rgba(255,255,255,0.12); border-radius:28px;
+    background:linear-gradient(145deg, rgba(25,25,38,0.92), rgba(9,9,16,0.96));
+    box-shadow:0 40px 100px rgba(0,0,0,0.44), 0 0 80px rgba(99,102,241,0.10);
+    text-align:left; isolation:isolate;
+  }
+  .hero-preview-shell::before { content:''; position:absolute; inset:-35% 20% auto; height:260px; z-index:-1; background:radial-gradient(ellipse, rgba(99,102,241,0.18), transparent 68%); pointer-events:none; }
+  .hero-preview-shell::after { content:''; position:absolute; inset:0; z-index:-1; opacity:0.35; background-image:radial-gradient(rgba(255,255,255,0.18) 0.8px, transparent 0.8px); background-size:18px 18px; mask-image:linear-gradient(to bottom, black, transparent 78%); pointer-events:none; }
+  .hero-preview-chrome { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:15px 18px; border-bottom:1px solid rgba(255,255,255,0.08); background:rgba(255,255,255,0.025); }
+  .hero-preview-brand { display:flex; align-items:center; gap:9px; color:rgba(255,255,255,0.88); font-size:12px; font-weight:800; letter-spacing:-0.02em; }
+  .hero-preview-brand-mark { width:24px; height:24px; display:grid; place-items:center; border-radius:7px; color:white; background:linear-gradient(135deg,#756dff,#4f46e5); box-shadow:0 4px 14px rgba(99,102,241,0.35); }
+  .hero-preview-brand-mark svg { width:13px; height:13px; }
+  .hero-preview-chrome-meta { display:flex; align-items:center; gap:7px; color:rgba(255,255,255,0.38); font-size:9px; }
+  .hero-preview-live { display:inline-flex; align-items:center; gap:5px; color:#7ee4c1; font-weight:700; }
+  .hero-preview-live i { width:5px; height:5px; display:block; border-radius:50%; background:#52d4a7; box-shadow:0 0 0 4px rgba(82,212,167,0.12); }
+  .hero-preview-tabs { display:flex; align-items:center; gap:6px; padding:12px 18px 0; border-bottom:1px solid rgba(255,255,255,0.08); }
+  .hero-preview-tab { position:relative; padding:9px 12px 12px; color:rgba(255,255,255,0.42); border:0; border-radius:9px 9px 0 0; background:transparent; cursor:pointer; font-size:11px; font-weight:700; transition:color .2s ease, background .2s ease; }
+  .hero-preview-tab:hover { color:white; background:rgba(255,255,255,0.05); }
+  .hero-preview-tab.active { color:white; }
+  .hero-preview-tab.active::after { content:''; position:absolute; right:10px; bottom:-1px; left:10px; height:2px; border-radius:4px 4px 0 0; background:#847dff; box-shadow:0 0 12px rgba(132,125,255,0.65); }
+  .hero-preview-body { display:grid; grid-template-columns:190px 1fr; min-height:318px; }
+  .hero-preview-rail { padding:18px 12px; border-right:1px solid rgba(255,255,255,0.08); background:rgba(0,0,0,0.12); }
+  .hero-preview-rail-label { margin:4px 7px 8px; color:rgba(255,255,255,0.28); font-size:8px; font-weight:800; letter-spacing:.14em; text-transform:uppercase; }
+  .hero-preview-rail-item { display:flex; align-items:center; gap:8px; padding:9px 9px; margin:3px 0; border-radius:9px; color:rgba(255,255,255,0.46); font-size:10px; font-weight:650; transition:background .2s ease, color .2s ease; }
+  .hero-preview-rail-item svg { width:13px; height:13px; }
+  .hero-preview-rail-item.active { color:#d9d7ff; background:rgba(99,102,241,0.2); }
+  .hero-preview-main { min-width:0; padding:24px; }
+  .hero-preview-heading { display:flex; align-items:flex-start; justify-content:space-between; gap:18px; }
+  .hero-preview-heading p { margin:0 0 5px; color:rgba(255,255,255,0.38); font-size:10px; font-weight:650; }
+  .hero-preview-heading h3 { margin:0; color:white; font-size:20px; line-height:1.1; letter-spacing:-.05em; }
+  .hero-preview-heading button { padding:8px 10px; border:1px solid rgba(255,255,255,0.13); border-radius:8px; color:rgba(255,255,255,0.7); background:rgba(255,255,255,0.05); cursor:pointer; font-size:9px; font-weight:700; }
+  .hero-preview-summary { display:grid; grid-template-columns:1.1fr .9fr; gap:10px; margin-top:20px; }
+  .hero-preview-card { padding:15px; border:1px solid rgba(255,255,255,0.09); border-radius:13px; background:rgba(255,255,255,0.045); }
+  .hero-preview-card-label { display:flex; align-items:center; justify-content:space-between; color:rgba(255,255,255,0.46); font-size:9px; font-weight:700; }
+  .hero-preview-card-label strong { color:rgba(255,255,255,0.8); font-size:10px; }
+  .hero-preview-schedule { display:grid; grid-template-columns:38px 1fr; gap:9px; margin-top:13px; }
+  .hero-preview-time { color:rgba(255,255,255,0.36); font-size:8px; font-weight:700; }
+  .hero-preview-event { padding:0 0 12px 10px; border-left:2px solid #7770ff; }
+  .hero-preview-event.teal { border-color:#39bf99; }
+  .hero-preview-event strong { display:block; color:rgba(255,255,255,0.82); font-size:10px; }
+  .hero-preview-event span { display:block; margin-top:3px; color:rgba(255,255,255,0.36); font-size:8px; }
+  .hero-preview-number { margin:15px 0 5px; color:white; font-size:30px; line-height:1; font-weight:800; letter-spacing:-.07em; }
+  .hero-preview-positive { display:flex; align-items:center; gap:4px; color:#77e0bf; font-size:8px; font-weight:700; }
+  .hero-preview-positive svg { width:10px; height:10px; }
+  .hero-preview-bottom { display:grid; grid-template-columns:1fr .9fr; gap:10px; margin-top:10px; }
+  .hero-preview-check { display:flex; align-items:center; gap:7px; margin-top:10px; color:rgba(255,255,255,0.54); font-size:9px; }
+  .hero-preview-check i { width:14px; height:14px; display:grid; place-items:center; border:1px solid rgba(82,212,167,0.5); border-radius:4px; color:#79e2c2; background:rgba(82,212,167,0.1); font-style:normal; }
+  .hero-preview-check i svg { width:9px; height:9px; }
+  .hero-preview-bars { height:58px; display:flex; align-items:end; gap:6px; margin-top:10px; }
+  .hero-preview-bars span { flex:1; min-height:9px; border-radius:5px 5px 2px 2px; background:#413e83; }
+  .hero-preview-bars span:nth-child(1) { height:22px; }.hero-preview-bars span:nth-child(2) { height:34px; }.hero-preview-bars span:nth-child(3) { height:28px; }.hero-preview-bars span:nth-child(4) { height:49px; background:#746dff; }.hero-preview-bars span:nth-child(5) { height:41px; }.hero-preview-bars span:nth-child(6) { height:55px; background:#9a95ff; }
+  .hero-preview-guest-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-top:22px; }
+  .hero-preview-guest-card strong { display:block; margin-top:8px; color:white; font-size:23px; letter-spacing:-.07em; }
+  .hero-preview-guest-card span { color:rgba(255,255,255,0.4); font-size:8px; font-weight:700; }
+  .hero-preview-guest-card em { display:block; margin-top:6px; color:#75dfbe; font-size:8px; font-style:normal; font-weight:700; }
+  .hero-preview-guest-list { margin-top:10px; border:1px solid rgba(255,255,255,0.09); border-radius:12px; overflow:hidden; }
+  .hero-preview-guest-row { display:grid; grid-template-columns:1.4fr .8fr .7fr; gap:8px; align-items:center; padding:10px 13px; border-bottom:1px solid rgba(255,255,255,0.07); color:rgba(255,255,255,0.52); font-size:9px; }
+  .hero-preview-guest-row:last-child { border-bottom:0; }
+  .hero-preview-person { display:flex; align-items:center; gap:7px; color:rgba(255,255,255,0.8); font-weight:700; }
+  .hero-preview-person i { width:20px; height:20px; display:grid; place-items:center; border-radius:50%; color:white; background:#635bff; font-size:7px; font-style:normal; }
+  .hero-preview-person i.green { background:#3bb591; }.hero-preview-person i.orange { background:#e98c70; }
+  .hero-preview-status { width:max-content; padding:4px 6px; border-radius:5px; color:#7ce2c0; background:rgba(82,212,167,0.11); font-size:8px; font-weight:750; }
+  .hero-preview-status.pending { color:#f2c276; background:rgba(240,177,84,0.12); }
+  .hero-preview-insights { display:grid; grid-template-columns:1.1fr .9fr; gap:10px; margin-top:22px; }
+  .hero-preview-chart { height:135px; margin-top:12px; border-bottom:1px solid rgba(255,255,255,0.14); background:repeating-linear-gradient(to bottom, transparent 0, transparent 31px, rgba(255,255,255,0.06) 32px); }
+  .hero-preview-chart svg { width:100%; height:100%; overflow:visible; }
+  .hero-preview-forecast { display:flex; flex-direction:column; justify-content:space-between; min-height:172px; background:linear-gradient(145deg,rgba(98,91,255,0.27),rgba(98,91,255,0.08)); }
+  .hero-preview-forecast strong { margin-top:18px; color:white; font-size:34px; letter-spacing:-.08em; }
+  .hero-preview-forecast p { margin:6px 0 0; color:rgba(222,219,255,0.68); font-size:9px; line-height:1.5; }
+  .hero-preview-note { display:flex; align-items:center; gap:7px; margin-top:10px; padding:11px 13px; border:1px solid rgba(255,255,255,0.08); border-radius:10px; color:rgba(255,255,255,0.54); background:rgba(255,255,255,0.035); font-size:9px; font-weight:650; }
+  .hero-preview-note svg { width:13px; height:13px; color:#857fff; }
+  @media (max-width: 640px) {
+    .hero-preview-body { grid-template-columns:82px 1fr; }
+    .hero-preview-main { padding:15px 12px; }
+    .hero-preview-rail { padding:14px 6px; }
+    .hero-preview-rail-item { padding:8px 5px; font-size:8px; gap:5px; }
+    .hero-preview-rail-label { margin-left:4px; font-size:7px; }
+    .hero-preview-summary, .hero-preview-bottom, .hero-preview-insights { grid-template-columns:1fr; }
+    .hero-preview-heading h3 { font-size:16px; }
+    .hero-preview-guest-grid { gap:6px; }
+    .hero-preview-guest-card { padding:10px; }
+    .hero-preview-guest-row { grid-template-columns:1.4fr .7fr .7fr; padding:8px 9px; font-size:8px; }
+    .hero-preview-person { gap:4px; }
+  }
   .stat-card {
     border: 1px solid rgba(255,255,255,0.06);
     transition: border-color 0.3s ease, box-shadow 0.3s ease, transform 0.3s ease;
@@ -3052,6 +3136,56 @@ function OnboardingWizard({ mode, formData, setFormData, fieldErrors, setFieldEr
   );
 }
 
+function HeroProductPreview() {
+  const [tab, setTab] = useState('overview');
+  const tabs = [
+    { id: 'overview', label: 'Overview', icon: Layers },
+    { id: 'guests', label: 'Guests', icon: Users },
+    { id: 'insights', label: 'Insights', icon: BarChart3 },
+  ];
+
+  const overview = (
+    <motion.div key="overview" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.3 }}>
+      <div className="hero-preview-heading"><div><p>Tuesday, September 17</p><h3>Spring Product Forum</h3></div><button>View agenda</button></div>
+      <div className="hero-preview-summary">
+        <div className="hero-preview-card"><div className="hero-preview-card-label"><strong>Today&apos;s plan</strong><span>3 items</span></div><div className="hero-preview-schedule"><span className="hero-preview-time">09:30</span><div className="hero-preview-event"><strong>Speaker arrivals</strong><span>Green room · 8 guests</span></div></div><div className="hero-preview-schedule"><span className="hero-preview-time">10:00</span><div className="hero-preview-event teal"><strong>Keynote begins</strong><span>Main stage · 420 seats</span></div></div></div>
+        <div className="hero-preview-card"><div className="hero-preview-card-label"><span>Expected guests</span><TrendingUp /></div><div className="hero-preview-number">428</div><div className="hero-preview-positive"><TrendingUp /> 14% ahead of plan</div></div>
+      </div>
+      <div className="hero-preview-bottom"><div className="hero-preview-card"><div className="hero-preview-card-label"><strong>Team checklist</strong><span>3 of 4</span></div><div className="hero-preview-check"><i><Check /></i>Confirm signage</div><div className="hero-preview-check"><i><Check /></i>Send guest reminder</div><div className="hero-preview-check"><i />Review catering count</div></div><div className="hero-preview-card"><div className="hero-preview-card-label"><strong>RSVP trend</strong><span>Live</span></div><div className="hero-preview-bars"><span /><span /><span /><span /><span /><span /></div></div></div>
+    </motion.div>
+  );
+
+  const guests = (
+    <motion.div key="guests" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.3 }}>
+      <div className="hero-preview-heading"><div><p>Spring Product Forum</p><h3>Guest list</h3></div><button>Export list</button></div>
+      <div className="hero-preview-guest-grid"><div className="hero-preview-card hero-preview-guest-card"><span>Confirmed</span><strong>428</strong><em>+14% this week</em></div><div className="hero-preview-card hero-preview-guest-card"><span>Pending</span><strong>36</strong><em>8 need a nudge</em></div><div className="hero-preview-card hero-preview-guest-card"><span>Checked in</span><strong>0</strong><em>Event day view</em></div></div>
+      <div className="hero-preview-guest-list"><div className="hero-preview-guest-row" style={{ color: 'rgba(255,255,255,0.3)', fontSize: 8, textTransform: 'uppercase', letterSpacing: '.08em', fontWeight: 800 }}><span>Guest</span><span>Source</span><span>Status</span></div><div className="hero-preview-guest-row"><span className="hero-preview-person"><i>AM</i>Alex Morgan</span><span>Team</span><span className="hero-preview-status">Confirmed</span></div><div className="hero-preview-guest-row"><span className="hero-preview-person"><i className="green">JC</i>Jamie Chen</span><span>Invite</span><span className="hero-preview-status">Confirmed</span></div><div className="hero-preview-guest-row"><span className="hero-preview-person"><i className="orange">KT</i>Kai Taylor</span><span>Invite</span><span className="hero-preview-status pending">Pending</span></div></div>
+    </motion.div>
+  );
+
+  const insights = (
+    <motion.div key="insights" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.3 }}>
+      <div className="hero-preview-heading"><div><p>Spring Product Forum</p><h3>Live insights</h3></div><button>Last 30 days</button></div>
+      <div className="hero-preview-insights"><div className="hero-preview-card"><div className="hero-preview-card-label"><strong>Response momentum</strong><span>Aug 18 to Sep 17</span></div><div className="hero-preview-chart"><svg viewBox="0 0 500 140" preserveAspectRatio="none" aria-hidden="true"><path d="M0 116 C60 90 80 103 130 86 S220 62 276 78 S345 45 400 57 S460 35 500 24" fill="none" stroke="#817aff" strokeWidth="4" strokeLinecap="round" /><path d="M0 116 C60 90 80 103 130 86 S220 62 276 78 S345 45 400 57 S460 35 500 24 L500 140 L0 140Z" fill="url(#heroChartFade)" opacity=".25" /><defs><linearGradient id="heroChartFade" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stopColor="#817aff" /><stop offset="1" stopColor="#817aff" stopOpacity="0" /></linearGradient></defs></svg></div></div><div className="hero-preview-card hero-preview-forecast"><div className="hero-preview-card-label"><strong>Attendance forecast</strong><TrendingUp /></div><strong>91%</strong><p>Based on responses, reminders, and guest history.</p></div></div>
+      <div className="hero-preview-note"><TrendingUp /> Response rate is up 14% since your last reminder.</div>
+    </motion.div>
+  );
+
+  const content = tab === 'guests' ? guests : tab === 'insights' ? insights : overview;
+  return (
+    <Reveal delay={180} className="w-full max-w-6xl mx-auto mt-16 sm:mt-24">
+      <div className="hero-preview-shell">
+        <div className="hero-preview-chrome"><div className="hero-preview-brand"><span className="hero-preview-brand-mark"><Calendar /></span>PlanIt workspace</div><div className="hero-preview-chrome-meta"><span className="hero-preview-live"><i /> Live</span><span>planit.app/workspace</span></div></div>
+        <div className="hero-preview-tabs" role="tablist" aria-label="Product preview views">{tabs.map(({ id, label, icon: Icon }) => <button key={id} className={`hero-preview-tab ${tab === id ? 'active' : ''}`} role="tab" aria-selected={tab === id} onClick={() => setTab(id)}><Icon className="inline-block w-3 h-3 mr-1.5" />{label}</button>)}</div>
+        <div className="hero-preview-body">
+          <aside className="hero-preview-rail"><div className="hero-preview-rail-label">Workspace</div><div className={`hero-preview-rail-item ${tab === 'overview' ? 'active' : ''}`}><Layers />Overview</div><div className="hero-preview-rail-item"><MessageSquare />Updates</div><div className={`hero-preview-rail-item ${tab === 'guests' ? 'active' : ''}`}><Users />Guests</div><div className="hero-preview-rail-item"><FileText />Details</div><div className="hero-preview-rail-label mt-5">Operations</div><div className="hero-preview-rail-item"><QrCode />Check-in</div><div className={`hero-preview-rail-item ${tab === 'insights' ? 'active' : ''}`}><BarChart3 />Insights</div></aside>
+          <main className="hero-preview-main"><AnimatePresence mode="wait" initial={false}>{content}</AnimatePresence></main>
+        </div>
+      </div>
+    </Reveal>
+  );
+}
+
 export default function Home() {
   const { wl, isWL } = useWhiteLabel();
   const wlName    = isWL ? (wl?.branding?.companyName || wl?.clientName || '') : '';
@@ -3618,6 +3752,8 @@ export default function Home() {
                   </div>
                 ))}
               </motion.div>
+
+              <HeroProductPreview />
 
               {/* Scroll indicator */}
               <div className="mt-10 sm:mt-16 flex flex-col items-center gap-2 cursor-default" style={{ opacity:0.4 }}>
