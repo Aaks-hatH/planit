@@ -222,6 +222,7 @@ export default function Pay() {
 
   return (
     <Shell testnet={testnet} network={inv.network} offline={offline}>
+      <PaymentMasthead inv={inv} meta={meta} active={active} />
       <div className="grid lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)] gap-6 items-start">
         <main className="min-w-0">
           {active && <ActiveCard {...ctx} />}
@@ -252,7 +253,7 @@ export default function Pay() {
 /* ── Chrome ───────────────────────────────────────────────────────────────── */
 function Shell({ children, testnet, network, offline }) {
   return (
-    <div className="pay-root min-h-screen relative overflow-x-hidden bg-[#07080c] text-neutral-100 font-sans">
+    <div className="pay-root min-h-screen relative overflow-x-hidden bg-[#070b12] text-neutral-100 font-sans">
       <style>{`
         @keyframes pay-pulse { 0%,100% { opacity: .35; transform: scale(1);} 50% { opacity: 1; transform: scale(1.35);} }
         @keyframes pay-sweep { 0% { transform: translateX(-100%);} 100% { transform: translateX(300%);} }
@@ -260,6 +261,9 @@ function Shell({ children, testnet, network, offline }) {
         @keyframes pay-draw { to { stroke-dashoffset: 0; } }
         .pay-pop { animation: pay-pop .5s cubic-bezier(.2,.9,.3,1.2) both; }
         .pay-draw { stroke-dasharray: 40; stroke-dashoffset: 40; animation: pay-draw .5s .25s ease-out forwards; }
+        .pay-root { background-image: radial-gradient(circle at 12% -10%, rgba(56,189,248,.10), transparent 32%), radial-gradient(circle at 95% 18%, rgba(99,102,241,.10), transparent 30%); }
+        .pay-masthead { animation: pay-rise .5s ease-out both; }
+        @keyframes pay-rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
         @media print {
           .pay-root { background: #fff !important; color: #000 !important; }
           .pay-no-print { display: none !important; }
@@ -270,15 +274,15 @@ function Shell({ children, testnet, network, offline }) {
 
       {/* ambient glow + grid */}
       <div aria-hidden className="pointer-events-none absolute inset-0 pay-no-print">
-        <div className="absolute -top-40 -left-32 w-[560px] h-[560px] rounded-full bg-amber-500/10 blur-[120px]" />
-        <div className="absolute top-1/3 -right-40 w-[520px] h-[520px] rounded-full bg-emerald-500/10 blur-[130px]" />
+        <div className="absolute -top-40 -left-32 w-[560px] h-[560px] rounded-full bg-sky-500/10 blur-[120px]" />
+        <div className="absolute top-1/3 -right-40 w-[520px] h-[520px] rounded-full bg-indigo-500/10 blur-[130px]" />
         <div className="absolute inset-0 opacity-[0.07]" style={{ backgroundImage: 'linear-gradient(#fff 1px, transparent 1px), linear-gradient(90deg, #fff 1px, transparent 1px)', backgroundSize: '44px 44px', maskImage: 'radial-gradient(ellipse at 50% 0%, #000 30%, transparent 75%)', WebkitMaskImage: 'radial-gradient(ellipse at 50% 0%, #000 30%, transparent 75%)' }} />
       </div>
 
-      <header className="relative z-10 border-b border-white/10 bg-black/30 backdrop-blur-md pay-no-print">
+      <header className="relative z-10 border-b border-white/[0.08] bg-[#070b12]/80 backdrop-blur-xl pay-no-print">
         <div className="max-w-6xl mx-auto px-5 h-14 flex items-center justify-between">
           <Link to="/" className="flex items-center gap-2.5 group">
-            <span className="w-7 h-7 rounded-lg bg-white text-black flex items-center justify-center font-black text-sm">P</span>
+            <span className="w-7 h-7 rounded-lg bg-gradient-to-br from-sky-300 to-indigo-500 text-white flex items-center justify-center font-black text-sm shadow-lg shadow-indigo-500/20"><Sparkles className="w-3.5 h-3.5" /></span>
             <span className="font-bold tracking-tight text-white group-hover:text-amber-200 transition-colors">PlanIt</span>
           </Link>
           <div className="flex items-center gap-3">
@@ -288,7 +292,7 @@ function Shell({ children, testnet, network, offline }) {
               </span>
             )}
             <span className="inline-flex items-center gap-1.5 text-[11px] font-medium text-emerald-300">
-              <Lock className="w-3.5 h-3.5" /> <span className="hidden sm:inline">Secure checkout</span>
+              <Lock className="w-3.5 h-3.5" /> <span className="hidden sm:inline">Encrypted payment link</span>
             </span>
           </div>
         </div>
@@ -313,7 +317,27 @@ function Shell({ children, testnet, network, offline }) {
   );
 }
 
-const glass = 'rounded-2xl border border-white/10 bg-white/[0.04] backdrop-blur-sm';
+const glass = 'rounded-3xl border border-white/[0.09] bg-[#0d121c]/90 backdrop-blur-xl shadow-[0_24px_80px_rgba(0,0,0,0.22)]';
+
+function PaymentMasthead({ inv, meta, active }) {
+  const Icon = meta.icon;
+  return (
+    <div className="pay-masthead mb-7 flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
+      <div className="min-w-0">
+        <div className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.18em] text-sky-300/80">
+          <span className="flex h-7 w-7 items-center justify-center rounded-lg border border-sky-300/20 bg-sky-300/10"><Icon className="h-3.5 w-3.5" /></span>
+          PlanIt Payments
+        </div>
+        <h1 className="mt-4 text-3xl font-semibold tracking-[-0.05em] text-white sm:text-4xl">{active ? 'Complete your payment' : inv.status === 'confirmed' ? 'Payment complete' : 'Payment status'}</h1>
+        <p className="mt-2 max-w-xl text-sm leading-6 text-slate-400">{active ? 'A private checkout link for your PlanIt order. Review the amount, scan the code, and keep this page open while we confirm it.' : 'Your private payment link and receipt are kept together here for easy reference.'}</p>
+      </div>
+      <div className="flex shrink-0 items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.035] px-4 py-3">
+        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/[0.06] text-sky-300"><Receipt className="h-4 w-4" /></div>
+        <div><div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-500">Invoice</div><div className="mt-0.5 font-mono text-xs text-slate-200">{inv.id.slice(0, 8)}…{inv.id.slice(-4)}</div></div>
+      </div>
+    </div>
+  );
+}
 
 /* ── Stepper ──────────────────────────────────────────────────────────────── */
 function Stepper({ status }) {
@@ -374,7 +398,7 @@ function ActiveCard({ inv, meta, amountBtc, amountSats, unit, setUnit, copy, cop
       {/* Title row */}
       <div className="flex items-start justify-between gap-4">
         <div className="flex items-center gap-3 min-w-0">
-          <span className="w-11 h-11 rounded-xl bg-gradient-to-br from-amber-300 to-orange-500 text-black flex items-center justify-center shrink-0">
+          <span className="w-11 h-11 rounded-xl bg-gradient-to-br from-sky-300 to-indigo-500 text-white flex items-center justify-center shrink-0 shadow-lg shadow-indigo-500/20">
             <Icon className="w-5 h-5" />
           </span>
           <div className="min-w-0">
@@ -408,8 +432,8 @@ function ActiveCard({ inv, meta, amountBtc, amountSats, unit, setUnit, copy, cop
       {integrity.ok && (
         <>
           {/* Amount hero */}
-          <div className="mt-6 rounded-2xl border border-amber-400/20 bg-gradient-to-b from-amber-400/[0.07] to-transparent p-5 text-center">
-            <div className="flex items-center justify-center gap-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-amber-300/90">
+          <div className="mt-6 rounded-2xl border border-sky-300/20 bg-gradient-to-b from-sky-400/[0.08] to-transparent p-5 text-center">
+            <div className="flex items-center justify-center gap-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-sky-300/90">
               Send exactly
               <span className="inline-flex rounded-full bg-black/40 border border-white/10 p-0.5 normal-case tracking-normal">
                 {['btc', 'sats'].map((u) => (
@@ -466,7 +490,7 @@ function ActiveCard({ inv, meta, amountBtc, amountSats, unit, setUnit, copy, cop
                 </span>
               </div>
 
-              <a href={inv.uri} className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-amber-300 to-orange-500 text-black text-sm font-bold px-4 py-3 hover:brightness-110 active:scale-[.99] transition">
+              <a href={inv.uri} className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-sky-300 via-indigo-400 to-violet-500 text-white text-sm font-bold px-4 py-3 shadow-lg shadow-indigo-500/20 hover:brightness-110 active:scale-[.99] transition">
                 <Wallet className="w-4 h-4" /> Open in wallet app
               </a>
             </div>
@@ -550,7 +574,7 @@ function ConfirmedCard({ inv, meta, next, copy, copied }) {
           {next ? 'Thank you! Taking you to your confirmation in a few seconds…' : 'Thank you! Your subscription is paid and your service is active.'}
         </p>
         {next && (
-          <Link to={next} className="mt-4 inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-amber-300 to-orange-500 text-black text-sm font-bold px-5 py-2.5 hover:brightness-110 pay-no-print">
+          <Link to={next} className="mt-4 inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-sky-300 via-indigo-400 to-violet-500 text-white text-sm font-bold px-5 py-2.5 shadow-lg shadow-indigo-500/20 hover:brightness-110 pay-no-print">
             Continue now <ArrowRight className="w-4 h-4" />
           </Link>
         )}
@@ -599,7 +623,7 @@ function ExpiredCard({ busy, requote, error, inv }) {
       <div className="w-16 h-16 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center mx-auto mb-5"><Clock className="w-8 h-8 text-neutral-400" /></div>
       <h1 className="text-xl font-bold text-white mb-2">This quote expired</h1>
       <p className="text-sm text-neutral-400 max-w-sm mx-auto mb-6">Bitcoin's price moves, so each quote is only held for a short time. <strong className="text-neutral-200">Nothing was charged.</strong> Get a fresh quote to continue — it takes a second.</p>
-      <button onClick={requote} disabled={busy} className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-amber-300 to-orange-500 text-black text-sm font-bold px-6 py-3 hover:brightness-110 disabled:opacity-60">
+      <button onClick={requote} disabled={busy} className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-sky-300 via-indigo-400 to-violet-500 text-white text-sm font-bold px-6 py-3 shadow-lg shadow-indigo-500/20 hover:brightness-110 disabled:opacity-60">
         {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />} Get a new quote
       </button>
       {error && <p className="text-xs text-red-300 mt-3">{error}</p>}
