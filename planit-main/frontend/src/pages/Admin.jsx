@@ -10116,7 +10116,7 @@ function WhiteLabelPanel() {
             { label: 'Active',        value: stats.active, icon: CheckCircle, color: 'text-green-600' },
             { label: 'Trial',         value: stats.trial,  icon: Clock, color: 'text-amber-600' },
             { label: 'Suspended',     value: stats.suspended, icon: AlertTriangle, color: 'text-red-600' },
-            { label: 'MRR (sandbox)', value: fmtMoney(stats.mrr), icon: DollarSign, color: 'text-blue-600', note: 'Stripe not live' },
+            { label: 'MRR (sandbox)', value: fmtMoney(stats.mrr), icon: DollarSign, color: 'text-blue-600', note: 'Bitcoin billing' },
           ].map(({ label, value, icon: Icon, color, note }) => (
             <div key={label} className="bg-white border border-neutral-200 rounded-xl p-4">
               <div className="flex items-center justify-between mb-1">
@@ -10517,7 +10517,7 @@ function WhiteLabelPanel() {
                 <div className="flex items-start gap-3 p-4 bg-amber-50 border border-amber-200 rounded-xl mb-3">
                   <AlertCircle className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
                   <div className="text-sm text-amber-800">
-                    <strong>Stripe Sandbox Mode</strong> — billing is not live. The amount you set here is what the client sees in their dashboard. Pick a preset or enter a custom amount.
+                    <strong>Bitcoin billing</strong> — the amount you set here is what the client sees in their dashboard and what their payment link charges (in USD, converted to BTC at checkout). Pick a preset or enter a custom amount.
                   </div>
                 </div>
 
@@ -10695,33 +10695,36 @@ function WhiteLabelPanel() {
             <div className="flex flex-col gap-2 p-6 border-t border-neutral-200 sticky bottom-0 bg-white">
               {/* Events row */}
               <ClientEventsSection selected={selected} isDemo={isDemo} API={API} />
-              {/* Stripe billing row */}
+              {/* PlanIt Payments (Bitcoin) billing row */}
               <div className="flex gap-2">
                 <button
                   onClick={async () => {
-                    if (isDemo) { toast.success('Checkout URL generated (sandbox)'); return; }
+                    if (isDemo) { toast.success('Payment link generated (sandbox)'); return; }
                     try {
                       const r = await api.post(`${API}/${selected._id}/create-checkout`);
+                      try { await navigator.clipboard.writeText(r.data.url); toast.success('Payment link copied — send it to the client'); }
+                      catch { toast.success('Payment link created'); }
                       window.open(r.data.url, '_blank');
                     } catch (e) {
-                      toast.error(e?.response?.data?.error || 'Failed to create checkout');
+                      toast.error(e?.response?.data?.error || 'Failed to create payment link');
                     }
                   }}
                   className="flex-1 flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl py-2 text-xs font-semibold">
-                  <CreditCard className="w-3.5 h-3.5" /> Send Checkout Link
+                  <CreditCard className="w-3.5 h-3.5" /> Create Payment Link
                 </button>
                 <button
                   onClick={async () => {
-                    if (isDemo) { toast.success('Portal URL generated (sandbox)'); return; }
+                    if (isDemo) { toast.success('Latest invoice opened (sandbox)'); return; }
                     try {
-                      const r = await api.post(`${API}/${selected._id}/billing-portal`);
+                      const r = await api.get(`${API}/${selected._id}/latest-invoice`);
+                      toast.success(`Latest invoice: ${r.data.status} · $${Number(r.data.usd).toFixed(2)}`);
                       window.open(r.data.url, '_blank');
                     } catch (e) {
-                      toast.error(e?.response?.data?.error || 'No Stripe customer yet — send checkout first');
+                      toast.error(e?.response?.data?.error || 'No invoices yet — create a payment link first');
                     }
                   }}
                   className="flex-1 flex items-center justify-center gap-2 border border-indigo-200 text-indigo-700 hover:bg-indigo-50 rounded-xl py-2 text-xs font-semibold">
-                  <ExternalLink className="w-3.5 h-3.5" /> Billing Portal
+                  <ExternalLink className="w-3.5 h-3.5" /> Latest Invoice
                 </button>
               </div>
               {/* Client portal row */}

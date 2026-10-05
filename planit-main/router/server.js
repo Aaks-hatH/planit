@@ -1945,6 +1945,20 @@ const SHARED_CONFIG_KEYS = [
   'EMAIL_REMINDER_HOURS',
   'FRONTEND_URL',
   'WATCHDOG_URL',   // propagated to backends so they can reference it if needed
+
+  // ── PlanIt Payments (Bitcoin) — set these ONLY here, never on a backend ──
+  'BTC_XPUB',               // watch-only wallet key (cannot spend)
+  'BTC_NETWORK',            // mainnet | testnet | signet
+  'PAYMENTS_ENC_KEY',       // AES-256 key for buyer PII at rest
+  'PAYMENTS_ENC_KEY_PREV',  // old key, only while rotating
+  'BTC_API_BASE',
+  'BTC_TEST_RATE_USD',
+  'BTC_CONF_SMALL', 'BTC_CONF_MEDIUM', 'BTC_CONF_LARGE',
+  'BTC_QUOTE_MIN_SUPPORT', 'BTC_QUOTE_MIN_WL',
+  'BTC_TOLERANCE_BPS', 'BTC_MIN_SATS', 'BTC_MAX_USD_CENTS',
+  'BTC_MAX_OPEN_PER_IP', 'BTC_MAX_OPEN_TOTAL', 'BTC_GRACE_HOURS',
+  'WL_PRICE_BASIC_CENTS', 'WL_PRICE_PRO_CENTS', 'WL_PRICE_ENTERPRISE_CENTS',
+  'DISCORD_WEBHOOK_URL',
 ];
 app.get('/mesh/config', meshAuth(SERVICE_NAME), (_req, res) => {
   const config = {};

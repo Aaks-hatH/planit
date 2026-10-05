@@ -16,7 +16,7 @@ export default function SupportSuccess() {
   const [payment, setPayment] = useState(null);
   const [error, setError] = useState(null);
 
-  const sessionId = searchParams.get('session_id');
+  const sessionId = searchParams.get('invoice');
   const type = searchParams.get('type');
 
   useEffect(() => {
@@ -26,7 +26,7 @@ export default function SupportSuccess() {
     }
 
     const verifyPayment = async () => {
-      // Retry up to 4 times with delay — Stripe can take a moment to mark session as paid
+      // Retry up to 4 times with delay — the server may take a moment to finish recording the payment
       const maxAttempts = 4;
       for (let attempt = 1; attempt <= maxAttempts; attempt++) {
         try {

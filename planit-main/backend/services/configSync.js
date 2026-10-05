@@ -34,6 +34,10 @@ async function syncConfigFromRouter() {
     return;
   }
 
+  if (process.env.NODE_ENV === 'production' && !/^https:\/\//i.test(routerUrl)) {
+    console.warn('[configSync] ROUTER_URL is not https:// — payment secrets would travel unencrypted. Use the https URL.');
+  }
+
   for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
     const result = await meshGet(CALLER, `${routerUrl}/mesh/config`, { timeout: 8000 });
 
@@ -43,7 +47,12 @@ async function syncConfigFromRouter() {
 
       // These keys are always overwritten from the router — backends should NOT
       // set them in their own Render env vars (set them only on the router).
-      const FORCE_FROM_ROUTER = new Set(['UPSTASH_REDIS_URL','UPSTASH_REDIS_TOKEN','FRONTEND_URL']);
+      const FORCE_FROM_ROUTER = new Set([
+        'UPSTASH_REDIS_URL','UPSTASH_REDIS_TOKEN','FRONTEND_URL',
+        // PlanIt Payments: every backend MUST use the same wallet key and PII key,
+        // otherwise addresses/decryption diverge between instances.
+        'BTC_XPUB','BTC_NETWORK','PAYMENTS_ENC_KEY','PAYMENTS_ENC_KEY_PREV',
+      ]);
 
       for (const [key, value] of Object.entries(config)) {
         if (FORCE_FROM_ROUTER.has(key) || !process.env[key]) {

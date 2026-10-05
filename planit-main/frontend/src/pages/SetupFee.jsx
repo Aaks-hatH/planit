@@ -37,15 +37,21 @@ export default function SetupFee() {
   const set = (k, v) => setForm(p => ({ ...p, [k]: v }));
 
   const handlePay = async () => {
-    if (!form.businessName || !form.email) { setError('Business name and email are required.'); return; }
+    if (!form.leadId) { setError('Please use the payment link from your sign-up confirmation.'); return; }
     setState('loading');
     setError('');
     try {
-      const r = await api.post('/whitelabel/setup-fee/checkout', form);
-      window.location.href = r.data.url;
+      // Price and buyer details are decided by the server from your sign-up record.
+      const r = await api.post('/whitelabel/setup-fee/checkout', { leadId: form.leadId });
+      window.location.href = r.data.payUrl;
     } catch (e) {
       setState('idle');
-      setError(e?.response?.data?.error === 'validation' ? 'Please check your entries.' : 'Something went wrong. Please try again or contact us.');
+      const code = e?.response?.data?.error;
+      setError(
+        code === 'already_paid' ? 'This setup fee has already been paid — thank you!'
+        : code === 'validation' || code === 'not_found' ? 'We could not find your sign-up. Please use the link from your confirmation.'
+        : e?.response?.data?.message || 'Something went wrong. Please try again or contact us.'
+      );
     }
   };
 
@@ -92,8 +98,8 @@ export default function SetupFee() {
           </div>
 
           <div style={{ marginTop: '2rem', padding: '1rem', background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '8px' }}>
-            <div style={{ fontSize: '0.8rem', fontWeight: 600, color: '#15803d', marginBottom: '0.25rem' }}>Secure checkout via Stripe</div>
-            <div style={{ fontSize: '0.75rem', color: '#16a34a' }}>Your payment details are never stored by PlanIt. Processed securely by Stripe.</div>
+            <div style={{ fontSize: '0.8rem', fontWeight: 600, color: '#15803d', marginBottom: '0.25rem' }}>Pay with Bitcoin</div>
+            <div style={{ fontSize: '0.75rem', color: '#16a34a' }}>No card details, no account. A unique address is generated for your order and funds go straight to PlanIt's wallet.</div>
           </div>
         </div>
 
@@ -129,11 +135,11 @@ export default function SetupFee() {
             padding: '0.875rem', cursor: state === 'loading' ? 'default' : 'pointer',
             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem',
           }}>
-            {state === 'loading' ? 'Redirecting to Stripe...' : 'Pay $299 — Continue to Stripe'}
+            {state === 'loading' ? 'Creating your invoice...' : 'Pay $299 with Bitcoin'}
           </button>
 
           <p style={{ fontSize: '0.72rem', color: '#9ca3af', textAlign: 'center', margin: '0.875rem 0 0', lineHeight: 1.5 }}>
-            You will be redirected to Stripe to complete payment securely. By paying you agree to our{' '}
+            You'll get a Bitcoin invoice with the amount locked at the current rate for 60 minutes. By paying you agree to our{' '}
             <Link to="/terms" style={{ color: '#6b7280' }}>Terms of Service</Link>.
           </p>
         </div>

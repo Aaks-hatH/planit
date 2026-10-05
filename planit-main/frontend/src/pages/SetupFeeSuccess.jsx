@@ -4,14 +4,14 @@ import api from '../services/api';
 
 export default function SetupFeeSuccess() {
   const [params] = useSearchParams();
-  const sessionId = params.get('session_id');
+  const sessionId = params.get('invoice');
   const [state, setState] = useState('loading');
   const [data, setData] = useState(null);
 
   useEffect(() => {
     document.title = 'Payment Confirmed — PlanIt';
     if (!sessionId) { setState('error'); return; }
-    api.get(`/whitelabel/setup-fee/verify?session_id=${sessionId}`)
+    api.get(`/whitelabel/setup-fee/verify?invoice=${sessionId}`)
       .then(r => { setData(r.data); setState('success'); })
       .catch(() => setState('error'));
   }, [sessionId]);

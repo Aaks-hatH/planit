@@ -33,6 +33,7 @@ const NotFound         = lazy(() => import('./pages/NotFound'));
 const TooManyRequests  = lazy(() => import('./pages/TooManyRequests'));
 const Support          = lazy(() => import('./pages/Support'));
 const SupportSuccess   = lazy(() => import('./pages/SupportSuccess'));
+const Pay              = lazy(() => import('./pages/Pay'));
 const WallOfSupporters = lazy(() => import('./pages/WallOfSupporters'));
 const About            = lazy(() => import('./pages/About'));
 const Status           = lazy(() => import('./pages/Status'));
@@ -593,6 +594,7 @@ function App() {
         <Route path="/privacy"         element={<Privacy />} />
         <Route path="/support"         element={<Support />} />
         <Route path="/support/success" element={<SupportSuccess />} />
+        <Route path="/pay/:id"         element={<Pay />} />
         <Route path="/support/wall"    element={<WallOfSupporters />} />
         <Route path="/about"           element={<About />} />
         <Route path="/status"          element={<Status />} />
