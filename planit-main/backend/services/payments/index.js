@@ -79,6 +79,7 @@ function publicView(inv) {
     requiredConf: inv.requiredConf,
     confirmations: inv.confirmations || 0,
     seenSats: inv.seenSats || 0,
+    createdAt: inv.createdAt,
     expiresAt: inv.expiresAt,
     paidAt: inv.paidAt || null,
     label: inv.label || '',
@@ -240,11 +241,26 @@ async function checkInvoice(inv) {
       next = await transition(inv, ACTIVE, { ...counters, status: 'detected' },
         inv.status === 'pending' ? { type: 'detected', detail: `${seen} sats in mempool/chain` } : null);
       wait = 20_000;
+      if (next && inv.status === 'pending') {
+        // Heads-up that money is on its way (larger orders wait for confirmations).
+        notify.alert({
+          title: 'Payment seen - waiting for confirmations',
+          content: `${notify.usd(inv.usdCents)} (${inv.purpose}) is in the mempool`,
+          level: 'info',
+          invoiceId: inv.publicId,
+          fields: [
+            { name: 'Invoice', value: inv.publicId },
+            { name: 'Seen', value: `${seen} of ${inv.btcSats} sats`, inline: true },
+            { name: 'Needs', value: `${inv.requiredConf} confirmation(s)`, inline: true },
+            { name: 'Network', value: inv.network, inline: true },
+          ],
+        }).catch(() => {});
+      }
     } else if (now > inv.expiresAt && inv.status === 'pending') {
       if (seen > 0) {
         next = await transition(inv, ['pending'], { ...counters, status: 'review' }, { type: 'review', detail: `late/partial payment: ${seen} of ${inv.btcSats} sats` });
         await notify.discord({
-          content: `Payment needs review — ${notify.usd(inv.usdCents)} (${inv.purpose})`, title: 'PlanIt Payments — review needed', color: 0xf59e0b,
+          content: `Payment needs review — ${notify.usd(inv.usdCents)} (${inv.purpose})`, title: 'PlanIt Payments — review needed', color: 0xf59e0b, invoiceId: inv.publicId,
           fields: [
             { name: 'Invoice', value: inv.publicId },
             { name: 'Received', value: `${seen} sats of ${inv.btcSats}`, inline: true },
