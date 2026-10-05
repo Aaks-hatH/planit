@@ -12,7 +12,8 @@ import {
   TrendingUp, Ban, Phone, CheckSquare, List, Hash,
   LifeBuoy, Cpu, Globe, Filter, ChevronUp, ArrowRight,
   LogOut, Copy, Navigation, Timer, PieChart, ClipboardList, Send, CheckCircle, Loader,
-  MapPin, Volume2, Radio, Mic, UtensilsCrossed, LayoutGrid, ShieldAlert, Bot
+  MapPin, Volume2, Radio, Mic, UtensilsCrossed, LayoutGrid, ShieldAlert, Bot,
+  Bitcoin, Coins, Wallet, Landmark, Layers, Heart, Receipt, ShieldCheck
 } from 'lucide-react';
 
 /* ─── DATA ─────────────────────────────────────────────────────────────────── */
@@ -1034,6 +1035,7 @@ const CATEGORIES = [
   { label: 'Table Service',         icon: UtensilsCrossed, id: 'Table Service' },
   { label: 'RSVP Pages',            icon: LayoutGrid,      id: 'RSVP Pages' },
   { label: 'White Label & Branding', icon: Globe,          id: 'White Label & Branding' },
+  { label: 'Payments & Bitcoin',    icon: DollarSign,      id: 'Payments & Bitcoin' },
   { label: 'Security & Passwords',  icon: Shield,          id: 'Security & Passwords' },
   { label: 'Data & Privacy',        icon: Database,        id: 'Data & Privacy' },
   { label: 'Errors & Troubleshooting', icon: AlertTriangle, id: 'Errors & Troubleshooting' },
@@ -3972,7 +3974,385 @@ const CLAUDE_ARTICLE = {
 };
 ARTICLES.push(CLAUDE_ARTICLE);
 
-const POPULAR = ['gs-create', 'claude-integration', 'err-service-crash', 'err-loading', 'err-password', 'ent-checkin', 'data-retention', 'ts-overview'];
+// -- PAYMENTS & BITCOIN ------------------------------------------------------
+// Numbers below mirror the live defaults in backend/services/payments
+// (confirmation tiers, quote windows, 1% tolerance). Update them together.
+const BTC_CATEGORY = 'Payments & Bitcoin';
+
+const BITCOIN_ARTICLES = [
+  /* ───────────────────────────────────────────────────────────── 1 */
+  {
+    id: 'btc-what-is-bitcoin',
+    category: BTC_CATEGORY,
+    title: 'New to Bitcoin? What it is and why PlanIt uses it',
+    icon: Bitcoin,
+    tags: ['bitcoin', 'btc', 'crypto', 'what is', 'beginner', 'why', 'stripe', 'card', 'payments', 'basics'],
+    content: [
+      {
+        type: 'intro',
+        text: 'PlanIt takes payments in Bitcoin instead of through a card processor. You don’t need an account, a card, or to hand over billing details — you send Bitcoin from a wallet or an exchange to an address we show you, and the page confirms it automatically. If you have never used Bitcoin, this article covers the five things you need to know.',
+      },
+      {
+        type: 'steps',
+        items: [
+          { title: 'Bitcoin is digital cash that moves directly between wallets', body: 'A Bitcoin payment goes from your wallet to ours across a public network. No bank or card company sits in the middle, which is why there are no card numbers for us to store or leak.' },
+          { title: 'A wallet is an app that holds your Bitcoin', body: 'Wallets are free phone or desktop apps. Many exchanges (where you buy Bitcoin) also include one. Everything you do with Bitcoin starts and ends in a wallet.' },
+          { title: 'An address is like a one-time account number', body: 'It’s a long string starting with “bc1q”. PlanIt generates a brand-new address for every order, so the payment can be matched to your order and nobody else’s.' },
+          { title: 'Amounts are tiny decimals — and that’s normal', body: 'Because one Bitcoin is worth a lot, small purchases look like 0.00012345 BTC. The page also shows the amount in “sats” (1 BTC = 100,000,000 sats), which many wallets use: 12,345 sats is the same thing.' },
+          { title: 'Payments can’t be reversed', body: 'Once confirmed on the network, a Bitcoin payment can’t be pulled back like a card chargeback. That’s why this page asks you to double-check the address and amount before you send. It also means we never have to worry about chargebacks.' },
+        ],
+      },
+      {
+        type: 'compare',
+        items: [
+          { label: 'Paying PlanIt with Bitcoin', desc: 'Send from any wallet or exchange.', features: ['No account or sign-up', 'No card or billing details', 'Address is unique to your order', 'Receipt is your pay page + invoice ID'], best: 'Anyone who already holds Bitcoin, or is happy to buy a little' },
+          { label: 'Paying with a card (not offered)', desc: 'PlanIt Payments is Bitcoin-only for now.', features: ['Would need a card processor', 'Would store billing details', 'Chargebacks possible'], best: 'Not available — see “Getting Bitcoin” if you need to buy some' },
+        ],
+      },
+      {
+        type: 'callout',
+        variant: 'info',
+        text: 'Bitcoin’s price moves up and down. That’s why every PlanIt quote is “locked” for a short time (20 minutes for donations and feature requests, 60 minutes for White Label). Pay inside the window and the USD price you were shown is what you pay.',
+      },
+      {
+        type: 'links',
+        items: [
+          { label: 'Getting your first Bitcoin and a wallet', href: '/help#btc-get-wallet', external: false },
+          { label: 'How to pay PlanIt, step by step', href: '/help#btc-how-to-pay', external: false },
+        ],
+      },
+    ],
+  },
+
+  /* ───────────────────────────────────────────────────────────── 2 */
+  {
+    id: 'btc-get-wallet',
+    category: BTC_CATEGORY,
+    title: 'Getting your first Bitcoin and choosing a wallet',
+    icon: Wallet,
+    tags: ['wallet', 'buy bitcoin', 'exchange', 'coinbase', 'kraken', 'cash app', 'strike', 'proton', 'sparrow', 'electrum', 'custodial', 'self custody'],
+    content: [
+      {
+        type: 'intro',
+        text: 'You need two things to pay: some Bitcoin, and a place to send it from. Most people do both in one app. Below is how the options differ, with examples. PlanIt isn’t affiliated with any of them and this isn’t financial advice — pick whatever you trust and can use comfortably.',
+      },
+      {
+        type: 'compare',
+        items: [
+          { label: 'Exchange or payment app', desc: 'You buy Bitcoin with a bank account or card, and it sits in the app’s own wallet (“custodial”). Examples: Coinbase, Kraken, Cash App, Strike.', features: ['Easiest way to buy for the first time', 'Usually requires ID verification', 'Withdrawals have a fee and can have limits or holds', 'The company holds the keys'], best: 'Beginners who want to buy and pay today' },
+          { label: 'Self-custody wallet', desc: 'An app where only you hold the keys (“non-custodial”). Examples: Proton Wallet, Blue Wallet, Muun, Sparrow, Electrum.', features: ['You control the funds', 'Back up your recovery phrase offline', 'Nobody can freeze it or reverse it', 'You top it up from an exchange or another wallet'], best: 'People who want control, or already hold Bitcoin' },
+        ],
+      },
+      {
+        type: 'steps',
+        items: [
+          { title: 'Pick an app', body: 'If you have never owned Bitcoin, an exchange/payment app is the shortest path. If you want control, install a self-custody wallet first and buy elsewhere to send into it.' },
+          { title: 'Buy a little more than you need', body: 'Remember the network fee comes on top of the amount PlanIt shows, and buying itself may cost a small spread or fee. Adding a few extra dollars avoids being just short.' },
+          { title: 'Wait for the purchase to settle', body: 'Some apps hold newly bought Bitcoin for a short time before you can send it out. Check before you open the PlanIt pay page, so the price-lock timer isn’t ticking while you wait.' },
+          { title: 'Back up self-custody wallets', body: 'If you use a self-custody wallet, write the recovery phrase on paper and keep it offline. Never type it into a website — including this one. PlanIt will never ask for it.' },
+          { title: 'Come back and pay', body: 'Then follow “How to pay PlanIt, step by step”.', links: [{ label: 'How to pay PlanIt', href: '/help#btc-how-to-pay', external: false }] },
+        ],
+      },
+      {
+        type: 'callout',
+        variant: 'warning',
+        text: 'Never share your recovery phrase or seed words with anyone, ever. No legitimate service — PlanIt included — will ask for them.',
+      },
+    ],
+  },
+
+  /* ───────────────────────────────────────────────────────────── 3 */
+  {
+    id: 'btc-how-to-pay',
+    category: BTC_CATEGORY,
+    title: 'How to pay PlanIt with Bitcoin, step by step',
+    icon: Coins,
+    tags: ['pay', 'payment', 'how to pay', 'checkout', 'qr', 'scan', 'address', 'send', 'invoice', 'donate', 'setup fee', 'steps'],
+    content: [
+      {
+        type: 'intro',
+        text: 'Every PlanIt payment works the same way, whether it’s a donation, a feature request, the White Label setup fee, or a monthly subscription invoice. You get a pay page with a QR code, an exact amount, and an address. Here’s the whole journey.',
+      },
+      {
+        type: 'steps',
+        items: [
+          { title: '1. Start your payment', body: 'Donations and feature requests start on the Support page: pick an amount (donations from $3, feature requests from $5), enter your email, and press the pay button. The White Label setup fee starts from the payment link in your sign-up confirmation. Subscription invoices come as a link from the PlanIt team.', links: [{ label: 'Open the Support page', href: '/support', external: false }] },
+          { title: '2. Land on your pay page', body: 'You’re taken to a private page just for this order. It shows what you’re paying for, the total in USD and in Bitcoin, a countdown ring for how long the price is locked, a QR code, and the payment address. The link is a secret, so don’t post it publicly.' },
+          { title: '3. Open your wallet and choose Send', body: 'On a phone: tap “Open in wallet app”, or scan the QR code with your wallet’s scanner. On desktop or an exchange: copy the address and the amount with the copy buttons — it avoids typing mistakes.' },
+          { title: '4. Verify before you confirm', body: 'On your wallet’s confirmation screen check three things: the address starts with the same 8 characters and ends with the same 8 characters as shown on the PlanIt page; the amount equals the amount on the page; and the network is Bitcoin (on-chain), not Lightning.' },
+          { title: '5. Send and choose a normal network fee', body: 'The network fee is paid by you, on top of the amount, and goes to the Bitcoin miners — not to PlanIt. A standard or “medium” fee is fine. Very low fees can leave a payment stuck for hours.' },
+          { title: '6. Watch the page update', body: 'Within seconds the page switches to “Payment detected”. Small payments (under $20) are accepted at that point. Larger ones show a progress bar until they have 1 or 2 confirmations, about 10 minutes each. You can close the tab; we keep watching.' },
+          { title: '7. Done — keep your invoice ID', body: 'You’re sent to a confirmation page, or shown a receipt on the pay page itself. We don’t email receipts, so keep your invoice ID (shown on the receipt, with a print/save button) as proof of payment.' },
+        ],
+      },
+      {
+        type: 'callout',
+        variant: 'warning',
+        text: 'Send exactly the amount shown, to the address shown. If your wallet has a “subtract fee from amount” option, turn it off — otherwise your payment arrives slightly short.',
+      },
+      {
+        type: 'callout',
+        variant: 'info',
+        text: 'Payments under the quoted amount by up to about 1% are accepted to absorb rounding. Anything lower is treated as a partial payment: the page shows the remaining amount, and you simply send the rest to the same address.',
+      },
+      {
+        type: 'faq',
+        items: [
+          { q: 'What do the QR code and “Open in wallet app” actually contain?', a: 'They contain a standard Bitcoin payment link with the address and exact amount, so your wallet fills both in for you. The QR code is drawn inside your browser — the address isn’t sent to any third-party QR service.' },
+          { q: 'Can I pay in more than one transaction?', a: 'Yes, as long as they all go to the same address before the price lock ends. The page tracks what has arrived and shows what’s left.' },
+          { q: 'Do I need to stay on the page?', a: 'No. Once your transaction is on the network, our server keeps tracking it and completes your order. Reopen your pay link any time to see the status.' },
+          { q: 'What is the “test mode” banner?', a: 'If you see TEST MODE, the site is running on a Bitcoin test network. Those coins have no value — never send real Bitcoin to a test-mode address.' },
+        ],
+      },
+      {
+        type: 'links',
+        items: [
+          { label: 'Paying from an exchange', href: '/help#btc-pay-from-exchange', external: false },
+          { label: 'Confirmations, fees & timing', href: '/help#btc-confirmations-fees', external: false },
+          { label: 'Something went wrong?', href: '/help#btc-pay-problems', external: false },
+        ],
+      },
+    ],
+  },
+
+  /* ───────────────────────────────────────────────────────────── 4 */
+  {
+    id: 'btc-pay-from-exchange',
+    category: BTC_CATEGORY,
+    title: 'Paying from an exchange (Coinbase, Kraken, Cash App, Strike…)',
+    icon: Landmark,
+    tags: ['exchange', 'coinbase', 'kraken', 'cash app', 'strike', 'withdraw', 'withdrawal', 'lightning', 'on-chain', 'fee', 'binance'],
+    content: [
+      {
+        type: 'intro',
+        text: 'You can pay straight from an exchange or payment app — you don’t need a separate wallet. The key differences are withdrawal fees, limits, and the fact that some apps default to Lightning. Here’s how to do it without ending up short.',
+      },
+      {
+        type: 'steps',
+        items: [
+          { title: 'Open the pay page first, then your exchange', body: 'The price lock ticks from the moment the page is created (20 minutes for donations and feature requests, 60 for White Label). Have your balance ready before you start.' },
+          { title: 'Choose Send / Withdraw → Bitcoin → on-chain', body: 'Pick “Bitcoin network” or “on-chain”. Do not choose Lightning — PlanIt Payments doesn’t accept Lightning, only regular on-chain Bitcoin to the address shown.' },
+          { title: 'Paste the address with the Copy button', body: 'Use the copy button on the pay page. Then compare the first and last characters in the exchange’s confirmation step with the ones the PlanIt page highlights.' },
+          { title: 'Make the amount RECEIVED equal the amount shown', body: 'Exchanges handle fees two ways. If the app lists “amount to send” plus a separate fee, enter the PlanIt amount. If it subtracts the fee from what you enter, increase your withdrawal by the fee so the full amount still arrives.' },
+          { title: 'Submit, then be patient with security checks', body: 'Exchanges sometimes ask for 2-factor approval or a confirmation email, and may hold a first withdrawal for review. If that takes longer than the timer, don’t pay twice — see “Payment problems”.', links: [{ label: 'Payment problems', href: '/help#btc-pay-problems', external: false }] },
+        ],
+      },
+      {
+        type: 'faq',
+        items: [
+          { q: 'My exchange won’t let me withdraw such a small amount.', a: 'Some have minimum withdrawals or flat fees that make small payments awkward. Try another app, or withdraw to a self-custody wallet once and pay from there.' },
+          { q: 'The exchange says the address is “not whitelisted”.', a: 'Some exchanges require new withdrawal addresses to be approved, sometimes with a delay. Because every PlanIt order has a new address, an address whitelist can be a hurdle — turn it off for this payment if you’re comfortable, or pay from a wallet instead.' },
+          { q: 'Is it OK to pay from an exchange I don’t control the keys to?', a: 'Yes, PlanIt only sees the transaction on the blockchain — it doesn’t know or care which app sent it. Keep in mind that a refund, if ever agreed, would be sent to an address you provide.' },
+        ],
+      },
+    ],
+  },
+
+  /* ───────────────────────────────────────────────────────────── 5 */
+  {
+    id: 'btc-confirmations-fees',
+    category: BTC_CATEGORY,
+    title: 'Confirmations, network fees and how long payments take',
+    icon: Clock,
+    tags: ['confirmations', 'fee', 'network fee', 'how long', 'time', 'mempool', 'stuck', 'slow', 'detected', 'blocks', 'sats'],
+    content: [
+      {
+        type: 'intro',
+        text: 'Bitcoin transactions are grouped into blocks roughly every ten minutes. A transaction is “detected” the moment it’s announced, and gains a “confirmation” each time a new block is added on top of it. PlanIt waits for more confirmations on bigger orders to be sure the payment is final.',
+      },
+      {
+        type: 'compare',
+        items: [
+          { label: 'Under $20', desc: 'Donations and small feature requests.', features: ['0 confirmations required', 'Accepted as soon as it’s seen on the network', 'Usually finishes within a minute'], best: 'Quick donations' },
+          { label: '$20 – $99.99', desc: 'Larger donations, mid-size feature requests, Basic and Pro subscriptions.', features: ['1 confirmation required', 'About 10 minutes on average', 'Progress bar shown on the pay page'], best: 'Typical subscriptions' },
+          { label: '$100 and up', desc: 'Enterprise subscriptions and the $299 setup fee.', features: ['2 confirmations required', 'About 20 minutes on average', 'Protects against reversals on bigger payments'], best: 'High-value orders' },
+        ],
+      },
+      {
+        type: 'steps',
+        items: [
+          { title: 'Who pays the network fee?', body: 'You do. It’s added by your wallet on top of the amount shown and goes to miners. PlanIt charges no extra fee on top of the price.' },
+          { title: 'What fee should I choose?', body: 'The default or “medium” setting in your wallet is almost always right. A higher fee gets the transaction into the next block sooner; a very low fee can leave it waiting for hours.' },
+          { title: 'What if my payment is stuck?', body: 'Check your transaction on a block explorer (the pay page links to it once detected). If it’s still unconfirmed after a long time, many wallets offer “bump fee” (RBF) or “speed up”. Your price lock only matters until the payment is first seen, so a slow confirmation after that won’t void it.' },
+          { title: 'Is a payment “detected” the same as “paid”?', body: 'Not for orders that need confirmations. “Detected” means we can see it. “Confirmed” means it has enough blocks on top — only then is your order fulfilled.' },
+        ],
+      },
+      {
+        type: 'callout',
+        variant: 'info',
+        text: 'These tiers are PlanIt’s current defaults and can be adjusted by the operator. The pay page always shows the exact number of confirmations required for your order.',
+      },
+    ],
+  },
+
+  /* ───────────────────────────────────────────────────────────── 6 */
+  {
+    id: 'btc-pay-problems',
+    category: BTC_CATEGORY,
+    title: 'Payment problems: expired, partial, late, wrong amount or stuck',
+    icon: LifeBuoy,
+    tags: ['problem', 'expired', 'late', 'partial', 'underpaid', 'overpaid', 'review', 'stuck', 'not detected', 'wrong amount', 'wrong address', 'lightning', 'help', 'error'],
+    content: [
+      {
+        type: 'intro',
+        text: 'Almost every payment goes straight through. When one doesn’t, it falls into one of the cases below. The most important rule: keep your invoice ID and don’t send the same payment twice — nothing is lost, and we can fix it.',
+      },
+      {
+        type: 'faq',
+        items: [
+          { q: 'The page says “This quote expired”.', a: 'The price lock ended before a payment arrived. Nothing was charged. Press “Get a new quote” to receive a fresh amount and a new address, then pay that one.' },
+          { q: 'I sent Bitcoin but the page still says “Waiting”.', a: 'Press “I’ve paid — check now”. If it still doesn’t see anything: open the transaction in your wallet and confirm it was broadcast, that it went to the exact address on the page, and that it is on-chain (not Lightning). The page refreshes itself every few seconds, and the server re-checks the blockchain continuously.' },
+          { q: 'The page says “Payment detected” and then nothing changes.', a: 'It’s waiting for confirmations. Orders of $20 or more need 1–2 blocks. If your fee was low it can take a long time — try “speed up” in your wallet.' },
+          { q: 'I paid less than the amount shown.', a: 'Within roughly 1% under is accepted. Beyond that the page shows “we received part of your payment” and the remaining amount. Send the difference to the same address — no need to start over — before the price lock ends.' },
+          { q: 'I paid more than the amount shown.', a: 'The order completes normally. If the overpayment is large, email us with your invoice ID and we’ll discuss it; refunds are handled manually.' },
+          { q: 'I paid after the timer ran out.', a: 'Late payments are caught automatically: the page changes to “We’re reviewing your payment” and a person is alerted. Don’t pay again. We watch an expired invoice’s address for about 24 hours.' },
+          { q: 'The page says “We’re reviewing your payment”.', a: 'A payment arrived that doesn’t exactly match (late or partial). A person checks it and either accepts it — completing your order — or contacts you. Email us with your invoice ID if you haven’t heard back within a day.' },
+          { q: 'I sent it to the wrong address.', a: 'If it was an address from an old or expired PlanIt quote, it’s still monitored for a while and will be flagged for review. If it was an address that isn’t ours, we can’t recover it — Bitcoin can’t be reversed.' },
+          { q: 'I paid with Lightning.', a: 'PlanIt Payments is on-chain only. A Lightning invoice and a regular Bitcoin address are different things, so choose “on-chain” / “Bitcoin network” when sending. If your wallet offers to route the payment through a swap service instead, decline and send on-chain.' },
+          { q: 'I get “Too many open payments”.', a: 'To prevent abuse, only a few unpaid invoices can be open at once from one network. Finish or wait for the open ones to expire, then try again.' },
+          { q: 'The page says “Exchange rate unavailable” or “Bitcoin network lookup unavailable”.', a: 'A price or blockchain data source had a temporary problem. Wait a minute and try again. Nothing was charged.' },
+        ],
+      },
+      {
+        type: 'callout',
+        variant: 'info',
+        text: 'To contact us, email planit.userhelp@gmail.com with your invoice ID (shown on your pay page, e.g. “a1b2c3d4”) and, if you have it, the transaction ID from your wallet. That is all we need to find your payment.',
+      },
+    ],
+  },
+
+  /* ───────────────────────────────────────────────────────────── 7 */
+  {
+    id: 'btc-security',
+    category: BTC_CATEGORY,
+    title: 'How PlanIt keeps Bitcoin payments safe',
+    icon: ShieldCheck,
+    tags: ['security', 'safe', 'watch-only', 'xpub', 'scam', 'phishing', 'encryption', 'privacy', 'address', 'verify', 'trust'],
+    content: [
+      {
+        type: 'intro',
+        text: 'PlanIt’s payment system is designed so there is as little as possible to trust. Here’s what protects you, what protects PlanIt, and what you should still do yourself.',
+      },
+      {
+        type: 'steps',
+        items: [
+          { title: 'The server can’t spend funds', body: 'PlanIt’s servers only hold a public, watch-only key. It can derive receiving addresses and read the blockchain, but it has no private key — so even a complete server breach can’t move money out of the wallet.' },
+          { title: 'A new address for every order', body: 'Each invoice gets an address that has never been used before. We verify this against the blockchain before showing it, which lets us tie each payment to exactly one order.' },
+          { title: 'Amounts are decided on the server', body: 'Your browser never sends a Bitcoin amount or address. The price in USD is set by the server, converted at a locked rate, and fixed when the invoice is created — nothing in your browser can change it.' },
+          { title: 'Safety checks on the pay page', body: 'Your browser also checks that the address has the right format for the network, that the QR code and wallet link match the address and amount on screen, and that the connection is encrypted. If any check fails, the payment details are hidden instead of shown.' },
+          { title: 'Odd payments go to a human', body: 'Late, partial or unusual payments are never auto-accepted. They go to a review queue and alert the PlanIt team.' },
+          { title: 'Your details are protected', body: 'The email and name you enter are encrypted at rest (AES-256-GCM) and erased after your order is fulfilled. IP addresses are kept only as one-way hashes used for abuse limits. Pay links are long random IDs, not guessable numbers.' },
+        ],
+      },
+      {
+        type: 'callout',
+        variant: 'warning',
+        text: 'What you should do: (1) only pay the address shown on the PlanIt page, on the PlanIt website; (2) compare the first and last 8 characters of the address in your wallet’s confirmation screen; (3) ignore anyone who messages you a different “PlanIt payment address”; (4) never share your wallet’s recovery phrase.',
+      },
+      {
+        type: 'faq',
+        items: [
+          { q: 'How do I know I’m on the real PlanIt site?', a: 'Check the address bar: the domain should be PlanIt’s own and show a padlock. The pay page also lists the domain in its safety checks. Be careful with links received over chat or email from people you don’t know.' },
+          { q: 'Can someone else open my pay link?', a: 'Anyone with the link can view that one order’s status and address, but not your email, and they can’t change anything. Treat the link like a receipt: don’t post it publicly.' },
+          { q: 'Does PlanIt see my wallet or my balance?', a: 'No. We only see the public transaction that pays our address — the same thing anyone can see on a block explorer.' },
+        ],
+      },
+    ],
+  },
+
+  /* ───────────────────────────────────────────────────────────── 8 */
+  {
+    id: 'btc-wl-billing',
+    category: BTC_CATEGORY,
+    title: 'White Label billing: the setup fee and monthly payments in Bitcoin',
+    icon: Layers,
+    tags: ['white label', 'setup fee', '$299', 'subscription', 'monthly', 'billing', 'renewal', 'invoice', 'payment link', 'client portal', 'overdue'],
+    content: [
+      {
+        type: 'intro',
+        text: 'White Label customers pay PlanIt in two parts: a one-time setup fee before configuration starts, and a monthly subscription. Both are paid in Bitcoin using the same pay page described in this guide.',
+      },
+      {
+        type: 'steps',
+        items: [
+          { title: 'Setup fee ($299, one-time)', body: 'After you sign up you receive a payment link. Open it, check your business name and email, and press “Pay with Bitcoin”. The price is locked for 60 minutes. The setup fee needs 2 confirmations (about 20 minutes). As soon as it’s confirmed, your lead is marked paid and the team starts your DNS, branding and testing.', links: [{ label: 'White Label setup page', href: '/white-label/setup-fee', external: false }] },
+          { title: 'Monthly subscription', body: 'Bitcoin can’t be “pulled” from your wallet, so there are no automatic charges. Instead, when your next payment is due the PlanIt team sends you a payment link for that month. You pay it exactly like any other invoice.' },
+          { title: 'What a payment does', body: 'When a subscription invoice is confirmed, your account is set to active and your “paid through” date moves 30 days forward (from the existing renewal date if you pay early, so you never lose days).' },
+          { title: 'Amounts', body: 'Typical list prices are Basic $49/month, Pro $99.99/month and Enterprise $149.99/month, but the amount agreed for your account is what your invoice and client dashboard show. The USD amount is converted to Bitcoin at checkout.' },
+          { title: 'Reminders and overdue accounts', body: 'The team is alerted about a week before a renewal is due and again when it’s overdue. Overdue accounts are flagged and the team will follow up, so pay promptly and reach out if you need more time.' },
+        ],
+      },
+      {
+        type: 'callout',
+        variant: 'info',
+        text: 'Paying for a business? Bitcoin payments may have tax or bookkeeping consequences. Print or save the receipt from your pay page and keep the invoice ID for your records, and ask an accountant if unsure.',
+      },
+    ],
+  },
+
+  /* ───────────────────────────────────────────────────────────── 9 */
+  {
+    id: 'btc-support-features',
+    category: BTC_CATEGORY,
+    title: 'Supporting PlanIt and funding feature requests',
+    icon: Heart,
+    tags: ['donate', 'donation', 'support', 'feature request', 'wall of supporters', 'minimum', 'tip', 'coffee'],
+    content: [
+      {
+        type: 'intro',
+        text: 'PlanIt is free to use. If it helps you, you can chip in towards development, or put money behind a feature you’d like to see. Both are paid in Bitcoin.',
+      },
+      {
+        type: 'steps',
+        items: [
+          { title: 'Donations (from $3)', body: 'Choose a preset or enter your own amount, add your email (required, so we can reach you if something goes wrong), an optional name and an optional message.' },
+          { title: 'Feature requests (from $5)', body: 'Describe the feature (at least 10 characters), choose how much you’d like to put behind it, and pay. Higher contributions help a request rise up the list.' },
+          { title: 'Wall of Supporters', body: 'After your payment confirms, donations appear on the Wall of Supporters with your name (or “Anonymous”), amount and message. Your email is never shown.', links: [{ label: 'Wall of Supporters', href: '/support/wall', external: false }] },
+          { title: 'Small payments are fast', body: 'Payments under $20 are accepted as soon as they appear on the network, so a donation often completes within a minute.' },
+        ],
+      },
+      {
+        type: 'faq',
+        items: [
+          { q: 'Is my donation private?', a: 'Your email is encrypted and erased after fulfilment. Only the name and message you choose to enter are shown on the wall. Note that Bitcoin transactions themselves are public on the blockchain, as for any Bitcoin payment.' },
+          { q: 'What is the largest payment I can make?', a: 'A single invoice is capped at $5,000. For anything bigger, contact us.' },
+          { q: 'Do I get a receipt?', a: 'Yes — the confirmation page and your pay page are the receipt (with a print/save button). We don’t send receipt emails.' },
+        ],
+      },
+      { type: 'links', items: [{ label: 'Go to the Support page', href: '/support', external: false }] },
+    ],
+  },
+
+  /* ───────────────────────────────────────────────────────────── 10 */
+  {
+    id: 'btc-receipts-refunds',
+    category: BTC_CATEGORY,
+    title: 'Receipts, refunds and privacy for Bitcoin payments',
+    icon: Receipt,
+    tags: ['receipt', 'refund', 'privacy', 'data', 'email', 'proof of payment', 'tax', 'invoice id', 'chargeback'],
+    content: [
+      {
+        type: 'intro',
+        text: 'A few practical things people ask after paying.',
+      },
+      {
+        type: 'faq',
+        items: [
+          { q: 'Where is my receipt?', a: 'On your pay page, once the payment is confirmed. It shows the amount in USD and Bitcoin, the exchange rate used, the date, your invoice ID and the transaction ID. There is a Print / save button. We don’t email receipts.' },
+          { q: 'I lost my pay link. Can I still prove I paid?', a: 'Yes. Your wallet or exchange has the transaction record (with the transaction ID), and anyone can look it up on a public block explorer. Email us the transaction ID and the approximate time and we can match it to your order.' },
+          { q: 'Can I get a refund?', a: 'Bitcoin payments can’t be reversed or charged back, so refunds are manual and handled case by case. Email planit.userhelp@gmail.com with your invoice ID; if a refund is agreed, you’ll provide a Bitcoin address to receive it. The amount returned may differ from what you paid because of price movement and network fees.' },
+          { q: 'What does PlanIt store about my payment?', a: 'The order amount, the Bitcoin amount and rate, the address and transaction ID, and status history. Your email and name are encrypted and erased after fulfilment (supporters’ chosen name and message are kept for the wall). IP addresses are stored only as keyed hashes for abuse limits.' },
+          { q: 'How long are payment records kept?', a: 'Confirmed invoices are kept for up to two years for accounting; unpaid and expired ones are deleted within days; rejected ones after about three months.' },
+          { q: 'Is Bitcoin anonymous?', a: 'Not exactly. Transactions are public on the blockchain, tied to addresses rather than names. We don’t link an address to your identity beyond the email you gave us for the order, which is erased after fulfilment.' },
+          { q: 'Do I owe tax on paying with Bitcoin?', a: 'Depending on where you live, spending Bitcoin can be a taxable event. PlanIt can’t give tax advice — keep your receipts and ask a tax professional.' },
+        ],
+      },
+    ],
+  },
+];
+ARTICLES.push(...BITCOIN_ARTICLES);
+
+const POPULAR = ['gs-create', 'btc-how-to-pay', 'claude-integration', 'err-service-crash', 'err-loading', 'err-password', 'ent-checkin', 'data-retention', 'ts-overview'];
 
 /* ─── SUB-COMPONENTS ────────────────────────────────────────────────────────── */
 
@@ -4386,11 +4766,17 @@ export default function Help() {
 
   // Auto-open article from URL hash (e.g. /help#claude)
   useEffect(() => {
-    const hash = window.location.hash.replace('#', '');
-    if (hash) {
-      const article = ARTICLES.find(a => a.id === hash || a.id === `${hash}-integration` || a.tags.includes(hash));
-      if (article) setActiveArticle(article.id);
-    }
+    const openFromHash = () => {
+      const hash = window.location.hash.replace('#', '');
+      if (hash) {
+        const article = ARTICLES.find(a => a.id === hash || a.id === `${hash}-integration` || a.tags.includes(hash));
+        if (article) setActiveArticle(article.id);
+      }
+    };
+    openFromHash();
+    // Article-to-article links (/help#btc-how-to-pay) only change the hash, so listen for it.
+    window.addEventListener('hashchange', openFromHash);
+    return () => window.removeEventListener('hashchange', openFromHash);
   }, []);
 
   const filtered = useMemo(() => {
@@ -4551,7 +4937,7 @@ export default function Help() {
                   {ARTICLES
                     .filter(a => a.id !== currentArticle.id && (a.category === currentArticle.category || a.tags.some(t => currentArticle.tags.includes(t))))
                     .slice(0, 4)
-                    .map(a => <ArticleCard key={a.id} article={a} onClick={() => openArticle(a.id)} isNew={['ent-walkie','ent-seating'].includes(a.id)} />)
+                    .map(a => <ArticleCard key={a.id} article={a} onClick={() => openArticle(a.id)} isNew={['ent-walkie','ent-seating','btc-how-to-pay','btc-what-is-bitcoin'].includes(a.id)} />)
                   }
                 </div>
               </div>
@@ -4617,7 +5003,7 @@ export default function Help() {
                   )}
                 </p>
                 <div className="space-y-2">
-                  {filtered.map(a => <ArticleCard key={a.id} article={a} onClick={() => openArticle(a.id)} isNew={['ent-walkie','ent-seating'].includes(a.id)} />)}
+                  {filtered.map(a => <ArticleCard key={a.id} article={a} onClick={() => openArticle(a.id)} isNew={['ent-walkie','ent-seating','btc-how-to-pay','btc-what-is-bitcoin'].includes(a.id)} />)}
                 </div>
               </div>
             )}
@@ -4628,7 +5014,7 @@ export default function Help() {
                 <div className="mb-12">
                   <h2 className="text-lg font-black text-neutral-900 mb-4">Popular articles</h2>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                    {popularArticles.map(a => <ArticleCard key={a.id} article={a} onClick={() => openArticle(a.id)} isNew={['ent-walkie','ent-seating'].includes(a.id)} />)}
+                    {popularArticles.map(a => <ArticleCard key={a.id} article={a} onClick={() => openArticle(a.id)} isNew={['ent-walkie','ent-seating','btc-how-to-pay','btc-what-is-bitcoin'].includes(a.id)} />)}
                   </div>
                 </div>
 
@@ -4689,7 +5075,7 @@ export default function Help() {
                             <span className="text-xs text-neutral-400 font-medium">{catArticles.length} articles</span>
                           </div>
                           <div className="space-y-2">
-                            {catArticles.map(a => <ArticleCard key={a.id} article={a} onClick={() => openArticle(a.id)} isNew={['ent-walkie','ent-seating'].includes(a.id)} />)}
+                            {catArticles.map(a => <ArticleCard key={a.id} article={a} onClick={() => openArticle(a.id)} isNew={['ent-walkie','ent-seating','btc-how-to-pay','btc-what-is-bitcoin'].includes(a.id)} />)}
                           </div>
                         </div>
                       );
