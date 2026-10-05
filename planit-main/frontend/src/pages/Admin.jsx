@@ -33,6 +33,7 @@ import {
   BookOpen, Edit3, Tag, Check, Star, ShieldAlert, ShieldCheck, Loader2, Copy,
 } from 'lucide-react';
 import api, { adminAPI, uptimeAPI, watchdogAPI, routerAPI, bugReportAPI, blogAPI } from '../services/api';
+import AdminPayments from '../components/AdminPayments';
 import PlatformAnalyticsDashboard from '../components/PlatformAnalyticsDashboard';
 import PiiLookupPanel from '../components/PiiLookupPanel';
 import { SERVICE_CATEGORIES, ALL_SERVICES_FLAT } from '../utils/serviceCategories';
@@ -7847,7 +7848,7 @@ function FleetControl() {
 
 
 // ─── Mobile "More" nav button ─────────────────────────────────────────────────
-const MORE_SECTIONS = ['organizers','staff','employees','audit-logs','analytics','compliance','security','blocklist','banned-ips','reports','uptime','command-center','whitelabel','blog','account'];
+const MORE_SECTIONS = ['organizers','staff','employees','audit-logs','analytics','compliance','security','blocklist','banned-ips','reports','uptime','command-center','whitelabel','payments','blog','account'];
 function MoreNavButton({ activeSection, setActiveSection, onLogout }) {
   const [open, setOpen] = React.useState(false);
   const isActive = MORE_SECTIONS.includes(activeSection);
@@ -8085,6 +8086,13 @@ function AuditLogsPanel() {
 }
 
 
+// Payments panel wrapper: passes the demo flag down so demo admin accounts
+// never see real invoices (same DemoContext every other panel reads).
+function PaymentsPanel() {
+  const isDemo = useContext(DemoContext);
+  return <AdminPayments isDemo={isDemo} />;
+}
+
 // ─── Nav Items ────────────────────────────────────────────────────────────────
 const NAV_ITEMS = [
   { id: 'dashboard',          label: 'Dashboard',          icon: Monitor    },
@@ -8107,6 +8115,7 @@ const NAV_ITEMS = [
   { id: 'system',             label: 'System',             icon: Server     },
   { id: 'command-center',     label: 'Command',            icon: Crosshair  },
   { id: 'whitelabel',         label: 'White Label',        icon: Layers     },
+  { id: 'payments',           label: 'Payments',           icon: DollarSign },
   { id: 'blog',               label: 'Blog CMS',           icon: BookOpen   },
   { id: 'account',            label: 'My Account',         icon: User       },
 ];
@@ -12041,6 +12050,7 @@ export default function Admin() {
           {activeSection === 'reports'        && !selectedEvent && <div className="max-w-5xl mx-auto"><BugReportsPanel isReadOnly={isReadOnly} quickReportId={quickReportId} onNeedLogin={exitReadOnlyMode} /></div>}
           {activeSection === 'command-center' && !selectedEvent && <CommandCenterPanel />}
           {activeSection === 'whitelabel'     && !selectedEvent && <div className="max-w-7xl mx-auto"><WhiteLabelPanel /></div>}
+          {activeSection === 'payments'       && !selectedEvent && <div className="max-w-6xl mx-auto"><PaymentsPanel /></div>}
           {activeSection === 'blog'           && !selectedEvent && <div className="max-w-6xl mx-auto"><BlogCMSPanel /></div>}
           {activeSection === 'account'        && !selectedEvent && (
             <div className="max-w-2xl mx-auto">
