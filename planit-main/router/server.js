@@ -1894,12 +1894,12 @@ app.post('/mesh/exec', meshAuth(SERVICE_NAME), express.json(), (req, res) => {
 //   NTFY_TOKEN            — Optional bearer token if your ntfy topic is private
 //   SLACK_WEBHOOK_URL     — Slack Incoming Webhook URL
 //
-// Body: { type: 'bug_report' | 'status_report' | 'incident', payload: { ... } }
+// Body: { type: 'bug_report' | 'status_report' | 'incident' | 'payment', payload: { ... } }
 //
 // Returns 200 immediately — alerts fire in the background so the backend
 // caller gets an instant response and never waits on downstream channels.
 
-const { alertBugReport, alertStatusReport, alertIncident } = require('./services/alerting');
+const { alertBugReport, alertStatusReport, alertIncident, alertPayment } = require('./services/alerting');
 
 app.post('/mesh/alert', meshAuth(SERVICE_NAME), express.json({ limit: '32kb' }), (req, res) => {
   const { type, payload } = req.body || {};
@@ -1909,7 +1909,16 @@ app.post('/mesh/alert', meshAuth(SERVICE_NAME), express.json({ limit: '32kb' }),
   }
 
   // Acknowledge instantly — don't await alerts so we never block the backend
-  res.json({ ok: true, type });
+  res.json({
+    ok: true, type,
+    // Which destinations are configured on this router (booleans only, no URLs).
+    // Lets Admin -> Payments -> "Send test alert" show what actually fired.
+    channels: {
+      discord: !!process.env.DISCORD_WEBHOOK_URL,
+      ntfy:    !!process.env.NTFY_URL,
+      slack:   !!process.env.SLACK_WEBHOOK_URL,
+    },
+  });
 
   // Fire alerts in background — all channels in parallel, errors logged only
   setImmediate(async () => {
@@ -1923,6 +1932,9 @@ app.post('/mesh/alert', meshAuth(SERVICE_NAME), express.json({ limit: '32kb' }),
           break;
         case 'incident':
           await alertIncident(payload);
+          break;
+        case 'payment':
+          await alertPayment(payload);
           break;
         default:
           console.warn(`[alert] Unknown alert type from ${req.meshCaller}: ${type}`);
