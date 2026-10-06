@@ -31,7 +31,9 @@ import {
   Rocket, Timer, Wifi as WifiOn, Cpu as CpuIcon,
   Command, Key, Play, Crosshair, Ban, MoreHorizontal, CreditCard,
   BookOpen, Edit3, Tag, Check, Star, ShieldAlert, ShieldCheck, Loader2, Copy,
+  Sun, Moon,
 } from 'lucide-react';
+import '../styles/adminDark.css';
 import api, { adminAPI, uptimeAPI, watchdogAPI, routerAPI, bugReportAPI, blogAPI } from '../services/api';
 import AdminPayments from '../components/AdminPayments';
 import PlatformAnalyticsDashboard from '../components/PlatformAnalyticsDashboard';
@@ -10986,6 +10988,27 @@ export default function Admin() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
+  // ── Dark mode ─────────────────────────────────────────────────────────────
+  // Explicit choice is saved in localStorage; with no saved choice we follow the OS setting.
+  const [adminTheme, setAdminTheme] = useState(() => {
+    try {
+      const saved = localStorage.getItem('planit-admin-theme');
+      if (saved === 'dark' || saved === 'light') return saved;
+    } catch { /* storage blocked — fall through */ }
+    return (typeof window !== 'undefined' && window.matchMedia?.('(prefers-color-scheme: dark)').matches) ? 'dark' : 'light';
+  });
+  const toggleAdminTheme = () => setAdminTheme(prev => {
+    const next = prev === 'dark' ? 'light' : 'dark';
+    try { localStorage.setItem('planit-admin-theme', next); } catch { /* ignore */ }
+    return next;
+  });
+  // Mirror onto <html> so overscroll / scrollbars / form controls match too.
+  useEffect(() => {
+    const el = document.documentElement;
+    el.classList.toggle('admin-dark-html', adminTheme === 'dark');
+    return () => el.classList.remove('admin-dark-html');
+  }, [adminTheme]);
+
   // Shared TurnstileWidget handles explicit render/remove/poll behavior.
 
   // Watchdog state — polled top-level so outage banner shows on any tab
@@ -11719,7 +11742,7 @@ export default function Admin() {
   // ── Main App ──────────────────────────────────────────────────────────────
   return (
     <DemoContext.Provider value={isDemo}>
-    <div className="min-h-screen bg-neutral-100 flex">
+    <div className={`min-h-screen bg-neutral-100 flex ${adminTheme === 'dark' ? 'admin-dark' : ''}`}>
 
       {/* Mobile nav drawer */}
       {mobileNavOpen && (
@@ -11883,6 +11906,15 @@ export default function Admin() {
               {searchLoading ? <span className="spinner w-3 h-3 border-2 border-neutral-300 border-t-neutral-600" /> : <Search className="w-3 h-3" />}
             </button>
           </form>
+
+          <button
+            onClick={toggleAdminTheme}
+            className="btn btn-secondary text-xs py-1.5 px-2.5"
+            title={adminTheme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+            aria-label={adminTheme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+          >
+            {adminTheme === 'dark' ? <Sun className="w-3.5 h-3.5" /> : <Moon className="w-3.5 h-3.5" />}
+          </button>
 
           <button onClick={async () => { try { const r = await adminAPI.exportData('events'); const b = new Blob([JSON.stringify(r.data.data, null, 2)], { type: 'application/json' }); const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = `planit-export-${Date.now()}.json`; a.click(); toast.success('Exported'); } catch { toast.error('Export failed'); } }} className="hidden sm:flex btn btn-secondary text-xs gap-1.5 py-1.5">
             <Download className="w-3.5 h-3.5" /> Export All
