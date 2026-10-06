@@ -325,7 +325,14 @@ async function fulfill(inv) {
   try {
     const fn = handlers[claimed.purpose];
     if (!fn) throw new Error(`no fulfillment handler for ${claimed.purpose}`);
-    await fn(claimed, readPii(claimed));
+    // Never fulfil (and then wipe the encrypted buyer details) if they can't be read.
+    // A decrypt failure almost always means PAYMENTS_ENC_KEY differs from the one the
+    // invoice was created with. Throwing here keeps the data and retries once it's fixed.
+    const rawPii = decrypt(claimed.pii, claimed.publicId);
+    if (claimed.pii && !rawPii) throw new Error('cannot decrypt invoice details - PAYMENTS_ENC_KEY mismatch? (data kept, will retry)');
+    let pii = {};
+    try { pii = JSON.parse(rawPii || '{}'); } catch { throw new Error('invoice details are corrupt'); }
+    await fn(claimed, pii);
     const done = await Invoice.findOneAndUpdate(
       { _id: claimed._id },
       { $set: { fulfillState: 'done', fulfillAt: new Date(), pii: '' }, $push: { events: { $each: [{ at: new Date(), type: 'fulfilled', detail: claimed.purpose }], $slice: -50 } } },
