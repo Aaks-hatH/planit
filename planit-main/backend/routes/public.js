@@ -82,50 +82,11 @@ router.get('/invite/:inviteCode/qr.svg', async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
-// Get sitemap
-router.get('/sitemap.xml', async (req, res) => {
-  try {
-    const protocol = process.env.NODE_ENV === 'production' ? 'https' : 'http';
-    const domain = process.env.BASE_DOMAIN || 'localhost:5173';
-    const baseUrl = `${protocol}://${domain}`;
-
-    // Get public events
-    const publicEvents = await Event.find({
-      'settings.isPublic': true,
-      status: 'active'
-    })
-    .select('subdomain updatedAt')
-    .lean();
-
-    // Generate sitemap XML
-    const urls = [
-      { loc: baseUrl, priority: '1.0', changefreq: 'daily' },
-      { loc: `${baseUrl}/terms`, priority: '0.5', changefreq: 'monthly' },
-      { loc: `${baseUrl}/privacy`, priority: '0.5', changefreq: 'monthly' },
-      ...publicEvents.map(event => ({
-        loc: `${protocol}://${event.subdomain}.${domain}`,
-        lastmod: event.updatedAt.toISOString().split('T')[0],
-        priority: '0.8',
-        changefreq: 'weekly'
-      }))
-    ];
-
-    const sitemap = `<?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-${urls.map(url => `  <url>
-    <loc>${url.loc}</loc>
-    ${url.lastmod ? `<lastmod>${url.lastmod}</lastmod>` : ''}
-    <changefreq>${url.changefreq}</changefreq>
-    <priority>${url.priority}</priority>
-  </url>`).join('\n')}
-</urlset>`;
-
-    res.header('Content-Type', 'application/xml');
-    res.send(sitemap);
-  } catch (error) {
-    res.status(500).send('Error generating sitemap');
-  }
-});
+// NOTE: the sitemap lives further down (GET /sitemap.xml — static pages + every blog post).
+// An older handler here used to be registered first, so Express always served it and the
+// blog-aware one below never ran: search engines were told about the homepage, /terms,
+// /privacy and event subdomains, but not a single blog post. Don't re-add a second
+// '/sitemap.xml' route above the real one.
 
 // Get robots.txt
 router.get('/robots.txt', (req, res) => {
