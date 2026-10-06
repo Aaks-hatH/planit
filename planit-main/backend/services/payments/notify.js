@@ -36,7 +36,7 @@ const usd = (cents) => `$${(cents / 100).toFixed(2)}`;
 // level: info | medium | high | critical   (matches the router's alerting levels)
 
 const LEVEL_COLOR = { info: 0x10b981, medium: 0xf59e0b, high: 0xef4444, critical: 0xb91c1c };
-const NTFY_PRIORITY = { info: 3, medium: 4, high: 4, critical: 5 };
+const NTFY_PRIORITY = { info: 5, medium: 5, high: 5, critical: 5 };   // 5 = max, can pass Do Not Disturb
 const NTFY_TAGS = {
   info: ['moneybag'],
   medium: ['warning', 'eyes'],
@@ -58,13 +58,16 @@ function frontendUrl(path = '') {
 
 // -- Direct (fallback) senders --------------------------------------------------
 
+const ALERT_USER = process.env.DISCORD_ALERT_USER_ID || '1168575437723680850';
+
 async function directDiscord({ title, content, fields, level }) {
   const url = process.env.DISCORD_WEBHOOK_URL;
   if (!url) return false;
   try {
     await axios.post(url, {
-      content: clean(content, 300),
-      allowed_mentions: { parse: [] },
+      // The mention is added AFTER clean() (which breaks '@'), and only this one user can be pinged.
+      content: `<@${ALERT_USER}> ${clean(content || title, 280)}`,
+      allowed_mentions: { users: [ALERT_USER] },
       embeds: [{
         title: clean(title, 100),
         color: LEVEL_COLOR[level] ?? LEVEL_COLOR.info,
