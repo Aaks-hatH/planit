@@ -26,6 +26,7 @@ const QRCode     = require('qrcode');
 const { verifyTurnstile } = require('../services/captchaService');
 const { unbanIp, listActiveBans } = require('../middleware/security');
 
+
 // ─── TOTP helpers ─────────────────────────────────────────────────────────────
 // Encrypt a TOTP secret before storing it so the DB field is not plaintext.
 // We derive an encryption key from the license key so there's no extra secret.
