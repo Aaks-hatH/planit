@@ -162,13 +162,8 @@ export default function Pay() {
       .then(setQr).catch(() => setQr(''));
   }, [inv?.uri, integrity.ok]);
 
-  // Redirect on success
-  useEffect(() => {
-    if (inv?.status === 'confirmed' && !redirected.current) {
-      const to = successUrl(inv);
-      if (to) { redirected.current = true; const t = setTimeout(() => navigate(to), 4500); return () => clearTimeout(t); }
-    }
-  }, [inv, navigate]);
+  // No auto-redirect on success: the receipt stays on screen and the buyer
+  // presses Continue (ConfirmedCard) when they are ready to move on.
 
   const copy = async (what, text) => {
     try { await navigator.clipboard.writeText(text); setCopied(what); setTimeout(() => setCopied(''), 1600); } catch { /* ignore */ }
@@ -712,7 +707,7 @@ function ConfirmedCard({ inv, meta, next, copy, copied }) {
       </div>
       <h1 className="mt-8 text-[30px] font-semibold tracking-[-0.03em]">Payment confirmed</h1>
       <p className="mx-auto mt-3 max-w-[340px] text-[15px] leading-6 text-[#6e6e73]">
-        {next ? 'Thank you. Taking you to your confirmation in a few seconds.' : 'Thank you. Your subscription is paid and your service is active.'}
+        {next ? 'Thank you. Your payment is confirmed. Press Continue when you are ready.' : 'Thank you. Your subscription is paid and your service is active.'}
       </p>
 
       <div className="pay-no-print mx-auto mt-8 flex max-w-[320px] flex-col gap-3">
