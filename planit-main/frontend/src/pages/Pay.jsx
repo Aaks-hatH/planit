@@ -1,22 +1,25 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import {
-  AlertTriangle, ArrowRight, BadgeCheck, Check, CheckCircle2, ChevronDown, Clock, Coins, Copy,
-  ExternalLink, EyeOff, Fingerprint, Globe, Heart, KeyRound, Landmark, LifeBuoy, Loader2, Lock,
-  Monitor, Printer, Receipt, RefreshCw, ShieldAlert, ShieldCheck, Smartphone, Sparkles, Wallet,
-  XCircle, Zap, Layers,
+  AlertTriangle, ArrowUpRight, Check, CheckCircle2, ChevronDown, Clock, Copy, EyeOff, Fingerprint,
+  HelpCircle, KeyRound, Landmark, LifeBuoy, Loader2, Lock, Monitor, Printer, Receipt, RefreshCw,
+  ShieldAlert, ShieldCheck, Smartphone, Sparkles, Wallet, X, XCircle,
 } from 'lucide-react';
 import QRCode from 'qrcode';
 import axios from 'axios';
 import { io } from 'socket.io-client';
 
 /**
- * PlanIt Payments — Bitcoin pay page (/pay/:id)
+ * PlanIt Payments: Bitcoin pay page (/pay/:id)
  *
  * The invoice id in the URL is a 128-bit random value and is the only
  * credential needed to view the page. The browser never sends an amount or an
  * address anywhere; it only displays what the server issued, and runs a few
  * integrity checks on that data before it lets anyone pay (see `useIntegrity`).
+ *
+ * Layout: one calm column. The amount, the QR code and the address are always
+ * visible. Everything else (order details, how to pay, security, questions)
+ * lives behind small buttons and opens in a sheet when someone asks for it.
  */
 
 const api = axios.create({
@@ -26,12 +29,12 @@ const api = axios.create({
 const WS_URL = import.meta.env.VITE_WS_URL || 'ws://localhost:5000';
 const SUPPORT_EMAIL = 'planit.userhelp@gmail.com';
 
-/* ── What is being bought ─────────────────────────────────────────────────── */
+/* What is being bought */
 const PURPOSE = {
-  support:          { title: 'Support PlanIt',         sub: 'One-time donation',            icon: Heart },
-  feature_request:  { title: 'Feature request',        sub: 'Funds your requested feature', icon: Sparkles },
-  wl_setup:         { title: 'White Label setup fee',  sub: 'One-time, before we begin',    icon: Layers },
-  wl_subscription:  { title: 'White Label subscription', sub: '30 days of service',         icon: Globe },
+  support:          { title: 'Support PlanIt',           sub: 'One-time donation' },
+  feature_request:  { title: 'Feature request',          sub: 'Funds your requested feature' },
+  wl_setup:         { title: 'White Label setup fee',    sub: 'One-time, before we begin' },
+  wl_subscription:  { title: 'White Label subscription', sub: '30 days of service' },
 };
 
 const successUrl = (inv) => {
@@ -41,7 +44,7 @@ const successUrl = (inv) => {
   return null; // subscription: stay here and show the receipt
 };
 
-/* ── Helpers ──────────────────────────────────────────────────────────────── */
+/* Helpers */
 const chunk = (addr) => addr.match(/.{1,4}/g) || [addr];
 const mmss = (ms) => {
   const s = Math.max(0, Math.floor(ms / 1000));
@@ -51,7 +54,9 @@ const explorerBase = (network) => `https://mempool.space/${network === 'mainnet'
 const txLink = (inv) => (inv?.txid ? `${explorerBase(inv.network)}tx/${inv.txid}` : null);
 const btcToSats = (s) => Number(String(s).replace('.', ''));
 const fmtSats = (n) => Number(n).toLocaleString();
-const when = (d) => (d ? new Date(d).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' }) : '—');
+const money = (n) => Number(n).toLocaleString('en-US', { style: 'currency', currency: 'USD' });
+const rateText = (n) => `$${Number(n).toLocaleString()}`;
+const when = (d) => (d ? new Date(d).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' }) : 'Not available');
 
 const BECH32 = '[023456789acdefghjklmnpqrstuvwxyz]';
 const ADDR_RE = { mainnet: new RegExp(`^bc1q${BECH32}{38}$`), test: new RegExp(`^tb1q${BECH32}{38}$`) };
@@ -83,14 +88,19 @@ function useIntegrity(inv, amountBtc) {
 
     const checks = [
       { id: 'addr', ok: addrOk, label: `Address is a valid ${inv.network === 'mainnet' ? 'Bitcoin' : 'test-network'} SegWit address`, bad: 'The address format is wrong for this network.' },
-      { id: 'uri',  ok: uriOk,  label: 'QR code and wallet link match the address and amount shown', bad: 'The QR / wallet link does not match the details on screen.' },
+      { id: 'uri',  ok: uriOk,  label: 'QR code and wallet link match the address and amount shown', bad: 'The QR code or wallet link does not match the details on screen.' },
       { id: 'tls',  ok: secure, label: `Connection to ${host || 'this site'} is encrypted (HTTPS)`, bad: 'This page is not on a secure (HTTPS) connection.' },
     ];
     return { ok: checks.every((c) => c.ok), checks };
   }, [inv, amountBtc]);
 }
 
-/* ── Page ─────────────────────────────────────────────────────────────────── */
+/* Shared style tokens */
+const linkCls = 'font-medium text-[#635bff] transition-colors hover:text-[#4338ca]';
+const primaryBtn = 'flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#1d1d1f] px-6 text-[15px] font-medium text-white transition hover:bg-black active:scale-[0.99] disabled:opacity-60';
+const secondaryBtn = 'flex h-12 w-full items-center justify-center gap-2 rounded-xl border border-[#e8e8ed] bg-white px-6 text-[15px] font-medium text-[#1d1d1f] transition hover:bg-[#fafafa] active:scale-[0.99] disabled:opacity-60';
+
+/* Page */
 export default function Pay() {
   const { id } = useParams();
   const [search] = useSearchParams();
@@ -100,17 +110,17 @@ export default function Pay() {
   const [error, setError] = useState('');
   const [offline, setOffline] = useState(false);
   const [qr, setQr] = useState('');
-  const [now, setNow] = useState(Date.now());
   const [copied, setCopied] = useState('');
   const [busy, setBusy] = useState(false);
   const [unit, setUnit] = useState('btc'); // 'btc' | 'sats'
+  const [sheet, setSheet] = useState(null); // null | 'details' | 'how' | 'security' | 'faq'
   const redirected = useRef(false);
 
   useEffect(() => {
-    document.title = inv ? `Pay $${inv.usd.toFixed(2)} with Bitcoin — PlanIt` : 'Pay with Bitcoin — PlanIt';
+    document.title = inv ? `Pay ${money(inv.usd)} with Bitcoin | PlanIt` : 'Pay with Bitcoin | PlanIt';
   }, [inv]);
 
-  // ── Load + live updates (socket for speed, polling as the safety net) ──────
+  // Load + live updates (socket for speed, polling as the safety net)
   const load = useCallback(async () => {
     try {
       const r = await api.get(`/payments/${id}`);
@@ -141,20 +151,18 @@ export default function Pay() {
     return () => clearInterval(t);
   }, [load, active]);
 
-  useEffect(() => { const t = setInterval(() => setNow(Date.now()), 1000); return () => clearInterval(t); }, []);
-
   const amountBtc = inv ? (inv.partial ? inv.remainingBtc : inv.btc) : '';
   const amountSats = inv ? (inv.partial ? btcToSats(inv.remainingBtc) : inv.sats) : 0;
   const integrity = useIntegrity(inv, amountBtc);
 
-  // ── QR code (generated locally — the address never leaves the browser) ────
+  // QR code (generated locally, the address never leaves the browser)
   useEffect(() => {
     if (!inv?.uri || !integrity.ok) { setQr(''); return; }
-    QRCode.toDataURL(inv.uri, { margin: 2, width: 300, errorCorrectionLevel: 'M', color: { dark: '#0a0a0a', light: '#ffffff' } })
+    QRCode.toDataURL(inv.uri, { margin: 2, width: 360, errorCorrectionLevel: 'M', color: { dark: '#0a0a0a', light: '#ffffff' } })
       .then(setQr).catch(() => setQr(''));
   }, [inv?.uri, integrity.ok]);
 
-  // ── Redirect on success ───────────────────────────────────────────────────
+  // Redirect on success
   useEffect(() => {
     if (inv?.status === 'confirmed' && !redirected.current) {
       const to = successUrl(inv);
@@ -185,451 +193,551 @@ export default function Pay() {
     setBusy(false);
   };
 
-  /* ── Early states ── */
+  /* Early states */
   if (error && !inv) {
     return (
       <Shell>
-        <div className="mx-auto max-w-md text-center py-20">
-          <div className="w-16 h-16 rounded-2xl bg-amber-400/10 border border-amber-400/30 flex items-center justify-center mx-auto mb-5">
-            <AlertTriangle className="w-8 h-8 text-amber-400" />
-          </div>
-          <h1 className="text-xl font-bold text-white mb-2">Payment link not found</h1>
-          <p className="text-sm text-neutral-400 mb-6">{error}</p>
-          <Link to="/support" className="inline-flex items-center gap-2 text-sm font-semibold text-amber-300 hover:text-amber-200">
-            Back to PlanIt <ArrowRight className="w-4 h-4" />
-          </Link>
+        <div className="py-16 text-center">
+          <IconBadge><AlertTriangle className="h-5 w-5 text-[#1d1d1f]" strokeWidth={1.75} /></IconBadge>
+          <h1 className="mt-7 text-[24px] font-semibold tracking-[-0.025em]">Payment link not found</h1>
+          <p className="mx-auto mt-3 max-w-[320px] text-[15px] leading-6 text-[#6e6e73]">{error}</p>
+          <Link to="/support" className={`mt-8 inline-flex items-center gap-1 text-[15px] ${linkCls}`}>Back to PlanIt</Link>
         </div>
       </Shell>
     );
   }
   if (!inv) {
     return (
-      <Shell>
-        <div className="py-32 text-center text-neutral-400 text-sm">
-          <Loader2 className="w-7 h-7 animate-spin mx-auto mb-4 text-amber-400" />
-          Securing your payment…
-          {offline && <p className="mt-3 text-xs text-amber-300">Having trouble reaching PlanIt — retrying…</p>}
+      <Shell offline={offline}>
+        <div className="py-32 text-center" role="status">
+          <Loader2 className="mx-auto h-5 w-5 animate-spin text-[#8e8e93]" />
+          <p className="mt-5 text-[15px] text-[#6e6e73]">Securing your payment</p>
+          {offline && <p className="mt-2 text-[13px] text-[#6e6e73]">Having trouble reaching PlanIt. Retrying.</p>}
         </div>
       </Shell>
     );
   }
 
-  const remainingMs = new Date(inv.expiresAt).getTime() - now;
-  const totalMs = Math.max(60_000, new Date(inv.expiresAt).getTime() - new Date(inv.createdAt || inv.expiresAt).getTime() || 20 * 60_000);
   const testnet = inv.network !== 'mainnet';
-  const meta = PURPOSE[inv.purpose] || { title: 'PlanIt payment', sub: '', icon: Coins };
-  const ctx = { inv, meta, amountBtc, amountSats, unit, setUnit, copy, copied, remainingMs, totalMs, busy, refresh, requote, qr, integrity, error };
+  const meta = PURPOSE[inv.purpose] || { title: 'PlanIt payment', sub: '' };
+  const ctx = { inv, meta, amountBtc, amountSats, unit, setUnit, copy, copied, busy, refresh, requote, qr, integrity, error };
+
+  const pills = [
+    inv.status !== 'confirmed' && { id: 'details', label: 'Order details', icon: Receipt },
+    active && { id: 'how', label: 'How to pay', icon: Wallet },
+    { id: 'security', label: 'Security', icon: ShieldCheck },
+    { id: 'faq', label: 'Questions', icon: HelpCircle },
+  ].filter(Boolean);
 
   return (
     <Shell testnet={testnet} network={inv.network} offline={offline}>
-      <PaymentMasthead inv={inv} meta={meta} active={active} />
-      <div className="grid lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)] gap-6 items-start">
-        <main className="min-w-0">
+      <div className="pay-rise">
+        {active && <Summary inv={inv} meta={meta} />}
+
+        <div className={active ? 'mt-10' : ''}>
           {active && <ActiveCard {...ctx} />}
           {inv.status === 'confirmed' && <ConfirmedCard {...ctx} next={successUrl(inv)} />}
           {inv.status === 'expired' && <ExpiredCard {...ctx} />}
           {inv.status === 'review' && <ReviewCard {...ctx} />}
           {inv.status === 'rejected' && <RejectedCard {...ctx} />}
-        </main>
+        </div>
 
-        <aside className="space-y-6 min-w-0 print:hidden">
-          <OrderSummary {...ctx} />
-          {active && <HowToPay />}
-          <SecurityPanel integrity={integrity} />
-        </aside>
+        <div className="pay-no-print mt-12 flex flex-wrap justify-center gap-2.5">
+          {pills.map(({ id: pid, label, icon: Icon }) => (
+            <button
+              key={pid}
+              type="button"
+              onClick={() => setSheet(pid)}
+              className="inline-flex h-10 items-center gap-2 rounded-full border border-[#e8e8ed] bg-white px-4 text-[14px] font-medium text-[#1d1d1f] transition hover:border-[#d2d2d7] hover:bg-[#fafafa] active:scale-[0.98]"
+            >
+              <Icon className="h-4 w-4 text-[#6e6e73]" strokeWidth={1.75} />
+              {label}
+            </button>
+          ))}
+        </div>
+
+        <p className="pay-no-print mt-14 text-center text-[13px] leading-6 text-[#6e6e73]">
+          Need help? Read the <Link to="/help#btc-how-to-pay" className={linkCls}>payment guide</Link> or email{' '}
+          <a href={`mailto:${SUPPORT_EMAIL}`} className={linkCls}>{SUPPORT_EMAIL}</a> with invoice{' '}
+          <span className="pay-mono text-[#1d1d1f]">{inv.id.slice(0, 8)}</span>.
+        </p>
       </div>
 
-      <div className="mt-8 print:hidden"><Faq /></div>
-
-      <p className="mt-8 text-center text-[11px] text-neutral-500 print:hidden">
-        Need a hand? <Link to="/help#btc-how-to-pay" className="text-amber-300 hover:text-amber-200 underline underline-offset-2">Read the payment guide</Link>
-        {' '}or email <a href={`mailto:${SUPPORT_EMAIL}`} className="text-amber-300 hover:text-amber-200 underline underline-offset-2">{SUPPORT_EMAIL}</a>
-        {' '}and include your invoice ID <span className="font-mono text-neutral-300">{inv.id.slice(0, 8)}</span>.
-      </p>
+      {sheet && (
+        <Sheet key={sheet} title={SHEET_TITLES[sheet]} onClose={() => setSheet(null)}>
+          {sheet === 'details' && <DetailsSheet {...ctx} />}
+          {sheet === 'how' && <HowSheet />}
+          {sheet === 'security' && <SecuritySheet integrity={integrity} active={!!active} />}
+          {sheet === 'faq' && <FaqSheet />}
+        </Sheet>
+      )}
     </Shell>
   );
 }
 
-/* ── Chrome ───────────────────────────────────────────────────────────────── */
+const SHEET_TITLES = {
+  details: 'Order details',
+  how: 'How to pay',
+  security: 'Security',
+  faq: 'Questions',
+};
+
+/* Chrome */
+const PAY_CSS = `
+  @import url('https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500&display=swap');
+  .pay-root {
+    font-family: 'Geist', 'DM Sans', -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+  .pay-mono { font-family: 'Geist Mono', 'DM Mono', ui-monospace, SFMono-Regular, Menlo, monospace; }
+  .pay-root :focus-visible { outline: 2px solid #635bff; outline-offset: 2px; }
+  .pay-root :focus:not(:focus-visible) { outline: none; }
+  .pay-root button, .pay-root a { -webkit-tap-highlight-color: transparent; }
+
+  @keyframes pay-ping { 75%, 100% { transform: scale(2.2); opacity: 0; } }
+  @keyframes pay-rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+  @keyframes pay-fade-in { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes pay-fade-out { from { opacity: 1; } to { opacity: 0; } }
+  @keyframes pay-sheet-in { from { opacity: 0; transform: translateY(24px) scale(0.985); } to { opacity: 1; transform: none; } }
+  @keyframes pay-sheet-out { from { opacity: 1; transform: none; } to { opacity: 0; transform: translateY(14px) scale(0.99); } }
+  @keyframes pay-draw { to { stroke-dashoffset: 0; } }
+
+  .pay-rise { animation: pay-rise .5s cubic-bezier(.2,.7,.2,1) both; }
+  .pay-ping { animation: pay-ping 1.8s cubic-bezier(0,0,.2,1) infinite; }
+  .pay-fade-in { animation: pay-fade-in .2s ease-out both; }
+  .pay-fade-out { animation: pay-fade-out .17s ease-in both; }
+  .pay-sheet-in { animation: pay-sheet-in .32s cubic-bezier(.2,.8,.2,1) both; }
+  .pay-sheet-out { animation: pay-sheet-out .17s ease-in both; }
+  .pay-draw { stroke-dasharray: 32; stroke-dashoffset: 32; animation: pay-draw .45s .15s cubic-bezier(.4,0,.2,1) forwards; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .pay-root *, .pay-root *::before, .pay-root *::after {
+      animation-duration: .01ms !important;
+      animation-delay: 0s !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: .01ms !important;
+    }
+  }
+  @media print {
+    .pay-root { background: #fff !important; color: #000 !important; }
+    .pay-no-print { display: none !important; }
+  }
+`;
+
 function Shell({ children, testnet, network, offline }) {
   return (
-    <div className="pay-root min-h-screen relative overflow-x-hidden bg-[#070b12] text-neutral-100 font-sans">
-      <style>{`
-        @keyframes pay-pulse { 0%,100% { opacity: .35; transform: scale(1);} 50% { opacity: 1; transform: scale(1.35);} }
-        @keyframes pay-sweep { 0% { transform: translateX(-100%);} 100% { transform: translateX(300%);} }
-        @keyframes pay-pop { 0% { transform: scale(.6); opacity: 0;} 70% { transform: scale(1.08);} 100% { transform: scale(1); opacity: 1;} }
-        @keyframes pay-draw { to { stroke-dashoffset: 0; } }
-        .pay-pop { animation: pay-pop .5s cubic-bezier(.2,.9,.3,1.2) both; }
-        .pay-draw { stroke-dasharray: 40; stroke-dashoffset: 40; animation: pay-draw .5s .25s ease-out forwards; }
-        .pay-root { background-image: radial-gradient(circle at 12% -10%, rgba(56,189,248,.10), transparent 32%), radial-gradient(circle at 95% 18%, rgba(99,102,241,.10), transparent 30%); }
-        .pay-masthead { animation: pay-rise .5s ease-out both; }
-        @keyframes pay-rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
-        @media print {
-          .pay-root { background: #fff !important; color: #000 !important; }
-          .pay-no-print { display: none !important; }
-          .pay-receipt { background: #fff !important; border: 1px solid #ccc !important; color: #000 !important; }
-          .pay-receipt * { color: #000 !important; }
-        }
-      `}</style>
+    <div className="pay-root min-h-screen overflow-x-hidden bg-white text-[#1d1d1f]">
+      <style>{PAY_CSS}</style>
 
-      {/* ambient glow + grid */}
-      <div aria-hidden className="pointer-events-none absolute inset-0 pay-no-print">
-        <div className="absolute -top-40 -left-32 w-[560px] h-[560px] rounded-full bg-sky-500/10 blur-[120px]" />
-        <div className="absolute top-1/3 -right-40 w-[520px] h-[520px] rounded-full bg-indigo-500/10 blur-[130px]" />
-        <div className="absolute inset-0 opacity-[0.07]" style={{ backgroundImage: 'linear-gradient(#fff 1px, transparent 1px), linear-gradient(90deg, #fff 1px, transparent 1px)', backgroundSize: '44px 44px', maskImage: 'radial-gradient(ellipse at 50% 0%, #000 30%, transparent 75%)', WebkitMaskImage: 'radial-gradient(ellipse at 50% 0%, #000 30%, transparent 75%)' }} />
-      </div>
-
-      <header className="relative z-10 border-b border-white/[0.08] bg-[#070b12]/80 backdrop-blur-xl pay-no-print">
-        <div className="max-w-6xl mx-auto px-5 h-14 flex items-center justify-between">
-          <Link to="/" className="flex items-center gap-2.5 group">
-            <span className="w-7 h-7 rounded-lg bg-gradient-to-br from-sky-300 to-indigo-500 text-white flex items-center justify-center font-black text-sm shadow-lg shadow-indigo-500/20"><Sparkles className="w-3.5 h-3.5" /></span>
-            <span className="font-bold tracking-tight text-white group-hover:text-amber-200 transition-colors">PlanIt</span>
+      <header className="pay-no-print">
+        <div className="mx-auto flex h-16 max-w-[1040px] items-center justify-between px-5 sm:px-8">
+          <Link to="/" className="inline-flex items-center gap-2.5" aria-label="PlanIt home">
+            <span className="grid h-6 w-6 place-items-center rounded-md bg-[#1d1d1f] text-white"><Sparkles className="h-3.5 w-3.5" /></span>
+            <span className="text-[15px] font-semibold tracking-[-0.01em]">PlanIt</span>
           </Link>
-          <div className="flex items-center gap-3">
-            {testnet && (
-              <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-amber-300 bg-amber-400/10 border border-amber-400/30 rounded-full px-2.5 py-1">
-                <AlertTriangle className="w-3 h-3" /> TEST MODE · {network}
-              </span>
-            )}
-            <span className="inline-flex items-center gap-1.5 text-[11px] font-medium text-emerald-300">
-              <Lock className="w-3.5 h-3.5" /> <span className="hidden sm:inline">Encrypted payment link</span>
+          {testnet && (
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-3 py-1 text-[12px] font-medium text-amber-800 ring-1 ring-inset ring-amber-200">
+              Test mode <span className="text-amber-700/70">{network}</span>
             </span>
-          </div>
+          )}
         </div>
       </header>
 
       {offline && (
-        <div className="relative z-10 bg-amber-400/10 border-b border-amber-400/30 text-amber-200 text-xs text-center py-2 pay-no-print">
-          Connection problem — we keep retrying automatically. If you already sent payment, you don't need to do anything.
+        <div className="pay-no-print bg-amber-50 px-5 py-2.5 text-center text-[13px] text-amber-900" role="status">
+          Connection problem. We keep retrying automatically. If you already sent payment, you do not need to do anything.
         </div>
       )}
 
-      <div className="relative z-10 max-w-6xl mx-auto px-5 py-8 sm:py-10">
+      <main className="mx-auto w-full max-w-[460px] px-5 pb-24 pt-10 sm:pt-16">
         {testnet && (
-          <div className="mb-6 rounded-xl bg-amber-400/10 border border-amber-400/30 text-amber-100 text-sm px-4 py-3 flex gap-3 pay-no-print">
-            <AlertTriangle className="w-5 h-5 text-amber-300 shrink-0 mt-0.5" />
-            <div><strong>This is a test payment ({network}).</strong> Use test coins only — they have no real value. Never send real Bitcoin to this address.</div>
+          <div className="pay-no-print mb-10 rounded-2xl bg-amber-50 px-5 py-4 text-[14px] leading-6 text-amber-900">
+            <strong className="font-semibold">This is a test payment on {network}.</strong> Use test coins only, they have no real value. Never send real Bitcoin to this address.
           </div>
         )}
         {children}
-      </div>
+      </main>
     </div>
   );
 }
 
-const glass = 'rounded-3xl border border-white/[0.09] bg-[#0d121c]/90 backdrop-blur-xl shadow-[0_24px_80px_rgba(0,0,0,0.22)]';
+const IconBadge = ({ children }) => (
+  <span className="mx-auto grid h-12 w-12 place-items-center rounded-full bg-[#f5f5f7]">{children}</span>
+);
 
-function PaymentMasthead({ inv, meta, active }) {
-  const Icon = meta.icon;
+/* Sheet (the surface every hidden detail opens in) */
+function Sheet({ title, onClose, children }) {
+  const [leaving, setLeaving] = useState(false);
+  const panelRef = useRef(null);
+  const closeRef = useRef(onClose);
+  closeRef.current = onClose;
+  const timer = useRef(null);
+
+  const close = useCallback(() => {
+    if (timer.current) return;
+    setLeaving(true);
+    timer.current = setTimeout(() => closeRef.current(), 170);
+  }, []);
+
+  useEffect(() => {
+    const opener = document.activeElement;
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    panelRef.current?.focus({ preventScroll: true });
+
+    const onKey = (e) => {
+      if (e.key === 'Escape') { e.stopPropagation(); close(); return; }
+      if (e.key !== 'Tab' || !panelRef.current) return;
+      const items = panelRef.current.querySelectorAll('a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])');
+      if (!items.length) { e.preventDefault(); return; }
+      const first = items[0];
+      const last = items[items.length - 1];
+      const here = document.activeElement;
+      if (e.shiftKey && (here === first || here === panelRef.current)) { e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && here === last) { e.preventDefault(); first.focus(); }
+    };
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('keydown', onKey);
+      document.body.style.overflow = prevOverflow;
+      clearTimeout(timer.current);
+      if (opener && typeof opener.focus === 'function') opener.focus({ preventScroll: true });
+    };
+  }, [close]);
+
   return (
-    <div className="pay-masthead mb-7 flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
-      <div className="min-w-0">
-        <div className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.18em] text-sky-300/80">
-          <span className="flex h-7 w-7 items-center justify-center rounded-lg border border-sky-300/20 bg-sky-300/10"><Icon className="h-3.5 w-3.5" /></span>
-          PlanIt Payments
+    <div className="pay-no-print fixed inset-0 z-50 flex items-end justify-center sm:items-center sm:p-6">
+      <div
+        className={`absolute inset-0 bg-black/[0.18] backdrop-blur-[3px] ${leaving ? 'pay-fade-out' : 'pay-fade-in'}`}
+        onClick={close}
+        aria-hidden="true"
+      />
+      <div
+        ref={panelRef}
+        role="dialog"
+        aria-modal="true"
+        aria-label={title}
+        tabIndex={-1}
+        className={`relative flex max-h-[88vh] w-full flex-col overflow-hidden rounded-t-[28px] bg-white shadow-[0_24px_80px_rgba(0,0,0,0.18),0_0_0_1px_rgba(0,0,0,0.04)] outline-none sm:max-w-[520px] sm:rounded-[24px] ${leaving ? 'pay-sheet-out' : 'pay-sheet-in'}`}
+      >
+        <div className="flex items-center justify-between px-7 pb-3 pt-7">
+          <h2 className="text-[20px] font-semibold tracking-[-0.02em]">{title}</h2>
+          <button
+            type="button"
+            onClick={close}
+            aria-label="Close"
+            className="grid h-8 w-8 place-items-center rounded-full bg-[#f5f5f7] text-[#6e6e73] transition-colors hover:bg-[#ececf0] hover:text-[#1d1d1f]"
+          >
+            <X className="h-4 w-4" />
+          </button>
         </div>
-        <h1 className="mt-4 text-3xl font-semibold tracking-[-0.05em] text-white sm:text-4xl">{active ? 'Complete your payment' : inv.status === 'confirmed' ? 'Payment complete' : 'Payment status'}</h1>
-        <p className="mt-2 max-w-xl text-sm leading-6 text-slate-400">{active ? 'A private checkout link for your PlanIt order. Review the amount, scan the code, and keep this page open while we confirm it.' : 'Your private payment link and receipt are kept together here for easy reference.'}</p>
-      </div>
-      <div className="flex shrink-0 items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.035] px-4 py-3">
-        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/[0.06] text-sky-300"><Receipt className="h-4 w-4" /></div>
-        <div><div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-500">Invoice</div><div className="mt-0.5 font-mono text-xs text-slate-200">{inv.id.slice(0, 8)}…{inv.id.slice(-4)}</div></div>
+        <div className="overscroll-contain overflow-y-auto px-7 pb-[max(2rem,env(safe-area-inset-bottom))] pt-3">{children}</div>
       </div>
     </div>
   );
 }
 
-/* ── Stepper ──────────────────────────────────────────────────────────────── */
-function Stepper({ status }) {
-  const steps = ['Invoice ready', 'Payment sent', 'Confirming', 'Complete'];
-  const current = status === 'confirmed' ? 4 : status === 'detected' ? 2 : 1; // index of the active step
+/* Small pieces */
+function Segmented({ value, onChange, options, label, tabs, full }) {
   return (
-    <ol className="flex items-center w-full" aria-label="Payment progress">
-      {steps.map((label, i) => {
-        const done = i < current || status === 'confirmed';
-        const isActive = i === current && status !== 'confirmed';
+    <div
+      role={tabs ? 'tablist' : 'group'}
+      aria-label={label}
+      className={`${full ? 'flex w-full' : 'inline-flex'} rounded-[10px] bg-[#f5f5f7] p-0.5`}
+    >
+      {options.map(({ id, text, icon: Icon }) => {
+        const on = value === id;
         return (
-          <li key={label} className="flex-1 flex items-center last:flex-none">
-            <div className="flex flex-col items-center gap-1.5 min-w-[54px]">
-              <span className={`w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-bold border transition-all
-                ${done ? 'bg-emerald-400 text-black border-emerald-300' : isActive ? 'bg-amber-400/15 text-amber-300 border-amber-400/60 ring-4 ring-amber-400/10' : 'bg-white/5 text-neutral-500 border-white/10'}`}>
-                {done ? <Check className="w-3.5 h-3.5" /> : isActive ? <span className="w-2 h-2 rounded-full bg-amber-300" style={{ animation: 'pay-pulse 1.6s ease-in-out infinite' }} /> : i + 1}
-              </span>
-              <span className={`text-[10px] font-medium text-center leading-tight ${done ? 'text-emerald-300' : isActive ? 'text-amber-200' : 'text-neutral-500'}`}>{label}</span>
-            </div>
-            {i < steps.length - 1 && <span className={`flex-1 h-px mx-1 mb-5 ${done ? 'bg-emerald-400/60' : 'bg-white/10'}`} />}
-          </li>
+          <button
+            key={id}
+            type="button"
+            role={tabs ? 'tab' : undefined}
+            aria-selected={tabs ? on : undefined}
+            aria-pressed={tabs ? undefined : on}
+            onClick={() => onChange(id)}
+            className={`inline-flex items-center justify-center gap-1.5 rounded-[8px] px-3 py-1.5 text-[13px] font-medium transition-all ${full ? 'flex-1' : ''} ${on ? 'bg-white text-[#1d1d1f] shadow-[0_1px_2px_rgba(0,0,0,0.08),0_0_0_0.5px_rgba(0,0,0,0.04)]' : 'text-[#6e6e73] hover:text-[#1d1d1f]'}`}
+          >
+            {Icon && <Icon className="h-3.5 w-3.5" strokeWidth={1.75} />}
+            {text}
+          </button>
         );
       })}
-    </ol>
-  );
-}
-
-/* ── Countdown ring ───────────────────────────────────────────────────────── */
-function Ring({ remainingMs, totalMs }) {
-  const r = 20, c = 2 * Math.PI * r;
-  const frac = Math.min(1, Math.max(0, remainingMs / totalMs));
-  const low = remainingMs < 120_000;
-  return (
-    <div className="relative w-14 h-14 shrink-0" role="timer" aria-label="Price lock countdown">
-      <svg viewBox="0 0 48 48" className="w-14 h-14 -rotate-90">
-        <circle cx="24" cy="24" r={r} fill="none" stroke="rgba(255,255,255,.1)" strokeWidth="3" />
-        <circle cx="24" cy="24" r={r} fill="none" strokeWidth="3" strokeLinecap="round"
-          stroke={low ? '#f87171' : '#fbbf24'} strokeDasharray={c} strokeDashoffset={c * (1 - frac)} style={{ transition: 'stroke-dashoffset 1s linear, stroke .3s' }} />
-      </svg>
-      <span className={`absolute inset-0 flex items-center justify-center text-[11px] font-mono font-semibold ${low ? 'text-red-300' : 'text-amber-200'}`}>
-        {remainingMs > 0 ? mmss(remainingMs) : '00:00'}
-      </span>
     </div>
   );
 }
 
-/* ── Active (pending / detected) ──────────────────────────────────────────── */
-function ActiveCard({ inv, meta, amountBtc, amountSats, unit, setUnit, copy, copied, remainingMs, totalMs, busy, refresh, qr, integrity }) {
-  const Icon = meta.icon;
+const CopyChip = ({ done }) => (
+  <span className={`inline-flex h-8 shrink-0 items-center gap-1.5 rounded-full px-3 text-[13px] font-medium transition-colors ${done ? 'bg-emerald-50 text-emerald-700' : 'bg-[#f5f5f7] text-[#1d1d1f] group-hover:bg-[#ececf0]'}`}>
+    {done ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+    {done ? 'Copied' : 'Copy'}
+  </span>
+);
+
+const CopyBtn = ({ onClick, done }) => (
+  <button
+    type="button"
+    onClick={onClick}
+    aria-label="Copy"
+    className="pay-no-print grid h-7 w-7 shrink-0 place-items-center rounded-full text-[#6e6e73] transition-colors hover:bg-[#f5f5f7] hover:text-[#1d1d1f]"
+  >
+    {done ? <Check className="h-4 w-4 text-emerald-600" /> : <Copy className="h-4 w-4" />}
+  </button>
+);
+
+const Row = ({ k, v, mono, small, action }) => (
+  <div className="flex items-start justify-between gap-6 py-4">
+    <dt className="shrink-0 text-[14px] text-[#6e6e73]">{k}</dt>
+    <dd className="flex min-w-0 items-center justify-end gap-2 text-right text-[14px] text-[#1d1d1f]">
+      <span className={`min-w-0 break-all ${mono ? 'pay-mono' : ''} ${small ? 'text-[12px] leading-5' : ''}`}>{v}</span>
+      {action}
+    </dd>
+  </div>
+);
+
+function PriceLock({ expiresAt }) {
+  const [now, setNow] = useState(Date.now());
+  useEffect(() => { const t = setInterval(() => setNow(Date.now()), 1000); return () => clearInterval(t); }, []);
+  const ms = new Date(expiresAt).getTime() - now;
+  const low = ms < 120_000;
+  return (
+    <span role="timer" className={`tabular-nums ${low ? 'font-medium text-red-600' : 'text-[#1d1d1f]'}`}>
+      {ms > 0 ? mmss(ms) : '00:00'}
+    </span>
+  );
+}
+
+/* Top of the page while a payment is open */
+function Summary({ inv, meta }) {
+  return (
+    <div>
+      <p className="text-[15px] font-medium text-[#6e6e73]">{meta.title}</p>
+      <h1 className="mt-2 text-[46px] font-semibold leading-none tracking-[-0.035em] tabular-nums sm:text-[54px]">{money(inv.usd)}</h1>
+      {(inv.label || meta.sub) && <p className="mt-4 text-[15px] leading-6 text-[#6e6e73]">{inv.label || meta.sub}</p>}
+    </div>
+  );
+}
+
+/* Active (pending / detected) */
+function ActiveCard({ inv, amountBtc, amountSats, unit, setUnit, copy, copied, busy, refresh, qr, integrity }) {
   const detected = inv.status === 'detected';
   const confPct = inv.requiredConf > 0 ? Math.min(100, Math.round((inv.confirmations / inv.requiredConf) * 100)) : 100;
   const a = inv.address;
   const tx = txLink(inv);
   const amountText = unit === 'btc' ? amountBtc : String(amountSats);
+  const parts = chunk(a);
+
+  // Fail closed: if anything looks off, hide every payment detail.
+  if (!integrity.ok) {
+    return (
+      <div className="rounded-2xl border border-red-200 bg-red-50 px-6 py-6 text-[14px] leading-6 text-red-900" role="alert">
+        <div className="flex items-center gap-2 text-[16px] font-semibold"><ShieldAlert className="h-5 w-5 text-red-600" /> Do not pay yet</div>
+        <p className="mt-2">Something on this page looks off, so we hid the payment details to keep you safe.</p>
+        <ul className="mt-3 list-disc space-y-1 pl-5">
+          {integrity.checks.filter((c) => !c.ok).map((c) => <li key={c.id}>{c.bad}</li>)}
+        </ul>
+        <p className="mt-4 text-[13px] text-red-800">Reload this page. If it keeps happening, email {SUPPORT_EMAIL}.</p>
+      </div>
+    );
+  }
 
   return (
-    <div className={`${glass} p-5 sm:p-7 shadow-2xl shadow-black/40`}>
-      {/* Title row */}
-      <div className="flex items-start justify-between gap-4">
-        <div className="flex items-center gap-3 min-w-0">
-          <span className="w-11 h-11 rounded-xl bg-gradient-to-br from-sky-300 to-indigo-500 text-white flex items-center justify-center shrink-0 shadow-lg shadow-indigo-500/20">
-            <Icon className="w-5 h-5" />
-          </span>
-          <div className="min-w-0">
-            <h1 className="text-lg font-bold text-white truncate">{meta.title}</h1>
-            <p className="text-xs text-neutral-400 truncate">{inv.label ? `${inv.label} · ` : ''}{meta.sub}</p>
-          </div>
-        </div>
-        {!detected && <Ring remainingMs={remainingMs} totalMs={totalMs} />}
-      </div>
-
-      <div className="mt-6"><Stepper status={inv.status} /></div>
-
+    <>
       {inv.partial && (
-        <div className="mt-5 rounded-xl bg-sky-400/10 border border-sky-400/30 text-sky-100 text-sm px-4 py-3 flex gap-3">
-          <Coins className="w-5 h-5 text-sky-300 shrink-0 mt-0.5" />
-          <div>We received <strong>{fmtSats(inv.seenSats)} sats</strong> so far. Please send the remaining <strong className="font-mono">{inv.remainingBtc} BTC</strong> to the <em>same address</em> below — no need to start over.</div>
+        <div className="mb-6 rounded-2xl bg-[#f5f5f7] px-5 py-4 text-[14px] leading-6">
+          We received <strong className="font-semibold">{fmtSats(inv.seenSats)} sats</strong> so far. Send the remaining{' '}
+          <span className="pay-mono font-medium">{inv.remainingBtc} BTC</span> to the same address below. No need to start over.
         </div>
       )}
 
-      {/* Integrity failure: fail closed */}
-      {!integrity.ok && (
-        <div className="mt-6 rounded-xl bg-red-500/10 border border-red-400/40 text-red-100 px-4 py-4">
-          <div className="flex items-center gap-2 font-bold mb-1"><ShieldAlert className="w-5 h-5 text-red-300" /> Don't pay yet — something looks off</div>
-          <ul className="text-sm list-disc pl-5 space-y-0.5 text-red-100/90">
-            {integrity.checks.filter((c) => !c.ok).map((c) => <li key={c.id}>{c.bad}</li>)}
-          </ul>
-          <p className="text-xs text-red-200/80 mt-2">Reload this page. If it keeps happening, email {SUPPORT_EMAIL} — we've hidden the payment details to keep you safe.</p>
-        </div>
-      )}
-
-      {integrity.ok && (
-        <>
-          {/* Amount hero */}
-          <div className="mt-6 rounded-2xl border border-sky-300/20 bg-gradient-to-b from-sky-400/[0.08] to-transparent p-5 text-center">
-            <div className="flex items-center justify-center gap-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-sky-300/90">
-              Send exactly
-              <span className="inline-flex rounded-full bg-black/40 border border-white/10 p-0.5 normal-case tracking-normal">
-                {['btc', 'sats'].map((u) => (
-                  <button key={u} type="button" onClick={() => setUnit(u)} aria-pressed={unit === u}
-                    className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase transition-colors ${unit === u ? 'bg-amber-400 text-black' : 'text-neutral-400 hover:text-white'}`}>{u}</button>
-                ))}
-              </span>
-            </div>
-            <button type="button" onClick={() => copy('amt', amountText)} className="group mt-2 inline-flex items-center gap-3 max-w-full" aria-label="Copy amount">
-              <span className="font-mono text-3xl sm:text-4xl font-bold text-white tracking-tight break-all">{unit === 'sats' ? fmtSats(amountSats) : amountBtc}</span>
-              <span className="text-sm font-semibold text-neutral-400">{unit === 'btc' ? 'BTC' : 'sats'}</span>
-              <span className="p-1.5 rounded-lg border border-white/10 text-neutral-400 group-hover:text-white group-hover:bg-white/10 transition-colors">
-                {copied === 'amt' ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
-              </span>
-            </button>
-            <p className="text-xs text-neutral-400 mt-1.5">
-              ≈ <strong className="text-neutral-200">${inv.usd.toFixed(2)} USD</strong> · 1 BTC = ${Number(inv.rateUsd).toLocaleString()}
-            </p>
-          </div>
-
-          {/* QR + address */}
-          <div className="mt-5 grid sm:grid-cols-[auto_minmax(0,1fr)] gap-5 items-center">
-            <div className="mx-auto">
-              <div className="relative p-2.5 rounded-2xl bg-white shadow-xl shadow-black/50">
-                {qr
-                  ? <img src={qr} alt="Bitcoin payment QR code" width={208} height={208} className="block w-[208px] h-[208px]" />
-                  : <div className="w-[208px] h-[208px] flex items-center justify-center"><Loader2 className="w-6 h-6 animate-spin text-neutral-400" /></div>}
-                {detected && <div className="absolute inset-0 rounded-2xl bg-white/80 backdrop-blur-[2px] flex items-center justify-center"><CheckCircle2 className="w-14 h-14 text-emerald-500" /></div>}
-              </div>
-              <p className="text-[10px] text-neutral-500 text-center mt-2 flex items-center justify-center gap-1"><Lock className="w-3 h-3" /> QR drawn in your browser</p>
-            </div>
-
-            <div className="min-w-0 space-y-3">
-              <div>
-                <div className="flex items-center justify-between mb-1.5">
-                  <span className="text-[11px] font-semibold uppercase tracking-wider text-neutral-400">Payment address</span>
-                  <button type="button" onClick={() => copy('addr', a)} className="inline-flex items-center gap-1.5 text-xs font-semibold text-amber-300 hover:text-amber-200">
-                    {copied === 'addr' ? <><Check className="w-3.5 h-3.5 text-emerald-400" /> Copied</> : <><Copy className="w-3.5 h-3.5" /> Copy</>}
-                  </button>
-                </div>
-                <div className="rounded-xl bg-black/40 border border-white/10 px-3 py-2.5 font-mono text-[13px] leading-6 break-all select-all">
-                  {chunk(a).map((c, i, arr) => (
-                    <span key={i} className={i === 0 || i === arr.length - 1 || i === 1 || i === arr.length - 2 ? 'text-amber-200 font-semibold' : 'text-neutral-300'}>{c}{' '}</span>
-                  ))}
-                </div>
-              </div>
-
-              <div className="rounded-xl bg-emerald-400/[0.06] border border-emerald-400/20 px-3 py-2.5 text-xs text-emerald-100/90 flex gap-2.5">
-                <Fingerprint className="w-4 h-4 text-emerald-300 shrink-0 mt-0.5" />
-                <span>
-                  <strong className="text-emerald-200">Verify before you send.</strong> Your wallet's confirm screen should begin with{' '}
-                  <code className="font-mono text-amber-200">{a.slice(0, 8)}</code> and end with <code className="font-mono text-amber-200">{a.slice(-8)}</code>.
-                  If it doesn't, stop.
-                </span>
-              </div>
-
-              <a href={inv.uri} className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-sky-300 via-indigo-400 to-violet-500 text-white text-sm font-bold px-4 py-3 shadow-lg shadow-indigo-500/20 hover:brightness-110 active:scale-[.99] transition">
-                <Wallet className="w-4 h-4" /> Open in wallet app
-              </a>
-            </div>
-          </div>
-
-          {/* Live status */}
-          <div className="mt-5 rounded-xl border border-white/10 bg-black/30 px-4 py-3.5" aria-live="polite">
-            {detected ? (
-              <>
-                <div className="flex items-center gap-2 text-sm font-semibold text-emerald-300">
-                  <Zap className="w-4 h-4" /> Payment detected on the network
-                </div>
-                <div className="mt-2.5 h-2 rounded-full bg-white/10 overflow-hidden relative">
-                  <div className="h-full rounded-full bg-gradient-to-r from-emerald-400 to-teal-300 transition-all duration-700" style={{ width: `${Math.max(8, confPct)}%` }} />
-                  <div className="absolute inset-y-0 w-1/3 bg-gradient-to-r from-transparent via-white/30 to-transparent" style={{ animation: 'pay-sweep 2s linear infinite' }} />
-                </div>
-                <div className="mt-2 flex flex-wrap items-center justify-between gap-x-4 gap-y-1 text-xs text-neutral-300">
-                  <span>Confirmations <strong className="text-white">{inv.confirmations}</strong> / {inv.requiredConf}</span>
-                  <span className="text-neutral-400">Roughly 10 minutes per confirmation. You can close this page — we'll finish automatically.</span>
-                </div>
-                {tx && <a href={tx} target="_blank" rel="noopener noreferrer" className="mt-2 inline-flex items-center gap-1 text-xs text-amber-300 hover:text-amber-200">View transaction <ExternalLink className="w-3 h-3" /></a>}
-              </>
-            ) : (
-              <div className="flex items-start gap-3">
-                <span className="relative flex w-2.5 h-2.5 mt-1.5"><span className="absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-60 animate-ping" /><span className="relative inline-flex rounded-full w-2.5 h-2.5 bg-amber-400" /></span>
-                <div className="text-sm text-neutral-300">
-                  <strong className="text-white">Waiting for your payment…</strong>
-                  <div className="text-xs text-neutral-400 mt-0.5">
-                    This page updates by itself the moment your transaction appears.{' '}
-                    {inv.requiredConf === 0 ? 'This amount is accepted as soon as it is seen.' : `This order needs ${inv.requiredConf} confirmation${inv.requiredConf > 1 ? 's' : ''} (about ${inv.requiredConf * 10} min).`}
-                  </div>
-                </div>
+      <div className="overflow-hidden rounded-[22px] border border-[#e8e8ed] bg-white shadow-[0_1px_2px_rgba(16,24,40,0.04),0_12px_32px_-12px_rgba(16,24,40,0.08)]">
+        {/* QR */}
+        <div className="flex justify-center px-6 pb-8 pt-10">
+          <div className="relative rounded-2xl border border-[#f0f0f3] p-2">
+            {qr
+              ? <img src={qr} alt="Bitcoin payment QR code" width={184} height={184} className="block h-[184px] w-[184px] rounded-xl" />
+              : <div className="grid h-[184px] w-[184px] place-items-center"><Loader2 className="h-5 w-5 animate-spin text-[#8e8e93]" /></div>}
+            {detected && (
+              <div className="absolute inset-0 grid place-items-center rounded-2xl bg-white/85 backdrop-blur-[2px]">
+                <CheckCircle2 className="h-11 w-11 text-emerald-500" strokeWidth={1.5} />
               </div>
             )}
           </div>
-
-          <button onClick={refresh} disabled={busy}
-            className="mt-4 w-full inline-flex items-center justify-center gap-2 rounded-xl border border-white/15 bg-white/[0.04] hover:bg-white/10 py-2.5 text-sm font-medium text-neutral-200 disabled:opacity-60 transition-colors">
-            <RefreshCw className={`w-4 h-4 ${busy ? 'animate-spin' : ''}`} /> I've paid — check now
-          </button>
-
-          <ul className="mt-4 grid sm:grid-cols-3 gap-2 text-[11px] text-neutral-400">
-            <li className="flex gap-2"><Coins className="w-3.5 h-3.5 text-amber-300 shrink-0 mt-px" /> Send the exact amount. Your wallet adds the network fee on top.</li>
-            <li className="flex gap-2"><Landmark className="w-3.5 h-3.5 text-amber-300 shrink-0 mt-px" /> On-chain Bitcoin only. Lightning payments are not supported.</li>
-            <li className="flex gap-2"><Clock className="w-3.5 h-3.5 text-amber-300 shrink-0 mt-px" /> Price is locked until the timer ends. Late? You'll get a fresh quote.</li>
-          </ul>
-
-          <IntegrityList checks={integrity.checks} />
-        </>
-      )}
-    </div>
-  );
-}
-
-function IntegrityList({ checks }) {
-  return (
-    <details className="mt-4 group rounded-xl border border-white/10 bg-black/20">
-      <summary className="cursor-pointer list-none flex items-center justify-between gap-2 px-4 py-2.5 text-xs font-semibold text-emerald-300">
-        <span className="inline-flex items-center gap-2"><BadgeCheck className="w-4 h-4" /> {checks.length} automatic safety checks passed</span>
-        <ChevronDown className="w-4 h-4 text-neutral-500 group-open:rotate-180 transition-transform" />
-      </summary>
-      <ul className="px-4 pb-3 space-y-1.5 text-xs text-neutral-300">
-        {checks.map((c) => <li key={c.id} className="flex gap-2"><Check className="w-3.5 h-3.5 text-emerald-400 shrink-0 mt-0.5" /> {c.label}</li>)}
-        <li className="text-[11px] text-neutral-500 pt-1">These run in your browser on the data this page received. They don't replace comparing the address in your own wallet.</li>
-      </ul>
-    </details>
-  );
-}
-
-/* ── Confirmed ────────────────────────────────────────────────────────────── */
-function ConfirmedCard({ inv, meta, next, copy, copied }) {
-  const tx = txLink(inv);
-  return (
-    <div className={`${glass} pay-receipt p-6 sm:p-8 shadow-2xl shadow-black/40`}>
-      <div className="text-center">
-        <div className="pay-pop w-20 h-20 rounded-full bg-emerald-400/15 border border-emerald-400/40 flex items-center justify-center mx-auto mb-5">
-          <svg viewBox="0 0 24 24" className="w-10 h-10" fill="none" stroke="#34d399" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><path className="pay-draw" d="M5 12.5l4.5 4.5L19 7.5" /></svg>
         </div>
-        <h1 className="text-2xl font-bold text-white">Payment confirmed</h1>
-        <p className="text-sm text-neutral-400 mt-1.5">
-          {next ? 'Thank you! Taking you to your confirmation in a few seconds…' : 'Thank you! Your subscription is paid and your service is active.'}
-        </p>
-        {next && (
-          <Link to={next} className="mt-4 inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-sky-300 via-indigo-400 to-violet-500 text-white text-sm font-bold px-5 py-2.5 shadow-lg shadow-indigo-500/20 hover:brightness-110 pay-no-print">
-            Continue now <ArrowRight className="w-4 h-4" />
-          </Link>
+
+        {/* Amount */}
+        <div className="border-t border-[#f0f0f3] px-6 py-6">
+          <div className="flex items-center justify-between gap-3">
+            <span className="text-[13px] font-medium text-[#6e6e73]">Send exactly</span>
+            <Segmented
+              label="Amount unit"
+              value={unit}
+              onChange={setUnit}
+              options={[{ id: 'btc', text: 'BTC' }, { id: 'sats', text: 'sats' }]}
+            />
+          </div>
+          <button
+            type="button"
+            onClick={() => copy('amt', amountText)}
+            aria-label="Copy amount"
+            className="group mt-4 flex w-full items-center justify-between gap-4 text-left"
+          >
+            <span className="pay-mono min-w-0 break-all text-[22px] font-medium tracking-[-0.02em] tabular-nums">
+              {unit === 'sats' ? fmtSats(amountSats) : amountBtc}
+              <span className="ml-2 text-[14px] font-normal tracking-normal text-[#6e6e73]">{unit === 'btc' ? 'BTC' : 'sats'}</span>
+            </span>
+            <CopyChip done={copied === 'amt'} />
+          </button>
+          <p className="mt-2 text-[13px] text-[#6e6e73]">
+            {inv.partial ? 'Remaining balance. ' : `About ${money(inv.usd)}. `}1 BTC = {rateText(inv.rateUsd)}
+          </p>
+        </div>
+
+        {/* Address */}
+        <div className="border-t border-[#f0f0f3] px-6 py-6">
+          <div className="flex items-center justify-between gap-3">
+            <span className="text-[13px] font-medium text-[#6e6e73]">Bitcoin address</span>
+            <button type="button" onClick={() => copy('addr', a)} aria-label="Copy address" className="group">
+              <CopyChip done={copied === 'addr'} />
+            </button>
+          </div>
+          <p className="pay-mono mt-4 select-all break-all text-[14px] leading-[1.9]">
+            {parts.map((c, i, arr) => {
+              const edge = i < 2 || i >= arr.length - 2;
+              return <span key={i} className={`mr-2 inline-block ${edge ? 'font-semibold text-[#1d1d1f]' : 'text-[#6e6e73]'}`}>{c}</span>;
+            })}
+          </p>
+          <p className="mt-3 text-[13px] leading-5 text-[#6e6e73]">
+            Before you confirm, check that your wallet shows an address starting with{' '}
+            <span className="pay-mono font-medium text-[#1d1d1f]">{a.slice(0, 8)}</span> and ending with{' '}
+            <span className="pay-mono font-medium text-[#1d1d1f]">{a.slice(-8)}</span>. If it does not, stop.
+          </p>
+        </div>
+
+        {/* Status */}
+        {detected ? (
+          <div className="border-t border-[#f0f0f3] px-6 py-6">
+            <div className="flex items-center justify-between gap-3 text-[14px]">
+              <span className="inline-flex items-center gap-2 font-medium text-emerald-700" aria-live="polite">
+                <span className="h-2 w-2 rounded-full bg-emerald-500" /> Payment detected
+              </span>
+              <span className="tabular-nums text-[#6e6e73]">
+                {inv.requiredConf > 0 ? `${inv.confirmations} of ${inv.requiredConf} confirmations` : 'Confirming'}
+              </span>
+            </div>
+            <div className="mt-4 h-1 overflow-hidden rounded-full bg-[#f0f0f3]">
+              <div className="h-full rounded-full bg-emerald-500 transition-all duration-700" style={{ width: `${Math.max(6, confPct)}%` }} />
+            </div>
+            <p className="mt-4 text-[13px] leading-5 text-[#6e6e73]">
+              Each confirmation takes about 10 minutes. You can close this page and we will finish automatically.
+            </p>
+            {tx && (
+              <a href={tx} target="_blank" rel="noopener noreferrer" className={`mt-3 inline-flex items-center gap-1 text-[13px] ${linkCls}`}>
+                View transaction <ArrowUpRight className="h-3.5 w-3.5" />
+              </a>
+            )}
+          </div>
+        ) : (
+          <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 border-t border-[#f0f0f3] px-6 py-5 text-[14px]">
+            <span className="inline-flex items-center gap-2.5" aria-live="polite">
+              <span className="relative flex h-2 w-2">
+                <span className="pay-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-60" />
+                <span className="relative inline-flex h-2 w-2 rounded-full bg-amber-400" />
+              </span>
+              Waiting for payment
+            </span>
+            <span className="text-[#6e6e73]">Price locked for <PriceLock expiresAt={inv.expiresAt} /></span>
+          </div>
         )}
       </div>
 
-      <div className="mt-7 rounded-xl border border-white/10 bg-black/30 divide-y divide-white/5 text-sm">
-        <Row k="Receipt for" v={`${meta.title}${inv.label ? ` — ${inv.label}` : ''}`} />
-        <Row k="Amount" v={`$${inv.usd.toFixed(2)} USD`} />
+      <div className="mt-6 space-y-3">
+        <a href={inv.uri} className={primaryBtn}>
+          <Wallet className="h-[18px] w-[18px]" strokeWidth={1.75} /> Open in wallet
+        </a>
+        <button type="button" onClick={refresh} disabled={busy} className={secondaryBtn}>
+          <RefreshCw className={`h-4 w-4 ${busy ? 'animate-spin' : ''}`} strokeWidth={1.75} /> I've paid, check now
+        </button>
+      </div>
+
+      <p className="mx-auto mt-6 max-w-[360px] text-center text-[13px] leading-5 text-[#6e6e73]">
+        Send the exact amount, your wallet adds the network fee. On-chain Bitcoin only. Lightning is not supported.
+      </p>
+    </>
+  );
+}
+
+/* Confirmed */
+function ConfirmedCard({ inv, meta, next, copy, copied }) {
+  const tx = txLink(inv);
+  return (
+    <div className="pay-receipt pt-4 text-center">
+      <div className="mx-auto grid h-14 w-14 place-items-center rounded-full bg-emerald-500">
+        <svg viewBox="0 0 24 24" className="h-7 w-7" fill="none" stroke="#fff" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <path className="pay-draw" d="M5.5 12.5l4.2 4.2L18.5 7.8" />
+        </svg>
+      </div>
+      <h1 className="mt-8 text-[30px] font-semibold tracking-[-0.03em]">Payment confirmed</h1>
+      <p className="mx-auto mt-3 max-w-[340px] text-[15px] leading-6 text-[#6e6e73]">
+        {next ? 'Thank you. Taking you to your confirmation in a few seconds.' : 'Thank you. Your subscription is paid and your service is active.'}
+      </p>
+
+      <div className="pay-no-print mx-auto mt-8 flex max-w-[320px] flex-col gap-3">
+        {next && <Link to={next} className={primaryBtn}>Continue</Link>}
+        <button type="button" onClick={() => window.print()} className={secondaryBtn}>
+          <Printer className="h-4 w-4" strokeWidth={1.75} /> Print or save receipt
+        </button>
+      </div>
+
+      <dl className="mt-14 divide-y divide-[#f0f0f3] border-y border-[#f0f0f3] text-left">
+        <Row k="Receipt for" v={`${meta.title}${inv.label ? `, ${inv.label}` : ''}`} />
+        <Row k="Amount" v={`${money(inv.usd)} USD`} />
         <Row k="Bitcoin paid" v={`${inv.btc} BTC`} mono />
-        <Row k="Rate used" v={`1 BTC = $${Number(inv.rateUsd).toLocaleString()}`} />
+        <Row k="Rate used" v={`1 BTC = ${rateText(inv.rateUsd)}`} />
         <Row k="Network" v={inv.network === 'mainnet' ? 'Bitcoin mainnet' : `${inv.network} (test)`} />
         <Row k="Confirmed" v={when(inv.paidAt)} />
         <Row k="Invoice ID" v={inv.id} mono small action={<CopyBtn onClick={() => copy('id', inv.id)} done={copied === 'id'} />} />
-        {inv.txid && <Row k="Transaction" v={inv.txid} mono small action={tx && <a href={tx} target="_blank" rel="noopener noreferrer" className="text-amber-300 hover:text-amber-200 pay-no-print" aria-label="View transaction"><ExternalLink className="w-4 h-4" /></a>} />}
-      </div>
+        {inv.txid && (
+          <Row
+            k="Transaction"
+            v={inv.txid}
+            mono
+            small
+            action={tx && (
+              <a href={tx} target="_blank" rel="noopener noreferrer" aria-label="View transaction" className="pay-no-print grid h-7 w-7 shrink-0 place-items-center rounded-full text-[#6e6e73] transition-colors hover:bg-[#f5f5f7] hover:text-[#1d1d1f]">
+                <ArrowUpRight className="h-4 w-4" />
+              </a>
+            )}
+          />
+        )}
+      </dl>
 
-      <div className="mt-5 flex flex-wrap gap-3 justify-center pay-no-print">
-        <button onClick={() => window.print()} className="inline-flex items-center gap-2 rounded-xl border border-white/15 bg-white/[0.04] hover:bg-white/10 px-4 py-2.5 text-sm font-medium text-neutral-200">
-          <Printer className="w-4 h-4" /> Print / save receipt
-        </button>
-        <Link to="/" className="inline-flex items-center gap-2 rounded-xl border border-white/15 bg-white/[0.04] hover:bg-white/10 px-4 py-2.5 text-sm font-medium text-neutral-200">Back to PlanIt</Link>
-      </div>
-      <p className="text-[11px] text-neutral-500 text-center mt-4">Keep your invoice ID. We don't email receipts — this page is your proof of payment.</p>
+      <p className="mt-6 text-[13px] leading-5 text-[#6e6e73]">Keep your invoice ID. We do not email receipts, so this page is your proof of payment.</p>
+      <Link to="/" className={`pay-no-print mt-6 inline-block text-[14px] ${linkCls}`}>Back to PlanIt</Link>
     </div>
   );
 }
 
-const Row = ({ k, v, mono, small, action }) => (
-  <div className="flex items-start justify-between gap-4 px-4 py-2.5">
-    <span className="text-neutral-400 shrink-0">{k}</span>
-    <span className={`text-right text-neutral-100 min-w-0 break-all ${mono ? 'font-mono' : ''} ${small ? 'text-[11px] leading-5' : ''} flex items-center gap-2 justify-end`}>
-      <span className="min-w-0">{v}</span>{action}
-    </span>
-  </div>
-);
-const CopyBtn = ({ onClick, done }) => (
-  <button onClick={onClick} className="p-1 rounded-md text-neutral-400 hover:text-white pay-no-print" aria-label="Copy">
-    {done ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
-  </button>
-);
-
-/* ── Expired / Review / Rejected ──────────────────────────────────────────── */
+/* Expired / Review / Rejected */
 function ExpiredCard({ busy, requote, error, inv }) {
   return (
-    <div className={`${glass} p-8 text-center`}>
-      <div className="w-16 h-16 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center mx-auto mb-5"><Clock className="w-8 h-8 text-neutral-400" /></div>
-      <h1 className="text-xl font-bold text-white mb-2">This quote expired</h1>
-      <p className="text-sm text-neutral-400 max-w-sm mx-auto mb-6">Bitcoin's price moves, so each quote is only held for a short time. <strong className="text-neutral-200">Nothing was charged.</strong> Get a fresh quote to continue — it takes a second.</p>
-      <button onClick={requote} disabled={busy} className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-sky-300 via-indigo-400 to-violet-500 text-white text-sm font-bold px-6 py-3 shadow-lg shadow-indigo-500/20 hover:brightness-110 disabled:opacity-60">
-        {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />} Get a new quote
-      </button>
-      {error && <p className="text-xs text-red-300 mt-3">{error}</p>}
-      <div className="mt-6 text-xs text-neutral-500 border-t border-white/10 pt-4">
-        Already sent a payment to the old address? Don't send it again — it will be flagged for a person to review automatically. Keep invoice ID <span className="font-mono text-neutral-300">{inv.id.slice(0, 8)}</span>.
+    <div className="pt-4 text-center">
+      <IconBadge><Clock className="h-5 w-5 text-[#1d1d1f]" strokeWidth={1.75} /></IconBadge>
+      <h1 className="mt-7 text-[26px] font-semibold tracking-[-0.03em]">This quote expired</h1>
+      <p className="mx-auto mt-3 max-w-[340px] text-[15px] leading-6 text-[#6e6e73]">
+        Bitcoin's price moves, so each quote is only held for a short time. <strong className="font-medium text-[#1d1d1f]">Nothing was charged.</strong> Get a fresh quote to continue.
+      </p>
+      <div className="mx-auto mt-8 max-w-[320px]">
+        <button type="button" onClick={requote} disabled={busy} className={primaryBtn}>
+          {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" strokeWidth={1.75} />} Get a new quote
+        </button>
       </div>
+      {error && <p className="mt-4 text-[13px] text-red-600" role="alert">{error}</p>}
+      <p className="mx-auto mt-12 max-w-[360px] border-t border-[#f0f0f3] pt-6 text-[13px] leading-5 text-[#6e6e73]">
+        Already sent a payment to the old address? Do not send it again. It will be flagged for a person to review automatically. Keep invoice ID{' '}
+        <span className="pay-mono text-[#1d1d1f]">{inv.id.slice(0, 8)}</span>.
+      </p>
     </div>
   );
 }
@@ -637,166 +745,189 @@ function ExpiredCard({ busy, requote, error, inv }) {
 function ReviewCard({ inv, copy, copied }) {
   const tx = txLink(inv);
   return (
-    <div className={`${glass} p-8 text-center`}>
-      <div className="w-16 h-16 rounded-2xl bg-amber-400/10 border border-amber-400/30 flex items-center justify-center mx-auto mb-5"><LifeBuoy className="w-8 h-8 text-amber-300" /></div>
-      <h1 className="text-xl font-bold text-white mb-2">We're reviewing your payment</h1>
-      <p className="text-sm text-neutral-300 max-w-md mx-auto">
-        A payment arrived that doesn't exactly match this order — for example it came after the quote expired, or it was a partial amount.
-        A person will review it. <strong className="text-white">Please don't send it again.</strong>
+    <div className="pt-4 text-center">
+      <IconBadge><LifeBuoy className="h-5 w-5 text-[#1d1d1f]" strokeWidth={1.75} /></IconBadge>
+      <h1 className="mt-7 text-[26px] font-semibold tracking-[-0.03em]">We're reviewing your payment</h1>
+      <p className="mx-auto mt-3 max-w-[360px] text-[15px] leading-6 text-[#6e6e73]">
+        A payment arrived that does not exactly match this order. For example, it came after the quote expired, or it was a partial amount. A person will review it.{' '}
+        <strong className="font-medium text-[#1d1d1f]">Please do not send it again.</strong>
       </p>
-      <div className="mt-5 rounded-xl bg-black/30 border border-white/10 p-4 text-left text-sm space-y-2">
-        <div className="flex justify-between gap-3"><span className="text-neutral-400">Invoice ID</span>
-          <span className="font-mono text-xs text-neutral-100 flex items-center gap-2 break-all">{inv.id}<CopyBtn onClick={() => copy('id', inv.id)} done={copied === 'id'} /></span></div>
-        <div className="flex justify-between gap-3"><span className="text-neutral-400">Received so far</span><span className="font-mono text-neutral-100">{fmtSats(inv.seenSats)} sats</span></div>
-        <div className="flex justify-between gap-3"><span className="text-neutral-400">Order total</span><span className="font-mono text-neutral-100">{fmtSats(inv.sats)} sats</span></div>
-      </div>
-      {tx && <a href={tx} target="_blank" rel="noopener noreferrer" className="mt-4 inline-flex items-center gap-1 text-xs text-amber-300 hover:text-amber-200">View your transaction <ExternalLink className="w-3 h-3" /></a>}
-      <p className="text-xs text-neutral-500 mt-4">Questions? Email <a className="text-amber-300 underline underline-offset-2" href={`mailto:${SUPPORT_EMAIL}?subject=Payment%20review%20${inv.id.slice(0, 8)}`}>{SUPPORT_EMAIL}</a> with your invoice ID.</p>
+      <dl className="mt-10 divide-y divide-[#f0f0f3] border-y border-[#f0f0f3] text-left">
+        <Row k="Invoice ID" v={inv.id} mono small action={<CopyBtn onClick={() => copy('id', inv.id)} done={copied === 'id'} />} />
+        <Row k="Received so far" v={`${fmtSats(inv.seenSats)} sats`} mono />
+        <Row k="Order total" v={`${fmtSats(inv.sats)} sats`} mono />
+      </dl>
+      {tx && (
+        <a href={tx} target="_blank" rel="noopener noreferrer" className={`mt-6 inline-flex items-center gap-1 text-[14px] ${linkCls}`}>
+          View your transaction <ArrowUpRight className="h-3.5 w-3.5" />
+        </a>
+      )}
+      <p className="mt-6 text-[13px] leading-5 text-[#6e6e73]">
+        Questions? Email <a className={linkCls} href={`mailto:${SUPPORT_EMAIL}?subject=Payment%20review%20${inv.id.slice(0, 8)}`}>{SUPPORT_EMAIL}</a> with your invoice ID.
+      </p>
     </div>
   );
 }
 
 function RejectedCard({ inv }) {
   return (
-    <div className={`${glass} p-8 text-center`}>
-      <div className="w-16 h-16 rounded-2xl bg-red-500/10 border border-red-400/30 flex items-center justify-center mx-auto mb-5"><XCircle className="w-8 h-8 text-red-300" /></div>
-      <h1 className="text-xl font-bold text-white mb-2">Payment not accepted</h1>
-      <p className="text-sm text-neutral-300 max-w-sm mx-auto">This payment couldn't be accepted for this order. Please email <a className="text-amber-300 underline underline-offset-2" href={`mailto:${SUPPORT_EMAIL}?subject=Rejected%20payment%20${inv.id.slice(0, 8)}`}>{SUPPORT_EMAIL}</a> with invoice ID <span className="font-mono text-neutral-100">{inv.id.slice(0, 8)}</span> and we'll sort it out.</p>
+    <div className="pt-4 text-center">
+      <IconBadge><XCircle className="h-5 w-5 text-red-500" strokeWidth={1.75} /></IconBadge>
+      <h1 className="mt-7 text-[26px] font-semibold tracking-[-0.03em]">Payment not accepted</h1>
+      <p className="mx-auto mt-3 max-w-[340px] text-[15px] leading-6 text-[#6e6e73]">
+        This payment could not be accepted for this order. Please email{' '}
+        <a className={linkCls} href={`mailto:${SUPPORT_EMAIL}?subject=Rejected%20payment%20${inv.id.slice(0, 8)}`}>{SUPPORT_EMAIL}</a>{' '}
+        with invoice ID <span className="pay-mono text-[#1d1d1f]">{inv.id.slice(0, 8)}</span> and we will sort it out.
+      </p>
     </div>
   );
 }
 
-/* ── Sidebar ──────────────────────────────────────────────────────────────── */
-function OrderSummary({ inv, meta }) {
-  const Icon = meta.icon;
+/* Sheets */
+function DetailsSheet({ inv, meta, copy, copied }) {
   return (
-    <section className={`${glass} p-5 pay-receipt`} aria-label="Order summary">
-      <h2 className="flex items-center gap-2 text-sm font-bold text-white mb-3"><Receipt className="w-4 h-4 text-amber-300" /> Order summary</h2>
-      <div className="flex items-center gap-3 pb-3 border-b border-white/10">
-        <span className="w-9 h-9 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center"><Icon className="w-4 h-4 text-amber-300" /></span>
-        <div className="min-w-0"><div className="text-sm font-semibold text-white truncate">{meta.title}</div><div className="text-xs text-neutral-400 truncate">{inv.label || meta.sub}</div></div>
-        <div className="ml-auto text-lg font-bold text-white">${inv.usd.toFixed(2)}</div>
-      </div>
-      <dl className="mt-3 space-y-2 text-xs">
-        <Kv k="Total in Bitcoin" v={`${inv.btc} BTC`} mono />
-        <Kv k="Exchange rate" v={`$${Number(inv.rateUsd).toLocaleString()} / BTC`} />
-        <Kv k="Network fee" v="Paid by you, in your wallet" />
-        <Kv k="PlanIt fee" v="None — you pay the price shown" />
-        <Kv k="Confirmations" v={inv.requiredConf === 0 ? 'Instant (0)' : `${inv.requiredConf} (≈ ${inv.requiredConf * 10} min)`} />
-        <Kv k="Created" v={when(inv.createdAt)} />
-        <Kv k="Invoice ID" v={`${inv.id.slice(0, 8)}…${inv.id.slice(-4)}`} mono />
-      </dl>
-    </section>
+    <dl className="divide-y divide-[#f0f0f3]">
+      <Row k="Item" v={`${meta.title}${inv.label ? `, ${inv.label}` : ''}`} />
+      <Row k="Total" v={money(inv.usd)} />
+      <Row k="Total in Bitcoin" v={`${inv.btc} BTC`} mono />
+      <Row k="Exchange rate" v={`${rateText(inv.rateUsd)} per BTC`} />
+      <Row k="Network fee" v="Paid by you, in your wallet" />
+      <Row k="PlanIt fee" v="None, you pay the price shown" />
+      <Row k="Confirmations" v={inv.requiredConf === 0 ? 'Instant' : `${inv.requiredConf} (about ${inv.requiredConf * 10} min)`} />
+      <Row k="Created" v={when(inv.createdAt)} />
+      <Row k="Invoice ID" v={inv.id} mono small action={<CopyBtn onClick={() => copy('id', inv.id)} done={copied === 'id'} />} />
+    </dl>
   );
 }
-const Kv = ({ k, v, mono }) => (
-  <div className="flex justify-between gap-3"><dt className="text-neutral-400">{k}</dt><dd className={`text-right text-neutral-100 ${mono ? 'font-mono' : ''}`}>{v}</dd></div>
-);
 
-function HowToPay() {
-  const tabs = [
-    { id: 'phone', label: 'Phone wallet', icon: Smartphone, steps: [
-      'Open your Bitcoin wallet (e.g. Proton Wallet, Blue Wallet, Muun, Cash App) and tap Send.',
-      'Tap the scan icon and point the camera at the QR code — or tap "Open in wallet app".',
-      'Check the address ends match and the amount equals what is shown.',
-      'Confirm. This page flips to "Payment detected" within seconds.',
-    ] },
-    { id: 'exchange', label: 'Exchange', icon: Landmark, steps: [
-      'In Coinbase, Kraken, Cash App, Strike, etc., choose Send / Withdraw → Bitcoin (on-chain, not Lightning).',
-      'Paste the address and enter the BTC amount. Use "Copy" above to avoid typos.',
-      'Make sure the amount RECEIVED equals the amount shown. If the exchange subtracts its fee from the amount, raise the withdrawal so the full amount arrives.',
-      'Some exchanges hold withdrawals for review — if that takes longer than the timer, you may be asked to get a fresh quote or we will review it manually.',
-    ] },
-    { id: 'desktop', label: 'Desktop wallet', icon: Monitor, steps: [
-      'In Sparrow, Electrum, or Proton Wallet choose Send.',
-      'Paste the address and the amount. Turn OFF "subtract fee from amount".',
-      'Pick a normal fee. Higher fee = faster confirmation; very low fees can stall.',
-      'Review the address ends, then sign and broadcast.',
-    ] },
-  ];
+const HOW_TABS = [
+  { id: 'phone', text: 'Phone', icon: Smartphone, steps: [
+    'Open your Bitcoin wallet (for example Proton Wallet, Blue Wallet, Muun or Cash App) and tap Send.',
+    'Tap the scan icon and point the camera at the QR code, or tap Open in wallet.',
+    'Check that the address ends match and the amount equals what is shown.',
+    'Confirm. This page switches to Payment detected within seconds.',
+  ] },
+  { id: 'exchange', text: 'Exchange', icon: Landmark, steps: [
+    'In Coinbase, Kraken, Cash App, Strike or similar, choose Send or Withdraw, then Bitcoin (on-chain, not Lightning).',
+    'Paste the address and enter the BTC amount. Use Copy on the page to avoid typos.',
+    'Make sure the amount received equals the amount shown. If the exchange subtracts its fee from the amount, raise the withdrawal so the full amount arrives.',
+    'Some exchanges hold withdrawals for review. If that takes longer than the timer, you may be asked to get a fresh quote, or we will review it manually.',
+  ] },
+  { id: 'desktop', text: 'Desktop', icon: Monitor, steps: [
+    'In Sparrow, Electrum or Proton Wallet, choose Send.',
+    'Paste the address and the amount. Turn off "subtract fee from amount".',
+    'Pick a normal fee. A higher fee confirms faster, and very low fees can stall.',
+    'Review the address ends, then sign and broadcast.',
+  ] },
+];
+
+function HowSheet() {
   const [tab, setTab] = useState('phone');
-  const cur = tabs.find((t) => t.id === tab);
+  const cur = HOW_TABS.find((t) => t.id === tab);
   return (
-    <section className={`${glass} p-5`} aria-label="How to pay">
-      <h2 className="flex items-center gap-2 text-sm font-bold text-white mb-3"><Wallet className="w-4 h-4 text-amber-300" /> How to pay</h2>
-      <div className="flex gap-1.5 p-1 rounded-xl bg-black/30 border border-white/10" role="tablist">
-        {tabs.map((t) => (
-          <button key={t.id} role="tab" aria-selected={tab === t.id} onClick={() => setTab(t.id)}
-            className={`flex-1 inline-flex items-center justify-center gap-1.5 rounded-lg py-1.5 text-[11px] font-semibold transition-colors ${tab === t.id ? 'bg-white/10 text-white' : 'text-neutral-400 hover:text-neutral-200'}`}>
-            <t.icon className="w-3.5 h-3.5" /> {t.label}
-          </button>
-        ))}
-      </div>
-      <ol className="mt-4 space-y-3">
+    <div>
+      <Segmented full tabs label="Payment method" value={tab} onChange={setTab} options={HOW_TABS} />
+      <ol className="mt-8 space-y-6">
         {cur.steps.map((s, i) => (
-          <li key={i} className="flex gap-3 text-xs text-neutral-300 leading-relaxed">
-            <span className="w-5 h-5 rounded-full bg-amber-400/15 border border-amber-400/30 text-amber-200 text-[10px] font-bold flex items-center justify-center shrink-0 mt-0.5">{i + 1}</span>
-            <span>{s}</span>
+          <li key={s} className="flex gap-4">
+            <span className="mt-0.5 grid h-6 w-6 shrink-0 place-items-center rounded-full bg-[#f5f5f7] text-[12px] font-medium tabular-nums text-[#6e6e73]">{i + 1}</span>
+            <span className="text-[15px] leading-6 text-[#1d1d1f]">{s}</span>
           </li>
         ))}
       </ol>
-      <Link to="/help#btc-how-to-pay" className="mt-4 inline-flex items-center gap-1 text-xs font-semibold text-amber-300 hover:text-amber-200">Full step-by-step guide <ArrowRight className="w-3 h-3" /></Link>
-    </section>
+      <Link to="/help#btc-how-to-pay" className={`mt-8 inline-flex items-center gap-1 text-[14px] ${linkCls}`}>Read the full guide</Link>
+    </div>
   );
 }
 
-function SecurityPanel({ integrity }) {
-  const items = [
-    { icon: KeyRound, t: 'We can’t spend your money — or ours', d: 'PlanIt’s server only holds a public, watch-only key. It can create receive addresses but can never move funds, so a server breach can’t drain the wallet.' },
-    { icon: Fingerprint, t: 'A fresh address for every order', d: 'Each invoice gets its own never-used address, checked on the blockchain before it’s shown to you.' },
-    { icon: ShieldCheck, t: 'Price and address are set by our server', d: 'Your browser never supplies an amount or address, so neither can be altered by the link you opened.' },
-    { icon: EyeOff, t: 'Your email is encrypted, then erased', d: 'Stored with AES-256-GCM and wiped once your order is fulfilled. IP addresses are kept only as one-way hashes for abuse limits.' },
-    { icon: Lock, t: 'No account. No card.', d: 'Nothing to hack or leak: no card numbers, no saved payment method, no password.' },
-  ];
+const SECURITY_ITEMS = [
+  { icon: KeyRound, t: 'The server cannot spend funds', d: 'PlanIt’s server only holds a public, watch-only key. It can create receive addresses but can never move funds, so a server breach cannot drain the wallet.' },
+  { icon: Fingerprint, t: 'A fresh address for every order', d: 'Each invoice gets its own never-used address, checked on the blockchain before it is shown to you.' },
+  { icon: ShieldCheck, t: 'Price and address come from our server', d: 'Your browser never supplies an amount or address, so neither can be altered by the link you opened.' },
+  { icon: EyeOff, t: 'Your email is encrypted, then erased', d: 'Stored with AES-256-GCM and wiped once your order is fulfilled. IP addresses are kept only as one-way hashes for abuse limits.' },
+  { icon: Lock, t: 'No account, no card', d: 'Nothing to hack or leak. No card numbers, no saved payment method, no password.' },
+];
+
+function SecuritySheet({ integrity, active }) {
   return (
-    <section className={`${glass} p-5`} aria-label="Security">
-      <h2 className="flex items-center gap-2 text-sm font-bold text-white mb-1"><ShieldCheck className="w-4 h-4 text-emerald-400" /> Why this is safe</h2>
-      <p className="text-[11px] text-neutral-500 mb-3">{integrity?.ok === false ? 'Safety checks failed on this page — see the warning.' : 'Built so there’s very little to trust.'}</p>
-      <ul className="space-y-3">
-        {items.map(({ icon: I, t, d }) => (
-          <li key={t} className="flex gap-3">
-            <span className="w-8 h-8 shrink-0 rounded-lg bg-emerald-400/10 border border-emerald-400/20 flex items-center justify-center"><I className="w-4 h-4 text-emerald-300" /></span>
-            <div><div className="text-xs font-semibold text-white">{t}</div><div className="text-[11px] text-neutral-400 leading-relaxed mt-0.5">{d}</div></div>
+    <div>
+      <ul className="space-y-6">
+        {SECURITY_ITEMS.map(({ icon: I, t, d }) => (
+          <li key={t} className="flex gap-4">
+            <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-[#f5f5f7]"><I className="h-[18px] w-[18px] text-[#1d1d1f]" strokeWidth={1.75} /></span>
+            <div>
+              <div className="text-[15px] font-medium">{t}</div>
+              <div className="mt-1 text-[14px] leading-6 text-[#6e6e73]">{d}</div>
+            </div>
           </li>
         ))}
       </ul>
-      <div className="mt-4 rounded-xl bg-amber-400/[0.07] border border-amber-400/20 p-3 text-[11px] text-amber-100/90 leading-relaxed">
-        <strong className="text-amber-200">Stay safe from scams:</strong> only pay the address shown on this page, on this website. If anyone messages you a different address "for PlanIt", don't pay it. Bitcoin payments can’t be reversed.
+
+      {active && integrity?.checks?.length > 0 && (
+        <div className="mt-10 border-t border-[#f0f0f3] pt-8">
+          <h3 className="text-[15px] font-medium">Checks on this page</h3>
+          <ul className="mt-4 space-y-3">
+            {integrity.checks.map((c) => (
+              <li key={c.id} className="flex gap-3 text-[14px] leading-6">
+                {c.ok
+                  ? <Check className="mt-1 h-4 w-4 shrink-0 text-emerald-600" />
+                  : <X className="mt-1 h-4 w-4 shrink-0 text-red-600" />}
+                <span className={c.ok ? 'text-[#1d1d1f]' : 'text-red-700'}>{c.ok ? c.label : c.bad}</span>
+              </li>
+            ))}
+          </ul>
+          <p className="mt-4 text-[13px] leading-5 text-[#6e6e73]">These run in your browser on the data this page received. They do not replace comparing the address in your own wallet.</p>
+        </div>
+      )}
+
+      <div className="mt-10 rounded-2xl bg-[#f5f5f7] px-5 py-4 text-[14px] leading-6">
+        <strong className="font-medium">Stay safe from scams.</strong> Only pay the address shown on this page, on this website. If anyone messages you a different address for PlanIt, do not pay it. Bitcoin payments cannot be reversed.
       </div>
-    </section>
+    </div>
   );
 }
 
-/* ── FAQ ──────────────────────────────────────────────────────────────────── */
-function Faq() {
-  const [open, setOpen] = useState(0);
-  const items = [
-    { q: 'How long does it take?', a: 'Donations and small payments are accepted as soon as they appear on the network (seconds). Larger orders wait for 1–2 confirmations, roughly 10 minutes each. The page shows live progress, and you can safely close it — we keep watching the blockchain.' },
-    { q: 'Who pays the network fee?', a: 'You do, inside your wallet, on top of the amount shown. PlanIt doesn’t add any fee. For faster confirmation choose a higher fee in your wallet.' },
-    { q: 'I sent the wrong amount. What now?', a: 'Slightly under (within about 1%) is accepted. If you sent less than that, the page shows the remaining amount — send the difference to the same address. If you sent more, you’re still fine; contact us if you want to discuss the overpayment.' },
-    { q: 'I paid after the timer ran out.', a: 'Don’t panic and don’t pay twice. Late payments are flagged for a person to review, and the order is completed manually. Keep your invoice ID and email us if you don’t hear back.' },
-    { q: 'Can I pay with Lightning, PayPal or a card?', a: 'Not at the moment. PlanIt Payments accepts on-chain Bitcoin only.' },
-    { q: 'Can I get a refund?', a: 'Bitcoin transactions can’t be reversed, so refunds are handled manually and case by case. Email us with your invoice ID.' },
-  ];
+const FAQ_ITEMS = [
+  { q: 'How long does it take?', a: 'Donations and small payments are accepted as soon as they appear on the network, usually within seconds. Larger orders wait for 1 or 2 confirmations, roughly 10 minutes each. The page shows live progress, and you can safely close it. We keep watching the blockchain.' },
+  { q: 'Who pays the network fee?', a: 'You do, inside your wallet, on top of the amount shown. PlanIt does not add any fee. For faster confirmation choose a higher fee in your wallet.' },
+  { q: 'I sent the wrong amount. What now?', a: 'Slightly under (within about 1%) is accepted. If you sent less than that, the page shows the remaining amount, so send the difference to the same address. If you sent more, you are still fine. Contact us if you want to discuss the overpayment.' },
+  { q: 'I paid after the timer ran out.', a: 'Do not panic and do not pay twice. Late payments are flagged for a person to review, and the order is completed manually. Keep your invoice ID and email us if you do not hear back.' },
+  { q: 'Can I pay with Lightning, PayPal or a card?', a: 'Not at the moment. PlanIt Payments accepts on-chain Bitcoin only.' },
+  { q: 'Can I get a refund?', a: 'Bitcoin transactions cannot be reversed, so refunds are handled manually and case by case. Email us with your invoice ID.' },
+];
+
+function FaqSheet() {
+  const [open, setOpen] = useState(-1);
   return (
-    <section className={`${glass} p-5 sm:p-6`} aria-label="Frequently asked questions">
-      <h2 className="flex items-center gap-2 text-sm font-bold text-white mb-3"><Sparkles className="w-4 h-4 text-amber-300" /> Quick answers</h2>
-      <div className="divide-y divide-white/10">
-        {items.map((it, i) => (
-          <div key={it.q}>
-            <button onClick={() => setOpen(open === i ? -1 : i)} aria-expanded={open === i} className="w-full flex items-center justify-between gap-3 py-3 text-left">
-              <span className="text-sm font-medium text-neutral-100">{it.q}</span>
-              <ChevronDown className={`w-4 h-4 text-neutral-500 shrink-0 transition-transform ${open === i ? 'rotate-180' : ''}`} />
-            </button>
-            {open === i && <p className="pb-3.5 text-[13px] text-neutral-400 leading-relaxed">{it.a}</p>}
-          </div>
-        ))}
+    <div>
+      <div className="divide-y divide-[#f0f0f3] border-y border-[#f0f0f3]">
+        {FAQ_ITEMS.map((it, i) => {
+          const on = open === i;
+          return (
+            <div key={it.q}>
+              <button
+                type="button"
+                onClick={() => setOpen(on ? -1 : i)}
+                aria-expanded={on}
+                className="flex w-full items-center justify-between gap-4 py-4 text-left"
+              >
+                <span className="text-[15px] font-medium">{it.q}</span>
+                <ChevronDown className={`h-4 w-4 shrink-0 text-[#8e8e93] transition-transform duration-200 ${on ? 'rotate-180' : ''}`} />
+              </button>
+              <div className={`grid transition-[grid-template-rows] duration-200 ease-out ${on ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'}`}>
+                <div className="overflow-hidden">
+                  <p className={`pb-5 text-[14px] leading-6 text-[#6e6e73] ${on ? 'visible' : 'invisible [transition:visibility_0s_linear_0.2s]'}`}>{it.a}</p>
+                </div>
+              </div>
+            </div>
+          );
+        })}
       </div>
-      <div className="mt-4 flex flex-wrap gap-x-5 gap-y-2 text-xs">
-        <Link to="/help#btc-what-is-bitcoin" className="text-amber-300 hover:text-amber-200 inline-flex items-center gap-1">New to Bitcoin? <ArrowRight className="w-3 h-3" /></Link>
-        <Link to="/help#btc-how-to-pay" className="text-amber-300 hover:text-amber-200 inline-flex items-center gap-1">How to pay PlanIt <ArrowRight className="w-3 h-3" /></Link>
-        <Link to="/help#btc-pay-problems" className="text-amber-300 hover:text-amber-200 inline-flex items-center gap-1">Payment problems <ArrowRight className="w-3 h-3" /></Link>
+      <div className="mt-8 flex flex-col gap-3 text-[14px]">
+        <Link to="/help#btc-what-is-bitcoin" className={linkCls}>New to Bitcoin?</Link>
+        <Link to="/help#btc-how-to-pay" className={linkCls}>How to pay PlanIt</Link>
+        <Link to="/help#btc-pay-problems" className={linkCls}>Payment problems</Link>
       </div>
-    </section>
+    </div>
   );
 }
