@@ -521,6 +521,27 @@ function Summary({ inv, meta }) {
 
 /* Active (pending / detected) */
 function ActiveCard({ inv, amountBtc, amountSats, unit, setUnit, copy, copied, busy, refresh, qr, integrity }) {
+  // "Open in wallet" is a bitcoin: link. If no app on the device handles it, the browser
+  // stays put (Safari shows an error). We notice that and point to the QR code instead.
+  const [noWallet, setNoWallet] = useState(false);
+  const walletTimer = useRef(null);
+  useEffect(() => () => clearTimeout(walletTimer.current), []);
+  const openWallet = () => {
+    clearTimeout(walletTimer.current);
+    setNoWallet(false);
+    let left = false;
+    const leave = () => { left = true; };
+    window.addEventListener('blur', leave, { once: true });
+    window.addEventListener('pagehide', leave, { once: true });
+    document.addEventListener('visibilitychange', leave, { once: true });
+    walletTimer.current = setTimeout(() => {
+      window.removeEventListener('blur', leave);
+      window.removeEventListener('pagehide', leave);
+      document.removeEventListener('visibilitychange', leave);
+      if (!left) setNoWallet(true);
+    }, 1800);
+  };
+
   const detected = inv.status === 'detected';
   const confPct = inv.requiredConf > 0 ? Math.min(100, Math.round((inv.confirmations / inv.requiredConf) * 100)) : 100;
   const a = inv.address;
@@ -653,13 +674,24 @@ function ActiveCard({ inv, amountBtc, amountSats, unit, setUnit, copy, copied, b
       </div>
 
       <div className="mt-6 space-y-3">
-        <a href={inv.uri} className={primaryBtn}>
+        <a href={inv.uri} onClick={openWallet} className={primaryBtn}>
           <Wallet className="h-[18px] w-[18px]" strokeWidth={1.75} /> Open in wallet
         </a>
         <button type="button" onClick={refresh} disabled={busy} className={secondaryBtn}>
           <RefreshCw className={`h-4 w-4 ${busy ? 'animate-spin' : ''}`} strokeWidth={1.75} /> I've paid, check now
         </button>
       </div>
+
+      {noWallet && (
+        <div className="mt-4 rounded-2xl bg-[#f5f5f7] px-5 py-4 text-[14px] leading-6" role="status">
+          No wallet app opened. {inv.network !== 'mainnet'
+            ? 'Wallet apps usually cannot open test-network links, so copy the address and amount above instead.'
+            : 'Scan the QR code with a Bitcoin wallet app, or copy the address and amount above.'}
+          <button type="button" onClick={() => copy('uri', inv.uri)} className={`mt-1 block text-[14px] ${linkCls}`}>
+            {copied === 'uri' ? 'Copied' : 'Copy payment link'}
+          </button>
+        </div>
+      )}
 
       <p className="mx-auto mt-6 max-w-[360px] text-center text-[13px] leading-5 text-[#6e6e73]">
         Send the exact amount, your wallet adds the network fee. On-chain Bitcoin only. Lightning is not supported.
