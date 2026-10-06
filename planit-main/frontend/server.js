@@ -38,6 +38,7 @@ import path from 'node:path';
 import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { matchShareRoute } from './shareMeta.js';
+import { fetchPost, fetchPosts, buildPostPage, buildIndexPage, buildNotFoundPage } from './blogPrerender.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const DIST_DIR = path.join(__dirname, 'dist');
@@ -70,6 +71,12 @@ if (API_BASE.includes('localhost')) {
 // here. Intentionally doesn't try to catch generic search crawlers
 // (Googlebot etc.) — those already get index.html's default SEO tags.
 const BOT_UA_RE = /(facebookexternalhit|WhatsApp|Twitterbot|Slackbot|TelegramBot|Discordbot|LinkedInBot|SkypeUriPreview|Pinterest|redditbot|Applebot|iMessage|vkShare|Embedly|Iframely|SnapchatAds|Bitrix)/i;
+
+// Search-engine and AI crawlers. Unlike the link-preview bots above, these
+// don't just need a title: they need the page content itself in the HTML, because
+// many of them never run JavaScript (and Google runs it late). Blog pages get a
+// fully pre-rendered version for these (see blogPrerender.js). Add new crawlers here.
+const SEARCH_CRAWLER_RE = /(Googlebot|Google-InspectionTool|GoogleOther|AdsBot-Google|Storebot-Google|bingbot|BingPreview|msnbot|DuckDuckBot|YandexBot|Baiduspider|Slurp|Sogou|Qwantify|SeznamBot|GPTBot|ChatGPT-User|OAI-SearchBot|ClaudeBot|Claude-User|Claude-SearchBot|anthropic-ai|PerplexityBot|Perplexity-User|CCBot|Bytespider|Amazonbot|cohere-ai|meta-externalagent)/i;
 
 function escapeHtml(str) {
   return String(str).replace(/[&<>"']/g, (c) => ({
@@ -128,6 +135,33 @@ const app = express();
 app.disable('x-powered-by');
 app.set('trust proxy', true); // Render sits behind its own proxy/TLS terminator
 
+// /sitemap.xml — live, not the static file in public/. The static copy only listed
+// the blog posts that existed when it was written, so every new post was invisible
+// to search engines. This proxies the backend's dynamic sitemap (static pages + every
+// non-deleted blog post) with a 1-hour cache, and falls back to the static file if the
+// backend is unreachable. Registered BEFORE express.static so the static file can't win.
+let sitemapCache = { xml: null, expiresAt: 0 };
+app.get('/sitemap.xml', async (req, res) => {
+  try {
+    if (sitemapCache.xml && sitemapCache.expiresAt > Date.now()) {
+      res.set('Cache-Control', 'public, max-age=3600');
+      return res.type('application/xml').send(sitemapCache.xml);
+    }
+    const r = await fetch(`${API_BASE}/sitemap.xml`, {
+      headers: { 'User-Agent': 'PlanIt-Sitemap/1.0 (+https://planitapp.onrender.com)' },
+    });
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    const xml = await r.text();
+    if (!xml.includes('<urlset')) throw new Error('response was not a sitemap');
+    sitemapCache = { xml, expiresAt: Date.now() + 60 * 60 * 1000 };
+    res.set('Cache-Control', 'public, max-age=3600');
+    return res.type('application/xml').send(xml);
+  } catch (err) {
+    console.warn('[sitemap] live sitemap failed, serving static fallback:', err.message);
+    return res.sendFile(path.join(DIST_DIR, 'sitemap.xml'), (e) => { if (e) res.status(502).send('Sitemap unavailable'); });
+  }
+});
+
 // Hashed JS/CSS/image assets under dist/assets, etc. — served as-is, long
 // cache, exactly like a static site would (Vite fingerprints these
 // filenames, so caching them aggressively is always safe).
@@ -142,6 +176,38 @@ app.get('*', async (req, res, next) => {
 
     const ua = req.headers['user-agent'] || '';
     const isBotUA = BOT_UA_RE.test(ua);
+    const isSearchCrawler = SEARCH_CRAWLER_RE.test(ua);
+
+    // ── Blog pre-rendering for crawlers (Google, Bing, AI bots, link-preview bots) ──
+    // Visitors skip this entirely and get the normal SPA shell below.
+    if (isBotUA || isSearchCrawler) {
+      const cleanPath = req.path.replace(/\/+$/, '') || '/';
+      const postMatch = cleanPath.match(/^\/blog\/([a-z0-9-]+)$/i);
+      if (cleanPath === '/blog' || postMatch) {
+        let page = null;
+        let status = 200;
+        if (postMatch) {
+          const result = await fetchPost(API_BASE, postMatch[1].toLowerCase());
+          if (result.post) {
+            const list = await fetchPosts(API_BASE);
+            const sameCategory = (list.posts || []).filter((p) => p.category === result.post.category);
+            page = buildPostPage({ html, post: result.post, relatedPosts: sameCategory.length > 1 ? sameCategory : list.posts, injectMeta });
+          } else if (result.notFound) {
+            page = buildNotFoundPage({ html });
+            status = 404;
+          }
+        } else {
+          const list = await fetchPosts(API_BASE);
+          if (list.posts?.length) page = buildIndexPage({ html, posts: list.posts, injectMeta });
+        }
+        if (page) {
+          res.set('Cache-Control', 'public, max-age=300');
+          return res.status(status).type('html').send(page);
+        }
+        // Backend hiccup: fall through to the normal flow rather than serve a broken page.
+      }
+    }
+
     const routeMatch = matchShareRoute(req.path);
     if (isBotUA) {
       console.log('[share-preview debug]', JSON.stringify({
