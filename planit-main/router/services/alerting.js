@@ -76,7 +76,7 @@ const NTFY_PRIORITY = {
 };
 
 // Discord user to mention on every alert — set this to your Discord user ID
-const DISCORD_ALERT_USER = '1168575437723680850';
+const DISCORD_ALERT_USER = process.env.DISCORD_ALERT_USER_ID || '1168575437723680850';
 
 // ─── Deduplication ────────────────────────────────────────────────────────────
 
@@ -797,7 +797,7 @@ async function alertPayment({ title, content, fields = [], level = 'info', invoi
   }
 
   const adminUrl = _adminUrl();
-  const ping = lvl !== 'info';   // routine donations are silent; anything needing a human pings you
+  const ping = true;   // every payment alert pings the owner (<@DISCORD_ALERT_USER>)
 
   // ── Discord ──────────────────────────────────────────────────────────────
   const discordFields = [...safeFields];
@@ -828,7 +828,9 @@ async function alertPayment({ title, content, fields = [], level = 'info', invoi
   await _sendNtfy({
     title:    _plain(title, 120),
     body:     ntfyBody || _plain(title, 120),
-    priority: lvl === 'critical' ? 5 : (lvl === 'high' || lvl === 'medium') ? 4 : 3,
+    // 5 = ntfy 'max/urgent', the only priority that can break through Do Not Disturb
+    // (once the phone allows it). Override with NTFY_PAYMENT_PRIORITY=1..5 on the router.
+    priority: Math.min(5, Math.max(1, Number(process.env.NTFY_PAYMENT_PRIORITY) || 5)),
     tags:     PAYMENT_NTFY_TAGS[lvl],
     actions:  adminUrl ? `view, Open Admin, ${adminUrl}` : undefined,
     iconUrl:  APP_ICON_URL,
