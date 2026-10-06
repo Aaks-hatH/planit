@@ -24,8 +24,5 @@ Allow: /terms
 Allow: /privacy
 Allow: /license
 
-# Crawl-delay for polite crawling
-Crawl-delay: 1
-
 # Sitemaps
-Sitemap: https://planitapp.onrender.com/api/sitemap.xml
+Sitemap: https://planitapp.onrender.com/sitemap.xml
