@@ -383,8 +383,10 @@ router.post('/request', [
       const tierLabels = { basic: 'Basic ($149/mo)', pro: 'Pro ($249/mo)', enterprise: 'Enterprise ($499/mo)', unsure: 'Not sure yet' };
       const typeLabels = { restaurant: 'Restaurant', venue: 'Venue / Event Space', hotel: 'Hotel', corporate: 'Corporate', other: 'Other' };
       try {
+        const alertUser = process.env.DISCORD_ALERT_USER_ID || '1168575437723680850';
         await axios.post(discordUrl, {
-          content: `New white label inquiry from **${businessName}**`,
+          content: `<@${alertUser}> New white label inquiry from **${String(businessName).replace(/[@*_`~|>]/g, '')}**`,
+          allowed_mentions: { users: [alertUser] },
           embeds: [{
             title: 'White Label Sign-up Request',
             color: 0x6366f1,
