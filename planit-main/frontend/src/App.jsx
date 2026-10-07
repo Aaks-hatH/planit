@@ -272,7 +272,8 @@ function MaintenanceGate({ children }) {
 // ─── Home route — WL domains get their branded landing, PlanIt gets its own ──
 function HomeRoute() {
   const { isWL } = useWhiteLabel();
-  return isWL ? <WLHome /> : <Home />;
+  const launchWizard = new URLSearchParams(window.location.search).get('new') === '1';
+  return isWL && !launchWizard ? <WLHome /> : <Home />;
 }
 
 // ─── White-label suspended / blocked page ─────────────────────────────────────
