@@ -3260,6 +3260,14 @@ export default function Home() {
   const eventFormTimingRef = useRef({ pageLoadedAt: Date.now(), formStartedAt: 0, firstInputAt: 0, largestPasteChars: 0, largestPasteElapsedMs: 0 });
   // On white-label domains, skip the branch selector and go straight to event creation
   useEffect(() => { if (isWL) { setSelectedBranch('events'); setShowIntro(false); } }, [isWL]);
+  // The branded WL landing page links here so clients can launch the same
+  // protected, full-feature wizard used on the standard PlanIt homepage.
+  useEffect(() => {
+    if (isWL && new URLSearchParams(window.location.search).get('new') === '1') {
+      setSelectedBranch('events');
+      setWizardOpen(true);
+    }
+  }, [isWL]);
 
   // Close wizard on Escape key
   useEffect(() => {
@@ -3279,7 +3287,6 @@ export default function Home() {
   };
 
   const handleTitleChange = (e) => {
-    onUserInput?.();
     const title = e.target.value;
     setFormData(prev => ({ ...prev, title, subdomain: prev._subdomainTouched ? prev.subdomain : makeSubdomain(title) }));
   };
@@ -4908,22 +4915,23 @@ export default function Home() {
               {!created && (
                 <Reveal delay={80}>
                   <div className="sticky top-24">
-                    {/* Mode selector, lets you flip between Standard, Enterprise, and RSVP-only without leaving the wizard */}
-                    {(selectedBranch === 'events' || selectedBranch === 'rsvp') && (
+                    {/* Mode selector keeps the full set of WL event types available inside the same wizard. */}
+                    {(isWL || selectedBranch === 'events' || selectedBranch === 'rsvp') && (
                       <div style={{ display:'flex', gap:6, marginBottom:20, padding:'6px', background:'rgba(255,255,255,0.03)', borderRadius:14, border:'1px solid rgba(255,255,255,0.06)' }}>
                         {[
                           { val:'standard',   label:'Standard',   sub:'Team planning'  },
                           { val:'enterprise', label:'Enterprise', sub:'Large + QR'     },
                           { val:'rsvp',       label:'RSVP',       sub:'Just RSVPs'     },
+                          ...(isWL ? [{ val:'table-service', label:'Restaurant', sub:'Tables + bookings' }] : []),
                         ].map(({ val, label, sub }) => (
                           <button key={val} type="button" onClick={() => {
                               setMode(val);
                               setFormData(p => ({ ...p, isEnterpriseMode: val === 'enterprise' }));
                               setWizardKey(k => k + 1);
-                              const nextBranch = val === 'rsvp' ? 'rsvp' : 'events';
+                              const nextBranch = val === 'table-service' ? 'venue' : val === 'rsvp' ? 'rsvp' : 'events';
                               if (nextBranch !== selectedBranch) {
                                 setSelectedBranch(nextBranch);
-                                setTimeout(() => document.getElementById(nextBranch === 'rsvp' ? 'planit-rsvp' : 'planit-events')?.scrollIntoView({ behavior:'smooth', block:'start' }), 50);
+                                setTimeout(() => document.getElementById(nextBranch === 'venue' ? 'planit-venue' : nextBranch === 'rsvp' ? 'planit-rsvp' : 'planit-events')?.scrollIntoView({ behavior:'smooth', block:'start' }), 50);
                               }
                             }}
                             data-mode={val}
