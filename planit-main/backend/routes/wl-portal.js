@@ -246,6 +246,20 @@ router.get('/me', verifyWLClient, (req, res) => {
   });
 });
 
+// Tenant-scoped event picker used by the portal's homepage settings.
+router.get('/events', verifyWLClient, async (req, res) => {
+  try {
+    const Event = require('../models/Event');
+    const events = await Event.find({ wlDomain: req.wlClient.domain, status: 'active' })
+      .select('subdomain title date location status isTableServiceMode isEnterpriseMode eventType')
+      .sort({ createdAt: -1 }).lean();
+    res.json({ events });
+  } catch (err) {
+    console.error('[wl-portal] event list error', err.message);
+    res.status(500).json({ error: 'Could not load events.' });
+  }
+});
+
 // ─── PATCH /branding ──────────────────────────────────────────────────────────
 
 const HEX_COLOR = /^#[0-9a-fA-F]{3,8}$/;
@@ -316,6 +330,15 @@ router.patch('/pages', verifyWLClient, [
   if (!errors.isEmpty()) return res.status(400).json({ error: 'Validation failed.', details: errors.array() });
 
   const wl = req.wlClient;
+  const homepageSubdomain = req.body.home?.tableServiceEventId;
+  if (homepageSubdomain) {
+    const event = await require('../models/Event').findOne({
+      subdomain: String(homepageSubdomain).trim().toLowerCase(),
+      wlDomain: wl.domain,
+      status: 'active',
+    }).select('_id').lean();
+    if (!event) return res.status(400).json({ error: 'Choose an event that belongs to this white-label account.' });
+  }
   const PAGES = ['home', 'events', 'checkout', 'contact'];
   const PAGE_FIELDS = {
     home:     ['headline', 'subheadline', 'heroImageUrl', 'ctaText', 'showSearch', 'tableServiceEventId'],
@@ -357,7 +380,7 @@ router.patch('/features', verifyWLClient, [
 
   const wl  = req.wlClient;
   // Seating chart is pro+ only
-  if (req.body.showSeatingChart !== undefined && wl.tier === 'basic') {
+  if (req.body.showSeatingChart === true && wl.tier === 'basic') {
     return res.status(403).json({ error: 'Seating chart requires Pro or Enterprise tier.' });
   }
 
