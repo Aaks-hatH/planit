@@ -197,7 +197,7 @@ router.get('/resolve', async (req, res) => {
     const linkedSubdomain = wl.pages?.home?.tableServiceEventId?.trim();
     if (linkedSubdomain) {
       const Event = require('../models/Event');
-      const linked = await Event.findOne({ subdomain: linkedSubdomain.toLowerCase() })
+      const linked = await Event.findOne({ subdomain: linkedSubdomain.toLowerCase(), wlDomain: wl.domain, status: 'active' })
         .select('isTableServiceMode')
         .lean();
       if (linked) linkedEventKind = linked.isTableServiceMode ? 'table_service' : 'standard';
@@ -536,11 +536,15 @@ router.post('/', verifyAdmin, demoGuard, async (req, res) => {
       contactName, contactEmail, contactPhone,
       branding = {}, limits = {}, notes,
       billing = {},
+      portalPassword,
       keyValidDays = 365,
     } = req.body;
 
     if (!clientName || !domain) {
       return res.status(400).json({ error: 'clientName and domain are required' });
+    }
+    if (typeof portalPassword !== 'string' || portalPassword.trim().length < 12 || portalPassword.trim().length > 200) {
+      return res.status(400).json({ error: 'A client portal password of at least 12 characters is required.' });
     }
 
     const normalDomain = domain.toLowerCase().trim();
@@ -552,6 +556,7 @@ router.post('/', verifyAdmin, demoGuard, async (req, res) => {
     // Generate license key
     const { key, expiresAt } = generateLicenseKey(normalDomain, tier, keyValidDays);
 
+    const portalPasswordHash = await bcrypt.hash(portalPassword, 12);
     const wl = await WhiteLabel.create({
       clientName,
       domain: normalDomain,
@@ -584,11 +589,14 @@ router.post('/', verifyAdmin, demoGuard, async (req, res) => {
         monthlyAmount:  billing.monthlyAmount || 0,
         currency:       'usd',
       },
+      portal: { enabled: true, passwordHash: portalPasswordHash },
       notes,
     });
 
     console.log(`[whitelabel] Created ${wl._id} — ${clientName} (${normalDomain}) tier=${tier}`);
-    return res.status(201).json(wl);
+    const result = wl.toObject();
+    if (result.portal) delete result.portal.passwordHash;
+    return res.status(201).json(result);
   } catch (err) {
     console.error('[whitelabel] create error', err);
     if (err.code === 11000) return res.status(409).json({ error: 'domain_taken' });
@@ -628,6 +636,23 @@ router.patch('/:id', verifyAdmin, demoGuard, async (req, res) => {
 
     if (Object.keys(updates).length === 0) {
       return res.status(400).json({ error: 'no valid fields to update' });
+    }
+
+    if (req.body.features?.showSeatingChart === true) {
+      const currentTier = req.body.tier || (await WhiteLabel.findById(req.params.id).select('tier').lean())?.tier;
+      if (currentTier === 'basic') return res.status(400).json({ error: 'Seating chart requires Pro or Enterprise tier.' });
+    }
+
+    const requestedHomepageEvent = req.body.pages?.home?.tableServiceEventId;
+    if (requestedHomepageEvent) {
+      const current = await WhiteLabel.findById(req.params.id).select('domain').lean();
+      if (!current) return res.status(404).json({ error: 'not_found' });
+      const event = await require('../models/Event').findOne({
+        subdomain: String(requestedHomepageEvent).trim().toLowerCase(),
+        wlDomain: current.domain,
+        status: 'active',
+      }).select('_id').lean();
+      if (!event) return res.status(400).json({ error: 'Homepage event must belong to this client.' });
     }
 
     const wl = await WhiteLabel.findByIdAndUpdate(
@@ -763,12 +788,12 @@ router.get('/:id/latest-invoice', verifyAdmin, async (req, res) => {
 
 router.get('/:id/events', verifyAdmin, async (req, res) => {
   try {
-    const wl = await WhiteLabel.findById(req.params.id).select('domain limits').lean();
+    const wl = await WhiteLabel.findById(req.params.id).select('domain limits pages.home.tableServiceEventId').lean();
     if (!wl) return res.status(404).json({ error: 'not_found' });
 
     const Event = require('../models/Event');
     const events = await Event.find({ wlDomain: wl.domain })
-      .select('subdomain title date location status isTableServiceMode isEnterpriseMode createdAt participants')
+      .select('subdomain title date location status isTableServiceMode isEnterpriseMode eventType settings.isPublic createdAt participants')
       .sort({ createdAt: -1 })
       .lean();
 
@@ -777,13 +802,37 @@ router.get('/:id/events', verifyAdmin, async (req, res) => {
         id: e._id, subdomain: e.subdomain, title: e.title, date: e.date,
         location: e.location, status: e.status,
         isTableServiceMode: e.isTableServiceMode, isEnterpriseMode: e.isEnterpriseMode,
+        eventType: e.eventType, isPublic: e.settings?.isPublic === true,
         createdAt: e.createdAt, participantCount: e.participants?.length || 0,
       })),
       count: events.length,
       maxEvents: wl.limits?.maxEvents ?? null,
+      homepageEventSubdomain: wl.pages?.home?.tableServiceEventId || '',
     });
   } catch (err) {
     console.error('[whitelabel] list events error', err.message);
+    return res.status(500).json({ error: 'internal' });
+  }
+});
+
+// ─── Admin: Link a tenant-owned event as the white-label homepage ────────────
+router.patch('/:id/home-event', verifyAdmin, demoGuard, async (req, res) => {
+  try {
+    const wl = await WhiteLabel.findById(req.params.id).select('domain').lean();
+    if (!wl) return res.status(404).json({ error: 'not_found' });
+    const subdomain = String(req.body?.subdomain || '').trim().toLowerCase();
+    if (subdomain) {
+      const event = await require('../models/Event').findOne({ subdomain, wlDomain: wl.domain, status: 'active' }).select('_id').lean();
+      if (!event) return res.status(404).json({ error: 'event_not_found_or_not_owned' });
+    }
+    const updated = await WhiteLabel.findByIdAndUpdate(
+      wl._id,
+      { $set: { 'pages.home.tableServiceEventId': subdomain || null } },
+      { new: true, runValidators: true },
+    ).select('pages.home').lean();
+    return res.json({ ok: true, homepageEventSubdomain: updated?.pages?.home?.tableServiceEventId || '' });
+  } catch (err) {
+    console.error('[whitelabel] homepage event link error', err.message);
     return res.status(500).json({ error: 'internal' });
   }
 });
@@ -799,9 +848,14 @@ router.post('/:id/create-event', verifyAdmin, demoGuard, [
   body('title').trim().isLength({ min: 1, max: 200 }).withMessage('Title is required'),
   body('organizerName').trim().isLength({ min: 1, max: 100 }).withMessage('Organizer name is required'),
   body('organizerEmail').isEmail().normalizeEmail().withMessage('Valid organizer email is required'),
+  body('accountPassword').isString().isLength({ min: 4, max: 200 }).withMessage('Organizer account password must be at least 4 characters.'),
+  body('password').optional({ values: 'falsy' }).isString().isLength({ min: 6, max: 200 }).withMessage('Event password must be at least 6 characters.'),
+  body('staffPassword').optional({ values: 'falsy' }).isString().isLength({ min: 4, max: 200 }).withMessage('Staff password must be at least 4 characters.'),
   body('date').optional({ nullable: true }).isISO8601().withMessage('Date must be a valid ISO date'),
   body('isTableServiceMode').optional().isBoolean(),
   body('isEnterpriseMode').optional().isBoolean(),
+  body('showOnHome').optional().isBoolean(),
+  body('eventType').optional().isIn(['standard', 'rsvpOnly']),
 ], async (req, res) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) return res.status(400).json({ error: errors.array()[0].msg, fields: errors.array() });
@@ -825,6 +879,8 @@ router.post('/:id/create-event', verifyAdmin, demoGuard, [
       title, description = '', date = null, location = '',
       organizerName, organizerEmail,
       isTableServiceMode = false, isEnterpriseMode = false,
+      eventType = 'standard', accountPassword, password, staffPassword,
+      showOnHome = true,
       maxParticipants = 100,
     } = req.body;
 
@@ -844,8 +900,13 @@ router.post('/:id/create-event', verifyAdmin, demoGuard, [
     const event = new Event({
       subdomain, title, description, date: date || undefined, location,
       organizerName, organizerEmail,
+      password: password ? await bcrypt.hash(password, 10) : null,
+      isPasswordProtected: !!password,
       isEnterpriseMode: !!isEnterpriseMode,
       isTableServiceMode: !!isTableServiceMode,
+      eventType,
+      ...(eventType === 'rsvpOnly' ? { rsvpPage: { enabled: true } } : {}),
+      settings: { isPublic: !!showOnHome },
       maxParticipants,
       participants: [{ username: organizerName, role: 'organizer' }],
       wlDomain: wl.domain,
@@ -853,8 +914,15 @@ router.post('/:id/create-event', verifyAdmin, demoGuard, [
     await event.save();
 
     await EventParticipant.create({
-      eventId: event._id, username: organizerName, role: 'organizer', hasPassword: false,
+      eventId: event._id, username: organizerName, role: 'organizer',
+      password: await bcrypt.hash(accountPassword, 10), hasPassword: true,
     });
+    if (isTableServiceMode && staffPassword) {
+      await EventParticipant.create({
+        eventId: event._id, username: 'staff', role: 'staff',
+        password: await bcrypt.hash(staffPassword, 10), hasPassword: true,
+      });
+    }
 
     const { sendEventConfirmation } = require('../services/emailService');
     sendEventConfirmation(event).catch(() => {});
