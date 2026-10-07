@@ -109,6 +109,10 @@ export default function WLHome() {
           }
           <span style={{ fontWeight: 700, fontSize: '1rem', color: '#111', letterSpacing: '-0.02em' }}>{company}</span>
           <div style={{ flex: 1 }} />
+          <button onClick={() => navigate('/?new=1')}
+            style={{ fontSize: '0.8rem', fontWeight: 700, color: '#fff', background: primary, border: 0, cursor: 'pointer', padding: '8px 14px', borderRadius: 9 }}>
+            Create event
+          </button>
           {wl?.portalEnabled && (
             <a href="/dashboard"
               style={{ fontSize: '0.8rem', fontWeight: 600, color: primary, textDecoration: 'none', padding: '6px 14px', borderRadius: 8, border: `1.5px solid ${primary}33`, transition: 'background 0.15s' }}
@@ -283,7 +287,7 @@ function EventCard({ event, primary, accent, navigate }) {
 
   return (
     <div
-      onClick={() => navigate(`/e/${event.subdomain}`)}
+      onClick={() => navigate(event.isTableServiceMode ? `/e/${event.subdomain}/reserve` : `/e/${event.subdomain}`)}
       style={{
         background: '#fff', borderRadius: 16,
         border: '1.5px solid #e5e5e5',
