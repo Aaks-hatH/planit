@@ -293,6 +293,19 @@ function PagesSection({ data, branding, token, onUpdate, toast }) {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [tab, setTab] = useState('home');
+  const [tenantEvents, setTenantEvents] = useState([]);
+  const [eventsLoading, setEventsLoading] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    setEventsLoading(true);
+    fetch(`${API}/wl-portal/events`, { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => r.ok ? r.json() : { events: [] })
+      .then(j => { if (!cancelled) setTenantEvents(j.events || []); })
+      .catch(() => { if (!cancelled) setTenantEvents([]); })
+      .finally(() => { if (!cancelled) setEventsLoading(false); });
+    return () => { cancelled = true; };
+  }, [token]);
 
   const set = (page, k, v) => {
     setForm(f => ({ ...f, [page]: { ...f[page], [k]: v } }));
@@ -319,7 +332,7 @@ function PagesSection({ data, branding, token, onUpdate, toast }) {
 
   const TABS = [
     { id: 'home',        label: 'Home' },
-    { id: 'reservation', label: 'Linked Event' },
+    { id: 'reservation', label: 'Homepage link' },
     { id: 'events',      label: 'Events' },
     { id: 'checkout',    label: 'Checkout' },
     { id: 'contact',     label: 'Contact' },
@@ -328,7 +341,7 @@ function PagesSection({ data, branding, token, onUpdate, toast }) {
   return (
     <Card>
       <SectionHeader title="Page content" subtitle="Customize text and content shown on each page" />
-      <div className="flex border-b border-neutral-100">
+      <div className="flex overflow-x-auto border-b border-neutral-100">
         {TABS.map(t => (
           <button key={t.id} onClick={() => setTab(t.id)}
             className={`px-5 py-3 text-xs font-semibold transition-colors ${tab === t.id ? 'text-blue-600 border-b-2 border-blue-500 -mb-px' : 'text-neutral-500 hover:text-neutral-800'}`}>
@@ -355,20 +368,31 @@ function PagesSection({ data, branding, token, onUpdate, toast }) {
 
         {tab === 'reservation' && <>
           <Field
-            label="Linked homepage event"
-            hint="When set, your home page (/) redirects straight to this one event instead of showing the events grid — works for both table service venues and regular party/RSVP events. Paste the event subdomain from its URL — e.g. if your event lives at /e/nobu-downtown, enter nobu-downtown."
+            label="Homepage destination"
+            hint="Choose one event or restaurant to feature as the homepage destination. Only events created for this white-label account are listed."
           >
-            <Input
+            <select
               value={form.home.tableServiceEventId}
-              onChange={e => set('home', 'tableServiceEventId', e.target.value.trim())}
-              placeholder="e.g. nobu-downtown"
-              maxLength={200}
-            />
+              onChange={e => set('home', 'tableServiceEventId', e.target.value)}
+              className="w-full px-3 py-2.5 text-sm rounded-lg border border-neutral-200 bg-neutral-50 text-neutral-900 outline-none focus:ring-2 focus:ring-blue-100"
+            >
+              <option value="">Show the events grid (no featured destination)</option>
+              {form.home.tableServiceEventId && !tenantEvents.some(event => event.subdomain === form.home.tableServiceEventId) && (
+                <option value={form.home.tableServiceEventId}>Saved event is unavailable — choose the events grid to clear it</option>
+              )}
+              {tenantEvents.map(event => (
+                <option key={event.subdomain} value={event.subdomain}>
+                  {event.title}{event.isTableServiceMode ? ' · Restaurant' : event.eventType === 'rsvpOnly' ? ' · RSVP' : ' · Event'} — /e/{event.subdomain}
+                </option>
+              ))}
+            </select>
+            {eventsLoading && <p className="text-xs text-neutral-400 mt-1">Loading tenant events…</p>}
+            {!eventsLoading && tenantEvents.length === 0 && <p className="text-xs text-amber-700 mt-1">No tenant events yet. Create one from the branded homepage or admin dashboard first.</p>}
           </Field>
           {form.home.tableServiceEventId && (
             <div className="flex items-start gap-2 p-3 rounded-lg bg-blue-50 border border-blue-100 text-xs text-blue-700">
               <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" className="flex-shrink-0 mt-0.5"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
-              Guests visiting your home page will be redirected to <strong className="mx-1">/e/{form.home.tableServiceEventId}/reserve</strong> if that event has table service enabled, or <strong className="mx-1">/e/{form.home.tableServiceEventId}</strong> (its regular event space) otherwise. Make sure the event exists before saving.
+                  Guests visiting your home page will be sent to the linked event’s full guest experience: restaurants open their reservation flow, while standard/RSVP events open the event space.
             </div>
           )}
           {!form.home.tableServiceEventId && (
@@ -917,7 +941,7 @@ export default function ClientPortal() {
       {/* Main */}
       <div className="flex-1 flex flex-col min-w-0">
         {/* Top bar */}
-        <header className="h-14 flex items-center px-6 gap-4 bg-white" style={{ borderBottom: '1px solid #e5e5e5' }}>
+        <header className="h-14 flex items-center px-4 sm:px-6 gap-4 bg-white" style={{ borderBottom: '1px solid #e5e5e5' }}>
           <div>
             <span className="text-sm font-semibold text-neutral-900">
               {NAV.find(n => n.id === section)?.label}
@@ -932,8 +956,18 @@ export default function ClientPortal() {
           </button>
         </header>
 
+        <nav aria-label="Dashboard sections" className="md:hidden flex gap-2 overflow-x-auto px-3 py-2 bg-white border-b border-neutral-200">
+          {NAV.map(({ id, label, Icon }) => (
+            <button key={id} onClick={() => setSection(id)}
+              className={`shrink-0 inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold transition-colors ${section === id ? 'text-white' : 'text-neutral-600 bg-neutral-100'}`}
+              style={section === id ? { background: data.branding?.primaryColor || '#2563eb' } : {}}>
+              <Icon size={13} />{label}
+            </button>
+          ))}
+        </nav>
+
         {/* Content */}
-        <main className="flex-1 p-6 pb-24 md:pb-6 max-w-2xl w-full mx-auto">
+        <main className="flex-1 p-4 sm:p-6 pb-24 md:pb-6 max-w-5xl w-full mx-auto">
           {section === 'branding' && (
             <BrandingSection data={data.branding} tier={tier} token={token} onUpdate={handleUpdate} toast={showToast} />
           )}
