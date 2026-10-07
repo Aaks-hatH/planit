@@ -177,7 +177,12 @@ router.post('/',
         isTableServiceMode: isTableServiceMode || false,
         eventType: resolvedEventType,
         ...(resolvedEventType === 'rsvpOnly' ? { rsvpPage: { enabled: true } } : {}),
-        settings: settings || {}, maxParticipants: maxParticipants || 100,
+        settings: {
+          ...(settings || {}),
+          // On an authenticated white-label domain, newly created events should
+          // be discoverable on that tenant's homepage unless the creator opted out.
+          ...(wlDomain ? { isPublic: settings?.isPublic !== false } : {}),
+        }, maxParticipants: maxParticipants || 100,
         participants: [{ username: organizerName, role: 'organizer' }],
         wlDomain,
         creatorIp:          creatorIpAddr,
@@ -284,7 +289,7 @@ router.get('/public/wl', async (req, res, next) => {
       'settings.isPublic': true,
       status: 'active',
     })
-    .select('subdomain title description date location participants maxParticipants coverImage themeColor tags createdAt')
+    .select('subdomain title description date location participants maxParticipants coverImage themeColor tags createdAt isTableServiceMode eventType')
     .sort({ date: 1 })
     .limit(limit)
     .lean();
