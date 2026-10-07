@@ -76,7 +76,7 @@ const whiteLabelSchema = new mongoose.Schema({
   // ── Client Portal Auth ──────────────────────────────────────────────────────
   portal: {
     enabled:        { type: Boolean, default: false },
-    passwordHash:   { type: String },               // bcrypt hash of portal password
+    passwordHash:   { type: String, select: false }, // bcrypt hash of portal password; never returned by default
     // Brute-force protection
     loginAttempts:  { type: Number, default: 0 },   // consecutive failed attempts
     lockedUntil:    { type: Date },                  // null = not locked
