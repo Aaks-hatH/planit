@@ -40,6 +40,7 @@ const Blocklist = require('../models/Blocklist');
 const { analyzeEvent, applyEventSpamResult } = require('../services/spamDetector');
 const { verifyTurnstile } = require('../services/captchaService');
 const { sendAntiAbuse } = require('../services/antiAbuseResponses');
+const { EventCreationError, precheck, createEventWithOrganizer } = require('../services/eventCreation');
 
 // ── Timezone helpers ────────────────────────────────────────────────────────
 function isValidTimezone(tz) {
@@ -80,33 +81,16 @@ router.post('/',
     body('organizerName').trim().isLength({ min: 1, max: 100 }).withMessage('Organizer name is required'),
     body('organizerEmail').isEmail().normalizeEmail().withMessage('Valid email is required'),
     body('password').optional({ values: 'falsy' }).isLength({ min: 6 }).withMessage('Password must be at least 6 characters'),
+    body('accountPassword').isString().isLength({ min: 4 }).withMessage('Account password is required (at least 4 characters)'),
     body('agreedToTerms').custom(v => v === true || v === 'true').withMessage('You must agree to the Terms of Service and Privacy Policy'),
     validate
   ],
   async (req, res, next) => {
     try {
       const { subdomain, title, description, date, location, organizerName, organizerEmail, password, accountPassword, staffPassword, isEnterpriseMode, isTableServiceMode, eventType, settings, maxParticipants, timezone: rawTimezone } = req.body;
-      // Store the organizer's chosen IANA timezone (falls back to UTC only if missing/invalid).
-      const resolvedTimezone = isValidTimezone(rawTimezone) ? rawTimezone : 'UTC';
-      const resolvedEventType = eventType === 'rsvpOnly' ? 'rsvpOnly' : 'standard';
 
-      const existing = await Event.findOne({ subdomain });
-      if (existing) return res.status(409).json({ error: 'This event link is already taken.' });
-
-      // Blocklist checks
-      const [subdomainBanned, nameBanned] = await Promise.all([
-        Blocklist.findOne({ type: 'event', value: subdomain, $or: [{ expiresAt: null }, { expiresAt: { $gt: new Date() } }] }).lean(),
-        Blocklist.findOne({ type: 'name',  value: { $regex: new RegExp(`^${organizerName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') }, $or: [{ expiresAt: null }, { expiresAt: { $gt: new Date() } }] }).lean(),
-      ]);
-      if (subdomainBanned) return res.status(403).json({ error: 'This event link is not available.' });
-      if (nameBanned)      return res.status(403).json({ error: 'This display name is not allowed.' });
-
-      let hashedPassword = null;
-      let isPasswordProtected = false;
-      if (password) {
-        hashedPassword = await bcrypt.hash(password, 10);
-        isPasswordProtected = true;
-      }
+      // Subdomain taken / blocklist checks (shared with the white-label admin route).
+      await precheck({ subdomain, organizerName });
 
       // V-10 FIX: Validate x-wl-domain against actual WL record and request origin
       let wlDomain = null;
@@ -170,80 +154,34 @@ router.post('/',
         captchaCleared = true;
       }
 
-      const event = new Event({
-        subdomain, title, description, date, timezone: resolvedTimezone, location, organizerName, organizerEmail,
-        password: hashedPassword, isPasswordProtected,
-        isEnterpriseMode: isEnterpriseMode || false,
-        isTableServiceMode: isTableServiceMode || false,
-        eventType: resolvedEventType,
-        ...(resolvedEventType === 'rsvpOnly' ? { rsvpPage: { enabled: true } } : {}),
-        settings: {
-          ...(settings || {}),
-          // On an authenticated white-label domain, newly created events should
-          // be discoverable on that tenant's homepage unless the creator opted out.
-          ...(wlDomain ? { isPublic: settings?.isPublic !== false } : {}),
-        }, maxParticipants: maxParticipants || 100,
-        participants: [{ username: organizerName, role: 'organizer' }],
+      const { event, token, recoveryCode: organizerRecoveryCode } = await createEventWithOrganizer({
+        subdomain, title, description, date, timezone: rawTimezone, location, organizerName, organizerEmail,
+        password, accountPassword, staffPassword,
+        isEnterpriseMode, isTableServiceMode, eventType, settings, maxParticipants,
         wlDomain,
-        creatorIp:          creatorIpAddr,
-        creatorUserAgent,
-        creatorFingerprint,
+        creator: { ip: creatorIpAddr, userAgent: creatorUserAgent, fingerprint: creatorFingerprint },
         // Record when and against which version of the legal text the organizer agreed.
-        legalAcceptance: {
-          acceptedAt: new Date(),
-          version:    String(req.body.legalVersion || '').slice(0, 32),
-        },
-      });
-
-      await event.save();
+        legalAcceptance: { acceptedAt: new Date(), version: String(req.body.legalVersion || '').slice(0, 32) },
+      }, { skipPrecheck: true });
 
       // ── Spam analysis result ────────────────────────────────────────────────
       // The scoring details remain internal. We persist only admin-facing fields
       // already supported by the event model and never expose them to creators.
       applyEventSpamResult(event._id, initialSpamResult).catch(() => {});
 
-      const participantData = { eventId: event._id, username: organizerName, role: 'organizer' };
-      let organizerRecoveryCode = null;
-      if (accountPassword) {
-        participantData.password = await bcrypt.hash(accountPassword, 10);
-        participantData.hasPassword = true;
-        // Generate recovery code — shown once, never stored in plaintext
-        const segs = Array.from({ length: 5 }, () => crypto.randomBytes(2).toString('hex').toUpperCase());
-        organizerRecoveryCode = segs.join('-');
-        participantData.recoveryCodeHash = await bcrypt.hash(organizerRecoveryCode.replace(/-/g, '').toLowerCase(), 10);
-        participantData.recoveryCodeGeneratedAt = new Date();
-      }
-      await EventParticipant.create(participantData);
-
-      // For table service: create a default "staff" account using the staffPassword if provided
-      if (isTableServiceMode && staffPassword && String(staffPassword).length >= 4) {
-        const hashed = await bcrypt.hash(String(staffPassword), 10);
-        await EventParticipant.create({
-          eventId: event._id,
-          username: 'staff',
-          role: 'staff',
-          password: hashed,
-          hasPassword: true,
-        });
-      }
-
-      const token = jwt.sign(
-        { eventId: event._id.toString(), username: organizerName, role: 'organizer' },
-        secrets.jwt,
-        { expiresIn: '24h' }
-      );
-      const { sendEventConfirmation } = require('../services/emailService');
-      sendEventConfirmation(event).catch(() => {});
       recordIdentity(req, { source: 'event_created', name: organizerName, email: organizerEmail, event });
 
       res.status(201).json({
         message: 'Event created successfully',
         event: { id: event._id, subdomain: event.subdomain, title: event.title, isPasswordProtected: event.isPasswordProtected },
         token,
-        // Only present when organizer set an account password — shown once on the frontend, never again
-        recoveryCode: organizerRecoveryCode || undefined,
+        // Shown once on the frontend, never again
+        recoveryCode: organizerRecoveryCode,
       });
-    } catch (error) { next(error); }
+    } catch (error) {
+      if (error instanceof EventCreationError) return res.status(error.status).json({ error: error.message, ...error.extra });
+      next(error);
+    }
   }
 );
 
@@ -289,7 +227,7 @@ router.get('/public/wl', async (req, res, next) => {
       'settings.isPublic': true,
       status: 'active',
     })
-    .select('subdomain title description date location participants maxParticipants coverImage themeColor tags createdAt isTableServiceMode eventType')
+    .select('subdomain title description date location participants maxParticipants coverImage themeColor tags createdAt')
     .sort({ date: 1 })
     .limit(limit)
     .lean();
@@ -434,6 +372,12 @@ router.post('/verify-password/:eventId', authLimiter, eventPasswordLimiter,
 
       const existing = await EventParticipant.findOne({ eventId: req.params.eventId, username }).select('+password +recoveryCodeHash +recoveryCodeGeneratedAt');
       let vpRecoveryCode = null;
+      // An organizer name with no password must never be claimable through the public
+      // join flow (that would let a stranger set the password and become organizer).
+      // Access for such legacy accounts is re-issued by an admin.
+      if (event.participants?.some(p => p.username === username && p.role === 'organizer') && !(existing && existing.hasPassword)) {
+        return res.status(403).json({ error: 'This organizer account has not been set up yet. Contact the platform admin to get organizer access.' });
+      }
       if (existing && existing.hasPassword) {
         if (!accountPassword) return res.status(400).json({ error: 'This name has an account — enter your account password.', requiresAccountPassword: true });
         const accountMatch = await bcrypt.compare(accountPassword, existing.password);
@@ -555,6 +499,12 @@ router.post('/join/:eventId',
 
       const existing = await EventParticipant.findOne({ eventId: req.params.eventId, username }).select('+password +recoveryCodeHash +recoveryCodeGeneratedAt');
       let joinRecoveryCode = null;
+      // An organizer name with no password must never be claimable through the public
+      // join flow (that would let a stranger set the password and become organizer).
+      // Access for such legacy accounts is re-issued by an admin.
+      if (event.participants?.some(p => p.username === username && p.role === 'organizer') && !(existing && existing.hasPassword)) {
+        return res.status(403).json({ error: 'This organizer account has not been set up yet. Contact the platform admin to get organizer access.' });
+      }
       if (existing && existing.hasPassword) {
         if (!accountPassword) return res.status(400).json({ error: 'This name has an account — enter your account password.', requiresAccountPassword: true });
         const accountMatch = await bcrypt.compare(accountPassword, existing.password);
