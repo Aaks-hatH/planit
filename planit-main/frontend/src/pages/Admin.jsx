@@ -41,7 +41,7 @@ import PiiLookupPanel from '../components/PiiLookupPanel';
 import { SERVICE_CATEGORIES, ALL_SERVICES_FLAT } from '../utils/serviceCategories';
 import { formatNumber, formatFileSize } from '../utils/formatters';
 import { DateTime } from 'luxon';
-import { getTimezoneOptions, isValidTimezone } from '../utils/timezoneUtils';
+import { getTimezoneOptions, isValidTimezone, localDateTimeToUTC, getUserTimezone } from '../utils/timezoneUtils';
 import toast from 'react-hot-toast';
 import TurnstileWidget from '../components/TurnstileWidget';
 import socketService from '../services/socket';
@@ -9074,7 +9074,6 @@ const STATUS_COLORS = {
 const EMPTY_FORM = {
   clientName: '', domain: '', tier: 'basic', status: 'trial',
   contactName: '', contactEmail: '', contactPhone: '',
-  portalPassword: '', confirmPortalPassword: '',
   notes: '', keyValidDays: 365,
   branding: { companyName: '', primaryColor: '#2563eb', accentColor: '#1d4ed8', hidePoweredBy: false, logoUrl: '', fontFamily: 'Inter' },
   pages: {
@@ -9093,7 +9092,21 @@ function ClientEventsSection({ selected, isDemo, API, onCreated }) {
   const [data, setData]       = useState(null); // { events, count, maxEvents }
   const [loading, setLoading] = useState(true);
   const [showWizard, setShowWizard] = useState(false);
-  const [linking, setLinking] = useState(false);
+  const [accessFor, setAccessFor] = useState(null); // event whose organizer access is being (re)issued
+  const [accessPw, setAccessPw]   = useState('');
+  const [accessRes, setAccessRes] = useState(null);
+  const [accessErr, setAccessErr] = useState(null);
+
+  const issueAccess = async () => {
+    setAccessErr(null);
+    if (accessPw.length < 4) { setAccessErr('Password must be at least 4 characters'); return; }
+    if (isDemo) { toast.success('Organizer access issued (sandbox)'); setAccessFor(null); setAccessPw(''); return; }
+    try {
+      const r = await api.post(`${API}/${selected._id}/events/${accessFor.id}/organizer-access`, { accountPassword: accessPw });
+      setAccessRes(r.data);
+    } catch (e) { setAccessErr(e?.response?.data?.error || 'Failed'); }
+  };
+  const closeAccess = () => { setAccessFor(null); setAccessPw(''); setAccessRes(null); setAccessErr(null); };
 
   const load = useCallback(() => {
     if (!selected?._id) return;
@@ -9107,30 +9120,13 @@ function ClientEventsSection({ selected, isDemo, API, onCreated }) {
   useEffect(() => { load(); }, [load]);
 
   const atLimit = data && data.maxEvents != null && data.count >= data.maxEvents;
-  const linkHomepage = async (subdomain) => {
-    setLinking(true);
-    try {
-      if (isDemo) {
-        setData(d => ({ ...d, homepageEventSubdomain: subdomain || '' }));
-      } else {
-        const r = await api.patch(`${API}/${selected._id}/home-event`, { subdomain: subdomain || '' });
-        setData(d => ({ ...d, homepageEventSubdomain: r.data.homepageEventSubdomain || '' }));
-      }
-      toast.success(subdomain ? 'Homepage event linked' : 'Homepage event cleared');
-    } catch (e) {
-      toast.error(e?.response?.data?.error || 'Could not update homepage event');
-    } finally { setLinking(false); }
-  };
 
   return (
     <div className="border border-neutral-200 rounded-xl p-3 space-y-2">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Calendar className="w-3.5 h-3.5 text-neutral-500" />
-          <div>
-            <span className="text-xs font-semibold text-neutral-700">Tenant events</span>
-            <span className="block text-[10px] text-neutral-400">Create and choose the event shown on the client homepage</span>
-          </div>
+          <span className="text-xs font-semibold text-neutral-700">Events</span>
           {data && (
             <span className={`text-xs px-1.5 py-0.5 rounded border ${atLimit ? 'bg-red-50 text-red-700 border-red-200' : 'bg-neutral-100 text-neutral-500 border-transparent'}`}>
               {data.count}{data.maxEvents != null ? ` / ${data.maxEvents}` : ''}
@@ -9152,38 +9148,50 @@ function ClientEventsSection({ selected, isDemo, API, onCreated }) {
       ) : !data || data.events.length === 0 ? (
         <div className="text-xs text-neutral-400 py-2 text-center">No events yet for this client.</div>
       ) : (
-        <div className="space-y-1 max-h-56 overflow-y-auto">
+        <div className="space-y-1 max-h-40 overflow-y-auto">
           {data.events.map(ev => (
-            <div key={ev.id} className={`flex items-center justify-between gap-2 text-xs rounded-lg px-2 py-2 ${data.homepageEventSubdomain === ev.subdomain ? 'bg-blue-50 border border-blue-200' : 'bg-neutral-50 border border-transparent'}`}>
+            <div key={ev.id} className="flex items-center justify-between text-xs bg-neutral-50 rounded-lg px-2 py-1.5">
               <div className="min-w-0">
-                <div className="font-medium text-neutral-800 truncate flex items-center gap-1.5">
-                  {ev.title}
-                  {ev.isTableServiceMode && <span className="px-1 py-0.5 rounded bg-orange-100 text-orange-700 text-[9px]">Restaurant</span>}
-                  <span className={`px-1 py-0.5 rounded text-[9px] ${ev.isPublic ? 'bg-green-50 text-green-700' : 'bg-neutral-200 text-neutral-500'}`}>{ev.isPublic ? 'Public' : 'Hidden'}</span>
-                  <span className={`px-1 py-0.5 rounded text-[9px] ${ev.status === 'active' ? 'bg-emerald-50 text-emerald-700' : 'bg-neutral-200 text-neutral-500'}`}>{ev.status === 'active' ? 'Active' : 'Inactive'}</span>
-                  {data.homepageEventSubdomain === ev.subdomain && <span className="px-1 py-0.5 rounded bg-blue-100 text-blue-700 text-[9px]">Homepage</span>}
-                </div>
+                <div className="font-medium text-neutral-800 truncate">{ev.title}</div>
                 <div className="text-neutral-400 font-mono truncate">{ev.subdomain}</div>
               </div>
               <div className="flex items-center gap-1 shrink-0">
-                <a href={ev.isTableServiceMode ? `/e/${ev.subdomain}/reserve` : `/e/${ev.subdomain}`} target="_blank" rel="noreferrer" className="px-2 py-1 rounded-md border border-neutral-200 bg-white text-neutral-600 hover:text-blue-700">Open</a>
-                {ev.status !== 'active' ? (
-                  data.homepageEventSubdomain === ev.subdomain && <button disabled={linking} onClick={() => linkHomepage('')} className="px-2 py-1 rounded-md font-semibold bg-amber-50 text-amber-800 disabled:opacity-50">Clear link</button>
-                ) : (
-                  <button disabled={linking} onClick={() => linkHomepage(data.homepageEventSubdomain === ev.subdomain ? '' : ev.subdomain)}
-                    className={`px-2 py-1 rounded-md font-semibold disabled:opacity-50 ${data.homepageEventSubdomain === ev.subdomain ? 'bg-blue-600 text-white' : 'bg-white border border-neutral-200 text-neutral-600 hover:text-blue-700'}`}>
-                    {data.homepageEventSubdomain === ev.subdomain ? 'Linked' : 'Set home'}
-                  </button>
-                )}
+                <button
+                  title="Set organizer password / issue new recovery code"
+                  onClick={() => setAccessFor(ev)}
+                  className="p-1 rounded hover:bg-neutral-200 text-neutral-500"><Key className="w-3 h-3" /></button>
+                <span className={`px-1.5 py-0.5 rounded text-[10px] font-semibold ${ev.status === 'active' ? 'bg-green-50 text-green-700' : 'bg-neutral-200 text-neutral-500'}`}>
+                  {ev.status || 'active'}
+                </span>
               </div>
             </div>
           ))}
         </div>
       )}
-      {data?.homepageEventSubdomain && !data.events?.some(ev => ev.subdomain === data.homepageEventSubdomain) && (
-        <div className="flex items-center justify-between rounded-lg bg-amber-50 border border-amber-200 px-3 py-2 text-xs text-amber-800">
-          <span>The saved homepage event is no longer in this tenant’s event list.</span>
-          <button onClick={() => linkHomepage('')} disabled={linking} className="font-semibold underline">Clear</button>
+
+      {accessFor && (
+        <div className="fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-5 space-y-3">
+            <h3 className="text-base font-bold text-neutral-900">Organizer access</h3>
+            <p className="text-xs text-neutral-500">{accessFor.title} — sets the organizer's account password and issues a new one-time recovery code. Their old password and code stop working.</p>
+            {accessErr && <div className="text-xs bg-red-50 text-red-700 border border-red-200 rounded-lg px-3 py-2">{accessErr}</div>}
+            {accessRes ? (
+              <>
+                <p className="text-sm text-neutral-600">Organizer: <span className="font-mono">{accessRes.organizerName}</span></p>
+                <RecoveryCodeBox code={accessRes.recoveryCode} who={accessRes.organizerName} />
+                <button onClick={closeAccess} className="w-full bg-blue-600 hover:bg-blue-700 text-white rounded-xl py-2 text-sm font-semibold">Done</button>
+              </>
+            ) : (
+              <>
+                <input type="password" autoComplete="new-password" value={accessPw} onChange={e => setAccessPw(e.target.value)}
+                  className="w-full border border-neutral-200 rounded-lg px-3 py-2 text-sm" placeholder="New organizer password (min 4)" />
+                <div className="flex gap-2">
+                  <button onClick={closeAccess} className="flex-1 border border-neutral-200 rounded-xl py-2 text-sm font-medium hover:bg-neutral-50">Cancel</button>
+                  <button onClick={issueAccess} className="flex-1 bg-blue-600 hover:bg-blue-700 text-white rounded-xl py-2 text-sm font-semibold">Set access</button>
+                </div>
+              </>
+            )}
+          </div>
         </div>
       )}
 
@@ -9200,64 +9208,104 @@ function ClientEventsSection({ selected, isDemo, API, onCreated }) {
   );
 }
 
-// ─── Create-event wizard modal — admin-side, no CAPTCHA/abuse checks ────────
-// Scoped-down counterpart to the public OnboardingWizard in Home.jsx: that
-// component is wired directly into the self-serve signup flow (Turnstile,
-// bot-abuse scoring, timing telemetry) and isn't safe to reuse for an
-// authenticated internal action, so this is a smaller purpose-built form that
-// posts straight to /whitelabel/:id/create-event.
+// ─── Create-event wizard modal — admin-side ─────────────────────────────────
+// Same fields and rules as the public wizard (Home.jsx): organizer account
+// password (required), optional event password, staff PIN for table service,
+// timezone-aware date. The server runs the SAME creation code
+// (services/eventCreation.js), so a client's event is identical to one a
+// customer would create themselves. Only the spam/CAPTCHA step is skipped
+// because this is an authenticated admin action.
+function RecoveryCodeBox({ code, who }) {
+  const [copied, setCopied] = useState(false);
+  return (
+    <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 space-y-2">
+      <div className="text-xs font-semibold text-amber-800">Recovery code{who ? ` for ${who}` : ''} — shown once</div>
+      <div className="flex items-center gap-2">
+        <code className="flex-1 font-mono text-sm bg-white border border-amber-200 rounded-lg px-3 py-2 select-all">{code}</code>
+        <button type="button"
+          onClick={async () => { try { await navigator.clipboard.writeText(code); setCopied(true); setTimeout(() => setCopied(false), 1500); } catch { /* ignore */ } }}
+          className="p-2 rounded-lg border border-amber-200 bg-white hover:bg-amber-100">
+          {copied ? <Check className="w-4 h-4 text-green-600" /> : <Copy className="w-4 h-4 text-amber-700" />}
+        </button>
+      </div>
+      <p className="text-[11px] text-amber-700">Give this to the organizer. It is the only way for them to reset a forgotten password, and it cannot be shown again.</p>
+    </div>
+  );
+}
+
 function CreateEventWizardModal({ selected, isDemo, API, onClose, onCreated }) {
   const [form, setForm] = useState({
-    title: '', date: '', location: '',
+    title: '', description: '', date: '', timezone: getUserTimezone(), location: '',
     organizerName: selected?.contactName || '',
     organizerEmail: selected?.contactEmail || '',
-    accountPassword: '', confirmAccountPassword: '', eventPassword: '', staffPassword: '', showOnHome: true,
+    accountPassword: '', password: '', staffPassword: '',
     mode: 'standard', // 'standard' | 'rsvp' | 'table-service' | 'enterprise'
   });
   const [saving, setSaving] = useState(false);
   const [error, setError]   = useState(null);
+  const [result, setResult] = useState(null); // { event, organizerName, recoveryCode }
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
+  const isTS = form.mode === 'table-service';
+  const input = 'mt-1 w-full border border-neutral-200 rounded-lg px-3 py-2 text-sm';
 
   const submit = async () => {
     setError(null);
-    if (!form.title.trim())          { setError('Title is required'); return; }
+    if (!form.title.trim())          { setError(isTS ? 'Restaurant name is required' : 'Title is required'); return; }
     if (!form.organizerName.trim())  { setError('Organizer name is required'); return; }
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.organizerEmail)) { setError('Valid organizer email is required'); return; }
-    if (form.mode !== 'table-service' && !form.date) { setError('Date is required unless this is a restaurant/table-service event'); return; }
+    if (!isTS && !form.date)         { setError('Date and time is required'); return; }
+    if (!isTS && !form.timezone)     { setError('Timezone is required'); return; }
+    if (!form.accountPassword)       { setError('Organizer account password is required'); return; }
     if (form.accountPassword.length < 4) { setError('Organizer account password must be at least 4 characters'); return; }
-    if (form.accountPassword !== form.confirmAccountPassword) { setError('Organizer account passwords do not match'); return; }
-    if (form.eventPassword && form.eventPassword.length < 6) { setError('Optional event access password must be at least 6 characters'); return; }
-    if (form.mode === 'table-service' && form.staffPassword && form.staffPassword.length < 4) { setError('Staff password must be at least 4 characters'); return; }
+    if (form.password && form.password.length < 6) { setError('Event password must be at least 6 characters'); return; }
+    if (isTS && form.staffPassword && form.staffPassword.length < 4) { setError('Staff PIN must be at least 4 characters'); return; }
 
     if (isDemo) { toast.success('Event created (sandbox)'); onCreated?.(); return; }
 
     setSaving(true);
     try {
-      await api.post(`${API}/${selected._id}/create-event`, {
-        title: form.title.trim(),
-        date: form.mode === 'table-service' ? null : form.date,
+      const r = await api.post(`${API}/${selected._id}/create-event`, {
+        title: form.title.trim().replace(/\s+/g, ' '),
+        description: form.description.trim().replace(/\s+/g, ' '),
+        ...(!isTS ? { date: localDateTimeToUTC(form.date, form.timezone), timezone: form.timezone } : {}),
         location: form.location.trim(),
         organizerName: form.organizerName.trim(),
         organizerEmail: form.organizerEmail.trim(),
         accountPassword: form.accountPassword,
-        password: form.eventPassword || undefined,
-        staffPassword: form.staffPassword || undefined,
-        showOnHome: form.showOnHome,
-        isTableServiceMode: form.mode === 'table-service',
+        password: form.password || undefined,
+        staffPassword: (isTS && form.staffPassword) ? form.staffPassword : undefined,
+        isTableServiceMode: isTS,
         isEnterpriseMode: form.mode === 'enterprise',
         eventType: form.mode === 'rsvp' ? 'rsvpOnly' : 'standard',
       });
       toast.success('Event created for ' + selected.clientName);
-      onCreated?.();
+      setResult(r.data);
     } catch (e) {
       setError(e?.response?.data?.error || 'Failed to create event');
     } finally { setSaving(false); }
   };
 
+  // ── Success: show the recovery code once, then close ──
+  if (result) {
+    return (
+      <div className="fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4">
+        <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-5 space-y-3">
+          <h3 className="text-base font-bold text-neutral-900">Event created</h3>
+          <p className="text-sm text-neutral-600">
+            <span className="font-semibold">{result.event?.title}</span> is live for {selected?.clientName}.
+            The organizer logs in as <span className="font-mono">{result.organizerName}</span> with the account password you just set.
+          </p>
+          {result.recoveryCode && <RecoveryCodeBox code={result.recoveryCode} who={result.organizerName} />}
+          <button onClick={() => onCreated?.()} className="w-full bg-blue-600 hover:bg-blue-700 text-white rounded-xl py-2 text-sm font-semibold">Done</button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-xl max-h-[92vh] overflow-y-auto">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between p-5 border-b border-neutral-200">
           <div>
             <h3 className="text-base font-bold text-neutral-900">New Event</h3>
@@ -9266,90 +9314,89 @@ function CreateEventWizardModal({ selected, isDemo, API, onClose, onCreated }) {
           <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-neutral-100"><X className="w-4 h-4" /></button>
         </div>
 
-        <div className="p-6 space-y-4">
+        <div className="p-5 space-y-3">
           {error && (
             <div className="text-xs bg-red-50 text-red-700 border border-red-200 rounded-lg px-3 py-2">{error}</div>
           )}
 
-          <div className="flex gap-2">
+          <div className="grid grid-cols-4 gap-2">
             {[
               { v: 'standard',      label: 'Standard' },
               { v: 'rsvp',          label: 'RSVP' },
-              { v: 'table-service', label: 'Table Service' },
+              { v: 'table-service', label: 'Table Svc' },
               { v: 'enterprise',    label: 'Enterprise' },
             ].map(({ v, label }) => (
               <button key={v} onClick={() => set('mode', v)}
-                className={`flex-1 text-xs font-semibold rounded-lg py-1.5 border ${form.mode === v ? 'bg-blue-600 text-white border-blue-600' : 'border-neutral-200 text-neutral-600 hover:bg-neutral-50'}`}>
+                className={`text-xs font-semibold rounded-lg py-1.5 border ${form.mode === v ? 'bg-blue-600 text-white border-blue-600' : 'border-neutral-200 text-neutral-600 hover:bg-neutral-50'}`}>
                 {label}
               </button>
             ))}
           </div>
 
           <div>
-            <label className="text-xs font-medium text-neutral-500">Event Title</label>
-            <input value={form.title} onChange={e => set('title', e.target.value)}
-              className="mt-1 w-full border border-neutral-200 rounded-lg px-3 py-2 text-sm" placeholder="e.g. Summer Gala 2026" />
+            <label className="text-xs font-medium text-neutral-500">{isTS ? 'Restaurant Name' : 'Event Title'}</label>
+            <input value={form.title} onChange={e => set('title', e.target.value)} className={input} placeholder="e.g. Summer Gala 2026" />
           </div>
 
-          {form.mode !== 'table-service' && (
-            <div>
-              <label className="text-xs font-medium text-neutral-500">Date</label>
-              <input type="datetime-local" value={form.date} onChange={e => set('date', e.target.value)}
-                className="mt-1 w-full border border-neutral-200 rounded-lg px-3 py-2 text-sm" />
+          <div>
+            <label className="text-xs font-medium text-neutral-500">Description</label>
+            <input value={form.description} onChange={e => set('description', e.target.value)} className={input} placeholder="Optional" />
+          </div>
+
+          {!isTS && (
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <label className="text-xs font-medium text-neutral-500">Date</label>
+                <input type="datetime-local" value={form.date} onChange={e => set('date', e.target.value)} className={input} />
+              </div>
+              <div>
+                <label className="text-xs font-medium text-neutral-500">Timezone</label>
+                <select value={form.timezone} onChange={e => set('timezone', e.target.value)} className={input}>
+                  {getTimezoneOptions(form.timezone).map(tz => <option key={tz.value} value={tz.value}>{tz.label}</option>)}
+                </select>
+              </div>
             </div>
           )}
 
           <div>
             <label className="text-xs font-medium text-neutral-500">Location</label>
-            <input value={form.location} onChange={e => set('location', e.target.value)}
-              className="mt-1 w-full border border-neutral-200 rounded-lg px-3 py-2 text-sm" placeholder="Optional" />
+            <input value={form.location} onChange={e => set('location', e.target.value)} className={input} placeholder="Optional" />
           </div>
 
           <div className="grid grid-cols-2 gap-2">
             <div>
-              <label className="text-xs font-medium text-neutral-500">Organizer Name</label>
-              <input value={form.organizerName} onChange={e => set('organizerName', e.target.value)}
-                className="mt-1 w-full border border-neutral-200 rounded-lg px-3 py-2 text-sm" />
+              <label className="text-xs font-medium text-neutral-500">{isTS ? 'Manager Name' : 'Organizer Name'}</label>
+              <input value={form.organizerName} onChange={e => set('organizerName', e.target.value)} className={input} />
             </div>
             <div>
-              <label className="text-xs font-medium text-neutral-500">Organizer Email</label>
-              <input value={form.organizerEmail} onChange={e => set('organizerEmail', e.target.value)}
-                className="mt-1 w-full border border-neutral-200 rounded-lg px-3 py-2 text-sm" />
+              <label className="text-xs font-medium text-neutral-500">{isTS ? 'Manager Email' : 'Organizer Email'}</label>
+              <input value={form.organizerEmail} onChange={e => set('organizerEmail', e.target.value)} className={input} />
             </div>
           </div>
 
-          <div className="rounded-xl border border-blue-100 bg-blue-50/60 p-4 space-y-3">
-            <div>
-              <label className="text-xs font-semibold text-neutral-700">Organizer account password *</label>
-              <input type="password" autoComplete="new-password" value={form.accountPassword} onChange={e => set('accountPassword', e.target.value)}
-                className="mt-1 w-full border border-neutral-200 rounded-lg px-3 py-2 text-sm bg-white" placeholder="At least 4 characters" minLength={4} />
-              <p className="text-[11px] text-neutral-500 mt-1">The organizer uses this to sign in to the event management dashboard. Share it with them securely; it cannot be viewed again after creation.</p>
-            </div>
-            <div>
-              <label className="text-xs font-semibold text-neutral-700">Confirm organizer password *</label>
-              <input type="password" autoComplete="new-password" value={form.confirmAccountPassword} onChange={e => set('confirmAccountPassword', e.target.value)}
-                className="mt-1 w-full border border-neutral-200 rounded-lg px-3 py-2 text-sm bg-white" placeholder="Enter it again" minLength={4} />
-            </div>
-            <div>
-              <label className="text-xs font-semibold text-neutral-700">Guest access password <span className="font-normal text-neutral-400">(optional · 6+ characters)</span></label>
-              <input type="password" autoComplete="new-password" value={form.eventPassword} onChange={e => set('eventPassword', e.target.value)}
-                className="mt-1 w-full border border-neutral-200 rounded-lg px-3 py-2 text-sm bg-white" placeholder="Leave blank for an open event" minLength={6} />
-            </div>
-            <label className="flex items-start gap-2 text-xs text-neutral-700">
-              <input type="checkbox" checked={form.showOnHome} onChange={e => set('showOnHome', e.target.checked)} className="mt-0.5 accent-blue-600" />
-              <span><strong>List this event on the branded homepage</strong><span className="block text-neutral-500 mt-0.5">Guests can discover it in the tenant’s public event grid.</span></span>
-            </label>
-            {form.mode === 'table-service' && (
-              <div>
-                <label className="text-xs font-semibold text-neutral-700">Staff sign-in password <span className="font-normal text-neutral-400">(optional · 4+ characters)</span></label>
-                <input type="password" autoComplete="new-password" value={form.staffPassword} onChange={e => set('staffPassword', e.target.value)}
-                  className="mt-1 w-full border border-neutral-200 rounded-lg px-3 py-2 text-sm bg-white" placeholder="Optional staff login" minLength={4} />
-              </div>
-            )}
+          <div>
+            <label className="text-xs font-medium text-neutral-500">Organizer account password <span className="text-red-500">*</span></label>
+            <input type="password" autoComplete="new-password" value={form.accountPassword} onChange={e => set('accountPassword', e.target.value)}
+              className={input} placeholder="At least 4 characters — the organizer logs in with this" />
           </div>
 
-          <p className="text-xs text-neutral-500 rounded-lg bg-neutral-50 border border-neutral-100 p-3">
-            The event link is generated from its title and attached to <strong>{selected?.domain}</strong>. New events appear in this tenant’s branded feed; choose “Set home” in the event list to make one the homepage destination.
+          {isTS ? (
+            <div>
+              <label className="text-xs font-medium text-neutral-500">Staff PIN</label>
+              <input type="password" autoComplete="new-password" value={form.staffPassword} onChange={e => set('staffPassword', e.target.value)}
+                className={input} placeholder="Optional — at least 4 characters" />
+            </div>
+          ) : (
+            <div>
+              <label className="text-xs font-medium text-neutral-500">Event password</label>
+              <input type="password" autoComplete="new-password" value={form.password} onChange={e => set('password', e.target.value)}
+                className={input} placeholder="Optional — guests must enter it to join (min 6)" />
+            </div>
+          )}
+
+          <p className="text-[11px] text-neutral-400">
+            The event link is generated from the title. It'll be tagged to {selected?.domain} and appear on this client's branded discovery feed.
+            You'll get a one-time recovery code on the next screen.
           </p>
         </div>
 
@@ -10102,24 +10149,12 @@ function WhiteLabelPanel() {
       toast.error('Client name and domain are required');
       return;
     }
-    if (modal === 'create') {
-      if ((form.portalPassword || '').length < 12) {
-        toast.error('Set a client portal password of at least 12 characters');
-        return;
-      }
-      if (form.portalPassword !== form.confirmPortalPassword) {
-        toast.error('Client portal passwords do not match');
-        return;
-      }
-    }
     if (isDemo) { toast.success(modal === 'create' ? 'White label created (sandbox)' : 'Changes saved (sandbox)'); setModal(null); return; }
     setSaving(true);
     try {
       if (modal === 'create') {
-        const createPayload = { ...form };
-        delete createPayload.confirmPortalPassword;
-        await api.post(API, createPayload);
-        toast.success(`White label created — portal login is enabled at https://${form.domain.trim()}/dashboard`);
+        await api.post(API, form);
+        toast.success('White label created');
       } else {
         await api.patch(`${API}/${selected._id}`, form);
         toast.success('Changes saved');
@@ -10128,7 +10163,7 @@ function WhiteLabelPanel() {
       load();
     } catch (e) {
       const msg = e?.response?.data?.error;
-      toast.error(msg === 'domain_taken' ? 'That domain is already registered' : (msg || 'Save failed'));
+      toast.error(msg === 'domain_taken' ? 'That domain is already registered' : 'Save failed');
     } finally {
       setSaving(false);
     }
@@ -10193,7 +10228,6 @@ function WhiteLabelPanel() {
       limits: { maxEvents: d.maxEvents, maxGuestsPerEvent: d.maxGuestsPerEvent, maxAdminUsers: d.maxAdminUsers },
       billing: { ...f.billing, monthlyAmount: d.monthlyAmount },
       branding: { ...f.branding, hidePoweredBy: tier !== 'basic' ? f.branding.hidePoweredBy : false },
-      features: { ...f.features, showSeatingChart: tier === 'basic' ? false : f.features.showSeatingChart },
     }));
   };
 
@@ -10368,14 +10402,14 @@ function WhiteLabelPanel() {
       {/* ── Create/Edit Modal ───────────────────────────────────────────────── */}
       {(modal === 'create' || modal === 'edit') && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[92vh] overflow-y-auto">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between p-6 border-b border-neutral-200 sticky top-0 bg-white z-10">
               <h3 className="text-lg font-bold text-neutral-900">
                 {modal === 'create' ? 'New White Label Client' : `Edit — ${selected?.clientName}`}
               </h3>
               <button onClick={() => setModal(null)} className="p-2 rounded-xl hover:bg-neutral-100"><X className="w-5 h-5" /></button>
             </div>
-            <div className="p-6 space-y-5 bg-neutral-50/60">
+            <div className="p-6 space-y-6">
               {/* Client Info */}
               <div>
                 <h4 className="text-xs font-semibold text-neutral-500 uppercase tracking-wider mb-3">Client Info</h4>
@@ -10405,34 +10439,6 @@ function WhiteLabelPanel() {
                   </div>
                 </div>
               </div>
-
-              {modal === 'create' && (
-                <div className="rounded-2xl border border-blue-200 bg-blue-50/60 p-5">
-                  <div className="flex items-start gap-3 mb-4">
-                    <div className="w-9 h-9 rounded-xl bg-blue-100 flex items-center justify-center shrink-0"><Lock className="w-4 h-4 text-blue-700" /></div>
-                    <div>
-                      <h4 className="text-sm font-semibold text-neutral-900">Client portal sign-in</h4>
-                      <p className="text-xs text-neutral-600 mt-0.5">Set the password the client uses for their branded dashboard. It is securely hashed and cannot be viewed later.</p>
-                    </div>
-                  </div>
-                  <div className="grid sm:grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-xs font-semibold text-neutral-600 mb-1.5">Portal password · 12+ characters *</label>
-                      <input type="password" autoComplete="new-password" value={form.portalPassword || ''}
-                        onChange={e => setForm(f => ({ ...f, portalPassword: e.target.value }))}
-                        className="w-full border border-neutral-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        placeholder="Create a strong password" minLength={12} required />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-semibold text-neutral-600 mb-1.5">Confirm portal password *</label>
-                      <input type="password" autoComplete="new-password" value={form.confirmPortalPassword || ''}
-                        onChange={e => setForm(f => ({ ...f, confirmPortalPassword: e.target.value }))}
-                        className="w-full border border-neutral-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        placeholder="Enter it again" minLength={12} required />
-                    </div>
-                  </div>
-                </div>
-              )}
 
               {/* Tier & Status */}
               <div>
@@ -10536,7 +10542,7 @@ function WhiteLabelPanel() {
                     </div>
                     {form.pages?.home?.tableServiceEventId ? (
                       <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-white" style={{ background: form.branding.primaryColor || '#2563eb' }}>
-                        → Opens the selected event experience
+                        → Redirects to reservation page
                       </div>
                     ) : (
                       <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-white" style={{ background: form.branding.primaryColor || '#2563eb' }}>
@@ -10582,17 +10588,17 @@ function WhiteLabelPanel() {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-neutral-700 mb-1">
-                      Homepage event subdomain
+                      Reservation Page — Linked Event Subdomain
                     </label>
                     <input className="w-full border border-neutral-200 rounded-xl px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-500"
                       value={form.pages?.home?.tableServiceEventId || ''} onChange={e => setForm(f => ({ ...f, pages: { ...f.pages, home: { ...f.pages.home, tableServiceEventId: e.target.value.trim() } } }))}
                       placeholder="e.g. nobu-downtown" maxLength={200} />
                     {form.pages?.home?.tableServiceEventId && (
                       <p className="text-xs text-blue-600 mt-1">
-                        Homepage routes guests to the linked event’s full guest experience; restaurants open reservations and regular events open their event page.
+                        Home page will redirect to: <code className="font-mono">/e/{form.pages.home.tableServiceEventId}/reserve</code>
                       </p>
                     )}
-                    <p className="text-xs text-neutral-400 mt-1">Must belong to this client. Leave blank to show the public events grid; the Events panel also offers a safe event picker.</p>
+                    <p className="text-xs text-neutral-400 mt-1">Leave blank to show the events grid instead.</p>
                   </div>
                 </div>
               </div>
@@ -10627,23 +10633,19 @@ function WhiteLabelPanel() {
                 <h4 className="text-xs font-semibold text-neutral-500 uppercase tracking-wider mb-3">Feature Flags</h4>
                 <div className="space-y-2">
                   {[
-                    ['showGuestList',    'Show guest list', false],
-                    ['showWaitlist',     'Enable waitlist', false],
-                    ['showSeatingChart', 'Seating chart', true],
-                    ['showSocialShare',  'Social share buttons', false],
-                  ].map(([key, label, proOnly]) => {
-                    const locked = proOnly && form.tier === 'basic';
-                    return (
+                    ['showGuestList',    'Show guest list'],
+                    ['showWaitlist',     'Enable waitlist'],
+                    ['showSeatingChart', 'Seating chart'],
+                    ['showSocialShare',  'Social share buttons'],
+                  ].map(([key, label]) => (
                     <div key={key} className="flex items-center justify-between py-2 px-3 rounded-xl bg-neutral-50 border border-neutral-100">
-                      <span className="text-sm text-neutral-700 flex items-center gap-2">{label}{proOnly && <span className="text-[10px] px-1.5 py-0.5 rounded bg-indigo-50 text-indigo-700 border border-indigo-100">Pro+</span>}</span>
-                      <button type="button" role="switch" aria-checked={!!form.features?.[key]} disabled={locked}
-                        className={`w-9 h-5 rounded-full relative transition-all disabled:opacity-40 disabled:cursor-not-allowed ${form.features?.[key] ? 'bg-blue-600' : 'bg-neutral-300'}`}
+                      <span className="text-sm text-neutral-700">{label}</span>
+                      <div className={`w-9 h-5 rounded-full relative cursor-pointer transition-all ${form.features?.[key] ? 'bg-blue-600' : 'bg-neutral-300'}`}
                         onClick={() => setForm(f => ({ ...f, features: { ...f.features, [key]: !f.features?.[key] } }))}>
-                        <span className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-all ${form.features?.[key] ? 'left-4' : 'left-0.5'}`} />
-                      </button>
+                        <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-all ${form.features?.[key] ? 'left-4' : 'left-0.5'}`} />
+                      </div>
                     </div>
-                    );
-                  })}
+                  ))}
                 </div>
               </div>
 
@@ -10740,7 +10742,7 @@ function WhiteLabelPanel() {
       {/* ── View / Detail Modal ─────────────────────────────────────────────── */}
       {modal === 'view' && selected && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[92vh] overflow-y-auto">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between p-6 border-b border-neutral-200 sticky top-0 bg-white">
               <div>
                 <h3 className="text-lg font-bold text-neutral-900">{selected.clientName}</h3>
