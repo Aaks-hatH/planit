@@ -27,7 +27,7 @@ const btc = require('../services/payments/bitcoin');
 const chain = require('../services/payments/chainApi');
 const notify = require('../services/payments/notify');
 const { checkNow } = require('../jobs/paymentWatcher');
-const { verifyAdmin, demoGuard } = require('../middleware/auth');
+const { verifyAdmin, requirePermission, demoGuard } = require('../middleware/auth');
 const { realIp } = require('../middleware/realIp');
 
 const ID_RE = /^[0-9a-f]{32}$/;
@@ -100,7 +100,7 @@ function adminView(inv) {
   };
 }
 
-router.get('/admin/list', verifyAdmin, async (req, res) => {
+router.get('/admin/list', verifyAdmin, requirePermission('canViewFinancials'), async (req, res) => {
   try {
     if (isDemo(req)) {
       return res.json({ items: [], stats: { confirmedUsdCents: 0, confirmedCount: 0, confirmedSats: 0, last30UsdCents: 0, byStatus: {}, byPurpose: {} }, network: null, demo: true });
@@ -158,7 +158,7 @@ router.get('/admin/list', verifyAdmin, async (req, res) => {
 });
 
 // Is everything wired up? Safe to poll; every external lookup is time-boxed.
-router.get('/admin/health', verifyAdmin, async (req, res) => {
+router.get('/admin/health', verifyAdmin, requirePermission('canViewFinancials'), async (req, res) => {
   try {
     if (isDemo(req)) return res.json({ demo: true, configured: false });
     const configured = btc.isConfigured();
@@ -206,7 +206,7 @@ router.get('/admin/health', verifyAdmin, async (req, res) => {
 });
 
 // Sends a real test through the same path as production alerts.
-router.post('/admin/test-alert', verifyAdmin, demoGuard, adminTestLimiter, async (req, res) => {
+router.post('/admin/test-alert', verifyAdmin, requirePermission('canViewFinancials'), demoGuard, adminTestLimiter, async (req, res) => {
   try {
     const who = req.admin?.username || req.admin?.email || 'admin';
     const r = await notify.alert({
@@ -225,7 +225,7 @@ router.post('/admin/test-alert', verifyAdmin, demoGuard, adminTestLimiter, async
   }
 });
 
-router.get('/admin/:id', verifyAdmin, async (req, res) => {
+router.get('/admin/:id', verifyAdmin, requirePermission('canViewFinancials'), async (req, res) => {
   try {
     if (!ID_RE.test(req.params.id)) return res.status(404).json({ error: 'not_found' });
     if (isDemo(req)) return res.status(404).json({ error: 'not_found' });
@@ -238,7 +238,7 @@ router.get('/admin/:id', verifyAdmin, async (req, res) => {
   }
 });
 
-router.post('/admin/:id/recheck', verifyAdmin, demoGuard, adminTestLimiter, async (req, res) => {
+router.post('/admin/:id/recheck', verifyAdmin, requirePermission('canViewFinancials'), demoGuard, adminTestLimiter, async (req, res) => {
   try {
     if (!ID_RE.test(req.params.id)) return res.status(404).json({ error: 'not_found' });
     const found = await Invoice.findOne({ publicId: req.params.id }).select('_id').lean();
@@ -252,7 +252,7 @@ router.post('/admin/:id/recheck', verifyAdmin, demoGuard, adminTestLimiter, asyn
   }
 });
 
-router.post('/admin/:id/retry-fulfill', verifyAdmin, demoGuard, adminTestLimiter, async (req, res) => {
+router.post('/admin/:id/retry-fulfill', verifyAdmin, requirePermission('canViewFinancials'), demoGuard, adminTestLimiter, async (req, res) => {
   try {
     if (!ID_RE.test(req.params.id)) return res.status(404).json({ error: 'not_found' });
     const inv = await Invoice.findOneAndUpdate(
@@ -271,7 +271,7 @@ router.post('/admin/:id/retry-fulfill', verifyAdmin, demoGuard, adminTestLimiter
 });
 
 // Resolve an invoice that landed in "review" (late / partial / odd payment).
-router.post('/admin/:id/resolve', verifyAdmin, demoGuard, async (req, res) => {
+router.post('/admin/:id/resolve', verifyAdmin, requirePermission('canViewFinancials'), demoGuard, async (req, res) => {
   try {
     const { action, note } = req.body || {};
     if (!ID_RE.test(req.params.id) || !['accept', 'reject'].includes(action)) return res.status(400).json({ error: 'validation' });
