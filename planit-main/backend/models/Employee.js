@@ -6,7 +6,7 @@ const employeeSchema = new mongoose.Schema({
   role: {
     type: String,
     required: true,
-    enum: ['super_admin', 'admin', 'support', 'moderator', 'analyst', 'developer', 'demo'],
+    enum: ['super_admin', 'admin', 'support', 'moderator', 'analyst', 'developer', 'marketing', 'recruiter', 'finance', 'content_editor', 'demo'],
     default: 'support',
   },
   department:  { type: String, trim: true, maxlength: 100 },
@@ -76,6 +76,15 @@ const employeeSchema = new mongoose.Schema({
 
     // ── Team management ──────────────────────────────────────
     canViewEmployees:     { type: Boolean, default: false },
+
+    // ── Hiring ───────────────────────────────────────────────
+    canViewHiring:        { type: Boolean, default: false },
+    canManageHiring:      { type: Boolean, default: false },
+    canViewCandidatePII:  { type: Boolean, default: false }, // resumes, contact details
+
+    // ── Advertising ──────────────────────────────────────────
+    canManageAds:         { type: Boolean, default: false },
+    canViewAdSpend:       { type: Boolean, default: false },
   },
 
   // ── Demo flag ─────────────────────────────────────────────────────────────
@@ -110,6 +119,12 @@ const employeeSchema = new mongoose.Schema({
   // ── Access scope ──────────────────────────────────────────────────────────
   // Optional list of event IDs this employee is restricted to. Empty = all events.
   accessibleEvents:  [{ type: String }],
+
+  // ── GitHub repo access (personal repo, no org) ────────────────────────────
+  // Only set for employees who need to touch the code. On a personal repo a
+  // collaborator is added or removed by username; there are no teams.
+  githubUsername:    { type: String, trim: true, maxlength: 39 },
+  githubAccess:      { type: String, enum: ['none', 'read', 'write'], default: 'none' },
 }, { timestamps: true });
 
 module.exports = mongoose.model('Employee', employeeSchema);
