@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { getUserTimezone, localDateTimeToUTC, getTimezoneOptions, detectTimezone } from '../utils/timezoneUtils';
 import { validateEmail } from '../utils/validators';
 import { useNavigate } from 'react-router-dom';
@@ -15,6 +15,7 @@ import { trackGAEvent } from '../services/analytics';
 import RecoveryCodeModal from '../components/RecoveryCodeModal';
 import toast from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
+import { HomePreloader, HomeScrollChrome, ScrollFloat, MotionReveal, useSiteReady } from '../components/HomeMotion';
 import { useWhiteLabel } from '../context/WhiteLabelContext';
 
 /*
@@ -1531,38 +1532,8 @@ function CopyLinkBox({ eventId, subdomain, mode }) {
   );
 }
 
-function Reveal({ children, delay = 0, className = '', direction = 'up' }) {
-  const ref = useRef(null);
-  const [visible, setVisible] = useState(false);
-  useEffect(() => {
-    const el = ref.current; if (!el) return;
-    const obs = new IntersectionObserver(
-      ([e]) => { if (e.isIntersecting) { setTimeout(() => setVisible(true), delay); obs.unobserve(el); } },
-      { threshold: 0.08 }
-    );
-    obs.observe(el);
-    return () => obs.disconnect();
-  }, [delay]);
-  const hiddenTransform = {
-    up:     'translateY(28px)',
-    left:   'translateX(-32px)',
-    right:  'translateX(32px)',
-    scale:  'scale(0.94)',
-  }[direction] || 'translateY(28px)';
-  return (
-    <div
-      ref={ref}
-      className={`${className} transition-all ease-out ${visible ? 'opacity-100' : 'opacity-0'}`}
-      style={{
-        transitionDuration: '800ms',
-        transitionTimingFunction: 'cubic-bezier(0.16,1,0.3,1)',
-        transform: visible ? 'none' : hiddenTransform,
-        willChange: 'transform, opacity',
-      }}
-    >
-      {children}
-    </div>
-  );
+function Reveal(props) {
+  return <MotionReveal {...props} />;
 }
 
 // A soft, low-opacity gradient seam used between major sections so the page
@@ -2406,7 +2377,7 @@ const SHOWCASE_STEPS = [
 ];
 function ProductShowcase() {
   return (
-    <section className="relative border-t" style={{ borderColor: 'rgba(255,255,255,0.05)' }}>
+    <section id="showcase" className="relative border-t" style={{ borderColor: 'rgba(255,255,255,0.05)' }}>
       <div className="max-w-6xl mx-auto px-6 sm:px-10 py-20 sm:py-28">
         <Reveal className="text-center mb-16 sm:mb-20">
           <p className="text-xs font-semibold text-neutral-600 uppercase tracking-widest mb-4">See it in action</p>
@@ -3186,6 +3157,8 @@ function HeroProductPreview() {
   );
 }
 
+let homePreloadShown = false;
+
 export default function Home() {
   const { wl, isWL } = useWhiteLabel();
   const wlName    = isWL ? (wl?.branding?.companyName || wl?.clientName || '') : '';
@@ -3205,6 +3178,14 @@ export default function Home() {
   const [showIntro, setShowIntro] = useState(
     () => !isWL && typeof window !== 'undefined' && !sessionStorage.getItem('planit_intro_played')
   );
+  // Loading screen (counter + curtain). Plays once per full page load, never on
+  // white-label domains. The intro cinematic mounts underneath it so the curtain
+  // opens straight onto the cinematic (or the page, if it was already played).
+  const siteReady = useSiteReady();
+  const [preloading, setPreloading] = useState(() => !isWL && !homePreloadShown);
+  const [introGate, setIntroGate] = useState(() => !(!isWL && !homePreloadShown));
+  const revealFromPreloader = useCallback(() => setIntroGate(true), []);
+  const finishPreloader = useCallback(() => { homePreloadShown = true; setPreloading(false); }, []);
   useEffect(() => {
     if (!showIntro) return;
     const prevOverflow = document.body.style.overflow;
@@ -3458,8 +3439,9 @@ export default function Home() {
     <div className="min-h-screen text-white relative" style={{ background: 'var(--bg-base)', overflowX: 'clip', maxWidth: '100vw', isolation: 'isolate' }}>
       <InjectGlobalCSS />
       <AnimatePresence>
-        {showIntro && <IntroCinematic onComplete={dismissIntro} />}
+        {showIntro && introGate && <IntroCinematic onComplete={dismissIntro} />}
       </AnimatePresence>
+      {preloading && <HomePreloader ready={siteReady} onReveal={revealFromPreloader} onDone={finishPreloader} />}
       {showAd && <CrossPlatformAd trigger="post_event_create" onClose={() => setShowAd(false)} />}
       {/* Recovery code modal, shown once when organizer sets an account password at creation */}
       {organizerRecoveryCode && (
@@ -3477,6 +3459,7 @@ export default function Home() {
         />
       )}
       <ScrollProgressBar />
+      {!isWL && <HomeScrollChrome key={String(selectedBranch)} />}
 
 
       {/* Nav */}
@@ -3760,7 +3743,7 @@ export default function Home() {
                 ))}
               </motion.div>
 
-              <HeroProductPreview />
+              <ScrollFloat distance={36}><HeroProductPreview /></ScrollFloat>
 
               {/* Scroll indicator */}
               <div className="mt-10 sm:mt-16 flex flex-col items-center gap-2 cursor-default" style={{ opacity:0.4 }}>
@@ -3777,7 +3760,7 @@ export default function Home() {
         {/* ═══════════════════════════════════════════════════════════
             SOCIAL PROOF STRIP, replaces branch gateway
         ═══════════════════════════════════════════════════════════ */}
-        <section className="relative border-t overflow-hidden" style={{ borderColor:'rgba(255,255,255,0.05)', display: (selectedBranch || isWL) ? 'none' : 'block' }}>
+        <section id="features" className="relative border-t overflow-hidden" style={{ borderColor:'rgba(255,255,255,0.05)', display: (selectedBranch || isWL) ? 'none' : 'block' }}>
           <div className="max-w-screen-xl mx-auto px-6 sm:px-10 py-20">
 
             {/* Section label */}
