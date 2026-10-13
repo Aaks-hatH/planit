@@ -5,7 +5,7 @@
 
 require('dotenv').config();
 
-const VERSION = '1.3.1'; // bump this on every deploy so ntfy alerts show which build is running
+const VERSION = '1.4.0'; // bump this on every deploy so ntfy alerts show which build is running
 const { verifyIntegrity, scheduleReverification } = require('./keys');
 verifyIntegrity();
 scheduleReverification();
@@ -25,6 +25,7 @@ const supportRoutes       = require('./routes/support');
 const paymentRoutes       = require('./routes/payments');
 const { startPaymentWatcher } = require('./jobs/paymentWatcher');
 const bugReportRoutes     = require('./routes/bug-reports');
+const careersRoutes       = require('./routes/careers');
 const uptimeRoutes        = require('./routes/uptime');
 const { startCleanupScheduler } = require('./jobs/cleanupJob');
 const { seedBlogPosts }         = require('./services/blogSeeder');
@@ -449,6 +450,7 @@ app.use('/api/blog',        blogRoutes);
 app.use('/api/support',     supportRoutes);
 app.use('/api/payments',    paymentRoutes);
 app.use('/api/bug-reports', bugReportRoutes);
+app.use('/api/careers',     careersRoutes);
 app.use('/api/uptime',      uptimeRoutes);
 app.use('/api/mesh',        meshRoutes);
 app.use('/api',             publicRoutes);
