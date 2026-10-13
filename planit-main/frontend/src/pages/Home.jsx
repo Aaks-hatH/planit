@@ -5198,7 +5198,7 @@ export default function Home() {
               <div>
                 <h3 className="text-xs font-bold text-neutral-500 mb-5 uppercase tracking-wider">Company</h3>
                 <ul className="space-y-3.5 text-sm text-neutral-500">
-                  {[['About PlanIt', '/about'], ['Blog & Guides', '/blog'], ['Terms of Service', '/terms'], ['Privacy Policy', '/privacy'], ['License', '/license'], ['Credits', '/credits']].map(([l, h]) => (
+                  {[['About PlanIt', '/about'], ['Blog & Guides', '/blog'], ['Careers', '/careers'], ['Terms of Service', '/terms'], ['Privacy Policy', '/privacy'], ['License', '/license'], ['Credits', '/credits']].map(([l, h]) => (
                     <li key={l}><a href={h} className="nav-link inline-block hover:text-neutral-200 transition-colors duration-200">{l}</a></li>
                   ))}
                 </ul>
