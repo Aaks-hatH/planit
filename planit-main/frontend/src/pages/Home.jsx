@@ -3175,23 +3175,26 @@ export default function Home() {
   const navigate = useNavigate();
   // Opening cinematic, plays once per browser session, skipped entirely on
   // white-label domains (they get their own branded hero, not PlanIt's).
-  const [showIntro, setShowIntro] = useState(
-    () => !isWL && typeof window !== 'undefined' && !sessionStorage.getItem('planit_intro_played')
-  );
+  // The opening cinematic is retired: the PlanIt loading screen below is the only
+  // loader. To bring the cinematic back, restore the old initial value:
+  //   !isWL && typeof window !== 'undefined' && !sessionStorage.getItem('planit_intro_played')
+  const [showIntro, setShowIntro] = useState(false);
   // Loading screen (counter + curtain). Plays once per full page load, never on
   // white-label domains. The intro cinematic mounts underneath it so the curtain
-  // opens straight onto the cinematic (or the page, if it was already played).
+  // opens onto the page.
   const siteReady = useSiteReady();
   const [preloading, setPreloading] = useState(() => !isWL && !homePreloadShown);
   const [introGate, setIntroGate] = useState(() => !(!isWL && !homePreloadShown));
   const revealFromPreloader = useCallback(() => setIntroGate(true), []);
   const finishPreloader = useCallback(() => { homePreloadShown = true; setPreloading(false); }, []);
+  // Scroll lock: held while the loader or the intro is up, always released after.
+  const scrollLocked = preloading || (showIntro && introGate);
   useEffect(() => {
-    if (!showIntro) return;
-    const prevOverflow = document.body.style.overflow;
+    if (!scrollLocked) return;
     document.body.style.overflow = 'hidden';
-    return () => { document.body.style.overflow = prevOverflow; };
-  }, [showIntro]);
+    return () => { document.body.style.overflow = ''; };
+  }, [scrollLocked]);
+
   const dismissIntro = () => {
     sessionStorage.setItem('planit_intro_played', '1');
     setShowIntro(false);
