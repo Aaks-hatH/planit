@@ -1894,12 +1894,12 @@ app.post('/mesh/exec', meshAuth(SERVICE_NAME), express.json(), (req, res) => {
 //   NTFY_TOKEN            — Optional bearer token if your ntfy topic is private
 //   SLACK_WEBHOOK_URL     — Slack Incoming Webhook URL
 //
-// Body: { type: 'bug_report' | 'status_report' | 'incident' | 'payment', payload: { ... } }
+// Body: { type: 'bug_report' | 'status_report' | 'incident' | 'payment' | 'career', payload: { ... } }
 //
 // Returns 200 immediately — alerts fire in the background so the backend
 // caller gets an instant response and never waits on downstream channels.
 
-const { alertBugReport, alertStatusReport, alertIncident, alertPayment } = require('./services/alerting');
+const { alertBugReport, alertStatusReport, alertIncident, alertPayment, alertCareer } = require('./services/alerting');
 
 app.post('/mesh/alert', meshAuth(SERVICE_NAME), express.json({ limit: '32kb' }), (req, res) => {
   const { type, payload } = req.body || {};
@@ -1935,6 +1935,9 @@ app.post('/mesh/alert', meshAuth(SERVICE_NAME), express.json({ limit: '32kb' }),
           break;
         case 'payment':
           await alertPayment(payload);
+          break;
+        case 'career':
+          await alertCareer(payload);
           break;
         default:
           console.warn(`[alert] Unknown alert type from ${req.meshCaller}: ${type}`);
