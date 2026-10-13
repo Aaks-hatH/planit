@@ -165,6 +165,13 @@ const auditSchema = new mongoose.Schema(
         'analytics_viewed', 'analytics_exported',
         // PII / data-subject requests
         'pii_lookup', 'pii_export',
+        // Careers (listings / applications / settings)
+        'careers_application_deleted', 'careers_application_updated', 'careers_export',
+        'careers_job_closed', 'careers_job_created', 'careers_job_deleted',
+        'careers_job_reopened', 'careers_job_updated', 'careers_settings_updated',
+        // Careers -> Org chart
+        'careers_org_created', 'careers_org_updated', 'careers_org_deleted',
+        'careers_org_layout', 'careers_org_imported',
       ],
     },
 
