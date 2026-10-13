@@ -36,6 +36,7 @@ import {
 import '../styles/adminDark.css';
 import api, { adminAPI, uptimeAPI, watchdogAPI, routerAPI, bugReportAPI, blogAPI } from '../services/api';
 import AdminPayments from '../components/AdminPayments';
+import AdminCareers from '../components/AdminCareers';
 import PlatformAnalyticsDashboard from '../components/PlatformAnalyticsDashboard';
 import PiiLookupPanel from '../components/PiiLookupPanel';
 import { SERVICE_CATEGORIES, ALL_SERVICES_FLAT } from '../utils/serviceCategories';
@@ -7850,7 +7851,7 @@ function FleetControl() {
 
 
 // ─── Mobile "More" nav button ─────────────────────────────────────────────────
-const MORE_SECTIONS = ['organizers','staff','employees','audit-logs','analytics','compliance','security','blocklist','banned-ips','reports','uptime','command-center','whitelabel','payments','blog','account'];
+const MORE_SECTIONS = ['organizers','staff','employees','audit-logs','analytics','compliance','security','blocklist','banned-ips','reports','uptime','command-center','whitelabel','payments','careers','blog','account'];
 function MoreNavButton({ activeSection, setActiveSection, onLogout }) {
   const [open, setOpen] = React.useState(false);
   const isActive = MORE_SECTIONS.includes(activeSection);
@@ -7860,7 +7861,7 @@ function MoreNavButton({ activeSection, setActiveSection, onLogout }) {
     analytics: 'Analytics', compliance: 'PII & Compliance', security: 'Security', blocklist: 'Blocklist',
     'banned-ips': 'Banned IPs',
     reports: 'Reports', uptime: 'Uptime', 'command-center': 'Command',
-    whitelabel: 'White Label', blog: 'Blog CMS', account: 'My Account',
+    whitelabel: 'White Label', careers: 'Careers', blog: 'Blog CMS', account: 'My Account',
   };
   const icons = {
     organizers: Building2, staff: UserCheck, employees: Briefcase,
@@ -7868,7 +7869,7 @@ function MoreNavButton({ activeSection, setActiveSection, onLogout }) {
     analytics: BarChart3, compliance: ShieldAlert, security: Shield, blocklist: Ban,
     'banned-ips': ShieldAlert,
     reports: Inbox, uptime: Radio, 'command-center': Crosshair,
-    whitelabel: Layers, blog: BookOpen, account: User,
+    whitelabel: Layers, careers: Briefcase, blog: BookOpen, account: User,
   };
   return (
     <>
@@ -8095,6 +8096,12 @@ function PaymentsPanel() {
   return <AdminPayments isDemo={isDemo} />;
 }
 
+// Careers panel wrapper (same demo-safe pattern as Payments)
+function CareersPanel() {
+  const isDemo = useContext(DemoContext);
+  return <AdminCareers isDemo={isDemo} />;
+}
+
 // ─── Nav Items ────────────────────────────────────────────────────────────────
 const NAV_ITEMS = [
   { id: 'dashboard',          label: 'Dashboard',          icon: Monitor    },
@@ -8118,6 +8125,7 @@ const NAV_ITEMS = [
   { id: 'command-center',     label: 'Command',            icon: Crosshair  },
   { id: 'whitelabel',         label: 'White Label',        icon: Layers     },
   { id: 'payments',           label: 'Payments',           icon: DollarSign },
+  { id: 'careers',            label: 'Careers',            icon: Briefcase  },
   { id: 'blog',               label: 'Blog CMS',           icon: BookOpen   },
   { id: 'account',            label: 'My Account',         icon: User       },
 ];
@@ -12210,6 +12218,7 @@ export default function Admin() {
           {activeSection === 'command-center' && !selectedEvent && <CommandCenterPanel />}
           {activeSection === 'whitelabel'     && !selectedEvent && <div className="max-w-7xl mx-auto"><WhiteLabelPanel /></div>}
           {activeSection === 'payments'       && !selectedEvent && <div className="max-w-6xl mx-auto"><PaymentsPanel /></div>}
+          {activeSection === 'careers'        && !selectedEvent && <div className="max-w-6xl mx-auto"><CareersPanel /></div>}
           {activeSection === 'blog'           && !selectedEvent && <div className="max-w-6xl mx-auto"><BlogCMSPanel /></div>}
           {activeSection === 'account'        && !selectedEvent && (
             <div className="max-w-2xl mx-auto">
