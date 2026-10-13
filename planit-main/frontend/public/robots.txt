@@ -18,6 +18,7 @@ Allow: /blog
 Allow: /blog/
 Allow: /discover
 Allow: /about
+Allow: /careers
 Allow: /help
 Allow: /status
 Allow: /terms
