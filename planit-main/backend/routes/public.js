@@ -307,6 +307,7 @@ router.get('/sitemap.xml', async (req, res, next) => {
       { loc: '/blog',     priority: '0.9', changefreq: 'daily'   },
       { loc: '/discover', priority: '0.8', changefreq: 'daily'   },
       { loc: '/about',    priority: '0.6', changefreq: 'monthly' },
+      { loc: '/careers',  priority: '0.6', changefreq: 'weekly'  },
       { loc: '/help',     priority: '0.6', changefreq: 'weekly'  },
       { loc: '/terms',    priority: '0.4', changefreq: 'monthly' },
       { loc: '/privacy',  priority: '0.4', changefreq: 'monthly' },
@@ -318,6 +319,13 @@ router.get('/sitemap.xml', async (req, res, next) => {
       .select('slug updatedAt publishDate')
       .sort({ publishDate: -1 })
       .lean();
+
+    // Open volunteer roles (each has its own shareable page + JobPosting markup)
+    let jobs = [];
+    try {
+      const JobListing = require('../models/JobListing');
+      jobs = await JobListing.find({ status: 'open' }).select('slug updatedAt').lean();
+    } catch { /* careers is optional - never break the sitemap */ }
 
     const staticUrls = staticPages.map(p => `  <url>
     <loc>${base}${p.loc}</loc>
@@ -333,9 +341,17 @@ router.get('/sitemap.xml', async (req, res, next) => {
     <priority>0.7</priority>
   </url>`).join('\n');
 
+    const jobUrls = jobs.map(j => `  <url>
+    <loc>${base}/careers/${j.slug}</loc>
+    <lastmod>${new Date(j.updatedAt || Date.now()).toISOString().split('T')[0]}</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.5</priority>
+  </url>`).join('\n');
+
     const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
 ${staticUrls}
+${jobUrls}
 ${postUrls}
 </urlset>`;
 
