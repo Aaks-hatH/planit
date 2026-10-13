@@ -45,13 +45,6 @@ export function HomePreloader({ ready, onReveal, onDone }) {
   const readyRef = useRef(ready);
   readyRef.current = ready;
 
-  // Lock scroll while the loader is up.
-  useEffect(() => {
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    return () => { document.body.style.overflow = prev; };
-  }, []);
-
   useEffect(() => {
     let raf;
     const t0 = performance.now();
@@ -84,15 +77,15 @@ export function HomePreloader({ ready, onReveal, onDone }) {
     <div className="fixed inset-0" style={{ zIndex: 1100 }} role="status" aria-label="Loading PlanIt">
       <motion.div
         className="absolute inset-x-0 top-0 h-1/2"
-        style={{ background: '#05050f' }}
+        style={{ background: '#04040a' }}
         animate={{ y: exit ? '-101%' : 0 }}
         transition={curtain}
       >
-        <div className="absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-indigo-300/50 to-transparent" />
+        <div className="absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-indigo-400/40 to-transparent" />
       </motion.div>
       <motion.div
         className="absolute inset-x-0 bottom-0 h-1/2"
-        style={{ background: '#05050f' }}
+        style={{ background: '#04040a' }}
         animate={{ y: exit ? '101%' : 0 }}
         transition={curtain}
         onAnimationComplete={() => exit && onDone?.()}
@@ -103,25 +96,25 @@ export function HomePreloader({ ready, onReveal, onDone }) {
         transition={{ duration: 0.55, ease: EASE }}
       >
         <div className="flex items-start justify-between text-[11px] tracking-[0.3em] text-neutral-500">
-          <span><b className="font-display text-sm font-extrabold tracking-tight text-white">PlanIt</b> / EVENTS</span>
+          <span><b className="font-syne text-sm font-extrabold tracking-tight text-white">PlanIt</b> / EVENTS</span>
           <span>&copy; {new Date().getFullYear()}</span>
         </div>
         <div className="mx-auto w-full max-w-3xl text-center">
-          <div className="font-display text-[clamp(5rem,24vw,15rem)] font-black leading-none tracking-[-0.06em] text-white tabular-nums">
+          <div className="font-syne text-[clamp(5rem,24vw,15rem)] font-black leading-none tracking-[-0.06em] text-white tabular-nums">
             {String(p).padStart(2, '0')}
             <span
               className="inline-block pr-[0.14em] align-top text-[0.28em]"
               style={{
-                background: 'linear-gradient(90deg,#818cf8,#f472b6,#fb923c)',
+                background: 'linear-gradient(90deg,#6366f1,#8b5cf6)',
                 WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent',
               }}
             >%</span>
           </div>
           <div className="relative mx-auto mt-6 h-px w-full max-w-md bg-white/10">
-            <div className="absolute inset-y-0 left-0 bg-gradient-to-r from-indigo-400 via-pink-400 to-orange-400" style={{ width: `${p}%` }} />
+            <div className="absolute inset-y-0 left-0 bg-gradient-to-r from-indigo-500 to-violet-500" style={{ width: `${p}%` }} />
             <span className="absolute top-1/2 h-1.5 w-1.5 -translate-y-1/2 rounded-full bg-white" style={{ left: `${p}%` }} />
           </div>
-          <div className="mt-5 h-4 text-[11px] uppercase tracking-[0.3em] text-indigo-300/80">{word}</div>
+          <div className="mt-5 h-4 text-[11px] uppercase tracking-[0.3em] text-indigo-300/70">{word}</div>
         </div>
         <div className="flex items-end justify-between text-[10px] tracking-[0.3em] text-neutral-600">
           <span>PLAN &middot; INVITE &middot; CHECK IN</span>
@@ -170,8 +163,8 @@ export function HomeScrollChrome() {
     <>
       <motion.div
         aria-hidden="true"
-        style={{ scaleX: bar, zIndex: 9998 }}
-        className="pointer-events-none fixed left-0 right-0 top-0 h-[3px] origin-left bg-gradient-to-r from-indigo-400 via-pink-400 to-orange-400"
+        style={{ scaleX: bar, zIndex: 9998, boxShadow: '0 0 8px rgba(99,102,241,0.5)' }}
+        className="pointer-events-none fixed left-0 right-0 top-0 h-[3px] origin-left bg-gradient-to-r from-indigo-500 to-violet-500"
       />
       {items.length > 1 && (
         <div className="fixed right-5 top-1/2 z-[60] hidden -translate-y-1/2 flex-col items-end gap-3 xl:flex">
@@ -186,7 +179,7 @@ export function HomeScrollChrome() {
               )}>{r.label}</span>
               <span className={cx(
                 'block rounded-full transition-all duration-300',
-                active === r.id ? 'h-2.5 w-2.5 bg-pink-400' : 'h-1.5 w-1.5 bg-white/25 group-hover:bg-white/60',
+                active === r.id ? 'h-2.5 w-2.5 bg-violet-400' : 'h-1.5 w-1.5 bg-white/25 group-hover:bg-white/60',
               )} />
             </button>
           ))}
