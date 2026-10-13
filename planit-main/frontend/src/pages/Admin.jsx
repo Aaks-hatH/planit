@@ -8097,9 +8097,9 @@ function PaymentsPanel() {
 }
 
 // Careers panel wrapper (same demo-safe pattern as Payments)
-function CareersPanel() {
+function CareersPanel({ currentUser }) {
   const isDemo = useContext(DemoContext);
-  return <AdminCareers isDemo={isDemo} />;
+  return <AdminCareers isDemo={isDemo} currentUser={currentUser} />;
 }
 
 // ─── Nav Items ────────────────────────────────────────────────────────────────
@@ -12218,7 +12218,7 @@ export default function Admin() {
           {activeSection === 'command-center' && !selectedEvent && <CommandCenterPanel />}
           {activeSection === 'whitelabel'     && !selectedEvent && <div className="max-w-7xl mx-auto"><WhiteLabelPanel /></div>}
           {activeSection === 'payments'       && !selectedEvent && <div className="max-w-6xl mx-auto"><PaymentsPanel /></div>}
-          {activeSection === 'careers'        && !selectedEvent && <div className="max-w-6xl mx-auto"><CareersPanel /></div>}
+          {activeSection === 'careers'        && !selectedEvent && <div className="max-w-6xl mx-auto"><CareersPanel currentUser={currentUser} /></div>}
           {activeSection === 'blog'           && !selectedEvent && <div className="max-w-6xl mx-auto"><BlogCMSPanel /></div>}
           {activeSection === 'account'        && !selectedEvent && (
             <div className="max-w-2xl mx-auto">
