@@ -1320,7 +1320,7 @@ function ApplyForm({ job, attribution, engagement, onDone, onBack }) {
     if (s === 1) {
       if (f.fullName.trim().length < 2) e.fullName = 'Please enter your full name';
       if (!/^\S+@\S+\.\S+$/.test(f.email.trim())) e.email = 'Enter a valid email';
-      if (!f.ageConfirmed) e.ageConfirmed = 'You must be 16 or older to volunteer';
+      if (!f.ageConfirmed) e.ageConfirmed = 'You must be 13 or older to volunteer';
     }
     if (s === 2) {
       ['linkedin', 'github', 'portfolio', 'resumeUrl'].forEach((k) => { if (f[k] && !URL_RX.test(f[k].trim())) e[k] = 'Enter a valid link'; });
@@ -1403,7 +1403,7 @@ function ApplyForm({ job, attribution, engagement, onDone, onBack }) {
             </div>
             <label className={cx('flex cursor-pointer items-start gap-3 rounded-xl border p-3.5 text-sm transition', f.ageConfirmed ? 'border-emerald-400/40 bg-emerald-400/[0.06]' : err.ageConfirmed ? 'border-rose-500/60' : 'border-white/10 bg-white/[0.03]')}>
               <input type="checkbox" checked={f.ageConfirmed} onChange={(e) => set('ageConfirmed', e.target.checked)} className="mt-0.5 h-4 w-4 accent-emerald-400" />
-              <span className="text-neutral-300">I&apos;m at least 16 years old.{err.ageConfirmed && <span className="ml-2 text-xs text-rose-400">{err.ageConfirmed}</span>}</span>
+              <span className="text-neutral-300">I&apos;m at least 13 years old.{err.ageConfirmed && <span className="ml-2 text-xs text-rose-400">{err.ageConfirmed}</span>}</span>
             </label>
           </>)}
 
