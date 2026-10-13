@@ -851,6 +851,78 @@ async function alertPayment({ title, content, fields = [], level = 'info', invoi
   console.log(`[alert] Payment alert dispatched -- ${title} (${lvl})`);
 }
 
+// ─── Careers Alert ────────────────────────────────────────────────────────────
+//
+// Called via POST /mesh/alert { type: 'career', payload } by the backend when a
+// volunteer application comes in from /careers.
+// payload: { title, content, fields: [{name, value, inline}], level, applicationId }
+
+async function alertCareer({ title, content, fields = [], level = 'info', applicationId = '' } = {}) {
+  if (!title) return;
+  const lvl = PAYMENT_COLOR[level] ? level : 'info';
+  const safeFields = (Array.isArray(fields) ? fields : [])
+    .filter(f => f && f.value !== undefined && String(f.value).trim() !== '')
+    .slice(0, 10)
+    .map(f => ({ name: _plain(f.name, 60), value: _plain(f.value, 1000), inline: !!f.inline }));
+
+  const dedupKey = `career:${_plain(title, 80)}:${applicationId || _plain(content, 60)}`;
+  if (_isDuplicate(dedupKey, 30 * 1000)) {
+    console.log(`[alert] Career alert deduped -- ${dedupKey}`);
+    return;
+  }
+
+  const adminUrl = _adminUrl();
+
+  // ── Discord ──────────────────────────────────────────────────────────────
+  const discordFields = [...safeFields];
+  if (adminUrl) discordFields.push({ name: 'Admin', value: `[Open Careers](${adminUrl})`, inline: true });
+
+  await _sendDiscord({
+    username:   BRAND_NAME,
+    avatar_url: APP_ICON_URL,
+    content:    `<@${DISCORD_ALERT_USER}> ${_plain(content || title, 180)}`,
+    allowed_mentions: { users: [DISCORD_ALERT_USER] },
+    embeds: [{
+      color: PAYMENT_COLOR[lvl],
+      author: { name: `${BRAND_NAME} · Careers`, icon_url: APP_ICON_URL },
+      title: _plain(title, 120),
+      fields: discordFields,
+      thumbnail: { url: APP_ICON_URL },
+      footer: { text: `${BRAND_NAME}  ·  PlanIt Careers${applicationId ? `  ·  ${String(applicationId).slice(-6)}` : ''}`, icon_url: APP_ICON_URL },
+      timestamp: _ts(),
+    }],
+  });
+
+  // ── ntfy ─────────────────────────────────────────────────────────────────
+  const ntfyBody = [
+    _plain(content, 300),
+    ...safeFields.map(f => `${f.name}: ${f.value}`),
+  ].filter(Boolean).join('\n');
+
+  await _sendNtfy({
+    title:    _plain(title, 120),
+    body:     ntfyBody || _plain(title, 120),
+    priority: Math.min(5, Math.max(1, Number(process.env.NTFY_CAREER_PRIORITY) || 4)),
+    tags:     ['briefcase', 'raising_hand'],
+    actions:  adminUrl ? `view, Open Admin, ${adminUrl}` : undefined,
+    iconUrl:  APP_ICON_URL,
+    clickUrl: adminUrl || undefined,
+  });
+
+  // ── Slack ────────────────────────────────────────────────────────────────
+  const blocks = [
+    { type: 'header', text: { type: 'plain_text', text: _plain(title, 150), emoji: true } },
+    ...(content ? [{ type: 'section', text: { type: 'mrkdwn', text: _plain(content, 300) } }] : []),
+    ...(safeFields.length ? [{ type: 'section', fields: safeFields.map(f => ({ type: 'mrkdwn', text: `*${f.name}:*\n${f.value}`.slice(0, 1900) })) }] : []),
+  ];
+  if (adminUrl) blocks.push({ type: 'actions', elements: [{ type: 'button', text: { type: 'plain_text', text: 'Open Admin', emoji: true }, url: adminUrl }] });
+  blocks.push({ type: 'context', elements: [{ type: 'mrkdwn', text: `*${BRAND_NAME}*  ·  PlanIt Careers  ·  ${new Date().toUTCString()}` }] });
+
+  await _sendSlack({ username: `${BRAND_NAME} Careers`, icon_emoji: ':briefcase:', blocks });
+
+  console.log(`[alert] Career alert dispatched -- ${title}`);
+}
+
 // ─── Exports ──────────────────────────────────────────────────────────────────
 
-module.exports = { alertBugReport, alertStatusReport, alertIncident, alertPayment };
+module.exports = { alertBugReport, alertStatusReport, alertIncident, alertPayment, alertCareer };
