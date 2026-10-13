@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import {
   motion, AnimatePresence, useScroll, useTransform, useSpring, useInView,
-  useMotionValue, useReducedMotion,
+  useMotionValue, useReducedMotion, useAnimationFrame, useVelocity,
 } from 'framer-motion';
 import {
   ArrowRight, ArrowLeft, ArrowUpRight, Check, CheckCircle2, ChevronDown, Clock, Copy, Globe,
@@ -150,7 +150,72 @@ function ping(event, extra = {}) {
   } catch { /* ignore */ }
 }
 
-/* ─── Small animation primitives ───────────────────────────────────────────── */
+/* ─── Fonts, helpers, hooks ────────────────────────────────────────────────── */
+// Unbounded (wide, sci-fi display) + Instrument Serif italic (accent) + DM Mono (labels).
+// Loaded only on this route so the rest of the app is unaffected.
+const FONT_HREF = 'https://fonts.googleapis.com/css2?family=Unbounded:wght@400;600;700;800;900&family=Instrument+Serif:ital@0;1&family=DM+Mono:wght@400;500&display=swap';
+
+const wrap = (min, max, v) => { const r = max - min; return ((((v - min) % r) + r) % r) + min; };
+const hueFor = (s = '') => { let h = 0; for (const c of s) h = (h * 31 + c.charCodeAt(0)) % 360; return h; };
+const TEAM_COLOR = {
+  Engineering: '#818cf8', Design: '#f472b6', Security: '#34d399', Marketing: '#fbbf24', Community: '#22d3ee',
+  Growth: '#a3e635', Operations: '#c4b5fd', Leadership: '#fb923c', People: '#f9a8d4', Partnerships: '#5eead4',
+};
+const teamColor = (t) => TEAM_COLOR[t] || `hsl(${hueFor(t)} 80% 72%)`;
+
+function usePointerFine() {
+  const [fine, setFine] = useState(false);
+  useEffect(() => { setFine(!!window.matchMedia?.('(pointer: fine)').matches); }, []);
+  return fine;
+}
+
+/** Injects the careers fonts once and resolves when they are actually usable. */
+function useCareersFonts() {
+  const [ready, setReady] = useState(false);
+  useEffect(() => {
+    let alive = true;
+    const done = () => { if (alive) setReady(true); };
+    const timer = setTimeout(done, 3000);   // never block the page on a slow font CDN
+    const load = () => Promise.all([
+      document.fonts.load('800 1em Unbounded'), document.fonts.load('italic 1em "Instrument Serif"'), document.fonts.load('500 1em "DM Mono"'),
+    ]).then(done, done);
+    let link = document.getElementById('careers-fonts');
+    if (!link) {
+      link = document.createElement('link');
+      link.id = 'careers-fonts'; link.rel = 'stylesheet'; link.href = FONT_HREF;
+      link.addEventListener('load', load); link.addEventListener('error', done);
+      document.head.appendChild(link);
+    } else load();
+    return () => { alive = false; clearTimeout(timer); };
+  }, []);
+  return ready;
+}
+
+const GLYPHS = '!<>-_\\/[]{}=+*^?#';
+function useScramble(text, run, delay = 0) {
+  const reduce = useReducedMotion();
+  const [out, setOut] = useState(reduce ? text : '');
+  useEffect(() => {
+    if (!run) return undefined;
+    if (reduce) { setOut(text); return undefined; }
+    let raf; let start = 0;
+    const total = 800;
+    const tick = (t) => {
+      if (!start) start = t + delay;
+      const p = Math.max(0, Math.min(1, (t - start) / total));
+      const reveal = Math.floor(p * text.length);
+      let s = '';
+      for (let i = 0; i < text.length; i++) s += (i < reveal || text[i] === ' ') ? text[i] : GLYPHS[Math.floor(Math.random() * GLYPHS.length)];
+      setOut(p === 0 ? '' : s);
+      if (p < 1) raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [text, run, delay, reduce]);
+  return out;
+}
+
+/* ─── Animation primitives ─────────────────────────────────────────────────── */
 function Reveal({ children, delay = 0, y = 28, className = '', as = 'div' }) {
   const reduce = useReducedMotion();
   const Tag = motion[as] || motion.div;
@@ -167,17 +232,19 @@ function Reveal({ children, delay = 0, y = 28, className = '', as = 'div' }) {
   );
 }
 
-function Words({ text, className = '', delay = 0, accent = [] }) {
+/** Word-by-word masked rise. `accent` words render in the serif italic with a moving gradient. */
+function Words({ text, className = '', delay = 0, accent = [], inView = false }) {
   const reduce = useReducedMotion();
+  const trigger = inView ? { whileInView: { y: 0, rotate: 0 }, viewport: { once: true, margin: '-12%' } } : { animate: { y: 0, rotate: 0 } };
   return (
     <span className={className} aria-label={text}>
       {text.split(' ').map((w, i) => (
-        <span key={i} className="inline-block overflow-hidden align-bottom pb-[0.12em] -mb-[0.12em]" aria-hidden="true">
+        <span key={i} className="inline-block overflow-hidden align-bottom pb-[0.18em] -mb-[0.18em] pr-[0.18em] -mr-[0.18em] pl-[0.04em] -ml-[0.04em]" aria-hidden="true">
           <motion.span
-            className={cx('inline-block', accent.includes(i) && 'bg-gradient-to-r from-indigo-300 via-cyan-200 to-emerald-300 bg-clip-text text-transparent')}
-            initial={reduce ? false : { y: '110%', rotate: 3 }}
-            animate={{ y: 0, rotate: 0 }}
-            transition={{ duration: 0.9, delay: delay + i * 0.07, ease: EASE }}
+            className={cx('inline-block', accent.includes(i) && 'font-serif-i careers-shine text-[1.16em] leading-[0.8]')}
+            initial={reduce ? false : { y: '115%', rotate: 4 }}
+            {...trigger}
+            transition={{ duration: 1, delay: delay + i * 0.07, ease: EASE }}
           >
             {w}
           </motion.span>
@@ -188,24 +255,80 @@ function Words({ text, className = '', delay = 0, accent = [] }) {
   );
 }
 
-function Counter({ to, suffix = '' }) {
+/** Per-character kinetic headline. Words flagged `serif` rise as a single unit so the gradient stays smooth. */
+function Kinetic({ lines, go = true, delay = 0, className = '' }) {
+  const reduce = useReducedMotion();
+  let k = 0;
+  const hidden = { y: '118%', rotate: 7, opacity: 0 };
+  const shown = { y: 0, rotate: 0, opacity: 1 };
+  const box = { padding: '0.12em 0.2em 0.2em', margin: '-0.12em -0.2em -0.2em' };
+  return (
+    <h1 className={className} aria-label={lines.map((l) => l.map((w) => w.t).join(' ')).join(' ')}>
+      {lines.map((line, li) => (
+        <span key={li} className="block" aria-hidden="true">
+          {line.map((w, wi) => (
+            <span key={wi}>
+              <span className="inline-block whitespace-nowrap align-bottom">
+                {w.serif ? (
+                  <span className="inline-block overflow-hidden align-bottom" style={box}>
+                    <motion.span
+                      className="font-serif-i careers-shine inline-block text-[1.2em] leading-[0.82]"
+                      initial={reduce ? false : hidden} animate={go ? shown : hidden}
+                      transition={{ duration: 1.1, delay: delay + (k++) * 0.04, ease: EASE }}
+                    >{w.t}</motion.span>
+                  </span>
+                ) : [...w.t].map((ch, ci) => (
+                  <span key={ci} className="inline-block overflow-hidden align-bottom" style={box}>
+                    <motion.span
+                      className="inline-block" initial={reduce ? false : hidden} animate={go ? shown : hidden}
+                      transition={{ duration: 1, delay: delay + (k++) * 0.04, ease: EASE }}
+                    >{ch}</motion.span>
+                  </span>
+                ))}
+              </span>
+              {wi < line.length - 1 ? ' ' : null}
+            </span>
+          ))}
+        </span>
+      ))}
+    </h1>
+  );
+}
+
+function Counter({ to, suffix = '', run = true }) {
   const ref = useRef(null);
   const inView = useInView(ref, { once: true, margin: '-10%' });
   const reduce = useReducedMotion();
   const [v, setV] = useState(reduce ? to : 0);
   useEffect(() => {
-    if (!inView) return undefined;
+    if (!inView || !run) return undefined;
     if (reduce) { setV(to); return undefined; }
-    let raf; const t0 = performance.now(); const dur = 1400;
+    let raf; const t0 = performance.now(); const dur = 1600;
     const step = (t) => {
       const p = Math.min(1, (t - t0) / dur);
-      setV(Math.round(to * (1 - Math.pow(1 - p, 3))));
+      setV(Math.round(to * (1 - Math.pow(1 - p, 4))));
       if (p < 1) raf = requestAnimationFrame(step);
     };
     raf = requestAnimationFrame(step);
     return () => cancelAnimationFrame(raf);
-  }, [inView, to, reduce]);
+  }, [inView, run, to, reduce]);
   return <span ref={ref}>{v}{suffix}</span>;
+}
+
+/** Pulls its children toward the cursor. */
+function Magnetic({ children, strength = 0.32, className = '' }) {
+  const ref = useRef(null);
+  const reduce = useReducedMotion();
+  const fine = usePointerFine();
+  const x = useMotionValue(0); const y = useMotionValue(0);
+  const sx = useSpring(x, { stiffness: 240, damping: 16, mass: 0.4 }); const sy = useSpring(y, { stiffness: 240, damping: 16, mass: 0.4 });
+  const move = (e) => {
+    if (!fine || reduce || !ref.current) return;
+    const r = ref.current.getBoundingClientRect();
+    x.set((e.clientX - (r.left + r.width / 2)) * strength); y.set((e.clientY - (r.top + r.height / 2)) * strength);
+  };
+  const leave = () => { x.set(0); y.set(0); };
+  return <motion.div ref={ref} style={{ x: sx, y: sy }} onMouseMove={move} onMouseLeave={leave} className={cx('inline-block', className)}>{children}</motion.div>;
 }
 
 /** Card with a cursor-following spotlight. */
@@ -218,18 +341,141 @@ function Spotlight({ children, className = '', color = 'rgba(99,102,241,0.20)' }
   return (
     <div
       onMouseMove={onMove}
-      className={cx('group relative overflow-hidden rounded-3xl border border-white/[0.08] bg-white/[0.025] backdrop-blur-sm', className)}
+      className={cx('group relative overflow-hidden rounded-3xl border border-white/[0.08] bg-white/[0.025] backdrop-blur-sm transition-colors duration-500 hover:border-white/[0.18]', className)}
     >
       <div
         className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-500 group-hover:opacity-100"
         style={{ background: `radial-gradient(420px circle at var(--mx,50%) var(--my,50%), ${color}, transparent 45%)` }}
       />
-      <div className="relative">{children}</div>
+      <div className="relative h-full">{children}</div>
     </div>
   );
 }
 
-/* ─── Chrome: progress bar + depth rail + nav ──────────────────────────────── */
+/** Mono section label: (01) ——— SCRAMBLING TEXT */
+function Eyebrow({ n, children, className = '' }) {
+  const ref = useRef(null);
+  const inView = useInView(ref, { once: true, margin: '-10%' });
+  const txt = useScramble(String(children).toUpperCase(), inView);
+  return (
+    <div ref={ref} className={cx('flex items-center gap-3 font-mono text-[11px] font-medium tracking-[0.28em] text-cyan-300', className)} aria-label={String(children)}>
+      <span className="text-neutral-500" aria-hidden="true">({n})</span>
+      <motion.span aria-hidden="true" className="h-px bg-gradient-to-r from-cyan-300/70 to-transparent" initial={{ width: 0 }} animate={inView ? { width: 48 } : {}} transition={{ duration: 0.9, ease: EASE }} />
+      <span aria-hidden="true">{txt || '\u00A0'}</span>
+    </div>
+  );
+}
+
+/* ─── Page chrome: grain, cursor, preloader ────────────────────────────────── */
+const GRAIN = "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 .6 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>\")";
+
+function Grain() {
+  return <div aria-hidden="true" className="careers-grain pointer-events-none fixed -inset-1/2 z-[3] opacity-[0.055]" style={{ backgroundImage: GRAIN }} />;
+}
+
+/** Soft cursor follower. Reads data-cursor="Label" from whatever is under the pointer. */
+function Cursor() {
+  const fine = usePointerFine();
+  const reduce = useReducedMotion();
+  const x = useMotionValue(-100); const y = useMotionValue(-100);
+  const dx = useSpring(x, { stiffness: 900, damping: 50, mass: 0.2 }); const dy = useSpring(y, { stiffness: 900, damping: 50, mass: 0.2 });
+  const rx = useSpring(x, { stiffness: 170, damping: 22, mass: 0.5 }); const ry = useSpring(y, { stiffness: 170, damping: 22, mass: 0.5 });
+  const [mode, setMode] = useState({ kind: 'idle', label: '' });
+  const [visible, setVisible] = useState(false);
+  useEffect(() => {
+    if (!fine || reduce) return undefined;
+    const move = (e) => { x.set(e.clientX); y.set(e.clientY); setVisible(true); };
+    const over = (e) => {
+      const el = e.target.closest?.('[data-cursor],a,button,input,textarea,select,summary');
+      const label = el?.getAttribute?.('data-cursor') || '';
+      const kind = !el ? 'idle' : label ? 'label' : 'link';
+      setMode((m) => (m.kind === kind && m.label === label ? m : { kind, label }));
+    };
+    const leave = () => setVisible(false);
+    window.addEventListener('mousemove', move, { passive: true });
+    window.addEventListener('mouseover', over, { passive: true });
+    document.documentElement.addEventListener('mouseleave', leave);
+    return () => { window.removeEventListener('mousemove', move); window.removeEventListener('mouseover', over); document.documentElement.removeEventListener('mouseleave', leave); };
+  }, [fine, reduce, x, y]);
+  if (!fine || reduce) return null;
+  const size = mode.kind === 'label' ? 84 : mode.kind === 'link' ? 52 : 30;
+  return (
+    <>
+      <motion.div aria-hidden="true" className="pointer-events-none fixed left-0 top-0 z-[250]" style={{ x: dx, y: dy, opacity: visible ? 1 : 0 }}>
+        <span className={cx('absolute block h-1.5 w-1.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white transition-opacity duration-200', mode.kind === 'label' && 'opacity-0')} />
+      </motion.div>
+      <motion.div aria-hidden="true" className="pointer-events-none fixed left-0 top-0 z-[249]" style={{ x: rx, y: ry, opacity: visible ? 1 : 0 }}>
+        <motion.div
+          className="absolute flex -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border"
+          animate={{ width: size, height: size, backgroundColor: mode.kind === 'label' ? 'rgba(255,255,255,1)' : mode.kind === 'link' ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0)', borderColor: mode.kind === 'label' ? 'rgba(255,255,255,1)' : 'rgba(255,255,255,0.32)' }}
+          transition={{ type: 'spring', stiffness: 320, damping: 26 }}
+        >
+          <AnimatePresence>
+            {mode.kind === 'label' && <motion.span key={mode.label} initial={{ opacity: 0, scale: 0.6 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }} className="font-mono text-[10px] font-medium uppercase tracking-[0.18em] text-neutral-900">{mode.label}</motion.span>}
+          </AnimatePresence>
+        </motion.div>
+      </motion.div>
+    </>
+  );
+}
+
+const LOAD_WORDS = ['Compiling roles', 'Warming up the crew', 'Aligning pixels', 'Almost there'];
+
+/** Counter + hairline progress, then a two-panel curtain. Progress follows real readiness (fonts + roles). */
+function Preloader({ ready, onReveal, onDone }) {
+  const [p, setP] = useState(0);
+  const [phase, setPhase] = useState('count');
+  const readyRef = useRef(ready);
+  readyRef.current = ready;
+  useEffect(() => {
+    let raf; const t0 = performance.now(); let last = t0; let val = 0; let fired = false;
+    const tick = (t) => {
+      const el = t - t0; const dt = Math.min(64, t - last); last = t;
+      const ok = readyRef.current || el > 3800;
+      const target = ok && el > 1500 ? 100 : Math.min(ok ? 96 : 86, (1 - Math.exp(-el / 800)) * 100);
+      val += (target - val) * (1 - Math.exp(-dt / 120));
+      if (target === 100 && val > 99.4) val = 100;
+      setP(Math.round(val));
+      if (val >= 100 && !fired) { fired = true; setTimeout(() => { setPhase('exit'); onReveal(); }, 380); return; }
+      raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [onReveal]);
+  const exit = phase === 'exit';
+  const word = LOAD_WORDS[Math.min(LOAD_WORDS.length - 1, Math.floor(p / 26))];
+  const curtain = { duration: 1.05, ease: [0.76, 0, 0.24, 1], delay: 0.38 };
+  return (
+    <div className="fixed inset-0 z-[300]" role="status" aria-label="Loading careers">
+      <motion.div className="absolute inset-x-0 top-0 h-1/2 bg-[#05050f]" animate={{ y: exit ? '-101%' : 0 }} transition={curtain}>
+        <div className="absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-cyan-300/50 to-transparent" />
+      </motion.div>
+      <motion.div className="absolute inset-x-0 bottom-0 h-1/2 bg-[#05050f]" animate={{ y: exit ? '101%' : 0 }} transition={curtain} onAnimationComplete={() => exit && onDone()} />
+      <motion.div className="absolute inset-0 flex flex-col justify-between p-6 sm:p-10" animate={{ opacity: exit ? 0 : 1, scale: exit ? 1.04 : 1, filter: exit ? 'blur(10px)' : 'blur(0px)' }} transition={{ duration: 0.55, ease: EASE }}>
+        <div className="flex items-start justify-between font-mono text-[11px] tracking-[0.3em] text-neutral-500">
+          <span><b className="font-display text-sm font-extrabold tracking-tight text-white">PlanIt</b> / CAREERS</span>
+          <span>© {new Date().getFullYear()}</span>
+        </div>
+        <div className="mx-auto w-full max-w-3xl text-center">
+          <div className="font-display text-[clamp(5rem,24vw,15rem)] font-black leading-none tracking-[-0.06em] text-white tabular-nums">
+            {String(p).padStart(2, '0')}<span className="careers-shine inline-block pr-[0.14em] align-top text-[0.28em]">%</span>
+          </div>
+          <div className="relative mx-auto mt-6 h-px w-full max-w-md bg-white/10">
+            <div className="absolute inset-y-0 left-0 bg-gradient-to-r from-indigo-400 via-cyan-300 to-emerald-300" style={{ width: `${p}%` }} />
+            <span className="absolute top-1/2 h-1.5 w-1.5 -translate-y-1/2 rounded-full bg-white shadow-[0_0_16px_4px_rgba(103,232,249,0.9)]" style={{ left: `${p}%` }} />
+          </div>
+          <div className="mt-5 h-4 font-mono text-[11px] uppercase tracking-[0.3em] text-cyan-300/80">{word}</div>
+        </div>
+        <div className="flex items-end justify-between font-mono text-[10px] tracking-[0.3em] text-neutral-600">
+          <span>VOLUNTEER · REMOTE · ASYNC-FIRST</span>
+          <span className="hidden sm:block">LOADING FONTS &amp; ROLES</span>
+        </div>
+      </motion.div>
+    </div>
+  );
+}
+
+/* ─── Scroll progress + depth rail + nav ───────────────────────────────────── */
 const RAIL = [
   { id: 'top', label: 'Intro' }, { id: 'why', label: 'Why join' }, { id: 'how', label: 'Process' },
   { id: 'roles', label: 'Open roles' }, { id: 'faq', label: 'FAQ' },
@@ -260,7 +506,7 @@ function ScrollChrome() {
         <div className="mb-1 font-mono text-[11px] tabular-nums text-neutral-500">{String(pct).padStart(2, '0')}%</div>
         {RAIL.map((r) => (
           <button key={r.id} onClick={() => go(r.id)} className="group flex items-center gap-3" aria-label={`Jump to ${r.label}`}>
-            <span className={cx('text-[11px] font-semibold uppercase tracking-widest transition-all duration-300', active === r.id ? 'translate-x-0 text-white opacity-100' : 'translate-x-2 text-neutral-500 opacity-0 group-hover:translate-x-0 group-hover:opacity-100')}>{r.label}</span>
+            <span className={cx('font-mono text-[10px] font-medium uppercase tracking-[0.22em] transition-all duration-300', active === r.id ? 'translate-x-0 text-white opacity-100' : 'translate-x-2 text-neutral-500 opacity-0 group-hover:translate-x-0 group-hover:opacity-100')}>{r.label}</span>
             <span className={cx('block rounded-full transition-all duration-300', active === r.id ? 'h-2.5 w-2.5 bg-cyan-300 shadow-[0_0_12px_rgba(103,232,249,0.9)]' : 'h-1.5 w-1.5 bg-white/25 group-hover:bg-white/60')} />
           </button>
         ))}
@@ -269,7 +515,7 @@ function ScrollChrome() {
   );
 }
 
-function Nav({ onApply, openRoles }) {
+function Nav({ onApply, openRoles, go }) {
   const [solid, setSolid] = useState(false);
   useEffect(() => {
     const on = () => setSolid(window.scrollY > 24);
@@ -277,107 +523,152 @@ function Nav({ onApply, openRoles }) {
     return () => window.removeEventListener('scroll', on);
   }, []);
   return (
-    <header className={cx('fixed inset-x-0 top-[3px] z-[70] transition-all duration-500', solid ? 'border-b border-white/[0.06] bg-[#05050f]/70 backdrop-blur-xl' : 'border-b border-transparent')}>
+    <motion.header
+      initial={{ opacity: 0, y: -24 }} animate={{ opacity: go ? 1 : 0, y: go ? 0 : -24 }} transition={{ duration: 0.9, delay: 0.5, ease: EASE }}
+      className={cx('fixed inset-x-0 top-[3px] z-[70] transition-[background,border-color,backdrop-filter] duration-500', solid ? 'border-b border-white/[0.06] bg-[#05050f]/70 backdrop-blur-xl' : 'border-b border-transparent')}
+    >
       <div className="mx-auto flex max-w-6xl items-center justify-between px-5 py-3.5">
         <a href="/" className="group flex items-center gap-2.5 text-white">
           <ArrowLeft className="h-4 w-4 text-neutral-500 transition-transform group-hover:-translate-x-1" />
-          <span className="font-display text-lg font-extrabold tracking-tight">PlanIt</span>
-          <span className="rounded-full border border-white/10 bg-white/[0.04] px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.2em] text-neutral-400">Careers</span>
+          <span className="font-display text-base font-extrabold tracking-tight">PlanIt</span>
+          <span className="rounded-full border border-white/10 bg-white/[0.04] px-2 py-0.5 font-mono text-[10px] font-medium uppercase tracking-[0.2em] text-neutral-400">Careers</span>
         </a>
         <div className="flex items-center gap-2">
           <a href="/about" className="hidden rounded-lg px-3 py-2 text-sm text-neutral-400 transition hover:text-white sm:block">About</a>
           <a href="/blog" className="hidden rounded-lg px-3 py-2 text-sm text-neutral-400 transition hover:text-white sm:block">Blog</a>
-          <button onClick={onApply} className="group flex items-center gap-2 rounded-xl bg-white px-4 py-2 text-sm font-bold text-neutral-900 transition hover:bg-neutral-200">
-            {openRoles > 0 ? `${openRoles} open role${openRoles === 1 ? '' : 's'}` : 'Apply'}
-            <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
-          </button>
+          <Magnetic strength={0.25}>
+            <button onClick={onApply} className="group flex items-center gap-2 rounded-xl bg-white px-4 py-2 text-sm font-bold text-neutral-900 transition hover:bg-neutral-200">
+              {openRoles > 0 ? `${openRoles} open role${openRoles === 1 ? '' : 's'}` : 'Apply'}
+              <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
+            </button>
+          </Magnetic>
         </div>
       </div>
-    </header>
+    </motion.header>
   );
 }
 
 /* ─── Hero ─────────────────────────────────────────────────────────────────── */
-function Hero({ openRoles, teams, accepting, onBrowse, onGeneral, loading }) {
+const HERO_LINES = [
+  [{ t: 'Help' }, { t: 'us' }, { t: 'build' }],
+  [{ t: 'the' }, { t: 'future', serif: true }],
+  [{ t: 'of' }, { t: 'events.' }],
+];
+const CHIPS = [
+  { t: 'React', x: '5%', y: '23%', d: 30, c: '#818cf8', s: 5.2 },
+  { t: 'Figma', x: '11%', y: '67%', d: 46, c: '#f472b6', s: 6.4 },
+  { t: 'Node.js', x: '90%', y: '27%', d: 38, c: '#34d399', s: 5.8 },
+  { t: 'SEO', x: '84%', y: '71%', d: 24, c: '#fbbf24', s: 6.9 },
+  { t: 'Security', x: '2.5%', y: '45%', d: 20, c: '#22d3ee', s: 7.3 },
+  { t: 'Video', x: '94%', y: '49%', d: 52, c: '#fb7185', s: 5.5 },
+];
+
+function FloatChip({ chip, mx, my, go }) {
+  const px = useTransform(mx, [-0.5, 0.5], [chip.d, -chip.d]);
+  const py = useTransform(my, [-0.5, 0.5], [chip.d, -chip.d]);
+  return (
+    <motion.div style={{ left: chip.x, top: chip.y, x: px, y: py }} className="pointer-events-none absolute hidden xl:block">
+      <motion.div
+        initial={{ opacity: 0, scale: 0.6 }} animate={go ? { opacity: 1, scale: 1 } : { opacity: 0, scale: 0.6 }} transition={{ duration: 0.9, delay: 1.2 + chip.d / 100, ease: EASE }}
+      >
+        <motion.div animate={{ y: [0, -12, 0] }} transition={{ duration: chip.s, repeat: Infinity, ease: 'easeInOut' }}
+          className="flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-3.5 py-1.5 font-mono text-[11px] text-neutral-300 shadow-[0_8px_30px_rgba(0,0,0,0.35)] backdrop-blur-md">
+          <span className="h-1.5 w-1.5 rounded-full" style={{ background: chip.c, boxShadow: `0 0 10px ${chip.c}` }} />{chip.t}
+        </motion.div>
+      </motion.div>
+    </motion.div>
+  );
+}
+
+function Hero({ openRoles, teams, accepting, onBrowse, onGeneral, go }) {
   const reduce = useReducedMotion();
   const ref = useRef(null);
   const { scrollYProgress } = useScroll({ target: ref, offset: ['start start', 'end start'] });
-  const y = useTransform(scrollYProgress, [0, 1], reduce ? [0, 0] : [0, 160]);
-  const op = useTransform(scrollYProgress, [0, 0.8], [1, 0]);
+  const y = useTransform(scrollYProgress, [0, 1], reduce ? [0, 0] : [0, 180]);
+  const op = useTransform(scrollYProgress, [0, 0.75], [1, 0]);
   const blobA = useTransform(scrollYProgress, [0, 1], reduce ? [0, 0] : [0, -220]);
   const blobB = useTransform(scrollYProgress, [0, 1], reduce ? [0, 0] : [0, 140]);
   const ringRot = useTransform(scrollYProgress, [0, 1], [0, 140]);
+  const mxRaw = useMotionValue(0); const myRaw = useMotionValue(0);
+  const mx = useSpring(mxRaw, { stiffness: 50, damping: 18 }); const my = useSpring(myRaw, { stiffness: 50, damping: 18 });
+  const gxRaw = useMotionValue(-800); const gyRaw = useMotionValue(-800);
+  const gx = useSpring(gxRaw, { stiffness: 90, damping: 24, mass: 0.7 }); const gy = useSpring(gyRaw, { stiffness: 90, damping: 24, mass: 0.7 });
+  const onMove = (e) => {
+    if (reduce || !ref.current) return;
+    const r = ref.current.getBoundingClientRect();
+    mxRaw.set((e.clientX - r.left) / r.width - 0.5); myRaw.set((e.clientY - r.top) / r.height - 0.5);
+    gxRaw.set(e.clientX - r.left - 260); gyRaw.set(e.clientY - r.top - 260);
+  };
+  const hide = { opacity: 0, y: 24 }; const show = { opacity: 1, y: 0 };
+  const stats = [
+    { n: openRoles, s: '', l: 'Open roles' },
+    { n: teams, s: '', l: 'Teams' },
+    { n: 100, s: '%', l: 'Remote' },
+    { alt: 'Async-first', l: 'By default' },
+  ];
 
   return (
-    <section id="top" ref={ref} className="relative flex min-h-[100svh] items-center overflow-hidden px-5 pb-24 pt-32">
+    <section id="top" ref={ref} onMouseMove={onMove} className="relative flex min-h-[100svh] items-center overflow-hidden px-5 pb-24 pt-32">
+      {/* depth layers */}
+      <div className="pointer-events-none absolute inset-0" style={{ backgroundImage: 'linear-gradient(rgba(255,255,255,.045) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.045) 1px,transparent 1px)', backgroundSize: '72px 72px', maskImage: 'radial-gradient(ellipse 62% 56% at 50% 46%, #000 25%, transparent 78%)', WebkitMaskImage: 'radial-gradient(ellipse 62% 56% at 50% 46%, #000 25%, transparent 78%)' }} />
       <motion.div style={{ y: blobA }} className="pointer-events-none absolute -left-40 top-10 h-[34rem] w-[34rem] rounded-full bg-indigo-600/25 blur-[120px]" />
       <motion.div style={{ y: blobB }} className="pointer-events-none absolute -right-32 top-1/3 h-[30rem] w-[30rem] rounded-full bg-cyan-500/15 blur-[120px]" />
-      <motion.div
-        style={{ rotate: ringRot }}
-        className="pointer-events-none absolute left-1/2 top-1/2 hidden h-[900px] w-[900px] -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/[0.04] md:block"
-      >
+      <motion.div aria-hidden="true" style={{ x: gx, y: gy }} className="pointer-events-none absolute left-0 top-0 hidden h-[520px] w-[520px] rounded-full bg-[radial-gradient(circle,rgba(129,140,248,0.22),rgba(34,211,238,0.08)_45%,transparent_70%)] md:block" />
+      <motion.div style={{ rotate: ringRot }} className="pointer-events-none absolute left-1/2 top-1/2 hidden h-[900px] w-[900px] -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/[0.05] md:block">
         <span className="absolute left-1/2 top-0 h-2 w-2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-cyan-300 shadow-[0_0_20px_rgba(103,232,249,1)]" />
+        <span className="absolute bottom-[14%] right-[6%] h-1.5 w-1.5 rounded-full bg-indigo-300 shadow-[0_0_14px_rgba(165,180,252,1)]" />
       </motion.div>
+      <motion.div style={{ rotate: useTransform(ringRot, (v) => -v * 1.6) }} className="pointer-events-none absolute left-1/2 top-1/2 hidden h-[620px] w-[620px] -translate-x-1/2 -translate-y-1/2 rounded-full border border-dashed border-white/[0.06] md:block">
+        <span className="absolute right-0 top-1/2 h-1.5 w-1.5 -translate-y-1/2 translate-x-1/2 rounded-full bg-emerald-300 shadow-[0_0_14px_rgba(110,231,183,1)]" />
+      </motion.div>
+      {CHIPS.map((c) => <FloatChip key={c.t} chip={c} mx={mx} my={my} go={go} />)}
+      <div aria-hidden="true" className="pointer-events-none absolute left-6 top-1/2 hidden -translate-y-1/2 rotate-180 font-mono text-[10px] tracking-[0.4em] text-neutral-600 [writing-mode:vertical-rl] lg:block">VOLUNTEER CREW · REMOTE · ASYNC-FIRST · {new Date().getFullYear()}</div>
 
       <motion.div style={{ y, opacity: op }} className="relative mx-auto w-full max-w-5xl text-center">
-        <motion.div
-          initial={reduce ? false : { opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.7, ease: EASE }}
-          className="mx-auto mb-7 inline-flex items-center gap-2.5 rounded-full border border-white/10 bg-white/[0.04] px-4 py-1.5 backdrop-blur"
-        >
-          <span className="relative flex h-2 w-2">
-            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-70" />
-            <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-400" />
-          </span>
-          <span className="text-xs font-semibold uppercase tracking-[0.16em] text-neutral-300">
-            {loading ? 'Loading roles…' : accepting ? `Volunteer team · Remote · ${openRoles} open` : 'Applications paused'}
-          </span>
-        </motion.div>
-
-        <h1 className="font-display text-[clamp(2.6rem,8vw,6.2rem)] font-extrabold leading-[0.98] tracking-[-0.04em] text-white">
-          <Words text="Help us build the" delay={0.1} />
-          <br />
-          <Words text="future of events." delay={0.35} accent={[2]} />
-        </h1>
+        <Kinetic
+          lines={HERO_LINES} go={go} delay={0.15}
+          className="font-display text-[clamp(2.1rem,7vw,5.4rem)] font-extrabold leading-[1.04] tracking-[-0.035em] text-white"
+        />
 
         <motion.p
-          initial={reduce ? false : { opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, delay: 0.9, ease: EASE }}
-          className="mx-auto mt-7 max-w-2xl text-base leading-relaxed text-neutral-400 sm:text-lg"
+          initial={reduce ? false : hide} animate={go ? show : hide} transition={{ duration: 0.9, delay: 1.0, ease: EASE }}
+          className="mx-auto mt-8 max-w-2xl text-base leading-relaxed text-neutral-400 sm:text-lg"
         >
           PlanIt is a live, growing event platform and we&apos;re building a volunteer crew around it. Real product, real users, real ownership.
           These roles are unpaid, flexible, and entirely remote.
         </motion.p>
 
         <motion.div
-          initial={reduce ? false : { opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, delay: 1.05, ease: EASE }}
-          className="mt-9 flex flex-col items-center justify-center gap-3 sm:flex-row"
+          initial={reduce ? false : hide} animate={go ? show : hide} transition={{ duration: 0.9, delay: 1.15, ease: EASE }}
+          className="mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row"
         >
-          <button onClick={onBrowse} className="group relative flex items-center gap-2 overflow-hidden rounded-2xl bg-white px-7 py-3.5 text-sm font-extrabold text-neutral-900 shadow-[0_0_40px_rgba(255,255,255,0.18)] transition hover:shadow-[0_0_60px_rgba(255,255,255,0.3)]">
-            <span className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/70 to-transparent transition-transform duration-700 group-hover:translate-x-full" />
-            <span className="relative">See open roles</span>
-            <ArrowRight className="relative h-4 w-4 transition-transform group-hover:translate-x-1" />
-          </button>
-          {accepting && (
-            <button onClick={onGeneral} className="flex items-center gap-2 rounded-2xl border border-white/15 bg-white/[0.04] px-7 py-3.5 text-sm font-bold text-white backdrop-blur transition hover:border-white/30 hover:bg-white/[0.08]">
-              Don&apos;t see yours? Pitch us <Sparkles className="h-4 w-4 text-cyan-300" />
+          <Magnetic>
+            <button onClick={onBrowse} data-cursor="Go" className="group relative flex items-center gap-2 overflow-hidden rounded-2xl bg-white px-7 py-3.5 text-sm font-extrabold text-neutral-900 shadow-[0_0_40px_rgba(255,255,255,0.18)] transition hover:shadow-[0_0_70px_rgba(255,255,255,0.32)]">
+              <span className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-cyan-200/70 to-transparent transition-transform duration-700 group-hover:translate-x-full" />
+              <span className="relative">See open roles</span>
+              <ArrowRight className="relative h-4 w-4 transition-transform group-hover:translate-x-1" />
             </button>
+          </Magnetic>
+          {accepting && (
+            <Magnetic>
+              <button onClick={onGeneral} className="flex items-center gap-2 rounded-2xl border border-white/15 bg-white/[0.04] px-7 py-3.5 text-sm font-bold text-white backdrop-blur transition hover:border-white/30 hover:bg-white/[0.08]">
+                Don&apos;t see yours? Pitch us <Sparkles className="h-4 w-4 text-cyan-300" />
+              </button>
+            </Magnetic>
           )}
         </motion.div>
 
         <motion.div
-          initial={reduce ? false : { opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 1, delay: 1.3 }}
-          className="mx-auto mt-16 grid max-w-3xl grid-cols-2 gap-px overflow-hidden rounded-2xl border border-white/[0.08] bg-white/[0.06] sm:grid-cols-4"
+          initial={reduce ? false : { opacity: 0, y: 30 }} animate={go ? show : { opacity: 0, y: 30 }} transition={{ duration: 1, delay: 1.35, ease: EASE }}
+          className="mx-auto mt-16 grid max-w-3xl grid-cols-2 gap-px overflow-hidden rounded-2xl border border-white/[0.08] bg-white/[0.06] shadow-[0_30px_80px_rgba(0,0,0,0.4)] sm:grid-cols-4"
         >
-          {[
-            { n: openRoles, s: '', l: 'Open roles' },
-            { n: teams, s: '', l: 'Teams' },
-            { n: 100, s: '%', l: 'Remote' },
-            { n: 0, s: '', l: 'Mandatory meetings', alt: 'Async-first' },
-          ].map((x, i) => (
-            <div key={i} className="bg-[#07070f]/80 px-4 py-5 backdrop-blur">
+          {stats.map((x) => (
+            <div key={x.l} className="group relative bg-[#07070f]/85 px-4 py-5 backdrop-blur transition-colors hover:bg-[#0b0b18]">
+              <span className="absolute inset-x-0 top-0 h-px origin-left scale-x-0 bg-gradient-to-r from-cyan-300 to-transparent transition-transform duration-500 group-hover:scale-x-100" />
               <div className="font-display text-3xl font-extrabold text-white">
-                {x.alt ? <span className="text-xl">{x.alt}</span> : <Counter to={x.n} suffix={x.s} />}
+                {x.alt ? <span className="text-lg sm:text-xl">{x.alt}</span> : <Counter to={x.n} suffix={x.s} run={go} />}
               </div>
-              <div className="mt-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-neutral-500">{x.alt ? 'By default' : x.l}</div>
+              <div className="mt-1.5 font-mono text-[10px] font-medium uppercase tracking-[0.2em] text-neutral-500">{x.l}</div>
             </div>
           ))}
         </motion.div>
@@ -385,29 +676,52 @@ function Hero({ openRoles, teams, accepting, onBrowse, onGeneral, loading }) {
 
       <motion.button
         onClick={onBrowse} aria-label="Scroll down"
-        initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.8 }}
-        className="absolute bottom-7 left-1/2 hidden -translate-x-1/2 flex-col items-center gap-2 text-neutral-500 transition hover:text-white sm:flex"
+        initial={{ opacity: 0 }} animate={{ opacity: go ? 1 : 0 }} transition={{ delay: 2.1 }}
+        className="absolute bottom-7 left-1/2 hidden -translate-x-1/2 flex-col items-center gap-3 text-neutral-500 transition hover:text-white sm:flex"
       >
-        <span className="text-[10px] font-bold uppercase tracking-[0.3em]">Scroll</span>
-        <span className="flex h-9 w-5 items-start justify-center rounded-full border border-white/20 p-1">
-          <span className="h-1.5 w-1 animate-bounce rounded-full bg-cyan-300" />
-        </span>
+        <span className="font-mono text-[10px] font-medium uppercase tracking-[0.4em]">Scroll</span>
+        <span className="relative block h-10 w-px overflow-hidden bg-white/15"><span className="careers-drip absolute inset-x-0 top-0 h-4 bg-gradient-to-b from-transparent to-cyan-300" /></span>
       </motion.button>
     </section>
   );
 }
 
-function Marquee({ words }) {
-  const row = [...words, ...words];
+/* ─── Velocity-driven marquee ──────────────────────────────────────────────── */
+function MarqueeRow({ words, dir = 1, outline = false, base = 3.4, factor }) {
+  const reduce = useReducedMotion();
+  const x = useMotionValue(0);
+  const dirRef = useRef(dir);
+  useAnimationFrame((_, delta) => {
+    if (reduce) return;
+    const v = factor.get();
+    if (v < -0.02) dirRef.current = -dir; else if (v > 0.02) dirRef.current = dir;
+    x.set(wrap(-50, 0, x.get() + dirRef.current * base * (delta / 1000) * (1 + Math.abs(v))));
+  });
+  const tx = useTransform(x, (v) => `${v}%`);
+  const track = [...words, ...words, ...words, ...words];
   return (
-    <div className="relative overflow-hidden border-y border-white/[0.06] bg-white/[0.015] py-5" aria-hidden="true">
-      <div className="flex w-max careers-marquee gap-10 whitespace-nowrap">
-        {row.map((w, i) => (
-          <span key={i} className="flex items-center gap-10 font-display text-2xl font-extrabold uppercase tracking-tight text-white/[0.14]">
-            {w} <Sparkles className="h-4 w-4 text-cyan-300/50" />
-          </span>
-        ))}
-      </div>
+    <motion.div style={{ x: tx }} className="flex w-max gap-10 whitespace-nowrap py-1">
+      {track.map((w, i) => (
+        <span key={i} className={cx('flex items-center gap-10', outline ? 'font-serif-i text-[clamp(2.4rem,5.4vw,4.4rem)] leading-none text-transparent' : 'font-display text-[clamp(1.6rem,4vw,3rem)] font-extrabold uppercase tracking-[-0.03em] text-white/[0.16]')} style={outline ? { WebkitTextStroke: '1px rgba(255,255,255,0.3)' } : undefined}>
+          {w}<Sparkles className={cx('h-5 w-5', outline ? 'text-indigo-300/60' : 'text-cyan-300/50')} />
+        </span>
+      ))}
+    </motion.div>
+  );
+}
+
+function Marquee({ words }) {
+  const { scrollY } = useScroll();
+  const vel = useVelocity(scrollY);
+  const sm = useSpring(vel, { damping: 50, stiffness: 400 });
+  const factor = useTransform(sm, [0, 1000], [0, 4], { clamp: false });
+  const skew = useTransform(sm, [-2000, 2000], [-9, 9]);
+  return (
+    <div className="relative overflow-hidden border-y border-white/[0.06] bg-white/[0.015] py-6" aria-hidden="true">
+      <motion.div style={{ skewX: skew }} className="space-y-1">
+        <MarqueeRow words={words} dir={1} factor={factor} />
+        <MarqueeRow words={[...words].reverse()} dir={-1} outline base={2.6} factor={factor} />
+      </motion.div>
       <div className="pointer-events-none absolute inset-y-0 left-0 w-32 bg-gradient-to-r from-[#05050f] to-transparent" />
       <div className="pointer-events-none absolute inset-y-0 right-0 w-32 bg-gradient-to-l from-[#05050f] to-transparent" />
     </div>
@@ -415,11 +729,58 @@ function Marquee({ words }) {
 }
 
 /* ─── Why join (bento) ─────────────────────────────────────────────────────── */
+function Terminal() {
+  const ref = useRef(null);
+  const inView = useInView(ref, { once: true, margin: '-15%' });
+  const reduce = useReducedMotion();
+  const LINES = [['$', 'git checkout -b feat/guest-checkin'], ['$', 'npm run build'], ['✓', 'build passed'], ['$', 'git push origin main'], ['✓', 'deployed to production']];
+  const [n, setN] = useState(reduce ? LINES.length : 0);
+  useEffect(() => {
+    if (!inView || reduce) return undefined;
+    let i = 0;
+    const id = setInterval(() => { i += 1; setN(i); if (i >= LINES.length) clearInterval(id); }, 620);
+    return () => clearInterval(id);
+  }, [inView, reduce]); // eslint-disable-line react-hooks/exhaustive-deps
+  return (
+    <div ref={ref} className="mt-6 overflow-hidden rounded-xl border border-white/10 bg-black/40 font-mono text-[12px]">
+      <div className="flex items-center gap-1.5 border-b border-white/[0.06] px-3 py-2">
+        <span className="h-2 w-2 rounded-full bg-rose-400/70" /><span className="h-2 w-2 rounded-full bg-amber-300/70" /><span className="h-2 w-2 rounded-full bg-emerald-400/70" />
+        <span className="ml-2 text-[10px] tracking-widest text-neutral-600">~/planit</span>
+      </div>
+      <div className="min-h-[132px] space-y-1 p-3.5">
+        {LINES.slice(0, n).map(([k, t], i) => (
+          <motion.div key={i} initial={{ opacity: 0, x: -6 }} animate={{ opacity: 1, x: 0 }} className="flex gap-2">
+            <span className={k === '✓' ? 'text-emerald-300' : 'text-cyan-300'}>{k}</span>
+            <span className={k === '✓' ? 'text-emerald-200/90' : 'text-neutral-300'}>{t}</span>
+          </motion.div>
+        ))}
+        {n < LINES.length && <span className="careers-blink inline-block h-3.5 w-1.5 translate-y-0.5 bg-cyan-300/80" />}
+      </div>
+    </div>
+  );
+}
+
+function WeekBars() {
+  const ref = useRef(null);
+  const inView = useInView(ref, { once: true, margin: '-15%' });
+  const days = [['M', 40], ['T', 70], ['W', 25], ['T', 55], ['F', 35], ['S', 85], ['S', 15]];
+  return (
+    <div ref={ref} className="mt-5 flex h-16 items-end gap-1.5">
+      {days.map(([d, h], i) => (
+        <div key={i} className="flex flex-1 flex-col items-center gap-1.5">
+          <motion.div className="w-full rounded-md bg-gradient-to-t from-pink-400/20 to-pink-300/70" initial={{ height: 0 }} animate={inView ? { height: `${h}%` } : {}} transition={{ duration: 0.9, delay: 0.2 + i * 0.07, ease: EASE }} />
+          <span className="font-mono text-[9px] text-neutral-600">{d}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 const WHY = [
-  { icon: Rocket, title: 'Ship real software', body: 'PlanIt is live with real users. Work in a React + Node + MongoDB codebase that is actually deployed, not a tutorial project.', span: 'lg:col-span-2', color: 'rgba(99,102,241,0.22)' },
+  { icon: Rocket, title: 'Ship real software', body: 'PlanIt is live with real users. Work in a React + Node + MongoDB codebase that is actually deployed, not a tutorial project.', span: 'lg:col-span-2', color: 'rgba(99,102,241,0.22)', viz: 'terminal' },
   { icon: Layers, title: 'Own something', body: 'Take a feature, campaign or area end to end. No busywork, no coffee runs.', span: '', color: 'rgba(34,211,238,0.18)' },
   { icon: Award, title: 'Portfolio + references', body: 'Real shipped work to point at, plus LinkedIn recommendations and reference letters for people who deliver.', span: '', color: 'rgba(52,211,153,0.18)' },
-  { icon: Clock, title: 'Your schedule', body: 'A few hours a week, async-first, no mandatory meetings. Life comes first.', span: '', color: 'rgba(244,114,182,0.18)' },
+  { icon: Clock, title: 'Your schedule', body: 'A few hours a week, async-first, no mandatory meetings. Life comes first.', span: 'lg:col-span-2', color: 'rgba(244,114,182,0.18)', viz: 'week' },
   { icon: Heart, title: 'Upside, if it happens', body: 'These roles are unpaid. If PlanIt starts making money, contributors may get a cut, agreed in writing first. No promises, just an honest seat at the table.', span: 'lg:col-span-2', color: 'rgba(251,191,36,0.18)' },
 ];
 
@@ -427,20 +788,27 @@ function Why() {
   return (
     <section id="why" className="relative px-5 py-28">
       <div className="mx-auto max-w-6xl">
-        <Reveal className="mb-14 max-w-2xl">
-          <div className="mb-3 text-xs font-bold uppercase tracking-[0.3em] text-cyan-300">Why join</div>
-          <h2 className="font-display text-4xl font-extrabold tracking-[-0.03em] text-white sm:text-5xl">Small team. Real product. Zero fluff.</h2>
-        </Reveal>
+        <div className="mb-14 max-w-3xl">
+          <Eyebrow n="01" className="mb-5">Why join</Eyebrow>
+          <h2 className="font-display text-4xl font-extrabold leading-[1.08] tracking-[-0.04em] text-white sm:text-5xl">
+            <Words inView text="Small team. Real product. Zero fluff." accent={[5]} />
+          </h2>
+        </div>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {WHY.map((w, i) => (
-            <Reveal key={w.title} delay={i * 0.06} className={w.span}>
+            <Reveal key={w.title} delay={i * 0.07} className={w.span}>
               <Spotlight color={w.color} className="h-full">
                 <div className="flex h-full flex-col p-7">
-                  <div className="mb-5 flex h-11 w-11 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.05] transition-transform duration-500 group-hover:-rotate-6 group-hover:scale-110">
-                    <w.icon className="h-5 w-5 text-white" />
+                  <div className="mb-5 flex items-center justify-between">
+                    <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.05] transition-transform duration-500 group-hover:-rotate-6 group-hover:scale-110">
+                      <w.icon className="h-5 w-5 text-white" />
+                    </div>
+                    <span className="font-mono text-[11px] tracking-[0.2em] text-neutral-600">0{i + 1}</span>
                   </div>
-                  <h3 className="font-display text-xl font-bold text-white">{w.title}</h3>
+                  <h3 className="font-display text-lg font-bold tracking-[-0.03em] text-white">{w.title}</h3>
                   <p className="mt-2 text-sm leading-relaxed text-neutral-400">{w.body}</p>
+                  {w.viz === 'terminal' && <Terminal />}
+                  {w.viz === 'week' && <WeekBars />}
                 </div>
               </Spotlight>
             </Reveal>
@@ -464,31 +832,36 @@ function How() {
   const reduce = useReducedMotion();
   const { scrollYProgress } = useScroll({ target: ref, offset: ['start 70%', 'end 55%'] });
   const line = useSpring(scrollYProgress, { stiffness: 120, damping: 26 });
+  const head = useTransform(line, (v) => `${v * 100}%`);
   return (
     <section id="how" className="relative px-5 py-28">
       <div className="mx-auto max-w-4xl">
-        <Reveal className="mb-16 text-center">
-          <div className="mb-3 text-xs font-bold uppercase tracking-[0.3em] text-cyan-300">The process</div>
-          <h2 className="font-display text-4xl font-extrabold tracking-[-0.03em] text-white sm:text-5xl">From hello to shipping.</h2>
-        </Reveal>
+        <div className="mb-16 flex flex-col items-center text-center">
+          <Eyebrow n="02" className="mb-5">The process</Eyebrow>
+          <h2 className="font-display text-4xl font-extrabold leading-[1.08] tracking-[-0.04em] text-white sm:text-5xl">
+            <Words inView text="From hello to shipping." accent={[2]} />
+          </h2>
+        </div>
         <div ref={ref} className="relative pl-12 sm:pl-0">
           <div className="absolute bottom-3 left-[19px] top-3 w-px bg-white/10 sm:left-1/2" />
           <motion.div style={{ scaleY: reduce ? 1 : line }} className="absolute bottom-3 left-[19px] top-3 w-px origin-top bg-gradient-to-b from-indigo-400 via-cyan-300 to-emerald-300 shadow-[0_0_12px_rgba(103,232,249,0.7)] sm:left-1/2" />
-          <div className="space-y-14">
+          <motion.span aria-hidden="true" style={{ top: head }} className="absolute left-[19px] z-10 hidden h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white shadow-[0_0_24px_6px_rgba(103,232,249,0.8)] sm:left-1/2 sm:block" />
+          <div className="space-y-16">
             {STEPS.map((s, i) => (
               <motion.div
                 key={s.t}
-                initial={reduce ? false : { opacity: 0, x: i % 2 ? 40 : -40 }}
+                initial={reduce ? false : { opacity: 0, x: i % 2 ? 50 : -50 }}
                 whileInView={{ opacity: 1, x: 0 }}
                 viewport={{ once: true, margin: '-120px' }}
-                transition={{ duration: 0.8, ease: EASE }}
+                transition={{ duration: 0.9, ease: EASE }}
                 className={cx('relative sm:w-1/2', i % 2 ? 'sm:ml-auto sm:pl-14' : 'sm:pr-14 sm:text-right')}
               >
-                <span className={cx('absolute top-1 flex h-10 w-10 items-center justify-center rounded-full border border-cyan-300/40 bg-[#07070f] font-display text-sm font-extrabold text-cyan-200 shadow-[0_0_24px_rgba(34,211,238,0.35)]', '-left-12 sm:left-auto', i % 2 ? 'sm:-left-5' : 'sm:-right-5')}>
+                <span aria-hidden="true" className={cx('pointer-events-none absolute -top-10 select-none font-serif-i text-[8.5rem] leading-none text-transparent', i % 2 ? 'right-0 sm:right-6' : 'right-0 sm:left-0 sm:right-auto')} style={{ WebkitTextStroke: '1px rgba(255,255,255,0.1)' }}>0{i + 1}</span>
+                <span className={cx('absolute top-1 flex h-10 w-10 items-center justify-center rounded-full border border-cyan-300/40 bg-[#07070f] font-mono text-sm font-medium text-cyan-200 shadow-[0_0_24px_rgba(34,211,238,0.35)]', '-left-12', i % 2 ? 'sm:-left-5' : 'sm:left-auto sm:-right-5')}>
                   {i + 1}
                 </span>
-                <h3 className="font-display text-2xl font-bold text-white">{s.t}</h3>
-                <p className="mt-2 text-sm leading-relaxed text-neutral-400 sm:text-base">{s.d}</p>
+                <h3 className="relative font-display text-xl font-bold tracking-[-0.03em] text-white sm:text-2xl">{s.t}</h3>
+                <p className="relative mt-2 text-sm leading-relaxed text-neutral-400 sm:text-base">{s.d}</p>
               </motion.div>
             ))}
           </div>
@@ -519,39 +892,39 @@ function RoleCard({ job, index, onOpen }) {
   };
   const reset = () => { rx.set(0); ry.set(0); };
   const left = daysLeft(job.deadline);
+  const color = teamColor(job.team);
+  const isNew = job.open && job.postedAt && Date.now() - new Date(job.postedAt).getTime() < 7 * 86400000;
   return (
     <motion.div
       layout
-      initial={reduce ? false : { opacity: 0, y: 36 }}
-      whileInView={{ opacity: 1, y: 0 }}
+      initial={reduce ? false : { opacity: 0, y: 40, scale: 0.97 }}
+      whileInView={{ opacity: 1, y: 0, scale: 1 }}
       viewport={{ once: true, margin: '-60px' }}
-      exit={{ opacity: 0, scale: 0.95 }}
-      transition={{ duration: 0.6, delay: (index % 3) * 0.08, ease: EASE }}
+      exit={{ opacity: 0, scale: 0.94 }}
+      transition={{ duration: 0.7, delay: (index % 3) * 0.09, ease: EASE }}
       style={{ rotateX: sx, rotateY: sy, transformPerspective: 1000 }}
       onMouseMove={onMove} onMouseLeave={reset}
     >
       <button
-        onClick={() => onOpen(job.slug)}
+        onClick={() => onOpen(job.slug)} data-cursor={job.open ? 'Open' : 'View'}
         className={cx(
-          'group relative flex h-full w-full flex-col overflow-hidden rounded-3xl border p-6 text-left transition-colors duration-300',
+          'group relative flex h-full w-full flex-col overflow-hidden rounded-3xl border p-6 text-left transition-colors duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/60',
           job.open ? 'border-white/10 bg-white/[0.035] hover:border-white/25' : 'border-white/[0.06] bg-white/[0.015] opacity-70 hover:opacity-100',
           job.featured && job.open && 'border-cyan-300/30 shadow-[0_0_50px_rgba(34,211,238,0.10)]',
         )}
       >
-        <div className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-500 group-hover:opacity-100" style={{ background: 'radial-gradient(360px circle at var(--mx,50%) var(--my,0%), rgba(99,102,241,0.18), transparent 45%)' }} />
-        <div className="relative mb-4 flex items-center justify-between gap-3">
-          <span className="rounded-full border border-white/10 bg-white/[0.05] px-3 py-1 text-[10px] font-bold uppercase tracking-[0.16em] text-neutral-300">{job.team}</span>
-          {job.open ? (
-            <span className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-emerald-300">
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,1)]" />{left ? `${left}d left` : 'Open'}
-            </span>
-          ) : (
-            <span className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-neutral-500"><Lock className="h-3 w-3" />Closed</span>
-          )}
+        <div className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-500 group-hover:opacity-100" style={{ background: `radial-gradient(360px circle at var(--mx,50%) var(--my,0%), ${color}2e, transparent 45%)` }} />
+        <span aria-hidden="true" className="absolute inset-x-0 top-0 h-px origin-left scale-x-0 transition-transform duration-700 ease-out group-hover:scale-x-100" style={{ background: `linear-gradient(90deg, ${color}, transparent)` }} />
+        <span aria-hidden="true" className="pointer-events-none absolute right-4 -top-2 select-none font-serif-i text-[5.5rem] leading-none text-transparent opacity-70 transition-opacity duration-500 group-hover:opacity-100" style={{ WebkitTextStroke: `1px ${color}55` }}>{String(index + 1).padStart(2, '0')}</span>
+        <div className="relative mb-5 flex items-center gap-2.5">
+          <span className="flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.05] px-3 py-1 font-mono text-[10px] font-medium uppercase tracking-[0.16em] text-neutral-300">
+            <span className="h-1.5 w-1.5 rounded-full" style={{ background: color, boxShadow: `0 0 8px ${color}` }} />{job.team}
+          </span>
+          {isNew && <span className="rounded-full bg-cyan-300 px-2 py-0.5 font-mono text-[9px] font-medium uppercase tracking-[0.18em] text-neutral-900">New</span>}
         </div>
-        <h3 className="relative font-display text-2xl font-bold leading-tight text-white">{job.title}</h3>
-        {job.tagline && <p className="relative mt-2 line-clamp-2 text-sm leading-relaxed text-neutral-400">{job.tagline}</p>}
-        <div className="relative mt-5 flex flex-wrap gap-x-4 gap-y-1.5 text-xs text-neutral-500">
+        <h3 className="relative font-display text-xl font-bold leading-[1.15] tracking-[-0.035em] text-white">{job.title}</h3>
+        {job.tagline && <p className="relative mt-2.5 line-clamp-2 text-sm leading-relaxed text-neutral-400">{job.tagline}</p>}
+        <div className="relative mt-5 flex flex-wrap gap-x-4 gap-y-1.5 font-mono text-[11px] text-neutral-500">
           <span className="flex items-center gap-1.5"><MapPin className="h-3.5 w-3.5" />{job.location}</span>
           <span className="flex items-center gap-1.5"><Clock className="h-3.5 w-3.5" />{job.hoursPerWeek}</span>
         </div>
@@ -562,7 +935,18 @@ function RoleCard({ job, index, onOpen }) {
           </div>
         )}
         <div className="relative mt-auto flex items-center justify-between pt-6 text-sm font-bold text-white">
-          <span>{job.open ? 'View & apply' : 'View details'}</span>
+          <span className="flex items-center gap-3">
+            {job.open ? (
+              <span className="flex items-center gap-1.5 font-mono text-[10px] font-medium uppercase tracking-[0.16em] text-emerald-300">
+                <span className="relative flex h-1.5 w-1.5"><span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-70" /><span className="relative h-1.5 w-1.5 rounded-full bg-emerald-400" /></span>
+                {left ? `${left}d left` : 'Open'}
+              </span>
+            ) : (
+              <span className="flex items-center gap-1.5 font-mono text-[10px] font-medium uppercase tracking-[0.16em] text-neutral-500"><Lock className="h-3 w-3" />Closed</span>
+            )}
+            <span className="text-neutral-500">·</span>
+            <span>{job.open ? 'View & apply' : 'View details'}</span>
+          </span>
           <span className="flex h-9 w-9 items-center justify-center rounded-full bg-white/10 transition-all duration-300 group-hover:bg-white group-hover:text-neutral-900">
             <ArrowUpRight className="h-4 w-4 transition-transform duration-300 group-hover:rotate-12" />
           </span>
@@ -576,14 +960,14 @@ function GeneralCard({ onOpen, accepting }) {
   return (
     <Reveal>
       <button
-        onClick={() => onOpen('general')} disabled={!accepting}
+        onClick={() => onOpen('general')} disabled={!accepting} data-cursor="Pitch"
         className="group relative h-full w-full overflow-hidden rounded-3xl p-px text-left disabled:cursor-not-allowed disabled:opacity-50"
       >
         <span className="absolute inset-[-100%] careers-spin bg-[conic-gradient(from_0deg,transparent_0_60%,#6366f1_75%,#22d3ee_88%,transparent_100%)] opacity-70" />
-        <span className="relative flex h-full flex-col rounded-[calc(1.5rem-1px)] bg-[#07070f] p-6">
-          <Sparkles className="mb-4 h-6 w-6 text-cyan-300" />
-          <h3 className="font-display text-2xl font-bold text-white">Don&apos;t see your role?</h3>
-          <p className="mt-2 text-sm leading-relaxed text-neutral-400">Tell us what you&apos;d build, write, design or grow. Some of our best ideas start as a pitch nobody posted a job for.</p>
+        <span className="relative flex h-full min-h-[18rem] flex-col rounded-[calc(1.5rem-1px)] bg-[#07070f] p-6">
+          <Sparkles className="mb-4 h-6 w-6 text-cyan-300 transition-transform duration-500 group-hover:rotate-12 group-hover:scale-125" />
+          <h3 className="font-display text-xl font-bold leading-[1.15] tracking-[-0.035em] text-white">Don&apos;t see <span className="font-serif-i careers-shine text-[1.2em] leading-none">your</span> role?</h3>
+          <p className="mt-3 text-sm leading-relaxed text-neutral-400">Tell us what you&apos;d build, write, design or grow. Some of our best ideas start as a pitch nobody posted a job for.</p>
           <span className="mt-auto flex items-center gap-2 pt-6 text-sm font-bold text-white">General application <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" /></span>
         </span>
       </button>
@@ -596,6 +980,7 @@ function Roles({ state, onOpen, reload }) {
   const [q, setQ] = useState('');
   const [team, setTeam] = useState('All');
   const teams = useMemo(() => ['All', ...Array.from(new Set(jobs.map((j) => j.team).filter(Boolean)))], [jobs]);
+  const counts = useMemo(() => jobs.reduce((m, j) => ({ ...m, [j.team]: (m[j.team] || 0) + 1 }), { All: jobs.length }), [jobs]);
   const shown = useMemo(() => jobs.filter((j) => {
     if (team !== 'All' && j.team !== team) return false;
     const t = q.trim().toLowerCase();
@@ -605,16 +990,18 @@ function Roles({ state, onOpen, reload }) {
   return (
     <section id="roles" className="relative px-5 py-28">
       <div className="mx-auto max-w-6xl">
-        <Reveal className="mb-10 flex flex-col justify-between gap-6 md:flex-row md:items-end">
+        <div className="mb-10 flex flex-col justify-between gap-6 md:flex-row md:items-end">
           <div>
-            <div className="mb-3 text-xs font-bold uppercase tracking-[0.3em] text-cyan-300">Open roles</div>
-            <h2 className="font-display text-4xl font-extrabold tracking-[-0.03em] text-white sm:text-5xl">Find your seat.</h2>
+            <Eyebrow n="03" className="mb-5">Open roles</Eyebrow>
+            <h2 className="font-display text-4xl font-extrabold leading-[1.08] tracking-[-0.04em] text-white sm:text-5xl">
+              <Words inView text="Find your seat." accent={[2]} />
+            </h2>
           </div>
-          <div className="relative w-full md:w-72">
+          <Reveal delay={0.1} className="relative w-full md:w-72">
             <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-500" />
-            <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search roles or skills" className="w-full rounded-xl border border-white/10 bg-white/[0.04] py-2.5 pl-10 pr-3 text-sm text-white outline-none transition placeholder:text-neutral-600 focus:border-indigo-400/70 focus:shadow-[0_0_0_4px_rgba(99,102,241,0.15)]" />
-          </div>
-        </Reveal>
+            <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search roles or skills" aria-label="Search roles" className="w-full rounded-xl border border-white/10 bg-white/[0.04] py-2.5 pl-10 pr-3 text-sm text-white outline-none transition placeholder:text-neutral-600 focus:border-indigo-400/70 focus:shadow-[0_0_0_4px_rgba(99,102,241,0.15)]" />
+          </Reveal>
+        </div>
 
         {!accepting && !loading && (
           <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="mb-8 flex items-start gap-3 rounded-2xl border border-amber-400/30 bg-amber-400/[0.07] p-4 text-sm text-amber-100">
@@ -624,19 +1011,30 @@ function Roles({ state, onOpen, reload }) {
         )}
 
         {teams.length > 2 && (
-          <div className="mb-8 flex flex-wrap gap-2">
+          <div className="mb-3 flex flex-wrap gap-2">
             {teams.map((t) => (
-              <button key={t} onClick={() => setTeam(t)} className={cx('relative rounded-full px-4 py-1.5 text-xs font-bold uppercase tracking-wider transition-colors', team === t ? 'text-neutral-900' : 'text-neutral-400 hover:text-white')}>
+              <button key={t} onClick={() => setTeam(t)} className={cx('relative flex items-center gap-2 rounded-full px-4 py-1.5 font-mono text-[11px] font-medium uppercase tracking-[0.14em] transition-colors', team === t ? 'text-neutral-900' : 'text-neutral-400 hover:text-white')}>
                 {team === t && <motion.span layoutId="careers-team-pill" className="absolute inset-0 rounded-full bg-white" transition={{ type: 'spring', stiffness: 400, damping: 32 }} />}
                 <span className="relative">{t}</span>
+                <span className={cx('relative text-[10px]', team === t ? 'text-neutral-500' : 'text-neutral-600')}>{counts[t] || 0}</span>
               </button>
             ))}
           </div>
         )}
+        {!loading && !error && jobs.length > 0 && (
+          <div className="mb-7 font-mono text-[10px] uppercase tracking-[0.24em] text-neutral-600" aria-live="polite">Showing {shown.length} of {jobs.length}</div>
+        )}
 
         {loading ? (
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {[0, 1, 2].map((i) => <div key={i} className="h-64 animate-pulse rounded-3xl border border-white/[0.06] bg-white/[0.03]" />)}
+            {[0, 1, 2].map((i) => (
+              <div key={i} className="careers-shimmer relative h-72 overflow-hidden rounded-3xl border border-white/[0.06] bg-white/[0.03] p-6" style={{ animationDelay: `${i * 0.15}s` }}>
+                <div className="h-5 w-24 rounded-full bg-white/[0.06]" />
+                <div className="mt-6 h-6 w-3/4 rounded-lg bg-white/[0.07]" />
+                <div className="mt-3 h-3 w-full rounded bg-white/[0.04]" /><div className="mt-2 h-3 w-2/3 rounded bg-white/[0.04]" />
+                <div className="mt-8 flex gap-2"><div className="h-6 w-14 rounded-md bg-white/[0.05]" /><div className="h-6 w-16 rounded-md bg-white/[0.05]" /><div className="h-6 w-12 rounded-md bg-white/[0.05]" /></div>
+              </div>
+            ))}
           </div>
         ) : error ? (
           <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-10 text-center">
@@ -645,9 +1043,16 @@ function Roles({ state, onOpen, reload }) {
           </div>
         ) : (
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {shown.map((j, i) => <RoleCard key={j.slug} job={j} index={i} onOpen={onOpen} />)}
+            <AnimatePresence mode="popLayout">
+              {shown.map((j, i) => <RoleCard key={j.slug} job={j} index={i} onOpen={onOpen} />)}
+            </AnimatePresence>
             <GeneralCard onOpen={onOpen} accepting={accepting} />
           </div>
+        )}
+        {!loading && !error && jobs.length > 0 && shown.length === 0 && (
+          <Reveal className="mt-6 text-center text-sm text-neutral-500">
+            Nothing matches that search. <button onClick={() => { setQ(''); setTeam('All'); }} className="font-bold text-cyan-300 hover:underline">Clear filters</button>
+          </Reveal>
         )}
         {!loading && !error && jobs.length === 0 && (
           <Reveal className="mt-6 text-center text-sm text-neutral-500">No roles are posted right now. A general application is the best way to get on our radar.</Reveal>
@@ -672,22 +1077,28 @@ function Faq() {
   return (
     <section id="faq" className="relative px-5 py-28">
       <div className="mx-auto max-w-3xl">
-        <Reveal className="mb-12 text-center">
-          <div className="mb-3 text-xs font-bold uppercase tracking-[0.3em] text-cyan-300">Good to know</div>
-          <h2 className="font-display text-4xl font-extrabold tracking-[-0.03em] text-white sm:text-5xl">Straight answers.</h2>
-        </Reveal>
+        <div className="mb-12 flex flex-col items-center text-center">
+          <Eyebrow n="04" className="mb-5">Good to know</Eyebrow>
+          <h2 className="font-display text-4xl font-extrabold leading-[1.08] tracking-[-0.04em] text-white sm:text-5xl">
+            <Words inView text="Straight answers." accent={[1]} />
+          </h2>
+        </div>
         <div className="space-y-3">
           {FAQ.map((f, i) => (
-            <Reveal key={f.q} delay={i * 0.04}>
-              <div className={cx('overflow-hidden rounded-2xl border transition-colors', open === i ? 'border-white/20 bg-white/[0.05]' : 'border-white/[0.08] bg-white/[0.025]')}>
+            <Reveal key={f.q} delay={i * 0.05}>
+              <div className={cx('relative overflow-hidden rounded-2xl border transition-colors duration-300', open === i ? 'border-white/20 bg-white/[0.05]' : 'border-white/[0.08] bg-white/[0.025] hover:border-white/15')}>
+                <motion.span aria-hidden="true" className="absolute inset-y-0 left-0 w-0.5 origin-top bg-gradient-to-b from-indigo-400 to-cyan-300" initial={false} animate={{ scaleY: open === i ? 1 : 0 }} transition={{ duration: 0.4, ease: EASE }} />
                 <button onClick={() => setOpen(open === i ? -1 : i)} className="flex w-full items-center justify-between gap-4 p-5 text-left" aria-expanded={open === i}>
-                  <span className="font-display text-base font-bold text-white sm:text-lg">{f.q}</span>
+                  <span className="flex items-baseline gap-4">
+                    <span className="font-mono text-[11px] tracking-[0.2em] text-neutral-600">0{i + 1}</span>
+                    <span className="font-display text-sm font-bold tracking-[-0.02em] text-white sm:text-base">{f.q}</span>
+                  </span>
                   <ChevronDown className={cx('h-5 w-5 flex-shrink-0 text-neutral-400 transition-transform duration-300', open === i && 'rotate-180 text-cyan-300')} />
                 </button>
                 <AnimatePresence initial={false}>
                   {open === i && (
-                    <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.35, ease: EASE }}>
-                      <p className="px-5 pb-5 text-sm leading-relaxed text-neutral-400 sm:text-base">{f.a}</p>
+                    <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.4, ease: EASE }}>
+                      <p className="px-5 pb-5 pl-14 text-sm leading-relaxed text-neutral-400 sm:text-base">{f.a}</p>
                     </motion.div>
                   )}
                 </AnimatePresence>
@@ -701,19 +1112,32 @@ function Faq() {
 }
 
 function FinalCta({ onBrowse }) {
+  const ref = useRef(null);
+  const { scrollYProgress } = useScroll({ target: ref, offset: ['start end', 'end start'] });
+  const bx = useTransform(scrollYProgress, [0, 1], ['6%', '-14%']);
   return (
-    <section className="relative px-5 pb-28 pt-10">
+    <section ref={ref} className="relative px-5 pb-28 pt-10">
       <Reveal className="mx-auto max-w-5xl">
-        <div className="relative overflow-hidden rounded-[2rem] border border-white/10 bg-gradient-to-br from-indigo-500/20 via-white/[0.03] to-cyan-400/15 p-10 text-center sm:p-16">
+        <div className="relative overflow-hidden rounded-[2rem] border border-white/10 bg-gradient-to-br from-indigo-500/20 via-white/[0.03] to-cyan-400/15 p-10 text-center sm:p-20">
           <div className="pointer-events-none absolute -top-24 left-1/2 h-56 w-[36rem] -translate-x-1/2 rounded-full bg-indigo-500/30 blur-[90px]" />
-          <h2 className="relative font-display text-4xl font-extrabold tracking-[-0.03em] text-white sm:text-6xl">Your next project<br />starts here.</h2>
-          <p className="relative mx-auto mt-5 max-w-lg text-neutral-300">Pick a role, tell us what you&apos;d bring, and let&apos;s build something people actually use.</p>
-          <button onClick={onBrowse} className="group relative mt-8 inline-flex items-center gap-2 rounded-2xl bg-white px-8 py-4 text-sm font-extrabold text-neutral-900 transition hover:scale-[1.03]">
-            Browse open roles <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
-          </button>
+          <motion.div aria-hidden="true" style={{ x: bx }} className="pointer-events-none absolute inset-x-0 top-1/2 -translate-y-1/2 select-none whitespace-nowrap font-serif-i text-[clamp(7rem,24vw,19rem)] leading-none text-transparent">
+            <span style={{ WebkitTextStroke: '1px rgba(255,255,255,0.13)' }}>Let&apos;s build · Let&apos;s build</span>
+          </motion.div>
+          <h2 className="relative font-display text-4xl font-extrabold leading-[1.08] tracking-[-0.04em] text-white sm:text-6xl">
+            Your next project<br />starts <span className="font-serif-i careers-shine text-[1.2em] leading-none">here.</span>
+          </h2>
+          <p className="relative mx-auto mt-6 max-w-lg text-neutral-300">Pick a role, tell us what you&apos;d bring, and let&apos;s build something people actually use.</p>
+          <div className="relative mt-9">
+            <Magnetic>
+              <button onClick={onBrowse} data-cursor="Go" className="group relative inline-flex items-center gap-2 overflow-hidden rounded-2xl bg-white px-8 py-4 text-sm font-extrabold text-neutral-900 transition hover:shadow-[0_0_60px_rgba(255,255,255,0.3)]">
+                <span className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-cyan-200/70 to-transparent transition-transform duration-700 group-hover:translate-x-full" />
+                <span className="relative">Browse open roles</span><ArrowRight className="relative h-4 w-4 transition-transform group-hover:translate-x-1" />
+              </button>
+            </Magnetic>
+          </div>
         </div>
       </Reveal>
-      <footer className="mx-auto mt-14 flex max-w-6xl flex-col items-center justify-between gap-4 border-t border-white/[0.06] pt-8 text-xs text-neutral-500 sm:flex-row">
+      <footer className="mx-auto mt-14 flex max-w-6xl flex-col items-center justify-between gap-4 border-t border-white/[0.06] pt-8 font-mono text-[11px] tracking-wide text-neutral-500 sm:flex-row">
         <span>© {new Date().getFullYear()} PlanIt. Volunteer roles are unpaid.</span>
         <span className="flex gap-5">
           <a href="/about" className="hover:text-white">About</a><a href="/blog" className="hover:text-white">Blog</a>
@@ -1232,6 +1656,22 @@ export default function Careers() {
   const [state, setState] = useState({ jobs: [], loading: true, error: false, accepting: true, pausedMessage: '' });
   const [extra, setExtra] = useState(null);   // role opened by deep-link that isn't in the list
 
+  // Intro: plays once per session, never on a deep-linked role or with reduced motion.
+  const [intro, setIntro] = useState(() => {
+    try { return !slug && !window.matchMedia('(prefers-reduced-motion: reduce)').matches && !sessionStorage.getItem('planit_careers_intro'); } catch { return false; }
+  });
+  const [revealed, setRevealed] = useState(!intro);
+  const fontsReady = useCareersFonts();
+  const onReveal = useCallback(() => { setRevealed(true); try { sessionStorage.setItem('planit_careers_intro', '1'); } catch { /* ignore */ } }, []);
+  const onIntroDone = useCallback(() => setIntro(false), []);
+  useEffect(() => {
+    if (!intro) return undefined;
+    const prev = document.documentElement.style.overflow;
+    document.documentElement.style.overflow = 'hidden';
+    window.scrollTo(0, 0);
+    return () => { document.documentElement.style.overflow = prev; };
+  }, [intro]);
+
   const load = useCallback(() => {
     setState((s) => ({ ...s, loading: true, error: false }));
     api.get('/careers/jobs')
@@ -1297,20 +1737,35 @@ export default function Careers() {
   }, [state.jobs]);
 
   return (
-    <div className="relative min-h-screen overflow-x-clip bg-[#05050f] font-sans text-white selection:bg-cyan-300/30">
+    <div className="careers-root relative min-h-screen overflow-x-clip bg-[#05050f] font-sans text-white selection:bg-cyan-300/30">
       <style>{`
-        @keyframes careers-marquee { to { transform: translateX(-50%); } }
+        .careers-root .font-display { font-family: 'Unbounded', 'Syne', system-ui, sans-serif; }
+        .careers-root .font-serif-i { font-family: 'Instrument Serif', Georgia, serif; font-style: italic; font-weight: 400; letter-spacing: -0.01em; }
+        .careers-root .font-mono { font-family: 'DM Mono', ui-monospace, 'Courier New', monospace; }
+        .careers-shine { background: linear-gradient(100deg, #a5b4fc 0%, #67e8f9 28%, #ffffff 50%, #6ee7b7 72%, #a5b4fc 100%); background-size: 250% 100%; -webkit-background-clip: text; background-clip: text; color: transparent; -webkit-text-fill-color: transparent; animation: careers-shine 6s linear infinite; }
+        @keyframes careers-shine { to { background-position: -250% 0; } }
         @keyframes careers-spin { to { transform: rotate(360deg); } }
-        .careers-marquee { animation: careers-marquee 38s linear infinite; }
+        @keyframes careers-grain { 0%,100% { transform: translate(0,0); } 20% { transform: translate(-3%,2%); } 40% { transform: translate(2%,-3%); } 60% { transform: translate(-2%,-1%); } 80% { transform: translate(3%,3%); } }
+        @keyframes careers-drip { 0% { transform: translateY(-100%); } 100% { transform: translateY(260%); } }
+        @keyframes careers-blink { 50% { opacity: 0; } }
+        @keyframes careers-shimmer { 100% { transform: translateX(100%); } }
         .careers-spin { animation: careers-spin 7s linear infinite; }
-        @media (prefers-reduced-motion: reduce) { .careers-marquee, .careers-spin { animation: none !important; } }
+        .careers-grain { animation: careers-grain 1.2s steps(5) infinite; }
+        .careers-drip { animation: careers-drip 1.8s cubic-bezier(.6,0,.2,1) infinite; }
+        .careers-blink { animation: careers-blink 1s steps(2) infinite; }
+        .careers-shimmer::after { content: ''; position: absolute; inset: 0; transform: translateX(-100%); background: linear-gradient(90deg, transparent, rgba(255,255,255,0.06), transparent); animation: careers-shimmer 1.6s infinite; }
+        @media (prefers-reduced-motion: reduce) { .careers-spin, .careers-shine, .careers-grain, .careers-drip, .careers-blink, .careers-shimmer::after { animation: none !important; } }
       `}</style>
       <StarBackground fixed starCount={150} />
       <div className="pointer-events-none fixed inset-0 z-[1] bg-[radial-gradient(ellipse_at_top,rgba(99,102,241,0.10),transparent_55%)]" />
+      <div className="pointer-events-none fixed inset-0 z-[2] bg-[radial-gradient(ellipse_at_center,transparent_55%,rgba(0,0,0,0.55))]" />
+      <Grain />
+      <Cursor />
+      {intro && <Preloader ready={fontsReady && !state.loading} onReveal={onReveal} onDone={onIntroDone} />}
       <div className="relative z-10">
         <ScrollChrome />
-        <Nav openRoles={openRoles} onApply={() => scrollTo('roles')} />
-        <Hero openRoles={openRoles} teams={teams} accepting={state.accepting} loading={state.loading} onBrowse={() => scrollTo('roles')} onGeneral={() => openRole('general')} />
+        <Nav openRoles={openRoles} go={revealed} onApply={() => scrollTo('roles')} />
+        <Hero openRoles={openRoles} teams={teams} accepting={state.accepting} go={revealed} onBrowse={() => scrollTo('roles')} onGeneral={() => openRole('general')} />
         <Marquee words={marquee} />
         <Why />
         <How />
