@@ -33,11 +33,14 @@ const JobListing      = require('../models/JobListing');
 const JobApplication  = require('../models/JobApplication');
 const CareerEvent     = require('../models/CareerEvent');
 const CareersSettings = require('../models/CareersSettings');
+const OrgNode         = require('../models/OrgNode');
+const Employee        = require('../models/Employee');
+const mongoose        = require('mongoose');
 const { SOURCES }     = JobApplication;
 const { EVENTS }      = CareerEvent;
 
 const { realIp }           = require('../middleware/realIp');
-const { verifyAdmin, requirePermission } = require('../middleware/auth');
+const { verifyAdmin, requirePermission, requireSuperAdminRole } = require('../middleware/auth');
 const { verifyTurnstile }  = require('../services/captchaService');
 const { recordIdentity }   = require('../services/identityService');
 const { audit }            = require('../models/AuditLog');
@@ -582,6 +585,252 @@ router.post('/admin/test-alert', verifyAdmin, canManage, async (req, res, next) 
       fields: [{ name: 'Role', value: 'Test role', inline: true }, { name: 'Source', value: 'linkedin', inline: true }],
     });
     res.json(r);
+  } catch (e) { next(e); }
+});
+
+
+// ═════════════════════════════════════════════════════════════════════════════
+// ORG CHART
+//   READ   any logged-in admin / employee (verifyAdmin only, no hiring perm)
+//   WRITE  super admin only (requireSuperAdminRole). Demo accounts can never
+//          write (they are not super admins) and only ever read an empty chart.
+// ═════════════════════════════════════════════════════════════════════════════
+
+const MAX_LEVEL = 9;
+const ACCENTS = ['slate', 'indigo', 'emerald', 'amber', 'rose', 'sky', 'violet', 'teal'];
+const isSuperReq = (req) => {
+  const a = req.admin || {};
+  return (!a.isEmployee && a.isAdmin === true) || a.role === 'super_admin';
+};
+const canSeeApplicants = (req) => isSuperReq(req) || req.admin?.permissions?.canViewHiring === true;
+const oid = (v) => (v && mongoose.isValidObjectId(String(v)) ? String(v) : null);
+
+function serializeNode(n, superView, applicants) {
+  const o = {
+    _id: String(n._id), title: n.title, department: n.department || '', status: n.status,
+    level: n.level, parentId: n.parentId ? String(n.parentId) : null, order: n.order || 0,
+    personName: n.personName || '', personEmail: n.personEmail || '', employeeId: n.employeeId ? String(n.employeeId) : null,
+    avatar: n.avatar || '', bio: n.bio || '', location: n.location || '', timezone: n.timezone || '',
+    startDate: n.startDate || null, skills: n.skills || [], links: n.links || [], accent: n.accent || 'slate',
+    description: n.description || '', jobSlug: n.jobSlug || '', updatedAt: n.updatedAt,
+  };
+  if (applicants && n.jobSlug) o.applicants = applicants[n.jobSlug] || 0;
+  if (superView) { o.privatePhone = n.privatePhone || ''; o.privateNotes = n.privateNotes || ''; }
+  return o;
+}
+
+async function loadOrg(req) {
+  const superView = isSuperReq(req);
+  const docs = await OrgNode.find().sort({ level: 1, order: 1, createdAt: 1 }).lean();
+  let applicants = null;
+  if (canSeeApplicants(req)) {
+    const rows = await JobApplication.aggregate([{ $group: { _id: '$jobSlug', n: { $sum: 1 } } }]);
+    applicants = Object.fromEntries(rows.map((r) => [r._id, r.n]));
+  }
+  const maxT = docs.reduce((m, d) => Math.max(m, new Date(d.updatedAt || 0).getTime()), 0);
+  return { nodes: docs.map((d) => serializeNode(d, superView, applicants)), rev: `${docs.length}:${maxT}`, canEdit: superView };
+}
+
+function nodeFromBody(b, existing) {
+  const out = {};
+  const has = (k) => Object.prototype.hasOwnProperty.call(b, k);
+  if (has('title')) out.title = str(b.title, 120);
+  if (has('department')) out.department = str(b.department, 80);
+  if (has('status')) out.status = b.status === 'filled' ? 'filled' : 'open';
+  if (has('personName')) out.personName = str(b.personName, 100);
+  if (has('personEmail')) {
+    const e = str(b.personEmail, 160).toLowerCase();
+    out.personEmail = /^[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+$/.test(e) ? e : '';
+  }
+  if (has('avatar')) out.avatar = cleanUrl(b.avatar, 400);
+  if (has('bio')) out.bio = str(b.bio, 1200);
+  if (has('location')) out.location = str(b.location, 100);
+  if (has('timezone')) out.timezone = str(b.timezone, 60);
+  if (has('startDate')) { const d = b.startDate ? new Date(b.startDate) : null; out.startDate = d && !isNaN(d) ? d : null; }
+  if (has('skills')) {
+    const arr = Array.isArray(b.skills) ? b.skills : String(b.skills || '').split(',');
+    out.skills = arr.map((s) => str(s, 30)).filter(Boolean).slice(0, 15);
+  }
+  if (has('links')) {
+    out.links = (Array.isArray(b.links) ? b.links : []).slice(0, 5)
+      .map((l) => ({ label: str(l?.label, 40), url: cleanUrl(l?.url, 300) })).filter((l) => l.url);
+  }
+  if (has('accent')) out.accent = ACCENTS.includes(b.accent) ? b.accent : 'slate';
+  if (has('description')) out.description = str(b.description, 1500);
+  if (has('jobSlug')) { const s = str(b.jobSlug, 90).toLowerCase(); out.jobSlug = /^[a-z0-9-]*$/.test(s) ? s : ''; }
+  if (has('privatePhone')) out.privatePhone = str(b.privatePhone, 30);
+  if (has('privateNotes')) out.privateNotes = str(b.privateNotes, 1500);
+  if (has('employeeId')) out.employeeId = oid(b.employeeId);
+  return out;
+}
+
+// Vacant positions never keep a person's identity around.
+function clearPerson(o) {
+  Object.assign(o, { personName: '', personEmail: '', employeeId: null, avatar: '', bio: '', startDate: null, privatePhone: '', privateNotes: '' });
+}
+
+// Check parent.level < child.level and no cycles over a full id -> {level,parentId} map.
+function validateTree(map) {
+  for (const [id, n] of map) {
+    if (n.parentId) {
+      const p = map.get(n.parentId);
+      if (!p) return `A reporting line points at a position that does not exist.`;
+      if (p.level >= n.level) return `A person must sit on a lower level than their manager.`;
+    }
+    let cur = n, hops = 0;
+    while (cur && cur.parentId) {
+      cur = map.get(cur.parentId);
+      if (++hops > 100 || (cur && String(cur._id) === id)) return 'That move would create a reporting loop.';
+    }
+  }
+  return null;
+}
+
+router.get('/admin/org', verifyAdmin, async (req, res, next) => {
+  try {
+    if (req.admin?.isDemo) return res.json({ nodes: [], rev: '0:0', canEdit: false, demo: true });
+    const data = await loadOrg(req);
+    const extra = { me: req.admin?.employeeId ? String(req.admin.employeeId) : null };
+    if (data.canEdit) {
+      const [emps, jobs] = await Promise.all([
+        Employee.find({ status: 'active', role: { $ne: 'demo' }, isDemo: { $ne: true } }).select('name email role department avatar').sort({ name: 1 }).lean(),
+        JobListing.find().select('slug title status').sort({ title: 1 }).lean(),
+      ]);
+      extra.employees = emps.map((e) => ({ _id: String(e._id), name: e.name, email: e.email, role: e.role, department: e.department || '', avatar: e.avatar || '' }));
+      extra.listings = jobs.map((j) => ({ slug: j.slug, title: j.title, status: j.status }));
+    }
+    res.json({ ...data, ...extra });
+  } catch (e) { next(e); }
+});
+
+router.post('/admin/org', verifyAdmin, requireSuperAdminRole, async (req, res, next) => {
+  try {
+    const b = req.body || {};
+    const data = nodeFromBody(b);
+    if (!data.title || data.title.length < 2) return res.status(400).json({ error: 'Give the position a title' });
+    if (data.status === 'open') clearPerson(data);
+    if (data.status === 'filled' && !data.personName && data.employeeId) {
+      const emp = await Employee.findById(data.employeeId).select('name email').lean();
+      if (emp) { data.personName = emp.name; data.personEmail = data.personEmail || emp.email; }
+    }
+    if (data.status === 'filled' && !data.personName) return res.status(400).json({ error: 'A filled position needs a person' });
+
+    let level = Math.round(num(b.level, 0, MAX_LEVEL, 0));
+    let parentId = null;
+    if (oid(b.parentId)) {
+      const parent = await OrgNode.findById(oid(b.parentId)).select('level').lean();
+      if (!parent) return res.status(400).json({ error: 'Manager not found' });
+      if (parent.level >= MAX_LEVEL) return res.status(400).json({ error: 'That is already the lowest level' });
+      parentId = parent._id; level = parent.level + 1;
+    }
+    const last = await OrgNode.findOne({ level }).sort({ order: -1 }).select('order').lean();
+    const node = await OrgNode.create({ ...data, level, parentId, order: (last?.order ?? -1) + 1, updatedBy: actorName(req) });
+    audit('careers_org_created', { req, actor: req.admin, targetId: String(node._id), targetType: 'org_node', details: { title: node.title, status: node.status } });
+    res.status(201).json({ node: serializeNode(node.toObject(), true) });
+  } catch (e) { next(e); }
+});
+
+router.put('/admin/org/:id', verifyAdmin, requireSuperAdminRole, async (req, res, next) => {
+  try {
+    if (!oid(req.params.id)) return res.status(400).json({ error: 'Bad id' });
+    const node = await OrgNode.findById(req.params.id);
+    if (!node) return res.status(404).json({ error: 'Position not found' });
+    const data = nodeFromBody(req.body || {});
+    if ('title' in data && data.title.length < 2) return res.status(400).json({ error: 'Give the position a title' });
+    const status = data.status || node.status;
+    if (status === 'open') clearPerson(data);
+    if (status === 'filled') {
+      const empId = 'employeeId' in data ? data.employeeId : node.employeeId;
+      let name = 'personName' in data ? data.personName : node.personName;
+      if (!name && empId) {
+        const emp = await Employee.findById(empId).select('name email').lean();
+        if (emp) { data.personName = name = emp.name; if (!(data.personEmail ?? node.personEmail)) data.personEmail = emp.email; }
+      }
+      if (!name) return res.status(400).json({ error: 'A filled position needs a person' });
+    }
+    Object.assign(node, data, { updatedBy: actorName(req) });
+    await node.save();
+    audit('careers_org_updated', { req, actor: req.admin, targetId: String(node._id), targetType: 'org_node', details: { title: node.title, status: node.status, fields: Object.keys(data) } });
+    res.json({ node: serializeNode(node.toObject(), true) });
+  } catch (e) { next(e); }
+});
+
+// Bulk reposition: [{ id, level, parentId|null, order }]. All-or-nothing.
+router.post('/admin/org/layout', verifyAdmin, requireSuperAdminRole, async (req, res, next) => {
+  try {
+    const moves = Array.isArray(req.body?.moves) ? req.body.moves.slice(0, 300) : [];
+    if (!moves.length) return res.status(400).json({ error: 'Nothing to move' });
+    const docs = await OrgNode.find().select('level parentId order').lean();
+    const map = new Map(docs.map((d) => [String(d._id), { _id: String(d._id), level: d.level, parentId: d.parentId ? String(d.parentId) : null, order: d.order || 0 }]));
+    const touched = new Map();
+    for (const m of moves) {
+      const id = oid(m?.id);
+      if (!id || !map.has(id)) return res.status(400).json({ error: 'A position in that move no longer exists. Refresh and try again.' });
+      const cur = map.get(id);
+      const level = Math.round(num(m.level, 0, MAX_LEVEL, cur.level));
+      const parentId = m.parentId ? oid(m.parentId) : null;
+      if (m.parentId && !parentId) return res.status(400).json({ error: 'Bad manager id' });
+      const next = { ...cur, level, parentId, order: Math.round(num(m.order, 0, 100000, cur.order)) };
+      map.set(id, next); touched.set(id, next);
+    }
+    const problem = validateTree(map);
+    if (problem) return res.status(400).json({ error: problem });
+    await OrgNode.bulkWrite([...touched.values()].map((t) => ({
+      updateOne: { filter: { _id: t._id }, update: { $set: { level: t.level, parentId: t.parentId, order: t.order, updatedBy: actorName(req) } } },
+    })));
+    audit('careers_org_layout', { req, actor: req.admin, targetType: 'org_node', details: { moved: touched.size } });
+    res.json(await loadOrg(req));
+  } catch (e) { next(e); }
+});
+
+router.delete('/admin/org/:id', verifyAdmin, requireSuperAdminRole, async (req, res, next) => {
+  try {
+    if (!oid(req.params.id)) return res.status(400).json({ error: 'Bad id' });
+    const node = await OrgNode.findById(req.params.id);
+    if (!node) return res.status(404).json({ error: 'Position not found' });
+    // Reports move up to the deleted box's manager (always a valid, lower level).
+    await OrgNode.updateMany({ parentId: node._id }, { $set: { parentId: node.parentId || null } });
+    await node.deleteOne();
+    audit('careers_org_deleted', { req, actor: req.admin, targetId: String(node._id), targetType: 'org_node', details: { title: node.title } });
+    res.json(await loadOrg(req));
+  } catch (e) { next(e); }
+});
+
+// One-click scaffold: active employees + open listings that are not on the chart yet. Idempotent.
+router.post('/admin/org/import', verifyAdmin, requireSuperAdminRole, async (req, res, next) => {
+  try {
+    const existing = await OrgNode.find().select('employeeId jobSlug level').lean();
+    const haveEmp = new Set(existing.filter((n) => n.employeeId).map((n) => String(n.employeeId)));
+    const haveJob = new Set(existing.filter((n) => n.jobSlug).map((n) => n.jobSlug));
+    const [emps, jobs] = await Promise.all([
+      Employee.find({ status: 'active', role: { $ne: 'demo' }, isDemo: { $ne: true } }).sort({ createdAt: 1 }).lean(),
+      JobListing.find({ status: 'open' }).sort({ sortOrder: 1 }).lean(),
+    ]);
+    const pretty = (r) => String(r || '').replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+    const docs = [];
+    let top = existing.find((n) => n.level === 0);
+    const order = { 0: 0, 1: 0, 2: 0 };
+    for (const e of emps) {
+      if (haveEmp.has(String(e._id))) continue;
+      const level = e.role === 'super_admin' ? 0 : 1;
+      const doc = {
+        _id: new mongoose.Types.ObjectId(), title: pretty(e.role), department: e.department || '', status: 'filled', level, order: order[level]++,
+        personName: e.name, personEmail: e.email, employeeId: e._id, avatar: cleanUrl(e.avatar || '', 400),
+        location: e.location || '', timezone: e.timezone || '', startDate: e.startDate || null, updatedBy: actorName(req),
+      };
+      docs.push(doc);
+    }
+    const newTop = docs.find((d) => d.level === 0);
+    const topId = top?._id || newTop?._id || null;
+    for (const d of docs) d.parentId = d.level === 1 ? topId : null;
+    for (const j of jobs) {
+      if (haveJob.has(j.slug)) continue;
+      docs.push({ _id: new mongoose.Types.ObjectId(), title: j.title, department: j.team || '', status: 'open', level: 2, order: order[2]++, parentId: null,
+        description: str(j.tagline || j.description, 1500), jobSlug: j.slug, updatedBy: actorName(req) });
+    }
+    if (docs.length) await OrgNode.insertMany(docs);
+    audit('careers_org_imported', { req, actor: req.admin, targetType: 'org_node', details: { added: docs.length } });
+    res.json({ added: docs.length, ...(await loadOrg(req)) });
   } catch (e) { next(e); }
 });
 
