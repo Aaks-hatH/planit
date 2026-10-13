@@ -2,10 +2,11 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Briefcase, Bell, Check, ChevronDown, Copy, Download, Edit2, ExternalLink, Inbox, Link2, Loader2,
-  Lock, Mail, Pause, Play, Plus, RefreshCw, Search, Star, Trash2, Unlock, X, Users, Eye, Clock,
+  Lock, Mail, Pause, Play, Plus, RefreshCw, Search, Star, Trash2, Unlock, X, Users, Eye, Clock, Network,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../services/api';
+import OrgChart from './OrgChart';
 
 /**
  * Admin -> Careers
@@ -298,7 +299,10 @@ function ApplicationPanel({ app, onClose, onChange, onDelete, isDemo }) {
 }
 
 /* ── Main panel ─────────────────────────────────────────────────────────────── */
-export default function AdminCareers({ isDemo = false }) {
+export default function AdminCareers({ isDemo = false, currentUser = null }) {
+  // Hiring data needs canViewHiring (super admins and the root login pass). Every other
+  // logged-in employee only gets the Org chart tab, which is readable by everyone.
+  const canHiring = isDemo || (!!currentUser && (!currentUser.isEmployee || currentUser.role === 'super_admin' || currentUser.permissions?.canViewHiring === true));
   const [tab, setTab] = useState('applications');
   const [overview, setOverview] = useState(null);
   const [jobs, setJobs] = useState([]);
@@ -312,27 +316,28 @@ export default function AdminCareers({ isDemo = false }) {
   const [busy, setBusy] = useState('');
 
   const loadAll = useCallback(async (silent) => {
+    if (!canHiring) { setLoading(false); return; }
     if (isDemo) { setOverview(DEMO_OVERVIEW); setLoading(false); return; }
     if (!silent) setLoading(true);
     try {
       const [o, j] = await Promise.all([api.get('/careers/admin/overview'), api.get('/careers/admin/jobs')]);
       setOverview(o.data); setJobs(j.data.jobs || []); setErr('');
     } catch (e) { setErr(e?.response?.data?.error || e.message || 'Failed to load careers'); } finally { setLoading(false); }
-  }, [isDemo]);
+  }, [isDemo, canHiring]);
 
   const loadApps = useCallback(async () => {
-    if (isDemo) return;
+    if (isDemo || !canHiring) return;
     try {
       const params = { ...filters, limit: 30 };
       Object.keys(params).forEach((k) => (params[k] === 'all' || params[k] === '') && delete params[k]);
       const r = await api.get('/careers/admin/applications', { params });
       setApps(r.data);
     } catch (e) { setErr(e?.response?.data?.error || 'Failed to load applications'); }
-  }, [filters, isDemo]);
+  }, [filters, isDemo, canHiring]);
 
   useEffect(() => { loadAll(); }, [loadAll]);
   useEffect(() => { const t = setTimeout(loadApps, filters.q ? 300 : 0); return () => clearTimeout(t); }, [loadApps, filters.q]);
-  useEffect(() => { if (isDemo) return undefined; const t = setInterval(() => { loadAll(true); loadApps(); }, 30000); return () => clearInterval(t); }, [isDemo, loadAll, loadApps]);
+  useEffect(() => { if (isDemo || !canHiring) return undefined; const t = setInterval(() => { loadAll(true); loadApps(); }, 30000); return () => clearInterval(t); }, [isDemo, canHiring, loadAll, loadApps]);
 
   const setF = (k, v) => setFilters((p) => ({ ...p, [k]: v, page: k === 'page' ? v : 1 }));
   const accepting = overview?.settings?.acceptingApplications !== false;
@@ -396,7 +401,10 @@ export default function AdminCareers({ isDemo = false }) {
   const fSteps = [['page_view', 'Viewed page'], ['role_open', 'Opened a role'], ['apply_start', 'Started form'], ['step_2', 'Reached step 2'], ['step_3', 'Reached step 3'], ['apply_submit', 'Submitted']];
   const fTop = Math.max(1, funnel.page_view?.visitors || 0);
 
-  const tabs = useMemo(() => [['applications', 'Applications', Inbox, overview?.byStatus?.new || 0], ['listings', 'Listings', Briefcase, overview?.openJobs || 0], ['insights', 'Insights', Eye, 0]], [overview]);
+  const tabs = useMemo(() => (canHiring
+    ? [['applications', 'Applications', Inbox, overview?.byStatus?.new || 0], ['listings', 'Listings', Briefcase, overview?.openJobs || 0], ['org', 'Org chart', Network, 0], ['insights', 'Insights', Eye, 0]]
+    : [['org', 'Org chart', Network, 0]]), [overview, canHiring]);
+  useEffect(() => { if (!canHiring) setTab('org'); }, [canHiring]);
 
   if (loading) return <div className="flex items-center justify-center py-24 text-neutral-400"><Loader2 className="mr-2 h-5 w-5 animate-spin" />Loading careers…</div>;
 
@@ -405,27 +413,27 @@ export default function AdminCareers({ isDemo = false }) {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h2 className="flex items-center gap-2 text-xl font-black text-neutral-900"><Briefcase className="h-5 w-5" />Careers</h2>
-          <p className="text-sm text-neutral-500">Volunteer roles, applications and where candidates come from.</p>
+          <p className="text-sm text-neutral-500">{canHiring ? 'Volunteer roles, applications, the org chart and where candidates come from.' : 'See who is on the team and which roles are open.'}</p>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
+        {canHiring && <div className="flex flex-wrap items-center gap-2">
           <button onClick={() => { loadAll(true); loadApps(); }} className="rounded-lg border border-neutral-200 p-2 text-neutral-500 hover:bg-neutral-50" title="Refresh"><RefreshCw className="h-4 w-4" /></button>
           <button onClick={testAlert} disabled={busy === 'alert'} className="flex items-center gap-1.5 rounded-lg border border-neutral-200 px-3 py-2 text-xs font-bold text-neutral-700 hover:bg-neutral-50"><Bell className="h-4 w-4" />Test alert</button>
           <button onClick={exportCsv} className="flex items-center gap-1.5 rounded-lg border border-neutral-200 px-3 py-2 text-xs font-bold text-neutral-700 hover:bg-neutral-50"><Download className="h-4 w-4" />CSV</button>
           <button onClick={toggleAccepting} disabled={busy === 'toggle'} className={`flex items-center gap-1.5 rounded-lg px-3.5 py-2 text-xs font-bold transition ${accepting ? 'bg-emerald-600 text-white hover:bg-emerald-700' : 'bg-amber-500 text-white hover:bg-amber-600'}`}>
             {accepting ? <><Pause className="h-4 w-4" />Applications open · pause</> : <><Play className="h-4 w-4" />Paused · resume</>}
           </button>
-        </div>
+        </div>}
       </div>
 
-      {err && <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">{err}</div>}
-      {!accepting && <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800"><b>Applications are paused.</b> Visitors can still read roles but cannot apply.</div>}
+      {canHiring && err && <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">{err}</div>}
+      {canHiring && !accepting && <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800"><b>Applications are paused.</b> Visitors can still read roles but cannot apply.</div>}
 
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+      {canHiring && <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Stat label="Total applicants" value={overview?.total ?? 0} accent="bg-neutral-900" />
         <Stat label="New (unreviewed)" value={overview?.byStatus?.new ?? 0} accent="bg-sky-500" />
         <Stat label="Open roles" value={overview?.openJobs ?? 0} accent="bg-emerald-500" />
         <Stat label="In pipeline" value={(overview?.byStatus?.interview || 0) + (overview?.byStatus?.trial || 0)} sub={`${overview?.byStatus?.accepted || 0} accepted`} accent="bg-violet-500" />
-      </div>
+      </div>}
 
       <div className="flex gap-1 rounded-xl bg-neutral-100 p-1">
         {tabs.map(([id, label, I, c]) => (
@@ -437,7 +445,13 @@ export default function AdminCareers({ isDemo = false }) {
       </div>
 
       <AnimatePresence mode="wait">
-        {tab === 'applications' && (
+        {tab === 'org' && (
+          <motion.div key="org" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+            <OrgChart isDemo={isDemo} />
+          </motion.div>
+        )}
+
+        {canHiring && tab === 'applications' && (
           <motion.div key="apps" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="space-y-3">
             <div className="flex flex-wrap gap-2">
               <div className="relative min-w-[200px] flex-1"><Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-400" /><input value={filters.q} onChange={(e) => setF('q', e.target.value)} placeholder="Search name, email, school, skill" className={`${field} pl-9`} /></div>
@@ -472,7 +486,7 @@ export default function AdminCareers({ isDemo = false }) {
           </motion.div>
         )}
 
-        {tab === 'listings' && (
+        {canHiring && tab === 'listings' && (
           <motion.div key="listings" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="space-y-3">
             <button onClick={() => setEditing({})} className="flex items-center gap-2 rounded-xl bg-neutral-900 px-4 py-2.5 text-sm font-bold text-white hover:bg-neutral-700"><Plus className="h-4 w-4" />Add job listing</button>
             {jobs.length === 0 && <div className="rounded-2xl border border-dashed border-neutral-300 p-12 text-center text-sm text-neutral-400">No listings yet. Add your first volunteer role.</div>}
@@ -516,7 +530,7 @@ export default function AdminCareers({ isDemo = false }) {
           </motion.div>
         )}
 
-        {tab === 'insights' && (
+        {canHiring && tab === 'insights' && (
           <motion.div key="insights" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="grid gap-4 lg:grid-cols-2">
             <div className="rounded-2xl border border-neutral-200 bg-white p-5 lg:col-span-2">
               <div className="mb-1 flex items-center justify-between"><h3 className="text-sm font-black text-neutral-900">Applications, last 30 days</h3><span className="text-xs text-neutral-400">{(overview?.series || []).reduce((a, s) => a + s.n, 0)} total</span></div>
