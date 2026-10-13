@@ -68,6 +68,7 @@ const QRPass             = lazy(() => import('./pages/QRPass'));
 const VenueMap           = lazy(() => import('./pages/VenueMap'));
 const ForgotPassword    = lazy(() => import('./pages/ForgotPassword'));
 const ClaudeConnect     = lazy(() => import('./pages/ClaudeConnect'));
+const Careers           = lazy(() => import('./pages/Careers'));
 
 // Loading state shown during chunk loads (usually <200ms on a warm CDN).
 // On event URLs it shows the event's own name (from the server preload or the
@@ -612,6 +613,7 @@ function App() {
         <Route path="/429"             element={<TooManyRequests />} />
         <Route path="/forgot-password"  element={<ForgotPassword />} />
         <Route path="/claude-connect"   element={<ClaudeConnect />} />
+        <Route path="/careers/:slug?"   element={<Careers />} />
         <Route path="*"                element={<NotFound />} />
       </Routes>
             </Suspense>
