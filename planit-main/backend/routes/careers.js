@@ -628,7 +628,11 @@ async function loadOrg(req) {
     applicants = Object.fromEntries(rows.map((r) => [r._id, r.n]));
   }
   const maxT = docs.reduce((m, d) => Math.max(m, new Date(d.updatedAt || 0).getTime()), 0);
-  return { nodes: docs.map((d) => serializeNode(d, superView, applicants)), rev: `${docs.length}:${maxT}`, canEdit: superView };
+  // A box linked to a public listing always shows that listing's opening count (one number, two places).
+  const slugs = [...new Set(docs.map((d) => d.jobSlug).filter(Boolean))];
+  const openingsBySlug = new Map(slugs.length ? (await JobListing.find({ slug: { $in: slugs } }).select('slug openings').lean()).map((j) => [j.slug, j.openings || 1]) : []);
+  const nodes = docs.map((d) => { const o = serializeNode(d, superView, applicants); if (d.jobSlug && d.status === 'open' && openingsBySlug.has(d.jobSlug)) o.seats = openingsBySlug.get(d.jobSlug); return o; });
+  return { nodes, rev: `${docs.length}:${maxT}`, canEdit: superView };
 }
 
 function nodeFromBody(b, existing) {
@@ -704,6 +708,11 @@ router.get('/admin/org', verifyAdmin, async (req, res, next) => {
   } catch (e) { next(e); }
 });
 
+// Openings set on an org-chart box flow to its linked public listing (-> JobPosting.totalJobOpenings).
+async function syncOpenings(node) {
+  if (node.status === 'open' && node.jobSlug) await JobListing.updateOne({ slug: node.jobSlug }, { $set: { openings: node.seats || 1 } });
+}
+
 router.post('/admin/org', verifyAdmin, requireSuperAdminRole, async (req, res, next) => {
   try {
     const b = req.body || {};
@@ -726,6 +735,7 @@ router.post('/admin/org', verifyAdmin, requireSuperAdminRole, async (req, res, n
     }
     const last = await OrgNode.findOne({ level }).sort({ order: -1 }).select('order').lean();
     const node = await OrgNode.create({ ...data, level, parentId, order: (last?.order ?? -1) + 1, updatedBy: actorName(req) });
+    await syncOpenings(node);
     audit('careers_org_created', { req, actor: req.admin, targetId: String(node._id), targetType: 'org_node', details: { title: node.title, status: node.status } });
     res.status(201).json({ node: serializeNode(node.toObject(), true) });
   } catch (e) { next(e); }
@@ -751,6 +761,7 @@ router.put('/admin/org/:id', verifyAdmin, requireSuperAdminRole, async (req, res
     }
     Object.assign(node, data, { updatedBy: actorName(req) });
     await node.save();
+    if ('seats' in data || 'jobSlug' in data) await syncOpenings(node);
     audit('careers_org_updated', { req, actor: req.admin, targetId: String(node._id), targetType: 'org_node', details: { title: node.title, status: node.status, fields: Object.keys(data) } });
     res.json({ node: serializeNode(node.toObject(), true) });
   } catch (e) { next(e); }
@@ -878,7 +889,7 @@ router.post('/admin/org/import', verifyAdmin, requireSuperAdminRole, async (req,
     for (const d of docs) d.parentId = d.level === 1 ? topId : null;
     for (const j of jobs) {
       if (haveJob.has(j.slug)) continue;
-      docs.push({ _id: new mongoose.Types.ObjectId(), title: j.title, department: j.team || '', status: 'open', level: 1, order: order[1]++, parentId: null,
+      docs.push({ _id: new mongoose.Types.ObjectId(), title: j.title, department: j.team || '', status: 'open', level: 1, order: order[1]++, parentId: null, seats: j.openings || 1,
         description: str(j.tagline || j.description, 1500), jobSlug: j.slug, updatedBy: actorName(req) });
     }
     if (docs.length) await OrgNode.insertMany(docs);
