@@ -612,7 +612,7 @@ function serializeNode(n, superView, applicants) {
     personName: n.personName || '', personEmail: n.personEmail || '', employeeId: n.employeeId ? String(n.employeeId) : null,
     avatar: n.avatar || '', bio: n.bio || '', location: n.location || '', timezone: n.timezone || '',
     startDate: n.startDate || null, skills: n.skills || [], links: n.links || [], accent: n.accent || 'slate',
-    description: n.description || '', jobSlug: n.jobSlug || '', updatedAt: n.updatedAt,
+    description: n.description || '', jobSlug: n.jobSlug || '', owner: !!n.owner, seats: n.seats || 1, updatedAt: n.updatedAt,
   };
   if (applicants && n.jobSlug) o.applicants = applicants[n.jobSlug] || 0;
   if (superView) { o.privatePhone = n.privatePhone || ''; o.privateNotes = n.privateNotes || ''; }
@@ -658,6 +658,7 @@ function nodeFromBody(b, existing) {
   if (has('accent')) out.accent = ACCENTS.includes(b.accent) ? b.accent : 'slate';
   if (has('description')) out.description = str(b.description, 1500);
   if (has('jobSlug')) { const s = str(b.jobSlug, 90).toLowerCase(); out.jobSlug = /^[a-z0-9-]*$/.test(s) ? s : ''; }
+  if (has('seats')) out.seats = Math.max(1, Math.min(99, Math.round(Number(b.seats)) || 1));
   if (has('privatePhone')) out.privatePhone = str(b.privatePhone, 30);
   if (has('privateNotes')) out.privateNotes = str(b.privateNotes, 1500);
   if (has('employeeId')) out.employeeId = oid(b.employeeId);
@@ -690,7 +691,7 @@ router.get('/admin/org', verifyAdmin, async (req, res, next) => {
   try {
     if (req.admin?.isDemo) return res.json({ nodes: [], rev: '0:0', canEdit: false, demo: true });
     const data = await loadOrg(req);
-    const extra = { me: req.admin?.employeeId ? String(req.admin.employeeId) : null };
+    const extra = { me: req.admin?.employeeId ? String(req.admin.employeeId) : null, root: !req.admin?.isEmployee && req.admin?.isAdmin === true };
     if (data.canEdit) {
       const [emps, jobs] = await Promise.all([
         Employee.find({ status: 'active', role: { $ne: 'demo' }, isDemo: { $ne: true } }).select('name email role department avatar').sort({ name: 1 }).lean(),
@@ -796,6 +797,58 @@ router.delete('/admin/org/:id', verifyAdmin, requireSuperAdminRole, async (req, 
   } catch (e) { next(e); }
 });
 
+// Make sure the person looking at the chart has a box at the top of it, and that no position is left
+// floating with nobody to report to. Idempotent. Loose positions are attached to the top box, so the
+// chart reads as one connected tree (top box -> teams -> roles).
+async function tidyOrg(req) {
+  const a = req.admin || {};
+  const rootLogin = !a.isEmployee && a.isAdmin === true;
+  const myEmp = !rootLogin && a.employeeId ? oid(a.employeeId) : null;
+  const docs = await OrgNode.find().select('level parentId order owner employeeId').lean();
+  let mine = null;
+  if (rootLogin) mine = docs.find((d) => d.owner) || null;
+  else if (myEmp) mine = docs.find((d) => d.employeeId && String(d.employeeId) === myEmp) || null;
+
+  let created = false;
+  if (!mine && (rootLogin || myEmp)) {
+    let name = a.name || a.username || '';
+    let email = String(a.email || '').toLowerCase();
+    if (myEmp) {
+      const emp = await Employee.findById(myEmp).select('name email').lean();
+      if (emp) { name = emp.name || name; email = String(emp.email || email).toLowerCase(); }
+    }
+    mine = await OrgNode.create({
+      title: 'Super Admin', department: 'Leadership', status: 'filled', level: 0, parentId: null, order: -1, accent: 'indigo',
+      personName: str(name, 100) || 'Super Admin',
+      personEmail: /^[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+$/.test(email) ? email : '',
+      employeeId: myEmp, owner: rootLogin, updatedBy: actorName(req),
+    });
+    mine = mine.toObject();
+    docs.push(mine);
+    created = true;
+  }
+
+  const tops = docs.filter((d) => !d.parentId && d.level === 0).sort((x, y) => (x.order || 0) - (y.order || 0));
+  const target = mine && !mine.parentId && mine.level === 0 ? mine : tops[0];
+  let adopted = 0;
+  if (target) {
+    const loose = docs.filter((d) => !d.parentId && d.level > 0 && String(d._id) !== String(target._id)).map((d) => d._id);
+    if (loose.length) {
+      await OrgNode.updateMany({ _id: { $in: loose } }, { $set: { parentId: target._id, updatedBy: actorName(req) } });
+      adopted = loose.length;
+    }
+  }
+  return { created, adopted };
+}
+
+router.post('/admin/org/tidy', verifyAdmin, requireSuperAdminRole, async (req, res, next) => {
+  try {
+    const r = await tidyOrg(req);
+    if (r.created || r.adopted) audit('careers_org_tidied', { req, actor: req.admin, targetType: 'org_node', details: r });
+    res.json({ ...r, ...(await loadOrg(req)) });
+  } catch (e) { next(e); }
+});
+
 // One-click scaffold: active employees + open listings that are not on the chart yet. Idempotent.
 router.post('/admin/org/import', verifyAdmin, requireSuperAdminRole, async (req, res, next) => {
   try {
@@ -825,10 +878,11 @@ router.post('/admin/org/import', verifyAdmin, requireSuperAdminRole, async (req,
     for (const d of docs) d.parentId = d.level === 1 ? topId : null;
     for (const j of jobs) {
       if (haveJob.has(j.slug)) continue;
-      docs.push({ _id: new mongoose.Types.ObjectId(), title: j.title, department: j.team || '', status: 'open', level: 2, order: order[2]++, parentId: null,
+      docs.push({ _id: new mongoose.Types.ObjectId(), title: j.title, department: j.team || '', status: 'open', level: 1, order: order[1]++, parentId: null,
         description: str(j.tagline || j.description, 1500), jobSlug: j.slug, updatedBy: actorName(req) });
     }
     if (docs.length) await OrgNode.insertMany(docs);
+    await tidyOrg(req);
     audit('careers_org_imported', { req, actor: req.admin, targetType: 'org_node', details: { added: docs.length } });
     res.json({ added: docs.length, ...(await loadOrg(req)) });
   } catch (e) { next(e); }
