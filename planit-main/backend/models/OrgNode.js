@@ -40,10 +40,12 @@ const orgNodeSchema = new mongoose.Schema({
   startDate:    { type: Date, default: null },
   skills:       { type: [String], default: [] },
   links:        { type: [linkSchema], default: [] },
+  owner:        { type: Boolean, default: false },   // the root-login super admin's own box (no Employee account behind it)
   accent:       { type: String, enum: ['slate', 'indigo', 'emerald', 'amber', 'rose', 'sky', 'violet', 'teal'], default: 'slate' },
 
   // ── Open-position extras ─────────────────────────────────────────────────
   description:  { type: String, trim: true, maxlength: 1500, default: '' },   // what the role is for
+  seats:        { type: Number, default: 1, min: 1, max: 99 },   // how many people this open role is hiring for
   jobSlug:      { type: String, trim: true, lowercase: true, maxlength: 90, default: '' }, // link to a JobListing
 
   // ── Super-admin only ─────────────────────────────────────────────────────
