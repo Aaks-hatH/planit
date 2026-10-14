@@ -72,6 +72,9 @@ export default function AddPersonWizard({ prefill = {}, onClose, onCreated }) {
   const nodeLabel = (n) => `${'— '.repeat(n.level)}${n.status === 'open' ? 'Open' : n.personName} · ${n.title}`;
   const chosenOpen = nodes.find((n) => n._id === form.orgNodeId);
   const chosenMgr = nodes.find((n) => n._id === (form.place === 'fill' ? chosenOpen?.parentId : form.managerNodeId));
+  // People who already hold this role. Several people can share one role, so a new person is placed beside them.
+  const titleKey = form.positionTitle.trim().toLowerCase();
+  const sameRole = titleKey ? nodes.filter((n) => n.status === 'filled' && !n.owner && String(n.title || '').trim().toLowerCase() === titleKey) : [];
 
   // Picking an open position fills in its title and department so nobody types it twice.
   const pickOpen = (id) => {
@@ -83,6 +86,13 @@ export default function AddPersonWizard({ prefill = {}, onClose, onCreated }) {
       const n = nodes.find((x) => x.status === 'open' && x.jobSlug === prefill.jobSlug);
       if (n) setForm((f) => ({ ...f, place: 'fill', orgNodeId: n._id, positionTitle: f.positionTitle || n.title, department: f.department || n.department || '' }));
     }
+  }, [nodes.length]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {   // role already has people and no open seat: sit beside them (same manager) instead of under the top box
+    if (!nodes.length || prefill.orgNodeId || prefill.managerNodeId || !prefill.positionTitle) return;
+    const key = prefill.positionTitle.trim().toLowerCase();
+    if (nodes.some((x) => x.status === 'open' && x.jobSlug && x.jobSlug === prefill.jobSlug)) return;
+    const mate = nodes.find((x) => x.status === 'filled' && !x.owner && String(x.title || '').trim().toLowerCase() === key);
+    if (mate) setForm((f) => (f.managerNodeId ? f : { ...f, place: 'new', managerNodeId: mate.parentId || '' }));
   }, [nodes.length]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {   // when launched from an open box, take its title/department
     if (prefill.orgNodeId && nodes.length) {
@@ -233,6 +243,12 @@ export default function AddPersonWizard({ prefill = {}, onClose, onCreated }) {
                   <div className="grid gap-4 sm:grid-cols-2">
                     <Lbl t="Reports to (manager)" hint="Their manager sees their sign-ins and they see their manager."><select className={FIELD} value={form.managerNodeId} onChange={(e) => set('managerNodeId', e.target.value)}><option value="">Top of the chart</option>{managers.filter((n) => n.level < 9).map((n) => <option key={n._id} value={n._id}>{nodeLabel(n)}</option>)}</select></Lbl>
                     <Lbl t="Position title"><input className={FIELD} value={form.positionTitle} maxLength={120} onChange={(e) => set('positionTitle', e.target.value)} placeholder={role ? role.label : 'Community Lead'} /></Lbl>
+                  </div>
+                )}
+                {form.place === 'new' && sameRole.length > 0 && (
+                  <div className="mt-3 flex flex-wrap items-center gap-2 rounded-lg bg-emerald-50 px-3 py-2 text-xs text-emerald-900">
+                    <span>{sameRole.length === 1 ? `${sameRole[0].personName} already holds` : `${sameRole.length} people already hold`} <b>{form.positionTitle.trim()}</b>. Several people can share a role, and they show side by side on the chart.</span>
+                    {form.managerNodeId !== (sameRole[0].parentId || '') && <button type="button" onClick={() => set('managerNodeId', sameRole[0].parentId || '')} className="rounded-md bg-emerald-600 px-2 py-1 font-bold text-white hover:bg-emerald-700">Sit beside them</button>}
                   </div>
                 )}
                 {form.place === 'fill' && chosenOpen && (
