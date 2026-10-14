@@ -2,12 +2,12 @@ import React, { memo, useCallback, useEffect, useMemo, useReducer, useRef, useSt
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Briefcase, Calendar, Check, ExternalLink, GripVertical, Loader2, Mail, MapPin, Maximize2, Plus, RefreshCw,
-  Search, Trash2, UserPlus, X, Edit2, ZoomIn, ZoomOut, Globe, Lock, Users, Clock, Download,
+  Search, Trash2, UserPlus, X, Edit2, ZoomIn, ZoomOut, Globe, Lock, Users, Clock, Download, Crown, Minimize2, Sparkles,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../services/api';
 import {
-  CARD_W, CARD_H, LANE_H, PAD_T, PAD_L, MAX_LEVEL, levelLabel, computeLayout, childrenMap, descendantsOf,
+  CARD_W, CARD_H, HEAD_W, HEAD_H, MAX_LEVEL, computeLayout, linkPath, childrenMap, descendantsOf,
   ancestorsOf, planMove, validTargets, initials,
 } from './orgChartLogic';
 
@@ -19,14 +19,14 @@ import {
  */
 
 const ACCENT = {
-  slate:   { bar: 'bg-slate-500',   soft: 'bg-slate-100 text-slate-700',     hex: '#64748b' },
-  indigo:  { bar: 'bg-indigo-500',  soft: 'bg-indigo-100 text-indigo-700',   hex: '#6366f1' },
-  emerald: { bar: 'bg-emerald-500', soft: 'bg-emerald-100 text-emerald-700', hex: '#10b981' },
-  amber:   { bar: 'bg-amber-500',   soft: 'bg-amber-100 text-amber-800',     hex: '#f59e0b' },
-  rose:    { bar: 'bg-rose-500',    soft: 'bg-rose-100 text-rose-700',       hex: '#f43f5e' },
-  sky:     { bar: 'bg-sky-500',     soft: 'bg-sky-100 text-sky-700',         hex: '#0ea5e9' },
-  violet:  { bar: 'bg-violet-500',  soft: 'bg-violet-100 text-violet-700',   hex: '#8b5cf6' },
-  teal:    { bar: 'bg-teal-500',    soft: 'bg-teal-100 text-teal-700',       hex: '#14b8a6' },
+  slate:   { bar: 'bg-slate-500',   soft: 'bg-slate-100 text-slate-700',     border: 'border-slate-300',   wash: 'bg-slate-100/50',   hex: '#64748b' },
+  indigo:  { bar: 'bg-indigo-500',  soft: 'bg-indigo-100 text-indigo-700',   border: 'border-indigo-300',  wash: 'bg-indigo-100/40',  hex: '#6366f1' },
+  emerald: { bar: 'bg-emerald-500', soft: 'bg-emerald-100 text-emerald-700', border: 'border-emerald-300', wash: 'bg-emerald-100/40', hex: '#10b981' },
+  amber:   { bar: 'bg-amber-500',   soft: 'bg-amber-100 text-amber-800',     border: 'border-amber-300',   wash: 'bg-amber-100/40',   hex: '#f59e0b' },
+  rose:    { bar: 'bg-rose-500',    soft: 'bg-rose-100 text-rose-700',       border: 'border-rose-300',    wash: 'bg-rose-100/40',    hex: '#f43f5e' },
+  sky:     { bar: 'bg-sky-500',     soft: 'bg-sky-100 text-sky-700',         border: 'border-sky-300',     wash: 'bg-sky-100/40',     hex: '#0ea5e9' },
+  violet:  { bar: 'bg-violet-500',  soft: 'bg-violet-100 text-violet-700',   border: 'border-violet-300',  wash: 'bg-violet-100/40',  hex: '#8b5cf6' },
+  teal:    { bar: 'bg-teal-500',    soft: 'bg-teal-100 text-teal-700',       border: 'border-teal-300',    wash: 'bg-teal-100/40',    hex: '#14b8a6' },
 };
 const field = 'w-full rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm outline-none transition focus:border-neutral-900 focus:ring-2 focus:ring-neutral-900/10';
 
@@ -60,7 +60,10 @@ const tenure = (d) => {
 const Card = memo(function Card({ node, x, y, reports, flags, canEdit, onDown, onOpen, onHover, onAdd }) {
   const a = ACCENT[node.accent] || ACCENT.slate;
   const open = node.status === 'open';
-  const { selected, dim, match, isMe, placeholder, hot, valid, ghost, invalid } = flags;
+  const { selected, dim, match, isMe, placeholder, hot, ghost, invalid, lead } = flags;
+  const dark = lead && !open;
+  const seats = open ? Math.max(1, node.seats || 1) : 1;
+  const multi = seats > 1;
   return (
     <div
       data-card={node._id}
@@ -71,41 +74,44 @@ const Card = memo(function Card({ node, x, y, reports, flags, canEdit, onDown, o
       onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onOpen(node._id); } }}
       role="button" tabIndex={0}
       aria-label={`${open ? 'Open position' : node.personName}, ${node.title}`}
-      style={{ position: 'absolute', left: 0, top: 0, width: CARD_W, height: CARD_H, transform: `translate3d(${x}px, ${y}px, 0)${ghost ? ' scale(1.05) rotate(-1.2deg)' : ''}`, zIndex: ghost ? 50 : hot ? 20 : 10, willChange: 'transform', touchAction: 'manipulation' }}
-      className={`group select-none overflow-hidden rounded-2xl border bg-white text-left outline-none transition-[box-shadow,opacity,border-color] duration-150 ${open ? 'border-dashed border-neutral-300' : 'border-neutral-200'}
+      style={{ boxShadow: multi ? '5px 5px 0 -1px #fff, 5px 5px 0 0 #d4d4d4, 10px 10px 0 -1px #fff, 10px 10px 0 0 #e5e5e5' : undefined, position: 'absolute', left: 0, top: 0, width: CARD_W, height: CARD_H, transform: `translate3d(${x}px, ${y}px, 0)${ghost ? ' scale(1.05) rotate(-1.2deg)' : ''}`, zIndex: ghost ? 50 : hot ? 20 : 10, willChange: 'transform', touchAction: 'manipulation' }}
+      className={`group select-none overflow-hidden rounded-2xl border text-left outline-none transition-[box-shadow,opacity,border-color] duration-150
+        ${dark ? 'border-neutral-900 bg-neutral-900 text-white' : `bg-white ${open ? 'border-dashed border-neutral-300' : 'border-neutral-200'}`}
         ${canEdit ? 'cursor-grab active:cursor-grabbing' : 'cursor-pointer'} ${dim ? 'opacity-30' : ''} ${placeholder ? 'opacity-40' : ''}
-        ${ghost ? (invalid ? 'border-red-400 shadow-2xl' : 'border-emerald-400 shadow-2xl') : 'shadow-sm hover:shadow-md'}
-        ${selected ? 'ring-2 ring-neutral-900' : ''} ${match ? 'ring-2 ring-amber-400' : ''} ${hot ? 'ring-2 ring-emerald-500 shadow-lg' : ''} focus-visible:ring-2 focus-visible:ring-indigo-500`}
+        ${ghost ? (invalid ? 'border-red-400 shadow-2xl' : 'border-emerald-400 shadow-2xl') : 'shadow-sm hover:shadow-lg'}
+        ${selected ? 'ring-2 ring-indigo-500' : ''} ${match ? 'ring-2 ring-amber-400' : ''} ${hot ? 'ring-2 ring-emerald-500 shadow-lg' : ''} focus-visible:ring-2 focus-visible:ring-indigo-500`}
     >
-      <div className={`h-1 w-full ${open ? 'bg-neutral-200' : a.bar}`} />
-      <div className="flex items-start gap-2.5 px-3 pt-2.5">
-        <Avatar node={node} />
+      <div className={`h-1.5 w-full ${open ? 'bg-neutral-200' : dark ? 'bg-indigo-400' : a.bar}`} />
+      <div className="flex items-start gap-3 px-3.5 pt-3">
+        <Avatar node={node} size={46} />
         <div className="min-w-0 flex-1">
-          <div className="truncate text-[13px] font-black leading-tight text-neutral-900">{open ? 'Open position' : node.personName}</div>
-          <div className="mt-0.5 truncate text-[11.5px] font-semibold text-neutral-600">{node.title}</div>
-          {node.department && <div className="mt-1 truncate text-[10.5px] text-neutral-400">{node.department}</div>}
+          <div className={`truncate text-[16px] font-black leading-tight ${dark ? 'text-white' : 'text-neutral-900'}`}>{open ? 'Open position' : node.personName}</div>
+          <div className={`mt-0.5 line-clamp-2 text-[13px] font-semibold leading-snug ${dark ? 'text-neutral-200' : 'text-neutral-600'}`}>{node.title}</div>
         </div>
-        {canEdit && <span data-grip className="-mr-1 -mt-0.5 flex-shrink-0 cursor-grab rounded p-1 text-neutral-300 hover:text-neutral-600" style={{ touchAction: 'none' }} title="Drag"><GripVertical className="h-4 w-4" /></span>}
+        {canEdit && <span data-grip className={`-mr-1 -mt-0.5 flex-shrink-0 cursor-grab rounded p-1 ${dark ? 'text-neutral-500 hover:text-white' : 'text-neutral-300 hover:text-neutral-600'}`} style={{ touchAction: 'none' }} title="Drag"><GripVertical className="h-4 w-4" /></span>}
       </div>
-      <div className="absolute inset-x-3 bottom-2 flex items-center gap-1.5">
+      <div className="absolute inset-x-3.5 bottom-2.5 flex items-center gap-1.5">
         {open
-          ? <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-800">Hiring{typeof node.applicants === 'number' ? ` · ${node.applicants} applied` : ''}</span>
-          : <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-700">Filled</span>}
-        {isMe && <span className="rounded-full bg-neutral-900 px-2 py-0.5 text-[10px] font-bold text-white">You</span>}
-        {reports > 0 && <span className="ml-auto flex items-center gap-0.5 text-[10.5px] font-semibold text-neutral-400"><Users className="h-3 w-3" />{reports}</span>}
+          ? <span className="rounded-full bg-amber-100 px-2.5 py-0.5 text-[11px] font-bold text-amber-800">{multi ? `${seats} openings` : 'Hiring'}{typeof node.applicants === 'number' ? ` · ${node.applicants} applied` : ''}</span>
+          : lead
+            ? <span className="flex items-center gap-1 rounded-full bg-indigo-500/20 px-2.5 py-0.5 text-[11px] font-bold text-indigo-200"><Crown className="h-3 w-3" />Super admin</span>
+            : <span className="rounded-full bg-emerald-50 px-2.5 py-0.5 text-[11px] font-bold text-emerald-700">Filled</span>}
+        {isMe && <span className={`rounded-full px-2.5 py-0.5 text-[11px] font-bold ${dark ? 'bg-white text-neutral-900' : 'bg-neutral-900 text-white'}`}>You</span>}
+        {node.department && !lead && <span className="min-w-0 truncate text-[11px] text-neutral-400">{node.department}</span>}
+        {reports > 0 && <span className={`ml-auto flex flex-shrink-0 items-center gap-1 text-[12px] font-bold ${dark ? 'text-neutral-300' : 'text-neutral-500'}`}><Users className="h-3.5 w-3.5" />{reports}</span>}
       </div>
       {canEdit && !ghost && !placeholder && (
         <button data-nodrag onPointerDown={(e) => e.stopPropagation()} onClick={(e) => { e.stopPropagation(); onAdd(node._id); }} title="Add a position that reports here"
-          className="absolute -bottom-0 left-1/2 hidden h-5 w-5 -translate-x-1/2 translate-y-1/2 items-center justify-center rounded-full bg-neutral-900 text-white shadow group-hover:flex"><Plus className="h-3 w-3" /></button>
+          className="absolute -bottom-0 left-1/2 hidden h-6 w-6 -translate-x-1/2 translate-y-1/2 items-center justify-center rounded-full bg-indigo-600 text-white shadow group-hover:flex"><Plus className="h-3.5 w-3.5" /></button>
       )}
     </div>
   );
 });
 
-/* ── connector path ─────────────────────────────────────────────────────────── */
-const curve = (x1, y1, x2, y2) => {
-  const k = Math.max(36, Math.abs(y2 - y1) * 0.5);
-  return `M${x1},${y1} C${x1},${y1 + k} ${x2},${y2 - k} ${x2},${y2}`;
+const teamTone = (dept) => {
+  const keys = Object.keys(ACCENT); let h = 0;
+  for (const ch of String(dept)) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+  return ACCENT[keys[(h % (keys.length - 1)) + 1]];   // skip slate so teams are always coloured
 };
 
 /* ── profile drawer ─────────────────────────────────────────────────────────── */
@@ -117,7 +123,7 @@ const Chip = ({ icon: I, children }) => <span className="inline-flex items-cente
 function toForm(n) {
   const base = {
     status: 'open', title: '', department: '', personName: '', personEmail: '', avatar: '', bio: '', location: '', timezone: '',
-    accent: 'slate', description: '', jobSlug: '', privatePhone: '', privateNotes: '',
+    accent: 'slate', description: '', jobSlug: '', seats: 1, privatePhone: '', privateNotes: '',
   };
   return {
     ...base, ...n,
@@ -149,7 +155,7 @@ function Drawer({ node, nodes, byId, cmap, canEdit, ctx, onClose, onSelect, onSa
   const save = async () => {
     if (f.title.trim().length < 2) return toast.error('Give the position a title');
     if (f.status === 'filled' && !f.personName.trim() && !f.employeeId) return toast.error('Add who holds this position, or mark it open');
-    const body = { ...f, employeeId: f.employeeId || null, skills: f.skills, startDate: f.startDate || null };
+    const body = { ...f, seats: Math.max(1, Math.min(99, Number(f.seats) || 1)), employeeId: f.employeeId || null, skills: f.skills, startDate: f.startDate || null };
     setBusy(true);
     try {
       await onSaved(node, body, parent || null);
@@ -180,7 +186,7 @@ function Drawer({ node, nodes, byId, cmap, canEdit, ctx, onClose, onSelect, onSa
             </div>
             <div className="flex flex-wrap gap-1.5">
               {node.department && <Chip icon={Briefcase}>{node.department}</Chip>}
-              <Chip icon={Users}>{levelLabel(node.level)}</Chip>
+              {node.status === 'open' && (node.seats || 1) > 1 && <Chip icon={Users}>{node.seats} openings</Chip>}
               {node.status === 'filled' && node.startDate && <Chip icon={Calendar}>Since {new Date(node.startDate).toLocaleDateString(undefined, { month: 'short', year: 'numeric' })} · {tenure(node.startDate)}</Chip>}
             </div>
             {node.status === 'filled' && (
@@ -254,6 +260,8 @@ function Drawer({ node, nodes, byId, cmap, canEdit, ctx, onClose, onSelect, onSa
               </div>
             </>)}
             {f.status === 'open' && (<>
+              <Lbl t="Openings" hint="How many people you are hiring for this role. Shows as a stacked card."><input className={field} type="number" min={1} max={99} value={f.seats} onChange={(e) => set('seats', e.target.value)} /></Lbl>
+              <div />
               <Lbl t="What is this role for?" className="sm:col-span-2"><textarea rows={4} className={field} value={f.description} maxLength={1500} onChange={(e) => set('description', e.target.value)} /></Lbl>
               <Lbl t="Public job listing" className="sm:col-span-2" hint="Links this box to its /careers page and applicant count.">
                 <select className={field} value={f.jobSlug} onChange={(e) => set('jobSlug', e.target.value)}><option value="">None</option>{(ctx.listings || []).map((l) => <option key={l.slug} value={l.slug}>{l.title} ({l.status})</option>)}</select>
@@ -279,6 +287,7 @@ function Drawer({ node, nodes, byId, cmap, canEdit, ctx, onClose, onSelect, onSa
           </>) : (<>
             <button onClick={() => onDeleted(node)} className="rounded-lg p-2 text-neutral-400 hover:bg-red-50 hover:text-red-600" title="Delete position"><Trash2 className="h-4 w-4" /></button>
             <div className="flex gap-2">
+              <button onClick={() => ctx.duplicate(node._id)} className="flex items-center gap-1.5 rounded-lg border border-neutral-300 px-3 py-2 text-sm font-semibold text-neutral-700 hover:bg-white" title="Add another of this role"><Users className="h-4 w-4" />Duplicate</button>
               <button onClick={() => ctx.addUnder(node._id)} className="flex items-center gap-1.5 rounded-lg border border-neutral-300 px-3 py-2 text-sm font-semibold text-neutral-700 hover:bg-white"><Plus className="h-4 w-4" />Add report</button>
               <button onClick={() => setEditing(true)} className="flex items-center gap-1.5 rounded-lg bg-neutral-900 px-4 py-2 text-sm font-bold text-white hover:bg-neutral-700"><Edit2 className="h-4 w-4" />Edit</button>
             </div>
@@ -293,7 +302,7 @@ function Drawer({ node, nodes, byId, cmap, canEdit, ctx, onClose, onSelect, onSa
 export default function OrgChart({ isDemo = false }) {
   const [nodes, setNodes] = useState([]);
   const [canEdit, setCanEdit] = useState(false);
-  const [ctx, setCtx] = useState({ me: null, employees: [], listings: [] });
+  const [ctx, setCtx] = useState({ me: null, root: false, employees: [], listings: [] });
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState('');
   const [selectedId, setSelectedId] = useState(null);
@@ -305,6 +314,7 @@ export default function OrgChart({ isDemo = false }) {
   const [drag, setDrag] = useState(null);
   const [updatedAt, setUpdatedAt] = useState(null);
   const [busy, setBusy] = useState(false);
+  const [full, setFull] = useState(false);
   const [, force] = useReducer((x) => x + 1, 0);
 
   const scrollRef = useRef(null);
@@ -316,6 +326,7 @@ export default function OrgChart({ isDemo = false }) {
   const sessionRef = useRef(null);
   const dragStateRef = useRef(null);
   const fittedRef = useRef(false);
+  const tidiedRef = useRef(false);
   const canEditRef = useRef(false);
   nodesRef.current = nodes; scaleRef.current = scale; canEditRef.current = canEdit;
 
@@ -328,7 +339,7 @@ export default function OrgChart({ isDemo = false }) {
       if (silent && (r.data.rev === revRef.current || sessionRef.current)) { setUpdatedAt(Date.now()); return; }
       revRef.current = r.data.rev;
       setNodes(r.data.nodes); setCanEdit(!!r.data.canEdit);
-      setCtx({ me: r.data.me || null, employees: r.data.employees || [], listings: r.data.listings || [] });
+      setCtx({ me: r.data.me || null, root: !!r.data.root, employees: r.data.employees || [], listings: r.data.listings || [] });
       setErr(''); setUpdatedAt(Date.now());
     } catch (e) { if (!silent) setErr(e?.response?.data?.error || e.message || 'Could not load the org chart'); } finally { setLoading(false); }
   }, [isDemo]);
@@ -373,13 +384,44 @@ export default function OrgChart({ isDemo = false }) {
     return () => cancelAnimationFrame(raf);
   }, [layout, byId]);
 
-  /* fit on first load */
+  /* fit the whole chart into the visible area */
+  const fit = useCallback(() => {
+    const el = scrollRef.current; if (!el) return;
+    const l = layoutRef.current;
+    const sc = Math.min((el.clientWidth - 16) / l.width, (el.clientHeight - 16) / l.height, 1);
+    setScale(Math.max(0.3, +sc.toFixed(2)));
+    el.scrollLeft = 0; el.scrollTop = 0;
+  }, []);
   useEffect(() => {
     if (fittedRef.current || !nodes.length || !scrollRef.current) return;
-    fittedRef.current = true;
-    const w = scrollRef.current.clientWidth;
-    setScale(Math.max(0.5, Math.min(1, (w - 8) / layout.width)));
-  }, [nodes.length, layout.width]);
+    fittedRef.current = true; fit();
+  }, [nodes.length, layout.width, fit]);
+  useEffect(() => { const t = setTimeout(fit, 60); return () => clearTimeout(t); }, [full, fit]);
+
+  /* full screen: lock page scroll, Esc leaves (unless a drag or the drawer is using it) */
+  useEffect(() => {
+    if (!full) return undefined;
+    const prev = document.body.style.overflow; document.body.style.overflow = 'hidden';
+    const k = (e) => { if (e.key === 'Escape' && !sessionRef.current) setFull(false); };
+    window.addEventListener('keydown', k);
+    return () => { document.body.style.overflow = prev; window.removeEventListener('keydown', k); };
+  }, [full]);
+
+  /* the person looking at the chart is always on it, and nobody floats without a manager */
+  const tidy = useCallback(async (silent) => {
+    if (isDemo) return;
+    setBusy(true);
+    try {
+      const r = await api.post('/careers/admin/org/tidy');
+      revRef.current = r.data.rev; setNodes(r.data.nodes);
+      if (!silent || r.data.created || r.data.adopted) toast.success(r.data.created || r.data.adopted ? 'Added you at the top and connected loose positions' : 'Already tidy');
+      setTimeout(fit, 80);
+    } catch (e) { if (!silent) toast.error(e?.response?.data?.error || 'Could not tidy the chart'); } finally { setBusy(false); }
+  }, [isDemo, fit]);
+  useEffect(() => {
+    if (tidiedRef.current || isDemo || !canEdit || !nodes.length) return;
+    if (nodes.some((n) => !n.parentId && n.level > 0)) { tidiedRef.current = true; tidy(true); }
+  }, [canEdit, nodes, isDemo, tidy]);
 
   /* ── persistence ─────────────────────────────────────────────────────────── */
   const commitPlan = useCallback(async (plan) => {
@@ -406,21 +448,17 @@ export default function OrgChart({ isDemo = false }) {
     if (!hit) for (const n of prov) if (n._id !== s.id && !desc.has(n._id) && inRect(n._id)) { hit = n._id; break; }
     s.lock = hit;
     const cxOf = (id) => (A.get(id)?.x ?? 0) + CARD_W / 2;
+    if (!hit) return { plan: { ok: false, quiet: true, reason: 'Drop onto a person to make them report to that person', nodes: base, moves: [] }, targetId: null, level: provMe.level };
+    const cyOf = (id) => (A.get(id)?.y ?? 0) + CARD_H / 2;
     const sibsOf = (parentId, level) => prov.filter((n) => n._id !== s.id && (parentId ? n.parentId === parentId : (!n.parentId && n.level === level))).sort((a, b) => a.order - b.order);
     let opts; let targetId = null;
-    if (hit) {
-      const X = prov.find((n) => n._id === hit);
-      if (X.level === provMe.level) {
-        const sibs = sibsOf(X.parentId || null, X.level);
-        const at = sibs.findIndex((n) => n._id === X._id);
-        opts = { parentId: X.parentId || null, level: X.level, index: Math.max(0, at) + (px > cxOf(X._id) ? 1 : 0) };
-      } else { targetId = X._id; opts = { parentId: X._id, level: X.level + 1 }; }
-    } else {
-      const lane = Math.max(0, Math.min(layoutRef.current.lanes - 1, Math.floor((py - PAD_T) / LANE_H)));
-      const par = me.parentId && base.find((n) => n._id === me.parentId && n.level < lane) ? me.parentId : null;
-      const sibs = sibsOf(par, lane);
-      opts = { parentId: par, level: lane, index: sibs.filter((n) => cxOf(n._id) < px).length };
-    }
+    const X = prov.find((n) => n._id === hit);
+    if (X.level === provMe.level) {
+      const sibs = sibsOf(X.parentId || null, X.level);
+      const at = sibs.findIndex((n) => n._id === X._id);
+      const after = (px - cxOf(X._id)) + (py - cyOf(X._id)) > 0;
+      opts = { parentId: X.parentId || null, level: X.level, index: Math.max(0, at) + (after ? 1 : 0) };
+    } else { targetId = X._id; opts = { parentId: X._id, level: X.level + 1 }; }
     const plan = planMove(base, s.id, { ...opts, shiftOnly: s.shift });
     return { plan, targetId, level: opts.level };
   }, []);
@@ -436,7 +474,7 @@ export default function OrgChart({ isDemo = false }) {
     if (ds) animRef.current.set(s.id, { x: ds.gx, y: ds.gy });   // glide from where it was dropped
     setDrag(null);
     if (commit && ds?.plan?.ok && ds.plan.moves.length) commitPlan(ds.plan);
-    else if (commit && ds && !ds.plan?.ok) toast.error(ds.plan?.reason || 'That move is not allowed');
+    else if (commit && ds && !ds.plan?.ok && !ds.plan?.quiet) toast.error(ds.plan?.reason || 'That move is not allowed');
   }, [commitPlan]);
 
   const onDown = useCallback((e, node) => {
@@ -497,6 +535,12 @@ export default function OrgChart({ isDemo = false }) {
     setDraft({ _new: true, _id: `new-${Date.now()}`, status: 'open', title: '', parentId: parentId || null, level: par ? par.level + 1 : 0, accent: par?.accent || 'slate', department: par?.department || '' });
   }, []);
 
+  const duplicate = useCallback((id) => {
+    const n = nodesRef.current.find((x) => x._id === id); if (!n) return;
+    setSelectedId(null);
+    setDraft({ _new: true, _id: `new-${Date.now()}`, status: 'open', title: n.title, department: n.department || '', parentId: n.parentId || null, level: n.level, accent: n.accent || 'slate', description: n.description || '', jobSlug: n.jobSlug || '', seats: n.seats || 1 });
+  }, []);
+
   const saveNode = async (node, body, parentId) => {
     if (node._new) {
       if (isDemo) {
@@ -550,41 +594,57 @@ export default function OrgChart({ isDemo = false }) {
   const counts = useMemo(() => ({ filled: nodes.filter((n) => n.status === 'filled').length, open: nodes.filter((n) => n.status === 'open').length }), [nodes]);
 
   const focusId = drag ? drag.id : (hoverId || selectedId);
-  const chain = useMemo(() => {
-    if (!focusId) return new Set();
-    const s = new Set([focusId, ...ancestorsOf(focusId, byId)]);
-    return s;
-  }, [focusId, byId]);
+  const chainSet = useMemo(() => {
+    const out = new Set();
+    if (!focusId) return out;
+    for (const id of [focusId, ...ancestorsOf(focusId, byId)]) { out.add(id); const g = layout.groupOf.get(id); if (g) out.add(g); }
+    return out;
+  }, [focusId, byId, layout.groupOf]);
 
   const A = animRef.current;
-  const rect = (id) => (drag && id === drag.id ? { x: drag.gx, y: drag.gy } : A.get(id) || layout.pos.get(id));
+  const at = (id) => (drag && id === drag.id ? { x: drag.gx, y: drag.gy } : A.get(id) || layout.pos.get(id));
   const edges = [];
-  for (const n of viewNodes) {
-    if (!n.parentId || !byId.has(n.parentId)) continue;
-    const p = rect(n.parentId); const c = rect(n._id); if (!p || !c) continue;
-    const involvesDrag = !!drag && (n._id === drag.id || n.parentId === drag.id);
-    const hot = !involvesDrag && focusId && (chain.has(n._id) && chain.has(n.parentId) || n.parentId === focusId);
-    edges.push({ id: n._id, d: curve(p.x + CARD_W / 2, p.y + CARD_H, c.x + CARD_W / 2, c.y), involvesDrag, hot, dim: filtering && !(matches.has(n._id) || matches.has(n.parentId)) });
-  }
-  let preview = null;   // dashed "this is where the line will land" connector
-  if (drag?.lastOk) {
-    const pn = byId.get(drag.id); const par = pn?.parentId && A.get(pn.parentId); const slot = A.get(drag.id);
-    if (par && slot) preview = curve(par.x + CARD_W / 2, par.y + CARD_H, slot.x + CARD_W / 2, slot.y);
+  for (const l of layout.links) {
+    const isHead = layout.heads.has(l.from);
+    const p = at(l.from); const c = at(l.to); if (!p || !c) continue;
+    const toHead = layout.heads.has(l.to);
+    const pw = isHead ? HEAD_W : CARD_W; const ph = isHead ? HEAD_H : CARD_H;
+    const involvesDrag = !!drag && (l.to === drag.id || l.parent === drag.id);
+    const hot = !involvesDrag && !!focusId && ((chainSet.has(l.to) && chainSet.has(l.from)) || l.parent === focusId);
+    const live = !toHead ? byId.get(l.to) : null;
+    const dimmed = filtering && live && !(matches.has(l.to) || matches.has(l.parent));
+    edges.push({ id: l.id, d: toHead ? linkPath(p, pw, ph, { x: c.x + (HEAD_W - CARD_W) / 2, y: c.y }, 'bus') : linkPath(p, pw, ph, c, l.mode), involvesDrag, hot, dim: !!dimmed });
   }
   const ghostNode = drag ? byId.get(drag.id) || baseById.get(drag.id) : null;
   const targetNode = drag?.targetId ? byId.get(drag.targetId) : null;
-  const dragLane = drag ? Math.max(0, Math.min(layout.lanes - 1, Math.floor((drag.gy + CARD_H / 2 - PAD_T) / LANE_H))) : -1;
-  const hint = !drag ? '' : !drag.plan.ok ? `Not allowed: ${drag.plan.reason}` : targetNode
+  const hint = !drag ? '' : !drag.plan.ok ? (drag.plan.quiet ? drag.plan.reason : `Not allowed: ${drag.plan.reason}`) : targetNode
     ? `Release to make ${ghostNode?.status === 'open' ? 'this position' : ghostNode?.personName} report to ${targetNode.status === 'open' ? targetNode.title : targetNode.personName}`
-    : `Release to place on ${levelLabel(drag.level)}${drag.shift ? ' (moving only this person)' : ''}`;
+    : `Release to reorder${drag.shift ? ' (moving only this person)' : ''}`;
+
+  // tinted band behind each team, from the live positions of its chip and everyone under it
+  const bands = [];
+  for (const h of layout.heads.values()) {
+    const hp = at(h.key); if (!hp) continue;
+    let x1 = hp.x; let x2 = hp.x + HEAD_W; let y2 = hp.y + HEAD_H; let count = 0; let open = 0;
+    const all = new Set();
+    for (const id of h.ids) { all.add(id); for (const d of descendantsOf(id, viewCmap)) all.add(d); }
+    for (const id of all) {
+      const p = at(id); if (!p) continue;
+      x1 = Math.min(x1, p.x); x2 = Math.max(x2, p.x + CARD_W); y2 = Math.max(y2, p.y + CARD_H); count += 1;
+      if (byId.get(id)?.status === 'open') open += 1;
+    }
+    bands.push({ key: h.key, dept: h.dept, x: x1 - 18, y: hp.y - 14, w: x2 - x1 + 36, h: y2 - hp.y + 32, hx: hp.x, hy: hp.y, count, open, tone: teamTone(h.dept) });
+  }
 
   const selected = draft || (selectedId ? nodes.find((n) => n._id === selectedId) : null);
+  const rootIds = useMemo(() => new Set(viewNodes.filter((n) => !n.parentId || !byId.has(n.parentId)).filter((n) => n.level === 0).map((n) => n._id)), [viewNodes, byId]);
 
   if (loading) return <div className="flex items-center justify-center py-24 text-neutral-400"><Loader2 className="mr-2 h-5 w-5 animate-spin" />Loading org chart…</div>;
   if (err) return <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">{err} <button onClick={() => { setLoading(true); load(); }} className="ml-2 font-bold underline">Retry</button></div>;
 
+  const tbtn = 'rounded-lg border border-neutral-200 bg-white p-2 text-neutral-600 hover:bg-neutral-50';
   return (
-    <div className="space-y-3">
+    <div className={full ? 'fixed inset-0 z-[120] flex flex-col gap-2 bg-white p-3 sm:p-4' : 'space-y-3'}>
       <style>{`
         @keyframes orgflow { to { stroke-dashoffset: -28; } }
         @keyframes orgpulse { 0%,100% { r: 4; opacity: .9; } 50% { r: 8; opacity: .25; } }
@@ -603,42 +663,51 @@ export default function OrgChart({ isDemo = false }) {
         </div>
         <div className="ml-auto flex items-center gap-1.5">
           <span className="hidden items-center gap-1.5 text-[11px] font-semibold text-neutral-400 md:flex"><span className="h-2 w-2 animate-pulse rounded-full bg-emerald-500" />{isDemo ? 'Sandbox' : `Live${updatedAt ? ' · synced' : ''}`}</span>
-          <button onClick={() => setScale((s) => Math.max(0.4, +(s - 0.1).toFixed(2)))} className="rounded-lg border border-neutral-200 p-2 text-neutral-600 hover:bg-neutral-50" title="Zoom out"><ZoomOut className="h-4 w-4" /></button>
+          <button onClick={() => setScale((x) => Math.max(0.3, +(x - 0.1).toFixed(2)))} className={tbtn} title="Zoom out"><ZoomOut className="h-4 w-4" /></button>
           <span className="w-10 text-center text-xs font-bold text-neutral-500">{Math.round(scale * 100)}%</span>
-          <button onClick={() => setScale((s) => Math.min(1.5, +(s + 0.1).toFixed(2)))} className="rounded-lg border border-neutral-200 p-2 text-neutral-600 hover:bg-neutral-50" title="Zoom in"><ZoomIn className="h-4 w-4" /></button>
-          <button onClick={() => setScale(Math.max(0.4, Math.min(1, (scrollRef.current.clientWidth - 8) / layout.width)))} className="rounded-lg border border-neutral-200 p-2 text-neutral-600 hover:bg-neutral-50" title="Fit to screen"><Maximize2 className="h-4 w-4" /></button>
-          <button onClick={() => load()} className="rounded-lg border border-neutral-200 p-2 text-neutral-600 hover:bg-neutral-50" title="Refresh"><RefreshCw className="h-4 w-4" /></button>
-          {canEdit && <button onClick={importAll} disabled={busy} className="flex items-center gap-1.5 rounded-lg border border-neutral-200 px-3 py-2 text-xs font-bold text-neutral-700 hover:bg-neutral-50" title="Add employees and open listings that are not on the chart yet"><Download className="h-4 w-4" />Import</button>}
+          <button onClick={() => setScale((x) => Math.min(1.5, +(x + 0.1).toFixed(2)))} className={tbtn} title="Zoom in"><ZoomIn className="h-4 w-4" /></button>
+          <button onClick={fit} className={tbtn} title="Fit everything on screen"><Maximize2 className="h-4 w-4" /></button>
+          <button onClick={() => load()} className={tbtn} title="Refresh"><RefreshCw className="h-4 w-4" /></button>
+          {canEdit && !isDemo && <button onClick={() => tidy(false)} disabled={busy} className="flex items-center gap-1.5 rounded-lg border border-neutral-200 bg-white px-3 py-2 text-xs font-bold text-neutral-700 hover:bg-neutral-50" title="Put me at the top and connect any loose positions"><Sparkles className="h-4 w-4" />Tidy</button>}
+          {canEdit && <button onClick={importAll} disabled={busy} className="flex items-center gap-1.5 rounded-lg border border-neutral-200 bg-white px-3 py-2 text-xs font-bold text-neutral-700 hover:bg-neutral-50" title="Add employees and open listings that are not on the chart yet"><Download className="h-4 w-4" />Import</button>}
           {canEdit && <button onClick={() => addUnder(null)} className="flex items-center gap-1.5 rounded-lg bg-neutral-900 px-3.5 py-2 text-xs font-bold text-white hover:bg-neutral-700"><Plus className="h-4 w-4" />Position</button>}
+          <button onClick={() => setFull((f) => !f)} className="flex items-center gap-1.5 rounded-lg bg-indigo-600 px-3.5 py-2 text-xs font-bold text-white hover:bg-indigo-700" title={full ? 'Exit full screen (Esc)' : 'Full screen'}>{full ? <><Minimize2 className="h-4 w-4" />Exit</> : <><Maximize2 className="h-4 w-4" />Full screen</>}</button>
         </div>
       </div>
 
       <p className="text-xs text-neutral-500">
         {canEdit
-          ? <><b>Drag</b> a card onto someone to change who they report to, or drop it on another row to change level. Hold <kbd className="rounded border border-neutral-300 bg-white px-1">Shift</kbd> to move only that person (their team stays). <kbd className="rounded border border-neutral-300 bg-white px-1">Esc</kbd> cancels. Click a card to edit its profile.</>
+          ? <><b>Drag</b> a card onto someone to make them report to that person, or onto a teammate to reorder. Hold <kbd className="rounded border border-neutral-300 bg-white px-1">Shift</kbd> to move only that person (their team stays). <kbd className="rounded border border-neutral-300 bg-white px-1">Esc</kbd> cancels. Click a card to open the profile.</>
           : <>Click anyone to see their profile. Only super admins can edit the chart.</>}
       </p>
 
-      <div className="relative overflow-hidden rounded-2xl border border-neutral-200 bg-neutral-50">
-        <div ref={scrollRef} onPointerDown={onPanDown} className="max-h-[72vh] min-h-[420px] overflow-auto" style={{ cursor: drag ? 'grabbing' : undefined }}>
-          <div style={{ width: layout.width * scale, height: layout.height * scale }}>
+      <div className={`relative overflow-hidden rounded-2xl border border-neutral-200 bg-neutral-50 ${full ? 'min-h-0 flex-1' : ''}`}
+        style={full ? undefined : { height: 'max(560px, calc(100vh - 250px))' }}>
+        <div ref={scrollRef} onPointerDown={onPanDown} className="h-full w-full overflow-auto" style={{ cursor: drag ? 'grabbing' : undefined, backgroundImage: 'radial-gradient(#d4d4d8 1px, transparent 1px)', backgroundSize: '22px 22px' }}>
+          <div style={{ width: layout.width * scale, height: layout.height * scale, margin: '0 auto' }}>
             <div ref={innerRef} style={{ width: layout.width, height: layout.height, transform: `scale(${scale})`, transformOrigin: '0 0', position: 'relative' }}>
-              {/* lanes */}
-              {Array.from({ length: layout.lanes }, (_, i) => (
-                <div key={i} style={{ position: 'absolute', left: 0, right: 0, top: PAD_T + i * LANE_H, height: LANE_H }}
-                  className={`border-b border-dashed border-neutral-200 transition-colors ${dragLane === i ? 'bg-emerald-100/60' : i % 2 ? 'bg-neutral-100/50' : 'bg-white/60'}`}>
-                  <div className="absolute left-3 top-3 w-24 text-[10.5px] font-bold uppercase leading-tight tracking-wider text-neutral-400">{levelLabel(i)}</div>
-                </div>
+              {/* team bands */}
+              {bands.map((b) => (
+                <div key={b.key} style={{ position: 'absolute', left: b.x, top: b.y, width: b.w, height: b.h, zIndex: 1 }} className={`rounded-3xl border border-dashed ${b.tone.border} ${b.tone.wash}`} />
               ))}
 
               {/* connector lines (same animated positions as the cards) */}
               <svg width={layout.width} height={layout.height} style={{ position: 'absolute', inset: 0, pointerEvents: 'none', overflow: 'visible', zIndex: 5 }}>
-                {edges.filter((e) => !e.involvesDrag && !e.hot).map((e) => <path key={e.id} d={e.d} fill="none" stroke="#cbd5e1" strokeWidth="2" opacity={e.dim ? 0.25 : 1} />)}
-                {edges.filter((e) => e.hot).map((e) => <path key={e.id} d={e.d} fill="none" stroke="#6366f1" strokeWidth="2.75" className="org-flow" strokeLinecap="round" />)}
-                {preview && <path d={preview} fill="none" stroke="#f59e0b" strokeWidth="2.5" strokeDasharray="3 7" strokeLinecap="round" opacity=".9" />}
-                {edges.filter((e) => e.involvesDrag).map((e) => <path key={e.id} d={e.d} fill="none" stroke={drag?.plan.ok ? '#10b981' : '#ef4444'} strokeWidth="3" className="org-flow" strokeLinecap="round" />)}
-                {drag && [...(drag.targets || [])].map((id) => { const p = A.get(id); if (!p) return null; const on = id === drag.targetId; return <circle key={id} cx={p.x + CARD_W / 2} cy={p.y + CARD_H} r={on ? 7 : 4} fill={on ? '#10b981' : '#6366f1'} className={on ? '' : 'org-port'} />; })}
+                {edges.filter((e) => !e.involvesDrag && !e.hot).map((e) => <path key={e.id} d={e.d} fill="none" stroke="#a1a1aa" strokeWidth="2.25" strokeLinejoin="round" opacity={e.dim ? 0.2 : 1} />)}
+                {edges.filter((e) => e.hot).map((e) => <path key={e.id} d={e.d} fill="none" stroke="#6366f1" strokeWidth="3.25" className="org-flow" strokeLinecap="round" strokeLinejoin="round" />)}
+                {edges.filter((e) => e.involvesDrag).map((e) => <path key={e.id} d={e.d} fill="none" stroke={drag?.plan.ok ? '#10b981' : '#ef4444'} strokeWidth="3.5" className="org-flow" strokeLinecap="round" strokeLinejoin="round" />)}
+                {drag && [...(drag.targets || [])].map((id) => { const p = A.get(id); if (!p) return null; const on = id === drag.targetId; return <circle key={id} cx={p.x + CARD_W / 2} cy={p.y + CARD_H} r={on ? 8 : 4.5} fill={on ? '#10b981' : '#6366f1'} className={on ? '' : 'org-port'} />; })}
               </svg>
+
+              {/* team chips */}
+              {bands.map((b) => (
+                <div key={`chip-${b.key}`} style={{ position: 'absolute', left: b.hx, top: b.hy, width: HEAD_W, height: HEAD_H, zIndex: 8 }}
+                  className={`flex items-center gap-2 rounded-full border-2 bg-white px-4 shadow-sm ${b.tone.border}`}>
+                  <span className={`h-3 w-3 flex-shrink-0 rounded-full ${b.tone.bar}`} />
+                  <span className="min-w-0 flex-1 truncate text-[14px] font-black text-neutral-900">{b.dept}</span>
+                  <span className="flex-shrink-0 text-[11px] font-bold text-neutral-500">{b.count}{b.open ? ` · ${b.open} open` : ''}</span>
+                </div>
+              ))}
 
               {/* cards */}
               {viewNodes.map((n) => {
@@ -647,7 +716,7 @@ export default function OrgChart({ isDemo = false }) {
                 return (
                   <Card key={n._id} node={n} x={p.x} y={p.y} reports={(viewCmap.get(n._id) || []).length}
                     canEdit={canEdit}
-                    flags={{ selected: selectedId === n._id, dim: filtering && !matches.has(n._id), match: !!needle && matches.has(n._id), isMe: !!ctx.me && n.employeeId === ctx.me, placeholder: drag?.id === n._id, hot: drag?.targetId === n._id, valid: false, ghost: false }}
+                    flags={{ selected: selectedId === n._id, dim: filtering && !matches.has(n._id), match: !!needle && matches.has(n._id), isMe: (!!ctx.me && n.employeeId === ctx.me) || (ctx.root && !!n.owner), lead: rootIds.has(n._id) && n.status === 'filled', placeholder: drag?.id === n._id, hot: drag?.targetId === n._id, ghost: false }}
                     onDown={onDown} onOpen={open} onHover={setHoverId} onAdd={addUnder} />
                 );
               })}
@@ -664,20 +733,22 @@ export default function OrgChart({ isDemo = false }) {
           </div>
         </div>
         <AnimatePresence>
-          {drag && <motion.div initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className={`pointer-events-none absolute left-1/2 top-3 z-[60] max-w-[90%] -translate-x-1/2 rounded-full px-4 py-1.5 text-xs font-bold text-white shadow-lg ${drag.plan.ok ? 'bg-emerald-600' : 'bg-red-600'}`}>{hint}</motion.div>}
+          {drag && <motion.div initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className={`pointer-events-none absolute left-1/2 top-3 z-[60] max-w-[90%] -translate-x-1/2 rounded-full px-4 py-1.5 text-xs font-bold text-white shadow-lg ${drag.plan.ok ? 'bg-emerald-600' : drag.plan.quiet ? 'bg-neutral-700' : 'bg-red-600'}`}>{hint}</motion.div>}
         </AnimatePresence>
       </div>
 
       <div className="flex flex-wrap items-center gap-4 text-[11px] text-neutral-500">
+        <span className="flex items-center gap-1.5"><span className="h-3 w-5 rounded border border-neutral-900 bg-neutral-900" />Super admin</span>
         <span className="flex items-center gap-1.5"><span className="h-3 w-5 rounded border border-neutral-300 bg-white" />Filled</span>
         <span className="flex items-center gap-1.5"><span className="h-3 w-5 rounded border border-dashed border-neutral-400 bg-white" />Open position</span>
-        <span className="flex items-center gap-1.5"><span className="h-0.5 w-5 bg-indigo-500" />Highlighted reporting line</span>
-        {canEdit && <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-indigo-500" />Where a line can connect while dragging</span>}
+        <span className="flex items-center gap-1.5"><span className="h-3 w-6 rounded-full border-2 border-indigo-300 bg-white" />Team</span>
+        <span className="flex items-center gap-1.5"><span className="h-0.5 w-5 bg-neutral-400" />Reports to</span>
+        <span className="flex items-center gap-1.5"><span className="h-0.5 w-5 bg-indigo-500" />Highlighted chain of command</span>
       </div>
 
       <AnimatePresence>
         {selected && (
-          <Drawer key={selected._id} node={selected} nodes={nodes} byId={baseById} cmap={cmap} canEdit={canEdit} ctx={{ ...ctx, addUnder }}
+          <Drawer key={selected._id} node={selected} nodes={nodes} byId={baseById} cmap={cmap} canEdit={canEdit} ctx={{ ...ctx, addUnder, duplicate }}
             onClose={() => { setSelectedId(null); setDraft(null); }} onSelect={(id) => { setDraft(null); setSelectedId(id); }} onSaved={saveNode} onDeleted={remove} />
         )}
       </AnimatePresence>
