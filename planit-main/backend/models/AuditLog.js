@@ -171,7 +171,9 @@ const auditSchema = new mongoose.Schema(
         'careers_job_reopened', 'careers_job_updated', 'careers_settings_updated',
         // Careers -> Org chart
         'careers_org_created', 'careers_org_updated', 'careers_org_deleted',
-        'careers_org_layout', 'careers_org_imported',
+        'careers_org_layout', 'careers_org_imported', 'careers_org_tidied',
+        // Team onboarding / access
+        'employee_onboarded', 'employee_role_changed', 'permissions_synced',
       ],
     },
 

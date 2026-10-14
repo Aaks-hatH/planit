@@ -51,7 +51,7 @@ router.post('/track', async (req, res) => {
 
 // ─── GET /dashboard ───────────────────────────────────────────────────────────
 // Admin-only. Returns aggregated analytics for the requested window.
-router.get('/dashboard', verifyAdmin, async (req, res) => {
+router.get('/dashboard', verifyAdmin, requirePermission('canViewAnalytics'), async (req, res) => {
   try {
     const windowDays = Math.min(Math.max(parseInt(req.query.window || '30', 10), 1), 365);
     const data = await getDashboardData(windowDays);
@@ -65,7 +65,7 @@ router.get('/dashboard', verifyAdmin, async (req, res) => {
 
 // ─── GET /by-event/:eventId ───────────────────────────────────────────────────
 // Per-event visitor profiles, grouped in application code.
-router.get('/by-event/:eventId', verifyAdmin, async (req, res) => {
+router.get('/by-event/:eventId', verifyAdmin, requirePermission('canViewAnalytics'), async (req, res) => {
   try {
     const { eventId } = req.params;
     const event = await Event.findById(eventId).lean();
@@ -157,7 +157,7 @@ router.get('/by-event/:eventId', verifyAdmin, async (req, res) => {
 
 // ─── GET /guest/:visitorId ────────────────────────────────────────────────────
 // Full cross-event profile for a single visitor.
-router.get('/guest/:visitorId', verifyAdmin, async (req, res) => {
+router.get('/guest/:visitorId', verifyAdmin, requirePermission('canViewAnalytics'), async (req, res) => {
   try {
     const { visitorId } = req.params;
     const Model = getModel();
@@ -233,7 +233,7 @@ router.get('/guest/:visitorId', verifyAdmin, async (req, res) => {
 
 // ─── POST /flag-visitor ───────────────────────────────────────────────────────
 // Admin: flag or unflag all analytics documents for a visitor.
-router.post('/flag-visitor', verifyAdmin, async (req, res) => {
+router.post('/flag-visitor', verifyAdmin, requirePermission('canViewAnalytics'), async (req, res) => {
   try {
     const { visitorId, isSuspected, reason } = req.body || {};
     if (!visitorId) return res.status(400).json({ error: 'visitorId required' });

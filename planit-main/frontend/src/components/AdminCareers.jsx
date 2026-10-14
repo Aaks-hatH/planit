@@ -2,11 +2,12 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Briefcase, Bell, Check, ChevronDown, Copy, Download, Edit2, ExternalLink, Inbox, Link2, Loader2,
-  Lock, Mail, Pause, Play, Plus, RefreshCw, Search, Star, Trash2, Unlock, X, Users, Eye, Clock, Network,
+  Lock, Mail, Pause, Play, Plus, RefreshCw, Search, Star, Trash2, Unlock, X, Users, Eye, Clock, Network, UserPlus,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../services/api';
 import OrgChart from './OrgChart';
+import AddPersonWizard from './AddPersonWizard';
 
 /**
  * Admin -> Careers
@@ -198,7 +199,7 @@ function Row({ k, v }) {
 }
 const Link = ({ href }) => (href ? <a href={href} target="_blank" rel="noreferrer noopener" className="inline-flex items-center gap-1 text-indigo-600 hover:underline">{href.replace(/^https?:\/\/(www\.)?/, '').slice(0, 44)}<ExternalLink className="h-3 w-3" /></a> : null);
 
-function ApplicationPanel({ app, onClose, onChange, onDelete, isDemo }) {
+function ApplicationPanel({ app, onClose, onChange, onDelete, isDemo, onAddToTeam }) {
   const [notes, setNotes] = useState(app.adminNotes || '');
   const [tag, setTag] = useState('');
   useEffect(() => setNotes(app.adminNotes || ''), [app._id]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -225,6 +226,11 @@ function ApplicationPanel({ app, onClose, onChange, onDelete, isDemo }) {
         </div>
 
         <div className="space-y-6 px-6 py-5">
+          {onAddToTeam && (
+            <button onClick={() => onAddToTeam(app)} className={`flex w-full items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-bold transition ${app.status === 'accepted' ? 'bg-emerald-600 text-white hover:bg-emerald-700' : 'border border-neutral-300 text-neutral-800 hover:bg-neutral-50'}`}>
+              <UserPlus className="h-4 w-4" />{app.status === 'accepted' ? 'Accepted: add to the team' : 'Add to the team'}
+            </button>
+          )}
           <div>
             <div className="mb-2 flex flex-wrap gap-1.5">
               {STATUSES.map((s) => (
@@ -303,6 +309,15 @@ export default function AdminCareers({ isDemo = false, currentUser = null }) {
   // Hiring data needs canViewHiring (super admins and the root login pass). Every other
   // logged-in employee only gets the Org chart tab, which is readable by everyone.
   const canHiring = isDemo || (!!currentUser && (!currentUser.isEmployee || currentUser.role === 'super_admin' || currentUser.permissions?.canViewHiring === true));
+  // Only super admins can create accounts, so only they get the "Add to the team" shortcut on an application.
+  const canAddToTeam = !isDemo && !!currentUser && (!currentUser.isEmployee || currentUser.role === 'super_admin');
+  const [teamPrefill, setTeamPrefill] = useState(null);
+  const addToTeam = (a) => setTeamPrefill({
+    name: a.fullName, email: a.email, phone: a.phone || '', location: a.location || '', timezone: a.timezone || '',
+    positionTitle: a.jobSlug && a.jobSlug !== 'general' ? a.jobTitle : '', jobSlug: a.jobSlug && a.jobSlug !== 'general' ? a.jobSlug : '',
+    department: (jobs.find((j) => j.slug === a.jobSlug) || {}).team || '', applicationId: a._id,
+    label: `From the application for ${a.jobTitle}. It is marked accepted when you add them.`,
+  });
   const [tab, setTab] = useState('applications');
   const [overview, setOverview] = useState(null);
   const [jobs, setJobs] = useState([]);
@@ -579,9 +594,10 @@ export default function AdminCareers({ isDemo = false, currentUser = null }) {
         {editing && <ListingEditor key={editing._id || 'new'} job={editing._id ? editing : null} isDemo={isDemo} onClose={() => setEditing(null)} onSaved={() => { setEditing(null); loadAll(true); }} />}
       </AnimatePresence>
       <AnimatePresence>
-        {openApp && <ApplicationPanel key={openApp._id} app={openApp} isDemo={isDemo} onClose={() => setOpenApp(null)} onDelete={deleteApp}
+        {openApp && <ApplicationPanel key={openApp._id} app={openApp} isDemo={isDemo} onClose={() => setOpenApp(null)} onDelete={deleteApp} onAddToTeam={canAddToTeam ? addToTeam : null}
           onChange={(item) => { setOpenApp(item); setApps((p) => ({ ...p, items: p.items.map((x) => (x._id === item._id ? item : x)) })); loadAll(true); }} />}
       </AnimatePresence>
+      {teamPrefill && <AddPersonWizard prefill={teamPrefill} onClose={() => setTeamPrefill(null)} onCreated={() => { loadApps(); loadAll(true); }} />}
     </div>
   );
 }

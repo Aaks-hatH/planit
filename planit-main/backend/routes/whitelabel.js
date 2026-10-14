@@ -22,7 +22,8 @@ const express   = require('express');
 const router    = express.Router();
 const crypto    = require('crypto');
 const WhiteLabel = require('../models/WhiteLabel');
-const { verifyAdmin, requireSuperAdminRole, demoGuard } = require('../middleware/auth');
+const { verifyAdmin, requirePermission, requireSuperAdminRole, demoGuard } = require('../middleware/auth');
+const canWL = requirePermission('canManageWhiteLabel');
 const axios      = require('axios');
 const { body, validationResult } = require('express-validator');
 const WLLead     = require('../models/WLLead');
@@ -281,7 +282,7 @@ router.post('/verify-key', verifyAdmin, async (req, res) => {
 
 // ─── Admin: List all white labels ─────────────────────────────────────────────
 
-router.get('/', verifyAdmin, async (req, res) => {
+router.get('/', verifyAdmin, canWL, async (req, res) => {
   try {
     const { status, tier, search } = req.query;
     const query = {};
@@ -319,7 +320,7 @@ router.get('/', verifyAdmin, async (req, res) => {
 
 // ─── Admin: Stats summary ─────────────────────────────────────────────────────
 
-router.get('/meta/stats', verifyAdmin, async (req, res) => {
+router.get('/meta/stats', verifyAdmin, canWL, async (req, res) => {
   try {
     const [total, active, trial, suspended, tierCounts] = await Promise.all([
       WhiteLabel.countDocuments(),
@@ -417,7 +418,7 @@ router.post('/request', [
 
 // ─── Admin: List leads ────────────────────────────────────────────────────────
 
-router.get('/leads', verifyAdmin, async (req, res) => {
+router.get('/leads', verifyAdmin, canWL, async (req, res) => {
   try {
     const { status, limit = 50, skip = 0 } = req.query;
     const filter = status ? { status } : {};
@@ -436,7 +437,7 @@ router.get('/leads', verifyAdmin, async (req, res) => {
 
 // ─── Admin: Update lead status / notes ───────────────────────────────────────
 
-router.patch('/leads/:id', verifyAdmin, async (req, res) => {
+router.patch('/leads/:id', verifyAdmin, canWL, async (req, res) => {
   try {
     const { status, notes, convertedToId } = req.body;
     const update = {};
@@ -453,7 +454,7 @@ router.patch('/leads/:id', verifyAdmin, async (req, res) => {
 
 // ─── Admin: Delete lead ───────────────────────────────────────────────────────
 
-router.delete('/leads/:id', verifyAdmin, requireSuperAdminRole, async (req, res) => {
+router.delete('/leads/:id', verifyAdmin, canWL, requireSuperAdminRole, async (req, res) => {
   try {
     await WLLead.findByIdAndDelete(req.params.id);
     return res.json({ ok: true });
@@ -514,7 +515,7 @@ router.get('/setup-fee/verify', async (req, res) => {
 
 // ─── Admin: Get single white label ────────────────────────────────────────────
 
-router.get('/:id', verifyAdmin, async (req, res) => {
+router.get('/:id', verifyAdmin, canWL, async (req, res) => {
   try {
     const wl = await WhiteLabel.findById(req.params.id).lean();
     if (!wl) return res.status(404).json({ error: 'not_found' });
@@ -529,7 +530,7 @@ router.get('/:id', verifyAdmin, async (req, res) => {
 
 // ─── Admin: Create white label ────────────────────────────────────────────────
 
-router.post('/', verifyAdmin, demoGuard, async (req, res) => {
+router.post('/', verifyAdmin, canWL, demoGuard, async (req, res) => {
   try {
     const {
       clientName, domain, tier = 'basic',
@@ -598,7 +599,7 @@ router.post('/', verifyAdmin, demoGuard, async (req, res) => {
 
 // ─── Admin: Update white label ────────────────────────────────────────────────
 
-router.patch('/:id', verifyAdmin, demoGuard, async (req, res) => {
+router.patch('/:id', verifyAdmin, canWL, demoGuard, async (req, res) => {
   try {
     const allowed = [
       'clientName', 'tier', 'status',
@@ -648,7 +649,7 @@ router.patch('/:id', verifyAdmin, demoGuard, async (req, res) => {
 
 // ─── Admin: Suspend / Unsuspend ───────────────────────────────────────────────
 
-router.patch('/:id/suspend', verifyAdmin, demoGuard, async (req, res) => {
+router.patch('/:id/suspend', verifyAdmin, canWL, demoGuard, async (req, res) => {
   try {
     const { suspend, reason } = req.body;
     const wl = await WhiteLabel.findById(req.params.id);
@@ -667,7 +668,7 @@ router.patch('/:id/suspend', verifyAdmin, demoGuard, async (req, res) => {
 
 // ─── Admin: Regenerate license key ────────────────────────────────────────────
 
-router.post('/:id/regenerate-key', verifyAdmin, demoGuard, async (req, res) => {
+router.post('/:id/regenerate-key', verifyAdmin, canWL, demoGuard, async (req, res) => {
   try {
     const { keyValidDays = 365 } = req.body;
     const wl = await WhiteLabel.findById(req.params.id);
@@ -689,7 +690,7 @@ router.post('/:id/regenerate-key', verifyAdmin, demoGuard, async (req, res) => {
 
 // ─── Admin: Delete white label ────────────────────────────────────────────────
 
-router.delete('/:id', verifyAdmin, requireSuperAdminRole, demoGuard, async (req, res) => {
+router.delete('/:id', verifyAdmin, canWL, requireSuperAdminRole, demoGuard, async (req, res) => {
   try {
     const wl = await WhiteLabel.findByIdAndDelete(req.params.id).lean();
     if (!wl) return res.status(404).json({ error: 'not_found' });
@@ -713,7 +714,7 @@ const TIER_DEFAULT_CENTS = () => ({
 // ─── Create a Bitcoin payment link for a client's monthly bill ───────────────
 // Admin calls this → returns a pay-page URL → send it to the client.
 
-router.post('/:id/create-checkout', verifyAdmin, demoGuard, async (req, res) => {
+router.post('/:id/create-checkout', verifyAdmin, canWL, demoGuard, async (req, res) => {
   try {
     const wl = await WhiteLabel.findById(req.params.id).lean();
     if (!wl) return res.status(404).json({ error: 'not_found' });
@@ -741,7 +742,7 @@ router.post('/:id/create-checkout', verifyAdmin, demoGuard, async (req, res) => 
 
 // ─── Latest invoice for a client (replaces the Stripe billing portal) ────────
 
-router.get('/:id/latest-invoice', verifyAdmin, async (req, res) => {
+router.get('/:id/latest-invoice', verifyAdmin, canWL, async (req, res) => {
   try {
     const inv = await Invoice.findOne({ purpose: 'wl_subscription', refId: String(req.params.id) })
       .sort({ createdAt: -1 }).select('publicId status usdCents expiresAt paidAt').lean();
@@ -761,7 +762,7 @@ router.get('/:id/latest-invoice', verifyAdmin, async (req, res) => {
 // Used by the client view modal to show what's already been created and to
 // enforce limits.maxEvents before opening the create-event wizard.
 
-router.get('/:id/events', verifyAdmin, async (req, res) => {
+router.get('/:id/events', verifyAdmin, canWL, async (req, res) => {
   try {
     const wl = await WhiteLabel.findById(req.params.id).select('domain limits').lean();
     if (!wl) return res.status(404).json({ error: 'not_found' });
@@ -795,7 +796,7 @@ router.get('/:id/events', verifyAdmin, async (req, res) => {
 // this client the same way self-serve WL events are, and enforces
 // limits.maxEvents since nothing else in the codebase does.
 
-router.post('/:id/create-event', verifyAdmin, demoGuard, [
+router.post('/:id/create-event', verifyAdmin, canWL, demoGuard, [
   body('title').trim().isLength({ min: 1, max: 200 }).withMessage('Title is required'),
   body('organizerName').trim().isLength({ min: 1, max: 100 }).withMessage('Organizer name is required'),
   body('organizerEmail').isEmail().normalizeEmail().withMessage('Valid organizer email is required'),
@@ -875,7 +876,7 @@ router.post('/:id/create-event', verifyAdmin, demoGuard, [
 // account had no password) and hands access back to a client who lost it.
 // Sets the organizer's password and returns a NEW one-time recovery code.
 
-router.post('/:id/events/:eventId/organizer-access', verifyAdmin, requireSuperAdminRole, demoGuard, [
+router.post('/:id/events/:eventId/organizer-access', verifyAdmin, canWL, requireSuperAdminRole, demoGuard, [
   body('accountPassword').isString().isLength({ min: 4 }).withMessage('Password must be at least 4 characters'),
 ], async (req, res) => {
   const errors = validationResult(req);
@@ -907,7 +908,7 @@ router.post('/:id/events/:eventId/organizer-access', verifyAdmin, requireSuperAd
 // POST /api/whitelabel/:id/portal/set-password
 // Only super-admin or root admin. Enables portal access and sets the password.
 
-router.post('/:id/portal/set-password', verifyAdmin, requireSuperAdminRole, demoGuard, [
+router.post('/:id/portal/set-password', verifyAdmin, canWL, requireSuperAdminRole, demoGuard, [
   require('express-validator').body('password')
     .isString().trim()
     .isLength({ min: 12, max: 200 })
@@ -936,7 +937,7 @@ router.post('/:id/portal/set-password', verifyAdmin, requireSuperAdminRole, demo
 });
 
 // POST /api/whitelabel/:id/portal/disable
-router.post('/:id/portal/disable', verifyAdmin, requireSuperAdminRole, demoGuard, async (req, res) => {
+router.post('/:id/portal/disable', verifyAdmin, canWL, requireSuperAdminRole, demoGuard, async (req, res) => {
   const wl = await WhiteLabel.findById(req.params.id);
   if (!wl) return res.status(404).json({ error: 'Client not found.' });
   await WhiteLabel.updateOne({ _id: wl._id }, { $set: { 'portal.enabled': false } });
@@ -944,7 +945,7 @@ router.post('/:id/portal/disable', verifyAdmin, requireSuperAdminRole, demoGuard
 });
 
 // GET /api/whitelabel/:id/portal/status
-router.get('/:id/portal/status', verifyAdmin, async (req, res) => {
+router.get('/:id/portal/status', verifyAdmin, canWL, async (req, res) => {
   const wl = await WhiteLabel.findById(req.params.id)
     .select('portal.enabled portal.lastLoginAt portal.lastLoginIp portal.loginAttempts portal.lockedUntil portal.loginLog domain')
     .lean();

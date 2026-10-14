@@ -6,6 +6,8 @@ import {
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../services/api';
+import AddPersonWizard from './AddPersonWizard';
+import { ago, when } from './teamShared';
 import {
   CARD_W, CARD_H, HEAD_W, HEAD_H, MAX_LEVEL, computeLayout, linkPath, childrenMap, descendantsOf,
   ancestorsOf, planMove, validTargets, initials,
@@ -196,6 +198,16 @@ function Drawer({ node, nodes, byId, cmap, canEdit, ctx, onClose, onSelect, onSa
                 <Row icon={Clock}>{node.timezone}</Row>
               </div>
             )}
+            {node.status === 'filled' && node.hasAccount && (
+              <div className="rounded-xl border border-neutral-200 bg-neutral-50 p-3 text-sm">
+                <div className="mb-1 flex items-center justify-between text-[11px] font-bold uppercase tracking-wider text-neutral-400"><span>Account</span>{node.accountRole && <span className="rounded-full bg-white px-2 py-0.5 text-[11px] font-semibold normal-case tracking-normal text-neutral-600 ring-1 ring-neutral-200">{String(node.accountRole).replace(/_/g, ' ')}</span>}</div>
+                {node.loginVisible
+                  ? <div className="space-y-0.5 text-neutral-700"><div>Last sign-in: <b>{node.lastLogin ? `${when(node.lastLogin)} (${ago(node.lastLogin)})` : 'never'}</b></div>{node.previousLogin && <div className="text-xs text-neutral-500">Before that: {when(node.previousLogin)}</div>}<div className="text-xs text-neutral-500">{node.loginCount || 0} sign-in{node.loginCount === 1 ? '' : 's'} in total</div></div>
+                  : <div className="text-xs text-neutral-400">Sign-in activity is visible to this person, their managers and super admins.</div>}
+                {node.accountStatus && node.accountStatus !== 'active' && <div className="mt-1 text-xs font-semibold text-red-600">Account {node.accountStatus}</div>}
+              </div>
+            )}
+            {node.status === 'filled' && !node.hasAccount && canEdit && <div className="rounded-xl border border-dashed border-neutral-300 p-3 text-xs text-neutral-500">No login account is linked to this person. Link one under Edit, or add them from the Team page.</div>}
             {node.status === 'filled' && node.bio && <p className="whitespace-pre-wrap text-sm leading-relaxed text-neutral-700">{node.bio}</p>}
             {node.status === 'open' && (
               <div className="space-y-2 rounded-xl bg-amber-50 p-3 text-sm text-amber-900">
@@ -287,6 +299,7 @@ function Drawer({ node, nodes, byId, cmap, canEdit, ctx, onClose, onSelect, onSa
           </>) : (<>
             <button onClick={() => onDeleted(node)} className="rounded-lg p-2 text-neutral-400 hover:bg-red-50 hover:text-red-600" title="Delete position"><Trash2 className="h-4 w-4" /></button>
             <div className="flex gap-2">
+              {node.status === 'open' && ctx.fillOpen && <button onClick={() => ctx.fillOpen(node)} className="flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-2 text-sm font-bold text-white hover:bg-emerald-700"><UserPlus className="h-4 w-4" />Add person</button>}
               <button onClick={() => ctx.duplicate(node._id)} className="flex items-center gap-1.5 rounded-lg border border-neutral-300 px-3 py-2 text-sm font-semibold text-neutral-700 hover:bg-white" title="Add another of this role"><Users className="h-4 w-4" />Duplicate</button>
               <button onClick={() => ctx.addUnder(node._id)} className="flex items-center gap-1.5 rounded-lg border border-neutral-300 px-3 py-2 text-sm font-semibold text-neutral-700 hover:bg-white"><Plus className="h-4 w-4" />Add report</button>
               <button onClick={() => setEditing(true)} className="flex items-center gap-1.5 rounded-lg bg-neutral-900 px-4 py-2 text-sm font-bold text-white hover:bg-neutral-700"><Edit2 className="h-4 w-4" />Edit</button>
@@ -314,6 +327,7 @@ export default function OrgChart({ isDemo = false }) {
   const [drag, setDrag] = useState(null);
   const [updatedAt, setUpdatedAt] = useState(null);
   const [busy, setBusy] = useState(false);
+  const [wizard, setWizard] = useState(null);          // add-person wizard prefill (fill an open position)
   const [full, setFull] = useState(false);
   const [, force] = useReducer((x) => x + 1, 0);
 
@@ -748,10 +762,11 @@ export default function OrgChart({ isDemo = false }) {
 
       <AnimatePresence>
         {selected && (
-          <Drawer key={selected._id} node={selected} nodes={nodes} byId={baseById} cmap={cmap} canEdit={canEdit} ctx={{ ...ctx, addUnder, duplicate }}
+          <Drawer key={selected._id} node={selected} nodes={nodes} byId={baseById} cmap={cmap} canEdit={canEdit} ctx={{ ...ctx, addUnder, duplicate, fillOpen: (n) => setWizard({ orgNodeId: n._id, positionTitle: n.title, department: n.department || '', label: `Filling the open position: ${n.title}` }) }}
             onClose={() => { setSelectedId(null); setDraft(null); }} onSelect={(id) => { setDraft(null); setSelectedId(id); }} onSaved={saveNode} onDeleted={remove} />
         )}
       </AnimatePresence>
+      {wizard && <AddPersonWizard prefill={wizard} onClose={() => setWizard(null)} onCreated={() => { revRef.current = ''; load(); }} />}
     </div>
   );
 }

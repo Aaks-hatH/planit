@@ -45,6 +45,7 @@ const { verifyTurnstile }  = require('../services/captchaService');
 const { recordIdentity }   = require('../services/identityService');
 const { audit }            = require('../models/AuditLog');
 const notify               = require('../services/careersNotify');
+const team                 = require('../services/teamService');
 
 const router = express.Router();
 
@@ -605,7 +606,7 @@ const isSuperReq = (req) => {
 const canSeeApplicants = (req) => isSuperReq(req) || req.admin?.permissions?.canViewHiring === true;
 const oid = (v) => (v && mongoose.isValidObjectId(String(v)) ? String(v) : null);
 
-function serializeNode(n, superView, applicants) {
+function serializeNode(n, superView, applicants, acct) {
   const o = {
     _id: String(n._id), title: n.title, department: n.department || '', status: n.status,
     level: n.level, parentId: n.parentId ? String(n.parentId) : null, order: n.order || 0,
@@ -616,6 +617,7 @@ function serializeNode(n, superView, applicants) {
   };
   if (applicants && n.jobSlug) o.applicants = applicants[n.jobSlug] || 0;
   if (superView) { o.privatePhone = n.privatePhone || ''; o.privateNotes = n.privateNotes || ''; }
+  if (acct) Object.assign(o, acct);
   return o;
 }
 
@@ -631,8 +633,28 @@ async function loadOrg(req) {
   // A box linked to a public listing always shows that listing's opening count (one number, two places).
   const slugs = [...new Set(docs.map((d) => d.jobSlug).filter(Boolean))];
   const openingsBySlug = new Map(slugs.length ? (await JobListing.find({ slug: { $in: slugs } }).select('slug openings').lean()).map((j) => [j.slug, j.openings || 1]) : []);
-  const nodes = docs.map((d) => { const o = serializeNode(d, superView, applicants); if (d.jobSlug && d.status === 'open' && openingsBySlug.has(d.jobSlug)) o.seats = openingsBySlug.get(d.jobSlug); return o; });
-  return { nodes, rev: `${docs.length}:${maxT}`, canEdit: superView };
+
+  // Who has a login account, what role it has, and (only where allowed) when they last signed in.
+  // Sign-in activity is visible to: super admins (everyone), you (yourself) and managers (everyone beneath them).
+  const tree = team.treeOf(docs);
+  const mine = team.nodeOfAdmin(docs, req.admin);
+  const loginVisible = new Set(mine ? [String(mine._id), ...tree.subtree(mine._id)] : []);
+  const linked = docs.filter((d) => d.employeeId).map((d) => d.employeeId);
+  const empRows = linked.length ? await Employee.find({ _id: { $in: linked } }).select('role status lastLogin previousLogin loginCount').lean() : [];
+  const empById = new Map(empRows.map((e) => [String(e._id), e]));
+  const rootStats = docs.some((d) => d.owner) && (superView || mine?.owner) ? await team.rootLoginStats() : null;
+  const acctFor = (d) => {
+    const e = d.employeeId ? empById.get(String(d.employeeId)) : null;
+    const a = { hasAccount: !!e || !!d.owner, accountRole: e ? e.role : (d.owner ? 'super_admin' : null), accountStatus: e ? e.status : (d.owner ? 'active' : null) };
+    if (superView || loginVisible.has(String(d._id))) {
+      const src = e || (d.owner ? rootStats : null);
+      if (src) Object.assign(a, { loginVisible: true, lastLogin: src.lastLogin || null, previousLogin: src.previousLogin || null, loginCount: src.loginCount || 0 });
+    }
+    return a;
+  };
+
+  const nodes = docs.map((d) => { const o = serializeNode(d, superView, applicants, acctFor(d)); if (d.jobSlug && d.status === 'open' && openingsBySlug.has(d.jobSlug)) o.seats = openingsBySlug.get(d.jobSlug); return o; });
+  return { nodes, rev: `${docs.length}:${maxT}:${[...empById.values()].reduce((m, e) => Math.max(m, new Date(e.lastLogin || 0).getTime()), 0)}`, canEdit: superView };
 }
 
 function nodeFromBody(b, existing) {
@@ -705,6 +727,40 @@ router.get('/admin/org', verifyAdmin, async (req, res, next) => {
       extra.listings = jobs.map((j) => ({ slug: j.slug, title: j.title, status: j.status }));
     }
     res.json({ ...data, ...extra });
+  } catch (e) { next(e); }
+});
+
+// "My team" - what every signed-in person gets: who they report to, who reports to them, who sits beside them, and
+// their own sign-in history. No permission needed beyond being signed in. Super admins always get a box (top of the chart).
+router.get('/admin/org/me', verifyAdmin, async (req, res, next) => {
+  try {
+    if (req.admin?.isDemo) return res.json({ demo: true, me: null, manager: null, reports: [], peers: [], chain: [], teamSize: 0 });
+    const rootLogin = !req.admin?.isEmployee && req.admin?.isAdmin === true;
+    const actorId = rootLogin ? 'root' : String(req.admin?.employeeId || '');
+
+    let docs = await OrgNode.find().select('parentId employeeId owner level').lean();
+    if (!team.nodeOfAdmin(docs, req.admin) && isSuperReq(req)) await tidyOrg(req);
+
+    const flat = await OrgNode.find().sort({ level: 1, order: 1, createdAt: 1 }).lean();
+    const tree = team.treeOf(flat);
+    const mineDoc = team.nodeOfAdmin(flat, req.admin);
+    const org = await loadOrg(req);
+    const byId = new Map(org.nodes.map((n) => [n._id, n]));
+    const me = mineDoc ? byId.get(String(mineDoc._id)) : null;
+
+    const out = { me, manager: null, reports: [], peers: [], chain: [], teamSize: 0, onChart: !!me, canEdit: org.canEdit };
+    if (me) {
+      out.manager = me.parentId ? byId.get(me.parentId) || null : null;
+      out.reports = tree.direct(me._id).map((id) => byId.get(id)).filter(Boolean);
+      out.peers = me.parentId ? tree.direct(me.parentId).filter((id) => id !== me._id).map((id) => byId.get(id)).filter(Boolean) : [];
+      out.chain = tree.ancestors(me._id).map((id) => byId.get(id)).filter(Boolean);
+      out.teamSize = tree.subtree(me._id).length;
+    }
+    // Your own sign-in history (with the device and IP you used).
+    out.login = actorId
+      ? { ...(me ? { lastLogin: me.lastLogin || null, previousLogin: me.previousLogin || null, loginCount: me.loginCount || 0 } : {}), recent: await team.recentLogins(actorId, 10, true) }
+      : { recent: [] };
+    res.json(out);
   } catch (e) { next(e); }
 });
 
@@ -900,3 +956,4 @@ router.post('/admin/org/import', verifyAdmin, requireSuperAdminRole, async (req,
 });
 
 module.exports = router;
+module.exports.tidyOrg = tidyOrg;

@@ -10,7 +10,8 @@ const Incident       = require('../models/Incident');
 const UptimeReport   = require('../models/UptimeReport');
 const UptimeCheck    = require('../models/UptimeCheck');
 const UptimeOverride = require('../models/UptimeOverride');
-const { verifyAdmin } = require('../middleware/auth');
+const { verifyAdmin, requirePermission } = require('../middleware/auth');
+const canIncidents = requirePermission('canManageIncidents');
 
 const SERVICE_CATEGORIES = [
   { id: 'main',          label: 'Main Pages',           services: ['homepage','about','support','wall','status','terms','privacy'] },
@@ -128,12 +129,12 @@ router.post('/report', reportRateLimit, async (req, res) => {
   } catch (err) { res.status(500).json({ error: 'Failed to submit report' }); }
 });
 
-router.get('/admin/reports',         verifyAdmin, async (req, res) => { try { res.json({ reports: await UptimeReport.find().sort({ createdAt: -1 }).limit(100) }); } catch(e){ res.status(500).json({error:'Failed'}); }});
-router.patch('/admin/reports/:id',   verifyAdmin, async (req, res) => { try { const r = await UptimeReport.findByIdAndUpdate(req.params.id, { status: req.body.status }, { new: true }); if (!r) return res.status(404).json({error:'Not found'}); res.json({report:r}); } catch(e){ res.status(500).json({error:'Failed'}); }});
-router.get('/admin/report-volume',   verifyAdmin, (req, res) => { const s=[]; for(const[service,entry]of reportersByService.entries()){ const wAge=Date.now()-entry.windowStart, rem=Math.max(0,DEDUP_WINDOW_MS-wAge); s.push({service,uniqueReporters:entry.ips.size,windowStartedAt:new Date(entry.windowStart).toISOString(),windowResetsIn:Math.ceil(rem/60000)+' minutes',thresholdReached:entry.ips.size>=NTFY_THRESHOLD,lastAlertFiredAt:thresholdFiredAt.has(service)?new Date(thresholdFiredAt.get(service)).toISOString():null}); } res.json({services:s,threshold:NTFY_THRESHOLD,windowMinutes:60}); });
+router.get('/admin/reports',         verifyAdmin, canIncidents, async (req, res) => { try { res.json({ reports: await UptimeReport.find().sort({ createdAt: -1 }).limit(100) }); } catch(e){ res.status(500).json({error:'Failed'}); }});
+router.patch('/admin/reports/:id',   verifyAdmin, canIncidents, async (req, res) => { try { const r = await UptimeReport.findByIdAndUpdate(req.params.id, { status: req.body.status }, { new: true }); if (!r) return res.status(404).json({error:'Not found'}); res.json({report:r}); } catch(e){ res.status(500).json({error:'Failed'}); }});
+router.get('/admin/report-volume',   verifyAdmin, canIncidents, (req, res) => { const s=[]; for(const[service,entry]of reportersByService.entries()){ const wAge=Date.now()-entry.windowStart, rem=Math.max(0,DEDUP_WINDOW_MS-wAge); s.push({service,uniqueReporters:entry.ips.size,windowStartedAt:new Date(entry.windowStart).toISOString(),windowResetsIn:Math.ceil(rem/60000)+' minutes',thresholdReached:entry.ips.size>=NTFY_THRESHOLD,lastAlertFiredAt:thresholdFiredAt.has(service)?new Date(thresholdFiredAt.get(service)).toISOString():null}); } res.json({services:s,threshold:NTFY_THRESHOLD,windowMinutes:60}); });
 
-router.get('/admin/incidents', verifyAdmin, async (req, res) => { try { res.json({ incidents: await Incident.find().sort({ createdAt: -1 }).limit(50) }); } catch(e){ res.status(500).json({error:'Failed'}); }});
-router.post('/admin/incidents', verifyAdmin, async (req, res) => {
+router.get('/admin/incidents', verifyAdmin, canIncidents, async (req, res) => { try { res.json({ incidents: await Incident.find().sort({ createdAt: -1 }).limit(50) }); } catch(e){ res.status(500).json({error:'Failed'}); }});
+router.post('/admin/incidents', verifyAdmin, canIncidents, async (req, res) => {
   try {
     const { title, description, severity, affectedServices, reportIds, initialMessage } = req.body;
     if (!title?.trim()) return res.status(400).json({ error: 'Title required' });
@@ -144,7 +145,7 @@ router.post('/admin/incidents', verifyAdmin, async (req, res) => {
     res.status(201).json({ incident });
   } catch(e){ res.status(500).json({error:'Failed to create incident'}); }
 });
-router.post('/admin/incidents/:id/timeline', verifyAdmin, async (req, res) => {
+router.post('/admin/incidents/:id/timeline', verifyAdmin, canIncidents, async (req, res) => {
   try {
     const { status, message } = req.body;
     if (!status || !message) return res.status(400).json({ error: 'Status and message required' });
@@ -158,8 +159,8 @@ router.post('/admin/incidents/:id/timeline', verifyAdmin, async (req, res) => {
     res.json({ incident: inc });
   } catch(e){ res.status(500).json({error:'Failed'}); }
 });
-router.patch('/admin/incidents/:id',   verifyAdmin, async (req, res) => { try { const { title, description, severity, affectedServices } = req.body; const inc = await Incident.findByIdAndUpdate(req.params.id, { title, description, severity, affectedServices }, { new: true }); if (!inc) return res.status(404).json({error:'Not found'}); res.json({incident:inc}); } catch(e){ res.status(500).json({error:'Failed'}); }});
-router.delete('/admin/incidents/:id',  verifyAdmin, async (req, res) => { try { await Incident.findByIdAndDelete(req.params.id); res.json({success:true}); } catch(e){ res.status(500).json({error:'Failed'}); }});
+router.patch('/admin/incidents/:id',   verifyAdmin, canIncidents, async (req, res) => { try { const { title, description, severity, affectedServices } = req.body; const inc = await Incident.findByIdAndUpdate(req.params.id, { title, description, severity, affectedServices }, { new: true }); if (!inc) return res.status(404).json({error:'Not found'}); res.json({incident:inc}); } catch(e){ res.status(500).json({error:'Failed'}); }});
+router.delete('/admin/incidents/:id',  verifyAdmin, canIncidents, async (req, res) => { try { await Incident.findByIdAndDelete(req.params.id); res.json({success:true}); } catch(e){ res.status(500).json({error:'Failed'}); }});
 
 // ─── Core history builders ────────────────────────────────────────────────────
 
@@ -220,7 +221,7 @@ function applyOverrides(days, entry) {
 
 // ─── GET /admin/server-health-history ────────────────────────────────────────
 
-router.get('/admin/server-health-history', verifyAdmin, async (req, res) => {
+router.get('/admin/server-health-history', verifyAdmin, canIncidents, async (req, res) => {
   try {
     const days      = Math.min(parseInt(req.query.days || '30', 10), 90);
     const checkSince = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
@@ -273,7 +274,7 @@ router.get('/admin/server-health-history', verifyAdmin, async (req, res) => {
 // Permanently fixes 'down' UptimeCheck records to 'up' for the given service.
 // Optionally scoped to a date range via startDate / endDate (ISO strings).
 
-router.post('/admin/uptime-override', verifyAdmin, async (req, res) => {
+router.post('/admin/uptime-override', verifyAdmin, canIncidents, async (req, res) => {
   try {
     const { service, startDate, endDate } = req.body;
     if (!service) return res.status(400).json({ error: 'service required' });
@@ -293,7 +294,7 @@ router.post('/admin/uptime-override', verifyAdmin, async (req, res) => {
 
 // ─── DELETE /admin/uptime-override/:service ───────────────────────────────────
 
-router.delete('/admin/uptime-override/:service', verifyAdmin, async (req, res) => {
+router.delete('/admin/uptime-override/:service', verifyAdmin, canIncidents, async (req, res) => {
   try {
     const svc = decodeURIComponent(req.params.service);
     await UptimeOverride.deleteMany({ service: svc });
@@ -305,7 +306,7 @@ router.delete('/admin/uptime-override/:service', verifyAdmin, async (req, res) =
 // Resolves all active incidents AND permanently fixes every 'down' UptimeCheck
 // record for those services to 'up'. No override documents are created.
 
-router.post('/admin/override-all-uptime', verifyAdmin, async (req, res) => {
+router.post('/admin/override-all-uptime', verifyAdmin, canIncidents, async (req, res) => {
   try {
     const activeIncidents = await Incident.find({ status: { $ne: 'resolved' } });
     const now = new Date();
@@ -340,7 +341,7 @@ router.post('/admin/override-all-uptime', verifyAdmin, async (req, res) => {
 // Permanently fixes all 'down' UptimeCheck records to 'up' for a service on a
 // given day. :date = YYYY-MM-DD (or unix-ms for legacy callers).
 
-router.patch('/admin/server-health-history/:service/:date', verifyAdmin, async (req, res) => {
+router.patch('/admin/server-health-history/:service/:date', verifyAdmin, canIncidents, async (req, res) => {
   try {
     const service = decodeURIComponent(req.params.service);
     const date    = req.params.date;
@@ -371,7 +372,7 @@ router.patch('/admin/server-health-history/:service/:date', verifyAdmin, async (
 // ?window=7d  → last 7 days, 1 data point per day
 // ?window=15d → last 15 days, 1 data point per day (default)
 
-router.get('/admin/live-history', verifyAdmin, async (req, res) => {
+router.get('/admin/live-history', verifyAdmin, canIncidents, async (req, res) => {
   try {
     const win = req.query.window || '15d';
 

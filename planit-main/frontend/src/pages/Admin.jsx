@@ -37,6 +37,7 @@ import '../styles/adminDark.css';
 import api, { adminAPI, uptimeAPI, watchdogAPI, routerAPI, bugReportAPI, blogAPI } from '../services/api';
 import AdminPayments from '../components/AdminPayments';
 import AdminCareers from '../components/AdminCareers';
+import TeamPage from '../components/TeamPage';
 import PlatformAnalyticsDashboard from '../components/PlatformAnalyticsDashboard';
 import PiiLookupPanel from '../components/PiiLookupPanel';
 import { SERVICE_CATEGORIES, ALL_SERVICES_FLAT } from '../utils/serviceCategories';
@@ -102,10 +103,16 @@ const RoleBadge = ({ role }) => {
     support:     'bg-teal-100 text-teal-800',
     analyst:     'bg-indigo-100 text-indigo-800',
     developer:   'bg-cyan-100 text-cyan-800',
+    marketing:   'bg-pink-100 text-pink-800',
+    recruiter:   'bg-violet-100 text-violet-800',
+    finance:     'bg-emerald-100 text-emerald-800',
+    content_editor: 'bg-sky-100 text-sky-800',
+    volunteer:   'bg-neutral-100 text-neutral-700',
+    demo:        'bg-orange-100 text-orange-800',
   };
   return (
     <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold ${map[role] || 'bg-neutral-100 text-neutral-600'}`}>
-      {role?.replace('_', ' ')}
+      {role?.replace(/_/g, ' ')}
     </span>
   );
 };
@@ -2794,724 +2801,11 @@ function LogsPanel() {
 // ═══════════════════════════════════════════════════════════════════════════════
 // EMPLOYEES PANEL
 // ═══════════════════════════════════════════════════════════════════════════════
-function EmployeesPanel({ currentUser }) {
+function EmployeesPanel({ currentUser, onNavigate }) {
   const isDemo = useContext(DemoContext);
-  const [employees, setEmployees]   = useState([]);
-  const [loading, setLoading]       = useState(true);
-  const [showModal, setShowModal]   = useState(false);
-  const [editing, setEditing]       = useState(null);
-  const [search, setSearch]         = useState('');
-  const [filterRole, setFilterRole] = useState('all');
-  const [filterStatus, setFilterStatus] = useState('all');
-  const [activeTab, setActiveTab]   = useState('info'); // 'info' | 'security' | 'permissions'
-
-  // ── Permission definitions ─────────────────────────────────────────────────
-  const EMPTY_PERMS = {
-    canCreateEvents: false, canEditEvents: false, canDeleteEvents: false,
-    canManageUsers: false, canBanUsers: false, canViewUserProfiles: false,
-    canManageInvites: false, canCheckinGuests: false,
-    canManagePolls: false, canManageSeating: false,
-    canManageFiles: false,
-    canViewLogs: false, canViewSystem: false, canAccessAPI: false,
-    canExportData: false, canRunCleanup: false, canViewAnalytics: false, canViewFinancials: false,
-    canManageIncidents: true, canSendNotifications: false,
-    canSendMarketing: false, canViewMarketing: false,
-    canManageBlocklist: false, canViewSecurityLogs: false,
-    canToggleMaintenance: false,
-    canEditContent: false, canPublishContent: false,
-    canManageWhiteLabel: false,
-    canViewEmployees: false,
-  };
-
-  const PERM_GROUPS = [
-    { label: 'Events', icon: '', perms: [
-      ['canCreateEvents','Create Events'],['canEditEvents','Edit Events'],['canDeleteEvents','Delete Events'],
-    ]},
-    { label: 'Users', icon: '', perms: [
-      ['canManageUsers','Manage Users'],['canBanUsers','Ban Users'],['canViewUserProfiles','View Profiles'],
-    ]},
-    { label: 'Invites & Check-in', icon: '', perms: [
-      ['canManageInvites','Manage Invites'],['canCheckinGuests','Check-in Guests'],
-    ]},
-    { label: 'Polls & Seating', icon: '', perms: [
-      ['canManagePolls','Manage Polls'],['canManageSeating','Manage Seating'],
-    ]},
-    { label: 'Files', icon: '', perms: [
-      ['canManageFiles','Manage Files'],
-    ]},
-    { label: 'Data & Analytics', icon: '', perms: [
-      ['canViewAnalytics','View Analytics'],['canViewFinancials','View Financials'],
-      ['canExportData','Export Data'],['canRunCleanup','Run Cleanup'],
-    ]},
-    { label: 'Internal Tooling', icon: '', perms: [
-      ['canViewLogs','View Logs'],['canViewSystem','View System Info'],['canAccessAPI','API Access'],
-    ]},
-    { label: 'Incidents', icon: '', perms: [
-      ['canManageIncidents','Manage Incidents'],['canSendNotifications','Send Notifications'],
-    ]},
-    { label: 'Marketing', icon: '', perms: [
-      ['canViewMarketing','View Campaigns'],['canSendMarketing','Send Campaigns'],
-    ]},
-    { label: 'Security', icon: '', perms: [
-      ['canManageBlocklist','Manage Blocklist'],['canViewSecurityLogs','Security Logs'],
-      ['canToggleMaintenance','Toggle Maintenance'],
-    ]},
-    { label: 'Content', icon: '', perms: [
-      ['canEditContent','Edit Content'],['canPublishContent','Publish Content'],
-    ]},
-    { label: 'Admin & Team', icon: '', perms: [
-      ['canManageWhiteLabel','White-label Settings'],['canViewEmployees','View Team'],
-    ]},
-  ];
-
-  const ALL_PERMS_FLAT = PERM_GROUPS.flatMap(g => g.perms);
-
-  // ── Permission presets ─────────────────────────────────────────────────────
-  const PRESETS = [
-    { label: 'Support Agent', color: 'teal', perms: {
-      canManageIncidents: true, canManageInvites: true, canCheckinGuests: true,
-      canViewUserProfiles: true, canSendNotifications: true,
-    }},
-    { label: 'Content Editor', color: 'indigo', perms: {
-      canEditContent: true, canPublishContent: true, canManageFiles: true, canViewAnalytics: true,
-    }},
-    { label: 'Event Manager', color: 'blue', perms: {
-      canCreateEvents: true, canEditEvents: true, canManageInvites: true,
-      canCheckinGuests: true, canManagePolls: true, canManageSeating: true,
-      canManageFiles: true, canManageUsers: true,
-    }},
-    { label: 'Analyst', color: 'purple', perms: {
-      canViewAnalytics: true, canViewFinancials: true, canExportData: true,
-      canViewMarketing: true, canViewLogs: true, canViewSystem: true,
-    }},
-    { label: 'Moderator', color: 'amber', perms: {
-      canManageUsers: true, canBanUsers: true, canManageBlocklist: true,
-      canViewSecurityLogs: true, canManageIncidents: true, canViewUserProfiles: true,
-    }},
-    { label: 'Marketing', color: 'pink', perms: {
-      canViewMarketing: true, canSendMarketing: true, canViewAnalytics: true, canExportData: true,
-    }},
-  ];
-
-  const PRESET_COLORS = {
-    teal: 'bg-teal-50 text-teal-700 border-teal-200 hover:bg-teal-100',
-    indigo: 'bg-indigo-50 text-indigo-700 border-indigo-200 hover:bg-indigo-100',
-    blue: 'bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100',
-    purple: 'bg-purple-50 text-purple-700 border-purple-200 hover:bg-purple-100',
-    amber: 'bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100',
-    pink: 'bg-pink-50 text-pink-700 border-pink-200 hover:bg-pink-100',
-  };
-
-  const applyPreset = (preset) => {
-    setForm(f => ({ ...f, permissions: { ...EMPTY_PERMS, ...preset.perms } }));
-  };
-
-  // ── Form state ─────────────────────────────────────────────────────────────
-  const EMPTY_FORM = {
-    name: '', email: '', role: 'support', department: '', phone: '',
-    notes: '', status: 'active', password: '', startDate: '',
-    isDemo: false,
-    timezone: '', location: '', emergencyContact: '', employeeId: '',
-    twoFactorEnabled: false, forcePasswordReset: false,
-    permissions: { ...EMPTY_PERMS },
-  };
-
-  const [form, setForm] = useState(EMPTY_FORM);
-  const [saving, setSaving] = useState(false);
-
-  // ── Load ───────────────────────────────────────────────────────────────────
-  useEffect(() => { load(); }, []);
-  const load = async () => {
-    setLoading(true);
-    if (isDemo) { setEmployees(DEMO_EMPLOYEES); setLoading(false); return; }
-    try { const r = await adminAPI.getEmployees(); setEmployees(r.data.employees || []); }
-    catch { toast.error('Failed to load employees'); }
-    finally { setLoading(false); }
-  };
-
-  // ── Open create/edit ───────────────────────────────────────────────────────
-  const openCreate = () => {
-    setEditing(null); setForm(EMPTY_FORM); setActiveTab('info'); setShowModal(true);
-  };
-
-  const openEdit = (emp) => {
-    setEditing(emp._id);
-    setForm({
-      name: emp.name, email: emp.email, role: emp.role,
-      department: emp.department || '', phone: emp.phone || '',
-      notes: emp.notes || '', status: emp.status, password: '',
-      startDate: emp.startDate || '', isDemo: emp.isDemo || false,
-      timezone: emp.timezone || '', location: emp.location || '',
-      emergencyContact: emp.emergencyContact || '', employeeId: emp.employeeId || '',
-      twoFactorEnabled: emp.twoFactorEnabled || false,
-      forcePasswordReset: emp.forcePasswordReset || false,
-      permissions: { ...EMPTY_PERMS, ...emp.permissions },
-    });
-    setActiveTab('info');
-    setShowModal(true);
-  };
-
-  // ── Save ───────────────────────────────────────────────────────────────────
-  const save = async () => {
-    if (isDemo) { toast.success('Employee updated successfully.'); return; }
-    if (!form.name.trim() || !form.email.trim()) { toast.error('Name and email required'); return; }
-    if (!editing && !form.password.trim()) { toast.error('Password is required for new employees'); return; }
-    setSaving(true);
-    try {
-      if (editing) { await adminAPI.updateEmployee(editing, form); toast.success('Employee updated'); }
-      else { await adminAPI.createEmployee(form); toast.success('Employee created'); }
-      setShowModal(false); load();
-    } catch (e) { toast.error(e.response?.data?.error || 'Save failed'); }
-    finally { setSaving(false); }
-  };
-
-  const del = async (id, name) => {
-    if (isDemo) { toast.success('Employee removed.'); return; }
-    if (!confirm(`Remove ${name} from the team?`)) return;
-    try { await adminAPI.deleteEmployee(id); setEmployees(p => p.filter(e => e._id !== id)); toast.success('Removed'); }
-    catch { toast.error('Delete failed'); }
-  };
-
-  const toggleSuspend = async (emp) => {
-    if (isDemo) { toast.success('Status updated (demo).'); return; }
-    const suspend = emp.status !== 'suspended';
-    const reason  = suspend ? prompt(`Reason for suspending ${emp.name}?`) : undefined;
-    if (suspend && reason === null) return; // cancelled
-    try {
-      await adminAPI.suspendEmployee(emp._id, suspend, reason || '');
-      setEmployees(p => p.map(e => e._id === emp._id ? { ...e, status: suspend ? 'suspended' : 'active' } : e));
-      toast.success(suspend ? `${emp.name} suspended` : `${emp.name} unsuspended`);
-    } catch (e) { toast.error(e.response?.data?.error || 'Action failed'); }
-  };
-
-  const doForceReset = async (emp) => {
-    if (isDemo) { toast.success('Password reset flagged (demo).'); return; }
-    if (!confirm(`Force password reset for ${emp.name}? They will be locked to the password-change screen on next login.`)) return;
-    try {
-      await adminAPI.forceResetEmployee(emp._id);
-      setEmployees(p => p.map(e => e._id === emp._id ? { ...e, forcePasswordReset: true } : e));
-      toast.success('Force-reset flag set');
-    } catch (e) { toast.error(e.response?.data?.error || 'Action failed'); }
-  };
-
-  // ── Change-password modal state ─────────────────────────────────────────────
-  const [cpModal, setCpModal]   = useState(null); // the employee being targeted
-  const [cpNew, setCpNew]       = useState('');
-  const [cpConfirm, setCpConfirm] = useState('');
-  const [cpSaving, setCpSaving] = useState(false);
-
-  const openCp = (emp) => { setCpModal(emp); setCpNew(''); setCpConfirm(''); };
-  const doChangePassword = async () => {
-    if (isDemo) { toast.success('Password changed (demo).'); setCpModal(null); return; }
-    if (cpNew.length < 8) { toast.error('Password must be at least 8 characters'); return; }
-    if (cpNew !== cpConfirm) { toast.error('Passwords do not match'); return; }
-    setCpSaving(true);
-    try {
-      await adminAPI.changeEmployeePassword(cpModal._id, { newPassword: cpNew });
-      toast.success(`Password changed for ${cpModal.name}`);
-      setCpModal(null);
-    } catch (e) { toast.error(e.response?.data?.error || 'Failed to change password'); }
-    finally { setCpSaving(false); }
-  };
-
-  // ── Permission toggle (FIX: use div onClick, not label, to avoid double-fire) ──
-  const togglePerm = (k) => setForm(f => ({ ...f, permissions: { ...f.permissions, [k]: !f.permissions[k] } }));
-
-  const grantedCount = Object.values(form.permissions).filter(Boolean).length;
-  const totalPerms   = Object.keys(EMPTY_PERMS).length;
-
-  // ── Filtering ──────────────────────────────────────────────────────────────
-  const ROLES = ['super_admin', 'admin', 'moderator', 'support', 'analyst', 'developer', 'demo'];
-
-  const filtered = employees.filter(emp => {
-    const q = search.toLowerCase();
-    const matchSearch = !q || emp.name.toLowerCase().includes(q) || emp.email.toLowerCase().includes(q) || (emp.department || '').toLowerCase().includes(q);
-    const matchRole   = filterRole === 'all'   || emp.role === filterRole;
-    const matchStatus = filterStatus === 'all' || emp.status === filterStatus;
-    return matchSearch && matchRole && matchStatus;
-  });
-
-  const avatarColor = (role) => {
-    const map = {
-      super_admin: 'bg-purple-100 text-purple-700', admin: 'bg-blue-100 text-blue-700',
-      moderator: 'bg-amber-100 text-amber-700', support: 'bg-teal-100 text-teal-700',
-      analyst: 'bg-indigo-100 text-indigo-700', developer: 'bg-cyan-100 text-cyan-700',
-      demo: 'bg-orange-100 text-orange-700',
-    };
-    return map[role] || 'bg-neutral-100 text-neutral-600';
-  };
-
-  const statusDot = (status) => {
-    if (status === 'active')    return 'bg-emerald-400';
-    if (status === 'suspended') return 'bg-red-400';
-    return 'bg-neutral-300';
-  };
-
-  // ── Stats bar ──────────────────────────────────────────────────────────────
-  const stats = {
-    active:    employees.filter(e => e.status === 'active').length,
-    suspended: employees.filter(e => e.status === 'suspended').length,
-    demo:      employees.filter(e => e.isDemo).length,
-  };
-
-  return (
-    <div className="space-y-5">
-
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-lg font-bold">Team & Employees</h2>
-          <p className="text-sm text-neutral-500">{employees.length} team member{employees.length !== 1 ? 's' : ''}</p>
-        </div>
-        <button onClick={openCreate} className="btn btn-primary gap-2 text-sm"><UserPlus className="w-4 h-4" /> Add Employee</button>
-      </div>
-
-      {/* Stats */}
-      {employees.length > 0 && (
-        <div className="grid grid-cols-3 gap-3">
-          <div className="card px-4 py-3 flex items-center gap-3">
-            <div className="w-2 h-2 rounded-full bg-emerald-400 flex-shrink-0" />
-            <div><p className="text-lg font-bold">{stats.active}</p><p className="text-xs text-neutral-500">Active</p></div>
-          </div>
-          <div className="card px-4 py-3 flex items-center gap-3">
-            <div className="w-2 h-2 rounded-full bg-red-400 flex-shrink-0" />
-            <div><p className="text-lg font-bold">{stats.suspended}</p><p className="text-xs text-neutral-500">Suspended</p></div>
-          </div>
-          <div className="card px-4 py-3 flex items-center gap-3">
-            <div className="w-2 h-2 rounded-full bg-orange-400 flex-shrink-0" />
-            <div><p className="text-lg font-bold">{stats.demo}</p><p className="text-xs text-neutral-500">Demo Accounts</p></div>
-          </div>
-        </div>
-      )}
-
-      {/* Search + Filters */}
-      {employees.length > 0 && (
-        <div className="flex flex-col sm:flex-row gap-2">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-neutral-400" />
-            <input
-              className="input w-full text-sm pl-8"
-              placeholder="Search by name, email, department…"
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-            />
-          </div>
-          <select className="input text-sm w-full sm:w-36" value={filterRole} onChange={e => setFilterRole(e.target.value)}>
-            <option value="all">All Roles</option>
-            {ROLES.map(r => <option key={r} value={r}>{r.replace('_',' ')}</option>)}
-          </select>
-          <select className="input text-sm w-full sm:w-36" value={filterStatus} onChange={e => setFilterStatus(e.target.value)}>
-            <option value="all">All Statuses</option>
-            {['active','inactive','suspended'].map(s => <option key={s} value={s}>{s}</option>)}
-          </select>
-        </div>
-      )}
-
-      {/* Employee list */}
-      {loading ? (
-        <div className="flex justify-center py-12"><div className="spinner w-6 h-6 border-2 border-neutral-300 border-t-neutral-600" /></div>
-      ) : employees.length === 0 ? (
-        <div className="text-center py-20 text-neutral-400">
-          <Briefcase className="w-12 h-12 mx-auto mb-3 opacity-30" />
-          <p className="text-base font-medium text-neutral-500 mb-2">No employees yet</p>
-          <p className="text-sm">Add your first team member to get started</p>
-          <button onClick={openCreate} className="btn btn-primary mt-4 gap-2"><UserPlus className="w-4 h-4" /> Add Employee</button>
-        </div>
-      ) : filtered.length === 0 ? (
-        <div className="text-center py-12 text-neutral-400">
-          <p className="text-sm">No employees match your search or filters.</p>
-          <button className="text-xs text-blue-500 mt-2 underline" onClick={() => { setSearch(''); setFilterRole('all'); setFilterStatus('all'); }}>Clear filters</button>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          {filtered.map(emp => {
-            const grantedPerms = ALL_PERMS_FLAT.filter(([k]) => emp.permissions?.[k]);
-            return (
-              <div key={emp._id} className={`card p-5 hover:shadow-lg transition-all ${emp.status !== 'active' ? 'opacity-60' : ''}`}>
-                <div className="flex items-start gap-4">
-                  <div className="relative flex-shrink-0">
-                    <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-lg font-bold ${avatarColor(emp.role)}`}>
-                      {emp.name.charAt(0).toUpperCase()}
-                    </div>
-                    <div className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-white ${statusDot(emp.status)}`} />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-0.5 flex-wrap">
-                      <p className="text-sm font-bold text-neutral-900">{emp.name}</p>
-                      <RoleBadge role={emp.role} />
-                      {/* ── "You" badge — identifies the logged-in employee's own row ── */}
-                      {currentUser?.isEmployee && currentUser?.email === emp.email && (
-                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-indigo-100 text-indigo-700">You</span>
-                      )}
-                      {emp.isDemo && <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-orange-100 text-orange-700">demo</span>}
-                      {emp.forcePasswordReset && <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-red-100 text-red-600">pw reset</span>}
-                    </div>
-                    <p className="text-xs text-neutral-500">{emp.email}</p>
-                    {emp.department && <p className="text-xs text-neutral-400">{emp.department}{emp.location ? ` · ${emp.location}` : ''}</p>}
-                    {emp.employeeId && <p className="text-xs text-neutral-400">ID: {emp.employeeId}</p>}
-                    {emp.startDate && <p className="text-xs text-neutral-400">Since {fmt(emp.startDate)}</p>}
-                    {emp.lastLogin && <p className="text-xs text-neutral-400">Last login: {fmt(emp.lastLogin)}</p>}
-                    {emp.permissions && (
-                      <div className="flex flex-wrap gap-1 mt-2">
-                        {emp.role === 'super_admin'
-                          ? <span className="text-xs bg-purple-50 text-purple-600 px-2 py-0.5 rounded-full font-medium">Full Access</span>
-                          : grantedPerms.length === 0
-                            ? <span className="text-xs bg-neutral-50 text-neutral-400 px-2 py-0.5 rounded-full">No permissions</span>
-                            : grantedPerms.slice(0, 4).map(([k, l]) => (
-                                <span key={k} className="text-xs bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full font-medium">{l}</span>
-                              ))
-                        }
-                        {grantedPerms.length > 4 && (
-                          <span className="text-xs bg-neutral-100 text-neutral-500 px-2 py-0.5 rounded-full">+{grantedPerms.length - 4} more</span>
-                        )}
-                        {emp.isDemo && <span className="text-xs bg-orange-50 text-orange-500 px-2 py-0.5 rounded-full font-medium">Sandbox</span>}
-                        {emp.twoFactorEnabled && <span className="text-xs bg-emerald-50 text-emerald-600 px-2 py-0.5 rounded-full font-medium">2FA</span>}
-                      </div>
-                    )}
-                  </div>
-                  {/* ── Action buttons — all disabled on own row ── */}
-                  {(() => {
-                    const isSelf = currentUser?.isEmployee && currentUser?.email === emp.email;
-                    return (
-                      <div className="flex gap-2 flex-shrink-0 flex-wrap justify-end">
-                        <button onClick={() => !isSelf && openEdit(emp)} disabled={isSelf} className={`btn btn-secondary p-1.5 ${isSelf ? 'opacity-30 cursor-not-allowed' : ''}`} title={isSelf ? "Use the Account tab to edit your own profile" : "Edit"}><Edit2 className="w-3.5 h-3.5" /></button>
-                        <button onClick={() => !isSelf && openCp(emp)} disabled={isSelf} className={`btn btn-secondary p-1.5 ${isSelf ? 'opacity-30 cursor-not-allowed' : ''}`} title={isSelf ? "Use the Account tab to change your own password" : "Change Password"}><Key className="w-3.5 h-3.5" /></button>
-                        <button onClick={() => !isSelf && doForceReset(emp)} disabled={isSelf} className={`btn btn-secondary p-1.5 text-amber-600 hover:bg-amber-50 ${isSelf ? 'opacity-30 cursor-not-allowed' : ''}`} title={isSelf ? "Cannot force-reset your own account" : "Force Password Reset"}><RotateCcw className="w-3.5 h-3.5" /></button>
-                        <button onClick={() => !isSelf && toggleSuspend(emp)} disabled={isSelf}
-                          className={`btn btn-secondary p-1.5 ${isSelf ? 'opacity-30 cursor-not-allowed' : emp.status === 'suspended' ? 'text-emerald-600 hover:bg-emerald-50' : 'text-orange-500 hover:bg-orange-50'}`}
-                          title={isSelf ? "Cannot suspend your own account" : emp.status === 'suspended' ? 'Unsuspend' : 'Suspend'}>
-                          <Power className="w-3.5 h-3.5" />
-                        </button>
-                        <button onClick={() => !isSelf && del(emp._id, emp.name)} disabled={isSelf} className={`btn btn-secondary p-1.5 text-red-500 hover:bg-red-50 ${isSelf ? 'opacity-30 cursor-not-allowed' : ''}`} title={isSelf ? "Cannot delete your own account" : "Delete"}><Trash2 className="w-3.5 h-3.5" /></button>
-                      </div>
-                    );
-                  })()}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
-
-      {/* ── Modal ── */}
-      {showModal && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 px-4" onClick={e => e.target === e.currentTarget && setShowModal(false)}>
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden" style={{ maxHeight: '92vh', display: 'flex', flexDirection: 'column' }}>
-
-            {/* Modal header */}
-            <div className="px-6 py-4 border-b flex items-center justify-between flex-shrink-0">
-              <div>
-                <h3 className="font-bold text-neutral-900">{editing ? 'Edit Employee' : 'New Employee'}</h3>
-                <p className="text-xs text-neutral-500 mt-0.5">{editing ? 'Update team member details and access' : 'Add a new team member'}</p>
-              </div>
-              <button onClick={() => setShowModal(false)} className="p-1.5 hover:bg-neutral-100 rounded-lg"><X className="w-4 h-4 text-neutral-400" /></button>
-            </div>
-
-            {/* Tabs */}
-            <div className="px-6 border-b flex gap-0 flex-shrink-0">
-              {[['info','Profile'],['security','Security'],['permissions','Permissions']].map(([tab, label]) => (
-                <button
-                  key={tab}
-                  onClick={() => setActiveTab(tab)}
-                  className={`px-4 py-3 text-xs font-semibold border-b-2 transition-all -mb-px ${activeTab === tab ? 'border-neutral-900 text-neutral-900' : 'border-transparent text-neutral-400 hover:text-neutral-600'}`}
-                >
-                  {label}
-                  {tab === 'permissions' && grantedCount > 0 && (
-                    <span className="ml-1.5 bg-blue-100 text-blue-600 text-[10px] font-bold px-1.5 py-0.5 rounded-full">{grantedCount}</span>
-                  )}
-                </button>
-              ))}
-            </div>
-
-            {/* Modal body */}
-            <div className="p-6 overflow-y-auto flex-1">
-
-              {/* ── TAB: Profile ── */}
-              {activeTab === 'info' && (
-                <div className="space-y-5">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-xs font-medium text-neutral-600 mb-1.5">Full Name *</label>
-                      <input className="input w-full text-sm" placeholder="Jane Smith" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-medium text-neutral-600 mb-1.5">Email *</label>
-                      <input type="email" className="input w-full text-sm" placeholder="jane@company.com" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-medium text-neutral-600 mb-1.5">Role</label>
-                      <select className="input w-full text-sm" value={form.role} onChange={e => setForm(f => ({ ...f, role: e.target.value }))}>
-                        {ROLES.map(r => <option key={r} value={r}>{r.replace('_', ' ')}</option>)}
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block text-xs font-medium text-neutral-600 mb-1.5">Status</label>
-                      <select className="input w-full text-sm" value={form.status} onChange={e => setForm(f => ({ ...f, status: e.target.value }))}>
-                        {['active','inactive','suspended'].map(s => <option key={s} value={s}>{s}</option>)}
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block text-xs font-medium text-neutral-600 mb-1.5">Department</label>
-                      <input className="input w-full text-sm" placeholder="Engineering" value={form.department} onChange={e => setForm(f => ({ ...f, department: e.target.value }))} />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-medium text-neutral-600 mb-1.5">Employee ID</label>
-                      <input className="input w-full text-sm" placeholder="EMP-001" value={form.employeeId} onChange={e => setForm(f => ({ ...f, employeeId: e.target.value }))} />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-medium text-neutral-600 mb-1.5">Phone</label>
-                      <input className="input w-full text-sm" placeholder="+1 555 000 0000" value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-medium text-neutral-600 mb-1.5">Location / Office</label>
-                      <input className="input w-full text-sm" placeholder="New York, NY" value={form.location} onChange={e => setForm(f => ({ ...f, location: e.target.value }))} />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-medium text-neutral-600 mb-1.5">Timezone</label>
-                      <input className="input w-full text-sm" placeholder="America/New_York" value={form.timezone} onChange={e => setForm(f => ({ ...f, timezone: e.target.value }))} />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-medium text-neutral-600 mb-1.5">Start Date</label>
-                      <input type="date" className="input w-full text-sm" value={form.startDate ? new Date(form.startDate).toISOString().slice(0,10) : ''} onChange={e => setForm(f => ({ ...f, startDate: e.target.value || undefined }))} />
-                    </div>
-                    <div className="col-span-2">
-                      <label className="block text-xs font-medium text-neutral-600 mb-1.5">Emergency Contact</label>
-                      <input className="input w-full text-sm" placeholder="Name — Phone or Email" value={form.emergencyContact} onChange={e => setForm(f => ({ ...f, emergencyContact: e.target.value }))} />
-                    </div>
-                    <div className="col-span-2">
-                      <label className="block text-xs font-medium text-neutral-600 mb-1.5">Notes</label>
-                      <textarea className="input w-full text-sm resize-none" rows={2} placeholder="Internal notes…" value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} />
-                    </div>
-                  </div>
-
-                  {/* Demo mode toggle */}
-                  <div className={`rounded-xl border-2 p-4 transition-all cursor-pointer ${form.isDemo ? 'border-orange-300 bg-orange-50' : 'border-neutral-200 bg-neutral-50'}`}
-                    onClick={() => setForm(f => ({ ...f, isDemo: !f.isDemo }))}>
-                    <div className="flex items-start gap-3">
-                      <div className="mt-0.5 flex-shrink-0">
-                        <div className={`w-9 h-5 rounded-full transition-all relative ${form.isDemo ? 'bg-orange-500' : 'bg-neutral-300'}`}>
-                          <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-all ${form.isDemo ? 'left-4' : 'left-0.5'}`} />
-                        </div>
-                      </div>
-                      <div>
-                        <p className="text-sm font-semibold text-neutral-800">Sandbox / Demo Account</p>
-                        <p className="text-xs text-neutral-500 mt-0.5">All writes are silently intercepted — great for demos or investor access.</p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* ── TAB: Security ── */}
-              {activeTab === 'security' && (
-                <div className="space-y-4">
-                  {/* Password */}
-                  <div>
-                    <label className="block text-xs font-medium text-neutral-600 mb-1.5">
-                      {editing ? 'New Password' : 'Password *'}
-                      {editing && <span className="text-neutral-400 font-normal ml-1">(leave blank to keep existing)</span>}
-                    </label>
-                    <input type="password" className="input w-full text-sm" placeholder={editing ? 'Leave blank to keep current' : 'Set login password'} value={form.password} onChange={e => setForm(f => ({ ...f, password: e.target.value }))} />
-                    <p className="text-xs text-neutral-400 mt-1">Employees log in at the admin page using their email + this password.</p>
-                  </div>
-
-                  {/* Security toggles */}
-                  <div className="space-y-3">
-                    {[
-                      {
-                        key: 'forcePasswordReset',
-                        title: 'Force Password Reset on Next Login',
-                        desc: 'Employee must change their password the next time they sign in.',
-                        color: 'red',
-                      },
-                      {
-                        key: 'twoFactorEnabled',
-                        title: '2FA Enabled',
-                        desc: 'Mark that this employee has two-factor authentication set up.',
-                        color: 'emerald',
-                      },
-                    ].map(({ key, title, desc, color }) => (
-                      <div
-                        key={key}
-                        className={`rounded-xl border-2 p-4 transition-all cursor-pointer ${form[key] ? `border-${color}-300 bg-${color}-50` : 'border-neutral-200 bg-neutral-50'}`}
-                        onClick={() => setForm(f => ({ ...f, [key]: !f[key] }))}
-                      >
-                        <div className="flex items-start gap-3">
-                          <div className="mt-0.5 flex-shrink-0">
-                            <div className={`w-9 h-5 rounded-full transition-all relative ${form[key] ? `bg-${color}-500` : 'bg-neutral-300'}`}>
-                              <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-all ${form[key] ? 'left-4' : 'left-0.5'}`} />
-                            </div>
-                          </div>
-                          <div>
-                            <p className="text-sm font-semibold text-neutral-800">{title}</p>
-                            <p className="text-xs text-neutral-500 mt-0.5">{desc}</p>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-
-                  {/* Login activity */}
-                  {editing && (
-                    <div className="rounded-xl border border-neutral-200 p-4 space-y-2">
-                      <p className="text-xs font-bold text-neutral-500 uppercase tracking-widest">Login Activity</p>
-                      <div className="grid grid-cols-2 gap-2 text-xs text-neutral-600">
-                        <div className="bg-neutral-50 rounded-lg px-3 py-2">
-                          <p className="text-[10px] text-neutral-400 uppercase font-semibold mb-0.5">Login Count</p>
-                          <p className="font-bold">{employees.find(e => e._id === editing)?.loginCount || 0}</p>
-                        </div>
-                        <div className="bg-neutral-50 rounded-lg px-3 py-2">
-                          <p className="text-[10px] text-neutral-400 uppercase font-semibold mb-0.5">Last Login</p>
-                          <p className="font-bold">{employees.find(e => e._id === editing)?.lastLogin ? fmt(employees.find(e => e._id === editing).lastLogin) : 'Never'}</p>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Access scope note */}
-                  <div className="rounded-xl bg-blue-50 border border-blue-200 px-4 py-3 text-xs text-blue-700">
-                    <strong>Session expiry:</strong> Employee tokens expire after 24 hours. They must log in again after expiry.
-                  </div>
-                </div>
-              )}
-
-              {/* ── TAB: Permissions ── */}
-              {activeTab === 'permissions' && (
-                <div className="space-y-4">
-                  {form.role === 'super_admin' ? (
-                    <div className="rounded-xl bg-purple-50 border border-purple-200 px-4 py-3 text-xs text-purple-700 font-medium">
-                      super_admin bypasses all permission checks — individual flags are ignored.
-                    </div>
-                  ) : form.isDemo ? (
-                    <div className="rounded-xl bg-orange-50 border border-orange-200 px-4 py-3 text-xs text-orange-700">
-                      Permissions are ignored for demo accounts — all write operations are intercepted regardless.
-                    </div>
-                  ) : (
-                    <>
-                      {/* Presets */}
-                      <div>
-                        <p className="text-xs font-bold text-neutral-500 uppercase tracking-widest mb-2">Quick Presets</p>
-                        <div className="flex flex-wrap gap-2">
-                          {PRESETS.map(p => (
-                            <button key={p.label} onClick={() => applyPreset(p)}
-                              className={`text-xs px-3 py-1.5 rounded-full border font-medium transition-all ${PRESET_COLORS[p.color]}`}>
-                              {p.label}
-                            </button>
-                          ))}
-                          <button onClick={() => setForm(f => ({ ...f, permissions: { ...EMPTY_PERMS } }))}
-                            className="text-xs px-3 py-1.5 rounded-full border border-neutral-200 text-neutral-500 hover:bg-neutral-50 font-medium">
-                            Clear All
-                          </button>
-                          <button onClick={() => setForm(f => ({ ...f, permissions: Object.fromEntries(Object.keys(EMPTY_PERMS).map(k => [k, true])) }))}
-                            className="text-xs px-3 py-1.5 rounded-full border border-neutral-200 text-neutral-500 hover:bg-neutral-50 font-medium">
-                            Grant All
-                          </button>
-                        </div>
-                      </div>
-
-                      {/* Progress */}
-                      <div className="flex items-center gap-3">
-                        <div className="flex-1 bg-neutral-100 rounded-full h-1.5">
-                          <div className="bg-blue-500 h-1.5 rounded-full transition-all" style={{ width: `${(grantedCount / totalPerms) * 100}%` }} />
-                        </div>
-                        <p className="text-xs text-neutral-500 flex-shrink-0">{grantedCount} / {totalPerms} granted</p>
-                      </div>
-
-                      {/* Permission groups */}
-                      <div className="space-y-4">
-                        {PERM_GROUPS.map(group => (
-                          <div key={group.label}>
-                            <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest mb-2">
-                              {group.icon} {group.label}
-                            </p>
-                            <div className="grid grid-cols-2 gap-1.5">
-                              {group.perms.map(([k, l]) => (
-                                /* FIX: use div with onClick instead of label wrapping a checkbox.
-                                   A <label> containing a readOnly checkbox fires the handler twice
-                                   (once for the label click, once for the synthetic checkbox click),
-                                   which causes togglePerm to toggle and immediately un-toggle. */
-                                <div
-                                  key={k}
-                                  onClick={() => togglePerm(k)}
-                                  className={`flex items-center gap-2.5 p-2.5 rounded-lg border cursor-pointer select-none transition-all ${form.permissions[k] ? 'border-neutral-900 bg-neutral-900' : 'border-neutral-200 hover:bg-neutral-50'}`}
-                                >
-                                  <div className={`w-4 h-4 rounded border-2 flex items-center justify-center flex-shrink-0 transition-all ${form.permissions[k] ? 'bg-white border-white' : 'border-neutral-300'}`}>
-                                    {form.permissions[k] && <svg width="10" height="10" viewBox="0 0 12 12" fill="none"><polyline points="2 6 5 9 10 3" stroke="#111" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>}
-                                  </div>
-                                  <span className={`text-xs ${form.permissions[k] ? 'text-white font-medium' : 'text-neutral-700'}`}>{l}</span>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </>
-                  )}
-                </div>
-              )}
-            </div>
-
-            {/* Footer */}
-            <div className="px-6 py-4 border-t flex gap-3 flex-shrink-0">
-              <button onClick={() => setShowModal(false)} className="flex-1 btn btn-secondary text-sm">Cancel</button>
-              <button onClick={save} disabled={saving} className="flex-1 btn bg-neutral-900 hover:bg-neutral-800 text-white text-sm gap-2 disabled:opacity-50">
-                {saving ? <span className="spinner w-4 h-4 border-2 border-white/30 border-t-white" /> : <Save className="w-4 h-4" />}
-                {editing ? 'Update' : 'Create'} Employee
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-      {/* ── Change Password Modal ── */}
-      {cpModal && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 px-4" onClick={e => e.target === e.currentTarget && setCpModal(null)}>
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
-            <div className="px-6 py-4 border-b flex items-center justify-between">
-              <div>
-                <h3 className="font-bold text-neutral-900">Change Password</h3>
-                <p className="text-xs text-neutral-500 mt-0.5">Set a new password for <strong>{cpModal.name}</strong></p>
-              </div>
-              <button onClick={() => setCpModal(null)} className="p-1.5 hover:bg-neutral-100 rounded-lg"><X className="w-4 h-4 text-neutral-400" /></button>
-            </div>
-            <div className="p-6 space-y-4">
-              <div>
-                <label className="block text-xs font-medium text-neutral-600 mb-1.5">New Password</label>
-                <input
-                  type="password"
-                  className="input w-full text-sm"
-                  placeholder="Min. 8 characters"
-                  value={cpNew}
-                  onChange={e => setCpNew(e.target.value)}
-                  autoFocus
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-neutral-600 mb-1.5">Confirm Password</label>
-                <input
-                  type="password"
-                  className="input w-full text-sm"
-                  placeholder="Repeat password"
-                  value={cpConfirm}
-                  onChange={e => setCpConfirm(e.target.value)}
-                  onKeyDown={e => e.key === 'Enter' && doChangePassword()}
-                />
-              </div>
-              {cpNew && cpConfirm && cpNew !== cpConfirm && (
-                <p className="text-xs text-red-500 flex items-center gap-1"><AlertTriangle className="w-3 h-3" /> Passwords do not match</p>
-              )}
-            </div>
-            <div className="px-6 py-4 border-t flex gap-3">
-              <button onClick={() => setCpModal(null)} className="flex-1 btn btn-secondary text-sm">Cancel</button>
-              <button onClick={doChangePassword} disabled={cpSaving || !cpNew || cpNew !== cpConfirm} className="flex-1 btn bg-neutral-900 hover:bg-neutral-800 text-white text-sm disabled:opacity-50 gap-2">
-                {cpSaving ? <span className="spinner w-4 h-4 border-2 border-white/30 border-t-white" /> : <Key className="w-4 h-4" />}
-                Set Password
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  );
+  // Everything (My team, Directory, Roles & access, add-person wizard) lives in components/TeamPage.jsx and
+  // renders from the server's roles/permissions catalog, so it can never miss a role or permission.
+  return <TeamPage currentUser={currentUser} isDemo={isDemo} demoEmployees={DEMO_EMPLOYEES} onNavigate={onNavigate} />;
 }
 function OrganizersPanel() {
   const isDemo = useContext(DemoContext);
@@ -7852,7 +7146,7 @@ function FleetControl() {
 
 // ─── Mobile "More" nav button ─────────────────────────────────────────────────
 const MORE_SECTIONS = ['organizers','staff','employees','audit-logs','analytics','compliance','security','blocklist','banned-ips','reports','uptime','command-center','whitelabel','payments','careers','blog','account'];
-function MoreNavButton({ activeSection, setActiveSection, onLogout }) {
+function MoreNavButton({ activeSection, setActiveSection, onLogout, canSee = () => true }) {
   const [open, setOpen] = React.useState(false);
   const isActive = MORE_SECTIONS.includes(activeSection);
   const labels = {
@@ -7887,7 +7181,7 @@ function MoreNavButton({ activeSection, setActiveSection, onLogout }) {
         </button>
         {open && (
           <div className="absolute bottom-full right-0 mb-2 w-44 bg-neutral-900 border border-white/10 rounded-2xl overflow-hidden shadow-2xl z-50">
-            {MORE_SECTIONS.map(id => {
+            {MORE_SECTIONS.filter(canSee).map(id => {
               const Icon = icons[id] || Settings;
               return (
                 <button key={id}
@@ -8153,7 +7447,10 @@ const PERM_LABELS = {
   canViewMarketing:'View Marketing', canManageBlocklist:'Manage Blocklist',
   canViewSecurityLogs:'Security Logs', canToggleMaintenance:'Toggle Maintenance',
   canEditContent:'Edit Content', canPublishContent:'Publish Content',
-  canManageWhiteLabel:'White Label', canViewEmployees:'View Employees',
+  canManageWhiteLabel:'White Label', canViewEmployees:'View Team Directory',
+  canViewDashboard:'View Dashboard', canViewEvents:'View Events', canManageBugReports:'Manage Bug Reports',
+  canViewHiring:'View Hiring', canManageHiring:'Manage Hiring', canViewCandidatePII:'View Candidate Details',
+  canManageAds:'Manage Ads', canViewAdSpend:'View Ad Spend',
 };
 const AUDIT_COLORS = {
   login_success:'bg-emerald-100 text-emerald-700', login_failure:'bg-red-100 text-red-700',
@@ -11123,6 +10420,17 @@ export default function Admin() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
+  // ── Role-based access ─────────────────────────────────────────────────────
+  // /admin/me returns `sections`: the admin pages this person's role allows (computed on the server from the same
+  // permission flags the API routes enforce). Everything else is hidden here AND refused by the API.
+  const allowedSections = new Set(currentUser?.sections || ['account']);
+  const canSee  = (id) => allowedSections.has(id);
+  const hasFlag = (k) => !!currentUser && (!currentUser.isEmployee || currentUser.role === 'super_admin' || (!currentUser.isDemo && currentUser.permissions?.[k] === true));
+  useEffect(() => {
+    // Landed on a page their role does not allow (e.g. the default Dashboard)? Send them somewhere they can be.
+    if (currentUser && !allowedSections.has(activeSection)) setActiveSection(allowedSections.has('employees') ? 'employees' : 'account');
+  }, [currentUser, activeSection]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // ── Dark mode ─────────────────────────────────────────────────────────────
   // Explicit choice is saved in localStorage; with no saved choice we follow the OS setting.
   const [adminTheme, setAdminTheme] = useState(() => {
@@ -11231,6 +10539,7 @@ export default function Admin() {
       setTotalPages(totalPages);
       return;
     }
+    if (currentUser && !(canSee('dashboard') || canSee('analytics'))) return;   // role has no dashboard: do not call APIs it will refuse
     try {
       const [sr, er] = await Promise.all([
         adminAPI.getStats(),
@@ -11894,7 +11203,7 @@ export default function Admin() {
               </button>
             </div>
             <nav className="flex-1 py-3 px-2 space-y-0.5">
-              {NAV_ITEMS.map(({ id, label, icon: I }) => {
+              {NAV_ITEMS.filter(n => canSee(n.id)).map(({ id, label, icon: I }) => {
                 const isCc  = id === 'command-center';
                 const isSec = id === 'security';
                 const isWl  = id === 'whitelabel';
@@ -11922,9 +11231,11 @@ export default function Admin() {
               })}
             </nav>
             <div className="p-2 border-t border-white/5 space-y-0.5">
+              {hasFlag('canRunCleanup') && (
               <button onClick={() => { setCleanupResult(null); setShowCleanup(true); setMobileNavOpen(false); }} className="w-full flex items-center gap-3 px-2.5 py-2.5 rounded-xl text-sm font-medium text-red-400 hover:bg-red-900/30 hover:text-red-300 transition-all">
                 <Trash className="w-4 h-4 flex-shrink-0" /> Cleanup
               </button>
+              )}
               <button onClick={logout} className="w-full flex items-center gap-3 px-2.5 py-2.5 rounded-xl text-sm font-medium text-neutral-400 hover:bg-white/5 hover:text-white transition-all">
                 <LogOut className="w-4 h-4 flex-shrink-0" /> Logout
               </button>
@@ -11948,7 +11259,7 @@ export default function Admin() {
 
         {/* Nav */}
         <nav className="flex-1 py-3 px-2 space-y-0.5 overflow-y-auto">
-          {NAV_ITEMS.map(({ id, label, icon: I }) => {
+          {NAV_ITEMS.filter(n => canSee(n.id)).map(({ id, label, icon: I }) => {
             const isCc  = id === 'command-center';
             const isSec = id === 'security';
             const isWl  = id === 'whitelabel';
@@ -11979,9 +11290,11 @@ export default function Admin() {
 
         {/* Bottom actions */}
         <div className="p-2 border-t border-white/5 space-y-0.5">
+          {hasFlag('canRunCleanup') && (
           <button onClick={() => { setCleanupResult(null); setShowCleanup(true); }} className="w-full flex items-center gap-3 px-2.5 py-2.5 rounded-xl text-sm font-medium text-red-400 hover:bg-red-900/30 hover:text-red-300 transition-all" title={!sidebarOpen ? 'Cleanup' : undefined}>
             <Trash className="w-4 h-4 flex-shrink-0" />{sidebarOpen && 'Cleanup'}
           </button>
+          )}
           <button onClick={logout} className="w-full flex items-center gap-3 px-2.5 py-2.5 rounded-xl text-sm font-medium text-neutral-400 hover:bg-white/5 hover:text-white transition-all" title={!sidebarOpen ? 'Logout' : undefined}>
             <LogOut className="w-4 h-4 flex-shrink-0" />{sidebarOpen && 'Logout'}
           </button>
@@ -12023,7 +11336,7 @@ export default function Admin() {
           </div>
 
           {/* Global search — desktop only */}
-          <form className="hidden sm:flex gap-2 items-center" onSubmit={async (e) => {
+          <form className={`${canSee('events') ? 'hidden sm:flex' : 'hidden'} gap-2 items-center`} onSubmit={async (e) => {
             e.preventDefault();
             if (!searchQuery.trim()) return;
             setSearchLoading(true);
@@ -12201,7 +11514,7 @@ export default function Admin() {
           {activeSection === 'users'          && !selectedEvent && <div className="max-w-7xl mx-auto"><AllUsersPanel /></div>}
           {activeSection === 'organizers'     && !selectedEvent && <div className="max-w-7xl mx-auto"><OrganizersPanel /></div>}
           {activeSection === 'staff'          && !selectedEvent && <div className="max-w-7xl mx-auto"><StaffPanel /></div>}
-          {activeSection === 'employees'      && !selectedEvent && <div className="max-w-5xl mx-auto"><EmployeesPanel currentUser={currentUser} /></div>}
+          {activeSection === 'employees'      && !selectedEvent && <div className="max-w-5xl mx-auto"><EmployeesPanel currentUser={currentUser} onNavigate={(id) => { setActiveSection(id); setSelectedEvent(null); }} /></div>}
           {activeSection === 'audit-logs'    && !selectedEvent && <div className="max-w-5xl mx-auto"><AuditLogsPanel /></div>}
           {activeSection === 'analytics'      && !selectedEvent && <div className="max-w-5xl mx-auto"><AnalyticsPanel stats={stats} /></div>}
           {activeSection === 'platform-analytics' && !selectedEvent && <div className="max-w-6xl mx-auto"><PlatformAnalyticsDashboard /></div>}
@@ -12391,7 +11704,7 @@ export default function Admin() {
           { id: 'fleet',      icon: Rocket,    label: 'Fleet'     },
           { id: 'marketing',  icon: Send,      label: 'Marketing' },
           { id: 'system',     icon: Server,    label: 'System'    },
-        ].map(({ id, icon: Icon, label }) => (
+        ].filter(n => canSee(n.id)).map(({ id, icon: Icon, label }) => (
           <button key={id}
             onClick={() => { setActiveSection(id); setSelectedEvent(null); }}
             className={`flex flex-col items-center gap-0.5 py-2 px-2 min-w-0 flex-1 transition-colors ${
@@ -12404,7 +11717,7 @@ export default function Admin() {
           </button>
         ))}
         {/* More button → cycles through remaining sections */}
-        <MoreNavButton activeSection={activeSection} setActiveSection={(id) => { setActiveSection(id); setSelectedEvent(null); }} onLogout={logout} />
+        <MoreNavButton canSee={canSee} activeSection={activeSection} setActiveSection={(id) => { setActiveSection(id); setSelectedEvent(null); }} onLogout={logout} />
       </nav>
 
 </div>

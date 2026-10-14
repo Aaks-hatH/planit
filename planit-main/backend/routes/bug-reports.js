@@ -119,8 +119,10 @@ async function sendAlert(report) {
 const jwt    = require('jsonwebtoken');
 const crypto = require('crypto');
 const { secrets } = require('../keys');
+const { hasPerm } = require('../utils/permissions');
+const { loadEmployeeAccess } = require('../middleware/auth');
 
-function verifyAdmin(req, res, next) {
+async function verifyAdmin(req, res, next) {
   const auth = req.headers.authorization || '';
   // Support both Authorization header and ?token= query param (used by SSE/iframe)
   const token = auth.startsWith('Bearer ') ? auth.slice(7) : (req.query.token || null);
@@ -129,6 +131,20 @@ function verifyAdmin(req, res, next) {
     const decoded = jwt.verify(token, secrets.jwt);
     if (!decoded.isAdmin) return res.status(403).json({ error: 'Admin access required' });
     req.admin = decoded;
+
+    // Bug reports need canManageBugReports. The alert quick-access link (HMAC-signed, read-only) is exempt.
+    if (!decoded.alertAccess) {
+      if (decoded.isEmployee && decoded.employeeId) {
+        try {
+          const acc = await loadEmployeeAccess(decoded.employeeId);
+          if (acc.missing || acc.status !== 'active') return res.status(401).json({ error: 'Your account is no longer active.' });
+          decoded.role = acc.role; decoded.permissions = acc.permissions; decoded.isDemo = acc.isDemo;
+        } catch (_) { /* fall back to the token snapshot */ }
+      }
+      if (!hasPerm(decoded, 'canManageBugReports')) {
+        return res.status(403).json({ error: "Your account does not have the 'canManageBugReports' permission required for this action.", requiredPermission: 'canManageBugReports' });
+      }
+    }
 
     // Alert quick-access tokens are read-only — block mutations so the admin
     // panel always requires a full login before making any changes.

@@ -369,6 +369,12 @@ export const adminAPI = {
   // All participants across every event (paginated)
   getAllParticipants: (params) => api.get('/admin/all-participants', { params }),
 
+  // Team: roles/permissions catalog, my manager + reports, sign-in history, permission sync
+  getTeamCatalog:        ()        => api.get('/admin/team/catalog'),
+  getMyTeam:             ()        => api.get('/careers/admin/org/me'),
+  getTeamLogins:         (actorId) => api.get(`/admin/team/logins/${actorId}`),
+  syncTeamPermissions:   ()        => api.post('/admin/team/sync-permissions'),
+
   // Employee CRUD
   getEmployees:   ()         => api.get('/admin/employees'),
   createEmployee: (data)     => api.post('/admin/employees', data),
@@ -376,7 +382,8 @@ export const adminAPI = {
   deleteEmployee: (id)       => api.delete(`/admin/employees/${id}`),
 
   // Employee security actions
-  suspendEmployee:     (id, suspend, reason) => api.patch(`/admin/employees/${id}/suspend`, { suspend, reason }),
+  // POST (the backend route is POST; this used to be PATCH and 404'd). Explicit suspend flag + optional reason.
+  suspendEmployee:     (id, suspend, reason) => api.post(`/admin/employees/${id}/suspend`, { suspend, reason }),
   forceResetEmployee:  (id)                  => api.post(`/admin/employees/${id}/force-reset`),
   changeEmployeePassword: (id, data)         => api.post(`/admin/employees/${id}/change-password`, data),
 

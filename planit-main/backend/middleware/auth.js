@@ -8,6 +8,35 @@ const Event = require('../models/Event');
 const { secrets } = require('../keys');
 // Redis for session revocation checks (brute-force lockout keys also live here)
 const redis = require('../services/redisClient');
+const { isSuperAdmin, hasPerm } = require('../utils/permissions');
+
+// ─── Fresh employee access ────────────────────────────────────────────────────
+// A JWT carries a snapshot of the employee's role + permissions from the moment they signed in. If a
+// super admin later changes that person's role, flips a flag, suspends or deletes them, the old
+// snapshot must not keep working for up to 24h. verifyAdmin therefore re-reads role / permissions /
+// status from the database (cached for a few seconds per process) and overrides the token's copy.
+// Fails open to the token snapshot if the database is unreachable, same policy as the Redis check.
+const accessCache = new Map(); // employeeId -> { ts, data }
+const ACCESS_TTL  = 10 * 1000;
+
+async function loadEmployeeAccess(employeeId) {
+  const id = String(employeeId);
+  const hit = accessCache.get(id);
+  if (hit && (Date.now() - hit.ts) < ACCESS_TTL) return hit.data;
+  if (!mongoose.isValidObjectId(id)) return { missing: true };
+  const Employee = require('../models/Employee');
+  const emp = await Employee.findById(id).select('role permissions status isDemo name email').lean();
+  const data = emp
+    ? { role: emp.role, permissions: emp.permissions || {}, status: emp.status, isDemo: !!emp.isDemo, name: emp.name, email: emp.email }
+    : { missing: true };
+  accessCache.set(id, { ts: Date.now(), data });
+  return data;
+}
+function invalidateEmployeeAccess(employeeId) { accessCache.delete(String(employeeId)); }
+setInterval(() => {
+  const cutoff = Date.now() - ACCESS_TTL;
+  for (const [k, v] of accessCache) if (v.ts < cutoff) accessCache.delete(k);
+}, 60 * 1000).unref();
 
 // ─── Session revocation key helpers ───────────────────────────────────────────
 // When an employee is suspended or deleted, their employee-level revocation key
@@ -119,6 +148,17 @@ async function resolveAdminEventAccess(req, event) {
     const isAdminSession = decoded.isAdmin === true && !decoded.restricted && !decoded.isDemo;
     if (!isEventScopedAdmin && !isAdminSession) continue;
     if (isAdminSession && await isEmployeeRevoked(decoded)) continue;
+
+    // An admin session acts as organizer of ANY event, which is edit-level power. Root and super admins
+    // always may; an employee needs canEditEvents (read from the database, not the token snapshot) and
+    // an active account. Event-scoped tokens are only minted for people who passed that same check.
+    if (isAdminSession && decoded.isEmployee && decoded.employeeId && decoded.role !== 'super_admin') {
+      try {
+        const acc = await loadEmployeeAccess(decoded.employeeId);
+        if (acc.missing || acc.status !== 'active' || acc.isDemo) continue;
+        if (acc.role !== 'super_admin' && acc.permissions?.canEditEvents !== true) continue;
+      } catch (_) { if (decoded.permissions?.canEditEvents !== true) continue; }
+    }
 
     const organizer = (event.participants || []).find(p => p.role === 'organizer');
     return {
@@ -401,6 +441,22 @@ const verifyAdmin = async (req, res, next) => {
     }
   }
 
+  // ── Fresh role / permissions / status (see loadEmployeeAccess) ─────────────
+  if (decoded.isEmployee && decoded.employeeId) {
+    try {
+      const acc = await loadEmployeeAccess(decoded.employeeId);
+      if (acc.missing || acc.status !== 'active') {
+        return res.status(401).json({ error: 'Your account is no longer active. Please contact an administrator.', revoked: true });
+      }
+      decoded.role        = acc.role;
+      decoded.permissions = acc.permissions;
+      decoded.isDemo      = acc.isDemo;
+      if (acc.name) decoded.name = acc.name;
+    } catch (e) {
+      console.error('[auth] employee access refresh failed (using token snapshot):', e.message);
+    }
+  }
+
   req.admin = decoded;
   next();
 };
@@ -469,11 +525,8 @@ const requirePermission = (perm) => (req, res, next) => {
   const admin = req.admin;
   if (!admin) return res.status(401).json({ error: 'Not authenticated.' });
 
-  // Root super-admin (env-var login) passes everything
-  if (!admin.isEmployee && admin.isAdmin === true) return next();
-
-  // Employee super_admin passes everything
-  if (admin.role === 'super_admin') return next();
+  // Root super-admin (env-var login) and employee super_admin pass everything
+  if (isSuperAdmin(admin)) return next();
 
   // Demo accounts are never allowed past a permission gate
   if (admin.isDemo) {
@@ -484,11 +537,24 @@ const requirePermission = (perm) => (req, res, next) => {
   }
 
   // Check the named permission flag
-  if (admin.permissions && admin.permissions[perm] === true) return next();
+  if (hasPerm(admin, perm)) return next();
 
   return res.status(403).json({
     error: `Your account does not have the '${perm}' permission required for this action.`,
     requiredPermission: perm,
+  });
+};
+
+// Same as requirePermission, but any ONE of the listed flags is enough.
+const requireAnyPermission = (...perms) => (req, res, next) => {
+  const admin = req.admin;
+  if (!admin) return res.status(401).json({ error: 'Not authenticated.' });
+  if (isSuperAdmin(admin)) return next();
+  if (admin.isDemo) return res.status(403).json({ error: 'Demo accounts cannot perform this action.', demo: true });
+  if (perms.some((p) => hasPerm(admin, p))) return next();
+  return res.status(403).json({
+    error: `Your account does not have access to this. One of these permissions is required: ${perms.join(', ')}.`,
+    requiredPermission: perms,
   });
 };
 
@@ -558,7 +624,10 @@ module.exports = {
   verifyAdmin,
   resolveAdminEventAccess,
   requirePermission,
+  requireAnyPermission,
   requireSuperAdminRole,
+  loadEmployeeAccess,
+  invalidateEmployeeAccess,
   demoGuard,
   revokeEmployeeSessions,
   clearEmployeeRevocation,

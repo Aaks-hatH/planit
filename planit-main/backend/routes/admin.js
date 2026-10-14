@@ -14,8 +14,12 @@ const File = require('../models/File');
 const EventParticipant = require('../models/EventParticipant');
 const Invite = require('../models/Invite');
 const Employee = require('../models/Employee');
-const { verifyAdmin, requirePermission, requireSuperAdminRole, demoGuard,
-        revokeEmployeeSessions, clearEmployeeRevocation } = require('../middleware/auth');
+const { verifyAdmin, requirePermission, requireAnyPermission, requireSuperAdminRole, demoGuard,
+        revokeEmployeeSessions, clearEmployeeRevocation, invalidateEmployeeAccess } = require('../middleware/auth');
+const OrgNode        = require('../models/OrgNode');
+const JobApplication = require('../models/JobApplication');
+const perms          = require('../utils/permissions');
+const team           = require('../services/teamService');
 const { authLimiter } = require('../middleware/rateLimiter');
 const { secrets } = require('../keys');
 const Blocklist = require('../models/Blocklist');
@@ -324,8 +328,9 @@ router.post(
         );
 
         Employee.findByIdAndUpdate(employee._id, {
-          $set: { lastLogin: new Date() }, $inc: { loginCount: 1 },
+          $set: { lastLogin: new Date(), previousLogin: employee.lastLogin || null }, $inc: { loginCount: 1 },
         }).catch(() => {});
+        team.recordLogin(req, { actorId: employee._id, name: employee.name, email: employee.email, role: employee.role, totp: !!employee.totpEnabled });
 
         audit('login_success', {
           req,
@@ -382,6 +387,7 @@ router.post(
         { expiresIn: '24h' },
       );
 
+      team.recordLogin(req, { actorId: 'root', actorType: 'root', name: 'Super Admin', email: String(username), role: 'super_admin', totp: rootTotpEnabled });
       audit('login_success', {
         req,
         actor: { email: username, role: 'super_admin', name: 'Root Admin' },
@@ -590,7 +596,7 @@ router.use(demoGuard);
 // DASHBOARD & STATISTICS
 // ═══════════════════════════════════════════════════════════════════════════════
 
-router.get('/stats', verifyAdmin, async (req, res, next) => {
+router.get('/stats', verifyAdmin, requireAnyPermission('canViewDashboard', 'canViewAnalytics'), async (req, res, next) => {
   try {
     const [
       totalEvents,
@@ -879,7 +885,7 @@ router.get('/logs/full', verifyAdmin, requirePermission('canViewLogs'), async (r
 // ═══════════════════════════════════════════════════════════════════════════════
 
 // Get all events (paginated + filterable)
-router.get('/events', verifyAdmin, async (req, res, next) => {
+router.get('/events', verifyAdmin, requirePermission('canViewEvents'), async (req, res, next) => {
   try {
     const page  = parseInt(req.query.page)  || 1;
     const limit = parseInt(req.query.limit) || 20;
@@ -924,7 +930,7 @@ router.get('/events', verifyAdmin, async (req, res, next) => {
 });
 
 // Get single event details
-router.get('/events/:eventId', verifyAdmin, async (req, res, next) => {
+router.get('/events/:eventId', verifyAdmin, requirePermission('canViewEvents'), async (req, res, next) => {
   try {
     const event = await Event.findById(req.params.eventId);
     if (!event) return res.status(404).json({ error: 'Event not found' });
@@ -1078,7 +1084,7 @@ router.delete('/events/:eventId', verifyAdmin, requirePermission('canDeleteEvent
 // MESSAGES MANAGEMENT
 // ═══════════════════════════════════════════════════════════════════════════════
 
-router.get('/events/:eventId/messages', verifyAdmin, async (req, res, next) => {
+router.get('/events/:eventId/messages', verifyAdmin, requirePermission('canViewEvents'), async (req, res, next) => {
   try {
     const messages = await Message.find({ eventId: req.params.eventId, isDeleted: false })
       .sort({ createdAt: 1 })
@@ -1109,7 +1115,7 @@ router.post('/events/:eventId/messages/bulk-delete', verifyAdmin, requirePermiss
 // PARTICIPANTS MANAGEMENT
 // ═══════════════════════════════════════════════════════════════════════════════
 
-router.get('/events/:eventId/participants', verifyAdmin, async (req, res, next) => {
+router.get('/events/:eventId/participants', verifyAdmin, requirePermission('canViewEvents'), async (req, res, next) => {
   try {
     const participants = await EventParticipant.find({ eventId: req.params.eventId })
       .select('-password')
@@ -1157,7 +1163,7 @@ router.post('/events/:eventId/participants/bulk-remove', verifyAdmin, requirePer
 // POLLS MANAGEMENT
 // ═══════════════════════════════════════════════════════════════════════════════
 
-router.get('/events/:eventId/polls', verifyAdmin, async (req, res, next) => {
+router.get('/events/:eventId/polls', verifyAdmin, requirePermission('canViewEvents'), async (req, res, next) => {
   try {
     const polls = await Poll.find({ eventId: req.params.eventId }).sort({ createdAt: -1 }).lean();
     res.json({ polls });
@@ -1175,7 +1181,7 @@ router.delete('/events/:eventId/polls/:pollId', verifyAdmin, requirePermission('
 // FILES MANAGEMENT
 // ═══════════════════════════════════════════════════════════════════════════════
 
-router.get('/events/:eventId/files', verifyAdmin, async (req, res, next) => {
+router.get('/events/:eventId/files', verifyAdmin, requirePermission('canViewEvents'), async (req, res, next) => {
   try {
     const files = await File.find({ eventId: req.params.eventId, isDeleted: false })
       .sort({ uploadedAt: -1 })
@@ -1195,7 +1201,7 @@ router.delete('/events/:eventId/files/:fileId', verifyAdmin, requirePermission('
 // INVITES MANAGEMENT (Enterprise Mode)
 // ═══════════════════════════════════════════════════════════════════════════════
 
-router.get('/events/:eventId/invites', verifyAdmin, async (req, res, next) => {
+router.get('/events/:eventId/invites', verifyAdmin, requirePermission('canViewEvents'), async (req, res, next) => {
   try {
     if (!Invite) return res.json({ invites: [] });
     const invites = await Invite.find({ eventId: req.params.eventId })
@@ -1231,7 +1237,7 @@ router.delete('/events/:eventId/invites/:inviteId', verifyAdmin, requirePermissi
 // in-app participant yes/maybe/no). These are collected via the public RSVP
 // page builder and can carry plus-ones, custom answers, seating selections,
 // approval status, and check-in state.
-router.get('/events/:eventId/rsvp-submissions', verifyAdmin, async (req, res, next) => {
+router.get('/events/:eventId/rsvp-submissions', verifyAdmin, requirePermission('canViewEvents'), async (req, res, next) => {
   try {
     const RSVPSubmission = require('../models/RSVPSubmission');
     const submissions = await RSVPSubmission.find({ eventId: req.params.eventId, deletedAt: null })
@@ -1298,7 +1304,7 @@ router.delete('/events/:eventId/rsvp-submissions/:submissionId', verifyAdmin, re
 
 // ─── GET /events/:eventId/full ─────────────────────────────────────────────────
 // Returns all event data in a single round-trip for the admin event detail panel.
-router.get('/events/:eventId/full', verifyAdmin, async (req, res, next) => {
+router.get('/events/:eventId/full', verifyAdmin, requirePermission('canViewEvents'), async (req, res, next) => {
   try {
     const { getModel: getAnalyticsModel } = require('../models/PlatformAnalytics');
     const { eventId } = req.params;
@@ -1413,7 +1419,7 @@ router.get('/events/:eventId/full', verifyAdmin, async (req, res, next) => {
 });
 
 // ─── PATCH /events/:eventId/admin-notes ───────────────────────────────────────
-router.patch('/events/:eventId/admin-notes', verifyAdmin, async (req, res, next) => {
+router.patch('/events/:eventId/admin-notes', verifyAdmin, requirePermission('canEditEvents'), async (req, res, next) => {
   try {
     const { adminNotes } = req.body || {};
     if (typeof adminNotes !== 'string') return res.status(400).json({ error: 'adminNotes must be a string' });
@@ -1505,7 +1511,7 @@ router.patch('/events/:eventId/event-type', verifyAdmin, requirePermission('canE
 //   page      int  (default 1)
 //   limit     int  (default 25)
 //   sort      'score_desc' | 'score_asc' | 'newest' | 'oldest'
-router.get('/spam/events', verifyAdmin, async (req, res, next) => {
+router.get('/spam/events', verifyAdmin, requirePermission('canViewEvents'), async (req, res, next) => {
   try {
     const { analyzeEvent: _ae, reAnalyzeEvent: _rae } = require('../services/spamDetector');
     const page    = Math.max(1, parseInt(req.query.page)  || 1);
@@ -1552,7 +1558,7 @@ router.get('/spam/events', verifyAdmin, async (req, res, next) => {
 
 // ─── GET /admin/spam/events/:eventId ──────────────────────────────────────────
 // Full spam detail for a single event (flags, score breakdown, creator metadata).
-router.get('/spam/events/:eventId', verifyAdmin, async (req, res, next) => {
+router.get('/spam/events/:eventId', verifyAdmin, requirePermission('canViewEvents'), async (req, res, next) => {
   try {
     const event = await Event.findById(req.params.eventId)
       .select('+spamScore +spamFlags +spamVerdict +adminNotes +creatorIp +creatorUserAgent +creatorFingerprint')
@@ -1581,7 +1587,7 @@ router.get('/spam/events/:eventId', verifyAdmin, async (req, res, next) => {
 
 // ─── POST /admin/spam/events/:eventId/reanalyze ────────────────────────────────
 // Re-run spam analysis on an existing event (useful after content edits).
-router.post('/spam/events/:eventId/reanalyze', verifyAdmin, async (req, res, next) => {
+router.post('/spam/events/:eventId/reanalyze', verifyAdmin, requirePermission('canEditEvents'), async (req, res, next) => {
   try {
     const { reAnalyzeEvent } = require('../services/spamDetector');
     const result = await reAnalyzeEvent(req.params.eventId);
@@ -1716,7 +1722,7 @@ router.post('/spam/events/bulk-action', verifyAdmin, requirePermission('canDelet
 // ─── GET /admin/spam/rsvps ─────────────────────────────────────────────────────
 // List RSVP submissions that were auto-flagged as spam suspects
 // (identified by the presence of "[Auto-flagged]" in organizerNotes).
-router.get('/spam/rsvps', verifyAdmin, async (req, res, next) => {
+router.get('/spam/rsvps', verifyAdmin, requirePermission('canViewEvents'), async (req, res, next) => {
   try {
     const RSVPSubmission = require('../models/RSVPSubmission');
     const page  = Math.max(1, parseInt(req.query.page)  || 1);
@@ -1818,7 +1824,7 @@ router.post('/spam/rsvps/bulk-action', verifyAdmin, requirePermission('canDelete
 
 // ─── GET /admin/spam/stats ────────────────────────────────────────────────────
 // Platform-wide spam statistics for the admin dashboard.
-router.get('/spam/stats', verifyAdmin, async (req, res, next) => {
+router.get('/spam/stats', verifyAdmin, requirePermission('canViewEvents'), async (req, res, next) => {
   try {
     const RSVPSubmission = require('../models/RSVPSubmission');
     const since7d  = new Date(Date.now() - 7  * 24 * 60 * 60 * 1000);
@@ -1884,7 +1890,7 @@ router.get('/spam/stats', verifyAdmin, async (req, res, next) => {
 // ─── POST /admin/spam/analyze-text ────────────────────────────────────────────
 // Dry-run spam analysis on arbitrary text (for admin testing/investigation).
 // body: { title?, description?, email?, subdomain?, name? }
-router.post('/spam/analyze-text', verifyAdmin, async (req, res, next) => {
+router.post('/spam/analyze-text', verifyAdmin, requirePermission('canViewEvents'), async (req, res, next) => {
   try {
     const { analyzeEvent } = require('../services/spamDetector');
     const result = await analyzeEvent({
@@ -1906,7 +1912,7 @@ router.post('/spam/analyze-text', verifyAdmin, async (req, res, next) => {
 // SEARCH & ACTIVITY
 // ═══════════════════════════════════════════════════════════════════════════════
 
-router.get('/search', verifyAdmin, async (req, res, next) => {
+router.get('/search', verifyAdmin, requirePermission('canViewEvents'), async (req, res, next) => {
   try {
     const query = req.query.q;
     if (!query || query.length < 2) {
@@ -1945,7 +1951,7 @@ router.get('/search', verifyAdmin, async (req, res, next) => {
   }
 });
 
-router.get('/activity', verifyAdmin, async (req, res, next) => {
+router.get('/activity', verifyAdmin, requirePermission('canViewDashboard'), async (req, res, next) => {
   try {
     const since = new Date(Date.now() - 48 * 60 * 60 * 1000);
     const [recentEvents, recentMessages, recentParticipants] = await Promise.all([
@@ -1964,7 +1970,7 @@ router.get('/activity', verifyAdmin, async (req, res, next) => {
 // Aggregates unique organizers from the events collection.
 // ═══════════════════════════════════════════════════════════════════════════════
 
-router.get('/organizers', verifyAdmin, async (req, res, next) => {
+router.get('/organizers', verifyAdmin, requirePermission('canViewUserProfiles'), async (req, res, next) => {
   try {
     const organizers = await Event.aggregate([
       {
@@ -1994,7 +2000,7 @@ router.get('/organizers', verifyAdmin, async (req, res, next) => {
 // Returns every staff-role EventParticipant enriched with event title.
 // ═══════════════════════════════════════════════════════════════════════════════
 
-router.get('/staff', verifyAdmin, async (req, res, next) => {
+router.get('/staff', verifyAdmin, requirePermission('canViewUserProfiles'), async (req, res, next) => {
   try {
     const staff = await EventParticipant.find({ role: 'staff' })
       .select('-password')
@@ -2022,7 +2028,7 @@ router.get('/staff', verifyAdmin, async (req, res, next) => {
 // Every participant (non-staff) across all events, paginated.
 // ═══════════════════════════════════════════════════════════════════════════════
 
-router.get('/all-participants', verifyAdmin, async (req, res, next) => {
+router.get('/all-participants', verifyAdmin, requirePermission('canViewUserProfiles'), async (req, res, next) => {
   try {
     const page   = parseInt(req.query.page  || '1');
     const limit  = parseInt(req.query.limit || '50');
@@ -2064,8 +2070,18 @@ router.get('/all-participants', verifyAdmin, async (req, res, next) => {
 
 // GET /admin/me — returns the current admin's own profile and permission set.
 // Useful for the frontend to know which UI sections to show/hide.
-router.get('/me', verifyAdmin, (req, res) => {
+router.get('/me', verifyAdmin, async (req, res) => {
   const admin = req.admin;
+  const rootLogin = !admin.isEmployee && admin.isAdmin === true;
+  let login = { lastLogin: null, previousLogin: null, loginCount: 0 };
+  try {
+    if (admin.employeeId) {
+      const e = await Employee.findById(admin.employeeId).select('lastLogin previousLogin loginCount').lean();
+      if (e) login = { lastLogin: e.lastLogin || null, previousLogin: e.previousLogin || null, loginCount: e.loginCount || 0 };
+    } else if (rootLogin) {
+      login = await team.rootLoginStats();
+    }
+  } catch (_) { /* login info is a nicety, never block /me */ }
   res.json({
     _id:         admin.employeeId  || null,  // MongoDB _id for employee accounts; null for root
     name:        admin.name        || admin.username || 'Admin',
@@ -2074,6 +2090,8 @@ router.get('/me', verifyAdmin, (req, res) => {
     isEmployee:  admin.isEmployee  || false,
     isDemo:      admin.isDemo      || false,
     permissions: admin.permissions || null, // null = root admin (all access)
+    sections:    perms.sectionsFor(admin),  // admin pages this person may open (server-side source of truth)
+    ...login,
   });
 });
 
@@ -2083,6 +2101,7 @@ router.get('/me/full', verifyAdmin, async (req, res, next) => {
     const empId = req.admin?.employeeId;
     if (!empId) {
       // Root admin — return synthetic profile
+      const rootStats = await team.rootLoginStats().catch(() => ({ lastLogin: null, previousLogin: null, loginCount: 0 }));
       return res.json({
         name:             req.admin.username || 'Root Admin',
         email:            null,
@@ -2095,8 +2114,9 @@ router.get('/me/full', verifyAdmin, async (req, res, next) => {
         emergencyContact: null,
         employeeId:       null,
         startDate:        null,
-        lastLogin:        null,
-        loginCount:       0,
+        lastLogin:        rootStats.lastLogin,
+        previousLogin:    rootStats.previousLogin,
+        loginCount:       rootStats.loginCount,
         createdAt:        null,
         twoFactorEnabled: !!(await redis.get('totp:root:secret').catch(() => null)),
         permissions:      null,
@@ -2172,104 +2192,257 @@ router.get('/me/audit', verifyAdmin, async (req, res, next) => {
   } catch (error) { next(error); }
 });
 
-router.get('/employees', verifyAdmin, async (req, res, next) => {
-  try {
-    // Strip passwordHash from every record before sending.
-    // Non-super_admin employees also cannot see the isDemo flag or full permissions
-    // of OTHER employees — only their own (via /me above).
-    const isSuperAdmin = req.admin.role === 'super_admin' ||
-                         (!req.admin.isEmployee && req.admin.isAdmin === true);
+// ─── Shared helpers for the Team routes ───────────────────────────────────────
+const SAFE_EMPLOYEE_STRIP = ['passwordHash', 'totpSecret'];
+const stripSecrets = (doc) => {
+  const o = typeof doc?.toObject === 'function' ? doc.toObject() : { ...doc };
+  for (const k of SAFE_EMPLOYEE_STRIP) delete o[k];
+  return o;
+};
+const sanitizePerms = (obj) => Object.fromEntries(perms.PERMISSION_KEYS.map((k) => [k, obj?.[k] === true]));
+const PW_RULE = /^(?=.*[A-Z])(?=.*[0-9])(?=.*[^A-Za-z0-9]).{10,}$/;
+const PW_MSG  = 'Password must be at least 10 characters with an uppercase letter, a number and a special character.';
+const isEmail = (e) => /^[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+$/.test(String(e || ''));
 
-    const raw = await Employee.find().sort({ createdAt: -1 }).lean();
-    const employees = raw.map(e => {
-      // eslint-disable-next-line no-unused-vars
-      const { passwordHash, ...safe } = e;
-      if (!isSuperAdmin) {
-        // Redact sensitive fields from non-super-admin viewers
-        delete safe.permissions;
-        delete safe.isDemo;
-        delete safe.passwordHash;
-      }
-      return safe;
-    });
-    res.json({ employees });
+// Who the viewer is on the org chart, and which boxes sit under them (their reports, direct and indirect).
+async function orgView(req) {
+  const docs = await OrgNode.find().select('title parentId employeeId personName personEmail status owner level').lean();
+  const t = team.treeOf(docs);
+  const mine = team.nodeOfAdmin(docs, req.admin);
+  const visible = new Set(mine ? [String(mine._id), ...t.subtree(mine._id)] : []);
+  return { docs, t, mine, visible };
+}
+
+// GET /admin/team/catalog - every role, permission group and admin section that exists. The Team page renders
+// from this, so a permission added in utils/permissions.js can never be "missing" from the UI.
+router.get('/team/catalog', verifyAdmin, (req, res) => {
+  res.json(perms.publicCatalog());
+});
+
+// GET /admin/team/logins/:actorId - sign-in history. Allowed for: super admins (anyone), yourself, and your managers
+// (anyone above you on the org chart). IP addresses are only shown to super admins and to the person themselves.
+router.get('/team/logins/:actorId', verifyAdmin, async (req, res, next) => {
+  try {
+    const sup = perms.isSuperAdmin(req.admin);
+    const target = String(req.params.actorId);
+    const rootLogin = !req.admin.isEmployee && req.admin.isAdmin === true;
+    const meId = req.admin.employeeId ? String(req.admin.employeeId) : (rootLogin ? 'root' : null);
+    let allowed = sup || (meId && meId === target);
+    if (!allowed && target !== 'root' && meId) {
+      const ov = await orgView(req);
+      const targetNode = ov.docs.find((d) => d.employeeId && String(d.employeeId) === target);
+      allowed = !!(ov.mine && targetNode && ov.visible.has(String(targetNode._id)));
+    }
+    if (!allowed) return res.status(403).json({ error: 'You can only see sign-in activity for yourself and the people you manage.' });
+    res.json({ logins: await team.recentLogins(target, 25, sup || meId === target) });
   } catch (error) { next(error); }
 });
 
+// POST /admin/team/sync-permissions - older accounts were created before newer permission flags existed, so those flags
+// are simply absent. This fills every missing flag from the person's ROLE defaults (never changes a flag that is already set).
+router.post('/team/sync-permissions', verifyAdmin, requireSuperAdminRole, async (req, res, next) => {
+  try {
+    const raw = await Employee.find().lean();
+    const details = [];
+    for (const e of raw) {
+      const preset = perms.presetFor(e.role);
+      const set = {};
+      for (const k of perms.PERMISSION_KEYS) {
+        if (e.permissions?.[k] === undefined) set[`permissions.${k}`] = e.role === 'super_admin' ? true : preset[k];
+      }
+      if (!Object.keys(set).length) continue;
+      await Employee.updateOne({ _id: e._id }, { $set: set });
+      invalidateEmployeeAccess(e._id);
+      details.push({ _id: String(e._id), name: e.name, role: e.role, added: Object.keys(set).map((k) => k.replace('permissions.', '')), granted: Object.entries(set).filter(([, v]) => v).length });
+    }
+    audit('permissions_synced', { req, actor: req.admin, targetType: 'employee', details: { accounts: details.length } });
+    res.json({ checked: raw.length, updated: details.length, details, message: details.length ? `Filled in missing permissions on ${details.length} account${details.length === 1 ? '' : 's'}` : 'Every account already has every permission flag' });
+  } catch (error) { next(error); }
+});
+
+// GET /admin/employees - the team directory. Needs canViewEmployees (super admins always). Everyone else uses /careers/admin/org/me.
+router.get('/employees', verifyAdmin, requirePermission('canViewEmployees'), async (req, res, next) => {
+  try {
+    const sup = perms.isSuperAdmin(req.admin);
+    const [raw, ov] = await Promise.all([Employee.find().sort({ createdAt: -1 }).lean(), orgView(req)]);
+    const nodeByEmp = new Map(ov.docs.filter((d) => d.employeeId).map((d) => [String(d.employeeId), d]));
+    const meId = req.admin.employeeId ? String(req.admin.employeeId) : null;
+
+    const employees = raw.map((e) => {
+      const safe = { ...e };
+      for (const k of SAFE_EMPLOYEE_STRIP) delete safe[k];
+
+      const node = nodeByEmp.get(String(e._id)) || null;
+      const parent = node?.parentId ? ov.t.byId.get(String(node.parentId)) : null;
+      safe.position = node ? { _id: String(node._id), title: node.title, level: node.level } : null;
+      safe.manager = parent ? { nodeId: String(parent._id), name: parent.status === 'open' ? null : parent.personName, title: parent.title, open: parent.status === 'open', employeeId: parent.employeeId ? String(parent.employeeId) : null } : null;
+      safe.reportCount = node ? ov.t.direct(node._id).length : 0;
+
+      // Sign-in activity: yourself, the people under you, or everyone if you are a super admin.
+      const canSeeLogin = sup || String(e._id) === meId || (node && ov.visible.has(String(node._id)));
+      if (!canSeeLogin) { delete safe.lastLogin; delete safe.previousLogin; delete safe.loginCount; safe.loginHidden = true; }
+
+      if (sup) {
+        safe.missingPermissions = perms.PERMISSION_KEYS.filter((k) => e.permissions?.[k] === undefined);
+      } else {
+        for (const k of ['permissions', 'isDemo', 'phone', 'emergencyContact', 'notes', 'twoFactorEnabled', 'totpEnabled', 'forcePasswordReset', 'accessibleEvents', 'githubUsername', 'githubAccess']) delete safe[k];
+      }
+      return safe;
+    });
+
+    const root = sup ? { name: 'Super Admin', ...(await team.rootLoginStats()) } : null;
+    res.json({ employees, root });
+  } catch (error) { next(error); }
+});
+
+// POST /admin/employees - add a person. One call does everything:
+//   role -> default permissions, a strong one-time password, the org-chart box (fill an open position or sit under a
+//   manager), and marking the hiring application accepted when they came from Careers.
 router.post('/employees', verifyAdmin, requireSuperAdminRole, async (req, res, next) => {
   try {
     const {
       name, email, role, department, phone, notes, permissions, startDate, status, isDemo,
       timezone, location, emergencyContact, employeeId, twoFactorEnabled, forcePasswordReset, accessibleEvents,
+      orgNodeId, managerNodeId, positionTitle, applicationId, githubUsername, githubAccess,
     } = req.body;
-    if (!name || !email) return res.status(400).json({ error: 'Name and email required' });
+    const cleanName  = String(name || '').trim();
+    const cleanEmail = String(email || '').trim().toLowerCase();
+    if (!cleanName || !cleanEmail) return res.status(400).json({ error: 'Name and email required' });
+    if (!isEmail(cleanEmail)) return res.status(400).json({ error: 'That email address does not look right.' });
 
-    const existing = await Employee.findOne({ email: email.toLowerCase().trim() });
-    if (existing) return res.status(400).json({ error: 'Email already registered' });
+    const roleId = role || 'volunteer';
+    if (!perms.ROLE_IDS.includes(roleId)) return res.status(400).json({ error: `Unknown role "${roleId}".` });
+
+    if (await Employee.findOne({ email: cleanEmail })) return res.status(400).json({ error: 'Email already registered' });
 
     const empData = {
-      name, email, role: role || 'support', department, phone, notes, permissions, status,
+      name: cleanName, email: cleanEmail, role: roleId, department, phone, notes, status,
       timezone, location, emergencyContact, employeeId,
+      // Role decides the starting access. Explicit flags (the "customise" step) win when sent.
+      permissions: roleId === 'super_admin' ? perms.allPermissions() : (permissions && typeof permissions === 'object' ? sanitizePerms(permissions) : perms.presetFor(roleId)),
+      isDemo: typeof isDemo === 'boolean' ? isDemo : roleId === 'demo',
     };
-    if (typeof isDemo === 'boolean') empData.isDemo = isDemo;
     if (typeof twoFactorEnabled === 'boolean') empData.twoFactorEnabled = twoFactorEnabled;
-    if (typeof forcePasswordReset === 'boolean') empData.forcePasswordReset = forcePasswordReset;
     if (Array.isArray(accessibleEvents)) empData.accessibleEvents = accessibleEvents;
-    if (startDate && startDate.trim()) {
+    if (githubUsername) empData.githubUsername = String(githubUsername).trim().slice(0, 39);
+    if (['none', 'read', 'write'].includes(githubAccess)) empData.githubAccess = githubAccess;
+    if (startDate && String(startDate).trim()) {
       const d = new Date(startDate);
       if (!isNaN(d.getTime())) empData.startDate = d;
     }
-    if (req.body.password && req.body.password.trim()) {
-      empData.passwordHash = await bcrypt.hash(req.body.password.trim(), 10);
+
+    // Password: use the one supplied, otherwise generate a strong one-time password. Either way the person
+    // is forced to choose their own on first login unless the caller explicitly says otherwise.
+    let tempPassword = null;
+    const supplied = req.body.password && String(req.body.password).trim();
+    if (supplied) {
+      if (!PW_RULE.test(supplied)) return res.status(400).json({ error: PW_MSG });
+      empData.passwordHash = await bcrypt.hash(supplied, 10);
+    } else {
+      tempPassword = team.generatePassword();
+      empData.passwordHash = await bcrypt.hash(tempPassword, 10);
     }
+    empData.forcePasswordReset = typeof forcePasswordReset === 'boolean' ? forcePasswordReset : true;
+
     const emp = await Employee.create(empData);
     audit('employee_created', {
       req, actor: req.admin,
       targetId: emp._id.toString(), targetType: 'employee',
       details: { name: emp.name, email: emp.email, role: emp.role, createdBy: req.admin.email || req.admin.username },
     });
-    res.status(201).json({ employee: emp, message: 'Employee created' });
+
+    // Put them on the org chart so their manager / reports exist from day one.
+    let node = null; let chartError = null;
+    try {
+      node = await team.placeOnChart({ emp, orgNodeId, managerNodeId, title: String(positionTitle || '').trim().slice(0, 120), department: String(department || '').trim().slice(0, 80), by: req.admin.email || req.admin.username || 'super admin' });
+    } catch (e) { chartError = e.message || 'Could not place them on the org chart'; console.error('[team] placeOnChart failed:', e.message); }
+
+    // Came from a hiring application? Mark it accepted (and keep the history).
+    let application = null;
+    if (applicationId && mongoose.isValidObjectId(String(applicationId))) {
+      try {
+        const app = await JobApplication.findById(applicationId);
+        if (app) {
+          if (app.status !== 'accepted') { app.status = 'accepted'; app.statusHistory.push({ status: 'accepted', by: req.admin.email || req.admin.username || 'super admin' }); await app.save(); }
+          application = { _id: String(app._id), status: app.status };
+        }
+      } catch (e) { console.error('[team] application update failed:', e.message); }
+    }
+
+    audit('employee_onboarded', {
+      req, actor: req.admin, targetId: emp._id.toString(), targetType: 'employee',
+      details: { role: emp.role, onChart: !!node, fromApplication: !!application, generatedPassword: !!tempPassword },
+    });
+
+    res.status(201).json({
+      employee: stripSecrets(emp), node: node ? { _id: String(node._id), title: node.title, parentId: node.parentId ? String(node.parentId) : null } : null,
+      application, chartError, ...(tempPassword ? { tempPassword } : {}), message: 'Employee created',
+    });
   } catch (error) { next(error); }
 });
 
+const EDITABLE_EMPLOYEE_FIELDS = ['name', 'email', 'role', 'department', 'phone', 'notes', 'status', 'isDemo', 'timezone', 'location',
+  'emergencyContact', 'employeeId', 'twoFactorEnabled', 'forcePasswordReset', 'accessibleEvents', 'githubUsername', 'githubAccess', 'avatar'];
+
 router.patch('/employees/:id', verifyAdmin, requireSuperAdminRole, async (req, res, next) => {
   try {
-    const { password, startDate, ...rest } = req.body;
-    const updateData = { ...rest };
+    const { password, startDate, permissions, applyRoleDefaults } = req.body;
+    const updateData = {};
+    for (const f of EDITABLE_EMPLOYEE_FIELDS) if (req.body[f] !== undefined) updateData[f] = req.body[f];
 
-    // Hash new password if provided
-    if (password && password.trim()) {
-      updateData.passwordHash = await bcrypt.hash(password.trim(), 10);
+    const before = await Employee.findById(req.params.id).select('role status email name department').lean();
+    if (!before) return res.status(404).json({ error: 'Employee not found' });
+
+    if (updateData.role !== undefined && !perms.ROLE_IDS.includes(updateData.role)) return res.status(400).json({ error: `Unknown role "${updateData.role}".` });
+    if (updateData.email !== undefined) {
+      updateData.email = String(updateData.email).trim().toLowerCase();
+      if (!isEmail(updateData.email)) return res.status(400).json({ error: 'That email address does not look right.' });
+      if (updateData.email !== before.email && await Employee.findOne({ email: updateData.email, _id: { $ne: req.params.id } })) return res.status(400).json({ error: 'Email already registered' });
+    }
+    // Nobody can lock themselves out or strip their own access from this screen.
+    const isSelf = req.admin.employeeId && String(req.admin.employeeId) === String(req.params.id);
+    if (isSelf && ((updateData.role && updateData.role !== before.role) || (updateData.status && updateData.status !== 'active'))) {
+      return res.status(400).json({ error: 'You cannot change your own role or suspend yourself. Ask another super admin.' });
+    }
+
+    // Permissions: a role change can re-apply that role's defaults; otherwise explicit flags replace the set.
+    const roleFinal = updateData.role || before.role;
+    if (roleFinal === 'super_admin') updateData.permissions = perms.allPermissions();
+    else if (applyRoleDefaults === true) updateData.permissions = perms.presetFor(roleFinal);
+    else if (permissions && typeof permissions === 'object') updateData.permissions = sanitizePerms(permissions);
+    if (roleFinal === 'demo') updateData.isDemo = true;
+
+    if (password && String(password).trim()) {
+      if (!PW_RULE.test(String(password).trim())) return res.status(400).json({ error: PW_MSG });
+      updateData.passwordHash = await bcrypt.hash(String(password).trim(), 10);
       updateData.forcePasswordReset = false; // clear force-reset flag on manual set
     }
-
-    // Only set startDate if it's a valid non-empty value
-    if (startDate && startDate.trim()) {
+    if (startDate && String(startDate).trim()) {
       updateData.startDate = new Date(startDate);
-      if (isNaN(updateData.startDate.getTime())) {
-        return res.status(400).json({ error: 'Invalid start date format.' });
-      }
+      if (isNaN(updateData.startDate.getTime())) return res.status(400).json({ error: 'Invalid start date format.' });
     }
 
-    // Prevent accidental overwrite of _id or passwordHash from client
-    delete updateData._id;
-    delete updateData.__v;
-    delete updateData.passwordHash; // only set via password field above
-    delete updateData.lastLogin;    // only updated via auth middleware
-    delete updateData.loginCount;   // only updated via auth middleware
-
-    const emp = await Employee.findByIdAndUpdate(
-      req.params.id,
-      { $set: updateData },
-      { new: true, runValidators: true }
-    );
+    const emp = await Employee.findByIdAndUpdate(req.params.id, { $set: updateData }, { new: true, runValidators: true });
     if (!emp) return res.status(404).json({ error: 'Employee not found' });
+    invalidateEmployeeAccess(emp._id.toString());   // new role / flags apply on their very next request
+
+    // Keep their org-chart box in step with their account.
+    const nodeSync = {};
+    if (updateData.name !== undefined) nodeSync.personName = emp.name;
+    if (updateData.email !== undefined) nodeSync.personEmail = emp.email;
+    if (updateData.department !== undefined && updateData.department !== before.department) nodeSync.department = emp.department || '';
+    if (Object.keys(nodeSync).length) OrgNode.updateMany({ employeeId: emp._id }, { $set: nodeSync }).catch(() => {});
+
+    const fields = Object.keys(updateData).filter((k) => k !== 'passwordHash');
     audit('employee_updated', {
       req, actor: req.admin,
       targetId: emp._id.toString(), targetType: 'employee',
-      details: { name: emp.name, email: emp.email, updatedFields: Object.keys(updateData), updatedBy: req.admin.email || req.admin.username },
+      details: { name: emp.name, email: emp.email, updatedFields: fields, updatedBy: req.admin.email || req.admin.username },
     });
-    res.json({ employee: emp, message: 'Employee updated' });
+    if (updateData.role && updateData.role !== before.role) {
+      audit('employee_role_changed', { req, actor: req.admin, targetId: emp._id.toString(), targetType: 'employee', details: { name: emp.name, from: before.role, to: emp.role } });
+    }
+    res.json({ employee: stripSecrets(emp), message: 'Employee updated' });
   } catch (error) { next(error); }
 });
 
@@ -2277,10 +2450,14 @@ router.delete('/employees/:id', verifyAdmin, requireSuperAdminRole, async (req, 
   try {
     const emp = await Employee.findById(req.params.id).lean();
     if (!emp) return res.status(404).json({ error: 'Employee not found' });
+    if (req.admin.employeeId && String(req.admin.employeeId) === String(req.params.id)) return res.status(400).json({ error: 'You cannot delete your own account.' });
     await Employee.findByIdAndDelete(req.params.id);
     // Revoke all active sessions immediately — the employee no longer exists
     // so any lingering JWT would otherwise grant ghost access for up to 24h.
     await revokeEmployeeSessions(req.params.id);
+    invalidateEmployeeAccess(req.params.id);
+    // Their box stays on the chart (so reporting lines don't break) but no longer points at a login account.
+    await OrgNode.updateMany({ employeeId: emp._id }, { $set: { employeeId: null } });
     audit('employee_deleted', {
       req, actor: req.admin,
       targetId: req.params.id, targetType: 'employee',
@@ -2311,29 +2488,32 @@ router.post('/employees/:id/force-reset', verifyAdmin, requireSuperAdminRole, as
       details: { name: emp.name, email: emp.email, setBy: req.admin.email || req.admin.username },
     });
 
-    res.json({ message: 'Password reset flag set — employee sessions revoked', employee: emp });
+    res.json({ message: 'Password reset flag set — employee sessions revoked', employee: stripSecrets(emp) });
   } catch (error) { next(error); }
 });
 
-// POST /admin/employees/:id/suspend — quick suspend/unsuspend toggle
+// POST /admin/employees/:id/suspend — suspend / unsuspend. Send { suspend: true|false } to be explicit; with no
+// body it toggles (the old behaviour).
 router.post('/employees/:id/suspend', verifyAdmin, requireSuperAdminRole, async (req, res, next) => {
   try {
     const emp = await Employee.findById(req.params.id);
     if (!emp) return res.status(404).json({ error: 'Employee not found' });
-    const next_status = emp.status === 'suspended' ? 'active' : 'suspended';
+    if (req.admin.employeeId && String(req.admin.employeeId) === String(req.params.id)) return res.status(400).json({ error: 'You cannot suspend your own account.' });
+    const next_status = typeof req.body?.suspend === 'boolean'
+      ? (req.body.suspend ? 'suspended' : 'active')
+      : (emp.status === 'suspended' ? 'active' : 'suspended');
     emp.status = next_status;
     await emp.save();
+    invalidateEmployeeAccess(emp._id.toString());
+    const reason = String(req.body?.reason || '').slice(0, 300);
 
     if (next_status === 'suspended') {
       // Immediately invalidate all active JWT sessions for this employee.
-      // Any request from a token issued before this timestamp will be rejected
-      // by verifyAdmin's Redis revocation check — even if the token is still
-      // within its 24-hour expiry window.
       await revokeEmployeeSessions(emp._id.toString());
       audit('employee_suspended', {
         req, actor: req.admin,
         targetId: emp._id.toString(), targetType: 'employee',
-        details: { name: emp.name, email: emp.email, suspendedBy: req.admin.email || req.admin.username },
+        details: { name: emp.name, email: emp.email, reason, suspendedBy: req.admin.email || req.admin.username },
       });
     } else {
       // Unsuspending: clear the revocation flag so new logins work normally.
@@ -2356,6 +2536,7 @@ router.get('/employees/:id/activity', verifyAdmin, requireSuperAdminRole, async 
     if (!emp) return res.status(404).json({ error: 'Employee not found' });
     res.json({
       lastLogin:    emp.lastLogin   || null,
+      previousLogin: emp.previousLogin || null,
       loginCount:   emp.loginCount  || 0,
       createdAt:    emp.createdAt,
       updatedAt:    emp.updatedAt,
@@ -2572,7 +2753,7 @@ router.get('/export/stats', verifyAdmin, requirePermission('canExportData'), asy
 // ADMIN EVENT ACCESS — bypass password
 // ═══════════════════════════════════════════════════════════════════════════════
 
-router.post('/events/:eventId/access', verifyAdmin, async (req, res, next) => {
+router.post('/events/:eventId/access', verifyAdmin, requirePermission('canEditEvents'), async (req, res, next) => {
   try {
     // Demo accounts are read-only guests and must never mint organizer-level tokens.
     if (req.admin?.isDemo) {
