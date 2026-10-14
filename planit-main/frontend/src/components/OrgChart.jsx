@@ -58,11 +58,13 @@ const tenure = (d) => {
   return m < 1 ? 'new' : m < 12 ? `${m} mo` : `${Math.floor(m / 12)} yr${m >= 24 ? 's' : ''}`;
 };
 
+const roleKey = (t) => String(t || '').trim().toLowerCase();
+
 /* ── the draggable card ─────────────────────────────────────────────────────── */
 const Card = memo(function Card({ node, x, y, reports, flags, canEdit, onDown, onOpen, onHover, onAdd }) {
   const a = ACCENT[node.accent] || ACCENT.slate;
   const open = node.status === 'open';
-  const { selected, dim, match, isMe, placeholder, hot, ghost, invalid, lead } = flags;
+  const { selected, dim, match, isMe, placeholder, hot, ghost, invalid, lead, sameRole = 1 } = flags;
   const dark = lead && !open;
   const seats = open ? Math.max(1, node.seats || 1) : 1;
   const multi = seats > 1;
@@ -97,7 +99,7 @@ const Card = memo(function Card({ node, x, y, reports, flags, canEdit, onDown, o
           ? <span className="rounded-full bg-amber-100 px-2.5 py-0.5 text-[11px] font-bold text-amber-800">{multi ? `${seats} openings` : 'Hiring'}{typeof node.applicants === 'number' ? ` · ${node.applicants} applied` : ''}</span>
           : lead
             ? <span className="flex items-center gap-1 rounded-full bg-indigo-500/20 px-2.5 py-0.5 text-[11px] font-bold text-indigo-200"><Crown className="h-3 w-3" />Super admin</span>
-            : <span className="rounded-full bg-emerald-50 px-2.5 py-0.5 text-[11px] font-bold text-emerald-700">Filled</span>}
+            : <span className="flex-shrink-0 rounded-full bg-emerald-50 px-2.5 py-0.5 text-[11px] font-bold text-emerald-700">{sameRole > 1 ? `${sameRole} in this role` : 'Filled'}</span>}
         {isMe && <span className={`rounded-full px-2.5 py-0.5 text-[11px] font-bold ${dark ? 'bg-white text-neutral-900' : 'bg-neutral-900 text-white'}`}>You</span>}
         {node.department && !lead && <span className="min-w-0 truncate text-[11px] text-neutral-400">{node.department}</span>}
         {reports > 0 && <span className={`ml-auto flex flex-shrink-0 items-center gap-1 text-[12px] font-bold ${dark ? 'text-neutral-300' : 'text-neutral-500'}`}><Users className="h-3.5 w-3.5" />{reports}</span>}
@@ -300,6 +302,7 @@ function Drawer({ node, nodes, byId, cmap, canEdit, ctx, onClose, onSelect, onSa
             <button onClick={() => onDeleted(node)} className="rounded-lg p-2 text-neutral-400 hover:bg-red-50 hover:text-red-600" title="Delete position"><Trash2 className="h-4 w-4" /></button>
             <div className="flex gap-2">
               {node.status === 'open' && ctx.fillOpen && <button onClick={() => ctx.fillOpen(node)} className="flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-2 text-sm font-bold text-white hover:bg-emerald-700"><UserPlus className="h-4 w-4" />Add person</button>}
+              {node.status === 'filled' && !node.owner && ctx.addAnother && <button onClick={() => ctx.addAnother(node)} className="flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-2 text-sm font-bold text-white hover:bg-emerald-700" title="Add another person to this same role"><UserPlus className="h-4 w-4" />Add another</button>}
               <button onClick={() => ctx.duplicate(node._id)} className="flex items-center gap-1.5 rounded-lg border border-neutral-300 px-3 py-2 text-sm font-semibold text-neutral-700 hover:bg-white" title="Add another of this role"><Users className="h-4 w-4" />Duplicate</button>
               <button onClick={() => ctx.addUnder(node._id)} className="flex items-center gap-1.5 rounded-lg border border-neutral-300 px-3 py-2 text-sm font-semibold text-neutral-700 hover:bg-white"><Plus className="h-4 w-4" />Add report</button>
               <button onClick={() => setEditing(true)} className="flex items-center gap-1.5 rounded-lg bg-neutral-900 px-4 py-2 text-sm font-bold text-white hover:bg-neutral-700"><Edit2 className="h-4 w-4" />Edit</button>
@@ -606,6 +609,12 @@ export default function OrgChart({ isDemo = false }) {
   }, [viewNodes, needle, filter]);
   const filtering = !!needle || filter !== 'all';
   const counts = useMemo(() => ({ filled: nodes.filter((n) => n.status === 'filled').length, open: nodes.filter((n) => n.status === 'open').length }), [nodes]);
+  // Several people can hold the same role (three Short-Form Video Creators, two Backend Engineers...). Count the filled boxes per title.
+  const roleCounts = useMemo(() => {
+    const m = new Map();
+    for (const n of nodes) if (n.status === 'filled') m.set(roleKey(n.title), (m.get(roleKey(n.title)) || 0) + 1);
+    return m;
+  }, [nodes]);
 
   const focusId = drag ? drag.id : (hoverId || selectedId);
   const chainSet = useMemo(() => {
@@ -730,7 +739,7 @@ export default function OrgChart({ isDemo = false }) {
                 return (
                   <Card key={n._id} node={n} x={p.x} y={p.y} reports={(viewCmap.get(n._id) || []).length}
                     canEdit={canEdit}
-                    flags={{ selected: selectedId === n._id, dim: filtering && !matches.has(n._id), match: !!needle && matches.has(n._id), isMe: (!!ctx.me && n.employeeId === ctx.me) || (ctx.root && !!n.owner), lead: rootIds.has(n._id) && n.status === 'filled', placeholder: drag?.id === n._id, hot: drag?.targetId === n._id, ghost: false }}
+                    flags={{ selected: selectedId === n._id, dim: filtering && !matches.has(n._id), match: !!needle && matches.has(n._id), isMe: (!!ctx.me && n.employeeId === ctx.me) || (ctx.root && !!n.owner), lead: rootIds.has(n._id) && n.status === 'filled', placeholder: drag?.id === n._id, hot: drag?.targetId === n._id, ghost: false, sameRole: n.status === 'filled' ? (roleCounts.get(roleKey(n.title)) || 1) : 1 }}
                     onDown={onDown} onOpen={open} onHover={setHoverId} onAdd={addUnder} />
                 );
               })}
@@ -762,7 +771,7 @@ export default function OrgChart({ isDemo = false }) {
 
       <AnimatePresence>
         {selected && (
-          <Drawer key={selected._id} node={selected} nodes={nodes} byId={baseById} cmap={cmap} canEdit={canEdit} ctx={{ ...ctx, addUnder, duplicate, fillOpen: (n) => setWizard({ orgNodeId: n._id, positionTitle: n.title, department: n.department || '', label: `Filling the open position: ${n.title}` }) }}
+          <Drawer key={selected._id} node={selected} nodes={nodes} byId={baseById} cmap={cmap} canEdit={canEdit} ctx={{ ...ctx, addUnder, duplicate, addAnother: (n) => setWizard({ positionTitle: n.title, department: n.department || '', managerNodeId: n.parentId || '', label: `Adding another ${n.title}. They will sit beside ${n.personName}.` }), fillOpen: (n) => setWizard({ orgNodeId: n._id, positionTitle: n.title, department: n.department || '', label: `Filling the open position: ${n.title}` }) }}
             onClose={() => { setSelectedId(null); setDraft(null); }} onSelect={(id) => { setDraft(null); setSelectedId(id); }} onSaved={saveNode} onDeleted={remove} />
         )}
       </AnimatePresence>
