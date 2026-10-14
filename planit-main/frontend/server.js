@@ -39,6 +39,7 @@ import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { matchShareRoute } from './shareMeta.js';
 import { fetchPost, fetchPosts, buildPostPage, buildIndexPage, buildNotFoundPage } from './blogPrerender.js';
+import { fetchJobs, buildCareersIndexPage, buildJobPage } from './careersPrerender.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const DIST_DIR = path.join(__dirname, 'dist');
@@ -205,6 +206,29 @@ app.get('*', async (req, res, next) => {
           return res.status(status).type('html').send(page);
         }
         // Backend hiccup: fall through to the normal flow rather than serve a broken page.
+      }
+
+      // ── Careers: every role as its own crawlable page with JobPosting markup (Google for Jobs) ──
+      const jobMatch = cleanPath.match(/^\/careers\/([a-z0-9-]+)$/i);
+      if (cleanPath === '/careers' || jobMatch) {
+        let page = null;
+        let status = 200;
+        const list = await fetchJobs(API_BASE);
+        if (list.jobs) {
+          const slug = jobMatch ? jobMatch[1].toLowerCase() : null;
+          if (!slug || slug === 'general') {
+            page = buildCareersIndexPage({ html, jobs: list.jobs, injectMeta });
+          } else {
+            const job = list.jobs.find((j) => j.slug === slug);
+            if (job) page = buildJobPage({ html, job, jobs: list.jobs, injectMeta });
+            else { page = buildNotFoundPage({ html }); status = 404; }
+          }
+        }
+        if (page) {
+          res.set('Cache-Control', 'public, max-age=300');
+          return res.status(status).type('html').send(page);
+        }
+        // Backend hiccup: fall through to the normal SPA shell.
       }
     }
 
