@@ -440,6 +440,7 @@ const PAGE_TITLES = {
   '/support/wall':             'Wall of Supporters · PlanIt',
   '/terms':                    'Terms of Service · PlanIt',
   '/blog':                     'PlanIt Blog · Ideas and Guides for Event Planners',
+  '/careers':                  'Careers · Volunteer with PlanIt',
   '/white-label':              'Launch Your Own Branded Event Platform · PlanIt White Label',
   '/white-label/setup-fee':    'White Label Setup Payment · PlanIt White Label',
   '/white-label/setup-success': 'Payment Confirmed, You Are Live · PlanIt White Label',
@@ -470,6 +471,7 @@ const PATTERN_TITLES = [
   [/^\/badge\//,                             'Your Event Entry Badge · PlanIt'],
   [/^\/card\//,                              'Your Invitation Card · PlanIt'],
   [/^\/blog\//,                              null],
+  [/^\/careers\//,                           null],   // Careers.jsx sets the role's own title
 ];
 
 // Renders nothing — just mounts the background analytics tracker inside <Router>
