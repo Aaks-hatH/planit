@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PlanIt Documentation — Event Management Platform</title>
+  <meta name="description" content="Complete documentation for PlanIt — the freeware event management platform with QR check-in, guest invites, seating maps, and real-time staff tools." />
+  <link rel="stylesheet" href="style.css" />
+  <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+  <script>window.CURRENT_PAGE = 'index';</script>
+</head>
+<body>
+  <div class="sidebar-overlay"></div>
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="sidebar-logo">
+        <a href="index.html">
+          <div class="logo-mark">P</div>
+          <div><div class="logo-text">PLANIT</div><div class="logo-sub">Docs</div></div>
+        </a>
+      </div>
+      <div class="sidebar-search">
+        <div class="sidebar-search-wrap">
+          <svg class="sidebar-search-icon" width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="7" cy="7" r="5"/><path d="M11 11l3 3"/></svg>
+          <input class="sidebar-search-input" type="text" placeholder="Search docs..." autocomplete="off" spellcheck="false" />
+          <span class="search-kbd">/</span>
+        </div>
+      </div>
+      <nav class="sidebar-nav"></nav>
+      <div class="sidebar-status">
+        <div class="status-dot"></div>
+        All systems operational
+      </div>
+      <div class="sidebar-footer">
+        <a href="https://planitapp.onrender.com" class="sidebar-footer-link" target="_blank">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M8 3H4a1 1 0 00-1 1v8a1 1 0 001 1h8a1 1 0 001-1v-4"/><path d="M11 2h3v3M14 2l-6 6"/></svg>
+          Open PlanIt App
+        </a>
+        <a href="https://github.com" class="sidebar-footer-link" target="_blank">
+          <svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+          View Source
+        </a>
+      </div>
+    </aside>
+
+    <div class="main">
+      <div class="topbar">
+        <div class="topbar-left">
+          <button class="menu-toggle" aria-label="Toggle menu">
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><line x1="2" y1="5" x2="16" y2="5"/><line x1="2" y1="9" x2="16" y2="9"/><line x1="2" y1="13" x2="16" y2="13"/></svg>
+          </button>
+          <div class="topbar-breadcrumb">
+            Docs
+            <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M4 2l4 4-4 4"/></svg>
+            <span>Introduction</span>
+          </div>
+        </div>
+        <div class="topbar-right">
+          <a href="https://planitapp.onrender.com" class="topbar-btn" target="_blank">Open App →</a>
+        </div>
+      </div>
+
+      <div class="inner-layout">
+        <div class="content">
+
+          <!-- HERO -->
+          <div class="hero">
+            <div class="hero-eyebrow">
+              <span class="hero-eyebrow-dot"></span>
+              Freeware &middot; No account required for guests &middot; Always free
+            </div>
+            <div class="hero-title">
+              Professional event management,<br>
+              <span class="alt">without the enterprise price tag.</span>
+            </div>
+            <p class="hero-desc">PlanIt gives event organisers a complete, battle-tested toolset — QR check-in, smart guest invites, drag-and-drop seating, real-time walkie-talkie, and live analytics — completely free.</p>
+            <div class="hero-actions">
+              <a href="getting-started.html" class="btn-primary">
+                <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M8 2s3 1.5 3 5.5c0 2-1.5 4-3 4.5-1.5-.5-3-2.5-3-4.5C5 3.5 8 2 8 2z"/></svg>
+                Get started in 5 minutes
+              </a>
+              <a href="https://planitapp.onrender.com" class="btn-secondary" target="_blank">
+                <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M8 3H4a1 1 0 00-1 1v8a1 1 0 001 1h8a1 1 0 001-1v-4"/><path d="M11 2h3v3M14 2l-6 6"/></svg>
+                Open the app
+              </a>
+            </div>
+          </div>
+
+          <!-- Quick nav -->
+          <h2 id="quick-nav">Jump to what you need</h2>
+          <div class="card-grid">
+            <a href="getting-started.html" class="card">
+              <div class="card-icon">
+                <svg width="17" height="17" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M8 2s3 1.5 3 5.5c0 2-1.5 4-3 4.5-1.5-.5-3-2.5-3-4.5C5 3.5 8 2 8 2z"/></svg>
+              </div>
+              <div class="card-title">Getting Started</div>
+              <div class="card-desc">Create your first event and invite guests in under five minutes.</div>
+              <div class="card-arrow">Read guide →</div>
+            </a>
+            <a href="invites.html" class="card">
+              <div class="card-icon">
+                <svg width="17" height="17" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><rect x="2" y="4.5" width="12" height="7" rx="1.5"/><path d="M10 4.5v7"/></svg>
+              </div>
+              <div class="card-title">Guest Invites</div>
+              <div class="card-desc">QR codes, wallet cards, print badges, and bulk CSV import.</div>
+              <div class="card-arrow">Read guide →</div>
+            </a>
+            <a href="check-in.html" class="card">
+              <div class="card-icon">
+                <svg width="17" height="17" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M2 5V3h3M14 5V3h-3M2 11v2h3M14 11v2h-3M2 8h12"/></svg>
+              </div>
+              <div class="card-title">Check-in System</div>
+              <div class="card-desc">QR scanning, boarding-pass review, staff accounts, offline mode.</div>
+              <div class="card-arrow">Read guide →</div>
+            </a>
+            <a href="seating.html" class="card">
+              <div class="card-icon">
+                <svg width="17" height="17" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><rect x="2" y="2" width="5" height="5" rx="1"/><rect x="9" y="2" width="5" height="5" rx="1"/><rect x="2" y="9" width="5" height="5" rx="1"/><rect x="9" y="9" width="5" height="5" rx="1"/></svg>
+              </div>
+              <div class="card-title">Seating Maps</div>
+              <div class="card-desc">Drag-and-drop floor plans with per-guest table assignment.</div>
+              <div class="card-arrow">Read guide →</div>
+            </a>
+            <a href="walkie-talkie.html" class="card">
+              <div class="card-icon">
+                <svg width="17" height="17" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><rect x="5.5" y="1.5" width="5" height="7" rx="2.5"/><path d="M3 8a5 5 0 0010 0"/><line x1="8" y1="13" x2="8" y2="14.5"/></svg>
+              </div>
+              <div class="card-title">Walkie-Talkie</div>
+              <div class="card-desc">WebRTC push-to-talk for your whole check-in team instantly.</div>
+              <div class="card-arrow">Read guide →</div>
+            </a>
+            <a href="faq.html" class="card">
+              <div class="card-icon">
+                <svg width="17" height="17" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="8" cy="8" r="6"/><path d="M6.5 6a1.7 1.7 0 013.3.6c0 1.5-1.8 1.8-1.8 3"/><circle cx="8" cy="12" r=".6" fill="currentColor" stroke="none"/></svg>
+              </div>
+              <div class="card-title">FAQ</div>
+              <div class="card-desc">Quick answers to the most common organiser questions.</div>
+              <div class="card-arrow">Browse FAQs →</div>
+            </a>
+          </div>
+
+          <hr>
+
+          <!-- What is PlanIt -->
+          <h2 id="what-is-planit">What is PlanIt?</h2>
+          <p>PlanIt is a proprietary freeware event management platform built for organisers who need a complete, professional-grade toolset for managing in-person events. It is free to use through the official hosted service and requires no subscription, no per-event fee, and no feature paywall.</p>
+          <p>Organisers create events, manage guests, assign seating, and run check-in from a single dashboard. Guests receive a unique invite link — they open it in any browser, see their QR code, and present it at the door. No app downloads. No accounts for guests. No friction.</p>
+
+          <!-- Feature overview -->
+          <h2 id="features">Platform features</h2>
+          <div class="feature-grid">
+            <div class="feature-cell">
+              <div class="feature-cell-icon">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><rect x="2" y="4.5" width="12" height="7" rx="1.5"/></svg>
+              </div>
+              <div class="feature-cell-title">Smart Guest Invites</div>
+              <div class="feature-cell-desc">Personal QR codes, wallet cards, printable A6 badges, RSVP tracking, and optional security PINs per guest.</div>
+            </div>
+            <div class="feature-cell">
+              <div class="feature-cell-icon">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M2 5V3h3M14 5V3h-3M2 11v2h3M14 11v2h-3M2 8h12"/></svg>
+              </div>
+              <div class="feature-cell-title">QR Check-in</div>
+              <div class="feature-cell-desc">Camera scanning, boarding-pass review screen, anti-fraud protection, manager override, and offline queued mode.</div>
+            </div>
+            <div class="feature-cell">
+              <div class="feature-cell-icon">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><rect x="2" y="2" width="5" height="5" rx="1"/><rect x="9" y="2" width="5" height="5" rx="1"/><rect x="2" y="9" width="5" height="5" rx="1"/><rect x="9" y="9" width="5" height="5" rx="1"/></svg>
+              </div>
+              <div class="feature-cell-title">Visual Seating Maps</div>
+              <div class="feature-cell-desc">Drag-and-drop floor plans with round tables, rectangular tables, stages, bars, VIP zones, and auditorium layouts.</div>
+            </div>
+            <div class="feature-cell">
+              <div class="feature-cell-icon">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><rect x="5.5" y="1.5" width="5" height="7" rx="2.5"/><path d="M3 8a5 5 0 0010 0"/></svg>
+              </div>
+              <div class="feature-cell-title">Walkie-Talkie</div>
+              <div class="feature-cell-desc">WebRTC push-to-talk voice channel connecting all logged-in staff instantly. No separate app or phone number.</div>
+            </div>
+            <div class="feature-cell">
+              <div class="feature-cell-icon">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M8 2l5 2.5V9c0 2.5-2 4.5-5 5-3-1-5-2.5-5-5V4.5L8 2z"/></svg>
+              </div>
+              <div class="feature-cell-title">Anti-Fraud Engine</div>
+              <div class="feature-cell-desc">Trust scores 0–100, duplicate fingerprint detection, guest flagging, auto-blocking, and a full audit log.</div>
+            </div>
+            <div class="feature-cell">
+              <div class="feature-cell-icon">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><polyline points="2 10 5 6 8 8 11 4 14 7"/></svg>
+              </div>
+              <div class="feature-cell-title">Live Analytics</div>
+              <div class="feature-cell-desc">Real-time attendance counters, check-in progress, group headcounts, and per-role breakdowns updated via WebSocket.</div>
+            </div>
+            <div class="feature-cell">
+              <div class="feature-cell-icon">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M3 8h10M8 3l5 5-5 5"/></svg>
+              </div>
+              <div class="feature-cell-title">CSV Bulk Import</div>
+              <div class="feature-cell-desc">Upload a spreadsheet of guests with roles, group sizes, PINs, and notes. Template download available in-app.</div>
+            </div>
+            <div class="feature-cell">
+              <div class="feature-cell-icon">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="8" cy="8" r="6"/><path d="M8 5v4l2 2"/></svg>
+              </div>
+              <div class="feature-cell-title">Offline Mode</div>
+              <div class="feature-cell-desc">Checks-in queue locally when connectivity drops. Auto-syncs when connection returns. Works at venues with weak signal.</div>
+            </div>
+            <div class="feature-cell">
+              <div class="feature-cell-icon">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><rect x="2" y="2" width="12" height="3" rx="1"/><rect x="2" y="7" width="7" height="3" rx="1"/><rect x="2" y="12" width="4" height="2" rx="1"/></svg>
+              </div>
+              <div class="feature-cell-title">Task & Notes Board</div>
+              <div class="feature-cell-desc">Shared task lists and notes visible to all staff logged into the event space. Real-time collaborative updates.</div>
+            </div>
+          </div>
+
+          <!-- Demo panel: live guest list -->
+          <h2 id="demo">See it in action</h2>
+          <p>Below is a preview of what the PlanIt check-in guest list looks like in real use. Each row shows the guest's name, role, group size, and check-in status.</p>
+
+          <div class="demo-panel">
+            <div class="demo-panel-header">
+              <div class="demo-dot demo-dot-red"></div>
+              <div class="demo-dot demo-dot-yellow"></div>
+              <div class="demo-dot demo-dot-green"></div>
+              <span class="demo-panel-title">PlanIt Check-in — Summer Gala 2025 — 3 staff online</span>
+            </div>
+            <div class="demo-panel-body">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px;">
+                <div style="font-family:var(--font-head);font-size:14px;font-weight:600;color:var(--text);">Guest List</div>
+                <div style="display:flex;gap:8px;">
+                  <span class="badge badge-green">✓ 47 admitted</span>
+                  <span class="badge badge-grey">⋯ 23 pending</span>
+                  <span class="badge badge-gold">★ 8 VIP</span>
+                </div>
+              </div>
+              <div style="margin-bottom:8px;">
+                <div class="progress-bar-wrap" style="height:8px;">
+                  <div class="progress-bar" style="width:67%;"></div>
+                </div>
+                <div style="font-size:11px;color:var(--text-3);margin-top:4px;">67% checked in (47 of 70)</div>
+              </div>
+              <div style="margin-top:16px;">
+                <div class="guest-row">
+                  <div class="guest-avatar" style="background:rgba(16,185,129,0.15);color:#10b981;">SA</div>
+                  <div class="guest-name">Sophie Anderson</div>
+                  <span class="guest-role-badge role-vip">VIP</span>
+                  <span style="font-size:12px;color:var(--text-3);">Table 1 · 2 adults</span>
+                  <span class="guest-status-icon" style="color:var(--success);">✓</span>
+                </div>
+                <div class="guest-row">
+                  <div class="guest-avatar" style="background:rgba(139,92,246,0.15);color:#a78bfa;">MK</div>
+                  <div class="guest-name">Marcus Kim</div>
+                  <span class="guest-role-badge role-speaker">SPEAKER</span>
+                  <span style="font-size:12px;color:var(--text-3);">Table 3 · 1 adult</span>
+                  <span class="guest-status-icon" style="color:var(--success);">✓</span>
+                </div>
+                <div class="guest-row">
+                  <div class="guest-avatar">JD</div>
+                  <div class="guest-name">Jamie Delacroix</div>
+                  <span class="guest-role-badge role-guest">GUEST</span>
+                  <span style="font-size:12px;color:var(--text-3);">Table 7 · 3 adults, 1 child</span>
+                  <span class="guest-status-icon" style="color:var(--text-3);">○</span>
+                </div>
+                <div class="guest-row">
+                  <div class="guest-avatar" style="background:rgba(245,158,11,0.15);color:#f59e0b;">RP</div>
+                  <div class="guest-name">Riya Patel</div>
+                  <span class="guest-role-badge role-vip">VIP</span>
+                  <span style="font-size:12px;color:var(--text-3);">Table 1 · 2 adults</span>
+                  <span class="guest-status-icon" style="color:var(--success);">✓</span>
+                </div>
+                <div class="guest-row" style="opacity:0.5;">
+                  <div class="guest-avatar">…</div>
+                  <div class="guest-name" style="color:var(--text-3);">66 more guests…</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Who is it for -->
+          <h2 id="who-is-it-for">Who is PlanIt for?</h2>
+          <p>PlanIt is built for <strong>event organisers</strong> who create and manage in-person events. Organisers hold accounts and control everything. Guests receive a unique invite link — they never sign up or log in. Staff use a simple PIN-based login shared by the organiser.</p>
+
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr><th>Role</th><th>What they do</th><th>Needs an account?</th><th>Access level</th></tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><strong>Organiser</strong></td>
+                  <td>Creates events, manages guest lists, configures check-in, sets up seating, views analytics, manages staff</td>
+                  <td><span class="t-yes">Yes</span></td>
+                  <td>Full access</td>
+                </tr>
+                <tr>
+                  <td><strong>Staff / Check-in</strong></td>
+                  <td>Scans QR codes, admits guests, uses walkie-talkie, views read-only seating map</td>
+                  <td>PIN-based login (no account)</td>
+                  <td>Check-in only</td>
+                </tr>
+                <tr>
+                  <td><strong>Guest</strong></td>
+                  <td>Views their invite page, presents QR code at entrance, RSVPs, saves wallet card</td>
+                  <td><span class="t-no">No</span></td>
+                  <td>Invite page only</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Use cases -->
+          <h2 id="use-cases">Common use cases</h2>
+          <p>PlanIt works for any in-person event where guest management, controlled entry, or staff coordination matters.</p>
+
+          <div class="icon-strip">
+            <div class="icon-strip-item">
+              <div class="icon-strip-icon">
+                <svg width="20" height="20" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><rect x="2" y="4.5" width="12" height="7" rx="1.5"/><circle cx="8" cy="8" r="1.5"/></svg>
+              </div>
+              <div class="icon-strip-label">Galas &amp; Dinners</div>
+              <div class="icon-strip-sub">Assigned seating, VIP lanes</div>
+            </div>
+            <div class="icon-strip-item">
+              <div class="icon-strip-icon">
+                <svg width="20" height="20" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><rect x="2" y="2" width="12" height="12" rx="2"/><path d="M2 6h12M6 6v8"/></svg>
+              </div>
+              <div class="icon-strip-label">Conferences</div>
+              <div class="icon-strip-sub">Bulk import, speaker badges</div>
+            </div>
+            <div class="icon-strip-item">
+              <div class="icon-strip-icon">
+                <svg width="20" height="20" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M8 2l2 4h4l-3 3 1 4-4-2-4 2 1-4-3-3h4z"/></svg>
+              </div>
+              <div class="icon-strip-label">Award Ceremonies</div>
+              <div class="icon-strip-sub">Stage areas, auditorium rows</div>
+            </div>
+            <div class="icon-strip-item">
+              <div class="icon-strip-icon">
+                <svg width="20" height="20" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="8" cy="6" r="3"/><path d="M2 14s1-4 6-4 6 4 6 4"/></svg>
+              </div>
+              <div class="icon-strip-label">Private Parties</div>
+              <div class="icon-strip-sub">Easy QR invites, no friction</div>
+            </div>
+            <div class="icon-strip-item">
+              <div class="icon-strip-icon">
+                <svg width="20" height="20" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M2 2h5v5H2zM9 2h5v5H9zM2 9h5v5H2z"/><rect x="9" y="9" width="5" height="5" rx="1"/></svg>
+              </div>
+              <div class="icon-strip-label">Product Launches</div>
+              <div class="icon-strip-sub">Press lists, invite tracking</div>
+            </div>
+          </div>
+
+          <!-- Tech stack -->
+          <h2 id="technology">How PlanIt works</h2>
+          <p>PlanIt is a full-stack web application. The frontend is a React single-page app; the backend is a Node.js/Express API with MongoDB persistence. Real-time features — check-in sync, walkie-talkie signalling, seating map updates, and security alerts — are delivered over Socket.IO WebSockets.</p>
+
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Layer</th><th>Technology</th><th>Purpose</th></tr></thead>
+              <tbody>
+                <tr><td><strong>Frontend</strong></td><td>React, Vite</td><td>Organiser dashboard, check-in UI, guest invite pages</td></tr>
+                <tr><td><strong>Backend</strong></td><td>Node.js, Express</td><td>API, auth, business logic, anti-fraud engine</td></tr>
+                <tr><td><strong>Database</strong></td><td>MongoDB (Mongoose)</td><td>Events, guests, participants, messages, seating maps</td></tr>
+                <tr><td><strong>Real-time</strong></td><td>Socket.IO</td><td>Check-in sync, seating updates, walkie-talkie signalling, security alerts</td></tr>
+                <tr><td><strong>Voice</strong></td><td>WebRTC</td><td>Peer-to-peer audio for walkie-talkie (server coordinates signalling)</td></tr>
+                <tr><td><strong>Cache / PubSub</strong></td><td>Redis</td><td>Session caching, rate-limit state, pub/sub for multi-instance deployments</td></tr>
+                <tr><td><strong>Auth</strong></td><td>JWT + bcrypt</td><td>Organiser sessions (30-day tokens) and staff PIN verification</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Data retention -->
+          <h2 id="data-retention">Data retention</h2>
+          <div class="callout warn">
+            <div class="callout-icon">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#f59e0b" stroke-width="1.5" stroke-linecap="round"><path d="M8 2L2 13h12L8 2z"/><line x1="8" y1="7" x2="8" y2="10"/><circle cx="8" cy="12" r=".6" fill="#f59e0b" stroke="none"/></svg>
+            </div>
+            <div class="callout-body">
+              <div class="callout-title">7-Day Automatic Deletion</div>
+              <p>All event data — guests, check-in history, messages, files, seating maps, and the event itself — is automatically and permanently deleted <strong>seven days after the event date</strong>. A countdown warning banner appears in the organiser dashboard as the deletion window approaches. Export anything you need before the deadline.</p>
+            </div>
+          </div>
+          <p>This policy keeps the platform lean, protects guest privacy, and ensures no long-term data accumulates. It is not configurable — the seven-day window is fixed for all events.</p>
+
+          <!-- Licensing -->
+          <h2 id="licensing">Licensing</h2>
+          <div class="callout info">
+            <div class="callout-icon">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#60a5fa" stroke-width="1.5" stroke-linecap="round"><circle cx="8" cy="8" r="6"/><line x1="8" y1="6" x2="8" y2="8.5"/><circle cx="8" cy="11" r=".6" fill="#60a5fa" stroke="none"/></svg>
+            </div>
+            <div class="callout-body">
+              <div class="callout-title">Proprietary Freeware</div>
+              <p>PlanIt is proprietary software. The source code is published for transparency and audit purposes, not for redistribution or self-hosting. You may not fork, modify, self-host, or redistribute PlanIt. All events must run on the official service at <a href="https://planitapp.onrender.com" target="_blank">planitapp.onrender.com</a>.</p>
+            </div>
+          </div>
+          <p>Using PlanIt is completely free. There are no subscriptions, no paid tiers, no per-event charges, and no feature paywalls. The platform is operated as a hosted service — you use it through the web app, not by running your own copy.</p>
+
+          <div class="page-nav">
+            <div></div>
+            <a href="getting-started.html" class="page-nav-link page-nav-next">
+              <span class="page-nav-label">Next →</span>
+              <span class="page-nav-title">Getting Started</span>
+            </a>
+          </div>
+
+        </div><!-- /content -->
+        <div class="toc-right"></div>
+      </div><!-- /inner-layout -->
+    </div><!-- /main -->
+  </div><!-- /layout -->
+  <script src="nav.js"></script>
+</body>
+</html>

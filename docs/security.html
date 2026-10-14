@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Security & Passwords — PlanIt Docs</title>
+  <link rel="stylesheet" href="style.css" />
+  <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+  <script>window.CURRENT_PAGE = 'security';</script>
+</head>
+<body>
+  <div class="sidebar-overlay"></div>
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="sidebar-logo"><a href="index.html"><div class="logo-mark">P</div><div><div class="logo-text">PLANIT</div><div class="logo-sub">Docs</div></div></a></div>
+      <div class="sidebar-search"><div class="sidebar-search-wrap"><svg class="sidebar-search-icon" width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="7" cy="7" r="5"/><path d="M11 11l3 3"/></svg><input class="sidebar-search-input" type="text" placeholder="Search docs..." autocomplete="off" /><span class="search-kbd">/</span></div></div>
+      <nav class="sidebar-nav"></nav>
+      <div class="sidebar-status"><div class="status-dot"></div>All systems operational</div>
+      <div class="sidebar-footer"><a href="https://planitapp.onrender.com" class="sidebar-footer-link" target="_blank">Open PlanIt App →</a></div>
+    </aside>
+    <div class="main">
+      <div class="topbar">
+        <div class="topbar-left">
+          <button class="menu-toggle" aria-label="Toggle menu"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><line x1="2" y1="5" x2="16" y2="5"/><line x1="2" y1="9" x2="16" y2="9"/><line x1="2" y1="13" x2="16" y2="13"/></svg></button>
+          <div class="topbar-breadcrumb">Docs <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M4 2l4 4-4 4"/></svg> <span>Security &amp; Passwords</span></div>
+        </div>
+        <div class="topbar-right"><a href="https://planitapp.onrender.com" class="topbar-btn" target="_blank">Open App →</a></div>
+      </div>
+      <div class="inner-layout">
+        <div class="content">
+
+          <div class="page-header">
+            <div class="page-tag">Security &amp; Data</div>
+            <h1 class="page-title">Security &amp; Passwords</h1>
+            <p class="page-desc">How PlanIt protects your event data, how the two-password system works, what the anti-fraud engine does, and how guest data is handled.</p>
+          </div>
+
+          <!-- TWO PASSWORDS -->
+          <h2 id="two-passwords">The two-password system</h2>
+          <p>PlanIt uses two completely separate passwords that serve different purposes. Confusing them is the most common source of access problems.</p>
+
+          <div class="table-wrap"><table>
+            <thead><tr><th></th><th>Account Password</th><th>Event Password</th></tr></thead>
+            <tbody>
+              <tr><td><strong>Purpose</strong></td><td>Proves you are the organiser</td><td>Controls entry to the workspace for everyone</td></tr>
+              <tr><td><strong>Required?</strong></td><td>Always (set at event creation)</td><td>Optional (leave blank for open workspaces)</td></tr>
+              <tr><td><strong>Who needs it?</strong></td><td>Organiser only — to claim organiser role</td><td>Every person who opens the event URL</td></tr>
+              <tr><td><strong>Storage</strong></td><td>Hashed with bcrypt, never readable</td><td>Hashed with bcrypt, never readable</td></tr>
+              <tr><td><strong>Reset/Recovery</strong></td><td>None — no email on file</td><td>Organiser can change it from Settings</td></tr>
+              <tr><td><strong>Used for Manager Override?</strong></td><td>Yes</td><td>No</td></tr>
+            </tbody>
+          </table></div>
+
+          <div class="callout warn">
+            <div class="callout-icon"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#f59e0b" stroke-width="1.5" stroke-linecap="round"><path d="M8 2L2 13h12L8 2z"/><line x1="8" y1="7" x2="8" y2="10"/><circle cx="8" cy="12" r=".6" fill="#f59e0b" stroke="none"/></svg></div>
+            <div class="callout-body">
+              <div class="callout-title">Account passwords cannot be reset</div>
+              <p>PlanIt stores no email address, so there is no password reset flow. If you lose your account (organiser) password, contact support — but recovery is not guaranteed. Always save your password in a password manager before sharing the event link.</p>
+            </div>
+          </div>
+
+          <!-- AUTH FLOW -->
+          <h2 id="auth-flow">Authentication flow</h2>
+          <p>PlanIt uses a sessionless, JWT-based authentication model. There are no traditional user accounts — identity is tied to the event, not to a registered user profile.</p>
+
+          <ol class="steps">
+            <li><div class="step-num">1</div><div class="step-content"><strong>Organiser creates the event</strong><p>Hashed bcrypt credential stored against the event document in MongoDB. The raw password is never persisted.</p></div></li>
+            <li><div class="step-num">2</div><div class="step-content"><strong>Organiser claims role from any device</strong><p>Enters the account password on the event page. Backend verifies the bcrypt hash and returns a signed JWT. The JWT is stored in the browser's <code>localStorage</code> for the organiser session.</p></div></li>
+            <li><div class="step-num">3</div><div class="step-content"><strong>Subsequent requests</strong><p>Every protected API call includes the JWT in the <code>Authorization</code> header. The server verifies the signature on each request. Tokens are valid for 30 days.</p></div></li>
+            <li><div class="step-num">4</div><div class="step-content"><strong>Staff check-in access</strong><p>Staff use a shared PIN provided by the organiser. The PIN is verified against the event's hashed staff credential and returns a scoped JWT with check-in-only permissions.</p></div></li>
+          </ol>
+
+          <!-- RESPONSE SIGNING -->
+          <h2 id="response-signing">Response signing</h2>
+          <p>All API responses that return sensitive data — including check-in verdicts — are signed with an HMAC signature. The frontend validates the signature before acting on any check-in result. This prevents a man-in-the-middle attack from injecting a forged "admitted" response if a device is on a compromised network.</p>
+
+          <div class="code-block-wrap">
+            <div class="code-header"><span class="code-lang">Response envelope</span></div>
+            <pre><code>{
+  "success": true,
+  "data": { "admitted": true, "guestName": "Sophie Anderson", ... },
+  "sig": "hmac-sha256-of-data-payload",
+  "ts": 1718123456789
+}</code></pre>
+          </div>
+
+          <!-- ANTI-FRAUD -->
+          <h2 id="anti-fraud">Anti-fraud engine</h2>
+          <p>In Enterprise mode, every check-in attempt passes through a multi-layer anti-fraud middleware before a verdict is returned.</p>
+
+          <h3 id="duplicate-detection">Duplicate detection</h3>
+          <p>At check-in time, the server computes a fingerprint from the guest's invite record and compares it against all fingerprints in the same event. If a match is already marked as admitted, the system flags it as a potential duplicate attempt. When <code>autoBlockDuplicates</code> is enabled in the event security settings, the scan is automatically rejected; otherwise it is shown as a warning for staff to review.</p>
+
+          <h3 id="reentrancy-lock">Reentrancy lock</h3>
+          <p>When a QR code is submitted for check-in, the server acquires an exclusive lock on that invite ID for the duration of the validation. If a second device submits the same code while the first is being processed, the second request immediately receives a conflict response. This prevents race conditions at busy multi-lane entrances where two staff members might scan the same code within milliseconds of each other.</p>
+
+          <h3 id="rapid-scan-detection">Rapid-scan detection</h3>
+          <p>If the same invite code is scanned three or more times within a 10-second window, the system records a rapid-scan event and reduces the invite's trust score. This catches someone methodically testing whether the same QR code works repeatedly.</p>
+
+          <h3 id="trust-score">Trust score</h3>
+          <p>Each invite starts with a trust score of 100. Security events reduce the score:</p>
+          <div class="table-wrap"><table>
+            <thead><tr><th>Event</th><th>Score impact</th></tr></thead>
+            <tbody>
+              <tr><td>Duplicate fingerprint detected</td><td>−30</td></tr>
+              <tr><td>Rapid scan (3+ in 10s)</td><td>−20</td></tr>
+              <tr><td>Multi-device scan (different IPs, short window)</td><td>−15</td></tr>
+              <tr><td>Scan outside time window</td><td>−10</td></tr>
+              <tr><td>Manager override used</td><td>−5 (logged, not a suspicion signal)</td></tr>
+            </tbody>
+          </table></div>
+          <p>Organisers can configure a minimum trust score threshold in the event security settings. Invites below the threshold can be auto-blocked or flagged for manual review.</p>
+
+          <h3 id="time-window">Time window enforcement</h3>
+          <p>By default, the check-in system only accepts scans within a defined time window:</p>
+          <div class="table-wrap"><table>
+            <thead><tr><th>Default window</th><th>Value</th></tr></thead>
+            <tbody>
+              <tr><td>Opens before event</td><td>2 hours</td></tr>
+              <tr><td>Closes after event start</td><td>30 minutes</td></tr>
+            </tbody>
+          </table></div>
+          <p>Organisers can extend or disable the window from the check-in settings panel. Scans outside the window receive a clear rejection message explaining when the window opens or that it has closed.</p>
+
+          <!-- RATE LIMITING -->
+          <h2 id="rate-limiting">Rate limiting</h2>
+          <p>PlanIt applies rate limits at the API layer to prevent abuse and protect service availability. Limits are enforced per IP, per session, or per event depending on the operation.</p>
+
+          <div class="table-wrap"><table>
+            <thead><tr><th>Operation</th><th>Limit</th><th>Scope</th></tr></thead>
+            <tbody>
+              <tr><td>API requests (general)</td><td>200 per 15 minutes</td><td>Per IP</td></tr>
+              <tr><td>Event creation</td><td>10 per hour</td><td>Per IP</td></tr>
+              <tr><td>Chat messages</td><td>30 per minute</td><td>Per session</td></tr>
+              <tr><td>Check-in scans</td><td>120 per minute</td><td>Per session</td></tr>
+              <tr><td>File uploads</td><td>20 per hour</td><td>Per IP</td></tr>
+              <tr><td>Guest CSV import</td><td>5 per hour</td><td>Per event</td></tr>
+              <tr><td>Support submissions</td><td>3 per hour</td><td>Per IP</td></tr>
+              <tr><td>Organiser auth attempts</td><td>10 per 15 minutes</td><td>Per IP</td></tr>
+            </tbody>
+          </table></div>
+
+          <!-- DATA PRIVACY -->
+          <h2 id="data-privacy">Data privacy &amp; retention</h2>
+          <p>PlanIt collects only the data that event organisers explicitly enter. There are no tracking pixels, no third-party analytics injected into event pages, and no advertising infrastructure.</p>
+
+          <h3 id="what-is-stored">What is stored</h3>
+          <div class="table-wrap"><table>
+            <thead><tr><th>Data type</th><th>Stored where</th><th>Retention</th></tr></thead>
+            <tbody>
+              <tr><td>Event metadata (name, date, slug)</td><td>MongoDB</td><td>7 days after event date</td></tr>
+              <tr><td>Guest records (name, email, role, group size)</td><td>MongoDB</td><td>7 days after event date</td></tr>
+              <tr><td>Check-in records &amp; audit log</td><td>MongoDB</td><td>7 days after event date</td></tr>
+              <tr><td>Chat messages</td><td>MongoDB</td><td>7 days after event date</td></tr>
+              <tr><td>Uploaded files</td><td>Cloudinary + MongoDB reference</td><td>7 days after event date</td></tr>
+              <tr><td>Seating maps</td><td>MongoDB</td><td>7 days after event date</td></tr>
+              <tr><td>Organiser password</td><td>MongoDB (bcrypt hash)</td><td>7 days after event date</td></tr>
+              <tr><td>Table Service venue data</td><td>MongoDB</td><td>Indefinite (no auto-delete)</td></tr>
+            </tbody>
+          </table></div>
+
+          <div class="callout warn">
+            <div class="callout-icon"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#f59e0b" stroke-width="1.5" stroke-linecap="round"><path d="M8 2L2 13h12L8 2z"/><line x1="8" y1="7" x2="8" y2="10"/><circle cx="8" cy="12" r=".6" fill="#f59e0b" stroke="none"/></svg></div>
+            <div class="callout-body">
+              <div class="callout-title">Deletion is permanent and automatic</div>
+              <p>The 7-day deletion policy runs daily at 2 AM. Once event data is deleted, it cannot be recovered by PlanIt staff or administrators. Export records you need — guest lists, attendance logs, uploaded files — before the deletion window closes.</p>
+            </div>
+          </div>
+
+          <h3 id="guest-email-use">How guest email addresses are used</h3>
+          <p>Guest email addresses collected during invite creation are used exclusively for duplicate fingerprinting — the system uses them to detect if the same person is invited twice under different names. PlanIt does <strong>not</strong> send emails to guests automatically, display email addresses to guests, or use them for any marketing purpose. Emails are stored hashed in the duplicate detection index alongside the full email for organiser reference.</p>
+
+          <!-- NO-ACCOUNT MODEL -->
+          <h2 id="no-account-model">The no-account model</h2>
+          <p>PlanIt deliberately avoids collecting user accounts for guests and participants. This design decision has several security and privacy benefits:</p>
+          <ul>
+            <li>No password database to breach for guests (there are none)</li>
+            <li>No persistent user profiles that accumulate data across events</li>
+            <li>No email address required from guests — zero friction for attendance</li>
+            <li>No risk of guest credentials being reused or phished</li>
+            <li>Identity data (guest names, emails) is tied to a specific event and deleted with it</li>
+          </ul>
+          <p>The trade-off is that sessions are ephemeral — if a participant closes their browser, they need to re-enter their display name when they return. There is no "log back in" flow for participants because there is nothing to log back into.</p>
+
+          <div class="page-nav">
+            <a href="table-service.html" class="page-nav-link">
+              <span class="page-nav-label">← Previous</span>
+              <span class="page-nav-title">Table Service Mode</span>
+            </a>
+            <a href="infrastructure.html" class="page-nav-link page-nav-next">
+              <span class="page-nav-label">Next →</span>
+              <span class="page-nav-title">Infrastructure</span>
+            </a>
+          </div>
+        </div>
+        <div class="toc-right"></div>
+      </div>
+    </div>
+  </div>
+  <script src="nav.js"></script>
+</body>
+</html>

@@ -1,0 +1,228 @@
+/* ─────────────────────────────────────────────────────────────────────────────
+ * adminDark.css — dark theme for the admin panel (src/pages/Admin.jsx)
+ *
+ * Scoped: nothing here applies unless an ancestor has the `admin-dark` class,
+ * which Admin.jsx toggles (and persists in localStorage as `planit-admin-theme`).
+ * The utility-class remaps below cover every light Tailwind colour class used by
+ * Admin.jsx, AdminPayments, PlatformAnalyticsDashboard, PiiLookupPanel and
+ * SecurityAlerts, so panels pick up dark mode without per-component edits.
+ * Saturated solids (bg-blue-600, bg-red-600, gradients, white text on them) and
+ * the already-dark sidebar are intentionally left alone.
+ * ───────────────────────────────────────────────────────────────────────────── */
+
+html.admin-dark-html { color-scheme: dark; background: #0b0d12; }
+
+.admin-dark {
+  color-scheme: dark;
+  --ad-page: #0b0d12;
+  --ad-surface: #12151c;
+  --ad-well: #0e1117;
+  --ad-line: #2a303d;
+  --ad-text: #f3f5f9;
+}
+
+/* Page backgrounds (root shell + full-page panels such as Command Center) */
+.admin-dark.min-h-screen,
+.admin-dark .min-h-screen.bg-neutral-50,
+.admin-dark .min-h-screen.bg-neutral-100 { background-color: var(--ad-page) !important; }
+
+/* Shared component classes from index.css */
+.admin-dark .card { background: var(--ad-surface); border-color: var(--ad-line); box-shadow: none; }
+.admin-dark .input,
+.admin-dark input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]),
+.admin-dark textarea,
+.admin-dark select {
+  background-color: var(--ad-well); border-color: #323a49; color: var(--ad-text);
+}
+.admin-dark .input::placeholder, .admin-dark textarea::placeholder { color: #6b7385; }
+.admin-dark .input:focus { border-color: #8b93a3; box-shadow: 0 0 0 1px #8b93a3; }
+.admin-dark .input:disabled { background-color: #171b24; }
+.admin-dark select option { background: #12151c; color: var(--ad-text); }
+
+.admin-dark .btn-primary { background: #e4e4e7; color: #0a0a0b; }
+.admin-dark .btn-primary:hover:not(:disabled) { background: #ffffff; }
+.admin-dark .btn-secondary { background: #1c212b; color: #cfd4de; border-color: #323a49; }
+.admin-dark .btn-secondary:hover:not(:disabled) { background: #262c38; border-color: #4a5262; }
+.admin-dark .btn-danger { background: rgba(239,68,68,.10); color: #f87171; border-color: rgba(239,68,68,.30); }
+.admin-dark .btn-danger:hover:not(:disabled) { background: rgba(239,68,68,.18); }
+.admin-dark .btn-ghost { color: #a0a8b8; }
+.admin-dark .btn-ghost:hover:not(:disabled) { background: #1c212b; color: var(--ad-text); }
+
+.admin-dark .badge-green { background: rgba(16,185,129,.12); color: #6ee7b7; border-color: rgba(16,185,129,.30); }
+.admin-dark .badge-gray  { background: #1c212b; color: #b8bfcc; border-color: #323a49; }
+.admin-dark .badge-red   { background: rgba(239,68,68,.12); color: #fca5a5; border-color: rgba(239,68,68,.30); }
+.admin-dark .badge-amber { background: rgba(245,158,11,.12); color: #fcd34d; border-color: rgba(245,158,11,.30); }
+.admin-dark .badge-primary { background: #e4e4e7; color: #0a0a0b; }
+
+.admin-dark table { border-color: var(--ad-line); }
+.admin-dark hr { border-color: var(--ad-line); }
+.admin-dark ::selection { background: rgba(96,165,250,.35); }
+
+/* Command Center inline <style> (CC_STYLES in Admin.jsx) */
+.admin-dark .cc-bar { background: #262c38; }
+.admin-dark .cc-tr:hover { background: #171b24; }
+
+/* Hard-coded SVG chart colours */
+.admin-dark svg [stroke="#e5e7eb"], .admin-dark svg [stroke="#f3f4f6"] { stroke: #2a303d; }
+.admin-dark svg [fill="#d1d5db"] { fill: #5b6475; }
+
+/* ── Tailwind utility remaps (generated from the classes actually in use) ── */
+.admin-dark .bg-amber-100{background-color:rgba(245,158,11,0.16)!important}
+.admin-dark .bg-amber-50{background-color:rgba(245,158,11,0.1)!important}
+.admin-dark .bg-blue-100{background-color:rgba(59,130,246,0.16)!important}
+.admin-dark .bg-blue-50{background-color:rgba(59,130,246,0.1)!important}
+.admin-dark .bg-cyan-100{background-color:rgba(6,182,212,0.16)!important}
+.admin-dark .bg-emerald-100{background-color:rgba(16,185,129,0.16)!important}
+.admin-dark .bg-emerald-50{background-color:rgba(16,185,129,0.1)!important}
+.admin-dark .bg-green-100{background-color:rgba(34,197,94,0.16)!important}
+.admin-dark .bg-green-50{background-color:rgba(34,197,94,0.1)!important}
+.admin-dark .bg-indigo-100{background-color:rgba(99,102,241,0.16)!important}
+.admin-dark .bg-indigo-50{background-color:rgba(99,102,241,0.1)!important}
+.admin-dark .bg-neutral-100{background-color:#1c212b!important}
+.admin-dark .bg-neutral-200{background-color:#262c38!important}
+.admin-dark .bg-neutral-300{background-color:#323a49!important}
+.admin-dark .bg-neutral-400{background-color:#4a5262!important}
+.admin-dark .bg-neutral-50{background-color:#171b24!important}
+.admin-dark .bg-neutral-500{background-color:#5b6475!important}
+.admin-dark .bg-neutral-800{background-color:#353d4d!important}
+.admin-dark .bg-neutral-900{background-color:#2b3240!important}
+.admin-dark .bg-orange-100{background-color:rgba(249,115,22,0.16)!important}
+.admin-dark .bg-orange-50{background-color:rgba(249,115,22,0.1)!important}
+.admin-dark .bg-pink-50{background-color:rgba(236,72,153,0.1)!important}
+.admin-dark .bg-purple-100{background-color:rgba(168,85,247,0.16)!important}
+.admin-dark .bg-purple-50{background-color:rgba(168,85,247,0.1)!important}
+.admin-dark .bg-red-100{background-color:rgba(239,68,68,0.16)!important}
+.admin-dark .bg-red-50{background-color:rgba(239,68,68,0.1)!important}
+.admin-dark .bg-rose-50{background-color:rgba(244,63,94,0.1)!important}
+.admin-dark .bg-sky-100{background-color:rgba(14,165,233,0.16)!important}
+.admin-dark .bg-slate-100{background-color:#1c212b!important}
+.admin-dark .bg-teal-100{background-color:rgba(20,184,166,0.16)!important}
+.admin-dark .bg-teal-50{background-color:rgba(20,184,166,0.1)!important}
+.admin-dark .bg-violet-100{background-color:rgba(139,92,246,0.16)!important}
+.admin-dark .bg-violet-50{background-color:rgba(139,92,246,0.1)!important}
+.admin-dark .bg-white{background-color:#12151c!important}
+.admin-dark .border-amber-100{border-color:rgba(245,158,11,0.22)!important}
+.admin-dark .border-amber-200{border-color:rgba(245,158,11,0.3)!important}
+.admin-dark .border-amber-300{border-color:rgba(245,158,11,0.4)!important}
+.admin-dark .border-blue-100{border-color:rgba(59,130,246,0.22)!important}
+.admin-dark .border-blue-200{border-color:rgba(59,130,246,0.3)!important}
+.admin-dark .border-blue-300{border-color:rgba(59,130,246,0.4)!important}
+.admin-dark .border-emerald-100{border-color:rgba(16,185,129,0.22)!important}
+.admin-dark .border-emerald-200{border-color:rgba(16,185,129,0.3)!important}
+.admin-dark .border-emerald-300{border-color:rgba(16,185,129,0.4)!important}
+.admin-dark .border-green-200{border-color:rgba(34,197,94,0.3)!important}
+.admin-dark .border-indigo-200{border-color:rgba(99,102,241,0.3)!important}
+.admin-dark .border-neutral-100{border-color:#1f2430!important}
+.admin-dark .border-neutral-200{border-color:#2a303d!important}
+.admin-dark .border-neutral-300{border-color:#3a4252!important}
+.admin-dark .border-neutral-400{border-color:#4a5262!important}
+.admin-dark .border-orange-200{border-color:rgba(249,115,22,0.3)!important}
+.admin-dark .border-orange-300{border-color:rgba(249,115,22,0.4)!important}
+.admin-dark .border-pink-200{border-color:rgba(236,72,153,0.3)!important}
+.admin-dark .border-purple-200{border-color:rgba(168,85,247,0.3)!important}
+.admin-dark .border-red-100{border-color:rgba(239,68,68,0.22)!important}
+.admin-dark .border-red-200{border-color:rgba(239,68,68,0.3)!important}
+.admin-dark .border-red-300{border-color:rgba(239,68,68,0.4)!important}
+.admin-dark .border-rose-100{border-color:rgba(244,63,94,0.22)!important}
+.admin-dark .border-rose-200{border-color:rgba(244,63,94,0.3)!important}
+.admin-dark .border-teal-200{border-color:rgba(20,184,166,0.3)!important}
+.admin-dark .border-violet-200{border-color:rgba(139,92,246,0.3)!important}
+.admin-dark .border-violet-300{border-color:rgba(139,92,246,0.4)!important}
+.admin-dark .divide-neutral-100 > :not([hidden]) ~ :not([hidden]){border-color:#1f2430!important}
+.admin-dark .focus\:bg-white:focus{background-color:#12151c!important}
+.admin-dark .focus\:border-neutral-400:focus{border-color:#4a5262!important}
+.admin-dark .focus\:ring-blue-300:focus{--tw-ring-color:rgba(59,130,246,0.4)!important}
+.admin-dark .hover\:bg-amber-100:hover{background-color:rgba(245,158,11,0.16)!important}
+.admin-dark .hover\:bg-amber-50:hover{background-color:rgba(245,158,11,0.1)!important}
+.admin-dark .hover\:bg-blue-100:hover{background-color:rgba(59,130,246,0.16)!important}
+.admin-dark .hover\:bg-blue-50:hover{background-color:rgba(59,130,246,0.1)!important}
+.admin-dark .hover\:bg-emerald-50:hover{background-color:rgba(16,185,129,0.1)!important}
+.admin-dark .hover\:bg-green-50:hover{background-color:rgba(34,197,94,0.1)!important}
+.admin-dark .hover\:bg-indigo-100:hover{background-color:rgba(99,102,241,0.16)!important}
+.admin-dark .hover\:bg-indigo-50:hover{background-color:rgba(99,102,241,0.1)!important}
+.admin-dark .hover\:bg-neutral-100:hover{background-color:#1c212b!important}
+.admin-dark .hover\:bg-neutral-200:hover{background-color:#262c38!important}
+.admin-dark .hover\:bg-neutral-50:hover{background-color:#171b24!important}
+.admin-dark .hover\:bg-neutral-700:hover{background-color:#3f4859!important}
+.admin-dark .hover\:bg-neutral-800:hover{background-color:#353d4d!important}
+.admin-dark .hover\:bg-orange-50:hover{background-color:rgba(249,115,22,0.1)!important}
+.admin-dark .hover\:bg-pink-100:hover{background-color:rgba(236,72,153,0.16)!important}
+.admin-dark .hover\:bg-purple-100:hover{background-color:rgba(168,85,247,0.16)!important}
+.admin-dark .hover\:bg-red-100:hover{background-color:rgba(239,68,68,0.16)!important}
+.admin-dark .hover\:bg-red-200:hover{background-color:rgba(239,68,68,0.24)!important}
+.admin-dark .hover\:bg-red-50:hover{background-color:rgba(239,68,68,0.1)!important}
+.admin-dark .hover\:bg-teal-100:hover{background-color:rgba(20,184,166,0.16)!important}
+.admin-dark .hover\:border-blue-300:hover{border-color:rgba(59,130,246,0.4)!important}
+.admin-dark .hover\:border-neutral-200:hover{border-color:#2a303d!important}
+.admin-dark .hover\:border-neutral-300:hover{border-color:#3a4252!important}
+.admin-dark .hover\:border-neutral-400:hover{border-color:#4a5262!important}
+.admin-dark .hover\:border-violet-300:hover{border-color:rgba(139,92,246,0.4)!important}
+.admin-dark .hover\:text-amber-600:hover{color:#fbbf24!important}
+.admin-dark .hover\:text-blue-600:hover{color:#60a5fa!important}
+.admin-dark .hover\:text-blue-700:hover{color:#93c5fd!important}
+.admin-dark .hover\:text-blue-800:hover{color:#bfdbfe!important}
+.admin-dark .hover\:text-green-600:hover{color:#4ade80!important}
+.admin-dark .hover\:text-indigo-800:hover{color:#c7d2fe!important}
+.admin-dark .hover\:text-neutral-600:hover{color:#b8bfcc!important}
+.admin-dark .hover\:text-neutral-700:hover{color:#cfd4de!important}
+.admin-dark .hover\:text-neutral-800:hover{color:#e2e6ee!important}
+.admin-dark .hover\:text-neutral-900:hover{color:#f3f5f9!important}
+.admin-dark .hover\:text-red-500:hover{color:#f87171!important}
+.admin-dark .hover\:text-red-600:hover{color:#f87171!important}
+.admin-dark .hover\:text-red-700:hover{color:#fca5a5!important}
+.admin-dark .hover\:text-violet-700:hover{color:#c4b5fd!important}
+.admin-dark .ring-purple-200{--tw-ring-color:rgba(168,85,247,0.3)!important}
+.admin-dark .ring-rose-300{--tw-ring-color:rgba(244,63,94,0.4)!important}
+.admin-dark .text-amber-500{color:#fbbf24!important}
+.admin-dark .text-amber-600{color:#fbbf24!important}
+.admin-dark .text-amber-700{color:#fcd34d!important}
+.admin-dark .text-amber-800{color:#fde68a!important}
+.admin-dark .text-amber-900{color:#fde68a!important}
+.admin-dark .text-blue-500{color:#60a5fa!important}
+.admin-dark .text-blue-600{color:#60a5fa!important}
+.admin-dark .text-blue-700{color:#93c5fd!important}
+.admin-dark .text-blue-800{color:#bfdbfe!important}
+.admin-dark .text-cyan-600{color:#22d3ee!important}
+.admin-dark .text-cyan-700{color:#67e8f9!important}
+.admin-dark .text-cyan-800{color:#a5f3fc!important}
+.admin-dark .text-emerald-500{color:#34d399!important}
+.admin-dark .text-emerald-600{color:#34d399!important}
+.admin-dark .text-emerald-700{color:#6ee7b7!important}
+.admin-dark .text-emerald-800{color:#a7f3d0!important}
+.admin-dark .text-green-600{color:#4ade80!important}
+.admin-dark .text-green-700{color:#86efac!important}
+.admin-dark .text-indigo-500{color:#818cf8!important}
+.admin-dark .text-indigo-600{color:#818cf8!important}
+.admin-dark .text-indigo-700{color:#a5b4fc!important}
+.admin-dark .text-indigo-800{color:#c7d2fe!important}
+.admin-dark .text-neutral-300{color:#6b7385!important}
+.admin-dark .text-neutral-400{color:#8b93a3!important}
+.admin-dark .text-neutral-500{color:#a0a8b8!important}
+.admin-dark .text-neutral-600{color:#b8bfcc!important}
+.admin-dark .text-neutral-700{color:#cfd4de!important}
+.admin-dark .text-neutral-800{color:#e2e6ee!important}
+.admin-dark .text-neutral-900{color:#f3f5f9!important}
+.admin-dark .text-orange-500{color:#fb923c!important}
+.admin-dark .text-orange-600{color:#fb923c!important}
+.admin-dark .text-orange-700{color:#fdba74!important}
+.admin-dark .text-pink-700{color:#f9a8d4!important}
+.admin-dark .text-purple-600{color:#c084fc!important}
+.admin-dark .text-purple-700{color:#d8b4fe!important}
+.admin-dark .text-purple-800{color:#e9d5ff!important}
+.admin-dark .text-red-500{color:#f87171!important}
+.admin-dark .text-red-600{color:#f87171!important}
+.admin-dark .text-red-700{color:#fca5a5!important}
+.admin-dark .text-red-800{color:#fecaca!important}
+.admin-dark .text-rose-500{color:#fb7185!important}
+.admin-dark .text-rose-600{color:#fb7185!important}
+.admin-dark .text-sky-500{color:#38bdf8!important}
+.admin-dark .text-sky-600{color:#38bdf8!important}
+.admin-dark .text-sky-700{color:#7dd3fc!important}
+.admin-dark .text-slate-700{color:#cfd4de!important}
+.admin-dark .text-teal-700{color:#5eead4!important}
+.admin-dark .text-teal-800{color:#99f6e4!important}
+.admin-dark .text-violet-500{color:#a78bfa!important}
+.admin-dark .text-violet-600{color:#a78bfa!important}
+.admin-dark .text-violet-700{color:#c4b5fd!important}
+.admin-dark .text-violet-800{color:#ddd6fe!important}
+.admin-dark .text-violet-900{color:#ddd6fe!important}

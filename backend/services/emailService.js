@@ -1,0 +1,612 @@
+'use strict';
+
+const redis     = require('./redisClient');
+const { meshPost } = require('../middleware/mesh');
+
+const CALLER         = process.env.BACKEND_LABEL || 'Backend';
+const EMAIL_LIMIT    = 3;
+const REMINDER_HOURS = parseInt(process.env.EMAIL_REMINDER_HOURS || '24', 10);
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+function secUntilMidnight() {
+  const now      = new Date();
+  const midnight = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1));
+  return Math.max(60, Math.floor((midnight - now) / 1000));
+}
+
+async function checkLimit(address) {
+  if (!address) return false;
+  const day = new Date().toISOString().slice(0, 10);
+  const key = `emlimit:${address}:${day}`;
+  const cnt = await redis.incrWithExpiry(key, secUntilMidnight());
+  if (cnt > EMAIL_LIMIT) {
+    console.log(`[email] SKIP ${address} - already sent ${cnt - 1} emails today (limit ${EMAIL_LIMIT})`);
+    return false;
+  }
+  return true;
+}
+
+function joinUrl(event) {
+  const base = (process.env.FRONTEND_URL || '').split(',')[0].trim().replace(/\/$/, '');
+  const sub  = event.subdomain;
+  const id   = event._id || event.id || '';
+  if (!base) return `#event-${id}`;
+  return sub ? `${base}/e/${sub}` : `${base}/event/${id}`;
+}
+
+const h = (s) => String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+function fmtDate(d, tz) {
+  // Format in the EVENT's timezone (e.g. "6:30 PM EDT"), not always UTC.
+  let zone = 'UTC';
+  try { if (tz) { new Intl.DateTimeFormat('en-US', { timeZone: tz }); zone = tz; } } catch { zone = 'UTC'; }
+  try {
+    return new Date(d).toLocaleString('en-US', {
+      weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
+      hour: 'numeric', minute: '2-digit', timeZone: zone, timeZoneName: 'short',
+    });
+  } catch { return String(d || ''); }
+}
+
+// ─── QR URL builder ───────────────────────────────────────────────────────────
+// Email clients (Gmail, Outlook, Apple Mail) all block data: URIs in <img> tags.
+// Instead we point to qrserver.com which generates the QR on-demand as a plain
+// external PNG -- every email client loads it just like any other image.
+
+function getQrImageUrl(joinUrl) {
+  if (!joinUrl || joinUrl.startsWith('#')) return null;
+  const encoded = encodeURIComponent(joinUrl);
+  return `https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encoded}&bgcolor=ffffff&color=000000&margin=10&format=png`;
+}
+
+// ─── Shared inline style tokens ───────────────────────────────────────────────
+
+// Brand kit mirrors the live PlanIt product exactly (frontend/tailwind.config.js
+// + frontend/src/index.css): Syne for display/headlines, DM Sans for body copy,
+// a near-black masthead, and the same neutral/indigo palette used across the app.
+const FONT_DISPLAY = `'Syne',-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif`;
+const FONT  = `'DM Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif`;
+const BG    = `#F0F0F1`;
+const WHITE = `#ffffff`;
+const DARK  = `#0A0A0A`;
+const MID   = `#404040`;
+const MUTED = `#525252`;
+const FAINT = `#A3A3A3`;
+const RULE  = `#E5E5E5`;
+const PANEL = `#FAFAFA`;
+const ACCENT      = `#6366F1`;
+const ACCENT_DARK = `#4338CA`;
+const ACCENT_SOFT = `#EEF2FF`;
+
+// ─── Shared fragments ─────────────────────────────────────────────────────────
+
+function emailShell(title, preheader, pillLabel, headerRowHtml, bodyHtml, footerNote) {
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <meta name="color-scheme" content="light only"/>
+  <meta name="x-apple-disable-message-reformatting"/>
+  <title>${h(title)}</title>
+  <!--[if mso]><noscript><xml><o:OfficeDocumentSettings><o:PixelsPerInch>96</o:PixelsPerInch></o:OfficeDocumentSettings></xml></noscript><![endif]-->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&display=swap" rel="stylesheet">
+  <style>
+    body,table,td,a{-webkit-text-size-adjust:100%;-ms-text-size-adjust:100%}
+    table,td{mso-table-lspace:0pt;mso-table-rspace:0pt}
+    img{border:0;height:auto;line-height:100%;outline:none;text-decoration:none;-ms-interpolation-mode:bicubic}
+    @media only screen and (max-width:620px){
+      .card{border-radius:0!important}
+      .ep{padding-left:24px!important;padding-right:24px!important}
+      .pill{display:none!important}
+    }
+  </style>
+</head>
+<body style="margin:0;padding:0;background:${BG};font-family:${FONT};-webkit-font-smoothing:antialiased;" bgcolor="${BG}">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${BG};" bgcolor="${BG}">
+    <tr>
+      <td align="center" style="padding:40px 16px;">
+
+        <div style="display:none;max-height:0;overflow:hidden;mso-hide:all;font-size:1px;color:${BG};line-height:1px;">${h(preheader)}&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;</div>
+
+        <table role="presentation" class="card" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background:${WHITE};border-radius:20px;overflow:hidden;box-shadow:0 1px 2px rgba(10,10,10,0.04),0 12px 32px rgba(10,10,10,0.08);" bgcolor="${WHITE}">
+
+          <!-- MASTHEAD -->
+          <tr>
+            <td style="background:${DARK};padding:30px 40px;" bgcolor="${DARK}">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td>
+                    <span style="font-size:22px;font-weight:800;color:${WHITE};letter-spacing:-0.03em;font-family:${FONT_DISPLAY};">Plan<span style="color:#818CF8;">It</span></span><br/>
+                    <span style="font-size:10px;font-weight:500;letter-spacing:1.4px;text-transform:uppercase;color:rgba(255,255,255,0.38);font-family:${FONT};">Event Management Platform</span>
+                  </td>
+                  <td align="right" valign="middle" class="pill">
+                    <span style="display:inline-block;font-size:10px;font-weight:700;letter-spacing:0.8px;text-transform:uppercase;color:rgba(255,255,255,0.75);border:1px solid rgba(255,255,255,0.16);background:rgba(255,255,255,0.06);border-radius:20px;padding:6px 14px;font-family:${FONT};">${h(pillLabel)}</span>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          ${headerRowHtml}
+
+          <!-- BODY -->
+          <tr>
+            <td class="ep" style="padding:32px 40px;">
+              ${bodyHtml}
+            </td>
+          </tr>
+
+          <!-- FOOTER -->
+          <tr>
+            <td class="ep" style="background:${PANEL};border-top:1px solid ${RULE};padding:20px 40px;" bgcolor="${PANEL}">
+              <p style="margin:0 0 4px 0;font-size:11px;color:${FAINT};line-height:1.6;font-family:${FONT};">${h(footerNote)}</p>
+              <p style="margin:0;font-size:11px;color:${FAINT};line-height:1.6;font-family:${FONT};"><a href="#unsubscribe" style="color:${ACCENT_DARK};text-decoration:underline;font-family:${FONT};">Unsubscribe</a> &nbsp;&middot;&nbsp; <a href="#preferences" style="color:${ACCENT_DARK};text-decoration:underline;font-family:${FONT};">Manage preferences</a></p>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
+}
+
+function detailRows(event) {
+  const rows = [
+    ['Event',     event.title],
+    ['Date',      event.date ? fmtDate(event.date, event.timezone) : null],
+    ['Location',  event.location],
+    ['Organiser', event.organizerName],
+  ];
+  return rows.filter(([, v]) => v).map(([k, v]) => `
+    <tr>
+      <td style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:${FAINT};width:90px;padding:8px 0;vertical-align:top;font-family:${FONT};">${h(k)}</td>
+      <td style="font-size:15px;color:${MID};padding:8px 0 8px 12px;line-height:1.45;font-family:${FONT};">${h(String(v))}</td>
+    </tr>`).join('');
+}
+
+function sectionCap(label) {
+  return `<p style="margin:0 0 16px 0;font-size:10px;font-weight:700;letter-spacing:1.3px;text-transform:uppercase;color:${ACCENT_DARK};padding-bottom:10px;border-bottom:2px solid ${ACCENT_SOFT};font-family:${FONT};">${h(label)}</p>`;
+}
+
+function hrule() {
+  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td style="height:1px;background:${RULE};font-size:0;line-height:0;padding:16px 0 0 0;"></td></tr></table>`;
+}
+
+function ctaButton(label, url) {
+  return `
+    <table role="presentation" cellpadding="0" cellspacing="0" style="margin-top:28px;width:100%;">
+      <tr>
+        <td align="center">
+          <!--[if mso]><v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" href="${h(url)}" style="height:50px;v-text-anchor:middle;width:260px;" arcsize="20%" stroke="f" fillcolor="${DARK}"><w:anchorlock/><center style="color:#ffffff;font-family:${FONT};font-size:14px;font-weight:700;">${h(label)}</center></v:roundrect><![endif]-->
+          <!--[if !mso]><!-->
+          <a href="${h(url)}" style="background:${DARK};background:linear-gradient(135deg,#1A1A1A 0%,${DARK} 100%);color:#ffffff;display:inline-block;font-family:${FONT};font-size:14px;font-weight:700;line-height:50px;text-align:center;text-decoration:none;width:260px;border-radius:12px;letter-spacing:-0.1px;mso-hide:all;">${h(label)}</a>
+          <!--<![endif]-->
+        </td>
+      </tr>
+    </table>`;
+}
+
+function signature(copy) {
+  return `
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top:36px;padding-top:24px;border-top:1px solid ${RULE};">
+      <tr>
+        <td>
+          <p style="margin:0 0 18px 0;font-size:15px;color:#525252;line-height:1.75;font-family:${FONT};">${copy}</p>
+          <p style="margin:0 0 2px 0;font-size:15px;font-weight:700;color:${DARK};font-family:${FONT};">Aakshat Hariharan</p>
+          <p style="margin:0;font-size:12px;color:${FAINT};font-family:${FONT};">Founder, PlanIt</p>
+        </td>
+      </tr>
+    </table>`;
+}
+
+function qrBlock(qrDataUri, link) {
+  if (!qrDataUri) return '';
+  return `
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top:24px;background:${PANEL};border:1px solid #E5E5E5;border-radius:10px;">
+      <tr>
+        <td style="padding:24px;text-align:center;">
+          <p style="margin:0 0 16px 0;font-size:10px;font-weight:700;letter-spacing:1.3px;text-transform:uppercase;color:${FAINT};font-family:${FONT};">QR Code for Attendees</p>
+          <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 auto;">
+            <tr>
+              <td style="background:${WHITE};border:1px solid #D4D4D4;border-radius:8px;padding:14px;line-height:0;">
+                <img src="${qrDataUri}" alt="Event QR Code" width="160" height="160" style="display:block;border-radius:4px;"/>
+              </td>
+            </tr>
+          </table>
+          <p style="margin:16px 0 6px 0;font-size:13px;color:${MUTED};line-height:1.6;font-family:${FONT};">Works with any smartphone camera. Print it, embed it in your materials, or display it on screen at the venue.</p>
+          <p style="margin:0;font-size:12px;color:${FAINT};font-family:${FONT};">QR code not rendering? <a href="${h(link)}" style="color:${DARK};font-weight:600;text-decoration:underline;font-family:${FONT};">Open the event link directly</a></p>
+        </td>
+      </tr>
+    </table>`;
+}
+
+// ─── Template builders ────────────────────────────────────────────────────────
+
+function buildConfirmation(event) {
+  const url      = joinUrl(event);
+  const qrImgUrl = getQrImageUrl(url);
+
+  const headerRow = `
+    <tr>
+      <td class="ep" style="padding:36px 40px 30px 40px;border-bottom:1px solid ${RULE};">
+        <span style="display:inline-block;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:${ACCENT_DARK};background:${ACCENT_SOFT};padding:5px 12px;border-radius:6px;margin-bottom:16px;font-family:${FONT};">Event Created</span>
+        <h1 style="margin:0 0 12px 0;font-size:24px;font-weight:800;color:${DARK};letter-spacing:-0.5px;line-height:1.2;font-family:${FONT_DISPLAY};">Your event is live.</h1>
+        <p style="margin:0;font-size:15px;color:${MUTED};line-height:1.65;font-family:${FONT};">Your dashboard is ready. Share the join link below or print the QR code to display at your venue. Guests join in seconds with no account needed.</p>
+      </td>
+    </tr>`;
+
+  const body = `
+    ${sectionCap('Event Details')}
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+      ${detailRows(event)}
+    </table>
+    ${hrule()}
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top:24px;background:${PANEL};border:1px solid #E5E5E5;border-radius:8px;">
+      <tr>
+        <td style="padding:16px 20px;">
+          <p style="margin:0 0 6px 0;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:${FAINT};font-family:${FONT};">Shareable Join Link</p>
+          <p style="margin:0;font-size:13px;color:${DARK};word-break:break-all;font-weight:600;font-family:${FONT};">${h(url)}</p>
+        </td>
+      </tr>
+    </table>
+    ${qrBlock(qrImgUrl, url)}
+    ${ctaButton('Open Event Dashboard', url)}
+    ${signature('Your dashboard is live. Add your guest list, brief your check-in team on the staff PIN, and you are set. If anything comes up before or on the day, just reply to this email.')}`;
+
+  return emailShell(
+    `Event created: ${event.title}`,
+    `Your event "${event.title}" is live. Open your dashboard to get started.`,
+    'Confirmation',
+    headerRow,
+    body,
+    'You received this because you created an event on PlanIt. This is an automated confirmation.'
+  );
+}
+
+function buildReminder(event) {
+  const url     = joinUrl(event);
+  const timeStr = REMINDER_HOURS === 24 ? 'tomorrow' : `in approximately ${REMINDER_HOURS} hours`;
+  const label   = REMINDER_HOURS === 24 ? 'Coming Up Tomorrow' : 'Coming Up Soon';
+
+  const headerRow = `
+    <tr>
+      <td class="ep" style="padding:36px 40px 30px 40px;border-bottom:1px solid ${RULE};">
+        <span style="display:inline-block;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:${ACCENT_DARK};background:${ACCENT_SOFT};padding:5px 12px;border-radius:6px;margin-bottom:16px;font-family:${FONT};">${h(label)}</span>
+        <h1 style="margin:0 0 12px 0;font-size:24px;font-weight:800;color:${DARK};letter-spacing:-0.5px;line-height:1.2;font-family:${FONT_DISPLAY};">Your event starts ${timeStr}.</h1>
+        <p style="margin:0;font-size:15px;color:${MUTED};line-height:1.65;font-family:${FONT};">Everything on PlanIt is ready. Here is a short checklist to keep handy before you head in.</p>
+      </td>
+    </tr>`;
+
+  const checklist = [
+    'Confirm your team knows their roles and arrival times',
+    'Test the QR check-in flow on your event dashboard before heading in',
+    'Share the event link with any attendees who have not yet joined',
+    'Keep a screenshot of the guest list as a backup in case of connectivity issues on the day',
+  ];
+
+  const checkRows = checklist.map((text, i) => `
+    <tr>
+      <td style="padding:10px 0;${i < checklist.length - 1 ? 'border-bottom:1px solid #F5F5F5;' : ''}vertical-align:top;width:20px;">
+        <div style="width:5px;height:5px;background:${MID};border-radius:50%;margin-top:6px;"></div>
+      </td>
+      <td style="padding:10px 0 10px 12px;${i < checklist.length - 1 ? 'border-bottom:1px solid #F5F5F5;' : ''}font-size:15px;color:${MID};line-height:1.55;font-family:${FONT};">${h(text)}</td>
+    </tr>`).join('');
+
+  const body = `
+    ${sectionCap('Event Details')}
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+      ${detailRows(event)}
+    </table>
+    ${hrule()}
+    <p style="margin:24px 0 14px 0;font-size:10px;font-weight:700;letter-spacing:1.3px;text-transform:uppercase;color:${FAINT};font-family:${FONT};">Day-of Checklist</p>
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+      ${checkRows}
+    </table>
+    ${ctaButton('Open Event Dashboard', url)}
+    ${signature('You are nearly there. Wishing you a smooth event. If anything comes up on the day, reply here and I will respond as fast as I can.')}`;
+
+  return emailShell(
+    `Reminder: ${event.title} starts ${timeStr}`,
+    `Your event "${event.title}" is coming up ${timeStr}.`,
+    `${REMINDER_HOURS}-Hour Reminder`,
+    headerRow,
+    body,
+    'You received this reminder because you are the organiser of this event on PlanIt.'
+  );
+}
+
+function buildThankyou(event) {
+  const url = joinUrl(event);
+
+  const headerRow = `
+    <tr>
+      <td class="ep" style="background:${DARK};padding:36px 40px 30px 40px;border-bottom:1px solid #262626;" bgcolor="${DARK}">
+        <span style="display:inline-block;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:rgba(255,255,255,0.4);background:rgba(255,255,255,0.08);padding:5px 12px;border-radius:5px;margin-bottom:16px;font-family:${FONT};">That is a wrap</span>
+        <h1 style="margin:0 0 12px 0;font-size:24px;font-weight:800;color:${WHITE};letter-spacing:-0.5px;line-height:1.2;font-family:${FONT_DISPLAY};">Well done. Truly.</h1>
+        <p style="margin:0;font-size:15px;color:rgba(255,255,255,0.4);line-height:1.65;font-family:${FONT};">A personal note about ${h(event.title)} from the founder.</p>
+      </td>
+    </tr>`;
+
+  const body = `
+    ${sectionCap('Event Summary')}
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+      ${detailRows(event)}
+    </table>
+    ${hrule()}
+    <p style="margin:24px 0 16px 0;font-size:15px;color:${MID};line-height:1.78;font-family:${FONT};">I wanted to take a moment to personally thank you for using PlanIt.</p>
+    <p style="margin:0 0 16px 0;font-size:15px;color:${MID};line-height:1.78;font-family:${FONT};">Every event on this platform matters to me - it is the reason I built it. I hope the people who attended left with something memorable, and that the logistics stayed completely out of the way.</p>
+    <p style="margin:0;font-size:15px;color:${MID};line-height:1.78;font-family:${FONT};">If you have feedback, positive or critical, I read every message. Just hit reply.</p>
+    ${ctaButton('View Event Summary', url)}
+    ${signature('With gratitude,')}`;
+
+  return emailShell(
+    `Thank you for using PlanIt: ${event.title}`,
+    `Your event "${event.title}" has concluded. A personal note from the founder.`,
+    'Event Concluded',
+    headerRow,
+    body,
+    'You received this because you organised an event on PlanIt.'
+  );
+}
+
+// ─── Organizer-authored email placeholders ─────────────────────────────────────
+// Organizers write custom RSVP confirmation subjects/bodies (see
+// RSVPSettings.jsx), and the UI's own placeholder text shows examples like
+// "[Event Name]" and "[First Name]" — so that bracket form has to work, not
+// just the {{eventName}} mustache form some earlier code only checked for.
+// Both are supported here, case-insensitively, with optional inner spacing.
+const TOKEN_DEFS = [
+  { pick: (t) => t.eventTitle,    re: [/\{\{\s*event(?:name)?\s*\}\}/gi, /\[\s*event\s*name\s*\]/gi] },
+  { pick: (t) => t.firstName,     re: [/\{\{\s*first\s*name\s*\}\}/gi, /\[\s*first\s*name\s*\]/gi] },
+  { pick: (t) => t.fullName,      re: [/\{\{\s*name\s*\}\}/gi, /\[\s*name\s*\]/gi, /\[\s*full\s*name\s*\]/gi] },
+  { pick: (t) => t.dateStr,       re: [/\{\{\s*(?:event)?date\s*\}\}/gi, /\[\s*(?:event\s*)?date\s*\]/gi] },
+  { pick: (t) => t.location,      re: [/\{\{\s*location\s*\}\}/gi, /\[\s*location\s*\]/gi] },
+  { pick: (t) => t.responseLabel, re: [/\{\{\s*response\s*\}\}/gi, /\[\s*response\s*\]/gi] },
+  { pick: (t) => t.statusLabel,   re: [/\{\{\s*status\s*\}\}/gi, /\[\s*status\s*\]/gi] },
+];
+
+function applyTemplateTokens(str, tokens, { escapeHtml = false } = {}) {
+  if (!str) return str;
+  let out = str;
+  for (const { pick, re } of TOKEN_DEFS) {
+    const raw = pick(tokens) ?? '';
+    const value = escapeHtml ? h(raw) : String(raw);
+    for (const pattern of re) out = out.replace(pattern, value);
+  }
+  return out;
+}
+
+function buildRsvpGuestConfirmation({ guestName, guestFirstName, guestEmail, eventTitle, eventDate, eventTimezone, eventLocation, response, status, plusOnes, editToken, customSubject, customBody }) {
+  const base      = (process.env.FRONTEND_URL || '').split(',')[0].trim().replace(/\/$/, '');
+  const editUrl   = editToken && base ? `${base}/rsvp/manage/${editToken}` : null;
+
+  const responseLabel = response === 'yes' ? 'Attending' : response === 'no' ? 'Not Attending' : 'Maybe';
+  const statusLabel   = status === 'waitlisted' ? 'Waitlisted' : status === 'pending' ? 'Pending Approval' : 'Confirmed';
+  const accentColor   = status === 'waitlisted' ? '#D97706' : status === 'pending' ? '#6366F1' : '#059669';
+
+  const pillLabel = status === 'waitlisted' ? 'Waitlist' : status === 'pending' ? 'Pending' : 'RSVP Confirmed';
+
+  const tokens = {
+    eventTitle,
+    firstName: guestFirstName || guestName,
+    fullName:  guestName,
+    dateStr:   eventDate ? fmtDate(eventDate, eventTimezone) : '',
+    location:  eventLocation || '',
+    responseLabel,
+    statusLabel,
+  };
+
+  // The organizer's custom note (if any) always supplements the actual RSVP
+  // details and edit link below it — it never replaces them. Previously a
+  // custom body swapped out the whole info block, so guests who got a
+  // personalized note lost the event details and their edit link entirely.
+  const customNote = (customBody && customBody.trim())
+    ? `<p style="margin:0 0 20px 0;font-size:15px;color:${MID};line-height:1.78;white-space:pre-line;font-family:${FONT};">${applyTemplateTokens(customBody.trim(), tokens, { escapeHtml: true })}</p>`
+    : '';
+
+  const detailTableRows = [
+    ['Event',    eventTitle],
+    ['Date',     eventDate ? fmtDate(eventDate, eventTimezone) : null],
+    ['Location', eventLocation || null],
+    ['Response', responseLabel],
+    ['Status',   statusLabel],
+    plusOnes > 0 ? ['Plus-ones', String(plusOnes)] : null,
+  ].filter(Boolean).filter(([, v]) => v).map(([k, v]) => `
+    <tr>
+      <td style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:${FAINT};width:90px;padding:8px 0;vertical-align:top;font-family:${FONT};">${h(k)}</td>
+      <td style="font-size:15px;color:${MID};padding:8px 0 8px 12px;line-height:1.45;font-family:${FONT};">${h(String(v))}</td>
+    </tr>`).join('');
+
+  const pendingNote = status === 'pending'
+    ? `<p style="margin:16px 0 0 0;font-size:14px;color:#525252;line-height:1.7;font-family:${FONT};">Your RSVP is awaiting approval from the organiser. You will receive a follow-up once it has been reviewed.</p>`
+    : status === 'waitlisted'
+    ? `<p style="margin:16px 0 0 0;font-size:14px;color:#525252;line-height:1.7;font-family:${FONT};">You have been added to the waitlist. The organiser will be in touch if a spot opens up.</p>`
+    : '';
+
+  const editNote = editUrl
+    ? `${hrule()}<p style="margin:24px 0 10px 0;font-size:14px;color:${MUTED};line-height:1.65;font-family:${FONT};">Need to make a change? You can update your RSVP at any time using the button below.</p>${ctaButton('Manage My RSVP', editUrl)}`
+    : '';
+
+  const bodyContent = `
+    ${customNote}
+    ${sectionCap('Your RSVP Details')}
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+      ${detailTableRows}
+    </table>
+    ${pendingNote}
+    ${editNote}`;
+
+  const headerRow = `
+    <tr>
+      <td class="ep" style="padding:36px 40px 30px 40px;border-bottom:1px solid ${RULE};">
+        <span style="display:inline-block;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#fff;background:${accentColor};padding:5px 12px;border-radius:5px;margin-bottom:16px;font-family:${FONT};">${h(pillLabel)}</span>
+        <h1 style="margin:0 0 12px 0;font-size:24px;font-weight:800;color:${DARK};letter-spacing:-0.5px;line-height:1.2;font-family:${FONT_DISPLAY};">
+          ${status === 'waitlisted' ? "You're on the waitlist." : status === 'pending' ? "We've received your RSVP." : "You're all set!"}
+        </h1>
+        <p style="margin:0;font-size:15px;color:${MUTED};line-height:1.65;font-family:${FONT};">
+          Hi ${h(guestFirstName || guestName)}, thanks for responding to <strong>${h(eventTitle)}</strong>.
+        </p>
+      </td>
+    </tr>`;
+
+  const subject = customSubject?.trim()
+    ? applyTemplateTokens(customSubject.trim(), tokens, { escapeHtml: false })
+    : `RSVP ${statusLabel}: ${eventTitle}`;
+
+
+  return {
+    subject,
+    html: emailShell(
+      subject,
+      `Your RSVP for ${eventTitle} is ${statusLabel.toLowerCase()}.`,
+      pillLabel,
+      headerRow,
+      bodyContent,
+      `You received this because you submitted an RSVP for ${eventTitle}. This is an automated confirmation.`
+    ),
+  };
+}
+
+// ─── Core send ────────────────────────────────────────────────────────────────
+
+async function _send(to, subject, html, { replyTo, from } = {}) {
+  const routerUrl = process.env.ROUTER_URL;
+  if (!routerUrl) {
+    console.warn('[email] ROUTER_URL not set - cannot relay email');
+    return false;
+  }
+  const payload = { to, subject, html };
+  if (replyTo) payload.replyTo = replyTo;
+  if (from) payload.from = from;
+  const r = await meshPost(CALLER, `${routerUrl}/mesh/email`, payload, { timeout: 15000 });
+  if (r.ok) {
+    console.log(`[email] Sent "${subject}" -> ${to}`);
+    return true;
+  }
+  console.error(`[email] Send failed "${subject}" -> ${to}:`, r.error || 'unknown');
+  return false;
+}
+
+// ─── Public API ───────────────────────────────────────────────────────────────
+
+async function sendEventConfirmation(event) {
+  const to = event.organizerEmail;
+  if (!to) return;
+  if (!(await checkLimit(to))) return;
+  await _send(to, `Event created: ${event.title}`, buildConfirmation(event));
+}
+
+async function sendEventReminder(event) {
+  const to = event.organizerEmail;
+  if (!to) return;
+  if (!(await checkLimit(to))) return;
+  const timeStr = REMINDER_HOURS === 24 ? 'tomorrow' : `in ${REMINDER_HOURS} hours`;
+  await _send(to, `Reminder: ${event.title} starts ${timeStr}`, buildReminder(event));
+}
+
+async function sendEventThankyou(event) {
+  const to = event.organizerEmail;
+  if (!to) return;
+  if (!(await checkLimit(to))) return;
+  await _send(to, `Thank you for using PlanIt: ${event.title}`, buildThankyou(event));
+}
+
+/**
+ * Send an RSVP confirmation email to the guest who just signed up.
+ *
+ * @param {object} opts
+ * @param {string} opts.guestEmail      - Recipient address
+ * @param {string} opts.guestName       - Guest display name
+ * @param {string} opts.eventTitle      - Event title
+ * @param {Date|string|null} opts.eventDate - Event date (optional)
+ * @param {string|null} opts.eventLocation  - Event location (optional)
+ * @param {string} opts.response        - 'yes' | 'maybe' | 'no'
+ * @param {string} opts.status          - 'confirmed' | 'pending' | 'waitlisted'
+ * @param {number} [opts.plusOnes]      - Number of plus-ones
+ * @param {string|null} [opts.editToken]- Token for guest self-edit link
+ * @param {string|null} [opts.customSubject] - Organizer-defined subject
+ * @param {string|null} [opts.customBody]    - Organizer-defined body (supports {{name}}, {{event}}, etc.)
+ */
+async function sendRsvpGuestConfirmation(opts) {
+  const { guestEmail, organizerEmail } = opts;
+  if (!guestEmail) return false;
+  if (!(await checkLimit(guestEmail))) return false;
+  const { subject, html } = buildRsvpGuestConfirmation(opts);
+  const from = organizerEmail || undefined;
+  return _send(guestEmail, subject, html, { replyTo: organizerEmail || undefined, from });
+}
+
+// ─── Organizer "New RSVP" notification (no-reply-relay fallback) ──────────────
+// Mirrors the Gmail-send version built in router/server.js's _buildRsvpNotificationHtml,
+// used only when the organizer hasn't connected Gmail (or that send failed) so
+// they still get notified — sent as their own address, Reply-To the guest.
+
+function buildRsvpOrganizerNotification({ guestName, guestEmail, guestPhone, response, status, plusOnes, eventTitle, eventDate, eventTimezone }) {
+  const responseLabel = response === 'yes' ? 'Attending' : response === 'no' ? 'Not Attending' : 'Maybe';
+  const statusLabel   = status === 'waitlisted' ? 'Waitlisted' : status === 'pending' ? 'Pending Approval' : 'Confirmed';
+
+  const rows = [
+    ['Guest',    guestName],
+    ['Email',    guestEmail],
+    ['Phone',    guestPhone],
+    ['Response', responseLabel],
+    ['Status',   statusLabel],
+    plusOnes > 0 ? ['Plus-ones', String(plusOnes)] : null,
+    ['Event',    eventTitle],
+    ['Date',     eventDate ? fmtDate(eventDate, eventTimezone) : null],
+  ].filter(Boolean).filter(([, v]) => v).map(([k, v]) => `
+    <tr>
+      <td style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:${FAINT};width:90px;padding:8px 0;vertical-align:top;font-family:${FONT};">${h(k)}</td>
+      <td style="font-size:15px;color:${MID};padding:8px 0 8px 12px;line-height:1.45;font-family:${FONT};">${h(String(v))}</td>
+    </tr>`).join('');
+
+  const headerRow = `
+    <tr>
+      <td class="ep" style="padding:36px 40px 30px 40px;border-bottom:1px solid ${RULE};">
+        <h1 style="margin:0 0 12px 0;font-size:24px;font-weight:800;color:${DARK};letter-spacing:-0.5px;line-height:1.2;font-family:${FONT_DISPLAY};">New RSVP</h1>
+        <p style="margin:0;font-size:15px;color:${MUTED};line-height:1.65;font-family:${FONT};">
+          ${h(guestName || 'Someone')} just responded to <strong>${h(eventTitle || 'your event')}</strong>.
+        </p>
+      </td>
+    </tr>`;
+
+  const bodyContent = `
+    ${sectionCap('RSVP Details')}
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0">${rows}</table>`;
+
+  const subject = `New RSVP: ${guestName || 'Someone'} for ${eventTitle || 'your event'}`;
+
+  return {
+    subject,
+    html: emailShell(subject, subject, 'New RSVP', headerRow, bodyContent, 'You received this because you are the organizer of this event.'),
+  };
+}
+
+/**
+ * Notify the organizer of a new RSVP via the no-reply relay. Only used when
+ * the organizer hasn't connected Gmail (or their Gmail send failed) — the
+ * Gmail-connected path in rsvp.js already sends as the organizer's own inbox.
+ * Sent "from" the organizer's own address and "reply-to" the guest, so a
+ * reply goes straight to the person who just RSVP'd.
+ */
+async function sendRsvpOrganizerNotification(opts) {
+  const { organizerEmail, guestEmail } = opts;
+  if (!organizerEmail) return false;
+  if (!(await checkLimit(organizerEmail))) return false;
+  const { subject, html } = buildRsvpOrganizerNotification(opts);
+  return _send(organizerEmail, subject, html, { replyTo: guestEmail || undefined, from: organizerEmail });
+}
+
+module.exports = {
+  sendEventConfirmation,
+  sendEventReminder,
+  sendEventThankyou,
+  sendRsvpGuestConfirmation,
+  sendRsvpOrganizerNotification,
+  buildRsvpGuestConfirmation,
+};

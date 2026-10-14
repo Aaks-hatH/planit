@@ -1,0 +1,19 @@
+{
+  "rewrites": [
+    {
+      "source": "/((?!_next|static|favicon.ico|planit-icon.svg|apple-touch-icon.png|pwa-.*\\.png|robots.txt|sitemap.xml|google.*\\.html).*)",
+      "destination": "/index.html"
+    }
+  ],
+  "headers": [
+    {
+      "source": "/static/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000, immutable"
+        }
+      ]
+    }
+  ]
+}

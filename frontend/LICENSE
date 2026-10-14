@@ -1,0 +1,488 @@
+================================================================================
+================================================================================
+
+              PLANIT FRONTEND APPLICATION — PROPRIETARY SOFTWARE LICENSE
+                         EXCLUSIVE RIGHTS RESERVED
+
+================================================================================
+================================================================================
+
+                     PlanIt Frontend Interface License Agreement
+                              Version 2.0 — March 2026
+
+              Copyright (c) 2026 Aakshat Hariharan. All Rights Reserved.
+
+                          planit.userhelp@gmail.com
+                        https://planitapp.onrender.com
+
+================================================================================
+                            PREAMBLE AND LEGAL NOTICE
+================================================================================
+
+IMPORTANT — READ THIS ENTIRE AGREEMENT CAREFULLY BEFORE ACCESSING, VIEWING,
+DOWNLOADING, CLONING, FORKING, INSPECTING, COMPILING, EXECUTING, OR OTHERWISE
+INTERACTING WITH THE PLANIT FRONTEND APPLICATION OR ANY PORTION THEREOF.
+
+This License Agreement ("Agreement") is a binding legal contract between You
+and Aakshat Hariharan ("Author") governing all access to and use of the PlanIt
+frontend application, its source code, compiled assets, design system, visual
+components, and all related materials. This Agreement takes effect at the
+earliest moment You interact with this software in any form — including the
+act of reading this source code.
+
+The public availability of this source code on a version control platform does
+NOT constitute an open-source release, a public domain dedication, an implied
+license, or consent to use, copy, fork, adapt, or build upon this work for any
+purpose beyond the narrow rights expressly granted in Section 2. Viewing the
+code does not grant you rights to use it.
+
+If You do not agree to every term of this Agreement in full, you must
+immediately cease all access to and interaction with this software, delete
+any local copies, and not interact with the live Hosted Service except as
+a normal end-user of the publicly offered event management platform.
+
+================================================================================
+SECTION 1 — DEFINITIONS
+================================================================================
+
+1.1   "Frontend Application" or "Software" means the PlanIt client-side web
+      application in its entirety, encompassing, without limitation:
+
+      (a)  All React component source files (.jsx, .tsx) including but not
+           limited to the Home, Admin, EventSpace, Discover, ReservePage,
+           ClientPortal, WLHome, WhiteLabel signup, Status, Help, About,
+           OrganizerLogin, TableService, GuestTablet, ServerView, Waitlist,
+           LiveWaitBoard, EnterpriseCheckin, InviteBadge, InviteCard,
+           GuestInvite, ReservationTicket, SecurityDashboard, Support, Terms,
+           Privacy, NotFound, and all other page-level components;
+
+      (b)  All context providers and consumer hooks including WhiteLabelContext,
+           and any future context modules;
+
+      (c)  All service modules, API client files, WebSocket client integrations,
+           and utility functions located in the /src/services, /src/utils,
+           /src/hooks, and related directories;
+
+      (d)  All UI component library files, design tokens, Tailwind CSS
+           configuration, custom CSS stylesheets, and animation definitions;
+
+      (e)  The Vite build configuration, Vite plugin configurations, service
+           worker registration logic, PWA manifest, and all build tooling
+           configuration files;
+
+      (f)  The public/ directory including index.html, robots.txt, sitemap.xml,
+           PWA icons, og-image assets, and all other static assets shipped with
+           the application;
+
+      (g)  The complete visual design language of the application, including
+           color palettes, typography choices, spacing systems, component
+           interaction patterns, animation timing curves, gradient definitions,
+           glassmorphism treatments, and the overall aesthetic system;
+
+      (h)  The white-label theming architecture, including the CSS variable
+           injection system, the [data-wl] attribute selector scheme, and the
+           dynamic branding application logic;
+
+      (i)  All documentation, code comments, inline explanations, and
+           architectural decision records embedded in or accompanying the
+           Frontend Application.
+
+1.2   "Author" means Aakshat Hariharan, the sole designer, architect, developer,
+      and intellectual property owner of the Frontend Application and every
+      element thereof, including all visual design choices, component
+      architectures, user experience flows, and implementation decisions.
+
+1.3   "You" or "Licensee" means any natural person, developer, designer,
+      engineer, researcher, student, company, organization, partnership,
+      corporation, LLC, government body, educational institution, non-profit
+      entity, or any other legal entity that in any manner accesses, views,
+      reads, downloads, clones, forks, compiles, executes, deploys, screenshots,
+      analyzes, reverse engineers, or otherwise interacts with the Frontend
+      Application or any file, asset, component, or portion thereof.
+
+1.4   "Hosted Service" means the publicly accessible production deployment of
+      the PlanIt platform operated by the Author at planitapp.onrender.com and
+      all associated subdomains and custom domains configured for white-label
+      clients.
+
+1.5   "White-Label Domain" means any custom domain configured by a paying
+      white-label client of the Author that serves a customized instance of
+      the Frontend Application under the client's own branding, pursuant to
+      a separately executed white-label license agreement between the Author
+      and that client.
+
+1.6   "Visual Design System" means the complete set of design decisions embodied
+      in the Frontend Application, including the dark color scheme (#080810,
+      #0a0a0a base tones), the gradient language (blue-to-indigo primary
+      gradients), the glassmorphism card treatments, the ambient radial glow
+      background orbs, the typography hierarchy, the micro-interaction patterns,
+      icon usage conventions, layout grid systems, and responsive breakpoint
+      strategies — all of which constitute confidential trade dress and
+      intellectual property of the Author.
+
+1.7   "Derivative Work" means any software, website, web application, mobile
+      application, design system, template, UI kit, component library, or other
+      creative or functional work that: (a) incorporates, copies, or adapts any
+      code, component, or design from the Frontend Application; (b) substantially
+      replicates the look, feel, layout, interaction patterns, or user experience
+      of the Frontend Application; (c) uses the Frontend Application's source
+      code as a reference to build a competing or similar product; or (d) takes
+      aesthetic inspiration from the Visual Design System in a way that would
+      cause a reasonable person to identify a connection to the Frontend
+      Application — regardless of whether any literal code was copied.
+
+1.8   "Commercial Use" means any use of the Frontend Application, its design,
+      components, or any Derivative Work thereof in connection with any revenue-
+      generating activity, including SaaS products, consulting services, agency
+      work, white-label resale, advertising-supported products, or any other
+      commercially motivated deployment.
+
+1.9   "Deploy" means to serve, host, publish, make publicly accessible, run in
+      a browser context, or otherwise make operational the Frontend Application
+      or any portion thereof on any infrastructure, including personal servers,
+      cloud platforms, CDNs, GitHub Pages, Netlify, Vercel, Render, AWS,
+      Cloudflare Pages, or any other hosting environment.
+
+1.10  "Distribute" means to share, transfer, publish, post, transmit, email,
+      make available, sublicense, or otherwise disseminate the Frontend
+      Application or any portion thereof to any third party through any channel,
+      including but not limited to GitHub, GitLab, Bitbucket, npm, package
+      registries, file sharing services, cloud storage, or direct transfer.
+
+================================================================================
+SECTION 2 — GRANT OF LIMITED LICENSE
+================================================================================
+
+2.1   Subject to Your full, continuous, and unconditional compliance with all
+      terms of this Agreement, the Author grants You a limited, personal,
+      non-exclusive, non-transferable, non-sublicensable, revocable license to:
+
+      (a)  View the source code of the Frontend Application solely for personal,
+           non-commercial educational reference and to understand the general
+           architectural approaches employed therein; and
+
+      (b)  Access and use the Hosted Service as an end-user for its intended
+           purpose of event planning, event management, and event discovery,
+           subject to the Terms of Service published at planitapp.onrender.com.
+
+2.2   White-label clients who have entered into a separately negotiated and
+      duly executed white-label license agreement with the Author are granted
+      additional rights as specified in that separate agreement. Those rights
+      do not extend to any person or entity beyond the named white-label client.
+
+2.3   This license does not grant You any rights except those expressly and
+      specifically enumerated in Section 2.1. Every right not expressly granted
+      is expressly reserved by the Author.
+
+2.4   The Author may revoke this limited license at any time, for any reason
+      or no reason, with or without notice, and Your only remedy upon such
+      revocation is to cease all use of the Software.
+
+2.5   Nothing in this Agreement shall be construed as a representation that
+      the Author will continue to make the Software available, continue to
+      operate the Hosted Service, or provide any support or updates.
+
+================================================================================
+SECTION 3 — RESTRICTIONS ON USE
+================================================================================
+
+3.1   You expressly agree that, without the Author's explicit prior written
+      permission specifically authorizing each activity, You will NOT:
+
+      (a)  Copy, clone, mirror, scrape, screenshot for reproduction, or
+           otherwise reproduce the Frontend Application or any portion thereof,
+           in any medium, format, or form, whether digital or physical,
+           temporary or permanent, complete or partial;
+
+      (b)  Deploy, serve, host, or publish the Frontend Application or any
+           portion thereof on any infrastructure other than the Author's
+           official Hosted Service;
+
+      (c)  Distribute, sublicense, sell, lease, rent, loan, give, transfer,
+           or otherwise make the Frontend Application or any portion thereof
+           available to any third party in any form;
+
+      (d)  Modify, adapt, translate, localize, or create any Derivative Work
+           based on or substantially similar to the Frontend Application,
+           including adapting individual components, extracting the design
+           system, rebuilding the visual aesthetic, or reimplementing any
+           feature or interaction pattern in a different codebase;
+
+      (e)  Reverse engineer, decompile, disassemble, decode, decrypt, or
+           attempt to reconstruct or discover any proprietary algorithms,
+           component logic, state management patterns, or design decisions
+           embedded in compiled or minified builds of the Frontend Application;
+
+      (f)  Use the Visual Design System, color palette, gradient language,
+           component aesthetics, animation patterns, or overall look-and-feel
+           of the Frontend Application as the basis for any other product's
+           design, whether the intended product is commercial or non-commercial;
+
+      (g)  Use any portion of the Frontend Application for any Commercial Use
+           without a separately negotiated, fully executed written license
+           agreement signed by the Author;
+
+      (h)  Remove, alter, obscure, cover, or replace any copyright notices,
+           license text, "Powered by PlanIt" attributions, or other proprietary
+           markings appearing in the Frontend Application's source code, compiled
+           output, user interface, or documentation;
+
+      (i)  Use the name "PlanIt," the PlanIt logo, the PlanIt visual identity,
+           or the name "Aakshat Hariharan" in connection with any product,
+           service, website, social media presence, or other context in a manner
+           that implies endorsement, affiliation, partnership, or sponsorship
+           without the Author's explicit prior written consent;
+
+      (j)  Misrepresent the origin of the Frontend Application or any portion
+           thereof, or remove any authorship information from the source code;
+
+      (k)  Use automated tools, web scrapers, crawlers, headless browsers, or
+           any other automated means to extract, index, reproduce, or mirror
+           the source code, design assets, or content of the Hosted Service at
+           scale;
+
+      (l)  Use any portion of the Frontend Application's source code in training
+           datasets for machine learning models, AI systems, code generation
+           models, or any automated system intended to produce similar or
+           competing software;
+
+      (m)  Frame, embed, or otherwise display the Hosted Service within another
+           website or application in a way that misrepresents the origin of the
+           service or removes the Author's branding;
+
+      (n)  Circumvent, disable, remove, or bypass any technical enforcement
+           mechanisms embedded in the Frontend Application, including the
+           white-label license heartbeat verification system, the domain
+           resolution checks, the maintenance gate, or any rate limiting or
+           access control logic.
+
+3.2   The restrictions in Section 3.1 apply to the Frontend Application in
+      its entirety and equally to every individual component, file, function,
+      hook, style, asset, icon, animation, color choice, or architectural
+      pattern it contains, no matter how small or seemingly insignificant
+      the portion in question may be.
+
+3.3   These restrictions apply regardless of Your stated purpose — educational,
+      academic, journalistic, artistic, non-commercial, governmental, or any
+      other purpose does not create an exception unless explicitly carved out
+      in Section 2.
+
+================================================================================
+SECTION 4 — INTELLECTUAL PROPERTY OWNERSHIP
+================================================================================
+
+4.1   The Frontend Application and all of its constituent elements — including
+      without limitation all source code, compiled assets, visual designs, user
+      experience flows, component architectures, state management patterns,
+      routing logic, build configurations, documentation, and all intellectual
+      property embodied therein — are and shall remain the sole and exclusive
+      property of the Author.
+
+4.2   Copyright in the Frontend Application vests exclusively in the Author
+      from the moment of creation and no assignment, transfer, or license of
+      any copyright interest arises from Your interaction with the Software
+      or this Agreement beyond the narrow license described in Section 2.
+
+4.3   The Visual Design System constitutes protectable trade dress and
+      confidential trade secret information belonging exclusively to the Author.
+      You acknowledge that the distinctive visual identity of the PlanIt
+      Frontend Application — including its dark-mode aesthetic, gradient
+      language, glassmorphism treatment, ambient glow patterns, component
+      styling, and overall look-and-feel — is a product of substantial creative
+      investment and is commercially valuable to the Author.
+
+4.4   The white-label theming architecture, including the dynamic CSS variable
+      injection system, the WhiteLabelContext state management design, the
+      heartbeat license verification integration, and the branding override
+      mechanism, constitutes a proprietary technical system embodying trade
+      secrets of the Author.
+
+4.5   Any feedback, bug reports, suggestions, feature requests, design
+      critiques, or other input You provide to the Author regarding the
+      Frontend Application are assigned to the Author in full upon delivery,
+      without compensation or attribution, and the Author may freely use,
+      incorporate, and exploit such input in the Software or any other work.
+
+4.6   Third-party open-source libraries included as dependencies of the
+      Frontend Application (including React, Vite, Tailwind CSS, Lucide React,
+      React Router, Axios, React Hot Toast, and others) remain the property of
+      their respective owners and are subject to their own open-source licenses.
+      The Author's proprietary rights extend to the original expression,
+      architecture, composition, and creative choices in how these libraries
+      are assembled and used, not to the libraries themselves.
+
+================================================================================
+SECTION 5 — CONFIDENTIALITY
+================================================================================
+
+5.1   The Frontend Application contains and embodies Confidential Information
+      of the Author. You agree to treat the source code, design decisions,
+      component architecture, and all non-public aspects of the Frontend
+      Application as strictly confidential.
+
+5.2   You agree not to disclose, publish, post, share, or otherwise
+      communicate any Confidential Information of the Author to any third
+      party without the Author's prior written consent.
+
+5.3   You agree not to use any Confidential Information of the Author for any
+      purpose other than the limited viewing right granted in Section 2.1(a).
+
+5.4   Your obligation of confidentiality shall survive termination of this
+      Agreement and shall continue indefinitely with respect to trade secrets
+      and for as long as copyright protection subsists with respect to other
+      Confidential Information.
+
+================================================================================
+SECTION 6 — DISCLAIMER OF WARRANTIES
+================================================================================
+
+6.1   THE FRONTEND APPLICATION AND THE HOSTED SERVICE ARE PROVIDED "AS IS"
+      AND "AS AVAILABLE," WITHOUT WARRANTY OF ANY KIND, WHETHER EXPRESS,
+      IMPLIED, STATUTORY, OR OTHERWISE.
+
+6.2   THE AUTHOR EXPRESSLY DISCLAIMS, TO THE MAXIMUM EXTENT PERMITTED BY
+      APPLICABLE LAW, ALL WARRANTIES, INCLUDING BUT NOT LIMITED TO:
+      (a) ANY IMPLIED WARRANTY OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR
+      PURPOSE; (b) ANY WARRANTY OF TITLE OR NON-INFRINGEMENT OF THIRD-PARTY
+      RIGHTS; (c) ANY WARRANTY THAT THE HOSTED SERVICE WILL BE UNINTERRUPTED,
+      TIMELY, SECURE, OR ERROR-FREE; (d) ANY WARRANTY THAT DEFECTS IN THE
+      SOFTWARE WILL BE CORRECTED; (e) ANY WARRANTY REGARDING THE ACCURACY OR
+      COMPLETENESS OF ANY CONTENT ACCESSIBLE THROUGH THE HOSTED SERVICE;
+      AND (f) ANY WARRANTIES ARISING FROM COURSE OF DEALING, COURSE OF
+      PERFORMANCE, USAGE OF TRADE, OR ANY PRIOR ORAL OR WRITTEN STATEMENTS.
+
+6.3   YOU BEAR ALL RISK ASSOCIATED WITH YOUR USE OF THE SOFTWARE AND THE
+      HOSTED SERVICE. SOME JURISDICTIONS DO NOT PERMIT THE EXCLUSION OF IMPLIED
+      WARRANTIES; IN SUCH JURISDICTIONS, THE FOREGOING EXCLUSIONS APPLY TO THE
+      MAXIMUM EXTENT PERMITTED BY APPLICABLE LAW.
+
+================================================================================
+SECTION 7 — LIMITATION OF LIABILITY
+================================================================================
+
+7.1   TO THE MAXIMUM EXTENT PERMITTED BY APPLICABLE LAW, IN NO EVENT SHALL
+      THE AUTHOR BE LIABLE TO YOU OR ANY THIRD PARTY FOR ANY INDIRECT,
+      INCIDENTAL, SPECIAL, EXEMPLARY, CONSEQUENTIAL, OR PUNITIVE DAMAGES,
+      INCLUDING WITHOUT LIMITATION: LOSS OF PROFITS; LOSS OF REVENUE; LOSS
+      OF DATA; LOSS OF GOODWILL; COST OF SUBSTITUTE GOODS OR SERVICES;
+      BUSINESS INTERRUPTION; LOSS OF BUSINESS OPPORTUNITY; OR ANY OTHER
+      ECONOMIC LOSS — ARISING OUT OF OR IN ANY WAY CONNECTED WITH THIS
+      AGREEMENT, THE SOFTWARE, OR THE HOSTED SERVICE, EVEN IF THE AUTHOR
+      HAS BEEN ADVISED OF THE POSSIBILITY OF SUCH DAMAGES AND EVEN IF ANY
+      REMEDY SET FORTH HEREIN IS FOUND TO HAVE FAILED OF ITS ESSENTIAL PURPOSE.
+
+7.2   THE AUTHOR'S TOTAL AGGREGATE LIABILITY TO YOU FOR ALL CLAIMS ARISING
+      OUT OF OR RELATED TO THIS AGREEMENT SHALL IN NO EVENT EXCEED THE GREATER
+      OF (a) THE TOTAL AMOUNTS PAID BY YOU TO THE AUTHOR IN THE TWELVE-MONTH
+      PERIOD IMMEDIATELY PRECEDING THE CLAIM, OR (b) ONE HUNDRED UNITED STATES
+      DOLLARS (USD $100.00).
+
+================================================================================
+SECTION 8 — INDEMNIFICATION
+================================================================================
+
+8.1   You agree to indemnify, defend (at the Author's option), and hold
+      harmless the Author from and against any and all third-party claims,
+      demands, actions, proceedings, damages, losses, liabilities, costs, and
+      expenses (including reasonable legal fees and court costs) arising out
+      of or related to: (a) Your breach of any term of this Agreement;
+      (b) Your unauthorized use of the Frontend Application; (c) Your violation
+      of any applicable law, regulation, or third-party right; or (d) any
+      content You submit, post, or transmit through the Hosted Service.
+
+================================================================================
+SECTION 9 — TERM AND TERMINATION
+================================================================================
+
+9.1   This Agreement is effective from the moment You first access or interact
+      with the Frontend Application and continues until terminated.
+
+9.2   The Author may terminate this Agreement and revoke the license granted
+      herein immediately and without prior notice if You breach any provision
+      of this Agreement, including any restriction in Section 3.
+
+9.3   Upon termination: (a) all rights granted to You hereunder immediately
+      and automatically terminate; (b) You must cease all use of and access
+      to the Software; (c) You must permanently delete all copies of the
+      Software in Your possession or under Your control, including local clones,
+      downloaded files, and any excerpts; and (d) if requested by the Author,
+      You must provide written certification of Your compliance with the
+      foregoing destruction obligations within five (5) business days.
+
+9.4   Sections 1, 3, 4, 5, 6, 7, 8, 9, 10, and 11 survive termination of
+      this Agreement indefinitely.
+
+================================================================================
+SECTION 10 — ENFORCEMENT AND REMEDIES
+================================================================================
+
+10.1  You acknowledge that any unauthorized use, copying, distribution, or
+      creation of Derivative Works from the Frontend Application would cause
+      the Author immediate and irreparable harm for which monetary damages
+      would be an inadequate remedy, and that the Author shall be entitled to
+      seek injunctive relief, specific performance, and other equitable remedies
+      in any court of competent jurisdiction, without the requirement of posting
+      bond or other security and without the necessity of proving actual damages.
+
+10.2  The Author reserves all available legal and equitable remedies for
+      violations of this Agreement, including without limitation: preliminary
+      and permanent injunctions; damages including statutory damages for
+      copyright infringement; disgorgement of all profits derived from
+      unauthorized use; attorneys' fees and litigation costs; and any other
+      relief available at law or in equity.
+
+10.3  The failure by the Author to enforce any provision of this Agreement
+      on any occasion shall not constitute a waiver of that provision or of
+      the Author's right to enforce it on any future occasion.
+
+10.4  Each restriction in Section 3 is independent, and the invalidity of
+      any one restriction shall not affect the enforceability of any other.
+
+================================================================================
+SECTION 11 — GENERAL PROVISIONS
+================================================================================
+
+11.1  Governing Law. This Agreement and all matters arising out of or relating
+      to it shall be governed by and construed under the laws of the jurisdiction
+      in which the Author resides, without giving effect to any conflict-of-law
+      rules that would cause the application of the laws of any other
+      jurisdiction.
+
+11.2  Entire Agreement. This Agreement, together with any white-label agreement
+      or commercial license separately executed in writing by the Author,
+      constitutes the entire agreement between You and the Author with respect
+      to the Frontend Application and supersedes all prior oral or written
+      agreements, representations, and understandings regarding the same.
+
+11.3  Severability. If any provision of this Agreement is found by a court of
+      competent jurisdiction to be invalid, illegal, or unenforceable, that
+      provision shall be modified to the minimum extent necessary to make it
+      valid and enforceable, and the remaining provisions shall continue in
+      full force and effect.
+
+11.4  No Waiver. No failure or delay by the Author in exercising any right
+      under this Agreement shall operate as a waiver of that right.
+
+11.5  Assignment. You may not assign, delegate, or transfer this Agreement or
+      any rights or obligations hereunder without the Author's prior written
+      consent. Any purported assignment without such consent is null and void.
+      The Author may assign this Agreement freely.
+
+11.6  Amendments. The Author may update or amend this Agreement at any time.
+      Continued access to or use of the Frontend Application or Hosted Service
+      following notice of an amendment constitutes acceptance of the amended
+      terms.
+
+11.7  Contact. Licensing inquiries, permission requests, and violation reports
+      should be directed to: planit.userhelp@gmail.com or through the support
+      page at planitapp.onrender.com.
+
+================================================================================
+
+                  Copyright (c) 2026 Aakshat Hariharan.
+                         All Rights Reserved.
+
+             Unauthorized copying, distribution, or deployment of
+              this software, via any medium, is strictly prohibited.
+
+================================================================================
