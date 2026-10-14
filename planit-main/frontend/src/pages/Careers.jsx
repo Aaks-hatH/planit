@@ -10,6 +10,7 @@ import {
   Star, Users, X, Zap, AlertCircle, Briefcase, Award, Calendar, Linkedin, Github,
 } from 'lucide-react';
 import api from '../services/api';
+import { buildJobPostingLd } from '../../jobPostingLd.js';
 import { getIdentity } from '../services/tracker';
 import TurnstileWidget from '../components/TurnstileWidget';
 
@@ -1661,20 +1662,24 @@ export default function Careers() {
     ping('role_open', { jobSlug: selected.slug, source: attribution.detected, scrollDepth: engagement.current.maxScroll, seconds: engagement.current.seconds });
   }, [selected?.slug]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Google-for-Jobs structured data for the open role
+  // Google-for-Jobs structured data for the open role. Same builder the server prerenderer uses
+  // (frontend/jobPostingLd.js), so crawlers and visitors get identical markup, including totalJobOpenings.
   useEffect(() => {
-    if (!selected || !selected.open || selected.slug === 'general') return undefined;
+    const ld = selected ? buildJobPostingLd(selected, window.location.origin) : null;
+    if (!ld) return undefined;
     const el = document.createElement('script');
     el.type = 'application/ld+json';
-    el.text = JSON.stringify({
-      '@context': 'https://schema.org/', '@type': 'JobPosting', title: selected.title,
-      description: selected.description || selected.tagline || selected.title, datePosted: selected.postedAt,
-      ...(selected.deadline ? { validThrough: selected.deadline } : {}), employmentType: 'VOLUNTEER',
-      hiringOrganization: { '@type': 'Organization', name: 'PlanIt', sameAs: window.location.origin },
-      ...(selected.workMode === 'remote' ? { jobLocationType: 'TELECOMMUTE' } : {}),
-    });
+    el.text = JSON.stringify(ld).replace(/</g, '\\u003c');
     document.head.appendChild(el);
     return () => el.remove();
+  }, [selected]);
+
+  // Browser tab: the role's own title while its drawer is open, the page title otherwise.
+  useEffect(() => {
+    if (!selected || selected.slug === 'general') return undefined;
+    const prev = document.title;
+    document.title = `${selected.title} · Volunteer with PlanIt`;
+    return () => { document.title = prev; };
   }, [selected]);
 
   const openRole = useCallback((s) => navigate(`/careers/${s}${search}`), [navigate, search]);
