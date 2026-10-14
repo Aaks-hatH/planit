@@ -21,15 +21,15 @@
  * GET /api/blog/:slug, cached in memory so a crawler burst never hammers the DB.
  */
 
-const SITE_URL = (process.env.SITE_URL || 'https://planitapp.onrender.com').replace(/\/+$/, '');
-const DEFAULT_IMAGE = `${SITE_URL}/planit-og.png`;
+export const SITE_URL = (process.env.SITE_URL || 'https://planitapp.onrender.com').replace(/\/+$/, '');
+export const DEFAULT_IMAGE = `${SITE_URL}/planit-og.png`;
 const CACHE_TTL_MS = 5 * 60 * 1000;
 const CACHE_MAX_ENTRIES = 200;
 
 // ── Tiny TTL cache (also shares one in-flight request between concurrent callers) ──
 const cache = new Map(); // key -> { expiresAt, promise }
 
-function cached(key, fn) {
+export function cached(key, fn) {
   const hit = cache.get(key);
   if (hit && hit.expiresAt > Date.now()) return hit.promise;
   if (cache.size >= CACHE_MAX_ENTRIES) cache.delete(cache.keys().next().value);
@@ -40,7 +40,7 @@ function cached(key, fn) {
   return promise;
 }
 
-async function getJSON(url) {
+export async function getJSON(url) {
   try {
     const res = await fetch(url, {
       headers: {
@@ -80,18 +80,18 @@ export function fetchPosts(apiBase) {
 }
 
 // ── HTML helpers ──────────────────────────────────────────────────────────────
-function esc(str) {
+export function esc(str) {
   return String(str ?? '').replace(/[&<>"']/g, (c) => ({
     '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
   }[c]));
 }
 
-function truncate(str, n) {
+export function truncate(str, n) {
   const s = String(str || '').trim();
   return s.length > n ? `${s.slice(0, n - 1).trimEnd()}…` : s;
 }
 
-function jsonLd(obj) {
+export function jsonLd(obj) {
   // </script> inside a string must not be able to close the tag.
   const json = JSON.stringify(obj).replace(/</g, '\\u003c').replace(/\u2028/g, '\\u2028').replace(/\u2029/g, '\\u2029');
   return `<script type="application/ld+json">${json}</script>`;
@@ -157,8 +157,8 @@ export function markdownToHtml(content) {
 // Minimal, readable styling for the pre-rendered shell (visitors never see this).
 const SHELL_STYLE = 'font-family:system-ui,-apple-system,Segoe UI,sans-serif;max-width:720px;margin:0 auto;padding:24px;line-height:1.65;color:#1c1917';
 
-function siteNav() {
-  return `<nav aria-label="Site"><a href="/">PlanIt</a> · <a href="/blog">Blog</a> · <a href="/discover">Discover</a> · <a href="/help">Help</a> · <a href="/about">About</a></nav>`;
+export function siteNav() {
+  return `<nav aria-label="Site"><a href="/">PlanIt</a> · <a href="/blog">Blog</a> · <a href="/careers">Careers</a> · <a href="/discover">Discover</a> · <a href="/help">Help</a> · <a href="/about">About</a></nav>`;
 }
 
 function postLinks(posts, { exclude, limit } = {}) {
@@ -168,13 +168,13 @@ function postLinks(posts, { exclude, limit } = {}) {
 }
 
 // ── Page builders ─────────────────────────────────────────────────────────────
-function setRoot(html, inner) {
+export function setRoot(html, inner) {
   const re = /<div id="root">\s*<\/div>/i;
   const block = `<div id="root"><div style="${SHELL_STYLE}">${inner}</div></div>`;
   return re.test(html) ? html.replace(re, () => block) : html;
 }
 
-function addToHead(html, extra) {
+export function addToHead(html, extra) {
   return html.replace('</head>', () => `    ${extra}\n  </head>`);
 }
 
@@ -184,7 +184,7 @@ function addToHead(html, extra) {
  * <h1>). Blog pages carry their own, and a second homepage <h1> would muddy
  * what the page is about.
  */
-function stripGenericJsonLd(html) {
+export function stripGenericJsonLd(html) {
   const out = html.replace(/<script type="application\/ld\+json">[\s\S]*?<\/script>\s*/gi, '');
   const bodyAt = out.search(/<body[\s>]/i);
   if (bodyAt === -1) return out;
