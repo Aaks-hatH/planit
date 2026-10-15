@@ -69,6 +69,7 @@ const PERMISSION_GROUPS = [
   ]},
   { id: 'team', label: 'Team', perms: [
     { key: 'canViewEmployees', label: 'View Team Directory', desc: 'See everyone on the team. Everyone can always see their own manager, reports and the org chart.' },
+    { key: 'canAssignTasks',   label: 'Assign Tasks',       desc: 'Create, edit and delete tasks for anyone on the team, and see every task and every linked pull request. Everyone can always see and update their own tasks.' },
   ]},
   { id: 'hiring', label: 'Hiring', perms: [
     { key: 'canViewHiring',      label: 'View Hiring',      desc: 'Applications, listings and insights in Careers.' },
