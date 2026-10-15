@@ -413,7 +413,7 @@ router.post(
 // GET /admin/totp/status  — returns whether TOTP is enabled for the caller
 router.get('/totp/status', verifyAdmin, async (req, res) => {
   try {
-    const empId = req.user?.employeeId;
+    const empId = req.admin?.employeeId;
     if (!empId) {
       // Root admin — secret lives in Redis
       const rootSecret = await redis.get('totp:root:secret').catch(() => null);
@@ -430,7 +430,7 @@ router.get('/totp/status', verifyAdmin, async (req, res) => {
 // (secret stored in Redis under totp:root:secret, same AES-128 encryption).
 router.post('/totp/setup', verifyAdmin, async (req, res) => {
   try {
-    const empId = req.user?.employeeId;
+    const empId = req.admin?.employeeId;
 
     // ── Root admin path ───────────────────────────────────────────────────────
     if (!empId) {
@@ -472,7 +472,7 @@ router.post('/totp/setup', verifyAdmin, async (req, res) => {
 // POST /admin/totp/enable  — verify the setup code and activate TOTP
 router.post('/totp/enable', verifyAdmin, async (req, res) => {
   try {
-    const empId = req.user?.employeeId;
+    const empId = req.admin?.employeeId;
     const { code } = req.body;
     if (!code || typeof code !== 'string') return res.status(400).json({ error: 'Verification code required' });
 
@@ -490,7 +490,7 @@ router.post('/totp/enable', verifyAdmin, async (req, res) => {
 
       audit('totp_enabled', {
         req,
-        actor: { email: req.user?.username, role: 'super_admin', name: 'Root Admin' },
+        actor: { email: req.admin?.username, role: 'super_admin', name: 'Root Admin' },
         details: { ip: realIp(req), account: 'root' },
       });
       return res.json({ ok: true, message: 'Two-factor authentication has been enabled for the root admin.' });
@@ -511,7 +511,7 @@ router.post('/totp/enable', verifyAdmin, async (req, res) => {
 
     audit('totp_enabled', {
       req,
-      actor: { employeeId: empId, email: req.user.email, role: req.user.role },
+      actor: { employeeId: empId, email: req.admin.email, role: req.admin.role },
       details: { ip: realIp(req) },
     });
 
@@ -525,7 +525,7 @@ router.post('/totp/enable', verifyAdmin, async (req, res) => {
 // POST /admin/totp/disable  — disable TOTP (requires current password + totp code)
 router.post('/totp/disable', verifyAdmin, async (req, res) => {
   try {
-    const empId = req.user?.employeeId;
+    const empId = req.admin?.employeeId;
     const { password, code } = req.body;
     if (!password || !code) return res.status(400).json({ error: 'Current password and authenticator code required.' });
 
@@ -571,7 +571,7 @@ router.post('/totp/disable', verifyAdmin, async (req, res) => {
 
     audit('totp_disabled', {
       req,
-      actor: { employeeId: empId, email: req.user.email, role: req.user.role },
+      actor: { employeeId: empId, email: req.admin.email, role: req.admin.role },
       details: { ip: realIp(req) },
     });
 
@@ -2322,7 +2322,6 @@ router.post('/employees', verifyAdmin, requireSuperAdminRole, async (req, res, n
       permissions: roleId === 'super_admin' ? perms.allPermissions() : (permissions && typeof permissions === 'object' ? sanitizePerms(permissions) : perms.presetFor(roleId)),
       isDemo: typeof isDemo === 'boolean' ? isDemo : roleId === 'demo',
     };
-    if (typeof twoFactorEnabled === 'boolean') empData.twoFactorEnabled = twoFactorEnabled;
     if (Array.isArray(accessibleEvents)) empData.accessibleEvents = accessibleEvents;
     if (githubUsername) empData.githubUsername = String(githubUsername).trim().slice(0, 39);
     if (['none', 'read', 'write'].includes(githubAccess)) empData.githubAccess = githubAccess;
@@ -2382,7 +2381,7 @@ router.post('/employees', verifyAdmin, requireSuperAdminRole, async (req, res, n
 });
 
 const EDITABLE_EMPLOYEE_FIELDS = ['name', 'email', 'role', 'department', 'phone', 'notes', 'status', 'isDemo', 'timezone', 'location',
-  'emergencyContact', 'employeeId', 'twoFactorEnabled', 'forcePasswordReset', 'accessibleEvents', 'githubUsername', 'githubAccess', 'avatar'];
+  'emergencyContact', 'employeeId', 'forcePasswordReset', 'accessibleEvents', 'githubUsername', 'githubAccess', 'avatar'];
 
 router.patch('/employees/:id', verifyAdmin, requireSuperAdminRole, async (req, res, next) => {
   try {
@@ -3602,7 +3601,7 @@ router.post('/security/unban', verifyAdmin, requirePermission('canManageBlocklis
     const result = await unbanIp(ip.trim());
     audit('security_unban', {
       req,
-      actor: { employeeId: req.user?.employeeId, email: req.user?.email, role: req.user?.role },
+      actor: { employeeId: req.admin?.employeeId, email: req.admin?.email, role: req.admin?.role },
       details: { ip: ip.trim(), operator: realIp(req) },
     });
     res.json(result);
@@ -3920,7 +3919,7 @@ router.post('/security/ban', verifyAdmin, requirePermission('canManageBlocklist'
     console.warn(`[trafficGuard] SOC manual ban: ${cleanIp} — "${reason}" (${Math.round(ttl / 60)}m)`);
     audit('security_manual_ban', {
       req,
-      actor: { employeeId: req.user?.employeeId, email: req.user?.email || req.user?.username, role: req.user?.role },
+      actor: { employeeId: req.admin?.employeeId, email: req.admin?.email || req.admin?.username, role: req.admin?.role },
       details: { ip: cleanIp, reason, ttlSeconds: ttl, ttlMinutes: Math.round(ttl / 60) },
     });
     res.json({
