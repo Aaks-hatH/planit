@@ -375,6 +375,20 @@ export const adminAPI = {
   getTeamLogins:         (actorId) => api.get(`/admin/team/logins/${actorId}`),
   syncTeamPermissions:   ()        => api.post('/admin/team/sync-permissions'),
 
+  // Team -> Tasks
+  getWorkPeople:  ()         => api.get('/admin/work/people'),
+  getWorkTasks:   (scope)    => api.get('/admin/work/tasks', { params: { scope } }),
+  createWorkTask: (data)     => api.post('/admin/work/tasks', data),
+  updateWorkTask: (id, data) => api.patch(`/admin/work/tasks/${id}`, data),
+  deleteWorkTask: (id)       => api.delete(`/admin/work/tasks/${id}`),
+
+  // Team -> GitHub
+  getGithubStatus:     ()                 => api.get('/admin/work/github/status'),
+  connectGithub:       (repo, token)      => api.put('/admin/work/github/connect', { repo, token }),
+  disconnectGithub:    ()                 => api.delete('/admin/work/github/connect'),
+  linkGithubUser:      (employeeId, username) => api.put(`/admin/work/github/link/${employeeId}`, { username }),
+  getGithubPulls:      ()                 => api.get('/admin/work/github/prs'),
+
   // Employee CRUD
   getEmployees:   ()         => api.get('/admin/employees'),
   createEmployee: (data)     => api.post('/admin/employees', data),
