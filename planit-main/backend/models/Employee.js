@@ -65,6 +65,7 @@ const employeeSchema = new mongoose.Schema({
   // collaborator is added or removed by username; there are no teams.
   githubUsername:    { type: String, trim: true, maxlength: 39 },
   githubAccess:      { type: String, enum: ['none', 'read', 'write'], default: 'none' },
+  githubId:          { type: Number },   // GitHub's permanent numeric id, saved when linked from Team -> GitHub, so renames don't break PR matching
 }, { timestamps: true });
 
 module.exports = mongoose.model('Employee', employeeSchema);
