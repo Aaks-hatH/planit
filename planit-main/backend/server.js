@@ -445,6 +445,7 @@ app.use('/api/rsvp',        rsvpRoutes);
 app.use('/api/chat',        chatRoutes);
 app.use('/api/polls',       pollRoutes);
 app.use('/api/files',       fileRoutes);
+app.use('/api/admin/work',  require('./routes/adminWork'));   // Team -> Tasks and Team -> GitHub (before the admin router)
 app.use('/api/admin',       adminRoutes);
 app.use('/api/blog',        blogRoutes);
 app.use('/api/support',     supportRoutes);
