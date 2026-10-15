@@ -1,11 +1,12 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   AlertTriangle, Briefcase, Check, Clock, Crown, Edit2, Key, Loader2, Network, Power, RefreshCw, RotateCcw, Search,
-  ShieldCheck, Trash2, UserPlus, Users, X, Save, History,
+  ShieldCheck, Trash2, UserPlus, Users, X, Save, History, ListChecks, Github,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { adminAPI } from '../services/api';
 import AddPersonWizard from './AddPersonWizard';
+import { GithubTab, TasksTab } from './TeamWork';
 import { FIELD, SECTION_LABEL, TONE, TONE_BAR, ago, initials, roleLabel, roleOf, sectionsFrom, when } from './teamShared';
 
 /**
@@ -477,6 +478,7 @@ export default function TeamPage({ currentUser, isDemo = false, demoEmployees = 
   const [employees, setEmployees] = useState([]);
   const isSuper = isDemo || !currentUser?.isEmployee || currentUser?.role === 'super_admin';
   const canDirectory = isSuper || currentUser?.permissions?.canViewEmployees === true;
+  const canAssign = isSuper || currentUser?.permissions?.canAssignTasks === true;
 
   useEffect(() => {
     adminAPI.getTeamCatalog().then((r) => setCatalog(r.data)).catch(() => toast.error('Could not load roles and permissions'));
@@ -486,13 +488,19 @@ export default function TeamPage({ currentUser, isDemo = false, demoEmployees = 
     adminAPI.getEmployees().then((r) => setEmployees(r.data.employees || [])).catch(() => {});
   }, [isSuper, isDemo, tab]);
 
-  const tabs = [['mine', 'My team', Network], ...(canDirectory ? [['directory', 'Directory', Users]] : []), ...(isSuper ? [['roles', 'Roles & access', ShieldCheck]] : [])];
+  const tabs = [
+    ['mine', 'My team', Network],
+    ...(canDirectory ? [['directory', 'Directory', Users]] : []),
+    ['tasks', 'Tasks', ListChecks],
+    ['github', 'GitHub', Github],
+    ...(isSuper ? [['roles', 'Roles & access', ShieldCheck]] : []),
+  ];
 
   return (
     <div className="space-y-5">
       <div>
         <h2 className="text-lg font-bold">Team</h2>
-        <p className="text-sm text-neutral-500">Who you report to, who reports to you{canDirectory ? ', and everyone on the team' : ''}.</p>
+        <p className="text-sm text-neutral-500">Who you report to, who reports to you{canDirectory ? ', and everyone on the team' : ''}. Plus tasks and GitHub pull requests.</p>
       </div>
       {tabs.length > 1 && (
         <div className="flex gap-1 rounded-xl bg-neutral-100 p-1">
@@ -505,6 +513,8 @@ export default function TeamPage({ currentUser, isDemo = false, demoEmployees = 
         <>
           {tab === 'mine' && <MyTeam catalog={catalog} isDemo={isDemo} onNavigate={onNavigate} />}
           {tab === 'directory' && canDirectory && <Directory catalog={catalog} currentUser={currentUser} isDemo={isDemo} demoEmployees={demoEmployees} isSuper={isSuper && !isDemo} />}
+          {tab === 'tasks' && <TasksTab currentUser={currentUser} isDemo={isDemo} canAssign={canAssign && !isDemo} />}
+          {tab === 'github' && <GithubTab isDemo={isDemo} isSuper={isSuper && !isDemo} />}
           {tab === 'roles' && isSuper && <RolesMatrix catalog={catalog} employees={isDemo ? demoEmployees : employees} />}
         </>
       )}
