@@ -1,0 +1,215 @@
+/**
+ * frontend/src/styles/liquid.css
+ *
+ * "Liquid" visual language shared by the PlanIt Home and Careers pages:
+ * Bodoni italic display type, liquid-glass surfaces, the streamer scrollbar
+ * (grows with scroll, sparks pop as you pass them, bursts into a firework at
+ * the end) and the performance tiers that keep it all smooth.
+ *
+ * Everything is namespaced `lq-` and the type rules are scoped under `.lq-page`
+ * so nothing leaks into the app screens. The Bodoni Moda italic webfont is loaded from index.html
+ * (next to Syne / DM Sans) so a slow or blocked font CDN can never stall this lazy-loaded stylesheet.
+ */
+
+:root {
+  --lq-display: 'Bodoni Moda', 'Didot', 'Bodoni 72', Georgia, serif;
+  --lq-ink: #ffffff;
+  --lq-indigo: #818cf8;
+  --lq-violet: #a78bfa;
+  --lq-pink: #f472b6;
+  --lq-amber: #fb923c;
+  --lq-mint: #6ee7b7;
+  --lq-vein: #26214f;
+}
+
+/* ─── Display type ─────────────────────────────────────────────────────────── */
+.lq-display {
+  font-family: var(--lq-display);
+  font-style: italic;
+  font-weight: 500;
+  letter-spacing: -0.025em;
+  overflow-wrap: anywhere;
+}
+
+/* Section headings on the pages become Bodoni italic automatically; wizard, mock
+   UIs and form controls keep their existing type. */
+.lq-page h1.font-syne,
+.lq-page h2.font-syne,
+.lq-page h3.font-syne,
+.lq-page h2.lq-h,
+.lq-page h3.lq-h {
+  font-family: var(--lq-display);
+  font-style: italic;
+  font-weight: 500;
+  letter-spacing: -0.025em;
+}
+.lq-page h1.font-syne { line-height: 0.95; }
+.lq-page h2.font-syne { line-height: 1.02; }
+
+/* Brand gradient, same stops the pages already use for their accent words */
+.lq-grad {
+  background: linear-gradient(90deg, #818cf8 0%, #f472b6 48%, #fb923c 100%);
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+  animation: lq-shimmer 7s linear infinite;
+}
+@keyframes lq-shimmer { to { background-position: 200% center; } }
+
+/* ─── Liquid glass ─────────────────────────────────────────────────────────── */
+.lq-glass,
+.lq-glass-strong {
+  position: relative;
+  overflow: hidden;
+  border: none;
+  background: rgba(255, 255, 255, 0.015);
+  background-blend-mode: luminosity;
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.1);
+}
+.lq-glass-strong {
+  -webkit-backdrop-filter: blur(40px);
+  backdrop-filter: blur(40px);
+  box-shadow: 4px 4px 4px rgba(0, 0, 0, 0.05), inset 0 1px 1px rgba(255, 255, 255, 0.15);
+}
+.lq-glass::before,
+.lq-glass-strong::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1.4px;
+  pointer-events: none;
+  background: linear-gradient(180deg,
+    rgba(255, 255, 255, 0.45) 0%,
+    rgba(255, 255, 255, 0.15) 20%,
+    rgba(255, 255, 255, 0) 40%,
+    rgba(255, 255, 255, 0) 60%,
+    rgba(255, 255, 255, 0.15) 80%,
+    rgba(255, 255, 255, 0.45) 100%);
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+}
+.lq-glass-strong::before {
+  background: linear-gradient(180deg,
+    rgba(255, 255, 255, 0.5) 0%,
+    rgba(255, 255, 255, 0.2) 20%,
+    rgba(255, 255, 255, 0) 40%,
+    rgba(255, 255, 255, 0) 60%,
+    rgba(255, 255, 255, 0.2) 80%,
+    rgba(255, 255, 255, 0.5) 100%);
+}
+/* Soft hover lift for interactive glass */
+.lq-lift { transition: transform .5s cubic-bezier(.22, 1, .36, 1), background-color .4s ease; }
+.lq-lift:hover { transform: translateY(-4px); background-color: rgba(255, 255, 255, 0.035); }
+
+/* Section kicker:  // Features */
+.lq-kicker {
+  font-family: 'DM Sans', system-ui, sans-serif;
+  font-size: 0.8125rem;
+  letter-spacing: 0.04em;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+/* ─── Backdrops ────────────────────────────────────────────────────────────── */
+.lq-zoom { animation: lq-zoom 1.8s cubic-bezier(.16, 1, .3, 1) forwards; }
+@keyframes lq-zoom { from { transform: scale(1.12); } to { transform: scale(1); } }
+
+.lq-orb { position: absolute; border-radius: 9999px; will-change: transform; pointer-events: none; }
+@keyframes lq-drift-a { 0%, 100% { transform: translate3d(0, 0, 0) scale(1); } 50% { transform: translate3d(6vw, 5vh, 0) scale(1.18); } }
+@keyframes lq-drift-b { 0%, 100% { transform: translate3d(0, 0, 0) scale(1.1); } 50% { transform: translate3d(-7vw, -4vh, 0) scale(0.92); } }
+@keyframes lq-drift-c { 0%, 100% { transform: translate3d(0, 0, 0) scale(0.95); } 50% { transform: translate3d(4vw, -6vh, 0) scale(1.15); } }
+.lq-drift-a { animation: lq-drift-a 22s ease-in-out infinite; }
+.lq-drift-b { animation: lq-drift-b 28s ease-in-out infinite; }
+.lq-drift-c { animation: lq-drift-c 34s ease-in-out infinite; }
+
+/* Film-grain veil to keep gradients from banding */
+.lq-grain {
+  position: absolute; inset: 0; pointer-events: none; opacity: .07; mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+}
+
+/* Party scene (spotlight finale) */
+@keyframes lq-bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-16px); } }
+@keyframes lq-twinkle { 0%, 100% { opacity: .12; } 50% { opacity: .42; } }
+.lq-bob { animation: lq-bob 11s ease-in-out infinite; }
+.lq-twinkle { animation: lq-twinkle 3.2s ease-in-out infinite; }
+
+/* The existing hero product preview picks up the glass look */
+.lq-page .hero-preview-shell { border-color: rgba(255, 255, 255, 0.16); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); }
+
+/* ─── Marquee-style ticker ─────────────────────────────────────────────────── */
+@keyframes lq-marquee { to { transform: translateX(-50%); } }
+.lq-marquee { animation: lq-marquee 38s linear infinite; }
+
+/* ─── Streamer scrollbar (desktop / mouse only) ────────────────────────────── */
+html.lq-vine-on { scrollbar-width: none; }
+html.lq-vine-on::-webkit-scrollbar { display: none; }
+html.lq-vine-dragging, html.lq-vine-dragging * { user-select: none; cursor: grabbing !important; }
+
+#lq-vine {
+  position: fixed;
+  top: 0;
+  right: calc(4px + env(safe-area-inset-right, 0px));
+  width: 24px;
+  height: 100vh;
+  z-index: 300;
+  opacity: 0.55;
+  cursor: pointer;
+  transition: opacity .35s ease;
+}
+#lq-vine.active, #lq-vine:hover { opacity: 1; }
+#lq-vine svg { display: block; overflow: visible; }
+
+.lq-vine-base  { fill: none; stroke: rgba(255, 255, 255, 0.14); stroke-width: 1.2; stroke-linecap: round; }
+.lq-vine-grown { fill: none; stroke: url(#lq-vine-grad); stroke-width: 1.8; stroke-linecap: round; }
+.lq-spark {
+  transform: scale(0);
+  transition: transform .55s cubic-bezier(.34, 1.56, .64, 1);
+}
+.lq-spark.on { transform: scale(1); }
+
+.lq-thumb { cursor: grab; filter: drop-shadow(0 0 5px rgba(167, 139, 250, .65)); }
+.lq-thumb-inner { transition: transform .25s cubic-bezier(.34, 1.56, .64, 1); }
+#lq-vine:hover .lq-thumb-inner, html.lq-vine-dragging .lq-thumb-inner { transform: scale(1.25); }
+.lq-thumb-body  { fill: #eef0ff; }
+.lq-thumb-edge  { fill: none; stroke: #4f46e5; stroke-width: .8; }
+.lq-thumb-dash  { fill: none; stroke: #4f46e5; stroke-width: .8; stroke-dasharray: 1.6 1.6; stroke-linecap: round; }
+
+/* The finale: a firework blooms at the bottom of the track */
+.lq-burst-inner {
+  transform: scale(0) rotate(-120deg);
+  transition: transform .9s cubic-bezier(.34, 1.56, .64, 1);
+}
+.lq-burst.on .lq-burst-inner { transform: scale(1) rotate(0deg); }
+.lq-burst-ray { stroke-linecap: round; }
+.lq-burst-core { fill: #fff4e8; }
+.lq-burst.on .lq-burst-pulse { animation: lq-pulse 2.4s ease-out infinite; transform-origin: center; transform-box: fill-box; }
+@keyframes lq-pulse { 0% { opacity: .7; transform: scale(.6); } 100% { opacity: 0; transform: scale(2.6); } }
+
+/* ─── Lenis smooth scroll ──────────────────────────────────────────────────── */
+html.lenis, html.lenis body { height: auto; }
+.lenis.lenis-smooth { scroll-behavior: auto !important; }
+.lenis.lenis-smooth [data-lenis-prevent] { overscroll-behavior: contain; }
+.lenis.lenis-stopped { overflow: clip; }
+.lenis.lenis-smooth iframe { pointer-events: none; }
+
+/* ─── Performance tiers (set on <html data-perf> by the governor) ──────────── */
+:root[data-perf="medium"] .lq-glass-strong { -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px); }
+:root[data-perf="low"] .lq-glass,
+:root[data-perf="low"] .lq-glass-strong { -webkit-backdrop-filter: none; backdrop-filter: none; background: rgba(255, 255, 255, 0.07); }
+:root[data-perf="low"] .lq-bob,
+:root[data-perf="low"] .lq-twinkle,
+:root[data-perf="low"] .lq-zoom,
+:root[data-perf="low"] .lq-drift-a,
+:root[data-perf="low"] .lq-drift-b,
+:root[data-perf="low"] .lq-drift-c { animation: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  .lq-bob, .lq-twinkle, .lq-zoom, .lq-drift-a, .lq-drift-b, .lq-drift-c, .lq-grad, .lq-marquee { animation: none !important; }
+  .lq-spark, .lq-burst-inner, .lq-thumb-inner { transition: none; }
+}
