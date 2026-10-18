@@ -13,6 +13,7 @@ import api from '../services/api';
 import { buildJobPostingLd } from '../../jobPostingLd.js';
 import { getIdentity } from '../services/tracker';
 import TurnstileWidget from '../components/TurnstileWidget';
+import { SmoothScroll, PerfGovernor, VineScroll, Aurora, Horizon, BlurText, SpotlightStage } from '../components/liquid/LiquidKit';
 
 /* ════════════════════════════════════════════════════════════════════════════
    PlanIt Careers  ·  /careers  and  /careers/:slug
@@ -213,7 +214,7 @@ function Words({ text, className = '', delay = 0, accent = [], inView = false })
       {text.split(' ').map((w, i) => (
         <span key={i} className="inline-block overflow-hidden align-bottom pb-[0.18em] -mb-[0.18em] pr-[0.18em] -mr-[0.18em] pl-[0.04em] -ml-[0.04em]" aria-hidden="true">
           <motion.span
-            className={cx('inline-block', accent.includes(i) && 'careers-shine text-[1.16em] leading-[0.8]')}
+            className={cx('inline-block', accent.includes(i) && 'careers-shine leading-[0.9]')}
             initial={reduce ? false : { y: '115%', rotate: 4 }}
             {...trigger}
             transition={{ duration: 1, delay: delay + i * 0.07, ease: EASE }}
@@ -244,7 +245,7 @@ function Kinetic({ lines, go = true, delay = 0, className = '' }) {
                 {w.serif ? (
                   <span className="inline-block overflow-hidden align-bottom" style={box}>
                     <motion.span
-                      className="careers-shine inline-block text-[1.2em] leading-[0.82]"
+                      className="careers-shine inline-block leading-[0.9]"
                       initial={reduce ? false : hidden} animate={go ? shown : hidden}
                       transition={{ duration: 1.1, delay: delay + (k++) * 0.04, ease: EASE }}
                     >{w.t}</motion.span>
@@ -313,7 +314,7 @@ function Spotlight({ children, className = '', color = 'rgba(99,102,241,0.20)' }
   return (
     <div
       onMouseMove={onMove}
-      className={cx('group relative overflow-hidden rounded-3xl border border-white/[0.08] bg-white/[0.025] backdrop-blur-sm transition-colors duration-500 hover:border-white/[0.18]', className)}
+      className={cx('lq-glass lq-lift group relative rounded-[1.5rem]', className)}
     >
       <div className="relative h-full">{children}</div>
     </div>
@@ -464,15 +465,6 @@ function ScrollChrome() {
         style={{ scaleX: bar }}
         className="fixed left-0 right-0 top-0 z-[90] h-[3px] origin-left bg-gradient-to-r from-indigo-400 via-pink-400 to-orange-400"
       />
-      <div className="fixed right-5 top-1/2 z-[60] hidden -translate-y-1/2 flex-col items-end gap-3 xl:flex">
-        <div className="mb-1 text-[11px] tabular-nums text-neutral-500">{String(pct).padStart(2, '0')}%</div>
-        {RAIL.map((r) => (
-          <button key={r.id} onClick={() => go(r.id)} className="group flex items-center gap-3" aria-label={`Jump to ${r.label}`}>
-            <span className={cx('text-[10px] font-medium uppercase tracking-[0.22em] transition-all duration-300', active === r.id ? 'translate-x-0 text-white opacity-100' : 'translate-x-2 text-neutral-500 opacity-0 group-hover:translate-x-0 group-hover:opacity-100')}>{r.label}</span>
-            <span className={cx('block rounded-full transition-all duration-300', active === r.id ? 'h-2.5 w-2.5 bg-pink-400' : 'h-1.5 w-1.5 bg-white/25 group-hover:bg-white/60')} />
-          </button>
-        ))}
-      </div>
     </>
   );
 }
@@ -487,25 +479,25 @@ function Nav({ onApply, openRoles, go }) {
   return (
     <motion.header
       initial={{ opacity: 0, y: -24 }} animate={{ opacity: go ? 1 : 0, y: go ? 0 : -24 }} transition={{ duration: 0.9, delay: 0.5, ease: EASE }}
-      className={cx('fixed inset-x-0 top-[3px] z-[70] transition-[background,border-color,backdrop-filter] duration-500', solid ? 'border-b border-white/[0.06] bg-[#05050f]/70 backdrop-blur-xl' : 'border-b border-transparent')}
+      className="fixed inset-x-0 z-[70] flex items-center justify-between px-4 sm:px-8 lg:px-14"
+      style={{ top: 'calc(1rem + 3px)' }}
     >
-      <div className="mx-auto flex max-w-6xl items-center justify-between px-5 py-3.5">
-        <a href="/" className="group flex items-center gap-2.5 text-white">
-          <ArrowLeft className="h-4 w-4 text-neutral-500 transition-transform group-hover:-translate-x-1" />
-          <span className="font-display text-base font-extrabold tracking-tight">PlanIt</span>
-          <span className="rounded-full border border-white/10 bg-white/[0.04] px-2 py-0.5 text-[10px] font-medium uppercase tracking-[0.2em] text-neutral-400">Careers</span>
-        </a>
-        <div className="flex items-center gap-2">
-          <a href="/about" className="hidden rounded-lg px-3 py-2 text-sm text-neutral-400 transition hover:text-white sm:block">About</a>
-          <a href="/blog" className="hidden rounded-lg px-3 py-2 text-sm text-neutral-400 transition hover:text-white sm:block">Blog</a>
-          <Magnetic strength={0.25}>
-            <button onClick={onApply} className="group flex items-center gap-2 rounded-xl bg-white px-4 py-2 text-sm font-bold text-neutral-900 transition hover:bg-neutral-200">
-              {openRoles > 0 ? `${openRoles} open role${openRoles === 1 ? '' : 's'}` : 'Apply'}
-              <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
-            </button>
-          </Magnetic>
-        </div>
-      </div>
+      <a href="/" aria-label="PlanIt home" className="group flex items-center gap-3 text-white">
+        <span className="lq-glass flex items-center justify-center rounded-full" style={{ width: 48, height: 48 }}>
+          <span className="lq-display text-[26px] leading-none">P</span>
+        </span>
+        <span className="lq-display hidden text-2xl leading-none sm:block">PlanIt</span>
+        <span className="lq-glass hidden rounded-full px-2.5 py-1 text-[10px] font-medium uppercase tracking-[0.2em] text-white/80 sm:block">Careers</span>
+      </a>
+      <nav aria-label="Primary" className="lq-glass flex items-center rounded-full px-1.5 py-1.5" style={solid ? { background: 'rgba(8,8,16,0.55)' } : undefined}>
+        <a href="/about" className="hidden px-3 py-2 text-sm font-medium text-white/90 transition-colors hover:text-white sm:block">About</a>
+        <a href="/blog" className="hidden px-3 py-2 text-sm font-medium text-white/90 transition-colors hover:text-white sm:block">Blog</a>
+        <button onClick={onApply} className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-full bg-white px-4 py-2 text-sm font-medium text-black transition-colors hover:bg-white/90">
+          {openRoles > 0 ? `${openRoles} open role${openRoles === 1 ? '' : 's'}` : 'Apply'}
+          <ArrowUpRight className="h-4 w-4" />
+        </button>
+      </nav>
+      <div aria-hidden="true" className="hidden shrink-0 sm:block" style={{ width: 48, height: 48 }} />
     </motion.header>
   );
 }
@@ -534,7 +526,7 @@ function FloatChip({ chip, mx, my, go }) {
         initial={{ opacity: 0, scale: 0.6 }} animate={go ? { opacity: 1, scale: 1 } : { opacity: 0, scale: 0.6 }} transition={{ duration: 0.9, delay: 1.2 + chip.d / 100, ease: EASE }}
       >
         <motion.div animate={{ y: [0, -12, 0] }} transition={{ duration: chip.s, repeat: Infinity, ease: 'easeInOut' }}
-          className="flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-3.5 py-1.5 text-[11px] text-neutral-300 backdrop-blur-md">
+          className="flex items-center gap-2 rounded-full lq-glass px-3.5 py-1.5 text-[11px] text-white/90">
           <span className="h-1.5 w-1.5 rounded-full" style={{ background: chip.c, boxShadow: `0 0 10px ${chip.c}` }} />{chip.t}
         </motion.div>
       </motion.div>
@@ -571,6 +563,8 @@ function Hero({ openRoles, teams, accepting, onBrowse, onGeneral, go }) {
 
   return (
     <section id="top" ref={ref} onMouseMove={onMove} className="relative flex min-h-[100svh] items-center overflow-hidden px-5 pb-24 pt-32">
+      <Aurora palette="sunset" density={0.00014} />
+      <Horizon height="min(60vh, 520px)" />
       {/* depth layers */}
       <div className="pointer-events-none absolute inset-0" style={{ backgroundImage: 'linear-gradient(rgba(255,255,255,.045) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.045) 1px,transparent 1px)', backgroundSize: '72px 72px', maskImage: 'radial-gradient(ellipse 62% 56% at 50% 46%, #000 25%, transparent 78%)', WebkitMaskImage: 'radial-gradient(ellipse 62% 56% at 50% 46%, #000 25%, transparent 78%)' }} />
       <motion.div style={{ rotate: ringRot }} className="pointer-events-none absolute left-1/2 top-1/2 hidden h-[900px] w-[900px] -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/[0.05] md:block">
@@ -586,7 +580,7 @@ function Hero({ openRoles, teams, accepting, onBrowse, onGeneral, go }) {
       <motion.div style={{ y, opacity: op }} className="relative mx-auto w-full max-w-5xl text-center">
         <Kinetic
           lines={HERO_LINES} go={go} delay={0.15}
-          className="font-display text-[clamp(2.4rem,8vw,6.2rem)] font-black leading-[1.02] tracking-[-0.045em] text-white"
+          className="font-display text-[clamp(2.6rem,9vw,7rem)] leading-[0.98] text-white"
         />
 
         <motion.p
@@ -602,7 +596,7 @@ function Hero({ openRoles, teams, accepting, onBrowse, onGeneral, go }) {
           className="mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row"
         >
           <Magnetic>
-            <button onClick={onBrowse} data-cursor="Go" className="group relative flex items-center gap-2 overflow-hidden rounded-2xl bg-gradient-to-r from-indigo-500 via-pink-500 to-orange-400 px-7 py-3.5 text-sm font-extrabold text-white transition">
+            <button onClick={onBrowse} data-cursor="Go" className="group relative flex items-center gap-2 overflow-hidden rounded-full bg-gradient-to-r from-indigo-500 via-pink-500 to-orange-400 px-7 py-3.5 text-sm font-extrabold text-white transition">
               <span className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-pink-300/50 to-transparent transition-transform duration-700 group-hover:translate-x-full" />
               <span className="relative">See open roles</span>
               <ArrowRight className="relative h-4 w-4 transition-transform group-hover:translate-x-1" />
@@ -610,7 +604,7 @@ function Hero({ openRoles, teams, accepting, onBrowse, onGeneral, go }) {
           </Magnetic>
           {accepting && (
             <Magnetic>
-              <button onClick={onGeneral} className="flex items-center gap-2 rounded-2xl border border-white/15 bg-white/[0.04] px-7 py-3.5 text-sm font-bold text-white backdrop-blur transition hover:border-white/30 hover:bg-white/[0.08]">
+              <button onClick={onGeneral} className="flex items-center gap-2 lq-glass-strong rounded-full px-7 py-3.5 text-sm font-medium text-white">
                 Don&apos;t see yours? Pitch us <Sparkles className="h-4 w-4 text-indigo-300" />
               </button>
             </Magnetic>
@@ -619,10 +613,10 @@ function Hero({ openRoles, teams, accepting, onBrowse, onGeneral, go }) {
 
         <motion.div
           initial={reduce ? false : { opacity: 0, y: 30 }} animate={go ? show : { opacity: 0, y: 30 }} transition={{ duration: 1, delay: 1.35, ease: EASE }}
-          className="mx-auto mt-16 grid max-w-3xl grid-cols-2 gap-px overflow-hidden rounded-2xl border border-white/[0.08] bg-white/[0.06] sm:grid-cols-4"
+          className="mx-auto mt-16 grid max-w-3xl grid-cols-2 gap-3 sm:grid-cols-4"
         >
           {stats.map((x) => (
-            <div key={x.l} className="group relative bg-[#07070f]/85 px-4 py-5 backdrop-blur transition-colors hover:bg-[#0b0b18]">
+            <div key={x.l} className="lq-glass lq-lift group relative rounded-[1.25rem] px-4 py-5 text-left">
               <span className="absolute inset-x-0 top-0 h-px origin-left scale-x-0 bg-gradient-to-r from-pink-400 to-transparent transition-transform duration-500 group-hover:scale-x-100" />
               <div className="font-display text-3xl font-extrabold text-white">
                 {x.alt ? <span className="text-lg sm:text-xl">{x.alt}</span> : <Counter to={x.n} suffix={x.s} run={go} />}
@@ -745,8 +739,9 @@ const WHY = [
 
 function Why() {
   return (
-    <section id="why" className="relative px-5 py-28">
-      <div className="mx-auto max-w-6xl">
+    <section id="why" className="relative overflow-hidden px-5 py-28">
+      <Aurora palette="violet" stars={false} />
+      <div className="relative mx-auto max-w-6xl">
         <div className="mb-14 max-w-3xl">
           <Eyebrow n="01" className="mb-5">Why join</Eyebrow>
           <h2 className="font-display text-4xl font-extrabold leading-[1.08] tracking-[-0.04em] text-white sm:text-5xl">
@@ -867,9 +862,9 @@ function RoleCard({ job, index, onOpen }) {
       <button
         onClick={() => onOpen(job.slug)} data-cursor={job.open ? 'Open' : 'View'}
         className={cx(
-          'group relative flex h-full w-full flex-col overflow-hidden rounded-3xl border p-6 text-left transition-colors duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400/60',
-          job.open ? 'border-white/10 bg-white/[0.035] hover:border-white/25' : 'border-white/[0.06] bg-white/[0.015] opacity-70 hover:opacity-100',
-          job.featured && job.open && 'border-indigo-400/30',
+          'group relative flex h-full w-full flex-col rounded-[1.5rem] p-6 text-left transition-colors duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400/60',
+          job.open ? 'lq-glass' : 'lq-glass opacity-70 hover:opacity-100',
+          job.featured && job.open && 'ring-1 ring-indigo-400/40',
         )}
       >
         <span aria-hidden="true" className="absolute inset-x-0 top-0 h-px origin-left scale-x-0 transition-transform duration-700 ease-out group-hover:scale-x-100" style={{ background: `linear-gradient(90deg, ${color}, transparent)` }} />
@@ -924,7 +919,7 @@ function GeneralCard({ onOpen, accepting }) {
         <span className="absolute inset-[-100%] careers-spin bg-[conic-gradient(from_0deg,transparent_0_60%,#6366f1_75%,#22d3ee_88%,transparent_100%)] opacity-70" />
         <span className="relative flex h-full min-h-[18rem] flex-col rounded-[calc(1.5rem-1px)] bg-[#07070f] p-6">
           <Sparkles className="mb-4 h-6 w-6 text-indigo-300 transition-transform duration-500 group-hover:rotate-12 group-hover:scale-125" />
-          <h3 className="font-display text-xl font-bold leading-[1.15] tracking-[-0.035em] text-white">Don&apos;t see <span className="careers-shine text-[1.2em] leading-none">your</span> role?</h3>
+          <h3 className="font-display text-xl font-bold leading-[1.15] tracking-[-0.035em] text-white">Don&apos;t see <span className="careers-shine leading-none">your</span> role?</h3>
           <p className="mt-3 text-sm leading-relaxed text-neutral-400">Tell us what you&apos;d build, write, design or grow. Some of our best ideas start as a pitch nobody posted a job for.</p>
           <span className="mt-auto flex items-center gap-2 pt-6 text-sm font-bold text-white">General application <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" /></span>
         </span>
@@ -946,8 +941,9 @@ function Roles({ state, onOpen, reload }) {
   }), [jobs, q, team]);
 
   return (
-    <section id="roles" className="relative px-5 py-28">
-      <div className="mx-auto max-w-6xl">
+    <section id="roles" className="relative overflow-hidden px-5 py-28">
+      <Aurora palette="indigo" stars={false} />
+      <div className="relative mx-auto max-w-6xl">
         <div className="mb-10 flex flex-col justify-between gap-6 md:flex-row md:items-end">
           <div>
             <Eyebrow n="03" className="mb-5">Open roles</Eyebrow>
@@ -1033,8 +1029,9 @@ const FAQ = [
 function Faq() {
   const [open, setOpen] = useState(0);
   return (
-    <section id="faq" className="relative px-5 py-28">
-      <div className="mx-auto max-w-3xl">
+    <section id="faq" className="relative overflow-hidden px-5 py-28">
+      <Aurora palette="sunset" stars={false} />
+      <div className="relative mx-auto max-w-3xl">
         <div className="mb-12 flex flex-col items-center text-center">
           <Eyebrow n="04" className="mb-5">Good to know</Eyebrow>
           <h2 className="font-display text-4xl font-extrabold leading-[1.08] tracking-[-0.04em] text-white sm:text-5xl">
@@ -1044,7 +1041,7 @@ function Faq() {
         <div className="space-y-3">
           {FAQ.map((f, i) => (
             <Reveal key={f.q} delay={i * 0.05}>
-              <div className={cx('relative overflow-hidden rounded-2xl border transition-colors duration-300', open === i ? 'border-white/20 bg-white/[0.05]' : 'border-white/[0.08] bg-white/[0.025] hover:border-white/15')}>
+              <div className={cx('lq-glass rounded-[1.25rem] transition-colors duration-300', open === i && 'ring-1 ring-white/10')}>
                 <motion.span aria-hidden="true" className="absolute inset-y-0 left-0 w-0.5 origin-top bg-gradient-to-b from-indigo-400 to-pink-400" initial={false} animate={{ scaleY: open === i ? 1 : 0 }} transition={{ duration: 0.4, ease: EASE }} />
                 <button onClick={() => setOpen(open === i ? -1 : i)} className="flex w-full items-center justify-between gap-4 p-5 text-left" aria-expanded={open === i}>
                   <span className="flex items-baseline gap-4">
@@ -1070,35 +1067,34 @@ function Faq() {
 }
 
 function FinalCta({ onBrowse }) {
-  const ref = useRef(null);
-  const { scrollYProgress } = useScroll({ target: ref, offset: ['start end', 'end start'] });
-  const bx = useTransform(scrollYProgress, [0, 1], ['6%', '-14%']);
   return (
-    <section ref={ref} className="relative px-5 pb-28 pt-10">
-      <Reveal className="mx-auto max-w-5xl">
-        <div className="relative overflow-hidden rounded-[2rem] border border-white/10 bg-gradient-to-br from-indigo-500/15 via-pink-500/[0.06] to-orange-400/10 p-10 text-center sm:p-20">
-          <h2 className="relative font-display text-4xl font-extrabold leading-[1.08] tracking-[-0.04em] text-white sm:text-6xl">
-            Your next project<br />starts <span className="careers-shine text-[1.2em] leading-none">here.</span>
-          </h2>
-          <p className="relative mx-auto mt-6 max-w-lg text-neutral-300">Pick a role, tell us what you&apos;d bring, and let&apos;s build something people actually use.</p>
-          <div className="relative mt-9">
-            <Magnetic>
-              <button onClick={onBrowse} data-cursor="Go" className="group relative inline-flex items-center gap-2 overflow-hidden rounded-2xl bg-gradient-to-r from-indigo-500 via-pink-500 to-orange-400 px-8 py-4 text-sm font-extrabold text-white transition">
-                <span className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-pink-300/50 to-transparent transition-transform duration-700 group-hover:translate-x-full" />
-                <span className="relative">Browse open roles</span><ArrowRight className="relative h-4 w-4 transition-transform group-hover:translate-x-1" />
-              </button>
-            </Magnetic>
+    <SpotlightStage minHeight="90dvh">
+      <div className="flex flex-col justify-between gap-16 px-8 pb-10 pt-28 md:px-16 lg:px-20" style={{ minHeight: '90dvh' }}>
+        <div>
+          <p className="lq-kicker mb-6">{'// Join the crew'}</p>
+          <BlurText
+            as="h2" justify="start" text={'Your next project\nstarts here.'} accent={[4]}
+            className="lq-display text-white leading-[0.9] text-6xl md:text-8xl lg:text-[7.5rem]"
+          />
+          <p className="mt-6 max-w-[44ch] text-sm font-light leading-snug text-white/90 md:text-base">
+            Pick a role, tell us what you&apos;d bring, and let&apos;s build something people actually use.
+          </p>
+          <div className="mt-8 flex flex-wrap items-center gap-6">
+            <button onClick={onBrowse} data-cursor="Go" className="lq-glass-strong inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-medium text-white">
+              Browse open roles <ArrowUpRight className="h-5 w-5" />
+            </button>
+            <a href="/about" className="inline-flex items-center gap-2 text-sm font-medium text-white transition-colors hover:text-white/80">About PlanIt <ArrowUpRight className="h-4 w-4" /></a>
           </div>
         </div>
-      </Reveal>
-      <footer className="mx-auto mt-14 flex max-w-6xl flex-col items-center justify-between gap-4 border-t border-white/[0.06] pt-8 text-[11px] tracking-wide text-neutral-500 sm:flex-row">
-        <span>© {new Date().getFullYear()} PlanIt. Volunteer roles are unpaid.</span>
-        <span className="flex gap-5">
-          <a href="/about" className="hover:text-white">About</a><a href="/blog" className="hover:text-white">Blog</a>
-          <a href="/privacy" className="hover:text-white">Privacy</a><a href="/terms" className="hover:text-white">Terms</a>
-        </span>
-      </footer>
-    </section>
+        <footer className="flex flex-col items-center justify-between gap-4 border-t border-white/20 pt-6 text-xs text-white/80 sm:flex-row">
+          <span>© {new Date().getFullYear()} PlanIt. Volunteer roles are unpaid.</span>
+          <span className="flex gap-5">
+            <a href="/about" className="hover:text-white">About</a><a href="/blog" className="hover:text-white">Blog</a>
+            <a href="/privacy" className="hover:text-white">Privacy</a><a href="/terms" className="hover:text-white">Terms</a>
+          </span>
+        </footer>
+      </div>
+    </SpotlightStage>
   );
 }
 
@@ -1694,9 +1690,9 @@ export default function Careers() {
   }, [state.jobs]);
 
   return (
-    <div className="careers-root relative min-h-screen overflow-x-clip bg-[#05050f] font-sans text-white selection:bg-pink-400/30">
+    <div className="careers-root lq-page relative min-h-screen overflow-x-clip bg-[#05050f] font-sans text-white selection:bg-pink-400/30">
       <style>{`
-        .careers-root .font-display { font-family: 'DM Sans', system-ui, -apple-system, sans-serif; }
+        .careers-root .font-display { font-family: var(--lq-display); font-style: italic; font-weight: 500; letter-spacing: -0.025em; }
         .careers-shine { background: linear-gradient(90deg, #818cf8 0%, #f472b6 45%, #fb923c 100%); -webkit-background-clip: text; background-clip: text; color: transparent; -webkit-text-fill-color: transparent; }
         @keyframes careers-spin { to { transform: rotate(360deg); } }
         @keyframes careers-drip { 0% { transform: translateY(-100%); } 100% { transform: translateY(260%); } }
@@ -1708,6 +1704,9 @@ export default function Careers() {
         .careers-shimmer::after { content: ''; position: absolute; inset: 0; transform: translateX(-100%); background: linear-gradient(90deg, transparent, rgba(255,255,255,0.06), transparent); animation: careers-shimmer 1.6s infinite; }
         @media (prefers-reduced-motion: reduce) { .careers-spin, .careers-shine, .careers-drip, .careers-blink, .careers-shimmer::after { animation: none !important; } }
       `}</style>
+      <PerfGovernor />
+      <SmoothScroll enabled={!intro} />
+      <VineScroll />
       <Cursor />
       {intro && <Preloader ready={!state.loading} onReveal={onReveal} onDone={onIntroDone} />}
       <div className="relative z-10">
