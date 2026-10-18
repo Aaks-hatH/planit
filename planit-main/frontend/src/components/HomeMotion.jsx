@@ -96,11 +96,11 @@ export function HomePreloader({ ready, onReveal, onDone }) {
         transition={{ duration: 0.55, ease: EASE }}
       >
         <div className="flex items-start justify-between text-[11px] tracking-[0.3em] text-neutral-500">
-          <span><b className="font-syne text-sm font-extrabold tracking-tight text-white">PlanIt</b> / EVENTS</span>
+          <span><b className="lq-display text-base font-medium text-white">PlanIt</b> / EVENTS</span>
           <span>&copy; {new Date().getFullYear()}</span>
         </div>
         <div className="mx-auto w-full max-w-3xl text-center">
-          <div className="font-syne text-[clamp(5rem,24vw,15rem)] font-black leading-none tracking-[-0.06em] text-white tabular-nums">
+          <div className="lq-display text-[clamp(5rem,24vw,15rem)] leading-none tracking-[-0.04em] text-white tabular-nums">
             {String(p).padStart(2, '0')}
             <span
               className="inline-block pr-[0.14em] align-top text-[0.28em]"
@@ -133,7 +133,7 @@ const RAIL = [
   { id: 'create', label: 'Create' },
 ];
 
-export function HomeScrollChrome() {
+export function HomeScrollChrome({ rail = true }) {
   const { scrollYProgress } = useScroll();
   const bar = useSpring(scrollYProgress, { stiffness: 140, damping: 28, mass: 0.3 });
   const [pct, setPct] = useState(0);
@@ -166,7 +166,7 @@ export function HomeScrollChrome() {
         style={{ scaleX: bar, zIndex: 9998, boxShadow: '0 0 8px rgba(99,102,241,0.5)' }}
         className="pointer-events-none fixed left-0 right-0 top-0 h-[3px] origin-left bg-gradient-to-r from-indigo-500 to-violet-500"
       />
-      {items.length > 1 && (
+      {rail && items.length > 1 && (
         <div className="fixed right-5 top-1/2 z-[60] hidden -translate-y-1/2 flex-col items-end gap-3 xl:flex">
           <div className="mb-1 text-[11px] tabular-nums text-neutral-500">{String(pct).padStart(2, '0')}%</div>
           {items.map((r) => (
