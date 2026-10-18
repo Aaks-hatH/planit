@@ -24,6 +24,7 @@
     "face-api.js": "^0.22.2",
     "framer-motion": "^11.0.0",
     "html5-qrcode": "^2.3.8",
+    "lenis": "^1.1.20",
     "lucide-react": "^0.303.0",
     "luxon": "^3.4.4",
     "qrcode": "^1.5.4",
