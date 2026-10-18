@@ -13,7 +13,17 @@ import api from '../services/api';
 import { buildJobPostingLd } from '../../jobPostingLd.js';
 import { getIdentity } from '../services/tracker';
 import TurnstileWidget from '../components/TurnstileWidget';
-import { SmoothScroll, PerfGovernor, VineScroll, Aurora, Horizon, BlurText, SpotlightStage, RockRidge } from '../components/liquid/LiquidKit';
+import { SmoothScroll, PerfGovernor, VineScroll, Aurora, BlurText, SpotlightStage } from '../components/liquid/LiquidKit';
+import { CrystalLotus, FloatingIsland, GlassOrb } from '../components/liquid/LiquidScenes';
+import { Lotus3D, Island3D, Blob3D, PageFloaters } from '../components/liquid/Scenes3D';
+
+const CAREER_FLOATS = [
+  { kind: 'crystal', mat: 'rose', x: 0.035, y: 0.2, size: 130, spin: 0.004 },
+  { kind: 'ring', mat: 'gold', x: 0.968, y: 0.36, size: 140, spin: 0.005 },
+  { kind: 'gem', mat: 'amber', x: 0.035, y: 0.52, size: 130, spin: 0.005 },
+  { kind: 'knot', mat: 'glass', x: 0.968, y: 0.66, size: 150, spin: 0.003 },
+  { kind: 'bubble', mat: 'glass', x: 0.035, y: 0.8, size: 140, spin: 0.002 },
+];
 
 /* ════════════════════════════════════════════════════════════════════════════
    PlanIt Careers  ·  /careers  and  /careers/:slug
@@ -564,7 +574,10 @@ function Hero({ openRoles, teams, accepting, onBrowse, onGeneral, go }) {
   return (
     <section id="top" ref={ref} onMouseMove={onMove} className="relative flex min-h-[100svh] items-center overflow-hidden px-5 pb-24 pt-32">
       <Aurora palette="sunset" density={0.00014} />
-      <RockRidge height="min(40vh, 360px)" />
+      <Lotus3D
+        style={{ left: '50%', top: '76%', width: 'min(78vw, 720px)', aspectRatio: '1', transform: 'translate(-50%, -50%)' }}
+        fallback={<CrystalLotus size="100%" className="!top-1/2" />}
+      />
       {/* depth layers */}
       <div className="pointer-events-none absolute inset-0" style={{ backgroundImage: 'linear-gradient(rgba(255,255,255,.045) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.045) 1px,transparent 1px)', backgroundSize: '72px 72px', maskImage: 'radial-gradient(ellipse 62% 56% at 50% 46%, #000 25%, transparent 78%)', WebkitMaskImage: 'radial-gradient(ellipse 62% 56% at 50% 46%, #000 25%, transparent 78%)' }} />
       <motion.div style={{ rotate: ringRot }} className="pointer-events-none absolute left-1/2 top-1/2 hidden h-[900px] w-[900px] -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/[0.05] md:block">
@@ -943,6 +956,10 @@ function Roles({ state, onOpen, reload }) {
   return (
     <section id="roles" className="relative overflow-hidden px-5 py-28">
       <Aurora palette="indigo" stars={false} />
+      <Island3D
+        style={{ right: '-8%', top: '30px', width: 'min(70vw, 700px)', height: '500px', opacity: 0.95 }}
+        fallback={<FloatingIsland className="!w-full" />}
+      />
       <div className="relative mx-auto max-w-6xl">
         <div className="mb-10 flex flex-col justify-between gap-6 md:flex-row md:items-end">
           <div>
@@ -1029,9 +1046,12 @@ const FAQ = [
 function Faq() {
   const [open, setOpen] = useState(0);
   return (
-    <section id="faq" className="relative overflow-hidden px-5 pb-64 pt-28">
+    <section id="faq" className="relative overflow-hidden px-5 py-28">
       <Aurora palette="sunset" stars={false} />
-      <RockRidge height="min(34vh, 300px)" seed={5} />
+      <Blob3D
+        style={{ right: '-12%', top: '12%', width: 'min(54vw, 560px)', aspectRatio: '1' }}
+        fallback={<div className="flex h-full items-center justify-center" style={{ opacity: 0.7 }}><GlassOrb className="!relative" size="100%" /></div>}
+      />
       <div className="relative mx-auto max-w-3xl">
         <div className="mb-12 flex flex-col items-center text-center">
           <Eyebrow n="04" className="mb-5">Good to know</Eyebrow>
@@ -1708,6 +1728,7 @@ export default function Careers() {
       <PerfGovernor />
       <SmoothScroll enabled={!intro} />
       <VineScroll variant="botanical" />
+      <PageFloaters items={CAREER_FLOATS} />
       <Cursor />
       {intro && <Preloader ready={!state.loading} onReveal={onReveal} onDone={onIntroDone} />}
       <div className="relative z-10">
