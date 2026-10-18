@@ -13,7 +13,7 @@ import api from '../services/api';
 import { buildJobPostingLd } from '../../jobPostingLd.js';
 import { getIdentity } from '../services/tracker';
 import TurnstileWidget from '../components/TurnstileWidget';
-import { SmoothScroll, PerfGovernor, VineScroll, Aurora, Horizon, BlurText, SpotlightStage } from '../components/liquid/LiquidKit';
+import { SmoothScroll, PerfGovernor, VineScroll, Aurora, Horizon, BlurText, SpotlightStage, RockRidge } from '../components/liquid/LiquidKit';
 
 /* ════════════════════════════════════════════════════════════════════════════
    PlanIt Careers  ·  /careers  and  /careers/:slug
@@ -564,7 +564,7 @@ function Hero({ openRoles, teams, accepting, onBrowse, onGeneral, go }) {
   return (
     <section id="top" ref={ref} onMouseMove={onMove} className="relative flex min-h-[100svh] items-center overflow-hidden px-5 pb-24 pt-32">
       <Aurora palette="sunset" density={0.00014} />
-      <Horizon height="min(60vh, 520px)" />
+      <RockRidge height="min(40vh, 360px)" />
       {/* depth layers */}
       <div className="pointer-events-none absolute inset-0" style={{ backgroundImage: 'linear-gradient(rgba(255,255,255,.045) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.045) 1px,transparent 1px)', backgroundSize: '72px 72px', maskImage: 'radial-gradient(ellipse 62% 56% at 50% 46%, #000 25%, transparent 78%)', WebkitMaskImage: 'radial-gradient(ellipse 62% 56% at 50% 46%, #000 25%, transparent 78%)' }} />
       <motion.div style={{ rotate: ringRot }} className="pointer-events-none absolute left-1/2 top-1/2 hidden h-[900px] w-[900px] -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/[0.05] md:block">
@@ -580,7 +580,7 @@ function Hero({ openRoles, teams, accepting, onBrowse, onGeneral, go }) {
       <motion.div style={{ y, opacity: op }} className="relative mx-auto w-full max-w-5xl text-center">
         <Kinetic
           lines={HERO_LINES} go={go} delay={0.15}
-          className="font-display text-[clamp(2.6rem,9vw,7rem)] leading-[0.98] text-white"
+          className="font-display text-[clamp(2rem,5.6vw,4.8rem)] leading-[1.02] text-white"
         />
 
         <motion.p
@@ -618,7 +618,7 @@ function Hero({ openRoles, teams, accepting, onBrowse, onGeneral, go }) {
           {stats.map((x) => (
             <div key={x.l} className="lq-glass lq-lift group relative rounded-[1.25rem] px-4 py-5 text-left">
               <span className="absolute inset-x-0 top-0 h-px origin-left scale-x-0 bg-gradient-to-r from-pink-400 to-transparent transition-transform duration-500 group-hover:scale-x-100" />
-              <div className="font-display text-3xl font-extrabold text-white">
+              <div className="font-display text-2xl whitespace-nowrap text-white">
                 {x.alt ? <span className="text-lg sm:text-xl">{x.alt}</span> : <Counter to={x.n} suffix={x.s} run={go} />}
               </div>
               <div className="mt-1.5 text-[10px] font-medium uppercase tracking-[0.2em] text-neutral-500">{x.l}</div>
@@ -1029,8 +1029,9 @@ const FAQ = [
 function Faq() {
   const [open, setOpen] = useState(0);
   return (
-    <section id="faq" className="relative overflow-hidden px-5 py-28">
+    <section id="faq" className="relative overflow-hidden px-5 pb-64 pt-28">
       <Aurora palette="sunset" stars={false} />
+      <RockRidge height="min(34vh, 300px)" seed={5} />
       <div className="relative mx-auto max-w-3xl">
         <div className="mb-12 flex flex-col items-center text-center">
           <Eyebrow n="04" className="mb-5">Good to know</Eyebrow>
@@ -1074,7 +1075,7 @@ function FinalCta({ onBrowse }) {
           <p className="lq-kicker mb-6">{'// Join the crew'}</p>
           <BlurText
             as="h2" justify="start" text={'Your next project\nstarts here.'} accent={[4]}
-            className="lq-display text-white leading-[0.9] text-6xl md:text-8xl lg:text-[7.5rem]"
+            className="lq-display text-white leading-[0.97] text-5xl md:text-7xl lg:text-8xl"
           />
           <p className="mt-6 max-w-[44ch] text-sm font-light leading-snug text-white/90 md:text-base">
             Pick a role, tell us what you&apos;d bring, and let&apos;s build something people actually use.
@@ -1692,7 +1693,7 @@ export default function Careers() {
   return (
     <div className="careers-root lq-page relative min-h-screen overflow-x-clip bg-[#05050f] font-sans text-white selection:bg-pink-400/30">
       <style>{`
-        .careers-root .font-display { font-family: var(--lq-display); font-style: italic; font-weight: 500; letter-spacing: -0.025em; }
+        .careers-root .font-display { font-family: var(--lq-display); font-style: normal; font-weight: 800; letter-spacing: -0.035em; }
         .careers-shine { background: linear-gradient(90deg, #818cf8 0%, #f472b6 45%, #fb923c 100%); -webkit-background-clip: text; background-clip: text; color: transparent; -webkit-text-fill-color: transparent; }
         @keyframes careers-spin { to { transform: rotate(360deg); } }
         @keyframes careers-drip { 0% { transform: translateY(-100%); } 100% { transform: translateY(260%); } }
@@ -1706,7 +1707,7 @@ export default function Careers() {
       `}</style>
       <PerfGovernor />
       <SmoothScroll enabled={!intro} />
-      <VineScroll />
+      <VineScroll variant="botanical" />
       <Cursor />
       {intro && <Preloader ready={!state.loading} onReveal={onReveal} onDone={onIntroDone} />}
       <div className="relative z-10">
