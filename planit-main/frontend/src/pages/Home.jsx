@@ -17,7 +17,18 @@ import toast from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
 import { HomePreloader, HomeScrollChrome, ScrollFloat, MotionReveal, useSiteReady } from '../components/HomeMotion';
 import { useWhiteLabel } from '../context/WhiteLabelContext';
-import { SmoothScroll, PerfGovernor, VineScroll, Aurora, Horizon, BlurText, SpotlightStage, CitySkyline, Festoon, rise } from '../components/liquid/LiquidKit';
+import { SmoothScroll, PerfGovernor, VineScroll, Aurora, BlurText, SpotlightStage, CitySkyline, Festoon, rise } from '../components/liquid/LiquidKit';
+import { GlassOrb, FloatingIsland } from '../components/liquid/LiquidScenes';
+import { Blob3D, Island3D, PageFloaters } from '../components/liquid/Scenes3D';
+
+const HOME_FLOATS = [
+  { kind: 'crystal', mat: 'amber', x: 0.035, y: 0.17, size: 130, spin: 0.004 },
+  { kind: 'knot', mat: 'glass', x: 0.968, y: 0.33, size: 150, spin: 0.003 },
+  { kind: 'ring', mat: 'gold', x: 0.035, y: 0.47, size: 140, spin: 0.005 },
+  { kind: 'bubble', mat: 'glass', x: 0.968, y: 0.58, size: 140, spin: 0.002 },
+  { kind: 'gem', mat: 'rose', x: 0.035, y: 0.69, size: 120, spin: 0.005 },
+  { kind: 'dodeca', mat: 'chrome', x: 0.968, y: 0.8, size: 130, spin: 0.004 },
+];
 
 /*
 PLANIT SOFTWARE LICENSE AGREEMENT
@@ -3452,6 +3463,7 @@ export default function Home() {
       <PerfGovernor />
       <SmoothScroll enabled={!scrollLocked} />
       {!isWL && <VineScroll variant="party" />}
+      {!isWL && <PageFloaters items={HOME_FLOATS} />}
       <AnimatePresence>
         {showIntro && introGate && <IntroCinematic onComplete={dismissIntro} />}
       </AnimatePresence>
@@ -3605,7 +3617,13 @@ export default function Home() {
               <StarBackground fixed={false} forceActive={true} paused={showIntro} />
             </div>
           )}
-          {!isWL && <Horizon height="min(78vh, 720px)" />}
+          {!isWL && (
+            <Blob3D
+              className="pointer-events-none"
+              style={{ left: '50%', top: '4svh', width: 'min(84vw, 660px)', height: '84svh', transform: 'translateX(8%)', zIndex: 1, opacity: 0.85 }}
+              fallback={<div className="flex h-full items-center justify-center" style={{ opacity: 0.72 }}><GlassOrb className="!relative" /></div>}
+            />
+          )}
           {!isWL && <Festoon className="!top-16 opacity-90" />}
 
           <div className="w-full relative" style={{ zIndex: 2 }}>
@@ -3742,6 +3760,12 @@ export default function Home() {
         ═══════════════════════════════════════════════════════════ */}
         <section id="features" className="relative overflow-hidden" style={{ display: (selectedBranch || isWL) ? 'none' : 'block' }}>
           <Aurora palette="violet" density={0.00012} />
+          {!isWL && (
+            <Island3D
+              style={{ right: '-14%', top: '10px', width: 'min(60vw, 640px)', height: '480px', zIndex: 0, opacity: 0.92 }}
+              fallback={<FloatingIsland className="!w-full" />}
+            />
+          )}
           <div className="relative max-w-screen-xl mx-auto px-6 sm:px-10 py-24 sm:py-32">
 
             {/* Section label */}
