@@ -7,7 +7,7 @@ import {
   ArrowRight, Link, Eye, EyeOff, ChevronRight, Zap, Clock,
   CheckCircle2, TrendingUp, ListChecks, Timer,
   Brain, ArrowUpRight, AlertCircle, UtensilsCrossed, MapPin, QrCode, Layers, Search, CornerDownRight, Bot,
-  Share2, Ticket, CheckSquare, X
+  Share2, Ticket, CheckSquare, X, Sparkles
 } from 'lucide-react';
 import { eventAPI } from '../services/api';
 import { trackFeature, flushTracker } from '../services/tracker';
@@ -17,6 +17,7 @@ import toast from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
 import { HomePreloader, HomeScrollChrome, ScrollFloat, MotionReveal, useSiteReady } from '../components/HomeMotion';
 import { useWhiteLabel } from '../context/WhiteLabelContext';
+import { SmoothScroll, PerfGovernor, VineScroll, Aurora, Horizon, BlurText, SpotlightStage, rise } from '../components/liquid/LiquidKit';
 
 /*
 PLANIT SOFTWARE LICENSE AGREEMENT
@@ -1633,23 +1634,21 @@ function SlugFinder({ compact = false }) {
   }
 
   return (
-    <div className={`mt-4 flex items-center gap-2 max-w-sm mx-auto ${shaking ? 'animate-shake' : ''}`}>
+    <div className={`lq-glass mt-4 flex items-center gap-1 max-w-sm mx-auto rounded-full p-1 ${shaking ? 'animate-shake' : ''}`}>
       <div className="relative flex-1">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-500 pointer-events-none" />
+        <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-white/50 pointer-events-none" />
         <input
           type="text"
           value={value}
           onChange={e => setValue(e.target.value)}
           onKeyDown={handleKey}
           placeholder="Have a link? Paste it here…"
-          className="w-full h-10 pl-10 pr-4 rounded-xl text-sm text-white placeholder-neutral-600 border border-neutral-800/80 focus:border-neutral-600 focus:outline-none transition-colors"
-          style={{ background: 'rgba(255,255,255,0.04)' }}
+          className="w-full h-10 pl-10 pr-4 rounded-full text-sm text-white placeholder-white/40 bg-transparent focus:outline-none"
         />
       </div>
       <button
         onClick={handleGo}
-        className="flex-shrink-0 flex items-center gap-1.5 h-10 px-4 rounded-xl text-sm font-bold border border-neutral-700 text-neutral-300 hover:border-neutral-500 hover:text-white transition-all"
-        style={{ background: 'rgba(255,255,255,0.04)' }}
+        className="flex-shrink-0 flex items-center gap-1.5 h-10 px-4 rounded-full text-sm font-medium bg-white text-neutral-900 hover:bg-white/90 transition-all"
       >
         Go <CornerDownRight className="w-3.5 h-3.5" />
       </button>
@@ -1676,10 +1675,10 @@ function FeatureCard({ icon: Icon, title, description, delay = 0 }) {
 function TestimonialCard({ quote, author, role, event, delay = 0, direction = 'up' }) {
   return (
     <Reveal delay={delay} direction={direction}>
-      <div className="group relative p-8 rounded-2xl border border-neutral-800 bg-neutral-900/50 hover:border-neutral-700 hover:bg-neutral-800/50 hover:-translate-y-1.5 hover:shadow-[0_20px_50px_rgba(0,0,0,0.4)] transition-all duration-500 h-full">
-        <span aria-hidden="true" className="absolute top-6 right-7 font-syne text-5xl font-black text-neutral-800 group-hover:text-neutral-700 transition-colors duration-500 select-none leading-none">"</span>
+      <div className="lq-glass lq-lift group relative p-8 rounded-[1.25rem] h-full">
+        <span aria-hidden="true" className="absolute top-5 right-7 lq-display text-6xl text-white/15 group-hover:text-white/30 transition-colors duration-500 select-none leading-none">"</span>
         <div className="flex items-start gap-4 mb-5">
-          <div className="flex-shrink-0 w-12 h-12 rounded-2xl bg-white flex items-center justify-center ring-1 ring-white/10 group-hover:ring-2 group-hover:ring-indigo-400/40 transition-all duration-500">
+          <div className="flex-shrink-0 w-12 h-12 rounded-full bg-white flex items-center justify-center ring-1 ring-white/10 group-hover:ring-2 group-hover:ring-indigo-400/40 transition-all duration-500">
             <span className="text-base font-bold text-neutral-900">{author.charAt(0)}</span>
           </div>
           <div>
@@ -2377,12 +2376,13 @@ const SHOWCASE_STEPS = [
 ];
 function ProductShowcase() {
   return (
-    <section id="showcase" className="relative border-t" style={{ borderColor: 'rgba(255,255,255,0.05)' }}>
-      <div className="max-w-6xl mx-auto px-6 sm:px-10 py-20 sm:py-28">
+    <section id="showcase" className="relative overflow-hidden">
+      <Aurora palette="sunset" stars={false} />
+      <div className="relative max-w-6xl mx-auto px-6 sm:px-10 py-20 sm:py-28">
         <Reveal className="text-center mb-16 sm:mb-20">
-          <p className="text-xs font-semibold text-neutral-600 uppercase tracking-widest mb-4">See it in action</p>
+          <p className="lq-kicker mb-5">{'// See it in action'}</p>
           <h2 className="font-syne text-3xl sm:text-5xl font-black text-white leading-tight">
-            Not just a Free Trial.<br /><span className="text-neutral-600">This is the real thing.</span>
+            Not just a Free Trial.<br /><span className="text-white/40">This is the real thing.</span>
           </h2>
         </Reveal>
 
@@ -2390,9 +2390,9 @@ function ProductShowcase() {
           {SHOWCASE_STEPS.map((s, i) => (
             <div key={s.key} className={`grid lg:grid-cols-2 gap-10 lg:gap-16 items-center ${i % 2 === 1 ? 'lg:[&>*:first-child]:order-2' : ''}`}>
               <Reveal direction={i % 2 === 1 ? 'right' : 'left'}>
-                <span className="text-xs font-bold uppercase tracking-widest mb-3 text-indigo-400 block">{s.eyebrow}</span>
+                <span className="lq-kicker mb-3 block">{'// '}{s.eyebrow}</span>
                 <h3 className="font-syne text-2xl sm:text-3xl font-black mb-3 text-white">{s.title}</h3>
-                <p className="text-sm sm:text-base leading-relaxed max-w-sm text-neutral-400">{s.desc}</p>
+                <p className="text-sm sm:text-base font-light leading-snug max-w-sm text-white/75">{s.desc}</p>
               </Reveal>
               <Reveal direction={i % 2 === 1 ? 'left' : 'right'} delay={100}>
                 <DeviceFrame variant={s.device}>{s.node}</DeviceFrame>
@@ -3195,6 +3195,14 @@ export default function Home() {
     return () => { document.body.style.overflow = ''; };
   }, [scrollLocked]);
 
+  // Blur-rise entrance used across the hero; held back until the loading curtain has opened.
+  const blurHidden = { filter: 'blur(10px)', opacity: 0, y: 20 };
+  const enter = (delay) => ({
+    initial: blurHidden,
+    animate: preloading ? blurHidden : { filter: 'blur(0px)', opacity: 1, y: 0 },
+    transition: { duration: 0.8, ease: 'easeOut', delay },
+  });
+
   const dismissIntro = () => {
     sessionStorage.setItem('planit_intro_played', '1');
     setShowIntro(false);
@@ -3439,8 +3447,11 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen text-white relative" style={{ background: 'var(--bg-base)', overflowX: 'clip', maxWidth: '100vw', isolation: 'isolate' }}>
+    <div className={`min-h-screen text-white relative${isWL ? '' : ' lq-page'}`} style={{ background: 'var(--bg-base)', overflowX: 'clip', maxWidth: '100vw', isolation: 'isolate' }}>
       <InjectGlobalCSS />
+      <PerfGovernor />
+      <SmoothScroll enabled={!scrollLocked} />
+      {!isWL && <VineScroll />}
       <AnimatePresence>
         {showIntro && introGate && <IntroCinematic onComplete={dismissIntro} />}
       </AnimatePresence>
@@ -3461,195 +3472,153 @@ export default function Home() {
           eventSlug={created?.subdomain}
         />
       )}
-      <ScrollProgressBar />
-      {!isWL && <HomeScrollChrome key={String(selectedBranch)} />}
+      {isWL && <ScrollProgressBar />}
+      {!isWL && <HomeScrollChrome rail={false} key={String(selectedBranch)} />}
 
 
-      {/* Nav */}
+      {/* Nav: a floating liquid-glass pill */}
       <header
-        className="sticky top-0 z-50 border-b"
-        style={{
-          transition: 'background 0.5s ease, border-color 0.5s ease, backdrop-filter 0.5s ease, box-shadow 0.5s ease',
-          backdropFilter: navScrolled ? 'blur(24px)' : 'blur(0px)',
-          boxShadow: navScrolled ? '0 8px 32px rgba(0,0,0,0.35)' : 'none',
-          ...(selectedBranch === 'venue'
-            ? { background: navScrolled ? 'rgba(10,6,3,0.97)' : 'rgba(10,6,3,0)', borderColor: navScrolled ? 'rgba(249,115,22,0.20)' : 'rgba(249,115,22,0)' }
-            : { background: navScrolled ? 'rgba(6,6,12,0.96)' : 'rgba(6,6,12,0)', borderColor: navScrolled ? 'rgba(38,38,38,0.6)' : 'rgba(38,38,38,0)' }
-          ),
-        }}
+        className="fixed inset-x-0 z-50 flex items-center justify-between px-4 sm:px-8 lg:px-14"
+        style={{ top: 'calc(1rem + var(--safe-top, 0px))', paddingTop: 0 }}
       >
-        <div className="max-w-screen-xl mx-auto px-4 sm:px-8 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            {/* ── Events brand: visible outside Venue section ── */}
-            <div style={{ display: selectedBranch === 'venue' ? 'none' : 'flex' }} className="items-center gap-3 transition-opacity duration-300">
-              {isWL && wlLogo ? (
-                <img src={wlLogo} alt={wlName} className="h-8 object-contain" />
-              ) : (
-                <>
-                  <div className="relative">
-                    <div className="w-9 h-9 rounded-2xl bg-neutral-800 border border-neutral-700 flex items-center justify-center">
-                      <Calendar className="w-5 h-5 text-neutral-300" />
-                    </div>
-                    {!isWL && <div className="absolute -top-1 -right-1 w-3 h-3 bg-emerald-500 rounded-full border-2 border-[#06060c] animate-pulse" />}
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="font-syne text-xl font-bold text-white tracking-tight">{isWL ? wlName : 'PlanIt'}</span>
-                    {!isWL && <span className="hidden sm:block px-2 py-0.5 rounded-md text-[10px] font-bold bg-neutral-800 border border-neutral-700 text-neutral-400 uppercase tracking-wider">Events</span>}
-                  </div>
-                </>
-              )}
-            </div>
-            {/* ── Venue brand: visible only in Venue section ── */}
-            <div style={{ display: selectedBranch === 'venue' ? 'flex' : 'none' }} className="items-center gap-3 transition-opacity duration-300">
-              <div className="w-9 h-9 rounded-2xl bg-orange-500/15 border border-orange-500/30 flex items-center justify-center">
-                <UtensilsCrossed className="w-5 h-5 text-orange-400" />
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="font-syne text-xl font-bold text-white tracking-tight">{isWL ? wlName : 'PlanIt'}</span>
-                {!isWL && <span className="hidden sm:block px-2 py-0.5 rounded-md text-[10px] font-bold bg-orange-500/10 border border-orange-500/25 text-orange-400 uppercase tracking-wider">Venue</span>}
-              </div>
-            </div>
-          </div>
-          <nav className="flex items-center gap-1">
-            {/* ── Branch switcher: shown when a branch is selected ── */}
-            {selectedBranch && (
-              <button
-                onClick={() => setSelectedBranch(null)}
-                className="hidden md:flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-neutral-500 hover:text-neutral-200 hover:bg-neutral-800/50 rounded-xl transition-all duration-200 border border-neutral-800 mr-1"
-              >
-                <ChevronRight className="w-3 h-3 rotate-180" /> Change
-              </button>
-            )}
-            {/* ── When NOT in Venue section: show Venue link ── */}
-            {!isWL && <a href="#planit-venue"
+        <a
+          href="#hero-top"
+          aria-label={isWL ? (wlName || 'Home') : 'PlanIt home'}
+          className="group flex items-center gap-3 text-white"
+        >
+          <span className="lq-glass relative flex shrink-0 items-center justify-center rounded-full" style={{ width: 48, height: 48 }}>
+            {isWL && wlLogo
+              ? <img src={wlLogo} alt={wlName} className="h-6 w-6 object-contain" />
+              : selectedBranch === 'venue'
+                ? <UtensilsCrossed className="h-5 w-5 text-orange-300" />
+                : <span className="lq-display text-[26px] leading-none">{(isWL ? wlName : 'P').charAt(0) || 'P'}</span>}
+            {!isWL && <span className="absolute right-1.5 top-1.5 h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-400" />}
+          </span>
+          <span className="lq-display hidden text-2xl leading-none sm:block">{isWL ? wlName : 'PlanIt'}</span>
+        </a>
+
+        <nav
+          aria-label="Primary"
+          className="lq-glass hidden items-center rounded-full px-1.5 py-1.5 md:flex"
+          style={navScrolled ? { background: 'rgba(8,8,16,0.55)' } : undefined}
+        >
+          {selectedBranch && (
+            <button
+              onClick={() => setSelectedBranch(null)}
+              className="inline-flex items-center gap-1 px-3 py-2 text-sm font-medium text-white/70 transition-colors hover:text-white"
+            >
+              <ChevronRight className="h-3 w-3 rotate-180" /> Change
+            </button>
+          )}
+          {!isWL && (
+            <a href="#planit-venue"
               onClick={(e) => { e.preventDefault(); selectBranch('venue'); }}
               style={{ display: selectedBranch === 'venue' ? 'none' : undefined }}
-              className="hidden md:flex items-center gap-1.5 px-3 py-2 text-sm text-orange-400/80 hover:text-orange-300 hover:bg-orange-500/8 rounded-xl transition-all duration-200">
-              <UtensilsCrossed className="w-3.5 h-3.5" />
+              className="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-orange-300/90 transition-colors hover:text-orange-200">
+              <UtensilsCrossed className="h-3.5 w-3.5" />
               PlanIt Venue
-            </a>}
-            {/* ── When IN Venue section: show Events link ── */}
-            <a href="#planit-events"
-              onClick={(e) => { e.preventDefault(); selectBranch('events'); }}
-              style={{ display: selectedBranch === 'venue' ? 'flex' : 'none' }}
-              className="items-center gap-1.5 px-3 py-2 text-sm text-neutral-300 hover:text-white hover:bg-neutral-800/50 rounded-xl transition-all duration-200">
-              <Calendar className="w-3.5 h-3.5" />
-              PlanIt Events
             </a>
-            <a href="/discover" className="hidden md:flex items-center gap-1.5 px-3 py-2 text-sm text-neutral-400 hover:text-neutral-200 hover:bg-neutral-800/50 rounded-xl transition-all duration-200">
-              <Zap className="w-3.5 h-3.5" />
-              Discover
-            </a>
-            <a href="/blog" className="hidden md:flex items-center gap-1.5 px-3 py-2 text-sm text-neutral-400 hover:text-neutral-200 hover:bg-neutral-800/50 rounded-xl transition-all duration-200">
-              Blog
-            </a>
-            <a href="/status" className="hidden md:flex items-center gap-1.5 px-3 py-2 text-sm text-neutral-400 hover:text-neutral-200 hover:bg-neutral-800/50 rounded-xl transition-all duration-200">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block" />
-              Status
-            </a>
-            <a href="/help" className="hidden md:flex items-center gap-1.5 px-3 py-2 text-sm text-neutral-400 hover:text-neutral-200 hover:bg-neutral-800/50 rounded-xl transition-all duration-200">
-              Help
-            </a>
-            <a href="/blog" className="hidden md:flex items-center gap-1.5 px-3 py-2 text-sm text-neutral-400 hover:text-neutral-200 hover:bg-neutral-800/50 rounded-xl transition-all duration-200">
-              Blog
-            </a>
-            <a href="/about" className="hidden md:flex items-center gap-1.5 px-3 py-2 text-sm text-neutral-400 hover:text-neutral-200 hover:bg-neutral-800/50 rounded-xl transition-all duration-200">
-              About
-            </a>
-            {/* Hamburger, mobile only */}
-            <button
-              className="md:hidden ml-2 w-9 h-9 flex items-center justify-center rounded-xl bg-neutral-800 border border-neutral-700 text-neutral-300 hover:text-white hover:bg-neutral-700 transition-all"
-              onClick={() => setMobileMenuOpen(o => !o)}
-              aria-label="Toggle menu"
-            >
-              {mobileMenuOpen ? (
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
-              ) : (
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" /></svg>
-              )}
-            </button>
-          </nav>
-        </div>
-        {/* Mobile dropdown menu */}
+          )}
+          <a href="#planit-events"
+            onClick={(e) => { e.preventDefault(); selectBranch('events'); }}
+            style={{ display: selectedBranch === 'venue' ? 'inline-flex' : 'none' }}
+            className="items-center gap-1.5 px-3 py-2 text-sm font-medium text-white/90 transition-colors hover:text-white">
+            <Calendar className="h-3.5 w-3.5" />
+            PlanIt Events
+          </a>
+          <a href="/discover" className="px-3 py-2 text-sm font-medium text-white/90 transition-colors hover:text-white">Discover</a>
+          <a href="/blog" className="px-3 py-2 text-sm font-medium text-white/90 transition-colors hover:text-white">Blog</a>
+          <a href="/status" className="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-white/90 transition-colors hover:text-white">
+            <span className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-400" />
+            Status
+          </a>
+          <a href="/help" className="px-3 py-2 text-sm font-medium text-white/90 transition-colors hover:text-white">Help</a>
+          <a href="/about" className="px-3 py-2 text-sm font-medium text-white/90 transition-colors hover:text-white">About</a>
+          <a href="#planit-events"
+            onClick={(e) => { e.preventDefault(); selectBranch(selectedBranch || 'events'); }}
+            className="ml-1 inline-flex items-center gap-1.5 whitespace-nowrap rounded-full bg-white px-4 py-2 text-sm font-medium text-black transition-colors hover:bg-white/90">
+            Start free
+            <ArrowUpRight className="h-4 w-4" />
+          </a>
+        </nav>
+
+        {/* Hamburger (mobile) / spacer that keeps the pill centred (desktop) */}
+        <button
+          className="lq-glass flex items-center justify-center rounded-full text-white md:hidden"
+          style={{ width: 48, height: 48 }}
+          onClick={() => setMobileMenuOpen(o => !o)}
+          aria-label="Toggle menu"
+          aria-expanded={mobileMenuOpen}
+        >
+          {mobileMenuOpen ? (
+            <svg className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+          ) : (
+            <svg className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" /></svg>
+          )}
+        </button>
+        <div aria-hidden="true" className="hidden shrink-0 md:block" style={{ width: 48, height: 48 }} />
+
+        {/* Mobile menu */}
         {mobileMenuOpen && (
-          <div className="md:hidden border-t border-neutral-800/60 px-4 py-3 space-y-1" style={{ background: 'rgba(6,6,12,0.98)' }}>
-            <a href="#planit-venue" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-2.5 px-3 py-2.5 text-sm text-orange-400 hover:text-orange-300 hover:bg-orange-500/10 rounded-xl transition-all">
-              <UtensilsCrossed className="w-4 h-4" />{isWL ? 'Venue' : 'PlanIt Venue'}
+          <div className="lq-glass-strong absolute left-4 right-4 top-full mt-3 space-y-1 rounded-3xl p-3 md:hidden" style={{ background: 'rgba(8,8,16,0.78)' }}>
+            {!isWL && (
+              <a href="#planit-venue" onClick={(e) => { e.preventDefault(); setMobileMenuOpen(false); selectBranch('venue'); }} className="flex items-center gap-2.5 rounded-2xl px-3 py-2.5 text-sm text-orange-300 transition-all hover:bg-white/5">
+                <UtensilsCrossed className="h-4 w-4" />PlanIt Venue
+              </a>
+            )}
+            <a href="/discover" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-2.5 rounded-2xl px-3 py-2.5 text-sm text-white/90 transition-all hover:bg-white/5">
+              <Zap className="h-4 w-4 text-white/50" />Discover
             </a>
-            <a href="/discover" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-2.5 px-3 py-2.5 text-sm text-neutral-300 hover:text-white hover:bg-neutral-800/60 rounded-xl transition-all">
-              <Zap className="w-4 h-4 text-neutral-500" />Discover
+            <a href="/status" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-2.5 rounded-2xl px-3 py-2.5 text-sm text-white/90 transition-all hover:bg-white/5">
+              <span className="ml-0.5 mr-0.5 inline-block h-1.5 w-1.5 rounded-full bg-emerald-400" />Status
             </a>
-            <a href="/status" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-2.5 px-3 py-2.5 text-sm text-neutral-300 hover:text-white hover:bg-neutral-800/60 rounded-xl transition-all">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block ml-0.5 mr-0.5" />Status
+            <a href="/help" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-2.5 rounded-2xl px-3 py-2.5 text-sm text-white/90 transition-all hover:bg-white/5">
+              <svg className="h-4 w-4 text-white/50" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3M12 17h.01"/></svg>Help
             </a>
-            <a href="/help" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-2.5 px-3 py-2.5 text-sm text-neutral-300 hover:text-white hover:bg-neutral-800/60 rounded-xl transition-all">
-              <svg className="w-4 h-4 text-neutral-500" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3M12 17h.01"/></svg>Help
+            <a href="/blog" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-2.5 rounded-2xl px-3 py-2.5 text-sm text-white/90 transition-all hover:bg-white/5">
+              <svg className="h-4 w-4 text-white/50" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>Blog
             </a>
-            <a href="/blog" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-2.5 px-3 py-2.5 text-sm text-neutral-300 hover:text-white hover:bg-neutral-800/60 rounded-xl transition-all">
-              <svg className="w-4 h-4 text-neutral-500" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>Blog
-            </a>
-            <a href="/about" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-2.5 px-3 py-2.5 text-sm text-neutral-400 hover:text-white hover:bg-neutral-800/60 rounded-xl transition-all">
+            <a href="/about" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-2.5 rounded-2xl px-3 py-2.5 text-sm text-white/70 transition-all hover:bg-white/5">
               About
             </a>
-            <div className="pt-1 border-t border-neutral-800 flex gap-2 mt-1">
-              <a href="/terms" onClick={() => setMobileMenuOpen(false)} className="flex-1 text-center py-2 text-xs text-neutral-600 hover:text-neutral-400 rounded-lg hover:bg-neutral-800/40 transition-all">
-                Terms
-              </a>
-              <a href="/privacy" onClick={() => setMobileMenuOpen(false)} className="flex-1 text-center py-2 text-xs text-neutral-600 hover:text-neutral-400 rounded-lg hover:bg-neutral-800/40 transition-all">
-                Privacy
-              </a>
+            <a href="#planit-events" onClick={(e) => { e.preventDefault(); setMobileMenuOpen(false); selectBranch(selectedBranch || 'events'); }} className="mt-1 flex items-center justify-center gap-1.5 rounded-full bg-white px-4 py-3 text-sm font-medium text-black">
+              Start free <ArrowUpRight className="h-4 w-4" />
+            </a>
+            <div className="mt-1 flex gap-2 border-t border-white/10 pt-1">
+              <a href="/terms" onClick={() => setMobileMenuOpen(false)} className="flex-1 rounded-lg py-2 text-center text-xs text-white/40 transition-all hover:text-white/70">Terms</a>
+              <a href="/privacy" onClick={() => setMobileMenuOpen(false)} className="flex-1 rounded-lg py-2 text-center text-xs text-white/40 transition-all hover:text-white/70">Privacy</a>
             </div>
           </div>
         )}
       </header>
 
       <main className="relative" style={{ zIndex: 2, overflowX: 'hidden', maxWidth: '100vw' }}>
-        {/* HERO, redesigned */}
-        <section id="hero-top" className="relative min-h-screen flex items-center" style={{ overflow: 'hidden', maxWidth: '100vw' }}>
+        {/* HERO: aurora + planet horizon, blur-in headline, glass UI */}
+        <section id="hero-top" className="relative min-h-screen flex items-center bg-[#05050f]" style={{ overflow: 'hidden', maxWidth: '100vw' }}>
+          {(isWL && heroImage)
+            ? <div className="absolute inset-0" style={{ backgroundImage: `url(${heroImage})`, backgroundSize: 'cover', backgroundPosition: 'center', opacity: 0.2 }} />
+            : isWL ? <CinematicGrid /> : <Aurora palette="indigo" stars={false} />
+          }
           {/* Deep-space layer, subtle nod to PlanIt → Planet, hero only */}
           {!isWL && (
             <div aria-hidden="true" className="absolute inset-0 pointer-events-none" style={{ zIndex: 0, opacity: 0.55 }}>
               <StarBackground fixed={false} forceActive={true} paused={showIntro} />
             </div>
           )}
-          {/* Layered background system */}
-          {(isWL && heroImage)
-            ? <div className="absolute inset-0" style={{ backgroundImage: `url(${heroImage})`, backgroundSize: 'cover', backgroundPosition: 'center', opacity: 0.2 }} />
-            : <CinematicGrid />
-          }
-          {/* Deep ambient radials */}
-          <div aria-hidden="true" className="absolute inset-0 pointer-events-none" style={{ zIndex: 1,
-            background: 'radial-gradient(ellipse 90% 60% at 50% 0%, rgba(99,102,241,0.09) 0%, transparent 55%), radial-gradient(ellipse 50% 40% at 85% 90%, rgba(249,115,22,0.06) 0%, transparent 50%), radial-gradient(ellipse 60% 40% at 10% 70%, rgba(139,92,246,0.06) 0%, transparent 50%), radial-gradient(ellipse 45% 35% at 90% 10%, rgba(244,114,182,0.05) 0%, transparent 50%)',
-          }} />
+          {!isWL && <Horizon height="min(78vh, 720px)" />}
 
           <div className="w-full relative" style={{ zIndex: 2 }}>
-            <div className="max-w-6xl mx-auto px-4 sm:px-8 lg:px-12 py-14 sm:py-28 lg:py-36 text-center">
+            <div className="max-w-6xl mx-auto px-4 sm:px-8 lg:px-12 pt-32 pb-14 sm:pt-40 sm:pb-28 lg:pt-44 lg:pb-36 text-center">
 
-              {/* Eyebrow badges */}
-              <motion.div initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }} transition={{ duration:0.5, delay:0.1 }}
-                className="flex flex-wrap items-center justify-center gap-2 sm:gap-3 mb-8 sm:mb-12"
-              >
-                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 sm:px-3.5 rounded-full text-[10px] sm:text-xs font-bold border border-indigo-500/20 text-indigo-300 uppercase tracking-wide sm:tracking-widest cursor-default"
-                  style={{ background: 'rgba(99,102,241,0.07)', boxShadow: '0 0 16px 1px rgba(99,102,241,0.15)' }}>
-                  <Calendar className="w-3 h-3" />{isWL ? 'Events' : 'PlanIt Events'}
-                </span>
-                <span className="hidden sm:inline-block w-1 h-1 rounded-full bg-neutral-700" />
-                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 sm:px-3.5 rounded-full text-[10px] sm:text-xs font-bold border border-orange-500/25 text-orange-400 uppercase tracking-wide sm:tracking-widest cursor-default"
-                  style={{ background: 'rgba(249,115,22,0.06)' }}>
-                  <UtensilsCrossed className="w-3 h-3" />{isWL ? 'Venue' : 'PlanIt Venue'}
-                </span>
-                {!isWL && (
-                  <>
-                    <span className="hidden sm:inline-block w-1 h-1 rounded-full bg-neutral-700" />
-                    <span className="inline-flex items-center gap-1.5 px-3 py-1.5 sm:px-3.5 rounded-full text-[10px] sm:text-xs font-bold border border-emerald-500/25 text-emerald-400 uppercase tracking-wide sm:tracking-widest cursor-default"
-                      style={{ background: 'rgba(16,185,129,0.06)' }}>
-                      <CheckSquare className="w-3 h-3" />RSVP
-                    </span>
-                  </>
-                )}
+              {/* Badge */}
+              <motion.div {...enter(0.4)} className="mb-8 sm:mb-10">
+                <a href="/help#claude" className="lq-glass inline-flex max-w-full items-center gap-2 rounded-full p-1 text-left">
+                  <span className="shrink-0 rounded-full bg-white px-3 py-1 text-xs font-semibold text-black">New</span>
+                  <span className="pr-3 text-sm font-light text-white/90">{isWL ? (wlName || 'Events') : 'Run your event by talking to Claude'}</span>
+                </a>
               </motion.div>
 
-              {/* Main headline, word-by-word animation */}
+              {/* Main headline, word-by-word blur-in */}
               {(isWL && heroHeadline)
                 ? (
                   <motion.h1 initial={{ opacity:0, y:30 }} animate={{ opacity:1, y:0 }} transition={{ duration:0.9, delay:0.25 }}
@@ -3658,37 +3627,37 @@ export default function Home() {
                     {heroHeadline}
                   </motion.h1>
                 ) : (
-                  <h1 className="font-syne font-black leading-[0.9] tracking-tight mb-6 sm:mb-8"
-                    style={{ fontSize:'clamp(2.25rem,9vw,7rem)' }}>
-                    <span className="hero-word inline-block text-white" style={{ animationDelay:'0.25s' }}>Plan</span>{' '}
-                    <span className="hero-word inline-block text-white" style={{ animationDelay:'0.38s' }}>every</span>{' '}
-                    <span className="hero-word inline-block text-white" style={{ animationDelay:'0.51s' }}>detail.</span>
-                    <br />
-                    <span className="hero-word inline-block shimmer-slate" style={{ animationDelay:'0.64s' }}>Execute</span>{' '}
-                    <span className="hero-word inline-block gradient-pop" style={{ animationDelay:'0.77s' }}>flawlessly.</span>
-                  </h1>
+                  <BlurText
+                    as="h1"
+                    start={!preloading}
+                    delay={110}
+                    text={'Plan every detail.\nExecute flawlessly.'}
+                    accent={[4]}
+                    className="lq-display mb-6 sm:mb-8 leading-[0.9] text-white"
+                    style={{ fontSize: 'clamp(2.6rem, 9vw, 7rem)' }}
+                  />
                 )
               }
 
               {/* Sub-headline */}
-              <motion.p initial={{ opacity:0, y:20 }} animate={{ opacity:1, y:0 }} transition={{ duration:0.7, delay:0.9 }}
-                className="text-base sm:text-lg md:text-xl text-neutral-400 max-w-sm sm:max-w-2xl mx-auto leading-relaxed font-light mb-10 sm:mb-14"
+              <motion.p {...enter(0.9)}
+                className="text-base sm:text-lg md:text-xl text-white/80 max-w-sm sm:max-w-2xl mx-auto leading-snug font-light mb-10 sm:mb-12"
               >
                 {isWL
                   ? (heroSubheadline || wlName || 'Your event platform')
                   : <>The complete workspace for events &amp; hospitality:{' '}
-                      <span className="text-neutral-200 font-medium">team chat, tasks, RSVP, check-in</span>
+                      <span className="text-white font-normal">team chat, tasks, RSVP, check-in</span>
                       {' '}and a live floor manager for restaurants.</>
                 }
               </motion.p>
 
               {/* CTA buttons */}
-              <motion.div initial={{ opacity:0, y:20 }} animate={{ opacity:1, y:0 }} transition={{ duration:0.7, delay:1.05 }}
-                className="flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-2.5 sm:gap-4 mb-10 sm:mb-16">
+              <motion.div {...enter(1.1)}
+                className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center justify-center gap-2.5 sm:gap-4 mb-10 sm:mb-12">
                 <MagneticLink href="#planit-events"
                   onClick={(e) => { e.preventDefault(); selectBranch('events'); }}
                   strength={10}
-                  className="cta-primary group inline-flex items-center justify-center gap-2.5 sm:gap-3 w-full sm:w-auto px-6 py-3.5 sm:px-8 sm:py-4 bg-white text-neutral-900 text-sm font-bold rounded-2xl shadow-2xl">
+                  className="cta-primary group inline-flex items-center justify-center gap-2.5 w-full sm:w-auto px-6 py-3 bg-white text-neutral-900 text-sm font-semibold rounded-full shadow-2xl">
                   <Calendar className="w-4 h-4" />
                   {(isWL && heroCta) ? heroCta : 'Start with Events'}
                   <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform duration-300" />
@@ -3696,91 +3665,102 @@ export default function Home() {
                 <MagneticLink href="#create"
                   onClick={(e) => { e.preventDefault(); setSelectedBranch('events'); setMode('enterprise'); setWizardKey(k => k + 1); setTimeout(() => document.getElementById('planit-events')?.scrollIntoView({ behavior:'smooth', block:'start' }), 50); }}
                   strength={10}
-                  className="group inline-flex items-center justify-center gap-2.5 sm:gap-3 w-full sm:w-auto px-6 py-3.5 sm:px-8 sm:py-4 border border-indigo-500/40 text-indigo-300 text-sm font-bold rounded-2xl transition-all duration-300 hover:border-indigo-400/70 hover:bg-indigo-500/10"
-                  style={{ background: 'rgba(99,102,241,0.07)' }}>
-                  <Zap className="w-4 h-4" />
+                  className="lq-glass-strong group inline-flex items-center justify-center gap-2.5 w-full sm:w-auto px-6 py-3 text-white text-sm font-medium rounded-full">
+                  <Zap className="w-4 h-4 text-indigo-300" />
                   Enterprise
                   <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform duration-300" />
                 </MagneticLink>
                 <MagneticLink href="#planit-venue"
                   onClick={(e) => { e.preventDefault(); selectBranch('venue'); }}
                   strength={10}
-                  className="cta-venue group inline-flex items-center justify-center gap-2.5 sm:gap-3 w-full sm:w-auto px-6 py-3.5 sm:px-8 sm:py-4 border border-orange-500/30 text-orange-400 text-sm font-bold rounded-2xl"
-                  style={{ background: 'rgba(249,115,22,0.06)' }}>
-                  <UtensilsCrossed className="w-4 h-4" />
+                  className="lq-glass-strong group inline-flex items-center justify-center gap-2.5 w-full sm:w-auto px-6 py-3 text-white text-sm font-medium rounded-full">
+                  <UtensilsCrossed className="w-4 h-4 text-orange-300" />
                   Explore Venue
                   <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform duration-300" />
                 </MagneticLink>
                 <MagneticLink href="#planit-rsvp"
                   onClick={(e) => { e.preventDefault(); selectBranch('rsvp'); }}
                   strength={10}
-                  className="group inline-flex items-center justify-center gap-2.5 sm:gap-3 w-full sm:w-auto px-6 py-3.5 sm:px-8 sm:py-4 border border-emerald-500/30 text-emerald-400 text-sm font-bold rounded-2xl transition-all duration-300 hover:border-emerald-400/60 hover:bg-emerald-500/10"
-                  style={{ background: 'rgba(16,185,129,0.06)' }}>
-                  <CheckSquare className="w-4 h-4" />
+                  className="lq-glass-strong group inline-flex items-center justify-center gap-2.5 w-full sm:w-auto px-6 py-3 text-white text-sm font-medium rounded-full">
+                  <CheckSquare className="w-4 h-4 text-emerald-300" />
                   Just Need RSVPs?
                   <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform duration-300" />
                 </MagneticLink>
               </motion.div>
 
               {/* Slug finder, jump to a private event */}
-              <motion.div initial={{ opacity:0, y:12 }} animate={{ opacity:1, y:0 }} transition={{ duration:0.6, delay:1.15 }}
-                className="mb-8 sm:mb-10">
-                <p className="text-xs text-neutral-600 uppercase tracking-widest mb-2">Already have an event link?</p>
+              <motion.div {...enter(1.2)} className="mb-10 sm:mb-12">
+                <p className="text-xs text-white/50 uppercase tracking-widest mb-2">Already have an event link?</p>
                 <SlugFinder />
               </motion.div>
 
               {/* Trust stats */}
-              <motion.div initial={{ opacity:0, y:20 }} animate={{ opacity:1, y:0 }} transition={{ duration:0.7, delay:1.2 }}
-                className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 max-w-xl mx-auto">
+              <motion.div {...enter(1.3)} className="flex flex-wrap items-stretch justify-center gap-4 mb-12 sm:mb-14">
                 {[
-                  { tag: 'Free forever',   desc: 'No credit card required',           icon: '✦', color: 'text-indigo-400' },
-                  { tag: 'Zero accounts',  desc: 'Guests join by name instantly',      icon: '◈', color: 'text-amber-400' },
-                  { tag: 'Unlimited team', desc: 'Every organizer & vendor included',  icon: '◉', color: 'text-emerald-400' },
-                ].map((item) => (
-                  <div key={item.tag} className="stat-card text-center p-4 sm:p-5 rounded-2xl cursor-default"
-                    style={{ background:'rgba(255,255,255,0.04)' }}>
-                    <div className={`${item.color} text-lg mb-1`}>{item.icon}</div>
-                    <div className="text-sm font-black text-white mb-0.5 tracking-wide">{item.tag}</div>
-                    <div className="text-xs text-neutral-500">{item.desc}</div>
+                  { tag: 'Free forever',   desc: 'No credit card required',          Icon: Sparkles },
+                  { tag: 'Zero accounts',  desc: 'Guests join by name instantly',     Icon: Zap },
+                  { tag: 'Unlimited team', desc: 'Every organizer & vendor included', Icon: Users },
+                ].map(({ tag, desc, Icon }) => (
+                  <div key={tag} className="lq-glass p-5 w-[220px] max-w-full rounded-[1.25rem] text-left flex flex-col justify-between gap-6 text-white cursor-default">
+                    <Icon className="w-7 h-7" strokeWidth={1.5} />
+                    <div>
+                      <div className="lq-display text-3xl leading-none">{tag}</div>
+                      <div className="text-xs font-light mt-2 text-white/80">{desc}</div>
+                    </div>
                   </div>
                 ))}
               </motion.div>
 
+              {/* What's inside, in the spirit of a logo strip */}
+              {!isWL && (
+                <motion.div {...enter(1.4)} className="flex flex-col items-center gap-4 mb-14 sm:mb-16">
+                  <div className="lq-glass rounded-full px-3.5 py-1 text-xs font-medium text-white/90">One workspace for the whole event</div>
+                  <ul className="flex flex-wrap justify-center gap-x-8 sm:gap-x-12 md:gap-x-14 gap-y-1" aria-label="What's included">
+                    {['Team chat', 'Task lists', 'Live polls', 'RSVP', 'QR check-in', 'Seating', 'Claude AI'].map((w) => (
+                      <li key={w} className="lq-display text-white text-xl md:text-3xl">{w}</li>
+                    ))}
+                  </ul>
+                </motion.div>
+              )}
+
               <ScrollFloat distance={36}><HeroProductPreview /></ScrollFloat>
 
               {/* Scroll indicator */}
-              <div className="mt-10 sm:mt-16 flex flex-col items-center gap-2 cursor-default" style={{ opacity:0.4 }}>
-                <span className="text-[10px] font-bold uppercase tracking-[0.25em] text-neutral-500">Scroll</span>
-                <div style={{ width:1, height:36, background:'linear-gradient(to bottom, rgba(99,102,241,0.6), transparent)', animation:'scroll-indicator-bounce 2s ease-in-out infinite' }} />
+              <div className="mt-10 sm:mt-16 flex flex-col items-center gap-2 cursor-default" style={{ opacity:0.5 }}>
+                <span className="text-[10px] font-medium uppercase tracking-[0.25em] text-white/60">Scroll</span>
+                <div style={{ width:1, height:36, background:'linear-gradient(to bottom, rgba(165,180,252,0.7), transparent)', animation:'scroll-indicator-bounce 2s ease-in-out infinite' }} />
               </div>
             </div>
           </div>
         </section>
-
 
         {!(selectedBranch || isWL) && <ProductShowcase />}
 
         {/* ═══════════════════════════════════════════════════════════
             SOCIAL PROOF STRIP, replaces branch gateway
         ═══════════════════════════════════════════════════════════ */}
-        <section id="features" className="relative border-t overflow-hidden" style={{ borderColor:'rgba(255,255,255,0.05)', display: (selectedBranch || isWL) ? 'none' : 'block' }}>
-          <div className="max-w-screen-xl mx-auto px-6 sm:px-10 py-20">
+        <section id="features" className="relative overflow-hidden" style={{ display: (selectedBranch || isWL) ? 'none' : 'block' }}>
+          <Aurora palette="violet" density={0.00012} />
+          <div className="relative max-w-screen-xl mx-auto px-6 sm:px-10 py-24 sm:py-32">
 
             {/* Section label */}
             <Reveal className="text-center mb-16">
-              <p className="text-xs font-semibold text-neutral-600 uppercase tracking-widest mb-4">The complete event platform</p>
-              <h2 className="font-syne text-4xl sm:text-6xl font-black text-white leading-tight mb-6">
-                Everything in one place.<br />
-                <span className="text-neutral-600">Nothing spread across five apps.</span>
-              </h2>
-              <p className="text-neutral-500 text-lg max-w-2xl mx-auto leading-relaxed">
+              <p className="lq-kicker mb-6">{'// The complete event platform'}</p>
+              <BlurText
+                as="h2"
+                text={'Everything in one place.\nNothing spread across five apps.'}
+                accent={[4, 5, 6, 7, 8]}
+                accentClass="text-white/40"
+                className="lq-display text-white leading-[1.02] text-5xl sm:text-7xl lg:text-[5.5rem] mb-8"
+              />
+              <p className="text-white/75 text-base sm:text-lg font-light max-w-2xl mx-auto leading-snug">
                 Most teams plan events across group chats, email threads, shared spreadsheets, and scattered notes.
                 PlanIt puts it all in one workspace, with your whole team, from day one.
               </p>
             </Reveal>
 
-            {/* Feature comparison grid */}
-            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-px bg-neutral-800/30 rounded-3xl overflow-hidden mb-24">
+            {/* Feature grid */}
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 mb-24">
               {[
                 { icon: MessageSquare, label: 'Real-time team chat',  desc: 'Your planning channel. Typing indicators, persistent history, instant delivery.' },
                 { icon: ListChecks,    label: 'Shared task lists',    desc: 'Assign, prioritize, and track every action item from one shared view.' },
@@ -3792,24 +3772,25 @@ export default function Home() {
                 { icon: Shield,        label: 'Anti-fraud check-in',  desc: 'Duplicate detection, trust scoring, and manager override built in.' },
                 { icon: UtensilsCrossed, label: 'Live floor manager', desc: 'For restaurants: visual floor map, walk-in waitlist, and live table status.' },
               ].map((f, i) => (
-                <Reveal key={f.label} delay={(i % 3) * 60} direction={i % 3 === 0 ? 'left' : i % 3 === 2 ? 'right' : 'up'}>
-                  <div className="group relative p-7 sm:p-9 bg-neutral-950 hover:bg-neutral-900 transition-all duration-400 h-full overflow-hidden"
-                    onMouseMove={(e) => {
-                      const r = e.currentTarget.getBoundingClientRect();
-                      e.currentTarget.style.setProperty('--mx', `${((e.clientX - r.left) / r.width) * 100}%`);
-                      e.currentTarget.style.setProperty('--my', `${((e.clientY - r.top) / r.height) * 100}%`);
-                    }}>
-                    <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"
-                      style={{ background: 'radial-gradient(circle at var(--mx, 20%) var(--my, 0%), rgba(99,102,241,0.12), transparent 60%)' }} />
-                    <div className="relative">
-                      <div className="feature-icon w-11 h-11 rounded-xl bg-neutral-800 border border-neutral-700/50 flex items-center justify-center mb-5 group-hover:bg-white group-hover:border-white group-hover:shadow-[0_0_20px_rgba(99,102,241,0.3)]">
-                        <f.icon className="w-5 h-5 text-neutral-400 group-hover:text-neutral-900 transition-colors duration-400" />
-                      </div>
-                      <div className="text-sm font-bold text-white mb-2 tracking-tight">{f.label}</div>
-                      <div className="text-xs text-neutral-500 leading-relaxed">{f.desc}</div>
-                    </div>
+                <motion.article
+                  key={f.label}
+                  {...rise(i % 3)}
+                  className="lq-glass lq-lift group relative flex min-h-[250px] flex-col rounded-[1.25rem] p-6 sm:p-7"
+                  onMouseMove={(e) => {
+                    const r = e.currentTarget.getBoundingClientRect();
+                    e.currentTarget.style.setProperty('--mx', `${e.clientX - r.left}px`);
+                    e.currentTarget.style.setProperty('--my', `${e.clientY - r.top}px`);
+                  }}
+                >
+                  <div aria-hidden="true" className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-500 group-hover:opacity-100"
+                    style={{ background: 'radial-gradient(260px circle at var(--mx, 30%) var(--my, 0%), rgba(129,140,248,0.18), transparent 65%)' }} />
+                  <div className="lq-glass relative flex h-11 w-11 shrink-0 items-center justify-center rounded-[0.75rem]">
+                    <f.icon className="h-5 w-5 text-white" />
                   </div>
-                </Reveal>
+                  <div className="flex-1" />
+                  <h3 className="lq-display relative mt-6 text-3xl leading-none text-white">{f.label}</h3>
+                  <p className="relative mt-3 max-w-[34ch] text-sm font-light leading-snug text-white/85">{f.desc}</p>
+                </motion.article>
               ))}
             </div>
 
@@ -3821,38 +3802,34 @@ export default function Home() {
                   { value: '4',       label: 'Event modes',           sub: 'Standard, Enterprise, RSVP, Venue' },
                   { value: '7 days',  label: 'Post-event data',       sub: 'Auto-deleted after' },
                 ].map((s, i) => (
-                  <Reveal key={s.label} delay={i * 70}>
-                    <div className="stat-card text-center p-6 sm:p-7 rounded-2xl cursor-default h-full"
-                      style={{ background:'rgba(255,255,255,0.04)' }}>
-                      <div className="font-syne text-2xl sm:text-3xl font-black text-white mb-1.5 tracking-tight">{s.value}</div>
-                      <div className="text-xs font-bold text-neutral-300 mb-1">{s.label}</div>
-                      <div className="text-xs text-neutral-600">{s.sub}</div>
-                    </div>
-                  </Reveal>
+                  <motion.div key={s.label} {...rise(i)} className="lq-glass text-center p-6 sm:p-7 rounded-[1.25rem] cursor-default h-full">
+                    <div className="lq-display text-4xl sm:text-5xl text-white mb-2 leading-none">{s.value}</div>
+                    <div className="text-xs font-medium text-white mb-1">{s.label}</div>
+                    <div className="text-xs font-light text-white/60">{s.sub}</div>
+                  </motion.div>
                 ))}
             </div>
 
-            {/* Two paths CTA */}
-            <div className="grid md:grid-cols-3 gap-4">
+            {/* Three paths */}
+            <div className="grid md:grid-cols-3 gap-4 sm:gap-6">
                 <Reveal direction="left">
                 <a href="#planit-events"
                   onClick={(e) => { e.preventDefault(); selectBranch('events'); }}
-                  className="group relative flex flex-col p-8 sm:p-10 rounded-3xl border border-neutral-800 hover:border-indigo-500/40 hover:-translate-y-1 transition-all duration-500 overflow-hidden h-full"
-                  style={{ background: 'rgba(99,102,241,0.03)' }}>
+                  className="lq-glass lq-lift group relative flex flex-col p-8 sm:p-10 rounded-[1.5rem] h-full">
                   <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500"
-                    style={{ background:'radial-gradient(ellipse at 0% 50%, rgba(99,102,241,0.08) 0%, transparent 60%)' }} />
+                    style={{ background:'radial-gradient(ellipse at 0% 50%, rgba(99,102,241,0.16) 0%, transparent 60%)' }} />
                   <div className="relative">
-                    <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl border border-indigo-500/20 bg-indigo-500/8 mb-6">
-                      <Calendar className="w-3.5 h-3.5 text-indigo-400" />
-                      <span className="text-xs font-bold text-indigo-400 uppercase tracking-wider">PlanIt Events</span>
+                    <div className="lq-glass inline-flex items-center gap-2 px-3 py-1.5 rounded-full mb-6">
+                      <Calendar className="w-3.5 h-3.5 text-indigo-300" />
+                      <span className="text-xs font-medium text-white/90">PlanIt Events</span>
                     </div>
-                    <h3 className="font-syne text-2xl sm:text-3xl font-black text-white mb-3 leading-tight">
+                    <h3 className="font-syne text-3xl sm:text-4xl text-white mb-3 leading-none">
                       Planning an event?<br />Start here.
                     </h3>
-                    <p className="text-sm text-neutral-500 leading-relaxed mb-7 max-w-sm">
+                    <p className="text-sm font-light text-white/75 leading-snug mb-7 max-w-sm">
                       Weddings, conferences, corporate retreats, galas. The full planning workspace: chat, tasks, RSVP, QR check-in, all in one place.
                     </p>
-                    <div className="flex items-center gap-2 text-sm font-bold text-indigo-400 group-hover:text-indigo-300 transition-colors">
+                    <div className="flex items-center gap-2 text-sm font-medium text-indigo-200 group-hover:text-white transition-colors">
                       Get started free <ArrowRight className="w-4 h-4 group-hover:translate-x-1.5 transition-transform duration-300" />
                     </div>
                   </div>
@@ -3862,22 +3839,21 @@ export default function Home() {
                 <Reveal direction="up">
                 <a href="#planit-rsvp"
                   onClick={(e) => { e.preventDefault(); selectBranch('rsvp'); }}
-                  className="group relative flex flex-col p-8 sm:p-10 rounded-3xl border border-neutral-800 hover:border-emerald-500/40 hover:-translate-y-1 transition-all duration-500 overflow-hidden h-full"
-                  style={{ background: 'rgba(16,185,129,0.03)' }}>
+                  className="lq-glass lq-lift group relative flex flex-col p-8 sm:p-10 rounded-[1.5rem] h-full">
                   <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500"
-                    style={{ background:'radial-gradient(ellipse at 50% 0%, rgba(16,185,129,0.08) 0%, transparent 60%)' }} />
+                    style={{ background:'radial-gradient(ellipse at 50% 0%, rgba(16,185,129,0.16) 0%, transparent 60%)' }} />
                   <div className="relative">
-                    <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl border border-emerald-500/20 bg-emerald-500/8 mb-6">
-                      <CheckSquare className="w-3.5 h-3.5 text-emerald-400" />
-                      <span className="text-xs font-bold text-emerald-400 uppercase tracking-wider">RSVP Event</span>
+                    <div className="lq-glass inline-flex items-center gap-2 px-3 py-1.5 rounded-full mb-6">
+                      <CheckSquare className="w-3.5 h-3.5 text-emerald-300" />
+                      <span className="text-xs font-medium text-white/90">RSVP Event</span>
                     </div>
-                    <h3 className="font-syne text-2xl sm:text-3xl font-black text-white mb-3 leading-tight">
+                    <h3 className="font-syne text-3xl sm:text-4xl text-white mb-3 leading-none">
                       Just need RSVPs?<br />Skip the rest.
                     </h3>
-                    <p className="text-sm text-neutral-500 leading-relaxed mb-7 max-w-sm">
+                    <p className="text-sm font-light text-white/75 leading-snug mb-7 max-w-sm">
                       A beautiful, section-based RSVP page and guest list. No seating charts, no floor management, live in under a minute.
                     </p>
-                    <div className="flex items-center gap-2 text-sm font-bold text-emerald-400 group-hover:text-emerald-300 transition-colors">
+                    <div className="flex items-center gap-2 text-sm font-medium text-emerald-200 group-hover:text-white transition-colors">
                       Create an RSVP page <ArrowRight className="w-4 h-4 group-hover:translate-x-1.5 transition-transform duration-300" />
                     </div>
                   </div>
@@ -3887,22 +3863,21 @@ export default function Home() {
                 <Reveal direction="right">
                 <a href="#planit-venue"
                   onClick={(e) => { e.preventDefault(); selectBranch('venue'); }}
-                  className="group relative flex flex-col p-8 sm:p-10 rounded-3xl border border-neutral-800 hover:border-orange-500/40 hover:-translate-y-1 transition-all duration-500 overflow-hidden h-full"
-                  style={{ background: 'rgba(249,115,22,0.02)' }}>
+                  className="lq-glass lq-lift group relative flex flex-col p-8 sm:p-10 rounded-[1.5rem] h-full">
                   <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500"
-                    style={{ background:'radial-gradient(ellipse at 100% 50%, rgba(249,115,22,0.07) 0%, transparent 60%)' }} />
+                    style={{ background:'radial-gradient(ellipse at 100% 50%, rgba(249,115,22,0.16) 0%, transparent 60%)' }} />
                   <div className="relative">
-                    <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl border border-orange-500/25 bg-orange-500/8 mb-6">
-                      <UtensilsCrossed className="w-3.5 h-3.5 text-orange-400" />
-                      <span className="text-xs font-bold text-orange-400 uppercase tracking-wider">PlanIt Venue</span>
+                    <div className="lq-glass inline-flex items-center gap-2 px-3 py-1.5 rounded-full mb-6">
+                      <UtensilsCrossed className="w-3.5 h-3.5 text-orange-300" />
+                      <span className="text-xs font-medium text-white/90">PlanIt Venue</span>
                     </div>
-                    <h3 className="font-syne text-2xl sm:text-3xl font-black text-white mb-3 leading-tight">
+                    <h3 className="font-syne text-3xl sm:text-4xl text-white mb-3 leading-none">
                       Running a restaurant<br />or venue floor?
                     </h3>
-                    <p className="text-sm text-neutral-500 leading-relaxed mb-7 max-w-sm">
+                    <p className="text-sm font-light text-white/75 leading-snug mb-7 max-w-sm">
                       Live floor map, walk-in waitlist, QR reservations, one-tap seating. Everything front-of-house needs, every service.
                     </p>
-                    <div className="flex items-center gap-2 text-sm font-bold text-orange-400 group-hover:text-orange-300 transition-colors">
+                    <div className="flex items-center gap-2 text-sm font-medium text-orange-200 group-hover:text-white transition-colors">
                       Set up your venue <ArrowRight className="w-4 h-4 group-hover:translate-x-1.5 transition-transform duration-300" />
                     </div>
                   </div>
@@ -3918,6 +3893,7 @@ export default function Home() {
             PLANIT EVENTS, its own "page" section
         ═══════════════════════════════════════════════════════════ */}
         <section id="planit-events" className="relative overflow-hidden" style={{ background: 'var(--bg-surface)', display: selectedBranch === 'events' ? 'block' : 'none' }}>
+          <Aurora palette="indigo" stars={false} />
           {/* Page-break top border with glow */}
           <div style={{ height: '2px', background: 'linear-gradient(90deg, transparent, rgba(148,163,184,0.12) 20%, rgba(255,255,255,0.25) 50%, rgba(148,163,184,0.12) 80%, transparent)' }} />
           {/* Background texture */}
@@ -3974,7 +3950,7 @@ export default function Home() {
                   From 6 months out to the final wrap-up. {isWL ? (wlName || 'Your platform') : 'PlanIt Events'} is the workspace for the whole team: organizers, vendors, volunteers, everyone.
                 </p>
                 <div className="flex items-center gap-4">
-                  <a href="#create" className="inline-flex items-center gap-2 px-6 py-3 bg-white text-neutral-900 rounded-xl font-bold hover:bg-neutral-100 transition-colors text-sm">
+                  <a href="#create" className="inline-flex items-center gap-2 px-6 py-3 bg-white text-neutral-900 rounded-full font-semibold hover:bg-neutral-100 transition-colors text-sm">
                     Start planning free <ArrowRight className="w-4 h-4" />
                   </a>
                   <span className="text-xs text-neutral-700">No credit card · No account needed</span>
@@ -4074,7 +4050,7 @@ export default function Home() {
                   { icon: Bot,           label: 'Claude AI co-pilot',    desc: 'Manage your whole event by talking to Claude. Add guests, check-ins, announcements, all conversationally.' },
                 ].map((f, i) => (
                   <Reveal key={f.label} delay={(i % 3) * 60} direction={i % 3 === 0 ? 'left' : i % 3 === 2 ? 'right' : 'up'}>
-                    <div className="feature-card group p-6 rounded-2xl h-full" style={{ background: 'rgba(255,255,255,0.02)' }}>
+                    <div className="lq-glass lq-lift group p-6 rounded-[1.25rem] h-full">
                       <div className="feature-icon w-9 h-9 rounded-xl bg-neutral-800 border border-neutral-700/50 flex items-center justify-center mb-4 group-hover:bg-neutral-700">
                         <f.icon className="w-4 h-4 text-neutral-400" />
                       </div>
@@ -4096,8 +4072,7 @@ export default function Home() {
                   role="link"
                   tabIndex={0}
                   onKeyDown={(e) => { if (e.key === 'Enter') navigate('/demo/invite'); }}
-                  className="group relative flex flex-col sm:flex-row items-stretch gap-0 rounded-3xl border border-indigo-500/20 overflow-hidden transition-all duration-400 hover:border-indigo-500/40 hover:-translate-y-1 hover:shadow-[0_24px_60px_rgba(0,0,0,0.35)] cursor-pointer"
-                  style={{ background: 'rgba(99,102,241,0.04)' }}
+                  className="lq-glass lq-lift group relative flex flex-col sm:flex-row items-stretch gap-0 rounded-[1.5rem] cursor-pointer"
                 >
                   <div className="flex-1 p-8 sm:p-10">
                     <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl border border-indigo-500/20 bg-indigo-500/8 mb-5">
@@ -4147,7 +4122,7 @@ export default function Home() {
           <div className="border-t border-neutral-800/40">
             <div className="max-w-screen-xl mx-auto px-6 sm:px-10 py-12">
               <Reveal>
-                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 p-6 rounded-2xl border border-neutral-800 transition-all duration-400 hover:border-neutral-700 hover:-translate-y-0.5" style={{ background: 'rgba(255,255,255,0.02)' }}>
+                <div className="lq-glass lq-lift flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 p-6 rounded-[1.25rem]">
                   <div className="flex items-center gap-4">
                     <div className="w-10 h-10 rounded-xl bg-neutral-800 border border-neutral-700 flex items-center justify-center flex-shrink-0">
                       <Zap className="w-5 h-5 text-neutral-400" />
@@ -4195,6 +4170,7 @@ export default function Home() {
             PLANIT RSVP, its own "page" section
         ═══════════════════════════════════════════════════════════ */}
         <section id="planit-rsvp" className="relative overflow-hidden" style={{ background: 'rgba(6,20,16,0.97)', display: selectedBranch === 'rsvp' ? 'block' : 'none' }}>
+          <Aurora palette="mint" stars={false} />
           <div style={{ height: '2px', background: 'linear-gradient(90deg, transparent, rgba(16,185,129,0.15) 20%, rgba(52,211,153,0.3) 50%, rgba(16,185,129,0.15) 80%, transparent)' }} />
           <div className="absolute inset-0 pointer-events-none" style={{
             backgroundImage: 'radial-gradient(circle at 15% 40%, rgba(16,185,129,0.07) 0%, transparent 50%), radial-gradient(circle at 85% 10%, rgba(52,211,153,0.05) 0%, transparent 40%)',
@@ -4229,7 +4205,7 @@ export default function Home() {
                 Drag-and-drop a real page: hero, agenda, photos, FAQ, whatever the event needs. Then share one link. No seating charts, no floor management, no ticketing. Just RSVPs, done beautifully.
               </p>
               <div className="flex items-center gap-4">
-                <a href="#create" className="inline-flex items-center gap-2 px-6 py-3 bg-emerald-400 text-emerald-950 rounded-xl font-bold hover:bg-emerald-300 transition-colors text-sm">
+                <a href="#create" className="inline-flex items-center gap-2 px-6 py-3 bg-emerald-400 text-emerald-950 rounded-full font-semibold hover:bg-emerald-300 transition-colors text-sm">
                   Create an RSVP page <ArrowRight className="w-4 h-4" />
                 </a>
                 <span className="text-xs text-emerald-900">Live in under a minute</span>
@@ -4246,7 +4222,7 @@ export default function Home() {
                 { icon: Users, label: 'Guest list + check-in', body: 'The same guest list and simple check-in as every PlanIt event, without the extra setup.' },
               ].map(({ icon: Icon, label, body }, i) => (
                 <Reveal key={label} delay={i * 80}>
-                  <div className="p-6 rounded-2xl border border-emerald-900/40 h-full" style={{ background: 'rgba(16,185,129,0.03)' }}>
+                  <div className="lq-glass lq-lift p-6 rounded-[1.25rem] h-full">
                     <Icon className="w-5 h-5 text-emerald-400 mb-3" />
                     <p className="text-sm font-bold text-white mb-1.5">{label}</p>
                     <p className="text-xs text-neutral-500 leading-relaxed">{body}</p>
@@ -4262,7 +4238,7 @@ export default function Home() {
               <p className="text-xs font-bold text-neutral-500 uppercase tracking-[0.2em] mb-6 text-center">Which one do you actually need?</p>
               <div className="grid md:grid-cols-2 gap-5">
                 {/* Standard Event card */}
-                <div className="rounded-3xl border border-neutral-800 p-8" style={{ background: 'rgba(255,255,255,0.02)' }}>
+                <div className="lq-glass rounded-[1.5rem] p-8">
                   <div className="flex items-center gap-2 mb-1">
                     <Calendar className="w-4 h-4 text-indigo-400" />
                     <span className="text-sm font-black text-white">Standard Event</span>
@@ -4275,7 +4251,7 @@ export default function Home() {
                   </div>
                 </div>
                 {/* RSVP Event card */}
-                <div className="rounded-3xl border border-emerald-700/40 p-8 relative overflow-hidden" style={{ background: 'rgba(16,185,129,0.05)' }}>
+                <div className="lq-glass rounded-[1.5rem] p-8 relative">
                   <div className="absolute top-0 right-0 text-[10px] font-black uppercase tracking-widest text-emerald-950 bg-emerald-400 px-3 py-1 rounded-bl-xl">Lightweight</div>
                   <div className="flex items-center gap-2 mb-1">
                     <CheckSquare className="w-4 h-4 text-emerald-400" />
@@ -4316,6 +4292,7 @@ export default function Home() {
             PLANIT VENUE, its own "page" section
         ═══════════════════════════════════════════════════════════ */}
         <section id="planit-venue" className="relative overflow-hidden" style={{ background: 'var(--bg-venue)', display: selectedBranch === 'venue' ? 'block' : 'none' }}>
+          <Aurora palette="amber" stars={false} />
           {/* Page-break top border with orange glow */}
           <div style={{ height: '2px', background: 'linear-gradient(90deg, transparent, rgba(249,115,22,0.15) 20%, rgba(249,115,22,0.5) 50%, rgba(249,115,22,0.15) 80%, transparent)' }} />
           {/* Background */}
@@ -4371,7 +4348,7 @@ export default function Home() {
                 </p>
                 <div className="flex items-center gap-4">
                   <a href="#create" onClick={() => setTimeout(() => document.querySelector('[data-mode="table-service"]')?.click(), 100)}
-                    className="inline-flex items-center gap-2 px-6 py-3 bg-orange-500 text-white rounded-xl font-bold hover:bg-orange-400 transition-colors text-sm">
+                    className="inline-flex items-center gap-2 px-6 py-3 bg-orange-500 text-white rounded-full font-semibold hover:bg-orange-400 transition-colors text-sm">
                     Set up your venue <ArrowRight className="w-4 h-4" />
                   </a>
                   <span className="text-xs text-neutral-700">Free · Data never expires</span>
@@ -4461,7 +4438,7 @@ export default function Home() {
                   { icon: Clock,        label: 'Data never expires',     desc: 'Your floor plan and history persist forever. No cleanup, no resets.' },
                 ].map((f, i) => (
                   <Reveal key={f.label} delay={(i % 3) * 60} direction={i % 3 === 0 ? 'left' : i % 3 === 2 ? 'right' : 'up'}>
-                    <div className="group p-6 rounded-2xl border border-orange-500/10 hover:border-orange-500/25 hover:-translate-y-1 hover:shadow-[0_16px_40px_rgba(0,0,0,0.35)] transition-all duration-400 h-full" style={{ background: 'rgba(249,115,22,0.025)' }}>
+                    <div className="lq-glass lq-lift group p-6 rounded-[1.25rem] h-full">
                       <div className="w-9 h-9 rounded-xl bg-orange-500/10 border border-orange-500/20 flex items-center justify-center mb-4 transition-all duration-500 group-hover:bg-orange-500/20 group-hover:scale-110 group-hover:-rotate-6">
                         <f.icon className="w-4 h-4 text-orange-400" />
                       </div>
@@ -4503,8 +4480,9 @@ export default function Home() {
         </section>
 
         {/* CLAUDE INTEGRATION */}
-        <section className="py-28 border-t border-neutral-800/40" style={{ display: selectedBranch === 'events' ? 'block' : 'none' }}>
-          <div className="max-w-screen-xl mx-auto px-4 sm:px-8">
+        <section className="relative overflow-hidden py-28 border-t border-white/5" style={{ display: selectedBranch === 'events' ? 'block' : 'none' }}>
+          <Aurora palette="violet" stars={false} />
+          <div className="relative max-w-screen-xl mx-auto px-4 sm:px-8">
             <div className="flex flex-col lg:flex-row items-center gap-16">
               {/* Left: copy */}
               <div className="flex-1">
@@ -4539,7 +4517,7 @@ export default function Home() {
                       href="https://claude.ai/customize/connectors?modal=add-custom-connector&mcpName=PlanIt&mcpServerUrl=https://planit-mcp.onrender.com/mcp"
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="group inline-flex items-center gap-2 px-5 py-3 rounded-xl text-white font-semibold text-sm transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_12px_28px_rgba(124,58,237,0.35)]"
+                      className="group inline-flex items-center gap-2 px-5 py-3 rounded-full text-white font-semibold text-sm transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_12px_28px_rgba(124,58,237,0.35)]"
                       style={{ background: '#7c3aed' }}
                       onMouseEnter={e => e.currentTarget.style.background = '#6d28d9'}
                       onMouseLeave={e => e.currentTarget.style.background = '#7c3aed'}
@@ -4547,13 +4525,11 @@ export default function Home() {
                       <Bot size={16} /> Add to Claude <ArrowUpRight size={14} className="transition-transform duration-300 group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
                     </a>
                     <a href="/help#claude"
-                      className="inline-flex items-center gap-2 px-5 py-3 rounded-xl text-neutral-300 text-sm transition-colors hover:text-white"
-                      style={{ border: '1px solid rgba(255,255,255,0.1)' }}>
+                      className="inline-flex items-center gap-2 px-5 py-3 lq-glass rounded-full text-white/90 text-sm transition-colors hover:text-white">
                       How it works
                     </a>
                     <a href="/mcp-docs"
-                      className="inline-flex items-center gap-2 px-5 py-3 rounded-xl text-neutral-300 text-sm transition-colors hover:text-white"
-                      style={{ border: '1px solid rgba(255,255,255,0.1)' }}>
+                      className="inline-flex items-center gap-2 px-5 py-3 lq-glass rounded-full text-white/90 text-sm transition-colors hover:text-white">
                       View full docs
                     </a>
                   </div>
@@ -4562,7 +4538,7 @@ export default function Home() {
 
               {/* Right: chat mockup */}
               <Reveal delay={120} direction="right" className="flex-1 max-w-md w-full">
-                <div className="rounded-2xl overflow-hidden transition-all duration-500 hover:-translate-y-1 hover:shadow-[0_24px_60px_rgba(124,58,237,0.15)]" style={{ border: '1px solid rgba(255,255,255,0.08)', background: 'rgba(14,14,22,0.9)' }}>
+                <div className="lq-glass-strong lq-lift rounded-[1.25rem]">
                   {/* Chrome */}
                   <div className="flex items-center gap-2 px-4 py-3" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)', background: 'rgba(10,10,18,0.95)' }}>
                     <div className="flex gap-1.5">
@@ -4650,7 +4626,7 @@ export default function Home() {
               {/* Discover Card, events only */}
               {selectedBranch !== 'venue' && (
               <Reveal delay={0} direction="left">
-                <a href="/discover" className="group relative block p-8 sm:p-10 rounded-3xl border border-neutral-800 bg-neutral-900/50 hover:border-neutral-500 hover:bg-neutral-800/60 hover:-translate-y-1.5 hover:shadow-[0_24px_60px_rgba(0,0,0,0.4)] transition-all duration-500 overflow-hidden h-full">
+                <a href="/discover" className="lq-glass lq-lift group relative block p-8 sm:p-10 rounded-[1.5rem] h-full">
                   <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500"
                     style={{ background: 'radial-gradient(ellipse at top left, rgba(80,60,200,0.12) 0%, transparent 65%)' }} />
                   <div className="relative">
@@ -4670,7 +4646,7 @@ export default function Home() {
 
               {/* Status Card */}
               <Reveal delay={120} direction="right">
-                <a href="/status" className="group relative block p-8 sm:p-10 rounded-3xl border border-neutral-800 bg-neutral-900/50 hover:border-neutral-500 hover:bg-neutral-800/60 hover:-translate-y-1.5 hover:shadow-[0_24px_60px_rgba(0,0,0,0.4)] transition-all duration-500 overflow-hidden h-full">
+                <a href="/status" className="lq-glass lq-lift group relative block p-8 sm:p-10 rounded-[1.5rem] h-full">
                   <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500"
                     style={{ background: 'radial-gradient(ellipse at top right, rgba(20,180,80,0.10) 0%, transparent 65%)' }} />
                   <div className="relative">
@@ -4732,14 +4708,14 @@ export default function Home() {
                   <Reveal delay={100}>
                     <div className="grid grid-cols-3 gap-2 sm:gap-4 mb-10">
                       {[{ icon: Clock, label: '60 seconds' }, { icon: Shield, label: 'Secure' }, { icon: CheckCircle2, label: 'Free forever' }].map((item, i) => (
-                        <div key={i} className="group text-center p-5 bg-neutral-900/50 rounded-2xl border border-neutral-800 hover:border-neutral-700 hover:bg-neutral-800/50 hover:-translate-y-1 transition-all duration-400">
+                        <div key={i} className="lq-glass lq-lift group text-center p-5 rounded-[1.25rem]">
                           <item.icon className="w-6 h-6 text-neutral-400 mx-auto mb-2 transition-transform duration-400 group-hover:scale-110 group-hover:text-neutral-200" />
                           <p className="text-sm font-semibold text-neutral-300">{item.label}</p>
                         </div>
                       ))}
                     </div>
                     {mode === 'table-service' ? (
-                      <div className="space-y-3 p-5 sm:p-8 bg-neutral-900/50 rounded-3xl border border-neutral-800">
+                      <div className="lq-glass space-y-3 p-5 sm:p-8 rounded-[1.5rem]">
                         <p className="text-base font-bold text-white mb-4">Everything included in Table Service:</p>
                         {['Visual floor plan editor: drag & drop tables anywhere', 'Live table states: available, occupied, cleaning, reserved', 'Walk-in waitlist with real-time estimated wait times', 'QR code reservations with configurable expiry windows', 'Per-restaurant timing config: dining duration, buffer, hours', 'Instant sync across all staff devices via live socket', 'Data never auto-deleted: your floor plan persists forever', 'Party size tracking and server assignment per table', 'Occupancy overview and turn time estimates at a glance'].map((item, i) => (
                           <div key={i} className="flex items-start gap-3 text-sm text-neutral-400">
@@ -4786,7 +4762,7 @@ export default function Home() {
                         </div>
                       </div>
                     ) : mode === 'rsvp' ? (
-                      <div className="space-y-3 p-5 sm:p-8 bg-neutral-900/50 rounded-3xl border border-neutral-800">
+                      <div className="lq-glass space-y-3 p-5 sm:p-8 rounded-[1.5rem]">
                         <p className="text-base font-bold text-white mb-4">What's included in an RSVP Event:</p>
                         {['Section-based drag-and-drop RSVP page builder', 'A 16-block library: hero, agenda, FAQ, gallery, sponsors, and more', 'Auto-generated cover graphic, no design work needed', 'Guest list with the same tools as every PlanIt event', 'Simple check-in (scan or confirm)', 'Analytics on views and responses'].map((item, i) => (
                           <div key={i} className="flex items-start gap-3 text-sm text-neutral-400">
@@ -4800,7 +4776,7 @@ export default function Home() {
                         </div>
                       </div>
                     ) : (
-                      <div className="space-y-3 p-5 sm:p-8 bg-neutral-900/50 rounded-3xl border border-neutral-800">
+                      <div className="lq-glass space-y-3 p-5 sm:p-8 rounded-[1.5rem]">
                         <p className="text-base font-bold text-white mb-4">Everything included:</p>
                         {['Private event space with custom branded URL', 'Unlimited team members, no caps', 'Real-time chat with file sharing', 'Task lists and deadline tracking', 'Polls, voting, and decision tools', 'RSVP management and tracking', 'Expense splitting and budgets', 'QR check-in for large events', 'Timeline and scheduling tools'].map((item, i) => (
                           <div key={i} className="flex items-start gap-3 text-sm text-neutral-400">
@@ -4827,7 +4803,7 @@ export default function Home() {
                         </div>
                       </div>
                       {mode === 'table-service' ? (
-                        <div className="p-8 bg-neutral-900/50 border border-neutral-800 rounded-3xl">
+                        <div className="lq-glass p-8 rounded-[1.5rem]">
                           <div className="flex items-start gap-4">
                             <UtensilsCrossed className="w-6 h-6 text-orange-400 flex-shrink-0 mt-1" />
                             <div className="w-full">
@@ -4857,7 +4833,7 @@ export default function Home() {
                           </div>
                         </div>
                       ) : mode === 'enterprise' ? (
-                        <div className="p-8 bg-neutral-900/50 border border-neutral-800 rounded-3xl">
+                        <div className="lq-glass p-8 rounded-[1.5rem]">
                           <div className="flex items-start gap-4">
                             <Zap className="w-6 h-6 text-neutral-400 flex-shrink-0 mt-1" />
                             <div>
@@ -4937,9 +4913,8 @@ export default function Home() {
 
                     {/* Launch wizard CTA */}
                     <div
+                      className="lq-glass-strong"
                       style={{
-                        background:'rgba(255,255,255,0.02)',
-                        border:'1px solid rgba(255,255,255,0.07)',
                         borderRadius:24,
                         padding:'48px 40px',
                         textAlign:'center',
@@ -5157,8 +5132,53 @@ export default function Home() {
           </div>
         </section>
 
+        {/* FINALE: a party scene that lights up under your cursor */}
+        {!(selectedBranch || isWL) && (
+          <SpotlightStage id="start" minHeight="92dvh">
+            <div className="flex flex-col justify-between gap-16 px-8 pb-10 pt-28 md:px-16 lg:px-20" style={{ minHeight: '92dvh' }}>
+              <div>
+                <p className="lq-kicker mb-6">{'// Start'}</p>
+                <BlurText
+                  as="h2"
+                  justify="start"
+                  text={"Let's plan\nsomething."}
+                  className="lq-display text-white leading-[0.88] text-6xl md:text-8xl lg:text-[8rem]"
+                />
+                <p className="mt-6 max-w-[44ch] text-sm md:text-base font-light leading-snug text-white/90">
+                  Free for every event. Create your workspace in under a minute: no credit card, and no accounts for your guests.
+                </p>
+                <div className="mt-8 flex flex-wrap items-center gap-6">
+                  <button onClick={() => selectBranch('events')} className="lq-glass-strong inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-medium text-white">
+                    Start with Events <ArrowUpRight className="h-5 w-5" />
+                  </button>
+                  <button onClick={() => selectBranch('venue')} className="inline-flex items-center gap-2 text-sm font-medium text-white transition-colors hover:text-white/80">
+                    Explore Venue <ArrowUpRight className="h-4 w-4" />
+                  </button>
+                  <button onClick={() => selectBranch('rsvp')} className="inline-flex items-center gap-2 text-sm font-medium text-white transition-colors hover:text-white/80">
+                    Just need RSVPs? <ArrowUpRight className="h-4 w-4" />
+                  </button>
+                </div>
+              </div>
+
+              <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4" aria-label="Highlights">
+                {[
+                  ['Free forever', 'No credit card, no per-seat pricing'],
+                  ['No guest accounts', 'Guests join by name with a personal QR'],
+                  ['Unlimited team', 'Organizers, vendors and volunteers'],
+                  ['Tidy by default', 'Event data auto-deleted 7 days after'],
+                ].map(([t, d]) => (
+                  <li key={t} className="lq-glass-strong rounded-[1.25rem] p-5 text-white">
+                    <div className="lq-display text-2xl leading-tight">{t}</div>
+                    <div className="mt-2 text-xs font-light text-white/90">{d}</div>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </SpotlightStage>
+        )}
+
         {/* FOOTER */}
-        <footer className="border-t border-neutral-800/50 relative overflow-hidden" style={{ background: 'rgba(6,6,12,0.95)' }}>
+        <footer className="border-t border-white/10 relative overflow-hidden" style={{ background: 'rgba(5,5,15,0.86)' }}>
           <div aria-hidden="true" className="absolute inset-x-0 top-0 h-px" style={{ background: 'linear-gradient(90deg, transparent, rgba(99,102,241,0.35), transparent)' }} />
           <div className="max-w-screen-xl mx-auto px-4 sm:px-8 py-16 sm:py-24">
             <div className="grid grid-cols-2 md:grid-cols-4 gap-10 sm:gap-12 mb-14">
@@ -5167,7 +5187,7 @@ export default function Home() {
                   {isWL && wlLogo
                     ? <img src={wlLogo} alt={wlName} className="h-8 object-contain" />
                     : <><div className="w-10 h-10 rounded-2xl bg-neutral-800 border border-neutral-700 flex items-center justify-center"><Calendar className="w-5 h-5 text-neutral-300" /></div>
-                       <span className="font-syne font-black text-xl text-white tracking-tight">{isWL ? wlName : 'PlanIt'}</span></>
+                       <span className="lq-display text-3xl leading-none text-white">{isWL ? wlName : 'PlanIt'}</span></>
                   }
                 </div>
                 <p className="text-sm text-neutral-500 leading-relaxed mb-4 max-w-xs">{isWL ? '' : 'The ultimate planning hub for event teams, plus standalone RSVP pages when that\'s all you need. Plan smart, execute flawlessly.'}</p>
