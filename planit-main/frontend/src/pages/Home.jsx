@@ -17,7 +17,7 @@ import toast from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
 import { HomePreloader, HomeScrollChrome, ScrollFloat, MotionReveal, useSiteReady } from '../components/HomeMotion';
 import { useWhiteLabel } from '../context/WhiteLabelContext';
-import { SmoothScroll, PerfGovernor, VineScroll, Aurora, Horizon, BlurText, SpotlightStage, rise } from '../components/liquid/LiquidKit';
+import { SmoothScroll, PerfGovernor, VineScroll, Aurora, Horizon, BlurText, SpotlightStage, CitySkyline, Festoon, rise } from '../components/liquid/LiquidKit';
 
 /*
 PLANIT SOFTWARE LICENSE AGREEMENT
@@ -3451,7 +3451,7 @@ export default function Home() {
       <InjectGlobalCSS />
       <PerfGovernor />
       <SmoothScroll enabled={!scrollLocked} />
-      {!isWL && <VineScroll />}
+      {!isWL && <VineScroll variant="party" />}
       <AnimatePresence>
         {showIntro && introGate && <IntroCinematic onComplete={dismissIntro} />}
       </AnimatePresence>
@@ -3606,6 +3606,7 @@ export default function Home() {
             </div>
           )}
           {!isWL && <Horizon height="min(78vh, 720px)" />}
+          {!isWL && <Festoon className="!top-16 opacity-90" />}
 
           <div className="w-full relative" style={{ zIndex: 2 }}>
             <div className="max-w-6xl mx-auto px-4 sm:px-8 lg:px-12 pt-32 pb-14 sm:pt-40 sm:pb-28 lg:pt-44 lg:pb-36 text-center">
@@ -3633,8 +3634,8 @@ export default function Home() {
                     delay={110}
                     text={'Plan every detail.\nExecute flawlessly.'}
                     accent={[4]}
-                    className="lq-display mb-6 sm:mb-8 leading-[0.9] text-white"
-                    style={{ fontSize: 'clamp(2.6rem, 9vw, 7rem)' }}
+                    className="lq-display mb-6 sm:mb-8 leading-[0.98] text-white"
+                    style={{ fontSize: 'clamp(2rem, 5.4vw, 4.6rem)' }}
                   />
                 )
               }
@@ -3751,7 +3752,7 @@ export default function Home() {
                 text={'Everything in one place.\nNothing spread across five apps.'}
                 accent={[4, 5, 6, 7, 8]}
                 accentClass="text-white/40"
-                className="lq-display text-white leading-[1.02] text-5xl sm:text-7xl lg:text-[5.5rem] mb-8"
+                className="lq-display text-white leading-[1.05] text-4xl sm:text-6xl lg:text-7xl mb-8"
               />
               <p className="text-white/75 text-base sm:text-lg font-light max-w-2xl mx-auto leading-snug">
                 Most teams plan events across group chats, email threads, shared spreadsheets, and scattered notes.
@@ -5132,6 +5133,13 @@ export default function Home() {
           </div>
         </section>
 
+        {/* Dusk skyline of the venue district, rising into the finale */}
+        {!(selectedBranch || isWL) && (
+          <div className="relative -mb-px" style={{ background: 'linear-gradient(180deg, #05050f 0%, rgba(5,5,15,0) 30%)' }}>
+            <CitySkyline />
+          </div>
+        )}
+
         {/* FINALE: a party scene that lights up under your cursor */}
         {!(selectedBranch || isWL) && (
           <SpotlightStage id="start" minHeight="92dvh">
@@ -5142,7 +5150,7 @@ export default function Home() {
                   as="h2"
                   justify="start"
                   text={"Let's plan\nsomething."}
-                  className="lq-display text-white leading-[0.88] text-6xl md:text-8xl lg:text-[8rem]"
+                  className="lq-display text-white leading-[0.95] text-5xl md:text-7xl lg:text-8xl"
                 />
                 <p className="mt-6 max-w-[44ch] text-sm md:text-base font-light leading-snug text-white/90">
                   Free for every event. Create your workspace in under a minute: no credit card, and no accounts for your guests.
