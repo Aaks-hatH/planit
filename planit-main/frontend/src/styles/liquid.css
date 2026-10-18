@@ -2,17 +2,16 @@
  * frontend/src/styles/liquid.css
  *
  * "Liquid" visual language shared by the PlanIt Home and Careers pages:
- * Bodoni italic display type, liquid-glass surfaces, the streamer scrollbar
+ * Syne display type, liquid-glass surfaces, the streamer scrollbar
  * (grows with scroll, sparks pop as you pass them, bursts into a firework at
  * the end) and the performance tiers that keep it all smooth.
  *
  * Everything is namespaced `lq-` and the type rules are scoped under `.lq-page`
- * so nothing leaks into the app screens. The Bodoni Moda italic webfont is loaded from index.html
- * (next to Syne / DM Sans) so a slow or blocked font CDN can never stall this lazy-loaded stylesheet.
+ * so nothing leaks into the app screens. Fonts (Syne / DM Sans) load from index.html so a slow or blocked font CDN can never stall this lazy-loaded stylesheet.
  */
 
 :root {
-  --lq-display: 'Bodoni Moda', 'Didot', 'Bodoni 72', Georgia, serif;
+  --lq-display: 'Syne', 'DM Sans', system-ui, sans-serif;
   --lq-ink: #ffffff;
   --lq-indigo: #818cf8;
   --lq-violet: #a78bfa;
@@ -25,9 +24,9 @@
 /* ─── Display type ─────────────────────────────────────────────────────────── */
 .lq-display {
   font-family: var(--lq-display);
-  font-style: italic;
-  font-weight: 500;
-  letter-spacing: -0.025em;
+  font-style: normal;
+  font-weight: 800;
+  letter-spacing: -0.035em;
   overflow-wrap: anywhere;
 }
 
@@ -39,12 +38,12 @@
 .lq-page h2.lq-h,
 .lq-page h3.lq-h {
   font-family: var(--lq-display);
-  font-style: italic;
-  font-weight: 500;
-  letter-spacing: -0.025em;
+  font-style: normal;
+  font-weight: 800;
+  letter-spacing: -0.035em;
 }
-.lq-page h1.font-syne { line-height: 0.95; }
-.lq-page h2.font-syne { line-height: 1.02; }
+.lq-page h1.font-syne { line-height: 0.98; }
+.lq-page h2.font-syne { line-height: 1.05; }
 
 /* Brand gradient, same stops the pages already use for their accent words */
 .lq-grad {
@@ -212,4 +211,98 @@ html.lenis, html.lenis body { height: auto; }
 @media (prefers-reduced-motion: reduce) {
   .lq-bob, .lq-twinkle, .lq-zoom, .lq-drift-a, .lq-drift-b, .lq-drift-c, .lq-grad, .lq-marquee { animation: none !important; }
   .lq-spark, .lq-burst-inner, .lq-thumb-inner { transition: none; }
+}
+
+/* ─── Blooming flowers + rock ridge (Careers) ─────────────────────────────── */
+.lq-ridge { position: absolute; inset-inline: 0; bottom: 0; pointer-events: none; overflow: hidden; }
+.lq-ridge svg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.lq-ridge-layer { will-change: transform; }
+.lq-fl .lq-stem { transform: scaleY(0); transform-origin: 0 0; transition: transform 1.2s cubic-bezier(.22, 1, .36, 1) var(--d, 0s); }
+.lq-fl .lq-leaf { transform: scale(0); transform-origin: 0 0; transition: transform .8s cubic-bezier(.34, 1.56, .64, 1) calc(var(--d, 0s) + .6s); }
+.lq-fl .lq-petal { transform: scale(0); transform-origin: 0 0; transition: transform .9s cubic-bezier(.34, 1.56, .64, 1) calc(var(--d, 0s) + 1s + var(--p, 0s)); }
+.lq-fl .lq-core { transform: scale(0); transform-origin: 0 0; transition: transform .6s cubic-bezier(.34, 1.56, .64, 1) calc(var(--d, 0s) + 1.1s); }
+.lq-fl.on .lq-stem, .lq-fl.on .lq-leaf, .lq-fl.on .lq-petal, .lq-fl.on .lq-core { transform: none; }
+.lq-sway { transform-origin: 0 0; animation: lq-sway 6s ease-in-out infinite alternate; animation-delay: var(--sd, 0s); }
+@keyframes lq-sway { from { transform: rotate(-2.2deg); } to { transform: rotate(2.2deg); } }
+.lq-pollen { animation: lq-twinkle 3.6s ease-in-out infinite; }
+
+/* ─── City skyline + string lights (Home) ─────────────────────────────────── */
+.lq-sky { position: relative; overflow: hidden; pointer-events: none; }
+.lq-sky svg { display: block; width: 100%; height: 100%; position: absolute; inset: 0; }
+.lq-win-on { animation: lq-win 5s ease-in-out infinite; animation-delay: var(--wd, 0s); }
+@keyframes lq-win { 0%, 100% { opacity: .95; } 50% { opacity: .35; } }
+.lq-bulb { animation: lq-bulb 2.8s ease-in-out infinite; animation-delay: var(--bd, 0s); }
+@keyframes lq-bulb { 0%, 100% { opacity: 1; } 50% { opacity: .45; } }
+.lq-festoon { position: absolute; inset-inline: 0; top: 0; height: 120px; pointer-events: none; }
+.lq-festoon svg { width: 100%; height: 100%; display: block; }
+.lq-festoon-sway { transform-origin: 50% 0; animation: lq-fest 9s ease-in-out infinite alternate; }
+@keyframes lq-fest { from { transform: skewX(-.6deg); } to { transform: skewX(.6deg); } }
+:root[data-perf="low"] .lq-sway,
+:root[data-perf="low"] .lq-win-on,
+:root[data-perf="low"] .lq-bulb,
+:root[data-perf="low"] .lq-pollen,
+:root[data-perf="low"] .lq-festoon-sway { animation: none; }
+@media (prefers-reduced-motion: reduce) {
+  .lq-sway, .lq-win-on, .lq-bulb, .lq-pollen, .lq-festoon-sway { animation: none !important; }
+  .lq-fl .lq-stem, .lq-fl .lq-leaf, .lq-fl .lq-petal, .lq-fl .lq-core { transition: none; }
+}
+
+/* ─── Hero "footage" scenes: lotus · island · orb ─────────────────────────── */
+.lq-lotus-glow { position: absolute; inset: 6%; border-radius: 50%; background: radial-gradient(circle at 50% 58%, rgba(255, 150, 110, .42) 0%, rgba(244, 114, 182, .2) 32%, rgba(129, 140, 248, .08) 55%, transparent 70%); animation: lq-glowp 7s ease-in-out infinite; }
+@keyframes lq-glowp { 0%, 100% { opacity: .75; transform: scale(1); } 50% { opacity: 1; transform: scale(1.06); } }
+.lq-lotus-svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; filter: drop-shadow(0 0 18px rgba(255, 140, 120, .45)) drop-shadow(0 0 60px rgba(244, 114, 182, .3)); }
+.lq-lotus .lq-lp { transform: scale(0); transform-origin: 0 0; transition: transform 1.3s cubic-bezier(.34, 1.4, .64, 1) var(--d, 0s); }
+.lq-lotus.on .lq-lp { transform: none; }
+.lq-lotus-breathe { transform-origin: 200px 292px; animation: lq-breathe 9s ease-in-out infinite; }
+@keyframes lq-breathe { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.025); } }
+.lq-lotus-star { position: absolute; border-radius: 9999px; background: #fff; opacity: .4; animation: lq-twinkle 3.4s ease-in-out infinite; }
+.lq-drift-petal { position: absolute; overflow: visible; opacity: .9; filter: drop-shadow(0 0 8px rgba(255, 140, 150, .55)); animation: lq-pdrift 18s ease-in-out infinite alternate; }
+@keyframes lq-pdrift {
+  0% { transform: translate3d(0, -4%, 0) rotate(var(--r)); }
+  50% { transform: translate3d(-18%, 22%, 0) rotate(calc(var(--r) + 70deg)); }
+  100% { transform: translate3d(12%, 46%, 0) rotate(calc(var(--r) + 150deg)); }
+}
+
+.lq-island { position: absolute; width: min(94vw, 900px); aspect-ratio: 640 / 470; opacity: 0; transform: translateY(24px) scale(.96); transition: opacity 1.4s ease, transform 1.6s cubic-bezier(.16, 1, .3, 1); }
+.lq-island.on { opacity: 1; transform: none; }
+.lq-island-svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; filter: drop-shadow(0 30px 40px rgba(0, 0, 0, .6)); }
+.lq-island-light { position: absolute; left: -26%; top: 14%; width: 62%; height: 52%; background: radial-gradient(ellipse at 30% 50%, rgba(255, 214, 170, .85) 0%, rgba(255, 176, 110, .35) 34%, transparent 70%); filter: blur(14px); opacity: .85; }
+.lq-island-bob { animation: lq-ibob 9s ease-in-out infinite; transform-origin: 320px 300px; }
+@keyframes lq-ibob { 0%, 100% { transform: translateY(0) rotate(-.6deg); } 50% { transform: translateY(-14px) rotate(.8deg); } }
+.lq-sway-s { transform-origin: 0 0; animation: lq-sway 5s ease-in-out infinite alternate; }
+
+.lq-orb3 { position: absolute; }
+.lq-orb3-haze { position: absolute; inset: -20% -10%; background: radial-gradient(ellipse at 22% 10%, rgba(176, 150, 210, .26), transparent 52%), radial-gradient(ellipse at 52% 60%, rgba(120, 130, 255, .1), transparent 60%); }
+.lq-orb3-float { position: absolute; inset: 14% 22%; animation: lq-ofloat 12s ease-in-out infinite; }
+@keyframes lq-ofloat { 0%, 100% { transform: translateY(0) rotate(0); } 50% { transform: translateY(-3.5%) rotate(2deg); } }
+.lq-orb3-body {
+  position: absolute; inset: 0; overflow: hidden;
+  border-radius: 52% 48% 55% 45% / 58% 50% 50% 42%;
+  animation: lq-morph 16s ease-in-out infinite;
+  background: radial-gradient(ellipse at 50% 58%, rgba(26, 34, 82, .96) 0%, rgba(10, 11, 28, .98) 62%, #06060f 100%);
+  box-shadow: inset 0 -12px 20px -6px rgba(255, 255, 255, .95), inset 14px 0 22px -8px rgba(255, 214, 150, .9), inset -8px 8px 26px rgba(120, 170, 255, .4), 0 0 50px rgba(255, 255, 255, .22), 0 0 130px rgba(120, 130, 255, .2);
+}
+@keyframes lq-morph {
+  0%, 100% { border-radius: 52% 48% 55% 45% / 58% 50% 50% 42%; }
+  33% { border-radius: 46% 54% 48% 52% / 50% 58% 42% 50%; }
+  66% { border-radius: 56% 44% 50% 50% / 46% 52% 56% 48%; }
+}
+.lq-orb3-body i { position: absolute; inset: 0; display: block; }
+.lq-orb3-blue { background: radial-gradient(circle at 48% 66%, rgba(38, 108, 255, .8), rgba(38, 108, 255, 0) 46%); animation: lq-ofloat 9s ease-in-out infinite reverse; }
+.lq-orb3-amber { background: radial-gradient(circle at 30% 14%, rgba(255, 190, 90, .95), rgba(255, 190, 90, 0) 28%), radial-gradient(circle at 84% 58%, rgba(255, 170, 70, .65), rgba(255, 170, 70, 0) 22%), radial-gradient(circle at 16% 48%, rgba(255, 200, 110, .7), rgba(255, 200, 110, 0) 24%); }
+.lq-orb3-film {
+  background: conic-gradient(from 0deg at 50% 56%, #f5b04a, #e8573f, #7a4df0, #2f7bff, #29d3c4, #f5b04a);
+  mix-blend-mode: color-dodge; opacity: .5;
+  -webkit-mask-image: radial-gradient(circle at 50% 56%, transparent 44%, #000 84%); mask-image: radial-gradient(circle at 50% 56%, transparent 44%, #000 84%);
+  animation: lq-spin 22s linear infinite;
+}
+@keyframes lq-spin { to { transform: rotate(360deg); } }
+.lq-orb3-spec { background: radial-gradient(ellipse 34% 7% at 50% 98%, rgba(255, 255, 255, .95), transparent 70%), radial-gradient(ellipse 14% 5% at 40% 5%, rgba(255, 235, 190, .9), transparent 70%); }
+
+:root[data-perf="low"] .lq-lotus-glow, :root[data-perf="low"] .lq-lotus-breathe, :root[data-perf="low"] .lq-drift-petal,
+:root[data-perf="low"] .lq-island-bob, :root[data-perf="low"] .lq-sway-s, :root[data-perf="low"] .lq-orb3-float,
+:root[data-perf="low"] .lq-orb3-body, :root[data-perf="low"] .lq-orb3-film, :root[data-perf="low"] .lq-orb3-blue { animation: none; }
+@media (prefers-reduced-motion: reduce) {
+  .lq-lotus-glow, .lq-lotus-breathe, .lq-drift-petal, .lq-island-bob, .lq-sway-s, .lq-orb3-float, .lq-orb3-body, .lq-orb3-film, .lq-orb3-blue, .lq-lotus-star { animation: none !important; }
+  .lq-lotus .lq-lp, .lq-island { transition: none; }
 }
