@@ -15,7 +15,7 @@
  * Every piece respects prefers-reduced-motion and the performance tier.
  */
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { motion, useReducedMotion } from 'framer-motion';
+import { motion, useReducedMotion, useScroll, useTransform } from 'framer-motion';
 import Lenis from 'lenis';
 import '../../styles/liquid.css';
 
@@ -145,9 +145,11 @@ export function PerfGovernor() {
 const SPARK_COLORS = ['#818cf8', '#f472b6', '#fb923c', '#6ee7b7'];
 const BURST_COLORS = ['#f472b6', '#fb923c', '#818cf8', '#fff4e8'];
 
-export function VineScroll() {
+export function VineScroll({ variant = 'ticket' } = {}) {
   useEffect(() => {
     if (!window.matchMedia?.('(pointer: fine)').matches) return undefined; // phones keep their native overlay scrollbar
+    const botanical = variant === 'botanical'; // Advaith-style: moss vine, leaves, leaf handle, cream bloom
+    const party = variant === 'party'; // PlanIt: bunting flags + ticket handle + confetti bloom
     const NS = 'http://www.w3.org/2000/svg';
     const docEl = document.documentElement;
     docEl.classList.add('lq-vine-on');
@@ -195,42 +197,66 @@ export function VineScroll() {
       grown = el('path', { d, class: 'lq-vine-grown' });
       len = grown.getTotalLength();
       grown.style.strokeDasharray = len;
+      if (botanical) { grown.style.stroke = '#8fb57a'; grown.style.strokeWidth = '1.7'; }
 
-      // Sparks: little four-point stars on short stems, alternating sides
+      // Things that sprout along the vine as you scroll past
       sparks = [];
       let side = 1; let i = 0;
       for (let sy = PAD + 46; sy < H - PAD - 30; sy += 58) {
         const c = SPARK_COLORS[i % SPARK_COLORS.length];
-        const g = el('g', { transform: `translate(${xAt(sy).toFixed(2)} ${sy})` });
-        const inner = el('g', { class: 'lq-spark' }, g);
-        el('path', { d: `M0 0 Q ${3 * side} -1.5 ${7 * side} -5`, fill: 'none', stroke: c, 'stroke-width': 1, 'stroke-linecap': 'round', opacity: 0.8 }, inner);
-        const s = i % 2 ? 0.8 : 1.05;
-        el('path', {
-          d: 'M0 -5 C.9 -1.6 1.6 -.9 5 0 C1.6 .9 .9 1.6 0 5 C-.9 1.6 -1.6 .9 -5 0 C-1.6 -.9 -.9 -1.6 0 -5 Z',
-          fill: c,
-          transform: `translate(${7 * side} -5.5) scale(${s}) rotate(${side * 12})`,
-        }, inner);
+        let inner;
+        if (botanical) {
+          const g = el('g', { transform: `translate(${xAt(sy).toFixed(2)} ${sy}) rotate(${side > 0 ? -35 : 215})` });
+          inner = el('path', { d: 'M0 0 C3 -3.6 8 -3.6 10 0 C8 3.6 3 3.6 0 0 Z', fill: i % 3 === 1 ? '#b9d8a0' : '#8fb57a', class: 'lq-spark' }, g);
+        } else {
+          const g = el('g', { transform: `translate(${xAt(sy).toFixed(2)} ${sy})` });
+          inner = el('g', { class: 'lq-spark' }, g);
+          el('path', { d: `M0 0 Q ${3 * side} -1.5 ${7 * side} -5`, fill: 'none', stroke: c, 'stroke-width': 1, 'stroke-linecap': 'round', opacity: 0.8 }, inner);
+          if (party) {
+            // bunting pennant
+            el('path', { d: `M${7 * side} -5 L${15 * side} -2.4 L${7 * side} 1.6 Z`, fill: c, opacity: 0.95 }, inner);
+          } else {
+            const s = i % 2 ? 0.8 : 1.05;
+            el('path', {
+              d: 'M0 -5 C.9 -1.6 1.6 -.9 5 0 C1.6 .9 .9 1.6 0 5 C-.9 1.6 -1.6 .9 -5 0 C-1.6 -.9 -.9 -1.6 0 -5 Z',
+              fill: c,
+              transform: `translate(${7 * side} -5.5) scale(${s}) rotate(${side * 12})`,
+            }, inner);
+          }
+        }
         sparks.push({ y: sy, node: inner });
         side *= -1; i++;
       }
 
-      // Finale: a firework at the end of the track
+      // Finale: a five-petal bloom opens at the end of the vine
       burst = el('g', { class: 'lq-burst', transform: `translate(${xAt(H - PAD).toFixed(2)} ${H - PAD})` });
       const bi = el('g', { class: 'lq-burst-inner' }, burst);
-      el('circle', { cx: 0, cy: 0, r: 4, fill: 'none', stroke: '#f472b6', 'stroke-width': 1, class: 'lq-burst-pulse' }, bi);
-      for (let r = 0; r < 10; r++) {
-        const long = r % 2 === 0;
-        el('line', { x1: 0, y1: -3.2, x2: 0, y2: long ? -9.5 : -6.4, stroke: BURST_COLORS[r % 4], 'stroke-width': long ? 1.5 : 1.1, class: 'lq-burst-ray', transform: `rotate(${r * 36})` }, bi);
+      if (botanical || party) {
+        for (let p = 0; p < 5; p++) el('ellipse', { cx: 0, cy: -4.2, rx: 2.3, ry: 3.6, transform: `rotate(${p * 72})`, fill: botanical ? '#fff4e8' : SPARK_COLORS[p % 4] }, bi);
+        el('circle', { cx: 0, cy: 0, r: 1.9, class: 'lq-burst-core', style: botanical ? 'fill:#e8702a' : 'fill:#fff4e8' }, bi);
+      } else {
+        el('circle', { cx: 0, cy: 0, r: 4, fill: 'none', stroke: '#f472b6', 'stroke-width': 1, class: 'lq-burst-pulse' }, bi);
+        for (let r = 0; r < 10; r++) {
+          const long = r % 2 === 0;
+          el('line', { x1: 0, y1: -3.2, x2: 0, y2: long ? -9.5 : -6.4, stroke: BURST_COLORS[r % 4], 'stroke-width': long ? 1.5 : 1.1, class: 'lq-burst-ray', transform: `rotate(${r * 36})` }, bi);
+        }
+        el('circle', { cx: 0, cy: 0, r: 2, class: 'lq-burst-core' }, bi);
       }
-      el('circle', { cx: 0, cy: 0, r: 2, class: 'lq-burst-core' }, bi);
 
-      // Thumb: a ticket stub with notched sides and a perforation
+      // Handle: a veined leaf (botanical) or a ticket stub
       thumb = el('g', { class: 'lq-thumb' });
       const ti = el('g', { class: 'lq-thumb-inner' }, thumb);
-      el('path', { d: 'M-10 -5 H10 V-1.6 A1.6 1.6 0 0 0 10 1.6 V5 H-10 V1.6 A1.6 1.6 0 0 0 -10 -1.6 Z', class: 'lq-thumb-body' }, ti);
-      el('path', { d: 'M-10 -5 H10 V-1.6 A1.6 1.6 0 0 0 10 1.6 V5 H-10 V1.6 A1.6 1.6 0 0 0 -10 -1.6 Z', class: 'lq-thumb-edge' }, ti);
-      el('path', { d: 'M-3.4 -3.8 V3.8', class: 'lq-thumb-dash' }, ti);
-      el('path', { d: 'M3.6 -2.4 L4.6 0 L3.6 2.4 L6.4 0 Z', fill: '#f472b6' }, ti);
+      if (botanical) {
+        thumb.style.filter = 'drop-shadow(0 0 4px rgba(185,216,160,.55))';
+        el('path', { d: 'M-10 0 C-6 -7 6 -7 10 0 C6 7 -6 7 -10 0 Z', style: 'fill:#b9d8a0' }, ti);
+        el('path', { d: 'M-10 0 L10 0', style: 'fill:none;stroke:#34502b;stroke-width:.9;stroke-linecap:round' }, ti);
+        el('path', { d: 'M-3 0 L1 -3.5 M2 0 L5 -3 M-3 0 L1 3.5 M2 0 L5 3', style: 'fill:none;stroke:#34502b;stroke-width:.6;stroke-linecap:round;opacity:.75' }, ti);
+      } else {
+        el('path', { d: 'M-10 -5 H10 V-1.6 A1.6 1.6 0 0 0 10 1.6 V5 H-10 V1.6 A1.6 1.6 0 0 0 -10 -1.6 Z', class: 'lq-thumb-body' }, ti);
+        el('path', { d: 'M-10 -5 H10 V-1.6 A1.6 1.6 0 0 0 10 1.6 V5 H-10 V1.6 A1.6 1.6 0 0 0 -10 -1.6 Z', class: 'lq-thumb-edge' }, ti);
+        el('path', { d: 'M-3.4 -3.8 V3.8', class: 'lq-thumb-dash' }, ti);
+        el('path', { d: 'M3.6 -2.4 L4.6 0 L3.6 2.4 L6.4 0 Z', fill: '#f472b6' }, ti);
+      }
 
       progress = Math.min(1, Math.max(0, window.scrollY / maxScroll()));
       render();
@@ -313,7 +339,7 @@ export function VineScroll() {
       wrap.remove();
       docEl.classList.remove('lq-vine-on', 'lq-vine-dragging');
     };
-  }, []);
+  }, [variant]);
   return null;
 }
 
@@ -653,5 +679,248 @@ export function SpotlightStage({ children, radius = 260, id, className = '', min
       <div aria-hidden="true" className="pointer-events-none absolute inset-0 z-40 bg-gradient-to-b from-[#05050f]/55 via-transparent to-[#05050f]/75" />
       <div className="relative z-50" style={{ minHeight }}>{children}</div>
     </section>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Rock ridge + blooming flowers (Careers)
+   ═══════════════════════════════════════════════════════════════════════════ */
+function useInViewOnce(ref, margin = '0px 0px -12% 0px') {
+  const [on, setOn] = useState(false);
+  useEffect(() => {
+    const n = ref.current; if (!n) return undefined;
+    if (typeof IntersectionObserver === 'undefined') { setOn(true); return undefined; }
+    const io = new IntersectionObserver(([e]) => { if (e.isIntersecting) { setOn(true); io.disconnect(); } }, { rootMargin: margin, threshold: 0.15 });
+    io.observe(n);
+    return () => io.disconnect();
+  }, [ref, margin]);
+  return on;
+}
+
+/** Jagged, rocky silhouette: midpoint displacement + sharpened peaks. Returns [[x,y]...] across 0..W. */
+function rockLine(seed, W, base, amp, steps = 96) {
+  const rnd = mulberry32(seed);
+  const n = steps + 1;
+  let h = new Array(n).fill(0);
+  h[0] = rnd() * 0.5; h[steps] = rnd() * 0.5;
+  let span = steps; let scale = 1;
+  while (span > 1) {
+    const half = span / 2;
+    for (let i = half; i < steps; i += span) h[i] = (h[i - half] + h[i + half]) / 2 + (rnd() - 0.5) * scale;
+    span = half; scale *= 0.56;
+  }
+  const mn = Math.min(...h); const mx = Math.max(...h);
+  return h.map((v, i) => {
+    const t = (v - mn) / (mx - mn || 1);
+    return [(i / steps) * W, base - Math.pow(t, 1.35) * amp];
+  });
+}
+const yOnLine = (pts, x) => {
+  for (let i = 0; i < pts.length - 1; i++) if (x >= pts[i][0] && x <= pts[i + 1][0]) {
+    const t = (x - pts[i][0]) / (pts[i + 1][0] - pts[i][0] || 1);
+    return pts[i][1] + (pts[i + 1][1] - pts[i][1]) * t;
+  }
+  return pts[pts.length - 1][1];
+};
+
+const BLOOM_COLORS = [['#f472b6', '#fbcfe8'], ['#fb923c', '#fde68a'], ['#818cf8', '#c7d2fe'], ['#a78bfa', '#ddd6fe'], ['#6ee7b7', '#d1fae5']];
+
+function Flower({ x, y, h, s, ci, d, sd, lean }) {
+  const [c1, c2] = BLOOM_COLORS[ci % BLOOM_COLORS.length];
+  const petals = ci % 2 ? 6 : 8;
+  const r = 13 * s;
+  return (
+    <g transform={`translate(${x.toFixed(1)} ${y.toFixed(1)})`}>
+      <g className="lq-sway" style={{ '--sd': `${sd}s` }}>
+        <path className="lq-stem" style={{ '--d': `${d}s` }} d={`M0 0 C${lean * 0.2} ${-h * 0.35} ${lean} ${-h * 0.7} ${lean} ${-h}`} fill="none" stroke="#34d399" strokeOpacity=".8" strokeWidth={2.2 * s} strokeLinecap="round" />
+        <g transform={`translate(${lean * 0.32} ${-h * 0.42})`}><path className="lq-leaf" style={{ '--d': `${d}s` }} d={`M0 0 C${8 * s} ${-3 * s} ${15 * s} ${-2 * s} ${19 * s} ${-9 * s} C${11 * s} ${-12 * s} ${3 * s} ${-9 * s} 0 0Z`} fill="#10b981" fillOpacity=".75" /></g>
+        <g transform={`translate(${lean * 0.18} ${-h * 0.26}) scale(-1 1)`}><path className="lq-leaf" style={{ '--d': `${d}s` }} d={`M0 0 C${7 * s} ${-3 * s} ${13 * s} ${-2 * s} ${16 * s} ${-8 * s} C${9 * s} ${-10 * s} ${2 * s} ${-8 * s} 0 0Z`} fill="#059669" fillOpacity=".7" /></g>
+        <g transform={`translate(${lean} ${-h})`}>
+          {Array.from({ length: petals }).map((_, k) => (
+            <g key={k} transform={`rotate(${(360 / petals) * k})`}>
+              <path className="lq-petal" style={{ '--d': `${d}s`, '--p': `${k * 0.05}s` }} d={`M0 0 C${-r * 0.55} ${-r * 0.35} ${-r * 0.55} ${-r * 0.95} 0 ${-r * 1.25} C${r * 0.55} ${-r * 0.95} ${r * 0.55} ${-r * 0.35} 0 0Z`} fill={k % 2 ? c1 : c2} fillOpacity={k % 2 ? 0.95 : 0.9} />
+            </g>
+          ))}
+          <circle className="lq-core" style={{ '--d': `${d}s` }} r={3.6 * s} fill="#fff4e8" />
+        </g>
+      </g>
+    </g>
+  );
+}
+
+const FLOWER_SPOTS = (() => {
+  const rnd = mulberry32(7);
+  const out = [];
+  for (let i = 0; i < 17; i++) {
+    out.push({ x: 40 + (i / 16) * 1520 + (rnd() - 0.5) * 70, h: 60 + rnd() * 86, s: 0.7 + rnd() * 0.6, ci: Math.floor(rnd() * 5), d: (i % 9) * 0.14 + rnd() * 0.2, sd: -rnd() * 6, lean: (rnd() - 0.5) * 34 });
+  }
+  return out;
+})();
+
+/** Layered granite peaks with parallax; the front ridge sprouts flowers that bloom as it scrolls into view. */
+export function RockRidge({ height = '44vh', flowers = false, seed = 0, className = '' }) {
+  const ref = useRef(null);
+  const on = useInViewOnce(ref);
+  const reduce = useReducedMotion();
+  const { scrollYProgress } = useScroll({ target: ref, offset: ['start end', 'end start'] });
+  const yBack = useTransform(scrollYProgress, [0, 1], reduce ? [0, 0] : [-26, 26]);
+  const yMid = useTransform(scrollYProgress, [0, 1], reduce ? [0, 0] : [-14, 14]);
+  const yFront = useTransform(scrollYProgress, [0, 1], reduce ? [0, 0] : [-4, 4]);
+  const L = useMemo(() => {
+    const W = 1600; const Hh = 420;
+    const mk = (seed, base, amp, steps) => rockLine(seed, W, base, amp, steps);
+    const back = mk(11 + seed, 300, 210, 64); const mid = mk(23 + seed, 350, 190, 128); const front = mk(37 + seed, 400, 130, 128);
+    const poly = (pts) => `M0 ${Hh} L${pts.map(([x, y]) => `${x.toFixed(1)} ${y.toFixed(1)}`).join(' L')} L${W} ${Hh} Z`;
+    const edge = (pts) => `M${pts.map(([x, y]) => `${x.toFixed(1)} ${y.toFixed(1)}`).join(' L')}`;
+    // faceted light planes on each local peak
+    const facets = (pts, drop) => {
+      let d = '';
+      for (let i = 2; i < pts.length - 3; i++) {
+        if (pts[i][1] < pts[i - 1][1] && pts[i][1] < pts[i + 1][1] && pts[i][1] < pts[i - 2][1] - 4) {
+          const [px, py] = pts[i]; const [rx, ry] = pts[Math.min(pts.length - 1, i + 2)];
+          d += `M${px.toFixed(1)} ${py.toFixed(1)} L${rx.toFixed(1)} ${ry.toFixed(1)} L${(px + 6).toFixed(1)} ${(py + drop).toFixed(1)} Z `;
+        }
+      }
+      return d;
+    };
+    const plants = FLOWER_SPOTS.map((f) => ({ ...f, y: yOnLine(front, f.x) + 3 }));
+    return { W, Hh, back, mid, front, poly, edge, facets, plants };
+  }, [seed]);
+  return (
+    <div ref={ref} aria-hidden="true" className={`lq-ridge ${className}`} style={{ height }}>
+      <svg viewBox={`0 0 ${L.W} ${L.Hh}`} preserveAspectRatio="xMidYMax slice">
+        <defs>
+          <linearGradient id="lq-rg-back" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#3b3a86" /><stop offset="1" stopColor="#0b0a22" /></linearGradient>
+          <linearGradient id="lq-rg-mid" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#262466" /><stop offset="1" stopColor="#07071a" /></linearGradient>
+          <linearGradient id="lq-rg-front" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#14123a" /><stop offset="1" stopColor="#05050f" /></linearGradient>
+          <linearGradient id="lq-rg-rim" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stopColor="#818cf8" /><stop offset=".5" stopColor="#f472b6" /><stop offset="1" stopColor="#fb923c" /></linearGradient>
+        </defs>
+        <motion.g className="lq-ridge-layer" style={{ y: yBack }}>
+          <path d={L.poly(L.back)} fill="url(#lq-rg-back)" />
+          <path d={L.facets(L.back, 46)} fill="#a5b4fc" fillOpacity=".11" />
+          <path d={L.edge(L.back)} fill="none" stroke="#a5b4fc" strokeOpacity=".4" strokeWidth="1.2" />
+        </motion.g>
+        <motion.g className="lq-ridge-layer" style={{ y: yMid }}>
+          <path d={L.poly(L.mid)} fill="url(#lq-rg-mid)" />
+          <path d={L.facets(L.mid, 40)} fill="#f9a8d4" fillOpacity=".1" />
+          <path d={L.edge(L.mid)} fill="none" stroke="url(#lq-rg-rim)" strokeOpacity=".55" strokeWidth="1.3" />
+        </motion.g>
+        <motion.g className="lq-ridge-layer" style={{ y: yFront }}>
+          <path d={L.poly(L.front)} fill="url(#lq-rg-front)" />
+          <path d={L.facets(L.front, 30)} fill="#818cf8" fillOpacity=".12" />
+          <path d={L.edge(L.front)} fill="none" stroke="url(#lq-rg-rim)" strokeOpacity=".9" strokeWidth="1.6" />
+          {flowers && (
+            <g className={`lq-fl${on || reduce ? ' on' : ''}`}>
+              {L.plants.map((f, i) => <Flower key={i} {...f} />)}
+              {Array.from({ length: 14 }).map((_, i) => (
+                <circle key={i} className="lq-pollen" cx={80 + i * 110 + (i % 3) * 17} cy={150 + ((i * 53) % 150)} r={1.6 + (i % 3) * 0.5} fill={i % 2 ? '#fde68a' : '#fbcfe8'} style={{ animationDelay: `${(i % 7) * 0.5}s` }} />
+              ))}
+            </g>
+          )}
+        </motion.g>
+      </svg>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   City skyline + festoon string lights (Home)
+   ═══════════════════════════════════════════════════════════════════════════ */
+const WARM = ['#fde68a', '#fbcfe8', '#c7d2fe', '#fdba74'];
+
+const CITY = (() => {
+  const rnd = mulberry32(91);
+  const W = 1600;
+  const layer = (baseY, minH, maxH, minW, maxW, seedOff) => {
+    const r = mulberry32(100 + seedOff);
+    const b = []; let x = -10;
+    while (x < W + 10) {
+      const w = minW + r() * (maxW - minW); const h = minH + r() * (maxH - minH);
+      b.push({ x, w, h, y: baseY - h, roof: r() < 0.28 ? 'spire' : r() < 0.4 ? 'step' : 'flat' });
+      x += w + (r() < 0.3 ? 4 : 0);
+    }
+    return b;
+  };
+  const back = layer(360, 70, 190, 46, 92, 1);
+  const front = layer(360, 40, 130, 54, 110, 2);
+  const wins = [];
+  front.forEach((b, bi) => {
+    for (let wy = b.y + 14; wy < 350; wy += 14) for (let wx = b.x + 8; wx < b.x + b.w - 10; wx += 12) {
+      const v = rnd();
+      if (v < 0.34) wins.push({ x: wx, y: wy, c: WARM[(bi + Math.floor(wy)) % 4], blink: v < 0.07, d: (v * 90) % 5 });
+    }
+  });
+  return { W, back, front, wins };
+})();
+
+const roofPath = (b, bottom) => {
+  const { x, y, w, roof } = b;
+  if (roof === 'spire') return `M${x} ${bottom} V${y + 6} H${x + w / 2 - 3} L${x + w / 2} ${y - 22} L${x + w / 2 + 3} ${y + 6} H${x + w} V${bottom} Z`;
+  if (roof === 'step') return `M${x} ${bottom} V${y + 10} H${x + w * 0.2} V${y} H${x + w * 0.8} V${y + 10} H${x + w} V${bottom} Z`;
+  return `M${x} ${bottom} V${y} H${x + w} V${bottom} Z`;
+};
+
+/** A dusk skyline of the venue district: two parallax layers, lit windows that flicker, glowing street-line. */
+export function CitySkyline({ height = 'min(46vh, 420px)', className = '' }) {
+  const ref = useRef(null);
+  const reduce = useReducedMotion();
+  const { scrollYProgress } = useScroll({ target: ref, offset: ['start end', 'end start'] });
+  const yBack = useTransform(scrollYProgress, [0, 1], reduce ? [0, 0] : [22, -22]);
+  const yFront = useTransform(scrollYProgress, [0, 1], reduce ? [0, 0] : [10, -10]);
+  return (
+    <div ref={ref} aria-hidden="true" className={`lq-sky ${className}`} style={{ height }}>
+      <svg viewBox={`0 0 ${CITY.W} 400`} preserveAspectRatio="xMidYMax slice">
+        <defs>
+          <linearGradient id="lq-city-glow" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#f472b6" stopOpacity="0" /><stop offset=".78" stopColor="#f472b6" stopOpacity=".16" /><stop offset="1" stopColor="#fb923c" stopOpacity=".3" /></linearGradient>
+          <linearGradient id="lq-city-back" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#2a2766" /><stop offset="1" stopColor="#0c0b26" /></linearGradient>
+          <linearGradient id="lq-city-front" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#14123a" /><stop offset="1" stopColor="#06060f" /></linearGradient>
+        </defs>
+        <rect width={CITY.W} height="400" fill="url(#lq-city-glow)" />
+        <motion.g style={{ y: yBack }}>
+          {CITY.back.map((b, i) => <path key={i} d={roofPath(b, 400)} fill="url(#lq-city-back)" stroke="#a5b4fc" strokeOpacity=".22" strokeWidth="1" />)}
+        </motion.g>
+        <motion.g style={{ y: yFront }}>
+          {CITY.front.map((b, i) => <path key={i} d={roofPath(b, 400)} fill="url(#lq-city-front)" stroke="#f9a8d4" strokeOpacity=".32" strokeWidth="1" />)}
+          {CITY.wins.map((w, i) => <rect key={i} x={w.x} y={w.y} width="5" height="7" rx="1" fill={w.c} className={w.blink ? 'lq-win-on' : undefined} style={w.blink ? { '--wd': `${w.d}s` } : { opacity: 0.8 }} />)}
+        </motion.g>
+        <rect y="392" width={CITY.W} height="8" fill="#05050f" />
+      </svg>
+    </div>
+  );
+}
+
+/** Swags of party bulbs across the top of a hero. */
+export function Festoon({ className = '' }) {
+  const swags = 5; const W = 1600;
+  const bulbs = useMemo(() => {
+    const out = [];
+    for (let s = 0; s < swags; s++) {
+      const x0 = (s / swags) * W - 20; const x1 = ((s + 1) / swags) * W + 20;
+      for (let k = 1; k < 9; k++) {
+        const t = k / 9; const x = x0 + (x1 - x0) * t;
+        const y = 8 + 216 * t * (1 - t);
+        out.push({ x, y, c: ['#fbcfe8', '#fde68a', '#c7d2fe', '#fdba74', '#a7f3d0'][(s + k) % 5], d: ((s * 9 + k) * 0.37) % 3 });
+      }
+    }
+    return { out, x: (s) => (s / swags) * W - 20 };
+  }, []);
+  return (
+    <div aria-hidden="true" className={`lq-festoon ${className}`}>
+      <svg viewBox={`0 0 ${W} 120`} preserveAspectRatio="xMidYMin slice">
+        <defs><radialGradient id="lq-bulb-glow"><stop offset="0" stopColor="#fff" stopOpacity=".85" /><stop offset="1" stopColor="#fff" stopOpacity="0" /></radialGradient></defs>
+        <g className="lq-festoon-sway">
+          {Array.from({ length: swags }).map((_, s) => {
+            const x0 = bulbs.x(s); const x1 = bulbs.x(s + 1);
+            return <path key={s} d={`M${x0} 8 Q${(x0 + x1) / 2} 116 ${x1} 8`} fill="none" stroke="#ffffff" strokeOpacity=".28" strokeWidth="1.2" />;
+          })}
+          {bulbs.out.map((b, i) => (
+            <g key={i} className="lq-bulb" style={{ '--bd': `${b.d}s` }}>
+              <circle cx={b.x} cy={b.y + 4} r="13" fill={b.c} opacity=".22" />
+              <circle cx={b.x} cy={b.y + 4} r="3.6" fill={b.c} />
+            </g>
+          ))}
+        </g>
+      </svg>
+    </div>
   );
 }
