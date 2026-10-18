@@ -34,7 +34,7 @@
     "react-router-dom": "^6.21.1",
     "socket.io-client": "^4.6.1",
     "tailwind-merge": "^2.2.0",
-    "three": "^0.160.0",
+    "three": "^0.169.0",
     "zustand": "^4.4.7"
   },
   "devDependencies": {
