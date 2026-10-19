@@ -2391,7 +2391,7 @@ function ProductShowcase() {
 
         <div className="space-y-20 sm:space-y-28">
           {SHOWCASE_STEPS.map((s, i) => (
-            <div key={s.key} className={`grid lg:grid-cols-2 gap-10 lg:gap-16 items-center ${i % 2 === 1 ? 'lg:[&>*:first-child]:order-2' : ''}`}>
+            <div key={s.key} className={`grid grid-cols-[minmax(0,1fr)] lg:grid-cols-2 gap-10 lg:gap-16 items-center ${i % 2 === 1 ? 'lg:[&>*:first-child]:order-2' : ''}`}>
               <Reveal direction={i % 2 === 1 ? 'right' : 'left'}>
                 <span className="lq-kicker mb-3 block">{'// '}{s.eyebrow}</span>
                 <h3 className="font-syne text-2xl sm:text-3xl font-black mb-3 text-white">{s.title}</h3>
@@ -3594,7 +3594,7 @@ export default function Home() {
         )}
       </header>
 
-      <main className="relative" style={{ zIndex: 2, overflowX: 'hidden', maxWidth: '100vw' }}>
+      <main className="relative" style={{ zIndex: 2, overflowX: 'clip', maxWidth: '100vw' }}>
         {/* HERO: aurora + planet horizon, blur-in headline, glass UI */}
         <section id="hero-top" className="relative min-h-screen flex items-center bg-[#05050f]" style={{ overflow: 'hidden', maxWidth: '100vw' }}>
           {(isWL && heroImage)
