@@ -103,8 +103,9 @@
     rgba(255, 255, 255, 0.5) 100%);
 }
 /* Soft hover lift for interactive glass */
-.lq-lift { transition: transform .5s cubic-bezier(.22, 1, .36, 1), background-color .4s ease; }
-.lq-lift:hover { transform: translateY(-4px); background-color: rgba(255, 255, 255, 0.035); }
+/* Uses the standalone `translate` property so it never fights framer-motion's inline `transform`. */
+.lq-lift { transition: translate .5s cubic-bezier(.22, 1, .36, 1), background-color .4s ease; }
+.lq-lift:hover { translate: 0 -4px; background-color: rgba(255, 255, 255, 0.035); }
 
 /* Section kicker:  // Features */
 .lq-kicker {
