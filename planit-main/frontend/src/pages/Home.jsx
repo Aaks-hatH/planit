@@ -18,7 +18,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { HomePreloader, HomeScrollChrome, ScrollFloat, MotionReveal, useSiteReady } from '../components/HomeMotion';
 import { useWhiteLabel } from '../context/WhiteLabelContext';
 import { SmoothScroll, PerfGovernor, Aurora, BlurText, SpotlightStage } from '../components/liquid/LiquidKit';
-import CityScene3D from '../components/liquid/CityScene3D';
 import { ZoomReveal, ScrollStory } from '../components/liquid/ScrollStory';
 import { MEDIA } from '../content/media';
 
@@ -2168,7 +2167,6 @@ function EnterpriseDemo() {
   );
 }
 
-import StarBackground from '../components/StarBackground';
 import CrossPlatformAd from '../components/CrossPlatformAd';
 import TurnstileWidget from '../components/TurnstileWidget';
 
@@ -3208,10 +3206,11 @@ export default function Home() {
 
   // Blur-rise entrance used across the hero; held back until the loading curtain has opened.
   const blurHidden = { filter: 'blur(10px)', opacity: 0, y: 20 };
+  // Animate the hero underneath the loading curtain, so the reveal never lands on a blank frame.
   const enter = (delay) => ({
     initial: blurHidden,
-    animate: preloading ? blurHidden : { filter: 'blur(0px)', opacity: 1, y: 0 },
-    transition: { duration: 0.8, ease: 'easeOut', delay },
+    animate: { filter: 'blur(0px)', opacity: 1, y: 0 },
+    transition: { duration: 0.72, ease: [0.22, 1, 0.36, 1], delay },
   });
 
   const dismissIntro = () => {
@@ -3603,33 +3602,33 @@ export default function Home() {
       </header>
 
       <main className="relative" style={{ zIndex: 2, overflowX: 'clip', maxWidth: '100vw' }}>
-        {/* HERO: aurora + planet horizon, blur-in headline, glass UI */}
-        <section id="hero-top" className="relative min-h-screen flex items-center bg-[#05050f]" style={{ overflow: 'hidden', maxWidth: '100vw' }}>
+        {/* HERO: cinematic skyline, clear message, and a responsive product preview */}
+        <section id="hero-top" className="relative flex min-h-[100svh] items-center bg-[#05050f]" style={{ overflow: 'hidden', maxWidth: '100vw' }}>
           {(isWL && heroImage)
-            ? <div className="absolute inset-0" style={{ backgroundImage: `url(${heroImage})`, backgroundSize: 'cover', backgroundPosition: 'center', opacity: 0.2 }} />
-            : isWL ? <CinematicGrid /> : <Aurora palette="indigo" stars={false} />
-          }
-          {/* Deep-space layer, subtle nod to PlanIt → Planet, hero only */}
-          {!isWL && (
-            <div aria-hidden="true" className="absolute inset-0 pointer-events-none" style={{ zIndex: 0, opacity: 0.55 }}>
-              <StarBackground fixed={false} forceActive={true} paused={showIntro} />
-            </div>
-          )}
-          {!isWL && (
-            <CityScene3D
-              mood="night" seed={7}
-              style={{ left: 0, right: 0, bottom: 0, height: '72%', zIndex: 1, WebkitMaskImage: 'linear-gradient(to bottom, transparent 0%, #000 38%)', maskImage: 'linear-gradient(to bottom, transparent 0%, #000 38%)' }}
-            />
-          )}
-
+            ? <div aria-hidden="true" className="absolute inset-0" style={{ backgroundImage: `linear-gradient(180deg, rgba(5,5,15,.25), rgba(5,5,15,.85)), url(${heroImage})`, backgroundSize: 'cover', backgroundPosition: 'center', opacity: 0.72 }} />
+            : isWL ? <CinematicGrid /> : (
+              <div aria-hidden="true" className="pointer-events-none absolute inset-0" style={{
+                zIndex: 0,
+                backgroundImage: 'linear-gradient(180deg, rgba(5,5,15,.18) 0%, rgba(5,5,15,.25) 34%, rgba(5,5,15,.62) 68%, #05050f 100%), linear-gradient(90deg, rgba(5,5,15,.34) 0%, rgba(5,5,15,.02) 48%, rgba(5,5,15,.3) 100%), url("/media/planit-skyline.webp")',
+                backgroundSize: 'cover',
+                backgroundPosition: 'center 68%',
+                transform: 'scale(1.015)',
+              }} />
+            )}
+          {!isWL && <div aria-hidden="true" className="pointer-events-none absolute inset-0 z-[1] opacity-30" style={{
+            backgroundImage: 'linear-gradient(rgba(199,210,254,.04) 1px, transparent 1px), linear-gradient(90deg, rgba(199,210,254,.04) 1px, transparent 1px)',
+            backgroundSize: '80px 80px',
+            maskImage: 'radial-gradient(ellipse at 50% 32%, black, transparent 78%)',
+            WebkitMaskImage: 'radial-gradient(ellipse at 50% 32%, black, transparent 78%)',
+          }} />}
           <div className="w-full relative" style={{ zIndex: 2 }}>
             <div className="max-w-6xl mx-auto px-4 sm:px-8 lg:px-12 pt-32 pb-14 sm:pt-40 sm:pb-28 lg:pt-44 lg:pb-36 text-center">
 
               {/* Badge */}
               <motion.div {...enter(0.4)} className="mb-8 sm:mb-10">
                 <a href="/help#claude" className="lq-glass inline-flex max-w-full items-center gap-2 rounded-full p-1 text-left">
-                  <span className="shrink-0 rounded-full bg-white px-3 py-1 text-xs font-semibold text-black">New</span>
-                  <span className="pr-3 text-sm font-light text-white/90">{isWL ? (wlName || 'Events') : 'Run your event by talking to Claude'}</span>
+                  <span className="shrink-0 rounded-full border border-indigo-200/20 bg-indigo-300/15 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.12em] text-indigo-100">{isWL ? 'WELCOME' : 'ONE WORKSPACE'}</span>
+                  <span className="min-w-0 break-words pr-3 text-sm font-light text-white/90">{isWL ? (wlName || 'Your event platform') : 'Plan it together. Run it seamlessly.'}</span>
                 </a>
               </motion.div>
 
@@ -3644,12 +3643,12 @@ export default function Home() {
                 ) : (
                   <BlurText
                     as="h1"
-                    start={!preloading}
+                    start={true}
                     delay={110}
                     text={'Plan every detail.\nExecute flawlessly.'}
                     accent={[4]}
                     className="lq-display mb-6 sm:mb-8 leading-[0.98] text-white"
-                    style={{ fontSize: 'clamp(2rem, 5.4vw, 4.6rem)' }}
+                    style={{ fontSize: 'clamp(2.2rem, 6.2vw, 4.9rem)' }}
                   />
                 )
               }
@@ -3719,7 +3718,7 @@ export default function Home() {
                   <div key={tag} className="lq-glass flex w-full min-w-0 items-center gap-4 rounded-[1.25rem] p-4 text-left text-white cursor-default sm:w-[220px] sm:flex-col sm:items-stretch sm:justify-between sm:gap-6 sm:p-5">
                     <Icon className="h-6 w-6 shrink-0 sm:h-7 sm:w-7" strokeWidth={1.5} />
                     <div className="min-w-0">
-                      <div className="lq-display text-[1.45rem] leading-[1.05] sm:text-3xl sm:leading-none" style={{ overflowWrap: 'normal' }}>{tag}</div>
+                      <div className="lq-display min-w-0 max-w-full break-words text-[clamp(1.05rem,4.5vw,1.45rem)] leading-[1.05] sm:text-3xl sm:leading-tight" style={{ overflowWrap: 'anywhere', whiteSpace: 'normal' }}>{tag}</div>
                       <div className="mt-1.5 text-xs font-light text-white/80 sm:mt-2">{desc}</div>
                     </div>
                   </div>
@@ -3732,7 +3731,7 @@ export default function Home() {
                   <div className="lq-glass rounded-full px-3.5 py-1 text-xs font-medium text-white/90">One workspace for the whole event</div>
                   <ul className="flex max-w-md flex-wrap justify-center gap-2 sm:max-w-none sm:gap-x-12 sm:gap-y-1 md:gap-x-14" aria-label="What's included">
                     {['Team chat', 'Task lists', 'Live polls', 'RSVP', 'QR check-in', 'Seating', 'Claude AI'].map((w) => (
-                      <li key={w} className="lq-display max-md:rounded-full max-md:border max-md:border-white/15 max-md:bg-white/5 max-md:px-3.5 max-md:py-1.5 text-white text-sm md:text-3xl" style={{ overflowWrap: 'normal' }}>{w}</li>
+                      <li key={w} className="lq-display max-w-full break-words max-md:rounded-full max-md:border max-md:border-white/15 max-md:bg-white/5 max-md:px-3.5 max-md:py-1.5 text-white text-sm md:text-3xl" style={{ overflowWrap: 'anywhere', whiteSpace: 'normal' }}>{w}</li>
                     ))}
                   </ul>
                 </motion.div>
@@ -3818,7 +3817,7 @@ export default function Home() {
                     <f.icon className="h-5 w-5 text-white" />
                   </div>
                   <div className="flex-1" />
-                  <h3 className="lq-display relative mt-6 text-3xl leading-none text-white">{f.label}</h3>
+                  <h3 className="lq-display relative mt-6 w-full min-w-0 max-w-full break-words text-[clamp(1.2rem,5.1vw,1.875rem)] leading-[1.05] text-white sm:text-3xl" style={{ overflowWrap: 'anywhere', whiteSpace: 'normal' }}>{f.label}</h3>
                   <p className="relative mt-3 max-w-[34ch] text-sm font-light leading-snug text-white/85">{f.desc}</p>
                 </motion.article>
               ))}
@@ -5165,20 +5164,7 @@ export default function Home() {
           </div>
         </section>
 
-        {/* The PlanIt event city at dusk, rising into the finale */}
-        {!(selectedBranch || isWL) && (
-          <div id="city-band" className="relative -mb-px overflow-hidden" style={{ height: 'min(78vh, 680px)', background: '#05050f' }}>
-            <CityScene3D
-              mood="dusk" view="close" seed={21}
-              style={{ inset: 0, WebkitMaskImage: 'linear-gradient(to bottom, transparent 0%, #000 30%)', maskImage: 'linear-gradient(to bottom, transparent 0%, #000 30%)' }}
-            />
-            <div className="pointer-events-none absolute inset-x-0 bottom-0 z-[2] flex items-end justify-between px-6 pb-5 font-mono text-[10px] uppercase tracking-[0.28em] text-white/55 sm:px-10">
-              <span>Main stage</span><span className="hidden sm:inline">Big top</span><span>Ferris wheel</span><span className="hidden sm:inline">Arena</span>
-            </div>
-          </div>
-        )}
-
-        {/* FINALE: a party scene that lights up under your cursor */}
+        {/* FINALE: a cinematic close with a clear next step */}
         {!(selectedBranch || isWL) && (
           <SpotlightStage id="start" minHeight="92dvh">
             <div className="flex flex-col justify-between gap-16 px-8 pb-10 pt-28 md:px-16 lg:px-20" style={{ minHeight: '92dvh' }}>
