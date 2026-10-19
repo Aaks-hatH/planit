@@ -17,7 +17,7 @@ import toast from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
 import { HomePreloader, HomeScrollChrome, ScrollFloat, MotionReveal, useSiteReady } from '../components/HomeMotion';
 import { useWhiteLabel } from '../context/WhiteLabelContext';
-import { SmoothScroll, PerfGovernor, Aurora, BlurText, SpotlightStage, rise } from '../components/liquid/LiquidKit';
+import { SmoothScroll, PerfGovernor, Aurora, BlurText, SpotlightStage } from '../components/liquid/LiquidKit';
 import CityScene3D from '../components/liquid/CityScene3D';
 import { ZoomReveal, ScrollStory } from '../components/liquid/ScrollStory';
 import { MEDIA } from '../content/media';
@@ -1535,6 +1535,14 @@ function CopyLinkBox({ eventId, subdomain, mode }) {
     </div>
   );
 }
+
+// Grouped reveal for card grids: the whole grid fades up as ONE unit with a quick, even
+// cascade, instead of every card waiting for its own scroll trigger and blur filter.
+const GRID_PARENT = { hidden: {}, show: { transition: { staggerChildren: 0.05 } } };
+const GRID_CHILD = {
+  hidden: { opacity: 0, y: 18 },
+  show: { opacity: 1, y: 0, transition: { duration: 0.5, ease: [0.22, 1, 0.36, 1] } },
+};
 
 function Reveal(props) {
   return <MotionReveal {...props} />;
@@ -3779,7 +3787,10 @@ export default function Home() {
             </Reveal>
 
             {/* Feature grid */}
-            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 mb-24">
+            <motion.div
+              className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 mb-24"
+              variants={GRID_PARENT} initial="hidden" whileInView="show" viewport={{ once: true, amount: 0.06 }}
+            >
               {[
                 { icon: MessageSquare, label: 'Real-time team chat',  desc: 'Your planning channel. Typing indicators, persistent history, instant delivery.' },
                 { icon: ListChecks,    label: 'Shared task lists',    desc: 'Assign, prioritize, and track every action item from one shared view.' },
@@ -3793,7 +3804,7 @@ export default function Home() {
               ].map((f, i) => (
                 <motion.article
                   key={f.label}
-                  {...rise(i % 3)}
+                  variants={GRID_CHILD}
                   className="lq-glass lq-lift group relative flex min-h-[250px] flex-col rounded-[1.25rem] p-6 sm:p-7"
                   onMouseMove={(e) => {
                     const r = e.currentTarget.getBoundingClientRect();
@@ -3811,23 +3822,26 @@ export default function Home() {
                   <p className="relative mt-3 max-w-[34ch] text-sm font-light leading-snug text-white/85">{f.desc}</p>
                 </motion.article>
               ))}
-            </div>
+            </motion.div>
 
             {/* Stats row */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-24">
+            <motion.div
+              className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-24"
+              variants={GRID_PARENT} initial="hidden" whileInView="show" viewport={{ once: true, amount: 0.2 }}
+            >
                 {[
                   { value: '< 60s',   label: 'To create an event',    sub: 'No account needed' },
                   { value: '∞',       label: 'Team members',          sub: 'No per-seat caps' },
                   { value: '4',       label: 'Event modes',           sub: 'Standard, Enterprise, RSVP, Venue' },
                   { value: '7 days',  label: 'Post-event data',       sub: 'Auto-deleted after' },
                 ].map((s, i) => (
-                  <motion.div key={s.label} {...rise(i)} className="lq-glass text-center p-6 sm:p-7 rounded-[1.25rem] cursor-default h-full">
+                  <motion.div key={s.label} variants={GRID_CHILD} className="lq-glass text-center p-6 sm:p-7 rounded-[1.25rem] cursor-default h-full">
                     <div className="lq-display text-4xl sm:text-5xl text-white mb-2 leading-none">{s.value}</div>
                     <div className="text-xs font-medium text-white mb-1">{s.label}</div>
                     <div className="text-xs font-light text-white/60">{s.sub}</div>
                   </motion.div>
                 ))}
-            </div>
+            </motion.div>
 
             {/* Three paths */}
             <div className="grid md:grid-cols-3 gap-4 sm:gap-6">
