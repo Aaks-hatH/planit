@@ -10,7 +10,7 @@
  * Best size: 2400 x 1500 (16:10), WebP or JPG, under 400 KB. Landscape photos work best.
  * `alt` is read by screen readers, so describe what is actually in the picture.
  *
- * Photos: most are from Pexels (free to use, no attribution required). The check-in
+ * Photos: most are from Pexels (free to use, no attribution required); the check-in
  * pictures (home story 3 and careers story 2) and the stage hero are your own uploads.
  */
 const base = '/media';
@@ -44,8 +44,9 @@ export const MEDIA = {
         text: 'Every guest gets a personal QR code. Staff scan at the door and the live count updates for everyone.',
       },
       {
-        src: `${base}/home-story-4-night.webp`,
-        alt: 'A crowd in a large hall under laser lights and big video screens',
+        // Brand-matched skyline replaces the old laser-heavy concert image.
+        src: `${base}/planit-skyline.webp`,
+        alt: 'A sleek modern city skyline illuminated in cool blue and violet light, reflected across calm water at night',
         title: 'Enjoy the night',
         text: 'Announcements, polls, chat and the live feed run themselves while you host. Seven days later it all disappears.',
       },
