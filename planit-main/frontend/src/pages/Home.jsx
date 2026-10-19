@@ -17,18 +17,10 @@ import toast from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
 import { HomePreloader, HomeScrollChrome, ScrollFloat, MotionReveal, useSiteReady } from '../components/HomeMotion';
 import { useWhiteLabel } from '../context/WhiteLabelContext';
-import { SmoothScroll, PerfGovernor, VineScroll, Aurora, BlurText, SpotlightStage, CitySkyline, Festoon, rise } from '../components/liquid/LiquidKit';
-import { GlassOrb, FloatingIsland } from '../components/liquid/LiquidScenes';
-import { Blob3D, Island3D, PageFloaters } from '../components/liquid/Scenes3D';
-
-const HOME_FLOATS = [
-  { kind: 'crystal', mat: 'amber', x: 0.035, y: 0.17, size: 130, spin: 0.004 },
-  { kind: 'knot', mat: 'glass', x: 0.968, y: 0.33, size: 150, spin: 0.003 },
-  { kind: 'ring', mat: 'gold', x: 0.035, y: 0.47, size: 140, spin: 0.005 },
-  { kind: 'bubble', mat: 'glass', x: 0.968, y: 0.58, size: 140, spin: 0.002 },
-  { kind: 'gem', mat: 'rose', x: 0.035, y: 0.69, size: 120, spin: 0.005 },
-  { kind: 'dodeca', mat: 'chrome', x: 0.968, y: 0.8, size: 130, spin: 0.004 },
-];
+import { SmoothScroll, PerfGovernor, Aurora, BlurText, SpotlightStage, rise } from '../components/liquid/LiquidKit';
+import CityScene3D from '../components/liquid/CityScene3D';
+import { ZoomReveal, ScrollStory } from '../components/liquid/ScrollStory';
+import { MEDIA } from '../content/media';
 
 /*
 PLANIT SOFTWARE LICENSE AGREEMENT
@@ -3462,8 +3454,6 @@ export default function Home() {
       <InjectGlobalCSS />
       <PerfGovernor />
       <SmoothScroll enabled={!scrollLocked} />
-      {!isWL && <VineScroll variant="party" />}
-      {!isWL && <PageFloaters items={HOME_FLOATS} />}
       <AnimatePresence>
         {showIntro && introGate && <IntroCinematic onComplete={dismissIntro} />}
       </AnimatePresence>
@@ -3618,13 +3608,11 @@ export default function Home() {
             </div>
           )}
           {!isWL && (
-            <Blob3D
-              className="pointer-events-none"
-              style={{ left: '50%', top: '4svh', width: 'min(84vw, 660px)', height: '84svh', transform: 'translateX(8%)', zIndex: 1, opacity: 0.85 }}
-              fallback={<div className="flex h-full items-center justify-center" style={{ opacity: 0.72 }}><GlassOrb className="!relative" /></div>}
+            <CityScene3D
+              mood="night" seed={7}
+              style={{ left: 0, right: 0, bottom: 0, height: '72%', zIndex: 1, WebkitMaskImage: 'linear-gradient(to bottom, transparent 0%, #000 38%)', maskImage: 'linear-gradient(to bottom, transparent 0%, #000 38%)' }}
             />
           )}
-          {!isWL && <Festoon className="!top-16 opacity-90" />}
 
           <div className="w-full relative" style={{ zIndex: 2 }}>
             <div className="max-w-6xl mx-auto px-4 sm:px-8 lg:px-12 pt-32 pb-14 sm:pt-40 sm:pb-28 lg:pt-44 lg:pb-36 text-center">
@@ -3755,17 +3743,23 @@ export default function Home() {
 
         {!(selectedBranch || isWL) && <ProductShowcase />}
 
+        {!(selectedBranch || isWL) && (
+          <>
+            <ZoomReveal
+              id="real-events" media={MEDIA.home.hero} label="media.js → home.hero"
+              kicker="// Made for real nights"
+              title="Every event, in one place."
+              text="Guest list, seating, door check-in and live updates, on a link your guests can open without an account."
+            />
+            <ScrollStory id="story" items={MEDIA.home.story} label="media.js → home.story" kicker="// From first invite to last dance" />
+          </>
+        )}
+
         {/* ═══════════════════════════════════════════════════════════
             SOCIAL PROOF STRIP, replaces branch gateway
         ═══════════════════════════════════════════════════════════ */}
         <section id="features" className="relative overflow-hidden" style={{ display: (selectedBranch || isWL) ? 'none' : 'block' }}>
           <Aurora palette="violet" density={0.00012} />
-          {!isWL && (
-            <Island3D
-              style={{ right: '-14%', top: '10px', width: 'min(60vw, 640px)', height: '480px', zIndex: 0, opacity: 0.92 }}
-              fallback={<FloatingIsland className="!w-full" />}
-            />
-          )}
           <div className="relative max-w-screen-xl mx-auto px-6 sm:px-10 py-24 sm:py-32">
 
             {/* Section label */}
@@ -5157,10 +5151,16 @@ export default function Home() {
           </div>
         </section>
 
-        {/* Dusk skyline of the venue district, rising into the finale */}
+        {/* The PlanIt event city at dusk, rising into the finale */}
         {!(selectedBranch || isWL) && (
-          <div className="relative -mb-px" style={{ background: 'linear-gradient(180deg, #05050f 0%, rgba(5,5,15,0) 30%)' }}>
-            <CitySkyline />
+          <div id="city-band" className="relative -mb-px overflow-hidden" style={{ height: 'min(78vh, 680px)', background: '#05050f' }}>
+            <CityScene3D
+              mood="dusk" view="close" seed={21}
+              style={{ inset: 0, WebkitMaskImage: 'linear-gradient(to bottom, transparent 0%, #000 30%)', maskImage: 'linear-gradient(to bottom, transparent 0%, #000 30%)' }}
+            />
+            <div className="pointer-events-none absolute inset-x-0 bottom-0 z-[2] flex items-end justify-between px-6 pb-5 font-mono text-[10px] uppercase tracking-[0.28em] text-white/55 sm:px-10">
+              <span>Main stage</span><span className="hidden sm:inline">Big top</span><span>Ferris wheel</span><span className="hidden sm:inline">Arena</span>
+            </div>
           </div>
         )}
 
