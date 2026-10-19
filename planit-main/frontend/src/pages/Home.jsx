@@ -3710,17 +3710,17 @@ export default function Home() {
               </motion.div>
 
               {/* Trust stats */}
-              <motion.div {...enter(1.3)} className="flex flex-wrap items-stretch justify-center gap-4 mb-12 sm:mb-14">
+              <motion.div {...enter(1.3)} className="mx-auto flex w-full max-w-sm flex-col items-stretch gap-3 mb-12 sm:mb-14 sm:max-w-none sm:flex-row sm:flex-wrap sm:justify-center sm:gap-4">
                 {[
                   { tag: 'Free forever',   desc: 'No credit card required',          Icon: Sparkles },
                   { tag: 'Zero accounts',  desc: 'Guests join by name instantly',     Icon: Zap },
                   { tag: 'Unlimited team', desc: 'Every organizer & vendor included', Icon: Users },
                 ].map(({ tag, desc, Icon }) => (
-                  <div key={tag} className="lq-glass p-5 w-[220px] max-w-full rounded-[1.25rem] text-left flex flex-col justify-between gap-6 text-white cursor-default">
-                    <Icon className="w-7 h-7" strokeWidth={1.5} />
-                    <div>
-                      <div className="lq-display text-3xl leading-none">{tag}</div>
-                      <div className="text-xs font-light mt-2 text-white/80">{desc}</div>
+                  <div key={tag} className="lq-glass flex w-full min-w-0 items-center gap-4 rounded-[1.25rem] p-4 text-left text-white cursor-default sm:w-[220px] sm:flex-col sm:items-stretch sm:justify-between sm:gap-6 sm:p-5">
+                    <Icon className="h-6 w-6 shrink-0 sm:h-7 sm:w-7" strokeWidth={1.5} />
+                    <div className="min-w-0">
+                      <div className="lq-display text-[1.45rem] leading-[1.05] sm:text-3xl sm:leading-none" style={{ overflowWrap: 'normal' }}>{tag}</div>
+                      <div className="mt-1.5 text-xs font-light text-white/80 sm:mt-2">{desc}</div>
                     </div>
                   </div>
                 ))}
@@ -3730,9 +3730,9 @@ export default function Home() {
               {!isWL && (
                 <motion.div {...enter(1.4)} className="flex flex-col items-center gap-4 mb-14 sm:mb-16">
                   <div className="lq-glass rounded-full px-3.5 py-1 text-xs font-medium text-white/90">One workspace for the whole event</div>
-                  <ul className="flex flex-wrap justify-center gap-x-8 sm:gap-x-12 md:gap-x-14 gap-y-1" aria-label="What's included">
+                  <ul className="flex max-w-md flex-wrap justify-center gap-2 sm:max-w-none sm:gap-x-12 sm:gap-y-1 md:gap-x-14" aria-label="What's included">
                     {['Team chat', 'Task lists', 'Live polls', 'RSVP', 'QR check-in', 'Seating', 'Claude AI'].map((w) => (
-                      <li key={w} className="lq-display text-white text-xl md:text-3xl">{w}</li>
+                      <li key={w} className="lq-display max-md:rounded-full max-md:border max-md:border-white/15 max-md:bg-white/5 max-md:px-3.5 max-md:py-1.5 text-white text-sm md:text-3xl" style={{ overflowWrap: 'normal' }}>{w}</li>
                     ))}
                   </ul>
                 </motion.div>
