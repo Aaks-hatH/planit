@@ -14,7 +14,6 @@ import { buildJobPostingLd } from '../../jobPostingLd.js';
 import { getIdentity } from '../services/tracker';
 import TurnstileWidget from '../components/TurnstileWidget';
 import { SmoothScroll, PerfGovernor, Aurora, BlurText, SpotlightStage } from '../components/liquid/LiquidKit';
-import CityScene3D from '../components/liquid/CityScene3D';
 import { ZoomReveal, ScrollStory } from '../components/liquid/ScrollStory';
 import { HomePreloader } from '../components/HomeMotion';
 import { MEDIA } from '../content/media';
@@ -467,7 +466,7 @@ function ScrollChrome() {
     <>
       <motion.div
         style={{ scaleX: bar }}
-        className="fixed left-0 right-0 top-0 z-[90] h-[3px] origin-left bg-gradient-to-r from-indigo-400 via-pink-400 to-orange-400"
+        className="fixed left-0 right-0 top-0 z-[90] h-[3px] origin-left bg-gradient-to-r from-indigo-400 via-violet-400 to-emerald-300"
       />
     </>
   );
@@ -514,11 +513,11 @@ const HERO_LINES = [
 ];
 const CHIPS = [
   { t: 'React', x: '5%', y: '23%', d: 30, c: '#818cf8', s: 5.2 },
-  { t: 'Figma', x: '11%', y: '67%', d: 46, c: '#f472b6', s: 6.4 },
-  { t: 'Node.js', x: '90%', y: '27%', d: 38, c: '#fb923c', s: 5.8 },
-  { t: 'SEO', x: '84%', y: '71%', d: 24, c: '#818cf8', s: 6.9 },
-  { t: 'Security', x: '2.5%', y: '45%', d: 20, c: '#f472b6', s: 7.3 },
-  { t: 'Video', x: '94%', y: '49%', d: 52, c: '#fb923c', s: 5.5 },
+  { t: 'Figma', x: '11%', y: '67%', d: 46, c: '#a78bfa', s: 6.4 },
+  { t: 'Node.js', x: '90%', y: '27%', d: 38, c: '#22d3ee', s: 5.8 },
+  { t: 'SEO', x: '84%', y: '71%', d: 24, c: '#6ee7b7', s: 6.9 },
+  { t: 'Security', x: '2.5%', y: '45%', d: 20, c: '#818cf8', s: 7.3 },
+  { t: 'Video', x: '94%', y: '49%', d: 52, c: '#22d3ee', s: 5.5 },
 ];
 
 function FloatChip({ chip, mx, my, go }) {
@@ -567,19 +566,22 @@ function Hero({ openRoles, teams, accepting, onBrowse, onGeneral, go }) {
 
   return (
     <section id="top" ref={ref} onMouseMove={onMove} className="relative flex min-h-[100svh] items-center overflow-hidden px-5 pb-24 pt-32">
-      <Aurora palette="sunset" density={0.00014} />
-      <CityScene3D
-        mood="dawn" seed={13}
-        style={{ left: 0, right: 0, bottom: 0, height: '56%', zIndex: 0, opacity: 0.9, WebkitMaskImage: 'linear-gradient(to bottom, transparent 0%, #000 62%)', maskImage: 'linear-gradient(to bottom, transparent 0%, #000 62%)' }}
-      />
+      <div aria-hidden="true" className="pointer-events-none absolute inset-0 z-0" style={{
+        backgroundImage: 'linear-gradient(180deg, rgba(5,5,15,.18) 0%, rgba(5,5,15,.28) 36%, rgba(5,5,15,.78) 74%, #05050f 100%), linear-gradient(90deg, rgba(5,5,15,.34) 0%, rgba(5,5,15,.08) 50%, rgba(5,5,15,.34) 100%), url("/media/planit-skyline.webp")',
+        backgroundSize: 'cover', backgroundPosition: 'center 68%', transform: 'scale(1.015)',
+      }} />
+      <div aria-hidden="true" className="pointer-events-none absolute inset-0 z-0 opacity-30" style={{
+        backgroundImage: 'linear-gradient(rgba(199,210,254,.045) 1px, transparent 1px), linear-gradient(90deg, rgba(199,210,254,.045) 1px, transparent 1px)',
+        backgroundSize: '76px 76px', maskImage: 'radial-gradient(ellipse at 50% 34%, black, transparent 78%)', WebkitMaskImage: 'radial-gradient(ellipse at 50% 34%, black, transparent 78%)',
+      }} />
       {/* depth layers */}
       <div className="pointer-events-none absolute inset-0" style={{ backgroundImage: 'linear-gradient(rgba(255,255,255,.045) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.045) 1px,transparent 1px)', backgroundSize: '72px 72px', maskImage: 'radial-gradient(ellipse 62% 56% at 50% 46%, #000 25%, transparent 78%)', WebkitMaskImage: 'radial-gradient(ellipse 62% 56% at 50% 46%, #000 25%, transparent 78%)' }} />
       <motion.div style={{ rotate: ringRot }} className="pointer-events-none absolute left-1/2 top-1/2 hidden h-[900px] w-[900px] -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/[0.05] md:block">
-        <span className="absolute left-1/2 top-0 h-2 w-2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-pink-400" />
+        <span className="absolute left-1/2 top-0 h-2 w-2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-emerald-300" />
         <span className="absolute bottom-[14%] right-[6%] h-1.5 w-1.5 rounded-full bg-indigo-300" />
       </motion.div>
       <motion.div style={{ rotate: useTransform(ringRot, (v) => -v * 1.6) }} className="pointer-events-none absolute left-1/2 top-1/2 hidden h-[620px] w-[620px] -translate-x-1/2 -translate-y-1/2 rounded-full border border-dashed border-white/[0.06] md:block">
-        <span className="absolute right-0 top-1/2 h-1.5 w-1.5 -translate-y-1/2 translate-x-1/2 rounded-full bg-orange-400" />
+        <span className="absolute right-0 top-1/2 h-1.5 w-1.5 -translate-y-1/2 translate-x-1/2 rounded-full bg-violet-300" />
       </motion.div>
       {CHIPS.map((c) => <FloatChip key={c.t} chip={c} mx={mx} my={my} go={go} />)}
       <div aria-hidden="true" className="pointer-events-none absolute left-6 top-1/2 hidden -translate-y-1/2 rotate-180 text-[10px] tracking-[0.4em] text-neutral-600 [writing-mode:vertical-rl] lg:block">VOLUNTEER CREW · REMOTE · ASYNC-FIRST · {new Date().getFullYear()}</div>
@@ -603,8 +605,8 @@ function Hero({ openRoles, teams, accepting, onBrowse, onGeneral, go }) {
           className="mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row"
         >
           <Magnetic>
-            <button onClick={onBrowse} data-cursor="Go" className="group relative flex items-center gap-2 overflow-hidden rounded-full bg-gradient-to-r from-indigo-500 via-pink-500 to-orange-400 px-7 py-3.5 text-sm font-extrabold text-white transition">
-              <span className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-pink-300/50 to-transparent transition-transform duration-700 group-hover:translate-x-full" />
+            <button onClick={onBrowse} data-cursor="Go" className="group relative flex items-center gap-2 overflow-hidden rounded-full bg-gradient-to-r from-indigo-500 via-violet-500 to-cyan-400 px-7 py-3.5 text-sm font-extrabold text-white transition">
+              <span className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-indigo-100/45 to-transparent transition-transform duration-700 group-hover:translate-x-full" />
               <span className="relative">See open roles</span>
               <ArrowRight className="relative h-4 w-4 transition-transform group-hover:translate-x-1" />
             </button>
@@ -1700,7 +1702,7 @@ export default function Careers() {
     <div className="careers-root lq-page relative min-h-screen overflow-x-clip bg-[#05050f] font-sans text-white selection:bg-pink-400/30">
       <style>{`
         .careers-root .font-display { font-family: var(--lq-display); font-style: normal; font-weight: 800; letter-spacing: -0.035em; }
-        .careers-shine { background: linear-gradient(90deg, #818cf8 0%, #f472b6 45%, #fb923c 100%); -webkit-background-clip: text; background-clip: text; color: transparent; -webkit-text-fill-color: transparent; }
+        .careers-shine { background: linear-gradient(90deg, #a5b4fc 0%, #818cf8 46%, #6ee7b7 100%); -webkit-background-clip: text; background-clip: text; color: transparent; -webkit-text-fill-color: transparent; }
         @keyframes careers-spin { to { transform: rotate(360deg); } }
         @keyframes careers-drip { 0% { transform: translateY(-100%); } 100% { transform: translateY(260%); } }
         @keyframes careers-blink { 50% { opacity: 0; } }
