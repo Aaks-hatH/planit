@@ -35,8 +35,57 @@ export function useSiteReady() {
   return ready;
 }
 
-/* ─── Preloader ────────────────────────────────────────────────────────────── */
+/* ─── Preloader: a guy shoves the plan aside to reveal PlanIt ───────────────── */
 const LOAD_WORDS = ['Setting the stage', 'Seating the guests', 'Scanning the door', 'Doors open'];
+const PLAN_ROWS = ['09:00  LOAD IN', '10:30  DOORS', '12:00  KEYNOTE', '13:30  LUNCH', '15:00  BREAKOUTS', '18:00  GALA', '21:00  AFTER PARTY', '23:30  WRAP'];
+
+function Pusher() {
+  const ink = '#111';
+  return (
+    <svg viewBox="0 0 140 170" className="h-full w-full overflow-visible" aria-hidden="true">
+      <style>{`
+        @keyframes pl-legA { 0% { transform: rotate(-34deg) } 100% { transform: rotate(30deg) } }
+        @keyframes pl-legB { 0% { transform: rotate(30deg) } 100% { transform: rotate(-34deg) } }
+        @keyframes pl-bob { 0%,100% { transform: translateY(0) } 50% { transform: translateY(-3px) } }
+        .pl-legA, .pl-legB { transform-box: view-box; animation-duration: .42s; animation-timing-function: ease-in-out; animation-iteration-count: infinite; animation-direction: alternate; }
+        .pl-legA { animation-name: pl-legA } .pl-legB { animation-name: pl-legB }
+        .pl-body { animation: pl-bob .42s ease-in-out infinite }
+        @media (prefers-reduced-motion: reduce) { .pl-legA, .pl-legB, .pl-body { animation: none } }
+      `}</style>
+      <g transform="rotate(10 60 160)">
+        {/* back leg */}
+        <g className="pl-legB" style={{ transformOrigin: '56px 112px' }}>
+          <path d="M56 112 L50 138 L58 160" stroke={ink} strokeWidth="9" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+          <path d="M58 160 l16 1 c3 0 4 4 0 5 l-22 1 z" fill="#fff" stroke={ink} strokeWidth="3" strokeLinejoin="round" />
+        </g>
+        <g className="pl-body">
+          {/* back arm */}
+          <path d="M70 56 L100 62 L122 58" stroke={ink} strokeWidth="8" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+          {/* torso */}
+          <path d="M44 50 Q62 42 80 52 L84 96 Q62 108 46 100 Z" fill="#8a8a8a" stroke={ink} strokeWidth="3" strokeLinejoin="round" />
+          {[[58, 64], [70, 72], [56, 82], [68, 90], [76, 62]].map(([x, y], i) => <circle key={i} cx={x} cy={y} r="3.2" fill="#fff" />)}
+          {/* shorts */}
+          <path d="M46 100 Q62 108 84 96 L86 120 L66 122 L62 112 L58 123 L44 121 Z" fill="#ececec" stroke={ink} strokeWidth="3" strokeLinejoin="round" />
+          {/* head + cap */}
+          <circle cx="66" cy="30" r="14" fill="#fff" stroke={ink} strokeWidth="3" />
+          <path d="M52 27 Q54 10 70 12 Q82 14 80 26 Z" fill="#9a9a9a" stroke={ink} strokeWidth="3" strokeLinejoin="round" />
+          <path d="M78 24 L96 28 L78 31 Z" fill="#9a9a9a" stroke={ink} strokeWidth="3" strokeLinejoin="round" />
+          <circle cx="72" cy="33" r="1.8" fill={ink} /><path d="M70 40 q6 3 10 -1" stroke={ink} strokeWidth="2.4" fill="none" strokeLinecap="round" />
+          <path d="M84 40 q3 5 0 8 q-3 -3 0 -8" fill="#8fd0ff" stroke={ink} strokeWidth="1.4" />
+          {/* front arm */}
+          <path d="M74 58 L104 70 L126 66" stroke={ink} strokeWidth="8" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+          <circle cx="127" cy="66" r="5.5" fill="#fff" stroke={ink} strokeWidth="3" />
+          <circle cx="123" cy="58" r="5.5" fill="#fff" stroke={ink} strokeWidth="3" />
+        </g>
+        {/* front leg */}
+        <g className="pl-legA" style={{ transformOrigin: '64px 112px' }}>
+          <path d="M64 112 L74 136 L66 160" stroke={ink} strokeWidth="9" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+          <path d="M66 160 l16 1 c3 0 4 4 0 5 l-22 1 z" fill="#fff" stroke={ink} strokeWidth="3" strokeLinejoin="round" />
+        </g>
+      </g>
+    </svg>
+  );
+}
 
 export function HomePreloader({ ready, onReveal, onDone }) {
   const reduce = useReducedMotion();
@@ -49,18 +98,18 @@ export function HomePreloader({ ready, onReveal, onDone }) {
     let raf;
     const t0 = performance.now();
     let last = t0; let val = 0; let fired = false;
-    const minMs = reduce ? 300 : 1300;
+    const minMs = reduce ? 300 : 2100;
     const tick = (t) => {
       const el = t - t0;
       const dt = Math.min(64, t - last); last = t;
-      const ok = readyRef.current || el > 3500;
-      const target = ok && el > minMs ? 100 : Math.min(ok ? 96 : 86, (1 - Math.exp(-el / 700)) * 100);
-      val += (target - val) * (1 - Math.exp(-dt / 110));
+      const ok = readyRef.current || el > 4200;
+      const target = ok && el > minMs ? 100 : Math.min(ok ? 96 : 86, (1 - Math.exp(-el / 900)) * 100);
+      val += (target - val) * (1 - Math.exp(-dt / 120));
       if (target === 100 && val > 99.4) val = 100;
-      setP(Math.round(val));
+      setP(Math.round(val * 10) / 10);
       if (val >= 100 && !fired) {
         fired = true;
-        setTimeout(() => { setPhase('exit'); onReveal?.(); }, 320);
+        setTimeout(() => { setPhase('exit'); onReveal?.(); }, 380);
         return;
       }
       raf = requestAnimationFrame(tick);
@@ -71,57 +120,48 @@ export function HomePreloader({ ready, onReveal, onDone }) {
 
   const exit = phase === 'exit';
   const word = LOAD_WORDS[Math.min(LOAD_WORDS.length - 1, Math.floor(p / 26))];
-  const curtain = { duration: reduce ? 0.2 : 1.0, ease: [0.76, 0, 0.24, 1], delay: reduce ? 0 : 0.34 };
+  const edge = 6 + p * 0.94; // % from the left where the plan sheet starts
 
   return (
-    <div className="fixed inset-0" style={{ zIndex: 1100 }} role="status" aria-label="Loading PlanIt">
-      <motion.div
-        className="absolute inset-x-0 top-0 h-1/2"
-        style={{ background: '#04040a' }}
-        animate={{ y: exit ? '-101%' : 0 }}
-        transition={curtain}
+    <motion.div
+      className="fixed inset-0 overflow-hidden"
+      style={{ zIndex: 1100, background: '#fbfaf7' }}
+      role="status" aria-label="Loading PlanIt"
+      animate={{ y: exit ? '-100%' : 0 }}
+      transition={{ duration: reduce ? 0.2 : 0.95, ease: [0.76, 0, 0.24, 1], delay: reduce ? 0 : 0.25 }}
+      onAnimationComplete={() => exit && onDone?.()}
+    >
+      {/* the word, revealed as the plan is shoved aside */}
+      <div className="absolute inset-0 flex items-center justify-center">
+        <div className="lq-display select-none whitespace-nowrap text-[clamp(3rem,17vw,17rem)] leading-none tracking-[-0.05em]" style={{ color: '#ff4b4b' }}>PlanIt</div>
+      </div>
+
+      {/* the plan: a dark schedule sheet that gets pushed off to the right */}
+      <div
+        className="absolute inset-y-0 right-0 overflow-hidden"
+        style={{ left: `${edge}%`, background: '#050507', willChange: 'left' }}
       >
-        <div className="absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-indigo-400/40 to-transparent" />
-      </motion.div>
-      <motion.div
-        className="absolute inset-x-0 bottom-0 h-1/2"
-        style={{ background: '#04040a' }}
-        animate={{ y: exit ? '101%' : 0 }}
-        transition={curtain}
-        onAnimationComplete={() => exit && onDone?.()}
-      />
-      <motion.div
-        className="absolute inset-0 flex flex-col justify-between p-6 sm:p-10"
-        animate={{ opacity: exit ? 0 : 1, scale: exit ? 1.04 : 1, filter: exit ? 'blur(10px)' : 'blur(0px)' }}
-        transition={{ duration: 0.55, ease: EASE }}
+        <div className="absolute inset-0 opacity-[0.16]" style={{ backgroundImage: 'linear-gradient(rgba(255,255,255,.5) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.5) 1px, transparent 1px)', backgroundSize: '48px 48px' }} />
+        <div className="absolute left-8 top-1/2 hidden -translate-y-1/2 space-y-3 font-mono text-[11px] tracking-[0.2em] text-white/55 sm:block">
+          <div className="mb-5 text-white/90">THE PLAN</div>
+          {PLAN_ROWS.map((r) => <div key={r}>{r}</div>)}
+        </div>
+      </div>
+
+      {/* the guy doing the pushing */}
+      <div
+        className="absolute"
+        style={{ left: `${edge}%`, top: '50%', height: 'clamp(150px, 24vw, 260px)', aspectRatio: '140 / 170', transform: 'translate(-92%, -34%)', willChange: 'left' }}
       >
-        <div className="flex items-start justify-between text-[11px] tracking-[0.3em] text-neutral-500">
-          <span><b className="lq-display text-base font-medium text-white">PlanIt</b> / EVENTS</span>
-          <span>&copy; {new Date().getFullYear()}</span>
-        </div>
-        <div className="mx-auto w-full max-w-3xl text-center">
-          <div className="lq-display text-[clamp(5rem,24vw,15rem)] leading-none tracking-[-0.04em] text-white tabular-nums">
-            {String(p).padStart(2, '0')}
-            <span
-              className="inline-block pr-[0.14em] align-top text-[0.28em]"
-              style={{
-                background: 'linear-gradient(90deg,#6366f1,#8b5cf6)',
-                WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent',
-              }}
-            >%</span>
-          </div>
-          <div className="relative mx-auto mt-6 h-px w-full max-w-md bg-white/10">
-            <div className="absolute inset-y-0 left-0 bg-gradient-to-r from-indigo-500 to-violet-500" style={{ width: `${p}%` }} />
-            <span className="absolute top-1/2 h-1.5 w-1.5 -translate-y-1/2 rounded-full bg-white" style={{ left: `${p}%` }} />
-          </div>
-          <div className="mt-5 h-4 text-[11px] uppercase tracking-[0.3em] text-indigo-300/70">{word}</div>
-        </div>
-        <div className="flex items-end justify-between text-[10px] tracking-[0.3em] text-neutral-600">
-          <span>PLAN &middot; INVITE &middot; CHECK IN</span>
-          <span className="hidden sm:block">LOADING FONTS &amp; DEMOS</span>
-        </div>
-      </motion.div>
-    </div>
+        <Pusher />
+      </div>
+
+      <div className="absolute inset-x-0 bottom-0 flex items-end justify-between p-6 font-mono text-[11px] uppercase tracking-[0.25em] text-black/60 sm:p-10">
+        <span>{word}</span>
+        <span className="text-[clamp(1.6rem,4vw,3rem)] tracking-normal tabular-nums text-black">{String(Math.min(100, Math.round(p))).padStart(2, '0')}%</span>
+      </div>
+      <div className="absolute left-6 top-6 font-mono text-[11px] uppercase tracking-[0.25em] text-black/60 sm:left-10 sm:top-8">PlanIt / Events</div>
+    </motion.div>
   );
 }
 
