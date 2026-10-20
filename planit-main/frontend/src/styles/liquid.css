@@ -27,7 +27,12 @@
   font-style: normal;
   font-weight: 800;
   letter-spacing: -0.035em;
-  overflow-wrap: anywhere;
+  /* Syne 800 is a very wide face. `anywhere` split words like "accounts" into
+     "accoun / ts" inside narrow cards, so only break a word when it truly
+     cannot fit on a line of its own, and never hyphenate. */
+  overflow-wrap: break-word;
+  word-break: normal;
+  hyphens: none;
 }
 
 /* Section headings on the pages become Bodoni italic automatically; wizard, mock
@@ -47,13 +52,17 @@
 
 /* Brand gradient, same stops the pages already use for their accent words */
 .lq-grad {
-  background: linear-gradient(90deg, #818cf8 0%, #f472b6 48%, #fb923c 100%);
+  /* Palindromic stops so the looping shimmer is seamless (the old gradient
+     ended on orange and restarted on indigo, leaving a hard purple seam). */
+  background: linear-gradient(90deg, #818cf8 0%, #f472b6 25%, #fb923c 50%, #f472b6 75%, #818cf8 100%);
   background-size: 200% auto;
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
   -webkit-text-fill-color: transparent;
   animation: lq-shimmer 7s linear infinite;
+  /* keep the glyph edges from being clipped by the inline-block box */
+  padding-right: 0.04em;
 }
 @keyframes lq-shimmer { to { background-position: 200% center; } }
 
@@ -63,45 +72,61 @@
   position: relative;
   overflow: hidden;
   border: none;
-  background: rgba(255, 255, 255, 0.015);
-  background-blend-mode: luminosity;
-  -webkit-backdrop-filter: blur(6px);
-  backdrop-filter: blur(6px);
-  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.1);
+  background:
+    radial-gradient(120% 90% at 50% -20%, rgba(165, 180, 252, 0.10), rgba(165, 180, 252, 0) 60%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.045), rgba(255, 255, 255, 0.012));
+  -webkit-backdrop-filter: blur(10px) saturate(130%);
+  backdrop-filter: blur(10px) saturate(130%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.14),
+    0 10px 30px -12px rgba(0, 0, 0, 0.55);
 }
 .lq-glass-strong {
-  -webkit-backdrop-filter: blur(40px);
-  backdrop-filter: blur(40px);
-  box-shadow: 4px 4px 4px rgba(0, 0, 0, 0.05), inset 0 1px 1px rgba(255, 255, 255, 0.15);
+  -webkit-backdrop-filter: blur(40px) saturate(140%);
+  backdrop-filter: blur(40px) saturate(140%);
+  box-shadow:
+    4px 4px 4px rgba(0, 0, 0, 0.05),
+    inset 0 1px 0 rgba(255, 255, 255, 0.18),
+    0 10px 30px -12px rgba(0, 0, 0, 0.55);
 }
+/* Hairline border: bright at the top edge, but never fading out at the sides,
+   so the card reads as one closed, clean shape. */
 .lq-glass::before,
 .lq-glass-strong::before {
   content: '';
   position: absolute;
   inset: 0;
   border-radius: inherit;
-  padding: 1.4px;
+  padding: 1px;
   pointer-events: none;
   background: linear-gradient(180deg,
-    rgba(255, 255, 255, 0.45) 0%,
-    rgba(255, 255, 255, 0.15) 20%,
-    rgba(255, 255, 255, 0) 40%,
-    rgba(255, 255, 255, 0) 60%,
-    rgba(255, 255, 255, 0.15) 80%,
-    rgba(255, 255, 255, 0.45) 100%);
+    rgba(255, 255, 255, 0.40) 0%,
+    rgba(255, 255, 255, 0.16) 30%,
+    rgba(255, 255, 255, 0.10) 65%,
+    rgba(255, 255, 255, 0.22) 100%);
   -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
   -webkit-mask-composite: xor;
   mask-composite: exclude;
 }
 .lq-glass-strong::before {
   background: linear-gradient(180deg,
-    rgba(255, 255, 255, 0.5) 0%,
-    rgba(255, 255, 255, 0.2) 20%,
-    rgba(255, 255, 255, 0) 40%,
-    rgba(255, 255, 255, 0) 60%,
-    rgba(255, 255, 255, 0.2) 80%,
-    rgba(255, 255, 255, 0.5) 100%);
+    rgba(255, 255, 255, 0.46) 0%,
+    rgba(255, 255, 255, 0.20) 30%,
+    rgba(255, 255, 255, 0.12) 65%,
+    rgba(255, 255, 255, 0.26) 100%);
 }
+/* Hero stat cards: the title scales with the card (container query) so the
+   widest word ("Unlimited") always fits on one line instead of splitting. */
+.lq-stat { container-type: inline-size; }
+.lq-stat-title {
+  font-size: 1.35rem;
+  font-size: clamp(1.1rem, 12cqw, 1.7rem);
+  line-height: 1.08;
+  letter-spacing: -0.03em;
+  overflow-wrap: normal;
+  text-wrap: balance;
+}
+
 /* Soft hover lift for interactive glass */
 /* Uses the standalone `translate` property so it never fights framer-motion's inline `transform`. */
 .lq-lift { transition: translate .5s cubic-bezier(.22, 1, .36, 1), background-color .4s ease; }
