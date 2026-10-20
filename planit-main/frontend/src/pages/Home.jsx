@@ -15,7 +15,7 @@ import { trackGAEvent } from '../services/analytics';
 import RecoveryCodeModal from '../components/RecoveryCodeModal';
 import toast from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
-import { HomePreloader, HomeScrollChrome, ScrollFloat, MotionReveal, useSiteReady } from '../components/HomeMotion';
+import { HomePreloader, HomeScrollChrome, HeroHeadline, ScrollFloat, MotionReveal, useSiteReady } from '../components/HomeMotion';
 import { useWhiteLabel } from '../context/WhiteLabelContext';
 import { SmoothScroll, PerfGovernor, Aurora, BlurText, SpotlightStage } from '../components/liquid/LiquidKit';
 import { ZoomReveal, ScrollStory } from '../components/liquid/ScrollStory';
@@ -3643,15 +3643,7 @@ export default function Home() {
                     {heroHeadline}
                   </motion.h1>
                 ) : (
-                  <BlurText
-                    as="h1"
-                    start={introGate}
-                    delay={110}
-                    text={'Plan every detail.\nExecute flawlessly.'}
-                    accent={[4]}
-                    className="lq-display mb-6 sm:mb-8 leading-[0.98] text-white"
-                    style={{ fontSize: 'clamp(2.7rem, 6.5vw, 6.8rem)', letterSpacing: '-0.045em' }}
-                  />
+                  <div className="mb-6 sm:mb-8"><HeroHeadline start={introGate} /></div>
                 )
               }
 
