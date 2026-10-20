@@ -4,8 +4,8 @@
  * Motion layer for the PlanIt home page. Additive only: nothing here changes
  * fonts, copy, demos or layout.
  *
- *   HomePreloader    counter + hairline progress, then a two-panel curtain.
- *                    Progress follows real readiness (fonts + window load).
+ *   HomePreloader    a bouncing-ball character piece that writes "PlanIt" and
+ *                    bursts open as an iris. Holds until fonts + load are ready.
  *   HomeScrollChrome scroll percentage + depth rail that jumps between sections.
  *   ScrollFloat      scroll-linked parallax / scale wrapper for big visuals.
  *   MotionReveal     spring-in-view reveal (opacity + offset).
@@ -35,53 +35,85 @@ export function useSiteReady() {
   return ready;
 }
 
-/* ─── Preloader: a guy shoves the plan aside to reveal PlanIt ───────────────── */
-const LOAD_WORDS = ['Setting the stage', 'Seating the guests', 'Scanning the door', 'Doors open'];
-const PLAN_ROWS = ['09:00  LOAD IN', '10:30  DOORS', '12:00  KEYNOTE', '13:30  LUNCH', '15:00  BREAKOUTS', '18:00  GALA', '21:00  AFTER PARTY', '23:30  WRAP'];
+/* ─── Preloader ─────────────────────────────────────────────────────────────
+   A character walks in from the left and shoves a big colour panel across the
+   screen, uncovering the PlanIt wordmark. Then the panel and the character
+   leave together and the loader dissolves onto the hero.
 
-function Pusher() {
-  const ink = '#c7d2fe';
+   Built to stay smooth on phones:
+     - one requestAnimationFrame loop, zero React re-renders while it plays
+     - only transforms and opacity are animated (compositor-friendly):
+       no masks, filters, blur, canvas or layout-changing properties
+     - the walk cycle is tied to the distance travelled, so feet never skate
+     - the position eases toward its target, so a slow frame never causes a jump
+   It holds near the end until fonts + window load are ready. Tap to fast-forward.
+   prefers-reduced-motion gets a plain fade. Colours are the site's own.
+   ───────────────────────────────────────────────────────────────────────── */
+const WORD = ['P', 'l', 'a', 'n', 'I', 't'];
+const INK = '#0b0b1c';
+const LOAD_WORDS = ['Setting the stage', 'Seating the guests', 'Scanning the door', 'Doors open'];
+
+const clamp01 = (v) => (v < 0 ? 0 : v > 1 ? 1 : v);
+const easeInOutCubic = (t) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
+const easeOutBack = (t) => { const c1 = 1.9; const c3 = c1 + 1; return 1 + c3 * Math.pow(t - 1, 3) + c1 * Math.pow(t - 1, 2); };
+
+// A limb drawn as an outlined stroke: ink underneath, fill on top.
+function Limb({ d, w, fill }) {
   return (
-    <svg viewBox="0 0 140 170" className="h-full w-full overflow-visible" aria-hidden="true">
-      <style>{`
-        @keyframes pl-legA { 0% { transform: rotate(-34deg) } 100% { transform: rotate(30deg) } }
-        @keyframes pl-legB { 0% { transform: rotate(30deg) } 100% { transform: rotate(-34deg) } }
-        @keyframes pl-bob { 0%,100% { transform: translateY(0) } 50% { transform: translateY(-3px) } }
-        .pl-legA, .pl-legB { transform-box: view-box; animation-duration: .42s; animation-timing-function: ease-in-out; animation-iteration-count: infinite; animation-direction: alternate; }
-        .pl-legA { animation-name: pl-legA } .pl-legB { animation-name: pl-legB }
-        .pl-body { animation: pl-bob .42s ease-in-out infinite }
-        @media (prefers-reduced-motion: reduce) { .pl-legA, .pl-legB, .pl-body { animation: none } }
-      `}</style>
-      <g transform="rotate(10 60 160)">
-        {/* back leg */}
-        <g className="pl-legB" style={{ transformOrigin: '56px 112px' }}>
-          <path d="M56 112 L50 138 L58 160" stroke={ink} strokeWidth="9" strokeLinecap="round" strokeLinejoin="round" fill="none" />
-          <path d="M58 160 l16 1 c3 0 4 4 0 5 l-22 1 z" fill="#e0e7ff" stroke={ink} strokeWidth="3" strokeLinejoin="round" />
+    <g fill="none" strokeLinecap="round" strokeLinejoin="round">
+      <path d={d} stroke={INK} strokeWidth={w + 7} />
+      <path d={d} stroke={fill} strokeWidth={w} />
+    </g>
+  );
+}
+
+function Shoe({ x, y, refEl }) {
+  return (
+    <g ref={refEl}>
+      <path d={`M${x - 10} ${y - 4} L${x + 8} ${y - 6} Q${x + 24} ${y - 4} ${x + 26} ${y + 5} L${x + 26} ${y + 8} L${x - 12} ${y + 8} Z`} fill="#f5f6ff" stroke={INK} strokeWidth="3.4" strokeLinejoin="round" />
+      <path d={`M${x - 2} ${y - 3} Q${x + 8} ${y + 1} ${x + 18} ${y - 2}`} stroke="#f472b6" strokeWidth="4" fill="none" strokeLinecap="round" />
+      <path d={`M${x - 12} ${y + 5} L${x + 26} ${y + 5}`} stroke={INK} strokeWidth="2.4" />
+    </g>
+  );
+}
+
+function Pusher({ refs }) {
+  const skin = '#fcd9b6';
+  const dots = [[76, 82], [96, 76], [112, 90], [84, 104], [104, 112], [120, 108], [74, 124], [94, 130]];
+  return (
+    <svg viewBox="0 0 200 240" className="h-full w-full" style={{ overflow: 'visible', display: 'block' }} aria-hidden="true">
+      <g ref={refs.body}>
+        {/* far arm */}
+        <Limb d="M104 78 L142 92 L178 84" w={10} fill="#e9b98f" />
+        {/* far leg (behind) */}
+        <g ref={refs.legB}>
+          <Limb d="M90 150 L84 190 L72 222" w={14} fill="#e9b98f" />
+          <path d="M74 200 L72 222" stroke="#fff" strokeWidth="14" strokeLinecap="round" opacity="0.95" />
+          <Shoe x={72} y={226} refEl={refs.shoeB} />
         </g>
-        <g className="pl-body">
-          {/* back arm */}
-          <path d="M70 56 L100 62 L122 58" stroke={ink} strokeWidth="8" strokeLinecap="round" strokeLinejoin="round" fill="none" />
-          {/* torso */}
-          <path d="M44 50 Q62 42 80 52 L84 96 Q62 108 46 100 Z" fill="#6366f1" stroke={ink} strokeWidth="3" strokeLinejoin="round" />
-          {[[58, 64], [70, 72], [56, 82], [68, 90], [76, 62]].map(([x, y], i) => <circle key={i} cx={x} cy={y} r="3.2" fill="#e0e7ff" />)}
-          {/* shorts */}
-          <path d="M46 100 Q62 108 84 96 L86 120 L66 122 L62 112 L58 123 L44 121 Z" fill="#2dd4bf" stroke={ink} strokeWidth="3" strokeLinejoin="round" />
-          {/* head + cap */}
-          <circle cx="66" cy="30" r="14" fill="#e0e7ff" stroke={ink} strokeWidth="3" />
-          <path d="M52 27 Q54 10 70 12 Q82 14 80 26 Z" fill="#818cf8" stroke={ink} strokeWidth="3" strokeLinejoin="round" />
-          <path d="M78 24 L96 28 L78 31 Z" fill="#818cf8" stroke={ink} strokeWidth="3" strokeLinejoin="round" />
-          <circle cx="72" cy="33" r="1.8" fill={ink} /><path d="M70 40 q6 3 10 -1" stroke={ink} strokeWidth="2.4" fill="none" strokeLinecap="round" />
-          <path d="M84 40 q3 5 0 8 q-3 -3 0 -8" fill="#2dd4bf" stroke={ink} strokeWidth="1.4" />
-          {/* front arm */}
-          <path d="M74 58 L104 70 L126 66" stroke={ink} strokeWidth="8" strokeLinecap="round" strokeLinejoin="round" fill="none" />
-          <circle cx="127" cy="66" r="5.5" fill="#e0e7ff" stroke={ink} strokeWidth="3" />
-          <circle cx="123" cy="58" r="5.5" fill="#e0e7ff" stroke={ink} strokeWidth="3" />
+        {/* torso: floral shirt */}
+        <path d="M66 70 Q94 58 124 72 L128 132 Q96 146 68 136 Z" fill="#8b5cf6" stroke={INK} strokeWidth="3.4" strokeLinejoin="round" />
+        {dots.map(([x, y], i) => <circle key={i} cx={x} cy={y} r="4.6" fill="#f5f6ff" />)}
+        {/* shorts */}
+        <path d="M68 136 Q96 146 128 132 L132 170 L100 174 L96 156 L90 174 L66 170 Z" fill="#c7d2fe" stroke={INK} strokeWidth="3.4" strokeLinejoin="round" />
+        {/* near leg */}
+        <g ref={refs.legF}>
+          <Limb d="M98 156 L108 192 L98 222" w={14} fill={skin} />
+          <path d="M100 202 L98 222" stroke="#fff" strokeWidth="14" strokeLinecap="round" />
+          <Shoe x={98} y={226} refEl={refs.shoeF} />
         </g>
-        {/* front leg */}
-        <g className="pl-legA" style={{ transformOrigin: '64px 112px' }}>
-          <path d="M64 112 L74 136 L66 160" stroke={ink} strokeWidth="9" strokeLinecap="round" strokeLinejoin="round" fill="none" />
-          <path d="M66 160 l16 1 c3 0 4 4 0 5 l-22 1 z" fill="#e0e7ff" stroke={ink} strokeWidth="3" strokeLinejoin="round" />
-        </g>
+        {/* head */}
+        <circle cx="94" cy="44" r="20" fill={skin} stroke={INK} strokeWidth="3.4" />
+        <path d="M72 40 Q72 14 96 14 Q118 16 114 38 Z" fill="#818cf8" stroke={INK} strokeWidth="3.4" strokeLinejoin="round" />
+        <path d="M112 32 L140 40 L112 44 Z" fill="#818cf8" stroke={INK} strokeWidth="3.4" strokeLinejoin="round" />
+        <circle cx="104" cy="46" r="2.6" fill={INK} />
+        <path d="M98 40 L110 38" stroke={INK} strokeWidth="3" strokeLinecap="round" />
+        <path d="M100 58 q6 4 12 -1" stroke={INK} strokeWidth="3" fill="none" strokeLinecap="round" />
+        <path d="M78 46 q4 7 0 11 q-4 -4 0 -11" fill="#7dd3fc" stroke={INK} strokeWidth="1.8" />
+        {/* near arm */}
+        <Limb d="M112 84 L146 102 L180 94" w={10} fill={skin} />
+        <circle cx="184" cy="94" r="7.5" fill={skin} stroke={INK} strokeWidth="3.2" />
+        <circle cx="181" cy="82" r="7.5" fill={skin} stroke={INK} strokeWidth="3.2" />
       </g>
     </svg>
   );
@@ -89,79 +121,221 @@ function Pusher() {
 
 export function HomePreloader({ ready, onReveal, onDone }) {
   const reduce = useReducedMotion();
-  const [p, setP] = useState(0);
-  const [phase, setPhase] = useState('count');
+  const rootRef = useRef(null);
+  const panelRef = useRef(null);
+  const charRef = useRef(null);
+  const wordRef = useRef(null);
+  const letterRefs = useRef([]);
+  const capRef = useRef(null);
+  const pctRef = useRef(null);
+  const partRefs = useRef({});
   const readyRef = useRef(ready);
+  const speedRef = useRef(1);
+  const cbRef = useRef({ onReveal, onDone });
   readyRef.current = ready;
+  cbRef.current = { onReveal, onDone };
 
   useEffect(() => {
-    let raf;
+    const root = rootRef.current;
+    const panel = panelRef.current;
+    const charEl = charRef.current;
+    const word = wordRef.current;
+    const letters = letterRefs.current;
+    const P = partRefs.current;
+    if (!root || !panel || !charEl || !word) return undefined;
+
+    let seen = false;
+    try { seen = !!localStorage.getItem('planit_preloader_seen'); } catch { /* storage blocked */ }
+    speedRef.current = seen ? 1.6 : 1;
+
+    // geometry (re-measured on resize only)
+    let vw = window.innerWidth;
+    let charH = 200; let charW = 167; let travel = vw + charW;
+    let lefts = [];
+    const measure = () => {
+      vw = window.innerWidth;
+      charH = Math.max(170, Math.min(330, vw * 0.22 + 60));
+      charW = charH * (200 / 240);
+      charEl.style.height = `${charH}px`;
+      charEl.style.width = `${charW}px`;
+      charEl.style.marginTop = `${(-charH * 0.5).toFixed(1)}px`;
+      travel = vw + charW;
+      const wr = word.getBoundingClientRect();
+      lefts = letters.map((el) => wr.left + el.offsetLeft);
+    };
+    measure();
+    window.addEventListener('resize', measure);
+    if (document.fonts?.ready) document.fonts.ready.then(measure).catch(() => {});
+
+    let raf = 0;
     const t0 = performance.now();
-    let last = t0; let val = 0; let fired = false;
-    const minMs = reduce ? 300 : 2100;
-    const tick = (t) => {
-      const el = t - t0;
-      const dt = Math.min(64, t - last); last = t;
-      const ok = readyRef.current || el > 4200;
-      const target = ok && el > minMs ? 100 : Math.min(ok ? 96 : 86, (1 - Math.exp(-el / 900)) * 100);
-      val += (target - val) * (1 - Math.exp(-dt / 120));
-      if (target === 100 && val > 99.4) val = 100;
-      setP(Math.round(val * 10) / 10);
-      if (val >= 100 && !fired) {
-        fired = true;
-        setTimeout(() => { setPhase('exit'); onReveal?.(); }, 380);
+    let last = t0;
+    let el = 0;
+    let pos = 0;
+    let prevEdge = 0;
+    let phase = 0;
+    let revealed = false;
+    let fadeAt = null;
+    let finished = false;
+    let lastPct = -1;
+    let lastWord = '';
+    const popAt = letters.map(() => null);
+    const popDone = letters.map(() => false);
+
+    const setLegs = (angF, angB) => {
+      P.legF.setAttribute('transform', `rotate(${angF.toFixed(2)} 98 156)`);
+      P.legB.setAttribute('transform', `rotate(${angB.toFixed(2)} 90 150)`);
+      P.shoeF.setAttribute('transform', `rotate(${(-angF * 0.85).toFixed(2)} 98 226)`);
+      P.shoeB.setAttribute('transform', `rotate(${(-angB * 0.85).toFixed(2)} 72 226)`);
+    };
+
+    const startFade = () => {
+      if (fadeAt != null) return;
+      fadeAt = el;
+      root.style.transition = 'opacity 620ms cubic-bezier(.4,0,.2,1)';
+      root.style.opacity = '0';
+      word.style.transition = 'transform 620ms cubic-bezier(.22,1,.36,1)';
+      word.style.transform = 'scale(1.06)';
+    };
+
+    const frame = (now) => {
+      const rdt = Math.min(50, now - last); last = now;
+      const dt = rdt * speedRef.current;
+      el += dt;
+      const canGo = readyRef.current || (now - t0) > 4800;
+
+      // target progress: slow heave to start, steady shove, holds near the end until ready
+      const u = clamp01((el - 250) / 2300);
+      const base = easeInOutCubic(u);
+      const target = Math.min(base, canGo ? 1 : 0.8);
+      pos += (target - pos) * (1 - Math.exp(-dt / 110));
+      if (target === 1 && pos > 0.9992) pos = 1;
+
+      const edge = pos * travel;
+      const dEdge = edge - prevEdge; prevEdge = edge;
+
+      // the panel + the character share one edge, and only transform changes
+      panel.style.transform = `translate3d(${edge.toFixed(1)}px,0,0)`;
+
+      // walk cycle tied to distance, so feet don't skate; small idle strain when held
+      const s = charH / 240;
+      phase += (dEdge * Math.PI) / (80 * s) + (dEdge < 0.15 ? dt * 0.006 : 0);
+      const sw = Math.sin(phase);
+      const strain = (1 - u) * 0.9 + 0.1;
+      setLegs(-6 + 26 * sw, 14 - 26 * sw);
+      const bob = Math.abs(Math.cos(phase)) * 3 * s + Math.sin(el * 0.05) * 0.8 * strain;
+      const lean = 11 + 3 * Math.sin(el * 0.02) * strain;
+      P.body.setAttribute('transform', `translate(0 ${(-bob).toFixed(2)}) rotate(${lean.toFixed(2)} 96 232)`);
+      charEl.style.transform = `translate3d(${(edge - charW * 0.97).toFixed(1)}px,0,0)`;
+
+      // letters rise + fade in as the panel uncovers them
+      for (let i = 0; i < letters.length; i += 1) {
+        if (popDone[i]) continue;
+        if (popAt[i] == null && edge > lefts[i]) popAt[i] = el;
+        if (popAt[i] == null) continue;
+        const k = clamp01((el - popAt[i]) / 520);
+        const e = easeOutBack(k);
+        letters[i].style.opacity = String(clamp01(k * 2.2));
+        letters[i].style.transform = `translate3d(0,${((1 - e) * 0.14).toFixed(3)}em,0) scale(${(0.9 + 0.1 * e).toFixed(3)})`;
+        if (k >= 1) { popDone[i] = true; letters[i].style.opacity = '1'; letters[i].style.transform = 'none'; }
+      }
+
+      // caption + percent only touch the DOM when they change
+      const pct = Math.round(pos * 100);
+      if (pct !== lastPct && pctRef.current) { lastPct = pct; pctRef.current.textContent = String(pct).padStart(2, '0'); }
+      const w = LOAD_WORDS[Math.min(LOAD_WORDS.length - 1, Math.floor(pos * LOAD_WORDS.length))];
+      if (w !== lastWord && capRef.current) { lastWord = w; capRef.current.textContent = w; }
+
+      if (!revealed && edge > vw * 0.86) { revealed = true; cbRef.current.onReveal?.(); }
+      if (fadeAt == null && edge > vw * 1.02) startFade();
+      if (fadeAt != null && el - fadeAt > 640 && !finished) {
+        finished = true;
+        try { localStorage.setItem('planit_preloader_seen', '1'); } catch { /* storage blocked */ }
+        cbRef.current.onDone?.();
         return;
       }
-      raf = requestAnimationFrame(tick);
+      raf = requestAnimationFrame(frame);
     };
-    raf = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(raf);
-  }, [onReveal, reduce]);
 
-  const exit = phase === 'exit';
-  const word = LOAD_WORDS[Math.min(LOAD_WORDS.length - 1, Math.floor(p / 26))];
-  const edge = 6 + p * 0.94; // % from the left where the plan sheet starts
+    const frameReduced = (now) => {
+      letters.forEach((l) => { l.style.opacity = '1'; });
+      panel.style.display = 'none'; charEl.style.display = 'none';
+      const e = now - t0;
+      if (!revealed && (readyRef.current || e > 4000) && e > 450) {
+        revealed = true; cbRef.current.onReveal?.();
+        root.style.transition = 'opacity 320ms ease'; root.style.opacity = '0';
+        setTimeout(() => { if (!finished) { finished = true; cbRef.current.onDone?.(); } }, 340);
+      }
+      if (!finished) raf = requestAnimationFrame(frameReduced);
+    };
+
+    raf = requestAnimationFrame(reduce ? frameReduced : frame);
+    return () => { cancelAnimationFrame(raf); window.removeEventListener('resize', measure); };
+  }, [reduce]);
+
+  const legsRef = (k) => (el) => { partRefs.current[k] = el; };
+  const refs = { body: legsRef('body'), legF: legsRef('legF'), legB: legsRef('legB'), shoeF: legsRef('shoeF'), shoeB: legsRef('shoeB') };
 
   return (
-    <motion.div
+    <div
+      ref={rootRef}
       className="fixed inset-0 overflow-hidden"
-      style={{ zIndex: 1100, background: '#0b1024' }}
-      role="status" aria-label="Loading PlanIt"
-      animate={{ y: exit ? '-100%' : 0 }}
-      transition={{ duration: reduce ? 0.2 : 0.95, ease: [0.76, 0, 0.24, 1], delay: reduce ? 0 : 0.25 }}
-      onAnimationComplete={() => exit && onDone?.()}
+      style={{ zIndex: 1100, background: '#05050f', touchAction: 'manipulation' }}
+      role="status"
+      aria-label="Loading PlanIt"
+      onPointerDown={() => { speedRef.current = Math.max(speedRef.current, 3); }}
     >
-      {/* the word, revealed as the plan is shoved aside */}
-      <div className="absolute inset-0 flex items-center justify-center">
-        <div className="lq-display select-none whitespace-nowrap text-[clamp(3rem,17vw,17rem)] leading-none tracking-[-0.05em]" style={{ color: '#a5b4fc' }}>PlanIt</div>
-      </div>
+      {/* the site's own atmosphere under the wordmark */}
+      <div aria-hidden="true" className="absolute inset-0" style={{ background: 'radial-gradient(60% 55% at 28% 42%, rgba(99,102,241,.28), rgba(99,102,241,0) 70%), radial-gradient(50% 50% at 78% 70%, rgba(244,114,182,.15), rgba(244,114,182,0) 70%)' }} />
 
-      {/* the plan: a dark schedule sheet that gets pushed off to the right */}
-      <div
-        className="absolute inset-y-0 right-0 overflow-hidden"
-        style={{ left: `${edge}%`, background: '#03040a', willChange: 'left' }}
-      >
-        <div className="absolute inset-0 opacity-[0.16]" style={{ backgroundImage: 'linear-gradient(rgba(165,180,252,.5) 1px, transparent 1px), linear-gradient(90deg, rgba(165,180,252,.5) 1px, transparent 1px)', backgroundSize: '48px 48px' }} />
-        <div className="absolute left-8 top-1/2 hidden -translate-y-1/2 space-y-3 font-mono text-[11px] tracking-[0.2em] text-white/55 sm:block">
-          <div className="mb-5 text-white/90">THE PLAN</div>
-          {PLAN_ROWS.map((r) => <div key={r}>{r}</div>)}
+      <div className="absolute inset-0 flex items-center justify-center">
+        <div
+          ref={wordRef}
+          aria-hidden="true"
+          className="lq-display select-none whitespace-nowrap leading-none"
+          style={{ fontSize: 'clamp(4rem, 21vw, 15rem)', letterSpacing: '-0.045em', color: '#f1f3ff', willChange: 'transform' }}
+        >
+          {WORD.map((ch, i) => (
+            <span
+              key={i}
+              ref={(e) => { letterRefs.current[i] = e; }}
+              style={{
+                display: 'inline-block', opacity: 0, willChange: 'transform, opacity',
+                ...(i >= 4 ? { background: 'linear-gradient(180deg,#a5b4fc 0%,#f472b6 70%,#fb923c 100%)', WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent', WebkitTextFillColor: 'transparent' } : null),
+              }}
+            >{ch}</span>
+          ))}
         </div>
       </div>
 
-      {/* the guy doing the pushing */}
+      {/* the panel being shoved: starts covering the whole screen, ends off to the right */}
       <div
-        className="absolute"
-        style={{ left: `${edge}%`, top: '50%', height: 'clamp(150px, 24vw, 260px)', aspectRatio: '140 / 170', transform: 'translate(-92%, -34%)', willChange: 'left' }}
+        ref={panelRef}
+        aria-hidden="true"
+        className="absolute inset-y-0 left-0 w-full"
+        style={{ willChange: 'transform', background: 'linear-gradient(100deg,#3730a3 0%,#6d28d9 55%,#be185d 100%)', boxShadow: '-24px 0 48px -12px rgba(5,5,15,.55)' }}
       >
-        <Pusher />
+        <div className="absolute inset-y-0 left-0 w-[3px]" style={{ background: 'linear-gradient(180deg,rgba(255,255,255,0),rgba(255,255,255,.55),rgba(255,255,255,0))' }} />
+        <div className="absolute inset-0 opacity-[0.12]" style={{ backgroundImage: 'radial-gradient(rgba(255,255,255,.9) 1px, transparent 1.4px)', backgroundSize: '22px 22px' }} />
       </div>
 
-      <div className="absolute inset-x-0 bottom-0 flex items-end justify-between p-6 font-mono text-[11px] uppercase tracking-[0.25em] text-white/65 sm:p-10">
-        <span>{word}</span>
-        <span className="text-[clamp(1.6rem,4vw,3rem)] tracking-normal tabular-nums text-emerald-300">{String(Math.min(100, Math.round(p))).padStart(2, '0')}%</span>
+      {/* the character, hands on the panel's edge */}
+      <div
+        ref={charRef}
+        aria-hidden="true"
+        className="pointer-events-none absolute left-0"
+        style={{ top: '50%', willChange: 'transform' }}
+      >
+        <div style={{ position: 'absolute', inset: 0, transform: 'translateY(0)' }}>
+          <Pusher refs={refs} />
+        </div>
       </div>
-      <div className="absolute left-6 top-6 font-mono text-[11px] uppercase tracking-[0.25em] text-white/65 sm:left-10 sm:top-8">PlanIt / Events</div>
-    </motion.div>
+
+      <div className="absolute inset-x-0 bottom-0 flex items-end justify-between p-6 text-[11px] uppercase tracking-[0.25em] text-white/70 sm:p-10" style={{ fontFamily: "'DM Sans', system-ui, sans-serif" }}>
+        <span ref={capRef}>Setting the stage</span>
+        <span className="text-[clamp(1.4rem,4vw,2.6rem)] tracking-normal tabular-nums text-white/90"><span ref={pctRef}>00</span>%</span>
+      </div>
+    </div>
   );
 }
 
