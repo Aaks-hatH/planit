@@ -3624,7 +3624,7 @@ export default function Home() {
             WebkitMaskImage: 'radial-gradient(ellipse at 50% 32%, black, transparent 78%)',
           }} />}
           <div className="w-full relative" style={{ zIndex: 2 }}>
-            <div className="max-w-6xl mx-auto px-4 sm:px-8 lg:px-12 pt-32 pb-14 sm:pt-40 sm:pb-28 lg:pt-44 lg:pb-36 text-center">
+            <div className="max-w-[110rem] mx-auto px-4 sm:px-8 lg:px-12 pt-32 pb-14 sm:pt-40 sm:pb-28 lg:pt-44 lg:pb-36 text-center">
 
               {/* Badge */}
               <motion.div {...enter(0.4)} className="mb-8 sm:mb-10">
@@ -3650,7 +3650,7 @@ export default function Home() {
                     text={'Plan every detail.\nExecute flawlessly.'}
                     accent={[4]}
                     className="lq-display mb-6 sm:mb-8 leading-[0.98] text-white"
-                    style={{ fontSize: 'clamp(2.1rem, 5.4vw, 4.4rem)', letterSpacing: '-0.04em' }}
+                    style={{ fontSize: 'clamp(2.7rem, 6.5vw, 6.8rem)', letterSpacing: '-0.045em' }}
                   />
                 )
               }
