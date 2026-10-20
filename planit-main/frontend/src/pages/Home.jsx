@@ -3204,13 +3204,15 @@ export default function Home() {
     return () => { document.body.style.overflow = ''; };
   }, [scrollLocked]);
 
-  // Blur-rise entrance used across the hero; held back until the loading curtain has opened.
-  const blurHidden = { filter: 'blur(10px)', opacity: 0, y: 20 };
-  // Animate the hero underneath the loading curtain, so the reveal never lands on a blank frame.
+  // Blur-rise entrance used across the hero. It waits for the loader's iris to
+  // start opening (introGate), so the hero plays as the page is revealed
+  // instead of finishing unseen behind the loader.
+  const blurHidden = { opacity: 0, y: 22 }; // transform + opacity only: blur filters stutter on phones
+  const blurShown  = { opacity: 1, y: 0 };
   const enter = (delay) => ({
     initial: blurHidden,
-    animate: { filter: 'blur(0px)', opacity: 1, y: 0 },
-    transition: { duration: 0.72, ease: [0.22, 1, 0.36, 1], delay },
+    animate: introGate ? blurShown : blurHidden,
+    transition: { duration: 0.8, ease: [0.22, 1, 0.36, 1], delay: delay * 0.5 },
   });
 
   const dismissIntro = () => {
@@ -3643,12 +3645,12 @@ export default function Home() {
                 ) : (
                   <BlurText
                     as="h1"
-                    start={true}
+                    start={introGate}
                     delay={110}
                     text={'Plan every detail.\nExecute flawlessly.'}
                     accent={[4]}
                     className="lq-display mb-6 sm:mb-8 leading-[0.98] text-white"
-                    style={{ fontSize: 'clamp(2.2rem, 6.2vw, 4.9rem)' }}
+                    style={{ fontSize: 'clamp(2.1rem, 5.4vw, 4.4rem)', letterSpacing: '-0.04em' }}
                   />
                 )
               }
@@ -3709,17 +3711,17 @@ export default function Home() {
               </motion.div>
 
               {/* Trust stats */}
-              <motion.div {...enter(1.3)} className="mx-auto flex w-full max-w-sm flex-col items-stretch gap-3 mb-12 sm:mb-14 sm:max-w-none sm:flex-row sm:flex-wrap sm:justify-center sm:gap-4">
+              <motion.div {...enter(1.3)} className="mx-auto mb-12 grid w-full max-w-sm grid-cols-1 gap-3 sm:mb-14 sm:max-w-[48rem] sm:grid-cols-3 sm:gap-4">
                 {[
                   { tag: 'Free forever',   desc: 'No credit card required',          Icon: Sparkles },
                   { tag: 'Zero accounts',  desc: 'Guests join by name instantly',     Icon: Zap },
                   { tag: 'Unlimited team', desc: 'Every organizer & vendor included', Icon: Users },
                 ].map(({ tag, desc, Icon }) => (
-                  <div key={tag} className="lq-glass flex w-full min-w-0 items-center gap-4 rounded-[1.25rem] p-4 text-left text-white cursor-default sm:w-[220px] sm:flex-col sm:items-stretch sm:justify-between sm:gap-6 sm:p-5">
-                    <Icon className="h-6 w-6 shrink-0 sm:h-7 sm:w-7" strokeWidth={1.5} />
+                  <div key={tag} className="lq-glass lq-stat flex min-w-0 cursor-default items-center gap-4 rounded-[1.25rem] p-4 text-left text-white sm:min-h-[11rem] sm:flex-col sm:items-stretch sm:justify-between sm:gap-6 sm:p-5">
+                    <Icon className="h-6 w-6 shrink-0 text-indigo-200 sm:h-7 sm:w-7" strokeWidth={1.5} />
                     <div className="min-w-0">
-                      <div className="lq-display min-w-0 max-w-full break-words text-[clamp(1.05rem,4.5vw,1.45rem)] leading-[1.05] sm:text-3xl sm:leading-tight" style={{ overflowWrap: 'anywhere', whiteSpace: 'normal' }}>{tag}</div>
-                      <div className="mt-1.5 text-xs font-light text-white/80 sm:mt-2">{desc}</div>
+                      <div className="lq-display lq-stat-title">{tag}</div>
+                      <div className="mt-1.5 text-xs font-light leading-snug text-white/75 sm:mt-2 sm:text-[13px]">{desc}</div>
                     </div>
                   </div>
                 ))}
@@ -3729,9 +3731,9 @@ export default function Home() {
               {!isWL && (
                 <motion.div {...enter(1.4)} className="flex flex-col items-center gap-4 mb-14 sm:mb-16">
                   <div className="lq-glass rounded-full px-3.5 py-1 text-xs font-medium text-white/90">One workspace for the whole event</div>
-                  <ul className="flex max-w-md flex-wrap justify-center gap-2 sm:max-w-none sm:gap-x-12 sm:gap-y-1 md:gap-x-14" aria-label="What's included">
+                  <ul className="flex max-w-md flex-wrap justify-center gap-2 sm:max-w-3xl sm:gap-3" aria-label="What's included">
                     {['Team chat', 'Task lists', 'Live polls', 'RSVP', 'QR check-in', 'Seating', 'Claude AI'].map((w) => (
-                      <li key={w} className="lq-display max-w-full break-words max-md:rounded-full max-md:border max-md:border-white/15 max-md:bg-white/5 max-md:px-3.5 max-md:py-1.5 text-white text-sm md:text-3xl" style={{ overflowWrap: 'anywhere', whiteSpace: 'normal' }}>{w}</li>
+                      <li key={w} className="lq-glass lq-display whitespace-nowrap rounded-full px-3.5 py-1.5 text-sm text-white sm:px-5 sm:py-2.5 sm:text-base">{w}</li>
                     ))}
                   </ul>
                 </motion.div>
