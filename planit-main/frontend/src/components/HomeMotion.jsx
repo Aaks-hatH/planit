@@ -308,16 +308,13 @@ export function HomePreloader({ ready, onReveal, onDone }) {
         </div>
       </div>
 
-      {/* the panel being shoved: starts covering the whole screen, ends off to the right */}
+      {/* the panel being shoved: solid black, starts covering the whole screen, ends off to the right */}
       <div
         ref={panelRef}
         aria-hidden="true"
         className="absolute inset-y-0 left-0 w-full"
-        style={{ willChange: 'transform', background: 'linear-gradient(100deg,#3730a3 0%,#6d28d9 55%,#be185d 100%)', boxShadow: '-24px 0 48px -12px rgba(5,5,15,.55)' }}
-      >
-        <div className="absolute inset-y-0 left-0 w-[3px]" style={{ background: 'linear-gradient(180deg,rgba(255,255,255,0),rgba(255,255,255,.55),rgba(255,255,255,0))' }} />
-        <div className="absolute inset-0 opacity-[0.12]" style={{ backgroundImage: 'radial-gradient(rgba(255,255,255,.9) 1px, transparent 1.4px)', backgroundSize: '22px 22px' }} />
-      </div>
+        style={{ willChange: 'transform', background: '#000', boxShadow: '-1px 0 0 rgba(165,180,252,.55), -36px 0 70px -18px rgba(129,140,248,.40)' }}
+      />
 
       {/* the character, hands on the panel's edge */}
       <div
