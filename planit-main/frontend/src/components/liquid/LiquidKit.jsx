@@ -283,18 +283,18 @@ export function BlurText({ text, as = 'p', className = '', delay = 90, accent = 
       ref={ref}
       className={className}
       aria-label={text.replace(/\n/g, ' ')}
-      style={{ display: 'flex', flexWrap: 'wrap', justifyContent: justify === 'center' ? 'center' : 'flex-start', rowGap: '0.04em', ...style }}
+      style={{ display: 'flex', flexWrap: 'wrap', justifyContent: justify === 'center' ? 'center' : 'flex-start', columnGap: '0.28em', rowGap: '0.06em', ...style }}
     >
       {tokens.map((tok, k) => {
         if (tok === '\n') return <span key={`br${k}`} aria-hidden="true" style={{ flexBasis: '100%', height: 0 }} />;
         const i = wi++;
-        if (reduce) return <span key={k} aria-hidden="true" className={accent.includes(i) ? accentClass : undefined} style={{ display: 'inline-block', marginRight: '0.26em' }}>{tok}</span>;
+        if (reduce) return <span key={k} aria-hidden="true" className={accent.includes(i) ? accentClass : undefined} style={{ display: 'inline-block' }}>{tok}</span>;
         return (
           <motion.span
             key={k}
             aria-hidden="true"
             className={accent.includes(i) ? accentClass : undefined}
-            style={{ display: 'inline-block', marginRight: '0.26em', willChange: 'transform, filter, opacity' }}
+            style={{ display: 'inline-block', willChange: 'transform, filter, opacity' }}
             initial={{ filter: 'blur(10px)', opacity: 0, y: 50 }}
             animate={go
               ? { filter: ['blur(10px)', 'blur(5px)', 'blur(0px)'], opacity: [0, 0.5, 1], y: [50, -5, 0] }
