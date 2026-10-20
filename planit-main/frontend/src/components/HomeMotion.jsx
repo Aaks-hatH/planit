@@ -16,6 +16,7 @@ import { useEffect, useRef, useState } from 'react';
 import {
   motion, useScroll, useSpring, useTransform, useReducedMotion,
 } from 'framer-motion';
+import { UserCheck, ScanLine, LayoutGrid, BarChart3 } from 'lucide-react';
 
 const EASE = [0.22, 1, 0.36, 1];
 const cx = (...a) => a.filter(Boolean).join(' ');
@@ -332,6 +333,460 @@ export function HomePreloader({ ready, onReveal, onDone }) {
         <span ref={capRef}>Setting the stage</span>
         <span className="text-[clamp(1.4rem,4vw,2.6rem)] tracking-normal tabular-nums text-white/90"><span ref={pctRef}>00</span>%</span>
       </div>
+    </div>
+  );
+}
+
+/* ─── Hero headline: the letters are your event ─────────────────────────────
+   Huge stacked headline, every letter its own element on a small spring
+   system (one rAF loop, transforms + opacity only). On top of the hover swell
+   and click shockwave, the letters play event-planning tools:
+
+     RSVP      tap or drag across letters to mark guests "going"
+     Check-in  a QR scanner beam sweeps down; letters light up as they check in
+     Seating   the letters sit down at four round tables
+     Live poll each line is an option; tap to vote while other votes trickle in
+
+   Finishing RSVP or Check-in fires confetti. The loop only runs on screen.
+   Reduced motion: static headline, no tools.
+   ───────────────────────────────────────────────────────────────────────── */
+const HEAD_LINES = ['Plan every', 'detail.', 'Execute', 'flawlessly.'];
+const GRAD = 'linear-gradient(90deg,#818cf8 0%,#f472b6 25%,#fb923c 50%,#f472b6 75%,#818cf8 100%)';
+const GOOD = '#34d399';
+const TOOL_MODES = [
+  { id: 'rsvp', label: 'RSVP', Icon: UserCheck, hint: 'Tap or drag across the letters to RSVP them' },
+  { id: 'checkin', label: 'Check-in', Icon: ScanLine, hint: 'Scanning QR codes... tap to scan again' },
+  { id: 'seating', label: 'Seating', Icon: LayoutGrid, hint: 'Every guest gets a seat. Tap a mode to change it' },
+  { id: 'poll', label: 'Live poll', Icon: BarChart3, hint: 'Tap a line to vote. Other votes keep arriving' },
+];
+
+export function HeroHeadline({ start = true, lines = HEAD_LINES, className = '' }) {
+  const reduce = useReducedMotion();
+  const [mode, setMode] = useState('rsvp');
+  const [status, setStatus] = useState('');
+  const modeRef = useRef('rsvp');
+  const h1Ref = useRef(null);
+  const wrapRef = useRef(null);
+  const glowRef = useRef(null);
+  const beamRef = useRef(null);
+  const confettiRef = useRef(null);
+  const letterRefs = useRef([]);
+  const badgeRefs = useRef([]);
+  const tableRefs = useRef([]);
+  const barRefs = useRef([]);
+  const pctRefs = useRef([]);
+  const startRef = useRef(start);
+  startRef.current = start;
+  modeRef.current = mode;
+
+  const lastLine = lines.length - 1;
+
+  useEffect(() => {
+    const h1 = h1Ref.current;
+    const glow = glowRef.current;
+    if (!h1) return undefined;
+    const els = letterRefs.current.filter(Boolean);
+    const badges = badgeRefs.current;
+    const N = els.length;
+    const st = els.map(() => ({ x: 0, y: 0, r: 0, s: 1, vx: 0, vy: 0, vr: 0, vs: 0 }));
+    if (reduce) { els.forEach((e) => { e.style.opacity = '1'; }); return undefined; }
+
+    const isSp = els.map((e) => e.dataset.sp === '1');
+    const lineOf = els.map((e) => Number(e.dataset.li));
+    const real = []; els.forEach((_, k) => { if (!isSp[k]) real.push(k); });
+    const T = real.length;
+    const on = els.map(() => 0);
+    const bs = els.map(() => 0);
+
+    let F = 100; let W = 1; let H = 1;
+    let cx = []; let cy = []; let gW = 1; let gLeft = []; let letterIdx = [];
+    let seat = []; let seatRot = []; let tableC = []; let tableR = 0;
+    let lineL = []; let lineW = []; let lineY = [];
+    const measure = () => {
+      F = parseFloat(getComputedStyle(h1).fontSize) || 100;
+      W = h1.clientWidth; H = h1.clientHeight;
+      cx = els.map((e) => e.offsetLeft + e.offsetWidth / 2);
+      cy = els.map((e) => e.offsetTop + e.offsetHeight / 2);
+      const g = els.filter((e) => e.dataset.grad === '1');
+      if (g.length) {
+        const l0 = g[0].offsetLeft; const l1 = g[g.length - 1].offsetLeft + g[g.length - 1].offsetWidth;
+        gW = Math.max(1, l1 - l0); gLeft = g.map((e) => e.offsetLeft - l0);
+      }
+      letterIdx = els.map((e) => Number(e.dataset.i));
+      // per-line geometry for the poll bars
+      lineL = []; lineW = []; lineY = [];
+      for (let li = 0; li < lines.length; li += 1) {
+        const ks = real.filter((k) => lineOf[k] === li);
+        if (!ks.length) continue;
+        const a = els[ks[0]]; const z = els[ks[ks.length - 1]];
+        lineL[li] = a.offsetLeft; lineW[li] = z.offsetLeft + z.offsetWidth - a.offsetLeft;
+        lineY[li] = a.offsetTop + a.offsetHeight * 0.93;
+      }
+      // seating layout: four round tables
+      const nT = 4; const per = Math.ceil(T / nT);
+      const tcx = [0.27, 0.73, 0.27, 0.73].map((v) => v * W);
+      const tcy = [0.26, 0.26, 0.74, 0.74].map((v) => v * H);
+      tableR = Math.min(W * 0.14, H * 0.2);
+      tableC = tcx.map((x, i) => ({ x, y: tcy[i] }));
+      seat = els.map(() => null); seatRot = els.map(() => 0);
+      real.forEach((k, j) => {
+        const t = Math.floor(j / per); const idx = j % per;
+        const cnt = Math.min(per, T - t * per);
+        const ang = -Math.PI / 2 + (idx / cnt) * Math.PI * 2;
+        seat[k] = { x: tcx[t] + Math.cos(ang) * tableR, y: tcy[t] + Math.sin(ang) * tableR };
+        seatRot[k] = (ang * 180) / Math.PI + 90;
+      });
+      tableRefs.current.forEach((el, i) => {
+        if (!el || !tableC[i]) return;
+        const r = tableR * 0.58;
+        el.style.width = `${r * 2}px`; el.style.height = `${r * 2}px`;
+        el.style.left = `${tableC[i].x - r}px`; el.style.top = `${tableC[i].y - r}px`;
+      });
+    };
+    measure();
+    window.addEventListener('resize', measure);
+    if (document.fonts?.ready) document.fonts.ready.then(measure).catch(() => {});
+
+    const ptr = { x: 0, y: 0, in: false, glow: 0, down: false, mouse: true };
+    let rect = h1.getBoundingClientRect();
+    const rel = (e) => { rect = h1.getBoundingClientRect(); ptr.x = e.clientX - rect.left; ptr.y = e.clientY - rect.top; };
+    const inside = (m = 0) => ptr.x > -m && ptr.x < W + m && ptr.y > -m && ptr.y < H + m;
+    const nearest = (maxD) => {
+      let best = -1; let bd = maxD;
+      for (let j = 0; j < T; j += 1) {
+        const k = real[j];
+        const d = Math.hypot(cx[k] + st[k].x - ptr.x, cy[k] + st[k].y - ptr.y);
+        if (d < bd) { bd = d; best = k; }
+      }
+      return best;
+    };
+
+    // tool state
+    let prevMode = null;
+    let beam = { y: 0, active: false, done: false };
+    let tableAmt = 0; let pollAmt = 0;
+    const votes = [3, 5, 2, 4];
+    const pctShown = [-1, -1, -1, -1];
+    let celebrated = false;
+    let lastStatus = '';
+
+    // confetti (own short-lived loop)
+    const cvs = confettiRef.current;
+    let parts = []; let cfRaf = 0;
+    const confetti = () => {
+      if (!cvs || !wrapRef.current) return;
+      const w = wrapRef.current.clientWidth; const hh = wrapRef.current.clientHeight;
+      const dpr = Math.min(2, window.devicePixelRatio || 1);
+      cvs.width = w * dpr; cvs.height = hh * dpr;
+      const c = cvs.getContext('2d'); c.setTransform(dpr, 0, 0, dpr, 0, 0);
+      const ox = w / 2; const oy = h1.offsetTop + H * 0.45;
+      const cols = ['#818cf8', '#a78bfa', '#f472b6', '#fb923c', '#34d399', '#ffffff'];
+      parts = Array.from({ length: 130 }, () => {
+        const a = Math.random() * Math.PI * 2; const sp = 6 + Math.random() * 14;
+        return { x: ox, y: oy, vx: Math.cos(a) * sp * 1.2, vy: Math.sin(a) * sp - 6, rot: Math.random() * 6, vr: (Math.random() - 0.5) * 0.4, w: 6 + Math.random() * 7, h: 3 + Math.random() * 5, col: cols[(Math.random() * cols.length) | 0], life: 0 };
+      });
+      cancelAnimationFrame(cfRaf);
+      let lt = performance.now();
+      const step = (now) => {
+        const k = Math.min(2, (now - lt) / 16.67); lt = now;
+        c.clearRect(0, 0, w, hh);
+        let alive = 0;
+        parts.forEach((p) => {
+          p.life += k; p.vy += 0.38 * k; p.vx *= 0.992; p.x += p.vx * k; p.y += p.vy * k; p.rot += p.vr * k;
+          const al = Math.max(0, 1 - p.life / 110);
+          if (al > 0 && p.y < hh + 30) {
+            alive += 1; c.save(); c.globalAlpha = al; c.translate(p.x, p.y); c.rotate(p.rot);
+            c.fillStyle = p.col; c.fillRect(-p.w / 2, -p.h / 2, p.w, p.h); c.restore();
+          }
+        });
+        if (alive) cfRaf = requestAnimationFrame(step); else c.clearRect(0, 0, w, hh);
+      };
+      cfRaf = requestAnimationFrame(step);
+    };
+
+    const kickAll = (px, py, power = 7, radius = 1.4) => {
+      for (let i = 0; i < N; i += 1) {
+        const dx = cx[i] + st[i].x - px; const dy = cy[i] + st[i].y - py;
+        const d = Math.hypot(dx, dy) || 1;
+        const f = Math.exp(-Math.pow(d / (F * 1.15 * radius), 2));
+        st[i].vx += (dx / d) * f * F * power; st[i].vy += (dy / d) * f * F * power;
+        st[i].vr += (dx / d) * f * 260; st[i].vs += f * 5;
+      }
+    };
+    const pop = (k, p = 1) => { st[k].vy -= F * 5 * p; st[k].vs += 6 * p; st[k].vr += (Math.random() - 0.5) * 220; };
+
+    const handleTool = (e, isDown) => {
+      const m = modeRef.current;
+      if (!inside(0)) return;
+      if (m === 'rsvp') {
+        const k = nearest(F * 0.55);
+        if (k < 0) return;
+        if (isDown) { on[k] = on[k] ? 0 : 1; pop(k); ptr.last = k; }
+        else if (ptr.down && ptr.mouse && ptr.last !== k) { if (!on[k]) { on[k] = 1; pop(k, 0.7); } ptr.last = k; }
+      } else if (m === 'checkin' && isDown && beam.done) {
+        on.fill(0); beam = { y: -F * 0.1, active: true, done: false }; celebrated = false;
+      } else if (m === 'poll' && isDown) {
+        const k = nearest(F * 0.7);
+        if (k < 0) return;
+        votes[lineOf[k]] += 1;
+        real.forEach((q) => { if (lineOf[q] === lineOf[k]) pop(q, 0.55); });
+      }
+    };
+    const onMove = (e) => {
+      ptr.mouse = e.pointerType === 'mouse'; rel(e); ptr.in = true;
+      if (ptr.down) handleTool(e, false);
+    };
+    const onDown = (e) => {
+      ptr.mouse = e.pointerType === 'mouse'; rel(e); ptr.in = true; ptr.down = true;
+      if (inside(F)) kickAll(ptr.x, ptr.y);
+      handleTool(e, true);
+    };
+    const onUp = (e) => { ptr.down = false; ptr.last = -1; if (e.pointerType !== 'mouse') ptr.in = false; };
+    const onLeave = () => { ptr.in = false; ptr.down = false; };
+    window.addEventListener('pointermove', onMove, { passive: true });
+    window.addEventListener('pointerdown', onDown, { passive: true });
+    window.addEventListener('pointerup', onUp, { passive: true });
+    window.addEventListener('pointercancel', onUp, { passive: true });
+    document.addEventListener('pointerleave', onLeave);
+
+    // other guests keep voting
+    const sim = setInterval(() => {
+      if (modeRef.current !== 'poll') return;
+      const r = Math.random();
+      votes[r < 0.38 ? 1 : r < 0.62 ? 3 : r < 0.84 ? 0 : 2] += 1;
+    }, 650);
+
+    let onScreen = true;
+    let raf = 0;
+    const io = new IntersectionObserver(([en]) => { onScreen = en.isIntersecting; if (onScreen && !raf) { last = performance.now(); raf = requestAnimationFrame(frame); } }, { threshold: 0 });
+    io.observe(h1);
+    let last = performance.now();
+    let tStart = null; let gx = 0; let gOff = 0;
+    const STIFF = 190; const DAMP = 15;
+    const easeBack = easeOutBack;
+
+    function frame(now) {
+      raf = 0;
+      if (!onScreen) return;
+      const dt = Math.min(0.04, (now - last) / 1000); last = now;
+      if (startRef.current && tStart == null) tStart = now;
+      const te = tStart == null ? -1 : now - tStart;
+      const m = modeRef.current;
+
+      // mode change: reset tool state
+      if (m !== prevMode) {
+        prevMode = m; on.fill(0); celebrated = false; beam = { y: -F * 0.1, active: m === 'checkin', done: false };
+        if (m === 'checkin') els.forEach((_, k) => { bs[k] = 0; });
+      }
+
+      // check-in: the QR beam sweeps down, checking in whatever it crosses
+      if (beam.active) {
+        beam.y += dt * (H + F * 0.2) / 2.3;
+        for (let j = 0; j < T; j += 1) {
+          const k = real[j];
+          if (!on[k] && cy[k] + st[k].y - F * 0.3 < beam.y) { on[k] = 1; pop(k, 0.5); }
+        }
+        if (beam.y > H + F * 0.2) { beam.active = false; beam.done = true; confetti(); }
+      }
+      if (beamRef.current) {
+        const show = beam.active ? 1 : 0;
+        beamRef.current.style.opacity = String(show);
+        beamRef.current.style.transform = `translate3d(0,${beam.y.toFixed(1)}px,0)`;
+      }
+
+      tableAmt += ((m === 'seating' ? 1 : 0) - tableAmt) * (1 - Math.exp(-dt / 0.16));
+      pollAmt += ((m === 'poll' ? 1 : 0) - pollAmt) * (1 - Math.exp(-dt / 0.16));
+
+      let count = 0;
+      for (let j = 0; j < T; j += 1) count += on[real[j]];
+      if (m === 'rsvp') {
+        if (count === T && !celebrated) { celebrated = true; confetti(); }
+        if (count < T) celebrated = false;
+      }
+
+      for (let k = 0; k < N; k += 1) {
+        const i = letterIdx[k]; const q = st[k]; const el = els[k];
+        let tx = 0; let ty = 0; let tr = 0; let ts = 1;
+        if (m === 'seating' && seat[k]) {
+          tx = seat[k].x - cx[k]; ty = seat[k].y - cy[k]; ts = 0.5; tr = seatRot[k];
+        } else if (ptr.in) {
+          const dx = cx[k] - ptr.x; const dy = cy[k] - ptr.y;
+          const d = Math.hypot(dx, dy) || 1;
+          const f = Math.exp(-Math.pow(d / (F * 1.15), 2));
+          tx = (dx / d) * f * F * 0.075; ty = (dy / d) * f * F * 0.075 - f * F * 0.03;
+          tr = (dx / F) * f * -10; ts = 1 + 0.13 * f;
+        }
+        q.vx += ((tx - q.x) * STIFF - q.vx * DAMP) * dt; q.x += q.vx * dt;
+        q.vy += ((ty - q.y) * STIFF - q.vy * DAMP) * dt; q.y += q.vy * dt;
+        q.vr += ((tr - q.r) * STIFF - q.vr * DAMP) * dt; q.r += q.vr * dt;
+        q.vs += ((ts - q.s) * STIFF - q.vs * DAMP) * dt; q.s += q.vs * dt;
+
+        const ek = clamp01((te - i * 26) / 820);
+        const e = te < 0 ? 0 : easeBack(ek);
+        const ey = (1 - e) * F * 0.55;
+        // check-in dims guests who haven't been scanned yet
+        bs[k] += (on[k] - bs[k]) * (1 - Math.exp(-dt / 0.09));
+        const dim = m === 'checkin' && !isSp[k] ? 0.38 + 0.62 * bs[k] : 1;
+        el.style.opacity = te < 0 ? '0' : String((clamp01(ek * 2.4) * dim).toFixed(3));
+        el.style.transform = `translate3d(${q.x.toFixed(2)}px,${(q.y + ey).toFixed(2)}px,0) rotate(${q.r.toFixed(2)}deg) scale(${(q.s * (0.85 + 0.15 * e)).toFixed(4)})`;
+
+        // tick badge
+        const b = badges[k];
+        if (b) {
+          const vis = m !== 'seating' && m !== 'poll' ? bs[k] : 0;
+          if (vis > 0.01) {
+            const sc = easeBack(clamp01(vis));
+            b.style.opacity = String(clamp01(vis * 2).toFixed(2));
+            b.style.transform = `translate3d(${(cx[k] + q.x + F * 0.26).toFixed(1)}px,${(cy[k] + q.y - F * 0.36).toFixed(1)}px,0) scale(${sc.toFixed(3)})`;
+          } else b.style.opacity = '0';
+        }
+      }
+
+      // gradient on the last line
+      gOff += dt * gW * 0.09;
+      const gTarget = ptr.in ? ((ptr.x / Math.max(1, rect.width)) - 0.5) * gW * 0.9 : 0;
+      gx += (gTarget - gx) * (1 - Math.exp(-dt / 0.25));
+      let gi = 0;
+      for (let k = 0; k < N; k += 1) {
+        if (els[k].dataset.grad !== '1') continue;
+        els[k].style.backgroundPosition = `${(-gLeft[gi] + gOff + gx).toFixed(1)}px 0`;
+        gi += 1;
+      }
+
+      // tables
+      tableRefs.current.forEach((el) => { if (el) { el.style.opacity = tableAmt.toFixed(3); el.style.transform = `scale(${(0.6 + 0.4 * tableAmt).toFixed(3)})`; } });
+
+      // poll bars
+      const total = votes.reduce((a, c) => a + c, 0);
+      for (let li = 0; li < lines.length; li += 1) {
+        const bar = barRefs.current[li]; const lab = pctRefs.current[li];
+        if (!bar || lineW[li] == null) continue;
+        const share = votes[li] / total;
+        bar.style.opacity = pollAmt.toFixed(3);
+        bar.style.left = `${lineL[li]}px`; bar.style.top = `${lineY[li]}px`;
+        bar.style.transform = `scaleX(${(share * pollAmt).toFixed(4)})`;
+        bar.style.width = `${lineW[li]}px`;
+        if (lab) {
+          lab.style.opacity = pollAmt.toFixed(3);
+          lab.style.left = `${lineL[li] + lineW[li] * share + 10}px`; lab.style.top = `${lineY[li] - F * 0.1}px`;
+          const pc = Math.round(share * 100);
+          if (pc !== pctShown[li]) { pctShown[li] = pc; lab.textContent = `${pc}%`; }
+        }
+      }
+
+      if (glow) {
+        ptr.glow += ((ptr.in ? 1 : 0) - ptr.glow) * (1 - Math.exp(-dt / 0.18));
+        glow.style.opacity = ptr.glow.toFixed(3);
+        glow.style.transform = `translate3d(${(ptr.x - F * 1.6).toFixed(1)}px,${(ptr.y - F * 1.6).toFixed(1)}px,0)`;
+      }
+
+      const s2 = m === 'rsvp' ? `${count} / ${T} going`
+        : m === 'checkin' ? `${count} / ${T} checked in`
+          : m === 'seating' ? `${T} guests, 4 tables`
+            : `${total} votes`;
+      if (s2 !== lastStatus) { lastStatus = s2; setStatus(s2); }
+
+      raf = requestAnimationFrame(frame);
+    }
+    raf = requestAnimationFrame(frame);
+
+    return () => {
+      cancelAnimationFrame(raf); cancelAnimationFrame(cfRaf); clearInterval(sim); io.disconnect();
+      window.removeEventListener('resize', measure);
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerdown', onDown);
+      window.removeEventListener('pointerup', onUp);
+      window.removeEventListener('pointercancel', onUp);
+      document.removeEventListener('pointerleave', onLeave);
+    };
+  }, [reduce, lines]);
+
+  const full = lines.join(' ');
+  let idx = 0;
+  const active = TOOL_MODES.find((t) => t.id === mode) || TOOL_MODES[0];
+  return (
+    <div ref={wrapRef} className="relative mx-auto w-full" style={{ containerType: 'inline-size' }}>
+      <h1
+        ref={h1Ref}
+        aria-label={full}
+        className={`lq-display relative mx-auto text-white ${className}`}
+        style={{ fontSize: 'min(12cqw, 13vh)', lineHeight: 0.94, letterSpacing: '-0.045em', textAlign: 'center', touchAction: 'manipulation', userSelect: 'none', WebkitUserSelect: 'none' }}
+      >
+        <div ref={glowRef} aria-hidden="true" className="pointer-events-none absolute left-0 top-0"
+          style={{ width: '3.2em', height: '3.2em', opacity: 0, borderRadius: '50%', background: 'radial-gradient(circle, rgba(129,140,248,.34), rgba(244,114,182,.14) 45%, rgba(0,0,0,0) 70%)', willChange: 'transform, opacity', zIndex: -1 }} />
+        {/* seating: four round tables */}
+        {[0, 1, 2, 3].map((t) => (
+          <div key={t} ref={(e) => { tableRefs.current[t] = e; }} aria-hidden="true" className="pointer-events-none absolute flex items-center justify-center rounded-full"
+            style={{ opacity: 0, border: '1.5px solid rgba(165,180,252,.45)', background: 'radial-gradient(circle, rgba(129,140,248,.18), rgba(129,140,248,.04))', fontSize: '0.2em', color: 'rgba(255,255,255,.7)', fontFamily: "'DM Sans', system-ui, sans-serif", letterSpacing: '0.1em', zIndex: -1 }}>
+            T{t + 1}
+          </div>
+        ))}
+        {/* poll bars */}
+        {lines.map((_, li) => (
+          <div key={`b${li}`}>
+            <div ref={(e) => { barRefs.current[li] = e; }} aria-hidden="true" className="pointer-events-none absolute"
+              style={{ opacity: 0, height: '0.07em', borderRadius: 999, transformOrigin: '0 50%', background: 'linear-gradient(90deg,#818cf8,#f472b6,#fb923c)', boxShadow: '0 0 18px rgba(244,114,182,.5)', zIndex: 2 }} />
+            <span ref={(e) => { pctRefs.current[li] = e; }} aria-hidden="true" className="pointer-events-none absolute"
+              style={{ opacity: 0, fontSize: '0.2em', fontFamily: "'DM Sans', system-ui, sans-serif", letterSpacing: 0, fontWeight: 700, color: '#fff', zIndex: 2 }}>0%</span>
+          </div>
+        ))}
+        {/* check-in scanner beam */}
+        <div ref={beamRef} aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-0" style={{ opacity: 0, height: 3, zIndex: 3, background: `linear-gradient(90deg, transparent, ${GOOD}, #fff, ${GOOD}, transparent)`, boxShadow: `0 0 26px 8px rgba(52,211,153,.5), 0 -40px 60px -10px rgba(52,211,153,.18)` }} />
+
+        {lines.map((line, li) => (
+          <span key={li} aria-hidden="true" className="block whitespace-nowrap">
+            {[...line].map((ch, ci) => {
+              const isGrad = li === lastLine;
+              const i = idx; idx += 1;
+              return (
+                <span key={ci} ref={(e) => { letterRefs.current[i] = e; }} data-i={i} data-li={li} data-sp={ch === ' ' ? '1' : '0'} data-grad={isGrad ? '1' : '0'}
+                  style={{
+                    display: 'inline-block', opacity: 0, willChange: 'transform, opacity',
+                    ...(isGrad ? { backgroundImage: GRAD, backgroundRepeat: 'repeat-x', backgroundSize: '100% 100%', WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent', WebkitTextFillColor: 'transparent', paddingRight: '0.03em' } : null),
+                  }}
+                >{ch === ' ' ? '\u00A0' : ch}</span>
+              );
+            })}
+          </span>
+        ))}
+        {/* tick badges (own layer so the gradient text clip never touches them) */}
+        {(() => {
+          let bi = 0;
+          return lines.map((line) => [...line].map((ch, ci) => {
+            const k = bi; bi += 1;
+            if (ch === ' ') return null;
+            return (
+              <span key={`k${k}-${ci}`} ref={(e) => { badgeRefs.current[k] = e; }} aria-hidden="true" className="pointer-events-none absolute left-0 top-0 flex items-center justify-center rounded-full"
+                style={{ opacity: 0, width: '0.3em', height: '0.3em', marginLeft: '-0.15em', marginTop: '-0.15em', background: GOOD, boxShadow: '0 0 16px rgba(52,211,153,.75)', zIndex: 4, willChange: 'transform, opacity' }}>
+                <svg viewBox="0 0 24 24" width="62%" height="62%" fill="none" stroke="#04210f" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5" /></svg>
+              </span>
+            );
+          }));
+        })()}
+      </h1>
+
+      <canvas ref={confettiRef} aria-hidden="true" className="pointer-events-none absolute inset-0 h-full w-full" style={{ zIndex: 5 }} />
+
+      {!reduce && (
+        <div className="mt-5 flex flex-col items-center gap-2.5 sm:mt-6">
+          <div role="tablist" aria-label="Try the planning tools" className="flex flex-wrap items-center justify-center gap-2">
+            {TOOL_MODES.map(({ id, label, Icon }) => {
+              const on2 = id === mode;
+              return (
+                <button key={id} type="button" role="tab" aria-selected={on2} onClick={() => setMode(id)}
+                  className="lq-glass inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-[12px] font-medium text-white transition-transform active:scale-95 sm:px-4 sm:py-2 sm:text-sm"
+                  style={on2 ? { background: 'linear-gradient(135deg, rgba(129,140,248,.55), rgba(244,114,182,.42))' } : { color: 'rgba(255,255,255,.78)' }}>
+                  <Icon className="h-3.5 w-3.5 sm:h-4 sm:w-4" strokeWidth={2} />{label}
+                </button>
+              );
+            })}
+          </div>
+          <p className="min-h-[1.25rem] text-xs text-white/60 sm:text-sm" aria-live="polite">
+            <span className="mr-2 inline-block rounded-full bg-white/10 px-2 py-0.5 font-medium tabular-nums text-white/90">{status}</span>
+            {active.hint}
+          </p>
+        </div>
+      )}
     </div>
   );
 }
