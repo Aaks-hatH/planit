@@ -335,11 +335,11 @@ html.lenis, html.lenis body { height: auto; }
 
 
 /* ───────── Home footer: oversized fading wordmark ───────── */
-.pi-footer { color: #fff; --pi-warm: #ff9a76; }
+.pi-footer { color: #fff; --pi-warm: rgba(255,255,255,0.55); }
 .pi-footer-glow {
   position: absolute; left: 50%; bottom: -25%; width: 80%; height: 55%;
   transform: translateX(-50%); pointer-events: none;
-  background: radial-gradient(ellipse at center, rgba(255,140,100,0.10), transparent 70%);
+  background: radial-gradient(ellipse at center, rgba(255,255,255,0.05), transparent 70%);
   filter: blur(50px);
 }
 .pi-footer-rule { height: 1px; background: rgba(255,255,255,0.22); }
@@ -355,7 +355,7 @@ html.lenis, html.lenis body { height: auto; }
   display: inline-block; font-size: 0.95rem; font-weight: 600; color: rgba(255,255,255,0.9);
   text-decoration: none; transition: color .2s ease, opacity .2s ease;
 }
-.pi-footer-link:hover { color: var(--pi-warm); }
+.pi-footer-link:hover { color: #fff; opacity: .7; }
 
 .pi-footer-mark-wrap { position: relative; margin-top: clamp(2.5rem, 7vw, 5rem); padding: 0 clamp(1rem, 4vw, 3rem); overflow: hidden; }
 .pi-footer-mark {
@@ -363,10 +363,10 @@ html.lenis, html.lenis body { height: auto; }
   font-weight: 400;
   font-size: clamp(4.5rem, 25vw, 24rem);
   line-height: 0.85; letter-spacing: -0.03em;
-  text-align: left; white-space: nowrap;
+  text-align: center; white-space: nowrap;
   padding-bottom: 0.1em; user-select: none;
-  /* one warm tone, bright at the top, fading into the background */
-  background: linear-gradient(180deg, #ffa56b 0%, #ff8a73 45%, rgba(255,138,115,0.35) 78%, rgba(255,138,115,0) 100%);
+  /* white at the top, fading into the background */
+  background: linear-gradient(180deg, #ffffff 0%, rgba(255,255,255,0.7) 40%, rgba(255,255,255,0.22) 75%, rgba(255,255,255,0) 100%);
   -webkit-background-clip: text; background-clip: text; color: transparent;
   -webkit-text-fill-color: transparent;
 }
