@@ -16,7 +16,9 @@ const api = axios.create({
 
 // Native PlanIt hosts — requests from these should NOT set x-wl-domain
 const NATIVE_HOSTS = ['localhost', '127.0.0.1', 'planitapp.onrender.com', 'planit-router.onrender.com'];
-const _isWLHost = !NATIVE_HOSTS.some(h => window.location.hostname === h || window.location.hostname.endsWith('.' + h));
+// Render PR previews (planitapp-pr-13.onrender.com) are PlanIt itself, not a WL client.
+const _isPrPreview = /^planitapp-pr-\d+\.onrender\.com$/.test(window.location.hostname);
+const _isWLHost = !_isPrPreview && !NATIVE_HOSTS.some(h => window.location.hostname === h || window.location.hostname.endsWith('.' + h));
 
 api.interceptors.request.use((config) => {
   // Tell the backend which browser this is, so any route that collects a
