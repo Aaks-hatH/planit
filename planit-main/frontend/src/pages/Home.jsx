@@ -5204,7 +5204,7 @@ export default function Home() {
         )}
 
         {/* FOOTER */}
-        <footer className="pi-footer relative overflow-hidden" style={{ background: 'linear-gradient(180deg, rgba(12,8,10,0.92) 0%, rgba(26,14,16,0.97) 100%)' }}>
+        <footer className="pi-footer relative overflow-hidden" style={{ background: 'linear-gradient(180deg, rgba(8,8,12,0.92) 0%, rgba(16,16,22,0.97) 100%)' }}>
           <div aria-hidden="true" className="pi-footer-glow" />
           <div className="max-w-screen-xl mx-auto px-5 sm:px-10 pt-16 sm:pt-20">
             <div className="pi-footer-rule" aria-hidden="true" />
